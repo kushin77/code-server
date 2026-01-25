@@ -30,3 +30,4 @@ act -j validate
 ## Security token
 
 Add `SNYK_TOKEN` to repository secrets to enable full scheduled security scans.
+<!-- ci-test: trigger security scanners -->

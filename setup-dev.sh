@@ -19,4 +19,4 @@ else
   echo "terraform not found — install if you plan to modify IaC"
 fi
 
-echo "Setup complete. Run 'pre-commit run --all-files' to verify." 
+echo "Setup complete. Run 'pre-commit run --all-files' to verify."

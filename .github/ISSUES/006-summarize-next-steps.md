@@ -74,4 +74,3 @@ Outstanding items and recommendations:
 - Optionally enable evidence collection integrated with the Landing Zone (see `GCP-landing-zone/docs/automation/` for examples).
 
 Done — marking onboarding tasks complete. Close or migrate local issues to real GitHub Issues/PRs as needed.
-

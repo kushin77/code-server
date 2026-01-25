@@ -19,4 +19,3 @@ Progress:
 
 - [x] `setup-dev.sh` created to install `pre-commit` and check terraform presence.
 - [x] `Dockerfile` added for a minimal reproducible dev container.
-

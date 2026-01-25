@@ -18,6 +18,16 @@ Checklist:
 Summary of work implemented:
 
  - Pull request with tflint guidance: https://github.com/kushin77/code-server/pull/9 (merged)
+ - Pull request with README badges and local CI run instructions: https://github.com/kushin77/code-server/pull/10 (merged)
+
+Closed issues:
+
+- https://github.com/kushin77/code-server/issues/1
+- https://github.com/kushin77/code-server/issues/2
+- https://github.com/kushin77/code-server/issues/3
+- https://github.com/kushin77/code-server/issues/4
+- https://github.com/kushin77/code-server/issues/5
+- https://github.com/kushin77/code-server/issues/6
 
 Verification commands and expected outcomes:
 

@@ -25,3 +25,7 @@ jobs:
           else
             echo "No validate script found"; exit 0
           fi
+      - name: Run tflint (optional)
+        uses: terraform-linters/tflint-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

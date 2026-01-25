@@ -24,6 +24,10 @@ Summary of work implemented:
 
 Final status: all onboarding PRs merged and issues closed. Repository `main` now contains onboarding docs, CI, validation scripts, tflint config, README badges, `CODEOWNERS` (placeholder) and branch-protection guidance. Replace placeholder owners in `CODEOWNERS` and enable branch protection in repository settings to enforce reviews and required checks.
 
+Onboarding handoff document:
+
+- `onboarding/HANDOFF.md` (merged as PR #12) — final checklist, verification commands, artifact links, and next admin actions.
+
 Closed issues:
 
 - https://github.com/kushin77/code-server/issues/1

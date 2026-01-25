@@ -77,4 +77,3 @@ rule "google_compute_instance_no_external_ip" {
    enabled = true
 }
 ```
-

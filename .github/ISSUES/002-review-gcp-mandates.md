@@ -29,4 +29,3 @@ Next steps:
 - Update onboarding docs with commands to authenticate (`gcloud auth application-default login`).
 - Add CI workflows and pre-commit rules to repo (in progress).
 - Document where to find detailed policy docs: `GCP-landing-zone/README.md` and `docs/policies`.
-

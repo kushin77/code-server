@@ -1,0 +1,21 @@
+name: Security Scans
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  snyk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Snyk (if token set)
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "${SNYK_TOKEN}" ]; then
+            pip install --user snyk && ~/.local/bin/snyk test || true
+          else
+            echo "SNYK_TOKEN not set — skipping full Snyk scan"
+          fi

@@ -14,3 +14,9 @@ Checklist:
 - [ ] Create `setup-dev.sh` to install deps and verify pre-commit
 - [ ] Add `Dockerfile` for reproducible dev container
 - [ ] Document emulator and local testing steps
+
+Progress:
+
+- [x] `setup-dev.sh` created to install `pre-commit` and check terraform presence.
+- [x] `Dockerfile` added for a minimal reproducible dev container.
+

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Setting up developer environment (minimal checks)"
+
+which python3 >/dev/null 2>&1 || { echo "Please install python3"; exit 1; }
+which pip3 >/dev/null 2>&1 || { echo "Please install pip3"; exit 1; }
+
+echo "Installing pre-commit via pip"
+pip3 install --user pre-commit
+
+echo "Installing basic git hooks"
+pre-commit install || true
+
+echo "Check for terraform (optional)"
+if which terraform >/dev/null 2>&1; then
+  terraform --version
+else
+  echo "terraform not found — install if you plan to modify IaC"
+fi
+
+echo "Setup complete. Run 'pre-commit run --all-files' to verify." 

@@ -20,6 +20,10 @@ Summary of work implemented:
  - Pull request with tflint guidance: https://github.com/kushin77/code-server/pull/9 (merged)
  - Pull request with README badges and local CI run instructions: https://github.com/kushin77/code-server/pull/10 (merged)
 
+- Pull request adding CODEOWNERS and branch protection guidance: https://github.com/kushin77/code-server/pull/11 (merged)
+
+Final status: all onboarding PRs merged and issues closed. Repository `main` now contains onboarding docs, CI, validation scripts, tflint config, README badges, `CODEOWNERS` (placeholder) and branch-protection guidance. Replace placeholder owners in `CODEOWNERS` and enable branch protection in repository settings to enforce reviews and required checks.
+
 Closed issues:
 
 - https://github.com/kushin77/code-server/issues/1

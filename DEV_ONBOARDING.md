@@ -53,6 +53,12 @@ Where to get help
 - See `GCP-landing-zone/README.md` for platform-specific policy details.
 - Open a local issue in `.github/ISSUES` to track onboarding tasks and blockers.
 
+Repo controls and protections
+
+- This repository includes a `.github/CODEOWNERS` placeholder; owners should be replaced with the correct GitHub usernames or team handles.
+- Follow the branch protection guidance in `.github/BRANCH_PROTECTION.md` — require `CI Validate` status checks and code owner reviews for `main`.
+
+
 GCP tflint guidance
 
 - We added a minimal `.tflint.hcl` to this repo. For GCP-specific rules, install `tflint` with the `google` plugin and enable recommended rules:

@@ -1,0 +1,6 @@
+# CODEOWNERS
+# NOTE: Replace the placeholders below with actual GitHub usernames or team handles.
+# Example: `* @org/platform-engineering` or `docs/ @kushin77`
+
+# Default owners for the repository
+*    platform-engineering@company.com

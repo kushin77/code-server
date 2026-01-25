@@ -52,3 +52,23 @@ Developer obligations
 Where to get help
 - See `GCP-landing-zone/README.md` for platform-specific policy details.
 - Open a local issue in `.github/ISSUES` to track onboarding tasks and blockers.
+
+GCP tflint guidance
+
+- We added a minimal `.tflint.hcl` to this repo. For GCP-specific rules, install `tflint` with the `google` plugin and enable recommended rules:
+
+```bash
+# install tflint
+curl -sSL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+tflint --init
+```
+
+- Example: enable plugin and rules in `.tflint.hcl`:
+
+```
+plugin "google" {}
+rule "google_compute_instance_no_external_ip" {
+   enabled = true
+}
+```
+

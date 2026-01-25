@@ -14,14 +14,10 @@ Checklist:
 - [ ] Summarize what was implemented
 - [ ] Provide verification commands and expected outputs
 - [ ] Note outstanding items and blockers
-**Status:** completed
 
 Summary of work implemented:
 
-- Added onboarding docs: `DEV_ONBOARDING.md` and `CONTRIBUTING.md`.
-- Added developer tooling: `setup-dev.sh`, `Dockerfile`, `.pre-commit-config.yaml` (including terraform hooks).
-- Added CI: `.github/workflows/ci-validate.yml` (runs pre-commit and `scripts/validate.sh`) and `.github/workflows/security.yml` (scheduled Snyk scans).
-- Added `scripts/validate.sh` to run pre-commit, `terraform fmt -check`, `terraform validate`, and optional `tflint`.
+ - Pull request with tflint guidance: https://github.com/kushin77/code-server/pull/9 (merged)
 
 Verification commands and expected outcomes:
 

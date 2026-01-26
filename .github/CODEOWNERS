@@ -2,7 +2,7 @@
 # Lines starting with '#' are comments
 
 # Require reviews from the primary maintainer for all changes
-* @kushin77
+# * @kushin77
 
 # You can add paths with specific owners, for example:
 # /infra/ @your-org/infra-team

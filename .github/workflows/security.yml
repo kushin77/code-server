@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 3 * * *'
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   snyk:
     runs-on: ubuntu-latest
@@ -21,16 +25,30 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
 
-      - name: Fetch Snyk token from Google Secret Manager
+      - name: Fetch Snyk token (GSM with repo-secret fallback)
         id: fetch_snyk
         run: |
           set -euo pipefail
-          if [ -z "${{ secrets.GSM_SNYK_SECRET_NAME }}" ]; then
-            echo "GSM_SNYK_SECRET_NAME repo secret not set; skipping Snyk full scan"
-            exit 0
+          # Try GSM first (requires Workload Identity to have succeeded)
+          if [ -n "${{ secrets.GSM_SNYK_SECRET_NAME }}" ]; then
+            echo "Attempting to read Snyk token from Google Secret Manager..."
+            if TOKEN=$(gcloud secrets versions access latest --secret="${{ secrets.GSM_SNYK_SECRET_NAME }}" --project="${{ secrets.GCP_PROJECT }}" 2>/dev/null); then
+              echo "SNYK_TOKEN=$TOKEN" >> $GITHUB_ENV
+              echo "Retrieved Snyk token from GSM"
+            else
+              echo "Failed to read from GSM (possibly OIDC/auth not available)."
+            fi
           fi
-          TOKEN=$(gcloud secrets versions access latest --secret="${{ secrets.GSM_SNYK_SECRET_NAME }}" --project="${{ secrets.GCP_PROJECT }}")
-          echo "SNYK_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+          # If GSM didn't populate SNYK_TOKEN, fall back to repo secret (for run-from-fork or missing OIDC)
+          if [ -z "${SNYK_TOKEN:-}" ] && [ -n "${{ secrets.SNYK_TOKEN }}" ]; then
+            echo "Falling back to repository secret SNYK_TOKEN"
+            echo "SNYK_TOKEN=${{ secrets.SNYK_TOKEN }}" >> $GITHUB_ENV
+          fi
+
+          if [ -z "${SNYK_TOKEN:-}" ]; then
+            echo "No Snyk token available (GSM and repo secret empty). Skipping full Snyk scan"
+          fi
 
       - name: Run Snyk (if GSM value present)
         run: |

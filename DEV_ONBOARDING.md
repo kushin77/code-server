@@ -69,6 +69,48 @@ curl -sSL https://raw.githubusercontent.com/terraform-linters/tflint/master/inst
 tflint --init
 ```
 
+## Confirmed onboarding steps I ran
+
+I verified the minimal developer onboarding flow and captured exact commands and outcomes so contributors can reproduce locally.
+
+- Created a Python virtual environment and installed tooling:
+
+```bash
+cd /home/akushnir/code-server/code-server
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install pre-commit
+```
+
+- Installed and enabled `pre-commit` hooks (hooks installed at `.git/hooks/pre-commit`).
+
+- Ran repository validation script (`scripts/validate.sh`) which runs `pre-commit` and optional terraform checks. Validation output: "Validation completed successfully" (no terraform files found in this repo).
+
+- Tests: There are no repository test suites in `code-server` root; validation and pre-commit are the primary local checks.
+
+Reproduce locally (copy/paste):
+
+```bash
+git clone https://github.com/kushin77/code-server.git
+cd code-server
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install pre-commit
+pre-commit install
+bash scripts/validate.sh
+```
+
+Notes and recommendations (best practices):
+
+- Use a virtualenv for Python tooling; avoid `pip --user` in venvs (the `setup-dev.sh` uses `pip3 install --user pre-commit` — this repo's onboarding should prefer installing into the venv).
+- Keep the `setup-dev.sh` simple (it already checks for `python3`, `pip3`, installs `pre-commit`, and installs hooks). I updated this document rather than editing the script to avoid changing behavior without review.
+- Consider adding a CI job that runs `bash scripts/validate.sh` and fails PRs on validation errors. There is an active PR for CI verification: https://github.com/kushin77/code-server/pull/16
+
+If you'd like, I can open a PR with these doc updates, or push them to an existing branch and create a PR for review.
+
+
 - Example: enable plugin and rules in `.tflint.hcl`:
 
 ```

@@ -20,4 +20,3 @@ Progress:
 - [x] `DEV_ONBOARDING.md` added with quickstart and obligations
 - [x] `CONTRIBUTING.md` added
 - [x] `setup-dev.sh`, `Dockerfile`, `.pre-commit-config.yaml` added
-

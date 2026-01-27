@@ -1,0 +1,15 @@
+# Default code owners for repository — adjust as needed
+# Lines starting with '#' are comments
+
+# Require reviews from the primary maintainer for all changes
+# * @kushin77
+
+# You can add paths with specific owners, for example:
+# /infra/ @your-org/infra-team
+# /.github/workflows/ @your-org/devops
+# CODEOWNERS
+# NOTE: Replace the placeholders below with actual GitHub usernames or team handles.
+# Example: `* @org/platform-engineering` or `docs/ @kushin77`
+
+# Default owners for the repository
+*    platform-engineering@company.com

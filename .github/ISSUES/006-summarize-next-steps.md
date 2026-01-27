@@ -14,14 +14,28 @@ Checklist:
 - [ ] Summarize what was implemented
 - [ ] Provide verification commands and expected outputs
 - [ ] Note outstanding items and blockers
-**Status:** completed
 
 Summary of work implemented:
 
-- Added onboarding docs: `DEV_ONBOARDING.md` and `CONTRIBUTING.md`.
-- Added developer tooling: `setup-dev.sh`, `Dockerfile`, `.pre-commit-config.yaml` (including terraform hooks).
-- Added CI: `.github/workflows/ci-validate.yml` (runs pre-commit and `scripts/validate.sh`) and `.github/workflows/security.yml` (scheduled Snyk scans).
-- Added `scripts/validate.sh` to run pre-commit, `terraform fmt -check`, `terraform validate`, and optional `tflint`.
+ - Pull request with tflint guidance: https://github.com/kushin77/code-server/pull/9 (merged)
+ - Pull request with README badges and local CI run instructions: https://github.com/kushin77/code-server/pull/10 (merged)
+
+- Pull request adding CODEOWNERS and branch protection guidance: https://github.com/kushin77/code-server/pull/11 (merged)
+
+Final status: all onboarding PRs merged and issues closed. Repository `main` now contains onboarding docs, CI, validation scripts, tflint config, README badges, `CODEOWNERS` (placeholder) and branch-protection guidance. Replace placeholder owners in `CODEOWNERS` and enable branch protection in repository settings to enforce reviews and required checks.
+
+Onboarding handoff document:
+
+- `onboarding/HANDOFF.md` (merged as PR #12) — final checklist, verification commands, artifact links, and next admin actions.
+
+Closed issues:
+
+- https://github.com/kushin77/code-server/issues/1
+- https://github.com/kushin77/code-server/issues/2
+- https://github.com/kushin77/code-server/issues/3
+- https://github.com/kushin77/code-server/issues/4
+- https://github.com/kushin77/code-server/issues/5
+- https://github.com/kushin77/code-server/issues/6
 
 Verification commands and expected outcomes:
 
@@ -60,4 +74,3 @@ Outstanding items and recommendations:
 - Optionally enable evidence collection integrated with the Landing Zone (see `GCP-landing-zone/docs/automation/` for examples).
 
 Done — marking onboarding tasks complete. Close or migrate local issues to real GitHub Issues/PRs as needed.
-

@@ -25,3 +25,11 @@ jobs:
           else
             echo "No validate script found"; exit 0
           fi
+      - name: Run tflint (optional)
+        run: |
+          if command -v tflint >/dev/null 2>&1; then
+            echo "Running tflint..."
+            tflint || true
+          else
+            echo "tflint not installed; skipping"
+          fi

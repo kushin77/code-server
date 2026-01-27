@@ -5,17 +5,89 @@ on:
   schedule:
     - cron: '0 3 * * *'
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   snyk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run Snyk (if token set)
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Authenticate to GCP via Workload Identity
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }} # e.g. projects/123/locations/global/workloadIdentityPools/pool/providers/provider
+          service_account: ${{ secrets.GCP_SA }} # e.g. snyk-runner@project.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      - name: Fetch Snyk token from Google Secret Manager
+        id: fetch_snyk
         run: |
-          if [ -n "${SNYK_TOKEN}" ]; then
-            pip install --user snyk && ~/.local/bin/snyk test || true
+          set -euo pipefail
+          if [ -z "${{ secrets.GSM_SNYK_SECRET_NAME }}" ]; then
+            echo "GSM_SNYK_SECRET_NAME repo secret not set; skipping Snyk full scan"
+            exit 0
+          fi
+          TOKEN=$(gcloud secrets versions access latest --secret="${{ secrets.GSM_SNYK_SECRET_NAME }}" --project="${{ secrets.GCP_PROJECT }}")
+          echo "SNYK_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Run Snyk (if GSM value present)
+        run: |
+          if [ -n "${SNYK_TOKEN:-}" ]; then
+            pip install --user snyk
+            ~/.local/bin/snyk auth "$SNYK_TOKEN" || true
+            ~/.local/bin/snyk test || true
           else
-            echo "SNYK_TOKEN not set — skipping full Snyk scan"
+            echo "SNYK token unavailable; skipping full Snyk scan"
+          fi
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install gitleaks binary
+        run: |
+          set -e
+          echo "Installing gitleaks..."
+          curl -sSL "https://github.com/zricethezav/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz" -o /tmp/gitleaks.tar.gz
+          mkdir -p /tmp/gitleaks && tar -xzf /tmp/gitleaks.tar.gz -C /tmp/gitleaks
+          sudo mv /tmp/gitleaks/gitleaks /usr/local/bin/gitleaks || true
+
+      - name: Run gitleaks (secrets scan)
+        run: |
+          if command -v gitleaks >/dev/null 2>&1; then
+            echo "Running gitleaks detect..."
+            gitleaks detect --source=. || (echo "gitleaks found potential secrets"; exit 2)
+          else
+            echo "gitleaks not available; skipping"
+          fi
+
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Checkov
+        run: python -m pip install --upgrade pip checkov
+      - name: Run Checkov (IaC security)
+        run: |
+          checkov -d . || true
+
+  tfsec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tfsec
+        run: |
+          curl -sSL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | sudo bash || true
+      - name: Run tfsec (Terraform security)
+        run: |
+          if command -v tfsec >/dev/null 2>&1; then
+            tfsec . || true
+          else
+            echo "tfsec not available; skipping"
           fi

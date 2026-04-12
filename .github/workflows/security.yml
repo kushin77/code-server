@@ -62,7 +62,8 @@ jobs:
         run: |
           if command -v gitleaks >/dev/null 2>&1; then
             echo "Running gitleaks detect..."
-            gitleaks detect --source=. || (echo "gitleaks found potential secrets"; exit 2)
+            # .gitleaks.toml allowlist skips documentation false-positives
+            gitleaks detect --source=. --config=.gitleaks.toml || (echo "gitleaks found potential secrets"; exit 2)
           else
             echo "gitleaks not available; skipping"
           fi

@@ -1,0 +1,12 @@
+# .gitleaks.toml - allowlist for gitleaks secret scanning
+# Documentation files contain example secret patterns as illustration — not real credentials.
+
+[allowlist]
+  description = "Documentation example patterns are not real secrets"
+  paths = [
+    '''CODE_SECURITY_HARDENING\.md''',
+    '''SECURITY_IMPLEMENTATION.*\.md''',
+    '''START_HERE_SECURITY\.md''',
+    '''IDE_SECURITY_AND_USER_MANAGEMENT\.md''',
+    '''RUNBOOKS\.md''',
+  ]

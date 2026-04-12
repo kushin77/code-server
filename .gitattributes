@@ -1,0 +1,25 @@
+# .gitattributes — enforce consistent line endings
+# Shell scripts must be LF on all platforms to run correctly on Linux/CI
+
+*.sh        text eol=lf
+*.bash      text eol=lf
+Dockerfile* text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+Makefile    text eol=lf
+Caddyfile*  text eol=lf
+
+# Windows scripts can stay CRLF
+*.ps1       text eol=crlf
+*.bat       text eol=crlf
+
+# Text files — normalize to LF
+*.md        text eol=lf
+*.tf        text eol=lf
+*.json      text eol=lf
+*.cfg       text eol=lf
+
+# Binary files — no normalization
+*.vsix      binary
+*.png       binary
+*.jpg       binary

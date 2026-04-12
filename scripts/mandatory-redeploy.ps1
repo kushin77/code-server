@@ -34,6 +34,8 @@ while ((Get-Date) -lt $deadline) {
     if ($allHealthy) {
         Write-Host "[mandatory-redeploy] All services healthy."
         docker.exe compose ps | Out-Host
+        Write-Host "[mandatory-redeploy] Running runtime smoke checks..."
+        pwsh -NoProfile -File (Join-Path $PSScriptRoot "smoke-check.ps1") | Out-Host
         exit 0
     }
 

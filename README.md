@@ -1,96 +1,65 @@
-# Enterprise Code-Server Deployment
+# Enterprise code-server Deployment
 
-## Quick Start (HTTPS + Reverse Proxy)
+This repository runs a production-style code-server stack behind oauth2-proxy and Caddy.
 
-### Prerequisites
-- Docker & Docker Compose installed
-- WSL2 or Linux environment
+## Runtime Architecture
 
-### Deployment Steps
+- code-server runs inside Docker and is not directly exposed to the internet.
+- oauth2-proxy handles Google OIDC authentication.
+- Caddy terminates TLS and proxies authenticated traffic.
+- Runtime orchestration is managed by Docker Compose.
+- Terraform is used for metadata, validation, and outputs.
 
-1. **Start enterprise stack:**
-```bash
-cd ~/code-server-enterprise
-docker-compose up -d
+## Quick Start
+
+1. Create and populate `.env` (domain, OAuth credentials, DNS challenge token, code-server password).
+2. Deploy and verify runtime:
+
+```powershell
+pwsh -NoProfile -File .\scripts\mandatory-redeploy.ps1
 ```
 
-2. **Access via HTTPS:**
-```
-https://localhost
-```
+3. Validate functional readiness:
 
-3. **Get initial password:**
-```bash
-grep password ~/.config/code-server/config.yaml
+```powershell
+pwsh -NoProfile -File .\scripts\smoke-check.ps1
 ```
 
----
+4. Access the IDE at your domain:
 
-## Enterprise Features Included
-
-✅ **HTTPS/TLS Encryption** - Automatic cert generation via Caddy  
-✅ **Reverse Proxy** - Caddy handles all HTTP requests  
-✅ **WebSocket Support** - For real-time IDE features  
-✅ **Security Headers** - HSTS, X-Frame-Options, CSP ready  
-✅ **Container Isolation** - Docker network segmentation  
-✅ **Persistent Storage** - Volumes for code and configuration  
-
----
-
-## Next Steps (Post-Deployment)
-
-### Add OAuth2 Authentication (GitHub/Google)
-Install `oauth2-proxy` alongside Caddy for SSO:
-```yaml
-oauth2-proxy:
-  image: quay.io/oauth2-proxy/oauth2-proxy:latest
-  environment:
-    - OAUTH2_PROXY_CLIENT_ID=your-github-app-id
-    - OAUTH2_PROXY_CLIENT_SECRET=your-github-secret
-    - OAUTH2_PROXY_PROVIDER=github
+```text
+https://<your-domain>
 ```
 
-### Add Multi-User Support
-Use Coder platform instead of standalone code-server for:
-- Team workspaces
-- RBAC (Role-Based Access Control)
-- Resource quotas
-- Audit logging
+## Day-2 Operations
 
-### Enable Monitoring
-Add Prometheus + Grafana for metrics:
-```yaml
-prometheus:
-  image: prom/prometheus:latest
-  volumes:
-    - ./prometheus.yml:/etc/prometheus/prometheus.yml
+- Full apply flow (Terraform outputs + runtime rollout + smoke checks):
+
+```powershell
+make apply
 ```
 
----
+- Runtime-only rollout:
 
-## Security Checklist
+```powershell
+make redeploy
+```
 
-- [ ] Change default passwords in docker-compose.yml
-- [ ] Set up GitHub OAuth app (Settings → Developer Settings)
-- [ ] Configure firewall rules (only allow 80/443 from trusted IPs)
-- [ ] Enable audit logging in code-server config
-- [ ] Set resource limits in docker-compose
-- [ ] Backup volumes regularly
-- [ ] Rotate passwords monthly
+- Runtime-only validation:
 
----
+```powershell
+make smoke
+```
 
-## Troubleshooting
+- Service status:
 
-**Can't access HTTPS?**
-- Caddy generates self-signed cert on first run
-- Browser will show security warning (expected for self-signed)
-- Click "Advanced" → "Proceed" to bypass
+```powershell
+make status
+```
 
-**WebSocket errors?**
-- Verify `websocket` directive in Caddyfile
-- Check code-server logs: `docker logs code-server-enterprise_code-server_1`
+## Security Notes
 
-**Permission denied?**
-- Ensure WSL volumes have correct permissions
-- Run: `chmod 755 ~/code-server-enterprise/workspaces`
+- Do not store production secrets in `terraform.tfvars`.
+- Keep runtime secrets in `.env` or your secret manager workflow.
+- Use `/reset-browser-state` only when stale browser cache/storage causes client issues.
+- Do not clear site data on every request; this can force re-auth loops.

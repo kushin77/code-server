@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy clean logs status dashboard shell redeploy
+.PHONY: help init plan apply destroy clean logs status dashboard shell redeploy smoke
 
 help:
 	@echo "Code-Server Enterprise IaC - Available Commands"
@@ -32,15 +32,23 @@ plan:
 	@terraform plan -out=tfplan
 	@echo "✓ Plan created"
 
-apply: plan redeploy
+apply: plan
 	@terraform apply tfplan
 	@echo "✓ Infrastructure deployed"
 	@terraform output code_server_url
 	@terraform output code_server_password
+	@pwsh -NoProfile -File ./scripts/mandatory-redeploy.ps1
+	@echo "✓ Mandatory redeploy completed"
+	@pwsh -NoProfile -File ./scripts/smoke-check.ps1
+	@echo "✓ Runtime smoke checks passed"
 
 redeploy:
 	@pwsh -NoProfile -File ./scripts/mandatory-redeploy.ps1
 	@echo "✓ Mandatory redeploy completed"
+
+smoke:
+	@pwsh -NoProfile -File ./scripts/smoke-check.ps1
+	@echo "✓ Runtime smoke checks passed"
 
 destroy:
 	@terraform destroy -auto-approve
@@ -55,16 +63,16 @@ clean:
 status:
 	@echo "Deployment Status:"
 	@echo "=================="
-	@docker ps --filter "label=service=code-server-enterprise" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+	@docker.exe compose ps
 	@echo ""
 	@echo "Terraform State:"
 	@terraform state list
 
 logs:
-	@docker logs -f code-server-enterprise-app
+	@docker.exe compose logs -f --tail=200
 
 shell:
-	@docker exec -it code-server-enterprise-app bash
+	@docker.exe exec -it code-server sh
 
 dashboard:
 	@echo "Code-Server Enterprise Dashboard"
@@ -74,13 +82,13 @@ dashboard:
 	@terraform output -raw code_server_url 2>/dev/null || echo "Not deployed"
 	@echo ""
 	@echo "Container Status:"
-	@docker ps --filter "label=service=code-server-enterprise" --format "{{.Names}}: {{.Status}}"
+	@docker.exe compose ps --format "table {{.Name}}\t{{.State}}\t{{.Health}}"
 	@echo ""
 	@echo "Disk Usage:"
-	@docker volume ls | grep code-server-enterprise
+	@docker.exe volume ls | findstr code-server
 	@echo ""
 	@echo "Network:"
-	@docker network ls | grep code-server-enterprise
+	@docker.exe network ls | findstr code-server
 	@echo ""
 
 validate:

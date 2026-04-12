@@ -136,6 +136,8 @@ function Deploy {
 
     Write-Log "INFO" "Running mandatory runtime redeploy..."
     pwsh -NoProfile -File (Join-Path $projectDir "scripts/mandatory-redeploy.ps1")
+    Write-Log "INFO" "Running runtime smoke checks..."
+    pwsh -NoProfile -File (Join-Path $projectDir "scripts/smoke-check.ps1")
     
     Write-Log "SUCCESS" "✓ Deployment applied"
 }
@@ -162,9 +164,9 @@ function Show-OutputDetails {
     
     Write-Log "INFO" ""
     Write-Log "INFO" "Next steps:"
-    Write-Log "INFO" "  1. Open browser: http://localhost"
-    Write-Log "INFO" "  2. No GitHub authentication needed"
-    Write-Log "INFO" "  3. All infrastructure managed by Terraform"
+    Write-Log "INFO" "  1. Open browser: https://$url"
+    Write-Log "INFO" "  2. Authenticate via oauth2-proxy (Google OIDC)"
+    Write-Log "INFO" "  3. Runtime is managed by Docker Compose; Terraform tracks metadata/outputs"
     Write-Log "INFO" ""
     
     Pop-Location

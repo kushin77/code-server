@@ -23,7 +23,6 @@ services:
       - CS_DISABLE_FILE_DOWNLOADS=false
     command:
       - "--bind-addr=0.0.0.0:8080"
-      - "--base-path=/ide"
       - "--disable-telemetry"
       - "--cert=false"           # TLS handled by Caddy externally
     volumes:
@@ -31,7 +30,7 @@ services:
       - ${WORKSPACE_PATH:-./workspace}:/home/coder/workspace
       - ./settings.json:/home/coder/.local/share/code-server/User/settings.json:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/ide/healthz"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -110,7 +109,10 @@ services:
 
   # ─── Caddy ──────────────────────────────────────────────────────────────────
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    image: caddy-godaddy:local
     container_name: caddy
     restart: unless-stopped
     networks:
@@ -121,6 +123,8 @@ services:
     environment:
       # Caddy reads DOMAIN via {$DOMAIN} in Caddyfile
       DOMAIN: "${DOMAIN}"
+      # GoDaddy DNS-01 challenge credentials (KEY:SECRET format, from GSM via .env)
+      GODADDY_API_TOKEN: "${GODADDY_KEY}:${GODADDY_SECRET}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

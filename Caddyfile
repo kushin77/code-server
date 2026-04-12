@@ -1,8 +1,22 @@
 # Portable Caddyfile — domain driven by DOMAIN env var (set in docker-compose or .env)
 # Caddy reads {$DOMAIN} at startup from the container environment
-# TLS: Let's Encrypt auto-managed when DOMAIN resolves to this host's public IP
+# TLS: Let's Encrypt via DNS-01 (GoDaddy) — no inbound port 80 required
+
+# Global options — production CA only (disables staging fallback)
+{
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+}
 
 {$DOMAIN} {
+    # DNS-01 challenge — avoids need for open port 80/443 during cert issuance
+    # GODADDY_API_TOKEN = KEY:SECRET (set in .env)
+    tls {
+        dns godaddy {$GODADDY_API_TOKEN}
+        propagation_timeout 10m
+        propagation_delay 30s
+        resolvers ns53.domaincontrol.com ns54.domaincontrol.com
+    }
+
     encode gzip
 
     # Security headers
@@ -15,16 +29,11 @@
         -Server
     }
 
-    # Redirect root → /ide
-    redir / /ide permanent
-
     # All traffic → oauth2-proxy (handles Google Auth then forwards to code-server)
     reverse_proxy oauth2-proxy:4180 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto https
-        header_up X-Forwarded-Host {host}
     }
 }
 

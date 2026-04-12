@@ -19,8 +19,8 @@ services:
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
       - SERVICE_URL=https://open-vsx.org/vscode/gallery
       - ITEM_URL=https://open-vsx.org/vscode/item
-      # Set base path so code-server serves at /ide
       - CS_DISABLE_FILE_DOWNLOADS=false
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
     command:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"

@@ -1,43 +1,23 @@
 {
-  // Extension Management
-  "extensions.ignoreRecommendations": true,
-  "extensions.recommendations": false,
-  
-  // Disable extensions not available in Open VSX
-  "extensions.ignoreDeprecatedExtensions": true,
-  
-  // GitHub Copilot - disabled as not available in Open VSX
-  // Use alternatives: GitHub Copilot in CLI or other AI code completers
-  "copilot.enable": false,
-  "copilot-chat.openSymbolFromExplorer.enabled": false,
-  
-  // Telemetry and surveys
+  "extensions.enabled": true,
+  "extensions.autoCheckUpdates": false,
+  "extensions.autoUpdate": false,
+  "github.gitAuthentication": true,
+  "extensions.disabledRecommendations": [
+    "GitHub.copilot-chat",
+    "GitHub.copilot",
+    "GitHub.github-vscode-theme"
+  ],
+  "github.copilot.enable": false,
+  "chat.enabled": false,
+  "chat.commandCenter.enabled": false,
+  "workbench.commandPalette.experimental.suggestCommands": false,
   "telemetry.telemetryLevel": "off",
   "telemetry.enableCrashReporter": false,
   "telemetry.enableTelemetry": false,
-  
-  // Performance
-  "editor.formatOnSave": false,
-  "editor.formatOnPaste": false,
-  "editor.codeActionsOnSave": {},
-  
-  // Theme
-  "workbench.colorTheme": "Dark Modern",
-  "workbench.iconTheme": "off",
-  
-  // Extensions marketplace
-  "[python]": {
-    "editor.defaultFormatter": "ms-python.python",
-    "editor.formatOnSave": true
-  },
-  
-  // Recommended open-source extensions
-  "extensions.recommendations": [
-    "GitHub.copilot-nightly",
-    "GitLens.gitlens",
-    "ms-python.python",
-    "ms-vscode.PowerShell",
-    "redhat.vscode-yaml",
-    "ms-azuretools.vscode-docker"
-  ]
+  "extensions.ignoreRecommendations": false,
+  "extensions.showRecommendationsOnInstall": false,
+  "security.workspace.trust.enabled": false,
+  "workbench.startupEditor": "none",
+  "workbench.welcomePage.walkthroughs.openOnInstall": false
 }

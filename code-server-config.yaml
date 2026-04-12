@@ -1,12 +1,13 @@
-# Multi-User Enterprise Configuration
-# Add this to code-server config.yaml for team deployment
+# code-server Configuration
+# Deploy to: ~/.config/code-server/config.yaml
 
+bind-addr: 0.0.0.0:8080
 auth: password
 password: ${CODE_SERVER_PASSWORD}
-cert: false  # Let Caddy handle HTTPS
+cert: true  # Enable HTTPS with auto-generated self-signed cert
+            # Required for secure context (crypto.subtle, webviews, clipboard)
 
-# Workspace settings
-workspace-dir: /home/coder/project
+# First run: accept self-signed cert in browser via Advanced -> Proceed
 
 # Security
 proxy-domain: 

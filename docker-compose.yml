@@ -25,6 +25,7 @@ services:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
       - "--cert=false"           # TLS handled by Caddy externally
+      - "--auth=none"            # Auth handled by oauth2-proxy
     volumes:
       - coder-data:/home/coder
       - ${WORKSPACE_PATH:-./workspace}:/home/coder/workspace

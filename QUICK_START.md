@@ -2,24 +2,29 @@
 
 ## 🚀 Deploy in 30 Seconds
 
-### Windows (PowerShell)
+### All Platforms (Recommended - Uses Make)
+```bash
+cd c:\code-server-enterprise
+make deploy
+```
+
+### Windows (PowerShell Alternative)
 ```powershell
 cd c:\code-server-enterprise
-.\deploy-iac.ps1
+terraform init
+terraform apply -auto-approve
 ```
 
-### Linux/macOS/WSL (Bash)
-```bash
-cd ~/code-server-enterprise
-chmod +x deploy-iac.sh
-./deploy-iac.sh
-```
-
-### Using Terraform Directly
+### Linux/macOS/WSL (Alternative)
 ```bash
 cd ~/code-server-enterprise
 terraform init
-terraform apply
+terraform apply -auto-approve
+```
+
+### View What Will Deploy (Safe - Read-Only)
+```bash
+make plan
 ```
 
 ---
@@ -60,9 +65,34 @@ terraform state list
 
 ## 🔧 Common Commands
 
-### Plan Changes
+### Plan Changes (Safe - Preview Only)
 ```bash
-terraform plan
+make plan
+```
+
+### Deploy Infrastructure (Idempotent - Safe to Run Repeatedly)
+```bash
+make deploy
+```
+
+### Check Status
+```bash
+make status
+```
+
+### View Logs
+```bash
+make logs
+```
+
+### Shell Into Container
+```bash
+make shell
+```
+
+### View Full Dashboard
+```bash
+make dashboard
 ```
 
 ### Update Password
@@ -72,12 +102,23 @@ code_server_password = "new-password"
 ```
 Then:
 ```bash
-terraform apply
+make deploy
+```
+
+### Run IaC Audits
+```bash
+make audit
 ```
 
 ### Destroy Everything
 ```bash
-terraform destroy
+make destroy
+```
+
+## 📚 All Available Commands
+```bash
+make help
+```
 ```
 
 ### View Outputs

@@ -1,7 +1,7 @@
 variable "code_server_password" {
   description = "Code-Server authentication password"
   type        = string
-  default     = "secure-enterprise-password-${substr(uuid(), 0, 8)}"
+  default     = "secure-enterprise-password"
   sensitive   = true
 }
 
@@ -25,15 +25,15 @@ variable "enable_https" {
 }
 
 variable "code_server_version" {
-  description = "Code-Server version tag"
+  description = "Code-Server version tag (use specific version, not latest)"
   type        = string
-  default     = "latest"
+  default     = "4.19.1"
 }
 
 variable "caddy_version" {
-  description = "Caddy version tag"
+  description = "Caddy version tag (use specific version, not latest)"
   type        = string
-  default     = "latest"
+  default     = "2.7.6"
 }
 
 variable "log_level" {

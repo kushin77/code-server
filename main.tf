@@ -41,21 +41,13 @@ locals {
 
 # Docker Network
 resource "docker_network" "enterprise" {
-  name = local.network_name
+  name   = local.network_name
   driver = "bridge"
-  
-  labels = {
-    name = local.network_name
-  }
 }
 
 # Docker Volume for persistent data
 resource "docker_volume" "code_server_data" {
   name = local.data_volume
-  
-  labels = {
-    service = local.service_name
-  }
 }
 
 # Code-Server Container
@@ -66,10 +58,9 @@ resource "docker_image" "code_server" {
 }
 
 resource "docker_container" "code_server" {
-  name             = "${local.service_name}-app"
-  image            = docker_image.code_server.image_id
-  restart_policy   = "unless-stopped"
-  must_run         = true
+  name     = "${local.service_name}-app"
+  image    = docker_image.code_server.image_id
+  must_run = true
   
   env = [
     "PASSWORD=${local.code_server_password}",
@@ -89,24 +80,12 @@ resource "docker_container" "code_server" {
     ipv4_address = "172.20.0.2"
   }
   
-  # Expose internal port
-  expose = [local.code_server_port]
-  
-  # Health check
-  healthcheck {
-    test     = ["CMD", "curl", "-f", "http://localhost:${local.code_server_port}/health || exit 1"]
-    interval = "30s"
-    timeout  = "10s"
-    retries  = 3
+  # Port mapping (internal only, mapped by Caddy)
+  ports {
+    internal = local.code_server_port
+    external = local.code_server_port
   }
-  
-  labels = merge(
-    local.tags,
-    {
-      "service.port" = local.code_server_port
-    }
-  )
-  
+
   depends_on = [docker_network.enterprise]
 }
 
@@ -119,14 +98,14 @@ resource "docker_image" "caddy" {
 
 # Self-signed certificate helper
 resource "null_resource" "caddy_config" {
-  provisioners "local-exec" {
+  provisioner "local-exec" {
     command = "mkdir -p ${var.config_dir}/caddy"
   }
 }
 
 # Write Caddyfile
 resource "local_file" "caddyfile" {
-  filename = "${var.config_dir}/caddy/Caddyfile"
+  filename = abspath("${var.config_dir}/caddy/Caddyfile")
   content  = templatefile("${path.module}/Caddyfile.tpl", {
     code_server_host = "code-server-enterprise-app"
     code_server_port = local.code_server_port
@@ -135,10 +114,9 @@ resource "local_file" "caddyfile" {
 
 # Caddy Container  
 resource "docker_container" "caddy" {
-  name             = "${local.service_name}-proxy"
-  image            = docker_image.caddy.image_id
-  restart_policy   = "unless-stopped"
-  must_run         = true
+  name     = "${local.service_name}-proxy"
+  image    = docker_image.caddy.image_id
+  must_run = true
   
   # Port mappings
   ports {
@@ -175,14 +153,7 @@ resource "docker_container" "caddy" {
   env = [
     "ACME_AGREE=true"
   ]
-  
-  labels = merge(
-    local.tags,
-    {
-      "service.type" = "reverse-proxy"
-    }
-  )
-  
+
   depends_on = [docker_network.enterprise, docker_container.code_server, local_file.caddyfile]
 }
 
@@ -199,10 +170,10 @@ output "code_server_password" {
 }
 
 output "container_status" {
-  description = "Container Status"
+  description = "Container IDs"
   value = {
-    code_server = docker_container.code_server.state
-    caddy       = docker_container.caddy.state
+    code_server = docker_container.code_server.id
+    caddy       = docker_container.caddy.id
   }
 }
 
@@ -210,7 +181,5 @@ output "network_info" {
   description = "Network Configuration"
   value = {
     network_id = docker_network.enterprise.id
-    code_server_ip = docker_container.code_server.network_data[0].ip_address
-    caddy_ip       = docker_container.caddy.network_data[0].ip_address
   }
 }

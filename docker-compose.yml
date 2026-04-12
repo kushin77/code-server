@@ -1,7 +1,7 @@
 version: '3.9'
-# code-server enterprise stack — kushnir.cloud/ide with Google OAuth
-# Follows eiq-org oauth2-proxy sidecar pattern (docker-compose.oauth2-proxy.yml)
-# Secrets injected at runtime from GSM via scripts/fetch-gsm-secrets.sh
+# code-server enterprise stack — domain/ide with Google OAuth
+# All config via .env (copy from .env.template, populate via scripts/fetch-gsm-secrets.sh)
+# Portable: docker compose up on any host with a valid .env — no hardcoded IPs or paths
 
 services:
   # ─── code-server ────────────────────────────────────────────────────────────
@@ -28,6 +28,7 @@ services:
       - "--cert=false"           # TLS handled by Caddy externally
     volumes:
       - coder-data:/home/coder
+      - ${WORKSPACE_PATH:-./workspace}:/home/coder/workspace
       - ./settings.json:/home/coder/.local/share/code-server/User/settings.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/ide/healthz"]
@@ -61,8 +62,8 @@ services:
       # Provider
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      # Redirect configuration
-      OAUTH2_PROXY_REDIRECT_URL: "https://kushnir.cloud/oauth2/callback"
+      # Redirect configuration — domain driven by DOMAIN env var
+      OAUTH2_PROXY_REDIRECT_URL: "https://${DOMAIN}/oauth2/callback"
       # Upstream: code-server serves /ide (cert:false inside Docker)
       OAUTH2_PROXY_UPSTREAMS: "http://code-server:8080/"
       # Access control — restrict to your domain or specific emails
@@ -117,6 +118,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      # Caddy reads DOMAIN via {$DOMAIN} in Caddyfile
+      DOMAIN: "${DOMAIN}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

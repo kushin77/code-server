@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # set-godaddy-dns.sh
-# Sets GoDaddy DNS A record for kushnir.cloud → public IP
+# Sets GoDaddy DNS A record for <DOMAIN> → public IP
 # Mimics eiq-org pattern from nuke-redeploy-orchestrator.sh
 # Requires: GODADDY_KEY and GODADDY_SECRET env vars
 #           (fetch via scripts/fetch-gsm-secrets.sh)
-# Usage: ./set-godaddy-dns.sh [--ip 173.77.179.148] [--domain kushnir.cloud]
+# Usage: ./set-godaddy-dns.sh [--ip 1.2.3.4] [--domain example.com]
+#        or set DOMAIN / PUBLIC_IP env vars before calling
 set -euo pipefail
 
 readonly GODADDY_API="https://api.godaddy.com/v1"
-DOMAIN="${GODADDY_DOMAIN:-kushnir.cloud}"
+DOMAIN="${DOMAIN:-kushnir.cloud}"
 PUBLIC_IP="${PUBLIC_IP:-}"
 
 # Parse args

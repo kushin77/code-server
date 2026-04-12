@@ -1,8 +1,8 @@
-# Production: kushnir.cloud — code-server IDE with Google OAuth
-# Architecture: Caddy (TLS) → oauth2-proxy (Google Auth) → code-server (/ide)
-# TLS: Let's Encrypt auto-managed (requires port 443 accessible from internet)
+# Portable Caddyfile — domain driven by DOMAIN env var (set in docker-compose or .env)
+# Caddy reads {$DOMAIN} at startup from the container environment
+# TLS: Let's Encrypt auto-managed when DOMAIN resolves to this host's public IP
 
-kushnir.cloud {
+{$DOMAIN} {
     encode gzip
 
     # Security headers
@@ -12,15 +12,13 @@ kushnir.cloud {
         X-Frame-Options SAMEORIGIN
         X-XSS-Protection "1; mode=block"
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        # Remove server fingerprinting
         -Server
     }
 
     # Redirect root → /ide
     redir / /ide permanent
 
-    # All traffic routed through oauth2-proxy
-    # oauth2-proxy handles Google OAuth and proxies authenticated requests to code-server
+    # All traffic → oauth2-proxy (handles Google Auth then forwards to code-server)
     reverse_proxy oauth2-proxy:4180 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
@@ -31,30 +29,6 @@ kushnir.cloud {
 }
 
 # HTTP → HTTPS redirect
-http://kushnir.cloud {
+http://{$DOMAIN} {
     redir https://{host}{uri} permanent
-}
-
-# Local development fallback (direct connection without domain)
-# comment this out when kushnir.cloud DNS is live
-localhost:443 {
-    encode gzip
-
-    header X-Content-Type-Options nosniff
-    header X-Frame-Options SAMEORIGIN
-    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
-
-    # TLS: self-signed for local dev
-    tls internal
-
-    reverse_proxy localhost:8080 {
-        header_up X-Forwarded-Proto https
-        transport http {
-            tls_insecure_skip_verify
-        }
-    }
-}
-
-http://localhost:80 {
-    redir https://localhost{uri} permanent
 }

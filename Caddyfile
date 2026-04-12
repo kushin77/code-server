@@ -1,29 +1,60 @@
-localhost:443 {
-    # Automatic HTTPS
+# Production: kushnir.cloud — code-server IDE with Google OAuth
+# Architecture: Caddy (TLS) → oauth2-proxy (Google Auth) → code-server (/ide)
+# TLS: Let's Encrypt auto-managed (requires port 443 accessible from internet)
+
+kushnir.cloud {
     encode gzip
-    
-    # Reverse proxy to code-server
-    reverse_proxy 172.26.236.99:8080 {
-        # Preserve original headers for WebSocket
-        header_uri / X-Real-IP {http.request.remote.host}
-        header_uri / X-Forwarded-For {http.request.remote.host}
-        header_uri / X-Forwarded-Proto https
-        
-        # WebSocket support
-        websocket
-    }
-    
-    # Caching directives
-    cache_key {http.request.method} {http.request.uri}
-    
+
     # Security headers
-    header X-Content-Type-Options nosniff
-    header X-Frame-Options DENY
-    header X-XSS-Protection "1; mode=block"
-    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    header {
+        X-Content-Type-Options nosniff
+        # SAMEORIGIN (not DENY) — code-server uses iframes internally
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # Remove server fingerprinting
+        -Server
+    }
+
+    # Redirect root → /ide
+    redir / /ide permanent
+
+    # All traffic routed through oauth2-proxy
+    # oauth2-proxy handles Google OAuth and proxies authenticated requests to code-server
+    reverse_proxy oauth2-proxy:4180 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-Host {host}
+    }
 }
 
-# HTTP redirect to HTTPS
+# HTTP → HTTPS redirect
+http://kushnir.cloud {
+    redir https://{host}{uri} permanent
+}
+
+# Local development fallback (direct connection without domain)
+# comment this out when kushnir.cloud DNS is live
+localhost:443 {
+    encode gzip
+
+    header X-Content-Type-Options nosniff
+    header X-Frame-Options SAMEORIGIN
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # TLS: self-signed for local dev
+    tls internal
+
+    reverse_proxy localhost:8080 {
+        header_up X-Forwarded-Proto https
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+}
+
 http://localhost:80 {
     redir https://localhost{uri} permanent
 }

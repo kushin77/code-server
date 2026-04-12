@@ -1,41 +1,156 @@
-version: '3.8'
+version: '3.9'
+# code-server enterprise stack — kushnir.cloud/ide with Google OAuth
+# Follows eiq-org oauth2-proxy sidecar pattern (docker-compose.oauth2-proxy.yml)
+# Secrets injected at runtime from GSM via scripts/fetch-gsm-secrets.sh
 
 services:
+  # ─── code-server ────────────────────────────────────────────────────────────
   code-server:
-    image: codercom/code-server:latest
-    environment:
-      - PASSWORD=secure-enterprise-password-here
-      - SUDO_PASSWORD=secure-enterprise-password-here
-      - SERVICE_URL=https://open-vsx.org/vscode/gallery
-      - ITEM_URL=https://open-vsx.org/vscode/item
-    volumes:
-      - coder-data:/home/coder
-      - /home/alex_kushnir/code-server-enterprise/workspaces:/home/coder/project
-      - /home/alex_kushnir/code-server-enterprise/settings.json:/home/coder/.local/share/code-server/User/settings.json
+    image: codercom/code-server:4.115.0
+    container_name: code-server
     restart: unless-stopped
     networks:
       - enterprise
+    # NOT exposed to host — traffic comes only through oauth2-proxy
+    expose:
+      - "8080"
+    environment:
+      - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - SERVICE_URL=https://open-vsx.org/vscode/gallery
+      - ITEM_URL=https://open-vsx.org/vscode/item
+      # Set base path so code-server serves at /ide
+      - CS_DISABLE_FILE_DOWNLOADS=false
+    command:
+      - "--bind-addr=0.0.0.0:8080"
+      - "--base-path=/ide"
+      - "--disable-telemetry"
+      - "--cert=false"           # TLS handled by Caddy externally
+    volumes:
+      - coder-data:/home/coder
+      - ./settings.json:/home/coder/.local/share/code-server/User/settings.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ide/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
+  # ─── oauth2-proxy ───────────────────────────────────────────────────────────
+  # Eiq-org pattern: OIDC sidecar for zero-trust authentication
+  # Validates Google OAuth tokens before passing to code-server
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    container_name: oauth2-proxy
+    restart: unless-stopped
+    networks:
+      - enterprise
+    expose:
+      - "4180"
+    environment:
+      # Credentials from GSM (injected by scripts/fetch-gsm-secrets.sh)
+      OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
+      # Provider
+      OAUTH2_PROXY_PROVIDER: "google"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
+      # Redirect configuration
+      OAUTH2_PROXY_REDIRECT_URL: "https://kushnir.cloud/oauth2/callback"
+      # Upstream: code-server serves /ide (cert:false inside Docker)
+      OAUTH2_PROXY_UPSTREAMS: "http://code-server:8080/"
+      # Access control — restrict to your domain or specific emails
+      OAUTH2_PROXY_EMAIL_DOMAINS: "${ALLOWED_EMAIL_DOMAINS:-*}"
+      # Cookie settings
+      OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
+      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
+      OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
+      OAUTH2_PROXY_COOKIE_REFRESH: "15m"
+      # Proxy behaviour
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
+      OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"     # code-server requires WebSocket
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "false"
+      # Headers
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
+      OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
+      # Logging
+      OAUTH2_PROXY_AUTH_LOGGING: "true"
+      OAUTH2_PROXY_REQUEST_LOGGING: "true"
+      # Skip auth for health checks
+      OAUTH2_PROXY_SKIP_AUTH_ROUTES: "^/health$$|^/oauth2/"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4180/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - code-server
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─── Caddy ──────────────────────────────────────────────────────────────────
   caddy:
-    image: caddy:latest
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    networks:
+      - enterprise
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - /home/alex_kushnir/code-server-enterprise/Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      - code-server
-    restart: unless-stopped
-    networks:
-      - enterprise
+      - oauth2-proxy
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
 
 volumes:
   coder-data:
+    driver: local
   caddy-data:
+    driver: local
   caddy-config:
+    driver: local
 
 networks:
   enterprise:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.8.0/24

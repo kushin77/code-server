@@ -47,3 +47,4 @@ docker-compose.override.yml
 
 # Terraform backup
 backup.tfstate
+.env

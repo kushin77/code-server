@@ -6,12 +6,17 @@ USER root
 RUN mkdir -p /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser \
     && ln -sf ../extension.js /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser/extension.js
 
-# Remove default chat agent wiring that attempts to install GitHub.copilot-chat
-# (not available on OpenVSX/code-server).
-RUN perl -0777 -i -pe 's/\n  "defaultChatAgent": \{.*?\n  \},\n  "trustedExtensionAuthAccess"/\n  "trustedExtensionAuthAccess"/s' /usr/lib/code-server/lib/vscode/product.json
-
-# Remove lingering trusted list reference to github.copilot-chat.
-RUN perl -0777 -i -pe 's/,\s*"github\.copilot-chat"//g' /usr/lib/code-server/lib/vscode/product.json
+# Patch product.json:
+#   1. Remove defaultChatAgent (causes install-loop for copilot-chat in code-server)
+#   2. Ensure BOTH github.copilot AND github.copilot-chat are in trustedExtensionAuthAccess
+#      (without this, Copilot Chat is silently denied GitHub tokens and auth never completes)
+RUN perl -0777 -i -pe \
+    's/\n  "defaultChatAgent": \{.*?\n  \},\n  "trustedExtensionAuthAccess"/\n  "trustedExtensionAuthAccess"/s' \
+    /usr/lib/code-server/lib/vscode/product.json \
+  && grep -q '"github.copilot-chat"' /usr/lib/code-server/lib/vscode/product.json \
+     || perl -i -pe \
+        's/("github\.copilot")(\s*\])/$1,"github.copilot-chat"$2/' \
+        /usr/lib/code-server/lib/vscode/product.json
 
 # Cache Copilot VSIX payloads so startup can ensure extensions exist even after clean redeploy.
 RUN mkdir -p /opt/vsix \

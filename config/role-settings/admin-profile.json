@@ -1,0 +1,54 @@
+{
+  "role": "admin",
+  "priority": 100,
+  "description": "Administrator role with full access. All actions are audit-logged.",
+  "securityLevel": "full-access",
+  "settings": {
+    "editor.readOnly": false,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.fontSize": 13,
+    "editor.fontFamily": "Monaco, 'Courier New', monospace",
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.wordWrapColumn": 100,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": true,
+      "source.fixAll.prettier": true
+    },
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "git.enabled": true,
+    "terminal.integrated.enabled": false,
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.python",
+      "editor.formatOnSave": true,
+      "editor.tabSize": 4
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[markdown]": {
+      "editor.wordWrap": "on",
+      "editor.wordWrapColumn": 80
+    },
+    "[yaml]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "security.workspace.trust.enabled": false,
+    "security.workspace.trust.startup": "never",
+    "workbench.colorTheme": "Default Dark+",
+    "workbench.startupEditor": "none",
+    "extensions.recommendations": true,
+    "extensions.ignoreRecommendations": false,
+    "telemetry.telemetryLevel": "off"
+  }
+}

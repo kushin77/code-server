@@ -91,8 +91,11 @@ services:
       # Logging
       OAUTH2_PROXY_AUTH_LOGGING: "true"
       OAUTH2_PROXY_REQUEST_LOGGING: "true"
-      # Skip auth for health checks
-      OAUTH2_PROXY_SKIP_AUTH_ROUTES: "^/health$$|^/oauth2/"
+      # Skip auth for health checks and GitHub OAuth callback
+      # /callback is the GitHub OAuth redirect target used by the github-authentication
+      # VS Code extension — it must reach code-server directly or the OAuth state/code
+      # is consumed before the IDE can exchange it (causing "Sign in" to loop forever).
+      OAUTH2_PROXY_SKIP_AUTH_ROUTES: "^/health$$|^/oauth2/|^/callback"
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:4180/ping"]
       interval: 10s

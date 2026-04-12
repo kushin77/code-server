@@ -11,7 +11,7 @@ param(
 
 # Configuration
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectDir = Join-Path $scriptDir "code-server-enterprise"
+$projectDir = $scriptDir
 $logFile = Join-Path $scriptDir "deployment.log"
 
 # Color codes
@@ -133,6 +133,9 @@ function Deploy {
     Push-Location $projectDir
     terraform apply -auto-approve tfplan
     Pop-Location
+
+    Write-Log "INFO" "Running mandatory runtime redeploy..."
+    pwsh -NoProfile -File (Join-Path $projectDir "scripts/mandatory-redeploy.ps1")
     
     Write-Log "SUCCESS" "✓ Deployment applied"
 }

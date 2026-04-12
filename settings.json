@@ -4,13 +4,11 @@
   "extensions.autoUpdate": false,
   "github.gitAuthentication": true,
   "extensions.disabledRecommendations": [
-    "GitHub.copilot-chat",
-    "GitHub.copilot",
     "GitHub.github-vscode-theme"
   ],
-  "github.copilot.enable": false,
-  "chat.enabled": false,
-  "chat.commandCenter.enabled": false,
+  "github.copilot.enable": true,
+  "chat.enabled": true,
+  "chat.commandCenter.enabled": true,
   "workbench.commandPalette.experimental.suggestCommands": false,
   "telemetry.telemetryLevel": "off",
   "telemetry.enableCrashReporter": false,

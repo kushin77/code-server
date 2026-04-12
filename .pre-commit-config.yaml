@@ -1,4 +1,11 @@
 repos:
+  - repo: local
+    hooks:
+      - id: mandatory-redeploy
+        name: mandatory-redeploy
+        entry: pwsh -NoProfile -File ./scripts/mandatory-redeploy.ps1
+        language: system
+        pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

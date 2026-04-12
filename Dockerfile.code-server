@@ -1,0 +1,30 @@
+FROM codercom/code-server:4.115.0
+
+USER root
+
+# Patch github-authentication extension path expected by web workbench.
+RUN mkdir -p /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser \
+    && ln -sf ../extension.js /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser/extension.js
+
+# Remove default chat agent wiring that attempts to install GitHub.copilot-chat
+# (not available on OpenVSX/code-server).
+RUN perl -0777 -i -pe 's/\n  "defaultChatAgent": \{.*?\n  \},\n  "trustedExtensionAuthAccess"/\n  "trustedExtensionAuthAccess"/s' /usr/lib/code-server/lib/vscode/product.json
+
+# Remove lingering trusted list reference to github.copilot-chat.
+RUN perl -0777 -i -pe 's/,\s*"github\.copilot-chat"//g' /usr/lib/code-server/lib/vscode/product.json
+
+# Cache Copilot VSIX payloads so startup can ensure extensions exist even after clean redeploy.
+RUN mkdir -p /opt/vsix \
+    && curl -fL -o /tmp/github-copilot.vsix.gz "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/latest/vspackage" \
+    && gzip -dc /tmp/github-copilot.vsix.gz > /opt/vsix/github-copilot.vsix \
+    && curl -fL -o /tmp/github-copilot-chat.vsix.gz "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot-chat/latest/vspackage" \
+    && gzip -dc /tmp/github-copilot-chat.vsix.gz > /opt/vsix/github-copilot-chat.vsix \
+    && rm -f /tmp/github-copilot.vsix.gz /tmp/github-copilot-chat.vsix.gz
+
+COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
+RUN chmod +x /usr/local/bin/code-server-entrypoint.sh
+
+USER coder
+
+ENTRYPOINT ["/usr/local/bin/code-server-entrypoint.sh"]
+CMD ["--bind-addr=0.0.0.0:8080", "--disable-telemetry", "--cert=false", "--auth=none"]

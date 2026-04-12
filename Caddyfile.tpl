@@ -1,6 +1,17 @@
 localhost {
     # Auto HTTPS
     encode gzip
+
+    # One-shot endpoint to clear stale workbench cache/storage in a regular profile.
+    @reset path /reset-browser-state
+    header @reset Clear-Site-Data "\"cache\", \"storage\""
+    respond @reset 200
+
+    # Prevent stale JS/CSS bundles from persisting across patched deployments.
+    @stableAssets path /stable-*
+    header @stableAssets Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    header @stableAssets Pragma "no-cache"
+    header @stableAssets Expires "0"
     
     # Reverse proxy to code-server
     reverse_proxy ${code_server_host}:${code_server_port} {

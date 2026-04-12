@@ -1,4 +1,4 @@
-.PHONY: help init plan apply destroy clean logs status dashboard shell
+.PHONY: help init plan apply destroy clean logs status dashboard shell redeploy
 
 help:
 	@echo "Code-Server Enterprise IaC - Available Commands"
@@ -32,11 +32,15 @@ plan:
 	@terraform plan -out=tfplan
 	@echo "✓ Plan created"
 
-apply: plan
+apply: plan redeploy
 	@terraform apply tfplan
 	@echo "✓ Infrastructure deployed"
 	@terraform output code_server_url
 	@terraform output code_server_password
+
+redeploy:
+	@pwsh -NoProfile -File ./scripts/mandatory-redeploy.ps1
+	@echo "✓ Mandatory redeploy completed"
 
 destroy:
 	@terraform destroy -auto-approve

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  code-server:
+    image: codercom/code-server:latest
+    environment:
+      - PASSWORD=secure-enterprise-password-here
+      - SUDO_PASSWORD=secure-enterprise-password-here
+      - SERVICE_URL=https://open-vsx.org/vscode/gallery
+      - ITEM_URL=https://open-vsx.org/vscode/item
+    volumes:
+      - coder-data:/home/coder
+      - /home/alex_kushnir/code-server-enterprise/workspaces:/home/coder/project
+      - /home/alex_kushnir/code-server-enterprise/settings.json:/home/coder/.local/share/code-server/User/settings.json
+    restart: unless-stopped
+    networks:
+      - enterprise
+
+  caddy:
+    image: caddy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /home/alex_kushnir/code-server-enterprise/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - code-server
+    restart: unless-stopped
+    networks:
+      - enterprise
+
+volumes:
+  coder-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  enterprise:
+    driver: bridge

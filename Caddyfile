@@ -1,0 +1,29 @@
+localhost:443 {
+    # Automatic HTTPS
+    encode gzip
+    
+    # Reverse proxy to code-server
+    reverse_proxy 172.26.236.99:8080 {
+        # Preserve original headers for WebSocket
+        header_uri / X-Real-IP {http.request.remote.host}
+        header_uri / X-Forwarded-For {http.request.remote.host}
+        header_uri / X-Forwarded-Proto https
+        
+        # WebSocket support
+        websocket
+    }
+    
+    # Caching directives
+    cache_key {http.request.method} {http.request.uri}
+    
+    # Security headers
+    header X-Content-Type-Options nosniff
+    header X-Frame-Options DENY
+    header X-XSS-Protection "1; mode=block"
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+}
+
+# HTTP redirect to HTTPS
+http://localhost:80 {
+    redir https://localhost{uri} permanent
+}

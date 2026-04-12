@@ -1,0 +1,29 @@
+# Multi-User Enterprise Configuration
+# Add this to code-server config.yaml for team deployment
+
+auth: password
+password: ${CODE_SERVER_PASSWORD}
+cert: false  # Let Caddy handle HTTPS
+
+# Workspace settings
+workspace-dir: /home/coder/project
+
+# Security
+proxy-domain: 
+  - localhost
+  - 127.0.0.1
+
+# Logging for audit trail
+logging: debug
+
+# Extensions marketplace
+extension-gallery: https://open-vsx.org/vscode/gallery
+
+# Disable telemetry for compliance
+disable-telemetry: true
+
+# Resource limits per session
+max-connections: 100
+
+# Session timeout (30 minutes)
+session-timeout: 1800000

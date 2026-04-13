@@ -9,10 +9,10 @@ on:
 jobs:
   validate:
     name: Run repository validation
-    runs-on: ubuntu-lates
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkou
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -26,10 +26,10 @@ jobs:
           . .venv/bin/activate
           python -m pip install --upgrade pip setuptools wheel
 
-      - name: Install pre-commi
+      - name: Install pre-commit
         run: |
           . .venv/bin/activate
-          python -m pip install pre-commi
+          python -m pip install pre-commit
 
       - name: Install repo requirements (if any)
         run: |

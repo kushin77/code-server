@@ -55,3 +55,27 @@ backup.tfstate
 workspace/*
 !workspace/.gitkeep
 terraform.tfvars
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+coverage/
+.coverage
+htmlcov/
+
+# Node / JS build outputs
+out/
+.next/
+node_modules/
+
+# HuggingFace model cache (can be large)
+hf-model-cache/
+/tmp/hf-model-cache/

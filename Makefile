@@ -371,3 +371,90 @@ v: validate    # Short for validate
 om: ollama-status  # Ollama status
 oi: ollama-init    # Ollama init
 op: ollama-pull-models  # Ollama pull
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AGENT FARM
+# ─────────────────────────────────────────────────────────────────────────────
+
+## Pull a single model from HuggingFace into Ollama
+## Usage: make pull-model MODEL=qwen2.5-coder:32b-instruct-q4_K_M
+pull-model:
+	@if [ -z "$(MODEL)" ]; then echo "Usage: make pull-model MODEL=<ollama-name>"; exit 1; fi
+	@MODEL="$(MODEL)" && \
+	 REPO=$$(yq eval ".models[] | select(.name == \"$$MODEL\") | .hf_repo" config/recommended-models.yaml) && \
+	 FILE=$$(yq eval ".models[] | select(.name == \"$$MODEL\") | .hf_file" config/recommended-models.yaml) && \
+	 ./scripts/hf_pull_model.sh "$$REPO" "$$FILE" "$$MODEL"
+
+## Pull all recommended models (respects VRAM gate)
+pull-recommended:
+	@./scripts/hf_pull_recommended.sh
+
+## Pull only embedding models
+pull-embeddings:
+	@./scripts/hf_pull_recommended.sh embedding
+
+## Build all agent-farm Docker images
+agent-build:
+	@docker compose build embeddings agent-api computer-use-mcp
+
+## Start agent-farm services (idempotent — existing containers are no-ops)
+agent-up:
+	@docker compose up -d keycloak-db keycloak chroma embeddings agent-api computer-use-mcp
+
+## Stop agent-farm services
+agent-down:
+	@docker compose stop keycloak-db keycloak chroma embeddings agent-api computer-use-mcp
+
+## Tail logs for all agent-farm services
+agent-logs:
+	@docker compose logs -f keycloak chroma embeddings agent-api computer-use-mcp
+
+## Aggregate health check across all agent-farm services
+agent-health:
+	@echo "==> Agent Farm Health"
+	@curl -sf http://localhost:8001/health | python3 -m json.tool || echo "agent-api unreachable"
+	@curl -sf http://localhost:8000/health | python3 -m json.tool || echo "embeddings unreachable"
+	@curl -sf http://localhost:8008/health | python3 -m json.tool || echo "computer-use-mcp unreachable"
+	@curl -sf http://localhost:8080/health/live | python3 -m json.tool || echo "keycloak unreachable"
+
+## Bootstrap Keycloak realm from keycloak/realm-export.json
+keycloak-setup:
+	@echo "==> Waiting for Keycloak..."
+	@until curl -sf http://localhost:8080/health/live > /dev/null; do sleep 2; done
+	@curl -sf -X POST http://localhost:8080/auth/realms/master/protocol/openid-connect/token \
+	  -d 'username=$(KEYCLOAK_ADMIN_USER)&password=$(KEYCLOAK_ADMIN_PASSWORD)&grant_type=password&client_id=admin-cli' \
+	  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])" > /tmp/kc-token.txt
+	@curl -sf -X POST http://localhost:8080/auth/admin/realms \
+	  -H "Authorization: Bearer $$(cat /tmp/kc-token.txt)" \
+	  -H "Content-Type: application/json" \
+	  -d @keycloak/realm-export.json
+	@rm -f /tmp/kc-token.txt
+	@echo "==> Keycloak realm imported."
+
+## Show RAG index status (ChromaDB collection count)
+rag-status:
+	@curl -sf http://localhost:8000 | python3 -m json.tool || echo "Embeddings service not running"
+
+## Index current workspace into ChromaDB
+index-codebase:
+	@curl -sf -X POST http://localhost:8001/rag/index \
+	  -H "Content-Type: application/json" \
+	  -d '{"path":"/workspace","collection":"codebase"}' | python3 -m json.tool
+
+## Submit a task to the agent farm (usage: make agent-task TASK="<description>")
+agent-task:
+	@if [ -z "$(TASK)" ]; then echo "Usage: make agent-task TASK=\"your task here\""; exit 1; fi
+	@curl -sf -X POST http://localhost:8001/run_task \
+	  -H "Content-Type: application/json" \
+	  -d "{\"task\":\"$(TASK)\",\"thread_id\":\"$$(date +%s)\"}" | python3 -m json.tool
+
+## Prepare fine-tuning dataset from staged git commits
+finetune-prep:
+	@python3 scripts/prepare_finetune_dataset.py
+
+## Aliases
+ab: agent-build
+au: agent-up
+ad: agent-down
+al: agent-logs
+ah: agent-health

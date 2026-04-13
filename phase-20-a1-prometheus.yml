@@ -1,0 +1,227 @@
+# Phase 20-A1: Prometheus Configuration
+# ✅ Immutable, idempotent metrics collection
+
+global:
+  # ✅ Immutable global settings
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    phase: 'phase-20-a1'
+    component: 'global-orchestration-framework'
+    environment: 'staging'
+    monitor: 'prometheus'
+
+# ✅ Alertmanager configurations (immutable)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# ✅ Rule files (immutable path)
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+  - '/etc/prometheus/rules/*.yaml'
+
+# ========================================
+# Scrape Configurations - Immutable
+# ========================================
+scrape_configs:
+  # ========================================
+  # 🟢 Prometheus self-monitoring
+  # ========================================
+  - job_name: 'prometheus'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    metrics_path: '/metrics'
+    scheme: 'http'
+    honor_timestamps: true
+    honor_labels: true
+    
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          region: 'local'
+    
+    # ✅ Relabeling (immutable)
+    relabel_configs:
+      - source_labels: [__scheme__]
+        action: replace
+        regex: '^([^:]+)(?::\d+)?$'
+        replacement: '${1}'
+        target_label: scheme
+
+  # ========================================
+  # 🟢 Global Orchestrator - Main Service
+  # ========================================
+  - job_name: 'global-orchestrator'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    metrics_path: '/metrics'
+    scheme: 'http'
+    honor_timestamps: true
+    honor_labels: false
+    
+    static_configs:
+      - targets: ['global-orchestrator:9205']
+        labels:
+          service: 'global-orchestrator'
+          component: 'orchestration-engine'
+          region: 'primary'
+    
+    # ✅ Metric relabeling (immutable)
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '^(orchestrator_.*|global_.*)'
+        action: keep
+      
+      - source_labels: [__name__]
+        regex: '(up|scrape_duration_seconds|scrape_samples_scr.*)'
+        action: keep
+
+  # ========================================
+  # 🟢 Regional Health Checks
+  # ========================================
+  - job_name: 'regional_health'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    metrics_path: '/health-metrics'
+    scheme: 'http'
+    
+    static_configs:
+      - targets: ['global-orchestrator:9205']
+        labels:
+          service: 'health-checker'
+          type: 'regional-health'
+    
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(region_health|region_latency|region_error_rate|region_failover.*)'
+        action: keep
+
+  # ========================================
+  # 🟢 Service Discovery Metrics
+  # ========================================
+  - job_name: 'service_discovery'
+    scrape_interval: 45s
+    scrape_timeout: 20s
+    metrics_path: '/discovery-metrics'
+    scheme: 'http'
+    
+    static_configs:
+      - targets: ['global-orchestrator:9205']
+        labels:
+          service: 'service-discovery'
+          type: 'endpoint-registry'
+    
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(discovery_.*|service_registry.*|endpoint_.*)'
+        action: keep
+
+  # ========================================
+  # 🟢 Configuration Distribution Metrics
+  # ========================================
+  - job_name: 'config_distribution'
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    metrics_path: '/config-metrics'
+    scheme: 'http'
+    
+    static_configs:
+      - targets: ['global-orchestrator:9205']
+        labels:
+          service: 'config-distributor'
+          type: 'global-config'
+    
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(config_.*|distribution_.*|version_.*)'
+        action: keep
+
+  # ========================================
+  # 🟢 Failover Events & Incidents
+  # ========================================
+  - job_name: 'failover_events'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/events-metrics'
+    scheme: 'http'
+    
+    static_configs:
+      - targets: ['global-orchestrator:9205']
+        labels:
+          service: 'failover-monitor'
+          type: 'incident-tracking'
+    
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: '(failover_.*|incident_.*|recovery_.*)'
+        action: keep
+
+  # ========================================
+  # 🟢 Docker Container Metrics
+  # ========================================
+  - job_name: 'docker-containers'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    metrics_path: '/metrics'
+    scheme: 'http'
+    
+    static_configs:
+      - targets: ['127.0.0.1:8001']  # From docker-stats or cAdvisor
+        labels:
+          service: 'docker-monitoring'
+          type: 'container-metrics'
+    
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'container_(.*)'
+        action: keep
+
+  # ========================================
+  # 🟢 Network Metrics (optional cadvisor)
+  # ========================================
+  - job_name: 'network'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    metrics_path: '/metrics'
+    scheme: 'http'
+    
+    static_configs:
+      - targets: ['127.0.0.1:8080']  # If cAdvisor running
+        labels:
+          service: 'network-monitoring'
+          type: 'network-stats'
+    
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'network_(.*)'
+        action: keep
+
+# ========================================
+# Remote Storage Configuration (optional)
+# ========================================
+remote_write: []
+  # Example for long-term storage:
+  # - url: http://thanos:19291/api/v1/receive
+  #   queue_config:
+  #     capacity: 10000
+  #     max_shards: 200
+  #     min_shards: 1
+  #     max_samples_per_send: 500
+  #     batch_send_wait: 5s
+  #     min_back_off: 30ms
+  #     max_back_off: 100ms
+
+remote_read: []
+  # Example for reading from remote storage:
+  # - url: http://thanos:10901/api/v1/query
+
+# ========================================
+# Service Discovery (optional - CDP/DNS-SD)
+# ========================================
+# file_sd_configs: []
+# consul_sd_configs: []
+# kubernetes_sd_configs: []

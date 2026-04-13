@@ -49,44 +49,62 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
-      contents: read
+      contents: write
       issues: write
     steps:
-      - name: Report stale branches
+      - name: Audit and auto-delete stale branches
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
-            const STALE_DAYS = 30;
-            const cutoff = new Date(Date.now() - STALE_DAYS * 24 * 60 * 60 * 1000);
+            const WARN_DAYS = 14;   // Report after 14 days of inactivity
+            const AUTO_DELETE_DAYS = 60; // Auto-delete after 60 days
+            const PROTECTED = ['main', 'master', 'develop'];
+            const now = Date.now();
 
             const branches = await github.paginate(github.rest.repos.listBranches, {
               owner, repo, protected: false, per_page: 100
             });
 
-            const stale = [];
+            const warn = [], deleted = [];
             for (const branch of branches) {
-              if (['main', 'master', 'develop'].includes(branch.name)) continue;
+              if (PROTECTED.includes(branch.name)) continue;
               const commit = await github.rest.repos.getCommit({
                 owner, repo, ref: branch.commit.sha
               });
-              const committed = new Date(commit.data.commit.committer.date);
-              if (committed < cutoff) {
-                stale.push(`- \`${branch.name}\` — last commit: ${committed.toISOString().split('T')[0]}`);
+              const age = (now - new Date(commit.data.commit.committer.date)) / 86400000;
+              const date = new Date(commit.data.commit.committer.date).toISOString().split('T')[0];
+
+              if (age >= AUTO_DELETE_DAYS) {
+                try {
+                  await github.rest.git.deleteRef({ owner, repo, ref: `heads/${branch.name}` });
+                  deleted.push(`- \`${branch.name}\` — ${Math.floor(age)}d old (auto-deleted)`);
+                } catch(e) {
+                  deleted.push(`- \`${branch.name}\` — delete failed: ${e.message}`);
+                }
+              } else if (age >= WARN_DAYS) {
+                warn.push(`- \`${branch.name}\` — last commit: ${date} (${Math.floor(age)}d ago)`);
               }
             }
 
-            if (stale.length === 0) {
+            if (warn.length === 0 && deleted.length === 0) {
               console.log('No stale branches found.');
               return;
             }
 
-            const body = `## Stale Branch Audit\n\nThe following branches have had no commits in the last ${STALE_DAYS} days:\n\n${stale.join('\n')}\n\nPlease merge or delete them to keep the repo clean.`;
+            let body = `## Stale Branch Audit — ${new Date().toISOString().split('T')[0]}\n\n`;
+            if (deleted.length > 0) {
+              body += `### 🗑️ Auto-deleted (>${AUTO_DELETE_DAYS} days stale)\n${deleted.join('\n')}\n\n`;
+            }
+            if (warn.length > 0) {
+              body += `### ⚠️ Needs attention (>${WARN_DAYS} days stale, will auto-delete at ${AUTO_DELETE_DAYS}d)\n${warn.join('\n')}\n\n`;
+              body += `> Merge or delete these branches to avoid automatic deletion.`;
+            }
+
             await github.rest.issues.create({
               owner, repo,
-              title: `[Branch Hygiene] ${stale.length} stale branch(es) detected`,
+              title: `[Branch Hygiene] ${deleted.length} deleted, ${warn.length} stale branch(es)`,
               body,
               labels: ['hygiene', 'tech-debt']
             });
-            console.log(`Created issue for ${stale.length} stale branches.`);

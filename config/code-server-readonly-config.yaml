@@ -1,0 +1,236 @@
+# Read-Only IDE Access Control Configuration
+# Issue #187: Prevent Code Downloads & Exfiltration
+#
+# Usage: Copy security settings to code-server config
+# Location: ~/.config/code-server/config.yaml
+
+---
+# =============================================================================
+# SECTION 1: IDE FILESYSTEM RESTRICTIONS
+# =============================================================================
+# Disable access to sensitive files and hide them from the IDE
+
+bindAddr: 0.0.0.0:8080
+auth: password
+password: changeme  # Use strong password + Cloudflare Access
+
+# Hide sensitive files from IDE explorer
+files.exclude:
+  ".env": true                    # Hide environment variables
+  "*.key": true                   # Hide SSH/TLS keys
+  ".aws": true                    # Hide AWS credentials
+  ".ssh": true                    # Hide SSH directory
+  ".git/hooks/**": true           # Hide git hooks
+  ".git/config.local": true       # Hide local git config
+  ".npmrc": true                  # Hide npm token
+  ".docker": true                 # Hide Docker config
+  "**/.terraform/**": true        # Hide Terraform state (may contain secrets)
+  "**/node_modules": true         # Reduce clutter (huge folder)
+  "**/.venv": true                # Hide venv directories
+  "**/venv": true                 # Hide venv directories
+
+# Mark sensitive files as read-only when viewed
+workbench.editorAssociations:
+  "*.key": "readonly"
+  ".env": "readonly"
+  ".dockercfg": "readonly"
+  ".npmrc": "readonly"
+
+# Show read-only indicator prominently
+editor.readOnlyIndicator: "visible"
+
+# Disable file download from IDE
+# Note: This requires code-server patch (see extensions list below)
+extensions.ignoreRecommendations: true
+
+# =============================================================================
+# SECTION 2: SECURITY-CRITICAL EXTENSION MANAGEMENT
+# =============================================================================
+# Allow only safe extensions, block anything that enables exfiltration
+
+extensions.allowRemoteInstall: false
+extensions.devDependencies: false
+extensions.autoCheckUpdates: false
+extensions.autoUpdate: false
+
+# Whitelist of allowed extensions (all others blocked)
+extensions.allow:
+  - "ms-python.python"            # Python support (safe)
+  - "ms-python.vscode-pylance"    # Python language server
+  - "rust-lang.rust-analyzer"     # Rust language support
+  - "golang.go"                   # Go support
+  - "ms-vscode.go"                # Go tools
+  - "ms-vscode.cpptools"          # C++ support
+  - "ms-vscode.makefile-tools"    # Makefile support
+  - "eamodio.gitlens"             # Git support (SAFE if git proxy in place)
+  - "ms-vscode.js-debug"          # JS debugging
+  - "ms-vscode.extensions"        # Extension manager (optional)
+  - "ms-python.debugpy"           # Python debugger
+  - "esbenp.prettier-vscode"      # Code formatter
+  - "ms-python.pylint"            # Python linter
+
+# Block dangerous extensions (explicitly)
+extensions.ignore:
+  - "ms-vscode.remote-explorer"   # BLOCK: Enables file transfers via Explorer
+  - "ms-vscode.remote-ssh"        # BLOCK: Direct SSH access
+  - "ms-vscode.remote-ssh-edit"   # BLOCK: Edit remote files
+  - "ms-vscode.ftp-kr"            # BLOCK: FTP client
+  - "ms-vscode.sftp"              # BLOCK: SFTP client
+  - "pkosta.sftp"                 # BLOCK: SFTP
+  - "ms-playright.test-explorer"  # BLOCK: May enable test exports
+
+# =============================================================================
+# SECTION 3: TERMINAL SECURITY
+# =============================================================================
+# Use restricted shell instead of standard bash/zsh
+
+terminal.integrated.shellArgs.linux:
+  - "--login"
+  - "-i"
+
+terminal.integrated.shellPath.linux: "/usr/local/bin/restricted-shell"
+
+# Terminal environment setup
+terminal.integrated.env.linux:
+  SHELL: "/usr/local/bin/restricted-shell"
+  DEVELOPER_SESSION_ID: "${USER}"  # Tracked for audit logging
+
+# Disable terminal extensions/plugins that could bypass restrictions
+terminal.integrated.enableBellAnimation: false
+terminal.integrated.enableMultiLinePasteWarning: true
+
+# Keep terminal history but on local machine only (not synced)
+terminal.integrated.shellIntegration.enabled: true
+terminal.integrated.shellIntegration.nonce: "secure-session"
+
+# =============================================================================
+# SECTION 4: GIT CONFIGURATION
+# =============================================================================
+# Route git operations through authenticated proxy
+
+git.enabled: true
+git.ignoreMissingGitWarning: false
+
+# Use credential helper (git proxy) instead of SSH
+git.allowNoVerifyCommit: false
+git.allowForcePush: false
+git.confirmSync: true
+
+# Credential helper configuration
+git.credentials.helper: "cloudflare-git-proxy"
+
+# =============================================================================
+# SECTION 5: WORKSPACE SAFETY SETTINGS
+# =============================================================================
+
+# Disable settings sync (prevent credential leakage)
+settingsSync.enableBackupSettings: false
+settingsSync.keybindingsPerPlatform: false
+
+# Disable telemetry
+telemetry.enableCrashReporter: false
+telemetry.enableTelemetry: false
+
+# Disable marketplace suggestions
+extensions.recommendations: false
+extensions.showRecommendationsOnlyOnDemand: true
+
+# =============================================================================
+# SECTION 6: FILE OPERATIONS RESTRICTIONS
+# =============================================================================
+# Prevent bulk file operations that could exfiltrate code
+
+files.nested.enabled: false        # Don't allow nested workspaces
+editor.formatOnSave: true           # Only format (no write access)
+files.autoSave: "off"               # Prevent accidental modifications
+editor.autoSave: "off"              # Explicit saves only
+
+# Workspace trust requirements
+security.workspace.trust.enabled: true
+security.workspace.trust.startupPrompt: "always"
+
+# Preview trust settings
+security.workspace.trust.banner: "always"
+security.workspace.trust.untrustedFiles: "prompt"
+
+# =============================================================================
+# SECTION 7: AUDIT & LOGGING
+# =============================================================================
+# Log all IDE activity for security audit trail
+
+# Output channel logging
+output.trace.extension: false
+output.trace.server: "verbose"
+
+# Developer session tracking
+# Note: Requires audit logging implementation (see separate script)
+developerSession.trackCommands: true
+developerSession.trackFileAccess: true
+developerSession.trackTerminalInput: true
+
+# Do NOT log passwords/tokens (filtered at source)
+developerSession.filterSensitiveData: true
+
+# =============================================================================
+# SECTION 8: PERFORMANCE & RESOURCES
+# =============================================================================
+# Ensure minimal performance impact
+
+files.watcherExclude:
+  "**/node_modules/**": true
+  "**/.git/**": true
+  "**/dist/**": true
+  "**/build/**": true
+  "**/target/**": true
+
+# Limit file search scope
+search.followSymlinks: false
+search.useParentIgnoreFiles: true
+
+# Memory constraints (for containerized deployment)
+memory.maxMemory: 512
+
+# =============================================================================
+# SECTION 9: USER EXPERIENCE SETTINGS
+# =============================================================================
+# Balance usability with security
+
+workbench.colorTheme: "Default Dark+"
+editor.fontFamily: "Fira Code, Courier New"
+editor.fontSize: 14
+editor.fontLigatures: true
+
+# Helpful for developers
+editor.minimap.enabled: true
+editor.suggest.showInlineDetails: true
+breadcrumbs.enabled: true
+
+# =============================================================================
+# SECTION 10: STARTUP & SESSION MANAGEMENT
+# =============================================================================
+
+# Session timeout (matches Cloudflare Access default)
+session.timeout: 14400000  # 4 hours in milliseconds
+session.restorerTimeout: 0  # Don't restore session after timeout
+
+# Workspace settings
+workbench.startupEditor: "none"
+window.title: "Code Server - READ-ONLY Access"
+
+# =============================================================================
+# NOTE: REQUIRED PATCHES
+# =============================================================================
+# The following require custom code-server patches:
+#
+# 1. Remove "Download" from file context menu in Explorer
+#    File: src/vs/workbench/contrib/files/browser/fileActions.ts
+#    Action: Remove RegisteredFileAction for Download action
+#
+# 2. Disable package.json "Open in Integrated Terminal"
+#    Could be security risk if terminal not properly restricted
+#
+# 3. Patch terminal.ts to enforce restricted-shell usage
+#    Prevent users from overriding shellPath
+#
+# See code-server-readonly-patches.diff for implementation
+# =============================================================================

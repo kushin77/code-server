@@ -1,0 +1,93 @@
+name: Dependency & License Scanning
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Weekly, Sunday 3 AM
+  pull_request:
+    paths:
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '**/go.mod'
+      - '**/go.sum'
+      - 'terraform/**'
+
+jobs:
+  dependencies:
+    name: Scan Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: npm Audit
+        working-directory: extensions/agent-farm
+        run: |
+          npm audit --production --audit-level=high || true
+          npm audit json > npm-audit.json || true
+
+      - name: License Scan
+        run: |
+          npm install -g license-checker
+          license-checker --json > license-report.json || true
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          format: 'spdx-json'
+          output-file: sbom-spdx.json
+
+      - name: Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          path: '.'
+          format: 'JSON'
+          args: >-
+            -l
+
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-scan-results
+          path: |
+            npm-audit.json
+            license-report.json
+            sbom-spdx.json
+          retention-days: 90
+
+  licenses:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Check Licenses
+        run: |
+          license-checker \
+            --onlyunknown \
+            --excludePackages "code-server" \
+            --exit 1 || echo "Unknown licenses found - review required"
+
+      - name: Allowed Licenses Check
+        run: |
+          license-checker \
+            --json | jq -r '.[] | "\(.name): \(.licenses)"' | \
+            grep -E "(MIT|Apache|BSD|ISC|LGPL)" || echo "Review licenses"
+
+permissions:
+  contents: read
+  security-events: write

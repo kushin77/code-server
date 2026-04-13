@@ -68,17 +68,41 @@ export class OllamaClient {
         { responseType: 'stream' }
       );
 
+      let buffer = '';
       for await (const chunk of response.data) {
-        const line = chunk.toString('utf-8').trim();
-        if (line) {
-          try {
-            const json = JSON.parse(line);
-            if (json.response) {
-              yield json.response;
+        // Accumulate bytes into buffer, handling chunk boundaries
+        buffer += chunk.toString('utf-8');
+        
+        // Split on newline but preserve incomplete lines
+        const lines = buffer.split('\n');
+        // Keep the last incomplete line (if any) in the buffer
+        buffer = lines.pop() || '';
+        
+        // Process all complete lines
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed) {
+            try {
+              const json = JSON.parse(trimmed);
+              if (json.response) {
+                yield json.response;
+              }
+            } catch (e) {
+              // Skip non-JSON lines
             }
-          } catch (e) {
-            // Skip non-JSON lines
           }
+        }
+      }
+      
+      // Process any remaining buffered content
+      if (buffer.trim()) {
+        try {
+          const json = JSON.parse(buffer.trim());
+          if (json.response) {
+            yield json.response;
+          }
+        } catch (e) {
+          // Skip non-JSON lines
         }
       }
     } catch (error) {

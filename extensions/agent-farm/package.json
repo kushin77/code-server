@@ -1,0 +1,179 @@
+{
+  "name": "agent-farm",
+  "displayName": "Agent Farm - Multi-Agent Development System",
+  "description": "Specialized agents for code analysis, review, architecture, and testing",
+  "version": "0.1.0",
+  "publisher": "kushin77",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "Testing",
+    "Linters"
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "copilot",
+    "code-review",
+    "refactoring",
+    "testing"
+  ],
+  "icon": "resources/icon.png",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:agent-farm.executeTask",
+    "onView:agent-farm-dashboard"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agent-farm.executeTask",
+        "title": "Agent Farm: Execute Task",
+        "description": "Route task to specialized agents"
+      },
+      {
+        "command": "agent-farm.showDashboard",
+        "title": "Agent Farm: Show Dashboard",
+        "description": "Display agent farm status and history"
+      },
+      {
+        "command": "agent-farm.semanticSearch",
+        "title": "Agent Farm: Semantic Search",
+        "description": "Search code by meaning"
+      },
+      {
+        "command": "agent-farm.analyzeFile",
+        "title": "Agent Farm: Analyze File",
+        "description": "Run agents on current file"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "agent-farm-dashboard",
+          "name": "Agent Farm",
+          "when": "workspaceFolderCount != 0"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "agent-farm-container",
+          "title": "Agent Farm",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Agent Farm",
+      "properties": {
+        "agentFarm.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Agent Farm"
+        },
+        "agentFarm.agents": {
+          "type": "array",
+          "default": [
+            "code",
+            "review"
+          ],
+          "description": "Enabled agents (code, review, architect, test)"
+        },
+        "agentFarm.maxConcurrentAgents": {
+          "type": "number",
+          "default": 2,
+          "description": "Maximum concurrent agent executions"
+        },
+        "agentFarm.auditTrail": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable audit trail logging"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0"
+  },
+  "dependencies": {
+    "tree-sitter": "^0.20.8",
+    "tree-sitter-javascript": "^0.20.0",
+    "tree-sitter-python": "^0.20.0",
+    "tree-sitter-typescript": "^0.20.2"
+  }
+}
+{
+  "name": "agent-farm",
+  "displayName": "Agent Farm - AI Developer Team",
+  "description": "Orchestrated team of 5 specialized AI agents for code generation, testing, review, and documentation",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "AI",
+    "Developer Tools",
+    "Code Generators"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agentFarm.executeTask",
+        "title": "Agent Farm: Execute Task"
+      },
+      {
+        "command": "agentFarm.showDashboard",
+        "title": "Agent Farm: Show Dashboard"
+      },
+      {
+        "command": "agentFarm.searchCode",
+        "title": "Agent Farm: Search Code"
+      },
+      {
+        "command": "agentFarm.analyzeFile",
+        "title": "Agent Farm: Analyze File"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.60.0",
+    "typescript": "^5.2.0"
+  }
+}

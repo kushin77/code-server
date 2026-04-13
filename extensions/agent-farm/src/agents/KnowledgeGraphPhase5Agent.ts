@@ -3,10 +3,9 @@
  * Semantic code understanding through knowledge graphs
  */
 
-import { Agent } from '../phases';
+import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';
 import { CodeDependencyExtractor, DependencyGraph } from '../ml/CodeDependencyExtractor';
 import { KnowledgeGraphBuilder, KnowledgeGraph } from '../ml/KnowledgeGraphBuilder';
-import { RelationshipAnalyzer, CallGraph } from '../ml/RelationshipAnalyzer';
 
 export interface KnowledgeGraphQuery {
   type: 'dependency' | 'relationship' | 'architecture' | 'complexity' | 'impact';
@@ -21,7 +20,7 @@ export interface KnowledgeGraphQuery {
 
 export interface KnowledgeGraphResult {
   query: KnowledgeGraphQuery;
-  graph: KnowledgeGraph | DependencyGraph | CallGraph;
+  graph: KnowledgeGraph | DependencyGraph;
   analysis: {
     cyclicDependencies?: Array<{ nodes: string[]; severity: string }>;
     criticality: number;
@@ -32,60 +31,85 @@ export interface KnowledgeGraphResult {
 }
 
 export class KnowledgeGraphPhase5Agent extends Agent {
+  readonly name = 'KnowledgeGraphPhase5Agent';
+  readonly domain = 'Code Intelligence & Architecture';
+
   private dependencyExtractor: CodeDependencyExtractor;
   private graphBuilder: KnowledgeGraphBuilder;
-  private relationshipAnalyzer: RelationshipAnalyzer;
+  private cachedGraph: KnowledgeGraph | null = null;
 
-  constructor(context: any) {
-    super('KnowledgeGraphPhase5Agent', context);
+  constructor() {
+    super();
     this.dependencyExtractor = new CodeDependencyExtractor();
     this.graphBuilder = new KnowledgeGraphBuilder();
-    this.relationshipAnalyzer = new RelationshipAnalyzer();
   }
 
   /**
-   * Analyze code and build knowledge graph
+   * Analyze code context using knowledge graph
    */
-  async analyzeCodebase(files: Array<{ path: string; content: string }>): Promise<KnowledgeGraph> {
-    const startTime = performance.now();
+  async analyze(context: CodeContext): Promise<AgentOutput> {
+    try {
+      this.log('Starting knowledge graph analysis...');
 
-    // Extract dependencies
-    const depGraph = this.dependencyExtractor.buildDependencyGraph(files);
+      // Extract single file
+      const dependencies = await this.dependencyExtractor.extractDependencies(
+        context.content,
+        context.uri.fsPath
+      );
 
-    // Build knowledge graph
-    this.graphBuilder.buildFromDependencyGraph(depGraph);
+      const recommendations: string[] = [];
 
-    // Analyze relationships
-    const callGraph = this.relationshipAnalyzer.buildCallGraph(files);
-    const inheritanceHierarchy = this.relationshipAnalyzer.analyzeInheritanceHierarchy(files);
+      // Analyze dependency structure
+      if (dependencies.length === 0) {
+        recommendations.push('No dependencies found - consider this module can be tested independently');
+      } else if (dependencies.length > 10) {
+        recommendations.push(`High dependency count (${dependencies.length}) - consider breaking into smaller modules`);
+      }
 
-    // Enrich graph with analysis
-    this.graphBuilder.enrichWithCallGraph(callGraph);
+      // Detect different dependency types
+      const types = new Set(dependencies.map((d) => d.type));
+      const summary = `Found ${dependencies.length} dependencies of types: ${Array.from(types).join(', ')}`;
 
-    const graph = this.graphBuilder.getGraph();
-    const duration = performance.now() - startTime;
+      return this.formatOutput(summary, recommendations, dependencies.length > 10 ? 'warning' : 'info');
+    } catch (error) {
+      this.log(`Analysis error: ${error instanceof Error ? error.message : String(error)}`);
+      return this.formatOutput('Analysis failed', ['Dependency extraction error'], 'error');
+    }
+  }
 
-    this.log(`Analyzed ${files.length} files in ${duration.toFixed(2)}ms`);
-    this.log(`Built graph with ${graph.nodes.size} nodes and ${graph.edges.size} edges`);
+  /**
+   * Coordinate with other agents
+   */
+  async coordinate(context: MultiAgentContext, previousResults: AgentOutput[]): Promise<void> {
+    this.log('Knowledge graph agent coordinating with other agents...');
 
-    return graph;
+    // Could use previous results from other analysis agents
+    const insights = previousResults.map((r) => `[${r.agentName}] ${r.summary}`).join('\n');
+
+    if (insights) {
+      this.log(`Incorporating insights:\n${insights}`);
+    }
   }
 
   /**
    * Query the knowledge graph
    */
-  async query(queryText: string, files: Array<{ path: string; content: string }>): Promise<KnowledgeGraphResult> {
+  async queryGraph(
+    queryText: string,
+    files: Array<{ path: string; content: string }>
+  ): Promise<KnowledgeGraphResult> {
     // Parse query
     const parsedQuery = this.parseQuery(queryText);
 
     // Build graph if needed
-    if (this.graphBuilder.getGraph().nodes.size === 0) {
-      await this.analyzeCodebase(files);
+    if (!this.cachedGraph || this.cachedGraph.nodes.size === 0) {
+      await this.buildGraph(files);
     }
+
+    const graph = this.cachedGraph!;
 
     // Execute query based on type
     let analysisResult;
-    const graph = this.graphBuilder.getGraph();
 
     switch (parsedQuery.type) {
       case 'dependency':
@@ -116,6 +140,23 @@ export class KnowledgeGraphPhase5Agent extends Agent {
   }
 
   /**
+   * Build knowledge graph from files
+   */
+  private async buildGraph(files: Array<{ path: string; content: string }>): Promise<void> {
+    const startTime = performance.now();
+
+    // Extract dependencies from all files
+    const depGraph = this.dependencyExtractor.buildDependencyGraph(files);
+
+    // Build knowledge graph
+    this.graphBuilder.buildFromDependencyGraph(depGraph);
+    this.cachedGraph = this.graphBuilder.getGraph();
+
+    const duration = performance.now() - startTime;
+    this.log(`Built graph with ${this.cachedGraph.nodes.size} nodes and ${this.cachedGraph.edges.size} edges in ${duration.toFixed(2)}ms`);
+  }
+
+  /**
    * Analyze dependencies of a target
    */
   private analyzeDependencies(
@@ -132,23 +173,25 @@ export class KnowledgeGraphPhase5Agent extends Agent {
       };
     }
 
-    const outgoing = graph.edges
-      .values()
-      .filter((e) => e.from === targetNode.id)
-      .map((e) => ({
-        target: this.getNodeLabel(e.to, graph),
-        type: e.type,
-        strength: e.strength,
-      }));
+    const outgoing: Array<{ target: string; relation: string; weight: number }> = [];
+    const incoming: Array<{ source: string; relation: string; weight: number }> = [];
 
-    const incoming = graph.edges
-      .values()
-      .filter((e) => e.to === targetNode.id)
-      .map((e) => ({
-        source: this.getNodeLabel(e.from, graph),
-        type: e.type,
-        strength: e.strength,
-      }));
+    // Iterate through edges using the correct property names
+    for (const edge of graph.edges.values()) {
+      if (edge.fromId === targetNode.id) {
+        outgoing.push({
+          target: this.getNodeLabel(edge.toId, graph),
+          relation: edge.relation,
+          weight: edge.weight ?? 1,
+        });
+      } else if (edge.toId === targetNode.id) {
+        incoming.push({
+          source: this.getNodeLabel(edge.fromId, graph),
+          relation: edge.relation,
+          weight: edge.weight ?? 1,
+        });
+      }
+    }
 
     const criticality = (incoming.length + outgoing.length * 0.5) / (graph.nodes.size || 1);
 
@@ -231,9 +274,13 @@ export class KnowledgeGraphPhase5Agent extends Agent {
       };
     }
 
-    const pathsOut = this.graphBuilder.findShortestPath(targetNode.id, '');
-    const outEdges = Array.from(graph.edges.values()).filter((e) => e.from === targetNode.id).length;
-    const inEdges = Array.from(graph.edges.values()).filter((e) => e.to === targetNode.id).length;
+    let outEdges = 0;
+    let inEdges = 0;
+
+    for (const edge of graph.edges.values()) {
+      if (edge.fromId === targetNode.id) outEdges++;
+      if (edge.toId === targetNode.id) inEdges++;
+    }
 
     const complexity = (inEdges + outEdges) / (graph.nodes.size || 1);
 
@@ -263,20 +310,22 @@ export class KnowledgeGraphPhase5Agent extends Agent {
       };
     }
 
-    // Find all nodes that depend on target
+    // Find all nodes that depend on target using BFS
     const dependents = new Set<string>();
     const queue = [targetNode.id];
+    const visited = new Set<string>();
 
     while (queue.length > 0) {
       const nodeId = queue.shift()!;
-      Array.from(graph.edges.values())
-        .filter((e) => e.to === nodeId)
-        .forEach((e) => {
-          if (!dependents.has(e.from)) {
-            dependents.add(e.from);
-            queue.push(e.from);
-          }
-        });
+      if (visited.has(nodeId)) continue;
+      visited.add(nodeId);
+
+      for (const edge of graph.edges.values()) {
+        if (edge.toId === nodeId && !visited.has(edge.fromId)) {
+          dependents.add(edge.fromId);
+          queue.push(edge.fromId);
+        }
+      }
     }
 
     const impactScore = dependents.size / (graph.nodes.size || 1);
@@ -334,13 +383,6 @@ export class KnowledgeGraphPhase5Agent extends Agent {
     - Criticality score: ${(analysis.criticality * 100).toFixed(1)}%
     - Affected components: ${analysis.affectedComponents.length}
     - Key findings: ${analysis.recommendations.slice(0, 2).join('; ')}`;
-  }
-
-  async execute(input: any): Promise<KnowledgeGraphResult> {
-    const files = input.files || [];
-    const query = input.query || 'Analyze dependencies';
-
-    return this.query(query, files);
   }
 }
 

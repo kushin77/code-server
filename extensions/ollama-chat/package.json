@@ -1,0 +1,108 @@
+{
+  "name": "ollama-chat",
+  "displayName": "Ollama Chat - Local LLM",
+  "description": "Elite local LLM chat powered by Ollama. Chat with llama2:70b-chat, codegemma, neural-chat, and more.",
+  "version": "1.0.0",
+  "publisher": "enterprise",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "keywords": [
+    "ollama",
+    "llm",
+    "chat",
+    "ai",
+    "code-analysis",
+    "repository-learning"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "ollama.chat",
+        "name": "ollama",
+        "description": "Chat with local Ollama LLM models",
+        "isSticky": true
+      }
+    ],
+    "commands": [
+      {
+        "command": "ollama.startServer",
+        "title": "Ollama: Start Server"
+      },
+      {
+        "command": "ollama.stopServer",
+        "title": "Ollama: Stop Server"
+      },
+      {
+        "command": "ollama.listModels",
+        "title": "Ollama: List Available Models"
+      },
+      {
+        "command": "ollama.indexRepository",
+        "title": "Ollama: Index Repository for Context"
+      },
+      {
+        "command": "ollama.analyzeFile",
+        "title": "Ollama: Analyze Current File"
+      },
+      {
+        "command": "ollama.generateCode",
+        "title": "Ollama: Generate Code"
+      }
+    ],
+    "configuration": {
+      "title": "Ollama Chat",
+      "properties": {
+        "ollama.endpoint": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama server endpoint"
+        },
+        "ollama.defaultModel": {
+          "type": "string",
+          "enum": [
+            "llama2:70b-chat",
+            "codegemma",
+            "neural-chat",
+            "mistral"
+          ],
+          "default": "llama2:70b-chat",
+          "description": "Default model for chat"
+        },
+        "ollama.contextWindow": {
+          "type": "number",
+          "default": 4096,
+          "description": "Context window size in tokens"
+        },
+        "ollama.indexRepositoryOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically index repository on extension startup"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --target=node16",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
+    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+    "compile": "npm run esbuild",
+    "watch": "npm run esbuild-watch"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.19.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}

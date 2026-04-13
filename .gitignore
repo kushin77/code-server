@@ -50,3 +50,4 @@ backup.tfstate
 
 workspace/*
 !workspace/.gitkeep
+terraform.tfvars

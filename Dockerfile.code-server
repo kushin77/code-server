@@ -45,13 +45,7 @@ RUN EXTHOST=/usr/lib/code-server/lib/vscode/out/vs/workbench/api/node/extensionH
 #   1. Remove defaultChatAgent (causes install-loop for copilot-chat in code-server)
 #   2. Ensure BOTH github.copilot AND github.copilot-chat are in trustedExtensionAuthAccess
 #      (without this, Copilot Chat is silently denied GitHub tokens and auth never completes)
-RUN perl -0777 -i -pe \
-    's/\n  "defaultChatAgent": \{.*?\n  \},\n  "trustedExtensionAuthAccess"/\n  "trustedExtensionAuthAccess"/s' \
-    /usr/lib/code-server/lib/vscode/product.json \
-  && grep -q '"github.copilot-chat"' /usr/lib/code-server/lib/vscode/product.json \
-     || perl -i -pe \
-        's/("github\.copilot")(\s*\])/$1,"github.copilot-chat"$2/' \
-        /usr/lib/code-server/lib/vscode/product.json
+RUN node -e 'const fs = require("fs"); const path = "/usr/lib/code-server/lib/vscode/product.json"; const product = JSON.parse(fs.readFileSync(path, "utf8")); delete product.defaultChatAgent; const trusted = Array.isArray(product.trustedExtensionAuthAccess) ? product.trustedExtensionAuthAccess : []; product.trustedExtensionAuthAccess = [...new Set([...trusted, "github.copilot", "github.copilot-chat"])]; fs.writeFileSync(path, JSON.stringify(product, null, 2) + "\n");'
 
 # Cache Copilot VSIX payloads (pinned versions) so startup can ensure extensions exist
 # even after clean redeploy. Uses precise version numbers for immutability.

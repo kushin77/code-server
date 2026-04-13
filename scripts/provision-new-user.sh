@@ -31,7 +31,7 @@ if ! [[ "$ROLE" =~ ^(viewer|developer|architect|admin)$ ]]; then
   exit 1
 fi
 
-USER_ID=$(echo "$EMAIL" | sed 's/@.*//' | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+USER_ID=$(printf '%s' "$EMAIL" | tr '[:upper:]' '[:lower:]' | sed 's/@/-at-/g; s/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$REPO_ROOT"
@@ -49,10 +49,10 @@ echo ""
 
 # ─── STEP 1: Add to Email Allowlist ───────────────────────────────────────
 echo "Step 1️⃣  Adding to OAuth2 allowlist..."
-if grep -q "^$EMAIL$" allowed-emails.txt 2>/dev/null; then
+if grep -Fqx -- "$EMAIL" allowed-emails.txt 2>/dev/null; then
   echo "  ⚠️  Email already whitelisted"
 else
-  echo "$EMAIL" >> allowed-emails.tx
+  echo "$EMAIL" >> allowed-emails.txt
   sort allowed-emails.txt -o allowed-emails.txt  # Keep sorted
   echo "  ✅ Email added to allowed-emails.txt"
 fi
@@ -293,8 +293,12 @@ echo "  ✅ Audit entry created"
 echo ""
 echo "Step 6️⃣  Generating session token..."
 SESSION_TOKEN=$(openssl rand -hex 32)
-mkdir -p "sessions"
-cat > "sessions/${USER_ID}.activation" << EOF
+# Store token securely in temporary location (not in repo)
+# In production, write to secure secrets manager (Vault, AWS Secrets Manager, etc.)
+SECRETS_DIR="${SECRETS_DIR:=/tmp/code-server-secrets}"
+mkdir -p "$SECRETS_DIR" && chmod 700 "$SECRETS_DIR"
+TOKEN_FILE="$SECRETS_DIR/${USER_ID}.activation"
+cat > "$TOKEN_FILE" << EOF
 {
   "email": "$EMAIL",
   "role": "$ROLE",
@@ -303,8 +307,10 @@ cat > "sessions/${USER_ID}.activation" << EOF
   "expires": "$(date -I'seconds' -d '+30 days')"
 }
 EOF
-chmod 600 "sessions/${USER_ID}.activation"
-echo "  ✅ Activation token: sessions/${USER_ID}.activation"
+chmod 600 "$TOKEN_FILE"
+echo "  ✅ Activation token stored securely: $TOKEN_FILE"
+echo "  ⚠️  Token is transient and will expire when system restarts"
+echo "  📝 For production, implement persistent secure storage (Vault, etc.)"
 
 # ─── SUMMARY ────────────────────────────────────────────────────────────────
 echo ""

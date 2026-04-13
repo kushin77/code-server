@@ -23,9 +23,7 @@
   ],
   "icon": "resources/icon.png",
   "activationEvents": [
-    "onStartupFinished",
-    "onCommand:agent-farm.executeTask",
-    "onView:agent-farm-dashboard"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -106,8 +104,8 @@
     "lint": "eslint src",
     "test": "jest",
     "test:watch": "jest --watch",
-    "build": "webpack --mode production",
-    "dev": "webpack --mode development --watch"
+    "build": "npm run compile",
+    "dev": "npm run watch"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

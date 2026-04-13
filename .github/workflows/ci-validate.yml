@@ -6,6 +6,24 @@ on:
     branches: [ main ]
 
 jobs:
+  branch-name:
+    name: Enforce branch naming convention
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Check branch name
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          PATTERN='^(feat|fix|chore|docs|refactor|test|perf|ci|hotfix|dependabot)(/[a-z0-9._-]+)+$'
+          if [[ ! "$BRANCH" =~ $PATTERN ]]; then
+            echo "❌ Branch name '$BRANCH' violates naming convention."
+            echo "   Required pattern: <type>/<description>"
+            echo "   Allowed types: feat, fix, chore, docs, refactor, test, perf, ci, hotfix"
+            echo "   Example: feat/phase-7-observability"
+            exit 1
+          fi
+          echo "✅ Branch name '$BRANCH' is valid."
+
   validate:
     runs-on: ubuntu-lates
     steps:

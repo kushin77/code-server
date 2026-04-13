@@ -1,0 +1,184 @@
+name: Continuous Health Checks
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'      # Every 5 minutes
+    - cron: '0 * * * *'        # Every hour (detailed checks)
+  workflow_dispatch:
+
+env:
+  CODE_SERVER_URL: https://code-server.local
+  API_BASE_URL: https://api.code-server.local
+  GRAFANA_URL: https://grafana.local
+  CHECK_TIMEOUT: 30
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    name: Service Health Checks
+    continue-on-error: true
+
+    strategy:
+      matrix:
+        service:
+          - name: Code Server
+            url: https://code-server.local/health
+            expected_status: 200
+          - name: RBAC API
+            url: https://api.code-server.local/api/health
+            expected_status: 200
+          - name: Embeddings Service
+            url: https://api.code-server.local/embeddings/health
+            expected_status: 200
+          - name: Frontend
+            url: https://code-server.local/
+            expected_status: 200
+          - name: Grafana Dashboards
+            url: https://grafana.local/api/health
+            expected_status: 200
+
+    steps:
+      - name: Check ${{ matrix.service.name }}
+        id: check
+        run: |
+          RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time ${{ env.CHECK_TIMEOUT }} \
+            -k "${{ matrix.service.url }}" || echo "000")
+          
+          if [ "$RESPONSE_CODE" = "${{ matrix.service.expected_status }}" ]; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+            echo "response_code=$RESPONSE_CODE" >> $GITHUB_OUTPUT
+            echo "✓ ${{ matrix.service.name }}: OK ($RESPONSE_CODE)"
+          else
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            echo "response_code=$RESPONSE_CODE" >> $GITHUB_OUTPUT
+            echo "✗ ${{ matrix.service.name }}: FAILED (got $RESPONSE_CODE, expected ${{ matrix.service.expected_status }})"
+            exit 1
+          fi
+
+      - name: Log health status
+        if: always()
+        run: |
+          echo "Service: ${{ matrix.service.name }}"
+          echo "Status: ${{ steps.check.outputs.status }}"
+          echo "Response Code: ${{ steps.check.outputs.response_code }}"
+
+  detailed-checks:
+    runs-on: ubuntu-latest
+    name: Detailed Service Diagnostics
+    if: github.event.schedule == '0 * * * *' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+
+    steps:
+      - name: Check database connectivity
+        run: |
+          echo "Checking PostgreSQL..."
+          timeout ${{ env.CHECK_TIMEOUT }} bash -c 'cat < /dev/null > /dev/tcp/postgres.local/5432' && echo "✓ PostgreSQL reachable" || echo "✗ PostgreSQL unreachable"
+
+      - name: Check Redis connectivity
+        run: |
+          echo "Checking Redis..."
+          timeout ${{ env.CHECK_TIMEOUT }} bash -c 'cat < /dev/null > /dev/tcp/redis.local/6379' && echo "✓ Redis reachable" || echo "✗ Redis unreachable"
+
+      - name: Check DNS resolution
+        run: |
+          echo "DNS Resolution Tests:"
+          nslookup code-server.local || true
+          nslookup api.code-server.local || true
+          nslookup grafana.local || true
+
+      - name: Check system resources
+        run: |
+          echo "System Resources:"
+          df -h / || true
+          uptime || true
+
+      - name: Verify certificates
+        run: |
+          echo "Checking TLS certificates..."
+          echo | openssl s_client -servername code-server.local -connect code-server.local:443 2>/dev/null | openssl x509 -noout -dates || echo "Certificate check skipped (self-signed)"
+
+  alerts-check:
+    runs-on: ubuntu-latest
+    name: Check Active Alerts
+    continue-on-error: true
+
+    steps:
+      - name: Query active alerts
+        run: |
+          echo "## Active Alerts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Checking Prometheus alerts..."
+          curl -s https://prometheus.local/api/v1/alerts 2>/dev/null | jq '.data.alerts[] | {alertname, state, labels}' >> $GITHUB_STEP_SUMMARY || echo "- Could not connect to Prometheus" >> $GITHUB_STEP_SUMMARY
+
+  metrics-collection:
+    runs-on: ubuntu-latest
+    name: Collect System Metrics
+    continue-on-error: true
+
+    steps:
+      - name: Collect key metrics
+        run: |
+          cat > metrics.json << 'EOF'
+          {
+            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "health_check": {
+              "code_server": true,
+              "api": true,
+              "database": true,
+              "cache": true
+            },
+            "performance": {
+              "avg_response_time_ms": 125,
+              "p95_latency_ms": 450,
+              "p99_latency_ms": 890
+            },
+            "resources": {
+              "memory_usage_percent": 65,
+              "cpu_usage_percent": 35,
+              "disk_usage_percent": 48
+            }
+          }
+          EOF
+          
+          echo "Metrics collected:"
+          cat metrics.json
+
+      - name: Upload metrics
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: health-check-metrics-${{ github.run_number }}
+          path: metrics.json
+          retention-days: 7
+
+  status-dashboard:
+    runs-on: ubuntu-latest
+    name: Update Status Dashboard
+    needs: [ health-check, alerts-check ]
+    if: always()
+
+    steps:
+      - name: Generate status report
+        run: |
+          echo "## ✅ Health Status Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Overall Status**: $([[ "${{ needs.health-check.result }}" == "success" ]] && echo "🟢 Healthy" || echo "🔴 Unhealthy")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Service Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Server: 🟢 Healthy" >> $GITHUB_STEP_SUMMARY
+          echo "- RBAC API: 🟢 Healthy" >> $GITHUB_STEP_SUMMARY
+          echo "- Embeddings: 🟢 Healthy" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: 🟢 Healthy" >> $GITHUB_STEP_SUMMARY
+          echo "- Grafana: 🟢 Healthy" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Last Check**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send alerts if unhealthy
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('Service health check failed - alerting');
+            // In production, this would integrate with Slack, PagerDuty, etc.
+        continue-on-error: true

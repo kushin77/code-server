@@ -1,0 +1,351 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'performance/**'
+      - 'services/**'
+      - '.github/workflows/performance-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: 'Test scenario to run'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - stress
+          - soak
+          - spike
+
+env:
+  K6_VUS: 100
+  K6_DURATION: 5m
+  API_BASE_URL: http://localhost:3000
+  CODE_SERVER_URL: http://localhost:8443
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    name: Performance Test Environment Setup
+    outputs:
+      test-id: ${{ steps.test-id.outputs.id }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate test ID
+        id: test-id
+        run: |
+          TEST_ID="perf-$(date +%s)-${GITHUB_SHA::8}"
+          echo "id=$TEST_ID" >> $GITHUB_OUTPUT
+
+      - name: Start test services
+        run: |
+          docker-compose -f docker-compose.test.yml up -d
+          sleep 30
+        continue-on-error: true
+
+      - name: Verify services
+        run: |
+          for i in {1..10}; do
+            if curl -f http://localhost:3000/api/health 2>/dev/null; then
+              echo "✓ API service ready"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/10)"
+            sleep 3
+          done
+          echo "⚠ API health check failed, continuing with tests"
+        continue-on-error: true
+
+  load-test:
+    runs-on: ubuntu-latest
+    name: Load Testing (k6)
+    needs: setup
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: latest
+
+      - name: Run standard load test
+        if: github.event.inputs.test_scenario != 'spike' && github.event.inputs.test_scenario != 'stress'
+        run: |
+          k6 run performance/benchmarks/k6-load-test.js \
+            -e BASE_URL=${{ env.API_BASE_URL }} \
+            -e VUS=100 \
+            -e DURATION=5m \
+            --out json=results-standard.json
+        continue-on-error: true
+
+      - name: Run stress test
+        if: github.event.inputs.test_scenario == 'stress' || github.event.inputs.test_scenario == 'standard'
+        run: |
+          k6 run performance/benchmarks/k6-load-test.js \
+            -e BASE_URL=${{ env.API_BASE_URL }} \
+            -e VUS=500 \
+            -e DURATION=10m \
+            --out json=results-stress.json
+        continue-on-error: true
+
+      - name: Run soak test
+        if: github.event.inputs.test_scenario == 'soak' || github.event.inputs.test_scenario == 'standard'
+        run: |
+          k6 run performance/benchmarks/k6-load-test.js \
+            -e BASE_URL=${{ env.API_BASE_URL }} \
+            -e VUS=50 \
+            -e DURATION=30m \
+            --out json=results-soak.json
+        continue-on-error: true
+
+      - name: Run spike test
+        if: github.event.inputs.test_scenario == 'spike'
+        run: |
+          k6 run << 'SCRIPT'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          
+          export const options = {
+            stages: [
+              { duration: '1m', target: 100 },    // Ramp up
+              { duration: '30s', target: 500 },   // Spike
+              { duration: '1m', target: 50 },     // Cool down
+              { duration: '30s', target: 0 },     // Stop
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<500', 'p(99)<1000'],
+              http_req_failed: ['rate<0.1'],
+            },
+          };
+          
+          export default function () {
+            const response = http.get('${{ env.API_BASE_URL }}/api/health');
+            check(response, {
+              'status is 200': (r) => r.status === 200,
+              'response time < 500ms': (r) => r.timings.duration < 500,
+            });
+            sleep(1);
+          }
+          SCRIPT
+        continue-on-error: true
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: k6-results
+          path: results-*.json
+          retention-days: 30
+
+  latency-test:
+    runs-on: ubuntu-latest
+    name: Latency & Response Time Analysis
+    needs: setup
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@v1
+        with:
+          k6-version: latest
+
+      - name: Measure P95/P99 latencies
+        run: |
+          k6 run << 'SCRIPT'
+          import http from 'k6/http';
+          import { check } from 'k6';
+          
+          export const options = {
+            stages: [
+              { duration: '30s', target: 50 },
+              { duration: '2m', target: 100 },
+              { duration: '30s', target: 0 },
+            ],
+            thresholds: {
+              http_req_duration: [
+                'p(95)<500',
+                'p(99)<1000',
+                'p(99.9)<2000',
+              ],
+            },
+          };
+          
+          export default function () {
+            const endpoints = [
+              '/api/health',
+              '/api/agents',
+              '/api/metrics',
+            ];
+            
+            endpoints.forEach(endpoint => {
+              const response = http.get('${{ env.API_BASE_URL }}' + endpoint);
+              check(response, {
+                'status is 200': (r) => r.status === 200,
+                'P95 latency': (r) => r.timings.duration < 500,
+              });
+            });
+          }
+          SCRIPT
+        continue-on-error: true
+
+  database-performance:
+    runs-on: ubuntu-latest
+    name: Database Performance Test
+    needs: setup
+    continue-on-error: true
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install pgbench
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Initialize pgbench
+        run: |
+          pgbench -i -h localhost -U postgres -d testdb
+        env:
+          PGPASSWORD: test
+        continue-on-error: true
+
+      - name: Run pgbench benchmark
+        run: |
+          pgbench -c 10 -j 2 -T 60 -r -h localhost -U postgres -d testdb > pgbench-report.txt 2>&1
+        env:
+          PGPASSWORD: test
+        continue-on-error: true
+
+      - name: Upload database performance report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pgbench-report
+          path: pgbench-report.txt
+
+  cache-performance:
+    runs-on: ubuntu-latest
+    name: Cache Performance Analysis
+    needs: setup
+    continue-on-error: true
+
+    services:
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install redis-benchmark
+        run: |
+          pip install redis
+
+      - name: Run redis-benchmark
+        run: |
+          redis-benchmark -h localhost -p 6379 -t set,get -n 100000 -q > redis-benchmark.txt 2>&1
+        continue-on-error: true
+
+      - name: Upload Redis performance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: redis-benchmark
+          path: redis-benchmark.txt
+
+  report-generation:
+    runs-on: ubuntu-latest
+    name: Performance Report Generation
+    needs: [ setup, load-test, latency-test, database-performance, cache-performance ]
+    if: always()
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Generate HTML report
+        run: |
+          cat > performance-report.md << 'EOF'
+          # Performance Test Report
+          Test ID: ${{ needs.setup.outputs.test-id }}
+          Date: $(date)
+          
+          ## Load Test Results
+          EOF
+          
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test ID**: ${{ needs.setup.outputs.test-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Scenario**: ${{ github.event.inputs.test_scenario || 'standard' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload performance report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report
+          path: performance-report.md
+          retention-days: 90
+
+  cleanup:
+    runs-on: ubuntu-latest
+    name: Cleanup
+    needs: [ load-test, latency-test, database-performance, cache-performance, report-generation ]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stop test services
+        run: |
+          docker-compose -f docker-compose.test.yml down
+        continue-on-error: true
+
+      - name: Performance testing complete
+        run: |
+          echo "Performance tests completed"
+          echo "Results available in artifacts"

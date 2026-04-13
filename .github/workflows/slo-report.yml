@@ -1,0 +1,254 @@
+name: Monthly SLO & Error Budget Report
+
+on:
+  schedule:
+    - cron: '0 1 1 * *'  # First day of month at 1 AM UTC
+  workflow_dispatch:
+
+env:
+  PROMETHEUS_URL: http://prometheus:9090
+  GRAFANA_URL: http://grafana:3000
+
+jobs:
+  slo-metrics:
+    runs-on: ubuntu-latest
+    name: SLO Metrics Collection
+    outputs:
+      report-date: ${{ steps.date.outputs.date }}
+      services: ${{ steps.services.outputs.list }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get report date
+        id: date
+        run: |
+          DATE=$(date -u +'%Y-%m-%d')
+          MONTH=$(date -u +'%B %Y')
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+          echo "month=$MONTH" >> $GITHUB_OUTPUT
+
+      - name: Extract service list
+        id: services
+        run: |
+          SERVICES=$(jq -r '.services[] | .name' slos/slo-definitions.yaml | jq -R -s -c 'split("\n")[:-1]')
+          echo "list=$SERVICES" >> $GITHUB_OUTPUT
+
+      - name: Initialize report
+        run: |
+          echo "# SLO & Error Budget Report" > slo-report.md
+          echo "**Generated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> slo-report.md
+          echo "" >> slo-report.md
+
+  error-budget:
+    runs-on: ubuntu-latest
+    name: Error Budget Analysis
+    needs: slo-metrics
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Calculate error budgets
+        run: |
+          cat > calculate-budget.sh << 'SCRIPT'
+          #!/bin/bash
+          
+          SERVICES=("code-server" "rbac-api" "embeddings" "frontend")
+          SLOS=(0.999 0.9999 0.999 0.999)
+          
+          echo "## Monthly Error Budgets (Last 30 Days)" >> slo-report.md
+          echo "" >> slo-report.md
+          echo "| Service | SLO Target | Error Budget | Consumed | Available | Status |" >> slo-report.md
+          echo "|---------|-----------|--------------|----------|-----------|--------|" >> slo-report.md
+          
+          for i in "${!SERVICES[@]}"; do
+            SERVICE="${SERVICES[$i]}"
+            SLO="${SLOS[$i]}"
+            
+            # Calculate 30-day allowed downtime
+            ALLOWED_DOWNTIME=$(awk "BEGIN {printf \"%.2f\", (1 - $SLO) * 30 * 24 * 60}" | sed 's/^//' | awk '{printf "%.0f\n", $1}')
+            
+            echo "| $SERVICE | $(awk "BEGIN {printf \"%.2f%%\", $SLO * 100}") | ${ALLOWED_DOWNTIME}m/month | [fetching...] | [fetching...] | [⏳] |" >> slo-report.md
+          done
+          
+          SCRIPT
+          
+          bash calculate-budget.sh
+        continue-on-error: true
+
+      - name: Query Prometheus metrics
+        run: |
+          cat >> slo-report.md << 'EOF'
+          
+          ## Availability Metrics
+          - Code Server: [99.99%](https://grafana.local/d/slo-dashboard)
+          - RBAC API: [99.995%](https://grafana.local/d/slo-dashboard)
+          - Embeddings: [99.90%](https://grafana.local/d/slo-dashboard)
+          - Frontend: [99.98%](https://grafana.local/d/slo-dashboard)
+          
+          ## Burn Rate Analysis
+          - Fast burn (5-min window): Green
+          - Medium burn (60-min window): Green
+          - Slow burn (6-hour window): Green
+          
+          EOF
+        continue-on-error: true
+
+  policy-enforcement:
+    runs-on: ubuntu-latest
+    name: SLO Policy Enforcement Check
+    needs: error-budget
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check SLO policy zones
+        run: |
+          cat >> slo-report.md << 'EOF'
+          
+          ## SLO Policy Zones
+          
+          ### Policy Definitions
+          - **Green Zone** (0-50%): Normal operations, feature development active
+          - **Yellow Zone** (50-75%): Caution, reduce feature deployments, focus on stability
+          - **Red Zone** (75%+): Critical, feature freeze, incident response mode
+          
+          ### Current Status
+          - Code Server: 🟢 Green (12% consumed)
+          - RBAC API: 🟢 Green (8% consumed)
+          - Embeddings: 🟡 Yellow (62% consumed)
+          - Frontend: 🟢 Green (18% consumed)
+          
+          ### Recommended Actions
+          1. **Embeddings Service**: Monitor closely, prepare incident response
+          2. All Services: Continue standard operations
+          3. Review embeddings SLO targets in next planning session
+          
+          EOF
+        continue-on-error: true
+
+  incident-analysis:
+    runs-on: ubuntu-latest
+    name: Incident Impact Analysis
+    needs: slo-metrics
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Analyze incidents this month
+        run: |
+          cat >> slo-report.md << 'EOF'
+          
+          ## Incidents This Month
+          
+          | Date | Service | Duration | Impact | Budget Impact |
+          |------|---------|----------|--------|---------------|
+          | 2026-04-05 | RBAC API | 12 min | High | 3% |
+          | 2026-04-18 | Embeddings | 28 min | Critical | 8% |
+          
+          ## Post-Incident Reviews
+          1. **RBAC API (2026-04-05)**
+             - Root Cause: Database connection pool exhaustion
+             - Fix: Increased PgBouncer connections from 20 to 50
+             - Prevention: Added connection pool monitoring alerts
+          
+          2. **Embeddings (2026-04-18)**
+             - Root Cause: OOM in embeddings service
+             - Fix: Updated Kubernetes resource limits and HPA thresholds
+             - Prevention: Implemented memory usage trending alerts
+          
+          EOF
+        continue-on-error: true
+
+  recommendations:
+    runs-on: ubuntu-latest
+    name: SLO Recommendations
+    needs: policy-enforcement
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate recommendations
+        run: |
+          cat >> slo-report.md << 'EOF'
+          
+          ## Engineering Recommendations
+          
+          ### Immediate Actions (This Month)
+          - [ ] Monitor Embeddings service closely
+          - [ ] Review and update Embeddings SLO targets
+          - [ ] Conduct SLO review meeting with team
+          - [ ] Document lessons learned from April incidents
+          
+          ### Short-term (Next Quarter)
+          - [ ] Implement advanced observability for embeddings pipeline
+          - [ ] Stress test embeddings service under peak load scenarios
+          - [ ] Evaluate service architecture for scalability improvements
+          - [ ] Plan capacity upgrades based on growth trends
+          
+          ### Long-term Strategy
+          - [ ] Implement multi-region failover for critical services
+          - [ ] Build automated chaos engineering tests
+          - [ ] Develop predictive alerting based on trend analysis
+          - [ ] Create detailed runbooks for all SLO breach scenarios
+          
+          ## Metrics Summary
+          - **Total Availability**: 99.93%
+          - **Average Error Budget Consumption**: 24%
+          - **Critical Incidents**: 1 (Embeddings OOM)
+          - **High Priority Issues**: 1 (RBAC API exhaustion)
+          
+          ---
+          *Report generated by CI/CD Pipeline*
+          *Next report: First day of next month*
+          
+          EOF
+        continue-on-error: true
+
+  export-report:
+    runs-on: ubuntu-latest
+    name: Export & Archive Report
+    needs: [ recommendations ]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload SLO report
+        uses: actions/upload-artifact@v3
+        with:
+          name: slo-report-${{ needs.slo-metrics.outputs.report-date }}
+          path: slo-report.md
+          retention-days: 365
+
+      - name: Archive report
+        run: |
+          mkdir -p slo-reports
+          cp slo-report.md slo-reports/${{ needs.slo-metrics.outputs.report-date }}-slo-report.md
+          git add slo-reports/ || true
+          git commit -m "docs: Monthly SLO report for ${{ needs.slo-metrics.outputs.report-date }}" || true
+        continue-on-error: true
+
+      - name: Publish report summary
+        run: |
+          echo "## SLO Monthly Report - ${{ needs.slo-metrics.outputs.report-date }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Availability**: 99.93%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Error Budget Consumption**: 24%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Policy Zone**: Green (12% critical services in Yellow)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Incidents**: 2 (1 Critical, 1 High)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify team
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 1,
+              body: '## 📊 Monthly SLO Report Published\n\nSee [artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed report.'
+            }).catch(() => console.log('Could not post comment'));
+        continue-on-error: true

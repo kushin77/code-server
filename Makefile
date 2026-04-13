@@ -8,6 +8,7 @@
         backup restore rotate-secret update-vsix \
         ollama-health ollama-pull-models ollama-list ollama-logs ollama-index ollama-init ollama-status ollama-shell \
         logs-code-server logs-oauth2 logs-caddy \
+        git-sync git-clean git-branch-check git-install-hooks \
         pre-commit ci-validate cd-deploy d p s l v
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -232,6 +233,37 @@ audit-old: audit-config audit-immutability audit-health
 clean:
 	@rm -f tfplan tfplan.json deploy.log
 	@echo "✅ Cleaned temporary files"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GIT HYGIENE
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Sync with remote: fetch, prune dead remote-tracking refs, rebase local main
+git-sync:
+	@echo "🔄 Syncing with origin (fetch + prune)..."
+	@git fetch --prune --prune-tags origin
+	@git checkout main && git pull --rebase origin main
+	@echo "✅ Local main is up to date."
+
+# Delete all local branches already merged into main
+git-clean:
+	@echo "🧹 Deleting local branches merged into main..."
+	@git fetch --prune origin
+	@git branch --merged main | grep -vE '^\*|^\s*main$$' | xargs -r git branch -d
+	@echo "✅ Merged local branches deleted."
+
+# Audit: show local branches that diverge from or lag behind main
+git-branch-check:
+	@echo "📊 Branch status vs main:"
+	@git fetch --prune origin > /dev/null 2>&1
+	@git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads/ | grep -v '^main ' || echo "All branches are clean."
+
+# Install shared git hooks from .github/hooks/ into .git/hooks/
+git-install-hooks:
+	@echo "🪝 Installing git hooks from .github/hooks/..."
+	@cp .github/hooks/post-merge .git/hooks/post-merge && chmod +x .git/hooks/post-merge
+	@cp .github/hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+	@echo "✅ Hooks installed: post-merge (auto-prune), pre-push (naming + main guard)"
 
 # Full cleanup
 clean-volumes:

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# post-merge hook: auto-prune stale remote-tracking refs after every merge/pull
+# Install via: make git-install-hooks
+
+git fetch --prune --quiet origin
+merged=$(git branch --merged main 2>/dev/null | grep -vE '^\*|\bmain\b')
+if [ -n "$merged" ]; then
+  echo "🧹 post-merge: cleaning local merged branches..."
+  echo "$merged" | xargs git branch -d
+fi

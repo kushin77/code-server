@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# pre-push hook: block pushes directly to main; enforce branch naming
+# Install via: make git-install-hooks
+
+PROTECTED="main"
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+PATTERN='^(feat|fix|chore|docs|refactor|test|perf|ci|hotfix|dependabot)(/[a-z0-9._-]+)+$'
+
+if [ "$BRANCH" = "$PROTECTED" ]; then
+  echo "❌ Direct push to '$PROTECTED' is blocked. Open a pull request."
+  exit 1
+fi
+
+if [[ ! "$BRANCH" =~ $PATTERN ]]; then
+  echo "❌ Branch name '$BRANCH' violates naming convention."
+  echo "   Required: <type>/<description>  e.g. feat/phase-7-observability"
+  echo "   Allowed types: feat fix chore docs refactor test perf ci hotfix"
+  exit 1
+fi
+
+exit 0

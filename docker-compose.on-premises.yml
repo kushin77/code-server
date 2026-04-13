@@ -1,0 +1,504 @@
+version: '3.9'
+
+# On-Premises Docker Compose Configuration
+# Purpose: Self-contained local deployment with no cloud dependencies
+# Use: docker-compose -f docker-compose.on-premises.yml up -d
+
+services:
+  # ============================================================================
+  # DATABASE TIER - Self-managed PostgreSQL with local persistence
+  # ============================================================================
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-primary
+    environment:
+      POSTGRES_USER: codeserver
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_INITDB_ARGS: |
+        -c max_connections=200
+        -c shared_buffers=256MB
+        -c effective_cache_size=1GB
+        -c maintenance_work_mem=64MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c default_statistics_target=100
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c work_mem=1310kB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+        -c max_worker_parallel_workers_per_gather=4
+        -c max_worker_processes=4
+        -c max_parallel_workers=4
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-backups:/backups
+      - ./config/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codeserver"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-server-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  # Redis - In-memory cache with persistence
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    command: |
+      redis-server 
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --appendonly yes
+      --appendfsync everysec
+      --daemonize no
+      --databases 16
+      --dbfilename dump.rdb
+      --dir /data
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-server-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ChromaDB - Local vector database with persistence
+  chromadb:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: chromadb-local
+    ports:
+      - "8000:8000"
+    environment:
+      CHROMA_DB_IMPL: duckdb
+      CHROMA_PERSISTENCE_DATA_PATH: /chroma/data
+      ALLOW_RESET: "true"
+      ANONYMIZED_TELEMETRY: "false"
+    volumes:
+      - chromadb-data:/chroma/data
+      - chromadb-logs:/chroma/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-server-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================================================
+  # OBSERVABILITY TIER - Local monitoring with Prometheus, Grafana, Loki
+  # ============================================================================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-local
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-local
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_DATABASE_TYPE: sqlite3
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki-local
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================================================
+  # TRACING TIER - Jaeger for distributed tracing
+  # ============================================================================
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger-local
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: badger
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+    volumes:
+      - jaeger-data:/badger
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16686"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================================================
+  # APPLICATION TIER - Core services
+  # ============================================================================
+
+  code-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.code-server
+    container_name: code-server
+    ports:
+      - "8443:8443"
+    environment:
+      PASSWORD: ${CODE_SERVER_PASSWORD:-password}
+      SUDO_PASSWORD: ${CODE_SERVER_PASSWORD:-password}
+      CODE_SERVER_CUSTOM_DIR: /home/coder/.local/share/code-server
+      CODE_SERVER_ACCEPT_SERVER_LICENSE_TERMS: "true"
+    volumes:
+      - code-server-data:/home/coder
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./workspace:/workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8443"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  agent-api:
+    build:
+      context: ./services/agent-api
+      dockerfile: Dockerfile
+    container_name: agent-api
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://codeserver:${DB_PASSWORD:-password}@postgres:5432/agent_db
+      REDIS_URL: redis://redis:6379/0
+      CHROMA_URL: http://chromadb:8000
+      ENVIRONMENT: production
+      LOG_LEVEL: INFO
+      OLLAMA_BASE_URL: http://ollama:11434
+      PROMETHEUS_ENABLED: "true"
+      JAEGER_ENABLED: "true"
+      JAEGER_AGENT_HOST: jaeger
+    volumes:
+      - agent-api-data:/app/data
+      - ./services/agent-api:/app:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  embeddings-api:
+    build:
+      context: ./services/embeddings-api
+      dockerfile: Dockerfile
+    container_name: embeddings-api
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql://codeserver:${DB_PASSWORD:-password}@postgres:5432/embeddings_db
+      REDIS_URL: redis://redis:6379/1
+      CHROMA_URL: http://chromadb:8000
+      ENVIRONMENT: production
+      LOG_LEVEL: INFO
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - embeddings-api-data:/app/data
+      - ./services/embeddings-api:/app:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  # ============================================================================
+  # LLM INFERENCE - Ollama for local model serving
+  # ============================================================================
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-local
+    ports:
+      - "11434:11434"
+    environment:
+      OLLAMA_NUM_PARALLEL: 4
+      OLLAMA_NUM_GPU: 1
+      OLLAMA_DEBUG: "false"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - code-server-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  # ============================================================================
+  # REVERSE PROXY & LOAD BALANCER - Local ingress via Caddyfile
+  # ============================================================================
+
+  caddy:
+    image: caddy:latest
+    container_name: caddy-ingress
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-config:/config
+      - caddy-data:/data
+    environment:
+      ACME_AGREE: "true"
+    depends_on:
+      - code-server
+      - agent-api
+      - embeddings-api
+      - prometheus
+      - grafana
+    networks:
+      - code-server-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================================================
+  # BACKUP AUTOMATION - Daily backup service
+  # ============================================================================
+
+  backup-service:
+    image: alpine:latest
+    container_name: backup-service
+    command: |
+      sh -c '
+      while true; do
+        echo "Starting backup at $(date)" >> /backups/backup.log
+        # Backup PostgreSQL
+        pg_dump -h postgres -U codeserver -d agent_db > /backups/agent_db_$(date +%Y%m%d_%H%M%S).sql 2>> /backups/backup.log
+        # Backup Redis
+        redis-cli -h redis --rdb /backups/redis_$(date +%Y%m%d_%H%M%S).rdb >> /backups/backup.log 2>&1
+        # Keep only last 7 days of backups
+        find /backups -name "*.sql" -mtime +7 -delete
+        find /backups -name "*.rdb" -mtime +7 -delete
+        echo "Backup completed at $(date)" >> /backups/backup.log
+        sleep 86400  # Daily
+      done
+      '
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - postgres-backups:/backups
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - code-server-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  code-server-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  postgres-backups:
+    driver: local
+  redis-data:
+    driver: local
+  chromadb-data:
+    driver: local
+  chromadb-logs:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  jaeger-data:
+    driver: local
+  code-server-data:
+    driver: local
+  agent-api-data:
+    driver: local
+  embeddings-api-data:
+    driver: local
+  ollama-data:
+    driver: local
+  caddy-config:
+    driver: local
+  caddy-data:
+    driver: local
+
+secrets:
+  db_password:
+    environment: DB_PASSWORD

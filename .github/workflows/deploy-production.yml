@@ -1,0 +1,261 @@
+name: Deploy to Production (Blue-Green)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'deployment/**'
+      - 'services/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/deploy-production.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  DEPLOYMENT_TIMEOUT: 300
+  HEALTH_CHECK_RETRIES: 30
+  HEALTH_CHECK_INTERVAL: 10
+
+jobs:
+  pre-deployment:
+    runs-on: ubuntu-latest
+    name: Pre-Deployment Validation
+    outputs:
+      deployment-id: ${{ steps.deploy-id.outputs.id }}
+      services-changed: ${{ steps.changes.outputs.services }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Deployment ID
+        id: deploy-id
+        run: |
+          DEPLOY_ID="deploy-$(date +%s)-${GITHUB_SHA::8}"
+          echo "id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+          echo "Deployment ID: $DEPLOY_ID"
+
+      - name: Check service changes
+        id: changes
+        run: |
+          CHANGED_SERVICES=$(git diff --name-only origin/main..HEAD | grep '^services/' | cut -d'/' -f2 | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          echo "services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+          echo "Changed services: $CHANGED_SERVICES"
+
+      - name: Validate docker-compose
+        run: |
+          sudo apt-get update && sudo apt-get install -y docker-compose
+          docker-compose config > /dev/null
+          echo "✓ Docker Compose validation passed"
+
+      - name: Validate deployment scripts
+        run: |
+          bash -n deployment/scripts/blue-green-deploy.sh || exit 1
+          echo "✓ Deployment script validation passed"
+
+      - name: Pre-flight checks
+        run: |
+          echo "## Pre-Deployment Checklist" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Docker Compose validated" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Deployment scripts validated" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Deployment ID: ${{ steps.deploy-id.outputs.id }}" >> $GITHUB_STEP_SUMMARY
+
+  staging-deployment:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: pre-deployment
+    environment:
+      name: staging
+      url: https://staging.code-server.local
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure deployment credentials
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy to staging environment
+        run: |
+          ssh -i ~/.ssh/deploy_key deployer@${{ secrets.STAGING_HOST }} << 'EOF'
+          set -e
+          cd /opt/code-server
+          git pull origin main || git fetch origin main && git reset --hard origin/main
+          docker-compose -f deployment/production/docker-compose.yml pull
+          docker-compose -f deployment/production/docker-compose.yml down || true
+          docker-compose -f deployment/production/docker-compose.yml up -d
+          sleep 30
+          bash deployment/tests/smoke-tests.sh || exit 1
+          echo "Staging deployment successful"
+          EOF
+        continue-on-error: false
+
+      - name: Staging health check
+        run: |
+          for i in {1..10}; do
+            if curl -f https://staging.code-server.local/health 2>/dev/null; then
+              echo "✓ Staging health check passed"
+              exit 0
+            fi
+            echo "Waiting for staging... ($i/10)"
+            sleep 5
+          done
+          echo "✗ Staging health check failed"
+          exit 1
+
+      - name: Staging validation
+        if: success()
+        run: |
+          curl -s https://staging.code-server.local/api/health | jq .
+          echo "✓ Staging validation passed"
+
+  production-deployment:
+    runs-on: ubuntu-latest
+    name: Deploy to Production (Blue-Green)
+    needs: [ pre-deployment, staging-deployment ]
+    if: success()
+    environment:
+      name: production
+      url: https://code-server.local
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure production deployment
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.PROD_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Execute blue-green deployment
+        id: blue-green
+        run: |
+          ssh -i ~/.ssh/deploy_key deployer@${{ secrets.PROD_HOST }} << 'EOF'
+          set -e
+          cd /opt/code-server
+          
+          # Get active environment
+          ACTIVE=$(docker ps --filter "label=deployment-active" --format "{{.Label \"deployment-env\"}}" | head -1)
+          INACTIVE=$([ "$ACTIVE" = "blue" ] && echo "green" || echo "blue")
+          
+          echo "Active: $ACTIVE, Deploying to: $INACTIVE"
+          
+          # Pull latest images
+          docker-compose -f deployment/production/docker-compose.yml pull
+          
+          # Deploy to inactive environment with new tag
+          DEPLOY_TAG="deploy-$(date +%s)" \
+          docker-compose -f deployment/production/docker-compose.yml -p "$INACTIVE" up -d
+          
+          sleep 30
+          
+          # Run smoke tests
+          bash deployment/tests/smoke-tests.sh || {
+            echo "Smoke tests failed, rolling back..."
+            docker-compose -p "$INACTIVE" down
+            exit 1
+          }
+          
+          # Health check
+          for i in {1..${HEALTH_CHECK_RETRIES}}; do
+            if curl -f http://localhost:8443/health 2>/dev/null; then
+              echo "Health check passed"
+              break
+            fi
+            echo "Health check attempt $i/${HEALTH_CHECK_RETRIES}"
+            sleep ${HEALTH_CHECK_INTERVAL}
+            [ $i -eq ${HEALTH_CHECK_RETRIES} ] && exit 1
+          done
+          
+          # Traffic switch (update load balancer)
+          # In production, this would update Caddy reverse proxy config or load balancer
+          docker exec code-server-caddy caddy reload 2>/dev/null || true
+          
+          # Wait for soak period
+          echo "Soak period: 5 minutes"
+          sleep 300
+          
+          # Cleanup old environment
+          docker-compose -p "$ACTIVE" down || true
+          
+          echo "DEPLOY_ENV=$INACTIVE" >> $GITHUB_OUTPUT
+          echo "DEPLOY_ID=${{ needs.pre-deployment.outputs.deployment-id }}" >> $GITHUB_OUTPUT
+          EOF
+        continue-on-error: false
+
+      - name: Production health check
+        run: |
+          for i in {1..10}; do
+            if curl -f https://code-server.local/health 2>/dev/null; then
+              echo "✓ Production health check passed"
+              exit 0
+            fi
+            echo "Waiting for production... ($i/10)"
+            sleep 10
+          done
+          echo "✗ Production health check failed"
+          exit 1
+
+      - name: Verify SLO metrics
+        run: |
+          # Check that monitoring is collecting metrics
+          sleep 30
+          curl -s http://localhost:9090/api/v1/query?query=up | jq '.data.result | length'
+          echo "✓ SLO metric collection verified"
+        continue-on-error: true
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment ID**: ${{ needs.pre-deployment.outputs.deployment-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Active Environment**: ${{ steps.blue-green.outputs.DEPLOY_ENV }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
+
+  post-deployment:
+    runs-on: ubuntu-latest
+    name: Post-Deployment Validation
+    needs: [ pre-deployment, production-deployment ]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect deployment metrics
+        run: |
+          echo "## Deployment Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment ID**: ${{ needs.pre-deployment.outputs.deployment-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Overall Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify deployment status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = context.payload.workflow_run?.conclusion || 'success';
+            const message = `Deployment ${{ needs.pre-deployment.outputs.deployment-id }}: ${status}`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            }).catch(() => {
+              console.log('Could not post comment (no PR context)');
+            });

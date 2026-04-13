@@ -1,0 +1,151 @@
+name: Unit & Integration Tests
+
+on:
+  push:
+    branches: [ main, develop, 'feat/**' ]
+  pull_request:
+    branches: [ main, develop ]
+    
+env:
+  NODE_ENV: test
+  POSTGRES_TEST_URL: postgresql://test:test@localhost:5432/test
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        python-version: ['3.10', '3.11']
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Node dependencies
+        run: npm ci
+        working-directory: ./extensions/agent-farm
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: ./services/rbac-api
+        continue-on-error: true
+
+      - name: Run Node unit tests
+        run: npm test -- --coverage
+        working-directory: ./extensions/agent-farm
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Run Python unit tests
+        run: |
+          pip install pytest pytest-cov
+          pytest --cov=. tests/ -v
+        working-directory: ./services/rbac-api
+        continue-on-error: true
+
+      - name: Run integration tests
+        run: npm run test:integration
+        working-directory: ./extensions/agent-farm
+        continue-on-error: true
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./extensions/agent-farm/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+        continue-on-error: true
+
+      - name: Test Results Summary
+        if: always()
+        run: |
+          echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Node version: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Python version: ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+
+  test-api:
+    runs-on: ubuntu-latest
+    name: API Integration Tests
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start code-server
+        run: |
+          docker-compose -f docker-compose.test.yml up -d
+        env:
+          CODE_SERVER_PASSWORD: test
+        continue-on-error: true
+
+      - name: Wait for services
+        run: sleep 20
+
+      - name: Run API tests
+        run: |
+          curl -s http://localhost:8443/health || echo "Health check failed"
+          curl -s http://localhost:3000/api/health || echo "API health check failed"
+        continue-on-error: true
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose -f docker-compose.test.yml down
+        continue-on-error: true

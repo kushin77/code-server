@@ -1,0 +1,72 @@
+# Recommended Ollama models for Agent Farm
+# Pull with: make pull-recommended
+# Individual model: make pull-model MODEL=<name>
+#
+# All GGUF sources are from Hugging Face; use hf_pull_model.sh to mirror
+# into Ollama via the HuggingFace integration (requires HF_TOKEN for gated models).
+
+version: "1.0"
+
+models:
+  # Primary coding model — best quality, higher VRAM
+  - name: qwen2.5-coder:32b-instruct-q4_K_M
+    hf_repo: Qwen/Qwen2.5-Coder-32B-Instruct-GGUF
+    hf_file: qwen2.5-coder-32b-instruct-q4_k_m.gguf
+    category: coding
+    vram_gb: 24
+    context_window: 32768
+    description: "Qwen2.5-Coder 32B — FAANG-grade code gen, large context"
+
+  # Balanced coding model — fits on 16 GB VRAM
+  - name: qwen2.5-coder:14b-instruct-q6_K
+    hf_repo: Qwen/Qwen2.5-Coder-14B-Instruct-GGUF
+    hf_file: qwen2.5-coder-14b-instruct-q6_k.gguf
+    category: coding
+    vram_gb: 14
+    context_window: 32768
+    description: "Qwen2.5-Coder 14B — production default, good quality/speed ratio"
+
+  # Fast model — planner, reviewer, light tasks
+  - name: qwen2.5-coder:7b-instruct-q8_0
+    hf_repo: Qwen/Qwen2.5-Coder-7B-Instruct-GGUF
+    hf_file: qwen2.5-coder-7b-instruct-q8_0.gguf
+    category: fast
+    vram_gb: 8
+    context_window: 32768
+    description: "Qwen2.5-Coder 7B Q8 — fast agent, supervisor/planner"
+
+  # DeepSeek alternative — strong at reasoning/debugging
+  - name: deepseek-coder-v2:16b-lite-instruct-q8_0
+    hf_repo: bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF
+    hf_file: DeepSeek-Coder-V2-Lite-Instruct-Q8_0.gguf
+    category: coding
+    vram_gb: 16
+    context_window: 163840
+    description: "DeepSeek-Coder V2 16B — long-context debugging and refactoring"
+
+  # Embeddings — required for RAG pipeline
+  - name: nomic-embed-text:v1.5
+    hf_repo: nomic-ai/nomic-embed-text-v1.5-GGUF
+    hf_file: nomic-embed-text-v1.5.Q8_0.gguf
+    category: embedding
+    vram_gb: 1
+    context_window: 8192
+    description: "Nomic embed-text 1.5 — primary embedding model for ChromaDB RAG"
+
+  # Fallback embedding variant  
+  - name: mxbai-embed-large:335m-v1-fp16
+    hf_repo: mixedbread-ai/mxbai-embed-large-v1
+    hf_file: gguf/mxbai-embed-large-v1-f16.gguf
+    category: embedding
+    vram_gb: 1
+    context_window: 512
+    description: "MixedBread large embed — high-accuracy retrieval backup"
+
+  # Vision model for computer-use-mcp screenshots
+  - name: llava:13b-v1.6-vicuna-q6_K
+    hf_repo: mys/ggml_bakllava-1
+    hf_file: ggml-model-q6_k.gguf
+    category: vision
+    vram_gb: 10
+    context_window: 4096
+    description: "LLaVA 13B — screenshot analysis for computer-use-mcp"

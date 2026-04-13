@@ -106,10 +106,10 @@ Run `make help` for all available commands.
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Code-Server** | https://your-domain | Main IDE interface |
-| **Ollama API** | http://localhost:11434 | LLM inference endpoint |
-| **OAuth2 Proxy** | http://localhost:4180 | Auth sidecar |
-| **Caddy** | http://localhost | Reverse proxyhttps://your-domain | LLM inference endpoint |
+| **Code-Server** | https://ide.kushnir.cloud | Main IDE interface |
+| **Ollama API** | http://localhost:11434 | LLM inference endpoint (internal) |
+| **OAuth2 Proxy** | http://localhost:4180 | Auth sidecar (internal) |
+| **Caddy** | https://ide.kushnir.cloud | Reverse proxy & TLS termination |
 
 ## 📦 Architecture
 
@@ -158,7 +158,7 @@ Run `make help` for all available commands.
 1. **Deploy**: `make deploy`
 2. **Pull Models**: `make ollama-pull-models` (first time only)
 3. **Index Repository**: `make ollama-init`
-4. **Open Code-Server**: Visit https://your-domain
+4. **Open Code-Server**: Visit https://ide.kushnir.cloud
 5. **Start Chatting**: Type `@ollama` in the Chat view
 
 For detailed setup, see [OLLAMA_INTEGRATION.md](OLLAMA_INTEGRATION.md).

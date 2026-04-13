@@ -162,7 +162,7 @@ function Show-OutputDetails {
     
     Write-Log "INFO" ""
     Write-Log "INFO" "Next steps:"
-    Write-Log "INFO" "  1. Open browser: http://localhost"
+    Write-Log "INFO" "  1. Open browser: https://ide.kushnir.cloud"
     Write-Log "INFO" "  2. No GitHub authentication needed"
     Write-Log "INFO" "  3. All infrastructure managed by Terraform"
     Write-Log "INFO" ""

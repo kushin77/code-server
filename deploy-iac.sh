@@ -151,7 +151,7 @@ output_details() {
 
     log INFO ""
     log INFO "Next steps:"
-    log INFO "1. Open browser: http://localhost"
+    log INFO "1. Open browser: https://ide.kushnir.cloud"
     log INFO "2. Login with password above"
     log INFO "3. No GitHub authentication needed"
     log INFO "4. All infrastructure managed by Terraform"
@@ -182,7 +182,7 @@ main() {
     cleanup
 
     log SUCCESS ""
-    log SUCCESS "🎉 Deployment successful! Access your IDE at: http://localhost"
+    log SUCCESS "🎉 Deployment successful! Access your IDE at: https://ide.kushnir.cloud"
 }
 
 # Run main function

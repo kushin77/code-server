@@ -10,6 +10,8 @@ import { Agent } from './agent';
 import { TaskType, AgentResult, Recommendation, OrchestratorResult } from './types';
 import { CodeAgent } from './agents/code-agent';
 import { ReviewAgent } from './agents/review-agent';
+import { ArchitectAgent } from './agents/architect-agent';
+import { TestAgent } from './agents/test-agent';
 
 /**
  * Orchestrates multiple AI agents for comprehensive code analysis
@@ -32,7 +34,8 @@ export class AgentOrchestrator {
     const agentInstances: Agent[] = [
       new CodeAgent(),
       new ReviewAgent(),
-      // Future agents: ArchitectAgent, TestAgent
+      new ArchitectAgent(),
+      new TestAgent(),
     ];
 
     agentInstances.forEach(agent => {

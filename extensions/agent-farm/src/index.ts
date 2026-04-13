@@ -10,6 +10,9 @@ import { AgentOrchestrator } from './orchestrator';
 import { AgentFarmDashboard } from './dashboard';
 import { TaskType } from './types';
 import { CodeIndexer } from './code-indexer';
+import { SemanticCodeSearchEngine } from './semantic-search';
+import { RBACManager } from './rbac';
+import { AuditTrailManager } from './audit-trail';
 
 let orchestrator: AgentOrchestrator;
 let dashboard: AgentFarmDashboard;

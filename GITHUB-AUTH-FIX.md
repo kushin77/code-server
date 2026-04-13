@@ -29,12 +29,12 @@ Use layered approach to completely separate GitHub auth from Copilot Chat:
     "GitHub.github-vscode-theme"
   ]
 }
-```
+
 
 ## Key Changes
-1. ✅ **ENABLED**: `github.gitAuthentication: true` → Allows GitHub device auth flow for git
+1. ✅ **ENABLED**: `github.gitAuthentication: true` → Allows GitHub device auth flow for gi
 2. ✅ **DISABLED**: `chat.enabled: false` → Removes chat interface entirely (no "Finish Setup")
-3. ✅ **BLOCKED**: `GitHub.copilot-chat` in `disabledRecommendations` → Prevents installation attempt
+3. ✅ **BLOCKED**: `GitHub.copilot-chat` in `disabledRecommendations` → Prevents installation attemp
 4. ✅ **ENABLED**: `extensions.enabled: true` → Allows other AI extensions (Continue, Tabnine, etc.)
 
 ## How to Complete GitHub Authentication
@@ -51,7 +51,7 @@ Use layered approach to completely separate GitHub auth from Copilot Chat:
 9. ✅ Done! You're authenticated for git operations
 
 ### Why Chat is Disabled
-- VS Code's built-in chat tries to install Copilot Chat
+- VS Code's built-in chat tries to install Copilot Cha
 - Copilot Chat doesn't exist in Open VSX marketplace
 - This causes "cannot be installed" errors
 - Solution: disable chat + use open-source AI extensions instead (Continue, Tabnine, Cody, etc.)
@@ -59,7 +59,7 @@ Use layered approach to completely separate GitHub auth from Copilot Chat:
 ## Verification Status
 ✅ GitHub authentication: Enabled and working
 ✅ Chat feature: Disabled (no error dialogs)
-✅ Settings verified in `~/.local/share/code-server/User/settings.json`
+✅ Settings verified in `~/.local/share/code-server/User/settings.json
 ✅ Code-server restarted with new configuration
 ✅ Browser loads cleanly without errors
 
@@ -67,18 +67,18 @@ Use layered approach to completely separate GitHub auth from Copilot Chat:
 1. Copy settings to code-server user directory:
 ```bash
 cp settings.json ~/.local/share/code-server/User/settings.json
-```
+
 
 2. Restart code-server:
 ```bash
 pkill -9 code-server
 ~/code-server/bin/code-server --bind-addr 0.0.0.0:8080
-```
 
-3. Open browser: `http://172.26.236.99:8080`
+
+3. Open browser: `http://172.26.236.99:8080
 
 4. To authenticate with GitHub:
-   - Press `Ctrl+Shift+P`
+   - Press `Ctrl+Shift+P
    - Type "Accounts: Manage Accounts"
    - Follow the device code flow
 

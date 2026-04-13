@@ -8,12 +8,12 @@
 ```bash
 chmod +x BRANCH_PROTECTION_SETUP.sh
 ./BRANCH_PROTECTION_SETUP.sh
-```
+
 
 **On Windows (PowerShell):**
 ```powershell
 powershell -ExecutionPolicy Bypass -File BRANCH_PROTECTION_SETUP.ps1 -Confirm
-```
+
 
 ### Step 2: Verify Configuration
 
@@ -53,24 +53,24 @@ git config --global commit.gpgsign true
 
 # Verify configuration
 git config --global --list | grep -E "(signingkey|gpgsign)"
-```
+
 
 **For each commit (automatic after setup):**
 ```bash
 # Just commit normally - Git will automatically sign
 git commit -m "Your commit message"  # Will prompt for GPG passphrase if needed
-```
+
 
 **GitHub Integration:**
 - Add your GPG public key to GitHub: https://github.com/settings/keys
   ```bash
   gpg --armor --export YOUR_KEY_ID | pbcopy  # macOS
   gpg --armor --export YOUR_KEY_ID | xclip   # Linux
-  ```
+
 
 ---
 
-## Verification Checklist
+## Verification Checklis
 
 **For Individual Developers:**
 
@@ -106,7 +106,7 @@ git commit -m "Your commit message"  # Will prompt for GPG passphrase if needed
 - [ ] First PRs pass through new process
 
 **April 20 (2 weeks):**
-- [ ] Full enforcement
+- [ ] Full enforcemen
   - All PRs require 2 approvals
   - All commits must be signed
   - No force pushes or deletions allowed
@@ -117,7 +117,7 @@ git commit -m "Your commit message"  # Will prompt for GPG passphrase if needed
 ## Grace Period & Enforcement Phases
 
 ### Phase 0: Announce & Configure (Days 1-3)
-- PR templates in effect
+- PR templates in effec
 - Branch protection active
 - Signed commit requirement: **OPTIONAL** (warning in PR template)
 
@@ -147,13 +147,13 @@ git commit --amend -S
 
 # Force push (only on feature branches!)
 git push --force origin <branch-name>
-```
+
 
 ### Issue: "GPG command not found"
 
 **Fix:**
 - Install GPG: https://www.gnupg.org/download/
-- Verify installation: `gpg --version`
+- Verify installation: `gpg --version
 
 ### Issue: "Passphrase prompt stuck in terminal"
 
@@ -162,22 +162,22 @@ git push --force origin <branch-name>
 # Use pinentry-mac for GUI passphrase entry
 brew install pinentry-mac
 echo "pinentry-program /usr/local/bin/pinentry-mac" >> ~/.gnupg/gpg-agent.conf
-gpgconf --kill gpg-agent
-```
+gpgconf --kill gpg-agen
+
 
 **Fix (Linux, Debian/Ubuntu):**
 ```bash
 apt-get install pinentry-gnome3
 echo "pinentry-program /usr/bin/pinentry-gnome3" >> ~/.gnupg/gpg-agent.conf
-gpgconf --kill gpg-agent
-```
+gpgconf --kill gpg-agen
+
 
 ### Issue: "2-approval requirement too strict"
 
 **Context:** Branch protection requires 2 reviewers. If your team is small:
 
 **Option 1 - Maintain requirement** (Recommended for security)
-- Keep 2-approval requirement
+- Keep 2-approval requiremen
 - Second approval can be self-review if code is trivial
 - Focus on architectural/security reviews
 
@@ -186,8 +186,8 @@ gpgconf --kill gpg-agent
 # Edit BRANCH_PROTECTION_SETUP.ps1 or BRANCH_PROTECTION_SETUP.sh
 # Change: "required_approving_review_count": 2
 # To:     "required_approving_review_count": 1
-# Re-run setup script
-```
+# Re-run setup scrip
+
 
 ---
 
@@ -203,7 +203,7 @@ gpgconf --kill gpg-agent
 
 ---
 
-## Support
+## Suppor
 
 **Questions?** Comment on [Issue #75](https://github.com/kushin77/code-server/issues/75)
 

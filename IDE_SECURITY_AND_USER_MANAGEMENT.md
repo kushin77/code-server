@@ -26,7 +26,7 @@ git push origin main
 
 # Restart (auto-redeploys)
 docker compose restart oauth2-proxy
-```
+
 
 **User can now log in:** `https://ide.kushnir.cloud` → Google OAuth → Auto-settings apply
 
@@ -55,7 +55,7 @@ docker compose restart oauth2-proxy
 
 ### Available Roles
 
-```
+
 ┌────────────────────────────────────────────────────────────────┐
 │                         VIEWER                                │
 │  • Read-only code access                                       │
@@ -88,7 +88,7 @@ docker compose restart oauth2-proxy
 │  • All actions audit-logged                                    │
 │  Use: Platform engineers, admins only                          │
 └────────────────────────────────────────────────────────────────┘
-```
+
 
 ---
 
@@ -120,7 +120,7 @@ docker compose restart oauth2-proxy
 
 # Revoke all sessions (everyone logs out)
 ./scripts/manage-users.sh revoke-all-sessions
-```
+
 
 ---
 
@@ -129,10 +129,10 @@ docker compose restart oauth2-proxy
 ### Step 1: Provision User
 ```bash
 ./scripts/manage-users.sh add-user "newdev@company.com" "developer"
-```
+
 
 **This creates:**
-- ✅ Entry in OAuth2 allowlist
+- ✅ Entry in OAuth2 allowlis
 - ✅ Role-based settings profile
 - ✅ Isolated workspace
 - ✅ Audit log entry
@@ -142,10 +142,10 @@ docker compose restart oauth2-proxy
 git add allowed-emails.txt config/user-settings/
 git commit -m "chore: add newdev@company.com"
 git push origin main
-```
+
 
 ### Step 3: User Logs In
-```
+
 User opens: https://ide.kushnir.cloud
    ↓
 Redirected to Google OAuth
@@ -155,18 +155,18 @@ OAuth2 validates: email in allowed-emails.txt?
 Settings auto-load from role-based profile
    ↓
 IDE ready with restricted features
-```
+
 
 ### Step 4: (Optional) Later Change Role
 ```bash
 ./scripts/manage-users.sh change-role newdev@company.com viewer
-```
+
 
 ---
 
 ## 📊 Security Architecture
 
-```
+
 ┌─────────────────────────────────────────────────────────────────┐
 │                     NETWORK LAYER                               │
 │  • Egress filtering (blocks SSH, SCP, curl to external)         │
@@ -198,13 +198,13 @@ IDE ready with restricted features
 │  • Session start/stop logged                                    │
 │  • Immutable logs (append-only)                                 │
 └─────────────────────────────────────────────────────────────────┘
-```
+
 
 ---
 
 ## 🔑 File Locations Reference
 
-```
+
 /code-server-enterprise/
 ├── allowed-emails.txt              ← OAuth2 whitelist (edit to add users)
 ├── config/
@@ -225,15 +225,15 @@ IDE ready with restricted features
 ├── audit/                          ← Audit tracking
 │   └── user-provisioning.log       ← User changes log
 ├── scripts/
-│   ├── provision-new-user.sh       ← Add user script
+│   ├── provision-new-user.sh       ← Add user scrip
 │   └── manage-users.sh             ← User management CLI
 ├── docker-compose.yml              ← Disable downloads here
 └── CODE_SECURITY_HARDENING.md      ← Full reference
-```
+
 
 ---
 
-## 🔍 Verification Checklist
+## 🔍 Verification Checklis
 
 After setting up, verify all security features:
 
@@ -247,7 +247,7 @@ grep '"terminal.integrated.enabled": false' config/settings.json && echo "✅" |
 # 3. Check allowlist is active
 [[ -f allowed-emails.txt && -s allowed-emails.txt ]] && echo "✅" || echo "❌"
 
-# 4. Check role templates exist
+# 4. Check role templates exis
 ls config/role-settings/*.json | wc -l && echo "✅" || echo "❌"
 
 # 5. Check audit directory exists
@@ -258,7 +258,7 @@ docker compose ps | grep -E "code-server|oauth2-proxy" && echo "✅" || echo "�
 
 # 7. Run full security check
 ./scripts/manage-users.sh security-status
-```
+
 
 ---
 
@@ -302,7 +302,7 @@ tail -f logs/audit/operations.log
 
 # Restart services (applies changes)
 docker compose restart oauth2-proxy code-server
-```
+
 
 ---
 
@@ -315,7 +315,7 @@ docker compose restart oauth2-proxy code-server
 - ✅ Change user roles based on responsibilities
 - ✅ Monitor `logs/audit/` for suspicious activities
 - ✅ Disable access immediately if someone leaves
-- ✅ Encrypt backups of `allowed-emails.txt`
+- ✅ Encrypt backups of `allowed-emails.tx
 - ✅ Use git history to track user changes
 
 ### DON'T ❌
@@ -334,15 +334,15 @@ docker compose restart oauth2-proxy code-server
 
 ### User Can't Login
 ```bash
-# Check if email is in allowlist
-grep "user@company.com" allowed-emails.txt
+# Check if email is in allowlis
+grep "user@company.com" allowed-emails.tx
 
 # Restart OAuth proxy (picks up changes)
 docker compose restart oauth2-proxy
 
 # Check OAuth2 logs
 docker logs oauth2-proxy | tail -20
-```
+
 
 ### User Settings Not Applied
 ```bash
@@ -351,29 +351,29 @@ ls config/user-settings/{user-id}/settings.json
 
 # Reload IDE (F1 → Reload Window)
 # Or restart container: docker compose restart code-server
-```
+
 
 ### Files Are Downloadable (should be blocked)
 ```bash
 # Check docker-compose.yml
 grep "CS_DISABLE_FILE_DOWNLOADS" docker-compose.yml
 
-# Rebuild and restart
+# Rebuild and restar
 docker compose up -d --build code-server
-```
+
 
 ### Terminal Is Still Available
 ```bash
 # Check settings
 grep '"terminal.integrated.enabled"' config/settings.json
 
-# Verify it's false, then restart
+# Verify it's false, then restar
 docker compose restart code-server
-```
+
 
 ---
 
-## 📞 Support
+## 📞 Suppor
 
 For detailed implementation, see:
 - **Security Reference:** [CODE_SECURITY_HARDENING.md](./CODE_SECURITY_HARDENING.md)
@@ -383,6 +383,6 @@ For detailed implementation, see:
 
 ---
 
-**Status:** ✅ Production Ready  
-**Last Updated:** 2026-04-12  
+**Status:** ✅ Production Ready
+**Last Updated:** 2026-04-12
 **Security Level:** Enterprise (FAANG-grade)

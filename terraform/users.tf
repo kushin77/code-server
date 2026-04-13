@@ -7,7 +7,7 @@ variable "allowed_users" {
     role     = string  # viewer, developer, architect, admin
     disabled = optional(bool, false)
   }))
-  
+
   # ✅ Default users (override in terraform.tfvars)
   default = {
     akushnir = {
@@ -16,14 +16,14 @@ variable "allowed_users" {
       disabled = false
     }
   }
-  
+
   validation {
     condition = alltrue([
       for user in var.allowed_users : contains(["viewer", "developer", "architect", "admin"], user.role)
     ])
     error_message = "Role must be one of: viewer, developer, architect, admin"
   }
-  
+
   validation {
     condition = alltrue([
       for user in var.allowed_users : can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", user.email))
@@ -42,12 +42,12 @@ resource "local_file" "allowed_emails" {
     # Ensure file ends with newline
     [""]
   ))
-  
+
   file_permission = "0644"
-  
-  # ✅ Detect drift - if file edited outside Terraform, alert
+
+  # ✅ Detect drift - if file edited outside Terraform, aler
   lifecycle {
-    ignore_changes = [] # Don't ignore - we WANT to detect drift
+    ignore_changes = [] # Don't ignore - we WANT to detect drif
   }
 }
 
@@ -57,9 +57,9 @@ resource "local_file" "user_workspace_readme" {
     for name, user in var.allowed_users : name => user
     if !user.disabled
   }
-  
+
   filename = "${path.module}/../workspaces/${each.key}/README.md"
-  content = <<-EOT
+  content = <<-EO
 # Development Workspace
 
 Welcome, ${each.value.email}!
@@ -83,10 +83,10 @@ ${contains(["viewer", "developer", "architect"], each.value.role) ? "- ❌ Termi
 ${contains(["viewer", "architect"], each.value.role) ? "- ❌ File download disabled" : ""}
 
 For role details, see: IDE_SECURITY_AND_USER_MANAGEMENT.md
-EOT
-  
+EO
+
   file_permission = "0644"
-  
+
   depends_on = [
     local_file.allowed_emails
   ]
@@ -98,7 +98,7 @@ resource "local_file" "user_metadata" {
     for name, user in var.allowed_users : name => user
     if !user.disabled
   }
-  
+
   filename = "${path.module}/../config/user-settings/${each.key}/user-metadata.json"
   content = jsonencode({
     user_id        = each.key
@@ -108,9 +108,9 @@ resource "local_file" "user_metadata" {
     status         = "active"
     managed_by     = "terraform"
   })
-  
+
   file_permission = "0644"
-  
+
   depends_on = [
     local_file.allowed_emails
   ]
@@ -122,21 +122,21 @@ resource "null_resource" "user_settings_symlink" {
     for name, user in var.allowed_users : name => user
     if !user.disabled
   }
-  
+
   provisioner "local-exec" {
     # For each user, link their role template to their settings
-    command = <<-EOT
+    command = <<-EO
       mkdir -p "${path.module}/../config/user-settings/${each.key}"
-      
+
       # Link to role template
       if [ -f "${path.module}/../config/role-settings/${each.value.role}-profile.json" ]; then
         ln -sf "../../role-settings/${each.value.role}-profile.json" \
           "${path.module}/../config/user-settings/${each.key}/settings.json" || true
       fi
-    EOT
+    EO
     interpreter = ["/bin/bash", "-c"]
   }
-  
+
   depends_on = [
     local_file.user_metadata
   ]

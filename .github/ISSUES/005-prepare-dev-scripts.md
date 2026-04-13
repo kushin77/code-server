@@ -11,7 +11,7 @@ assignees: []
 
 Checklist:
 
-- [ ] Create `setup-dev.sh` to install deps and verify pre-commit
+- [ ] Create `setup-dev.sh` to install deps and verify pre-commi
 - [ ] Add `Dockerfile` for reproducible dev container
 - [ ] Document emulator and local testing steps
 

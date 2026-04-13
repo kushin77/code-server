@@ -20,7 +20,7 @@ This guide implements **zero-trust code access patterns** with defense-in-depth 
 # - OAuth2 proxy → Google (authentication)
 # - Caddy → Git hosting (if needed)
 # - Block terminal/code-server → external networks
-```
+
 
 **Implementation:** Update docker-compose.yml
 ```yaml
@@ -28,12 +28,12 @@ networks:
   enterprise:
     driver: bridge
     driver_opts:
-      # Enable network policy enforcement
+      # Enable network policy enforcemen
       "com.docker.network.bridge.enable_ip_masquerade": "true"
     ipam:
       config:
         - subnet: 172.25.0.0/16
-```
+
 
 **Firewall Rules (Windows/Linux):**
 ```powershell
@@ -42,23 +42,23 @@ networks:
 # Block raw socket access
 
 # Windows firewall (if hosting Docker)
-New-NetFirewallRule -DisplayName "Block code-server SSH" `
+New-NetFirewallRule -DisplayName "Block code-server SSH"
   -Direction Outbound -Action Block -Protocol TCP -RemotePort 22,2222
 
-New-NetFirewallRule -DisplayName "Block code-server SCP" `
+New-NetFirewallRule -DisplayName "Block code-server SCP"
   -Direction Outbound -Action Block -Protocol TCP -RemotePort 22,23
 
-New-NetFirewallRule -DisplayName "Block code-server curl external" `
-  -Direction Outbound -Action Block -Program "C:\Program Files\Docker\Docker\resources\bin\curl.exe" `
+New-NetFirewallRule -DisplayName "Block code-server curl external"
+  -Direction Outbound -Action Block -Program "C:\Program Files\Docker\Docker\resources\bin\curl.exe"
   -RemoteAddress "!172.25.0.0/16,!8.8.8.8,!1.1.1.1" # Only allow container network + DNS
-```
+
 
 #### 1.2 WebSocket Restrictions
 ```yaml
 # Caddy configuration restricts WebSocket abuse
 @websocket {
     header Connection Upgrade
-    header Upgrade websocket
+    header Upgrade websocke
 }
 
 # Log all WebSocket connections
@@ -67,11 +67,11 @@ New-NetFirewallRule -DisplayName "Block code-server curl external" `
 }
 
 log @websocket_connect {
-    output stdout
+    output stdou
     format json
     include_headers X-Auth-Request-User X-Auth-Request-Email
 }
-```
+
 
 ---
 
@@ -85,7 +85,7 @@ log @websocket_connect {
   "security.workspace.trust.enabled": true,
   "security.workspace.trust.confirmUntrustedWorkspaces": true,
   "security.workspace.trust.startup": "always",
-  
+
   // ❌ BLOCK: Shell script execution extensions
   "extensions.disabledRecommendations": [
     "ms-vscode.makefile-tools",
@@ -93,20 +93,20 @@ log @websocket_connect {
     "golang.go",
     "rust-lang.rust-analyzer"
   ],
-  
+
   // ❌ BLOCK: Git operations that could leak code
   "git.enabled": false,
   "git.ignoreLimitWarning": true,
-  
+
   // ❌ BLOCK: Terminal → external commands
   "terminal.integrated.enabled": false,
-  
+
   // ❌ ALLOW: Code viewing only
   "extensions.enabled": true,
   "editor.readOnlyMessage": "Code is read-only. Submit changes via PR system only.",
   "editor.readOnly": false  // Set per-workspace if needed
 }
-```
+
 
 #### 2.2 Terminal Sandboxing
 ```bash
@@ -128,7 +128,7 @@ exec_safe() {
       return $?
     fi
   done
-  
+
   echo "❌ Command blocked ($cmd): Not in whitelist" >&2
   log_security_event "TERMINAL_BLOCKED" "User: $USER, Command: $cmd"
   return 127
@@ -141,43 +141,43 @@ exec_safe() {
 # - Docker commands
 # - nc (netcat)
 # - perl, python (script execution)
-```
+
 
 **In Dockerfile.code-server:**
 ```dockerfile
 # Block command execution
 RUN chmod 000 /usr/bin/ssh /usr/bin/ssh-keygen /usr/bin/scp /usr/bin/sftp
-RUN chmod 000 /usr/bin/curl /usr/bin/wget
+RUN chmod 000 /usr/bin/curl /usr/bin/wge
 RUN chmod 000 /usr/bin/perl /usr/bin/python3 /usr/bin/ruby
-RUN chmod 000 /usr/bin/nc /usr/bin/netcat
-RUN chmod 000 /usr/bin/git
+RUN chmod 000 /usr/bin/nc /usr/bin/netca
+RUN chmod 000 /usr/bin/gi
 
 # Allow ONLY safe commands and development tools
 RUN chmod 755 /usr/bin/node /usr/bin/npm /usr/bin/bash
-```
+
 
 #### 2.3 Copy/Paste Restrictions
 ```json
 {
-  // Disable clipboard API in browser context
+  // Disable clipboard API in browser contex
   "workbench.editor.enablePreview": false,
   "editor.copyWithSyntaxHighlighting": false,
-  
+
   // Remove copy button from UI
   "workbench.editor.showTabs": "single",
-  
+
   // In code-server startup, inject script to block copy events
   "editor.glyphMargin": false,
   "editor.selectionClipboard": false  // Disable Linux middle-click paste
 }
-```
+
 
 **Implement in HTML/JavaScript layer:**
-```javascript
+```javascrip
 // Inject into code-server startup (via custom extension or patch)
 
 document.addEventListener('copy', (e) => {
-  // Log the copy event for audit
+  // Log the copy event for audi
   const selectedText = window.getSelection().toString();
   if (selectedText.length > 100) {  // Only log substantial copies
     fetch('/audit/clipboard-copy', {
@@ -199,7 +199,7 @@ document.addEventListener('contextmenu', (e) => {
   logAuditEvent('CONTEXT_MENU_BLOCKED', e.target);
   return false;
 });
-```
+
 
 #### 2.4 File Download Restrictions
 In **docker-compose.yml** (code-server service):
@@ -207,7 +207,7 @@ In **docker-compose.yml** (code-server service):
 environment:
   - CS_DISABLE_FILE_DOWNLOADS=true  # No "Download" button
   - CS_UPLOAD_DISABLED=true         # No file uploads
-```
+
 
 ---
 
@@ -255,15 +255,15 @@ done
 audit_git "BLOCKED_UNKNOWN:$COMMAND $*"
 echo "❌ Git operation not in whitelist: $COMMAND" >&2
 exit 127
-```
+
 
 **In Dockerfile:**
 ```dockerfile
-# Backup original git
+# Backup original gi
 RUN mv /usr/bin/git /usr/bin/git.real
 
 # Use wrapper
-COPY --chmod=755 scripts/git-wrapper.sh /usr/bin/git
+COPY --chmod=755 scripts/git-wrapper.sh /usr/bin/gi
 
 # Configure git to enforce signing
 RUN git config --global commit.gpgsign true
@@ -271,7 +271,7 @@ RUN git config --global push.gpgSign true
 RUN git config --global tag.gpgSign true
 RUN git config --global user.email "${WORKSPACE_ADMIN_EMAIL}"
 RUN git config --global user.name "Code-Server Admin"
-```
+
 
 #### 3.2 SSH Key Quarantine
 ```bash
@@ -280,7 +280,7 @@ chmod 000 ~/.ssh/id_rsa* ~/.ssh/id_ed25519*
 
 # SSH keys must be registered with Git host via OAuth (not SSH keys)
 # If SSH needed: use SSH key passphrase + hardware token
-```
+
 
 ---
 
@@ -295,7 +295,7 @@ volumes:
 environment:
   - SESSION_RECORDING_ENABLED=true
   - AUDIT_LOG_PATH=/var/log/audit.log
-```
+
 
 **Session Audit Script:**
 ```bash
@@ -328,7 +328,7 @@ echo "Session Started: $SESSION_ID" > "$SESSION_LOG"
 echo "User: $USER_EMAIL" >> "$SESSION_LOG"
 echo "IP: $IP_ADDRESS" >> "$SESSION_LOG"
 echo "Time: $START_TIME" >> "$SESSION_LOG"
-```
+
 
 #### 4.2 Immutable Audit Logs
 ```bash
@@ -340,7 +340,7 @@ sudo setfattr +i /var/log/audit.log  # Immutable
 
 # Verify logs haven't been tampered
 sha256sum /var/log/audit.log > /var/log/audit.log.sha256
-```
+
 
 ---
 
@@ -361,8 +361,8 @@ users:
       - terminal.exec
       - files.download
       - git.push
-  
-  - name: architect
+
+  - name: architec
     email: arch@company.com
     role: reviewer    # Review + approve changes
     permissions:
@@ -372,15 +372,15 @@ users:
       - logs.read
     restrictions:
       - code.write  # No direct changes
-  
+
   - name: admin
     email: admin@company.com
-    role: admin       # Full access with audit
+    role: admin       # Full access with audi
     permissions:
       - "*"
     restrictions:
       - none
-```
+
 
 ---
 
@@ -402,7 +402,7 @@ npm config set always-auth true
 
 # Only allow install from private registry
 npm config set audit false  # Skip public audits
-```
+
 
 **Docker buildkit secret management:**
 ```dockerfile
@@ -414,16 +414,16 @@ RUN --mount=type=secret,id=npm_token \
     npm config set //private-npm.company.com/:_authToken=$(cat /run/secrets/npm_token) && \
     npm install --legacy-peer-deps && \
     rm -f ~/.npmrc  # Clean credentials after build
-```
+
 
 ---
 
-### Layer 7: Secrets Management
+### Layer 7: Secrets Managemen
 
 #### 7.1 Block Hardcoded Secrets
 ```bash
 # Pre-commit hook to scan for secrets
-# .git/hooks/pre-commit
+# .git/hooks/pre-commi
 
 #!/bin/bash
 set -e
@@ -451,14 +451,14 @@ done
 
 echo "✅ No secrets detected"
 exit 0
-```
+
 
 ---
 
-## 👥 USER SETTINGS MANAGEMENT
+## 👥 USER SETTINGS MANAGEMEN
 
 ### Architecture: Settings Hierarchy
-```
+
 Workspace Default Settings
     ↓
 Organization Template
@@ -468,7 +468,7 @@ Team Settings (inherited)
 User Profile (can override team settings with restrictions)
     ↓
 Session Settings (temporary, reset on logout)
-```
+
 
 ---
 
@@ -495,9 +495,9 @@ Session Settings (temporary, reset on logout)
       "eamodio.gitlens",
       "ms-vscode-remote.remote-containers"
     ],
-    
+
     // ═════════════════════════════════════════════════════════════
-    // TIER 2: OVERRIDEABLE BUT ENFORCED DEFAULT
+    // TIER 2: OVERRIDEABLE BUT ENFORCED DEFAUL
     // ═════════════════════════════════════════════════════════════
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -508,14 +508,14 @@ Session Settings (temporary, reset on logout)
     "editor.wordWrapColumn": 100,
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
-    
+
     // ═════════════════════════════════════════════════════════════
     // TIER 3: PER-ROLE SETTINGS (Applied based on user role)
     // ═════════════════════════════════════════════════════════════
     // → Populated dynamically at login
   }
 }
-```
+
 
 #### Phase 2: Role-Based Settings Templates
 ```bash
@@ -564,9 +564,9 @@ Session Settings (temporary, reset on logout)
     "[markdown]": { "editor.readOnly": false }
   }
 }
-```
 
-#### Phase 3: User Provisioning Script
+
+#### Phase 3: User Provisioning Scrip
 ```bash
 #!/bin/bash
 # scripts/provision-new-user.sh
@@ -585,9 +585,9 @@ fi
 
 echo "👤 Provisioning user: $EMAIL as $ROLE"
 
-# Step 1: Add to allowed-emails.txt
+# Step 1: Add to allowed-emails.tx
 if ! grep -q "^$EMAIL$" allowed-emails.txt; then
-  echo "$EMAIL" >> allowed-emails.txt
+  echo "$EMAIL" >> allowed-emails.tx
   echo "✅ Email added to allowlist"
 else
   echo "⚠️  Email already in allowlist"
@@ -648,10 +648,10 @@ echo "📋 Next steps:"
 echo "   1. Commit provisioning changes: git add allowed-emails.txt config/"
 echo "   2. Restart oauth2-proxy: docker compose restart oauth2-proxy"
 echo "   3. User can now log in via Google OAuth"
-```
+
 
 #### Phase 4: Runtime Settings Injection
-```typescript
+```typescrip
 // Extension-based settings loader (TypeScript/VS Code Extension)
 // extensions/auto-settings-loader/src/extension.ts
 
@@ -669,10 +669,10 @@ export async function activate(context: vscode.ExtensionContext) {
   try {
     if (fs.existsSync(settingsPath)) {
       const userSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      
+
       // Apply settings to current workspace
       const workspaceSettings = vscode.workspace.getConfiguration();
-      
+
       for (const [key, value] of Object.entries(userSettings)) {
         if (key !== 'role' && key !== 'priority') {
           try {
@@ -696,9 +696,9 @@ export async function activate(context: vscode.ExtensionContext) {
     console.error('[Settings Loader] Error:', err);
   }
 }
-```
 
-#### Phase 5: Session Management
+
+#### Phase 5: Session Managemen
 ```bash
 #!/bin/bash
 # scripts/manage-user-session.sh
@@ -706,7 +706,7 @@ export async function activate(context: vscode.ExtensionContext) {
 get_session_info() {
   local email="$1"
   local session_file="sessions/${email}.session"
-  
+
   if [[ -f "$session_file" ]]; then
     cat "$session_file"
   else
@@ -723,7 +723,7 @@ list_active_sessions() {
       local user=$(grep "^user=" "$session" | cut -d= -f2)
       local login_time=$(grep "^login_time=" "$session" | cut -d= -f2)
       local idle_time=$(grep "^idle_time=" "$session" | cut -d= -f2)
-      
+
       printf "%-30s | Login: %s | Idle: %s\n" "$user" "$login_time" "$idle_time"
     fi
   done
@@ -732,10 +732,10 @@ list_active_sessions() {
 revoke_session() {
   local email="$1"
   local session_file="sessions/${email}.session"
-  
+
   if rm -f "$session_file"; then
     echo "✅ Session revoked: $email"
-    # Force re-authentication on next request
+    # Force re-authentication on next reques
     return 0
   else
     echo "❌ Failed to revoke session: $email"
@@ -748,7 +748,7 @@ revoke_all_user_sessions() {
   local count=$(rm -f sessions/${email}.session | wc -l)
   echo "✅ Revoked $count session(s) for $email"
 }
-```
+
 
 ---
 
@@ -756,19 +756,19 @@ revoke_all_user_sessions() {
 
 ### Week 1: Network & Container Security
 - [ ] Implement egress filtering (docker network policies)
-- [ ] Deploy git wrapper script
+- [ ] Deploy git wrapper scrip
 - [ ] Disable download/upload in code-server
 - [ ] Configure read-only filesystem where possible
 
 ### Week 2: IDE Lockdown
-- [ ] Implement extension blocklist
+- [ ] Implement extension blocklis
 - [ ] Disable terminal
 - [ ] Set up copy/paste audit logging
-- [ ] Enable workspace trust enforcement
+- [ ] Enable workspace trust enforcemen
 
-### Week 3: User Management
+### Week 3: User Managemen
 - [ ] Create role-based settings templates
-- [ ] Implement provisioning script
+- [ ] Implement provisioning scrip
 - [ ] Deploy settings loader extension
 - [ ] Create user onboarding guide
 
@@ -789,7 +789,7 @@ revoke_all_user_sessions() {
 ## 📋 QUICK START: ADD NEW USER
 
 ```bash
-# 1. Run provisioning script
+# 1. Run provisioning scrip
 ./scripts/provision-new-user.sh "newdev@company.com" developer "New Developer"
 
 # 2. Commit changes
@@ -800,13 +800,13 @@ git commit -m "chore: provision new user newdev@company.com"
 docker compose restart oauth2-proxy
 
 # 4. User logs in via: https://ide.kushnir.cloud
-# → OAuth2 validates against allowed-emails.txt
+# → OAuth2 validates against allowed-emails.tx
 # → Settings loader applies role-based config
 # → Session audit log created
 
 # Verify
 docker logs oauth2-proxy | grep "newdev@company.com"
-```
+
 
 ---
 
@@ -817,7 +817,7 @@ docker logs oauth2-proxy | grep "newdev@company.com"
 # View recent user logins
 docker logs oauth2-proxy | grep "authenticated"
 
-# View file access audit
+# View file access audi
 tail -f logs/sessions/*.log
 
 # Verify git operations were blocked
@@ -828,11 +828,11 @@ tar czf audit-export-$(date +%Y%m%d).tar.gz logs/sessions/
 
 # Verify immutable logs
 lsattr /var/log/audit.log  # Should show "----ia--------"
-```
+
 
 ---
 
-## 🔐 SECURITY CHECKLIST
+## 🔐 SECURITY CHECKLIS
 
 - [ ] Network egress filtering enabled
 - [ ] Git clone/push disabled (PR-only code flow)

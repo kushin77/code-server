@@ -1,4 +1,4 @@
-# 🔍 Infrastructure as Code Audit & Hardening Report
+# 🔍 Infrastructure as Code Audit & Hardening Repor
 
 ## Executive Summary
 
@@ -48,13 +48,13 @@ Your infrastructure has **PARTIAL IaC coverage with several gaps**. This report 
 - `scripts/fetch-gsm-secrets.sh` - Manual secret retrieval
 
 **Problem:**
-```
+
 Imperative: "Do this, then that, then check the result"
 Declarative: "Here's the desired state, make it so"
 
 Shell scripts = imperative
 Terraform = declarative
-```
+
 
 **Impact:**
 - ❌ Not idempotent (running twice can break things)
@@ -107,7 +107,7 @@ Terraform = declarative
 terraform init              # Always safe
 terraform apply             # Safe (won't recreate unchanged resources)
 docker-compose up -d        # Safe (won't restart if already running)
-```
+
 
 ### ❌ NOT Idempotent (Breaks on Repeat)
 ```bash
@@ -115,7 +115,7 @@ docker-compose up -d        # Safe (won't restart if already running)
 bash scripts/set-godaddy-dns.sh           # May set DNS twice, race conditions
 bash scripts/fetch-gsm-secrets.sh         # Creates .env multiple times
 bash deploy-iac.sh                        # Downloads, extracts, overwrites
-```
+
 
 ### Problem Example:
 ```bash
@@ -127,26 +127,26 @@ scripts/deploy-kushnir-cloud.sh
 scripts/deploy-kushnir-cloud.sh
 # ❌ DNS API calls race
 # ❌ Images rebuilt from scratch (slow)
-# ❌ Containers may be inconsistent
+# ❌ Containers may be inconsisten
 # ❌ State lost between runs
-```
+
 
 ---
 
 ## What Immutability Means (and Current Gaps)
 
 ### ✅ Immutable (Infrastructure Doesn't Drift)
-```
+
 Goal: Once deployed, infrastructure stays in known state
 Problem: Infrastructure can be modified outside IaC (manual changes)
 Solution: Enforce IaC as single source of truth, disallow manual changes
-```
+
 
 ### ❌ Currently NOT Immutable
 1. **Manual edits possible:** `vi allowed-emails.txt` bypasses review
 2. **Container images rebuild:** No digest pinning (can change unexpectedly)
 3. **Configuration untracj:** Role settings not in git with commit history
-4. **No enforcement:** Nothing prevents someone from manually editing `/etc/caddy/Caddyfile`
+4. **No enforcement:** Nothing prevents someone from manually editing `/etc/caddy/Caddyfile
 5. **Drift possible:** State can diverge from IaC definitions
 
 ### Current Immutability Issues:
@@ -168,13 +168,13 @@ Solution: Enforce IaC as single source of truth, disallow manual changes
 **Goal:** Convert all shell scripts to Terraform or Makefile targets
 
 **Current Imperative Scripts:**
-```
+
 deploy-iac.sh              → CONVERT to Makefile wrapper
-deploy-iac.ps1             → CONVERT to Makefile wrapper  
+deploy-iac.ps1             → CONVERT to Makefile wrapper
 deploy-kushnir-cloud.sh    → REPLACE with docker-compose + pre-checks
 set-godaddy-dns.sh         → REPLACE with Terraform (godaddy provider)
 fetch-gsm-secrets.sh       → REPLACE with Terraform data sources
-```
+
 
 **Action:** Create wrapper Makefile that calls Terraform (declarative), not custom scripts.
 
@@ -185,27 +185,27 @@ fetch-gsm-secrets.sh       → REPLACE with Terraform data sources
 **Goal:** Single source of truth for all configuration
 
 **Current Fragmentation:**
-```
+
 main.tf (Terraform)        ← Primary
 docker-compose.yml         ← Secondary
 .env file                  ← Secrets (manual)
 config/*.json              ← Tertiary
 scripts/*.sh               ← Embedded config
 Caddyfile                  ← Static config
-```
+
 
 **Desired State:**
-```
+
 terraform/
   ├── main.tf              ← PRIMARY: Services, networks, volumes
   ├── variables.tf         ← PRIMARY: All inputs
   ├── outputs.tf           ← PRIMARY: All outputs
   ├── locals.tf            ← PRIMARY: Computed values
   ├── secrets.tf           ← PRIMARY: GCP Secrets Manager data sources
-  ├── users.tf             ← PRIMARY: User management
+  ├── users.tf             ← PRIMARY: User managemen
   ├── docker-compose.yml   ← GENERATED: From Terraform
   └── config/              ← Generated from Terraform
-```
+
 
 ---
 
@@ -220,7 +220,7 @@ terraform/
 ├── .tfvars           ← NEVER (contains inputs)
 ├── terraform.tfstate ← NEVER (sensitive)
 └── ...
-```
+
 
 **Protect with:**
 - Require PR review before merge to main
@@ -234,7 +234,7 @@ terraform/
 **Goal:** All operations can run 100x safely
 
 **Audit Each Script:**
-```
+
 For each bash/ps1/python script:
 1. Does it check if already done?
 2. Does it create output files each time (cumulative)?
@@ -243,18 +243,18 @@ For each bash/ps1/python script:
 5. Can you recover by re-running?
 
 If any are ❌, convert to Terraform or add idempotency checks
-```
+
 
 **Key Fixes:**
-- ✅ Terraform: Already idempotent
-- ✅ docker-compose: Already idempotent  
-- ❌ Scripts: Need refactoring to be idempotent
+- ✅ Terraform: Already idempoten
+- ✅ docker-compose: Already idempoten
+- ❌ Scripts: Need refactoring to be idempoten
 
 ---
 
 ### Phase 5: Fix Immutability (2 hours)
 
-**Goal:** Infrastructure matches IaC exactly, can't drift
+**Goal:** Infrastructure matches IaC exactly, can't drif
 
 **1. Image Pinning**
 ```hcl
@@ -267,7 +267,7 @@ resource "docker_image" "code_server" {
 resource "docker_image" "code_server" {
   name = "codercom/code-server:4.115.0@sha256:abc123..."
 }
-```
+
 
 **2. Configuration Management**
 ```hcl
@@ -283,7 +283,7 @@ resource "local_file" "allowed_emails" {
   filename = "allowed-emails.txt"
   content = jsonencode(var.allowed_users)  # ← From tfvars/Terraform
 }
-```
+
 
 **3. No Manual Changes**
 ```hcl
@@ -293,13 +293,13 @@ resource "local_file" "config" {
   content              = jsonencode(local.config)
   file_permission      = "0644"
   directory_permission = "0755"
-  
+
   # Prevent drift - warn if file edited outside Terraform
   lifecycle {
-    ignore_changes = []  # Don't ignore - detect drift
+    ignore_changes = []  # Don't ignore - detect drif
   }
 }
-```
+
 
 ---
 
@@ -307,7 +307,7 @@ resource "local_file" "config" {
 
 ### New Structure:
 
-```
+
 code-server-enterprise/
 ├── terraform/                          # ← ALL IaC HERE
 │   ├── main.tf                        # Core configuration
@@ -316,7 +316,7 @@ code-server-enterprise/
 │   ├── locals.tf                      # Computed values
 │   ├── docker.tf                      # Docker resources
 │   ├── secrets.tf                     # GCP Secrets Manager
-│   ├── users.tf                       # User management
+│   ├── users.tf                       # User managemen
 │   ├── dns.tf                         # GoDaddy DNS (TBD)
 │   ├── github.tf                      # GitHub branch protection (TBD)
 │   ├── versions.tf                    # Provider versions
@@ -350,7 +350,7 @@ code-server-enterprise/
     ├── IaC-IDEMPOTENCY.md            # ← NEW
     ├── IaC-IMMUTABILITY.md           # ← NEW
     └── [existing docs]
-```
+
 
 ---
 
@@ -358,45 +358,45 @@ code-server-enterprise/
 
 ### Issue 1: Mutable Image Tags
 
-**File:** `docker-compose.yml`
+**File:** `docker-compose.yml
 
 **Current (BAD):**
 ```yaml
 code-server:
   image: codercom/code-server:latest  # ❌ Mutable - can change daily
-  
+
 caddy:
   image: caddy:latest                 # ❌ Mutable
-  
+
 oauth2-proxy:
   image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1  # ✅ Mostly good (but no digest)
-```
+
 
 **Fixed (GOOD):**
 ```yaml
 code-server:
-  image: codercom/code-server:4.115.0@sha256:abcd1234...  # ✅ Immutable + digest
+  image: codercom/code-server:4.115.0@sha256:abcd1234...  # ✅ Immutable + diges
 
 caddy:
   image: caddy:latest@sha256:def5678...  # ✅ Better (but should pin major.minor)
 
 oauth2-proxy:
-  image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:ghi9012...  # ✅ Full version + digest
-```
+  image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:ghi9012...  # ✅ Full version + diges
+
 
 **Implementation:**
 ```bash
 # Find digest for image:
 docker pull codercom/code-server:4.115.0
-docker inspect codercom/code-server:4.115.0 | grep -i digest
+docker inspect codercom/code-server:4.115.0 | grep -i diges
 
-# Update docker-compose.yml with digest
+# Update docker-compose.yml with diges
 docker-compose up -d  # Now uses exact image, won't auto-upgrade
-```
+
 
 ---
 
-### Issue 2: Manual Secret Management
+### Issue 2: Manual Secret Managemen
 
 **File:** `.env` (currently created by fetch-gsm-secrets.sh)
 
@@ -404,8 +404,8 @@ docker-compose up -d  # Now uses exact image, won't auto-upgrade
 ```bash
 # scripts/fetch-gsm-secrets.sh
 gcloud secrets versions access latest --secret="google-client-id" > .env  # ❌ Writes secrets to file
-export GOOGLE_CLIENT_ID=$(cat .env | ...)                                 # ❌ In plaintext
-```
+export GOOGLE_CLIENT_ID=$(cat .env | ...)                                 # ❌ In plaintex
+
 
 **Fixed (GOOD - Secrets Manager):**
 ```hcl
@@ -417,15 +417,15 @@ data "google_secret_manager_secret_version" "google_client_id" {
 
 # Use in docker-compose generation
 resource "local_file" "env_file" {
-  sensitive_content = <<-EOT
+  sensitive_content = <<-EO
 GOOGLE_CLIENT_ID=${data.google_secret_manager_secret_version.google_client_id.secret_data}
 GOOGLE_CLIENT_SECRET=${data.google_secret_manager_secret_version.google_client_secret.secret_data}
-  EOT
+  EO
   filename = ".env"
-  
+
   # .env not in git (it's generated)
 }
-```
+
 
 **.gitignore adjustment:**
 ```bash
@@ -440,24 +440,24 @@ tfplan*
 terraform/
 Makefile
 .github/workflows/
-```
+
 
 ---
 
-### Issue 3: Manual User Management
+### Issue 3: Manual User Managemen
 
-**Files:** `allowed-emails.txt`, `config/user-settings/`, `config/role-settings/`
+**Files:** `allowed-emails.txt`, `config/user-settings/`, `config/role-settings/
 
 **Current (BAD - Manual Files):**
 ```bash
-# ❌ Users edited by: vi allowed-emails.txt
+# ❌ Users edited by: vi allowed-emails.tx
 # ❌ No version control
 # ❌ No review process
 # ❌ Can't rollback
 
 ./scripts/manage-users.sh add-user "email@company.com" "developer"
 # → Creates files manually
-```
+
 
 **Fixed (GOOD - IaC-Managed):**
 ```hcl
@@ -504,7 +504,7 @@ resource "local_file" "user_settings" {
     created  = filesha256("...")
   })
 }
-```
+
 
 **Usage:**
 ```bash
@@ -525,15 +525,15 @@ allowed_users = {
 # Deploy:
 terraform apply -var-file="environments/prod.tfvars"
 # ✅ Generates all files from single source
-# ✅ Can rollback with git revert
+# ✅ Can rollback with git rever
 # ✅ PR review before applying
-```
+
 
 ---
 
 ### Issue 4: Deployment Scripts Are Imperative
 
-**Files:** `deploy-iac.sh`, `deploy-iac.ps1`
+**Files:** `deploy-iac.sh`, `deploy-iac.ps1
 
 **Current (BAD):**
 ```bash
@@ -544,7 +544,7 @@ install_terraform()         # Then this
 init_terraform()           # Then this
 plan_deployment()          # Then this
 apply_deployment()         # Then this
-```
+
 
 **Fixed (GOOD - Declarative):**
 ```makefile
@@ -558,7 +558,7 @@ deploy: validate plan
 plan: validate
 	terraform plan -out=tfplan
 
-destroy: 
+destroy:
 	terraform destroy -auto-approve
 
 validate:
@@ -568,7 +568,7 @@ validate:
 # ✅ Idempotent (can run 100x)
 # ✅ Declarative (targets = state goals)
 # ✅ Follows terraform patterns
-```
+
 
 **Usage:**
 ```bash
@@ -577,13 +577,13 @@ make deploy  # Apply changes (safe, declarative)
 make destroy # Remove everything
 
 # No need for custom scripts!
-```
+
 
 ---
 
 ## GitHub Actions CI/CD for IaC
 
-**Create:** `.github/workflows/iac-validate.yml`
+**Create:** `.github/workflows/iac-validate.yml
 
 ```yaml
 name: IaC Validation
@@ -598,32 +598,32 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Initialize Terraform
         run: terraform -chdir=terraform init -backend=false
-      
+
       - name: Format Check
         run: terraform -chdir=terraform fmt -check -recursive
-      
+
       - name: Validate
         run: terraform -chdir=terraform validate
-      
+
       - name: Plan (PR only)
         if: github.event_name == 'pull_request'
         run: terraform -chdir=terraform plan -out=tfplan
-      
+
       - name: Upload Plan
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v3
         with:
           name: tfplan
           path: terraform/tfplan
-```
 
-**Create:** `.github/workflows/iac-deploy.yml`
+
+**Create:** `.github/workflows/iac-deploy.yml
 
 ```yaml
 name: IaC Deploy
@@ -636,31 +636,31 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.0
-      
+
       - name: Initialize
-        run: terraform -chdir=terraform init
-      
+        run: terraform -chdir=terraform ini
+
       - name: Validate
         run: terraform -chdir=terraform validate
-      
+
       - name: Plan
         run: terraform -chdir=terraform plan
-      
+
       - name: Apply
         run: terraform -chdir=terraform apply -auto-approve
-```
+
 
 ---
 
-## Idempotency Verification Checklist
+## Idempotency Verification Checklis
 
 ### ✅ Test Each Component:
 
@@ -681,11 +681,11 @@ terraform apply -auto-approve  # Should show "No changes"
 # 4. User provisioning idempotency
 terraform apply -var-file=prod.tfvars
 terraform apply -var-file=prod.tfvars  # Should be unchanged
-```
+
 
 ---
 
-## Immutability Verification Checklist
+## Immutability Verification Checklis
 
 ### ✅ Verify No Drift:
 
@@ -694,7 +694,7 @@ terraform apply -var-file=prod.tfvars  # Should be unchanged
 terraform plan  # Should show "No changes"
 
 # 2. Verify image digests
-docker inspect code-server | grep -i digest
+docker inspect code-server | grep -i diges
 # Should show: sha256:abc123...@sha256:def456...
 
 # 3. Verify config files
@@ -707,7 +707,7 @@ git status | grep "config/"
 vi allowed-emails.txt  # Edit and save
 terraform plan         # Should detect change
 terraform apply        # Should revert to IaC version
-```
+
 
 ---
 
@@ -734,12 +734,12 @@ terraform apply        # Should revert to IaC version
 - [ ] All config in git with PR review
 - [ ] No mutable image tags (all digests pinned)
 - [ ] Secrets in GCP Secrets Manager (not .env)
-- [ ] CI/CD validates every PR  
+- [ ] CI/CD validates every PR
 - [ ] No drift: `terraform plan` always shows "No changes"
 - [ ] Team training complete: everyone knows IaC process
 
 ---
 
-**Status:** Architecture Review Complete  
-**Recommendation:** Proceed with Phase 1-3 immediately (5 hours)  
+**Status:** Architecture Review Complete
+**Recommendation:** Proceed with Phase 1-3 immediately (5 hours)
 **Risk if Deferred:** Configuration drift, deployment failures, reduced auditability

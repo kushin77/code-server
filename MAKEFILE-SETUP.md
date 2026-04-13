@@ -12,7 +12,7 @@ The new `Makefile` requires the `make` command, which is not available on standa
 wsl
 cd /mnt/c/code-server-enterprise
 make deploy
-```
+
 
 **Why**: WSL has full `make` support and is the easiest path.
 
@@ -25,13 +25,13 @@ choco install make
 scoop install make
 
 # Or download from: https://www.gnu.org/software/make/
-```
+
 
 Then:
 ```powershell
 cd c:\code-server-enterprise
 make deploy
-```
+
 
 ### Option 3: Use Git Bash
 ```bash
@@ -39,16 +39,16 @@ make deploy
 # Then run:
 cd /c/code-server-enterprise
 make deploy
-```
+
 
 ### Option 4: Use Docker for Make
 ```powershell
 # Run make commands in a Docker container
-docker run --rm -v c:/code-server-enterprise:/workspace `
-  -w /workspace `
-  alpine:latest `
+docker run --rm -v c:/code-server-enterprise:/workspace
+  -w /workspace
+  alpine:lates
   sh -c "apk add make && make deploy"
-```
+
 
 ## 🚀 Recommended Setup
 
@@ -59,7 +59,7 @@ docker run --rm -v c:/code-server-enterprise:/workspace `
 
 ### For macOS/Linux Users
 - `make` should be pre-installed
-- Just run `make deploy`
+- Just run `make deploy
 
 ## 📋 Immediate Workaround: Use Terraform Directly
 
@@ -67,11 +67,11 @@ If `make` is not available immediately:
 
 ```powershell
 cd c:\code-server-enterprise
-terraform init
+terraform ini
 terraform plan -out=tfplan
 terraform apply tfplan
 docker compose restart oauth2-proxy
-```
+
 
 This achieves the same result as `make deploy` but manually.
 
@@ -80,11 +80,10 @@ This achieves the same result as `make deploy` but manually.
 Once `make` is installed:
 ```bash
 make help
-```
+
 
 Should display all available commands.
 
 ---
 
 **Next Steps**: Install `make` on your system, then enjoy the full `make deploy` workflow!
-

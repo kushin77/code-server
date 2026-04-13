@@ -77,19 +77,19 @@ Every PR must satisfy these non-negotiable gates:
 
 A change is complete **only when**:
 
-✅ Secure — No vulnerability paths  
-✅ Observable — Logs, metrics, traces exist  
-✅ Load-tested — Performance validated  
-✅ Documented — Architecture, deployment, rollback clear  
-✅ Automated — Tests, builds, deploys all pass  
-✅ Reproducible — Anyone can rebuild from source  
-✅ Policy compliant — All scans passing, ADRs linked  
+✅ Secure — No vulnerability paths
+✅ Observable — Logs, metrics, traces exis
+✅ Load-tested — Performance validated
+✅ Documented — Architecture, deployment, rollback clear
+✅ Automated — Tests, builds, deploys all pass
+✅ Reproducible — Anyone can rebuild from source
+✅ Policy compliant — All scans passing, ADRs linked
 
 **"Works locally" is not done.** "Works in production" is the standard.
 
 ---
 
-## Local Development Checklist
+## Local Development Checklis
 
 Before opening a PR, validate locally:
 
@@ -97,7 +97,7 @@ Before opening a PR, validate locally:
 # Pre-commit checks
 pre-commit run --all-files
 
-# Repository validation script
+# Repository validation scrip
 ./scripts/validate.sh
 
 # IaC policy validation (OPA/Conftest)
@@ -112,7 +112,7 @@ pytest tests/ -v --cov=. --cov-report=term
 # Static analysis
 pylint src/
 shellcheck scripts/*.sh
-```
+
 
 Failure in any local check = PR must address before review request.
 
@@ -169,7 +169,7 @@ Link threat model document in PR.
 
 Major architectural decisions require an ADR (Architecture Decision Record).
 
-**Location**: `/docs/adr/`
+**Location**: `/docs/adr/
 
 **When required**:
 - New service architecture
@@ -197,7 +197,7 @@ For production services, define:
 - **Error Budget**: How much failure is acceptable
 - **Alert Thresholds**: When to page on-call
 
-**Location**: `/docs/slos/`
+**Location**: `/docs/slos/
 
 Without SLOs, you're not running engineering — you're gambling.
 
@@ -246,7 +246,7 @@ Every production change must answer:
 1. [Specific step]
 2. [Specific step]
 3. [Verification step]
-```
+
 
 ---
 
@@ -254,14 +254,14 @@ Every production change must answer:
 
 Refer to [.github/workflows/](github/workflows/) for implementation details:
 
-- `ci-validate.yml` — Lint, unit tests, SAST
+- `ci-validate.yml` — Lint, unit tests, SAS
 - `security.yml` — Dependency, secrets, container scans
 - `deploy.yml` — Artifact versioning, rollback capability
-- `validate.yml` — IaC policy enforcement
+- `validate.yml` — IaC policy enforcemen
 
 ---
 
-## When in Doubt
+## When in Doub
 
 Ask the following:
 

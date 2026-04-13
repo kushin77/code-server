@@ -8,14 +8,14 @@
 
 ---
 
-## Architecture Impact
+## Architecture Impac
 
 - [ ] No architectural impact (minor fix/optimization)
 - [ ] ADR exists and is linked
 - [ ] NEW ADR required — see [docs/adr/TEMPLATE.md](../../docs/adr/TEMPLATE.md)
 
 **If architectural change:**
-- ADR Path: `docs/adr/XXX-[description].md`
+- ADR Path: `docs/adr/XXX-[description].md
 - Horizontal scaling considered: YES / NO / N/A
 - Failure isolation: [Brief description]
 - Dependency changes: [List any new external dependencies]
@@ -63,10 +63,10 @@
 - [ ] Distributed tracing enabled (OpenTelemetry ready if applicable)
 - [ ] Runbook/troubleshooting guide updated
 
-**Logs/Metrics**: 
-```
+**Logs/Metrics**:
+
 [Example log output or metric name]
-```
+
 
 ---
 
@@ -80,10 +80,10 @@
 - [ ] No test skips (`@skip`, `.skip()`, etc.)
 
 **Test results**:
-```
+
 Coverage: XX%
 Tests passing: YY/YY
-```
+
 
 ---
 
@@ -97,10 +97,10 @@ Tests passing: YY/YY
 
 **Rollback plan:**
 - Time to rollback: [X minutes]
-- Rollback command: 
-  ```
+- Rollback command:
+
   [git revert / terraform destroy / helm rollback / etc.]
-  ```
+
 - Data considerations: [What happens if we revert?]
 - Dependent services affected: [List any services that depend on this]
 
@@ -116,7 +116,7 @@ Tests passing: YY/YY
 
 ---
 
-## Risk Assessment
+## Risk Assessmen
 
 **What breaks if this fails?**
 [Describe failure scenarios and their impact]
@@ -142,7 +142,7 @@ Tests passing: YY/YY
 
 ---
 
-## Reviewer Checklist
+## Reviewer Checklis
 
 Reviewers verify:
 
@@ -164,6 +164,6 @@ Relates to: #[ISSUE_NUMBER]
 
 ---
 
-## Additional Context
+## Additional Contex
 
 [Add any additional context, screenshots, links, or considerations here]

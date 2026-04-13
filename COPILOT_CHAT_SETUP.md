@@ -8,13 +8,13 @@ Both GitHub Copilot extensions are already installed and configured in your code
 
 ---
 
-## 🎯 Quick Start
+## 🎯 Quick Star
 
 ### 1. **Verify Installation** (Optional)
 
 In code-server, open the Extensions view (Ctrl+Shift+X) and check for:
-- GitHub Copilot
-- GitHub Copilot Chat
+- GitHub Copilo
+- GitHub Copilot Cha
 
 Both should show as "Installed" with a green checkmark.
 
@@ -23,7 +23,7 @@ Both should show as "Installed" with a green checkmark.
 Copilot Chat requires a GitHub Copilot subscription or free trial:
 
 #### Option A: GitHub Copilot Free (Recommended)
-1. Go to: https://github.com/settings/copilot
+1. Go to: https://github.com/settings/copilo
 2. Click "Copy activation code"
 3. In code-server, press `Ctrl+Shift+P` (Windows) or `Cmd+Shift+P` (Mac)
 4. Search for "GitHub: Authorize with GitHub Copilot"
@@ -47,29 +47,29 @@ Once authenticated, open Copilot Chat:
 
 ### Inline Chat (Quick edits)
 Press `Ctrl+I` in your editor and describe a code change:
-```
+
 Make this function async
 Add error handling
 Optimize this loop
-```
+
 
 ### Chat Panel (Full conversations)
 Press `Ctrl+L` for the chat panel. Ask:
-```
+
 Explain this code to me
 How do I fix this error?
 Generate unit tests for this function
 Refactor this for readability
-```
+
 
 ### Agent Mode (Autonomous tasks)
 Use chat to delegate complex tasks:
-```
-Implement user authentication with JWT
+
+Implement user authentication with JW
 Create a CI/CD pipeline for this repo
-Debug this failing test and fix it
+Debug this failing test and fix i
 Refactor the entire auth module
-```
+
 
 ---
 
@@ -87,7 +87,7 @@ Refactor the entire auth module
    - OAuth2-Proxy provides an additional authentication layer (optional)
 
 3. **Patched Configuration** (product.json)
-   - Copilot Chat added to `trustedExtensionAuthAccess`
+   - Copilot Chat added to `trustedExtensionAuthAccess
    - Without this, Copilot Chat can't access GitHub tokens
    - Automatic `defaultChatAgent` removal prevents install loops
 
@@ -98,13 +98,13 @@ Refactor the entire auth module
 
 ---
 
-## 📋 System Requirements Met
+## 📋 System Requirements Me
 
-✅ **Code-Server Version**: 4.115.0 (latest)  
-✅ **Copilot Chat Compatibility**: Latest version (auto-downloaded)  
-✅ **Network Access**: Required (Copilot API calls to GitHub)  
-✅ **GitHub Account**: Required (free tier supported)  
-✅ **VS Code Version Parity**: Synchronized with base VS Code  
+✅ **Code-Server Version**: 4.115.0 (latest)
+✅ **Copilot Chat Compatibility**: Latest version (auto-downloaded)
+✅ **Network Access**: Required (Copilot API calls to GitHub)
+✅ **GitHub Account**: Required (free tier supported)
+✅ **VS Code Version Parity**: Synchronized with base VS Code
 
 ---
 
@@ -122,7 +122,7 @@ Refactor the entire auth module
 2. Check extension compatibility:
    ```bash
    docker exec code-server code-server --list-extensions
-   ```
+
    Both `github.copilot` and `github.copilot-chat` should appear
 
 3. Rebuild container to get latest extensions:
@@ -130,7 +130,7 @@ Refactor the entire auth module
    docker compose down
    docker compose build --no-cache code-server
    docker compose up -d
-   ```
+
 
 ### "Copilot Chat Extension Not Found" Error
 
@@ -143,8 +143,8 @@ docker compose build --no-cache code-server
 docker compose up -d
 
 # Check logs
-docker compose logs code-server | grep -i copilot
-```
+docker compose logs code-server | grep -i copilo
+
 
 ### GitHub Token Issues
 
@@ -163,11 +163,11 @@ docker compose logs code-server | grep -i copilot
 **Solution**:
 1. Check internet connectivity
 2. Wait a few minutes if rate-limited
-3. Ensure adequate code-server resources: `make status`
+3. Ensure adequate code-server resources: `make status
 
 ---
 
-## 📚 Cloud Provider Support
+## 📚 Cloud Provider Suppor
 
 ### GCP (Google Cloud Platform)
 - ✅ Fully supported
@@ -191,16 +191,16 @@ docker compose logs code-server | grep -i copilot
 
 ## 🎓 Best Practices
 
-### For Team Development
+### For Team Developmen
 1. **Enable in Docker**: Already done ✅
-2. **Share settings**: Settings sync via GitHub account
-3. **Use custom instructions**: Define project patterns in `.instructions.md`
+2. **Share settings**: Settings sync via GitHub accoun
+3. **Use custom instructions**: Define project patterns in `.instructions.md
 4. **Disable telemetry** (optional): Set in VS Code settings
 
 ### For Security
 1. **Never commit tokens**: Use `.gitignore` for sensitive files
 2. **Use GitHub Copilot Business for enterprise**: Additional privacy controls
-3. **Audit Copilot requests**: Review sensitive code before using Copilot
+3. **Audit Copilot requests**: Review sensitive code before using Copilo
 4. **Keep extensions updated**: Automatic via latest Docker image
 
 ### For Performance
@@ -213,10 +213,10 @@ docker compose logs code-server | grep -i copilot
 
 ## 🔗 Official Resources
 
-- **GitHub Copilot Home**: https://github.com/features/copilot
-- **Copilot Documentation**: https://docs.github.com/en/copilot
-- **Copilot Chat Guide**: https://code.visualstudio.com/docs/copilot/copilot-chat
-- **Pricing & Plans**: https://github.com/pricing/copilot
+- **GitHub Copilot Home**: https://github.com/features/copilo
+- **Copilot Documentation**: https://docs.github.com/en/copilo
+- **Copilot Chat Guide**: https://code.visualstudio.com/docs/copilot/copilot-cha
+- **Pricing & Plans**: https://github.com/pricing/copilo
 
 ---
 
@@ -239,22 +239,22 @@ docker compose logs code-server | grep -i copilot
 ## ✅ Installation Summary
 
 ### What's Already Done
-✅ Copilot Chat .vsix files cached in Docker image  
-✅ github-authentication patch applied  
-✅ product.json patched for token access  
-✅ Entrypoint script configured for auto-installation  
-✅ Extensions installed on container startup  
+✅ Copilot Chat .vsix files cached in Docker image
+✅ github-authentication patch applied
+✅ product.json patched for token access
+✅ Entrypoint script configured for auto-installation
+✅ Extensions installed on container startup
 
 ### What You Need to Do
-1. Launch code-server: `make deploy` or `docker compose up -d`
+1. Launch code-server: `make deploy` or `docker compose up -d
 2. Click Copilot icon in sidebar
 3. Click "Sign in with GitHub"
-4. Authorize GitHub Copilot
+4. Authorize GitHub Copilo
 5. Start using Copilot Chat! 🚀
 
 ---
 
-## 📞 Support
+## 📞 Suppor
 
 **Issue with Copilot Chat?**
 1. Check [troubleshooting section](#-troubleshooting) above
@@ -268,7 +268,6 @@ docker compose logs code-server | grep -i copilot
 
 ---
 
-**Status**: ✅ Copilot Chat fully configured and ready to use  
-**Last Updated**: April 12, 2026  
+**Status**: ✅ Copilot Chat fully configured and ready to use
+**Last Updated**: April 12, 2026
 **Docker Image**: codercom/code-server:4.115.0
-

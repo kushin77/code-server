@@ -37,26 +37,26 @@ settings = {
     "extensions.autoCheckUpdates": False,
     "extensions.autoUpdate": False,
     "extensions.allowUnsigned": False,
-    
+
     # Disable GitHub features
     "github.gitAuthentication": False,
     "github.copilot.enable": False,
     "github.copilot-chat.welcome": False,
     "github.codespaces.devcontainersBuildGraceful": False,
-    
+
     # Disable telemetry
     "telemetry.telemetryLevel": "off",
     "telemetry.enableCrashReporter": False,
     "telemetry.enableTelemetry": False,
-    
+
     # Disable recommendations
     "extensions.recommendations": False,
     "extensions.ignoreRecommendations": True,
     "extensions.showRecommendationsOnInstall": False,
-    
-    # Disable workspace trust
+
+    # Disable workspace trus
     "security.workspace.trust.enabled": False,
-    
+
     # Minimal startup
     "workbench.startupEditor": "none",
     "workbench.welcomePage.walkthroughs.openOnInstall": False

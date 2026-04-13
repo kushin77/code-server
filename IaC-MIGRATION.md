@@ -43,17 +43,17 @@ The following old scripts are **DEPRECATED and should be deleted**:
 make help        # Shows all available commands
 make plan        # Preview deployment (safe)
 make deploy      # Deploy (idempotent)
-```
+
 
 ### Step 2: Delete Old Scripts
 ```bash
 rm -f deploy-iac.ps1 deploy-iac.sh
-```
+
 
 ### Step 3: Update Documentation
-- ✅ QUICK_START.md updated to reference `make deploy`
+- ✅ QUICK_START.md updated to reference `make deploy
 - ✅ DEPLOYMENT.md ready for detailed workflow docs
-- Update any CI/CD pipelines to use `make deploy`
+- Update any CI/CD pipelines to use `make deploy
 
 ### Step 4: Test on All Platforms
 
@@ -61,13 +61,13 @@ rm -f deploy-iac.ps1 deploy-iac.sh
 ```powershell
 cd c:\code-server-enterprise
 make deploy
-```
+
 
 #### On Linux/macOS/WSL
 ```bash
 cd ~/code-server-enterprise
 make deploy
-```
+
 
 ## ✨ Key Benefits of Makefile Approach
 
@@ -98,13 +98,13 @@ make deploy
 
 ## 🔍 Makefile Features
 
-### Core Deployment
+### Core Deploymen
 ```bash
 make init       # Initialize Terraform
 make plan       # Preview changes (safe, read-only)
 make deploy     # Apply changes (idempotent)
 make destroy    # Remove everything
-```
+
 
 ### Operations & Monitoring
 ```bash
@@ -112,7 +112,7 @@ make status     # Show container/resource status
 make logs       # Stream application logs
 make shell      # SSH into running container
 make dashboard  # Full deployment dashboard
-```
+
 
 ### Maintenance
 ```bash
@@ -121,22 +121,22 @@ make fmt        # Auto-format Terraform files
 make refresh    # Sync state with reality
 make audit      # Run IaC compliance checks
 make clean      # Remove temporary files
-```
 
-### State Management
+
+### State Managemen
 ```bash
 make output           # Show Terraform outputs
 make state-list       # List all resources
 make state-show       # Show resource details
 make console          # Terraform console (debugging)
-```
+
 
 ## 🚨 Gotchas & Notes
 
 ### 1. Makefile Requires `make` Command
 - **Windows**: Install via `choco install make` or use WSL
 - **macOS**: Included in Xcode Command Line Tools
-- **Linux**: Usually pre-installed; else `apt install make`
+- **Linux**: Usually pre-installed; else `apt install make
 
 ### 2. Old `terraform.tfstate` Still Used
 - Migration is **non-destructive**
@@ -155,11 +155,11 @@ If using GitHub Actions, GitLab CI, or Cloud Build:
 
 # NEW (Good - IaC-first)
 make deploy
-```
+
 
 ## 📚 Related Documentation
 
-- [QUICK_START.md](QUICK_START.md) - 30-second deployment
+- [QUICK_START.md](QUICK_START.md) - 30-second deploymen
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Full deployment workflow
 - [IaC-README.md](IaC-README.md) - Terraform architecture details
 - [Makefile](Makefile) - All operational targets
@@ -167,7 +167,7 @@ make deploy
 ## ✅ Checklist for Full Migration
 
 - [x] Create new Makefile with all targets
-- [x] Update QUICK_START.md to use `make deploy`
+- [x] Update QUICK_START.md to use `make deploy
 - [x] Document new command mappings
 - [ ] Test on Windows (PowerShell)
 - [ ] Test on Linux/WSL
@@ -193,6 +193,5 @@ make deploy
 
 ---
 
-**Migration Date**: 2026-01-27  
+**Migration Date**: 2026-01-27
 **Status**: ✅ Complete and Ready for Testing
-

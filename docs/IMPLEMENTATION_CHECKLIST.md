@@ -1,4 +1,4 @@
-# Enterprise Engineering Implementation Checklist
+# Enterprise Engineering Implementation Checklis
 
 This checklist verifies that the enterprise FAANG-level engineering system is fully implemented and enforced.
 

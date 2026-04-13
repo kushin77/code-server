@@ -77,7 +77,7 @@ echo "   - Require linear history"
 echo "   - Status checks: ci-validate, security/dependency-check, security/secret-scan"
 echo ""
 
-# Apply via GitHub API REST endpoint
+# Apply via GitHub API REST endpoin
 RESPONSE=$(gh api \
   --method PUT \
   "/repos/$REPO/branches/$BRANCH/protection" \

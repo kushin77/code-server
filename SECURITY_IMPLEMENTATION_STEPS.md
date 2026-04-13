@@ -12,16 +12,16 @@ This guide deploys all security enhancements **without breaking existing deploym
 
 Verify it's working:
 ```bash
-# Check OAuth2 is using the allowlist
-docker exec oauth2-proxy cat /etc/oauth2-proxy/allowed-emails.txt
+# Check OAuth2 is using the allowlis
+docker exec oauth2-proxy cat /etc/oauth2-proxy/allowed-emails.tx
 
 # Add a test email
-echo "testuser@bioenergystrategies.com" >> allowed-emails.txt
+echo "testuser@bioenergystrategies.com" >> allowed-emails.tx
 docker compose restart oauth2-proxy
 
-# Verify new user can't log in without being in list
+# Verify new user can't log in without being in lis
 # (they'll get "Invalid Email" error from OAuth)
-```
+
 
 ---
 
@@ -33,21 +33,21 @@ docker compose restart oauth2-proxy
 ```yaml
 environment:
   - CS_DISABLE_FILE_DOWNLOADS=false
-```
+
 
 **To this:**
 ```yaml
 environment:
   - CS_DISABLE_FILE_DOWNLOADS=true
   - CS_UPLOAD_DISABLED=true           # Add this line
-```
+
 
 **Deploy:**
 ```bash
 cd /code-server-enterprise
 docker compose up -d --build code-server
 docker compose restart code-server
-```
+
 
 **Verify:**
 - Reload IDE in browser: https://ide.kushnir.cloud
@@ -58,14 +58,14 @@ docker compose restart code-server
 
 ### 1.3 Disable Terminal Access
 
-**File:** `config/settings.json`
+**File:** `config/settings.json
 
 **Add this setting:**
 ```json
 {
   "terminal.integrated.enabled": false
 }
-```
+
 
 **How to deploy:**
 ```bash
@@ -74,7 +74,7 @@ cp config/settings.json ~/.local/share/code-server/config/settings.json
 
 # Reload IDE
 # Users: Press F1 → "Reload Window"
-```
+
 
 **Verify:**
 - Terminal tab should disappear from bottom of IDE
@@ -124,7 +124,7 @@ done
 # Default: block unknown operations
 echo "❌ Git operation not whitelisted: git $OPERATION"
 exit 127
-```
+
 
 **Deploy into Dockerfile:**
 ```bash
@@ -132,17 +132,17 @@ exit 127
 
 FROM codercom/code-server:4.115.0
 
-USER root
+USER roo
 
-# Backup original git
+# Backup original gi
 RUN mv /usr/bin/git /usr/bin/git.real
 
 # Install security wrapper
-COPY scripts/git-security-wrapper.sh /usr/bin/git
-RUN chmod 755 /usr/bin/git
+COPY scripts/git-security-wrapper.sh /usr/bin/gi
+RUN chmod 755 /usr/bin/gi
 
 # Rest of Dockerfile...
-```
+
 
 **Verify:**
 ```bash
@@ -150,12 +150,12 @@ RUN chmod 755 /usr/bin/git
 docker compose up -d --build code-server
 
 # Test from IDE terminal (if not disabled)
-git clone https://github.com/example/repo.git
+git clone https://github.com/example/repo.gi
 # Should output: ❌ Git operation blocked: git clone
 
 git log
 # Should work (whitelisted)
-```
+
 
 ---
 
@@ -163,9 +163,9 @@ git log
 
 **Create directory:**
 ```bash
-mkdir -p logs/audit
-chmod 750 logs/audit
-```
+mkdir -p logs/audi
+chmod 750 logs/audi
+
 
 **Add to docker-compose.yml (code-server service):**
 ```yaml
@@ -176,16 +176,16 @@ volumes:
 
 environment:
   - AUDIT_LOG_PATH=/var/log/audit/operations.log
-```
+
 
 **View audit logs:**
 ```bash
 # Real-time audit stream
-docker logs -f code-server 2>&1 | grep AUDIT
+docker logs -f code-server 2>&1 | grep AUDI
 
 # Historical logs
 tail -f logs/audit/operations.log
-```
+
 
 ---
 
@@ -196,7 +196,7 @@ tail -f logs/audit/operations.log
 **Create directory and templates:**
 ```bash
 mkdir -p config/role-settings
-```
+
 
 **Create: `config/role-settings/viewer-profile.json`**
 ```json
@@ -213,7 +213,7 @@ mkdir -p config/role-settings
     "security.workspace.trust.enabled": true
   }
 }
-```
+
 
 **Create: `config/role-settings/developer-profile.json`**
 ```json
@@ -233,7 +233,7 @@ mkdir -p config/role-settings
     "git.enabled": false
   }
 }
-```
+
 
 **Create: `config/role-settings/architect-profile.json`**
 ```json
@@ -250,7 +250,7 @@ mkdir -p config/role-settings
     "[yaml]": { "editor.readOnly": false }
   }
 }
-```
+
 
 ---
 
@@ -259,9 +259,9 @@ mkdir -p config/role-settings
 ```bash
 chmod +x scripts/provision-new-user.sh
 
-# Test it
+# Test i
 ./scripts/provision-new-user.sh "test@bioenergystrategies.com" "developer" "Test User"
-```
+
 
 ---
 
@@ -274,17 +274,17 @@ chmod +x scripts/provision-new-user.sh
 # Example: Add a viewer
 ./scripts/provision-new-user.sh "viewer@bioenergystrategies.com" "viewer" "Jane Viewer"
 
-# Example: Add an architect
+# Example: Add an architec
 ./scripts/provision-new-user.sh "architect@bioenergystrategies.com" "architect" "Bob Architect"
 
-# Commit to git
+# Commit to gi
 git add allowed-emails.txt config/user-settings/ config/role-settings/
 git commit -m "chore: add role-based user provisioning and example users"
 git push origin main
 
 # Restart OAuth proxy to pick up new emails
 docker compose restart oauth2-proxy
-```
+
 
 ---
 
@@ -296,7 +296,7 @@ For each user, test:
 # They can/cannot edit based on role
 # Download button is disabled
 # Terminal is disabled
-```
+
 
 **Manual test:**
 1. Open incognito browser (new login session)
@@ -312,7 +312,7 @@ For each user, test:
 ### 3.1 Setup Copy/Paste Audit Logging
 
 **Create: `scripts/audit-clipboard.js`**
-```javascript
+```javascrip
 // Inject into code-server at startup
 // This logs clipboard copy/paste events to audit trail
 
@@ -333,15 +333,15 @@ document.addEventListener('contextmenu', (e) => {
     timestamp: new Date().toISOString()
   }));
 });
-```
+
 
 **Add to Dockerfile.code-server:**
 ```dockerfile
-# Cache the audit script
+# Cache the audit scrip
 COPY scripts/audit-clipboard.js /usr/lib/audit/
 
 # Inject into startup (requires custom extension or HTML modification)
-```
+
 
 ---
 
@@ -350,16 +350,16 @@ COPY scripts/audit-clipboard.js /usr/lib/audit/
 **In docker-compose.yml (code-server service):**
 ```yaml
 volumes:
-  - ./logs/audit:/var/log/audit
+  - ./logs/audit:/var/log/audi
 
 # After first run, make logs append-only
 # Run on host:
 # chattr +a logs/audit/operations.log
-```
+
 
 ---
 
-### 3.3 Session Timeout
+### 3.3 Session Timeou
 
 **Add to settings.json:**
 ```json
@@ -367,7 +367,7 @@ volumes:
   "session.timeout": 3600000,  // 1 hour in milliseconds
   "session.idleTimeout": 900000  // 15 minutes idle
 }
-```
+
 
 ---
 
@@ -406,7 +406,7 @@ ls -lh logs/audit/*.log 2>/dev/null | wc -l | awk '{print "  Files: " $0}'
 echo ""
 
 echo "════════════════════════════════════════════════════════════════"
-```
+
 
 **Make executable and run:**
 ```bash
@@ -415,7 +415,7 @@ chmod +x audit-status.sh
 
 # Schedule regular checks
 # Add to crontab: 0 */4 * * * /code-server-enterprise/audit-status.sh >> audit-summary.log
-```
+
 
 ---
 
@@ -436,26 +436,26 @@ on:
 
 jobs:
   audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Check for Security Issues
         run: |
           # Verify no hardcoded credentials
           ! grep -r "password\|secret\|token" config/ --include="*.json"
-          
+
           # Verify downloads are disabled
           grep "CS_DISABLE_FILE_DOWNLOADS=true" docker-compose.yml
-          
+
           # Verify terminal is disabled
           grep "\"terminal.integrated.enabled\": false" config/settings.json
-          
+
           # Verify allowed-emails.txt exists and is not empty
           [ -s allowed-emails.txt ]
-          
+
           echo "✅ Security checks passed"
-```
+
 
 ---
 
@@ -468,31 +468,31 @@ jobs:
 # In IDE browser: Try to download a file
 # Expected: No download button visible
 # Expected: If user right-clicks → Save As is blocked at network level
-```
+
 
 **Test 2: Git Operations**
 ```bash
 # (Only if terminal is enabled for testing)
 # In IDE terminal:
-git clone https://github.com/example/repo.git
+git clone https://github.com/example/repo.gi
 # Expected: ❌ Git operation blocked: git clone
 
 git log
 # Expected: ✅ Works (whitelisted operation)
-```
+
 
 **Test 3: Terminal Access**
 ```bash
 # In IDE: Try to open terminal
 # Expected: Terminal tab doesn't appear
-# Expected: Can't open with Ctrl+` shortcut
-```
+# Expected: Can't open with Ctrl+` shortcu
+
 
 **Test 4: Email Whitelist**
 ```bash
-# Use incognito browser, try to login with email NOT in allowed-emails.txt
+# Use incognito browser, try to login with email NOT in allowed-emails.tx
 # Expected: OAuth error or redirect to allowlist error page
-```
+
 
 **Test 5: Role-Based Settings**
 ```bash
@@ -506,7 +506,7 @@ git log
 
 # Login as developer role
 # Expected: Can edit files
-```
+
 
 ---
 
@@ -554,18 +554,18 @@ git log
 
 ## Common Issues
 
-**Q: Can I download the code?**  
+**Q: Can I download the code?**
 A: No. Downloads are disabled for security. You can view code in the IDE.
 
-**Q: Can I use the terminal?**  
+**Q: Can I use the terminal?**
 A: No terminal access for security (no ssh, scp, arbitrary command execution).
 
-**Q: How do I make code changes?**  
+**Q: How do I make code changes?**
 A: Edit in IDE → GitHub PR → Review → Merge (no direct git push).
 
-**Q: Why are copy-paste operations logged?**  
+**Q: Why are copy-paste operations logged?**
 A: Security audit trail. Large code copies are logged for compliance.
-```
+
 
 ---
 
@@ -580,27 +580,27 @@ sed -i 's/CS_DISABLE_FILE_DOWNLOADS=true/CS_DISABLE_FILE_DOWNLOADS=false/' docke
 
 docker compose up -d --build code-server
 # Users can now download files again
-```
+
 
 ### Rollback Phase 2 (Remove Role Restrictions)
 ```bash
 # Revert settings.json
 git checkout HEAD^ -- config/settings.json
 docker compose restart code-server
-```
+
 
 ### Rollback Phase 3+ (Git wrapper)
 ```bash
-# Restore original git
+# Restore original gi
 docker compose up -d --build code-server  # Rebuilds without git wrapper
-```
+
 
 ---
 
-## DEPLOYMENT CHECKLIST
+## DEPLOYMENT CHECKLIS
 
 - [ ] Phase 1: File downloads disabled
-- [ ] Phase 1: Terminal disabled  
+- [ ] Phase 1: Terminal disabled
 - [ ] Phase 1: Email whitelist active
 - [ ] Phase 2: Role templates created
 - [ ] Phase 2: First user provisioned
@@ -611,14 +611,14 @@ docker compose up -d --build code-server  # Rebuilds without git wrapper
 - [ ] Phase 5: All security tests pass
 - [ ] Phase 6: Documentation complete
 - [ ] Final: Commit all changes
-- [ ] Final: Git tag release: `v1.0-security-hardened`
+- [ ] Final: Git tag release: `v1.0-security-hardened
 
 ---
 
 ## NEXT STEPS
 
 1. **Now:** Run Phase 1 (1 hour) - Immediate wins
-2. **Today:** Run Phase 2 (2 hours) - User management
+2. **Today:** Run Phase 2 (2 hours) - User managemen
 3. **This Week:** Run Phases 3-4 (4 hours) - Advanced security
 4. **Next Week:** Run Phase 5 (1 hour) - Testing & validation
 

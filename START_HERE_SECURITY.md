@@ -34,17 +34,17 @@ A **complete enterprise security system** that prevents code theft while allowin
 ```bash
 cd /code-server-enterprise
 ./scripts/manage-users.sh list-users
-```
+
 
 ### 2. Add Your First User
 ```bash
 ./scripts/manage-users.sh add-user "newdev@company.com" "developer" "John Developer"
-```
+
 
 ### 3. Check Security Status
 ```bash
 ./scripts/manage-users.sh security-status
-```
+
 
 That's it! The user can now log in at `https://ide.kushnir.cloud` with these restrictions:
 - ✅ Can edit code
@@ -99,7 +99,7 @@ That's it! The user can now log in at `https://ide.kushnir.cloud` with these res
 ### User Adds Someone
 ```bash
 ./scripts/manage-users.sh add-user "alice@company.com" "developer"
-```
+
 
 ### System Does
 1. ✅ Adds email to whitelist (allowed-emails.txt)
@@ -109,14 +109,14 @@ That's it! The user can now log in at `https://ide.kushnir.cloud` with these res
 5. ✅ Commits to git (you push)
 
 ### User Logs In
-1. Opens: `https://ide.kushnir.cloud`
+1. Opens: `https://ide.kushnir.cloud
 2. OAuth2 asks: "Is alice@company.com in allowed-emails.txt?"
 3. System checks: ✅ Yes!
 4. IDE loads: (downloads developer-profile.json)
 5. Settings apply: editor.readOnly=false, terminal=disabled, downloads=blocked
 
 ### Alice Tries to Steal Code
-```
+
 Alice tries: File → Download
 Result: ❌ No download button (blocked)
 
@@ -128,13 +128,13 @@ Result: ❌ SSH blocked (not in container)
 
 Alice tries: Copy large code block
 Result: ✅ Copied, but action logged to audit trail
-```
+
 
 ---
 
 ## The 4 Roles
 
-```
+
 ┌──────────────────────────────────────────┐
 │ VIEWER                                   │
 │ • Read code                              │
@@ -168,7 +168,7 @@ Result: ✅ Copied, but action logged to audit trail
 │ • All actions audit-logged               │
 │ Use: Platform engineers only             │
 └──────────────────────────────────────────┘
-```
+
 
 ---
 
@@ -177,31 +177,31 @@ Result: ✅ Copied, but action logged to audit trail
 ### Add a Developer
 ```bash
 ./scripts/manage-users.sh add-user "alice@company.com" "developer" "Alice Engineer"
-```
+
 **Result:** Alice can edit code, auto-format, but cannot download or run commands.
 
 ### Make Someone Read-Only
 ```bash
 ./scripts/manage-users.sh change-role "alice@company.com" "viewer"
-```
+
 **Result:** Next time Alice logs in, code becomes read-only.
 
 ### Remove Someone (Fired?)
 ```bash
 ./scripts/manage-users.sh remove-user "alice@company.com"
-```
+
 **Result:** Alice gets "Invalid Email" error on next login. Instant access revocation.
 
 ### List Everyone
 ```bash
 ./scripts/manage-users.sh list-users
-```
+
 **Result:** Shows all users, their roles, and when they were added.
 
 ### Check Everything Is Secure
 ```bash
 ./scripts/manage-users.sh security-status
-```
+
 **Result:** Shows what's protected (downloads, terminal, git, etc.)
 
 ---
@@ -210,7 +210,7 @@ Result: ✅ Copied, but action logged to audit trail
 
 ### Scenario: Malicious Developer Tries to Steal Code
 
-```
+
 Developer: "I'll download the source code"
 System: ❌ No download button
         (CS_DISABLE_FILE_DOWNLOADS=true)
@@ -222,7 +222,7 @@ System: ❌ SSH disabled in container
 Developer: "I'll copy the code with Ctrl+C"
 System: ✅ Copies work, but:
         → Event logged to audit trail
-        → Timestamp, user email, file context
+        → Timestamp, user email, file contex
         → Evidence for investigation
 
 Developer: "I'll use terminal to run scp"
@@ -232,7 +232,7 @@ System: ❌ Terminal disabled
 Developer: "I'll access the database directly"
 System: ❌ Network egress filtered
         ❌ No external connections allowed
-```
+
 
 **Result:** No way to exfiltrate code. All attempts logged.
 
@@ -240,8 +240,8 @@ System: ❌ Network egress filtered
 
 ## Security Layers (Defense-In-Depth)
 
-```
-Public Internet
+
+Public Interne
     ↓
 NETWORK LAYER
 ├── HTTPS-only (TLS enforced)
@@ -258,21 +258,21 @@ APPLICATION LAYER
 ├── File download disabled
 ├── Terminal disabled
 ├── Git operations blocked
-└── Extension whitelist
+└── Extension whitelis
     ↓
 AUDIT LAYER
 ├── Access logging
 ├── User provisioning tracking
 ├── Immutable logs
 └── Compliance evidence
-```
+
 
 ---
 
-## Deployment Checklist
+## Deployment Checklis
 
 ### Right Now ✅
-- [x] Read this document
+- [x] Read this documen
 - [x] Understand the 4 roles
 - [x] Know the 2 main scripts
 
@@ -282,7 +282,7 @@ AUDIT LAYER
 - [ ] Test with a real user
 
 ### This Week
-- [ ] Complete all 6 phases of security deployment
+- [ ] Complete all 6 phases of security deploymen
 - [ ] Review audit logs for evidence
 - [ ] Train your team
 
@@ -295,7 +295,7 @@ AUDIT LAYER
 
 ## File Locations (Quick Reference)
 
-```
+
 /code-server-enterprise/
 
 ❌ PREVENT CODE THEFT:
@@ -313,9 +313,9 @@ AUDIT LAYER
 📚 DOCUMENTATION:
 ├── SECURITY_IMPLEMENTATION_SUMMARY.md   ← Overview
 ├── CODE_SECURITY_HARDENING.md          ← Architecture
-├── SECURITY_IMPLEMENTATION_STEPS.md    ← Deployment
+├── SECURITY_IMPLEMENTATION_STEPS.md    ← Deploymen
 └── IDE_SECURITY_AND_USER_MANAGEMENT.md ← Operations
-```
+
 
 ---
 
@@ -367,7 +367,7 @@ You now have:
 ./scripts/manage-users.sh add-user "dev@company.com" "developer"
 git add . && git commit -m "add dev" && git push
 # Done!
-```
+
 
 ### Option 2: Read & Deploy (This week)
 Follow [SECURITY_IMPLEMENTATION_STEPS.md](./SECURITY_IMPLEMENTATION_STEPS.md) to add:
@@ -381,7 +381,7 @@ Read [CODE_SECURITY_HARDENING.md](./CODE_SECURITY_HARDENING.md) to understand al
 
 ---
 
-## Support
+## Suppor
 
 Everything is documented. Start with:
 1. This file (you're reading it! ✅)
@@ -395,6 +395,6 @@ Everything is documented. Start with:
 
 Need help? See the "Still Have Questions?" section above.
 
-**Status:** ✅ Production Ready  
-**Security System:** Enterprise (FAANG-grade)  
-**Your Next Action:** `./scripts/manage-users.sh add-user email@company.com developer`
+**Status:** ✅ Production Ready
+**Security System:** Enterprise (FAANG-grade)
+**Your Next Action:** `./scripts/manage-users.sh add-user email@company.com developer

@@ -19,7 +19,7 @@ if [[ -z "$EMAIL" ]]; then
   exit 1
 fi
 
-# Validate email format
+# Validate email forma
 if ! [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
   echo "❌ Invalid email format: $EMAIL"
   exit 1
@@ -52,7 +52,7 @@ echo "Step 1️⃣  Adding to OAuth2 allowlist..."
 if grep -q "^$EMAIL$" allowed-emails.txt 2>/dev/null; then
   echo "  ⚠️  Email already whitelisted"
 else
-  echo "$EMAIL" >> allowed-emails.txt
+  echo "$EMAIL" >> allowed-emails.tx
   sort allowed-emails.txt -o allowed-emails.txt  # Keep sorted
   echo "  ✅ Email added to allowed-emails.txt"
 fi
@@ -69,7 +69,7 @@ if [[ ! -f "$ROLE_TEMPLATE" ]]; then
   echo "  ⚠️  Role template not found: $ROLE_TEMPLATE"
   echo "  Creating default template..."
   mkdir -p "config/role-settings"
-  
+
   # Create a default based on role (see templates below)
   case "$ROLE" in
     viewer)
@@ -215,15 +215,15 @@ cat > "$WORKSPACE_DIR/README.md" << EOF
 
 Welcome, $DISPLAY_NAME!
 
-## Your Environment
+## Your Environmen
 
 - **Role**: $ROLE
 - **Email**: $EMAIL
 - **Workspace**: $WORKSPACE_DIR
 
-## Quick Start
+## Quick Star
 
-1. Open any file to begin development
+1. Open any file to begin developmen
 2. Use Ctrl+Shift+P for command palette
 3. Save with Ctrl+S (auto-formatting enabled)
 4. Navigate with Ctrl+P (quick open)

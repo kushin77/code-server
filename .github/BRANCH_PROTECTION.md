@@ -67,13 +67,13 @@ All of the following **must pass**:
 # Generate GPG key (one-time)
 gpg --full-generate-key
 
-# Configure Git
+# Configure Gi
 git config --global user.signingkey <KEY_ID>
 git config --global commit.gpgsign true
 
-# Sign on commit
+# Sign on commi
 git commit -S -m "Your message"
-```
+
 
 ---
 
@@ -102,7 +102,7 @@ git commit -S -m "Your message"
 
 ---
 
-## Enforcement Checklist
+## Enforcement Checklis
 
 Before considering branch protection "configured":
 
@@ -124,7 +124,7 @@ Before considering branch protection "configured":
 
 1. **Settings → Branches**
 2. **Click "Add rule"**
-3. **Branch name pattern**: `main`
+3. **Branch name pattern**: `main
 4. **Check all boxes** as specified above
 5. **Save changes**
 
@@ -156,7 +156,7 @@ curl -X PUT \
     "require_signed_commits": true,
     "required_conversation_resolution": true
   }'
-```
+
 
 ---
 
@@ -193,7 +193,7 @@ git push origin main
 # Try to merge PR without approvals (should fail)
 # Try to merge PR with failing tests (should fail)
 # Try to delete main branch (should fail)
-```
+
 
 All should be blocked. If not, configuration incomplete.
 

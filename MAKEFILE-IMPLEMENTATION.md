@@ -15,16 +15,16 @@ Replaced imperative PowerShell/Bash deployment scripts with a **declarative, ide
 
 ### Old Scripts (Can Now Be Deleted)
 
-- `deploy-iac.ps1` → Use `make deploy`
-- `deploy-iac.sh` → Use `make deploy`
+- `deploy-iac.ps1` → Use `make deploy
+- `deploy-iac.sh` → Use `make deploy
 
-## 🚀 Quick Start
+## 🚀 Quick Star
 
 ### On Linux/macOS/WSL
 ```bash
 cd ~/code-server-enterprise
 make deploy
-```
+
 
 ### On Windows
 ```powershell
@@ -41,17 +41,17 @@ make deploy
 # Option 3: Use Terraform directly
 cd c:\code-server-enterprise
 terraform init && terraform apply -auto-approve
-```
+
 
 ## 📋 Available Commands
 
-### Core Deployment
+### Core Deploymen
 ```bash
 make init          # Initialize Terraform (run once)
 make plan          # Preview changes (safe, read-only)
 make deploy        # Deploy infrastructure (idempotent)
 make destroy       # Remove all resources
-```
+
 
 ### Daily Operations
 ```bash
@@ -59,7 +59,7 @@ make status        # Show deployment status
 make logs          # Stream application logs
 make shell         # SSH into running container
 make dashboard     # Full deployment dashboard
-```
+
 
 ### Maintenance & Auditing
 ```bash
@@ -68,15 +68,15 @@ make fmt           # Auto-format Terraform code
 make audit         # Check for drift, immutability, idempotency
 make refresh       # Sync state with reality
 make clean         # Remove temporary files
-```
 
-### State Management
+
+### State Managemen
 ```bash
 make output        # Show Terraform outputs
 make state-list    # List all managed resources
 make state-show    # Show resource details
 make console       # Terraform console (debugging)
-```
+
 
 ## ✨ Key Features
 
@@ -120,12 +120,12 @@ make console       # Terraform console (debugging)
 No action needed! Your existing `terraform.tfstate` continues to work:
 ```bash
 make deploy    # Works with existing state
-```
+
 
 ### For New Deployments
 ```bash
 make deploy    # Single command deploys everything
-```
+
 
 ### For CI/CD Pipelines
 Replace:
@@ -136,16 +136,16 @@ Replace:
 
 # NEW (Good - declarative)
 make deploy
-```
 
-## ✅ Testing Checklist
 
-- [ ] Test on Windows PowerShell: `make deploy`
-- [ ] Test on WSL: `make deploy`
-- [ ] Test on macOS: `make deploy`
-- [ ] Test on Linux: `make deploy`
+## ✅ Testing Checklis
+
+- [ ] Test on Windows PowerShell: `make deploy
+- [ ] Test on WSL: `make deploy
+- [ ] Test on macOS: `make deploy
+- [ ] Test on Linux: `make deploy
 - [ ] Verify idempotency: Run `make deploy` twice
-- [ ] Verify rollback: Run `make destroy`, then `make deploy`
+- [ ] Verify rollback: Run `make destroy`, then `make deploy
 - [ ] Test `make plan` (read-only preview)
 - [ ] Test `make status` (shows deployment health)
 - [ ] Test `make logs` (shows running container logs)
@@ -153,8 +153,8 @@ make deploy
 
 ## 🚨 Known Limitations
 
-### Make Not on Windows by Default
-- Install via `choco install make`
+### Make Not on Windows by Defaul
+- Install via `choco install make
 - Or use WSL for seamless experience
 - See [MAKEFILE-SETUP.md](MAKEFILE-SETUP.md) for details
 
@@ -168,14 +168,14 @@ make deploy
    ```bash
    make plan    # Preview changes
    make deploy  # Deploy infrastructure
-   ```
 
-2. **Update CI/CD pipelines** to use `make deploy`
+
+2. **Update CI/CD pipelines** to use `make deploy
 
 3. **Delete old scripts** (optional after full migration):
    ```bash
    rm deploy-iac.ps1 deploy-iac.sh
-   ```
+
 
 4. **Train team** on new workflow via [IaC-MIGRATION.md](IaC-MIGRATION.md)
 
@@ -201,9 +201,8 @@ make deploy
 
 ## ✅ Status: COMPLETE AND READY
 
-**Implementation Date**: 2026-01-27  
-**Status**: ✅ All targets implemented and documented  
+**Implementation Date**: 2026-01-27
+**Status**: ✅ All targets implemented and documented
 **Ready For**: Testing on all platforms (Windows, macOS, Linux, WSL)
 
 Next: Test on your system and provide feedback!
-

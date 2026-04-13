@@ -21,7 +21,7 @@ variable "enable_https" {
   description = "Enable HTTPS/TLS"
   type        = bool
   default     = true
-  
+
 }
 
 variable "code_server_version" {
@@ -40,7 +40,7 @@ variable "log_level" {
   description = "Logging level (debug, info, warn, error)"
   type        = string
   default     = "info"
-  
+
   validation {
     condition     = contains(["debug", "info", "warn", "error"], var.log_level)
     error_message = "Log level must be one of: debug, info, warn, error."

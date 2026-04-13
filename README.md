@@ -1,10 +1,10 @@
-# Enterprise Code-Server Deployment
+# Enterprise Code-Server Deploymen
 
 ## Quick Start (HTTPS + Reverse Proxy)
 
 ### Prerequisites
 - Docker & Docker Compose installed
-- WSL2 or Linux environment
+- WSL2 or Linux environmen
 
 ### Deployment Steps
 
@@ -12,28 +12,28 @@
 ```bash
 cd ~/code-server-enterprise
 docker-compose up -d
-```
+
 
 2. **Access via HTTPS:**
-```
-https://localhost
-```
+
+https://localhos
+
 
 3. **Get initial password:**
 ```bash
 grep password ~/.config/code-server/config.yaml
-```
+
 
 ---
 
 ## Enterprise Features Included
 
-✅ **HTTPS/TLS Encryption** - Automatic cert generation via Caddy  
-✅ **Reverse Proxy** - Caddy handles all HTTP requests  
-✅ **WebSocket Support** - For real-time IDE features  
-✅ **Security Headers** - HSTS, X-Frame-Options, CSP ready  
-✅ **Container Isolation** - Docker network segmentation  
-✅ **Persistent Storage** - Volumes for code and configuration  
+✅ **HTTPS/TLS Encryption** - Automatic cert generation via Caddy
+✅ **Reverse Proxy** - Caddy handles all HTTP requests
+✅ **WebSocket Support** - For real-time IDE features
+✅ **Security Headers** - HSTS, X-Frame-Options, CSP ready
+✅ **Container Isolation** - Docker network segmentation
+✅ **Persistent Storage** - Volumes for code and configuration
 
 ---
 
@@ -43,14 +43,14 @@ grep password ~/.config/code-server/config.yaml
 Install `oauth2-proxy` alongside Caddy for SSO:
 ```yaml
 oauth2-proxy:
-  image: quay.io/oauth2-proxy/oauth2-proxy:latest
+  image: quay.io/oauth2-proxy/oauth2-proxy:lates
   environment:
     - OAUTH2_PROXY_CLIENT_ID=your-github-app-id
-    - OAUTH2_PROXY_CLIENT_SECRET=your-github-secret
+    - OAUTH2_PROXY_CLIENT_SECRET=your-github-secre
     - OAUTH2_PROXY_PROVIDER=github
-```
 
-### Add Multi-User Support
+
+### Add Multi-User Suppor
 Use Coder platform instead of standalone code-server for:
 - Team workspaces
 - RBAC (Role-Based Access Control)
@@ -61,14 +61,14 @@ Use Coder platform instead of standalone code-server for:
 Add Prometheus + Grafana for metrics:
 ```yaml
 prometheus:
-  image: prom/prometheus:latest
+  image: prom/prometheus:lates
   volumes:
     - ./prometheus.yml:/etc/prometheus/prometheus.yml
-```
+
 
 ---
 
-## Security Checklist
+## Security Checklis
 
 - [ ] Change default passwords in docker-compose.yml
 - [ ] Set up GitHub OAuth app (Settings → Developer Settings)
@@ -89,8 +89,8 @@ prometheus:
 
 **WebSocket errors?**
 - Verify `websocket` directive in Caddyfile
-- Check code-server logs: `docker logs code-server-enterprise_code-server_1`
+- Check code-server logs: `docker logs code-server-enterprise_code-server_1
 
 **Permission denied?**
 - Ensure WSL volumes have correct permissions
-- Run: `chmod 755 ~/code-server-enterprise/workspaces`
+- Run: `chmod 755 ~/code-server-enterprise/workspaces

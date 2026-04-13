@@ -1,5 +1,5 @@
 #!/bin/bash
-# Enterprise Code-Server Setup Script
+# Enterprise Code-Server Setup Scrip
 
 set -e
 
@@ -23,7 +23,7 @@ CADDY_EMAIL=admin@example.com
 
 # OAuth2 Settings (optional)
 GITHUB_CLIENT_ID=your-github-app-id
-GITHUB_CLIENT_SECRET=your-github-secret
+GITHUB_CLIENT_SECRET=your-github-secre
 EOF
 
 echo "⚠️  Configuration file created: ~/.code-server-enterprise/.env"

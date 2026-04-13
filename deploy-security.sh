@@ -10,7 +10,7 @@ echo ""
 
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
 
-# Step 1: Verify scripts exist
+# Step 1: Verify scripts exis
 echo "Step 1: Verifying scripts..."
 if [[ ! -f "scripts/manage-users.sh" ]]; then
   echo "❌ scripts/manage-users.sh not found"
@@ -18,7 +18,7 @@ if [[ ! -f "scripts/manage-users.sh" ]]; then
 fi
 echo "✅ Scripts verified"
 
-# Step 2: Verify role files exist
+# Step 2: Verify role files exis
 echo ""
 echo "Step 2: Verifying role templates..."
 roles=("viewer" "developer" "architect" "admin")

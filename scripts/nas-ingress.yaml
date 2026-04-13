@@ -10,7 +10,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ide-windows-backend
-  namespace: default
+  namespace: defaul
 spec:
   ports:
     - port: 443
@@ -21,7 +21,7 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: ide-windows-backend
-  namespace: default
+  namespace: defaul
 subsets:
   - addresses:
       - ip: 192.168.168.174
@@ -33,7 +33,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: ide-kushnir-cloud
-  namespace: default
+  namespace: defaul
   annotations:
     nginx.ingress.kubernetes.io/ssl-passthrough: "true"
 spec:

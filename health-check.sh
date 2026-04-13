@@ -1,5 +1,5 @@
 #!/bin/bash
-# Monitoring & Health Check Script
+# Monitoring & Health Check Scrip
 
 echo "📊 Code-Server Enterprise Health Check"
 echo "========================================"
@@ -17,7 +17,7 @@ docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsa
 
 echo ""
 echo "🌐 Network Connectivity:"
-# Test code-server endpoint
+# Test code-server endpoin
 if curl -sk https://localhost > /dev/null 2>&1; then
   echo "✅ HTTPS endpoint responding"
 else

@@ -1,7 +1,7 @@
 # GitHub Copilot Chat - Quick Reference
 
 ## ✅ Current Status
-- **Extensions Installed**: ✅ Both github.copilot and github.copilot-chat
+- **Extensions Installed**: ✅ Both github.copilot and github.copilot-cha
 - **Configuration**: ✅ Product.json patched and ready
 - **Authentication**: ⏳ Requires GitHub sign-in
 - **Cloud Provider**: ✅ Works on any cloud with GitHub access
@@ -15,14 +15,14 @@
 make deploy
 
 # 2. Open in browser
-# → http://localhost
+# → http://localhos
 
 # 3. Click Copilot icon
 # → Sign in with GitHub
 # → Complete OAuth flow
 
 # Done! Use Copilot Chat with Ctrl+L
-```
+
 
 ---
 
@@ -39,14 +39,14 @@ make deploy
 
 ## 💬 Chat Examples
 
-```
+
 @workspace What does this codebase do?
 Explain this error message
 Generate unit tests for this function
 Refactor this for performance
 Debug why this is failing
 How do I implement...?
-```
+
 
 ---
 
@@ -54,21 +54,21 @@ How do I implement...?
 
 ```bash
 # Check extensions are installed
-docker exec code-server /usr/bin/code-server --list-extensions | grep copilot
+docker exec code-server /usr/bin/code-server --list-extensions | grep copilo
 
 # Check .vsix files cached
 docker exec code-server ls -lh /opt/vsix/
 
 # Run full validation
 docker exec code-server bash /home/coder/workspace/scripts/validate-copilot.sh
-```
+
 
 ---
 
 ## 🔐 Authentication
 
 1. Click Copilot icon → "Sign in"
-2. Get code from: https://github.com/settings/copilot
+2. Get code from: https://github.com/settings/copilo
 3. Paste code in code-server
 4. Approve in browser
 5. Done!
@@ -80,7 +80,7 @@ docker exec code-server bash /home/coder/workspace/scripts/validate-copilot.sh
 - Use `@workspace` to reference your codebase
 - Use `#selection` to reference selected code
 - Use `/` commands for specialized tasks
-- Create `.instructions.md` for project context
+- Create `.instructions.md` for project contex
 - Enable settings sync for multi-device
 
 ---
@@ -104,4 +104,3 @@ docker exec code-server bash /home/coder/workspace/scripts/validate-copilot.sh
 ---
 
 **Ready to go!** Open code-server and authenticate with GitHub. 🚀
-

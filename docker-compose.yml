@@ -81,7 +81,7 @@ services:
       # Proxy behaviour
       OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
       OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
-      OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"     # code-server requires WebSocket
+      OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"     # code-server requires WebSocke
       OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
       # Headers
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"

@@ -44,19 +44,19 @@ Verification commands and expected outcomes:
 ```bash
 chmod +x ./setup-dev.sh
 ./setup-dev.sh
-```
+
 
 - Run validation locally (should exit 0 on success):
 
 ```bash
 ./scripts/validate.sh
-```
+
 
 - Run pre-commit manual check:
 
 ```bash
 pre-commit run --all-files
-```
+
 
 - Create a test PR to exercise CI (CI will fail if checks don't pass):
 
@@ -65,7 +65,7 @@ git checkout -b test/ci-validate
 git commit --allow-empty -m "test: ci validate"
 git push -u origin test/ci-validate
 # Create PR via GitHub UI or `gh` CLI
-```
+
 
 Outstanding items and recommendations:
 

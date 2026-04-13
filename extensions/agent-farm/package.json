@@ -4,6 +4,10 @@
   "description": "Specialized agents for code analysis, review, architecture, and testing",
   "version": "0.1.0",
   "publisher": "kushin77",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kushin77/code-server.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },

@@ -1,0 +1,43 @@
+{
+  "realm": "enterprise",
+  "enabled": true,
+  "displayName": "Agent Farm Enterprise",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "agent-api",
+      "enabled": true,
+      "bearerOnly": false,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "defaultClientScopes": ["openid","profile","email","roles"]
+    },
+    {
+      "clientId": "backstage",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {"name": "mcp-admin",    "description": "Full platform access"},
+      {"name": "mcp-executor", "description": "Can approve and execute HITL actions"},
+      {"name": "mcp-coder",    "description": "Can submit code tasks"},
+      {"name": "mcp-readonly", "description": "Read-only observability access"}
+    ]
+  },
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and specialChars(1)"
+}

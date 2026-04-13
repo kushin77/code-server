@@ -71,8 +71,9 @@ services:
   # ─── Ollama ─────────────────────────────────────────────────────────────────
   # Elite local LLM server with models rivaling Claude Opus
   # Serves high-quality code analysis and repository learning
+  # Pinned to v0.1.27 for immutability and reproducible builds
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.1.27
     container_name: ollama
     restart: unless-stopped
     networks:
@@ -112,8 +113,9 @@ services:
   # ─── ollama-init ────────────────────────────────────────────────────────────
   # One-time service that pulls elite models and shares them with ollama
   # Models selected for code intelligence and learning capability
+  # Pinned to v0.1.27 for immutability and reproducible builds
   ollama-init:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.1.27
     container_name: ollama-init
     networks:
       - enterprise

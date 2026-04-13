@@ -1,21 +1,47 @@
 "use strict";
 /**
- * Phase 11: Advanced Resilience, HA/DR & Observability
- *
- * This module provides enterprise-grade high availability and disaster recovery:
- * - Continuous health monitoring across all system components
- * - Automatic failover with customizable strategies
- * - Disaster recovery orchestration (backup, recovery, testing)
- * - Chaos engineering for resilience validation
- * - SLO tracking (RTO < 1h, RPO < 15min, availability 99.9%)
+ * Phase 11: Advanced Resilience & HA/DR
+ * Exports for circuit breakers, failover, and chaos engineering
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ResilienceOrchestrator = exports.FailoverState = exports.FailoverManager = exports.HealthMonitor = void 0;
-var HealthMonitor_1 = require("./HealthMonitor");
-Object.defineProperty(exports, "HealthMonitor", { enumerable: true, get: function () { return HealthMonitor_1.HealthMonitor; } });
-var FailoverManager_1 = require("./FailoverManager");
+exports.Phase11Examples = exports.ResiliencePhase11Agent = exports.ChaosEngineer = exports.FailoverManager = exports.CircuitBreaker = void 0;
+var CircuitBreaker_1 = require("../../ml/CircuitBreaker");
+Object.defineProperty(exports, "CircuitBreaker", { enumerable: true, get: function () { return CircuitBreaker_1.CircuitBreaker; } });
+var FailoverManager_1 = require("../../ml/FailoverManager");
 Object.defineProperty(exports, "FailoverManager", { enumerable: true, get: function () { return FailoverManager_1.FailoverManager; } });
-Object.defineProperty(exports, "FailoverState", { enumerable: true, get: function () { return FailoverManager_1.FailoverState; } });
-var ResilienceOrchestrator_1 = require("./ResilienceOrchestrator");
-Object.defineProperty(exports, "ResilienceOrchestrator", { enumerable: true, get: function () { return ResilienceOrchestrator_1.ResilienceOrchestrator; } });
+var ChaosEngineer_1 = require("../../ml/ChaosEngineer");
+Object.defineProperty(exports, "ChaosEngineer", { enumerable: true, get: function () { return ChaosEngineer_1.ChaosEngineer; } });
+var ResiliencePhase11Agent_1 = require("../../agents/ResiliencePhase11Agent");
+Object.defineProperty(exports, "ResiliencePhase11Agent", { enumerable: true, get: function () { return ResiliencePhase11Agent_1.ResiliencePhase11Agent; } });
+/**
+ * Phase 11 Configuration Examples
+ */
+exports.Phase11Examples = {
+    circuitBreakerConfig: {
+        name: 'api-service',
+        failureThreshold: 5,
+        resetTimeout: 30000,
+        halfOpenRequests: 3,
+        monitoringWindow: 60000,
+    },
+    failoverConfig: {
+        strategy: 'active-passive',
+        healthCheckInterval: 5000,
+        failureThreshold: 3,
+        replicationDelay: 100,
+        autoFailover: true,
+    },
+    chaosTestScenario: {
+        name: 'Latency Spike Test',
+        scenario: 'latency',
+        targetServices: ['api-gateway', 'data-service'],
+        duration: 60000,
+        intensity: 0.8,
+    },
+    slaTargets: {
+        availability: 99.99,
+        maxRecoveryTime: 30000,
+        maxDataLoss: 0,
+    },
+};
 //# sourceMappingURL=index.js.map

@@ -297,7 +297,7 @@ class GitOpsOrchestrator {
         let totalHealthy = 0;
         let totalProgressing = 0;
         let totalDegraded = 0;
-        let totalUnknown = 0;
+        const totalUnknown = 0;
         for (const cluster of uniqueLusters) {
             // In real implementation, would query cluster API
             // For simulation:

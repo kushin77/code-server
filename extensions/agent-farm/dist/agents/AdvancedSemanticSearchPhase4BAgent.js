@@ -162,15 +162,15 @@ class AdvancedSemanticSearchPhase4BAgent extends types_1.Agent {
         if (code.includes('async') && code.includes('await')) {
             patterns.push('Async/await pattern (properly used)');
         }
-        if (code.match(/for\s*\(\s*let|for\s*\(\s*const|forEach|map|filter/g)?.length >
-            2) {
+        const iterationMatches = code.match(/for\s*\(\s*let|for\s*\(\s*const|forEach|map|filter/g);
+        if ((iterationMatches?.length ?? 0) > 2) {
             patterns.push('Heavy iteration usage (potential for optimization)');
         }
         if (code.includes('new Error') || code.includes('throw')) {
             patterns.push('Explicit error handling');
         }
-        if (code.match(/const\s+\w+\s*=\s*memo|useMemo|useCallback|lru|memoize/g)
-            ?.length > 0) {
+        const memoMatches = code.match(/const\s+\w+\s*=\s*memo|useMemo|useCallback|lru|memoize/g);
+        if ((memoMatches?.length ?? 0) > 0) {
             patterns.push('Memoization pattern detected');
         }
         if (code.includes('export') && code.includes('interface')) {

@@ -1,14 +1,44 @@
 /**
- * Phase 11: Advanced Resilience, HA/DR & Observability
- *
- * This module provides enterprise-grade high availability and disaster recovery:
- * - Continuous health monitoring across all system components
- * - Automatic failover with customizable strategies
- * - Disaster recovery orchestration (backup, recovery, testing)
- * - Chaos engineering for resilience validation
- * - SLO tracking (RTO < 1h, RPO < 15min, availability 99.9%)
+ * Phase 11: Advanced Resilience & HA/DR
+ * Exports for circuit breakers, failover, and chaos engineering
  */
-export { HealthMonitor, type HealthStatus, type SystemHealth, type SystemMetrics } from './HealthMonitor';
-export { FailoverManager, FailoverState, type FailoverStrategy } from './FailoverManager';
-export { ResilienceOrchestrator, type DisasterRecoveryJob } from './ResilienceOrchestrator';
+export { CircuitBreaker } from '../../ml/CircuitBreaker';
+export type { CircuitBreakerConfig, CircuitBreakerMetrics, CircuitState } from '../../ml/CircuitBreaker';
+export { FailoverManager } from '../../ml/FailoverManager';
+export type { FailoverConfig, FailoverStrategy, FailoverTrigger, FailoverEvent, ReplicaHealth, } from '../../ml/FailoverManager';
+export { ChaosEngineer } from '../../ml/ChaosEngineer';
+export type { ChaosTest, ChaosTestMetrics, ChaosScenario } from '../../ml/ChaosEngineer';
+export { ResiliencePhase11Agent } from '../../agents/ResiliencePhase11Agent';
+export type { ResilienceStatus } from '../../agents/ResiliencePhase11Agent';
+/**
+ * Phase 11 Configuration Examples
+ */
+export declare const Phase11Examples: {
+    circuitBreakerConfig: {
+        name: string;
+        failureThreshold: number;
+        resetTimeout: number;
+        halfOpenRequests: number;
+        monitoringWindow: number;
+    };
+    failoverConfig: {
+        strategy: "active-passive";
+        healthCheckInterval: number;
+        failureThreshold: number;
+        replicationDelay: number;
+        autoFailover: boolean;
+    };
+    chaosTestScenario: {
+        name: string;
+        scenario: "latency";
+        targetServices: string[];
+        duration: number;
+        intensity: number;
+    };
+    slaTargets: {
+        availability: number;
+        maxRecoveryTime: number;
+        maxDataLoss: number;
+    };
+};
 //# sourceMappingURL=index.d.ts.map

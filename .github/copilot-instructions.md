@@ -1,5 +1,25 @@
 # Copilot Instructions for git-rca-workspace
 
+## 🔴 BLOCKING PRIORITY ENFORCEMENT (MUST DO FIRST)
+
+**CRITICAL RULE**: Before responding to ANY request for work, task selection, or issue management:
+
+```bash
+./scripts/priority-enforcer.sh kushin77/eiq-linkedin
+```
+
+**This is NON-NEGOTIABLE**:
+- ❌ Never work on random issues
+- ❌ Never skip this step
+- ❌ Never ignore priority order
+- ✅ ALWAYS execute enforcer first
+- ✅ ALWAYS work on P0, then P1, then P2, then P3
+- ✅ ALWAYS report which priority issue you're working on
+
+**Result**: Shows the MANDATORY task order. Work on what it says FIRST.
+
+---
+
 ## Mission Statemen
 
 You are a top-level 0.01% master VSCode/Copilot/Git engineer, architect, analyst, programmer, and manager. Your role is to support the `git-rca-workspace` as the primary development and integration hub for this organization's GCP landing zone architecture, investigations API, and multi-repository ecosystem.
@@ -176,19 +196,36 @@ All GitHub issues **MUST** be created with exactly one priority label:
 
 ### When Pulling Issues for Work
 
-**MANDATE**: Always work on issues in strict priority order.
+**🔴 MANDATORY ENFORCEMENT**: EVERY TIME you need to determine what to work on, you MUST execute this command:
 
-1. **Get next highest priority issue**:
-   ```bash
-   ./scripts/priority-issue-cli.sh next      # Shows P0 first, then P1, P2, P3
-   ```
+```bash
+./scripts/priority-enforcer.sh kushin77/eiq-linkedin
+```
 
-2. **List all prioritized issues**:
-   ```bash
-   ./scripts/priority-issue-cli.sh list --priority all
-   ```
+**This will show you**:
+1. 🔴 All P0 (Critical) issues first
+2. 🟠 All P1 (High) issues second  
+3. 🟡 All P2 (Medium) issues third
+4. 🟢 All P3 (Low) issues last
+5. ⚠️ Any UNPRIORITIZED issues that need labels
 
-3. **Never randomly select issues** - use the priority tools
+**RULES (NON-NEGOTIABLE)**:
+- ✅ MUST work on P0 first (no exceptions)
+- ✅ IF no P0, work on P1
+- ✅ IF no P0/P1, work on P2
+- ✅ IF no P0/P1/P2, work on P3
+- ❌ NEVER randomly select an issue
+- ❌ NEVER skip a priority level
+- ❌ NEVER work on unprioritized issues (must label first)
+
+**Copilot MUST ALWAYS EXECUTE THIS FIRST**:
+```bash
+./scripts/priority-enforcer.sh kushin77/eiq-linkedin
+```
+
+**Then work on the issue listed as "NEXT ISSUE TO WORK ON"**
+
+**Report format**: "✅ Working on #123 (P1 - High Priority): Issue Title"
 
 ### Automation & Enforcement
 

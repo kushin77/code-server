@@ -334,36 +334,48 @@ export class GitHubActionsAgent extends Agent {
   ): Recommendation[] {
     const recommendations: Recommendation[] = [];
 
-    // Check for secrets passed directly in code (anti-pattern)
+    // Check for hardcoded secrets - but exclude proper ${{ secrets.XXXXX }} references
+    const lines = code.split('\n');
     const secretPatterns = [
-      /password['\s]*[:=]/gi,
-      /token['\s]*[:=]/gi,
-      /api[_-]?key['\s]*[:=]/gi,
-      /secret['\s]*[:=]/gi,
-      /credentials['\s]*[:=]/gi,
+      /password['\s]*[:=]\s*["'](?!\{)/gi,
+      /token['\s]*[:=]\s*["'](?!\{)/gi,
+      /api[_-]?key['\s]*[:=]\s*["'](?!\{)/gi,
+      /secret['\s]*[:=]\s*["'][^}]/gi,
+      /credentials['\s]*[:=]\s*["'](?!\{)/gi,
     ];
 
-    secretPatterns.forEach(pattern => {
-      if (pattern.test(code)) {
-        recommendations.push({
-          id: 'gh-hardcoded-secret',
-          title: 'Hardcoded Secret/Credential Detected',
-          description: 'Potential hardcoded secret, password, or API key found in workflow.',
-          severity: 'critical',
-          actionable: true,
-          suggestedFix: 'Move secrets to GitHub Secrets and reference with ${{ secrets.SECRET_NAME }}',
-          codeSnippet: `# Instead of:
+    let foundHardcodedSecret = false;
+    lines.forEach(line => {
+      // Skip lines that properly use ${{ secrets. }}
+      if (line.includes('${{ secrets.')) {
+        return;
+      }
+
+      secretPatterns.forEach(pattern => {
+        if (pattern.test(line)) {
+          foundHardcodedSecret = true;
+        }
+      });
+    });
+
+    if (foundHardcodedSecret) {
+      recommendations.push({
+        id: 'gh-hardcoded-secret',
+        title: 'Hardcoded Secret/Credential Detected',
+        description: 'Potential hardcoded secret, password, or API key found in workflow.',
+        severity: 'critical',
+        actionable: true,
+        suggestedFix: 'Move secrets to GitHub Secrets and reference with ${{ secrets.SECRET_NAME }}',
+        codeSnippet: `# Instead of:
 env:
   API_KEY: "abc123def456"
 
 # Use:
 env:
   API_KEY: \${{ secrets.API_KEY }}`,
-          documentationUrl: 'https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions',
-        });
-        return;
-      }
-    });
+        documentationUrl: 'https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions',
+      });
+    }
 
     // Check if using secrets properly
     const hasSecretsUsage = code.includes('secrets.');

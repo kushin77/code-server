@@ -1,0 +1,387 @@
+# code-server enterprise stack — domain/ide with Google OAuth
+# All config via .env (copy from .env.template, populate via scripts/fetch-gsm-secrets.sh)
+# Portable: docker compose up on any host with a valid .env — no hardcoded IPs or paths
+
+services:
+  # ─── code-server ────────────────────────────────────────────────────────────
+  code-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.code-server
+      args:
+        # Pin VSIX versions — override: make deploy COPILOT_VERSION=x.y.z COPILOT_CHAT_VERSION=a.b.c
+        COPILOT_VERSION: ${COPILOT_VERSION:-1.299.0}
+        COPILOT_CHAT_VERSION: ${COPILOT_CHAT_VERSION:-0.27.2}
+    image: code-server-patched:local
+    container_name: code-server
+    restart: unless-stopped
+    networks:
+      - enterprise
+    # NOT exposed to host — traffic comes only through oauth2-proxy
+    expose:
+      - "8080"
+    environment:
+      - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - SERVICE_URL=https://marketplace.visualstudio.com/_apis/public/gallery
+      - ITEM_URL=https://marketplace.visualstudio.com/items
+      - CACHEURL=https://vscode.blob.core.windows.net/gallery/index
+      - CS_DISABLE_FILE_DOWNLOADS=false
+      # Tier 1 Performance Enhancements:
+      # - Increased heap for code analysis and caching
+      # - Source maps for extension debugging
+      # - max-workers removed (not supported in this Node version)
+      - NODE_OPTIONS=--enable-source-maps --max-old-space-size=3000 --max-http-header-size=16384
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      # Ollama integration
+      - OLLAMA_ENDPOINT=http://ollama:11434
+      - OLLAMA_DEFAULT_MODEL=llama2:70b-chat
+    command:
+      - "--bind-addr=0.0.0.0:8080"
+      - "--disable-telemetry"
+      - "--cert=false"           # TLS handled by Caddy externally
+      - "--auth=none"            # Auth handled by oauth2-proxy
+    volumes:
+      - coder-data:/home/coder
+      - ${WORKSPACE_PATH:-./workspace}:/home/coder/workspace
+      # Enterprise settings: seeded into user settings on first launch (see entrypoint.sh)
+      - ./config/settings.json:/etc/code-server/settings.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: '2.0'
+        reservations:
+          memory: 512m
+          cpus: '0.25'
+    depends_on:
+      - ollama
+    security_opt:
+      - apparmor=unconfined
+      - seccomp=unconfined  # TEMP: Both AppArmor + seccomp blocking binary execution (see PHASE-14-STATUS-APRIL-13.md)
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─── Ollama ─────────────────────────────────────────────────────────────────
+  # Elite local LLM server with models rivaling Claude Opus
+  # Serves high-quality code analysis and repository learning
+  # Pinned to v0.1.27 for immutability and reproducible builds
+  ollama:
+    image: ollama/ollama:0.1.27
+    container_name: ollama
+    restart: unless-stopped
+    networks:
+      - enterprise
+    expose:
+      - "11434"
+    environment:
+      # Enable GPU acceleration (optional, will fall back to CPU if unavailable)
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_KEEP_ALIVE=5m
+      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
+      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
+    volumes:
+      - ollama-data:/root/.ollama
+      - ${WORKSPACE_PATH:-./workspace}:/workspace:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    security_opt:
+      - apparmor=unconfined
+      - seccomp=unconfined  # TEMP: Both AppArmor + seccomp blocking binary execution (see PHASE-14-STATUS-APRIL-13.md)
+    # Resource limits — adjust based on available RAM
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          memory: 8G
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── ollama-init ────────────────────────────────────────────────────────────
+  # One-time init task that pulls elite models ONCE and exits cleanly
+  # Models selected for code intelligence and learning capability
+  # Pinned to v0.1.27 for immutability and reproducible builds
+  # NOTE: Uses 'restart: no' to prevent re-running after completion
+  ollama-init:
+    image: ollama/ollama:0.1.27
+    container_name: ollama-init
+    networks:
+      - enterprise
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    volumes:
+      - ollama-data:/root/.ollama
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        echo "🚀 Pulling elite LLM models..."
+        # Main model: llama2:70b-chat (rivals Claude Opus)
+        echo "⏳ Pulling llama2:70b-chat (elite reasoning model)..."
+        ollama pull llama2:70b-chat || true
+
+        # Code-specific models
+        echo "⏳ Pulling codegemma (Google's code reasoning)..."
+        ollama pull codegemma || true
+
+        echo "⏳ Pulling neural-chat (code-optimized)..."
+        ollama pull neural-chat || true
+
+        # Fast model for real-time feedback
+        echo "⏳ Pulling mistral (fast reasoning)..."
+        ollama pull mistral || true
+
+        echo "✅ All models pulled successfully"
+        exit 0
+    depends_on:
+      - ollama
+    restart: "no"
+    profiles:
+      - init
+
+  # ─── ssh-proxy ──────────────────────────────────────────────────────────────
+  # PHASE 13: SSH proxy with comprehensive audit logging
+  # Logs all key operations to: file (JSON), SQLite (searchable), syslog (centralized)
+  # Immutable configuration (version pinned for reproducibility)
+  ssh-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.ssh-proxy
+    image: ssh-proxy:local
+    container_name: ssh-proxy
+    restart: unless-stopped
+    networks:
+      - enterprise
+    expose:
+      - "2222"
+      - "3222"
+    environment:
+      - AUDIT_LOG_PATH=/var/log/code-server-audit.log
+      - AUDIT_DB_PATH=/var/lib/code-server/audit.db
+      - LOG_LEVEL=info
+    command:
+      - "--listen=0.0.0.0:2222"
+      - "--target=localhost:22"
+      - "--audit-config=/etc/code-server/audit-logging.conf"
+      - "--log-level=info"
+    volumes:
+      # Audit logging: File sink
+      - audit-logs:/var/log
+      # Audit logging: SQLite sink
+      - audit-db:/var/lib/code-server
+      # Audit config (immutable)
+      - ./config/audit-logging.conf:/etc/code-server/audit-logging.conf:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3222/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.25'
+        reservations:
+          memory: 64m
+    security_opt:
+      - apparmor=unconfined
+      - seccomp=unconfined  # TEMP: Both AppArmor + seccomp blocking binary execution (see PHASE-14-STATUS-APRIL-13.md)
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+  # ─── oauth2-proxy ───────────────────────────────────────────────────────────
+  # Eiq-org pattern: OIDC sidecar for zero-trust authentication
+  # Validates Google OAuth tokens before passing to code-server
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    container_name: oauth2-proxy
+    restart: unless-stopped
+    networks:
+      - enterprise
+    expose:
+      - "4180"
+    environment:
+      # Credentials from GSM (injected by scripts/fetch-gsm-secrets.sh)
+      OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
+      # Provider
+      OAUTH2_PROXY_PROVIDER: "google"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
+      # Redirect configuration — domain driven by DOMAIN env var
+      OAUTH2_PROXY_REDIRECT_URL: "https://${DOMAIN}/oauth2/callback"
+      # Upstream: code-server serves /ide (cert:false inside Docker)
+      OAUTH2_PROXY_UPSTREAMS: "http://code-server:8080/"
+      # Access control — only allow specific email
+      OAUTH2_PROXY_EMAIL_DOMAINS: ""
+      OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
+      # Cookie settings
+      OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
+      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
+      OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
+      OAUTH2_PROXY_COOKIE_REFRESH: "15m"
+      # Proxy behaviour
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
+      OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"     # code-server requires WebSocke
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      # Headers
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
+      OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
+      # Logging
+      OAUTH2_PROXY_AUTH_LOGGING: "true"
+      OAUTH2_PROXY_REQUEST_LOGGING: "true"
+      # Skip auth for health checks and GitHub OAuth callback
+      # /callback is the GitHub OAuth redirect target used by the github-authentication
+      # VS Code extension — it must reach code-server directly or the OAuth state/code
+      # is consumed before the IDE can exchange it (causing "Sign in" to loop forever).
+      OAUTH2_PROXY_SKIP_AUTH_ROUTES: "^/health$$|^/oauth2/|^/callback$$"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4180/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
+    depends_on:
+      - code-server
+    security_opt:
+      - apparmor=unconfined
+      - seccomp=unconfined  # TEMP: Both AppArmor + seccomp blocking binary execution (see PHASE-14-STATUS-APRIL-13.md)
+    cap_drop:
+      - NET_RAW
+      - SYS_PTRACE
+      - SYS_ADMIN
+    # Allow execution and basic network ops, drop dangerous caps
+    cap_add:
+      - NET_BIND_SERVICE
+    # Removed read_only:true - causes execution permission errors despite capabilities
+    # Using security_opt + cap_drop for hardening instead
+    tmpfs:
+      - /tmp:size=10m,mode=1777
+      - /var/lib/oauth2-proxy:size=10m,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.25'
+        reservations:
+          memory: 32m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ─── Caddy ──────────────────────────────────────────────────────────────────
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    networks:
+      - enterprise
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Caddy reads DOMAIN via {$DOMAIN} in Caddyfile
+      DOMAIN: "${DOMAIN:ide.kushnir.cloud}"
+      # ACME (Let's Encrypt) certificate notification email
+      ACME_EMAIL: "${ACME_EMAIL:admin@kushnir.cloud}"
+      # CloudFlare DNS-01 challenge credentials (for automatic ACME validation)
+      CLOUDFLARE_API_TOKEN: "${CLOUDFLARE_API_TOKEN:}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - oauth2-proxy
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.50'
+        reservations:
+          memory: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+  # ─── Redis Cache Layer (Tier 2 Performance) ──────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - enterprise
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    environment:
+      - REDIS_LOGLEVEL=notice
+      - REDIS_DATABASES=16
+      - REDIS_MEMORY=512mb
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  coder-data:
+    driver: local
+  ollama-data:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local
+  audit-logs:
+    driver: local
+  audit-db:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  enterprise:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.8.0/24

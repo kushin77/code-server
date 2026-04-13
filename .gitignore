@@ -1,0 +1,65 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Logs
+*.log
+deployment.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Local temporary files
+*.tmp
+*.bak
+*.backup
+
+# Sensitive data (if accidentally created)
+*.pem
+*.key
+.env
+.env.local
+
+# User session and secrets (never commit)
+sessions/
+.secrets/
+
+# Docker
+docker-compose.override.yml
+
+# Caddy
+*.crt
+*.key
+
+# Build artifacts
+node_modules/
+dist/
+build/
+*.d.ts
+*.d.ts.map
+*.js.map
+
+# Terraform backup
+backup.tfstate
+
+workspace/*
+!workspace/.gitkeep
+terraform.tfvars

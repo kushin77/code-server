@@ -1,0 +1,377 @@
+version: '3.9'
+
+services:
+  # ====================================================================
+  # PHASE 18: MULTI-CLUSTER KUBERNETES SIMULATION
+  # Purpose: Local Kubernetes multi-cluster federation testing
+  # ====================================================================
+
+  # Primary Cluster - API Server
+  # Simulates primary Kubernetes control plane
+  primary-kube-apiserver:
+    image: kubeadm:1.27-alpine
+    container_name: primary-cluster
+    hostname: primary-cluster
+    ports:
+      - "6443:6443"
+    environment:
+      KUBERNETES_SERVICE_HOST: primary-cluster
+      KUBERNETES_SERVICE_PORT: 6443
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:6443/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - federation
+    labels:
+      cluster: primary
+      tier: production
+
+  # Secondary Cluster - API Server
+  # Simulates secondary Kubernetes control plane (US-West region)
+  secondary-kube-apiserver:
+    image: kubeadm:1.27-alpine
+    container_name: secondary-cluster
+    hostname: secondary-cluster
+    ports:
+      - "6444:6443"
+    environment:
+      KUBERNETES_SERVICE_HOST: secondary-cluster
+      KUBERNETES_SERVICE_PORT: 6443
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:6443/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - federation
+    labels:
+      cluster: secondary
+      tier: production
+
+  # Tertiary Cluster - API Server
+  # Simulates tertiary Kubernetes control plane (EU region)
+  tertiary-kube-apiserver:
+    image: kubeadm:1.27-alpine
+    container_name: tertiary-cluster
+    hostname: tertiary-cluster
+    ports:
+      - "6445:6443"
+    environment:
+      KUBERNETES_SERVICE_HOST: tertiary-cluster
+      KUBERNETES_SERVICE_PORT: 6443
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:6443/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - federation
+    labels:
+      cluster: tertiary
+      tier: production
+
+  # ====================================================================
+  # FEDERATION CONTROL PLANE
+  # ====================================================================
+
+  # KubeFed Control Plane
+  kubefed-controller:
+    image: quay.io/kubernetes-multicluster/kubefed:v1.7.0
+    container_name: kubefed-controller
+    hostname: kubefed
+    ports:
+      - "10357:10357"
+    environment:
+      KUBERNETES_SERVICE_HOST: primary-cluster
+      KUBERNETES_SERVICE_PORT: 6443
+      KUBEFED_NAMESPACE: kube-federation-system
+    depends_on:
+      primary-kube-apiserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+  # ====================================================================
+  # SERVICE MESH - ISTIO
+  # ====================================================================
+
+  # Istio Control Plane (Istiod) running in federation namespace
+  istiod:
+    image: istio/pilot:1.16.0
+    container_name: istiod
+    hostname: istiod
+    ports:
+      - "15010:15010"
+      - "15012:15012"
+      - "8080:8080"
+    environment:
+      ISTIOD_ADDR: istiod:15010
+      PILOT_ENABLE_EDS_FOR_HEADLESS_SERVICES: "true"
+      PILOT_ENABLE_MINTING: "true"
+    depends_on:
+      primary-kube-apiserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/debug/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+  # Istio Ingress Gateway - Primary cluster
+  istio-ingressgateway-primary:
+    image: istio/proxyv2:1.16.0
+    container_name: istio-ig-primary
+    ports:
+      - "80:8080"
+      - "443:8443"
+      - "15021:15021"
+    environment:
+      ISTIO_NAMESPACE: istio-system
+      CLUSTER_NAME: primary-cluster
+    depends_on:
+      - istiod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:15021/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+  # Istio Ingress Gateway - Secondary cluster
+  istio-ingressgateway-secondary:
+    image: istio/proxyv2:1.16.0
+    container_name: istio-ig-secondary
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+      - "15022:15021"
+    environment:
+      ISTIO_NAMESPACE: istio-system
+      CLUSTER_NAME: secondary-cluster
+    depends_on:
+      - istiod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:15021/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+  # ====================================================================
+  # GITOPS - ARGOCD
+  # ====================================================================
+
+  argocd-server:
+    image: quay.io/argoproj/argocd:v2.8.0
+    container_name: argocd
+    hostname: argocd
+    ports:
+      - "8081:8080"
+    command:
+      - argocd-server
+      - --repo-server=argocd-repo-server
+    environment:
+      ARGOCD_NAMESPACE: argocd
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+  argocd-repo-server:
+    image: quay.io/argoproj/argocd:v2.8.0
+    container_name: argocd-repo-server
+    ports:
+      - "8081:8081"
+    command:
+      - argocd-repo-server
+    environment:
+      ARGOCD_NAMESPACE: argocd
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+  # ====================================================================
+  # MONITORING - PROMETHEUS & GRAFANA
+  # ====================================================================
+
+  prometheus-federation:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus-federation
+    hostname: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/monitoring/prometheus-federation.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+  grafana-federation:
+    image: grafana/grafana:10.0.0
+    container_name: grafana-federation
+    hostname: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_SERVER_ROOT_URL: http://grafana:3000
+    volumes:
+      - ./config/monitoring/grafana-federation-datasources.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+    depends_on:
+      - prometheus-federation
+
+  # ====================================================================
+  # NETWORKING & OBSERVABILITY
+  # ====================================================================
+
+  # Network Policy Enforcer (simulated via Calico)
+  calico-controller:
+    image: calico/node:v3.26.0
+    container_name: calico
+    hostname: calico
+    privileged: true
+    environment:
+      DATASTORE_TYPE: kubernetes
+      KUBECONFIG: /root/.kube/config
+    networks:
+      - federation
+    cap_add:
+      - NET_ADMIN
+
+  # Multi-cluster DNS resolver
+  coredns-federation:
+    image: coredns:1.10.1
+    container_name: coredns
+    hostname: coredns
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    volumes:
+      - ./config/networking/coredns-federation.conf:/etc/coredns/Corefile:ro
+    healthcheck:
+      test: ["CMD", "dig", "@localhost", "kubernetes.default.svc"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+  # ====================================================================
+  # COST OPTIMIZATION TOOLS
+  # ====================================================================
+
+  # Kubecost - Multi-cluster cost management
+  kubecost:
+    image: gcr.io/kubecost1/kubecost:1.96.1
+    container_name: kubecost
+    hostname: kubecost
+    ports:
+      - "9090:9090"
+    environment:
+      KUBECOST_NAMESPACE: kubecost
+      DB_DRIVER: sqlite3
+      PROMETHEUS_SERVER_ENDPOINT: http://prometheus-federation:9090
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+    depends_on:
+      - prometheus-federation
+
+  # Vertical Pod Autoscaler (VPA) - Right-sizing recommendations
+  vpa-recommender:
+    image: k8s.gcr.io/autoscaling/vpa-recommender:0.14.0
+    container_name: vpa-recommender
+    environment:
+      METRICS_SERVER_DEPLOYMENT_NAME: metrics-server
+    networks:
+      - federation
+
+  # ====================================================================
+  # DISASTER RECOVERY & BACKUP
+  # ====================================================================
+
+  # Velero - Backup and restore across clusters
+  velero:
+    image: velero/velero:v1.11.1
+    container_name: velero
+    ports:
+      - "8000:8000"
+    environment:
+      VELERO_NAMESPACE: velero
+      BUCKET_NAME: velero-backups
+      PROVIDER: aws
+    networks:
+      - federation
+
+  # MinIO - S3-compatible storage for backups
+  minio:
+    image: minio/minio:latest
+    container_name: minio-backup
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: velero
+      MINIO_ROOT_PASSWORD: velero123
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - federation
+
+networks:
+  federation:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+    labels:
+      type: fleet-federation
+      tier: production
+
+volumes:
+  prometheus-federation-storage:
+  grafana-federation-storage:
+  minio-backup-storage:

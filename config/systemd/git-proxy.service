@@ -1,0 +1,43 @@
+[Unit]
+Description=Git Proxy Server - Credential Helper for Developers
+Documentation=https://github.com/kushin77/code-server/issues/184
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=git-proxy
+Group=git-proxy
+WorkingDirectory=/srv/git-proxy
+
+# Environment
+EnvironmentFile=/etc/git-proxy/config.env
+Environment="PYTHONUNBUFFERED=1"
+
+# Start command
+ExecStart=/usr/bin/python3 /srv/git-proxy/git-proxy-server.py
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/log/git-proxy /srv/git-proxy
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=512
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=git-proxy
+
+[Install]
+WantedBy=multi-user.target

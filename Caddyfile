@@ -1,0 +1,95 @@
+# Caddyfile — ide.kushnir.cloud IDE reverse proxy with automatic HTTPS
+# Status: Fully automated ACME (Let's Encrypt) provisioning
+# No manual certificate management required - Caddy handles everything
+
+{
+    # Automatic HTTPS provisioning via Let's Encrypt
+    auto_https on
+    
+    # ACME provider: Let's Encrypt (free, automated)
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+    
+    # Email for certificate notifications (required by Let's Encrypt)
+    email {$ACME_EMAIL:admin@kushnir.cloud}
+    
+    # DNS challenge using CloudFlare (for wildcard certs and DNS-01 validation)
+    acme_dns cloudflare {$CLOUDFLARE_API_TOKEN:}
+}
+
+ide.kushnir.cloud {
+    # TLS: Automatic provisioning via Let's Encrypt ACME
+    # Caddy automatically handles:
+    # - Certificate issuance
+    # - Automatic renewal (every 60 days)
+    # - OCSP stapling
+    # - Certificate transparency logs
+    # Certificate for wildcard subdomains also available
+    tls {
+        issuer acme {
+            disable_issuance_limits
+            challenge dns cloudflare
+        }
+    }
+
+    encode gzip
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        # SAMEORIGIN (not DENY) — code-server uses iframes internally
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # CSP: allow wss/ws for IDE terminals and extension host; blob:/data: for fonts/worker
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws: https:; worker-src 'self' blob:; frame-src 'self';"
+        -Server
+    }
+
+    # One-shot endpoint to clear stale workbench cache/storage in a regular profile.
+    @reset path /reset-browser-state
+    header @reset Clear-Site-Data "\"cache\", \"storage\""
+    respond @reset 200
+
+    # Prevent stale JS/CSS bundles from persisting across patched deployments.
+    @stableAssets path /stable-*
+    header @stableAssets Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    header @stableAssets Pragma "no-cache"
+    header @stableAssets Expires "0"
+
+    # ─────────────────────────────────────────────────────────────────
+    # Tier 2 Cache Configuration (CloudFlare CDN Compatible)
+    # ─────────────────────────────────────────────────────────────────
+
+    # Static assets (immutable, cached for 1 year)
+    @assets path_regexp \.(css|js|png|jpg|jpeg|gif|svg|woff|woff2|ico|webp)$
+    header @assets Cache-Control "public, max-age=31536000, immutable"
+    header @assets Vary "Accept-Encoding"
+
+    # Extensions API (cached for 24 hours)
+    @extensions path /api/extensions*
+    header @extensions Cache-Control "public, max-age=86400"
+    header @extensions CDN-Cache-Control "max-age=86400"
+
+    # Dynamic API (cached for 10 minutes)
+    @api path /api*
+    header @api Cache-Control "public, max-age=600"
+    header @api CDN-Cache-Control "max-age=600"
+
+    # Health check (no cache)
+    @health path /health /healthz
+    header @health Cache-Control "no-cache, no-store, must-revalidate"
+
+    # All traffic → oauth2-proxy (handles Google Auth then forwards to code-server)
+    reverse_proxy oauth2-proxy:4180 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto https
+        # Preserve client IP through proxy chain
+        header_up X-Forwarded-For {remote_host}
+    }
+}
+
+# HTTP → HTTPS redirect
+http://ide.kushnir.cloud {
+    redir https://{host}{uri} permanent
+}

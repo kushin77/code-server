@@ -1,0 +1,17 @@
+/*
+Example Terraform backend configuration (GCS) — replace placeholders.
+
+Store this file as `backend.tf` (not committed with real keys) and configure
+the `bucket`, `prefix`, and `kms_key_name` for CMEK per your org settings.
+
+*/
+
+terraform {
+  backend "gcs" {
+    bucket      = "<YOUR_TERRAFORM_STATE_BUCKET>"
+    prefix      = "<project>/<env>"
+    credentials = "<PATH_TO_SERVICE_ACCOUNT_JSON>" # use CI service account instead
+    # To use CMEK-managed keys, set the KMS key name:
+    # kms_key_name = "projects/<project>/locations/<location>/keyRings/<ring>/cryptoKeys/<key>"
+  }
+}

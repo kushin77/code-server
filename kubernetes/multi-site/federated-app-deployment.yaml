@@ -1,0 +1,495 @@
+---
+# Multi-Region App Tier Deployment
+# Deploys code-server across multiple regions with geographic affinity and active-active load balancing
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: code-server-federation
+  labels:
+    federation: enabled
+    monitoring: prometheus
+
+---
+# Service for clients in same region (strongly consistent read)
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-server-local
+  namespace: code-server-federation
+  labels:
+    app: code-server
+    service-type: local
+spec:
+  type: LoadBalancer
+  selector:
+    app: code-server
+    region: current  # Will be overridden per region
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 8443
+    protocol: TCP
+
+---
+# Headless service for inter-pod communication
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-server-headless
+  namespace: code-server-federation
+spec:
+  clusterIP: None
+  selector:
+    app: code-server
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+
+---
+# StatefulSet for code-server deployment across regions
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: code-server
+  namespace: code-server-federation
+spec:
+  serviceName: code-server-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: code-server
+  template:
+    metadata:
+      labels:
+        app: code-server
+        federation: enabled
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Single region affinity - all pods in cluster stay in same region
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - code-server
+          topologyKey: kubernetes.io/hostname
+      
+      # Distributed across different availability zones within region
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: topology.kubernetes.io/zone
+                operator: In
+                values:
+                - zone-a
+                - zone-b
+                - zone-c
+      
+      serviceAccountName: code-server
+      terminationGracePeriodSeconds: 60
+      
+      containers:
+      - name: code-server
+        image: code-server:phase-12-federated
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        
+        # Probes - critical for federation health
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+          successThreshold: 1
+        
+        # Environment variables for federation
+        env:
+        # Deployment identifiers
+        - name: REGION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['region']
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        
+        # Federation settings
+        - name: FEDERATION_ENABLED
+          value: "true"
+        - name: CRDT_SYNC_ENABLED
+          value: "true"
+        - name: WRITE_PROPAGATION_TIMEOUT_MS
+          value: "5000"
+        
+        # Database settings (multi-primary)
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: federation-db-creds
+              key: primary-url
+        - name: DATABASE_REPLICAS
+          valueFrom:
+            configMapKeyRef:
+              name: federation-config
+              key: db-replicas
+        - name: DATABASE_REPLICA_SYNC
+          value: "async"
+        - name: DB_ENABLE_REPLICATION
+          value: "true"
+        - name: DB_BDR_SLOT_NAME
+          value: code-server_slot
+        
+        # Cache settings (federation-aware)
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: federation-cache-creds
+              key: url
+        - name: REDIS_CLUSTER_ENABLED
+          value: "true"
+        - name: REDIS_FEDERATION_ENABLED
+          value: "true"
+        - name: REDIS_REPLICATION_MODE
+          value: "active-active"
+        
+        # Event streaming (critical for convergence)
+        - name: KAFKA_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: federation-config
+              key: kafka-brokers
+        - name: KAFKA_TOPIC_EVENTS
+          value: "code-server-events"
+        - name: KAFKA_CONSUMER_GROUP
+          value: "code-server-$(POD_NAME)"
+        - name: KAFKA_AUTO_OFFSET_RESET
+          value: "earliest"
+        - name: KINESIS_STREAM_NAME
+          value: "code-server-federation-events"
+        
+        # CRDT settings
+        - name: CRDT_SINK_ENABLED
+          value: "true"
+        - name: CRDT_VECTOR_CLOCK_ENABLED
+          value: "true"
+        - name: CRDT_MERGE_STRATEGY
+          value: "conflict-free"
+        - name: CRDT_CONVERGENCE_TIMEOUT_MS
+          value: "100"
+        
+        # Session settings (global)
+        - name: SESSION_STORE_TYPE
+          value: "redis"
+        - name: SESSION_TTL_SECONDS
+          value: "86400"
+        - name: SESSION_REPLICATION_ENABLED
+          value: "true"
+        
+        # Observability
+        - name: PROMETHEUS_ENABLED
+          value: "true"
+        - name: JAEGER_ENABLED
+          value: "true"
+        - name: JAEGER_AGENT_HOST
+          value: "jaeger-agent.monitoring"
+        - name: JAEGER_AGENT_PORT
+          value: "6831"
+        - name: OTEL_TRACES_EXPORTER
+          value: "jaeger"
+        - name: LOG_FORMAT
+          value: "json"
+        - name: LOG_LEVEL
+          value: "info"
+        
+        # Resilience (circuit breakers, timeouts)
+        - name: CIRCUIT_BREAKER_DB_THRESHOLD
+          value: "5"
+        - name: CIRCUIT_BREAKER_CACHE_THRESHOLD
+          value: "10"
+        - name: DB_QUERY_TIMEOUT_MS
+          value: "5000"
+        - name: CACHE_OPERATION_TIMEOUT_MS
+          value: "1000"
+        
+        # Performance tuning
+        - name: HTTP_MAX_CONNECTIONS
+          value: "1000"
+        - name: DB_CONNECTION_POOL_SIZE
+          value: "50"
+        - name: REDIS_CONNECTION_POOL_SIZE
+          value: "50"
+        - name: CACHE_LOCAL_TTL_SECONDS
+          value: "300"
+        
+        # Graceful shutdown
+        - name: SHUTDOWN_GRACE_PERIOD_SECONDS
+          value: "30"
+        - name: DRAIN_TIMEOUT_SECONDS
+          value: "25"
+        
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+            ephemeral-storage: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+            ephemeral-storage: 2Gi
+        
+        volumeMounts:
+        - name: config
+          mountPath: /etc/code-server
+          readOnly: true
+        - name: cache
+          mountPath: /tmp/cache
+        - name: logs
+          mountPath: /var/log/code-server
+      
+      volumes:
+      - name: config
+        configMap:
+          name: federation-app-config
+          defaultMode: 0644
+      - name: cache
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: logs
+        emptyDir:
+          sizeLimit: 2Gi
+
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: federation-app-config
+  namespace: code-server-federation
+data:
+  config.json: |
+    {
+      "federation": {
+        "enabled": true,
+        "siteId": "$(REGION)",
+        "syncInterval": 100,
+        "convergenceTimeout": 500,
+        "maxReplicationLag": 1000,
+        "conflictStrategy": "crdt-merge"
+      },
+      "database": {
+        "multiPrimary": true,
+        "bdrEnabled": true,
+        "replicationMode": "logical",
+        "synchronousCommit": "remote_apply",
+        "maxConnections": 50,
+        "poolIdleTimeout": 300,
+        "queryTimeout": 5000,
+        "rePrepareStatement": false
+      },
+      "cache": {
+        "clusterEnabled": true,
+        "federationEnabled": true,
+        "maxConnections": 50,
+        "ttl": 3600,
+        "localTtl": 300,
+        "keyEvictionPolicy": "allkeys-lru"
+      },
+      "eventStream": {
+        "enabled": true,
+        "transport": "kafka",
+        "idempotencyEnabled": true,
+        "batchSize": 100,
+        "flushInterval": 1000
+      },
+      "crdt": {
+        "enabled": true,
+        "vectorClockEnabled": true,
+        "lamportClockEnabled": false,
+        "mergeStrategy": "conflict-free",
+        "tombstoneRetention": 86400
+      },
+      "resilience": {
+        "circuitBreaker": {
+          "databaseThreshold": 5,
+          "cacheThreshold": 10,
+          "resetTimeout": 30000,
+          "monitoringWindow": 60000
+        },
+        "retryPolicy": {
+          "maxRetries": 3,
+          "backoffMs": 100,
+          "maxBackoffMs": 5000,
+          "jitterFactor": 0.1
+        },
+        "timeouts": {
+          "readTimeoutMs": 5000,
+          "writeTimeoutMs": 10000,
+          "connectTimeoutMs": 5000
+        }
+      },
+      "observability": {
+        "prometheus": {
+          "enabled": true,
+          "port": 9090,
+          "scrapeInterval": 15000
+        },
+        "jaeger": {
+          "enabled": true,
+          "samplingRate": 0.1,
+          "samplerType": "probabilistic"
+        },
+        "logging": {
+          "format": "json",
+          "level": "info",
+          "includeTraceId": true
+        }
+      }
+    }
+
+---
+# Pod Disruption Budget - ensure minimum replicas
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: code-server-pdb
+  namespace: code-server-federation
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: code-server
+
+---
+# Horizontal Pod Autoscaler - scale based on load
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: code-server-hpa
+  namespace: code-server-federation
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: code-server
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+
+---
+# ServiceAccount for code-server
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: code-server
+  namespace: code-server-federation
+
+---
+# RBAC ClusterRole for federation operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: code-server-federation
+rules:
+# Pod discovery
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+# ConfigMap access
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+# Secret access (for DB/Cache credentials)
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+# Leader election
+- apiGroups: [""]
+  resources: ["leases"]
+  verbs: ["get", "create", "update"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: code-server-federation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: code-server-federation
+subjects:
+- kind: ServiceAccount
+  name: code-server
+  namespace: code-server-federation

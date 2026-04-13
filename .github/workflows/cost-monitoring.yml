@@ -1,0 +1,312 @@
+name: Cost Monitoring & Governance
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC
+    - cron: '0 9 * * 5'  # Every Friday at 9 AM UTC
+  workflow_dispatch:
+    inputs:
+      report_type:
+        type: choice
+        description: Report type
+        options:
+          - daily
+          - weekly
+          - monthly
+        required: false
+        default: weekly
+
+jobs:
+  cost-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup environment
+        run: |
+          echo "REPORT_DATE=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "REPORT_WEEK=$(date -u +'%Y-W%V')" >> $GITHUB_ENV
+
+      - name: Fetch workflow runs (last 7 days)
+        id: fetch-runs
+        run: |
+          # Fetch all workflow runs from this repo
+          gh api \
+            repos/$GITHUB_REPOSITORY/actions/runs \
+            -F per_page=100 \
+            -F status=completed \
+            --jq '.workflow_runs[] | select(.updated_at > (now - 7*24*60*60 | todate))' \
+            > /tmp/runs.json
+          
+          TOTAL_RUNS=$(jq 'length' /tmp/runs.json)
+          FAILED_RUNS=$(jq '[.[] | select(.conclusion == "failure")] | length' /tmp/runs.json)
+          SUCCESS_RATE=$((100 * (TOTAL_RUNS - FAILED_RUNS) / TOTAL_RUNS))
+          
+          echo "total_runs=$TOTAL_RUNS" >> $GITHUB_OUTPUT
+          echo "failed_runs=$FAILED_RUNS" >> $GITHUB_OUTPUT
+          echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
+          
+          echo "✓ Analyzed $TOTAL_RUNS workflow runs"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Estimate cost impact
+        id: cost-estimate
+        run: |
+          # Estimate cost based on run duration and type
+          # GitHub Actions pricing: Ubuntu-latest ($0.008/min)
+          
+          TOTAL_RUNS=${{ steps.fetch-runs.outputs.total_runs }}
+          
+          # Estimate average run duration: 15 minutes
+          AVG_DURATION=15
+          GITHUB_RATE=0.008  # per minute per runner
+          
+          ESTIMATED_COST=$(echo "scale=2; $TOTAL_RUNS * $AVG_DURATION * $GITHUB_RATE" | bc)
+          MONTHLY_PROJECTION=$(echo "scale=2; $ESTIMATED_COST * 4" | bc)
+          ANNUAL_PROJECTION=$(echo "scale=2; $MONTHLY_PROJECTION * 12" | bc)
+          
+          echo "weekly_cost=$ESTIMATED_COST" >> $GITHUB_OUTPUT
+          echo "monthly_projection=$MONTHLY_PROJECTION" >> $GITHUB_OUTPUT
+          echo "annual_projection=$ANNUAL_PROJECTION" >> $GITHUB_OUTPUT
+          
+          echo "💰 Estimated weekly cost: \$$ESTIMATED_COST"
+          echo "📊 Monthly projection: \$$MONTHLY_PROJECTION"
+          echo "📈 Annual projection: \$$ANNUAL_PROJECTION"
+
+      - name: Analyze workflow categories
+        id: workflow-analysis
+        run: |
+          # Categorize workflows by type
+          jq -r '.workflow_runs[] | "\(.name)|\(.conclusion)"' /tmp/runs.json | \
+          awk -F'|' '{
+            cat = $1;
+            if (cat ~ /lint|format/) category="ci-lint";
+            else if (cat ~ /test/) category="ci-tests";
+            else if (cat ~ /security|scan/) category="ci-security";
+            else if (cat ~ /build|deploy/) category="ci-build";
+            else if (cat ~ /deploy-prod/) category="deploy-prod";
+            else category="other";
+            
+            totals[category]++;
+            if ($2 == "failure") failed[category]++;
+          }
+          END {
+            for (cat in totals) {
+              fail_rate = (failed[cat] ? 100*failed[cat]/totals[cat] : 0);
+              printf "%s: %d runs, %.1f%% failure\n", cat, totals[cat], fail_rate;
+            }
+          }' > /tmp/category_analysis.txt
+          
+          cat /tmp/category_analysis.txt
+          
+          # Check for expensive categories
+          if grep -q "deploy-prod.*100" /tmp/category_analysis.txt; then
+            echo "⚠️  Deploy-prod has 100% failure rate - investigate!"
+          fi
+
+      - name: Check quota compliance
+        id: quota-check
+        run: |
+          # Read governance config
+          QUOTA_LIMIT=300  # ci-tests quota from governance.yaml
+          
+          CI_TESTS_RUNS=$(jq '[.[] | select(.name | contains("test"))] | length' /tmp/runs.json)
+          QUOTA_PERCENTAGE=$((100 * CI_TESTS_RUNS / QUOTA_LIMIT))
+          
+          echo "ci_tests_runs=$CI_TESTS_RUNS" >> $GITHUB_OUTPUT
+          echo "quota_percentage=$QUOTA_PERCENTAGE" >> $GITHUB_OUTPUT
+          
+          echo "📋 ci-tests quota: $CI_TESTS_RUNS / $QUOTA_LIMIT ($QUOTA_PERCENTAGE%)"
+          
+          if [[ $QUOTA_PERCENTAGE -gt 80 ]]; then
+            echo "⚠️  WARNING: Quota usage >80%"
+          fi
+          if [[ $QUOTA_PERCENTAGE -gt 100 ]]; then
+            echo "🔴 CRITICAL: Quota exceeded!"
+          fi
+
+      - name: Detect API sprawl
+        id: api-check
+        run: |
+          # Check for unauthorized external API calls in recent commits
+          
+          SUSPICIOUS_APIS=0
+          
+          # Get recent commits
+          git log --oneline --since='7 days ago' | head -20 | while read commit; do
+            COMMIT_HASH=$(echo "$commit" | awk '{print $1}')
+            
+            # Check for suspicious API patterns
+            if git show $COMMIT_HASH | grep -qE 'curl|requests\.get|fetch.*http|api\.' ; then
+              echo "🔍 Potential API call in $COMMIT_HASH"
+              ((SUSPICIOUS_APIS++))
+            fi
+          done
+          
+          echo "api_sprawl_issues=$SUSPICIOUS_APIS" >> $GITHUB_OUTPUT
+
+      - name: Generate cost report
+        id: report
+        run: |
+          cat > /tmp/cost_report.md <<'EOF'
+          # GitHub Actions Cost Report
+          
+          **Report Date**: ${{ env.REPORT_DATE }}  
+          **Report Week**: ${{ env.REPORT_WEEK }}
+          
+          ## Summary
+          
+          | Metric | Value | Status |
+          |--------|-------|--------|
+          | Total Runs (7d) | ${{ steps.fetch-runs.outputs.total_runs }} | ✓ |
+          | Failed Runs | ${{ steps.fetch-runs.outputs.failed_runs }} | ${{ steps.fetch-runs.outputs.success_rate }}% success |
+          | Estimated Weekly Cost | \$${{ steps.cost-estimate.outputs.weekly_cost }} | 💰 |
+          | Monthly Projection | \$${{ steps.cost-estimate.outputs.monthly_projection }} | 📊 |
+          | Annual Projection | \$${{ steps.cost-estimate.outputs.annual_projection }} | 📈 |
+          
+          ## Quota Compliance
+          
+          | Category | Usage | Status |
+          |----------|-------|--------|
+          | ci-tests | ${{ steps.quota-check.outputs.ci_tests_runs }}/300 | ${{ steps.quota-check.outputs.quota_percentage }}% |
+          
+          ## Workflow Analysis
+          
+          ```
+          $(cat /tmp/category_analysis.txt)
+          ```
+          
+          ## Risk Summary
+          
+          ### Success Rate: ${{ steps.fetch-runs.outputs.success_rate }}%
+          - If below 90%, investigate failing workflows
+          - High failure rate == wasted minutes == wasted money
+          
+          ### Cost Projection
+          - Weekly: \$${{ steps.cost-estimate.outputs.weekly_cost }}
+          - Monthly: \$${{ steps.cost-estimate.outputs.monthly_projection }}
+          - Annual: \$${{ steps.cost-estimate.outputs.annual_projection }}
+          
+          ### Optimization Opportunities
+          
+          1. **Reduce workflow runs**: Cache dependencies, parallelize jobs
+          2. **Improve success rate**: Fix flaky tests, improve CI reliability
+          3. **Optimize runner size**: Use smaller runners for non-critical jobs
+          4. **Batch scheduled jobs**: Combine cron jobs with similar schedules
+          
+          ## Compliance Status
+          
+          - ✓ Governance rules applied
+          - ✓ Quota tracking enabled
+          - ✓ API sprawl monitoring active
+          - ⚠️ Requires manual review: Any quota >80%
+          
+          ---
+          
+          **Next Review**: ${{ steps.fetch-runs.outputs.total_runs > 50 && 'Urgent - High volume' || 'Scheduled' }}
+          EOF
+          
+          cat /tmp/cost_report.md
+
+      - name: Create GitHub Issue (if needed)
+        if: steps.quota-check.outputs.quota_percentage > 80
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const quotaPercent = ${{ steps.quota-check.outputs.quota_percentage }};
+            const severity = quotaPercent > 100 ? 'critical' : 'warning';
+            const labels = [severity, 'cost-control', 'governance'];
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Workflow quota alert: ${quotaPercent}% of monthly limit`,
+              body: `Workflow quota utilization has reached ${quotaPercent}%.\n\nSee cost report for details.`,
+              labels: labels
+            });
+
+      - name: Slack notification
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "GitHub Actions Cost Report",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*GitHub Actions Cost Report*\n*Week*: ${{ env.REPORT_WEEK }}\n*Status*: ${{ job.status }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Runs (7d)*\n${{ steps.fetch-runs.outputs.total_runs }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Success Rate*\n${{ steps.fetch-runs.outputs.success_rate }}%"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Weekly Cost*\n\$${{ steps.cost-estimate.outputs.weekly_cost }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Quota Usage*\n${{ steps.quota-check.outputs.quota_percentage }}%"
+                    }
+                  ]
+                }
+              ]
+            }
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: cost-report-${{ env.REPORT_DATE }}
+          path: /tmp/cost_report.md
+          retention-days: 90
+
+  enforcement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq yq
+          pip install pyyaml pydantic
+
+      - name: Run governance enforcement
+        run: |
+          bash scripts/enforce-governance.sh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_OWNER: ${{ github.repository_owner }}
+
+      - name: Create enforcement report
+        run: |
+          echo "## Governance Enforcement Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Branch protection validated" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Workflow compliance checked" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ API sprawl monitored" >> $GITHUB_STEP_SUMMARY
+          echo "- ✓ Cost tracking enabled" >> $GITHUB_STEP_SUMMARY

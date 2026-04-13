@@ -1,0 +1,71 @@
+{
+  "role": "architect",
+  "priority": 15,
+  "description": "Design and architecture review role. Can edit design docs, markdown, and configuration files. Code files are read-only.",
+  "securityLevel": "design-focused",
+  "settings": {
+    "editor.readOnly": true,
+    "editor.formatOnSave": false,
+    "editor.fontSize": 13,
+    "editor.fontFamily": "Monaco, 'Courier New', monospace",
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.wordWrapColumn": 100,
+    "git.enabled": false,
+    "terminal.integrated.enabled": false,
+    "[markdown]": {
+      "editor.readOnly": false,
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.wordWrap": "on",
+      "editor.wordWrapColumn": 80
+    },
+    "[json]": {
+      "editor.readOnly": false,
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[yaml]": {
+      "editor.readOnly": false,
+      "editor.formatOnSave": true
+    },
+    "[plaintext]": {
+      "editor.readOnly": false
+    },
+    "[dockercompose]": {
+      "editor.readOnly": true
+    },
+    "[dockerfile]": {
+      "editor.readOnly": true
+    },
+    "[python]": {
+      "editor.readOnly": true
+    },
+    "[javascript]": {
+      "editor.readOnly": true
+    },
+    "[typescript]": {
+      "editor.readOnly": true
+    },
+    "[go]": {
+      "editor.readOnly": true
+    },
+    "[rust]": {
+      "editor.readOnly": true
+    },
+    "files.exclude": {
+      "**/.env": true,
+      "**/.env.local": true,
+      "**/secrets": true,
+      "**/src": false,
+      "**/*.go": false,
+      "**/*.py": false,
+      "**/*.js": false
+    },
+    "workbench.colorTheme": "Dracula",
+    "workbench.startupEditor": "none",
+    "security.workspace.trust.enabled": true,
+    "extensions.recommendations": false,
+    "extensions.ignoreRecommendations": true,
+    "telemetry.telemetryLevel": "off"
+  }
+}

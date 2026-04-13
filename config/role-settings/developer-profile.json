@@ -1,0 +1,60 @@
+{
+  "role": "developer",
+  "priority": 20,
+  "description": "Full development access with code editing, auto-formatting, and linting.",
+  "securityLevel": "standard",
+  "settings": {
+    "editor.readOnly": false,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": true,
+      "source.fixAll.prettier": true
+    },
+    "editor.fontSize": 13,
+    "editor.fontFamily": "Monaco, 'Courier New', monospace",
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.wordWrapColumn": 100,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.exclude": {
+      "**/.env": true,
+      "**/.env.local": true,
+      "**/secrets": true
+    },
+    "git.enabled": false,
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.python",
+      "editor.formatOnSave": true,
+      "editor.tabSize": 4
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true,
+      "editor.tabSize": 2
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true,
+      "editor.tabSize": 2
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true,
+      "editor.tabSize": 2
+    },
+    "[markdown]": {
+      "editor.wordWrap": "on",
+      "editor.wordWrapColumn": 80,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "terminal.integrated.enabled": false,
+    "security.workspace.trust.enabled": true,
+    "security.workspace.trust.startup": "always",
+    "workbench.colorTheme": "Default Dark+",
+    "workbench.startupEditor": "none",
+    "extensions.recommendations": true,
+    "extensions.ignoreRecommendations": false,
+    "telemetry.telemetryLevel": "off"
+  }
+}

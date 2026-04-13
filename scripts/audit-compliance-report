@@ -1,0 +1,517 @@
+#!/usr/bin/env python3
+###############################################################################
+# AUDIT COMPLIANCE REPORT GENERATOR
+# Issue #183: Generate compliance reports suitable for audit/governance
+#
+# Usage:
+#   audit-compliance-report --developer alice --output alice-compliance.pdf
+#   audit-compliance-report --all-developers --format html
+#   audit-compliance-report --security-violations
+#
+###############################################################################
+
+import argparse
+import sqlite3
+import json
+from datetime import datetime, timedelta
+from pathlib import Path
+import os
+from io import StringIO
+
+AUDIT_LOG_DIR = os.environ.get('AUDIT_LOG_DIR', os.path.expanduser('~/.code-server-developers/logs'))
+AUDIT_DB_FILE = os.path.join(AUDIT_LOG_DIR, 'audit.db')
+
+###############################################################################
+# COMPLIANCE REPORT GENERATOR
+###############################################################################
+
+class ComplianceReportGenerator:
+    """Generate compliance reports"""
+    
+    def __init__(self, db_file=AUDIT_DB_FILE):
+        if not os.path.exists(db_file):
+            print(f"Error: Audit database not found at {db_file}")
+            exit(1)
+        self.db_file = db_file
+    
+    def generate_developer_report(self, developer_id, days=30):
+        """Generate comprehensive compliance report for a developer"""
+        
+        start_time = (datetime.now() - timedelta(days=days)).isoformat()
+        
+        conn = sqlite3.connect(self.db_file)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Get all events for developer
+        cursor.execute("""
+            SELECT * FROM audit_events 
+            WHERE developer_id = ? AND timestamp >= ?
+            ORDER BY timestamp
+        """, (developer_id, start_time))
+        
+        events = [dict(row) for row in cursor.fetchall()]
+        
+        # Get summary stats
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status='success' THEN 1 ELSE 0 END) as successes,
+                SUM(CASE WHEN status='denied' THEN 1 ELSE 0 END) as denied,
+                SUM(CASE WHEN status='blocked' THEN 1 ELSE 0 END) as blocked,
+                SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as errors
+            FROM audit_events 
+            WHERE developer_id = ? AND timestamp >= ?
+        """, (developer_id, start_time))
+        
+        stats = dict(cursor.fetchone())
+        conn.close()
+        
+        # Analyze events
+        event_breakdown = {}
+        session_times = []
+        file_operations = []
+        git_operations = []
+        failed_actions = []
+        
+        for event in events:
+            et = event['event_type']
+            event_breakdown[et] = event_breakdown.get(et, 0) + 1
+            
+            if event['status'] in ['denied', 'blocked', 'error']:
+                failed_actions.append(event)
+            
+            if et in ['SESSION_START', 'SESSION_END']:
+                session_times.append(
+                    (event['timestamp'], et, event.get('details', {}).get('ip_address', 'unknown'))
+                )
+            elif et.startswith('FILE_'):
+                file_operations.append(json.loads(event.get('details', '{}')))
+            elif et.startswith('GIT_'):
+                git_operations.append({
+                    'type': et,
+                    'branch': json.loads(event.get('details', '{}')).get('branch', 'unknown'),
+                    'status': event['status']
+                })
+        
+        # Calculate compliance score
+        violation_count = stats['denied'] + stats['blocked']
+        compliance_score = max(0, 100 - (violation_count * 5))
+        compliance_grade = self._get_grade(compliance_score)
+        
+        return {
+            'developer_id': developer_id,
+            'period_days': days,
+            'generated_at': datetime.now().isoformat(),
+            'stats': stats,
+            'event_breakdown': event_breakdown,
+            'compliance_score': compliance_score,
+            'compliance_grade': compliance_grade,
+            'failed_actions': failed_actions,
+            'session_activity': session_times,
+            'file_operations': len(file_operations),
+            'git_operations': git_operations,
+            'high_risk_events': [e for e in events if e['status'] in ['blocked', 'error']]
+        }
+    
+    def generate_team_report(self, days=30):
+        """Generate team-wide compliance report"""
+        
+        start_time = (datetime.now() - timedelta(days=days)).isoformat()
+        
+        conn = sqlite3.connect(self.db_file)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Get all developers
+        cursor.execute("""
+            SELECT DISTINCT developer_id FROM audit_events
+            WHERE timestamp >= ?
+            ORDER BY developer_id
+        """, (start_time,))
+        
+        developers = [row['developer_id'] for row in cursor.fetchall()]
+        
+        # Generate individual reports
+        developer_reports = {}
+        for dev in developers:
+            developer_reports[dev] = self.generate_developer_report(dev, days)
+        
+        # Calculate team stats
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_events,
+                COUNT(DISTINCT developer_id) as unique_developers,
+                SUM(CASE WHEN status='denied' THEN 1 ELSE 0 END) as total_denied,
+                SUM(CASE WHEN status='blocked' THEN 1 ELSE 0 END) as total_blocked
+            FROM audit_events 
+            WHERE timestamp >= ?
+        """, (start_time,))
+        
+        team_stats = dict(cursor.fetchone())
+        conn.close()
+        
+        # Calculate team compliance score
+        total_violations = team_stats['total_denied'] + team_stats['total_blocked']
+        team_compliance_score = max(0, 100 - (total_violations * 2))
+        
+        return {
+            'report_type': 'team',
+            'period_days': days,
+            'generated_at': datetime.now().isoformat(),
+            'team_stats': team_stats,
+            'team_compliance_score': team_compliance_score,
+            'developer_reports': developer_reports,
+            'developers_in_compliance': sum(1 for r in developer_reports.values() if r['failed_actions'] == []),
+            'developers_with_violations': sum(1 for r in developer_reports.values() if r['failed_actions'] != [])
+        }
+    
+    def generate_security_incident_report(self, days=7):
+        """Generate security incident report"""
+        
+        start_time = (datetime.now() - timedelta(days=days)).isoformat()
+        
+        conn = sqlite3.connect(self.db_file)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Get all security/blocked events
+        cursor.execute("""
+            SELECT * FROM audit_events 
+            WHERE timestamp >= ? AND 
+                (status IN ('blocked', 'denied') OR 
+                 event_type IN ('SECURITY_BREACH', 'UNAUTHORIZED_ACCESS', 'PRIVILEGE_ESCALATION'))
+            ORDER BY timestamp DESC
+        """, (start_time,))
+        
+        incidents = [dict(row) for row in cursor.fetchall()]
+        
+        # Group by type
+        by_type = {}
+        by_developer = {}
+        for incident in incidents:
+            et = incident['event_type']
+            dev = incident['developer_id']
+            by_type[et] = by_type.get(et, 0) + 1
+            by_developer[dev] = by_developer.get(dev, 0) + 1
+        
+        conn.close()
+        
+        return {
+            'report_type': 'security_incidents',
+            'period_days': days,
+            'generated_at': datetime.now().isoformat(),
+            'total_incidents': len(incidents),
+            'by_type': by_type,
+            'by_developer': by_developer,
+            'incidents': incidents
+        }
+    
+    @staticmethod
+    def _get_grade(score):
+        """Get letter grade for compliance score"""
+        if score >= 95:
+            return 'A'
+        elif score >= 90:
+            return 'A-'
+        elif score >= 85:
+            return 'B+'
+        elif score >= 80:
+            return 'B'
+        elif score >= 75:
+            return 'B-'
+        elif score >= 70:
+            return 'C+'
+        else:
+            return 'C'
+
+###############################################################################
+# FORMAT GENERATORS
+###############################################################################
+
+class ReportFormatter:
+    """Format reports in different output formats"""
+    
+    @staticmethod
+    def format_text(report):
+        """Format as plain text"""
+        output = StringIO()
+        
+        if report.get('report_type') == 'team':
+            output.write(ReportFormatter._format_team_report_text(report))
+        elif report.get('report_type') == 'security_incidents':
+            output.write(ReportFormatter._format_security_report_text(report))
+        else:
+            output.write(ReportFormatter._format_developer_report_text(report))
+        
+        return output.getvalue()
+    
+    @staticmethod
+    def _format_developer_report_text(report):
+        """Format developer report as text"""
+        
+        output = StringIO()
+        
+        output.write("="*70 + "\n")
+        output.write("DEVELOPER COMPLIANCE REPORT\n")
+        output.write("="*70 + "\n\n")
+        
+        output.write(f"Developer: {report['developer_id']}\n")
+        output.write(f"Report Period: Last {report['period_days']} days\n")
+        output.write(f"Generated: {report['generated_at'][:10]}\n\n")
+        
+        output.write("COMPLIANCE SCORE\n")
+        output.write("-"*70 + "\n")
+        output.write(f"Score: {report['compliance_score']}/100\n")
+        output.write(f"Grade: {report['compliance_grade']}\n\n")
+        
+        output.write("ACTIVITY SUMMARY\n")
+        output.write("-"*70 + "\n")
+        stats = report['stats']
+        output.write(f"Total Events: {stats['total']}\n")
+        output.write(f"Successful: {stats['successes']}\n")
+        output.write(f"Denied: {stats['denied']}\n")
+        output.write(f"Blocked: {stats['blocked']}\n")
+        output.write(f"Errors: {stats['errors']}\n\n")
+        
+        output.write("EVENT BREAKDOWN\n")
+        output.write("-"*70 + "\n")
+        for event_type, count in sorted(report['event_breakdown'].items()):
+            output.write(f"{event_type:30s}: {count:5d}\n")
+        output.write("\n")
+        
+        if report['failed_actions']:
+            output.write("FAILED ACTIONS (Policy Violations)\n")
+            output.write("-"*70 + "\n")
+            for action in report['failed_actions'][:20]:
+                output.write(f"[{action['timestamp'][:19]}] ")
+                output.write(f"{action['event_type']:20s} ")
+                output.write(f"Status: {action['status']}\n")
+            output.write("\n")
+        
+        output.write("="*70 + "\n")
+        
+        return output.getvalue()
+    
+    @staticmethod
+    def _format_team_report_text(report):
+        """Format team report as text"""
+        
+        output = StringIO()
+        
+        output.write("="*70 + "\n")
+        output.write("TEAM COMPLIANCE REPORT\n")
+        output.write("="*70 + "\n\n")
+        
+        output.write(f"Report Period: Last {report['period_days']} days\n")
+        output.write(f"Generated: {report['generated_at'][:10]}\n\n")
+        
+        output.write("TEAM COMPLIANCE SCORE\n")
+        output.write("-"*70 + "\n")
+        output.write(f"Score: {report['team_compliance_score']}/100\n")
+        output.write(f"Developers in Compliance: {report['developers_in_compliance']}\n")
+        output.write(f"Developers with Violations: {report['developers_with_violations']}\n\n")
+        
+        output.write("TEAM ACTIVITY SUMMARY\n")
+        output.write("-"*70 + "\n")
+        stats = report['team_stats']
+        output.write(f"Total Events: {stats['total_events']}\n")
+        output.write(f"Unique Developers: {stats['unique_developers']}\n")
+        output.write(f"Total Denied: {stats['total_denied']}\n")
+        output.write(f"Total Blocked: {stats['total_blocked']}\n\n")
+        
+        output.write("DEVELOPER COMPLIANCE SCORES\n")
+        output.write("-"*70 + "\n")
+        for dev_id, dev_report in sorted(report['developer_reports'].items()):
+            score = dev_report['compliance_score']
+            grade = dev_report['compliance_grade']
+            violations = len(dev_report['failed_actions'])
+            output.write(f"{dev_id:20s}: {score:3d}/100 ({grade})  ")
+            output.write(f"Violations: {violations}\n")
+        output.write("\n")
+        
+        output.write("="*70 + "\n")
+        
+        return output.getvalue()
+    
+    @staticmethod
+    def _format_security_report_text(report):
+        """Format security incident report as text"""
+        
+        output = StringIO()
+        
+        output.write("="*70 + "\n")
+        output.write("SECURITY INCIDENT REPORT\n")
+        output.write("="*70 + "\n\n")
+        
+        output.write(f"Report Period: Last {report['period_days']} days\n")
+        output.write(f"Generated: {report['generated_at'][:10]}\n\n")
+        
+        output.write("INCIDENT SUMMARY\n")
+        output.write("-"*70 + "\n")
+        output.write(f"Total Incidents: {report['total_incidents']}\n\n")
+        
+        output.write("Incidents by Type:\n")
+        for event_type, count in sorted(report['by_type'].items()):
+            output.write(f"  {event_type:30s}: {count:3d}\n")
+        output.write("\n")
+        
+        output.write("Incidents by Developer:\n")
+        for dev, count in sorted(report['by_developer'].items(), key=lambda x: x[1], reverse=True):
+            output.write(f"  {dev:20s}: {count:3d}\n")
+        output.write("\n")
+        
+        if report['incidents']:
+            output.write("RECENT INCIDENTS\n")
+            output.write("-"*70 + "\n")
+            for incident in report['incidents'][:20]:
+                output.write(f"[{incident['timestamp'][:19]}] ")
+                output.write(f"{incident['developer_id']:15s} ")
+                output.write(f"{incident['event_type']}\n")
+            output.write("\n")
+        
+        output.write("="*70 + "\n")
+        
+        return output.getvalue()
+    
+    @staticmethod
+    def format_json(report):
+        """Format as JSON"""
+        return json.dumps(report, indent=2, default=str)
+    
+    @staticmethod
+    def format_html(report):
+        """Format as HTML"""
+        
+        html = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Compliance Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; border-bottom: 3px solid #0066cc; }
+        h2 { color: #0066cc; margin-top: 30px; }
+        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .stat-box { background: #f5f5f5; padding: 15px; border-radius: 5px; }
+        .stat-box h3 { margin: 0 0 10px 0; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #0066cc; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #0066cc; color: white; }
+        tr:nth-child(even) { background-color: #f5f5f5; }
+        .compliance-score {
+            display: inline-block;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            background: #0066cc;
+        }
+        .compliance-a { background: #00aa00; }
+        .compliance-b { background: #ffaa00; }
+        .compliance-c { background: #ff0000; }
+        .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ccc; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+"""
+        
+        if report.get('report_type') == 'team':
+            html += f"<h1>Team Compliance Report</h1>\n"
+            html += f"<p>Period: Last {report['period_days']} days</p>\n"
+            html += f"<div class='compliance-score compliance-{ReportFormatter._get_color_class(report['team_compliance_score'])}'>"\
+                    f"{report['team_compliance_score']}</div>\n"
+        else:
+            html += f"<h1>Developer Compliance Report: {report['developer_id']}</h1>\n"
+            html += f"<p>Period: Last {report['period_days']} days</p>\n"
+            html += f"<div class='compliance-score compliance-{ReportFormatter._get_color_class(report['compliance_score'])}'>"\
+                    f"{report['compliance_score']}</div>\n"
+        
+        html += """
+    <div class='footer'>
+        <p>This report was automatically generated by the audit compliance system.</p>
+        <p>For questions or disputes, contact your security administrator.</p>
+    </div>
+</body>
+</html>
+"""
+        
+        return html
+    
+    @staticmethod
+    def _get_color_class(score):
+        if score >= 85:
+            return 'a'
+        elif score >= 70:
+            return 'b'
+        else:
+            return 'c'
+
+###############################################################################
+# MAIN CLI
+###############################################################################
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Generate compliance reports',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s --developer alice                      # Alice's compliance report
+  %(prog)s --team                                 # Team compliance report
+  %(prog)s --security-incidents                   # Security incidents
+  %(prog)s --developer bob --output bob.txt       # Save to file
+  %(prog)s --team --format html --output team.html  # HTML format
+        """
+    )
+    
+    parser.add_argument('--developer', help='Generate report for specific developer')
+    parser.add_argument('--team', action='store_true', help='Generate team-wide report')
+    parser.add_argument('--security-incidents', action='store_true', help='Generate security incident report')
+    parser.add_argument('--days', type=int, default=30, help='Report period in days (default: 30)')
+    
+    parser.add_argument('--format', choices=['text', 'json', 'html'], default='text',
+                       help='Output format (default: text)')
+    parser.add_argument('--output', help='Output file (default: stdout)')
+    
+    args = parser.parse_args()
+    
+    # Create generator
+    generator = ComplianceReportGenerator()
+    
+    # Generate appropriate report
+    if args.team:
+        report = generator.generate_team_report(args.days)
+    elif args.security_incidents:
+        report = generator.generate_security_incident_report(args.days)
+    elif args.developer:
+        report = generator.generate_developer_report(args.developer, args.days)
+    else:
+        parser.print_help()
+        return
+    
+    # Format report
+    formatter = ReportFormatter()
+    if args.format == 'json':
+        output = formatter.format_json(report)
+    elif args.format == 'html':
+        output = formatter.format_html(report)
+    else:
+        output = formatter.format_text(report)
+    
+    # Write output
+    if args.output:
+        with open(args.output, 'w') as f:
+            f.write(output)
+        print(f"Report written to {args.output}")
+    else:
+        print(output)
+
+if __name__ == '__main__':
+    main()

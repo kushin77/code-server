@@ -1,0 +1,410 @@
+# Repository Rules Configuration
+# Applied across all kushin77/* repositories
+
+version: "1.0"
+metadata:
+  organization: kushin77
+  effective_date: 2026-04-14
+  review_cycle: quarterly
+  contact: devops-team@example.com
+
+---
+
+## BRANCH PROTECTION RULES
+
+branches:
+  main:
+    protection:
+      enforce_admins: true
+      require_linear_history: false
+      required_status_checks:
+        strict: true
+        contexts:
+          - lint
+          - unit-tests
+          - security-scan
+      required_pull_request_reviews:
+        dismiss_stale_reviews: true
+        require_code_owner_review: false
+        required_approving_review_count: 1
+        restrict_dismissals: true
+      allow_force_pushes: false
+      allow_deletions: false
+      required_conversation_resolution: true
+      restrict_who_can_push:
+        - type: "team"
+          team_slug: "core-maintainers"
+
+  develop:
+    protection:
+      enforce_admins: false
+      require_linear_history: false
+      required_status_checks:
+        strict: false
+        contexts:
+          - unit-tests
+      required_pull_request_reviews:
+        dismiss_stale_reviews: true
+        require_code_owner_review: false
+        required_approving_review_count: 0
+      allow_force_pushes: true
+      allow_deletions: true
+      restrict_who_can_push: []
+
+  release/*:
+    protection:
+      enforce_admins: true
+      required_status_checks:
+        strict: true
+        contexts:
+          - lint
+          - unit-tests
+          - security-scan
+          - build
+      required_pull_request_reviews:
+        required_approving_review_count: 2
+        require_code_owner_review: true
+
+---
+
+## WORKFLOW QUOTAS & ENFORCEMENT
+
+workflow_quotas:
+  monthly:
+    ci-tests: 300
+    ci-lint: 200
+    ci-security: 150
+    ci-build: 100
+    deploy-staging: 50
+    deploy-prod: 30
+    scheduled-jobs: 20
+    manual-admin: 25
+    experimental: 50
+
+workflow_rules:
+  all_workflows:
+    - must_have_timeout_minutes: true
+      max_timeout: 360
+      min_timeout: 5
+    - must_have_cost_category_label: true
+    - must_cleanup_resources: true
+      applies_to:
+        - docker-builds
+        - container-pushes
+        - large-test-suites
+    - forbidden_patterns:
+        - "curl.*http[^s]"  # Disable HTTP (force HTTPS)
+        - "npm install \\-g"  # Global npm install not allowed
+        - "sudo"  # Self-hosted runners only
+        - "rm \\-rf /"  # Obvious safety check
+
+  job_constraints:
+    - max_concurrent_jobs: 6
+    - max_job_duration: 360  # minutes
+    - max_matrix_size: 10
+    - container_image_registry_only:
+        - ghcr.io
+        - docker.io
+        - gcr.io
+
+  on_schedule:
+    - forbidden_cron_patterns:
+        - "* * * * *"  # Every minute
+        - "*/5 * * * *"  # Every 5 minutes
+        - "0 * * * *"  # Every hour (consider batching)
+    - min_interval_minutes: 15
+    - max_frequency_per_day: 4
+
+  on_push:
+    - batch_workflow_runs: true
+    - max_runs_per_hour: 10
+    - protected_branches_only: true
+
+  on_pull_request:
+    - max_runs_per_pr: 5
+    - auto_cancel_in_progress: true
+
+  on_workflow_dispatch:
+    - requires_approval: true
+      approval_count: 1
+    - audit_log_required: true
+    - rate_limit: 2_per_hour
+
+---
+
+## API GOVERNANCE
+
+api_governance:
+  approved_apis:
+    production:
+      - name: GitHub API
+        endpoint: "https://api.github.com"
+        rate_limit: 5000/hour
+        cost: "included"
+        approval: "auto"
+
+      - name: GitHub GraphQL
+        endpoint: "https://api.github.com/graphql"
+        rate_limit: 5000_points/hour
+        cost: "included"
+        approval: "auto"
+
+      - name: Cloudflare API
+        endpoint: "https://api.cloudflare.com"
+        rate_limit: "per SLA"
+        cost: "tracked"
+        approval: "auto"
+
+      - name: GCP APIs
+        endpoint: "https://googleapis.com/*"
+        rate_limit: "per landing zone"
+        cost: "via GCP billing"
+        approval: "auto"
+
+      - name: Docker Registry API
+        endpoint: "https://registry.hub.docker.com"
+        rate_limit: "200/hour unauthenticated"
+        cost: "included"
+        approval: "auto"
+
+      - name: Slack API
+        endpoint: "https://slack.com/api"
+        rate_limit: "per token"
+        cost: "included"
+        approval: "auto"
+        restrictions:
+          - webhook_only: false
+          - approved_methods:
+              - chat.postMessage
+              - files.upload
+              - reactions.add
+          - forbidden_methods:
+              - admin.users.list  # Privacy risk
+              - admin.teams.list
+
+    development:
+      - name: OpenAI API
+        endpoint: "https://api.openai.com"
+        rate_limit: "per key"
+        cost: "requires modeling"
+        approval: "team-lead"
+        monthly_budget: 500
+        budget_reset_day: 1
+        approval_for_override: "cto"
+
+      - name: Claude API (Anthropic)
+        endpoint: "https://api.anthropic.com"
+        rate_limit: "per key"
+        cost: "requires modeling"
+        approval: "team-lead"
+        monthly_budget: 500
+        budget_reset_day: 1
+        approval_for_override: "cto"
+
+  forbidden_apis:
+    - pattern: ".*free-api.*"
+      reason: unreliable
+    - pattern: ".*tracking.*"
+      reason: privacy violation
+    - pattern: ".*eval.*js"
+      reason: security risk
+    - pattern: ".*random-service.*"
+      reason: unapproved
+
+  detection:
+    - scan_new_prs_for:
+        - "http://"  # Force HTTPS
+        - "api\\..*\\.com"  # Unknown APIs
+        - "requests\\.get"  # Python HTTP
+        - "curl "  # Shell HTTP
+        - "fetch\\("  # JavaScript HTTP
+    - alert_on_detection: true
+    - block_merge_until_approved: true
+
+---
+
+## COST TRACKING & ALERTING
+
+cost_tracking:
+  budgets:
+    monthly_total: 500
+    monthly_by_category:
+      ci-tests: 200
+      ci-security: 100
+      ci-build: 100
+      deploy-prod: 75
+      scheduled-jobs: 25
+
+  alerts:
+    slack_channel: "#devops-costs"
+    webhook_url: "https://hooks.slack.com/services/..."
+    
+    thresholds:
+      - level: critical
+        percentage: 150
+        action: "disable_workflows"
+        notify: ["cto", "finance"]
+        
+      - level: high
+        percentage: 100
+        action: "notify_team"
+        notify: ["team-leads"]
+        
+      - level: medium
+        percentage: 80
+        action: "create_issue"
+        notify: ["devops-team"]
+
+  reporting:
+    frequency: weekly
+    recipients:
+      - devops-team@example.com
+      - finance@example.com
+    metrics:
+      - total_cost
+      - cost_by_category
+      - cost_per_repo
+      - cost_per_team
+      - trending_up_repos
+      - trending_down_repos
+
+---
+
+## ENFORCEMENT & AUTOMATION
+
+enforcement:
+  auto_disable:
+    - condition: ">10 consecutive failures"
+      action: "disable_workflow"
+      notify: "workflow_owner"
+      
+    - condition: ">90 days inactive"
+      action: "delete_workflow"
+      notify: "workflow_owner"
+      grace_period_days: 7
+      
+    - condition: "quota_exceeded"
+      action: "skip_run"
+      notify: "team_lead"
+      recovery: "manual_approval"
+
+  auto_cleanup:
+    - artifacts:
+        retention_days: 30
+        action: "auto_delete"
+        
+    - logs:
+        retention_days: 90
+        action: "auto_delete"
+        
+    - docker_images:
+        untagged_retention_days: 7
+        action: "auto_delete"
+
+  compliance_checks:
+    frequency: daily
+    checks:
+      - all_workflows_have_timeout
+      - all_workflows_have_cost_category
+      - no_hardcoded_secrets
+      - no_unapproved_apis
+      - branch_protection_enabled
+    
+    on_violation:
+      action: "create_issue"
+      label: "governance-violation"
+      notify: "devops-team"
+      resolve_by: "48_hours"
+
+---
+
+## AUDIT & MONITORING
+
+audit:
+  events_logged:
+    - workflow_created
+    - workflow_deleted
+    - workflow_disabled
+    - quota_exceeded
+    - api_call_detected
+    - cost_threshold_hit
+    - approval_granted
+    - approval_denied
+
+  retention: 12_months
+  
+  reporting:
+    daily: "cost_summary.json"
+    weekly: "governance_report.md"
+    monthly: "audit_log.csv"
+    quarterly: "trend_analysis.pdf"
+
+monitoring:
+  metrics:
+    - name: workflow_executions
+      dimensions: [repo, category, status]
+      
+    - name: workflow_duration
+      dimensions: [repo, category]
+      buckets: [5, 15, 30, 60, 120, 360]
+      
+    - name: api_calls
+      dimensions: [endpoint, repo]
+      
+    - name: cost_per_workflow
+      dimensions: [category, repo]
+      
+    - name: quota_utilization
+      dimensions: [category, repo]
+
+  dashboards:
+    - name: "Governance Overview"
+      panels:
+        - cost_by_category
+        - quota_utilization
+        - failed_runs
+        - workflow_duration_trends
+        
+    - name: "Cost Control"
+      panels:
+        - spend_vs_budget
+        - trending_cost_drivers
+        - cost_forecast
+        - api_cost_breakdown
+
+---
+
+## EXEMPTIONS & OVERRIDES
+
+exemptions:
+  process:
+    - request_approval_from: "team-lead"
+    - requires: ["business_justification", "time_bound", "cost_estimate"]
+    - max_duration_days: 30
+    - requires_review_after: 14_days
+    - escalation_path: "team-lead -> cto -> finance"
+
+  examples:
+    - description: "Large batch processing for data migration"
+      normally_violates: "workflow_quota"
+      approved_until: "2026-05-14"
+      
+    - description: "Heavy ML model training"
+      normally_violates: "job_duration"
+      approved_until: "2026-08-01"
+
+---
+
+## POLICY REVIEW & UPDATES
+
+review_schedule:
+  - quarterly_comprehensive: "March, June, September, December"
+  - monthly_cost_review: "Last Friday of month"
+  - incident_reviews: "as_needed"
+
+policy_change_process:
+  - propose_in: "github_discussion"
+  - voting_period: "7_days"
+  - approval_required: "super_majority (2/3) of team leads"
+  - implementation_period: "2 weeks post-approval"
+  - rollback_plan: "required"

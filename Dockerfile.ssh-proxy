@@ -1,0 +1,48 @@
+# ════════════════════════════════════════════════════════════════════════════
+# SSH Proxy Service - IaC, Immutable, Idempotent
+# All versions pinned for reproducible builds, immutable image digests
+# ════════════════════════════════════════════════════════════════════════════
+
+FROM python:3.11-slim
+
+LABEL maintainer="Code-Server Enterprise <ops@code-server.local>"
+LABEL description="SSH Proxy with Comprehensive Audit Logging"
+LABEL version="1.0.0"
+LABEL iac.version.python="3.11-slim"
+LABEL iac.immutable="true"
+LABEL iac.idempotent="true"
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    openssh-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+RUN pip install --no-cache-dir \
+    fastapi==0.104.1 \
+    uvicorn==0.24.0 \
+    paramiko==3.4.0 \
+    pydantic==2.5.0
+
+# Create app directory
+WORKDIR /app
+
+# Copy SSH proxy script
+COPY scripts/ssh-proxy.py /app/ssh-proxy.py
+RUN chmod +x /app/ssh-proxy.py
+
+# Create audit log directories
+RUN mkdir -p /var/log /var/lib/code-server && \
+    chmod 755 /var/log /var/lib/code-server
+
+# Security: non-root user
+RUN groupadd -r sshproxy && useradd -r -g sshproxy sshproxy
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3222/health || exit 1
+
+# Entrypoint
+ENTRYPOINT ["python3", "/app/ssh-proxy.py"]
+CMD ["--listen", "0.0.0.0:2222", "--target", "localhost:22", "--log-level", "info"]

@@ -1,0 +1,61 @@
+[Unit]
+Description=Terminal Output Optimizer - WebSocket Batching Service
+Documentation=file:///opt/code-server/docs/LATENCY_OPTIMIZATION_INTEGRATION.md
+After=network-online.target code-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+WorkingDirectory=/opt/code-server
+
+# Service executable
+ExecStart=/usr/bin/python3 /opt/code-server/services/terminal-output-optimizer.py
+
+# Environment variables
+Environment="LOG_LEVEL=info"
+Environment="LISTEN_HOST=127.0.0.1"
+Environment="LISTEN_PORT=8081"
+Environment="BATCH_TIMEOUT_MS=20"
+Environment="MAX_BATCH_SIZE=4096"
+Environment="COMPRESSION_ENABLED=true"
+Environment="COMPRESSION_LEVEL=6"
+Environment="METRICS_DB=/var/lib/latency-monitor/latency_metrics.db"
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Process management
+Restart=on-failure
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=terminal-optimizer
+
+# Resource limits (prevent runaway)
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryLimit=512M
+CPUQuota=50%
+
+# Timeout for graceful shutdown
+TimeoutStartSec=30s
+TimeoutStopSec=10s
+KillMode=mixed
+
+# Performance (do not use KillMode=process for cleanup)
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,34 @@
+# Phase 13 Terraform Variables
+# Update values before running: terraform apply
+
+# Cloudflare Configuration
+# Get these from: https://dash.cloudflare.com/
+cloudflare_api_token  = var.CF_API_TOKEN  # Set via: export TF_VAR_cloudflare_api_token="..."
+cloudflare_zone_id   = var.CF_ZONE_ID    # Zone ID from Cloudflare dashboard
+cloudflare_account_id = var.CF_ACCOUNT_ID # Account ID from Cloudflare dashboard
+
+# Domain Configuration
+domain       = "ide.kushnir.cloud"
+tunnel_name  = "home-dev"
+
+# Code-Server Configuration
+code_server_origin = "http://localhost:8080"
+
+# Access Control
+enable_mfa              = true
+session_timeout_hours   = 24
+allowed_emails = [
+  "*@kushnir.cloud",
+  "developer1@example.com",
+  "developer2@example.com"
+]
+
+# Resource Tags
+tags = {
+  Phase       = "13"
+  Environment = "production"
+  ManagedBy   = "terraform"
+  Project     = "code-server-enterprise"
+  Owner       = "infrastructure-team"
+  CostCenter  = "engineering"
+}

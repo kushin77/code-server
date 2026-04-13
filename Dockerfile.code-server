@@ -1,0 +1,66 @@
+# ════════════════════════════════════════════════════════════════════════════
+# code-server enterprise build — IaC, immutable, idempotent
+# Pin all versions for reproducible builds and true immutability
+# ════════════════════════════════════════════════════════════════════════════
+
+ARG CODE_SERVER_VERSION=4.115.0
+
+FROM codercom/code-server:${CODE_SERVER_VERSION}
+
+# Version pinning for all extensions — set at build time, baked into image
+ARG COPILOT_VERSION=1.299.0
+ARG COPILOT_CHAT_VERSION=0.43.2026040705
+
+USER root
+
+# Patch github-authentication extension path expected by web workbench.
+RUN mkdir -p /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser \
+    && ln -sf ../extension.js /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser/extension.js
+
+# Patch extensionHostProcess.js: neutralize the navigator-throwing shim.
+#
+# VS Code 1.115+ defines Object.defineProperty(globalThis,"navigator",{get:()=>{throw PendingMigrationError}})
+# controlled by a --supportGlobalNavigator argv flag. Extensions that access `navigator` (e.g. via Zod
+# schema init in Copilot Chat 0.43+) crash at activation, after which VS Code attempts a gallery
+# reinstall that fails on Open VSX → "cannot be installed because it was not found".
+#
+# Fix: remove the throwing defineProperty so any extension that uses navigator works unmodified.
+# The pattern anchor is the unminified string 'supportGlobalNavigator' which VS Code uses as a flag
+# name and will not change without also changing the documented CLI interface.
+#
+# Build-time assertions: (1) fail if the shim is not found (VS Code restructured — needs review);
+#                        (2) fail if the patch did not apply (pattern changed — needs review).
+RUN EXTHOST=/usr/lib/code-server/lib/vscode/out/vs/workbench/api/node/extensionHostProcess.js \
+    && if ! grep -q 'supportGlobalNavigator' "$EXTHOST"; then \
+         echo 'FATAL: navigator shim not found in extensionHostProcess.js — update patch for new VS Code version' >&2; exit 1; \
+       fi \
+    && perl -i -pe \
+         's/\w+\.supportGlobalNavigator\|\|Object\.defineProperty\(globalThis,"navigator",\{get:\(\)=>\{[^}]+\}\}\);//' \
+         "$EXTHOST" \
+    && if grep -q 'navigator is now a global' "$EXTHOST"; then \
+         echo 'FATAL: navigator shim patch did not apply — pattern changed, update Dockerfile' >&2; exit 1; \
+       fi
+
+# NOTE: Copilot Chat product.json patch applied in code-server-entrypoint.sh instead
+# (at runtime when all dependencies are available)
+
+# Optional: Cache Copilot VSIX payloads (only if versions are valid/downloadable)
+# If versions fail to download, skip caching and rely on entrypoint install
+RUN mkdir -p /opt/vsix \
+    && (curl -fL -o /tmp/github-copilot.vsix.gz \
+      "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/1.295.0/vspackage" \
+    && gzip -dc /tmp/github-copilot.vsix.gz > /opt/vsix/github-copilot.vsix && test -s /opt/vsix/github-copilot.vsix \
+    && echo "[build] Cached github.copilot v1.295.0" || echo "[build] SKIP: Could not cache github.copilot") \
+    && (curl -fL -o /tmp/github-copilot-chat.vsix.gz \
+      "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot-chat/0.42.3/vspackage" \
+    && gzip -dc /tmp/github-copilot-chat.vsix.gz > /opt/vsix/github-copilot-chat.vsix && test -s /opt/vsix/github-copilot-chat.vsix \
+    && echo "[build] Cached github.copilot-chat v0.42.3" || echo "[build] SKIP: Could not cache github.copilot-chat"); \
+    rm -f /tmp/github-copilot.vsix.gz /tmp/github-copilot-chat.vsix.gz || true
+
+COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
+RUN chmod +x /usr/local/bin/code-server-entrypoint.sh
+
+USER coder
+
+ENTRYPOINT ["/usr/local/bin/code-server-entrypoint.sh"]
+CMD ["--bind-addr=0.0.0.0:8080", "--disable-telemetry", "--cert=false", "--auth=none"]

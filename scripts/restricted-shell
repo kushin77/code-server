@@ -1,0 +1,250 @@
+#!/bin/bash
+###############################################################################
+# RESTRICTED SHELL - Code Server Terminal Access Control
+# Issue #187: Read-Only IDE Access Control
+#
+# This script intercepts all terminal commands in code-server and blocks
+# dangerous commands that could lead to code exfiltration.
+#
+# Usage: Set as terminal.integrated.shellPath in code-server config
+# Installation:
+#   sudo cp restricted-shell /usr/local/bin/
+#   sudo chmod 755 /usr/local/bin/restricted-shell
+#
+###############################################################################
+
+set -e
+
+# ==================== CONFIGURATION ====================
+
+# Determine actual shell to use (bash or zsh, depending on availability)
+REAL_SHELL="${BASH_SHELL:-bash}"
+if ! command -v "$REAL_SHELL" &> /dev/null; then
+    REAL_SHELL="/bin/bash"
+fi
+
+# Session tracking
+DEVELOPER_ID="${USER:-unknown}"
+SESSION_ID="${DEVELOPER_SESSION_ID:-$(uuidgen 2>/dev/null || echo "unknown")}"
+AUDIT_LOG="/var/log/developer-session.log"
+COMMAND_LOG="/var/log/developer-commands.log"
+
+# Safe working directories (developers can work freely here)
+SAFE_DIRS=(
+    "/home/${DEVELOPER_ID}/code"
+    "/home/${DEVELOPER_ID}/workspace"
+    "/tmp/dev-session"
+    "/var/tmp/dev-work"
+)
+
+# Blocked command patterns (regex)
+# These are commands that enable code exfiltration
+BLOCKED_PATTERNS=(
+    '^wget\b'                      # wget file downloader
+    '^curl.*(-O|-o|>)'            # curl with output redirect
+    '^scp\b'                       # secure copy
+    '^sftp\b'                      # SFTP client
+    '^rsync\b'                     # rsync
+    '^nc\b'                        # netcat
+    '^ncat\b'                      # ncat
+    '^socat\b'                     # socat
+    '^telnet\b'                    # telnet
+    '^ssh-keygen\b'                # SSH key generation
+    '^ssh-copy-id\b'               # SSH key copying
+    '^ssh\s.*@'                    # Direct SSH access with user
+    '^\s*cat\s+.*\.ssh'            # Reading SSH keys
+    '^\s*cat\s+.*\.key'            # Reading private keys
+    '^\s*cat\s+.*/id_'             # Reading SSH keys (id_rsa, id_ed25519, etc)
+    '^\s*base64\s+.*\.key'         # Base64 encoding keys (exfil attempt)
+    '^\s*tar\s+.*-cf.*\|'          # tar piped somewhere (archive + exfil)
+    '^\s*zip\s+.*-'                # zip archive with options
+    '^\s*git\s+clone.*@'           # git clone via SSH (needs proxy)
+    '^\s*git\s+push.*@'            # git push via SSH (needs proxy)
+    '^\s*git\s+pull.*@'            # git pull via SSH (needs proxy)
+    '^ftp\b'                       # FTP client
+    '^lftp\b'                      # LFTP client
+    '^\s*env\s+SSH'                # Manipulating SSH env vars
+    '^\s*export\s+SSHKEY'          # Exporting SSH keys
+    '^\s*dd\s+if=/'                # Low-level disk operations
+    '^\s*hexdump\s+.*/\.ssh'       # Dumping SSH key files
+    '^\s*xxd\s+.*/\.key'           # Hex dump of key files
+    '^\s*strings\s+.*/id_'         # Extracting strings from binaries
+)
+
+# Allowed working directories (can write here)
+ALLOWED_WRITE_DIRS=(
+    "/home/${DEVELOPER_ID}/code"
+    "/tmp/dev-session"
+    "/var/tmp/dev-work"
+)
+
+# Blocked read paths (can't even cat these)
+BLOCKED_READ_PATHS=(
+    "/root"
+    "/home/${DEVELOPER_ID}/.ssh"
+    "/home/${DEVELOPER_ID}/.gnupg"
+    "/home/${DEVELOPER_ID}/.aws"
+    "/home/${DEVELOPER_ID}/.docker"
+    "/home/${DEVELOPER_ID}/.kube"
+    "/home/*/\.ssh"
+    "/root/.ssh"
+    "/etc/shadow"
+    "/etc/passwd"
+    "/proc/*/environ"
+)
+
+# ==================== LOGGING ====================
+
+log_audit() {
+    local message="$1"
+    local status="${2:-INFO}"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    if [ -w "$(dirname "$AUDIT_LOG")" ]; then
+        echo "[$timestamp] $status | Developer: $DEVELOPER_ID | Session: $SESSION_ID | $message" >> "$AUDIT_LOG"
+    fi
+}
+
+log_command() {
+    local command="$1"
+    local allowed="${2:-DENIED}"
+    local reason="${3:-No reason provided}"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    if [ -w "$(dirname "$COMMAND_LOG")" ]; then
+        echo "[$timestamp] $allowed | User: $DEVELOPER_ID | Session: $SESSION_ID | Cmd: $command | Reason: $reason" >> "$COMMAND_LOG"
+    fi
+}
+
+# ==================== COMMAND VALIDATION ====================
+
+is_blocked_command() {
+    local cmd="$1"
+    
+    # Check against all blocked patterns
+    for pattern in "${BLOCKED_PATTERNS[@]}"; do
+        if [[ $cmd =~ $pattern ]]; then
+            return 0  # Command is blocked
+        fi
+    done
+    
+    return 1  # Command is allowed
+}
+
+is_blocked_path() {
+    local path="$1"
+    
+    # Expand path if needed
+    if [[ "$path" == \~* ]]; then
+        path="${path/#\~/$HOME}"
+    fi
+    
+    # Resolve symlinks
+    if [ -e "$path" ]; then
+        path=$(readlink -f "$path")
+    fi
+    
+    # Check against blocked paths
+    for blocked in "${BLOCKED_READ_PATHS[@]}"; do
+        # Match both exact paths and paths under the directory
+        if [[ "$path" == "$blocked" ]] || [[ "$path" == "$blocked"/* ]]; then
+            return 0  # Path is blocked
+        fi
+    done
+    
+    return 1  # Path is allowed
+}
+
+is_safe_directory() {
+    local current_dir="$1"
+    
+    for safe_dir in "${SAFE_DIRS[@]}"; do
+        if [[ "$current_dir" == "$safe_dir" ]] || [[ "$current_dir" == "$safe_dir"/* ]]; then
+            return 0  # Directory is safe
+        fi
+    done
+    
+    return 1  # Directory is not in safe list
+}
+
+# ==================== COMMAND INTERCEPTION ====================
+
+# For interactive shells, use a history file to track commands
+setup_command_interception() {
+    # Use BASH_CMD trap in interactive shells
+    # This won't catch all commands, but combined with history file, covers most
+    
+    # Create a wrapper function that checks commands before execution
+    eval 'preexec_cmd() {
+        if is_blocked_command "$BASH_COMMAND"; then
+            log_command "$BASH_COMMAND" "DENIED" "Blocked dangerous command"
+            echo "Command blocked: This action is not allowed in read-only access mode"
+            return 1
+        else
+            log_command "$BASH_COMMAND" "ALLOWED" "Safe command"
+            return 0
+        fi
+    }'
+    
+    # Note: BASH_CMD trap has limitations with piped commands
+    # For more robust interception, consider using wrapper functions for common tools
+}
+
+# ==================== MAIN SHELL EXECUTION ====================
+
+# Start with login shell initialization
+if [ -z "$1" ]; then
+    # Interactive shell (-i flag)
+    # Setup command tracking
+    log_audit "Interactive shell started"
+    
+    # Initialize restricted environment
+    export PS1="[restricted] \u@\h:\W\$ "
+    export HISTFILE="/home/${DEVELOPER_ID}/.bash_history_readonly_session"
+    
+    # Start real shell with command tracking
+    # Note: We use exec to replace this process with the real shell
+    exec "$REAL_SHELL" -i \
+        -c "source /etc/profile.d/developer-restrictions.sh 2>/dev/null || true; \
+            trap 'preexec_cmd' DEBUG; \
+            exec \"$REAL_SHELL\" -i"
+    
+else
+    # Non-interactive execution (command passed)
+    local cmd="$*"
+    
+    if is_blocked_command "$cmd"; then
+        log_command "$cmd" "DENIED" "Blocked dangerous command pattern"
+        echo "Error: This command is not allowed in read-only access mode" >&2
+        echo "Blocked: $cmd" >&2
+        exit 1
+    fi
+    
+    # Log and execute
+    log_command "$cmd" "ALLOWED" "Safe command"
+    log_audit "Executing command: $cmd"
+    
+    # Execute through real shell
+    exec "$REAL_SHELL" -c "$cmd"
+fi
+
+# ==================== SECURITY NOTES ====================
+#
+# LIMITATIONS:
+# 1. Shell aliases can bypass this (use /etc/profile.d for trusted aliases only)
+# 2. Symlinks can redirect to blocked paths (use is_blocked_path for resolve)
+# 3. Piped commands may not all be checked (trap on DEBUG has issues)
+# 4. Binary executables might have embedded blocking code
+#
+# MITIGATIONS:
+# 1. Combined with code-server config, extension restrictions
+# 2. Audit logging tracks all attempts
+# 3. cgroup/AppArmor/SELinux policies provide OS-level enforcement
+# 4. Network isolation prevents exfiltration even if command succeeds
+#
+# TESTING:
+# - All blocked patterns should be tested
+# - Legitimate developer workflows should work
+# - Audit logs should show expected activity
+#
+###############################################################################

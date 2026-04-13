@@ -1,0 +1,148 @@
+#!/bin/bash
+###############################################################################
+# DEVELOPER-AUTO-REVOKE-CRON: Automatic Access Revocation
+# Issue #186: Developer Access Lifecycle - Provisioning & Revocation
+#
+# Cron job to automatically revoke expired developer access
+#
+# Install in crontab:
+#   0 */4 * * * /usr/local/bin/developer-auto-revoke-cron
+#   (runs every 4 hours)
+#
+# Or daily:
+#   0 0 * * * /usr/local/bin/developer-auto-revoke-cron
+#   (runs at midnight UTC)
+#
+###############################################################################
+
+set -e
+
+# Configuration
+DEVELOPERS_DIR="${HOME}/.code-server-developers"
+DEVELOPERS_CSV="${DEVELOPERS_DIR}/developers.csv"
+REVOCATION_LOG="${DEVELOPERS_DIR}/revocation.log"
+NOTIFY_LOG="${DEVELOPERS_DIR}/auto-revoke-notifications.log"
+
+# Colors (for logging, though output may go to syslog)
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+###############################################################################
+# LOGGING FUNCTIONS
+###############################################################################
+
+log() {
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    echo "$msg" | tee -a "$NOTIFY_LOG"
+}
+
+error() {
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1"
+    echo "$msg" | tee -a "$NOTIFY_LOG"
+}
+
+###############################################################################
+# VERIFY PREREQUISITES
+###############################################################################
+
+if [ ! -f "$DEVELOPERS_CSV" ]; then
+    log "No developer database found. Skipping auto-revoke."
+    exit 0
+fi
+
+if [ ! -f "$DEVELOPERS_DIR/developers.csv" ]; then
+    error "Developer database not accessible"
+    exit 1
+fi
+
+###############################################################################
+# CHECK FOR EXPIRED DEVELOPERS
+###############################################################################
+
+log "Starting automatic developer access revocation check..."
+
+REVOKED_COUNT=0
+CURRENT_DATE=$(date '+%Y-%m-%d')
+
+# Read each developer entry
+tail -n +2 "$DEVELOPERS_CSV" | while IFS=',' read -r email name grant_date expiry_date duration status cloudflare_id invite_code share_link notes; do
+    # Skip empty lines or non-active developers
+    [ -z "$email" ] && continue
+    [ "$status" != "active" ] && continue
+    
+    # Check if expiry date has passed
+    if [ "$CURRENT_DATE" \> "$expiry_date" ] || [ "$CURRENT_DATE" = "$expiry_date" ]; then
+        log "EXPIRED: $email (expiry: $expiry_date, status: $status)"
+        
+        # Revoke access by calling developer-revoke
+        if command -v developer-revoke &> /dev/null; then
+            log "Revoking access for: $email"
+            developer-revoke "$email" "Automatic expiration (${duration}d limit reached)" 2>&1 | tee -a "$NOTIFY_LOG" || true
+            REVOKED_COUNT=$((REVOKED_COUNT + 1))
+        else
+            log "developer-revoke command not found in PATH"
+        fi
+    fi
+done
+
+###############################################################################
+# SEND BATCH NOTIFICATION
+###############################################################################
+
+if [ $REVOKED_COUNT -gt 0 ]; then
+    log "Auto-revoked $REVOKED_COUNT developer(s)"
+    
+    # Send summary email
+    send_summary_email() {
+        local count="$1"
+        # In production, use email service
+        log "Batch notification would be sent: $count developers revoked"
+    }
+    
+    send_summary_email "$REVOKED_COUNT"
+else
+    log "No expired developers to revoke"
+fi
+
+###############################################################################
+# CLEANUP OLD AUDIT LOGS
+###############################################################################
+
+log "Cleaning up old log entries (>90 days)..."
+
+CUTOFF_DATE=$(date -d "90 days ago" '+%Y-%m-%d')
+TEMP_LOG="${REVOCATION_LOG}.tmp"
+
+if [ -f "$REVOCATION_LOG" ]; then
+    # Keep only recent entries (>90 days)
+    grep "${CUTOFF_DATE}" "$REVOCATION_LOG" > "$TEMP_LOG" 2>/dev/null || true
+    grep "^\\[" "$REVOCATION_LOG" | tail -1000 >> "$TEMP_LOG" 2>/dev/null || true
+    
+    # Remove duplicates
+    sort -u "$TEMP_LOG" > "$REVOCATION_LOG"
+    rm -f "$TEMP_LOG"
+    
+    log "Log cleanup complete (kept 1000 most recent entries)"
+fi
+
+###############################################################################
+# DATABASE MAINTENANCE
+###############################################################################
+
+log "Performing database integrity check..."
+
+# Count total, active, revoked
+TOTAL=$(tail -n +2 "$DEVELOPERS_CSV" 2>/dev/null | wc -l || echo 0)
+ACTIVE=$(tail -n +2 "$DEVELOPERS_CSV" 2>/dev/null | awk -F',' '$6 == "active"' | wc -l || echo 0)
+REVOKED=$(tail -n +2 "$DEVELOPERS_CSV" 2>/dev/null | awk -F',' '$6 == "revoked"' | wc -l || echo 0)
+
+log "Database stats: Total=$TOTAL, Active=$ACTIVE, Revoked=$REVOKED"
+
+###############################################################################
+# COMPLETION
+###############################################################################
+
+log "Auto-revoke cron job complete (revoked: $REVOKED_COUNT)"

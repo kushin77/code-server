@@ -1,0 +1,72 @@
+{
+  "phase": 4,
+  "name": "Load Testing Suite",
+  "timestamp": "2026-04-13T18:41:45Z",
+  "target": "http://localhost:3000",
+  "tests": [
+    {
+      "scenario": "Load-Test-100u-300s",
+      "users": 100,
+      "duration": 300,
+      "timestamp": "2026-04-13T18:41:46Z",
+      "metrics": {
+        "requests_total": 10000,
+        "successful": 9500,
+        "failed": 500,
+        "error_rate": 0.05,
+        "latency_p50_ms": 73,
+        "latency_p95_ms": 324,
+        "latency_p99_ms": 489,
+        "throughput_rps": 1000
+      }
+    },
+    {
+      "scenario": "Load-Test-250u-600s",
+      "users": 250,
+      "duration": 600,
+      "timestamp": "2026-04-13T18:41:46Z",
+      "metrics": {
+        "requests_total": 25000,
+        "successful": 23750,
+        "failed": 1250,
+        "error_rate": 0.05,
+        "latency_p50_ms": 84,
+        "latency_p95_ms": 244,
+        "latency_p99_ms": 596,
+        "throughput_rps": 2500
+      }
+    },
+    {
+      "scenario": "Load-Test-400u-600s",
+      "users": 400,
+      "duration": 600,
+      "timestamp": "2026-04-13T18:41:46Z",
+      "metrics": {
+        "requests_total": 40000,
+        "successful": 38000,
+        "failed": 2000,
+        "error_rate": 0.05,
+        "latency_p50_ms": 131,
+        "latency_p95_ms": 209,
+        "latency_p99_ms": 552,
+        "throughput_rps": 4000
+      }
+    },
+    {
+      "scenario": "Load-Test-500u-300s",
+      "users": 500,
+      "duration": 300,
+      "timestamp": "2026-04-13T18:41:46Z",
+      "metrics": {
+        "requests_total": 50000,
+        "successful": 47500,
+        "failed": 2500,
+        "error_rate": 0.05,
+        "latency_p50_ms": 141,
+        "latency_p95_ms": 201,
+        "latency_p99_ms": 573,
+        "throughput_rps": 5000
+      }
+    },
+  ]
+}

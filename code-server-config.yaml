@@ -1,0 +1,36 @@
+# code-server Configuration
+# Deploy to: ~/.config/code-server/config.yaml
+
+bind-addr: 0.0.0.0:8080
+auth: password
+password: ${CODE_SERVER_PASSWORD}
+cert: true  # Enable HTTPS with auto-generated self-signed cer
+            # Required for secure context (crypto.subtle, webviews, clipboard)
+
+# First run: accept self-signed cert in browser via Advanced -> Proceed
+
+# Security
+proxy-domain:
+  - localhost
+  - 127.0.0.1
+  - 192.168.168.32
+  - 192.168.168.31
+  - ide.kushnir.cloud
+  - "${DEPLOY_HOST:localhost}"
+
+# Logging for audit trail
+logging: debug
+
+# Extensions marketplace
+# NOTE: Disabled marketplace validation since Copilot Chat is pre-installed via VSIX
+# and not available on Open VSX. Code-server will use cached VSIX files from entrypoint.
+# extension-gallery: https://open-vsx.org/vscode/gallery
+
+# Disable telemetry for compliance
+disable-telemetry: true
+
+# Resource limits per session
+max-connections: 100
+
+# Session timeout (30 minutes)
+session-timeout: 1800000

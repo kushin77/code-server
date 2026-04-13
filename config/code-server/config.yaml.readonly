@@ -1,0 +1,246 @@
+# code-server Configuration - Read-Only Lean Developer Access
+# Issue #187: Read-Only IDE Access Control - Prevent Code Downloads
+#
+# This configuration implements defense-in-depth approach:
+# 1. Filesystem restrictions (what files are visible)
+# 2. UI restrictions (what features are available)
+# 3. Extension restrictions (what extensions are blocked)
+# 4. Terminal restrictions (restricted-shell wrapper)
+#
+# Installation:
+#   cp config.yaml ~/.config/code-server/
+#   systemctl restart code-server
+#
+# Test:
+#   1. Verify file view works: Open Python file, view syntax highlighting
+#   2. Verify search works: Ctrl+F, search for text
+#   3. Test terminal: Try 'wget', should be blocked
+#   4. Verify git works: 'git push' should work via proxy
+#
+
+# ==================== GENERAL SETTINGS ====================
+
+# Bind to localhost, use reverse proxy (Cloudflare Tunnel) for access
+bind-addr: 127.0.0.1:8080
+auth: token
+password: ${DEVELOPER_SESSION_TOKEN}
+
+# Security: disable telemetry and external connections
+telemetry: off
+
+# Certificate for HTTPS (should be set via reverse proxy)
+# Using Cloudflare Tunnel, so local cert not needed
+cert: false
+
+# Proxy settings for outbound connections
+proxy:
+  # All git operations go through our git proxy (Issue #184)
+  http: http://127.0.0.1:8081  # Terminal output optimizer (Issue #182)
+  https: https://127.0.0.1:8443/git-proxy  # Git proxy server
+
+# ==================== WORKSPACE SETTINGS ====================
+
+# Filesystem visibility restrictions
+"files.exclude":
+  # Hide sensitive files
+  ".env": true
+  ".env.local": true
+  ".env.*.local": true
+  "*.key": true
+  "*.pem": true
+  "**/.*credentials*": true
+  
+  # Hide SSH/config
+  ".ssh": true
+  ".config": true
+  ".aws": true
+  ".kube": true
+  
+  # Hide git internals
+  ".git/hooks": true
+  ".git/objects": true
+  ".git/refs/remotes": true
+  
+  # Hide system files
+  "node_modules": true
+  ".venv": true
+  "__pycache__": true
+  ".pytest_cache": true
+  "dist": true
+  "build": true
+  "*.pyc": true
+  ".DS_Store": true
+  "Thumbs.db": true
+
+# Watch for modifications to audit
+"files.watcherExclude":
+  "**/node_modules/**": true
+  "**/.git/**": true
+
+# ==================== EDITOR RESTRICTIONS ====================
+
+# Mark everything as read-only by default
+"editor.readOnlyIndicator": "visible"
+
+# Disable dangerous editor features
+"editor.formatOnSave": false
+"editor.codeActionsOnSave": {}
+
+# Disable find in files that could expose secrets
+"search.exclude":
+  "**/node_modules": true
+  "**/.git": true
+  "**/.env*": true
+  "**/*.key": true
+
+# ==================== WORKBENCH RESTRICTIONS ====================
+
+# Restrict file operations
+"files.enableTrash": false  # No undo for deletes
+"files.autoDelete": "off"
+
+# Hide explorer view (could enable downloads)
+"explorer.enabled": true
+"explorer.openEditors.visible": 0
+
+# Disable timeline (may show sensitive file changes)
+"timeline.showView": false
+
+# Disable settings sync (no export of settings)
+"settingsSync.enabled": false
+
+# Disable welcome screen (may have external links)
+"workbench.welcome.enabled": false
+"workbench.startupEditor": "none"
+
+# Disable VS Code marketplace (prevent extension downloads)
+"extensions.ignoreRecommendations": true
+"extensions.webWorker": false
+
+# ==================== SOURCE CONTROL (GIT) ====================
+
+# Git must go through our proxy (Issue #184)
+"git.path": "/usr/local/bin/git-wrapper"  # Custom wrapper for proxy
+"git.autoRepository": false
+
+# Disable git clone (developers shouldn't clone via SSH)
+# They use: git pull (via proxy) instead
+
+# Don't show git credentials in UI
+"git.showPushSuccessNotification": false
+
+# ==================== TERMINAL RESTRICTIONS ====================
+
+# Use restricted-shell as terminal shell
+"terminal.integrated.shellPath": "/usr/local/bin/restricted-shell"
+"terminal.integrated.shellArgs":
+  - "--login"
+  - "-i"
+
+# Restrict terminal capabilities
+"terminal.integrated.allowChords": false
+"terminal.integrated.enableBell": false
+
+# Resize terminal carefully (prevent exfil via terminal size)
+"terminal.integrated.inheritEnv": false
+
+# Custom environment for terminal
+"terminal.integrated.env.linux":
+  # Block dangerous programs
+  "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"  # No downloads in PATH
+  "HOME": "/home/${DEVELOPER_ID}"
+  "SHELL": "/usr/local/bin/restricted-shell"
+  "TERM": "xterm-256color"
+  "COLORTERM": "truecolor"
+  # Prevent git SSH
+  "GIT_SSH": "/usr/local/bin/git-ssh-blocked.sh"
+  # Git operations must go through proxy
+  "GIT_CONFIG_GLOBAL": "/tmp/.gitconfig"
+
+# ==================== EXTENSION RESTRICTIONS ====================
+
+# Extensions to DISABLE (security risk or enable exfiltration)
+"extensions.ignoreRecommendations": true
+
+# These extensions are blocked from installation
+# - ms-vscode.remote-explorer (enables file download)
+# - ms-vscode-remote.remote-containers (escape container)
+# - ms-vscode-remote.remote-ssh (SSH access)
+# - ms-vscode-remote.remote-wsl (WSL escape)
+# - eamodio.gitlens (can show SSH operations if not proxied)
+# - ms-python.python (if used with system Python not sandboxed)
+# - ms-cpp.cpptools (native compilation risk)
+
+# Safe extensions (pre-approved):
+# - ms-python.python (with sandboxed interpreter)
+# - ms-vscode.python-debugger
+# - eamodio.gitlens (safe with git proxy)language pack extensions
+# - ms-vscode.cpptools-extension-pack (with restrictions)
+# - rust-lang.rust-analyzer
+# - golang.go
+# - hashicorp.terraform
+
+# Disable marketplace (no new extensions)
+"extensions.enabled": false
+"extensions.autoUpdate": false
+"extensions.recommendations": false
+
+# ==================== SECURITY AUDIT LOGGING ====================
+
+# Log all file operations (if audit extension available)
+# This integrates with Issue #183 (Audit Logging & Compliance)
+
+# Enable command palette logging
+"commandPalette.preserveInput": true
+
+# Workspace trust (restrict untrusted workspaces)
+"security.workspace.trust.enabled": true
+"security.workspace.trust.untrustedFiles": "deny"
+
+# ==================== PERFORMANCE & RELIABILITY ====================
+
+# Timeout idle connections (4 hours default Cloudflare Access session)
+"http.proxyStrictSSL": false  # Trust our reverse proxy
+
+# Disable crash reports (may phone home)
+"telemetry.enableCrashReporter": false
+
+# ==================== DEBUGGING & TESTING ====================
+
+# For testing compliance:
+# 1. Open Terminal in code-server
+# 2. Try: wget https://example.com/file.zip
+#    Expected: Command blocked by restricted-shell
+# 3. Try: cat ~/.ssh/id_rsa
+#    Expected: Permission denied or blocked
+# 4. Try: git push origin main
+#    Expected: Credentials proxied, successful push
+# 5. Try: ls (in allowed directory)
+#    Expected: Works normally
+
+# ==================== NOTES ====================
+#
+# This configuration works with:
+# - Issue #184: Git commit proxy (git operations via proxy)
+# - Issue #185: Cloudflare Tunnel (network isolation)
+# - Issue #182: Latency optimization (terminal batching)
+# - Issue #183: Audit logging (all commands logged)
+#
+# Security Properties:
+# ✓ Read-only code access (IDE features work)
+# ✓ No file downloads (wget, curl, scp blocked)
+# ✓ No SSH key access (keys on server, git via proxy)
+# ✓ No git clone via SSH (must use proxy)
+# ✓ All actions logged (audit trail)
+# ✓ Session timeout (4 hours, Cloudflare Access)
+#
+# Limitations:
+# ✗ Developer can still view code (intentional)
+# ✗ Developer terminal works but filtered (intentional)
+# ✗ Some legitimate tools may be blocked (wget for docs, etc)
+#   ^ Workaround: Request admin to whitelist tools
+#
+# References:
+# - code-server config: https://coder.com/docs/code-server/latest/guide
+# - Settings docs: https://code.visualstudio.com/docs/getstarted/settings
+#

@@ -25,16 +25,18 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: extensions/agent-farm/package-lock.json
     
     - name: Install dependencies
       working-directory: extensions/agent-farm
-      run: npm install --legacy-peer-deps
+      run: npm install
     
     - name: Lint TypeScript
       working-directory: extensions/agent-farm
       run: npm run lint
+    
+    - name: Compile TypeScript
+      working-directory: extensions/agent-farm
+      run: npm run compile
     
     - name: Run tests
       working-directory: extensions/agent-farm
@@ -58,12 +60,10 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 20.x
-        cache: 'npm'
-        cache-dependency-path: extensions/agent-farm/package-lock.json
     
     - name: Install dependencies
       working-directory: extensions/agent-farm
-      run: npm install --legacy-peer-deps
+      run: npm install
     
     - name: Compile TypeScript
       working-directory: extensions/agent-farm

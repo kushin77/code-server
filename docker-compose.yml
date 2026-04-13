@@ -46,7 +46,7 @@ services:
       # Enterprise settings: seeded into user settings on first launch (see entrypoint.sh)
       - ./config/settings.json:/etc/code-server/settings.json:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      test: ["CMD", "curl", "-f", "http://code-server:8080/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -91,7 +91,7 @@ services:
       - ollama-data:/root/.ollama
       - ${WORKSPACE_PATH:-./workspace}:/workspace:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "curl", "-f", "http://ollama:11434/api/tags"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -202,7 +202,7 @@ services:
       # is consumed before the IDE can exchange it (causing "Sign in" to loop forever).
       OAUTH2_PROXY_SKIP_AUTH_ROUTES: "^/health$$|^/oauth2/|^/callback$$"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4180/ping"]
+      test: ["CMD", "wget", "-q", "--spider", "http://oauth2-proxy:4180/ping"]
       interval: 10s
       timeout: 5s
       retries: 3

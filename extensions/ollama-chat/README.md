@@ -38,12 +38,14 @@ Settings in `.vscode/settings.json`:
 
 ```json
 {
-  "ollama.endpoint": "http://localhost:11434",
+  "ollama.endpoint": "http://ollama:11434",
   "ollama.defaultModel": "llama2:70b-chat",
   "ollama.contextWindow": 4096,
   "ollama.indexRepositoryOnStartup": true
 }
 ```
+
+**Note**: MANDATE - Never use `localhost`. Use container network names (`http://ollama:11434`) or set via `OLLAMA_ENDPOINT` environment variable.
 
 ## Usage Examples
 

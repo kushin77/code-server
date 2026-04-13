@@ -47,7 +47,7 @@ services:
       - ${workspace_dir}:${workspace_path}
       - ./config/settings.json:/etc/code-server/settings.json:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${code_server_port}/healthz"]
+      test: ["CMD", "curl", "-f", "http://code-server:${code_server_port}/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -87,7 +87,7 @@ services:
       - ${ollama_volume}:/root/.ollama
       - ${workspace_dir}:${workspace_path}:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${ollama_port}/api/tags"]
+      test: ["CMD", "curl", "-f", "http://ollama:${ollama_port}/api/tags"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -176,7 +176,7 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${oauth2_proxy_port}/ping"]
+      test: ["CMD", "curl", "-f", "http://oauth2-proxy:${oauth2_proxy_port}/ping"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -209,7 +209,7 @@ services:
     environment:
       - ACME_AGREE=true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/healthz || exit 1"]
+      test: ["CMD", "curl", "-f", "http://caddy:80/healthz || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

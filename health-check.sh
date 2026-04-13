@@ -27,13 +27,13 @@ else
   echo "  ❌ HTTPS endpoint not responding: https://${DOMAIN}"
 fi
 
-if curl -sf --max-time 5 "http://localhost:4180/ping" > /dev/null 2>&1; then
+if curl -sf --max-time 5 "http://oauth2-proxy:4180/ping" > /dev/null 2>&1; then
   echo "  ✅ oauth2-proxy /ping: OK"
 else
   echo "  ❌ oauth2-proxy not responding"
 fi
 
-if curl -sf --max-time 5 "http://localhost:8080/healthz" > /dev/null 2>&1; then
+if curl -sf --max-time 5 "http://code-server:8080/healthz" > /dev/null 2>&1; then
   echo "  ✅ code-server /healthz: OK"
 else
   echo "  ❌ code-server not responding"

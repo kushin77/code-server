@@ -12,7 +12,8 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log('🚀 Ollama Chat extension activating...');
 
   const config = vscode.workspace.getConfiguration('ollama');
-  const endpoint = config.get<string>('endpoint') || 'http://localhost:11434';
+  // MANDATE: Never use localhost - use container network or environment variable
+  const endpoint = config.get<string>('endpoint') || process.env.OLLAMA_ENDPOINT || 'http://ollama:11434';
   const defaultModel = config.get<string>('defaultModel') || 'llama2:70b-chat';
 
   // Initialize Ollama client

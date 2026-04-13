@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Agent, AgentOutput, CodeContext } from './types';
 import { CodeAgent } from './agents/CodeAgent';
 import { ReviewAgent } from './agents/ReviewAgent';
+import { SemanticSearchAgent } from './agents/SemanticSearchAgent';
 import { Orchestrator } from './orchestrator/Orchestrator';
 
 let orchestrator: Orchestrator;
@@ -13,6 +14,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const agents: Agent[] = [
     new CodeAgent(),
     new ReviewAgent(),
+    new SemanticSearchAgent(),
   ];
 
   // Initialize orchestrator
@@ -134,53 +136,3 @@ function generateResultsHTML(results: AgentOutput[]): string {
 export function deactivate() {
   console.log('Agent Farm extension deactivated');
 }
-import * as vscode from "vscode";
-
-export class Agent {
-  constructor(private name: string) {}
-  
-  async execute(task: string): Promise<string> {
-    return `Agent ${this.name} executed: ${task}`;
-  }
-}
-
-export class Orchestrator {
-  private agents: Agent[] = [];
-  
-  constructor() {
-    this.agents = [
-      new Agent("Architect"),
-      new Agent("Coder"),
-      new Agent("Tester"),
-      new Agent("Reviewer"),
-      new Agent("Documenter")
-    ];
-  }
-  
-  async executeTask(task: string): Promise<string> {
-    const agent = this.agents[Math.floor(Math.random() * this.agents.length)];
-    return agent.execute(task);
-  }
-}
-
-export function activate(context: vscode.ExtensionContext) {
-  console.log("[Agent Farm] Activating...");
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand("agentFarm.executeTask", async () => {
-      const input = await vscode.window.showInputBox({
-        placeHolder: "Describe your task...",
-      });
-      
-      if (input) {
-        const orchestrator = new Orchestrator();
-        const result = await orchestrator.executeTask(input);
-        vscode.window.showInformationMessage(`✅ ${result}`);
-      }
-    })
-  );
-
-  vscode.window.showInformationMessage("🤖 AgentFarm extension loaded!");
-}
-
-export function deactivate() {}

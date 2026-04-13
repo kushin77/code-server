@@ -81,6 +81,11 @@ export class Orchestrator {
       case 'quality':
       case 'security':
         return this.agents.get('ReviewAgent');
+      case 'search':
+      case 'semantic':
+      case 'find':
+      case 'duplicate':
+        return this.agents.get('SemanticSearchAgent');
       default:
         // Return first available agent as fallback
         return this.agents.values().next().value;

@@ -1,70 +1,119 @@
+/**
+ * Agent Farm Types and Interfaces
+ */
+
 import * as vscode from 'vscode';
 
-export interface CodeContext {
-  uri: vscode.Uri;
-  content: string;
-  selection: vscode.Selection;
-  activeEditor: vscode.TextEditor;
+/**
+ * Task types that agents can handle
+ */
+export enum TaskType {
+  ARCHITECTURE = 'architecture',
+  CODE_IMPLEMENTATION = 'code_implementation',
+  TEST_COVERAGE = 'test_coverage',
+  CODE_REVIEW = 'code_review',
+  REFACTORING = 'refactoring',
+  PERFORMANCE = 'performance',
+  SECURITY = 'security',
 }
 
-export interface AgentOutput {
-  agentName: string;
-  domain: string;
-  timestamp: Date;
-  summary: string;
-  details?: string;
-  recommendations?: string[];
-  severity?: 'info' | 'warning' | 'error';
-  codeLocations?: CodeLocation[];
+/**
+ * Agent specialization domains
+ */
+export enum AgentSpecialization {
+  ARCHITECT = 'architect',
+  CODER = 'coder',
+  TESTER = 'tester',
+  REVIEWER = 'reviewer',
 }
 
-export interface CodeLocation {
-  file: string;
-  line: number;
-  column: number;
-  snippet: string;
-}
-
-export interface MultiAgentContext {
-  codeContext: CodeContext;
-  intermediateResults: AgentOutput[];
-  coordinationState: Record<string, unknown>;
-}
-
-export interface TaskDefinition {
-  type: string;
+/**
+ * Single recommendation from an agent
+ */
+export interface Recommendation {
+  id: string;
+  title: string;
   description: string;
-  targetAgents: string[];
-  parameters?: Record<string, unknown>;
+  severity: 'info' | 'warning' | 'critical';
+  actionable: boolean;
+  suggestedFix?: string;
+  codeSnippet?: string;
+  documentationUrl?: string;
 }
 
-export abstract class Agent {
-  abstract readonly name: string;
-  abstract readonly domain: string;
-
-  abstract analyze(context: CodeContext): Promise<AgentOutput>;
-  
-  abstract coordinate(
-    context: MultiAgentContext,
-    previousResults: AgentOutput[]
-  ): Promise<void>;
-
-  protected log(message: string): void {
-    console.log(`[${this.name}] ${message}`);
-  }
-
-  protected formatOutput(
-    summary: string,
-    recommendations: string[] = [],
-    severity: 'info' | 'warning' | 'error' = 'info'
-  ): AgentOutput {
-    return {
-      agentName: this.name,
-      domain: this.domain,
-      timestamp: new Date(),
-      summary,
-      recommendations,
-      severity,
-    };
-  }
+/**
+ * Result of an agent analysis/recommendation
+ */
+export interface AgentResult {
+  agent: string;
+  specialization: AgentSpecialization;
+  taskType: TaskType;
+  timestamp: number;
+  duration: number; // milliseconds
+  recommendations: Recommendation[];
+  confidence: number; // 0-100
+  metadata: Record<string, unknown>;
 }
+
+/**
+ * Orchestrator result combining all agent analyses
+ */
+export interface OrchestratorResult {
+  documentUri: string;
+  totalDuration: number;
+  agentResults: AgentResult[];
+  aggregatedRecommendations: Recommendation[];
+  summary: {
+    totalRecommendations: number;
+    criticalCount: number;
+    warningCount: number;
+    infoCount: number;
+    averageConfidence: number;
+  };
+}
+
+/**
+ * Code element types (for indexing)
+ */
+export enum CodeElementType {
+  FUNCTION = 'function',
+  CLASS = 'class',
+  INTERFACE = 'interface',
+  TYPE = 'type',
+  CONSTANT = 'constant',
+  VARIABLE = 'variable',
+  IMPORT = 'import',
+  EXPORT = 'export',
+}
+
+/**
+ * Represents a code element (function, class, etc.)
+ */
+export interface CodeElement {
+  type: CodeElementType;
+  name: string;
+  lineStart: number;
+  lineEnd: number;
+  complexity: number; // Cyclomatic complexity estimate
+  hasTests: boolean;
+  isExported: boolean;
+  documentation: string | undefined;
+  children: CodeElement[]; // For nested elements
+}
+
+/**
+ * Code index result
+ */
+export interface CodeIndex {
+  fileName: string;
+  totalLines: number;
+  elements: CodeElement[];
+  statistics: {
+    totalFunctions: number;
+    totalClasses: number;
+    averageComplexity: number;
+    hasTests: boolean;
+    documentationRatio: number;
+  };
+}
+

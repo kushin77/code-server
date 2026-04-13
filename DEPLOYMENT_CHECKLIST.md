@@ -101,10 +101,12 @@ docker compose ps
 #   ✓ oauth2-proxy running (port 4180)
 #   ✓ ollama       running (port 11434)
 
-# Check health endpoints
-curl http://localhost:8080/health        # code-server
-curl http://localhost:11434/api/tags     # ollama
-curl http://localhost/health             # caddy (via proxy)
+# Check internal health endpoints (from within docker network)
+docker compose exec caddy curl -s http://code-server:8080/health | jq .        # code-server
+docker compose exec ollama curl -s http://localhost:11434/api/tags | jq .      # ollama
+
+# Or access via domain (external)
+curl -H "Authorization: Bearer $GITHUB_TOKEN" https://ide.kushnir.cloud/health
 ```
 
 ### Phase 5: Configuration Verification
@@ -127,11 +129,11 @@ curl http://localhost:11434/api/tags
 ### Phase 6: Access Verification
 
 ```bash
-# For local deployment:
-# 1. Open browser: http://localhost:8080 (or http://ide.kushnir.cloud for domain)
+# For production deployment:
+# 1. Open browser: https://ide.kushnir.cloud
 # 2. Redirected to Google login (oauth2-proxy)
 # 3. Sign in with Google account
-# 4. Redirected back to code-server
+# 4. Redirected back to code-server IDE
 # 5. Inside IDE: Copilot Chat should be available
 #    - Extensions sidebar → search "copilot" → both should be installed
 #    - Click Copilot Chat icon in Activity Bar (left side)
@@ -163,8 +165,8 @@ curl http://localhost:11434/api/tags
 
 #### 3. Ollama Integration
 - [ ] Ollama service running: `docker compose ps ollama`
-- [ ] Models installed: `curl http://localhost:11434/api/tags`
-- [ ] Can invoke model: `curl -X POST http://localhost:11434/api/generate -d '{"model":"llama2","prompt":"hello"}'`
+- [ ] Models installed: `docker compose exec ollama curl -s http://localhost:11434/api/tags`
+- [ ] Can invoke model: `docker compose exec ollama curl -X POST http://localhost:11434/api/generate -d '{"model":"llama2","prompt":"hello"}'`
 
 #### 4. Infrastructure
 - [ ] All services healthy: `docker compose ps` shows all "running"
@@ -172,8 +174,8 @@ curl http://localhost:11434/api/tags
 - [ ] Rate limiting works: multiple rapid requests to /oauth2/sign_in get rate-limited
 - [ ] Caddyfile routing correct:
   ```bash
-  curl -I http://localhost/              # Redirects to /signin
-  curl -I -H "Cookie: oauth2proxy_..." http://localhost/  # 200 OK to IDE
+  curl -I https://ide.kushnir.cloud/              # Redirects to /signin
+  curl -I -H "Cookie: oauth2proxy_..." https://ide.kushnir.cloud/  # 200 OK to IDE
   ```
 
 ### Performance Baseline

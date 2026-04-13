@@ -10,8 +10,8 @@
 ### Running Services (Docker Compose)
 
 caddy          Up 2 minutes    HEALTHY    [0.0.0.0:80 → 80/tcp, 0.0.0.0:443 → 443/tcp]
-code-server    Up 1 minute     HEALTHY    [localhost:8080/tcp (internal)]
-oauth2-proxy   Up 2 minutes    HEALTHY    [localhost:4180/tcp (internal)]
+code-server    Up 1 minute     HEALTHY    [code-server:8080 (internal)]
+oauth2-proxy   Up 2 minutes    HEALTHY    [oauth2-proxy:4180 (internal)]
 
 
 ### Health Check Results

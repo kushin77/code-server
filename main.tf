@@ -338,8 +338,9 @@ fi
 echo ""
 echo "════════════════════════════════════════════════════════════════════════════"
 echo "DEPLOYMENT COMPLETE"
-echo "✅ Interface available at: http://localhost:8080"
-echo "✅ Next: Connect via VPN and access https://ide.kushnir.cloud"
+echo "✅ Access IDE at: https://ide.kushnir.cloud"
+echo "✅ Authentication: Google OAuth2"
+echo "✅ TLS: Let's Encrypt (auto-renewed)"
 echo "════════════════════════════════════════════════════════════════════════════"
 EOT
 

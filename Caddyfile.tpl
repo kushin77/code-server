@@ -1,3 +1,7 @@
+# ⚠️  LEGACY TEMPLATE — For reference only
+# In production, use the dynamic Caddyfile that reads {$DOMAIN} from environment
+# This template was used by Terraform for local development before domain migration
+
 localhost {
     # Auto HTTPS
     encode gzip
@@ -32,7 +36,7 @@ localhost {
     header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
 }
 
-# HTTP to HTTPS redirect
+# HTTP to HTTPS redirect (for legacy local deployments)
 http://localhost {
     redir https://localhost{uri} permanent
 }

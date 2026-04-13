@@ -1,0 +1,92 @@
+name: Branch Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+  # Run weekly to catch any lingering branches
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  delete-merged-branch:
+    name: Delete merged branch
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: write
+    steps:
+      - name: Delete head branch
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const branch = context.payload.pull_request.head.ref;
+            // Never delete protected branches
+            const protected_branches = ['main', 'master', 'develop'];
+            if (protected_branches.includes(branch)) {
+              console.log(`Skipping protected branch: ${branch}`);
+              return;
+            }
+            try {
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref: `heads/${branch}`,
+              });
+              console.log(`Deleted branch: ${branch}`);
+            } catch (err) {
+              if (err.status === 422) {
+                console.log(`Branch ${branch} already deleted.`);
+              } else {
+                throw err;
+              }
+            }
+
+  stale-branch-report:
+    name: Stale branch audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Report stale branches
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const STALE_DAYS = 30;
+            const cutoff = new Date(Date.now() - STALE_DAYS * 24 * 60 * 60 * 1000);
+
+            const branches = await github.paginate(github.rest.repos.listBranches, {
+              owner, repo, protected: false, per_page: 100
+            });
+
+            const stale = [];
+            for (const branch of branches) {
+              if (['main', 'master', 'develop'].includes(branch.name)) continue;
+              const commit = await github.rest.repos.getCommit({
+                owner, repo, ref: branch.commit.sha
+              });
+              const committed = new Date(commit.data.commit.committer.date);
+              if (committed < cutoff) {
+                stale.push(`- \`${branch.name}\` — last commit: ${committed.toISOString().split('T')[0]}`);
+              }
+            }
+
+            if (stale.length === 0) {
+              console.log('No stale branches found.');
+              return;
+            }
+
+            const body = `## Stale Branch Audit\n\nThe following branches have had no commits in the last ${STALE_DAYS} days:\n\n${stale.join('\n')}\n\nPlease merge or delete them to keep the repo clean.`;
+            await github.rest.issues.create({
+              owner, repo,
+              title: `[Branch Hygiene] ${stale.length} stale branch(es) detected`,
+              body,
+              labels: ['hygiene', 'tech-debt']
+            });
+            console.log(`Created issue for ${stale.length} stale branches.`);

@@ -1,6 +1,7 @@
 # Portable Caddyfile — domain driven by DOMAIN env var (set in docker-compose or .env)
 # Caddy reads {$DOMAIN} at startup from the container environment
-# TLS: Let's Encrypt via DNS-01 (GoDaddy) — no inbound port 80 required
+# TLS: Let's Encrypt via HTTP-01 challenge (standard method)
+# Note: Requires ports 80/443 to be open for ACME verification
 
 # Global options — production CA only (disables staging fallback)
 {
@@ -8,29 +9,10 @@
 }
 
 {$DOMAIN} {
-    # DNS-01 challenge — avoids need for open port 80/443 during cert issuance
-    # GODADDY_API_TOKEN = KEY:SECRET (set in .env)
-    tls {
-        dns godaddy {$GODADDY_API_TOKEN}
-        propagation_timeout 10m
-        propagation_delay 30s
-        resolvers ns53.domaincontrol.com ns54.domaincontrol.com
-    }
+    # HTTP-01 challenge — standard Let's Encrypt method (requires open 80/443)
+    # For DNS-01 (GoDaddy) without open ports, rebuild Caddy with custom plugins
 
     encode gzip
-
-    # ── Brute-force protection on auth endpoints ────────────────────────────────────
-    # Requires caddy-ratelimit module (included in Dockerfile.caddy)
-    @oauth_login {
-        path /oauth2/sign_in /oauth2/auth
-    }
-    rate_limit @oauth_login {
-        zone oauth_brute {
-            key     {remote_host}
-            events  20
-            window  1m
-        }
-    }
 
     # Security headers
     header {

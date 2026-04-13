@@ -12,7 +12,7 @@ variable "code_server_password" {
   type        = string
   sensitive   = true
   default     = "change-me-in-production"
-  
+
   validation {
     condition     = length(var.code_server_password) >= 8
     error_message = "code_server_password must be at least 8 characters."
@@ -55,7 +55,7 @@ variable "oauth2_proxy_cookie_secret" {
   type        = string
   sensitive   = true
   default     = ""
-  
+
   validation {
     condition     = length(var.oauth2_proxy_cookie_secret) > 0
     error_message = "oauth2_proxy_cookie_secret is required; generate: openssl rand -base64 32"
@@ -115,7 +115,7 @@ variable "ollama_num_threads" {
   description = "Number of CPU threads for Ollama (0 = auto)"
   type        = number
   default     = 8
-  
+
   validation {
     condition     = var.ollama_num_threads >= 0 && var.ollama_num_threads <= 256
     error_message = "ollama_num_threads must be 0-256."
@@ -160,7 +160,7 @@ variable "log_level" {
   description = "Logging level across all services"
   type        = string
   default     = "info"
-  
+
   validation {
     condition     = contains(["debug", "info", "warn", "error"], var.log_level)
     error_message = "log_level must be one of: debug, info, warn, error."
@@ -197,9 +197,9 @@ variable "tags" {
   description = "Tags to apply to all infrastructure resources"
   type        = map(string)
   default = {
-    Project     = "code-server-enterprise"
-    IaC         = "terraform"
-    Immutable   = "true"
-    Idempotent  = "true"
+    Project    = "code-server-enterprise"
+    IaC        = "terraform"
+    Immutable  = "true"
+    Idempotent = "true"
   }
 }

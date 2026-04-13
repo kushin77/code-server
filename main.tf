@@ -47,35 +47,35 @@ locals {
   # Version Pinning — ALL VERSIONS FROZEN HERE (immutability guarantee)
   # ─────────────────────────────────────────────────────────────────────────
   versions = {
-    code_server      = "4.115.0"          # Base image version (matches VS Code 1.115.0)
-    copilot          = "1.388.0"          # GitHub Copilot extension
-    copilot_chat     = "0.43.2026040705"  # GitHub Copilot Chat extension
-    ollama           = "0.1.27"           # Local LLM server
-    oauth2_proxy     = "v7.5.1"           # OIDC proxy for auth
-    caddy            = "2.7.6"            # Reverse proxy + auto TLS
-    node_base        = "22.11.0"          # Node.js (embedded in code-server)
+    code_server  = "4.115.0"         # Base image version (matches VS Code 1.115.0)
+    copilot      = "1.388.0"         # GitHub Copilot extension
+    copilot_chat = "0.43.2026040705" # GitHub Copilot Chat extension
+    ollama       = "0.1.27"          # Local LLM server
+    oauth2_proxy = "v7.5.1"          # OIDC proxy for auth
+    caddy        = "2.7.6"           # Reverse proxy + auto TLS
+    node_base    = "22.11.0"         # Node.js (embedded in code-server)
   }
 
   # ─────────────────────────────────────────────────────────────────────────
   # Network & Port Configuration
   # ─────────────────────────────────────────────────────────────────────────
   network = {
-    name                = "enterprise"
-    code_server_port    = 8080
-    oauth2_proxy_port   = 4180
-    caddy_http_port     = 80
-    caddy_https_port    = 443
-    ollama_port         = 11434
+    name              = "enterprise"
+    code_server_port  = 8080
+    oauth2_proxy_port = 4180
+    caddy_http_port   = 80
+    caddy_https_port  = 443
+    ollama_port       = 11434
   }
 
   # ─────────────────────────────────────────────────────────────────────────
   # Storage Configuration
   # ─────────────────────────────────────────────────────────────────────────
   storage = {
-    data_volume        = "${local.service_name}-data"
-    ollama_volume      = "ollama-data"
-    workspace_path     = "/home/coder/workspace"
-    workspace_dir      = "${path.module}/workspace"  # Local path on deploy host
+    data_volume    = "${local.service_name}-data"
+    ollama_volume  = "ollama-data"
+    workspace_path = "/home/coder/workspace"
+    workspace_dir  = "${path.module}/workspace" # Local path on deploy host
   }
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -83,12 +83,12 @@ locals {
   # ─────────────────────────────────────────────────────────────────────────
   resources = {
     code_server = {
-      limits        = { memory = "4g", cpus = "2.0" }
-      reservations  = { memory = "512m", cpus = "0.25" }
+      limits       = { memory = "4g", cpus = "2.0" }
+      reservations = { memory = "512m", cpus = "0.25" }
     }
     ollama = {
-      limits        = { memory = "32g", cpus = "8.0" }
-      reservations  = { memory = "8g", cpus = "2.0" }
+      limits       = { memory = "32g", cpus = "8.0" }
+      reservations = { memory = "8g", cpus = "2.0" }
     }
   }
 
@@ -96,41 +96,41 @@ locals {
   # Tags & Labels (for auditing and automation)
   # ─────────────────────────────────────────────────────────────────────────
   tags = {
-    Name           = local.service_name
-    Environment    = local.environment
-    Region         = local.region
-    ManagedBy      = "terraform"
-    Version        = "1.0.0"
-    IaC            = "true"
-    Immutable      = "true"
-    Idempotent     = "true"
+    Name        = local.service_name
+    Environment = local.environment
+    Region      = local.region
+    ManagedBy   = "terraform"
+    Version     = "1.0.0"
+    IaC         = "true"
+    Immutable   = "true"
+    Idempotent  = "true"
   }
 
   # ─────────────────────────────────────────────────────────────────────────
   # Export versions for docker-compose template
   # ─────────────────────────────────────────────────────────────────────────
   docker_compose_vars = {
-    service_name              = local.service_name
-    code_server_version       = local.versions.code_server
-    copilot_version           = local.versions.copilot
-    copilot_chat_version      = local.versions.copilot_chat
-    ollama_version            = local.versions.ollama
-    oauth2_proxy_version      = local.versions.oauth2_proxy
-    caddy_version             = local.versions.caddy
-    network_name              = local.network.name
-    code_server_port          = local.network.code_server_port
-    oauth2_proxy_port         = local.network.oauth2_proxy_port
-    caddy_http_port           = local.network.caddy_http_port
-    caddy_https_port          = local.network.caddy_https_port
-    ollama_port               = local.network.ollama_port
-    data_volume               = local.storage.data_volume
-    ollama_volume             = local.storage.ollama_volume
-    workspace_path            = local.storage.workspace_path
-    workspace_dir             = local.storage.workspace_dir
-    code_server_memory_limit  = local.resources.code_server.limits.memory
-    code_server_cpus_limit    = local.resources.code_server.limits.cpus
-    llama_model               = "llama2:70b-chat"
-    enable_ollama             = true
+    service_name             = local.service_name
+    code_server_version      = local.versions.code_server
+    copilot_version          = local.versions.copilot
+    copilot_chat_version     = local.versions.copilot_chat
+    ollama_version           = local.versions.ollama
+    oauth2_proxy_version     = local.versions.oauth2_proxy
+    caddy_version            = local.versions.caddy
+    network_name             = local.network.name
+    code_server_port         = local.network.code_server_port
+    oauth2_proxy_port        = local.network.oauth2_proxy_port
+    caddy_http_port          = local.network.caddy_http_port
+    caddy_https_port         = local.network.caddy_https_port
+    ollama_port              = local.network.ollama_port
+    data_volume              = local.storage.data_volume
+    ollama_volume            = local.storage.ollama_volume
+    workspace_path           = local.storage.workspace_path
+    workspace_dir            = local.storage.workspace_dir
+    code_server_memory_limit = local.resources.code_server.limits.memory
+    code_server_cpus_limit   = local.resources.code_server.limits.cpus
+    llama_model              = "llama2:70b-chat"
+    enable_ollama            = true
   }
 }
 
@@ -151,7 +151,7 @@ resource "null_resource" "workspace_setup" {
 # ════════════════════════════════════════════════════════════════════════════
 resource "local_file" "docker_compose_yml" {
   filename = "${path.module}/docker-compose.yml"
-  
+
   content = templatefile("${path.module}/docker-compose.tpl", local.docker_compose_vars)
 
   # Ensure workspace exists first
@@ -168,10 +168,10 @@ resource "local_file" "docker_compose_yml" {
 # ════════════════════════════════════════════════════════════════════════════
 resource "local_file" "caddyfile" {
   filename = "${path.module}/config/caddy/Caddyfile"
-  
+
   content = templatefile("${path.module}/Caddyfile.tpl", {
-    code_server_host = "localhost"
-    code_server_port = local.network.code_server_port
+    code_server_host  = "localhost"
+    code_server_port  = local.network.code_server_port
     oauth2_proxy_port = local.network.oauth2_proxy_port
   })
 
@@ -183,7 +183,7 @@ resource "local_file" "caddyfile" {
 # ════════════════════════════════════════════════════════════════════════════
 resource "local_file" "env_file" {
   filename = "${path.module}/.env"
-  
+
   content = <<-EOT
 # ⚠️  Generated by Terraform — DO NOT COMMIT TO GIT
 # This file contains secrets pulled from Google Secret Manager
@@ -227,7 +227,7 @@ EOT
 # ════════════════════════════════════════════════════════════════════════════
 resource "local_file" "deploy_script" {
   filename = "${path.module}/scripts/deploy.sh"
-  
+
   content = <<-EOT
 #!/bin/bash
 set -euo pipefail
@@ -360,23 +360,23 @@ resource "null_resource" "make_deploy_executable" {
 output "deployment_summary" {
   description = "Summary of IaC deployment configuration"
   value = {
-    service_name           = local.service_name
-    environment            = local.environment
-    pinned_versions        = local.versions
-    network                = local.network
-    storage_volumes        = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
-    tags                   = local.tags
-    docker_compose_file    = local_file.docker_compose_yml.filename
-    deployment_script      = local_file.deploy_script.filename
-    terraform_managed      = "✅ ALL infrastructure defined in Terraform"
-    idempotent_deployment  = "✅ Re-run scripts/deploy.sh safely anytime"
-    immutable_images       = "✅ All versions pinned; rebuild --no-cache ensures reproducibility"
+    service_name          = local.service_name
+    environment           = local.environment
+    pinned_versions       = local.versions
+    network               = local.network
+    storage_volumes       = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
+    tags                  = local.tags
+    docker_compose_file   = local_file.docker_compose_yml.filename
+    deployment_script     = local_file.deploy_script.filename
+    terraform_managed     = "✅ ALL infrastructure defined in Terraform"
+    idempotent_deployment = "✅ Re-run scripts/deploy.sh safely anytime"
+    immutable_images      = "✅ All versions pinned; rebuild --no-cache ensures reproducibility"
   }
 }
 
 output "deployment_commands" {
   description = "Quick reference for deployment"
-  value = <<-EOT
+  value       = <<-EOT
 ====== IDEMPOTENT DEPLOYMENT COMMANDS ======
 
 Option 1 (Recommended): Automated deployment with validation
@@ -409,12 +409,12 @@ EOT
 output "infrastructure_immutability" {
   description = "Verify immutability guarantees"
   value = {
-    code_server_version        = local.versions.code_server
-    copilot_extension_pinned   = local.versions.copilot
+    code_server_version           = local.versions.code_server
+    copilot_extension_pinned      = local.versions.copilot
     copilot_chat_extension_pinned = local.versions.copilot_chat
-    all_image_tags_frozen      = true
-    navigator_shim_patched     = "✅ Dockerfile.code-server contains immutable patch"
-    docker_compose_generated   = "✅ Never modify docker-compose.yml manually"
-    terraform_is_source_truth  = "✅ main.tf is authoritative; always regenerate"
+    all_image_tags_frozen         = true
+    navigator_shim_patched        = "✅ Dockerfile.code-server contains immutable patch"
+    docker_compose_generated      = "✅ Never modify docker-compose.yml manually"
+    terraform_is_source_truth     = "✅ main.tf is authoritative; always regenerate"
   }
 }

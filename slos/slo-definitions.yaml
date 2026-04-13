@@ -1,0 +1,126 @@
+# SLO Definitions - code-server enterprise platform
+# Service Level Objectives & Error Budget Management
+
+global:
+  # Historical error budget window
+  budget_window_days: 30
+  # Error budget calculation method
+  budget_calculation: rolling_30_day
+  # SLO review frequency
+  review_frequency_days: 7
+
+services:
+  # IDE Backend Service
+  code-server:
+    display_name: "Code Server IDE"
+    criticality: critical
+    owner: platform-team
+    slack_channel: "#code-server-slo"
+    
+    slos:
+      availability:
+        target: 0.999  # 99.9% uptime
+        description: "Service responds to health checks"
+        error_budget_minutes: 43.2  # ~43 minutes per month
+        
+      latency_p99:
+        target: 0.5  # < 500ms p99
+        description: "P99 request latency < 500ms"
+        error_budget_percent: 10
+        
+      error_rate:
+        target: 0.001  # < 0.1% errors
+        description: "Error rate < 0.1%"
+        error_budget_percent: 5
+  
+  # API Service
+  rbac-api:
+    display_name: "RBAC API"
+    criticality: high
+    owner: backend-team
+    slack_channel: "#rbac-slo"
+    
+    slos:
+      availability:
+        target: 0.9999  # 99.99% uptime
+        description: "API service availability"
+        error_budget_minutes: 4.32  # ~4 minutes per month
+        
+      latency_p99:
+        target: 0.1  # < 100ms p99
+        description: "P99 API latency < 100ms"
+        error_budget_percent: 5
+        
+      error_rate:
+        target: 0.0005  # < 0.05% errors
+        description: "Error rate < 0.05%"
+        error_budget_percent: 3
+  
+  # ML/Semantic Search Service
+  embeddings-api:
+    display_name: "Embeddings API"
+    criticality: high
+    owner: ml-team
+    slack_channel: "#embeddings-slo"
+    
+    slos:
+      availability:
+        target: 0.999  # 99.9% uptime
+        description: "Embeddings service availability"
+        error_budget_minutes: 43.2
+        
+      latency_p95:
+        target: 1.0  # < 1s p95 (ML is slower)
+        description: "P95 embedding latency < 1s"
+        error_budget_percent: 10
+        
+      error_rate:
+        target: 0.01  # < 1% errors (acceptable for ML)
+        description: "Error rate < 1%"
+        error_budget_percent: 8
+  
+  # Frontend Service
+  frontend:
+    display_name: "Frontend Application"
+    criticality: high
+    owner: frontend-team
+    slack_channel: "#frontend-slo"
+    
+    slos:
+      availability:
+        target: 0.999  # 99.9% uptime
+        description: "Frontend service availability"
+        error_budget_minutes: 43.2
+        
+      page_load_p75:
+        target: 3.0  # < 3s p75 load time
+        description: "P75 page load < 3s"
+        error_budget_percent: 8
+        
+      error_rate:
+        target: 0.001  # < 0.1% errors
+        description: "Frontend error rate < 0.1%"
+        error_budget_percent: 5
+
+# Alert thresholds
+alert_thresholds:
+  # Burn rate alerts (accelerated SLO consumption)
+  fast_burn:
+    window_minutes: 5
+    threshold_multiplier: 10  # 10x normal burn rate
+    severity: critical
+  
+  slow_burn:
+    window_minutes: 60
+    threshold_multiplier: 3  # 3x normal burn rate
+    severity: warning
+  
+  # Error budget exhaustion
+  budget_exhaustion:
+    threshold_percent: 50   # Alert if 50% of budget burnt
+    severity: warning
+    
+  # Critical outage
+  critical_outage:
+    threshold_percent: 99   # 99% error rate = critical outage
+    severity: critical

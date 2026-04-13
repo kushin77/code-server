@@ -1,0 +1,122 @@
+# Prometheus Recording Rules for SLO Metrics
+# These precompute expensive SLO calculations
+
+groups:
+  - name: slo_recording_rules
+    interval: 30s
+    
+    rules:
+      # Availability metrics (percentage of time service is healthy)
+      - record: slo:availability:30d
+        expr: |
+          (1 - avg_over_time(rate(up{job!=''}[1m])[30d:1m])) * 100
+        labels:
+          metric_type: availability
+      
+      - record: slo:availability:7d
+        expr: |
+          (1 - avg_over_time(rate(up{job!=''}[1m])[7d:1m])) * 100
+        labels:
+          metric_type: availability
+      
+      # Error rate metrics (percentage of requests that errored)
+      - record: slo:error_rate:30d
+        expr: |
+          (1 - sum(rate(requests_total{status=~'2..'}[1h])) / sum(rate(requests_total[1h]))) * 100
+        labels:
+          metric_type: error_rate
+      
+      - record: slo:error_rate:1h
+        expr: |
+          (1 - rate(requests_total{status=~'2..'}[1h]) / rate(requests_total[1h])) * 100
+        labels:
+          metric_type: error_rate
+      
+      # Latency metrics
+      - record: slo:latency:p99
+        expr: |
+          histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+        labels:
+          metric_type: latency
+          percentile: '99'
+      
+      - record: slo:latency:p95
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+        labels:
+          metric_type: latency
+          percentile: '95'
+      
+      - record: slo:latency:p50
+        expr: |
+          histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))
+        labels:
+          metric_type: latency
+          percentile: '50'
+      
+      # Error budget remaining (in percentage)
+      - record: slo:error_budget_remaining:code_server
+        expr: |
+          100 - (slo:error_rate:30d{job='code-server'} / 0.1)
+        labels:
+          service: code-server
+          slo_target: '99.9'
+      
+      - record: slo:error_budget_remaining:rbac_api
+        expr: |
+          100 - (slo:error_rate:30d{job='rbac-api'} / 0.05)
+        labels:
+          service: rbac-api
+          slo_target: '99.99'
+      
+      - record: slo:error_budget_remaining:embeddings
+        expr: |
+          100 - (slo:error_rate:30d{job='embeddings-api'} / 1.0)
+        labels:
+          service: embeddings-api
+          slo_target: '99.9'
+      
+      - record: slo:error_budget_remaining:frontend
+        expr: |
+          100 - (slo:error_rate:30d{job='frontend'} / 0.1)
+        labels:
+          service: frontend
+          slo_target: '99.9'
+      
+      # Burn rate (how fast error budget is consumed)
+      - record: slo:burn_rate:5m
+        expr: |
+          (1 - avg(rate(up[5m]))) * 30 * 24 * 60 / 43.2
+        labels:
+          metric_type: burn_rate
+          window: '5m'
+      
+      - record: slo:burn_rate:1h
+        expr: |
+          (1 - avg(rate(up[1h]))) * 30 * 24 * 60 / 43.2
+        labels:
+          metric_type: burn_rate
+          window: '1h'
+      
+      # Availability SLI (Service Level Indicator - the actual measurement)
+      - record: sli:availability
+        expr: |
+          rate(up{job!=''}[1m])
+      
+      # Request success ratio SLI
+      - record: sli:requests:success_ratio
+        expr: |
+          rate(requests_total{status=~'2..'}[5m]) / rate(requests_total[5m])
+      
+      # Latency SLI (requests faster than threshold)
+      - record: sli:requests:latency_fast
+        expr: |
+          rate(http_request_duration_seconds_bucket{le='0.5'}[5m]) / rate(http_request_duration_seconds_count[5m])
+      
+      # Composite SLO (combined availability + error rate)
+      - record: slo:composite:overall
+        expr: |
+          avg(
+            (slo:availability:30d{job=~'code-server|rbac-api|frontend|embeddings-api'} / 99.9) * 0.5
+            + (100 - slo:error_rate:30d{job=~'code-server|rbac-api|frontend|embeddings-api'}) * 0.5
+          )

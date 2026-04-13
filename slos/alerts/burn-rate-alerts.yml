@@ -1,0 +1,175 @@
+# Error Budget Burn Rate Alerts
+# Detects when services are consuming error budget too quickly
+
+groups:
+  - name: error_budget_alerts
+    interval: 30s
+    
+    # Code Server SLO Burn Rate Alerts
+    rules:
+      - alert: CodeServerHighBurnRate
+        expr: |
+          (1 - avg(rate(up{job='code-server'}[5m]))) > (1 - 0.999) * 10
+        for: 5m
+        labels:
+          severity: critical
+          service: code-server
+          slo: availability
+        annotations:
+          summary: "Code Server availability SLO at risk (10x burn rate)"
+          runbook: "https://wiki.internal/runbooks/code-server-high-burn"
+          dashboard: "http://grafana/d/slo-code-server"
+      
+      - alert: CodeServerLatencyBurnRate
+        expr: |
+          histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job='code-server'}[5m])) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+          service: code-server
+          slo: latency_p99
+        annotations:
+          summary: "Code Server P99 latency > 500ms (exceeding SLO)"
+          dashboard: "http://grafana/d/slo-code-server"
+      
+      - alert: CodeServerErrorBudgetCritical
+        expr: |
+          (1 - avg(rate(requests_total{job='code-server', status=~'2..'}[30m]))) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          service: code-server
+          slo: error_rate
+        annotations:
+          summary: "Code Server error rate > 1% (error budget critical)"
+          action: "Page on-call engineer"
+      
+      # RBAC API SLO Burn Rate Alerts
+      - alert: RBACAPIHighBurnRate
+        expr: |
+          (1 - avg(rate(up{job='rbac-api'}[5m]))) > (1 - 0.9999) * 10
+        for: 5m
+        labels:
+          severity: critical
+          service: rbac-api
+          slo: availability
+        annotations:
+          summary: "RBAC API availability SLO at risk (10x burn rate)"
+          runbook: "https://wiki.internal/runbooks/rbac-api-high-burn"
+          dashboard: "http://grafana/d/slo-rbac-api"
+      
+      - alert: RBACAPILatencyBurnRate
+        expr: |
+          histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job='rbac-api'}[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: rbac-api
+          slo: latency_p99
+        annotations:
+          summary: "RBAC API P99 latency > 100ms (exceeding SLO)"
+          dashboard: "http://grafana/d/slo-rbac-api"
+      
+      - alert: RBACAPIErrorBudgetCritical
+        expr: |
+          (1 - avg(rate(requests_total{job='rbac-api', status=~'2..'}[30m]))) > 0.005
+        for: 5m
+        labels:
+          severity: critical
+          service: rbac-api
+          slo: error_rate
+        annotations:
+          summary: "RBAC API error rate > 0.5% (error budget critical)"
+          action: "Page on-call engineer IMMEDIATELY"
+      
+      # Embeddings API SLO Burn Rate Alerts
+      - alert: EmbeddingsHighBurnRate
+        expr: |
+          (1 - avg(rate(up{job='embeddings-api'}[5m]))) > (1 - 0.999) * 10
+        for: 5m
+        labels:
+          severity: critical
+          service: embeddings-api
+          slo: availability
+        annotations:
+          summary: "Embeddings API availability SLO at risk"
+          dashboard: "http://grafana/d/slo-embeddings"
+      
+      - alert: EmbeddingsLatencyBurnRate
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job='embeddings-api'}[5m])) > 1.0
+        for: 20m
+        labels:
+          severity: warning
+          service: embeddings-api
+          slo: latency_p95
+        annotations:
+          summary: "Embeddings API P95 latency > 1s"
+          dashboard: "http://grafana/d/slo-embeddings"
+      
+      # Frontend SLO Burn Rate Alerts
+      - alert: FrontendHighBurnRate
+        expr: |
+          (1 - avg(rate(up{job='frontend'}[5m]))) > (1 - 0.999) * 10
+        for: 5m
+        labels:
+          severity: critical
+          service: frontend
+          slo: availability
+        annotations:
+          summary: "Frontend availability SLO at risk"
+          dashboard: "http://grafana/d/slo-frontend"
+      
+      - alert: FrontendErrorBudgetCritical
+        expr: |
+          (1 - avg(rate(requests_total{job='frontend', status=~'2..'}[30m]))) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          service: frontend
+          slo: error_rate
+        annotations:
+          summary: "Frontend error rate > 1%"
+          action: "Page on-call engineer"
+      
+      # Global error budget exhaustion alert
+      - alert: ErrorBudgetExhausted
+        expr: |
+          (sum(rate(requests_total{status=~'5..'}[30m])) / sum(rate(requests_total[30m]))) > 0.05
+        for: 15m
+        labels:
+          severity: critical
+          type: budget_exhaustion
+        annotations:
+          summary: "Global error budget exhausted - error rate > 5%"
+          action: "CRITICAL: Page all on-call engineers"
+          dashboard: "http://grafana/d/slo-dashboard"
+      
+      # Monthly error budget consumption tracking
+      - alert: MonthlyErrorBudgetUsage50Percent
+        expr: |
+          (
+            12 * abs(1 - avg_over_time((1 - rate(requests_total{status=~'5..'}[1h]))[30d:1h]))
+          ) >= 50
+        for: 1h
+        labels:
+          severity: warning
+          type: budget_tracking
+        annotations:
+          summary: "Service has consumed 50% of monthly error budget"
+          action: "Review SLO targets and incident response"
+          dashboard: "http://grafana/d/error-budget-dashboard"
+      
+      - alert: MonthlyErrorBudgetUsage75Percent
+        expr: |
+          (
+            12 * abs(1 - avg_over_time((1 - rate(requests_total{status=~'5..'}[1h]))[30d:1h]))
+          ) >= 75
+        for: 30m
+        labels:
+          severity: critical
+          type: budget_tracking
+        annotations:
+          summary: "Service has consumed 75% of monthly error budget"
+          action: "Escalate to engineering leadership"
+          dashboard: "http://grafana/d/error-budget-dashboard"

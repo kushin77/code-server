@@ -1,0 +1,99 @@
+{
+  "dashboard": {
+    "title": "SLO Tracking & Error Budget Dashboard",
+    "uid": "slo-dashboard-main",
+    "tags": ["slo", "error-budget", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Service Availability vs SLO Target",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "avg by (job) (rate(up[5m]))",
+            "legendFormat": "{{ job }} Availability"
+          }
+        ],
+        "yaxes": [
+          { "label": "Availability %", "format": "percentunit" }
+        ]
+      },
+      {
+        "title": "Error Budget Consumption (Monthly)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "(1 - avg by (job) (rate(requests_total{status=~'2..'}[1h]))) * 100",
+            "legendFormat": "{{ job }} Error %"
+          }
+        ]
+      },
+      {
+        "title": "P99 Latency vs SLO",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) by (job)",
+            "legendFormat": "{{ job }} P99 Latency"
+          }
+        ],
+        "yaxes": [
+          { "label": "Seconds", "format": "s" }
+        ]
+      },
+      {
+        "title": "Error Rate by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "(1 - avg by (job) (rate(requests_total{status=~'2..'}[5m]))) * 100",
+            "legendFormat": "{{ job }} Error Rate %"
+          }
+        ],
+        "yaxes": [
+          { "label": "Error Rate %", "format": "percent" }
+        ]
+      },
+      {
+        "title": "Burn Rate (Last 5 Minutes vs SLO Budget)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "(1 - avg by (job) (rate(up[5m]))) / (1 - 0.999) * 100",
+            "legendFormat": "{{ job }} Burn Rate Multiple"
+          }
+        ]
+      },
+      {
+        "title": "Monthly Error Budget Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "avg by (job) (available_budget_percent)",
+            "legendFormat": "{{ job }}"
+          }
+        ]
+      },
+      {
+        "title": "SLO Breaches This Month",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "slo_breaches_total",
+            "legendFormat": "{{ service }}"
+          }
+        ]
+      },
+      {
+        "title": "Alert Fire Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ALERTS{alertname=~'.*BurnRate|.*BudgetCritical'}[1h]) > 0",
+            "legendFormat": "{{ alertname }}"
+          }
+        ]
+      }
+    ]
+  }
+}

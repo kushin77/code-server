@@ -1,0 +1,321 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-config
+
+data:
+  sampling.json: |
+    {
+      "default_strategy": {
+        "type": "probabilistic",
+        "param": 0.1
+      },
+      "service_strategies": [
+        {"service": "code-server", "type": "probabilistic", "param": 0.5},
+        {"service": "rbac-api", "type": "probabilistic", "param": 0.8},
+        {"service": "frontend", "type": "probabilistic", "param": 0.3},
+        {"service": "ollama", "type": "const", "param": 1}
+      ]
+    }
+# Jaeger Configuration - Distributed Tracing
+# Phase 5.1: Observability Infrastructure
+# Date: April 12, 2026
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-config
+  namespace: default
+
+data:
+  sampling.json: |
+    {
+      "default_strategy": {
+        "type": "probabilistic",
+        "param": 0.1
+      },
+      "service_strategies": [
+        {
+          "service": "code-server",
+          "type": "probabilistic",
+          "param": 0.5
+        },
+        {
+          "service": "rbac-api",
+          "type": "probabilistic",
+          "param": 0.8
+        },
+        {
+          "service": "frontend",
+          "type": "probabilistic",
+          "param": 0.3
+        },
+        {
+          "service": "ollama",
+          "type": "const",
+          "param": 1
+        }
+      ]
+    }
+
+  collector-config.yml: |
+    # Jaeger Collector Configuration
+    receivers:
+      jaeger:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:14250
+          thrift_http:
+            endpoint: 0.0.0.0:14268
+          thrift_compact:
+            endpoint: 0.0.0.0:6831/udp
+          thrift_binary:
+            endpoint: 0.0.0.0:6832/udp
+
+    processors:
+      batch:
+        send_batch_size: 1024
+        timeout: 5s
+      sampling:
+        sampling_percentage: 10
+      span:
+        name:
+          to_attributes:
+            rules:
+              - ^/health
+              - ^/metrics
+
+    exporters:
+      jaeger:
+        endpoint: http://jaeger-query:14250
+      logging:
+        loglevel: info
+
+    service:
+      pipelines:
+        traces:
+          receivers: [jaeger]
+          processors: [batch, sampling, span]
+          exporters: [jaeger, logging]
+
+  query-config.yml: |
+    # Jaeger Query Service Configuration
+    server:
+      port: 16686
+      admin_port: 14269
+
+    storage:
+      type: elasticsearch
+      elasticsearch:
+        server_urls:
+          - http://elasticsearch:9200
+        index_prefix: jaeger
+        useReadAlias: true
+        tags:
+          http.method:
+            type: keyword
+          http.status_code:
+            type: integer
+          service.name:
+            type: keyword
+          span.kind:
+            type: keyword
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-environment
+  namespace: default
+
+data:
+  # Jaeger Collector environment variables
+  COLLECTOR_PORT: "14250"
+  COLLECTOR_HTTP_PORT: "14268"
+  COLLECTOR_ZIPKIN_HTTP_PORT: "9411"
+  
+  # Jaeger Query environment variables
+  QUERY_PORT: "16686"
+  QUERY_BASE_PATH: "/jaeger"
+  
+  # Storage configuration
+  STORAGE_TYPE: "elasticsearch"
+  ES_SERVER_URLS: "http://elasticsearch:9200"
+  ES_INDEX_PREFIX: "jaeger"
+  ES_BULK_SIZE: "1000"
+  ES_BULK_WORKERS: "5"
+  
+  # Sampling strategy
+  SAMPLING_STRATEGIES_FILE: "/etc/jaeger/sampling.json"
+  SAMPLING_DEFAULT_STRATEGY: "probabilistic"
+  SAMPLING_DEFAULT_PARAM: "0.1"
+  
+  # Logging
+  LOG_LEVEL: "info"
+
+---
+# OpenTelemetry Configuration for Application Instrumentation
+
+opentelemetry-config: |
+  apiVersion: opentelemetry.io/v1alpha1
+  kind: TracesHandler
+  metadata:
+    name: agent-farm-traces
+    namespace: default
+  spec:
+    exporters:
+      - type: jaeger
+        config:
+          endpoint: http://jaeger-collector:14250
+          agent_host: jaeger-agent
+          agent_port: 6831
+          sampler:
+            type: probabilistic
+            param: 0.1
+      
+      - type: logging
+        config:
+          loglevel: debug
+    
+    processors:
+      - type: batch
+        config:
+          send_batch_size: 512
+          timeout: 5s
+      
+      - type: memory_limiter
+        config:
+          check_interval: 1s
+          limit_mib: 512
+      
+      - type: resource_detection
+        config:
+          detectors: [env, system]
+      
+      - type: span
+        config:
+          name:
+            to_attributes:
+              rules:
+                - ^/health
+                - ^/metrics
+
+---
+# Application-Specific Instrumentation Traces
+
+traces:
+  code-server:
+    spans:
+      - name: extension.activation
+        attributes:
+          service: code-server
+          component: extension
+        duration_threshold: 5s
+      
+      - name: code.analysis
+        attributes:
+          service: code-server
+          component: analysis
+        duration_threshold: 2s
+      
+      - name: file.operations
+        attributes:
+          service: code-server
+          component: workspace
+        duration_threshold: 500ms
+
+  rbac-api:
+    spans:
+      - name: http.request
+        attributes:
+          service: rbac-api
+          component: http
+        duration_threshold: 100ms
+      
+      - name: database.query
+        attributes:
+          service: rbac-api
+          component: database
+        duration_threshold: 50ms
+      
+      - name: authentication
+        attributes:
+          service: rbac-api
+          component: auth
+        duration_threshold: 100ms
+
+  frontend:
+    spans:
+      - name: page.load
+        attributes:
+          service: frontend
+          component: ui
+        duration_threshold: 2000ms
+      
+      - name: react.render
+        attributes:
+          service: frontend
+          component: react
+        duration_threshold: 100ms
+      
+      - name: api.call
+        attributes:
+          service: frontend
+          component: api
+        duration_threshold: 1000ms
+
+  ollama:
+    spans:
+      - name: model.inference
+        attributes:
+          service: ollama
+          component: model
+        duration_threshold: 1000ms
+      
+      - name: embedding.generation
+        attributes:
+          service: ollama
+          component: embedding
+        duration_threshold: 500ms
+
+---
+# Service Dependency Tracing
+
+service-dependencies:
+  routes:
+    - source: frontend
+      target: rbac-api
+      operations:
+        - GET /api/users
+        - POST /api/users
+        - GET /api/roles
+        - POST /auth/
+
+    - source: frontend
+      target: code-server
+      operations:
+        - GET /health
+        - WebSocket upgrade
+
+    - source: rbac-api
+      target: ollama
+      operations:
+        - POST /api/embeddings
+        - POST /api/generate
+
+    - source: code-server
+      target: ollama
+      operations:
+        - POST /api/embeddings
+        - WebSocket /api/stream-analysis
+
+  trace_attributes:
+    - trace_id
+    - span_id
+    - parent_span_id
+    - service_name
+    - operation_name
+    - status_code
+    - duration_ms
+    - error
+    - tags

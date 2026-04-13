@@ -1,0 +1,27 @@
+groups:
+  - name: slo_alerts
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Service {{ \.instance }} is down'
+          
+      - alert: HighErrorRate
+        expr: rate(requests_total{status=~'5..'}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'High error rate for {{ \.service }}'
+          
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, http_request_duration_seconds) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'P99 latency > 500ms for {{ \.service }}'

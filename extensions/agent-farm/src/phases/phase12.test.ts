@@ -1,7 +1,7 @@
 /**
  * Phase 12: Multi-Site Federation & Geographic Distribution Test Suite
  * Comprehensive tests for global distribution, routing, replication, and federation
- * 
+ *
  * Test Coverage:
  * - Geographic routing and latency optimization
  * - Global load balancing strategies
@@ -10,7 +10,7 @@
  * - Multi-site orchestration
  * - Federation agent coordination
  * - HA/DR across global regions
- * 
+ *
  * Standards: FAANG-level TypeScript strict mode
  * Total: 200+ test cases, 95%+ coverage
  */
@@ -947,7 +947,7 @@ function createFederationAgent(config: any) {
   const registry = createGeographicRegistry();
   const router = createGeographicRouter();
   const orchestrator = createFederationOrchestrator(config, registry, router);
-  
+
   // Deploy regions
   orchestrator.deployRegion(config.primaryRegion, [`${config.primaryRegion}-replica-1`], true);
   config.secondaryRegions.forEach((region: string) => orchestrator.deployRegion(region, [`${region}-replica-1`, `${region}-replica-2`], false));

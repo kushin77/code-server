@@ -1,0 +1,39 @@
+# RBAC Policy for ArgoCD
+# Defines roles and permissions for users and groups
+
+# Default role - read-only access
+p, role:readonly, applications, get, */*, allow
+p, role:readonly, repositories, get, *, allow
+p, role:readonly, logs, get, */*, allow
+p, role:readonly, accounts, get, *, allow
+
+# Developer role - can create and manage apps
+p, role:developer, applications, create, */* allow
+p, role:developer, applications, update, */*, allow
+p, role:developer, applications, delete, */*, allow
+p, role:developer, applications, sync, */*, allow
+p, role:developer, repositories, get, *, allow
+
+# Admin role - full access
+p, role:admin, applications, *, */*, allow
+p, role:admin, repositories, *, *, allow
+p, role:admin, clusters, *, *, allow
+p, role:admin, accounts, *, *, allow
+p, role:admin, logs, *, */*, allow
+p, role:admin, certificates, *, *, allow
+
+# Operator role - can sync and troubleshoot
+p, role:operator, applications, sync, */*, allow
+p, role:operator, applications, get, */*, allow
+p, role:operator, logs, get, */*, allow
+
+# Group mappings (OIDC/SAML)
+g, admins, role:admin
+g, devs, role:developer
+g, ops, role:operator
+g, readers, role:readonly
+
+# Specific user permissions
+g, alice@example.com, role:admin
+g, bob@example.com, role:developer
+g, charlie@example.com, role:operator

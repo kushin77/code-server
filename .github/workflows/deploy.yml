@@ -25,8 +25,8 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Terraform Ini
-        run: terraform ini
+      - name: Terraform Init
+        run: terraform init
 
       - name: Terraform Validate
         run: terraform validate
@@ -46,8 +46,8 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Terraform Ini
-        run: terraform ini
+      - name: Terraform Init
+        run: terraform init
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan -lock=false
@@ -76,8 +76,8 @@ jobs:
         with:
           name: tfplan
 
-      - name: Terraform Ini
-        run: terraform ini
+      - name: Terraform Init
+        run: terraform init
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan

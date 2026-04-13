@@ -12,7 +12,7 @@ else
 fi
 
 # Terraform checks (if Terraform files present)
-if command -v terraform >/dev/null 2>&1 && ls **/*.tf 1> /dev/null 2>&1; then
+if command -v terraform >/dev/null 2>&1 && find . -name '*.tf' -not -path './.terraform/*' | grep -q .; then
   echo "Terraform files detected — running fmt and validate"
   terraform fmt -check -recursive || (echo "terraform fmt failed"; exit 1)
   terraform init -backend=false || true

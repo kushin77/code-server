@@ -19,6 +19,19 @@
 
     encode gzip
 
+    # ── Brute-force protection on auth endpoints ────────────────────────────────────
+    # Requires caddy-ratelimit module (included in Dockerfile.caddy)
+    @oauth_login {
+        path /oauth2/sign_in /oauth2/auth
+    }
+    rate_limit @oauth_login {
+        zone oauth_brute {
+            key     {remote_host}
+            events  20
+            window  1m
+        }
+    }
+
     # Security headers
     header {
         X-Content-Type-Options nosniff
@@ -26,6 +39,8 @@
         X-Frame-Options SAMEORIGIN
         X-XSS-Protection "1; mode=block"
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        # CSP: allow wss/ws for IDE terminals and extension host; blob:/data: for fonts/worker
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws: https:; worker-src 'self' blob:; frame-src 'self';"
         -Server
     }
 
@@ -45,6 +60,8 @@
         header_up Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-Proto https
+        # Preserve client IP through proxy chain
+        header_up X-Forwarded-For {remote_host}
     }
 }
 

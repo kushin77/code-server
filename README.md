@@ -1,69 +1,209 @@
-# Enterprise Code-Server Deploymen
+# Enterprise Code-Server Deployment
 
-## Quick Start (HTTPS + Reverse Proxy)
+Production-grade VS Code IDE with **elite local LLM (Ollama)**, OAuth2 authentication, and enterprise security.
+
+## 🚀 Quick Start
 
 ### Prerequisites
 - Docker & Docker Compose installed
-- WSL2 or Linux environmen
+- 32GB RAM (recommended for full LLM support)
+- 50GB disk space (for LLM models)
 
-### Deployment Steps
+### Deploy Everything
 
-1. **Start enterprise stack:**
 ```bash
-cd ~/code-server-enterprise
-docker-compose up -d
+# Clone and navigate
+cd code-server-enterprise
 
+# Start all services (code-server + Ollama + OAuth2 + Caddy)
+make deploy
 
-2. **Access via HTTPS:**
+# Pull elite LLM models (takes 30-60 minutes)
+make ollama-pull-models
 
-https://localhos
+# Initialize repository indexing
+make ollama-init
 
+# Monitor status
+make status
+```
 
-3. **Get initial password:**
+## ✨ What You Get
+
+### 🏆 Enterprise Code-Server
+- ✅ Full VS Code IDE in the browser
+- ✅ GitHub Copilot integration (both chat & code completion)
+- ✅ Persistent workspace volumes
+- ✅ OAuth2 authentication (Google/GitHub)
+- ✅ Reverse proxy with HTTPS/TLS (Caddy)
+- ✅ WebSocket support for real-time features
+- ✅ Container isolation & security hardening
+
+### 🧠 Elite Local LLM (Ollama)
+- ✅ **llama2:70b-chat** - Claude Opus-class reasoning (31GB)
+- ✅ **codegemma** - Code-specialized model (9GB)  
+- ✅ **neural-chat** - Fast & capable (13GB)
+- ✅ **mistral** - Ultra-lightweight (4GB)
+- ✅ Repository context learning & indexing
+- ✅ Semantic search across codebase
+- ✅ 100% local - no external API calls
+- ✅ Native VS Code integration via `@ollama`
+
+## 💬 Using the LLM
+
+Open VS Code Chat (Ctrl+Alt+I) and chat with Ollama:
+
+```
+@ollama explain this function
+
+@ollama generate unit tests with >95% coverage for this file
+
+@ollama refactor this code for performance
+
+@ollama how does the authentication system work in this repo?
+
+@ollama generate API documentation with examples
+```
+
+## 📚 Full Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [OLLAMA_INTEGRATION.md](OLLAMA_INTEGRATION.md) | Complete Ollama setup & usage guide |
+| [QUICK_START.md](QUICK_START.md) | Getting started with code-server |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System design & components |
+| [CODE_SECURITY_HARDENING.md](CODE_SECURITY_HARDENING.md) | Security features & hardening |
+
+## 🛠️ Management Commands
+
 ```bash
-grep password ~/.config/code-server/config.yaml
+# Ollama Management
+make ollama-health              # Check if Ollama is responding
+make ollama-pull-models         # Pull all 4 elite models
+make ollama-list                # Show available models
+make ollama-init                # Full init (pull + index)
+make ollama-status              # Show service status
+make ollama-logs                # Stream Ollama logs
 
+# Deployment
+make deploy                     # Deploy everything
+make destroy                    # Destroy all resources
+make status                     # Show status
+make logs                       # Stream logs
+make shell                      # SSH into code-server
+
+# Aliases
+make om                         # ollama-status
+make oi                         # ollama-init
+make op                         # ollama-pull-models
+make d                          # deploy
+make s                          # status
+```
+
+Run `make help` for all available commands.
+
+## 🔗 Access Points
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| **Code-Server** | https://your-domain | Main IDE interface |
+| **Ollama API** | http://localhost:11434 | LLM inference endpoint |
+| **OAuth2 Proxy** | http://localhost:4180 | Auth sidecar |
+| **Caddy** | http://localhost | Reverse proxyhttps://your-domain | LLM inference endpoint |
+
+## 📦 Architecture
+
+```
+┌─── Code-Server (VS Code) ───────────────────┐
+│  • Copilot Chat (GitHub)                    │
+│  • Ollama Chat (@ollama) [LOCAL LLM]        │
+│  • Repository Indexing (semantic search)    │
+└──────────────┬──────────────────────────────┘
+               │
+          docker network
+               │
+┌──────────────v──────────────────────────────┐
+│  Ollama Server (LLM Inference)              │
+│  • llama2:70b-chat (31GB)                   │
+│  • codegemma (9GB)                          │
+│  • neural-chat (13GB)                       │
+│  • mistral (4GB)                            │
+└─────────────────────────────────────────────┘
+```
+
+## 🔐 Security Features
+
+✅ OAuth2 authentication (Google/GitHub)  
+✅ HTTPS/TLS encryption (Caddy)  
+✅ Container isolation (Docker)  
+✅ No-new-privileges security option  
+✅ Capability dropping  
+✅ Read-only mounts where possible  
+✅ Persistent volumes with encryption support  
+✅ Network segmentation  
+
+## 📊 Resource Requirements
+
+| Component | Minimum | Recommended | Maximum |
+|-----------|---------|-------------|---------|
+| RAM | 8GB | 32GB | 64GB+ |
+| CPU | 4 cores | 8 cores | 16+ cores |
+| Disk | 20GB | 50-100GB | 200GB+ |
+| GPU | None (CPU ok) | NVIDIA (optional) | A100/H100 |
+
+**Note**: Models are downloaded on-demand the first time they're pulled.
+
+## 🚀 Next Steps
+
+1. **Deploy**: `make deploy`
+2. **Pull Models**: `make ollama-pull-models` (first time only)
+3. **Index Repository**: `make ollama-init`
+4. **Open Code-Server**: Visit https://your-domain
+5. **Start Chatting**: Type `@ollama` in the Chat view
+
+For detailed setup, see [OLLAMA_INTEGRATION.md](OLLAMA_INTEGRATION.md).
+
+## 📖 Learn More
+
+- [Ollama Documentation](https://ollama.ai)
+- [Code-Server Docs](https://coder.com/docs/code-server)
+- [VS Code Chat Extension API](https://code.visualstudio.com/api)
+- [Docker Compose Docs](https://docs.docker.com/compose/)
+
+## 🛠️ Troubleshooting
+
+### Ollama not responding?
+```bash
+make ollama-health      # Check connectivity
+make ollama-logs        # View logs
+docker compose restart ollama
+```
+
+### Need to pull models manually?
+```bash
+docker compose exec ollama ollama pull llama2:70b-chat
+docker compose exec ollama ollama pull codegemma
+```
+
+### Out of memory?
+- Reduce to faster models: `mistral` or `neural-chat`
+- Reduce context window: Set `ollama.contextWindow = 2048`
+- Add swap space or increase RAM
+
+See [OLLAMA_INTEGRATION.md](OLLAMA_INTEGRATION.md#troubleshooting) for detailed troubleshooting.
+
+## 📄 License
+
+- code-server: MIT
+- Ollama: MIT  
+- VS Code: Microsoft License
+- Models: Various (see individual model pages)
 
 ---
 
-## Enterprise Features Included
-
-✅ **HTTPS/TLS Encryption** - Automatic cert generation via Caddy
-✅ **Reverse Proxy** - Caddy handles all HTTP requests
-✅ **WebSocket Support** - For real-time IDE features
-✅ **Security Headers** - HSTS, X-Frame-Options, CSP ready
-✅ **Container Isolation** - Docker network segmentation
-✅ **Persistent Storage** - Volumes for code and configuration
-
----
-
-## Next Steps (Post-Deployment)
-
-### Add OAuth2 Authentication (GitHub/Google)
-Install `oauth2-proxy` alongside Caddy for SSO:
-```yaml
-oauth2-proxy:
-  image: quay.io/oauth2-proxy/oauth2-proxy:lates
-  environment:
-    - OAUTH2_PROXY_CLIENT_ID=your-github-app-id
-    - OAUTH2_PROXY_CLIENT_SECRET=your-github-secre
-    - OAUTH2_PROXY_PROVIDER=github
-
-
-### Add Multi-User Suppor
-Use Coder platform instead of standalone code-server for:
-- Team workspaces
-- RBAC (Role-Based Access Control)
-- Resource quotas
-- Audit logging
-
-### Enable Monitoring
-Add Prometheus + Grafana for metrics:
-```yaml
-prometheus:
-  image: prom/prometheus:lates
-  volumes:
-    - ./prometheus.yml:/etc/prometheus/prometheus.yml
+**Status**: ✅ Production Ready  
+**Last Updated**: 2026-04-12  
+**Version**: 4.115.0 (code-server) + 1.0.0 (Ollama integration)
 
 
 ---

@@ -6,6 +6,30 @@ USER root
 RUN mkdir -p /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser \
     && ln -sf ../extension.js /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser/extension.js
 
+# Patch extensionHostProcess.js: neutralize the navigator-throwing shim.
+#
+# VS Code 1.115+ defines Object.defineProperty(globalThis,"navigator",{get:()=>{throw PendingMigrationError}})
+# controlled by a --supportGlobalNavigator argv flag. Extensions that access `navigator` (e.g. via Zod
+# schema init in Copilot Chat 0.43+) crash at activation, after which VS Code attempts a gallery
+# reinstall that fails on Open VSX → "cannot be installed because it was not found".
+#
+# Fix: remove the throwing defineProperty so any extension that uses navigator works unmodified.
+# The pattern anchor is the unminified string 'supportGlobalNavigator' which VS Code uses as a flag
+# name and will not change without also changing the documented CLI interface.
+#
+# Build-time assertions: (1) fail if the shim is not found (VS Code restructured — needs review);
+#                        (2) fail if the patch did not apply (pattern changed — needs review).
+RUN EXTHOST=/usr/lib/code-server/lib/vscode/out/vs/workbench/api/node/extensionHostProcess.js \
+    && if ! grep -q 'supportGlobalNavigator' "$EXTHOST"; then \
+         echo 'FATAL: navigator shim not found in extensionHostProcess.js — update patch for new VS Code version' >&2; exit 1; \
+       fi \
+    && perl -i -pe \
+         's/\w+\.supportGlobalNavigator\|\|Object\.defineProperty\(globalThis,"navigator",\{get:\(\)=>\{[^}]+\}\}\);//' \
+         "$EXTHOST" \
+    && if grep -q 'navigator is now a global' "$EXTHOST"; then \
+         echo 'FATAL: navigator shim patch did not apply — pattern changed, update Dockerfile' >&2; exit 1; \
+       fi
+
 # Patch product.json:
 #   1. Remove defaultChatAgent (causes install-loop for copilot-chat in code-server)
 #   2. Ensure BOTH github.copilot AND github.copilot-chat are in trustedExtensionAuthAccess

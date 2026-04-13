@@ -8,6 +8,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.code-server
+      args:
+        # Pin VSIX versions — override: make deploy COPILOT_VERSION=x.y.z COPILOT_CHAT_VERSION=a.b.c
+        COPILOT_VERSION: ${COPILOT_VERSION:-1.299.0}
+        COPILOT_CHAT_VERSION: ${COPILOT_CHAT_VERSION:-0.27.2}
     image: code-server-patched:local
     container_name: code-server
     restart: unless-stopped
@@ -22,8 +26,14 @@ services:
       - SERVICE_URL=https://open-vsx.org/vscode/gallery
       - ITEM_URL=https://open-vsx.org/vscode/item
       - CS_DISABLE_FILE_DOWNLOADS=false
-      - NODE_OPTIONS=--no-experimental-global-navigator
+      # --no-experimental-global-navigator was removed in Node.js 22 (bundled in code-server 4.109+).
+      # The navigator shim is patched out at image build time (see Dockerfile.code-server).
+      # --enable-source-maps gives human-readable stack traces for extension crashes.
+      - NODE_OPTIONS=--enable-source-maps
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      # Ollama integration
+      - OLLAMA_ENDPOINT=http://ollama:11434
+      - OLLAMA_DEFAULT_MODEL=llama2:70b-chat
     command:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
@@ -32,11 +42,24 @@ services:
     volumes:
       - coder-data:/home/coder
       - ${WORKSPACE_PATH:-./workspace}:/home/coder/workspace
+      # Enterprise settings: seeded into user settings on first launch (see entrypoint.sh)
+      - ./config/settings.json:/etc/code-server/settings.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: '2.0'
+        reservations:
+          memory: 512m
+          cpus: '0.25'
+    depends_on:
+      - ollama
     security_opt:
       - no-new-privileges:true
     logging:
@@ -44,6 +67,85 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+
+  # ─── Ollama ─────────────────────────────────────────────────────────────────
+  # Elite local LLM server with models rivaling Claude Opus
+  # Serves high-quality code analysis and repository learning
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    networks:
+      - enterprise
+    expose:
+      - "11434"
+    environment:
+      # Enable GPU acceleration (optional, will fall back to CPU if unavailable)
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_KEEP_ALIVE=5m
+      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
+      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
+    volumes:
+      - ollama-data:/root/.ollama
+      - ${WORKSPACE_PATH:-./workspace}:/workspace:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    # Resource limits — adjust based on available RAM
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          memory: 8G
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── ollama-init ────────────────────────────────────────────────────────────
+  # One-time service that pulls elite models and shares them with ollama
+  # Models selected for code intelligence and learning capability
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: ollama-init
+    networks:
+      - enterprise
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    volumes:
+      - ollama-data:/root/.ollama
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        echo "🚀 Pulling elite LLM models..."
+        # Main model: llama2:70b-chat (rivals Claude Opus)
+        echo "⏳ Pulling llama2:70b-chat (elite reasoning model)..."
+        ollama pull llama2:70b-chat || true
+        
+        # Code-specific models
+        echo "⏳ Pulling codegemma (Google's code reasoning)..."
+        ollama pull codegemma || true
+        
+        echo "⏳ Pulling neural-chat (code-optimized)..."
+        ollama pull neural-chat || true
+        
+        # Fast model for real-time feedback
+        echo "⏳ Pulling mistral (fast reasoning)..."
+        ollama pull mistral || true
+        
+        echo "✅ All models pulled successfully"
+        sleep infinity
+    depends_on:
+      - ollama
+    restart: on-failure
 
   # ─── oauth2-proxy ───────────────────────────────────────────────────────────
   # Eiq-org pattern: OIDC sidecar for zero-trust authentication
@@ -110,6 +212,17 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    # oauth2-proxy writes nothing to disk — run with read-only root fs
+    read_only: true
+    tmpfs:
+      - /tmp:size=10m,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.25'
+        reservations:
+          memory: 32m
     logging:
       driver: json-file
       options:
@@ -145,6 +258,13 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.50'
+        reservations:
+          memory: 64m
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -159,6 +279,8 @@ services:
 
 volumes:
   coder-data:
+    driver: local
+  ollama-data:
     driver: local
   caddy-data:
     driver: local

@@ -18,7 +18,8 @@
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
     "git.enabled": true,
-    "terminal.integrated.enabled": false,
+    "terminal.integrated.enabled": true,
+    "terminal.integrated.defaultProfile.linux": "bash",
     "[python]": {
       "editor.defaultFormatter": "ms-python.python",
       "editor.formatOnSave": true,

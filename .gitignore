@@ -49,6 +49,14 @@ docker-compose.override.yml
 *.crt
 *.key
 
+# Build artifacts
+node_modules/
+dist/
+build/
+*.d.ts
+*.d.ts.map
+*.js.map
+
 # Terraform backup
 backup.tfstate
 

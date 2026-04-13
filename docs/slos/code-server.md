@@ -12,15 +12,15 @@ Code-server is the **developer IDE platform** for enterprise development. It imp
 **What we measure**: Percentage of HTTP requests returning 2xx/3xx (excluding client errors)
 
 **Definition**:
-```
+
 successful_requests = COUNT(http_status =~ "^[23]")
 failed_requests = COUNT(http_status =~ "^[45]")
 success_rate = (successful_requests / (successful_requests + failed_requests)) × 100
-```
 
-**SLO**: **99.5%** successful requests  
-**Alert threshold**: < 99.3% for 5 minutes  
-**Impact if breached**: Users unable to access code-server, blocked on all development
+
+**SLO**: **99.5%** successful requests
+**Alert threshold**: < 99.3% for 5 minutes
+**Impact if breached**: Users unable to access code-server, blocked on all developmen
 
 ---
 
@@ -28,12 +28,12 @@ success_rate = (successful_requests / (successful_requests + failed_requests)) �
 **What we measure**: 99th percentile of request response time
 
 **Definition**:
-```
-P99_latency = PERCENTILE(request_duration_ms, 99)
-```
 
-**SLO**: **< 800ms** P99 latency  
-**Alert threshold**: > 1000ms for 5 minutes  
+P99_latency = PERCENTILE(request_duration_ms, 99)
+
+
+**SLO**: **< 800ms** P99 latency
+**Alert threshold**: > 1000ms for 5 minutes
 **Impact if breached**: Poor user experience, context switching, developer frustration
 
 ---
@@ -42,19 +42,19 @@ P99_latency = PERCENTILE(request_duration_ms, 99)
 **What we measure**: Availability of code-server service (heartbeat)
 
 **Definition**:
-```
+
 available_seconds = COUNT(health_check_pass)
 total_seconds = total_measured_seconds
 availability = (available_seconds / total_seconds) × 100
-```
 
-**SLO**: **99.5%** availability  
-**Alert threshold**: < 99.3% for 10 minutes  
+
+**SLO**: **99.5%** availability
+**Alert threshold**: < 99.3% for 10 minutes
 **Impact if breached**: Code-server down, all developers blocked
 
 ---
 
-## Error Budget
+## Error Budge
 
 ### Calendar Month (30 days)
 - **Total possible uptime**: 43,200 minutes
@@ -104,7 +104,7 @@ alert_code_server_down:
   duration: 2 minutes
   severity: critical
   action: page on-call immediately
-```
+
 
 ---
 
@@ -125,8 +125,8 @@ alert_code_server_down:
 - Current headroom: 3-4 quarters before scaling needed
 
 ### Scaling Trigger
-**When**: Peak QPS > 70% of current capacity (350 req/sec)  
-**Then**: Provision additional code-server instance + load balancer  
+**When**: Peak QPS > 70% of current capacity (350 req/sec)
+**Then**: Provision additional code-server instance + load balancer
 **Timeline**: < 1 week provisioning via Terraform
 
 ---
@@ -142,7 +142,7 @@ alert_code_server_down:
 ## Review Schedule
 
 ### Monthly Review (Last Friday of month)
-- [ ] Error budget consumption vs. forecast
+- [ ] Error budget consumption vs. forecas
 - [ ] Incident analysis and trends
 - [ ] Deployment freeze status
 

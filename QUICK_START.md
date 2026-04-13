@@ -2,44 +2,51 @@
 
 ## 🚀 Deploy in 30 Seconds
 
-### Windows (PowerShell)
+### All Platforms (Recommended - Uses Make)
+```bash
+cd c:\code-server-enterprise
+make deploy
+
+
+### Windows (PowerShell Alternative)
 ```powershell
 cd c:\code-server-enterprise
-.\deploy-iac.ps1
-```
+terraform ini
+terraform apply -auto-approve
 
-### Linux/macOS/WSL (Bash)
+
+### Linux/macOS/WSL (Alternative)
 ```bash
 cd ~/code-server-enterprise
-chmod +x deploy-iac.sh
-./deploy-iac.sh
-```
+terraform ini
+terraform apply -auto-approve
 
-### Using Terraform Directly
+
+### View What Will Deploy (Safe - Read-Only)
 ```bash
-cd ~/code-server-enterprise
-terraform init
-terraform apply
-```
+make plan
+
 
 ---
 
 ## ✅ What Gets Deployed
 
-✓ **Docker Network** - Isolated, secure container network  
-✓ **Code-Server Container** - Full VS Code IDE in browser  
-✓ **Caddy Reverse Proxy** - HTTPS, security headers, WebSocket support  
-✓ **Persistent Volumes** - Your code and settings survive restarts  
-✓ **No Manual Config** - Fully automated, zero interventions  
+✓ **Docker Network** - Isolated, secure container network
+✓ **Code-Server Container** - Full VS Code IDE in browser
+✓ **Caddy Reverse Proxy** - HTTPS, security headers, WebSocket suppor
+✓ **Persistent Volumes** - Your code and settings survive restarts
+✓ **No Manual Config** - Fully automated, zero interventions
 
 ---
 
 ## 🌐 Access Your IDE
 
-**URL:** `http://localhost`  
-**Password:** Retrieved after deployment  
+**URL:** `https://ide.kushnir.cloud`  
+**Auth:** Google OAuth2 (configured)
 
-No GitHub authentication. No dialogs. Just works.
+No secondary authentication needed. Just visit the domain.
+
+For detailed domain configuration, see: [DOMAIN_CONFIGURATION.md](./DOMAIN_CONFIGURATION.md)
 
 ---
 
@@ -53,37 +60,73 @@ docker ps --filter "label=service=code-server-enterprise"
 docker logs code-server-enterprise-app
 
 # Check Terraform state
-terraform state list
-```
+terraform state lis
+
 
 ---
 
 ## 🔧 Common Commands
 
-### Plan Changes
+### Plan Changes (Safe - Preview Only)
 ```bash
-terraform plan
-```
+make plan
+
+
+### Deploy Infrastructure (Idempotent - Safe to Run Repeatedly)
+```bash
+make deploy
+
+
+### Check Status
+```bash
+make status
+
+
+### View Logs
+```bash
+make logs
+
+
+### Shell Into Container
+```bash
+make shell
+
+
+### View Full Dashboard
+```bash
+make dashboard
+
 
 ### Update Password
 Edit `terraform.tfvars`:
 ```hcl
 code_server_password = "new-password"
-```
+
 Then:
 ```bash
-terraform apply
-```
+make deploy
+
+
+### Run IaC Audits
+```bash
+make audi
+
 
 ### Destroy Everything
 ```bash
-terraform destroy
-```
+make destroy
+
+
+## 📚 All Available Commands
+```bash
+make help
+
+
 
 ### View Outputs
 ```bash
-terraform output
-```
+terraform outpu
+
 
 ---
 
@@ -93,25 +136,25 @@ terraform output
 ```bash
 docker ps  # Check if containers are running
 docker logs code-server-enterprise-app  # Check errors
-```
+
 
 **Terraform not found?**
 ```bash
 # Install manually: https://www.terraform.io/downloads
 terraform version
-```
+
 
 **Port already in use?**
 ```bash
 # Change port in docker-compose or firewall rules
-netstat -an | grep 8080  # Check what's using port
-```
+netstat -an | grep 8080  # Check what's using por
+
 
 ---
 
 ## 📚 Learn More
 
-- **Full IaC Guide:** `IaC-README.md`
+- **Full IaC Guide:** `IaC-README.md
 - **Terraform Docs:** `main.tf` (well documented)
 - **Architecture:** `IaC-README.md` (ASCII diagram)
 
@@ -120,9 +163,9 @@ netstat -an | grep 8080  # Check what's using port
 ## 💡 Tips
 
 - **Save state file**: Git ignore it with `.gitignore` (included)
-- **Multiple environments**: Create `prod.tfvars`, `dev.tfvars`
+- **Multiple environments**: Create `prod.tfvars`, `dev.tfvars
 - **Use Makefile**: `make help` for shortcuts
-- **Backup state**: `terraform state pull > backup.tfstate`
+- **Backup state**: `terraform state pull > backup.tfstate
 
 ---
 

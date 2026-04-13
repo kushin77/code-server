@@ -1,5 +1,10 @@
 #!/bin/bash
-# Monitoring & Health Check Script
+# Portable health check script — works from any directory
+# Usage: ./health-check.sh [domain]
+set -euo pipefail
+
+COMPOSE_FILE="$(dirname "$0")/docker-compose.yml"
+DOMAIN="${1:-localhost}"
 
 echo "📊 Code-Server Enterprise Health Check"
 echo "========================================"
@@ -7,26 +12,36 @@ echo ""
 
 # Check Docker containers
 echo "🐳 Container Status:"
-docker-compose -f ~/code-server-enterprise/docker-compose.yml ps
+docker compose -f "$COMPOSE_FILE" ps
 
 echo ""
 echo "📈 Resource Usage:"
 docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" \
-  code-server-enterprise_code-server_1 \
-  code-server-enterprise_caddy_1 2>/dev/null || echo "Containers not running"
+  code-server oauth2-proxy caddy 2>/dev/null || echo "  (some containers not running)"
 
 echo ""
 echo "🌐 Network Connectivity:"
-# Test code-server endpoint
-if curl -sk https://localhost > /dev/null 2>&1; then
-  echo "✅ HTTPS endpoint responding"
+if curl -sk --max-time 5 "https://${DOMAIN}" > /dev/null 2>&1; then
+  echo "  ✅ HTTPS endpoint responding: https://${DOMAIN}"
 else
-  echo "❌ HTTPS endpoint not responding"
+  echo "  ❌ HTTPS endpoint not responding: https://${DOMAIN}"
+fi
+
+if curl -sf --max-time 5 "http://localhost:4180/ping" > /dev/null 2>&1; then
+  echo "  ✅ oauth2-proxy /ping: OK"
+else
+  echo "  ❌ oauth2-proxy not responding"
+fi
+
+if curl -sf --max-time 5 "http://localhost:8080/healthz" > /dev/null 2>&1; then
+  echo "  ✅ code-server /healthz: OK"
+else
+  echo "  ❌ code-server not responding"
 fi
 
 echo ""
-echo "📝 Recent Logs (last 10 lines):"
-docker-compose -f ~/code-server-enterprise/docker-compose.yml logs --tail=10 2>/dev/null || echo "No logs available"
+echo "📝 Recent Logs (last 10 lines each):"
+docker compose -f "$COMPOSE_FILE" logs --tail=10 2>/dev/null || echo "  No logs available"
 
 echo ""
 echo "✨ Health check complete!"

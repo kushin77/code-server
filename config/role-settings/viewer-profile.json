@@ -1,0 +1,30 @@
+{
+  "role": "viewer",
+  "priority": 10,
+  "description": "Read-only access to code. Can view, search, and review code but cannot make edits.",
+  "securityLevel": "restricted",
+  "settings": {
+    "editor.readOnly": true,
+    "editor.folding": true,
+    "editor.showFoldingControls": "auto",
+    "editor.fontSize": 13,
+    "editor.fontFamily": "Monaco, 'Courier New', monospace",
+    "editor.formatOnSave": false,
+    "editor.wordWrap": "wordWrapColumn",
+    "editor.wordWrapColumn": 100,
+    "git.enabled": false,
+    "terminal.integrated.enabled": false,
+    "files.exclude": {
+      "**/.env": true,
+      "**/.env.local": true,
+      "**/secrets": true
+    },
+    "security.workspace.trust.enabled": true,
+    "security.workspace.trust.startup": "always",
+    "workbench.colorTheme": "Default Dark+",
+    "workbench.startupEditor": "none",
+    "extensions.recommendations": false,
+    "extensions.ignoreRecommendations": true,
+    "telemetry.telemetryLevel": "off"
+  }
+}

@@ -5,7 +5,7 @@
 Since **GitHub Copilot Chat is not available** in the Open VSX marketplace (code-server's extension store), here are the **best open-source AI alternatives**:
 
 ### 1. **Continue.dev** ⭐ (Recommended)
-**Best for**: Seamless AI code completion & chat  
+**Best for**: Seamless AI code completion & cha
 **Features**:
 - Works with local or cloud models
 - Free tier with Claude API integration
@@ -14,7 +14,7 @@ Since **GitHub Copilot Chat is not available** in the Open VSX marketplace (code
 
 **Installation**:
 1. In code-server, open **Extensions** (Ctrl+Shift+X)
-2. Search: `Continue`
+2. Search: `Continue
 3. Click **Install**
 4. Configure in `.continue/config.json` with your API key or local setup
 
@@ -23,12 +23,12 @@ Since **GitHub Copilot Chat is not available** in the Open VSX marketplace (code
 # In your terminal
 ollama pull mistral  # or any model
 # Then configure Continue to use localhost:11434
-```
+
 
 ---
 
 ### 2. **Cody by Sourcegraph**
-**Best for**: Enterprise-grade AI with local options  
+**Best for**: Enterprise-grade AI with local options
 **Features**:
 - VS Code native integration
 - Works with self-hosted Sourcegraph instances
@@ -43,7 +43,7 @@ ollama pull mistral  # or any model
 ---
 
 ### 3. **Tabnine**
-**Best for**: AI autocomplete (like Copilot)  
+**Best for**: AI autocomplete (like Copilot)
 **Features**:
 - Real-time code completion
 - Free tier available
@@ -57,7 +57,7 @@ ollama pull mistral  # or any model
 ---
 
 ### 4. **LocalAI + VS Code Extension**
-**Best for**: 100% offline, fully private  
+**Best for**: 100% offline, fully private
 **Features**:
 - Run AI locally without cloud services
 - Multiple models supported
@@ -70,7 +70,7 @@ ollama pull mistral  # or any model
 docker run -p 8080:8080 localai/localai
 
 # Then in Extensions search "LocalAI"
-```
+
 
 ---
 
@@ -89,9 +89,9 @@ docker run -p 8080:8080 localai/localai
 
 ### Option A: Continue.dev + Ollama (Recommended for Self-Hosted)
 1. Install Ollama: https://ollama.ai
-2. Pull a model: `ollama pull mistral`
+2. Pull a model: `ollama pull mistral
 3. Install **Continue** extension
-4. Configure to use `http://localhost:11434`
+4. Configure to use `http://localhost:11434
 
 **Result**: Free, offline, private AI with decent performance
 
@@ -166,12 +166,12 @@ Save to `~/.continue/config.json`:
     }
   ]
 }
-```
+
 
 ### Tabnine Configuration
 Settings → Search "Tabnine" → Configure API key (auto-configured with free account)
 
 ---
 
-**Status**: ✅ Multiple free AI options available  
+**Status**: ✅ Multiple free AI options available
 **Maintained**: Github repo at https://github.com/kushin77/code-server

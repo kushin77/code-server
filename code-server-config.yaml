@@ -4,14 +4,14 @@
 bind-addr: 0.0.0.0:8080
 auth: password
 password: ${CODE_SERVER_PASSWORD}
-cert: true  # Enable HTTPS with auto-generated self-signed cert
+cert: true  # Enable HTTPS with auto-generated self-signed cer
             # Required for secure context (crypto.subtle, webviews, clipboard)
 
 # First run: accept self-signed cert in browser via Advanced -> Proceed
 
 # Security
-proxy-domain: 
-  - localhost
+proxy-domain:
+  - localhos
   - 127.0.0.1
 
 # Logging for audit trail

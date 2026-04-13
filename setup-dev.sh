@@ -10,10 +10,10 @@ echo "Installing pre-commit via pip"
 # If running inside a Python virtualenv, install into the venv.
 if [ -n "${VIRTUAL_ENV-}" ]; then
   pip3 install --upgrade pip setuptools wheel
-  pip3 install pre-commit
+  pip3 install pre-commi
 else
   # For system installs, use --user to avoid requiring sudo.
-  pip3 install --user pre-commit
+  pip3 install --user pre-commi
 fi
 
 # If pre-commit is already available, skip installation
@@ -22,10 +22,10 @@ if command -v pre-commit >/dev/null 2>&1; then
 else
   if [ -n "${VIRTUAL_ENV-}" ] || [ "$FORCE_VENV" = "true" ]; then
     python -m pip install --upgrade pip setuptools wheel
-    python -m pip install pre-commit
+    python -m pip install pre-commi
   else
     # For system installs, use --user to avoid requiring sudo.
-    pip3 install --user pre-commit
+    pip3 install --user pre-commi
   fi
 fi
 

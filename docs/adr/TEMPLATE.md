@@ -6,20 +6,20 @@ Use this template for all Architecture Decision Records.
 
 # [NNN]. [Title]
 
-**Status**: [DRAFT | Accepted | Superseded | Deprecated]  
-**Date**: [YYYY-MM-DD]  
-**Author(s)**: [@github-username]  
-**Related ADRs**: [Links to related ADRs, if any]  
-**Supersedes**: [ADR number if replacing previous decision]  
+**Status**: [DRAFT | Accepted | Superseded | Deprecated]
+**Date**: [YYYY-MM-DD]
+**Author(s)**: [@github-username]
+**Related ADRs**: [Links to related ADRs, if any]
+**Supersedes**: [ADR number if replacing previous decision]
 
 ---
 
-## Context
+## Contex
 
 What is the issue we are addressing?
 
 Explain:
-- Problem statement
+- Problem statemen
 - Why it matters
 - Current state/pain points
 - Constraints or limitations we're working within
@@ -39,34 +39,34 @@ Provide a clear, actionable decision statement.
 List at least 2-3 alternatives with tradeoffs:
 
 ### Alternative 1: [Name]
-**Pros**: 
-- 
+**Pros**:
+-
 
-**Cons**: 
-- 
+**Cons**:
+-
 
-**Why not chosen**: 
+**Why not chosen**:
 
 ### Alternative 2: [Name]
-**Pros**: 
-- 
+**Pros**:
+-
 
-**Cons**: 
-- 
+**Cons**:
+-
 
-**Why not chosen**: 
+**Why not chosen**:
 
 ---
 
 ## Consequences
 
 ### Positive Consequences
-- 
-- 
+-
+-
 
 ### Negative Consequences (Accepted Risks)
-- 
-- 
+-
+-
 
 ---
 
@@ -92,7 +92,7 @@ How does this decision affect security posture?
 
 ---
 
-## Operational Impact
+## Operational Impac
 
 - **Deployment**: [How does this change deployment?]
 - **Monitoring**: [What must we monitor?]

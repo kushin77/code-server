@@ -14,13 +14,13 @@ ADRs serve as:
 
 Create an ADR for:
 
-✅ New service architecture  
-✅ Technology selection (database, messaging, framework)  
-✅ Infrastructure topology changes  
-✅ Security boundary changes  
-✅ Major refactoring with design implications  
-✅ Scalability architecture changes  
-✅ Multi-service integration patterns  
+✅ New service architecture
+✅ Technology selection (database, messaging, framework)
+✅ Infrastructure topology changes
+✅ Security boundary changes
+✅ Major refactoring with design implications
+✅ Scalability architecture changes
+✅ Multi-service integration patterns
 
 Do NOT require ADR for:
 - Bug fixes
@@ -33,23 +33,23 @@ Do NOT require ADR for:
 
 ## ADR Naming Convention
 
-```
+
 NNN-[kebab-case-title].md
-```
+
 
 Examples:
-- `001-containerized-deployment.md`
-- `002-oauth2-proxy-authentication.md`
-- `003-terraform-remote-state.md`
+- `001-containerized-deployment.md
+- `002-oauth2-proxy-authentication.md
+- `003-terraform-remote-state.md
 
-**NNN** = Sequential number (001, 002, 003...)  
+**NNN** = Sequential number (001, 002, 003...)
 **Title** = Descriptive, lowercase, hyphens only
 
 ---
 
 ## ADR Lifecycle
 
-1. **Draft** — Author creates ADR in PR, marked as `[DRAFT]`
+1. **Draft** — Author creates ADR in PR, marked as `[DRAFT]
 2. **Review** — Team reviews, discusses tradeoffs
 3. **Accepted** — Approved and merged
 4. **Superseded** — Replaced by newer ADR (link both)
@@ -64,7 +64,7 @@ Examples:
 3. Include security implications
 4. Include scaling implications
 5. Discuss alternatives considered
-6. Open PR with title: `[ADR] NNN: [Title]`
+6. Open PR with title: `[ADR] NNN: [Title]
 7. Address review feedback
 8. Merge when approved
 
@@ -77,7 +77,7 @@ If superseded, create a new ADR and reference it:
 ```markdown
 ## Status
 Superseded by [ADR-005: New Architecture](005-new-architecture.md)
-```
+
 
 Keep old ADRs for historical context. They're immutable records.
 
@@ -91,7 +91,7 @@ Keep old ADRs for historical context. They're immutable records.
 
 ---
 
-## Enforcement
+## Enforcemen
 
 - **Architectural changes without ADR = PR blocked**
 - **Missing security/scaling implications = Request changes**

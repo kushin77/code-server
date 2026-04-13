@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   snyk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - uses: actions/checkout@v4
       - name: Authenticate to GCP via Workload Identity
@@ -47,7 +47,7 @@ jobs:
           fi
 
   gitleaks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - uses: actions/checkout@v4
       - name: Install gitleaks binary
@@ -62,13 +62,14 @@ jobs:
         run: |
           if command -v gitleaks >/dev/null 2>&1; then
             echo "Running gitleaks detect..."
-            gitleaks detect --source=. || (echo "gitleaks found potential secrets"; exit 2)
+            # .gitleaks.toml allowlist skips documentation false-positives
+            gitleaks detect --source=. --config=.gitleaks.toml || (echo "gitleaks found potential secrets"; exit 2)
           else
             echo "gitleaks not available; skipping"
           fi
 
   checkov:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - uses: actions/checkout@v4
       - name: Install Checkov
@@ -78,7 +79,7 @@ jobs:
           checkov -d . || true
 
   tfsec:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - uses: actions/checkout@v4
       - name: Install tfsec

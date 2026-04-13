@@ -27,7 +27,7 @@ What we **target**. Examples:
 ### **Error Budget**
 How much **failure is acceptable**.
 
-Formula: `Error Budget = (100% - SLO%) × Total Time`
+Formula: `Error Budget = (100% - SLO%) × Total Time
 
 Example: 99.9% SLO on a 30-day month
 - Error budget: 0.1% × (30 days × 24 hours × 60 minutes) = **43.2 minutes**
@@ -46,7 +46,7 @@ For every service that:
 - ✅ Impacts production workflow
 - ✅ Has external users or dependencies
 - ✅ Runs 24/7 or during business hours
-- ✅ Requires on-call support
+- ✅ Requires on-call suppor
 
 Do NOT create for:
 - Internal utilities with infrequent use
@@ -64,14 +64,14 @@ Not internal metrics. Users care about:
 - "Did my changes apply successfully?"
 
 ### 2. Make SLOs Achievable but Demanding
-- SLO too loose: Doesn't drive reliability investment
+- SLO too loose: Doesn't drive reliability investmen
 - SLO too tight: Constantly consuming error budget, no room for innovation
 - Sweet spot: 99.5% - 99.99% depending on service criticality
 
 ### 3. Use Error Budget for Release Decisions
 - High error budget: Can deploy new features, accept more risk
 - Low error budget: Freeze deployments, focus on stability
-- This is data-driven risk management
+- This is data-driven risk managemen
 
 ### 4. Alert on SLO Violation, Not Symptom
 - ❌ Alert on "CPU > 80%" (might not matter if latency is fine)

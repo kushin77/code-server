@@ -30,9 +30,9 @@ git pull origin main
 
 # Create feature branch (naming: feature/xxx, bugfix/xxx, refactor/xxx)
 git checkout -b feature/my-awesome-feature
-```
 
-### 2. Development
+
+### 2. Developmen
 
 ```bash
 # Make changes, commit frequently
@@ -40,10 +40,10 @@ git add .
 git commit -m "Clear, concise commit message"
 
 # Run local checks BEFORE pushing
-pre-commit run --all-files    # Lint, format
+pre-commit run --all-files    # Lint, forma
 ./scripts/validate.sh          # Custom validations
 pytest tests/ -v --cov=.       # Unit tests
-```
+
 
 ### 3. Push & Open PR
 
@@ -53,7 +53,7 @@ git push origin feature/my-awesome-feature
 
 # Open PR (GitHub will auto-detect and show PR template)
 # Fill in ALL sections of template (no skipping)
-```
+
 
 ### 4. CI/CD Runs Automatically
 

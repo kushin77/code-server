@@ -1,16 +1,16 @@
 # 002. OAuth2 Proxy for Centralized Authentication
 
-**Status**: Accepted  
-**Date**: 2026-01-27  
-**Author(s)**: @kushin77  
-**Related ADRs**: [ADR-001: Containerized Deployment](001-containerized-deployment.md)  
+**Status**: Accepted
+**Date**: 2026-01-27
+**Author(s)**: @kushin77
+**Related ADRs**: [ADR-001: Containerized Deployment](001-containerized-deployment.md)
 
 ---
 
-## Context
+## Contex
 
 Code-server by default:
-- **Does not enforce authentication** — anyone with network access can use it
+- **Does not enforce authentication** — anyone with network access can use i
 - **Has weak session management** — password-based auth, no centralized IAM
 - **Cannot integrate with corporate identity** — no OIDC/SAML
 - **Lacks audit logging** — no tracking of who accessed what, when
@@ -29,7 +29,7 @@ We needed a transparent, corporate-integrated authentication layer.
 
 We will deploy **OAuth2 Proxy** as a reverse proxy in front of code-server:
 
-```
+
 User Browser
     ↓
   Caddy (TLS termination, routing)
@@ -37,13 +37,13 @@ User Browser
   OAuth2 Proxy (auth + session management)
     ↓
   code-server (trusted, no direct auth needed)
-```
+
 
 Configuration:
 - **OAuth provider**: Google OAuth (can switch to Azure AD, Okta later)
 - **Session backend**: Cookie-based (signed, encrypted)
 - **Session timeout**: 24 hours (auto-refresh on activity)
-- **Allowed users**: Whitelist in `allowed-emails.txt`
+- **Allowed users**: Whitelist in `allowed-emails.tx
 - **Fallback**: Force login if session expired
 
 Benefits:
@@ -59,11 +59,11 @@ Benefits:
 ## Alternatives Considered
 
 ### Alternative 1: Native code-server Password Auth
-**Pros**: 
+**Pros**:
 - No proxy layer needed
-- Simpler deployment
+- Simpler deploymen
 
-**Cons**: 
+**Cons**:
 - **Weak security** — no access control beyond password
 - **No audit trail** — impossible to track access
 - **Doesn't scale** — managing 50+ passwords manually unworkable
@@ -73,12 +73,12 @@ Benefits:
 **Why not chosen**: Doesn't meet enterprise security requirements.
 
 ### Alternative 2: VPN + Network Access Control
-**Pros**: 
+**Pros**:
 - OS-level security
-- All services behind VPN benefit
+- All services behind VPN benefi
 
-**Cons**: 
-- **VPN complexity** — requires separate infrastructure, management
+**Cons**:
+- **VPN complexity** — requires separate infrastructure, managemen
 - **User friction** — employees must be VPN clients
 - **Not fine-grained** — can't revoke per-app access without revking VPN
 - **Audit gaps** — VPN logs don't correlate to app usage
@@ -87,11 +87,11 @@ Benefits:
 **Why not chosen**: Too coarse-grained, insufficient audit trail.
 
 ### Alternative 3: ORY Hydra (Full OAuth Server)
-**Pros**: 
+**Pros**:
 - Full OAuth2/OIDC compliance
 - Can act as auth server for multiple apps
 
-**Cons**: 
+**Cons**:
 - **Over-engineered** — we're not building a SaaS platform
 - **Operational complexity** — database, migrations, configuration
 - **Learning curve** — Hydra is powerful but complex
@@ -115,33 +115,33 @@ Benefits:
 - ⚠️ **Proxy adds latency** — small HTTP header validation overhead (~5-10ms)
 - ⚠️ **OAuth dependency** — if Google OAuth down, authentication fails (mitigated: fallback auth token)
 - ⚠️ **Session affinity** — repeated requests to same proxy instance preferred (mitigated: shared cookie backend)
-- ⚠️ **Configuration complexity** — OAuth callback URLs, client IDs, must be correct
+- ⚠️ **Configuration complexity** — OAuth callback URLs, client IDs, must be correc
 - ⚠️ **User experience** — first-time login adds step (login redirect flow)
 
 ---
 
 ## Security Implications
 
-- **Trust boundaries**: 
+- **Trust boundaries**:
   - OAuth2 Proxy is the security boundary
   - Code-server assumes authenticated user (implicit trust)
   - User identity passed via HTTP header (trusted because proxy controls it)
-  
-- **Attack surface**: 
+
+- **Attack surface**:
   - **Reduced**: code-server never receives unauthenticated requests
   - **New**: OAuth client credentials (mitigated: stored in GCP Secret Manager, not in repo)
   - **New**: Session cookie security (mitigated: signed, encrypted, SameSite=Lax)
-  
-- **Data exposure**: 
+
+- **Data exposure**:
   - OAuth tokens cached in session (not exposed to code-server)
   - User email passed to code-server in `X-Auth-Request-User` header
-  
-- **Authentication/Authorization**: 
+
+- **Authentication/Authorization**:
   - ✅ Authentication enforced by OAuth2 Proxy
   - ✅ Authorization via whitelist (`allowed-emails.txt`)
   - Limitations: Single authorization policy (all/none), no RBAC
-  
-- **Mitigation strategy**: 
+
+- **Mitigation strategy**:
   - OAuth credentials stored in GCP Secret Manager
   - Session cookie: httpOnly, Secure, SameSite=Lax flags
   - Regular rotation of OAuth client credentials
@@ -152,55 +152,55 @@ Benefits:
 
 ## Performance & Scalability Implications
 
-- **Horizontal scaling**: 
+- **Horizontal scaling**:
   - ✅ OAuth2 Proxy stateless (no affinity required)
   - Multiple instances load-balanced via Caddy
   - Session backend (Redis or shared store) required for distributed scenarios
-  
-- **Bottlenecks**: 
-  - OAuth token validation (network call to Google): ~100-200ms first request
+
+- **Bottlenecks**:
+  - OAuth token validation (network call to Google): ~100-200ms first reques
   - Session cookie validation: ~1-5ms (local crypto, no network)
   - Caddy load balancer routing: <1ms overhead
-  
-- **Resource usage**: 
+
+- **Resource usage**:
   - OAuth2 Proxy: ~50-100MB RAM per instance
   - CPU: minimal (mostly network I/O waiting)
   - Storage: none (stateless)
-  
-- **Latency**: 
+
+- **Latency**:
   - First auth: adds ~200ms (OAuth roundtrip)
   - Subsequent requests: <10ms additional (cookie validation)
   - P99 latency: unlikely to exceed 500ms
-  
-- **Throughput**: 
+
+- **Throughput**:
   - Single instance: ~500-1000 auth requests/sec
   - Multiple instances scale linearly
 
 ---
 
-## Operational Impact
+## Operational Impac
 
-- **Deployment**: 
+- **Deployment**:
   - OAuth2 Proxy runs as sidecar container in Compose/container orchestration
   - Configuration: env vars (OAUTH2_PROXY_CLIENT_ID, OAUTH2_PROXY_CLIENT_SECRET, etc.)
   - Secrets injected from GCP Secret Manager at runtime
-  
-- **Monitoring**: 
+
+- **Monitoring**:
   - Log successful/failed auth attempts
   - Monitor token refresh rates (high refresh = possible misconfiguration)
   - Alert if Google OAuth service unreachable
-  
-- **Alerting**: 
+
+- **Alerting**:
   - Alert on sustained 401 responses (auth failure)
   - Alert on OAuth provider downtime
   - Alert on unusual access patterns (e.g., brute force)
-  
-- **Rollback**: 
+
+- **Rollback**:
   - ✅ Stateless, can be restarted immediately
   - Change to whitelist? Edit `allowed-emails.txt`, redeploy
-  - Change OAuth provider? Update env vars, restart
-  
-- **On-call**: 
+  - Change OAuth provider? Update env vars, restar
+
+- **On-call**:
   - Understanding OAuth2 flow (OIDC handshake)
   - Debugging session/cookie issues
   - Google OAuth troubleshooting
@@ -212,8 +212,8 @@ Benefits:
 
 **OAuth Provider Setup**:
 1. Create OAuth app in Google Cloud Console
-2. Configure redirect URI: `https://<code-server-domain>/oauth2/callback`
-3. Extract client ID and client secret
+2. Configure redirect URI: `https://<code-server-domain>/oauth2/callback
+3. Extract client ID and client secre
 4. Store secrets in GCP Secret Manager (encrypted at rest)
 
 **Whitelist Management**:

@@ -1,9 +1,5 @@
-# Custom Caddy build with GoDaddy DNS-01 challenge plugin
-# Used for Let's Encrypt cert issuance without needing open port 80/443
-FROM caddy:2-builder AS builder
-
-RUN xcaddy build \
-    --with github.com/caddy-dns/godaddy
-
-FROM caddy:2-alpine
-COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+# Official Caddy v2.9.1 reverse proxy and TLS termination
+# Simplified from xcaddy build (custom plugin compatibility issues)
+# Pinned to v2.9.1 for immutability and reproducible builds
+# Uses standard HTTP-01 Let's Encrypt challenge
+FROM caddy:2.9.1

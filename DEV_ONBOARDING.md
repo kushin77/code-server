@@ -10,38 +10,38 @@ Requirements extracted from `GCP-landing-zone`:
 - Pre-commit hooks and CI gates (format, lint, security)
 - Snyk/Static scans in CI; evidence collection automated
 
-Quick start
+Quick star
 
 1. Clone this repo (already done in workspace):
 
-   git clone https://github.com/kushin77/code-server.git
+   git clone https://github.com/kushin77/code-server.gi
 
 2. Run local setup script:
 
 ```bash
 chmod +x ./setup-dev.sh
 ./setup-dev.sh
-```
+
 
 3. Authenticate to Google Cloud (if you will run cloud commands):
 
 ```bash
 gcloud auth login
 gcloud auth application-default login
-```
+
 
 4. Run pre-commit checks locally:
 
 ```bash
 pre-commit install
 pre-commit run --all-files
-```
+
 
 5. Validate repo-supplied checks (if present):
 
 ```bash
 ./scripts/validate.sh || true
-```
+
 
 Developer obligations
 - Always run `pre-commit` before pushing.
@@ -64,10 +64,10 @@ GCP tflint guidance
 - We added a minimal `.tflint.hcl` to this repo. For GCP-specific rules, install `tflint` with the `google` plugin and enable recommended rules:
 
 ```bash
-# install tflint
+# install tflin
 curl -sSL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-tflint --init
-```
+tflint --ini
+
 
 ## Confirmed onboarding steps I ran
 
@@ -80,8 +80,8 @@ cd /home/akushnir/code-server/code-server
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install pre-commit
-```
+python -m pip install pre-commi
+
 
 - Installed and enabled `pre-commit` hooks (hooks installed at `.git/hooks/pre-commit`).
 
@@ -92,15 +92,15 @@ python -m pip install pre-commit
 Reproduce locally (copy/paste):
 
 ```bash
-git clone https://github.com/kushin77/code-server.git
+git clone https://github.com/kushin77/code-server.gi
 cd code-server
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install pre-commit
+python -m pip install pre-commi
 pre-commit install
 bash scripts/validate.sh
-```
+
 
 Notes and recommendations (best practices):
 
@@ -113,9 +113,8 @@ If you'd like, I can open a PR with these doc updates, or push them to an existi
 
 - Example: enable plugin and rules in `.tflint.hcl`:
 
-```
+
 plugin "google" {}
 rule "google_compute_instance_no_external_ip" {
    enabled = true
 }
-```

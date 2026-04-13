@@ -1,13 +1,13 @@
 # 001. Containerized Code-Server Deployment on Windows
 
-**Status**: Accepted  
-**Date**: 2026-01-27  
-**Author(s)**: @kushin77  
-**Related ADRs**: [ADR-002: OAuth2 Proxy for Authentication](002-oauth2-authentication.md), [ADR-003: Terraform Infrastructure](003-terraform-infrastructure.md)  
+**Status**: Accepted
+**Date**: 2026-01-27
+**Author(s)**: @kushin77
+**Related ADRs**: [ADR-002: OAuth2 Proxy for Authentication](002-oauth2-authentication.md), [ADR-003: Terraform Infrastructure](003-terraform-infrastructure.md)
 
 ---
 
-## Context
+## Contex
 
 Enterprise development requires:
 - **Multi-developer access** to isolated development environments
@@ -48,13 +48,13 @@ This ensures:
 ## Alternatives Considered
 
 ### Alternative 1: Manual Installation + Bash Scripts
-**Pros**: 
+**Pros**:
 - Direct control, minimal abstraction
 - Works on any OS with Bash
 
-**Cons**: 
+**Cons**:
 - **Drift-prone** — manual steps diverge across deployments
-- **No auditability** — hard to track who changed what
+- **No auditability** — hard to track who changed wha
 - **Non-reproducible** — environment-specific quirks accumulate
 - **Scaling nightmare** — no automation for multi-instance deployments
 - **Security debt** — configuration buried in scripts
@@ -62,26 +62,26 @@ This ensures:
 **Why not chosen**: Doesn't meet enterprise standards for reproducibility and auditability.
 
 ### Alternative 2: Kubernetes-Only
-**Pros**: 
+**Pros**:
 - Production-grade orchestration
 - Auto-scaling, self-healing
 - Industry standard
 
-**Cons**: 
+**Cons**:
 - **Over-engineered for MVP** — additional complexity, operational burden
 - **Requires external infrastructure** — not portable to Windows dev machines
-- **Steep learning curve** — team not ready yet
+- **Steep learning curve** — team not ready ye
 - **Cost** — licensing, infrastructure, operational overhead
 
 **Why not chosen**: Starting with Docker/Compose/Terraform. Can migrate to Kubernetes later (ADR-004 TBD).
 
 ### Alternative 3: Cloud-Only SaaS (e.g., GitHub Codespaces)
-**Pros**: 
+**Pros**:
 - No infrastructure to manage
 - Zero DevOps burden
 - Autoscaling built-in
 
-**Cons**: 
+**Cons**:
 - **Vendor lock-in** — tied to GitHub ecosystem
 - **Privacy/security** — code lives on external servers
 - **Cost** — per-developer, unbounded
@@ -96,8 +96,8 @@ This ensures:
 
 ### Positive Consequences
 - ✅ **Reproducible deployments** — same Compose/Terraform files produce identical environments
-- ✅ **Security hardened** — TLS, auth, isolation by default
-- ✅ **Auditable** — all changes tracked in Git, no manual drift
+- ✅ **Security hardened** — TLS, auth, isolation by defaul
+- ✅ **Auditable** — all changes tracked in Git, no manual drif
 - ✅ **Scalable** — easy to provision multiple instances
 - ✅ **Developer experience** — lightweight, familiar Docker workflow
 - ✅ **IaC enforcement** — code reviews catch infrastructure errors
@@ -114,24 +114,24 @@ This ensures:
 
 ## Security Implications
 
-- **Trust boundaries**: 
+- **Trust boundaries**:
   - Container boundary isolates code-server from host OS
   - OAuth2 Proxy enforces authentication before traffic reaches code-server
   - Caddy terminates TLS, preventing MITM
-  
-- **Attack surface**: 
+
+- **Attack surface**:
   - **Reduced**: Docker isolation, no exposed ports without proxy
   - **New**: Dependency on Docker daemon security, Caddy/OAuth2 Proxy correctness
-  
-- **Data exposure**: 
+
+- **Data exposure**:
   - Code and secrets confined to container filesystem
   - Container image stored in private registry (requires access control)
-  
-- **Authentication/Authorization**: 
+
+- **Authentication/Authorization**:
   - OAuth2 Proxy enforces org-level authentication
   - Code-server runs without direct auth (relies on proxy)
-  
-- **Mitigation strategy**: 
+
+- **Mitigation strategy**:
   - Container images scanned for vulnerabilities (CI gate)
   - Secrets never hardcoded — injected via environment variables from GCP Secret Manager
   - Regular security updates to image base and dependencies
@@ -141,59 +141,59 @@ This ensures:
 
 ## Performance & Scalability Implications
 
-- **Horizontal scaling**: 
+- **Horizontal scaling**:
   - ✅ Can provision multiple code-server instances via Terraform
   - Each instance isolated in separate container
   - Load balancer (Caddy) routes across instances
   - Stateless (no session affinity needed)
-  
-- **Bottlenecks**: 
+
+- **Bottlenecks**:
   - Single Docker Desktop instance on Windows (performance capped)
   - Network I/O for code syncing between instances (if using shared workspace)
   - Storage I/O if using network mounts (NFS, SMB)
-  
-- **Resource usage**: 
+
+- **Resource usage**:
   - Per container: ~300-500MB RAM baseline
   - CPU: minimal unless running heavy build jobs
   - Storage: ~2GB per instance (image + workspace)
-  
-- **Latency**: 
+
+- **Latency**:
   - Container startup: ~10-30 seconds
   - Code hot-load: milliseconds (in-memory)
   - Network latency: depends on infrastructure (LAN << cloud)
-  
-- **Throughput**: 
+
+- **Throughput**:
   - Single instance: handles ~50-100 concurrent connections (Caddy)
   - Additional instances scale linearly with load balancer
 
 ---
 
-## Operational Impact
+## Operational Impac
 
-- **Deployment**: 
+- **Deployment**:
   - CI/CD builds and pushes image to registry
   - Terraform applies infrastructure definition
   - Containers restart with new image
-  - Zero-downtime if using blue-green deployment
-  
-- **Monitoring**: 
+  - Zero-downtime if using blue-green deploymen
+
+- **Monitoring**:
   - Container health checks (HTTP /health endpoint)
   - Container logs streamed to stdout/stderr (capture via Docker logging driver)
   - Prometheus metrics from code-server (if instrumented)
   - Caddy metrics for ingress traffic
-  
-- **Alerting**: 
+
+- **Alerting**:
   - Alert if container exits unexpectedly
   - Alert if /health endpoint fails
   - Alert if Caddy upstream unreachable
   - Alert if image pulls fail (registry access issue)
-  
-- **Rollback**: 
+
+- **Rollback**:
   - ✅ Simple: `docker-compose down && docker-compose up -d` with previous image version
   - Rollback time: < 2 minutes
   - Data persistence: workspace files retained (not deleted on rollback)
-  
-- **On-call**: 
+
+- **On-call**:
   - Understanding Docker, Compose, Terraform required
   - Understanding Caddy reverse proxy behavior
   - Understanding OAuth2 Proxy authentication flow
@@ -213,7 +213,7 @@ This ensures:
 
 **Phase 3 (Q4 2026)**:
 - Migration to Kubernetes for production scale
-- Helm charts for version management
+- Helm charts for version managemen
 - Increased automation for multi-region deployments
 
 ---

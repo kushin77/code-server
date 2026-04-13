@@ -12,5 +12,5 @@ assignees: []
 
 Checklist:
 
-- [x] Clone `code-server`
-- [x] Clone `GCP-landing-zone`
+- [x] Clone `code-server
+- [x] Clone `GCP-landing-zone

@@ -1,3 +1,7 @@
+# ⚠️  LEGACY TEMPLATE — For reference only
+# In production, use the dynamic Caddyfile that reads {$DOMAIN} from environment
+# This template was used by Terraform for local development before domain migration
+
 localhost {
     # Auto HTTPS
     encode gzip
@@ -12,31 +16,27 @@ localhost {
     header @stableAssets Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
     header @stableAssets Pragma "no-cache"
     header @stableAssets Expires "0"
-    
+
     # Reverse proxy to code-server
     reverse_proxy ${code_server_host}:${code_server_port} {
         # Preserve original headers
-        header_uri / X-Real-IP {http.request.remote.host}
-        header_uri / X-Forwarded-For {http.request.remote.host}
-        header_uri / X-Forwarded-Proto https
-        
-        # WebSocket support required for code-server
-        websocket
+        header_up X-Real-IP {http.request.remote.host}
+        header_up X-Forwarded-For {http.request.remote.host}
+        header_up X-Forwarded-Proto https
+
+        # WebSocket support required for code-server terminal, extensions and live sync
+        flush_interval -1
     }
-    
+
     # Security headers
     header X-Content-Type-Options nosniff
     header X-Frame-Options SAMEORIGIN
     header X-XSS-Protection "1; mode=block"
     header Strict-Transport-Security "max-age=31536000; includeSubDomains"
-    header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
-    
-    # Timeouts
-    reverse_proxy_read_timeout 3600s
-    reverse_proxy_header_timeout 3600s
+    header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
 }
 
-# HTTP to HTTPS redirect
+# HTTP to HTTPS redirect (for legacy local deployments)
 http://localhost {
     redir https://localhost{uri} permanent
 }

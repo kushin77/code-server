@@ -1,0 +1,210 @@
+# Example Terraform Variables for 192.168.168.31 Deployment
+# Copy this file to terraform.tfvars and update with actual values
+
+# ============================================================================
+# SSH ACCESS & CONNECTIVITY
+# ============================================================================
+
+# Target host IP address or hostname
+deploy_host = "192.168.168.31"
+
+# SSH user account (usually 'ubuntu', 'ec2-user', or custom name)
+deploy_user = "akushnir"
+
+# Path to private SSH key (local machine)
+# Note: File should have 0600 permissions
+deploy_ssh_key_path = "~/.ssh/akushnir-31"
+
+# Optional: Bastion/jump host configuration
+# Leave as null if direct SSH access is available
+bastion_host           = null
+bastion_user           = null
+bastion_ssh_key_path   = null
+
+# ============================================================================
+# NAS CONFIGURATION
+# ============================================================================
+
+# Primary NAS endpoint (IP address or hostname)
+nas_primary_endpoint = "192.168.168.50"
+
+# NAS export path (varies by NAS type)
+# For NFS: /export/primary
+# For iSCSI: iqn.2024-01.nas.primary
+nas_primary_path = "/export/primary"
+
+# Primary mount point on target host
+nas_primary_mount_point = "/mnt/nas-primary"
+
+# Backup NAS endpoint
+nas_backup_endpoint = "192.168.168.51"
+
+# Backup NAS export path
+nas_backup_path = "/export/backup"
+
+# Backup mount point on target host
+nas_backup_mount_point = "/mnt/nas-backup"
+
+# NAS protocol: nfs4, nfs3, or iscsi
+nas_protocol = "nfs4"
+
+# NAS mount options (NFS-specific)
+# Common options for reliable NAS:
+#   rw = read-write
+#   hard = retry until success (do not soft-fail)
+#   intr = allow interrupt on signal
+#   timeo = timeout in 0.1s units (600 = 60 seconds)
+#   retrans = number of retransmit attempts
+#   _netdev = network device (mount after network starts)
+nas_mount_options = "rw,hard,intr,timeo=600,retrans=2,_netdev"
+
+# ============================================================================
+# STORAGE ALLOCATION (in GB)
+# ============================================================================
+
+# Ollama LLM models storage
+# Typical: 70B model = 40GB, so allocate 2000GB for multiple models
+storage_ollama = 2000
+
+# Code-Server IDE data (settings, extensions, metadata)
+storage_codeserver = 500
+
+# User workspace projects
+storage_workspace = 1000
+
+# ============================================================================
+# GPU CONFIGURATION
+# ============================================================================
+
+# Number of GPUs to configure
+# Should match actual hardware (lspci | grep NVIDIA)
+gpu_count = 2
+
+# GPU model name (for documentation)
+# Examples: A100, H100, RTX4090, RTX6000
+gpu_model = "A100"
+
+# CUDA Toolkit version
+# Should match supported version for target GPUs and Docker images
+cuda_version = "12.4"
+
+# cuDNN version (must be compatible with CUDA version)
+# CUDA 12.4 → cuDNN 9.0+
+cudnn_version = "9.0"
+
+# NVIDIA driver version (empty = install latest compatible)
+# Specific version example: "550.54.14"
+nvidia_driver_version = ""
+
+# ============================================================================
+# DOCKER CONFIGURATION
+# ============================================================================
+
+# Docker version to validate/install (empty = any version)
+docker_version = ""
+
+# Docker Compose version: v1 (standalone) or v2 (plugin) or plugin
+docker_compose_version = "v2"
+
+# ============================================================================
+# OLLAMA CONFIGURATION
+# ============================================================================
+
+# Ollama models to pre-pull
+ollama_models = [
+  "llama2:70b-chat",
+  "codegemma:latest",
+  "mistral:latest"
+]
+
+# Number of GPUs dedicated to Ollama
+# Set to gpu_count for full GPU utilization
+ollama_num_gpu = 2
+
+# How long to keep models in GPU memory after last use
+# Examples: 5m (5 minutes), 1h (1 hour), 24h (24 hours), 0 (never unload)
+ollama_keep_alive = "24h"
+
+# ============================================================================
+# NETWORK & SECURITY
+# ============================================================================
+
+# FQDN or local domain name for Code-Server
+# Examples: code-server-31.local, code.example.com
+domain_name = "code-server-31.local"
+
+# Enable TLS/HTTPS (strongly recommended)
+tls_enabled = true
+
+# List of IPs allowed SSH access
+# Empty list = allow from anywhere (configure firewall separately)
+allowed_ssh_ips = []
+
+# ============================================================================
+# DEPLOYMENT BEHAVIOR
+# ============================================================================
+
+# Skip GPU driver/CUDA/cuDNN installation (if already installed)
+skip_gpu_setup = false
+
+# Skip Docker installation (if already present)
+skip_docker_setup = false
+
+# Skip NAS mount configuration (if already mounted)
+skip_nas_mount = false
+
+# Timeout for validation checks (seconds)
+validation_timeout = 300
+
+# ============================================================================
+# DEPLOYMENT METADATA
+# ============================================================================
+
+# Deployment identifier (used in resource naming)
+deployment_name = "code-server-31"
+
+# Environment: production, staging, development
+environment = "production"
+
+# Common tags applied to all resources
+tags = {
+  Project     = "code-server-enterprise"
+  Component   = "infrastructure"
+  ManagedBy   = "Terraform"
+  CreatedDate = "2026-04-13"
+  Owner       = "platform-team"
+  Environment = "production"
+}
+
+# ============================================================================
+# NOTES
+# ============================================================================
+
+# To use this configuration:
+#
+# 1. Copy this file:
+#    cp terraform.tfvars.example terraform.tfvars
+#
+# 2. Edit terraform.tfvars with your specific values:
+#    - SSH key path (must exist and have correct permissions)
+#    - NAS endpoints and export paths
+#    - GPU count and model
+#    - Domain name
+#
+# 3. Validate configuration:
+#    terraform validate
+#
+# 4. Preview changes:
+#    terraform plan
+#
+# 5. Apply configuration:
+#    terraform apply
+#
+# 6. Review outputs:
+#    terraform output
+#
+# For sensitive data (SSH keys, NAS credentials):
+# - Environment variables: TF_VAR_* prefix
+# - Terraform variables -var flags
+# - .tfvars files (DO NOT commit to git)
+# - HashiCorp Vault (production recommended)

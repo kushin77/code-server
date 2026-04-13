@@ -134,6 +134,75 @@ All systems should follow these enterprise patterns:
 - Documentation is part of the definition of done
 - Architectural decisions are tracked and reviewed quarterly
 
+## GitHub Issue Management - Priority-Based Workflow (MANDATORY)
+
+### Priority Labels (Every Issue Must Have One)
+
+All GitHub issues **MUST** be created with exactly one priority label:
+
+- **P0** 🔴 - Critical/Blocking (customer outage, data loss, security breach, complete breakage)
+- **P1** 🟠 - High Priority (major degradation, significant user impact, core features broken)
+- **P2** 🟡 - Medium Priority (moderate issues, non-critical enhancements, minor pain points)
+- **P3** 🟢 - Low Priority (nice-to-have features, documentation, code cleanup, technical debt)
+
+### When Copilot Creates Issues
+
+**MANDATE**: Every issue creation MUST include a priority label.
+
+1. **Determine priority level**:
+   - Does this cause customer outage or complete breakage? → **P0**
+   - Is this a major feature degradation with significant impact? → **P1**
+   - Is this a moderate issue or non-critical enhancement? → **P2**
+   - Is this a nice-to-have or cleanup task? → **P3**
+   - When in doubt? → Default to **P1**
+
+2. **Use the priority-aware tool**:
+   ```bash
+   # PowerShell:
+   ./scripts/priority-issue-management.ps1 -Action create `
+     -Title "..." -Priority P1 -Body "..." -Labels @("...")
+   
+   # Bash:
+   ./scripts/priority-issue-cli.sh create \
+     --title "..." --priority P1 --body "..." --labels "..."
+   
+   # GitHub CLI:
+   gh issue create --title "..." --label P1 --body "..."
+   ```
+
+3. **Confirm with priority label visible** in output
+
+4. **Report back to user with priority**: "✅ Created #1234 (P1 - High Priority)"
+
+### When Pulling Issues for Work
+
+**MANDATE**: Always work on issues in strict priority order.
+
+1. **Get next highest priority issue**:
+   ```bash
+   ./scripts/priority-issue-cli.sh next      # Shows P0 first, then P1, P2, P3
+   ```
+
+2. **List all prioritized issues**:
+   ```bash
+   ./scripts/priority-issue-cli.sh list --priority all
+   ```
+
+3. **Never randomly select issues** - use the priority tools
+
+### Automation & Enforcement
+
+- GitHub workflow auto-labels unprioritized issues with `needs-priority`
+- Unprioritized issues get comment requesting priority assignment
+- Issue creator is responsible for setting correct priority
+- Team reviews priority distribution weekly
+
+### Reference Documentation
+
+See: [`PRIORITY-ISSUE-MANAGEMENT.md`](../PRIORITY-ISSUE-MANAGEMENT.md) for complete guide
+
+---
+
 ## Success Metrics
 
 - Zero production security incidents

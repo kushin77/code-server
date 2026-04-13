@@ -15,6 +15,7 @@ export enum TaskType {
   REFACTORING = 'refactoring',
   PERFORMANCE = 'performance',
   SECURITY = 'security',
+  CI_CD = 'ci_cd',
 }
 
 /**
@@ -25,6 +26,7 @@ export enum AgentSpecialization {
   CODER = 'coder',
   TESTER = 'tester',
   REVIEWER = 'reviewer',
+  CI_CD = 'ci_cd',
 }
 
 /**

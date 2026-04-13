@@ -1,0 +1,181 @@
+version: '3.9'
+
+# ============================================================================
+# APPSMITH ADMIN PORTAL
+# Low-code application builder for admin panels and internal tools
+# Authenticates via RBAC API JWT tokens
+# ============================================================================
+appsmith:
+  image: appsmith/appsmith:v1.3.22
+  container_name: appsmith
+  restart: unless-stopped
+  networks:
+    - enterprise
+  expose:
+    - "80"
+    - "443"
+  environment:
+    # Core configuration
+    APPSMITH_IP: "0.0.0.0"
+    APPSMITH_PORT: "80"
+    APPSMITH_SSL_CERTIFICATE: ""
+    APPSMITH_SSL_CERTIFICATE_KEY: ""
+    
+    # Database (PostgreSQL - use external for production)
+    APPSMITH_DB_URL: "postgresql://appsmith:appsmith@postgres:5432/appsmith"
+    
+    # Authentication: Use our RBAC API for JWT validation
+    APPSMITH_OAUTH_JWT_SECRET: "${JWT_SECRET}"
+    APPSMITH_OAUTH_JWT_BASE: "https://ide.kushnir.cloud"
+    
+    # Google OAuth (optional)
+    APPSMITH_GOOGLE_MAPS_API_KEY: "${GOOGLE_MAPS_KEY:-}"
+    GOOGLE_OAUTH_CLIENT_ID: "${GOOGLE_OAUTH_CLIENT_ID:-}"
+    GOOGLE_OAUTH_CLIENT_SECRET: "${GOOGLE_OAUTH_CLIENT_SECRET:-}"
+    
+    # Features
+    APPSMITH_ENABLE_SWAGGER_UI: "true"
+    APPSMITH_ENFORCE_SSL_REDIRECT: "false"
+    APPSMITH_EDITOR_PREVIEW_URL: "https://ide.kushnir.cloud/appsmith"
+    
+    # Logging
+    APPSMITH_LOG_LEVEL: "info"
+    
+  volumes:
+    - appsmith-stacks:/appsmith-stacks
+  
+  # Health check: verify Appsmith API is responsive
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://appsmith:80/api/v1/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 60s
+  
+  depends_on:
+    - postgresql
+  
+  deploy:
+    resources:
+      limits:
+        memory: 2G
+      reservations:
+        memory: 512m
+  
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+# ============================================================================
+# BACKSTAGE DEVELOPER PORTAL
+# Software catalog, docs, and developer onboarding
+# ============================================================================
+backstage:
+  image: backstage/backstage:latest
+  container_name: backstage
+  restart: unless-stopped
+  networks:
+    - enterprise
+  expose:
+    - "3000"
+    - "7007"
+  environment:
+    # App config
+    NODE_ENV: "production"
+    APP_CONFIG_backend_database_client: "pg"
+    APP_CONFIG_backend_database_connection_host: "postgres"
+    APP_CONFIG_backend_database_connection_port: "5432"
+    APP_CONFIG_backend_database_connection_database: "backstage"
+    APP_CONFIG_backend_database_connection_user: "backstage"
+    APP_CONFIG_backend_database_connection_password: "backstage"
+    
+    # Frontend configuration
+    APP_CONFIG_app_title: "RBAC Developer Portal"
+    APP_CONFIG_app_baseUrl: "https://ide.kushnir.cloud/backstage"
+    
+    # Backend configuration
+    APP_CONFIG_backend_baseUrl: "https://ide.kushnir.cloud/backstage"
+    APP_CONFIG_backend_cors_origin: "https://ide.kushnir.cloud"
+    
+    # RBAC API integration - authenticate users
+    APP_CONFIG_auth_providers_rbac_production_clientId: "backstage"
+    APP_CONFIG_auth_providers_rbac_production_clientSecret: "${BACKSTAGE_CLIENT_SECRET:-}"
+    APP_CONFIG_auth_providers_rbac_production_discoveryUrl: "https://ide.kushnir.cloud/auth/.well-known/openid-configuration"
+    
+    # Catalog configuration
+    APP_CONFIG_catalog_locations_0_type: "url"
+    APP_CONFIG_catalog_locations_0_target: "https://raw.githubusercontent.com/kushin77/code-server/main/catalog/entities.yaml"
+    
+    # GitHub integration
+    GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
+    
+    # Logging
+    LOG_LEVEL: "info"
+  
+  volumes:
+    - backstage-config:/app/dist-workspace
+    - backstage-generated:/app/packages/app/dist
+  
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://backstage:3000"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 60s
+  
+  depends_on:
+    - postgresql
+  
+  deploy:
+    resources:
+      limits:
+        memory: 1G
+      reservations:
+        memory: 256m
+  
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+# ============================================================================
+# POSTGRESQL DATABASE FOR APPSMITH & BACKSTAGE
+# ============================================================================
+postgresql:
+  image: postgres:16-alpine
+  container_name: postgres
+  restart: unless-stopped
+  networks:
+    - enterprise
+  expose:
+    - "5432"
+  environment:
+    POSTGRES_PASSWORD: "${POSTGRES_ROOT_PASSWORD:-postgres}"
+    POSTGRES_USER: "postgres"
+    POSTGRES_INITDB_ARGS: "-U postgres"
+  volumes:
+    # Initialize separate databases for Appsmith and Backstage
+    - postgres-data:/var/lib/postgresql/data
+    - ./scripts/init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh:ro
+  
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+  
+  deploy:
+    resources:
+      limits:
+        memory: 512m
+      reservations:
+        memory: 256m
+  
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"

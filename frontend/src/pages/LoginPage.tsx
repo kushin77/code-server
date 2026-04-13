@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Input, Alert, Spinner } from '@/components/Common'
+import { Button, Input, Alert } from '@/components/Common'
 import { useLogin } from '@/hooks'
-import { useAuthStore } from '@/store'
 
 interface LoginFormData {
   email: string
@@ -31,7 +30,7 @@ interface MFAState {
  */
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
-  const { login, verifyMFA, isLoading, error: hookError, mfaRequired } = useLogin()
+  const { login, verifyMFA, isLoading, error: hookError } = useLogin()
 
   // Form state
   const [formData, setFormData] = useState<LoginFormData>({
@@ -189,7 +188,7 @@ export const LoginPage: React.FC = () => {
                   type="email"
                   placeholder="admin@example.com"
                   value={formData.email}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setFormData({ ...formData, email: e.target.value })
                     setLocalError(null)
                   }}
@@ -202,7 +201,7 @@ export const LoginPage: React.FC = () => {
                   type="password"
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setFormData({ ...formData, password: e.target.value })
                     setLocalError(null)
                   }}
@@ -215,7 +214,7 @@ export const LoginPage: React.FC = () => {
                   type="text"
                   placeholder="acme-corp"
                   value={formData.org_slug}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setFormData({ ...formData, org_slug: e.target.value })
                     setLocalError(null)
                   }}
@@ -272,7 +271,7 @@ export const LoginPage: React.FC = () => {
                   placeholder="000000"
                   maxLength={6}
                   value={mfaState.totpCode}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     // Only allow digits
                     const value = e.target.value.replace(/\D/g, '').slice(0, 6)
                     setMfaState({ ...mfaState, totpCode: value })

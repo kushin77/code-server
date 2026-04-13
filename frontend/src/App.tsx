@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { useAuthStore } from '@/store'
 import { LoginPage } from '@/pages/LoginPage'
 import { MFASetup } from '@/pages/MFASetup'
-import { UserManagementPage } from '@/pages/UserManagement'
+import { UserManagementPage } from '@/pages/UserManagementPage'
 
 /**
  * ProtectedRoute Component

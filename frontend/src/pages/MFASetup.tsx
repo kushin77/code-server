@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode.react'
 import { Button, Input, Alert, Card, Spinner } from '@/components/Common'
@@ -248,7 +248,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                 </Card>
               </div>
 
-              {error && <Alert type="error">{error}</Alert>}
+              {state.error && <Alert type="error">{state.error}</Alert>}
 
               <div className="flex gap-4">
                 <Button
@@ -338,7 +338,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                 Enter the 6-digit code from your authenticator app to verify the setup:
               </p>
 
-              {error && <Alert type="error">{error}</Alert>}
+              {state.error && <Alert type="error">{state.error}</Alert>}
 
               <form onSubmit={handleVerifyTOTP} className="space-y-4">
                 <Input
@@ -347,7 +347,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                   placeholder="000000"
                   maxLength={6}
                   value={state.totpCode}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = e.target.value.replace(/\D/g, '').slice(0, 6)
                     setState((prev) => ({ ...prev, totpCode: value, error: null }))
                   }}
@@ -368,7 +368,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
           )}
 
           {/* STEP 4: Success & Backup Codes */}
-          {state.step === 'verified' && state.success && (
+          {state.step === 'complete' && state.success && (
             <>
               <div className="mb-6">
                 <Alert type="success">{state.success}</Alert>
@@ -394,13 +394,13 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                   <Button
                     label={codesCopied ? '✓ Copied' : 'Copy All'}
                     variant="secondary"
-                    flex
+                    className="flex-1"
                     onClick={copyBackupCodes}
                   />
                   <Button
                     label="Download"
                     variant="secondary"
-                    flex
+                    className="flex-1"
                     onClick={downloadBackupCodes}
                   />
                 </div>

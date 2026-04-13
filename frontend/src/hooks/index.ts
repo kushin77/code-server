@@ -82,7 +82,7 @@ export const useLogin = () => {
 export const useUserManagement = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { users, setUsers, addUser, updateUser: updateUserInStore, removeUser, setSelectedUser } = useUserStore()
+  const { users, setUsers, addUser, removeUser } = useUserStore()
 
   const fetchUsers = async (filters?: types.FilterConfig) => {
     setIsLoading(true)

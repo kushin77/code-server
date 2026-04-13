@@ -1,0 +1,260 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: code-server-ha
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  - name: gossip
+    port: 16379
+    targetPort: 16379
+  - name: metrics
+    port: 9121
+    targetPort: 9121
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-lb
+  namespace: code-server-ha
+  labels:
+    app: redis
+spec:
+  type: LoadBalancer
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+    protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: code-server-ha
+  labels:
+    app: redis
+spec:
+  serviceName: redis
+  replicas: 6
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - redis
+            topologyKey: kubernetes.io/hostname
+
+      initContainers:
+      - name: redis-init
+        image: redis:7-alpine
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          until redis-cli ping > /dev/null 2>&1; do
+            echo "Waiting for Redis to start..."
+            sleep 1
+          done
+
+          # Initialize cluster if this is the first node
+          if [ "${HOSTNAME##*-}" = "0" ]; then
+            redis-cli --cluster create \
+              redis-0.redis:6379 redis-1.redis:6379 redis-2.redis:6379 \
+              redis-3.redis:6379 redis-4.redis:6379 redis-5.redis:6379 \
+              --cluster-replicas 1 --cluster-yes || true
+          fi
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        command:
+        - redis-server
+        - /etc/redis/redis.conf
+
+        ports:
+        - name: redis
+          containerPort: 6379
+          protocol: TCP
+        - name: gossip
+          containerPort: 16379
+          protocol: TCP
+
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - cluster
+            - info
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /etc/redis
+          readOnly: true
+
+      - name: redis-exporter
+        image: oliver006/redis_exporter:latest
+        ports:
+        - name: metrics
+          containerPort: 9121
+          protocol: TCP
+        env:
+        - name: REDIS_ADDR
+          value: "localhost:6379"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+      volumes:
+      - name: redis-config
+        configMap:
+          name: redis-config
+
+      volumeClaimTemplates:
+      - metadata:
+          name: redis-data
+        spec:
+          accessModes: [ "ReadWriteOnce" ]
+          storageClassName: ssd
+          resources:
+            requests:
+              storage: 100Gi
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: code-server-ha
+data:
+  redis.conf: |
+    # Redis Cluster Configuration
+    port 6379
+    cluster-enabled yes
+    cluster-config-file nodes.conf
+    cluster-node-timeout 15000
+
+    # Persistence
+    appendonly yes
+    appendfsync everysec
+    save 900 1
+    save 300 10
+    save 60 10000
+
+    # Memory Management
+    maxmemory 1.5gb
+    maxmemory-policy allkeys-lru
+
+    # Replication
+    slave-read-only yes
+    slave-serve-stale-data yes
+    repl-disable-tcp-nodelay no
+    repl-backlog-size 256mb
+    repl-backlog-ttl 3600
+    min-slaves-to-write 1
+    min-slaves-max-lag 10
+
+    # Cluster Specific
+    cluster-require-full-coverage no
+    cluster-migration-barrier 1
+
+    # Logging
+    loglevel notice
+    logfile ""
+
+    # Performance
+    databases 16
+    hz 10
+    num-threads 4
+    num-io-threads 4
+    num-io-threads-do-reads yes
+    num-io-threads-do-writes yes
+
+    # Security
+    requirepass CHANGEME
+    masterauth CHANGEME
+
+    # Slowlog
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: code-server-ha
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: redis

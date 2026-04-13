@@ -132,18 +132,18 @@ services:
         # Main model: llama2:70b-chat (rivals Claude Opus)
         echo "⏳ Pulling llama2:70b-chat (elite reasoning model)..."
         ollama pull llama2:70b-chat || true
-        
+
         # Code-specific models
         echo "⏳ Pulling codegemma (Google's code reasoning)..."
         ollama pull codegemma || true
-        
+
         echo "⏳ Pulling neural-chat (code-optimized)..."
         ollama pull neural-chat || true
-        
+
         # Fast model for real-time feedback
         echo "⏳ Pulling mistral (fast reasoning)..."
         ollama pull mistral || true
-        
+
         echo "✅ All models pulled successfully"
         sleep infinity
     depends_on:

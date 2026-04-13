@@ -9,7 +9,8 @@
 # ==================== CRITICAL: No Self-Merge ====================
 
 # Default — all code changes need primary maintainer review
-* @kushin77
+# Multiple code owners to prevent bottlenecks and enforce independent review
+* @kushin77 @PureBlissAK
 
 # ==================== INFRASTRUCTURE (IaC, Terraform) ====================
 

@@ -1,0 +1,60 @@
+# Phase 12.1: Terraform Variables Example
+# Copy this file to terraform.tfvars and update with your actual values
+
+# AWS Region Configuration
+primary_region   = "us-west-2"
+secondary_region = "eu-west-1"
+tertiary_region  = "ap-south-1"
+
+# VPC Configuration - Replace with your actual VPC IDs
+vpc_id_us_west = "vpc-0123456789abcdef0"
+vpc_id_eu_west = "vpc-0123456789abcdef1"
+vpc_id_ap_south = "vpc-0123456789abcdef2"
+
+# Route Table IDs
+route_table_id_us_west = "rtb-0123456789abcdef0"
+route_table_id_eu_west = "rtb-0123456789abcdef1"
+route_table_id_ap_south = "rtb-0123456789abcdef2"
+
+# Network ACL IDs
+nacl_id_us_west = "acl-0123456789abcdef0"
+nacl_id_eu_west = "acl-0123456789abcdef1"
+nacl_id_ap_south = "acl-0123456789abcdef2"
+
+# CIDR Blocks
+cidr_us_west = "10.0.0.0/16"
+cidr_eu_west = "10.1.0.0/16"
+cidr_ap_south = "10.2.0.0/16"
+
+# Availability Zones
+availability_zones_us_west = ["us-west-2a", "us-west-2b", "us-west-2c"]
+availability_zones_eu_west = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
+availability_zones_ap_south = ["ap-south-1a", "ap-south-1b", "ap-south-1c"]
+
+# Domain Configuration
+primary_domain = "api.multi-region.example.com"
+
+# Health Check Configuration
+health_check_interval         = 10
+health_check_failure_threshold = 3
+
+# Feature Flags
+enable_dns_failover                = true
+enable_cross_region_replication    = true
+
+# Monitoring
+monitoring_email = "ops@example.com"
+
+# Environment
+environment = "production"
+
+# Project Details
+project_name = "multi-region-federation"
+
+# Tags
+tags = {
+  Terraform   = true
+  Phase       = "12"
+  Environment = "production"
+  CostCenter  = "engineering"
+}

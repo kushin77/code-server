@@ -1,0 +1,43 @@
+import * as vscode from 'vscode';
+export interface CodeContext {
+    uri: vscode.Uri;
+    content: string;
+    selection: vscode.Selection;
+    activeEditor: vscode.TextEditor;
+}
+export interface AgentOutput {
+    agentName: string;
+    domain: string;
+    timestamp: Date;
+    summary: string;
+    details?: string;
+    recommendations?: string[];
+    severity?: 'info' | 'warning' | 'error';
+    codeLocations?: CodeLocation[];
+}
+export interface CodeLocation {
+    file: string;
+    line: number;
+    column: number;
+    snippet: string;
+}
+export interface MultiAgentContext {
+    codeContext: CodeContext;
+    intermediateResults: AgentOutput[];
+    coordinationState: Record<string, unknown>;
+}
+export interface TaskDefinition {
+    type: string;
+    description: string;
+    targetAgents: string[];
+    parameters?: Record<string, unknown>;
+}
+export declare abstract class Agent {
+    abstract readonly name: string;
+    abstract readonly domain: string;
+    abstract analyze(context: CodeContext): Promise<AgentOutput>;
+    abstract coordinate(context: MultiAgentContext, previousResults: AgentOutput[]): Promise<void>;
+    protected log(message: string): void;
+    protected formatOutput(summary: string, recommendations?: string[], severity?: 'info' | 'warning' | 'error'): AgentOutput;
+}
+//# sourceMappingURL=types.d.ts.map

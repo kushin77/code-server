@@ -1,12 +1,18 @@
 # .gitleaks.toml - allowlist for gitleaks secret scanning
 # Documentation files contain example secret patterns as illustration — not real credentials.
+# Kubernetes manifests use CHANGEME placeholder values — not real credentials.
 
 [allowlist]
-  description = "Documentation example patterns are not real secrets"
+  description = "Documentation, build artifacts, and Kubernetes placeholder credentials are not real secrets"
   paths = [
     '''CODE_SECURITY_HARDENING\.md''',
     '''SECURITY_IMPLEMENTATION.*\.md''',
     '''START_HERE_SECURITY\.md''',
     '''IDE_SECURITY_AND_USER_MANAGEMENT\.md''',
     '''RUNBOOKS\.md''',
+    '''kubernetes/ha-config/.*secret.*\.ya?ml''',
+    '''extensions/agent-farm/package-lock\.json''',
+  ]
+  regexes = [
+    '''CHANGEME''',
   ]

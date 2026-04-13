@@ -43,7 +43,7 @@ export abstract class Agent {
   abstract readonly domain: string;
 
   abstract analyze(context: CodeContext): Promise<AgentOutput>;
-  
+
   abstract coordinate(
     context: MultiAgentContext,
     previousResults: AgentOutput[]

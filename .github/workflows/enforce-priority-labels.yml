@@ -1,0 +1,99 @@
+name: Enforce Priority Labels on Issues
+
+on:
+  issues:
+    types: [opened, labeled, unlabeled]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  enforce-priority:
+    runs-on: ubuntu-latest
+    name: Enforce Priority Labels
+
+    steps:
+      - name: Check Issue Priority Label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { issue, action } = context.payload;
+            const labels = issue.labels.map(l => l.name);
+            const hasPriority = labels.some(l => /^P[0-3]$/.test(l));
+            
+            // Check if issue has a priority label
+            if (!hasPriority) {
+              // Add "needs-priority" label to flag it
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['needs-priority']
+              });
+              
+              // Add comment explaining priority requirement
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `## ⚠️ Priority Label Required
+
+This issue does not have a priority label. All issues **MUST** be assigned a priority:
+
+- **P0** 🔴 - Critical/Blocking (customer impact, security, data loss, downtime)
+- **P1** 🟠 - High (significant impact, core functionality)
+- **P2** 🟡 - Medium (moderate impact, enhancement)
+- **P3** 🟢 - Low (minor impact, nice-to-have)
+
+**Please add a priority label:** \`/label P0\` or \`/label P1\`, etc.
+
+---
+*This check is automated. Issues without priority labels will be deprioritized in backlog triage.*`
+              });
+              
+              console.log(`⚠️ Added "needs-priority" label to issue #${issue.number}`);
+            } else if (action === 'labeled' || action === 'unlabeled') {
+              // Remove needs-priority label if a priority is now assigned
+              if (labels.some(l => /^P[0-3]$/.test(l))) {
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    name: 'needs-priority'
+                  });
+                  console.log(`✅ Removed "needs-priority" label from issue #${issue.number}`);
+                } catch (e) {
+                  // Label might not exist, that's fine
+                }
+              }
+            }
+
+  sort-by-priority:
+    runs-on: ubuntu-latest
+    name: Sort Issues by Priority
+    if: github.event.action == 'labeled'
+
+    steps:
+      - name: Comment Priority Sort
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { issue } = context.payload;
+            const labels = issue.labels.map(l => l.name);
+            const priority = labels.find(l => /^P[0-3]$/.test(l));
+            
+            if (priority) {
+              const priorityMap = {
+                'P0': '🔴 Critical',
+                'P1': '🟠 High',
+                'P2': '🟡 Medium',
+                'P3': '🟢 Low'
+              };
+              
+              console.log(`✅ Issue #${issue.number} assigned priority: ${priorityMap[priority]}`);
+              
+              // Optional: Create a workflow dispatch to update project board
+              // This ensures issues are sorted in any linked GitHub Project Board
+            }

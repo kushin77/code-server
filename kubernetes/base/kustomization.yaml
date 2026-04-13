@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: code-server
+
+resources:
+  - namespace.yaml
+  - code-server-deployment.yaml
+  - code-server-service.yaml
+  - agent-api-deployment.yaml
+  - agent-api-service.yaml
+  - embeddings-deployment.yaml
+  - embeddings-service.yaml
+  - redis-statefulset.yaml
+  - redis-service.yaml
+  - prometheus-deployment.yaml
+  - prometheus-service.yaml
+  - grafana-deployment.yaml
+  - grafana-service.yaml
+
+commonLabels:
+  app.kubernetes.io/version: "phase-8"
+  app.kubernetes.io/managed-by: "kustomize"
+
+commonAnnotations:
+  repository: "code-server"
+  environment: "shared"

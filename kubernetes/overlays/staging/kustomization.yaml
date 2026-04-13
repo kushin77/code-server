@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: code-server
+
+bases:
+  - ../../base
+
+commonLabels:
+  environment: staging
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: code-server
+
+bases:
+  - ../../base
+
+replicas:
+  - name: code-server
+    count: 2
+  - name: agent-api
+    count: 3
+  - name: embeddings
+    count: 2
+  - name: redis
+    count: 3
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
+  - hpa-patch.yaml
+
+commonLabels:
+  environment: staging
+  managed-by: kustomize
+
+commonAnnotations:
+  environment: "staging"
+  slo-target: "99.5%"

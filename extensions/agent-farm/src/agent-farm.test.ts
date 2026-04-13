@@ -5,7 +5,7 @@
  * Note: Tests mock VS Code dependencies since Jest runs in Node environment.
  */
 
-import { TaskType, AgentSpecialization } from '../src/types';
+import { TaskType, AgentSpecialization } from './types';
 
 describe('Agent Farm - Types', () => {
   describe('TaskType enum', () => {

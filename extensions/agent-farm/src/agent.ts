@@ -102,6 +102,7 @@ export abstract class Agent {
 
   /**
    * Calculate confidence score based on recommendations
+   * Returns value clamped to 0-95 range
    */
   protected calculateConfidence(recommendations: Recommendation[]): number {
     if (recommendations.length === 0) return 50; // Base confidence for no findings
@@ -109,8 +110,9 @@ export abstract class Agent {
     const criticalCount = recommendations.filter(r => r.severity === 'critical').length;
     const actionableCount = recommendations.filter(r => r.actionable).length;
     
-    // Confidence increases with actionable findings
-    return Math.min(95, 60 + (actionableCount * 5) - (criticalCount * 10));
+    // Confidence increases with actionable findings, clamped to valid range
+    const rawConfidence = 60 + (actionableCount * 5) - (criticalCount * 10);
+    return Math.max(0, Math.min(95, rawConfidence));
   }
 
   /**

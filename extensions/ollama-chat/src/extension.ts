@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import axios from 'axios';
 import { OllamaClient } from './ollama-client';
 import { RepositoryIndexer } from './repository-indexer';
 import { CodeAnalyzer } from './code-analyzer';

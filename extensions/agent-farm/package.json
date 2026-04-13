@@ -28,8 +28,8 @@
   "icon": "resources/icon.png",
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:agentFarm.analyzeFile",
-    "onCommand:agentFarm.analyzeWithTask",
+    "onCommand:agent-farm.analyzeFile",
+    "onCommand:agent-farm.analyzeWithTask",
     "onView:agentFarmView"
   ],
   "main": "./out/index.js",

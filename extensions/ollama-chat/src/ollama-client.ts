@@ -72,12 +72,12 @@ export class OllamaClient {
       for await (const chunk of response.data) {
         // Accumulate bytes into buffer, handling chunk boundaries
         buffer += chunk.toString('utf-8');
-        
+
         // Split on newline but preserve incomplete lines
         const lines = buffer.split('\n');
         // Keep the last incomplete line (if any) in the buffer
         buffer = lines.pop() || '';
-        
+
         // Process all complete lines
         for (const line of lines) {
           const trimmed = line.trim();
@@ -93,7 +93,7 @@ export class OllamaClient {
           }
         }
       }
-      
+
       // Process any remaining buffered content
       if (buffer.trim()) {
         try {

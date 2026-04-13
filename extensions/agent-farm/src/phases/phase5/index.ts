@@ -25,3 +25,19 @@ export {
   GraphStatistics,
   Community,
 } from '../../ml/KnowledgeGraphBuilder';
+
+export {
+  CodeRelationship,
+  InheritanceHierarchy,
+  CompositionPattern,
+  DIPattern,
+  CallGraph,
+  CallGraphNode,
+  RelationshipAnalyzer,
+} from '../../ml/RelationshipAnalyzer';
+
+export {
+  KnowledgeGraphPhase5Agent,
+  KnowledgeGraphQuery,
+  KnowledgeGraphResult,
+} from '../../agents/KnowledgeGraphPhase5Agent';

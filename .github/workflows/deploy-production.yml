@@ -23,11 +23,60 @@ env:
   DEPLOYMENT_TIMEOUT: 300
   HEALTH_CHECK_RETRIES: 30
   HEALTH_CHECK_INTERVAL: 10
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
 
 jobs:
+  fetch-secrets:
+    runs-on: ubuntu-latest
+    name: Fetch Deployment Secrets from GSM
+    outputs:
+      staging-host: ${{ steps.secrets.outputs.staging_host }}
+      prod-host: ${{ steps.secrets.outputs.prod_host }}
+    permissions:
+      contents: read
+      id-token: write  # For OIDC to GCP
+
+    steps:
+      - name: Authenticate to Google Cloud (OIDC)
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+        continue-on-error: true
+
+      - name: Fetch deployment secrets from GSM
+        id: secrets
+        run: |
+          if [ -n "${{ steps.auth.outputs.access_token }}" ]; then
+            gcloud config set project ${{ env.GCP_PROJECT_ID }}
+            
+            # Fetch deployment hosts and credentials from GSM
+            STAGING_HOST=$(gcloud secrets versions access latest --secret="prod-staging-host" 2>/dev/null || echo "staging.code-server.local")
+            PROD_HOST=$(gcloud secrets versions access latest --secret="prod-host" 2>/dev/null || echo "code-server.local")
+            DEPLOY_USER=$(gcloud secrets versions access latest --secret="prod-deploy-user" 2>/dev/null || echo "deployer")
+            DEPLOY_KEY=$(gcloud secrets versions access latest --secret="prod-deploy-ssh-key" 2>/dev/null || echo "")
+            
+            # Mask sensitive outputs
+            echo "::add-mask::$STAGING_HOST"
+            echo "::add-mask::$PROD_HOST"
+            echo "::add-mask::$DEPLOY_USER"
+            echo "::add-mask::$DEPLOY_KEY"
+            
+            echo "staging_host=$STAGING_HOST" >> $GITHUB_OUTPUT
+            echo "prod_host=$PROD_HOST" >> $GITHUB_OUTPUT
+            echo "deploy_user=$DEPLOY_USER" >> $GITHUB_OUTPUT
+          else
+            echo "warning: Could not authenticate to GCP, using fallback secrets" >&2
+            echo "staging_host=${{ secrets.STAGING_HOST }}" >> $GITHUB_OUTPUT
+            echo "prod_host=${{ secrets.PROD_HOST }}" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
   pre-deployment:
     runs-on: ubuntu-latest
     name: Pre-Deployment Validation
+    needs: fetch-secrets
     outputs:
       deployment-id: ${{ steps.deploy-id.outputs.id }}
       services-changed: ${{ steps.changes.outputs.services }}
@@ -72,33 +121,106 @@ jobs:
   staging-deployment:
     runs-on: ubuntu-latest
     name: Deploy to Staging
-    needs: pre-deployment
+    needs: [ fetch-secrets, pre-deployment ]
     environment:
       name: staging
       url: https://staging.code-server.local
+    permissions:
+      contents: read
+      id-token: write  # For OIDC to GCP
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (OIDC)
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+        continue-on-error: true
+
+      - name: Fetch application secrets from GSM for .env
+        id: app-secrets
+        run: |
+          if [ -n "${{ steps.auth.outputs.access_token }}" ]; then
+            gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+            
+            # Fetch all required .env variables from GSM
+            echo "Fetching staging environment secrets from GSM..."
+            
+            GOOGLE_CLIENT_ID=$(gcloud secrets versions access latest --secret="prod-portal-google-oauth-client-id" 2>/dev/null || echo "")
+            GOOGLE_CLIENT_SECRET=$(gcloud secrets versions access latest --secret="prod-portal-google-oauth-client-secret" 2>/dev/null || echo "")
+            GITHUB_TOKEN=$(gcloud secrets versions access latest --secret="prod-github-pat-code-server" 2>/dev/null || echo "")
+            OAUTH2_COOKIE_SECRET=$(gcloud secrets versions access latest --secret="prod-portal-oauth2-cookie-secret" 2>/dev/null || echo "")
+            GODADDY_KEY=$(gcloud secrets versions access latest --secret="prod-godaddy-api-key" 2>/dev/null || echo "")
+            GODADDY_SECRET=$(gcloud secrets versions access latest --secret="prod-godaddy-api-secret" 2>/dev/null || echo "")
+            
+            # Mask all secrets
+            echo "::add-mask::$GOOGLE_CLIENT_ID"
+            echo "::add-mask::$GOOGLE_CLIENT_SECRET"
+            echo "::add-mask::$GITHUB_TOKEN"
+            echo "::add-mask::$OAUTH2_COOKIE_SECRET"
+            echo "::add-mask::$GODADDY_KEY"
+            echo "::add-mask::$GODADDY_SECRET"
+            
+            # Export for deployment
+            {
+              echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
+              echo "GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
+              echo "GITHUB_TOKEN=$GITHUB_TOKEN"
+              echo "OAUTH2_PROXY_COOKIE_SECRET=$OAUTH2_COOKIE_SECRET"
+              echo "GODADDY_KEY=$GODADDY_KEY"
+              echo "GODADDY_SECRET=$GODADDY_SECRET"
+            } >> $GITHUB_ENV
+            
+            echo "✓ Secrets fetched from GSM"
+          fi
+        continue-on-error: true
 
       - name: Configure deployment credentials
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.STAGING_DEPLOY_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H ${{ needs.fetch-secrets.outputs.staging-host }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Deploy to staging environment
         run: |
-          ssh -i ~/.ssh/deploy_key deployer@${{ secrets.STAGING_HOST }} << 'EOF'
+          ssh -i ~/.ssh/deploy_key deployer@${{ needs.fetch-secrets.outputs.staging-host }} << 'EOF'
           set -e
           cd /opt/code-server
+          
+          # Fetch current .env or create from template
+          if [ ! -f .env ]; then
+            echo "Creating .env from template with GSM values..."
+            cp .env.template .env
+          fi
+          
+          # Update .env with current GSM values
+          {
+            grep -v "^GOOGLE_CLIENT" .env || true
+            grep -v "^GITHUB_TOKEN" .env || true
+            grep -v "^OAUTH2_PROXY_COOKIE_SECRET" .env || true
+            grep -v "^GODADDY" .env || true
+          } > .env.tmp && mv .env.tmp .env
+          
+          cat >> .env << ENVEOF
+          GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+          GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+          GITHUB_TOKEN=${GITHUB_TOKEN}
+          OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
+          GODADDY_KEY=${GODADDY_KEY}
+          GODADDY_SECRET=${GODADDY_SECRET}
+          ENVEOF
+          
           git pull origin main || git fetch origin main && git reset --hard origin/main
           docker-compose -f deployment/production/docker-compose.yml pull
           docker-compose -f deployment/production/docker-compose.yml down || true
           docker-compose -f deployment/production/docker-compose.yml up -d
           sleep 30
           bash deployment/tests/smoke-tests.sh || exit 1
-          echo "Staging deployment successful"
+          echo "✓ Staging deployment successful"
           EOF
         continue-on-error: false
 

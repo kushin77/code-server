@@ -120,7 +120,7 @@ log "✓ Config directories ready"
 
 # List integration points (readonly verify)
 log "[3/3] Verifying integration points..."
-DOCKER_NETWORK=$(docker network list --format='{{.Name}}' | grep -E '^phase') 
+DOCKER_NETWORK=$(docker network list --format='{{.Name}}' | grep -E '^phase' || true)
 if [ -z "$DOCKER_NETWORK" ]; then
     warn "Expected Docker network not found (will be created on docker-compose up)"
 else

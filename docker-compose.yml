@@ -311,11 +311,11 @@ services:
       - "443:443"
     environment:
       # Caddy reads DOMAIN via {$DOMAIN} in Caddyfile
-      DOMAIN: "${DOMAIN:ide.kushnir.cloud}"
+      DOMAIN: "${DOMAIN:-ide.kushnir.cloud}"
       # ACME (Let's Encrypt) certificate notification email
-      ACME_EMAIL: "${ACME_EMAIL:admin@kushnir.cloud}"
+      ACME_EMAIL: "${ACME_EMAIL:-admin@kushnir.cloud}"
       # CloudFlare DNS-01 challenge credentials (for automatic ACME validation)
-      CLOUDFLARE_API_TOKEN: "${CLOUDFLARE_API_TOKEN:}"
+      CLOUDFLARE_API_TOKEN: "${CLOUDFLARE_API_TOKEN:-}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

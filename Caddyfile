@@ -1,34 +1,18 @@
-# Caddyfile — ide.kushnir.cloud IDE reverse proxy with automatic HTTPS
-# Status: Fully automated ACME (Let's Encrypt) provisioning
-# No manual certificate management required - Caddy handles everything
+# Caddyfile — ide.kushnir.cloud IDE reverse proxy
+# Simplified for Docker deployment without Cloudflare DNS plugin
 
 {
-    # Automatic HTTPS provisioning via Let's Encrypt
-    auto_https on
-    
-    # ACME provider: Let's Encrypt (free, automated)
-    acme_ca https://acme-v02.api.letsencrypt.org/directory
-    
-    # Email for certificate notifications (required by Let's Encrypt)
-    email {$ACME_EMAIL:admin@kushnir.cloud}
-    
-    # DNS challenge using CloudFlare (for wildcard certs and DNS-01 validation)
-    acme_dns cloudflare {$CLOUDFLARE_API_TOKEN:}
+    # Disable automatic HTTPS for now (can be re-enabled with a Caddy image that includes DNS modules)
+    auto_https off
 }
 
 ide.kushnir.cloud {
-    # TLS: Automatic provisioning via Let's Encrypt ACME
-    # Caddy automatically handles:
-    # - Certificate issuance
-    # - Automatic renewal (every 60 days)
-    # - OCSP stapling
-    # - Certificate transparency logs
-    # Certificate for wildcard subdomains also available
-    tls {
-        issuer acme {
-            disable_issuance_limits
-            challenge dns cloudflare
-        }
+    # TLS: Use self-signed certificates by default
+    # For production, use `caddy list-modules` to verify dns.providers.cloudflare is available
+    # Or use a custom Caddy build: docker.io/library/caddy:latest-alpine
+    
+    tls internal {
+        # Self-signed certificates for internal use
     }
 
     encode gzip

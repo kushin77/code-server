@@ -1,0 +1,51 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: code-server
+
+commonLabels:
+  app.kubernetes.io/name: code-server
+  app.kubernetes.io/instance: production
+  app.kubernetes.io/version: "1.0.0"
+  managed-by: argocd
+
+commonAnnotations:
+  argocd.argoproj.io/instance: code-server-app
+  deployment.kubernetes.io/revision: "1"
+
+resources:
+- deployment.yaml
+- service.yaml
+- configmap.yaml
+- pvc.yaml
+
+images:
+- name: codercom/code-server
+  newTag: "4.21.0"
+
+replicas:
+- name: code-server
+  count: 3
+
+patchesStrategicMerge:
+- patch-memory.yaml
+
+configMapGenerator:
+- name: code-server-config
+  files:
+  - config.yaml
+
+secretGenerator:
+- name: code-server-secrets
+  envs:
+  - secrets.env
+  behavior: create
+
+vars:
+- name: WORKSPACE_MOUNT_PATH
+  objref:
+    kind: ConfigMap
+    name: code-server-config
+    apiVersion: v1
+  fieldref:
+    fieldpath: data.WORKSPACE_MOUNT_PATH

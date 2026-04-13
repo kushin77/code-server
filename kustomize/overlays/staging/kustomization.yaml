@@ -1,0 +1,72 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: code-server-staging
+
+bases:
+- ../../base/code-server
+
+namePrefix: staging-
+
+commonLabels:
+  environment: staging
+  tier: backend
+
+replicas:
+- name: code-server
+  count: 2
+
+patchesJson6902:
+- target:
+    group: apps
+    version: v1
+    kind: StatefulSet
+    name: code-server
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: 1Gi
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: 2Gi
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: 250m
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: 1000m
+    - op: replace
+      path: /spec/template/spec/containers/0/env/0/value
+      value: staging-password-change-me
+
+patchesStrategicMerge:
+- |-
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: code-server
+  spec:
+    type: ClusterIP
+
+configMapGenerator:
+- name: environment-config
+  literals:
+  - ENVIRONMENT=staging
+  - LOG_LEVEL=debug
+  - ENABLE_METRICS=true
+  - ENABLE_TESTS=true
+
+secretGenerator:
+- name: staging-secrets
+  literals:
+  - DATABASE_URL=postgresql://user:pass@db.staging:5432/codeserver
+  - AUTH_TOKEN_SECRET=staging-secret-key-temporary
+  behavior: create
+
+images:
+- name: codercom/code-server
+  newTag: "4.21.0"
+
+resources:
+- ingress-staging.yaml
+- networkpolicy-staging.yaml

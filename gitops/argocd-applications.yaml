@@ -1,0 +1,171 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: code-server-app
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/kushin77/code-server
+    targetRevision: main
+    path: kustomize/overlays/production
+    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: code-server
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  # Health assessment
+  ignoreDifferences:
+  - group: apps
+    kind: StatefulSet
+    jsonPointers:
+    - /spec/templateGeneration
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-stack
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/kushin77/code-server
+    targetRevision: main
+    path: kustomize/overlays/monitoring
+    plugin:
+      name: kustomize
+      env:
+      - name: KUSTOMIZE_LOAD_RESTRICTOR
+        value: LoadRestrictionsNone
+      - name: KUSTOMIZE_ENABLE_ALPHA_PLUGINS
+        value: "true"
+    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideDiff=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 2m
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ingress-controller
+  namespace: argocd
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/kushin77/code-server
+    targetRevision: main
+    path: kustomize/overlays/ingress
+    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ingress-nginx
+    
+  syncPolicy:
+    automated:
+      prune: false # Don't prune ingress resources
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: application-sync-webhook
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd
+data:
+  webhook-secret: |
+    {
+      "github": {
+        "secret": "your-github-webhook-secret",
+        "events": ["push", "pull_request"]
+      }
+    }
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argocd-application-viewer
+  namespace: argocd
+rules:
+- apiGroups: ["argoproj.io"]
+  resources: ["applications"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-application-viewer
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argocd-application-viewer
+subjects:
+- kind: ServiceAccount
+  name: argocd-application-controller
+  namespace: argocd
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-metrics
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd
+  endpoints:
+  - port: metrics
+    interval: 30s

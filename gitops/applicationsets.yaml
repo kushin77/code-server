@@ -1,0 +1,171 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: code-server-multi-cluster
+  namespace: argocd
+spec:
+  generators:
+  # Generate one app per cluster with specific label
+  - clusters:
+      selector:
+        matchLabels:
+          argocd.argoproj.io/cluster-type: multi-region
+      
+  template:
+    metadata:
+      name: '{{name}}-code-server'
+      labels:
+        app.kubernetes.io/managed-by: applicationset
+        cluster: '{{name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kushin77/code-server
+        targetRevision: main
+        path: kustomize/overlays/production
+        kustomize:
+          patches:
+          - target:
+              kind: StatefulSet
+            patch: |-
+              - op: replace
+                path: /metadata/namespace
+                value: code-server
+      destination:
+        server: '{{server}}'
+        namespace: code-server
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: environments
+  namespace: argocd
+spec:
+  generators:
+  # Matrix generator: create app for each env × cluster combination
+  - matrix:
+      generators:
+      - list:
+          elements:
+          - env: staging
+            path: kustomize/overlays/staging
+          - env: production
+            path: kustomize/overlays/production
+      - clusters:
+          selector:
+            matchLabels:
+              environment: '{{env}}'
+              
+  template:
+    metadata:
+      name: '{{name}}-{{env}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kushin77/code-server
+        targetRevision: main
+        path: '{{path}}'
+      destination:
+        server: '{{server}}'
+        namespace: '{{env}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: git-directories
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd
+spec:
+  generators:
+  # Generate app for each directory in kustomize/apps
+  - git:
+      repoURL: https://github.com/kushin77/code-server
+      revision: main
+      directories:
+      - path: 'kustomize/apps/*'
+      
+  template:
+    metadata:
+      name: '{{path.basename}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/kushin77/code-server
+        targetRevision: main
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: multi-cluster-project
+  namespace: argocd
+spec:
+  description: Multi-cluster deployment project
+  
+  sourceRepos:
+  - 'https://github.com/kushin77/code-server'
+  - 'https://github.com/kushin77/*'
+  
+  destinations:
+  - namespace: '*'
+    server: '*'
+    
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+    
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'
+    
+  namespaceResourceBlacklist:
+  - group: ''
+    kind: ResourceQuota
+  - group: ''
+    kind: LimitRange
+  - group: ''
+    kind: NetworkPolicy
+    
+  syncWindows:
+  - kind: allow
+    schedule: '0 2 * * *'
+    duration: 1h
+    applications:
+    - '*'
+    
+  orphanedResources:
+    warn: true
+    ignore:
+    - group: 'apps.open-cluster-management.io'
+      kind: ManagedClusterAddOn

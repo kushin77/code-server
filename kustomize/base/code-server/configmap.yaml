@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: code-server-config
+data:
+  config.yaml: |
+    bind-addr: 0.0.0.0:8080
+    auth: password
+    password: changeme
+    cert: false
+    log: debug
+    workspace: /home/coder/workspace
+    
+  init-script.sh: |
+    #!/bin/bash
+    set -exo pipefail
+    
+    # Install common tools
+    sudo apt-get update
+    sudo apt-get install -y \
+      git \
+      curl \
+      wget \
+      make \
+      gcc \
+      g++ \
+      python3 \
+      python3-pip \
+      nodejs \
+      npm
+    
+    # Install VS Code extensions
+    code-server --extensions-dir /home/coder/.local/share/code-server/extensions install \
+      eamodio.gitlens \
+      ms-kubernetes-tools.vscode-kubernetes-tools \
+      ms-python.python \
+      hashicorp.terraform
+    
+    # Setup git
+    git config --global user.name "Code Server User"
+    git config --global user.email "coder@example.com"
+    
+    echo "Code Server initialization complete"
+  
+  workspace-mount-path: /home/coder/workspace
+  storage-class: fast-ssd

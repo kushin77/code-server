@@ -27,7 +27,6 @@ export class GitHubActionsAgent extends Agent {
       [
         TaskType.CI_CD,
         TaskType.PERFORMANCE,
-        'COST_OPTIMIZATION' as TaskType, // New task type for Phase 3
       ]
     );
   }
@@ -74,10 +73,10 @@ export class GitHubActionsAgent extends Agent {
       const retryAnalysis = this.analyzeRetryStrategies(workflow);
       recommendations.push(...retryAnalysis);
 
-      this.log(`Analysis complete: ${recommendations.length} recommendations generated`);
+      this.outputChannel.appendLine(`[${new Date().toLocaleTimeString()}] Analysis complete: ${recommendations.length} recommendations generated`);
 
     } catch (error) {
-      this.logError(`Failed to analyze workflow: ${error instanceof Error ? error.message : String(error)}`);
+      this.outputChannel.appendLine(`[ERROR] Failed to analyze workflow: ${error instanceof Error ? error.message : String(error)}`);
       throw new Error(`Workflow analysis failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
@@ -208,7 +207,8 @@ export class GitHubActionsAgent extends Agent {
         });
       } else if (typeof runsOn === 'string') {
         // Check for unnecessary expensive runners
-        if (runsOn.includes('macos') && !jobConfig.name?.toString().includes('darwin', 'mac', 'ios')) {
+        const jobName_lower = jobName.toLowerCase();
+        if (runsOn.includes('macos') && !(/darwin|mac|ios/i.test(jobName_lower))) {
           recommendations.push({
             id: `gh-expensive-runner-${jobName}`,
             title: `Job "${jobName}" Using Expensive macOS Runner`,
@@ -223,7 +223,7 @@ export class GitHubActionsAgent extends Agent {
           });
         }
 
-        if (runsOn.includes('windows') && !jobConfig.name?.toString().includes('windows', 'win')) {
+        if (runsOn.includes('windows') && !(/windows|win/i.test(jobName_lower))) {
           recommendations.push({
             id: `gh-expensive-runner-windows-${jobName}`,
             title: `Job "${jobName}" Using Expensive Windows Runner`,
@@ -280,7 +280,8 @@ export class GitHubActionsAgent extends Agent {
       // If using Node/Python but no cache, recommend caching
       if (hasNodeSetup && !hasCache) {
         const setupStep = steps.find(s => s.uses?.toString().includes('setup-node'));
-        const packageManager = setupStep?.with?.['package-manager'] === 'pnpm' ? 'pnpm' : setupStep?.with?.['package-manager'] === 'yarn' ? 'yarn' : 'npm';
+        const with_ = (setupStep?.with as Record<string, unknown> | undefined) || {};
+        const packageManager = with_['package-manager'] === 'pnpm' ? 'pnpm' : with_['package-manager'] === 'yarn' ? 'yarn' : 'npm';
 
         recommendations.push({
           id: `gh-missing-cache-${jobName}`,
@@ -418,7 +419,6 @@ env:
         description: `Estimated monthly CI/CD cost: $${estimatedMonthlyCost.toFixed(2)}. Consider optimizations.`,
         severity: 'warning',
         actionable: true,
-        suggestedFix: 'Review runner selection, reduce parallel jobs, optimize workflow triggers',
         suggestedFix: 'Review job parallelization, cache dependencies, use efficient runners',
         documentationUrl: 'https://docs.github.com/en/billing/managing-billing-for-github-actions',
       });
@@ -486,7 +486,8 @@ env:
         
         // Network-dependent steps should have retry
         if ((uses.includes('upload') || uses.includes('download') || uses.includes('deploy')) && !step['continue-on-error']) {
-          const hasRetry = step.with?.['max-retry'] || step.with?.['retry-count'];
+          const with_ = (step.with as Record<string, unknown> | undefined) || {};
+          const hasRetry = with_['max-retry'] || with_['retry-count'];
            
           if (!hasRetry) {
             recommendations.push({
@@ -510,12 +511,5 @@ env:
     return recommendations;
   }
 
-  // Logging helper (inherited from base Agent class)
-  private log(message: string): void {
-    this.outputChannel.appendLine(`[${new Date().toLocaleTimeString()}] ${message}`);
-  }
 
-  private logError(message: string): void {
-    this.outputChannel.appendLine(`[ERROR] ${message}`);
-  }
 }

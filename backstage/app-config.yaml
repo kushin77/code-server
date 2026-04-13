@@ -1,0 +1,215 @@
+---
+# Backstage Application Configuration
+# Integrated with RBAC API for organization hierarchies and permissions
+# Software catalog with built-in documentation and developer onboarding
+
+app:
+  title: RBAC Developer Portal
+  baseUrl: https://ide.kushnir.cloud/backstage
+  
+  branding:
+    fullLogo: null
+    iconLogo: null
+
+backend:
+  baseUrl: https://ide.kushnir.cloud/backstage
+  cors:
+    origin: https://ide.kushnir.cloud
+    credentials: true
+    methods: [GET, HEAD, PUT, POST, DELETE, PATCH]
+    maxAge: 86400
+  
+  # PostgreSQL database for Backstage catalog
+  database:
+    client: pg
+    connection:
+      host: postgres
+      port: 5432
+      database: backstage
+      user: backstage
+    useNullAsDefault: true
+  
+  # Cache configuration with Redis (optional, currently in-memory)
+  cache:
+    store: memory
+  
+  # Auth configuration - use RBAC API
+  auth:
+    providers:
+      # Custom RBAC provider for JWT authentication
+      rbac:
+        required: false
+        production:
+          clientId: backstage
+          clientSecret: ${BACKSTAGE_CLIENT_SECRET}
+          audience: backstage
+          baseURL: https://ide.kushnir.cloud
+          discoveryUrl: https://ide.kushnir.cloud/auth/.well-known/openid-configuration
+
+# Frontend configuration
+frontend:
+  baseUrl: https://ide.kushnir.cloud/backstage
+  app:
+    baseUrl: https://ide.kushnir.cloud/backstage
+  
+  # Configure API proxy to avoid CORS issues
+  apiBaseUrl: /api
+  
+  # Default pages
+  defaultRoute: /catalog
+  
+  # Theme configuration
+  theme:
+    light:
+      primary:
+        main: '#0066cc'
+      secondary:
+        main: '#1976d2'
+    dark:
+      primary:
+        main: '#0099ff'
+      secondary:
+        main: '#2196f3'
+
+# Catalog configuration - the software catalog
+catalog:
+  locations:
+    # Local development catalog
+    - type: file
+      target: ../../catalog/entities.yaml
+      rules:
+        - allow: [Component, System, API, Resource, Location]
+    
+    # Remote catalog location (GitHub)
+    - type: url
+      target: https://raw.githubusercontent.com/kushin77/code-server/main/catalog/entities.yaml
+      rules:
+        - allow: [Component, System, API, Resource, Location, Group, User]
+  
+  # Import of entities from existing systems
+  import:
+    entityFilename: catalog-info.yaml
+    pullRequestBranchName: backstage-pr
+
+# PostgreSQL for catalog storage
+postgres:
+  host: postgres
+  port: 5432
+  database: backstage
+  user: backstage
+
+# Organization configuration - integrated with RBAC
+organization:
+  # Organization hierarchies mirrored from RBAC system
+  admins:
+    - user:default/admin
+  
+  # Teams (map to RBAC roles)
+  groups:
+    - id: engineering
+      description: Engineering team
+      parent: root
+    - id: devops
+      description: DevOps team
+      parent: root
+    - id: security
+      description: Security team
+      parent: root
+
+# Plugins configuration
+plugins:
+  enabled:
+    # Core plugins
+    - catalog
+    - scaffolder
+    - search
+    - techdocs
+    - user-settings
+    - permission
+    
+    # Organization plugins
+    - github
+    - gitlab
+    
+    # Monitoring and observability
+    - kubernetes
+    - grafana
+    
+    # Code quality
+    - sonarqube
+    - code-coverage
+
+# Tech Docs configuration - built-in documentation
+techdocs:
+  builder: mdx
+  generateDocs: true
+  publisher:
+    type: local
+
+# Scaffolder configuration - template-based project creation
+scaffolder:
+  defaultAuthor:
+    name: Backstage
+    email: backstage@example.com
+  
+  defaultCommitAction: commit
+  
+  # Templates location
+  locations:
+    - type: file
+      target: ../../scaffolder/templates
+
+# Search configuration - for catalog search
+search:
+  elasticsearch:
+    highlightOptions:
+      preTag: "\u0001"
+      postTag: "\u0001"
+    request:
+      headers:
+        X-Elastic-Product: Elasticsearch
+
+# Kubernetes plugin configuration
+kubernetes:
+  serviceLocatorMethod:
+    type: multiTenant
+  clusterLocatorMethods:
+    - type: config
+      clusters:
+        - name: local
+          url: ${KUBERNETES_API_URL:-http://localhost:6443}
+          authProvider: serviceAccount
+          skipTLSVerify: true
+
+# GitHub integration
+github:
+  token: ${GITHUB_TOKEN}
+  organization: kushin77
+
+# Grafana integration for metrics
+grafana:
+  domain: https://grafana.example.com
+  unAuthenticatedAccess: true
+
+# SonarQube integration for code quality
+sonarqube:
+  baseUrl: https://sonar.example.com
+  apiToken: ${SONARQUBE_TOKEN}
+
+# Permissions configuration - tied to RBAC API
+permission:
+  rbac:
+    # Enable RBAC enforcement
+    enabled: true
+    
+    # Use RBAC API for permission decisions
+    implementation: rbac-provider
+
+# Sign-in page configuration
+signInPage: custom
+
+# Feature flags
+featureFlags:
+  send-notification-init: true
+  entity-metadata-edit: true
+  backstage-graph-enabled: true

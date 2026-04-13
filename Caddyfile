@@ -37,7 +37,40 @@
     header @stableAssets Pragma "no-cache"
     header @stableAssets Expires "0"
 
-    # All traffic → oauth2-proxy (handles Google Auth then forwards to code-server)
+    # ─── API Routes ──────────────────────────────────────────────────────────
+    # RBAC API: auth, users, roles, MFA, OAuth2/OpenID Connect
+    @api {
+        path /api/* /auth/.well-known/* /auth/authorize /auth/token /auth/userinfo /auth/validate /auth/refresh /auth/logout /auth/jwks
+    }
+    reverse_proxy @api rbac-api:3001 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # ─── Admin Portal ─────────────────────────────────────────────────────────
+    # Appsmith: Low-code admin panel for user/role/organization management
+    @appsmith path /appsmith* /appsmith/*
+    reverse_proxy @appsmith appsmith:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # ─── Developer Portal ─────────────────────────────────────────────────────
+    # Backstage: Software catalog, documentation, scaffolder, onboarding
+    @backstage path /backstage* /backstage/*
+    reverse_proxy @backstage backstage:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # ─── Frontend & Code Server ─────────────────────────────────────────────
+    # Everything else → oauth2-proxy (handles Google Auth then forwards to code-server)
     reverse_proxy oauth2-proxy:4180 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}

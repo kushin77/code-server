@@ -9,7 +9,10 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:3001',
+        // MANDATE: Use domain DNS or container networks, NEVER localhost
+        // Development: VITE_API_URL=http://rbac-api:3001 (Docker container)
+        // Staging/Prod: VITE_API_URL=https://api-staging.kushnir.cloud OR https://api.kushnir.cloud
+        target: process.env.VITE_API_URL || 'http://rbac-api:3001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

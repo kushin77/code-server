@@ -51,16 +51,25 @@ You should see:
 
 ## Verify Backend Connection
 
-Backend API should be running on `http://localhost:3001`
+**MANDATE: Backend API uses domain DNS or container networks, NOT localhost**
+
+For Docker Compose development:
 
 ```bash
-curl http://localhost:3001/health
+# Via container network (development)
+curl http://rbac-api:3001/health
 # Expected: { "status": "ok" }
+
+# Or use your configured domain:
+curl https://api.kushnir.cloud/health
+# OR
+curl https://ide.kushnir.cloud/api/health
 ```
 
 If you see 404 or connection refused:
+- Ensure VITE_API_URL is set to container name or domain: `echo $VITE_API_URL`
 - Start backend API: `cd services/rbac-api && npm run dev`
-- Check port 3001 is available
+- Check docker network: `docker network inspect enterprise`
 
 ## Try Features
 
@@ -85,7 +94,8 @@ Click username/password fields:
 Open Browser DevTools (F12):
 - Go to Network tab
 - Try to login
-- See API request to `http://localhost:3001/auth/login`
+- See API request to the configured endpoint (e.g., `http://rbac-api:3001/auth/login` or domain URL)
+- **MANDATE**: Never see `localhost:3001` in requests - use domain DNS or container networks
 
 ## Project Structure
 
@@ -334,7 +344,7 @@ git push origin feature/my-feature
 ## Support
 
 - **Error in npm install?** Check Node.js version: `node --version` should be 18+
-- **API not connecting?** Check backend is running: `curl http://localhost:3001/health`
+- **API not connecting?** Check VITE_API_URL is set (use domain or container network, NOT localhost): `echo $VITE_API_URL` and test with `curl $VITE_API_URL/health`
 - **Styles not loading?** Restart dev server: `npm run dev`
 - **Still stuck?** Ask in #dev-frontend Slack channel
 

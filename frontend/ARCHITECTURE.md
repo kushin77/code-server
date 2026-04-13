@@ -26,8 +26,12 @@ The Enterprise RBAC Frontend is a **Single Page Application (SPA)** built on Rea
 │                  Client API Layer                     │
 │  (rbacAPI - Axios Instance)                          │
 ├─────────────────────────────────────────────────────┤
-│        ENTERPRISE RBAC API (http://localhost:3001)   │
-│  (Express.js, PostgreSQL, 15 Endpoints)              │
+│   ENTERPRISE RBAC API (Domain DNS or Container)      │
+│   MANDATE: Never localhost                           │
+│   Production: https://api.kushnir.cloud              │
+│   Or: https://ide.kushnir.cloud/api                  │
+│   Development: http://rbac-api:3001 (Container)      │
+│   (Express.js, PostgreSQL, 15 Endpoints)             │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -340,7 +344,8 @@ t=10ms: Hook calls API
          rbacAPI.createUser()
 
 t=200ms: Network request sent to backend
-         POST http://localhost:3001/admin/users
+         POST https://api.kushnir.cloud/admin/users
+         (MANDATE: Never localhost - use domain DNS)
 
 t=300ms: Backend processes
          Validates email uniqueness
@@ -676,10 +681,12 @@ import DOMPurify from 'dompurify'
 ### 7.4 API Request Security
 
 ```typescript
-// ✅ Only HTTPS in production
-const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://api.example.com'
-  : 'http://localhost:3001'
+// MANDATE: Never use localhost - always use domain DNS or container networks
+const API_URL = process.env.VITE_API_URL || (
+  process.env.NODE_ENV === 'production'
+    ? 'https://api.kushnir.cloud'
+    : 'http://rbac-api:3001'  // Docker container network
+)
 
 // ✅ Always use credentials
 axios.defaults.withCredentials = true

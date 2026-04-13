@@ -298,7 +298,7 @@ export class AgentFarmDashboard {
     ${aggregatedRecommendations.length > 0 ? `
       <h2>Recommendations (${aggregatedRecommendations.length})</h2>
       <div class="recommendations">
-        ${aggregatedRecommendations.map((rec, idx) => `
+        ${aggregatedRecommendations.map((rec: Recommendation, idx: number) => `
           <div class="recommendation-item ${rec.severity}">
             <div class="rec-title">
               ${rec.title}

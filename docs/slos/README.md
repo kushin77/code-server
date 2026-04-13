@@ -27,7 +27,7 @@ What we **target**. Examples:
 ### **Error Budget**
 How much **failure is acceptable**.
 
-Formula: `Error Budget = (100% - SLO%) × Total Time
+Formula: `Error Budget = (100% - SLO%) × Total Time`
 
 Example: 99.9% SLO on a 30-day month
 - Error budget: 0.1% × (30 days × 24 hours × 60 minutes) = **43.2 minutes**

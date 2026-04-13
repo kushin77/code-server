@@ -76,7 +76,7 @@ jobs:
         vsce package
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: agent-farm-vsix
         path: extensions/agent-farm/*.vsix
@@ -90,7 +90,7 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Download artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: agent-farm-vsix
     

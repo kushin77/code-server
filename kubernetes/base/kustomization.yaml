@@ -4,7 +4,13 @@ kind: Kustomization
 namespace: code-server
 
 resources:
+  # Namespace and core infrastructure
   - namespace.yaml
+  
+  # Configuration
+  - configmaps.yaml
+  
+  # Deployments and Services
   - code-server-deployment.yaml
   - code-server-service.yaml
   - agent-api-deployment.yaml
@@ -17,6 +23,16 @@ resources:
   - prometheus-service.yaml
   - grafana-deployment.yaml
   - grafana-service.yaml
+  
+  # Scaling and reliability
+  - hpa.yaml
+  - pdb.yaml
+  
+  # Monitoring and metrics
+  - monitoring.yaml
+  
+  # Security
+  - network-policies.yaml
 
 commonLabels:
   app.kubernetes.io/version: "phase-8"

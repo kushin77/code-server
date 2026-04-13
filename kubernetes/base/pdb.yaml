@@ -1,0 +1,59 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: code-server-pdb
+  namespace: code-server
+  labels:
+    app: code-server
+    component: pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: code-server
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: agent-api-pdb
+  namespace: code-server
+  labels:
+    app: agent-api
+    component: pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: agent-api
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: embeddings-pdb
+  namespace: code-server
+  labels:
+    app: embeddings
+    component: pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: embeddings
+  unhealthyPodEvictionPolicy: AlwaysAllow
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: code-server
+  labels:
+    app: redis
+    component: pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: redis
+  unhealthyPodEvictionPolicy: AlwaysAllow

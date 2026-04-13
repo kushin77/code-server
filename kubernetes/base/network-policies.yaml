@@ -1,0 +1,266 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-server-default-deny
+  namespace: code-server
+  labels:
+    app: code-server
+    component: network-policy
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  description: Default deny all ingress and egress, then explicitly allow
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-server-ingress
+  namespace: code-server
+  labels:
+    app: code-server
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: code-server
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow from Ingress controller (if applicable)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8443
+  # Allow from monitoring stack
+  - from:
+    - podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 8443
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-api-communication
+  namespace: code-server
+  labels:
+    app: agent-api
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: agent-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from code-server
+  - from:
+    - podSelector:
+        matchLabels:
+          app: code-server
+    ports:
+    - protocol: TCP
+      port: 3000
+  # Allow from prometheus scraping
+  - from:
+    - podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  # Allow to embeddings service
+  - to:
+    - podSelector:
+        matchLabels:
+          app: embeddings
+    ports:
+    - protocol: TCP
+      port: 5000
+  # Allow to Redis
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow to kube-dns for external service discovery
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: embeddings-communication
+  namespace: code-server
+  labels:
+    app: embeddings
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: embeddings
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from agent-api
+  - from:
+    - podSelector:
+        matchLabels:
+          app: agent-api
+    ports:
+    - protocol: TCP
+      port: 5000
+  # Allow from prometheus scraping
+  - from:
+    - podSelector:
+        matchLabels:
+          app: prometheus
+    ports:
+    - protocol: TCP
+      port: 5000
+  egress:
+  # Allow to Redis for caching
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow outbound DNS for model downloads (HuggingFace, etc.)
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow HTTPS for model downloads
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-communication
+  namespace: code-server
+  labels:
+    app: redis
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from code-server
+  - from:
+    - podSelector:
+        matchLabels:
+          app: code-server
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow from agent-api
+  - from:
+    - podSelector:
+        matchLabels:
+          app: agent-api
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow from embeddings
+  - from:
+    - podSelector:
+        matchLabels:
+          app: embeddings
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  # Allow pod-to-pod communication for cluster replication
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: monitoring-communication
+  namespace: code-server
+  labels:
+    app: monitoring
+    component: network-policy
+spec:
+  podSelector:
+    matchMatchLabels:
+      app: prometheus
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from Grafana
+  - from:
+    - podSelector:
+        matchLabels:
+          app: grafana
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  # Allow to all pods for scraping
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: code-server
+    ports:
+    - protocol: TCP
+      port: 8443
+    - protocol: TCP
+      port: 3000
+    - protocol: TCP
+      port: 5000
+    - protocol: TCP
+      port: 9090
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53

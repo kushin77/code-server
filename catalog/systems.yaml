@@ -1,0 +1,7 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: agent-farm
+  description: AI agent farm system for code-server enterprise
+spec:
+  owner: group:platform

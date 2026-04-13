@@ -1,0 +1,24 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: agent-farm-api
+  description: LangGraph multi-agent orchestration API
+  annotations:
+    github.com/project-slug: kushin77/code-server
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:platform
+  system: agent-farm
+  definition: |
+    openapi: "3.0.0"
+    info:
+      title: Agent Farm API
+      version: "1.0.0"
+    paths:
+      /run_task:
+        post:
+          summary: Submit a task
+      /health:
+        get:
+          summary: Health check

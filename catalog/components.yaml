@@ -1,0 +1,35 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: agent-api
+  description: FastAPI + LangGraph agent orchestration service
+  annotations:
+    github.com/project-slug: kushin77/code-server
+spec:
+  type: service
+  lifecycle: production
+  owner: group:platform
+  system: agent-farm
+  providesApis: [agent-farm-api]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: embeddings
+  description: Sentence-transformers + ChromaDB RAG service
+spec:
+  type: service
+  lifecycle: production
+  owner: group:platform
+  system: agent-farm
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: computer-use-mcp
+  description: Playwright browser automation MCP server
+spec:
+  type: service
+  lifecycle: production
+  owner: group:platform
+  system: agent-farm

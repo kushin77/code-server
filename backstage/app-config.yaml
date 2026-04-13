@@ -1,0 +1,59 @@
+app:
+  title: Agent Farm Developer Portal
+  baseUrl: http://localhost:3000
+  support:
+    url: https://github.com/kushin77/code-server/issues
+
+organization:
+  name: kushin77
+
+backend:
+  baseUrl: http://localhost:7007
+  listen:
+    port: 7007
+  csp:
+    connect-src: ["'self'", 'http:', 'https:']
+  database:
+    client: better-sqlite3
+    connection: ':memory:'
+
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+
+auth:
+  environment: production
+  providers:
+    oidc:
+      production:
+        clientId: backstage
+        clientSecret: ${BACKSTAGE_KEYCLOAK_SECRET}
+        metadataUrl: http://keycloak:8080/realms/enterprise/.well-known/openid-configuration
+        prompt: auto
+
+catalog:
+  providers: {}
+  import:
+    entityFilename: catalog-info.yaml
+  rules:
+    - allow: [Component, System, API, Group, User, Resource, Location]
+  locations:
+    - type: file
+      target: /catalog/all.yaml
+
+techdocs:
+  builder: local
+  generator:
+    runIn: local
+  publisher:
+    type: local
+
+proxy:
+  endpoints:
+    /ollama:
+      target: http://ollama:11434
+      changeOrigin: true
+    /agent-api:
+      target: http://agent-api:8001
+      changeOrigin: true

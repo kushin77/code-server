@@ -1,0 +1,93 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Terraform Variables Configuration
+# COPY THIS FILE: cp terraform.tfvars.example terraform.tfvars
+# EDIT: Fill in your secrets from Google Secret Manager / environment
+# DO NOT COMMIT: terraform.tfvars (contains secrets)
+# ════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Service Configuration (safe to commit to git)
+# ─────────────────────────────────────────────────────────────────────────────
+
+domain = "ide.kushnir.cloud"
+
+# Code-Server password (change in production)
+code_server_password = "change-me-in-production"
+
+# Workspace mount path (local filesystem)
+workspace_path = "./workspace"
+
+enable_workspace_mount = true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECRETS — Fill from Google Secret Manager (DO NOT COMMIT)
+# Run: scripts/fetch-gsm-secrets.sh
+# Or set environment variables:
+#   export TF_VAR_google_client_id="..."
+#   export TF_VAR_google_client_secret="..."
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Google OAuth2 credentials (from GCP Console → APIs & Services → Credentials)
+google_client_id     = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+google_client_secret = "YOUR_GOOGLE_CLIENT_SECRET"
+
+# OAuth2-Proxy cookie encryption (generate: openssl rand -base64 32)
+oauth2_proxy_cookie_secret = "YOUR_RANDOM_COOKIE_SECRET_64_CHARS_MIN"
+
+# GitHub token (optional, for higher Copilot rate limits)
+# Leave empty to disable
+github_token = ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Docker & Deployment Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+docker_context = "desktop-linux"    # Change to "default" on Linux; "desktop-linux" on Docker Desktop
+
+enable_https = true
+
+log_level = "info"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ollama (Local LLM) Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+enable_ollama = true
+
+# Number of CPU threads (0 = auto-detect)
+ollama_num_threads = 8
+
+# Number of GPUs (0 = CPU only)
+ollama_num_gpu = 0
+
+# Default model pulled at startup
+ollama_default_model = "llama2:70b-chat"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resource Limits (tune based on your hardware)
+# ─────────────────────────────────────────────────────────────────────────────
+
+code_server_memory_limit = "4g"
+code_server_cpus_limit   = "2.0"
+
+enable_healthchecks = true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Version Pinning (change only to upgrade)
+# ────────────────────────────────────────────────────────────────────────────
+
+code_server_version = "4.115.0"
+caddy_version       = "2.7.6"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resource Tags (for auditing and automation)
+# ─────────────────────────────────────────────────────────────────────────────
+
+tags = {
+  Project            = "code-server-enterprise"
+  Environment        = "production"
+  IaC                = "terraform"
+  ManagedBy          = "terraform"
+  CostCenter         = "engineering"
+  DataClassification = "internal"
+}

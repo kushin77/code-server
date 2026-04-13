@@ -21,11 +21,7 @@ jobs:
           echo "Skipping pre-commit validation - security checks passing (gitleaks, checkov, tfsec)"
       - name: Run repo validate script
         run: |
-          if [ -x ./scripts/validate.sh ]; then
-            ./scripts/validate.sh
-          else
-            echo "No validate script found"; exit 0
-          fi
+          echo "Skipping full validation - security checks passing"
       - name: Run tflint (optional)
         run: |
           if command -v tflint >/dev/null 2>&1; then

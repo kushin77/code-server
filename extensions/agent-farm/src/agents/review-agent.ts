@@ -48,9 +48,9 @@ export class ReviewAgent extends Agent {
 
     // Check for inconsistent naming conventions
     const camelCaseCount = (code.match(/[a-z][a-zA-Z0-9]*[A-Z]/g) || []).length;
-    const snake_case_count = (code.match(/_[a-z_]+/g) || []).length;
+    const snakeCaseCount = (code.match(/_[a-z_]+/g) || []).length;
 
-    if (camelCaseCount > 5 && snake_case_count > 5) {
+    if (camelCaseCount > 5 && snakeCaseCount > 5) {
       recommendations.push({
         id: 'naming-inconsistency',
         title: 'Inconsistent Naming Convention',

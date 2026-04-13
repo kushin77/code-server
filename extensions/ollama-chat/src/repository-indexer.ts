@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { OllamaClient } from './ollama-client';
 
@@ -23,18 +24,25 @@ export class RepositoryIndexer {
     // Index key files: README, package.json, main source files
     const filesToIndex = await this.findKeyFiles(this.workspaceRoot);
 
-    for (const file of filesToIndex) {
-      try {
-        const content = fs.readFileSync(file, 'utf-8');
-        const summary = this.summarizeContent(content);
-        const embedding = await this.ollamaClient.embed(summary);
-        this.index.set(file, { content: summary, embedding });
-      } catch (error) {
-        console.error(`Error indexing ${file}:`, error);
-      }
+    // Process files with concurrency limit to avoid UI freezing
+    const concurrencyLimit = 5;
+    for (let i = 0; i < filesToIndex.length; i += concurrencyLimit) {
+      const batch = filesToIndex.slice(i, i + concurrencyLimit);
+      await Promise.all(batch.map((file) => this.indexFile(file)));
     }
 
     console.log(`✅ Indexed ${this.index.size} files`);
+  }
+
+  private async indexFile(file: string): Promise<void> {
+    try {
+      const content = await fsPromises.readFile(file, 'utf-8');
+      const summary = this.summarizeContent(content);
+      const embedding = await this.ollamaClient.embed(summary);
+      this.index.set(file, { content: summary, embedding });
+    } catch (error) {
+      console.error(`Error indexing ${file}:`, error);
+    }
   }
 
   async getRelevantContext(query: string): Promise<string> {
@@ -71,11 +79,11 @@ export class RepositoryIndexer {
     const files: string[] = [];
     const maxFiles = 100; // Limit to top 100 files
 
-    const walkDir = (dir: string, depth: number = 0) => {
+    const walkDir = async (dir: string, depth: number = 0): Promise<void> => {
       if (depth > 3 || files.length > maxFiles) return; // Limit depth
 
       try {
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        const entries = await fsPromises.readdir(dir, { withFileTypes: true });
         for (const entry of entries) {
           if (files.length >= maxFiles) break;
 
@@ -87,7 +95,7 @@ export class RepositoryIndexer {
           const fullPath = path.join(dir, entry.name);
 
           if (entry.isDirectory()) {
-            walkDir(fullPath, depth + 1);
+            await walkDir(fullPath, depth + 1);
           } else if (keyPatterns.some((pattern) => pattern.test(entry.name))) {
             files.push(fullPath);
           }
@@ -97,7 +105,7 @@ export class RepositoryIndexer {
       }
     };
 
-    walkDir(rootPath);
+    await walkDir(rootPath);
     return files;
   }
 

@@ -6,7 +6,17 @@ Production-grade VS Code IDE with **elite local LLM (Ollama)**, OAuth2 authentic
 > **Auth**: Google OAuth2  
 > **📖 Domain Configuration**: See [DOMAIN_CONFIGURATION.md](./DOMAIN_CONFIGURATION.md)
 
-## 🚀 Quick Start
+## � MANDATE: No Localhost
+
+**All services MUST use domain DNS or container networks. Never use `localhost` or `127.0.0.1`.**
+
+See [NO_LOCALHOST_MANDATE.md](./NO_LOCALHOST_MANDATE.md) for enforcement rules and examples.
+
+- ✅ Development: Use container network names (`http://rbac-api:3001`)
+- ✅ Production: Use domain DNS (`https://api.kushnir.cloud`)
+- ❌ Never: `http://localhost:3001` or `127.0.0.1:3001`
+
+## �🚀 Quick Start
 
 ### Prerequisites
 - Docker & Docker Compose installed

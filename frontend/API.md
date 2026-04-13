@@ -59,9 +59,14 @@ frontend/src/api/rbac-client.ts
 class RBACAPIClient {
   private axiosInstance: AxiosInstance
   
-  constructor(baseURL: string = 'http://localhost:3001') {
+  constructor(baseURL?: string) {
+    // MANDATE: Use domain DNS or container networks, NEVER localhost
+    const defaultUrl = baseURL || 
+      process.env.VITE_API_URL || 
+      (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://rbac-api:3001')
+    
     this.axiosInstance = axios.create({
-      baseURL,
+      baseURL: defaultUrl,
       headers: {
         'Content-Type': 'application/json',
       },

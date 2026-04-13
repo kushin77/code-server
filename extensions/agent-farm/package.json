@@ -4,6 +4,10 @@
   "description": "Specialized agents for code analysis, review, architecture, and testing",
   "version": "0.1.0",
   "publisher": "kushin77",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kushin77/code-server.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -24,10 +28,11 @@
   "icon": "resources/icon.png",
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:agent-farm.executeTask",
-    "onView:agent-farm-dashboard"
+    "onCommand:agent-farm.analyzeFile",
+    "onCommand:agent-farm.analyzeWithTask",
+    "onView:agentFarmView"
   ],
-  "main": "./dist/extension.js",
+  "main": "./out/index.js",
   "contributes": {
     "commands": [
       {
@@ -102,25 +107,21 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "jest",
+    "lint": "tsc --noEmit",
+    "test": "jest --coverage",
     "test:watch": "jest --watch",
-    "build": "webpack --mode production",
-    "dev": "webpack --mode development --watch"
+    "test:coverage": "jest --coverage --coverageReporters=text-lcov",
+    "pretest": "npm run compile"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.0.0",
-    "webpack": "^5.88.0",
-    "webpack-cli": "^5.1.0"
+    "typescript": "^5.0.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "yaml": "^2.8.3"
+  }
 }

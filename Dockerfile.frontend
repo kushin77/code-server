@@ -1,0 +1,51 @@
+# Frontend — React + TypeScript User Management UI
+# Build stage: Compile TypeScript and bundle with Vite
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies (production + dev for build)
+RUN npm ci --prefer-offline --no-audit
+
+# Copy source code
+COPY frontend/src ./src
+COPY frontend/*.ts* ./
+COPY frontend/*.html ./
+COPY frontend/*.config.* ./
+COPY frontend/public ./public
+
+# Build the React app with Vite
+RUN npm run build
+
+# Runtime stage: Serve with minimal container
+FROM node:20-alpine AS runtime
+
+WORKDIR /app
+
+# Install lightweight HTTP server
+RUN npm install -g serve
+
+# Copy built app from builder
+COPY --from=builder /app/dist ./dist
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
+USER nodejs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget -q --spider http://localhost:3000/index.html || exit 1
+
+# Serve on port 3000
+EXPOSE 3000
+
+CMD ["serve", "-s", "dist", "-l", "3000"]
+
+# Labels for metadata
+LABEL org.opencontainers.image.authors="Engineering Team" \
+      org.opencontainers.image.description="Enterprise User Management UI - React + TypeScript" \
+      org.opencontainers.image.version="1.0.0"

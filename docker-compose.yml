@@ -46,7 +46,7 @@ services:
       # Enterprise settings: seeded into user settings on first launch (see entrypoint.sh)
       - ./config/settings.json:/etc/code-server/settings.json:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      test: ["CMD", "curl", "-f", "http://code-server:8080/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -91,7 +91,7 @@ services:
       - ollama-data:/root/.ollama
       - ${WORKSPACE_PATH:-./workspace}:/workspace:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "curl", "-f", "http://ollama:11434/api/tags"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -150,6 +150,102 @@ services:
       - ollama
     restart: on-failure
 
+  # ─── rbac-api ───────────────────────────────────────────────────────────────
+  # RBAC API — JWT-based authentication and authorization service
+  # Provides OAuth2/OpenID Connect for Appsmith and Backstage integration
+  # Exposes user management, role assignment, and MFA endpoints
+  rbac-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.rbac-api
+    image: rbac-api:local
+    container_name: rbac-api
+    restart: unless-stopped
+    networks:
+      - enterprise
+    # NOT exposed to host — traffic routed through Caddy reverse proxy
+    expose:
+      - "3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - BASE_URL=https://${DOMAIN}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_EXPIRES_IN=24h
+      - ENABLE_MFA=true
+      - ENABLE_AUDIT_LOGGING=true
+      # CORS origins: allow Appsmith and Backstage on internal network
+      - CORS_ORIGIN=http://appsmith,http://backstage,https://${DOMAIN}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://rbac-api:3001/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+          cpus: '0.1'
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "10"
+
+  # ─── frontend ───────────────────────────────────────────────────────────────
+  # React + TypeScript User Management UI
+  # Consumes RBAC API for authentication and user management
+  # Served by Caddy proxy at /admin path
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: frontend:local
+    container_name: frontend
+    restart: unless-stopped
+    networks:
+      - enterprise
+    # NOT exposed to host — traffic routed through Caddy reverse proxy
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=https://${DOMAIN}/api
+      - VITE_AUTH_DOMAIN=${DOMAIN}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://frontend:3000/index.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+          cpus: '0.1'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    depends_on:
+      - rbac-api
+
   # ─── oauth2-proxy ───────────────────────────────────────────────────────────
   # Eiq-org pattern: OIDC sidecar for zero-trust authentication
   # Validates Google OAuth tokens before passing to code-server
@@ -202,7 +298,7 @@ services:
       # is consumed before the IDE can exchange it (causing "Sign in" to loop forever).
       OAUTH2_PROXY_SKIP_AUTH_ROUTES: "^/health$$|^/oauth2/|^/callback$$"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4180/ping"]
+      test: ["CMD", "wget", "-q", "--spider", "http://oauth2-proxy:4180/ping"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -211,6 +307,7 @@ services:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     depends_on:
       - code-server
+      - rbac-api
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -256,6 +353,7 @@ services:
       - caddy-config:/config
     depends_on:
       - oauth2-proxy
+      - rbac-api
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 30s

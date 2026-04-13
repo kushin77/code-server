@@ -319,7 +319,8 @@ echo ""
 echo "Step 5: Validating deployment..."
 CHECKS_PASSED=0
 
-# Check code-server HTTP endpoint
+# Check code-server HTTP endpoint (from host - uses localhost for testing)
+# In production, access via domain DNS: https://${DOMAIN}
 if curl -sf http://localhost:8080/healthz > /dev/null 2>&1; then
   echo "✅ code-server HTTP health check passed"
   ((CHECKS_PASSED++))

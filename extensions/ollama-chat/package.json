@@ -61,7 +61,7 @@
       "properties": {
         "ollama.endpoint": {
           "type": "string",
-          "default": "http://localhost:11434",
+          "default": "http://ollama:11434",
           "description": "Ollama server endpoint"
         },
         "ollama.defaultModel": {

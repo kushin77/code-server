@@ -28,13 +28,17 @@ This guide covers deploying the Enterprise RBAC Frontend Dashboard across develo
 
 - Node.js 18+ (LTS recommended)
 - npm 9+ or yarn 3+
-- RBAC API running on `http://localhost:3001`
+- RBAC API running (configured via VITE_API_URL environment variable)
 
 ### Setup
 
 ```bash
 # Clone or navigate to frontend directory
 cd frontend
+
+# Set API URL (MANDATE: Never localhost)
+# For Docker development:
+export VITE_API_URL=http://rbac-api:3001
 
 # Install dependencies
 npm install
@@ -46,7 +50,7 @@ npm run dev
 **What happens**:
 - Vite dev server starts on `http://localhost:3000`
 - Hot Module Replacement (HMR) enabled for instant updates
-- API proxy configured for `/api` → `http://localhost:3001`
+- API proxy configured for `/api` → `${VITE_API_URL}` (set via environment)
 - TypeScript type checking in watch mode
 - SCSS/CSS hot-reload
 
@@ -68,12 +72,21 @@ docker run -d -p 5432:5432 postgres:15
 npm run test:watch
 ```
 
-### Environment Variables (Development)
+### Environment Variables
+
+**MANDATE: Never use `localhost` in any environment. Use domain DNS or container networks.**
 
 Create `.env.local`:
 
 ```env
-VITE_API_URL=http://localhost:3001
+# Development (Docker): Use container network name
+VITE_API_URL=http://rbac-api:3001
+
+# Staging/Production: Use your domain
+# VITE_API_URL=https://api.kushnir.cloud
+# OR if API is proxied through main domain:
+# VITE_API_URL=https://ide.kushnir.cloud/api
+
 VITE_APP_NAME=RBAC Dashboard
 VITE_APP_VERSION=1.0.0
 VITE_LOG_LEVEL=debug
@@ -548,7 +561,12 @@ VITE_SENTRY_DSN=https://xxxxx@sentry.io/xxxxx
 export default {
   define: {
     'import.meta.env.APP_VERSION': JSON.stringify(process.env.APP_VERSION || '1.0.0'),
-    'import.meta.env.API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:3001'),
+    // MANDATE: Never default to localhost
+    'import.meta.env.API_URL': JSON.stringify(process.env.VITE_API_URL || (
+      process.env.NODE_ENV === 'production'
+        ? 'https://api.kushnir.cloud'
+        : 'http://rbac-api:3001'  // Container network
+    )),
   },
 }
 ```
@@ -558,7 +576,12 @@ export default {
 ```typescript
 // src/config.ts
 export const config = {
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  // MANDATE: Use domain DNS or container networks, NEVER localhost
+  apiUrl: import.meta.env.VITE_API_URL || (
+    typeof window !== 'undefined' 
+      ? `${window.location.origin}/api`
+      : 'http://rbac-api:3001'
+  ),
   appVersion: import.meta.env.VITE_APP_VERSION || 'dev',
   environment: import.meta.env.MODE,
   logLevel: import.meta.env.VITE_LOG_LEVEL || 'info',

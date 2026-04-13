@@ -10,8 +10,7 @@
     '''START_HERE_SECURITY\.md''',
     '''IDE_SECURITY_AND_USER_MANAGEMENT\.md''',
     '''RUNBOOKS\.md''',
-    '''kubernetes/ha-config/.*''',
-    '''extensions/agent-farm/dist/.*''',
+    '''kubernetes/ha-config/.*secret.*\.ya?ml''',
     '''extensions/agent-farm/package-lock\.json''',
   ]
   regexes = [

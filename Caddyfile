@@ -59,6 +59,17 @@
         header_up X-Forwarded-For {remote_host}
     }
 
+    # ─── User Management UI ───────────────────────────────────────────────────
+    # React + TypeScript user management interface
+    # Integrated with RBAC API for authentication and authorization
+    @admin path /admin* /admin/*
+    reverse_proxy @admin frontend:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
+    }
+
     # ─── Developer Portal ─────────────────────────────────────────────────────
     # Backstage: Software catalog, documentation, scaffolder, onboarding
     @backstage path /backstage* /backstage/*

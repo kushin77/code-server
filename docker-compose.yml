@@ -200,6 +200,52 @@ services:
         max-size: "20m"
         max-file: "10"
 
+  # ─── frontend ───────────────────────────────────────────────────────────────
+  # React + TypeScript User Management UI
+  # Consumes RBAC API for authentication and user management
+  # Served by Caddy proxy at /admin path
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: frontend:local
+    container_name: frontend
+    restart: unless-stopped
+    networks:
+      - enterprise
+    # NOT exposed to host — traffic routed through Caddy reverse proxy
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=https://${DOMAIN}/api
+      - VITE_AUTH_DOMAIN=${DOMAIN}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://frontend:3000/index.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+          cpus: '0.1'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    depends_on:
+      - rbac-api
+
   # ─── oauth2-proxy ───────────────────────────────────────────────────────────
   # Eiq-org pattern: OIDC sidecar for zero-trust authentication
   # Validates Google OAuth tokens before passing to code-server

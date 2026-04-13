@@ -1,0 +1,330 @@
+.PHONY: help init plan apply destroy validate fmt clean verify backup restore docs
+
+# Terraform Kubernetes Deployment Automation
+# 
+# This Makefile provides convenient commands for managing the Terraform
+# Infrastructure as Code deployment of the Kubernetes cluster.
+#
+# Usage: make [target]
+# Example: make help
+
+# Variables
+TF_DIR := terraform
+TF_VAR_FILE := $(TF_DIR)/terraform.tfvars
+TF_INIT_FLAG := $(TF_DIR)/.terraform
+TF_LOCK_FILE := $(TF_DIR)/.terraform.lock.hcl
+UNAME_S := $(shell uname -s)
+LOG_DIR := logs
+TIMESTAMP := $(shell date +%Y%m%d-%H%M%S)
+BACKUP_DIR := backups
+STATE_FILE := $(TF_DIR)/terraform.tfstate
+STATE_BACKUP := $(TF_DIR)/terraform.tfstate.backup
+PLAN_FILE := $(TF_DIR)/tfplan-$(TIMESTAMP)
+
+# Color output
+BLUE := \033[0;34m
+GREEN := \033[0;32m
+YELLOW := \033[1;33m
+RED := \033[0;31m
+NC := \033[0m
+
+# Targets
+help: ## Display this help message
+	@echo "$(BLUE)Kubernetes Infrastructure as Code - Terraform Management$(NC)"
+	@echo ""
+	@echo "$(GREEN)Usage:$(NC) make [target]"
+	@echo ""
+	@echo "$(GREEN)Core Targets:$(NC)"
+	@echo "  $(BLUE)init$(NC)              Initialize Terraform workspace"
+	@echo "  $(BLUE)plan$(NC)              Preview infrastructure changes"
+	@echo "  $(BLUE)apply$(NC)             Deploy infrastructure"
+	@echo "  $(BLUE)destroy$(NC)           Destroy all infrastructure (DESTRUCTIVE)"
+	@echo ""
+	@echo "$(GREEN)Validation & Testing:$(NC)"
+	@echo "  $(BLUE)validate$(NC)          Validate Terraform configuration"
+	@echo "  $(BLUE)fmt$(NC)               Format Terraform code"
+	@echo "  $(BLUE)verify$(NC)            Verify cluster deployment status"
+	@echo "  $(BLUE)health-check$(NC)      Run health check scripts"
+	@echo "  $(BLUE)compliance$(NC)        Run compliance verification"
+	@echo "  $(BLUE)benchmark$(NC)         Run performance benchmarks"
+	@echo ""
+	@echo "$(GREEN)State Management:$(NC)"
+	@echo "  $(BLUE)state-show$(NC)        Show complete Terraform state"
+	@echo "  $(BLUE)state-backup$(NC)      Backup current state"
+	@echo "  $(BLUE)state-lock$(NC)        List locked state"
+	@echo "  $(BLUE)refresh$(NC)           Refresh state (sync with cluster)"
+	@echo ""
+	@echo "$(GREEN)Access & Operations:$(NC)"
+	@echo "  $(BLUE)outputs$(NC)           Show all Terraform outputs"
+	@echo "  $(BLUE)access-info$(NC)       Show access information"
+	@echo "  $(BLUE)port-forward$(NC)      Port-forward to services"
+	@echo "  $(BLUE)logs$(NC)              View recent logs"
+	@echo "  $(BLUE)cleanup$(NC)           Run cleanup scripts"
+	@echo ""
+	@echo "$(GREEN)Documentation:$(NC)"
+	@echo "  $(BLUE)docs$(NC)              Generate documentation"
+	@echo "  $(BLUE)checklist$(NC)         Show deployment checklist"
+	@echo ""
+	@echo "$(GREEN)Utility:$(NC)"
+	@echo "  $(BLUE)clean$(NC)             Clean temporary files"
+	@echo "  $(BLUE)version$(NC)           Show tool versions"
+	@echo ""
+
+# Initialize Terraform
+init: ## Initialize Terraform workspace
+	@echo "$(BLUE)Initializing Terraform workspace...$(NC)"
+	@mkdir -p $(LOG_DIR)
+	cd $(TF_DIR) && terraform init 2>&1 | tee ../$(LOG_DIR)/init-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ Terraform initialized$(NC)"
+
+# Validate configuration
+validate: init ## Validate Terraform configuration
+	@echo "$(BLUE)Validating Terraform configuration...$(NC)"
+	cd $(TF_DIR) && terraform validate 2>&1 | tee ../$(LOG_DIR)/validate-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ Configuration is valid$(NC)"
+
+# Format code
+fmt: ## Format Terraform code to canonical style
+	@echo "$(BLUE)Formatting Terraform code...$(NC)"
+	cd $(TF_DIR) && terraform fmt -recursive . 2>&1 | tee ../$(LOG_DIR)/fmt-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ Code formatted$(NC)"
+
+# Plan deployment
+plan: validate ## Preview infrastructure changes
+	@echo "$(BLUE)Planning Terraform deployment...$(NC)"
+	@if [ ! -f "$(TF_VAR_FILE)" ]; then \
+		echo "$(RED)ERROR: $(TF_VAR_FILE) not found$(NC)"; \
+		echo "Copy terraform.tfvars.example to terraform.tfvars and customize"; \
+		exit 1; \
+	fi
+	cd $(TF_DIR) && terraform plan \
+		-var-file=terraform.tfvars \
+		-out=$(PLAN_FILE) \
+		2>&1 | tee ../$(LOG_DIR)/plan-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ Plan saved to $(PLAN_FILE)$(NC)"
+	@echo "Review with: cat terraform/tfplan-*"
+
+# Apply deployment
+apply: plan ## Deploy infrastructure
+	@echo "$(YELLOW)Applying Terraform deployment...$(NC)"
+	@echo "$(RED)This will create/modify resources in your cluster.$(NC)"
+	@echo "Press Ctrl+C to cancel"
+	@sleep 3
+	cd $(TF_DIR) && terraform apply $(PLAN_FILE) \
+		2>&1 | tee ../$(LOG_DIR)/apply-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ Deployment complete$(NC)"
+
+# Quick apply (idempotent - safe for re-runs)
+quick-apply: ## Apply without interactive plan (idempotent)
+	@echo "$(BLUE)Quick applying Terraform (idempotent)...$(NC)"
+	@if [ ! -f "$(TF_VAR_FILE)" ]; then \
+		echo "$(RED)ERROR: $(TF_VAR_FILE) not found$(NC)"; \
+		exit 1; \
+	fi
+	cd $(TF_DIR) && terraform apply \
+		-auto-approve \
+		-var-file=terraform.tfvars \
+		2>&1 | tee ../$(LOG_DIR)/quick-apply-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ Deployment complete$(NC)"
+
+# Refresh state
+refresh: init ## Refresh state to sync with cluster
+	@echo "$(BLUE)Refreshing Terraform state...$(NC)"
+	cd $(TF_DIR) && terraform refresh \
+		-var-file=terraform.tfvars \
+		2>&1 | tee ../$(LOG_DIR)/refresh-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ State refreshed$(NC)"
+
+# Show state
+state-show: init ## Show complete Terraform state
+	@echo "$(BLUE)Terraform State:$(NC)"
+	cd $(TF_DIR) && terraform show | head -100
+	@echo ""
+	@echo "Full state: terraform/terraform.tfstate"
+
+# Backup state
+state-backup: ## Backup current Terraform state
+	@mkdir -p $(BACKUP_DIR)
+	@cp -v $(STATE_FILE) $(BACKUP_DIR)/state-$(TIMESTAMP).tfstate
+	@echo "$(GREEN)✓ State backed up to $(BACKUP_DIR)/state-$(TIMESTAMP).tfstate$(NC)"
+
+# Lock status
+state-lock: init ## Show state lock information
+	@echo "$(BLUE)State Lock Information:$(NC)"
+	@if [ -d "$(TF_DIR)/.terraform/state" ]; then \
+		ls -lh $(TF_DIR)/.terraform/state/ 2>/dev/null || echo "No locks found"; \
+	else \
+		echo "No lock directory found (local backend)"; \
+	fi
+
+# Show outputs
+outputs: init ## Display all Terraform outputs
+	@echo "$(BLUE)Terraform Outputs:$(NC)"
+	cd $(TF_DIR) && terraform output 2>&1
+
+# Access information
+access-info: outputs ## Show cluster access information
+	@echo ""
+	@echo "$(GREEN)Access Information:$(NC)"
+	cd $(TF_DIR) && terraform output access_information 2>&1
+
+# Verify deployment
+verify: ## Verify cluster deployment status
+	@echo "$(BLUE)Verifying Kubernetes deployment...$(NC)"
+	@command -v kubectl >/dev/null 2>&1 || { echo "$(RED)kubectl not found$(NC)"; exit 1; }
+	@echo ""
+	@echo "$(BLUE)Cluster nodes:$(NC)"
+	@kubectl get nodes -o wide
+	@echo ""
+	@echo "$(BLUE)Namespace status:$(NC)"
+	@kubectl get namespaces
+	@echo ""
+	@echo "$(BLUE)Pod status (all namespaces):$(NC)"
+	@kubectl get pods -A --no-headers | head -20
+	@echo ""
+	@echo "$(BLUE)Persistent volumes:$(NC)"
+	@kubectl get pv
+	@echo ""
+	@echo "$(BLUE)Services (all namespaces):$(NC)"
+	@kubectl get svc -A | head -15
+
+# Health check
+health-check: ## Run health check scripts
+	@echo "$(BLUE)Running health check...$(NC)"
+	@if [ -f "/tmp/k8s-verification/01-health-check.sh" ]; then \
+		bash /tmp/k8s-verification/01-health-check.sh; \
+	else \
+		echo "$(YELLOW)Health check script not found. Run 'make apply' first.$(NC)"; \
+	fi
+
+# Compliance check
+compliance: ## Run compliance verification
+	@echo "$(BLUE)Running compliance check...$(NC)"
+	@if [ -f "/tmp/k8s-verification/02-compliance-check.sh" ]; then \
+		bash /tmp/k8s-verification/02-compliance-check.sh; \
+	else \
+		echo "$(YELLOW)Compliance check script not found. Run 'make apply' first.$(NC)"; \
+	fi
+
+# Performance benchmark
+benchmark: ## Run performance benchmarks
+	@echo "$(BLUE)Running performance benchmarks...$(NC)"
+	@if [ -f "/tmp/k8s-verification/03-performance-benchmark.sh" ]; then \
+		bash /tmp/k8s-verification/03-performance-benchmark.sh; \
+	else \
+		echo "$(YELLOW)Benchmark script not found. Run 'make apply' first.$(NC)"; \
+	fi
+
+# Port forwarding
+port-forward: ## Port-forward to services for local access
+	@echo "$(BLUE)Port-forwarding services...$(NC)"
+	@echo "$(YELLOW)Forwarding Prometheus (9090 -> 9090)$(NC)"
+	@echo "$(YELLOW)Forwarding Grafana (3000 -> 3000)$(NC)"
+	@echo "$(YELLOW)Forwarding code-server (8080 -> 8080)$(NC)"
+	@echo "Press Ctrl+C to stop"
+	@(kubectl port-forward -n monitoring svc/prometheus-kube-prometheus-prometheus 9090:9090 &) && \
+	(kubectl port-forward -n monitoring svc/prometheus-grafana 3000:80 &) && \
+	(kubectl port-forward -n code-server svc/code-server 8080:8080 &) && \
+	wait
+
+# Destroy infrastructure
+destroy: ## Destroy all infrastructure (DESTRUCTIVE - requires confirmation)
+	@echo "$(RED)WARNING: This will DESTROY all infrastructure!$(NC)"
+	@echo "$(RED)This action cannot be undone.$(NC)"
+	@echo ""
+	@read -p "Are you sure? Type 'yes' to confirm: " confirm && \
+	if [ "$$confirm" = "yes" ]; then \
+		echo "$(YELLOW)Destroying infrastructure...$(NC)"; \
+		cd $(TF_DIR) && terraform destroy -var-file=terraform.tfvars 2>&1 | tee ../$(LOG_DIR)/destroy-$(TIMESTAMP).log; \
+		echo "$(GREEN)✓ Infrastructure destroyed$(NC)"; \
+	else \
+		echo "$(BLUE)Destroy cancelled$(NC)"; \
+	fi
+
+# View logs
+logs: ## View recent operation logs
+	@echo "$(BLUE)Recent logs:$(NC)"
+	@if [ -d "$(LOG_DIR)" ]; then \
+		ls -lhtr $(LOG_DIR) | tail -10; \
+		echo ""; \
+		echo "$(BLUE)View specific log:$(NC) cat logs/[logfile]"; \
+	else \
+		echo "No logs found"; \
+	fi
+
+# Cleanup
+cleanup: ## Clean temporary files and test resources
+	@echo "$(BLUE)Cleaning up temporary files...$(NC)"
+	@if [ -f "/tmp/k8s-verification/04-cleanup-test-resources.sh" ]; then \
+		bash /tmp/k8s-verification/04-cleanup-test-resources.sh; \
+	fi
+	@find $(TF_DIR) -name "*.tfplan*" -delete
+	@echo "$(GREEN)✓ Cleanup complete$(NC)"
+
+# Clean all
+clean: cleanup ## Remove all temporary and build files
+	@echo "$(BLUE)Deep cleaning...$(NC)"
+	@rm -rf $(TF_DIR)/.terraform/
+	@rm -f $(TF_DIR)/.terraform.lock.hcl
+	@rm -f $(TF_DIR)/tfplan*
+	@rm -rf $(TF_DIR)/.terraform.d/
+	@echo "$(GREEN)✓ Deep clean complete$(NC)"
+	@echo "$(YELLOW)Note: terraform.tfstate preserved for recovery$(NC)"
+
+# Generate documentation
+docs: ## Generate documentation from Terraform modules
+	@echo "$(BLUE)Documentation:$(NC)"
+	@echo ""
+	@echo "Main README:"
+	@echo "  cat $(TF_DIR)/README.md"
+	@echo ""
+	@echo "Phase 2 (Namespaces & Storage):"
+	@echo "  cat $(TF_DIR)/modules/phase2-namespaces/README.md"
+	@echo ""
+	@echo "View deployment checklist:"
+	@echo "  make checklist"
+
+# Show deployment checklist
+checklist: ## Show deployment verification checklist
+	@echo "$(BLUE)Deployment Verification Checklist:$(NC)"
+	@kubectl get configmap verification-checklist -o jsonpath='{.data.VERIFICATION_CHECKLIST\.md}' 2>/dev/null || \
+		echo "Checklist not found. Run 'make apply' first."
+
+# Version check
+version: ## Show Terraform and kubectl versions
+	@echo "$(BLUE)Tool Versions:$(NC)"
+	@echo ""
+	@echo "Terraform:"
+	@terraform version
+	@echo ""
+	@echo "kubectl:"
+	@kubectl version --client 2>/dev/null || echo "kubectl not installed"
+	@echo ""
+	@echo "Helm:"
+	@helm version 2>/dev/null || echo "Helm not installed"
+	@echo ""
+	@echo "Kubernetes Cluster:"
+	@kubectl version --short 2>/dev/null || echo "Cluster not accessible"
+
+# CI/CD targets
+.PHONY: ci-validate ci-plan ci-apply
+
+ci-validate: validate fmt ## CI: Validate and format code
+	@echo "$(GREEN)✓ CI validation passed$(NC)"
+
+ci-plan: ## CI: Generate plan for PR
+	@echo "$(BLUE)CI: Generating deployment plan...$(NC)"
+	@mkdir -p $(LOG_DIR)
+	cd $(TF_DIR) && terraform plan -var-file=terraform.tfvars -out=$(PLAN_FILE) 2>&1 | tee ../$(LOG_DIR)/ci-plan-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ Plan generated at $(PLAN_FILE)$(NC)"
+
+ci-apply: ## CI: Apply plan (merge/main branch only)
+	@echo "$(BLUE)CI: Applying plan...$(NC)"
+	cd $(TF_DIR) && terraform apply -auto-approve -var-file=terraform.tfvars 2>&1 | tee ../$(LOG_DIR)/ci-apply-$(TIMESTAMP).log
+	@echo "$(GREEN)✓ Applied to main branch$(NC)"
+
+# Default target
+.DEFAULT_GOAL := help
+
+# Quiet mode for CI
+Q ?=

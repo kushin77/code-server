@@ -1,0 +1,143 @@
+# Terraform Variables Example
+# Copy to terraform.tfvars and customize for your environment
+
+# ===== KUBERNETES CONNECTION =====
+kubeconfig_path     = "~/.kube/config"
+kubeconfig_context  = "kubernetes-admin@kubernetes"
+
+# ===== CLUSTER CONFIGURATION =====
+cluster_name    = "code-server-enterprise"
+cluster_version = "1.27.0"
+
+# ===== NETWORK CONFIGURATION =====
+pod_cidr                 = "10.244.0.0/16"
+service_cidr             = "10.96.0.0/12"
+control_plane_endpoint   = "k8s-api-lb:6443"
+
+# ===== NAMESPACE CONFIGURATION =====
+namespace_monitoring    = "monitoring"
+namespace_security      = "security"
+namespace_backup        = "backup-system"
+namespace_code_server   = "code-server"
+namespace_ingress       = "ingress-nginx"
+namespace_cert_manager  = "cert-manager"
+
+# ===== STORAGE CONFIGURATION =====
+storage_class_name          = "local-storage"
+prometheus_storage_size     = 50    # Gi
+loki_storage_size           = 20    # Gi
+code_server_workspace_size  = "100Gi"
+code_server_config_size     = 10    # Gi
+velero_storage_size         = "500Gi"
+
+# ===== REPLICATION & AVAILABILITY =====
+prometheus_replicas        = 2
+grafana_replicas           = 2
+loki_replicas              = 2
+alertmanager_replicas      = 2
+velero_replicas            = 2
+code_server_replicas       = 2
+
+# ===== RESOURCE REQUESTS/LIMITS =====
+prometheus_requests = {
+  cpu    = "500m"
+  memory = "2Gi"
+}
+
+prometheus_limits = {
+  cpu    = "2000m"
+  memory = "4Gi"
+}
+
+grafana_requests = {
+  cpu    = "250m"
+  memory = "512Mi"
+}
+
+grafana_limits = {
+  cpu    = "1000m"
+  memory = "2Gi"
+}
+
+loki_requests = {
+  cpu    = "250m"
+  memory = "512Mi"
+}
+
+loki_limits = {
+  cpu    = "1000m"
+  memory = "2Gi"
+}
+
+code_server_requests = {
+  cpu    = "1000m"
+  memory = "2Gi"
+}
+
+code_server_limits = {
+  cpu    = "4000m"
+  memory = "8Gi"
+}
+
+# ===== CREDENTIALS (CHANGE IN PRODUCTION!) =====
+grafana_admin_password  = "ChangeMe@123456789"
+code_server_password    = "ChangeMe@123456789"
+
+# ===== DOMAIN CONFIGURATION =====
+domain                  = "enterprise.local"
+code_server_hostname    = "code-server.enterprise.local"
+monitoring_hostname     = "monitoring.enterprise.local"
+logs_hostname           = "logs.enterprise.local"
+grafana_hostname        = "grafana.enterprise.local"
+prometheus_hostname     = "prometheus.enterprise.local"
+
+# ===== CERTIFICATE MANAGEMENT =====
+certmanager_email       = "admin@enterprise.local"
+
+# ===== FEATURE TOGGLES =====
+enable_monitoring   = true
+enable_backup       = true
+enable_ingress      = true
+enable_code_server  = true
+
+# ===== CODE-SERVER CONFIGURATION =====
+code_server_version = "4.28.1"
+
+code_server_extensions = [
+  "GitHub.github-vscode-theme",
+  "ms-python.python",
+  "golang.Go",
+  "rust-lang.rust-analyzer",
+  "hashicorp.terraform",
+  "ms-azuretools.vscode-docker",
+  "ms-kubernetes-tools.vscode-kubernetes-tools",
+  "eamodio.gitlens",
+  "GitLab.gitlab-workflow",
+  "redhat.yaml",
+  "ms-vscode.makefile-tools",
+  "charliermarsh.ruff"
+]
+
+# ===== VERIFICATION CONFIGURATION =====
+namespaces_to_verify = [
+  "monitoring",
+  "security",
+  "backup-system",
+  "code-server",
+  "ingress-nginx",
+  "cert-manager",
+  "kube-system",
+  "default"
+]
+
+# ===== TERRAFORM STATE =====
+terraform_state_file   = "terraform.tfstate"
+terraform_state_backup = "terraform.tfstate.backup"
+
+# ===== TAGS =====
+common_tags = {
+  Environment = "production"
+  Managed     = "terraform"
+  Version     = "1.0.0"
+  Team        = "platform"
+}

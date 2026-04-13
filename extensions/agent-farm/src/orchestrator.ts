@@ -12,6 +12,7 @@ import { CodeAgent } from './agents/code-agent';
 import { ReviewAgent } from './agents/review-agent';
 import { ArchitectAgent } from './agents/architect-agent';
 import { TestAgent } from './agents/test-agent';
+import { GitHubActionsAgent } from './agents/github-actions-agent';
 
 /**
  * Orchestrates multiple AI agents for comprehensive code analysis
@@ -36,6 +37,7 @@ export class AgentOrchestrator {
       new ReviewAgent(),
       new ArchitectAgent(),
       new TestAgent(),
+      new GitHubActionsAgent(),
     ];
 
     agentInstances.forEach(agent => {

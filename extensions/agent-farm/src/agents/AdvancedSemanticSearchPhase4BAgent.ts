@@ -39,7 +39,7 @@ export class AdvancedSemanticSearchPhase4BAgent extends Agent {
         recommendations.push(`Identified query intent: ${codeQuery.type}`);
 
         // 2. Expand query with synonyms and patterns
-        const expandedQueries = this.expandQueryTerms(codeQuery, context.content);
+        const expandedQueries = await this.expandQueryTerms(codeQuery, context.content);
         recommendations.push(
           `Expanded query to ${expandedQueries.expandedTerms.length} related terms`
         );
@@ -142,10 +142,10 @@ export class AdvancedSemanticSearchPhase4BAgent extends Agent {
   /**
    * Expand query with synonyms and patterns
    */
-  private expandQueryTerms(
+  private async expandQueryTerms(
     intent: any,
     content: string
-  ): ExpandedQuery {
+  ): Promise<ExpandedQuery> {
     const query = intent.keywords.join(' ');
     return this.queryUnderstanding.expandQuery(query);
   }

@@ -389,7 +389,10 @@ export interface FederationStatus {
   globalLatency: { p50: number; p95: number; p99: number };
   replicationLag: number;
   failoversPastDay: number;
+  failoverCount: number;  // Add missing property
   systemHealthScore: number; // 0-100
+  totalRequests?: number;  // Add missing property
+  deployedRegions?: string[];  // Add missing property
 }
 
 export class MultiSiteFederationOrchestrator {
@@ -487,6 +490,7 @@ export class MultiSiteFederationOrchestrator {
       globalLatency: globalLatencies,
       replicationLag: consistencyLatency,
       failoversPastDay: this.failoverHistory.filter(f => Date.now() - f.timestamp < 86400000).length,
+      failoverCount: this.failoverHistory.length,
       systemHealthScore: healthScore,
     };
   }

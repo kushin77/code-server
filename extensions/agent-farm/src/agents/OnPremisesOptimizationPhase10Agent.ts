@@ -3,7 +3,7 @@
  * Orchestrates edge deployment, offline operations, and resource constraints
  */
 
-import { Agent } from '../phases';
+import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';
 import { EdgeOptimizationEngine, EdgeProfile, CachePolicy, CompressionStrategy } from '../ml/EdgeOptimizationEngine';
 import { OfflineSyncManager, OfflineOperation } from '../ml/OfflineSyncManager';
 import { ResourceConstraintManager, ResourceQuota, WorkloadPriority } from '../ml/ResourceConstraintManager';
@@ -30,6 +30,9 @@ export interface EdgeDeploymentStatus {
 }
 
 export class OnPremisesOptimizationPhase10Agent extends Agent {
+  readonly name = 'OnPremisesOptimizationPhase10Agent';
+  readonly domain = 'On-Premises Optimization & Edge Deployment';
+
   private edgeEngine: EdgeOptimizationEngine;
   private syncManager: OfflineSyncManager;
   private resourceManager: ResourceConstraintManager;
@@ -37,7 +40,7 @@ export class OnPremisesOptimizationPhase10Agent extends Agent {
   private deploymentConfig: OnPremisesDeploymentConfig;
 
   constructor(context: any, config: OnPremisesDeploymentConfig) {
-    super('OnPremisesOptimizationPhase10Agent', context);
+    super();
     this.deploymentConfig = config;
     this.edgeEngine = new EdgeOptimizationEngine();
     this.syncManager = new OfflineSyncManager();
@@ -311,6 +314,33 @@ export class OnPremisesOptimizationPhase10Agent extends Agent {
     }
 
     return this.getDeploymentStatus();
+  }
+
+  /**
+   * Implement abstract analyze method
+   */
+  async analyze(context: CodeContext): Promise<AgentOutput> {
+    this.log('Analyzing on-premises deployment');
+    const status = this.getDeploymentStatus();
+    return this.formatOutput(
+      `On-premises deployment analyzed. ${status.healthyNodes} nodes healthy.`,
+      [
+        `Healthy nodes: ${status.healthyNodes}`,
+        `Resource utilization: ${status.resourceUtilization}%`,
+        `Offline sync queue: ${status.offlineSyncQueueLength}`,
+      ]
+    );
+  }
+
+  /**
+   * Implement abstract coordinate method
+   */
+  async coordinate(
+    context: MultiAgentContext,
+    previousResults: AgentOutput[]
+  ): Promise<void> {
+    this.log('Coordinating on-premises deployment with other agents');
+    // Stub implementation for multi-agent coordination
   }
 }
 

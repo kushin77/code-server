@@ -3,7 +3,7 @@
  * Orchestrates global distribution, smart routing, and cross-region replication
  */
 
-import { Agent } from '../phases';
+import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';
 import {
   GeographicRouter,
   GeographicRegion,
@@ -31,13 +31,17 @@ export interface MultiSiteFederationResponse {
 }
 
 export class MultiSiteFederationPhase12Agent extends Agent {
+  readonly name = 'MultiSiteFederationPhase12Agent';
+  readonly domain = 'Multi-Site Federation & Geographic Distribution';
+
   private orchestrator: MultiSiteFederationOrchestrator;
   private registry: GeographicRegistry;
   private router: GeographicRouter;
   private requestLog: MultiSiteFederationRequest[] = [];
 
   constructor(context: any, config: FederationConfig) {
-    super('MultiSiteFederationPhase12Agent', context);
+    super();
+
 
     this.registry = new GeographicRegistry();
     this.router = new GeographicRouter();
@@ -110,6 +114,33 @@ export class MultiSiteFederationPhase12Agent extends Agent {
    */
   getFederationStatus(): FederationStatus {
     return this.orchestrator.getFederationStatus();
+  }
+
+  /**
+   * Implement abstract analyze method
+   */
+  async analyze(context: CodeContext): Promise<AgentOutput> {
+    this.log('Analyzing multi-site federation configuration');
+    const status = this.getFederationStatus();
+    return this.formatOutput(
+      `Multi-site federation analyzed. ${status.totalRequests || 0} total requests processed.`,
+      [
+        `Deployed regions: ${(status.deployedRegions || []).length}`,
+        `Replication lag: ${status.replicationLag}ms`,
+        `Failover count: ${status.failoverCount}`,
+      ]
+    );
+  }
+
+  /**
+   * Implement abstract coordinate method
+   */
+  async coordinate(
+    context: MultiAgentContext,
+    previousResults: AgentOutput[]
+  ): Promise<void> {
+    this.log('Coordinating with other agents');
+    // Stub implementation for multi-agent coordination
   }
 
   /**

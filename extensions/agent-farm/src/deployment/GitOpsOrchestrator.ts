@@ -105,7 +105,7 @@ export class GitOpsOrchestrator {
   private syncPolicy: SyncPolicy;
   private metrics: GitOpsMetrics;
   private lastSyncOperation?: SyncOperation;
-  private reconciliationTimer?: NodeJS.Timer;
+  private reconciliationTimer?: NodeJS.Timeout;  // Use NodeJS.Timeout instead of NodeJS.Timer
 
   constructor(config: GitOpsConfig, source: RepositorySource) {
     this.config = config;
@@ -250,8 +250,8 @@ export class GitOpsOrchestrator {
   private async applyToTarget(
     target: DeploymentTarget,
     revision: string
-  ): Promise<{ resources: SyncOperation['result']['resources'] }> {
-    const resources: SyncOperation['result']['resources'] = [];
+  ): Promise<{ resources: Array<{ group: string; kind: string; namespace: string; name: string; status: 'Synced' | 'OutOfSync' | 'Unknown'; message: string }> }> {
+    const resources: Array<{ group: string; kind: string; namespace: string; name: string; status: 'Synced' | 'OutOfSync' | 'Unknown'; message: string }> = [];
 
     try {
       // Fetch manifests from Git path
@@ -353,8 +353,8 @@ export class GitOpsOrchestrator {
   private async applyKubernetesResources(
     manifests: string,
     namespace: string
-  ): Promise<SyncOperation['result']['resources']> {
-    const resources: SyncOperation['result']['resources'] = [];
+  ): Promise<Array<{ group: string; kind: string; namespace: string; name: string; status: 'Synced' | 'OutOfSync' | 'Unknown'; message: string }>> {
+    const resources: Array<{ group: string; kind: string; namespace: string; name: string; status: 'Synced' | 'OutOfSync' | 'Unknown'; message: string }> = [];
 
     try {
       // In real implementation, would parse YAML and apply via kubectl

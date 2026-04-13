@@ -7,6 +7,7 @@
         compose-up compose-down compose-restart \
         backup restore rotate-secret update-vsix \
         setup-remote-access grant-access revoke-access list-developers extend-access health-check audit-report \
+        audit-install audit-query audit-compliance audit-security audit-cleanup \
         ollama-health ollama-pull-models ollama-list ollama-logs ollama-index ollama-init ollama-status ollama-shell \
         logs-code-server logs-oauth2 logs-caddy \
         pre-commit ci-validate cd-deploy d p s l v
@@ -36,6 +37,19 @@ help:
 	@echo "  make list-developers - Show active developers & expiry dates"
 	@echo "  make extend-access EMAIL=user@example.com DAYS=7 - Add more access days"
 	@echo "  make audit-report [DATE=2026-04-13] - View access audit trail"
+	@echo ""
+	@echo "AUDIT LOGGING & COMPLIANCE (Issue #183):"
+	@echo "  make audit-install - Install audit logging system"
+	@echo "  make audit-compliance [DEVELOPER=alice] [DAYS=30] - Generate compliance report"
+	@echo "  make audit-security [DAYS=7] - Generate security incident report"
+	@echo "  make audit-query QUERY=... - Query audit logs (examples below)"
+	@echo "  make audit-cleanup [RETENTION=90] - Clean old audit logs"
+	@echo ""
+	@echo "AUDIT QUERY EXAMPLES:"
+	@echo "  make audit-query QUERY='--developer alice --event-type GIT_PUSH'"
+	@echo "  make audit-query QUERY='--violations'"
+	@echo "  make audit-query QUERY='--compliance-report alice --days 30'"
+	@echo "  make audit-query QUERY='--security-report --days 7'"
 	@echo ""
 	@echo "OLLAMA (Elite Local LLM):"
 	@echo "  make ollama-health - Check Ollama server health"
@@ -453,6 +467,59 @@ audit-report:
 	else \
 		echo "No audit logs found (first time?)"; \
 	fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUDIT LOGGING & COMPLIANCE (Issue #183)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Install audit logging system
+audit-install:
+	@echo "📦 Installing audit logging system..."
+	@mkdir -p ~/.code-server-developers/logs
+	@pip install -q tabulate  # Required by audit-query
+	@chmod +x scripts/audit-query scripts/audit-compliance-report
+	@cp scripts/audit-query /usr/local/bin/audit-query
+	@cp scripts/audit-compliance-report /usr/local/bin/audit-compliance-report
+	@cp services/audit-log-collector.py /usr/local/lib/python3*/dist-packages/
+	@echo "✅ Audit logging installed"
+	@echo "   - audit-query (search/analyze logs)"
+	@echo "   - audit-compliance-report (generate reports)"
+	@echo ""
+	@echo "Usage examples:"
+	@echo "   audit-query --developer alice --event-type GIT_PUSH"
+	@echo "   audit-query --violations"
+	@echo "   audit-compliance-report --developer alice"
+
+# Query audit logs
+audit-query:
+	@if [ -z "$(QUERY)" ]; then \
+		scripts/audit-query --list-developers; \
+	else \
+		scripts/audit-query $(QUERY); \
+	fi
+
+# Generate compliance report
+audit-compliance:
+	@if [ -z "$(DEVELOPER)" ]; then \
+		scripts/audit-compliance-report --team --format text; \
+	else \
+		scripts/audit-compliance-report --developer $(DEVELOPER) --days $(DAYS) --format text; \
+	fi
+
+# Generate security incident report
+audit-security:
+	@echo "🔒 Security Incident Report (Last $(DAYS) days)"
+	@scripts/audit-compliance-report --security-incidents --days $(DAYS) --format text
+
+# Cleanup audit logs based on retention policy
+audit-cleanup:
+	@echo "🧹 Cleaning up audit logs..."
+	@RETENTION_DAYS=$${RETENTION:-90}; \
+	echo "  Retaining last $$RETENTION_DAYS days"; \
+	find ~/.code-server-developers/logs -name "audit.*.jsonl" -mtime +1 -delete; \
+	sqlite3 ~/.code-server-developers/logs/audit.db "DELETE FROM audit_events WHERE datetime(timestamp) < datetime('now', '-'$$RETENTION_DAYS' days');" 2>/dev/null || true; \
+	du -sh ~/.code-server-developers/logs; \
+	echo "✅ Cleanup complete"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CI/CD TARGETS

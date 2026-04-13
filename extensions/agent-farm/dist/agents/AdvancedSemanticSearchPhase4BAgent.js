@@ -30,7 +30,7 @@ class AdvancedSemanticSearchPhase4BAgent extends types_1.Agent {
             if (codeQuery) {
                 recommendations.push(`Identified query intent: ${codeQuery.type}`);
                 // 2. Expand query with synonyms and patterns
-                const expandedQueries = this.expandQueryTerms(codeQuery, context.content);
+                const expandedQueries = await this.expandQueryTerms(codeQuery, context.content);
                 recommendations.push(`Expanded query to ${expandedQueries.expandedTerms.length} related terms`);
                 // 3. Analyze query constraints
                 if (codeQuery.constraints.length > 0) {
@@ -107,7 +107,7 @@ class AdvancedSemanticSearchPhase4BAgent extends types_1.Agent {
     /**
      * Expand query with synonyms and patterns
      */
-    expandQueryTerms(intent, content) {
+    async expandQueryTerms(intent, content) {
         const query = intent.keywords.join(' ');
         return this.queryUnderstanding.expandQuery(query);
     }

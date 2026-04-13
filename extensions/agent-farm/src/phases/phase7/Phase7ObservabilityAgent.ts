@@ -41,7 +41,7 @@ export interface AlertRule {
 export class MetricsAggregator extends EventEmitter {
   private metrics: Map<string, MetricPoint[]> = new Map();
   private logger: Logger;
-  private collectionInterval: NodeJS.Timer | null = null;
+  private collectionInterval: NodeJS.Timeout | null = null;
 
   constructor(private config: { logger: Logger; scrapeInterval: number }) {
     super();

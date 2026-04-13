@@ -33,13 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Orchestrator = exports.Agent = void 0;
-exports.activate = activate;
-exports.deactivate = deactivate;
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
-const types_1 = require("./types");
 const CodeAgent_1 = require("./agents/CodeAgent");
 const ReviewAgent_1 = require("./agents/ReviewAgent");
 const Orchestrator_1 = require("./orchestrator/Orchestrator");
@@ -138,45 +134,4 @@ function generateResultsHTML(results) {
 function deactivate() {
     console.log('Agent Farm extension deactivated');
 }
-class Agent {
-    constructor(name) {
-        this.name = name;
-    }
-    async execute(task) {
-        return `Agent ${this.name} executed: ${task}`;
-    }
-}
-exports.Agent = Agent;
-class Orchestrator {
-    constructor() {
-        this.agents = [];
-        this.agents = [
-            new types_1.Agent("Architect"),
-            new types_1.Agent("Coder"),
-            new types_1.Agent("Tester"),
-            new types_1.Agent("Reviewer"),
-            new types_1.Agent("Documenter")
-        ];
-    }
-    async executeTask(task) {
-        const agent = this.agents[Math.floor(Math.random() * this.agents.length)];
-        return agent.execute(task);
-    }
-}
-exports.Orchestrator = Orchestrator;
-function activate(context) {
-    console.log("[Agent Farm] Activating...");
-    context.subscriptions.push(vscode.commands.registerCommand("agentFarm.executeTask", async () => {
-        const input = await vscode.window.showInputBox({
-            placeHolder: "Describe your task...",
-        });
-        if (input) {
-            const orchestrator = new Orchestrator_1.Orchestrator();
-            const result = await orchestrator.executeTask(input);
-            vscode.window.showInformationMessage(`✅ ${result}`);
-        }
-    }));
-    vscode.window.showInformationMessage("🤖 AgentFarm extension loaded!");
-}
-function deactivate() { }
 //# sourceMappingURL=extension.js.map

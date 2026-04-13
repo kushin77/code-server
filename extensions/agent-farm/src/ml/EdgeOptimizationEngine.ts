@@ -159,10 +159,15 @@ export class EdgeOptimizationEngine {
     let toDelete: string;
     if (policy === 'lru') {
       // Delete least recently used (oldest timestamp)
-      toDelete = entries.reduce((oldest, [key, entry]) => {
-        const oldestEntry = this.cache.get(oldest);
-        return !oldestEntry || entry.timestamp < oldestEntry.timestamp ? key : oldest;
-      });
+      let oldestKey = entries[0][0];
+      let oldestTime = entries[0][1].timestamp;
+      for (const [key, entry] of entries) {
+        if (entry.timestamp < oldestTime) {
+          oldestKey = key;
+          oldestTime = entry.timestamp;
+        }
+      }
+      toDelete = oldestKey;
     } else if (policy === 'lfu') {
       // Simulate LFU by deleting random entry (simplified)
       toDelete = entries[Math.floor(Math.random() * entries.length)][0];

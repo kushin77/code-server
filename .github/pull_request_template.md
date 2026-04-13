@@ -1,5 +1,20 @@
 # PR Title: [Descriptive title]
 
+> **🤖 AUTO-DEPLOY MANDATE**: When this PR is merged, it automatically triggers branch cleanup and production deployment. Link issues below so they auto-close when code goes live.
+
+## Linked Issues
+
+**This PR resolves (REQUIRED - use one of: `Closes`, `Fixes`, `Resolves`):**
+```
+Closes #[issue-number]
+Fixes #[another-issue]
+Resolves #[third-issue]
+```
+
+> **ℹ️ Why**: Our auto-merge pipeline closes linked issues when your code deploys. This creates a complete audit trail from issue → code → production.
+
+---
+
 ## Summary
 
 **What problem does this solve?** Replace this with a clear, 2-3 sentence explanation of the problem statement.

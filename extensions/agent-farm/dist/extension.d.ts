@@ -1,11 +1,4 @@
-export declare class Agent {
-    private name;
-    constructor(name: string);
-    execute(task: string): Promise<string>;
-}
-export declare class Orchestrator {
-    private agents;
-    constructor();
-    executeTask(task: string): Promise<string>;
-}
+import * as vscode from 'vscode';
+export declare function activate(context: vscode.ExtensionContext): Promise<void>;
+export declare function deactivate(): void;
 //# sourceMappingURL=extension.d.ts.map

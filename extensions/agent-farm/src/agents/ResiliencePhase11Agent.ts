@@ -3,7 +3,7 @@
  * Orchestrates circuit breakers, failover, and chaos engineering
  */
 
-import { Agent } from '../phases';
+import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';
 import { CircuitBreaker, CircuitBreakerConfig } from '../ml/CircuitBreaker';
 import { FailoverManager, FailoverConfig } from '../ml/FailoverManager';
 import { ChaosEngineer, ChaosTest } from '../ml/ChaosEngineer';
@@ -26,6 +26,9 @@ export interface ResilienceStatus {
 }
 
 export class ResiliencePhase11Agent extends Agent {
+  readonly name = 'ResiliencePhase11Agent';
+  readonly domain = 'Advanced Resilience & HA/DR';
+
   private circuitBreakers: Map<string, CircuitBreaker> = new Map();
   private failoverManagers: Map<string, FailoverManager> = new Map();
   private chaosEngineer: ChaosEngineer;
@@ -40,7 +43,7 @@ export class ResiliencePhase11Agent extends Agent {
   };
 
   constructor(context: any) {
-    super('ResiliencePhase11Agent', context);
+    super();
     this.chaosEngineer = new ChaosEngineer();
   }
 
@@ -261,5 +264,32 @@ export class ResiliencePhase11Agent extends Agent {
       manager.destroy();
     }
     this.log('Resilience agents destroyed');
+  }
+
+  /**
+   * Implement abstract analyze method
+   */
+  async analyze(context: CodeContext): Promise<AgentOutput> {
+    this.log('Analyzing system resilience');
+    const status = this.getResilienceStatus();
+    return this.formatOutput(
+      `System resilience analyzed. Health score: ${status.systemHealthScore}/100`,
+      [
+        `Open circuit breakers: ${status.circuitBreakers.open}`,
+        `Healthy replicas: ${status.failoverMetrics.healthyReplicas}`,
+        `Failovers past day: ${status.failoverMetrics.failoversPastDay}`,
+      ]
+    );
+  }
+
+  /**
+   * Implement abstract coordinate method
+   */
+  async coordinate(
+    context: MultiAgentContext,
+    previousResults: AgentOutput[]
+  ): Promise<void> {
+    this.log('Coordinating resilience monitoring with other agents');
+    // Stub implementation for multi-agent coordination
   }
 }

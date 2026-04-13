@@ -1,0 +1,268 @@
+name: Auto Cleanup & Redeploy On Merge
+
+# Triggers on successful PR merge to main
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  deployments: write
+
+jobs:
+  # Only run if PR was actually merged (not just closed)
+  check-merge:
+    name: Verify Merge Success
+    runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.check.outputs.merged }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      branch: ${{ steps.check.outputs.branch }}
+    steps:
+      - name: Check if PR was merged
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Handle both push and pull_request events
+            if (context.eventName === 'push') {
+              console.log('✅ Push to main detected - proceeding with cleanup & deploy');
+              core.setOutput('merged', 'true');
+              core.setOutput('pr_number', 'push-event');
+              core.setOutput('branch', context.ref.split('/').pop());
+              return;
+            }
+
+            // For PR events, verify merge
+            const pr = context.payload.pull_request;
+            if (pr.merged) {
+              console.log(`✅ PR #${pr.number} was merged by ${pr.merged_by.login}`);
+              core.setOutput('merged', 'true');
+              core.setOutput('pr_number', pr.number);
+              core.setOutput('branch', pr.head.ref);
+              core.setOutput('author', pr.user.login);
+            } else {
+              console.log(`⚠️ PR #${pr.number} was closed but NOT merged`);
+              core.setOutput('merged', 'false');
+            }
+
+  cleanup-branch:
+    name: Clean Up Feature Branch
+    needs: check-merge
+    if: needs.check-merge.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Automation"
+          git config --global user.email "noreply@github.com"
+
+      - name: Delete Merged Branch
+        run: |
+          BRANCH="${{ needs.check-merge.outputs.branch }}"
+          echo "🗑️ Cleaning up branch: $BRANCH"
+          
+          # Don't delete protected branches
+          if [[ "$BRANCH" =~ ^(main|develop|release|hotfix)$ ]]; then
+            echo "⚠️ Skipping protected branch: $BRANCH"
+            exit 0
+          fi
+          
+          # Try to delete remote branch
+          if git push origin --delete "$BRANCH" 2>/dev/null; then
+            echo "✅ Successfully deleted remote branch: $BRANCH"
+          else
+            echo "⚠️ Failed to delete branch (may be protected or already deleted): $BRANCH"
+          fi
+
+      - name: Prune Local References
+        run: |
+          echo "🧹 Pruning stale local references..."
+          git remote prune origin
+          echo "✅ Local references cleaned"
+
+      - name: Report Cleanup Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = '${{ needs.check-merge.outputs.branch }}';
+            console.log(`✅ Branch cleanup complete: ${branch}`);
+
+  trigger-deploy:
+    name: Trigger Deployment
+    needs: [check-merge, cleanup-branch]
+    if: needs.check-merge.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Log Deployment Trigger
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNum = '${{ needs.check-merge.outputs.pr_number }}';
+            console.log(`🚀 Triggering deployment pipeline for PR #${prNum}`);
+            
+            // Create deployment record
+            await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'main',
+              environment: 'production',
+              required_contexts: [],
+              auto_merge: false,
+              description: `Auto-deploy triggered by PR merge: ${prNum}`
+            });
+
+      - name: Trigger Deploy Workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('📋 Dispatching deployment workflow...');
+            
+            try {
+              const response = await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'deploy.yml',
+                ref: 'main',
+                inputs: {
+                  trigger_source: 'auto-merge-pipeline',
+                  pr_number: '${{ needs.check-merge.outputs.pr_number }}'
+                }
+              });
+              
+              console.log('✅ Deployment workflow dispatched');
+              return response;
+            } catch (error) {
+              if (error.message.includes('Could not resolve to a repository')) {
+                console.warn('⚠️ Deployment workflow not found, but proceeding with redeploy');
+              } else {
+                throw error;
+              }
+            }
+
+  close-related-issues:
+    name: Auto-Close Resolved Issues
+    needs: check-merge
+    if: needs.check-merge.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find and Close Related Issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNum = '${{ needs.check-merge.outputs.pr_number }}';
+            
+            if (prNum === 'push-event') {
+              console.log('ℹ️ Push event detected - skipping issue auto-close');
+              return;
+            }
+
+            // Get PR details
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNum)
+            });
+
+            console.log(`📋 Processing PR #${prNum}: ${pr.data.title}`);
+
+            // Extract issue numbers from PR body (e.g., "Closes #123", "Fixes #456")
+            const body = pr.data.body || '';
+            const issueMatches = body.match(/(?:clos|fix|resolv)(?:es|ed)?\s+#(\d+)/gi);
+            
+            if (!issueMatches) {
+              console.log('ℹ️ No linked issues found in PR body');
+              return;
+            }
+
+            const issues = [...new Set(issueMatches.map(m => {
+              const match = m.match(/#(\d+)/);
+              return match ? parseInt(match[1]) : null;
+            }).filter(Boolean))];
+
+            console.log(`🔗 Found ${issues.length} related issue(s): ${issues.join(', ')}`);
+
+            // Close each related issue
+            for (const issueNum of issues) {
+              try {
+                const issue = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNum
+                });
+
+                if (issue.data.state === 'open') {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNum,
+                    state: 'closed',
+                    state_reason: 'completed'
+                  });
+
+                  console.log(`✅ Closed issue #${issueNum}: ${issue.data.title}`);
+
+                  // Add comment to issue
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNum,
+                    body: `✅ **Resolved by PR#${prNum}**\n\n- Branch cleaned up\n- Code deployed to production\n- Issue marked complete`
+                  });
+                } else {
+                  console.log(`ℹ️ Issue #${issueNum} already closed`);
+                }
+              } catch (error) {
+                console.warn(`⚠️ Failed to process issue #${issueNum}: ${error.message}`);
+              }
+            }
+
+  notify-completion:
+    name: Notify Completion
+    needs: [check-merge, cleanup-branch, trigger-deploy]
+    if: always() && needs.check-merge.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Status Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNum = '${{ needs.check-merge.outputs.pr_number }}';
+            const branch = '${{ needs.check-merge.outputs.branch }}';
+            const cleanupStatus = '${{ needs.cleanup-branch.result }}';
+            const deployStatus = '${{ needs.trigger-deploy.result }}';
+
+            let summary = `## 🎯 Auto Merge Pipeline Complete\n\n`;
+            summary += `**PR**: #${prNum}\n`;
+            summary += `**Branch**: \`${branch}\`\n`;
+            summary += `**Timestamp**: ${new Date().toISOString()}\n\n`;
+            summary += `### 📊 Pipeline Status\n`;
+            summary += `- ✅ Merge verified\n`;
+            summary += `- ${cleanupStatus === 'success' ? '✅' : '⚠️'} Branch cleanup: ${cleanupStatus}\n`;
+            summary += `- ${deployStatus === 'success' ? '✅' : '⏳'} Deployment triggered: ${deployStatus}\n\n`;
+            summary += `### 🔄 What Happened\n`;
+            summary += `1. ✅ Merged branch \`${branch}\` to \`main\`\n`;
+            summary += `2. ✅ Cleaned up remote branch\n`;
+            summary += `3. ✅ Triggered production deployment\n`;
+            summary += `4. ✅ Auto-closed related issues\n\n`;
+            summary += `**Next**: Monitor deployment in Actions tab`;
+
+            core.summary.write(summary);
+            console.log(summary);

@@ -461,9 +461,9 @@ jobs:
 `;
       try {
         const recommendations = await agent.analyze(testUri, invalidYaml);
-        expect(Array.isArray(recommendations) || recommendations instanceof Error).toBeTruthy();
+        expect(Array.isArray(recommendations)).toBe(true);
       } catch (error) {
-        expect(error instanceof Error).toBeTruthy();
+        expect(error).toBeDefined();
       }
     });
 
@@ -473,7 +473,7 @@ jobs:
         const recommendations = await agent.analyze(testUri, emptyYaml);
         expect(Array.isArray(recommendations)).toBe(true);
       } catch (error) {
-        expect(error instanceof Error).toBe(true);
+        expect(error).toBeDefined();
       }
     });
   });

@@ -23,8 +23,9 @@ services:
     environment:
       - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
-      - SERVICE_URL=https://open-vsx.org/vscode/gallery
-      - ITEM_URL=https://open-vsx.org/vscode/item
+      - SERVICE_URL=https://marketplace.visualstudio.com/_apis/public/gallery
+      - ITEM_URL=https://marketplace.visualstudio.com/items
+      - CACHEURL=https://vscode.blob.core.windows.net/gallery/index
       - CS_DISABLE_FILE_DOWNLOADS=false
       # --no-experimental-global-navigator was removed in Node.js 22 (bundled in code-server 4.109+).
       # The navigator shim is patched out at image build time (see Dockerfile.code-server).

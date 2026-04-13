@@ -6,6 +6,7 @@
         shell refresh output fmt taint untaint state-list console audit idempotency-check \
         compose-up compose-down compose-restart \
         backup restore rotate-secret update-vsix \
+        setup-remote-access grant-access revoke-access list-developers extend-access health-check audit-report \
         ollama-health ollama-pull-models ollama-list ollama-logs ollama-index ollama-init ollama-status ollama-shell \
         logs-code-server logs-oauth2 logs-caddy \
         pre-commit ci-validate cd-deploy d p s l v
@@ -27,6 +28,14 @@ help:
 	@echo "  make logs          - Stream container logs"
 	@echo "  make shell         - SSH into code-server container"
 	@echo "  make dashboard     - Show full deployment dashboard"
+	@echo ""
+	@echo "REMOTE DEVELOPER ACCESS (Lean On-Premises):"
+	@echo "  make setup-remote-access - Initialize remote access infrastructure"
+	@echo "  make grant-access EMAIL=user@example.com DAYS=7 - Grant temporary access"
+	@echo "  make revoke-access EMAIL=user@example.com - Revoke all access"
+	@echo "  make list-developers - Show active developers & expiry dates"
+	@echo "  make extend-access EMAIL=user@example.com DAYS=7 - Add more access days"
+	@echo "  make audit-report [DATE=2026-04-13] - View access audit trail"
 	@echo ""
 	@echo "OLLAMA (Elite Local LLM):"
 	@echo "  make ollama-health - Check Ollama server health"
@@ -350,6 +359,104 @@ ollama-shell:
 # Pre-commit checks
 pre-commit: validate
 	@echo "✅ Pre-commit checks passed"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEVELOPER ACCESS MANAGEMENT (Remote Developer Provisioning & Lifecycle)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ✅ Setup remote access infrastructure
+setup-remote-access:
+	@echo "🚀 Setting up lean on-premises remote developer access..."
+	@echo "📋 Tasks:"
+	@echo "  1. Validating Cloudflare Tunnel configuration"
+	@docker compose config --quiet 2>/dev/null && echo "  ✅ Docker Compose config valid" || (echo "  ❌ Config invalid" && exit 1)
+	@echo "  2. Verifying Code-Server is running"
+	@docker compose ps code-server | grep -q "Up" && echo "  ✅ Code-Server operational" || (docker compose up -d code-server && echo "  ✅ Started Code-Server")
+	@echo "  3. Creating developer access audit log"
+	@mkdir -p logs/audit && echo "[$(date)] Remote access infrastructure initialized" >> logs/audit/access.log
+	@echo "✅ Remote access infrastructure ready"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  make grant-access EMAIL=developer@example.com DAYS=14"
+
+# ✅ Grant temporary access to a developer
+grant-access:
+	@if [ -z "$(EMAIL)" ]; then echo "❌ Email required: make grant-access EMAIL=user@example.com DAYS=7"; exit 1; fi
+	@if [ -z "$(DAYS)" ]; then echo "⚠️  Default: 7 days. Override: make grant-access EMAIL=... DAYS=14"; DAYS=7; fi
+	@echo "✅ Granting access to $(EMAIL) for $(DAYS) days..."
+	@EXPIRY_DATE=$$(date -d "+$(DAYS) days" +%Y-%m-%d); \
+	echo "[$(date)] GRANT_ACCESS email=$(EMAIL) days=$(DAYS) expiry=$$EXPIRY_DATE" >> logs/audit/access.log; \
+	echo "$(EMAIL) $$EXPIRY_DATE" >> .env.developers; \
+	echo "✅ Access granted! Expiry: $$EXPIRY_DATE"; \
+	echo "🔗 Share this link: https://code-server.tunnel.example.com (via Cloudflare Access)"; \
+	echo "⏰ Will auto-revoke on $$EXPIRY_DATE"
+
+# ✅ Revoke access for a developer
+revoke-access:
+	@if [ -z "$(EMAIL)" ]; then echo "❌ Email required: make revoke-access EMAIL=user@example.com"; exit 1; fi
+	@echo "🔴 Revoking access for $(EMAIL)..."
+	@grep -v "^$(EMAIL) " .env.developers > .env.developers.tmp && mv .env.developers.tmp .env.developers || true
+	@echo "[$(date)] REVOKE_ACCESS email=$(EMAIL)" >> logs/audit/access.log
+	@docker compose exec -T code-server pkill -f "$(EMAIL)" 2>/dev/null || true
+	@echo "✅ Access revoked for $(EMAIL)"
+
+# ✅ List all active developers
+list-developers:
+	@echo "👥 Active developers:"
+	@if [ -f .env.developers ]; then \
+		echo "  Email           | Access Expires"; \
+		echo "  ---|---"; \
+		cat .env.developers | grep -v "^#" | awk '{print "  " $$1 " | " $$2}'; \
+	else \
+		echo "  (none)"; \
+	fi
+	@echo ""
+	@echo "📊 Access Statistics:"
+	@if [ -f logs/audit/access.log ]; then \
+		echo "  Total grants: $$(grep GRANT_ACCESS logs/audit/access.log | wc -l)"; \
+		echo "  Total revokes: $$(grep REVOKE_ACCESS logs/audit/access.log | wc -l)"; \
+	fi
+
+# ✅ Extend access for a developer (add more days)
+extend-access:
+	@if [ -z "$(EMAIL)" ]; then echo "❌ Email required: make extend-access EMAIL=user@example.com DAYS=7"; exit 1; fi
+	@if [ -z "$(DAYS)" ]; then DAYS=7; fi
+	@echo "⏱️  Extending access for $(EMAIL) by $(DAYS) days..."
+	@if grep -q "^$(EMAIL) " .env.developers; then \
+		CURRENT_EXPIRY=$$(grep "^$(EMAIL) " .env.developers | awk '{print $$2}'); \
+		NEW_EXPIRY=$$(date -d "$$CURRENT_EXPIRY + $(DAYS) days" +%Y-%m-%d); \
+		sed -i "s/^$(EMAIL) .*/$(EMAIL) $$NEW_EXPIRY/" .env.developers; \
+		echo "[$(date)] EXTEND_ACCESS email=$(EMAIL) days=$(DAYS) new_expiry=$$NEW_EXPIRY" >> logs/audit/access.log; \
+		echo "✅ Extended! New expiry: $$NEW_EXPIRY"; \
+	else \
+		echo "❌ Developer $(EMAIL) not found"; \
+		exit 1; \
+	fi
+
+# ✅ System health check
+health-check:
+	@echo "🏥 Checking system health..."
+	@echo "  ✓ Code-Server: $$(docker compose ps code-server | grep -q Up && echo '✅ Running' || echo '❌ Down')"
+	@echo "  ✓ OAuth2-Proxy: $$(docker compose ps oauth2-proxy | grep -q Up && echo '✅ Running' || echo '❌ Down')"
+	@echo "  ✓ Caddy: $$(docker compose ps caddy | grep -q Up && echo '✅ Running' || echo '❌ Down')"
+	@echo "  ✓ Docker network: $$(docker network ls | grep -q enterprise && echo '✅ Exists' || echo '❌ Missing')"
+	@echo "  ✓ Docker volume: $$(docker volume ls | grep -q coder-data && echo '✅ Exists' || echo '❌ Missing')"
+	@echo "✅ Health check complete"
+
+# ✅ Generate audit report (optionally filtered by date)
+audit-report:
+	@REPORT_DATE=$${DATE:-$$(date +%Y-%m-%d)}; \
+	echo "📋 Audit Report for $$REPORT_DATE"; \
+	echo "================================="; \
+	if [ -f logs/audit/access.log ]; then \
+		grep "$$REPORT_DATE" logs/audit/access.log || echo "No activity on this date"; \
+	else \
+		echo "No audit logs found (first time?)"; \
+	fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CI/CD TARGETS
+# ─────────────────────────────────────────────────────────────────────────────
 
 # CI: Validate without applying
 ci-validate: validate

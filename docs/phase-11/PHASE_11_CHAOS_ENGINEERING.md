@@ -1,6 +1,6 @@
 # Phase 11: Chaos Engineering
 
-**Document**: Resilience testing through controlled chaos  
+**Document**: Resilience testing through controlled chaos
 **Date**: April 13, 2026
 
 ## Overview
@@ -65,9 +65,9 @@ Each test produces scores (0-400 points):
 
 ### Test 1.1: Application Server Crash
 
-**Objective**: Verify app server restart and failover  
-**Scope**: Single code-server pod crash  
-**Duration**: 5 minutes  
+**Objective**: Verify app server restart and failover
+**Scope**: Single code-server pod crash
+**Duration**: 5 minutes
 **Risk**: None (2 other pods handle traffic)
 
 ```bash
@@ -96,12 +96,12 @@ METRICS=()
 while [ $(($(date +%s) - START_TIME)) -lt ${TEST_DURATION} ]; do
   # Check pod status
   POD_READY=$(kubectl get pod "${POD}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
-  
+
   if [ "${POD_READY}" = "True" ]; then
     echo "[TEST] Pod recovered at $(($(date +%s) - START_TIME))s"
     break
   fi
-  
+
   sleep 5
 done
 
@@ -127,9 +127,9 @@ echo "  - Data: ${DATA_SCORE}/100"
 
 ### Test 1.2: Database Connection Failure
 
-**Objective**: Verify circuit breaker and retry logic  
-**Scope**: Drop all PostgreSQL connections  
-**Duration**: 2 minutes  
+**Objective**: Verify circuit breaker and retry logic
+**Scope**: Drop all PostgreSQL connections
+**Duration**: 2 minutes
 **Risk**: Brief API errors (handled by retries)
 
 ```bash
@@ -140,9 +140,9 @@ echo "[TEST] Database Connection Failure Starting..."
 
 # Drop all connections
 kubectl exec postgres-primary -- psql -c "
-SELECT pg_terminate_backend(pid) 
-FROM pg_stat_activity 
-WHERE datname = 'code-server' 
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = 'code-server'
 AND pid <> pg_backend_pid();"
 
 # Monitor error rate
@@ -159,9 +159,9 @@ echo "[RESULT] Connection pool healthy: ${CONNECTION_POOL_HEALTHY}"
 
 ### Test 1.3: Cache Eviction
 
-**Objective**: Verify graceful fallback to database  
-**Scope**: Flush all Redis cache  
-**Duration**: 5 minutes  
+**Objective**: Verify graceful fallback to database
+**Scope**: Flush all Redis cache
+**Duration**: 5 minutes
 **Risk**: Latency increase (database queries slower)
 
 ```bash
@@ -193,9 +193,9 @@ echo "Recovered latency: ${RECOVERED_LATENCY}ms"
 
 ### Test 2.1: PostgreSQL Primary Down
 
-**Objective**: Verify automatic replica promotion  
-**Scope**: Kill primary DB instance  
-**Duration**: 10 minutes  
+**Objective**: Verify automatic replica promotion
+**Scope**: Kill primary DB instance
+**Duration**: 10 minutes
 **Risk**: 30-second outage + data <1 second stale
 
 ```bash
@@ -236,9 +236,9 @@ echo "[RESULT] PostgreSQL Primary Down: Data Loss ${DATA_SCORE}/100, Failover Ti
 
 ### Test 2.2: Application Cascade
 
-**Objective**: Verify circuit breakers prevent cascade  
-**Scope**: Kill database, monitor app failure behavior  
-**Duration**: 10 minutes  
+**Objective**: Verify circuit breakers prevent cascade
+**Scope**: Kill database, monitor app failure behavior
+**Duration**: 10 minutes
 **Risk**: Errors only to affected operations, not entire system
 
 ```bash
@@ -254,10 +254,10 @@ kubectl delete pod -l app=postgres,role=primary --grace-period=0 --force
 for i in {1..60}; do
   RESPONSE=$(curl -s -w "\n%{http_code}" http://api:8080/api/data 2>/dev/null)
   HTTP_CODE=$(echo "${RESPONSE}" | tail -1)
-  
+
   # Check circuit breaker state
   CB_STATE=$(kubectl logs -l app=code-server | grep "circuit.breaker" | tail -1)
-  
+
   echo "Request ${i}: HTTP ${HTTP_CODE} | CB: ${CB_STATE}"
   sleep 1
 done
@@ -271,9 +271,9 @@ echo "Health endpoint: ${HEALTH}"
 
 ### Test 3.1: Disk Full
 
-**Objective**: Verify graceful handling of disk full  
-**Scope**: Fill database disk to 95%  
-**Duration**: 5 minutes  
+**Objective**: Verify graceful handling of disk full
+**Scope**: Fill database disk to 95%
+**Duration**: 5 minutes
 **Risk**: Database becomes read-only
 
 ```bash
@@ -311,9 +311,9 @@ echo "[RESULT] Post-cleanup read-only: ${DB_STATUS}"
 
 ### Test 3.2: Memory Exhaustion
 
-**Objective**: Verify graceful OOM handling  
-**Scope**: Force memory pressure on app servers  
-**Duration**: 5 minutes  
+**Objective**: Verify graceful OOM handling
+**Scope**: Force memory pressure on app servers
+**Duration**: 5 minutes
 **Risk**: Pod restart (handled by Kubernetes)
 
 ```bash
@@ -334,7 +334,7 @@ for i in {1..60}; do
   MEMORY=$(kubectl top pod "${POD}" | awk 'NR==2{print $2}')
   POD_STATUS=$(kubectl get pod "${POD}" -o jsonpath='{.status.phase}')
   echo "Memory: ${MEMORY}M | Status: ${POD_STATUS}"
-  
+
   if [ "${POD_STATUS}" != "Running" ]; then
     echo "Pod crashed, waiting for restart..."
     timeout 30 bash -c "until kubectl get pod ${POD} | grep -q Running; do sleep 1; done"
@@ -351,9 +351,9 @@ echo "[RESULT] Memory exhaustion handled via pod restart"
 
 ### Test 4.1: Backup Validation
 
-**Objective**: Verify backup restore capability  
-**Scope**: Restore from latest backup  
-**Duration**: 30 minutes  
+**Objective**: Verify backup restore capability
+**Scope**: Restore from latest backup
+**Duration**: 30 minutes
 **Risk**: Test environment only
 
 ```bash
@@ -391,9 +391,9 @@ kubectl delete namespace "${TEST_NAMESPACE}"
 
 ### Test 4.2: PITR Recovery
 
-**Objective**: Verify point-in-time recovery  
-**Scope**: Restore to specific historical point  
-**Duration**: 30 minutes  
+**Objective**: Verify point-in-time recovery
+**Scope**: Restore to specific historical point
+**Duration**: 30 minutes
 **Risk**: Test environment only
 
 ```bash
@@ -432,27 +432,27 @@ data:
         time: "02:00"
         environment: staging
         maxDuration: 5m
-        
+
       - test: db-connection-failure
         frequency: daily
         time: "03:00"
         environment: staging
         maxDuration: 2m
-        
+
       - test: cache-eviction
         frequency: weekly
         day: Sunday
         time: "04:00"
         environment: staging
         maxDuration: 5m
-        
+
       - test: disk-full
         frequency: monthly
         day: 1
         time: "05:00"
         environment: staging
         maxDuration: 5m
-      
+
       - test: pitr-recovery
         frequency: monthly
         day: 15
@@ -477,5 +477,5 @@ Weekly resilience scores:
 
 ---
 
-**Status**: Complete  
+**Status**: Complete
 **Last Updated**: April 13, 2026

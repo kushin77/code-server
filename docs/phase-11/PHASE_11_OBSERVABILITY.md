@@ -1,6 +1,6 @@
 # Phase 11: Advanced Observability
 
-**Document**: Observability strategy for production systems  
+**Document**: Observability strategy for production systems
 **Date**: April 13, 2026
 
 ## Overview
@@ -192,9 +192,9 @@ SELECT operation, AVG(duration) as avg_duration
 
 **Find errors by service**:
 ```sql
-SELECT service, COUNT(*) 
-  FROM spans 
- WHERE error = true 
+SELECT service, COUNT(*)
+  FROM spans
+ WHERE error = true
  GROUP BY service
 ```
 
@@ -256,7 +256,7 @@ data:
       external_labels:
         cluster: 'code-server-prod'
         environment: 'production'
-    
+
     scrape_configs:
     - job_name: 'code-server'
       kubernetes_sd_configs:
@@ -272,19 +272,19 @@ data:
         target_label: pod
       - source_labels: [__meta_kubernetes_pod_node_name]
         target_label: node
-    
+
     - job_name: 'postgresql'
       static_configs:
       - targets: ['postgres-primary:9187']
       - targets: ['postgres-replica-1:9187']
       - targets: ['postgres-replica-2:9187']
-    
+
     - job_name: 'redis'
       static_configs:
       - targets: ['redis-0:9121']
       - targets: ['redis-1:9121']
       - targets: ['redis-2:9121']
-    
+
     - job_name: 'kubernetes-nodes'
       kubernetes_sd_configs:
       - role: node
@@ -325,19 +325,19 @@ metadata:
 data:
   loki-config.yaml: |
     auth_enabled: false
-    
+
     ingester:
       chunk_idle_period: 3m
       chunk_retain_period: 1m
       max_chunk_age: 1h
       max_streams_matching_max_bytes: 6291456
       max_streams_without_limits: 10000
-    
+
     limits_config:
       enforce_metric_name: false
       reject_old_samples: true
       reject_old_samples_max_age: 168h
-    
+
     schema_config:
       configs:
       - from: 2020-10-24
@@ -347,11 +347,11 @@ data:
         index:
           prefix: index_
           period: 24h
-    
+
     server:
       http_listen_port: 3100
       log_level: info
-    
+
     storage_config:
       boltdb_shipper:
         active_index_directory: /tmp/loki/boltdb-shipper-active
@@ -395,19 +395,19 @@ from sklearn.ensemble import IsolationForest
 def detect_anomalies(metric_data, contamination=0.01):
     """
     Detect anomalies in metric time series
-    
+
     Args:
         metric_data: N x M array (N time points, M features)
         contamination: Expected fraction of anomalies (1%)
-    
+
     Returns:
         Indices of anomalous points
     """
-    
+
     # Train isolation forest
     if_model = IsolationForest(contamination=contamination, random_state=42)
     predictions = if_model.fit_predict(metric_data)
-    
+
     # Return anomaly indices
     return np.where(predictions == -1)[0]
 
@@ -486,5 +486,5 @@ groups:
 
 ---
 
-**Status**: Complete  
+**Status**: Complete
 **Last Updated**: April 13, 2026

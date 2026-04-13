@@ -1,6 +1,6 @@
 # Phase 11: Capacity Planning & Right-Sizing
 
-**Document**: ML-driven capacity planning and forecasting  
+**Document**: ML-driven capacity planning and forecasting
 **Date**: April 13, 2026
 
 ## Overview
@@ -97,29 +97,29 @@ from scipy import stats
 def calculate_growth_rate(metrics_history):
     """
     Calculate exponential growth rate
-    
+
     Args:
         metrics_history: Array of measurements over time
-    
+
     Returns:
         Growth rate (% per month)
     """
-    
+
     # Remove outliers (2 std dev)
     mean = np.mean(metrics_history)
     std = np.std(metrics_history)
     filtered = metrics_history[
-        (metrics_history > mean - 2*std) & 
+        (metrics_history > mean - 2*std) &
         (metrics_history < mean + 2*std)
     ]
-    
+
     # Exponential fit: y = a * e^(bx)
     x = np.arange(len(filtered))
     slope, intercept, r_value, _, _ = stats.linregress(x, np.log(filtered + 1))
-    
+
     # Monthly growth rate
     monthly_growth = (np.exp(slope * 30) - 1) * 100
-    
+
     return monthly_growth, r_value**2  # r-squared for confidence
 ```
 
@@ -129,29 +129,29 @@ def calculate_growth_rate(metrics_history):
 def forecast_12_months(current_value, monthly_growth_rate):
     """
     Generate 12-month forecast
-    
+
     Args:
         current_value: Current metric value
         monthly_growth_rate: Growth % per month
-    
+
     Returns:
         12-month projection with confidence intervals
     """
-    
+
     forecast = []
     for month in range(1, 13):
         value = current_value * (1 + monthly_growth_rate/100) ** month
         # 95% confidence interval
         ci_lower = value * 0.9  # -10% confidence bound
         ci_upper = value * 1.1  # +10% confidence bound
-        
+
         forecast.append({
             'month': month,
             'value': value,
             'ci_lower': ci_lower,
             'ci_upper': ci_upper,
         })
-    
+
     return forecast
 ```
 
@@ -298,12 +298,12 @@ Implementation Plan:
 
 ```sql
 -- Capacity forecast report
-SELECT 
+SELECT
   DATE_TRUNC('month', timestamp) as month,
   'cpu' as metric,
   AVG(cpu_utilization) as current,
   PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY cpu_utilization) as p95,
-  CASE 
+  CASE
     WHEN AVG(cpu_utilization) > 80 THEN 'CRITICAL'
     WHEN AVG(cpu_utilization) > 70 THEN 'HIGH'
     WHEN AVG(cpu_utilization) > 50 THEN 'MEDIUM'
@@ -327,7 +327,7 @@ SELECT
   month,
   throughput,
   LAG(throughput) OVER (ORDER BY month) as prev_month,
-  ROUND(100 * (throughput - LAG(throughput) OVER (ORDER BY month)) / 
+  ROUND(100 * (throughput - LAG(throughput) OVER (ORDER BY month)) /
         LAG(throughput) OVER (ORDER BY month), 2) as growth_percent
 FROM monthly_averages
 ORDER BY month DESC;
@@ -366,7 +366,7 @@ May-June (Months 1-2) - Planning Phase
 └─ Budget: $10,500/month (+5%)
 
 July-August (Months 3-4) - First Wave of Scaling
-├─ CPU scaling: 4 → 8 vCPU  
+├─ CPU scaling: 4 → 8 vCPU
 ├─ Memory scaling: 32GB → 48GB
 ├─ Add cache replicas (6 → 9 nodes)
 └─ Budget: $12,000/month (+20%)
@@ -385,5 +385,5 @@ January 2027+ (Year 2)
 
 ---
 
-**Status**: Complete  
+**Status**: Complete
 **Last Updated**: April 13, 2026

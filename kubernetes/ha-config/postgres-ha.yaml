@@ -80,7 +80,7 @@ spec:
                 operator: In
                 values:
                 - "true"
-      
+
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -91,7 +91,7 @@ spec:
         - name: replication
           containerPort: 5433
           protocol: TCP
-        
+
         env:
         - name: POSTGRES_DB
           value: "code-server"
@@ -107,7 +107,7 @@ spec:
               key: password
         - name: PGDATA
           value: "/var/lib/postgresql/data/pgdata"
-        
+
         volumeMounts:
         - name: postgres-data
           mountPath: /var/lib/postgresql/data
@@ -116,7 +116,7 @@ spec:
           readOnly: true
         - name: backup
           mountPath: /backup
-        
+
         livenessProbe:
           exec:
             command:
@@ -127,7 +127,7 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
-        
+
         readinessProbe:
           exec:
             command:
@@ -138,7 +138,7 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 2
-        
+
         resources:
           requests:
             cpu: 2000m
@@ -146,7 +146,7 @@ spec:
           limits:
             cpu: 4000m
             memory: 8Gi
-      
+
       - name: postgres-exporter
         image: prometheuscommunity/postgres-exporter:latest
         ports:
@@ -163,7 +163,7 @@ spec:
           limits:
             cpu: 200m
             memory: 256Mi
-      
+
       volumes:
       - name: postgres-data
         persistentVolumeClaim:
@@ -235,7 +235,7 @@ spec:
                 values:
                 - postgres
             topologyKey: kubernetes.io/hostname
-      
+
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -243,7 +243,7 @@ spec:
         - name: postgresql
           containerPort: 5432
           protocol: TCP
-        
+
         env:
         - name: POSTGRES_DB
           value: "code-server"
@@ -256,7 +256,7 @@ spec:
             secretKeyRef:
               name: postgresql-credentials
               key: replication-password
-        
+
         command:
         - /bin/sh
         - -c
@@ -266,15 +266,15 @@ spec:
             echo 'Waiting for primary to be available...'
             sleep 1s
           done
-          
+
           echo "primary_conninfo = 'postgres://replication:CHANGEME@postgres-primary:5432/code-server'" >> /var/lib/postgresql/data/pgdata/recovery.conf
-          
+
           /usr/local/bin/docker-entrypoint.sh postgres
-        
+
         volumeMounts:
         - name: postgres-data
           mountPath: /var/lib/postgresql/data
-        
+
         livenessProbe:
           exec:
             command:
@@ -285,7 +285,7 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
-        
+
         resources:
           requests:
             cpu: 1000m
@@ -293,7 +293,7 @@ spec:
           limits:
             cpu: 2000m
             memory: 4Gi
-      
+
       - name: postgres-exporter
         image: prometheuscommunity/postgres-exporter:latest
         ports:
@@ -304,7 +304,7 @@ spec:
           requests:
             cpu: 100m
             memory: 128Mi
-      
+
       volumeClaimTemplates:
       - metadata:
           name: postgres-data
@@ -326,7 +326,7 @@ data:
     # Connection settings
     max_connections = 1000
     superuser_reserved_connections = 10
-    
+
     # Replication settings
     wal_level = replica
     max_wal_senders = 10
@@ -334,11 +334,11 @@ data:
     wal_keep_size = 1GB
     hot_standby = on
     hot_standby_feedback = on
-    
+
     # Synchronous replication
     synchronous_commit = on
     synchronous_standby_names = '*'
-    
+
     # Performance
     shared_buffers = 2GB
     effective_cache_size = 6GB
@@ -349,14 +349,14 @@ data:
     random_page_cost = 1.1
     effective_io_concurrency = 200
     work_mem = 10MB
-    
+
     # Logging
     logging_collector = on
     log_directory = 'pg_log'
     log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
     log_min_duration_statement = 1000
     log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
-    
+
     # Archiving for PITR
     archive_mode = on
     archive_command = 'test ! -f /backup/wal_archive/%f && cp %p /backup/wal_archive/%f'

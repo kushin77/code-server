@@ -1,6 +1,6 @@
 # Phase 11: Disaster Recovery
 
-**Document**: DR procedures, automation, and recovery processes  
+**Document**: DR procedures, automation, and recovery processes
 **Date**: April 13, 2026
 
 ## Table of Contents
@@ -126,7 +126,7 @@ mkdir -p "${BACKUP_PATH}"
 # Function: Backup
 backup_postgresql() {
   echo "[INFO] Starting PostgreSQL full backup..."
-  
+
   # Create base backup
   pg_basebackup \
     --host=postgres-primary \
@@ -138,23 +138,23 @@ backup_postgresql() {
     --progress \
     --xlog-method=stream \
     --max-rate=100M
-  
+
   echo "[INFO] Backup completed at ${BACKUP_PATH}"
 }
 
 # Function: Verify
 verify_backup() {
   echo "[INFO] Verifying backup integrity..."
-  
+
   # Check if base backup exists
   if [ ! -f "${BACKUP_PATH}/base.tar" ]; then
     echo "[ERROR] Base backup not found!"
     return 1
   fi
-  
+
   # Verify checksum
   sha256sum "${BACKUP_PATH}/base.tar" > "${BACKUP_PATH}/checksums.txt"
-  
+
   # Create manifest
   cat > "${BACKUP_PATH}/manifest.json" <<EOF
 {
@@ -168,29 +168,29 @@ verify_backup() {
   "wal_start_time": "$(psql -h postgres-primary -U backup_user -tc "SELECT wal_lsn FROM pg_control_recovery() LIMIT 1;")
 }
 EOF
-  
+
   echo "[INFO] Backup verification passed"
 }
 
 # Function: Upload to S3
 upload_to_s3() {
   echo "[INFO] Uploading backup to S3..."
-  
+
   aws s3 sync "${BACKUP_PATH}" "${S3_BUCKET}/postgresql/full/${DATE}/" \
     --delete \
     --sse=AES256 \
     --storage-class=STANDARD_IA
-  
+
   echo "[INFO] S3 upload completed"
 }
 
 # Function: Test Restore
 test_restore() {
   echo "[INFO] Testing backup restore (dry-run)..."
-  
+
   # Create temporary directory
   TEST_DIR=$(mktemp -d)
-  
+
   # Attempt restore in test environment
   if pg_basebackup \
     --host=postgres-primary \
@@ -365,9 +365,9 @@ spec:
 
 ### Scenario 1: Single-Node Failure
 
-**Failure**: PostgreSQL replica crashes  
-**Recovery**: Spin new node from image, restore from backup  
-**RTO**: 30 minutes  
+**Failure**: PostgreSQL replica crashes
+**Recovery**: Spin new node from image, restore from backup
+**RTO**: 30 minutes
 **Steps**:
 
 ```bash
@@ -388,9 +388,9 @@ kubectl exec postgres-primary -- psql -c "SELECT * FROM pg_stat_replication;"
 
 ### Scenario 2: Regional Failure (Full DC Down)
 
-**Failure**: Entire data center unavailable  
-**Recovery**: Failover to standby DC  
-**RTO**: < 1 hour  
+**Failure**: Entire data center unavailable
+**Recovery**: Failover to standby DC
+**RTO**: < 1 hour
 **Steps**:
 
 ```bash
@@ -404,12 +404,12 @@ read -p "Switch to standby DC? (y/n) " -n 1
 if [ "$REPLY" = "y" ]; then
   # 3. Promote standby cluster
   kubectl apply -f kubernetes/standby-promotion.yaml
-  
+
   # 4. Update DNS
   aws route53 change-resource-record-sets \
     --hosted-zone-id Z1234567890ABC \
     --change-batch 'file://dns-failover.json'
-  
+
   # 5. Verify services online
   ./scripts/health-check.sh
 fi
@@ -420,9 +420,9 @@ fi
 
 ### Scenario 3: Data Corruption
 
-**Failure**: Database corruption detected  
-**Recovery**: Point-in-time restore (PITR)  
-**RTO**: < 4 hours  
+**Failure**: Database corruption detected
+**Recovery**: Point-in-time restore (PITR)
+**RTO**: < 4 hours
 **Steps**:
 
 ```bash
@@ -455,9 +455,9 @@ kubectl scale deployment code-server --replicas=3
 
 ### Scenario 4: Configuration/Secrets Corruption
 
-**Failure**: Kubernetes ConfigMaps or Secrets corrupted  
-**Recovery**: Restore from Git + Vault  
-**RTO**: < 15 minutes  
+**Failure**: Kubernetes ConfigMaps or Secrets corrupted
+**Recovery**: Restore from Git + Vault
+**RTO**: < 15 minutes
 **Steps**:
 
 ```bash
@@ -482,8 +482,8 @@ kubectl get configmap,secret
 
 ### Monthly DR Drill Procedure
 
-**Frequency**: 1st Sunday of each month  
-**Duration**: 2 hours  
+**Frequency**: 1st Sunday of each month
+**Duration**: 2 hours
 **Participants**: DevOps, DBA, SRE
 
 **Script**: `/scripts/dr-drill.sh`
@@ -627,5 +627,5 @@ echo "[VERIFY] Backup verification completed" | tee -a "${VERIFY_LOG}"
 
 ---
 
-**Status**: Complete  
+**Status**: Complete
 **Last Updated**: April 13, 2026

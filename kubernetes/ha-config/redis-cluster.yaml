@@ -71,7 +71,7 @@ spec:
                 values:
                 - redis
             topologyKey: kubernetes.io/hostname
-      
+
       initContainers:
       - name: redis-init
         image: redis:7-alpine
@@ -84,7 +84,7 @@ spec:
             echo "Waiting for Redis to start..."
             sleep 1
           done
-          
+
           # Initialize cluster if this is the first node
           if [ "${HOSTNAME##*-}" = "0" ]; then
             redis-cli --cluster create \
@@ -95,14 +95,14 @@ spec:
         volumeMounts:
         - name: redis-data
           mountPath: /data
-      
+
       containers:
       - name: redis
         image: redis:7-alpine
         command:
         - redis-server
         - /etc/redis/redis.conf
-        
+
         ports:
         - name: redis
           containerPort: 6379
@@ -110,7 +110,7 @@ spec:
         - name: gossip
           containerPort: 16379
           protocol: TCP
-        
+
         env:
         - name: POD_IP
           valueFrom:
@@ -120,7 +120,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        
+
         livenessProbe:
           exec:
             command:
@@ -130,7 +130,7 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
-        
+
         readinessProbe:
           exec:
             command:
@@ -141,7 +141,7 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 2
-        
+
         resources:
           requests:
             cpu: 500m
@@ -149,14 +149,14 @@ spec:
           limits:
             cpu: 1000m
             memory: 2Gi
-        
+
         volumeMounts:
         - name: redis-data
           mountPath: /data
         - name: redis-config
           mountPath: /etc/redis
           readOnly: true
-      
+
       - name: redis-exporter
         image: oliver006/redis_exporter:latest
         ports:
@@ -173,12 +173,12 @@ spec:
           limits:
             cpu: 200m
             memory: 256Mi
-      
+
       volumes:
       - name: redis-config
         configMap:
           name: redis-config
-      
+
       volumeClaimTemplates:
       - metadata:
           name: redis-data
@@ -202,18 +202,18 @@ data:
     cluster-enabled yes
     cluster-config-file nodes.conf
     cluster-node-timeout 15000
-    
+
     # Persistence
     appendonly yes
     appendfsync everysec
     save 900 1
     save 300 10
     save 60 10000
-    
+
     # Memory Management
     maxmemory 1.5gb
     maxmemory-policy allkeys-lru
-    
+
     # Replication
     slave-read-only yes
     slave-serve-stale-data yes
@@ -222,15 +222,15 @@ data:
     repl-backlog-ttl 3600
     min-slaves-to-write 1
     min-slaves-max-lag 10
-    
+
     # Cluster Specific
     cluster-require-full-coverage no
     cluster-migration-barrier 1
-    
+
     # Logging
     loglevel notice
     logfile ""
-    
+
     # Performance
     databases 16
     hz 10
@@ -238,11 +238,11 @@ data:
     num-io-threads 4
     num-io-threads-do-reads yes
     num-io-threads-do-writes yes
-    
+
     # Security
     requirepass CHANGEME
     masterauth CHANGEME
-    
+
     # Slowlog
     slowlog-log-slower-than 10000
     slowlog-max-len 128

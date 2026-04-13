@@ -1,7 +1,7 @@
 # Phase 11: High Availability Architecture
 
-**Document**: Detailed HA design for code-server  
-**Date**: April 13, 2026  
+**Document**: Detailed HA design for code-server
+**Date**: April 13, 2026
 
 ## Table of Contents
 
@@ -430,10 +430,10 @@ frontend code-server-frontend
   bind *:80
   bind *:443 ssl crt /etc/ssl/cert.pem
   default_backend code-server-backend
-  
+
   # Redirect HTTP to HTTPS
   http-request redirect scheme https code 301 if !{ ssl_fc }
-  
+
   # Add tracing headers
   http-request set-header X-Request-ID %[rand,hex,bytes(16)]
   http-request set-header X-Forwarded-For %[src]
@@ -441,15 +441,15 @@ frontend code-server-frontend
 backend code-server-backend
   balance roundrobin
   option httpchk GET /health
-  
+
   # Health check parameters
   default-server inter 5s fall 3 rise 2
-  
+
   # Backend servers
   server app1 10.0.1.10:8080 check
   server app2 10.0.1.11:8080 check
   server app3 10.0.1.12:8080 check
-  
+
   # Remove unhealthy servers
   option forwardfor
   http-reuse safe
@@ -675,5 +675,5 @@ groups:
 
 ---
 
-**Status**: Complete  
+**Status**: Complete
 **Last Updated**: April 13, 2026

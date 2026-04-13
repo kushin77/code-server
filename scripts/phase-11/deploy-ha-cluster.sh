@@ -38,19 +38,19 @@ log_error() {
 # Functions
 check_prerequisites() {
   log_info "Checking prerequisites..."
-  
+
   # Check kubectl
   if ! command -v kubectl &> /dev/null; then
     log_error "kubectl not found. Please install kubectl."
   fi
   log_success "kubectl found"
-  
+
   # Check cluster connectivity
   if ! kubectl cluster-info &> /dev/null; then
     log_error "Cannot connect to Kubernetes cluster"
   fi
   log_success "Connected to Kubernetes cluster"
-  
+
   # Check for required manifests
   local required_files=(
     "kubernetes/ha-config/code-server-statefulset.yaml"
@@ -59,7 +59,7 @@ check_prerequisites() {
     "kubernetes/ha-config/network-policies.yaml"
     "kubernetes/ha-config/observability/jaeger-prometheus.yaml"
   )
-  
+
   for file in "${required_files[@]}"; do
     if [ ! -f "$file" ]; then
       log_error "Missing manifest: $file"
@@ -70,7 +70,7 @@ check_prerequisites() {
 
 create_namespace() {
   log_info "Creating namespace: $NAMESPACE"
-  
+
   if kubectl get namespace "$NAMESPACE" &> /dev/null; then
     log_warn "Namespace $NAMESPACE already exists"
   else
@@ -82,7 +82,7 @@ create_namespace() {
 
 deploy_storage_classes() {
   log_info "Deploying storage classes..."
-  
+
   cat <<'EOF' | kubectl apply ${DRY_RUN:+--dry-run=client} -f -
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -108,13 +108,13 @@ parameters:
   encrypted: "true"
 allowVolumeExpansion: true
 EOF
-  
+
   log_success "Storage classes deployed"
 }
 
 deploy_manifests() {
   log_info "Deploying HA manifests..."
-  
+
   local manifests=(
     "kubernetes/ha-config/code-server-statefulset.yaml"
     "kubernetes/ha-config/postgres-ha.yaml"
@@ -122,7 +122,7 @@ deploy_manifests() {
     "kubernetes/ha-config/network-policies.yaml"
     "kubernetes/ha-config/observability/jaeger-prometheus.yaml"
   )
-  
+
   for manifest in "${manifests[@]}"; do
     log_info "Deploying $manifest..."
     kubectl apply \
@@ -135,9 +135,9 @@ deploy_manifests() {
 
 wait_for_readiness() {
   log_info "Waiting for services to be ready..."
-  
+
   local start_time=$(date +%s)
-  
+
   # Wait for PostgreSQL primary
   log_info "Waiting for PostgreSQL primary..."
   until kubectl -n "$NAMESPACE" get pod -l app=postgres,role=primary | grep -q "1/1"; do
@@ -147,7 +147,7 @@ wait_for_readiness() {
     sleep 5
   done
   log_success "PostgreSQL primary ready"
-  
+
   # Wait for PostgreSQL replicas
   log_info "Waiting for PostgreSQL replicas..."
   until [ "$(kubectl -n "$NAMESPACE" get pods -l app=postgres,role=replica --no-headers | wc -l)" = "2" ]; then
@@ -157,7 +157,7 @@ wait_for_readiness() {
     sleep 5
   done
   log_success "PostgreSQL replicas ready"
-  
+
   # Wait for Redis
   log_info "Waiting for Redis cluster..."
   until [ "$(kubectl -n "$NAMESPACE" get pods -l app=redis --no-headers | wc -l)" = "6" ]; then
@@ -167,7 +167,7 @@ wait_for_readiness() {
     sleep 5
   done
   log_success "Redis cluster ready"
-  
+
   # Wait for code-server
   log_info "Waiting for code-server..."
   until [ "$(kubectl -n "$NAMESPACE" get pods -l app=code-server --no-headers | wc -l)" = "3" ]; then
@@ -181,42 +181,42 @@ wait_for_readiness() {
 
 verify_deployment() {
   log_info "Verifying deployment..."
-  
+
   # Check pod status
   log_info "Pod status:"
   kubectl -n "$NAMESPACE" get pods -o wide
-  
+
   # Check services
   log_info "Service status:"
   kubectl -n "$NAMESPACE" get svc
-  
+
   # Check PVCs
   log_info "PersistentVolumeClaim status:"
   kubectl -n "$NAMESPACE" get pvc
-  
+
   # Perform health checks
   log_info "Running health checks..."
-  
+
   # PostgreSQL replication check
   local pg_primary=$(kubectl -n "$NAMESPACE" get pod -l app=postgres,role=primary -o jsonpath='{.items[0].metadata.name}')
   local replication_status=$(kubectl -n "$NAMESPACE" exec "$pg_primary" -- psql -U postgres -c "SELECT count(*) FROM pg_stat_replication;" 2>/dev/null || echo "0")
-  
+
   if [ "$replication_status" -ge 2 ]; then
     log_success "PostgreSQL replication OK ($replication_status replicas)"
   else
     log_warn "PostgreSQL replication not fully healthy"
   fi
-  
+
   # Redis cluster check
   local redis_node=$(kubectl -n "$NAMESPACE" get pod -l app=redis -o jsonpath='{.items[0].metadata.name}')
   local cluster_info=$(kubectl -n "$NAMESPACE" exec "$redis_node" -- redis-cli cluster info 2>/dev/null | grep cluster_state || echo "fail")
-  
+
   if echo "$cluster_info" | grep -q "ok"; then
     log_success "Redis cluster OK"
   else
     log_warn "Redis cluster not fully healthy: $cluster_info"
   fi
-  
+
   log_success "Deployment verified"
 }
 
@@ -242,12 +242,12 @@ main() {
   log_info "=== Phase 11 HA Cluster Deployment ==="
   log_info "Namespace: $NAMESPACE"
   [ "$DRY_RUN" = "true" ] && log_warn "Running in DRY-RUN mode"
-  
+
   check_prerequisites
   create_namespace
   deploy_storage_classes
   deploy_manifests
-  
+
   if [ "$DRY_RUN" != "true" ]; then
     wait_for_readiness
     verify_deployment
@@ -255,7 +255,7 @@ main() {
   else
     log_warn "DRY-RUN: Skipping readiness checks"
   fi
-  
+
   log_success "=== Deployment completed successfully ==="
 }
 

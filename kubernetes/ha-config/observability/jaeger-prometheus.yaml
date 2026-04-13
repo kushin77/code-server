@@ -64,7 +64,7 @@ spec:
         - name: jaeger-collector
           containerPort: 14268
           protocol: TCP
-        
+
         env:
         - name: COLLECTOR_ZIPKIN_HTTP_PORT
           value: "9411"
@@ -72,12 +72,12 @@ spec:
           value: "100000"
         - name: SAMPLING_STRATEGIES_FILE
           value: /etc/jaeger/sampling_strategies.json
-        
+
         volumeMounts:
         - name: sampling-config
           mountPath: /etc/jaeger
           readOnly: true
-        
+
         resources:
           requests:
             cpu: 200m
@@ -85,21 +85,21 @@ spec:
           limits:
             cpu: 500m
             memory: 1Gi
-        
+
         livenessProbe:
           httpGet:
             path: /
             port: 16686
           initialDelaySeconds: 30
           periodSeconds: 10
-        
+
         readinessProbe:
           httpGet:
             path: /
             port: 16686
           initialDelaySeconds: 10
           periodSeconds: 5
-      
+
       volumes:
       - name: sampling-config
         configMap:
@@ -182,14 +182,14 @@ spec:
         - name: prometheus
           containerPort: 9090
           protocol: TCP
-        
+
         volumeMounts:
         - name: config
           mountPath: /etc/prometheus
           readOnly: true
         - name: storage
           mountPath: /prometheus
-        
+
         resources:
           requests:
             cpu: 500m
@@ -197,21 +197,21 @@ spec:
           limits:
             cpu: 1000m
             memory: 2Gi
-        
+
         livenessProbe:
           httpGet:
             path: /-/healthy
             port: 9090
           initialDelaySeconds: 30
           periodSeconds: 10
-        
+
         readinessProbe:
           httpGet:
             path: /-/ready
             port: 9090
           initialDelaySeconds: 10
           periodSeconds: 5
-      
+
       volumes:
       - name: config
         configMap:
@@ -234,12 +234,12 @@ data:
       external_labels:
         cluster: 'code-server-ha'
         environment: 'production'
-    
+
     scrape_configs:
     - job_name: 'prometheus'
       static_configs:
       - targets: ['localhost:9090']
-    
+
     - job_name: 'code-server'
       kubernetes_sd_configs:
       - role: pod
@@ -254,13 +254,13 @@ data:
         target_label: pod
       - source_labels: [__meta_kubernetes_pod_node_name]
         target_label: node
-    
+
     - job_name: 'postgresql'
       static_configs:
       - targets: ['postgres-primary:9187']
       - targets: ['postgres-replica-0:9187']
       - targets: ['postgres-replica-1:9187']
-    
+
     - job_name: 'redis'
       static_configs:
       - targets: ['redis-0:9121']
@@ -269,11 +269,11 @@ data:
       - targets: ['redis-3:9121']
       - targets: ['redis-4:9121']
       - targets: ['redis-5:9121']
-    
+
     - job_name: 'jaeger'
       static_configs:
       - targets: ['jaeger:16686']
-    
+
     - job_name: 'kubernetes-apiservers'
       kubernetes_sd_configs:
       - role: endpoints
@@ -285,7 +285,7 @@ data:
       - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
         action: keep
         regex: default;kubernetes;https
-    
+
     - job_name: 'kubernetes-nodes'
       kubernetes_sd_configs:
       - role: node

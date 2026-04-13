@@ -161,7 +161,7 @@ spec:
     spec:
       containers:
       - name: jaeger
-        image: jaegertracing/all-in-one:latest
+        image: jaegertracing/all-in-one:1.57.0
         ports:
         - containerPort: 6831
           protocol: UDP
@@ -453,7 +453,7 @@ groups:
       > 3.5e9  # 3.5GB limit
     for: 10m
     annotations:
-      summary: "Memory usage projectedto exceed limit in 1 hour"
+      summary: "Memory usage projected to exceed limit in 1 hour"
 ```
 
 ## Dashboards

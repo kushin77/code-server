@@ -136,7 +136,7 @@ echo "[FAILOVER] Failover to EU-Central complete"
 REGION="us-east"
 
 # 1. Remove from geographic routing
-aws route53 update-resource-record-sets \
+aws route53 change-resource-record-sets \
   --hosted-zone-id Z123456789ABC \
   --change-batch "{
     \"Changes\": [{
@@ -162,7 +162,7 @@ gcloud container clusters upgrade code-server-us-east \
   --zone us-east1-b
 
 # 5. Re-add to geographic routing
-aws route53 update-resource-record-sets \
+aws route53 change-resource-record-sets \
   --hosted-zone-id Z123456789ABC \
   --change-batch "{
     \"Changes\": [{

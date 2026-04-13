@@ -41,14 +41,16 @@ make plan
 
 ## 🌐 Access Your IDE
 
-**URL:** `http://localhos
-**Password:** Retrieved after deploymen
+**URL:** `https://ide.kushnir.cloud`  
+**Auth:** Google OAuth2 (configured)
 
-No GitHub authentication. No dialogs. Just works.
+No secondary authentication needed. Just visit the domain.
+
+For detailed domain configuration, see: [DOMAIN_CONFIGURATION.md](./DOMAIN_CONFIGURATION.md)
 
 ---
 
-## 📋 Verify Deploymen
+## 📋 Verify Deployment
 
 ```bash
 # Check containers

@@ -2,6 +2,10 @@
 
 Production-grade VS Code IDE with **elite local LLM (Ollama)**, OAuth2 authentication, and enterprise security.
 
+> **🌐 Access Your IDE**: `https://ide.kushnir.cloud`  
+> **Auth**: Google OAuth2  
+> **📖 Domain Configuration**: See [DOMAIN_CONFIGURATION.md](./DOMAIN_CONFIGURATION.md)
+
 ## 🚀 Quick Start
 
 ### Prerequisites

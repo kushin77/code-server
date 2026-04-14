@@ -1,3 +1,4 @@
+---
 name: Cleanup Stale Branches
 
 on:
@@ -57,7 +58,9 @@ jobs:
           DELETED_COUNT=0
 
           # Get all remote branches
-          git for-each-ref --sort=-committerdate refs/remotes/origin/ --format='%(refname:short)|%(committerdate:unix)' | while IFS='|' read branch date; do
+          git for-each-ref --sort=-committerdate refs/remotes/origin/ \
+            --format='%(refname:short)|%(committerdate:unix)' | \
+            while IFS='|' read branch date; do
             BRANCH_NAME="${branch#origin/}"
 
             # Skip protected branches
@@ -115,7 +118,10 @@ jobs:
             ### Next Run
             Scheduled for next Monday at 2:00 AM UTC
 
-            [View Workflow Run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})
+            [View Workflow Run](\
+${process.env.GITHUB_SERVER_URL}/\
+${process.env.GITHUB_REPOSITORY}/actions/runs/\
+${process.env.GITHUB_RUN_ID})
             `;
 
             core.summary.addRaw(summary);

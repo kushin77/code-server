@@ -1,3 +1,4 @@
+---
 name: Automatic Branch Cleanup
 
 on:
@@ -30,7 +31,9 @@ jobs:
           git pull origin main
 
           # Delete merged feature branches (pattern: feat/*, bugfix/*, etc.)
-          git branch --merged main | grep -E '^\s+(feat|bugfix|hotfix|chore|docs|refactor)/' | sed 's/^\s*//' | xargs -r git branch -d
+          git branch --merged main | \
+            grep -E '^\s+(feat|bugfix|hotfix|chore|docs|refactor)/' | \
+            sed 's/^\s*//' | xargs -r git branch -d
 
           echo "Deleted merged local feature branches"
 

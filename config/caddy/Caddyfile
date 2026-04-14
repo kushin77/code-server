@@ -1,89 +1,75 @@
 # ════════════════════════════════════════════════════════════════════════════
-# Caddyfile — DNS-First Reverse Proxy Configuration (Phase 21+)
+# Caddyfile — Production & On-Premises Configuration
 #
-# CRITICAL PRINCIPLE: All endpoints use DOMAIN environment variable
-# - For production: DOMAIN=kushnir.cloud (real DNS + Let's Encrypt TLS)
-# - For on-prem: DOMAIN=192.168.168.31 (direct IP, HTTP, no TLS)
-#
-# NEVER hardcode IPs or localhost - always use domain names
+# Supports both:
+# - Production: https://ide.kushnir.cloud (with Let's Encrypt TLS)
+# - On-Prem: http://code-server.192.168.168.31.nip.io (HTTP, no TLS)
 # ════════════════════════════════════════════════════════════════════════════
 
-# Global options block MUST come first (no site address before it).
-# auto_https off: on-prem uses HTTP (no Let's Encrypt for LAN/nip.io IPs).
-# For production with a real domain and ACME_EMAIL set, remove auto_https off.
 {
-    auto_https off
-
     log default {
         format json
         output stdout
     }
+
+    # Email for Let's Encrypt ACME
+    email {$ACME_EMAIL:admin@kushnir.cloud}
+
+    # Let's Encrypt CA (or self-signed if no ACME)
+    acme_ca {$ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
+
+    # Enable automatic HTTPS for real domains (production)
+    # For on-prem with nip.io: set ACME_CA empty and use http:// domains
+    auto_https on
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HTTP Listener (Port 80)
-# All HTTP requests proxy to services via DNS names (not IPs)
-# ─────────────────────────────────────────────────────────────────────────────
-
-:80 {
+# Primary production domain - HTTPS
+ide.kushnir.cloud {
     encode gzip
 
-    # Security headers
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
     header X-Content-Type-Options "nosniff"
-    header X-Frame-Options "SAMEORIGIN"
+    header X-Frame-Options "DENY"
     header X-XSS-Protection "1; mode=block"
     header Referrer-Policy "strict-origin-when-cross-origin"
     header Permissions-Policy "geolocation=(), microphone=(), camera=()"
 
-    # ── Health checks ─────────────────────────────────────────────────────────
+    reverse_proxy code-server:8080 {
+        flush_interval -1
+    }
+}
+
+# Alias for secondary domain (if configured)
+code-server.{$DOMAIN:kushnir.cloud} {
+    encode gzip
+    reverse_proxy code-server:8080 {
+        flush_interval -1
+    }
+}
+
+# Admin dashboards
+grafana.kushnir.cloud {
+    encode gzip
+    reverse_proxy grafana:3000
+}
+
+prometheus.kushnir.cloud {
+    encode gzip
+    reverse_proxy prometheus:9090
+}
+
+jaeger.kushnir.cloud {
+    encode gzip
+    reverse_proxy jaeger:16686
+}
+
+# Health check endpoint
+kushnir.cloud {
     @health_checks path /health /healthz /.well-known/health
     handle @health_checks {
         respond "OK" 200
     }
 
-    # ── IDE (code-server) ─────────────────────────────────────────────────────
-    @ide_requests host code-server.{$DOMAIN:192.168.168.31}
-    handle @ide_requests {
-        reverse_proxy code-server:8080 {
-            flush_interval -1
-        }
-    }
-
-    # ── GraphQL API ───────────────────────────────────────────────────────────
-    @graphql_requests host graphql-api.{$DOMAIN:192.168.168.31}
-    handle @graphql_requests {
-        reverse_proxy graphql-api:4000 {
-            flush_interval -1
-        }
-    }
-
-    # ── Developer Portal ──────────────────────────────────────────────────────
-    @portal_requests host dev-portal.{$DOMAIN:192.168.168.31}
-    handle @portal_requests {
-        reverse_proxy developer-portal:3001 {
-            flush_interval -1
-        }
-    }
-
-    # ── Prometheus ────────────────────────────────────────────────────────────
-    @prometheus_requests host prometheus.{$DOMAIN:192.168.168.31}
-    handle @prometheus_requests {
-        reverse_proxy prometheus:9090
-    }
-
-    # ── Grafana ───────────────────────────────────────────────────────────────
-    @grafana_requests host grafana.{$DOMAIN:192.168.168.31}
-    handle @grafana_requests {
-        reverse_proxy grafana:3000
-    }
-
-    # ── Jaeger ────────────────────────────────────────────────────────────────
-    @jaeger_requests host jaeger.{$DOMAIN:192.168.168.31}
-    handle @jaeger_requests {
-        reverse_proxy jaeger:16686
-    }
-
-    # ── Default catch-all → code-server IDE ──────────────────────────────────
     handle {
         reverse_proxy code-server:8080 {
             flush_interval -1
@@ -91,11 +77,76 @@
     }
 }
 
-# ════════════════════════════════════════════════════════════════════════════
-# ARCHITECTURE NOTES
-# ════════════════════════════════════════════════════════════════════════════
-# On-prem (current): DOMAIN=192.168.168.31, HTTP only (auto_https off)
-# Production: set DOMAIN=kushnir.cloud + ACME_EMAIL, remove auto_https off
-# All services reference each other by Docker container name (internal DNS)
-# Change DOMAIN env var → all endpoints update, no code changes needed
-# ════════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+# ON-PREMISES HTTP FALLBACK
+# For on-prem deployments using nip.io wildcard DNS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# On-prem: nip.io HTTP fallback
+code-server.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
+    encode gzip
+    header X-Content-Type-Options "nosniff"
+    
+    reverse_proxy code-server:8080 {
+        flush_interval -1
+    }
+}
+
+# On-prem: Observability dashboards
+grafana.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
+    encode gzip
+    reverse_proxy grafana:3000
+}
+
+prometheus.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
+    encode gzip
+    reverse_proxy prometheus:9090
+}
+
+jaeger.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
+    encode gzip
+    reverse_proxy jaeger:16686
+}
+# ON-PREMISES CONFIGURATION (nip.io dynamic DNS for on-prem at 192.168.168.31)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# On-prem code-server (HTTP only)
+code-server.192.168.168.31.nip.io,
+ide.192.168.168.31.nip.io {
+    encode gzip
+    reverse_proxy code-server:8080 {
+        flush_interval -1
+    }
+}
+
+# On-prem Grafana
+grafana.192.168.168.31.nip.io {
+    encode gzip
+    reverse_proxy grafana:3000
+}
+
+# On-prem Prometheus
+prometheus.192.168.168.31.nip.io {
+    encode gzip
+    reverse_proxy prometheus:9090
+}
+
+# On-prem Jaeger
+jaeger.192.168.168.31.nip.io {
+    encode gzip
+    reverse_proxy jaeger:16686
+}
+
+# On-prem health check
+192.168.168.31.nip.io {
+    @health_checks path /health /healthz /.well-known/health
+    handle @health_checks {
+        respond "OK" 200
+    }
+
+    handle {
+        reverse_proxy code-server:8080 {
+            flush_interval -1
+        }
+    }
+}

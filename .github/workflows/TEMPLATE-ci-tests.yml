@@ -1,3 +1,4 @@
+---
 name: CI - Unit & Integration Tests
 
 on:
@@ -153,7 +154,8 @@ jobs:
     steps:
       - name: Check test results
         run: |
-          if [ "${{ needs.unit-tests.result }}" = "failure" ] || [ "${{ needs.integration-tests.result }}" = "failure" ]; then
+          if [ "${{ needs.unit-tests.result }}" = "failure" ] || \
+             [ "${{ needs.integration-tests.result }}" = "failure" ]; then
             echo "::error::Tests failed"
             exit 1
           fi

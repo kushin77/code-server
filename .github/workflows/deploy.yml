@@ -1,3 +1,4 @@
+---
 name: Deploy Code-Server Enterprise IaC
 
 on:
@@ -102,7 +103,10 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Code-Server Enterprise IaC deployment successful\n*URL:* https://ide.kushnir.cloud\n*Deployment:* ${{ github.sha }}"
+                    "text": "Code-Server Enterprise IaC deployment\
+ successful\n*URL:*\
+ https://ide.kushnir.cloud\n*Deployment:*\
+ ${{ github.sha }}"
                   }
                 }
               ]

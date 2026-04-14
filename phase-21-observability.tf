@@ -102,7 +102,7 @@ resource "docker_container" "prometheus" {
   }
 
   volumes {
-    host_path      = "/var/lib/prometheus"
+    host_path      = "/home/akushnir/.docker-volumes/prometheus"
     container_path = "/prometheus"
     read_only      = false
   }
@@ -153,7 +153,7 @@ resource "docker_container" "grafana" {
   }
 
   volumes {
-    host_path      = "/var/lib/grafana"
+    host_path      = "/home/akushnir/.docker-volumes/grafana"
     container_path = "/var/lib/grafana"
     read_only      = false
   }
@@ -217,7 +217,7 @@ resource "docker_container" "alertmanager" {
   }
 
   volumes {
-    host_path      = "/var/lib/alertmanager"
+    host_path      = "/home/akushnir/.docker-volumes/alertmanager"
     container_path = "/alertmanager"
     read_only      = false
   }

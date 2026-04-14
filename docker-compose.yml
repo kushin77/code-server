@@ -94,7 +94,7 @@ services:
       - "--cert=false"
       - "--auth=password"
     volumes:
-      - /mnt/nas-56/code-server:/home/coder:rw
+      - nas-code-server:/home/coder:rw
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/healthz"]
       interval: 30s
@@ -129,7 +129,7 @@ services:
       OLLAMA_MAX_LOADED_MODELS: "2"
       OLLAMA_NUM_THREAD:       ${OLLAMA_NUM_THREAD:-8}
     volumes:
-      - /mnt/nas-56/ollama:/root/.ollama:rw  # models on NAS (large files)
+      - nas-ollama:/root/.ollama:rw  # models on NAS (large files)
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags"]
       interval: 30s
@@ -156,7 +156,7 @@ services:
     environment:
       OLLAMA_HOST: ollama:11434
     volumes:
-      - /mnt/nas-56/ollama:/root/.ollama:rw
+      - nas-ollama:/root/.ollama:rw
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -259,7 +259,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
-      - /mnt/nas-56/prometheus:/prometheus:rw
+      - nas-prometheus:/prometheus:rw
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy"]
       interval: 30s
@@ -290,7 +290,7 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED:  "false"
       GF_LOG_LEVEL:               warn
     volumes:
-      - /mnt/nas-56/grafana:/var/lib/grafana:rw
+      - nas-grafana:/var/lib/grafana:rw
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep -q ok"]
@@ -384,18 +384,11 @@ networks:
 # Volumes  (NAS-backed = /mnt/nas-56 bind mounts above; local SSD below)
 # ─────────────────────────────────────────────────────────────────────────────
 volumes:
+  # ── Local SSD volumes (fast I/O for databases) ───────────────────────────
   postgres-data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /home/akushnir/.local/data/postgres
   redis-data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /home/akushnir/.local/data/redis
   caddy-config:
     driver: local
   caddy-data:
@@ -404,3 +397,29 @@ volumes:
     driver: local
   jaeger-data:
     driver: local
+
+  # ── NAS-backed volumes (192.168.168.56:/export) ───────────────────────────
+  nas-ollama:
+    driver: local
+    driver_opts:
+      type: nfs4
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
+      device: ":/export/ollama"
+  nas-code-server:
+    driver: local
+    driver_opts:
+      type: nfs4
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      device: ":/export/code-server"
+  nas-prometheus:
+    driver: local
+    driver_opts:
+      type: nfs4
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      device: ":/export/prometheus"
+  nas-grafana:
+    driver: local
+    driver_opts:
+      type: nfs4
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      device: ":/export/grafana"

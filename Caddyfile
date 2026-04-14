@@ -20,7 +20,8 @@
     acme_ca {$ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
     
     # On-prem: disable auto_https to avoid TLS issues with nip.io
-    auto_https {$AUTO_HTTPS:on}
+    # Valid values: off (disable), disable_redirects, disable_certs, ignore_loaded_certs
+    auto_https off
 }
 
 # Primary production domain - HTTPS

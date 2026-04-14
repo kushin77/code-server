@@ -15,13 +15,13 @@ variable "on_prem_kubernetes_enabled" {
 variable "on_prem_k8s_nodes" {
   description = "List of on-premises nodes for Kubernetes cluster"
   type = list(object({
-    hostname      = string
-    ip_address    = string
-    ssh_user      = string
-    ssh_key       = string
-    role          = string # "control-plane", "worker"
-    gpu_enabled   = bool
-    gpu_type      = string # "nvidia", "amd", "none"
+    hostname    = string
+    ip_address  = string
+    ssh_user    = string
+    ssh_key     = string
+    role        = string # "control-plane", "worker"
+    gpu_enabled = bool
+    gpu_type    = string # "nvidia", "amd", "none"
   }))
   default = [
     {
@@ -75,15 +75,15 @@ resource "null_resource" "kubeadm_bootstrap" {
   }
 
   triggers = {
-    node_ip   = each.value.ip_address
-    k8s_ver   = var.k8s_version
-    runtime   = var.container_runtime
+    node_ip = each.value.ip_address
+    k8s_ver = var.k8s_version
+    runtime = var.container_runtime
     bootstrap = base64encode(templatefile("${path.module}/scripts/kubeadm-bootstrap.sh.tpl", {
-      KUBERNETES_VERSION  = var.k8s_version
-      CONTAINER_RUNTIME   = var.container_runtime
-      POD_CIDR            = var.k8s_pod_cidr
-      SERVICE_CIDR        = var.k8s_service_cidr
-      NODE_ROLE           = each.value.role
+      KUBERNETES_VERSION = var.k8s_version
+      CONTAINER_RUNTIME  = var.container_runtime
+      POD_CIDR           = var.k8s_pod_cidr
+      SERVICE_CIDR       = var.k8s_service_cidr
+      NODE_ROLE          = each.value.role
     }))
   }
 

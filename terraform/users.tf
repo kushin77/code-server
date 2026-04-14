@@ -4,7 +4,7 @@ variable "allowed_users" {
   description = "Map of allowed IDE users with roles and permissions"
   type = map(object({
     email    = string
-    role     = string  # viewer, developer, architect, admin
+    role     = string # viewer, developer, architect, admin
     disabled = optional(bool, false)
   }))
 
@@ -59,7 +59,7 @@ resource "local_file" "user_workspace_readme" {
   }
 
   filename = "${path.module}/../workspaces/${each.key}/README.md"
-  content = <<-EO
+  content  = <<-EO
 # Development Workspace
 
 Welcome, ${each.value.email}!
@@ -101,12 +101,12 @@ resource "local_file" "user_metadata" {
 
   filename = "${path.module}/../config/user-settings/${each.key}/user-metadata.json"
   content = jsonencode({
-    user_id        = each.key
-    email          = each.value.email
-    role           = each.value.role
-    date_created   = timestamp()
-    status         = "active"
-    managed_by     = "terraform"
+    user_id      = each.key
+    email        = each.value.email
+    role         = each.value.role
+    date_created = timestamp()
+    status       = "active"
+    managed_by   = "terraform"
   })
 
   file_permission = "0644"
@@ -125,7 +125,7 @@ resource "null_resource" "user_settings_symlink" {
 
   provisioner "local-exec" {
     # For each user, link their role template to their settings
-    command = <<-EO
+    command     = <<-EO
       mkdir -p "${path.module}/../config/user-settings/${each.key}"
 
       # Link to role template
@@ -148,11 +148,11 @@ output "configured_users" {
   value = {
     for name, user in var.allowed_users :
     name => {
-      email    = user.email
-      role     = user.role
-      disabled = user.disabled
+      email     = user.email
+      role      = user.role
+      disabled  = user.disabled
       workspace = "${path.module}/../workspaces/${name}"
-      settings = "${path.module}/../config/user-settings/${name}"
+      settings  = "${path.module}/../config/user-settings/${name}"
     }
   }
 }

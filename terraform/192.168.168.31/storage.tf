@@ -15,7 +15,7 @@ resource "null_resource" "nfs_mount_primary" {
     inline = [
       "set -e",
       "echo '=== Configuring NAS Primary Mount (${var.nas_protocol}) ==='",
-      
+
       # Install NFS client if needed
       "if [ '${var.nas_protocol}' = 'nfs4' ] || [ '${var.nas_protocol}' = 'nfs3' ]; then",
       "  if ! command -v mount.nfs &>/dev/null; then",
@@ -26,7 +26,7 @@ resource "null_resource" "nfs_mount_primary" {
       "    fi",
       "  fi",
       "fi",
-      
+
       # Install iSCSI initiator if needed
       "if [ '${var.nas_protocol}' = 'iscsi' ]; then",
       "  if ! command -v iscsiadm &>/dev/null; then",
@@ -37,7 +37,7 @@ resource "null_resource" "nfs_mount_primary" {
       "    fi",
       "  fi",
       "fi",
-      
+
       # Create systemd mount unit for NAS primary
       "sudo tee /etc/systemd/system/mnt-nas\\x2dprimary.mount > /dev/null << 'MOUNT_EOF'",
       "[Unit]",
@@ -55,12 +55,12 @@ resource "null_resource" "nfs_mount_primary" {
       "[Install]",
       "WantedBy=multi-user.target",
       "MOUNT_EOF",
-      
+
       # Enable and mount
       "sudo systemctl enable mnt-nas\\x2dprimary.mount",
       "sudo systemctl start mnt-nas\\x2dprimary.mount || echo 'Warning: Mount may require credentials or network connectivity'",
       "sleep 2",
-      
+
       # Verify mount
       "if mount | grep -q '${var.nas_primary_mount_point}'; then",
       "  echo '✓ NAS primary mounted at ${var.nas_primary_mount_point}'",
@@ -94,7 +94,7 @@ resource "null_resource" "nfs_mount_backup" {
     inline = [
       "set -e",
       "echo '=== Configuring NAS Backup Mount (${var.nas_protocol}) ==='",
-      
+
       # Create systemd mount unit for NAS backup
       "sudo tee /etc/systemd/system/mnt-nas\\x2dbackup.mount > /dev/null << 'MOUNT_EOF'",
       "[Unit]",
@@ -112,12 +112,12 @@ resource "null_resource" "nfs_mount_backup" {
       "[Install]",
       "WantedBy=multi-user.target",
       "MOUNT_EOF",
-      
+
       # Enable and mount
       "sudo systemctl enable mnt-nas\\x2dbackup.mount",
       "sudo systemctl start mnt-nas\\x2dbackup.mount || echo 'Warning: Mount may require credentials or network connectivity'",
       "sleep 2",
-      
+
       # Verify mount
       "if mount | grep -q '${var.nas_backup_mount_point}'; then",
       "  echo '✓ NAS backup mounted at ${var.nas_backup_mount_point}'",
@@ -149,31 +149,31 @@ resource "null_resource" "nfs_mount_backup" {
 locals {
   docker_volumes = {
     ollama_data = {
-      mount_path   = "/mnt/nas-primary/models"
-      host_path    = "${var.nas_primary_mount_point}/models"
-      capacity     = "${var.storage_ollama}G"
-      purpose      = "Ollama LLM models and cache"
+      mount_path = "/mnt/nas-primary/models"
+      host_path  = "${var.nas_primary_mount_point}/models"
+      capacity   = "${var.storage_ollama}G"
+      purpose    = "Ollama LLM models and cache"
     }
-    
+
     codeserver_data = {
-      mount_path   = "/home/coder/.local/share/code-server"
-      host_path    = "${var.nas_primary_mount_point}/codeserver"
-      capacity     = "${var.storage_codeserver}G"
-      purpose      = "Code-Server extensions, settings, workspace metadata"
+      mount_path = "/home/coder/.local/share/code-server"
+      host_path  = "${var.nas_primary_mount_point}/codeserver"
+      capacity   = "${var.storage_codeserver}G"
+      purpose    = "Code-Server extensions, settings, workspace metadata"
     }
-    
+
     workspace_data = {
-      mount_path   = "/home/coder/projects"
-      host_path    = "${var.nas_primary_mount_point}/workspaces"
-      capacity     = "${var.storage_workspace}G"
-      purpose      = "User code projects and workspace data"
+      mount_path = "/home/coder/projects"
+      host_path  = "${var.nas_primary_mount_point}/workspaces"
+      capacity   = "${var.storage_workspace}G"
+      purpose    = "User code projects and workspace data"
     }
-    
+
     backup_cache = {
-      mount_path   = "/mnt/nas-backup"
-      host_path    = "${var.nas_backup_mount_point}"
-      capacity     = "Dynamic"
-      purpose      = "Incremental backup of primary NAS"
+      mount_path = "/mnt/nas-backup"
+      host_path  = "${var.nas_backup_mount_point}"
+      capacity   = "Dynamic"
+      purpose    = "Incremental backup of primary NAS"
     }
   }
 }
@@ -192,7 +192,7 @@ resource "null_resource" "validate_storage_capacity" {
 
     inline = [
       "echo '=== Storage Capacity Validation ==='",
-      
+
       # Check primary NAS capacity
       "if [ -d '${var.nas_primary_mount_point}' ]; then",
       "  echo 'NAS Primary Space:'",
@@ -205,7 +205,7 @@ resource "null_resource" "validate_storage_capacity" {
       "    echo '✗ WARNING: Insufficient capacity! Required > Available'",
       "  fi",
       "fi",
-      
+
       # Create subdirectories for volumes
       "echo 'Creating volume directories...        ''",
       "mkdir -p '${var.nas_primary_mount_point}'/models",
@@ -230,7 +230,7 @@ resource "null_resource" "validate_storage_capacity" {
 # BACKUP SCHEDULING (via Systemd timers)
 # ============================================================================
 
- resource "null_resource" "configure_backup_timer" {
+resource "null_resource" "configure_backup_timer" {
   depends_on = [null_resource.validate_storage_capacity]
 
   count = var.skip_nas_mount ? 0 : 1
@@ -240,7 +240,7 @@ resource "null_resource" "validate_storage_capacity" {
 
     inline = [
       "echo '=== Configuring Backup Automation ==='",
-      
+
       # Create backup service script
       "sudo tee /usr/local/bin/nas-backup.sh > /dev/null << 'SCRIPT_EOF'",
       "#!/bin/bash",
@@ -249,9 +249,9 @@ resource "null_resource" "validate_storage_capacity" {
       "rsync -av --delete '${var.nas_primary_mount_point}/' '${var.nas_backup_mount_point}/' >> /var/log/nas-backup.log 2>&1",
       "echo \"[$(date)] Backup completed\" >> /var/log/nas-backup.log",
       "SCRIPT_EOF",
-      
+
       "sudo chmod +x /usr/local/bin/nas-backup.sh",
-      
+
       # Create systemd service for backup
       "sudo tee /etc/systemd/system/nas-backup.service > /dev/null << 'SERVICE_EOF'",
       "[Unit]",
@@ -266,7 +266,7 @@ resource "null_resource" "validate_storage_capacity" {
       "StandardOutput=journal",
       "StandardError=journal",
       "SERVICE_EOF",
-      
+
       # Create systemd timer for hourly backups
       "sudo tee /etc/systemd/system/nas-backup.timer > /dev/null << 'TIMER_EOF'",
       "[Unit]",
@@ -280,7 +280,7 @@ resource "null_resource" "validate_storage_capacity" {
       "[Install]",
       "WantedBy=timers.target",
       "TIMER_EOF",
-      
+
       # Enable and start timer
       "sudo systemctl daemon-reload",
       "sudo systemctl enable nas-backup.timer",
@@ -306,11 +306,11 @@ resource "null_resource" "validate_storage_capacity" {
 output "storage_configuration" {
   description = "Storage configuration summary"
   value = {
-    nas_primary       = var.nas_primary_mount_point
-    nas_backup        = var.nas_backup_mount_point
-    protocol          = var.nas_protocol
+    nas_primary         = var.nas_primary_mount_point
+    nas_backup          = var.nas_backup_mount_point
+    protocol            = var.nas_protocol
     total_allocation_gb = var.storage_ollama + var.storage_codeserver + var.storage_workspace
-    volumes           = keys(local.docker_volumes)
+    volumes             = keys(local.docker_volumes)
   }
 }
 

@@ -26,7 +26,7 @@ variable "portal_replicas" {
 
 resource "kubernetes_namespace" "api" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name = "api-gateway"
     labels = {
@@ -37,7 +37,7 @@ resource "kubernetes_namespace" "api" {
 
 resource "kubernetes_deployment" "graphql_server" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "graphql-api-server"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -68,7 +68,7 @@ resource "kubernetes_deployment" "graphql_server" {
         container {
           name  = "server"
           image = "node:20-alpine"
-          
+
           port {
             container_port = 4000
             name           = "graphql"
@@ -157,8 +157,8 @@ resource "kubernetes_deployment" "graphql_server" {
 }
 
 resource "kubernetes_service" "graphql_server" {
-  count     = var.enable_api_gateway ? 1 : 0
-  
+  count = var.enable_api_gateway ? 1 : 0
+
   metadata {
     name      = "graphql-api"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -186,7 +186,7 @@ resource "kubernetes_service" "graphql_server" {
 
 resource "kubernetes_config_map" "graphql_schema" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "graphql-schema"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -304,7 +304,7 @@ input UserSettingsInput {
 
 resource "kubernetes_config_map" "graphql_resolvers" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "graphql-resolvers"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -407,7 +407,7 @@ export const createLoaders = (prisma) => ({
 
 resource "kubernetes_service_account" "graphql_api" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "graphql-api"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -416,7 +416,7 @@ resource "kubernetes_service_account" "graphql_api" {
 
 resource "kubernetes_config_map" "rate_limit_rules" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "api-rate-limits"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -472,7 +472,7 @@ premiumFieldsCost:
 
 resource "kubernetes_deployment" "developer_portal" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "developer-portal"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -501,7 +501,7 @@ resource "kubernetes_deployment" "developer_portal" {
         container {
           name  = "portal"
           image = "node:20-alpine"
-          
+
           port {
             container_port = 3000
             name           = "http"
@@ -543,8 +543,8 @@ resource "kubernetes_deployment" "developer_portal" {
 }
 
 resource "kubernetes_service" "developer_portal" {
-  count     = var.enable_api_gateway ? 1 : 0
-  
+  count = var.enable_api_gateway ? 1 : 0
+
   metadata {
     name      = "developer-portal"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -571,7 +571,7 @@ resource "kubernetes_service" "developer_portal" {
 
 resource "kubernetes_config_map" "portal_features" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "portal-features"
     namespace = kubernetes_namespace.api[0].metadata[0].name
@@ -679,12 +679,12 @@ export function WebhookManagement() {
 
 resource "kubernetes_ingress_v1" "api_gateway" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "api-gateway-ingress"
     namespace = kubernetes_namespace.api[0].metadata[0].name
     annotations = {
-      "kubernetes.io/ingress.class" = "nginx"
+      "kubernetes.io/ingress.class"    = "nginx"
       "cert-manager.io/cluster-issuer" = "letsencrypt-prod"
     }
   }
@@ -737,7 +737,7 @@ resource "kubernetes_ingress_v1" "api_gateway" {
 
 resource "kubernetes_config_map" "graphql_monitoring" {
   count = var.enable_api_gateway ? 1 : 0
-  
+
   metadata {
     name      = "graphql-monitoring"
     namespace = kubernetes_namespace.api[0].metadata[0].name

@@ -32,7 +32,7 @@ data "aws_availability_zones" "available" {
 variable "eks_cluster_version" {
   description = "Kubernetes version"
   type        = string
-  default     = "1.28"  # Current stable version
+  default     = "1.28" # Current stable version
 }
 
 variable "eks_instance_types" {
@@ -70,8 +70,8 @@ variable "eks_region" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "aws_vpc" "kubernetes" {
-  count             = var.enable_kubernetes_orchestration ? 1 : 0
-  cidr_block        = "10.0.0.0/16"
+  count                = var.enable_kubernetes_orchestration ? 1 : 0
+  cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support   = true
 
@@ -90,9 +90,9 @@ resource "aws_subnet" "kubernetes_public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name        = "${var.eks_cluster_name}-public-${count.index + 1}"
-    Phase       = "22-A"
-    Type        = "Public"
+    Name  = "${var.eks_cluster_name}-public-${count.index + 1}"
+    Phase = "22-A"
+    Type  = "Public"
   }
 }
 
@@ -103,20 +103,20 @@ resource "aws_subnet" "kubernetes_private" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
-    Name        = "${var.eks_cluster_name}-private-${count.index + 1}"
-    Phase       = "22-A"
-    Type        = "Private"
+    Name  = "${var.eks_cluster_name}-private-${count.index + 1}"
+    Phase = "22-A"
+    Type  = "Private"
   }
 }
 
 # Internet Gateway
 resource "aws_internet_gateway" "kubernetes" {
-  count   = var.enable_kubernetes_orchestration ? 1 : 0
-  vpc_id  = aws_vpc.kubernetes[0].id
+  count  = var.enable_kubernetes_orchestration ? 1 : 0
+  vpc_id = aws_vpc.kubernetes[0].id
 
   tags = {
-    Name        = "${var.eks_cluster_name}-igw"
-    Phase       = "22-A"
+    Name  = "${var.eks_cluster_name}-igw"
+    Phase = "22-A"
   }
 }
 
@@ -139,8 +139,8 @@ resource "aws_nat_gateway" "kubernetes" {
   subnet_id     = aws_subnet.kubernetes_public[0].id
 
   tags = {
-    Name        = "${var.eks_cluster_name}-nat"
-    Phase       = "22-A"
+    Name  = "${var.eks_cluster_name}-nat"
+    Phase = "22-A"
   }
 
   depends_on = [aws_internet_gateway.kubernetes]
@@ -152,8 +152,8 @@ resource "aws_route_table" "public" {
   vpc_id = aws_vpc.kubernetes[0].id
 
   route {
-    cidr_block      = "0.0.0.0/0"
-    gateway_id      = aws_internet_gateway.kubernetes[0].id
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.kubernetes[0].id
   }
 
   tags = {
@@ -167,8 +167,8 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.kubernetes[0].id
 
   route {
-    cidr_block      = "0.0.0.0/0"
-    nat_gateway_id  = aws_nat_gateway.kubernetes[0].id
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.kubernetes[0].id
   }
 
   tags = {
@@ -229,8 +229,8 @@ resource "aws_security_group" "kubernetes" {
   }
 
   tags = {
-    Name        = "${var.eks_cluster_name}-sg"
-    Phase       = "22-A"
+    Name  = "${var.eks_cluster_name}-sg"
+    Phase = "22-A"
   }
 }
 
@@ -331,7 +331,7 @@ resource "aws_eks_cluster" "kubernetes" {
     security_group_ids      = [aws_security_group.kubernetes[0].id]
     endpoint_private_access = true
     endpoint_public_access  = true
-    public_access_cidrs     = ["0.0.0.0/0"]  # Restrict in production
+    public_access_cidrs     = ["0.0.0.0/0"] # Restrict in production
   }
 
   # Logging configuration
@@ -353,12 +353,12 @@ resource "aws_eks_cluster" "kubernetes" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "aws_eks_node_group" "main" {
-  count            = var.enable_kubernetes_orchestration ? 1 : 0
-  cluster_name     = aws_eks_cluster.kubernetes[0].name
-  node_group_name  = "${var.eks_cluster_name}-ng-main"
-  node_role_arn    = aws_iam_role.eks_nodes[0].arn
-  subnet_ids       = aws_subnet.kubernetes_private[*].id
-  version          = var.eks_cluster_version
+  count           = var.enable_kubernetes_orchestration ? 1 : 0
+  cluster_name    = aws_eks_cluster.kubernetes[0].name
+  node_group_name = "${var.eks_cluster_name}-ng-main"
+  node_role_arn   = aws_iam_role.eks_nodes[0].arn
+  subnet_ids      = aws_subnet.kubernetes_private[*].id
+  version         = var.eks_cluster_version
 
   instance_types = var.eks_instance_types
 
@@ -369,8 +369,8 @@ resource "aws_eks_node_group" "main" {
   }
 
   tags = {
-    Name        = "${var.eks_cluster_name}-ng-main"
-    Phase       = "22-A"
+    Name  = "${var.eks_cluster_name}-ng-main"
+    Phase = "22-A"
   }
 
   depends_on = [
@@ -420,12 +420,12 @@ output "eks_worker_nodes_count" {
 }
 
 output "kubeconfig" {
-  value       = try(base64encode(jsonencode({
+  value = try(base64encode(jsonencode({
     apiVersion = "v1"
     kind       = "Config"
     clusters = [{
       cluster = {
-        server                   = aws_eks_cluster.kubernetes[0].endpoint
+        server                     = aws_eks_cluster.kubernetes[0].endpoint
         certificate-authority-data = aws_eks_cluster.kubernetes[0].certificate_authority[0].data
       }
       name = aws_eks_cluster.kubernetes[0].name

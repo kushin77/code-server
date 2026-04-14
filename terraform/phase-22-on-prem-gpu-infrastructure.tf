@@ -132,7 +132,7 @@ resource "null_resource" "nvidia_gpu_drivers" {
       timeout     = "30m"
     }
 
-    on_failure = continue  # Don't fail if already installed
+    on_failure = continue # Don't fail if already installed
   }
 
   depends_on = [null_resource.gpu_prerequisites_check]

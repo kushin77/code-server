@@ -37,12 +37,12 @@ provider "docker" {
 }
 
 provider "aws" {
-  region = "us-east-1"  # Primary region (default)
+  region = "us-east-1" # Primary region (default)
 }
 
 provider "aws" {
   alias  = "secondary"
-  region = "us-west-2"  # Secondary region for DR
+  region = "us-west-2" # Secondary region for DR
 }
 
 # Cloudflare/DNS layer disabled for database HA deployment
@@ -297,10 +297,10 @@ resource "null_resource" "make_deploy_executable" {
 output "deployment_summary" {
   description = "Summary of IaC deployment configuration"
   value = {
-    service_name          = local.service_name
-    environment           = local.environment
-    pinned_versions       = local.versions
-    network               = local.network
-    storage_volumes       = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
+    service_name    = local.service_name
+    environment     = local.environment
+    pinned_versions = local.versions
+    network         = local.network
+    storage_volumes = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
   }
 }

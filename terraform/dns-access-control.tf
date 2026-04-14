@@ -73,9 +73,9 @@ resource "cloudflare_tunnel_route" "code_server" {
   # the tunnel to be created via cloudflared CLI first, then referenced here
 
   account_id = var.cloudflare_account_id
-  tunnel_id  = "temp_placeholder"  # Replace with actual tunnel ID after cloudflared CLI creation
-  network    = "0.0.0.0/0"         # Route all traffic through the tunnel
-  
+  tunnel_id  = "temp_placeholder" # Replace with actual tunnel ID after cloudflared CLI creation
+  network    = "0.0.0.0/0"        # Route all traffic through the tunnel
+
   # This resource creates DNS CNAME record pointing to tunnel
   # Format: tunnel_id.cfargotunnel.com
 }
@@ -86,10 +86,10 @@ resource "cloudflare_tunnel_route" "code_server" {
 
 resource "cloudflare_record" "code_server_cname" {
   zone_id = var.cloudflare_zone_id
-  name    = "ide"  # Creates ide.kushnir.cloud
+  name    = "ide" # Creates ide.kushnir.cloud
   type    = "CNAME"
-  content = "code-server.cfargotunnel.com"  # Placeholder - update after tunnel creation
-  ttl     = 1  # Auto/Proxied
+  content = "code-server.cfargotunnel.com" # Placeholder - update after tunnel creation
+  ttl     = 1                              # Auto/Proxied
   proxied = true
 
   # comment: "Code-Server Tunnel CNAME via Cloudflare" (comment arg not supported in v4)
@@ -101,16 +101,16 @@ resource "cloudflare_record" "code_server_cname" {
 
 # Access Application
 resource "cloudflare_access_application" "code_server" {
-  zone_id           = var.cloudflare_zone_id
-  name              = "Code-Server IDE"
-  domain            = var.domain
-  type              = "self_hosted"
-  session_duration  = "${var.session_timeout_hours}h"
-  
+  zone_id          = var.cloudflare_zone_id
+  name             = "Code-Server IDE"
+  domain           = var.domain
+  type             = "self_hosted"
+  session_duration = "${var.session_timeout_hours}h"
+
   # Security settings
   auto_redirect_to_identity = true
   enable_binding_cookie     = true
-  
+
   tags = [
     var.tags["Phase"],
     var.tags["Environment"],
@@ -135,7 +135,7 @@ resource "cloudflare_access_policy" "code_server_email_mfa" {
   dynamic "include" {
     for_each = var.enable_mfa ? [1] : []
     content {
-      login_method = ["totp", "otp"]  # Require TOTP or one-time passcode
+      login_method = ["totp", "otp"] # Require TOTP or one-time passcode
     }
   }
 
@@ -171,21 +171,21 @@ resource "cloudflare_access_policy" "code_server_default_deny" {
 resource "cloudflare_logpush_job" "http_requests" {
   account_id = var.cloudflare_account_id
   enabled    = true
-  frequency  = "low"  # Collect logs every 30 minutes
-  
+  frequency  = "low" # Collect logs every 30 minutes
+
   dataset = "http_requests"
-  
-  destination_conf = "s3://code-server-logs"  # Update with actual S3 bucket
-  
-  ownership_challenge = null  # Set via out-of-band verification with cloudflared CLI
-  
+
+  destination_conf = "s3://code-server-logs" # Update with actual S3 bucket
+
+  ownership_challenge = null # Set via out-of-band verification with cloudflared CLI
+
   filter = jsonencode({
     where = {
       and = [
         {
-          key    = "ClientRequestPath"
+          key      = "ClientRequestPath"
           operator = "contains"
-          value  = var.domain
+          value    = var.domain
         }
       ]
     }

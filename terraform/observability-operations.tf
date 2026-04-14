@@ -26,7 +26,7 @@ variable "disaster_recovery_replicas" {
 
 resource "kubernetes_namespace" "velero" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name = "velero"
     labels = {
@@ -51,9 +51,9 @@ resource "helm_release" "velero" {
           provider = "aws"
           bucket   = "velero-backup-local"
           config = {
-            s3Url = "http://minio.storage.svc.cluster.local:9000"
-            region = "us-east-1"
-            s3ForcePathStyle = "true"
+            s3Url                 = "http://minio.storage.svc.cluster.local:9000"
+            region                = "us-east-1"
+            s3ForcePathStyle      = "true"
             insecureSkipTLSVerify = "true"
           }
         }
@@ -67,7 +67,7 @@ resource "helm_release" "velero" {
             template = {
               includedNamespaces = ["*"]
               storageLocation    = "local"
-              ttl                = "720h"  # 30 days
+              ttl                = "720h" # 30 days
             }
           }
         }
@@ -86,7 +86,7 @@ resource "helm_release" "velero" {
           template = {
             includedNamespaces = ["*"]
             storageLocation    = "local"
-            ttl                = "168h"  # 7 days
+            ttl                = "168h" # 7 days
           }
         }
       }
@@ -110,7 +110,7 @@ resource "helm_release" "velero" {
 
 resource "kubernetes_namespace" "karpenter" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name = "karpenter"
     labels = {
@@ -130,7 +130,7 @@ resource "helm_release" "karpenter" {
   values = [
     yamlencode({
       settings = {
-        clusterName = "code-server-eks"
+        clusterName       = "code-server-eks"
         interruptionQueue = "code-server-queue"
       }
       resources = {
@@ -149,7 +149,7 @@ resource "helm_release" "karpenter" {
 
 resource "kubernetes_manifest" "karpenter_provisioner" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   manifest = {
     apiVersion = "karpenter.sh/v1alpha5"
     kind       = "Provisioner"
@@ -160,19 +160,19 @@ resource "kubernetes_manifest" "karpenter_provisioner" {
     spec = {
       requirements = [
         {
-          key        = "node.kubernetes.io/capacity-type"
-          operator   = "In"
-          values     = ["on-demand", "spot"]
+          key      = "node.kubernetes.io/capacity-type"
+          operator = "In"
+          values   = ["on-demand", "spot"]
         },
         {
-          key        = "kubernetes.io/arch"
-          operator   = "In"
-          values     = ["amd64"]
+          key      = "kubernetes.io/arch"
+          operator = "In"
+          values   = ["amd64"]
         },
         {
-          key        = "node.kubernetes.io/instance-type"
-          operator   = "In"
-          values     = ["t3.large", "t3.xlarge", "t3.2xlarge", "m5.large", "m5.xlarge"]
+          key      = "node.kubernetes.io/instance-type"
+          operator = "In"
+          values   = ["t3.large", "t3.xlarge", "t3.2xlarge", "m5.large", "m5.xlarge"]
         }
       ]
       limits = {
@@ -184,8 +184,8 @@ resource "kubernetes_manifest" "karpenter_provisioner" {
       consolidation = {
         enabled = true
       }
-      ttlSecondsAfterEmpty    = 30
-      ttlSecondsUntilExpired = 604800  # 7 days
+      ttlSecondsAfterEmpty   = 30
+      ttlSecondsUntilExpired = 604800 # 7 days
     }
   }
 
@@ -198,7 +198,7 @@ resource "kubernetes_manifest" "karpenter_provisioner" {
 
 resource "kubernetes_deployment" "cost_engine" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name      = "cost-optimization-engine"
     namespace = "karpenter"
@@ -229,7 +229,7 @@ resource "kubernetes_deployment" "cost_engine" {
         container {
           name  = "engine"
           image = "python:3.11-slim"
-          
+
           port {
             container_port = 8000
             name           = "api"
@@ -267,7 +267,7 @@ resource "kubernetes_deployment" "cost_engine" {
 
 resource "kubernetes_service_account" "cost_engine" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name      = "cost-engine"
     namespace = "karpenter"
@@ -276,7 +276,7 @@ resource "kubernetes_service_account" "cost_engine" {
 
 resource "kubernetes_cluster_role" "cost_engine" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name = "cost-engine"
   }
@@ -296,7 +296,7 @@ resource "kubernetes_cluster_role" "cost_engine" {
 
 resource "kubernetes_cluster_role_binding" "cost_engine" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name = "cost-engine-binding"
   }
@@ -320,7 +320,7 @@ resource "kubernetes_cluster_role_binding" "cost_engine" {
 
 resource "kubernetes_config_map" "dr_procedures" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name      = "disaster-recovery-procedures"
     namespace = "velero"
@@ -371,7 +371,7 @@ velero restore create --from-backup daily-YYYYMMDD \
 
 resource "kubernetes_config_map" "hpa_templates" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name      = "hpa-templates"
     namespace = "karpenter"
@@ -428,7 +428,7 @@ spec:
 
 resource "kubernetes_resource_quota" "operations_quota" {
   count = var.enable_observability_operations ? 1 : 0
-  
+
   metadata {
     name      = "operations-excellence-quota"
     namespace = "karpenter"

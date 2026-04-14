@@ -1,0 +1,255 @@
+#!/usr/bin/env docker-compose
+# ════════════════════════════════════════════════════════════════════════════
+# Phase 24: Operations Excellence & Resilience (Docker Compose)
+# ════════════════════════════════════════════════════════════════════════════
+# Purpose: Backup/disaster recovery, cost optimization, monitoring
+# Status: Production-ready with offline-first, on-premises focus
+# Deploy: docker-compose -f docker-compose-phase-24-operations.yml up -d
+# ════════════════════════════════════════════════════════════════════════════
+
+version: '3.9'
+
+services:
+  # ─────────────────────────────────────────────────────────────────────────
+  # MinIO: S3-compatible object storage for Velero backups
+  # ─────────────────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:RELEASE.2024-03-30T09-40-56Z
+    container_name: minio
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "0.0.0.0:9000:9000"
+      - "0.0.0.0:9001:9001"
+    environment:
+      # Credentials - MUST override in production
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_REGION_NAME=us-east-1
+      - MINIO_STORAGE_CLASS_RRS=EC:2
+    command: minio server /minio-data --console-address ":9001"
+    volumes:
+      - /home/akushnir/.docker-volumes/minio:/minio-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: '2'
+        reservations:
+          memory: 1g
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Velero Backup Agent: Disaster recovery via S3 (MinIO)
+  # ─────────────────────────────────────────────────────────────────────────
+  velero-backup-agent:
+    image: velero/velero:v1.12.0
+    container_name: velero-backup-agent
+    restart: always
+    networks:
+      - enterprise
+    environment:
+      # S3 Backend Configuration
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - AWS_S3_FORCE_PATH_STYLE=true
+      - AWS_S3_URL=http://minio:9000
+      - AWS_REGION=us-east-1
+      # Velero Configuration
+      - VELERO_NAMESPACE=default
+      - VELERO_SECRET_USEKEY=1
+      - VELERO_RESTORE_ONLY=false
+    command: |
+      velero server
+      --plugins velero/velero-plugin-for-aws:v1.8.0
+      --bucket velero-backups
+      --snapshot-location default
+      --restore-only=false
+    volumes:
+      - /home/akushnir/.docker-volumes/velero:/velero
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - minio
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://localhost:8085/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: '1'
+        reservations:
+          memory: 512m
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Backup Scheduler: Automated daily + hourly backups
+  # ─────────────────────────────────────────────────────────────────────────
+  backup-scheduler:
+    image: curlimages/curl:8.5.0
+    container_name: backup-scheduler
+    restart: always
+    networks:
+      - enterprise
+    environment:
+      - VELERO_ENDPOINT=http://velero-backup-agent:8085
+      - BACKUP_RETENTION_DAYS=30
+      - BACKUP_HOURLY_RETENTION_DAYS=7
+    command: |
+      sh -c '
+        while true; do
+          # Daily backup at 2:00 AM
+          if [ "$(date +%H:%M)" = "02:00" ]; then
+            curl -X POST $${VELERO_ENDPOINT}/api/v1/backups?backup=daily-$(date +%Y%m%d)
+          fi
+          # Hourly backup on the hour
+          if [ "$(date +%M)" = "00" ]; then
+            curl -X POST $${VELERO_ENDPOINT}/api/v1/backups?backup=hourly-$(date +%Y%m%d-%H)
+          fi
+          sleep 60
+        done
+      '
+    depends_on:
+      - velero-backup-agent
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Cost Optimization Engine: Real-time cost tracking + recommendations
+  # ─────────────────────────────────────────────────────────────────────────
+  cost-engine:
+    image: python:3.11-slim
+    container_name: cost-engine
+    restart: always
+    networks:
+      - enterprise
+    environment:
+      - PROMETHEUS_ENDPOINT=http://prometheus:9090
+      - GRAFANA_ENDPOINT=http://grafana:3000
+      - COST_ALERT_THRESHOLD=1000
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+    command: |
+      sh -c '
+        apt-get update && apt-get install -y curl && \
+        python3 -c "
+import os, json, time, requests, subprocess
+from datetime import datetime
+
+prometheus_url = os.environ.get(\"PROMETHEUS_ENDPOINT\", \"http://prometheus:9090\")
+grafana_url = os.environ.get(\"GRAFANA_ENDPOINT\", \"http://grafana:3000\")
+cost_threshold = float(os.environ.get(\"COST_ALERT_THRESHOLD\", \"1000\"))
+
+print(f\"Cost Engine initialized: {datetime.now()}\")
+print(f\"Prometheus: {prometheus_url}\")
+print(f\"Grafana: {grafana_url}\")
+print(f\"Alert threshold: \${cost_threshold}\")
+
+# Cost calculation loop
+while True:
+    try:
+        # Query memory usage from Prometheus
+        response = requests.get(
+            f\"{prometheus_url}/api/v1/query\",
+            params={\"query\": \"sum(container_memory_usage_bytes/1024/1024/1024)\"}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            if data[\"data\"][\"result\"]:
+                memory_gb = float(data[\"data\"][\"result\"][0][\"value\"][1])
+                # Estimate: \$0.048 per GB-hour = ~\$35/month per GB reserved
+                monthly_cost = memory_gb * 35
+                print(f\"[{datetime.now()}] Memory: {memory_gb:.2f}GB | Est. Monthly: \${monthly_cost:.2f}\")
+                if monthly_cost > cost_threshold:
+                    print(f\"⚠️  WARNING: Estimated cost \${monthly_cost:.2f} exceeds threshold \${cost_threshold}\")
+        time.sleep(300)  # Check every 5 minutes
+    except Exception as e:
+        print(f\"Error in cost calculation: {e}\")
+        time.sleep(300)
+        "
+      '
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep 'python' | grep -v grep || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 256m
+          cpus: '0.1'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # DR Procedures Executor: Automated recovery runbooks
+  # ─────────────────────────────────────────────────────────────────────────
+  dr-procedures:
+    image: curlimages/curl:8.5.0
+    container_name: dr-procedures
+    restart: always
+    networks:
+      - enterprise
+    environment:
+      - VELERO_ENDPOINT=http://velero-backup-agent:8085
+      - MINIO_ENDPOINT=http://minio:9001
+      - DR_CHECK_INTERVAL=3600
+    command: |
+      sh -c '
+        while true; do
+          echo "[$(date)] Running DR health checks..."
+          # Check backup storage health
+          curl -s $${MINIO_ENDPOINT}/minio/health/live > /dev/null && echo "✓ MinIO health check passed" || echo "✗ MinIO health check failed"
+          # Check Velero backup status
+          curl -s $${VELERO_ENDPOINT}/api/v1/backups | head -20
+          sleep $${DR_CHECK_INTERVAL}
+        done
+      '
+    depends_on:
+      - minio
+      - velero-backup-agent
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+networks:
+  enterprise:
+    external: true
+    name: enterprise
+
+volumes:
+  minio:
+  velero:

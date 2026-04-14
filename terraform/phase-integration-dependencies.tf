@@ -33,7 +33,7 @@ output "phase_25_api_gateway_namespace" {
   description = "GraphQL API Gateway namespace"
   value       = try(kubernetes_namespace.api[0].metadata[0].name, null)
   depends_on = [
-    kubernetes_namespace.velero,  # Phase 24 dependency
+    kubernetes_namespace.velero, # Phase 24 dependency
   ]
 }
 
@@ -44,11 +44,11 @@ output "phase_25_api_gateway_namespace" {
 locals {
   # Selector: Use on-prem kubeadm OR cloud EKS
   use_on_prem_k8s = var.on_prem_kubernetes_enabled
-  
+
   kubernetes_config = {
-    cluster_name = var.on_prem_kubernetes_enabled ? "on-prem-k8s-cluster" : "eks-code-server-prod"
-    api_endpoint = var.on_prem_kubernetes_enabled ? "https://${var.on_prem_k8s_nodes[0].ip_address}:6443" : ""
-    ca_cert_file = var.on_prem_kubernetes_enabled ? pathexpand("~/.kube/ca.crt") : ""
+    cluster_name    = var.on_prem_kubernetes_enabled ? "on-prem-k8s-cluster" : "eks-code-server-prod"
+    api_endpoint    = var.on_prem_kubernetes_enabled ? "https://${var.on_prem_k8s_nodes[0].ip_address}:6443" : ""
+    ca_cert_file    = var.on_prem_kubernetes_enabled ? pathexpand("~/.kube/ca.crt") : ""
     deployment_mode = var.on_prem_kubernetes_enabled ? "on-prem-kubeadm" : "cloud-eks"
   }
 }
@@ -73,10 +73,10 @@ output "kubernetes_cluster_endpoint" {
 
 locals {
   gpu_config = {
-    enabled                = var.on_prem_gpu_enabled
-    deployment_mode        = var.on_prem_gpu_enabled ? "on-prem-gpu" : "aws-gpu"
-    cuda_version           = var.on_prem_gpu_enabled ? var.cuda_toolkit_version : ""
-    driver_version         = var.on_prem_gpu_enabled ? var.gpu_drivers_version : ""
+    enabled                  = var.on_prem_gpu_enabled
+    deployment_mode          = var.on_prem_gpu_enabled ? "on-prem-gpu" : "aws-gpu"
+    cuda_version             = var.on_prem_gpu_enabled ? var.cuda_toolkit_version : ""
+    driver_version           = var.on_prem_gpu_enabled ? var.gpu_drivers_version : ""
     kubernetes_device_plugin = "nvidia-device-plugin"
   }
 }
@@ -85,7 +85,7 @@ output "gpu_infrastructure_config" {
   description = "GPU infrastructure configuration"
   value       = local.gpu_config
   depends_on = [
-    null_resource.kubeadm_bootstrap,  # Phase 22-A dependency
+    null_resource.kubeadm_bootstrap, # Phase 22-A dependency
   ]
 }
 
@@ -101,8 +101,8 @@ output "gpu_infrastructure_config" {
 locals {
   dr_config = {
     deployment_mode = var.on_prem_kubernetes_enabled ? "on-prem-manual-dr" : "aws-route53-dr"
-    rto_minutes      = var.on_prem_kubernetes_enabled ? 30 : 2  # Manual vs automated
-    baseline_hours   = 4  # Require 4h of stable database before DR
+    rto_minutes     = var.on_prem_kubernetes_enabled ? 30 : 2 # Manual vs automated
+    baseline_hours  = 4                                       # Require 4h of stable database before DR
   }
 }
 
@@ -168,7 +168,7 @@ locals {
     { phase = "22-A", name = "Kubernetes", enabled = var.on_prem_kubernetes_enabled },
     { phase = "22-D", name = "GPU Infrastructure", enabled = var.on_prem_gpu_enabled },
     { phase = "17", name = "Disaster Recovery", enabled = true },  # Always planning DR
-    { phase = "18", name = "Security Hardening", enabled = true },  # Always required
+    { phase = "18", name = "Security Hardening", enabled = true }, # Always required
     { phase = "25", name = "GraphQL API Portal", enabled = var.enable_api_gateway },
   ]
 }
@@ -185,12 +185,12 @@ output "execution_sequence" {
 output "infrastructure_status" {
   description = "Complete infrastructure deployment status"
   value = {
-    deployment_mode             = var.deployment_mode
-    kubernetes_mode             = var.on_prem_kubernetes_enabled ? "on-prem-kubeadm" : "cloud-eks"
-    gpu_enabled                 = var.on_prem_gpu_enabled
-    operations_excellence       = var.enable_observability_operations
-    graphql_api_portal          = var.enable_api_gateway
-    disaster_recovery_baseline  = "4 hours (Phase 16-A stability)"
-    timestamp                   = timestamp()
+    deployment_mode            = var.deployment_mode
+    kubernetes_mode            = var.on_prem_kubernetes_enabled ? "on-prem-kubeadm" : "cloud-eks"
+    gpu_enabled                = var.on_prem_gpu_enabled
+    operations_excellence      = var.enable_observability_operations
+    graphql_api_portal         = var.enable_api_gateway
+    disaster_recovery_baseline = "4 hours (Phase 16-A stability)"
+    timestamp                  = timestamp()
   }
 }

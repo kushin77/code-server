@@ -12,9 +12,9 @@ deployment_mode = "on-prem"
 # Phase 24: Operations Excellence & Resilience
 # ═════════════════════════════════════════════════════════════════════════════
 
-operations_excellence_enabled  = true
-backup_retention_days          = 30
-disaster_recovery_replicas     = 2
+operations_excellence_enabled = true
+backup_retention_days         = 30
+disaster_recovery_replicas    = 2
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Phase 25: GraphQL API & Developer Portal
@@ -38,13 +38,13 @@ k8s_service_cidr           = "10.96.0.0/12"
 # IMPORTANT: Update with your actual node IPs and SSH keys
 on_prem_k8s_nodes = [
   {
-    hostname      = "kube-control-01"
-    ip_address    = "192.168.168.31"
-    ssh_user      = "akushnir"
-    ssh_key       = "~/.ssh/id_rsa"
-    role          = "control-plane"
-    gpu_enabled   = true
-    gpu_type      = "nvidia"
+    hostname    = "kube-control-01"
+    ip_address  = "192.168.168.31"
+    ssh_user    = "akushnir"
+    ssh_key     = "~/.ssh/id_rsa"
+    role        = "control-plane"
+    gpu_enabled = true
+    gpu_type    = "nvidia"
   },
   # Uncomment to add worker nodes
   # {
@@ -71,11 +71,11 @@ on_prem_k8s_nodes = [
 # Phase 22-D: On-Premises GPU Infrastructure
 # ═════════════════════════════════════════════════════════════════════════════
 
-on_prem_gpu_enabled     = true
-gpu_drivers_version     = "550.90.07"
-cuda_toolkit_version    = "12.4"
-cudnn_version           = "8.9.7"
-gpu_memory_limit        = 24  # GB per GPU
+on_prem_gpu_enabled  = true
+gpu_drivers_version  = "550.90.07"
+cuda_toolkit_version = "12.4"
+cudnn_version        = "8.9.7"
+gpu_memory_limit     = 24 # GB per GPU
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Tags and Metadata

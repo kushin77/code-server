@@ -139,7 +139,7 @@ resource "docker_container" "grafana" {
   env = [
     "GF_SECURITY_ADMIN_PASSWORD=admin123",
     "GF_USERS_ALLOW_SIGN_UP=false",
-    "GF_INSTALL_PLUGINS=piechart",
+    # Removed GF_INSTALL_PLUGINS=piechart - plugin not available in 10.2.3
     "GF_SECURITY_COOKIE_SECURE=true",
     "GF_SECURITY_COOKIE_HTTPONLY=true",
   ]

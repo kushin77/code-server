@@ -138,13 +138,13 @@ services:
       start_period: 30s
     deploy:
       resources:
+        limits:   { memory: 12g }
         reservations:
+          memory: 8g
           devices:
             - driver: nvidia
               device_ids: ["1"]
               capabilities: [gpu]
-        limits:   { memory: 12g }
-        reservations: { memory: 8g }
     logging: *logging
 
   # ─── Ollama model bootstrap (runs once, then exits) ───────────────────────

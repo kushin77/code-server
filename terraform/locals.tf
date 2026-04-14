@@ -101,15 +101,15 @@ locals {
   # Single source of truth for all service resource allocation
   resource_limits = {
     code_server = {
-      memory_limit       = "4g"
-      cpu_limit          = "2.0"
-      memory_reservation = "512m"
-      cpu_reservation    = "0.25"
+      memory_limit       = "512m"
+      cpu_limit          = "1.0"
+      memory_reservation = "256m"
+      cpu_reservation    = "0.125"
     }
     ollama = {
-      memory_limit       = "32g"
-      cpu_limit          = null # Unlimited
-      memory_reservation = "8g"
+      memory_limit       = "0"
+      cpu_limit          = "0"
+      memory_reservation = null
       cpu_reservation    = null
     }
     oauth2_proxy = {
@@ -125,16 +125,16 @@ locals {
       cpu_reservation    = "0.25"
     }
     prometheus = {
-      memory_limit       = "512m"
-      cpu_limit          = "0.25"
-      memory_reservation = "256m"
-      cpu_reservation    = "0.125"
+      memory_limit       = "256m"
+      cpu_limit          = "0.125"
+      memory_reservation = "128m"
+      cpu_reservation    = "0.05"
     }
     grafana = {
-      memory_limit       = "512m"
-      cpu_limit          = "0.5"
-      memory_reservation = "256m"
-      cpu_reservation    = "0.25"
+      memory_limit       = "256m"
+      cpu_limit          = "0.1"
+      memory_reservation = "128m"
+      cpu_reservation    = "0.05"
     }
     alertmanager = {
       memory_limit       = "256m"

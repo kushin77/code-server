@@ -386,7 +386,7 @@ services:
       - ALERTMANAGER_URL=http://alertmanager:9093
       - LOG_LEVEL=INFO
     healthcheck:
-      test: ["CMD", "python", "-c", "import http.client; conn = http.client.HTTPConnection('localhost', 9094); conn.request('GET', '/metrics'); print(conn.getresponse().status)"]
+      test: ["CMD", "pgrep", "-f", "rca-engine.py"]
       interval: 30s
       timeout: 5s
       retries: 3

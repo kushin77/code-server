@@ -1,4 +1,7 @@
 #!/bin/bash
+# File: scripts/postgresql-replication-setup.sh
+# Owner: ops
+# Status: ACTIVE
 #
 # Phase 12.2: Multi-Primary PostgreSQL Replication Setup
 # Configures logical replication across 5 regional PostgreSQL instances
@@ -10,10 +13,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/../logs/postgresql-replication-setup.log"
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-
-# Ensure logs directory exists
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+export LOG_FILE="${SCRIPT_DIR}/../logs/postgresql-replication-setup.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
 # Configuration
@@ -21,29 +22,6 @@ PRIMARY_REGIONS=("us-east-1" "us-west-2" "eu-west-1" "ap-southeast-1" "ca-centra
 REPLICATION_SLOT_PREFIX="replication_slot"
 PUBLICATION_NAME="replication_pub"
 SUBSCRIPTION_NAME_PREFIX="replication_sub"
-
-##############################################################################
-# Logging Functions
-##############################################################################
-
-log() {
-    local level="$1"
-    shift
-    local message="$@"
-    echo "[${TIMESTAMP}] [${level}] ${message}" | tee -a "$LOG_FILE"
-}
-
-log_info() {
-    log "INFO" "$@"
-}
-
-log_warn() {
-    log "WARN" "$@"
-}
-
-log_error() {
-    log "ERROR" "$@"
-}
 
 ##############################################################################
 # PostgreSQL Connection Management

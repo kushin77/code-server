@@ -1,4 +1,7 @@
 #!/bin/bash
+# File: scripts/tier-2-master-orchestrator.sh
+# Owner: ops
+# Status: ACTIVE
 ###############################################################################
 # Tier 2 Master Orchestrator
 #
@@ -12,37 +15,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 STATE_DIR="/tmp/tier-2-state"
 MASTER_LOG="/tmp/tier-2-master-$(date +%Y%m%d-%H%M%S).log"
 START_TIME=$(date +%s)
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
 mkdir -p "$STATE_DIR"
-
-###############################################################################
-# Logging Functions
-###############################################################################
-
-log_info() {
-    local msg="$1"
-    echo -e "${BLUE}[$(date '+%H:%M:%S')]${NC} $msg" | tee -a "$MASTER_LOG"
-}
-
-log_success() {
-    local msg="$1"
-    echo -e "${GREEN}✓ $msg${NC}" | tee -a "$MASTER_LOG"
-}
-
-log_error() {
-    local msg="$1"
-    echo -e "${RED}❌ $msg${NC}" | tee -a "$MASTER_LOG"
-}
 
 ###############################################################################
 # Master Orchestration

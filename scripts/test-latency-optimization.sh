@@ -1,4 +1,7 @@
 #!/bin/bash
+# File: scripts/test-latency-optimization.sh
+# Owner: ops
+# Status: ACTIVE
 # Test and Validation Script for Latency Optimization Integration
 # Issue #182: Latency Optimization - Comprehensive Testing
 #
@@ -8,12 +11,15 @@
 
 set -euo pipefail
 
-# Colors for output
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
+# Colors for output (script-local overrides for test display)
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # Configuration
 TERMINAL_OPTIMIZER_HOST="127.0.0.1"
@@ -64,9 +70,7 @@ log_warning() {
   echo -e "${YELLOW}⚠ $1${NC}"
 }
 
-log_info() {
-  echo -e "${BLUE}ℹ $1${NC}"
-}
+# log_info provided by _common/logging.sh
 
 check_url() {
   local url=$1

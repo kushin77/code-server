@@ -54,7 +54,7 @@ variable "oauth2_proxy_cookie_secret" {
   description = "Random cookie encryption secret for oauth2-proxy (generate: openssl rand -base64 32)"
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "KPm7K8L9vN6q3W2zM5xJ4pL6K9mN8qW3zR5xY7tJ9pM2vO4wQ6sT8uV0xW2zY4aB"
 
   validation {
     condition     = length(var.oauth2_proxy_cookie_secret) > 0

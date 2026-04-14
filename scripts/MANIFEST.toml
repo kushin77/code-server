@@ -539,6 +539,20 @@ owner    = "platform"
 purpose  = "Tier-2 orchestrator for grouped operations and recovery actions."
 depends  = ["_common/init.sh"]
 
+[[script]]
+file     = "build-optimized.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Optimized image build wrapper for reproducible CI/CD builds."
+
+[[script]]
+file     = "build-with-cache.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Cached image build wrapper for faster iterative builds."
+
 # ─────────────────────────────────────────────────────────────────────────────
 # NOTE: All phase-*.sh scripts (130+) are historical deployment artifacts
 # archived to scripts/_archive/phase-history/. Historical one-off scripts

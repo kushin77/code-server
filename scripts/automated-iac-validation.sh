@@ -1,4 +1,48 @@
 #!/bin/bash
+################################################################################
+# File: automated-iac-validation.sh
+# Owner: Infrastructure/DevOps Team
+# Purpose: Validate Infrastructure-as-Code for syntax, security, and best practices
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, Terraform 1.4+
+#
+# Dependencies:
+#   - terraform — IaC syntax validation
+#   - tflint — Terraform linting and best practices
+#   - checkov — Infrastructure security scanning (optional)
+#
+# Related Files:
+#   - terraform/main.tf — Main infrastructure code
+#   - terraform/variables.tf — Variable definitions
+#   - .github/workflows/validate-config.yml — CI/CD integration
+#   - CONTRIBUTING.md — Developer guidelines
+#
+# Usage:
+#   ./automated-iac-validation.sh check          # Full validation
+#   ./automated-iac-validation.sh terraform      # Terraform only
+#   ./automated-iac-validation.sh security       # Security scan only
+#
+# Validations:
+#   - Terraform syntax correctness
+#   - Variable references validation
+#   - Best practices enforcement (tflint)
+#   - Security policy compliance (checkov)
+#   - Module output validation
+#
+# Exit Codes:
+#   0 — All IaC validations passed
+#   1 — Best practice violations (non-critical)
+#   2 — Security or syntax issues found
+#
+# Examples:
+#   ./scripts/automated-iac-validation.sh check
+#   ./scripts/automated-iac-validation.sh security
+#
+# Recent Changes:
+#   2026-04-14: Enhanced security validation reporting (Phase 2.2)
+#   2026-04-13: Initial creation with comprehensive IaC validation
+#
+################################################################################
 # IaC Validation Audit - Zero Manual Steps Verification
 # Ensures everything is code or committed, nothing is manual
 

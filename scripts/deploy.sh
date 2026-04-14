@@ -1,4 +1,51 @@
 #!/bin/bash
+################################################################################
+# File: deploy.sh
+# Owner: DevOps/Infrastructure Team
+# Purpose: Idempotent infrastructure deployment orchestrator
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, Terraform 1.4+, Docker 20.10+
+#
+# Dependencies:
+#   - terraform (>= 1.4) — Infrastructure as Code
+#   - docker-compose (>= 2.0) — Container orchestration
+#   - jq — JSON parsing for validation
+#   - curl — Health check verification
+#
+# Related Files:
+#   - terraform/main.tf — Infrastructure definition
+#   - docker-compose.yml — Container services
+#   - scripts/deployment-validation-suite.sh — Post-deploy tests
+#   - .github/workflows/deploy.yml — CI/CD integration
+#
+# Usage:
+#   bash scripts/deploy.sh                # Full deployment
+#   bash scripts/deploy.sh --validate-only  # Validation only
+#   bash scripts/deploy.sh --rollback       # Rollback to previous
+#
+# Orchestration:
+#   1) terraform apply (pin versions, generate docker-compose.yml)
+#   2) docker-compose build (rebuild with explicit versions)
+#   3) docker-compose up (start all services)
+#   4) health checks (validate all services operational)
+#   5) integration tests (verify critical paths)
+#
+# Exit Codes:
+#   0 — Successful deployment
+#   1 — Terraform failed
+#   2 — Docker build failed
+#   3 — Health checks failed
+#   4 — Integration tests failed
+#
+# Examples:
+#   ./scripts/deploy.sh                   # Full deployment with validation
+#   ./scripts/deploy.sh --validate-only   # Check readiness without deploying
+#
+# Recent Changes:
+#   2026-04-14: Integrated error-handler and logging libraries (Phase 2.2)
+#   2026-04-13: Created idempotent deployment pattern
+#
+################################################################################
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -20,9 +67,18 @@ set -euo pipefail
 PROJECT_DIR="$$(cd "$$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$$PROJECT_DIR"
 
-LOG_FILE="${PROJECT_DIR}/deployment.log"
-exec 1> >(tee -a "$$LOG_FILE")
-exec 2>&1
+# Source common libraries (Phase 2.2: Error Handling Integration)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/logging.sh" || { echo "FATAL: Cannot source logging library"; exit 1; }
+source "$SCRIPT_DIR/_common/utils.sh" || { log_fatal "Cannot source utils library"; }
+source "$SCRIPT_DIR/_common/error-handler.sh" || { log_fatal "Cannot source error-handler library"; }
+
+# Configure logging
+export LOG_LEVEL=1  # 0=debug, 1=info, 2=warn, 3=error, 4=fatal
+export LOG_FILE="${PROJECT_DIR}/deployment.log"
+
+# Setup error handling
+add_cleanup cleanup_deployment_handler
 
 echo "════════════════════════════════════════════════════════════════════════════"
 echo "IDEMPOTENT DEPLOYMENT: code-server-enterprise"

@@ -1,4 +1,48 @@
 #!/bin/bash
+################################################################################
+# File: automated-dns-configuration.sh
+# Owner: Infrastructure/DNS Team
+# Purpose: Automated DNS record management and validation
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, dig/nslookup
+#
+# Dependencies:
+#   - curl — DNS provider API communication
+#   - jq — JSON parsing for provider responses
+#   - dig — DNS query tool
+#   - openssl — DNS validation
+#
+# Related Files:
+#   - terraform/dns.tf — DNS resource definitions
+#   - .env — DNS provider credentials
+#   - RUNBOOKS.md — DNS troubleshooting
+#
+# Usage:
+#   ./automated-dns-configuration.sh setup       # Initial DNS configuration
+#   ./automated-dns-configuration.sh verify      # Verify DNS resolution
+#   ./automated-dns-configuration.sh update      # Update DNS records
+#
+# Operations:
+#   - Create/update DNS A records
+#   - Setup MX records (if applicable)
+#   - Validate CNAME configuration
+#   - Test DNS propagation
+#   - Monitor DNS resolution
+#
+# Exit Codes:
+#   0 — DNS configuration verified
+#   1 — DNS configuration with propagation delay
+#   2 — DNS resolution failed (connectivity issue)
+#
+# Examples:
+#   ./scripts/automated-dns-configuration.sh setup
+#   ./scripts/automated-dns-configuration.sh verify
+#
+# Recent Changes:
+#   2026-04-14: Added DNS propagation validation (Phase 2.2)
+#   2026-04-13: Initial creation with DNS automation
+#
+################################################################################
 # Automated DNS Configuration - IaC
 # Manages DNS records via Cloudflare API
 

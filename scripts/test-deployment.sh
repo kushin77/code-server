@@ -1,4 +1,50 @@
 #!/bin/bash
+################################################################################
+# File: test-deployment.sh
+# Owner: QA/Testing Team
+# Purpose: Automated end-to-end deployment verification and testing
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, Docker 20.10+
+#
+# Dependencies:
+#   - docker — Container runtime
+#   - curl — HTTP endpoint testing
+#   - jq — JSON response parsing
+#   - python3 — Test automation scripting
+#
+# Related Files:
+#   - docker-compose.yml — Service definitions for testing
+#   - .github/workflows/validate-config.yml — CI integration
+#   - TESTING.md — Comprehensive test documentation
+#   - scripts/stress-test-remote.sh — Load testing
+#
+# Usage:
+#   ./test-deployment.sh                        # Full E2E test suite
+#   ./test-deployment.sh --smoke                # Quick smoke tests
+#   ./test-deployment.sh --detailed             # Verbose output
+#   ./test-deployment.sh --module <name>        # Specific module test
+#
+# Test Suites:
+#   - Smoke tests (basic connectivity)
+#   - Integration tests (service communication)
+#   - Security tests (auth, TLS validation)
+#   - Performance tests (latency, throughput)
+#   - E2E tests (complete workflow validation)
+#
+# Exit Codes:
+#   0 — All tests passed
+#   1 — Some tests failed (non-critical)
+#   2 — Critical tests failed (deployment invalid)
+#
+# Examples:
+#   ./scripts/test-deployment.sh
+#   ./scripts/test-deployment.sh --smoke
+#
+# Recent Changes:
+#   2026-04-14: Integrated detailed error reporting (Phase 2.2)
+#   2026-04-13: Initial creation with comprehensive test suite
+#
+################################################################################
 
 echo "==============================================="
 echo "CODE-SERVER COPILOT CHAT DEPLOYMENT TEST"

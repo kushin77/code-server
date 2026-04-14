@@ -1,4 +1,50 @@
 #!/bin/bash
+################################################################################
+# File: enforce-governance.sh
+# Owner: DevOps/Governance Team
+# Purpose: Enforce governance policies and standards across repository
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+
+#
+# Dependencies:
+#   - git — Version control management
+#   - jq — JSON parsing for GitHub API responses
+#   - curl — GitHub API interaction
+#   - pre-commit — Git hook framework
+#
+# Related Files:
+#   - .github/GOVERNANCE-ROLLOUT.md — Governance policies
+#   - .pre-commit-config.yaml — Enforcement hooks
+#   - CONTRIBUTING.md — Developer guidelines
+#   - .github/workflows/ — Automated enforcement
+#
+# Usage:
+#   ./enforce-governance.sh check                # Check compliance status
+#   ./enforce-governance.sh apply                # Apply governance across repo
+#   ./enforce-governance.sh report               # Generate compliance report
+#
+# Enforcement Tasks:
+#   - Verify all PRs have required reviews
+#   - Check branch protection rules
+#   - Validate commit message format
+#   - Scan for policy violations
+#   - Run compliance tests
+#   - Generate audit trail
+#
+# Exit Codes:
+#   0 — Full compliance achieved
+#   1 — Some violations detected (auto-fixable)
+#   2 — Policy violations require manual review
+#
+# Examples:
+#   ./scripts/enforce-governance.sh check
+#   ./scripts/enforce-governance.sh report
+#
+# Recent Changes:
+#   2026-04-14: Integrated error handling validation (Phase 2.2)
+#   2026-04-13: Initial creation with enforcement automation
+#
+################################################################################
 
 # GitHub Governance Enforcement Script
 # Applies branch protection rules, workflow quotas, and cost controls

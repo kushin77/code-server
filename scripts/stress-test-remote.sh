@@ -1,4 +1,53 @@
 #!/bin/bash
+################################################################################
+# File: stress-test-remote.sh
+# Owner: Performance/QA Team
+# Purpose: Execute comprehensive stress tests against remote infrastructure
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, Python 3.10+
+#
+# Dependencies:
+#   - curl — HTTP load generation
+#   - python3 — Concurrent request scripting
+#   - locust (via Python) — Load testing framework
+#   - jq — Response parsing
+#   - ssh — Remote host access
+#
+# Related Files:
+#   - scripts/locustfile.py — Load test scenario definitions
+#   - scripts/stress-test-load.py — Python stress test harness
+#   - RUNBOOKS.md — Performance tuning procedures
+#   - SLO-DEFINITIONS.md — Performance SLO targets
+#
+# Usage:
+#   ./stress-test-remote.sh <host> <duration> <rate>
+#   ./stress-test-remote.sh 192.168.168.31 3600 100    # 1hr @ 100 req/sec
+#   ./stress-test-remote.sh 192.168.168.31 300 500     # 5min @ 500 req/sec
+#
+# Parameters:
+#   host — Target hostname or IP address
+#   duration — Test duration in seconds (default: 300)
+#   rate — Requests per second (default: 100)
+#
+# Metrics:
+#   - Requests/sec throughput
+#   - P50/P95/P99 latencies
+#   - Error rate and error types
+#   - Resource utilization (CPU, memory, disk I/O)
+#
+# Exit Codes:
+#   0 — Test completed, SLOs met
+#   1 — Test completed, SLOs missed
+#   2 — Test failed (unable to reach target)
+#
+# Examples:
+#   ./scripts/stress-test-remote.sh 192.168.168.31 3600 100
+#
+# Recent Changes:
+#   2026-04-14: Added error handling + metrics collection (Phase 2.2)
+#   2026-04-13: Initial creation with load generation
+#
+################################################################################
 # Stress test suite - executes on remote .31 host
 
 echo "=== CODE-SERVER STRESS TEST ==="

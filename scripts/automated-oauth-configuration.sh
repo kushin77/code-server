@@ -1,4 +1,47 @@
 #!/bin/bash
+################################################################################
+# File: automated-oauth-configuration.sh
+# Owner: Security/Identity Team
+# Purpose: Automated OAuth2 provider configuration and credential management
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+
+#
+# Dependencies:
+#   - curl — OAuth provider API communication
+#   - jq — JSON response parsing
+#   - docker — Container credential injection
+#
+# Related Files:
+#   - docker-compose.yml — oauth2-proxy service definition
+#   - terraform/oauth.tf — OAuth provider configuration
+#   - .env — OAuth client credentials (secrets)
+#
+# Usage:
+#   ./automated-oauth-configuration.sh setup      # Initial OAuth setup
+#   ./automated-oauth-configuration.sh validate   # Verify configuration
+#   ./automated-oauth-configuration.sh rotate     # Rotate credentials
+#
+# Configuration:
+#   - Create OAuth application in provider (GitHub, Google, etc)
+#   - Store client credentials securely
+#   - Configure redirect URIs
+#   - Validate permission scopes
+#   - Test OAuth flow
+#
+# Exit Codes:
+#   0 — OAuth configuration successful
+#   1 — OAuth configuration completed with warnings
+#   2 — OAuth configuration failed (authentication broken)
+#
+# Examples:
+#   ./scripts/automated-oauth-configuration.sh setup
+#   ./scripts/automated-oauth-configuration.sh validate
+#
+# Recent Changes:
+#   2026-04-14: Added credential validation logging (Phase 2.2)
+#   2026-04-13: Initial creation with OAuth setup automation
+#
+################################################################################
 # Automated OAuth Configuration - IaC Setup for Google OAuth2
 # Guides through Google Cloud Console OAuth app creation (cannot be fully automated)
 # But integrates the credentials into deployment

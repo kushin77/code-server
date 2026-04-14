@@ -1,0 +1,74 @@
+# Custom pre-commit hooks for code-server-enterprise
+# Phase 2.3: Code Quality & Governance Enforcement
+#
+# These hooks are referenced in .pre-commit-config.yaml
+# They enforce repository-specific standards and governance policies
+
+- id: verify-scripts-source-common
+  name: Verify scripts source _common libraries
+  description: Ensure all shell scripts source the common libraries for error handling, logging, and utilities
+  entry: bash -c 'for f in scripts/{deploy,backup,validate,test,health-check}.sh; do [[ -f "$f" ]] && ! grep -q "source.*_common" "$f" && echo "ERROR: $f must source _common libraries (logging.sh, utils.sh, error-handler.sh)"; done | head -5'
+  language: system
+  files: '^scripts/(deploy|backup|validate|test|health-check)\.sh$'
+  pass_filenames: false
+  stages: [commit]
+
+- id: verify-metadata-headers
+  name: Verify metadata headers in critical scripts
+  description: Ensure critical scripts have standardized metadata headers with File, Owner, Purpose, etc.
+  entry: bash -c 'for f in scripts/{deploy,backup,validate,test,health-check}.sh; do [[ -f "$f" ]] && ! grep -q "^# File:" "$f" && echo "ERROR: $f missing standardized headers (add via Phase 2.1 task)"; done | head -5'
+  language: system
+  files: '^scripts/(deploy|backup|validate|test|health-check)\.sh$'
+  pass_filenames: false
+  stages: [commit]
+
+- id: no-hardcoded-secrets
+  name: Prevent hardcoded secrets in code
+  description: Block commits that contain hardcoded passwords, API keys, or tokens
+  entry: bash -c 'grep -r "password=.*[a-zA-Z0-9]" scripts/ .env.* 2>/dev/null | grep -v "^.*#" | head -1 && (echo "ERROR: Hardcoded secrets detected. Use environment variables instead."; exit 1) || exit 0'
+  language: system
+  stages: [commit]
+  pass_filenames: false
+
+- id: no-large-binaries
+  name: Prevent accidental commit of large binaries
+  description: Block files larger than 5MB to prevent repository bloat
+  entry: bash -c 'find . -type f -size +5M -not -path "./.git/*" -not -path "./.terraform/*" 2>/dev/null | head -1 && (echo "ERROR: Large file detected (>5MB). Use git-lfs or archive it."; exit 1) || exit 0'
+  language: system
+  stages: [commit]
+  pass_filenames: false
+
+- id: verify-error-handling
+  name: Verify error handling in scripts
+  description: Warn if scripts don't have error handling (set -euo pipefail, error trap, etc.)
+  entry: bash -c 'for f in scripts/*.sh; do [[ -f "$f" ]] && ! grep -q "set -euo pipefail" "$f" && echo "WARNING: $f lacks error handling (set -euo pipefail)"; done | head -10'
+  language: system
+  files: '^scripts/.*\.sh$'
+  pass_filenames: false
+  stages: [manual]  # Manual check, not enforced at commit time
+
+- id: enforce-log-messages
+  name: Ensure shell scripts have meaningful log messages
+  description: Check that scripts use log_* functions from common libraries
+  entry: bash -c '[[ -d scripts/_common ]] && for f in scripts/{deploy,backup,validate,test}.sh; do [[ -f "$f" ]] && grep -q "source.*_common/logging" "$f" && ! grep -q "log_" "$f" && echo "WARNING: $f sources logging but doesn'\''t use log_* functions"; done | head -5'
+  language: system
+  files: '^scripts/(deploy|backup|validate|test)\.sh$'
+  pass_filenames: false
+  stages: [manual]  # Manual check for best practices
+
+- id: check-test-coverage
+  name: Verify test coverage for critical paths
+  description: Remind about tests for critical functions (manual check)
+  entry: bash -c '[[ -f scripts/test-deployment.sh ]] && echo "INFO: Verify test-deployment.sh covers critical paths" || true'
+  language: system
+  pass_filenames: false
+  stages: [manual]
+
+- id: enforce-documentation
+  name: Ensure documented changes in CHANGELOG
+  description: Remind to update documentation for significant changes
+  entry: bash -c '[[ "$(git diff --cached --name-only | wc -l)" -gt 5 ]] && echo "REMINDER: Update CHANGELOG.md and commit comments for multiple file changes" || true'
+  language: system
+  pass_filenames: false
+  stages: [commit]
+  always_run: true

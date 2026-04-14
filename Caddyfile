@@ -1,46 +1,49 @@
-# Caddyfile — Production IDE with Cloudflare Tunnel (Origin CA HTTPS)
-# 
-# IMPORTS: Shared blocks from Caddyfile.base
-# Uses Cloudflare Origin CA certificate for origin->Cloudflare connection  
-# Cloudflare Tunnel handles distribution; all HTTPS traffic proxied through tunnel
+# ════════════════════════════════════════════════════════════════════════════
+# Caddyfile — Development Environment
 #
-# Composition: @see Caddyfile.base for shared configuration (security_headers, cache_control_rules, etc.)
+# Used with: docker-compose -f docker-compose.yml -f docker-compose.override.yml
+# 
+# - HTTP only (no TLS)
+# - Direct port exposure (127.0.0.1:8080)
+# - No auth proxy (basic-auth from code-server)
+# - Development logging and caching disabled
+# ════════════════════════════════════════════════════════════════════════════
 
-@import Caddyfile.base
-
+# Global configuration
 {
     auto_https off
+    log default {
+        format json
+    }
 }
 
-# HTTPS catch-all for all domains (Cloudflare Tunnel traffic)
-:443 {
-    import compression_standard
-    import security_headers
-    import cache_control_rules
-
-    # Use Cloudflare Origin CA certificate (mounted in container at /etc/caddy/)
-    tls /etc/caddy/ide.kushnir.crt /etc/caddy/ide.kushnir.key {
-        protocols tls1.2 tls1.3
+# HTTP only in development
+:80 {
+    # Compression
+    encode gzip
+    
+    # Security headers (basic)
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
     }
-
-    # Reverse proxy to code-server with production headers
-    reverse_proxy code-server:8080 {
+    
+    # Development-friendly cache control (no caching)
+    header Cache-Control "no-cache, no-store, must-revalidate"
+    
+    # Reverse proxy to code-server:8080
+    reverse_proxy localhost:8080 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-Proto https
-        header_up CF-Connecting-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
     }
-}
-
-# HTTP catch-all (port 80)
-:80 {
-    import compression_standard
-    import security_headers
-
-    # Health check endpoints work on HTTP
-    @health path /health /healthz
-    reverse_proxy @health code-server:8080
-
-    # Redirect everything else to HTTPS
-    redir / https://{host}{uri} permanent
+    
+    # Logging
+    log {
+        output stdout
+        format json
+    }
 }

@@ -1,4 +1,50 @@
 #!/bin/bash
+################################################################################
+# File: automated-deployment-orchestration.sh
+# Owner: DevOps/Infrastructure Team
+# Purpose: Orchestrate complex multi-phase deployments with rollback capability
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, Terraform 1.4+
+#
+# Dependencies:
+#   - terraform — Infrastructure orchestration
+#   - docker-compose — Container services
+#   - jq — JSON parsing for state management
+#   - ssh — Remote deployment execution
+#
+# Related Files:
+#   - terraform/main.tf — Infrastructure code
+#   - docker-compose.yml — Service definitions
+#   - scripts/deploy.sh — Individual deployment (called by orchestrator)
+#   - RUNBOOKS.md — Deployment procedures
+#
+# Usage:
+#   ./automated-deployment-orchestration.sh plan   # Show deployment plan
+#   ./automated-deployment-orchestration.sh apply   # Execute deployment
+#   ./automated-deployment-orchestration.sh rollback # Rollback last deployment
+#
+# Orchestration:
+#   - Pre-flight validation
+#   - Terraform plan/apply
+#   - Docker build/restart
+#   - Health verification
+#   - Smoke tests
+#   - Rollback on failure
+#
+# Exit Codes:
+#   0 — Deployment successful
+#   1 — Deployment completed with warnings
+#   2 — Deployment failed, rollback initiated
+#
+# Examples:
+#   ./scripts/automated-deployment-orchestration.sh plan
+#   ./scripts/automated-deployment-orchestration.sh apply
+#
+# Recent Changes:
+#   2026-04-14: Integrated phase boundaries and error recovery (Phase 2.2)
+#   2026-04-13: Initial creation with multi-phase orchestration
+#
+################################################################################
 # MASTER DEPLOYMENT ORCHESTRATION - Pure IaC, Zero Manual Steps
 # Fully automated production deployment with all dependent services
 # No manual intervention required - everything is code

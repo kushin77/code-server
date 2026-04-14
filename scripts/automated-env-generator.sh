@@ -1,4 +1,47 @@
 #!/bin/bash
+################################################################################
+# File: automated-env-generator.sh
+# Owner: DevOps/Configuration Team
+# Purpose: Generate and manage environment variable files for all services
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+
+#
+# Dependencies:
+#   - openssl — Secure random secret generation
+#   - jq — JSON parsing for configuration
+#
+# Related Files:
+#   - terraform/variables.tf — Infrastructure variables
+#   - docker-compose.yml — Service environment references
+#   - .env.example — Environment template
+#   - CONTRIBUTING.md — Developer setup guide
+#
+# Usage:
+#   ./automated-env-generator.sh generate        # Generate .env file
+#   ./automated-env-generator.sh update <var>    # Update specific variable
+#   ./automated-env-generator.sh validate        # Validate .env syntax
+#
+# Environment Generation:
+#   - Generate secure random secrets
+#   - Populate service-specific variables
+#   - Validate required variables present
+#   - Create backup of previous .env
+#   - Set appropriate file permissions
+#
+# Exit Codes:
+#   0 — Environment file created/updated successfully
+#   1 — Environment file created with warnings
+#   2 — Failed to generate environment (missing requirements)
+#
+# Examples:
+#   ./scripts/automated-env-generator.sh generate
+#   ./scripts/automated-env-generator.sh validate
+#
+# Recent Changes:
+#   2026-04-14: Added env validation assertions (Phase 2.2)
+#   2026-04-13: Initial creation with secret generation
+#
+################################################################################
 # Production Environment Generator - Fully Automated IaC
 # Generates production .env with all credentials from environment or secure sources
 

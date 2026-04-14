@@ -1,4 +1,48 @@
 #!/bin/bash
+################################################################################
+# File: audit-logging.sh
+# Owner: Security/Compliance Team
+# Purpose: Centralized audit logging for security and compliance events
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+
+#
+# Dependencies:
+#   - docker — Container log collection
+#   - jq — JSON log parsing and filtering
+#   - journalctl — System journal access
+#
+# Related Files:
+#   - docker-compose.yml — Log configuration for services
+#   - RUNBOOKS.md — Audit log procedures
+#   - COMPLIANCE_STATUS_REPORT.md — Audit trail
+#
+# Usage:
+#   ./audit-logging.sh collect                  # Collect all audit logs
+#   ./audit-logging.sh filter <pattern>         # Filter logs by pattern
+#   ./audit-logging.sh archive                  # Archive logs for retention
+#
+# Audit Events:
+#   - User authentication (login/logout)
+#   - Authorization changes
+#   - Configuration modifications
+#   - Deployment events
+#   - Security policy violations
+#   - Infrastructure changes
+#
+# Exit Codes:
+#   0 — Audit logs collected successfully
+#   1 — Audit logs collected with gaps
+#   2 — Failed to collect audit logs
+#
+# Examples:
+#   ./scripts/audit-logging.sh collect
+#   ./scripts/audit-logging.sh filter "authentication"
+#
+# Recent Changes:
+#   2026-04-14: Added compliance log validation (Phase 2.2)
+#   2026-04-13: Initial creation with audit log collection
+#
+################################################################################
 ###############################################################################
 # AUDIT LOGGING BASH HELPERS
 # Issue #183: Shell command integration with audit logging system

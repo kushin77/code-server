@@ -1,4 +1,51 @@
 #!/bin/bash
+################################################################################
+# File: operations-runbook.sh
+# Owner: Operations/On-Call Team
+# Purpose: Standard operating procedures and incident response automation
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, Docker 20.10+
+#
+# Dependencies:
+#   - docker — Container runtime operations
+#   - curl — Service health verification
+#   - jq — JSON parsing for metrics
+#   - ssh — Remote host management
+#   - systemctl — Service management
+#
+# Related Files:
+#   - RUNBOOKS.md — Complete operational procedures
+#   - INCIDENT-RESPONSE-PLAYBOOKS.md — Incident handling
+#   - INCIDENT-RUNBOOKS.md — Emergency procedures
+#   - SLO-DEFINITIONS.md — SLO thresholds and escalation
+#
+# Usage:
+#   ./operations-runbook.sh status              # Current operation status
+#   ./operations-runbook.sh incident <type>     # Start incident procedure
+#   ./operations-runbook.sh escalate            # Escalate to on-call team
+#   ./operations-runbook.sh document            # Document incident for post-mortem
+#
+# Common Operations:
+#   - Health check and diagnostics
+#   - Service restart procedures
+#   - Log analysis and troubleshooting
+#   - Incident notification and escalation
+#   - Post-incident root cause analysis
+#
+# Exit Codes:
+#   0 — Operation completed successfully
+#   1 — Operation completed with warnings
+#   2 — Operation failed, escalation required
+#
+# Examples:
+#   ./scripts/operations-runbook.sh status
+#   ./scripts/operations-runbook.sh incident service-down
+#
+# Recent Changes:
+#   2026-04-14: Added error context tracking (Phase 2.2)
+#   2026-04-13: Initial creation with standard procedures
+#
+################################################################################
 
 # Phase 12.5: Operations Runbooks and Procedures
 # Critical operational procedures for 5-region federation

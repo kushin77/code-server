@@ -1,4 +1,50 @@
 #!/bin/bash
+################################################################################
+# File: init-repo-governance.sh
+# Owner: DevOps/Governance Team
+# Purpose: Initialize governance framework and enforce standards
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+
+#
+# Dependencies:
+#   - git — Version control and hook configuration
+#   - pre-commit — Framework for git hooks
+#   - shellcheck — Bash script linting
+#   - terraform — Infrastructure code validation
+#
+# Related Files:
+#   - .pre-commit-config.yaml — Pre-commit hook configuration (Phase 2.3)
+#   - .github/GOVERNANCE-ROLLOUT.md — Governance schedule
+#   - CONTRIBUTING.md — Developer guidelines
+#   - .github/workflows/validate-config.yml — CI validation
+#
+# Usage:
+#   ./init-repo-governance.sh                    # Setup governance framework
+#   ./init-repo-governance.sh --team-only        # Setup current team only
+#   ./init-repo-governance.sh --verify           # Verify governance installed
+#
+# Setup Tasks:
+#   - Create .pre-commit-config.yaml
+#   - Install pre-commit hooks
+#   - Setup branch protection on main
+#   - Configure PR review requirements
+#   - Setup enforcement in CI/CD pipelines
+#   - Configure default workflows
+#
+# Exit Codes:
+#   0 — Governance framework initialized successfully
+#   1 — Some governance components failed to initialize
+#   2 — Critical component initialization failed
+#
+# Examples:
+#   ./scripts/init-repo-governance.sh
+#   ./scripts/init-repo-governance.sh --verify
+#
+# Recent Changes:
+#   2026-04-14: Integrated with Phase 2.3 pre-commit setup
+#   2026-04-13: Initial creation with governance initialization
+#
+################################################################################
 
 # Initialize GitHub Governance for a Single Repository
 # Usage: ./init-repo-governance.sh kushin77/repo-name

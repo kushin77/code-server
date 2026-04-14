@@ -1,9 +1,49 @@
 #!/bin/bash
+################################################################################
+# File: backup.sh
+# Owner: Data Management Team
+# Purpose: Enterprise backup and restore for code-server persistent volumes
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, Docker 20.10+
+#
+# Dependencies:
+#   - docker (for volume backup/restore)
+#   - tar (for compression)
+#   - rsync (optional, for off-site replication)
+#
+# Related Files:
+#   - scripts/disaster-recovery-p3.sh — Full DR procedures
+#   - docker-compose.yml — Volume definitions
+#   - RUNBOOKS.md — Operational procedures
+#
+# Usage:
+#   ./backup.sh backup                    # Create snapshot of code-server data
+#   ./backup.sh restore <backup.tar.gz>   # Restore from backup
+#   ./backup.sh list                      # List available backups
+#
+# Examples:
+#   ./backup.sh backup
+#   ./backup.sh restore backups/coder-data-20260414-153000.tar.gz
+#
+# Recent Changes:
+#   2026-04-14: Added error handling integration (Phase 2.2)
+#   2026-04-13: Initial creation with backup/restore functions
+#
+################################################################################
 set -euo pipefail
-# ── Enterprise backup/restore for coder-data volume ──────────────────────────
+
+# Source common libraries (Phase 2.2: Error Handling Integration)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/_common/logging.sh" || { echo "FATAL: Cannot source logging library"; exit 1; }
+source "$SCRIPT_DIR/_common/utils.sh" || { echo "FATAL: Cannot source utils library"; exit 1; }
+source "$SCRIPT_DIR/_common/error-handler.sh" || { echo "FATAL: Cannot source error-handler library"; exit 1; }
+
+# Configure logging
+export LOG_LEVEL=1  # 0=debug, 1=info, 2=warn, 3=error, 4=fatal
+
 BACKUP_DIR="$SCRIPT_DIR/../backups"
-mkdir -p "$BACKUP_DIR"
+mkdir -p "$BACKUP_DIR" || log_fatal "Cannot create backup directory: $BACKUP_DIR"
+require_command docker || log_fatal "docker not found in PATH"
 
 COMMAND="${1:-backup}"
 

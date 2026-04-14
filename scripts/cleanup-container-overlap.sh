@@ -1,4 +1,46 @@
 #!/bin/bash
+################################################################################
+# File: cleanup-container-overlap.sh
+# Owner: Container Operations Team
+# Purpose: Detect and remove conflicting/overlapping Docker containers
+# Last Modified: April 14, 2026
+# Compatibility: Ubuntu 22.04+, Bash 4.0+, Docker 20.10+
+#
+# Dependencies:
+#   - docker — Container runtime
+#   - jq — JSON parsing for container inspection
+#   - curl — Health endpoint verification
+#
+# Related Files:
+#   - docker-compose.yml — Container definitions
+#   - RUNBOOKS.md — Container troubleshooting procedures
+#   - alert-rules.yml — Container health alerts
+#
+# Usage:
+#   ./cleanup-container-overlap.sh              # Cleanup overlapping containers
+#   ./cleanup-container-overlap.sh --dry-run    # Show what would be removed
+#   ./cleanup-container-overlap.sh --force      # Force removal without confirmation
+#
+# Detects:
+#   - Multiple instances of same service
+#   - Containers on conflicting ports
+#   - Failed/stopped containers not part of active deployment
+#   - Orphaned volumes not attached to running containers
+#
+# Exit Codes:
+#   0 — Cleanup completed successfully
+#   1 — Some containers could not be removed (manual review needed)
+#   2 — Critical issue preventing cleanup (Docker daemon may be corrupted)
+#
+# Examples:
+#   ./scripts/cleanup-container-overlap.sh
+#   ./scripts/cleanup-container-overlap.sh --dry-run
+#
+# Recent Changes:
+#   2026-04-14: Added safer confirmation dialogs (Phase 2.2)
+#   2026-04-13: Initial creation with overlap detection
+#
+################################################################################
 # cleanup-container-overlap.sh
 # Description: Remove overlapping containers and consolidate to single docker-compose stack
 # Usage: bash scripts/cleanup-container-overlap.sh

@@ -1,12 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 set -eu
 
 # ── Patch product.json ────────────────────────────────────────────────────────
 # Remove defaultChatAgent (causes Copilot Chat install-loop) and ensure both
 # github.copilot and github.copilot-chat are in trustedExtensionAuthAccess
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 PRODUCT_JSON=$(find /usr/lib/code-server -name "product.json" -type f | head -1)
 if [ -n "$PRODUCT_JSON" ] && [ -f "$PRODUCT_JSON" ]; then
   /usr/bin/node -e "const fs = require('fs'); const product = JSON.parse(fs.readFileSync('$PRODUCT_JSON', 'utf8')); delete product.defaultChatAgent; const trusted = Array.isArray(product.trustedExtensionAuthAccess) ? product.trustedExtensionAuthAccess : []; product.trustedExtensionAuthAccess = [...new Set([...trusted, 'github.copilot', 'github.copilot-chat'])]; fs.writeFileSync('$PRODUCT_JSON', JSON.stringify(product, null, 2) + '\n');" 2>/dev/null || echo "[entrypoint] WARNING: Could not patch product.json"
@@ -56,8 +53,8 @@ if [ ! -f "$SETTINGS_DIR/settings.json" ] && [ -f /etc/code-server/settings.json
 fi
 
 # ── Start code-server (background so trap can catch SIGTERM) ─────────────────
-# Enable OTEL instrumentation if OTEL_EXPORTER_OTLP_ENDPOINT is set
-if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]; then
+# Enable OTEL instrumentation only if endpoint is set AND SDK is not disabled
+if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ] && [ "${OTEL_SDK_DISABLED:-false}" != "true" ]; then
   echo "[entrypoint] Enabling OpenTelemetry instrumentation"
   export NODE_OPTIONS="--require /usr/local/lib/otel-tracer-init.js --enable-source-maps"
 else

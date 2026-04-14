@@ -1,9 +1,9 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
-# Phase 24-25 Docker Compose Deployment Script
-# ════════════════════════════════════════════════════════════════════════════
-# Deploy Phase 24-25 services on Ubuntu/Debian with Docker Compose v2+
-# Usage: ./deploy-phase-24-25.sh [phase24|phase25|all]
+# Docker Compose Services Deployment Script
+# ═══════════════════════════════════════════════════════════════════════════
+# Deploy services on Ubuntu/Debian with Docker Compose v2+
+# Usage: ./scripts/deploy-services.sh [operations|api|all]
 # ════════════════════════════════════════════════════════════════════════════
 
 set -euo pipefail

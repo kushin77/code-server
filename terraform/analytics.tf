@@ -1,20 +1,6 @@
-terraform {
-  required_version = ">= 1.5"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.5"
-    }
-  }
-}
-
 # ════════════════════════════════════════════════════════════════════════════
-# PHASE 26-B: Developer Analytics Dashboard (15 hours)
-# Real-time visibility into API usage patterns and performance
+# Developer Analytics Dashboard — ClickHouse time-series + aggregator
+# Real-time visibility into API usage patterns and performance metrics
 # ════════════════════════════════════════════════════════════════════════════
 
 # Analytics data collection configuration (single source of truth)
@@ -60,8 +46,8 @@ locals {
 }
 
 # ClickHouse deployment for time-series analytics
-resource "local_file" "phase_26b_clickhouse_deployment" {
-  filename = "${path.module}/../kubernetes/phase-26-analytics/clickhouse-deployment.yaml"
+resource "local_file" "clickhouse_deployment" {
+  filename = "${path.module}/../kubernetes/analytics/clickhouse-deployment.yaml"
   
   content = <<-EOT
     apiVersion: v1
@@ -146,8 +132,8 @@ resource "local_file" "phase_26b_clickhouse_deployment" {
 }
 
 # Analytics aggregator service
-resource "local_file" "phase_26b_analytics_aggregator" {
-  filename = "${path.module}/../kubernetes/phase-26-analytics/analytics-aggregator-deployment.yaml"
+resource "local_file" "analytics_aggregator" {
+  filename = "${path.module}/../kubernetes/analytics/analytics-aggregator-deployment.yaml"
   
   content = <<-EOT
     apiVersion: apps/v1
@@ -205,16 +191,16 @@ resource "local_file" "phase_26b_analytics_aggregator" {
       type: ClusterIP
   EOT
 
-  depends_on = [local_file.phase_26b_clickhouse_deployment]
+  depends_on = [local_file.clickhouse_deployment]
 }
 
-output "phase_26b_analytics_config" {
-  description = "Phase 26-B analytics configuration"
+output "analytics_config" {
+  description = "Analytics dashboard configuration"
   value       = local.analytics_metrics
 }
 
-output "phase_26b_status" {
-  description = "Phase 26-B implementation status"
+output "analytics_status" {
+  description = "Analytics implementation status"
   value = {
     status         = "IMPLEMENTED"
     storage        = "ClickHouse time-series database"

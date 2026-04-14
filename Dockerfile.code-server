@@ -74,31 +74,41 @@ RUN npm install --global \
 
 # Create tracer initialization script
 RUN cat > /usr/local/lib/otel-tracer-init.js << 'EOF'
-// Auto-instrument all Node.js core modules and popular packages
-const nodeSDK = require('@opentelemetry/sdk-node').NodeSDK;
-const getNodeAutoInstrumentations = require('@opentelemetry/auto-instrumentations-node').getNodeAutoInstrumentations;
-const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-grpc');
-const { Resource } = require('@opentelemetry/resources');
-const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+// Graceful OTEL tracer init — exits cleanly if @opentelemetry packages missing.
+// This allows the file to be required via NODE_OPTIONS without crashing when
+// packages are not installed or OTEL_SDK_DISABLED=true is set.
+if (process.env.OTEL_SDK_DISABLED === 'true') {
+  process.exit(0);
+}
+try {
+  const { NodeSDK } = require('@opentelemetry/sdk-node');
+  const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
+  const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-grpc');
+  const { Resource } = require('@opentelemetry/resources');
+  const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
 
-const sdk = new nodeSDK({
-  resource: new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'code-server',
-    [SemanticResourceAttributes.SERVICE_VERSION]: '4.115.0',
-  }),
-  traceExporter: new OTLPTraceExporter({
-    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4317',
-  }),
-  instrumentations: [getNodeAutoInstrumentations()],
-});
+  const sdk = new NodeSDK({
+    resource: new Resource({
+      [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'code-server',
+      [SemanticResourceAttributes.SERVICE_VERSION]: '4.115.0',
+    }),
+    traceExporter: new OTLPTraceExporter({
+      url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4317',
+    }),
+    instrumentations: [getNodeAutoInstrumentations()],
+  });
 
-sdk.start();
+  sdk.start();
 
-process.on('SIGTERM', () => {
-  sdk.shutdown()
-    .then(() => process.exit(0))
-    .catch((err) => { console.log('Error shutting down SDK', err); process.exit(1); });
-});
+  process.on('SIGTERM', () => {
+    sdk.shutdown()
+      .then(() => process.exit(0))
+      .catch((err) => { console.log('Error shutting down SDK', err); process.exit(1); });
+  });
+} catch (e) {
+  // @opentelemetry packages not installed — tracing unavailable, continuing.
+  console.warn('[OTEL] Packages not found, distributed tracing disabled:', e.message);
+}
 EOF
 
 COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh

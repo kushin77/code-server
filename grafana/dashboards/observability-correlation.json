@@ -5,7 +5,7 @@
     { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
   ],
   "annotations": { "list": [] },
-  "description": "Phase 23: Advanced Observability — Metrics Correlation & Anomaly Detection",
+  "description": "Advanced Observability — Metrics Correlation & Anomaly Detection",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -414,7 +414,7 @@
   "time": { "from": "now-3h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Phase 23: Correlation & Anomaly Detection",
+   "title": "Observability: Correlation & Anomaly Detection",
   "uid": "phase23-correlation",
   "version": 1
 }

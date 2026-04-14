@@ -76,8 +76,8 @@ services:
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
-      # ollama container healthcheck using wget
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null || exit 1"]
+      # ollama: no curl/wget in image; use bash /dev/tcp for TCP-level health check
+      test: ["CMD", "/bin/bash", "-c", "</dev/tcp/localhost/11434"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -206,7 +206,7 @@ services:
       - OTEL_SERVICE_NAME=caddy-proxy
       - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=2-alpine,hostname=caddy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:80/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3

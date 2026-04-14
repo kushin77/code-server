@@ -1,4 +1,4 @@
-name: Phase 13 - Production Deployment Validation
+name: Deploy Code-Server - Production Validation
 
 on:
   workflow_dispatch:

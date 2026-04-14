@@ -4,7 +4,6 @@
 # Regenerate: terraform apply
 # ════════════════════════════════════════════════════════════════════════════
 
-version: "3.9"
 
 services:
   # ─── code-server ────────────────────────────────────────────────────────────
@@ -38,9 +37,11 @@ services:
       - OLLAMA_ENDPOINT=http://ollama:${ollama_port}
       - OLLAMA_DEFAULT_MODEL=${llama_model}
       # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-      - OTEL_SDK_DISABLED=false
+      # OTEL disabled: @opentelemetry/* packages not installed in image.
+      # Re-enable after rebuilding image with: npm install --global @opentelemetry/sdk-node@0.49.0
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      # - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SDK_DISABLED=true
       - OTEL_SERVICE_NAME=code-server
       - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=4.115.0,hostname=code-server
       - NODE_TLS_REJECT_UNAUTHORIZED=0
@@ -67,8 +68,6 @@ services:
         reservations:
           memory: 512m
           cpus: '0.25'
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -94,13 +93,12 @@ services:
       - ${ollama_volume}:/root/.ollama
       - ${workspace_dir}:${workspace_path}:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${ollama_port}/api/tags"]
+      # ollama: no curl/wget in image; use bash /dev/tcp for TCP-level health check
+      test: ["CMD", "/bin/bash", "-c", "</dev/tcp/localhost/${ollama_port}"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-    security_opt:
-      - no-new-privileges:true
     deploy:
       resources:
         limits:
@@ -183,15 +181,13 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${oauth2_proxy_port}/ping"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:${oauth2_proxy_port}/ping"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
     depends_on:
       - code-server
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -226,15 +222,13 @@ services:
       - OTEL_SERVICE_NAME=caddy-proxy
       - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=${caddy_version},hostname=caddy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/healthz || exit 1"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:80/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
     depends_on:
       - oauth2-proxy
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:

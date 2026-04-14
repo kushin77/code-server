@@ -1,4 +1,4 @@
--- Phase 26-C: Organizations & Multi-Tenancy Schema
+-- Organizations & Multi-Tenancy Schema
 -- Production-ready PostgreSQL schema with RBAC and audit logging
 -- Idempotent: Safe to run multiple times (IF NOT EXISTS)
 

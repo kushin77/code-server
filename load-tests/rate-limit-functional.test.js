@@ -1,9 +1,8 @@
 /**
- * Phase 26-A: Functional Test Suite for GraphQL Rate Limiter
+ * Functional Test Suite for GraphQL Rate Limiter
  * Tests rate limiting enforcement across all tiers
- * 
- * Run with: node load-tests/phase-26a-functional-tests.js
- */
+ *
+ * Run with: node load-tests/rate-limit-functional.test.js
 
 const http = require('http');
 const https = require('https');

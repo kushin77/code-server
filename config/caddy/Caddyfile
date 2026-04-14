@@ -1,25 +1,19 @@
 # ════════════════════════════════════════════════════════════════════════════
 # Caddyfile — DNS-First Reverse Proxy Configuration (Phase 21+)
-# 
+#
 # CRITICAL PRINCIPLE: All endpoints use DOMAIN environment variable
 # - For production: DOMAIN=kushnir.cloud (real DNS + Let's Encrypt TLS)
-# - For on-prem: DOMAIN=192.168.168.31.nip.io (nip.io dynamic DNS, no TLS)
+# - For on-prem: DOMAIN=192.168.168.31 (direct IP, HTTP, no TLS)
 #
 # NEVER hardcode IPs or localhost - always use domain names
 # ════════════════════════════════════════════════════════════════════════════
 
-# Environment-driven domain (set via docker-compose.yml or .env)
-# Default to nip.io for on-premises if not specified
-{$DOMAIN:192.168.168.31.nip.io}
-
-# Global Caddyfile configuration
+# Global options block MUST come first (no site address before it).
+# auto_https off: on-prem uses HTTP (no Let's Encrypt for LAN/nip.io IPs).
+# For production with a real domain and ACME_EMAIL set, remove auto_https off.
 {
-    # For production (kushnir.cloud): auto_https on, Let's Encrypt
-    # For on-prem (*.nip.io): auto_https off (no TLS needed)
-    {if eq "{$ACME_EMAIL:""}" ""} auto_https off {else} acme_ca https://acme-v02.api.letsencrypt.org/directory {/if}
-    
-    email {$ACME_EMAIL:ops@kushnir.cloud}
-    
+    auto_https off
+
     log default {
         format json
         output stdout
@@ -32,85 +26,64 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 :80 {
-    # Compression for all responses
     encode gzip
-    
+
     # Security headers
-    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
     header X-Content-Type-Options "nosniff"
-    header X-Frame-Options "DENY"
+    header X-Frame-Options "SAMEORIGIN"
     header X-XSS-Protection "1; mode=block"
     header Referrer-Policy "strict-origin-when-cross-origin"
     header Permissions-Policy "geolocation=(), microphone=(), camera=()"
-    
-    # ─────────────────────────────────────────────────────────────────────────
-    # Primary Routes (all DNS-based, no hardcoded IPs)
-    # ─────────────────────────────────────────────────────────────────────────
-    
-    # IDE endpoint (code-server.{domain}:8080)
-    @ide_requests host code-server.{$DOMAIN:192.168.168.31.nip.io}
-    handle @ide_requests {
-        reverse_proxy code-server:8080 {
-            header_uri Host "code-server.{$DOMAIN:192.168.168.31.nip.io}"
-            flush_interval -1
-        }
-    }
-    
-    # GraphQL API endpoint (graphql-api.{domain}:4000)
-    @graphql_requests host graphql-api.{$DOMAIN:192.168.168.31.nip.io}
-    handle @graphql_requests {
-        reverse_proxy graphql-api:4000 {
-            header_uri Host "graphql-api.{$DOMAIN:192.168.168.31.nip.io}"
-            flush_interval -1
-        }
-    }
-    
-    # Developer Portal endpoint (dev-portal.{domain}:3001)
-    @portal_requests host dev-portal.{$DOMAIN:192.168.168.31.nip.io}
-    handle @portal_requests {
-        reverse_proxy developer-portal:3001 {
-            header_uri Host "dev-portal.{$DOMAIN:192.168.168.31.nip.io}"
-            flush_interval -1
-        }
-    }
-    
-    # Prometheus metrics endpoint (prometheus.{domain}:9090)
-    @prometheus_requests host prometheus.{$DOMAIN:192.168.168.31.nip.io}
-    handle @prometheus_requests {
-        reverse_proxy prometheus:9090 {
-            header_uri Host "prometheus.{$DOMAIN:192.168.168.31.nip.io}"
-        }
-    }
-    
-    # Grafana dashboards endpoint (grafana.{domain}:3000)
-    @grafana_requests host grafana.{$DOMAIN:192.168.168.31.nip.io}
-    handle @grafana_requests {
-        reverse_proxy grafana:3000 {
-            header_uri Host "grafana.{$DOMAIN:192.168.168.31.nip.io}"
-        }
-    }
-    
-    # Jaeger tracing UI endpoint (jaeger.{domain}:16686)
-    @jaeger_requests host jaeger.{$DOMAIN:192.168.168.31.nip.io}
-    handle @jaeger_requests {
-        reverse_proxy jaeger:16686 {
-            header_uri Host "jaeger.{$DOMAIN:192.168.168.31.nip.io}"
-        }
-    }
-    
-    # ─────────────────────────────────────────────────────────────────────────
-    # Health Check Endpoints
-    # ─────────────────────────────────────────────────────────────────────────
-    
+
+    # ── Health checks ─────────────────────────────────────────────────────────
     @health_checks path /health /healthz /.well-known/health
     handle @health_checks {
         respond "OK" 200
     }
-    
-    # ─────────────────────────────────────────────────────────────────────────
-    # Default/Catch-All (proxy to code-server IDE by default)
-    # ─────────────────────────────────────────────────────────────────────────
-    
+
+    # ── IDE (code-server) ─────────────────────────────────────────────────────
+    @ide_requests host code-server.{$DOMAIN:192.168.168.31}
+    handle @ide_requests {
+        reverse_proxy code-server:8080 {
+            flush_interval -1
+        }
+    }
+
+    # ── GraphQL API ───────────────────────────────────────────────────────────
+    @graphql_requests host graphql-api.{$DOMAIN:192.168.168.31}
+    handle @graphql_requests {
+        reverse_proxy graphql-api:4000 {
+            flush_interval -1
+        }
+    }
+
+    # ── Developer Portal ──────────────────────────────────────────────────────
+    @portal_requests host dev-portal.{$DOMAIN:192.168.168.31}
+    handle @portal_requests {
+        reverse_proxy developer-portal:3001 {
+            flush_interval -1
+        }
+    }
+
+    # ── Prometheus ────────────────────────────────────────────────────────────
+    @prometheus_requests host prometheus.{$DOMAIN:192.168.168.31}
+    handle @prometheus_requests {
+        reverse_proxy prometheus:9090
+    }
+
+    # ── Grafana ───────────────────────────────────────────────────────────────
+    @grafana_requests host grafana.{$DOMAIN:192.168.168.31}
+    handle @grafana_requests {
+        reverse_proxy grafana:3000
+    }
+
+    # ── Jaeger ────────────────────────────────────────────────────────────────
+    @jaeger_requests host jaeger.{$DOMAIN:192.168.168.31}
+    handle @jaeger_requests {
+        reverse_proxy jaeger:16686
+    }
+
+    # ── Default catch-all → code-server IDE ──────────────────────────────────
     handle {
         reverse_proxy code-server:8080 {
             flush_interval -1
@@ -119,37 +92,10 @@
 }
 
 # ════════════════════════════════════════════════════════════════════════════
-# CRITICAL ARCHITECTURE NOTES
+# ARCHITECTURE NOTES
 # ════════════════════════════════════════════════════════════════════════════
-#
-# 1. DNS RESOLUTION FLOW:
-#    - External client → nip.io/DNS → Caddy (port 80)
-#    - Caddy → Internal container DNS (e.g., code-server:8080, ollama:11434)
-#    - No hardcoded IPs, pure DNS-based service discovery
-#
-# 2. IN-CLUSTER COMMUNICATION:
-#    - All services reference each other by container name (Docker DNS)
-#    - Eliminates IP-based coupling and port conflicts
-#    - Environment-driven: Single source of truth (DOMAIN variable)
-#
-# 3. PRODUCTION READINESS:
-#    - On-prem: DOMAIN=192.168.168.31.nip.io (HTTP, no TLS overhead)
-#    - Production: DOMAIN=kushnir.cloud (HTTPS via Let's Encrypt)
-#    - Caddyfile automatically selects TLS based on ACME_EMAIL presence
-#
-# 4. SCALABILITY:
-#    - Change DOMAIN variable → all endpoints update instantly
-#    - No code changes needed for IP migration
-#    - Works with any IP/hostname/domain
-#
-# 5. MIGRATION PATTERN:
-#    - Phase 21: On-prem with nip.io (current)
-#    - Phase 22+: Production with kushnir.cloud + Let's Encrypt
-#    - Full backward compatibility, no service restart needed
-#
+# On-prem (current): DOMAIN=192.168.168.31, HTTP only (auto_https off)
+# Production: set DOMAIN=kushnir.cloud + ACME_EMAIL, remove auto_https off
+# All services reference each other by Docker container name (internal DNS)
+# Change DOMAIN env var → all endpoints update, no code changes needed
 # ════════════════════════════════════════════════════════════════════════════
-
-# HTTP to HTTPS redirect (for legacy local deployments)
-http://localhost {
-    redir https://localhost{uri} permanent
-}

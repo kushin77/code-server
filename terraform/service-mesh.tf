@@ -1,12 +1,6 @@
-# Phase 22-B: Service Mesh - Istio Control Plane & Configuration
-# Elite Production-Grade Infrastructure for Distributed Services
+# Istio service mesh — control plane, mTLS, traffic management
 # Immutable versions, declarative configuration, zero duplication
-# Deployment: ✓ Independent module, deployable with single apply
-# Overlap: ✗ None - clear separation from caching/routing/db-sharding
-
-terraform {
-  required_version = ">= 1.0"
-}
+# Independent module — no overlap with caching/routing/db-sharding
 
 # ============================================================================
 # ISTIO CONTROL PLANE - SERVICE MESH MANAGEMENT

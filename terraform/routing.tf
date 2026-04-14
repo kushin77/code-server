@@ -1,12 +1,6 @@
-# Phase 22-B: Advanced Routing - VyOS BGP Configuration + Failover Automation
-# Elite Production-Grade Infrastructure for High Availability & Load Balancing
+# VyOS BGP routing, failover automation, and traffic engineering
 # Immutable versions, declarative configuration, zero duplication
-# Deployment: ✓ Independent module, deployable with single apply
-# Overlap: ✗ None - clear separation from service-mesh/caching/db-sharding
-
-terraform {
-  required_version = ">= 1.0"
-}
+# Independent module — no overlap with service-mesh/caching/db-sharding
 
 # ============================================================================
 # VYOS ROUTING APPLIANCE - BGP FAILOVER & TRAFFIC ENGINEERING

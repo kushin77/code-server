@@ -410,29 +410,23 @@ jobs:
 
 ## Implementation Checklist
 
-**Week 1**: Quick wins
-- [ ] Disable scheduled workflows
+**P1 — Ship now (quick wins)**:
+- [ ] Disable unused scheduled workflows
 - [ ] Add caching to workflows
 - [ ] Reduce artifact retention to 7 days
 - [ ] **Estimated savings: 20-30%**
 
-**Week 2**: Medium effort
+**P2 — Next batch**:
 - [ ] Add path triggers to workflows
 - [ ] Add conditional artifact uploads
 - [ ] Implement fail-fast strategies
 - [ ] **Estimated savings: +20%** (total 40-50%)
 
-**Week 3**: Major changes
+**P3 — Ongoing**:
 - [ ] Refactor test matrix for parallelism
 - [ ] Optimize container images
 - [ ] Consolidate workflows
-- [ ] **Estimated savings: +20%** (total 60-70%)
-
-**Week 4**: Validate and tune
-- [ ] Monitor actual costs
-- [ ] Compare to baseline
-- [ ] Adjust thresholds
-- [ ] Document final state
+- [ ] Monitor, adjust, document
 
 ---
 
@@ -455,10 +449,9 @@ jobs:
 - [ ] Compare actual vs. budget
 - [ ] Identify new cost drivers
 - [ ] Refine workflows if needed
-- [ ] Celebrate savings!
 
-**Quarterly Deep-Dive**:
-- [ ] Full cost analysis
+**Ongoing**:
+- [ ] Full cost analysis when needed
 - [ ] New optimization tactics
 - [ ] Share learnings across teams
 - [ ] Adjust quotas
@@ -471,7 +464,6 @@ jobs:
 - GitHub Actions Pricing: https://github.com/pricing/actions
 - Actions Best Practices: https://docs.github.com/en/actions
 - Our GOVERNANCE.md: Framework overview
-- GOVERNANCE-ROLLOUT.md: 30-day timeline
 
 **Tools**:
 - `scripts/cost-report.sh` - Generate cost reports
@@ -480,6 +472,5 @@ jobs:
 
 ---
 
-**Status**: Ready for implementation  
-**Target Completion**: May 13, 2026  
+**Status**: Active — implement ASAP, no schedule  
 **Owner**: DevOps Team + Engineering Representatives

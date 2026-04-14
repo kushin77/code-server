@@ -3,7 +3,7 @@ import { check, group, sleep } from 'k6';
 import { Counter, Gauge, Histogram, Rate, Trend } from 'k6/metrics';
 
 /**
- * Phase 26-A: GraphQL Rate Limiting Load Test
+ * GraphQL API Rate Limiting Load Test
  * Tests rate limiting behavior under sustained 1000 req/sec load
  * Duration: 5 minutes
  * VUs: 500 concurrent users

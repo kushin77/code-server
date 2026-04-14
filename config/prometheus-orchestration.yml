@@ -1,4 +1,4 @@
-# Phase 20-A1: Prometheus Configuration
+# Prometheus Configuration for Global Orchestration
 # ✅ Immutable, idempotent metrics collection
 
 global:
@@ -7,7 +7,7 @@ global:
   scrape_timeout: 10s
   evaluation_interval: 15s
   external_labels:
-    phase: 'phase-20-a1'
+    environment: 'production'
     component: 'global-orchestration-framework'
     environment: 'staging'
     monitor: 'prometheus'

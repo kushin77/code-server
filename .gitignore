@@ -1,0 +1,9 @@
+
+tmp-fix-*.py
+
+
+# Terraform provider cache
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl

@@ -1,12 +1,6 @@
-# Phase 22-B: Advanced Caching Layer - Varnish + Caddy WAF + DDoS Protection
-# Elite Production-Grade Infrastructure for Performance & Security
-# Immutable versions, deterministic configuration, zero duplication
-# Deployment: ✓ Independent module, deployable with single apply
-# Overlap: ✗ None - clear separation from service-mesh/routing/db-sharding
-
-terraform {
-  required_version = ">= 1.0"
-}
+# Advanced Caching Layer - Varnish + Caddy WAF + DDoS Protection
+# Immutable image versions, deterministic configuration, zero duplication
+# Independent module — no overlap with service-mesh/routing/db-sharding
 
 # ============================================================================
 # VARNISH CACHING LAYER - HTTP ACCELERATION

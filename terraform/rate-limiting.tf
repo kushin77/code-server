@@ -1,30 +1,12 @@
-terraform {
-  required_version = ">= 1.5"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.5"
-    }
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.0"
-    }
-  }
-}
-
 # ════════════════════════════════════════════════════════════════════════════
-# PHASE 26-A: API Rate Limiting Enhancement (12 hours)
-# Intelligent rate limiting with usage-based quotas and tier integration
+# API Rate Limiting — tier-based quotas and usage enforcement
+# Single source of truth for rate limit tiers and Prometheus alert rules
 # ════════════════════════════════════════════════════════════════════════════
 
 # Extend PostgreSQL schema for rate limiting (idempotent)
-resource "null_resource" "phase_26a_schema" {
+resource "null_resource" "rate_limiting_schema" {
   provisioner "local-exec" {
-    command = "echo 'Phase 26-A: Rate Limiting Schema' >> terraform.log"
+    command = "echo 'Rate Limiting: schema ready' >> terraform.log"
   }
 }
 
@@ -56,14 +38,14 @@ locals {
 }
 
 # Prometheus metrics for rate limit tracking
-resource "local_file" "phase_26a_prometheus_rules" {
-  filename = "${path.module}/../kubernetes/phase-26-monitoring/rate-limit-rules.yaml"
+resource "local_file" "rate_limiting_prometheus_rules" {
+  filename = "${path.module}/../kubernetes/monitoring/rate-limit-rules.yaml"
   
   content = <<-EOT
     apiVersion: monitoring.coreos.com/v1
     kind: PrometheusRule
     metadata:
-      name: phase-26-rate-limits
+      name: api-rate-limits
       namespace: monitoring
     spec:
       groups:
@@ -87,16 +69,16 @@ resource "local_file" "phase_26a_prometheus_rules" {
             summary: "Rate limit accuracy below 99.9%"
   EOT
 
-  depends_on = [null_resource.phase_26a_schema]
+  depends_on = [null_resource.rate_limiting_schema]
 }
 
-output "phase_26a_rate_limits" {
+output "rate_limit_tiers" {
   description = "Rate limit tiers configuration"
   value       = local.rate_limits
 }
 
-output "phase_26a_status" {
-  description = "Phase 26-A implementation status"
+output "rate_limiting_status" {
+  description = "Rate limiting implementation status"
   value = {
     status      = "IMPLEMENTED"
     tier_count  = length(local.rate_limits)

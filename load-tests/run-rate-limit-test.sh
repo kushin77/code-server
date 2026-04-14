@@ -1,16 +1,17 @@
 #!/bin/bash
-# Phase 26-A: Rate Limiting Load Test Script
-# Run with: ./load-tests/phase-26-rate-limit.sh
+# Rate Limiting Load Test Runner
+# Executes k6 load test and summarizes results
+# Run with: ./load-tests/run-rate-limit-test.sh
 
 set -e
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║  Phase 26-A: API Rate Limiting Load Test                   ║"
+echo "║  API Rate Limiting Load Test                        ║"
 echo "║  Target: 1000 req/s for 5 minutes                          ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-RESULTS_DIR="load-test-results/phase-26a-$TIMESTAMP"
+RESULTS_DIR="load-test-results/rate-limit-$TIMESTAMP"
 
 mkdir -p "$RESULTS_DIR"
 
@@ -21,7 +22,7 @@ echo "Results directory: $RESULTS_DIR"
 k6 run \
   --out json="$RESULTS_DIR/results.json" \
   --summary-export="$RESULTS_DIR/summary.json" \
-  load-tests/phase-26-rate-limit.js
+  load-tests/rate-limit.k6.js
 
 echo ""
 echo "Load test completed!"
@@ -30,7 +31,7 @@ echo ""
 
 # Parse results
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║  Test Results Summary                                       ║"
+echo "║  Test Results Summary                              ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 
 if command -v jq &> /dev/null; then

@@ -1,4 +1,4 @@
--- Phase 26-D: Webhooks & Event Delivery Schema
+-- Webhooks & Event Delivery Schema
 -- Production-ready PostgreSQL schema with reliable event storage and retry management
 -- Idempotent: Safe to run multiple times (IF NOT EXISTS)
 

@@ -56,3 +56,5 @@ enable_auto_rollback = true   # Automatic rollback on SLO breach
 #   - Observe 24h:    Monitor production metrics
 #
 # Total Duration: ~3-4 hours active + 24-hour observation = ~1.5 days
+
+oauth2_proxy_cookie_secret = "72ZO5wAvWDtiygXQYZEu5WlUEjvjrilD"

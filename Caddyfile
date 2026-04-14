@@ -109,44 +109,6 @@ jaeger.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
 }
 # ON-PREMISES CONFIGURATION (nip.io dynamic DNS for on-prem at 192.168.168.31)
 # ═══════════════════════════════════════════════════════════════════════════════
+# NOTE: Templates above using {$EXTERNAL_DOMAIN} handle all on-prem cases.
+# No additional hard-coded site blocks needed here.
 
-# On-prem code-server (HTTP only)
-code-server.192.168.168.31.nip.io,
-ide.192.168.168.31.nip.io {
-    encode gzip
-    reverse_proxy code-server:8080 {
-        flush_interval -1
-    }
-}
-
-# On-prem Grafana
-grafana.192.168.168.31.nip.io {
-    encode gzip
-    reverse_proxy grafana:3000
-}
-
-# On-prem Prometheus
-prometheus.192.168.168.31.nip.io {
-    encode gzip
-    reverse_proxy prometheus:9090
-}
-
-# On-prem Jaeger
-jaeger.192.168.168.31.nip.io {
-    encode gzip
-    reverse_proxy jaeger:16686
-}
-
-# On-prem health check
-192.168.168.31.nip.io {
-    @health_checks path /health /healthz /.well-known/health
-    handle @health_checks {
-        respond "OK" 200
-    }
-
-    handle {
-        reverse_proxy code-server:8080 {
-            flush_interval -1
-        }
-    }
-}

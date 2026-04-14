@@ -26,9 +26,6 @@ services:
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:11434
-      # Structured JSON logging for Loki/Grafana ingestion
-      - LOG_FORMAT=${LOG_FORMAT:-json}
-      - LOG_LEVEL=${LOG_LEVEL:-1}
     command:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
@@ -74,8 +71,8 @@ services:
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
-      # ollama container has no curl/wget — use TCP port check
-      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/11434"]
+      # ollama container healthcheck using wget
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:11434/api/tags || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -195,10 +192,8 @@ services:
       - caddy-data:/data
     environment:
       - ACME_AGREE=true
-      # Structured JSON logging for Loki/Grafana ingestion
-      - LOG_FORMAT=${LOG_FORMAT:-json}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

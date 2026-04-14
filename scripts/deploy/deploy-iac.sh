@@ -85,15 +85,6 @@ check_prerequisites() {
         exit 1
     fi
     log_success "✓ Docker found"
-
-    # Check WSL (if on Windows)
-    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-        if ! command -v wsl &> /dev/null; then
-            log_error "WSL is not installed"
-            exit 1
-        fi
-        log_success "✓ WSL found"
-    fi
 }
 
 # Install/update Terraform
@@ -115,11 +106,8 @@ install_terraform() {
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         OS="darwin"
         ARCH="amd64"
-    elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-        OS="windows"
-        ARCH="amd64"
     else
-        log_error "Unsupported OS: $OSTYPE"
+        log_error "Unsupported OS: $OSTYPE (Linux-only development mandate)"
         exit 1
     fi
 

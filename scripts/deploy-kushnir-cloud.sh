@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # deploy-kushnir-cloud.sh
 # Idempotent deploy for <DOMAIN>/ide — fully containerised, no host mutation.
-# Run on any Linux/WSL host with Docker installed.
+# Run on any Linux host with Docker installed.
 #
 # What it does:
 #   1. Fetches secrets from GSM (GODADDY_KEY, GOOGLE_CLIENT_ID/SECRET, COOKIE_SECRET)

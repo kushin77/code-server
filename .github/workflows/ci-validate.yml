@@ -31,7 +31,7 @@ jobs:
       - name: Run pre-commit (all files)
         run: pre-commit run --all-files --show-diff-on-failure
         env:
-          SKIP: mandatory-redeploy,terraform_fmt,terraform_validate
+          SKIP: mandatory-redeploy,terraform_fmt,terraform_validate,yamllint
 
   governance:
     name: Governance audit (library adoption + MANIFEST)

@@ -556,6 +556,89 @@ locals {
     }
   }
 
+  # ✅ ON-PREMISES INFRASTRUCTURE CONFIGURATION
+  # Single source of truth for all on-prem environment-specific values
+  # Immutable: All deployed values pinned to known good configurations
+  on_prem = {
+    # Primary production host
+    primary = {
+      host_ip              = "192.168.168.31"
+      hostname             = "code-server-31"
+      ssh_user             = "akushnir"
+      base_path            = "/home/akushnir/.config"
+      docker_volumes_path  = "/home/akushnir/.docker-volumes"
+      varnish_config_path  = "/home/akushnir/.config/varnish"
+      vyos_config_path     = "/home/akushnir/.config/vyos"
+      caddy_config_path    = "/home/akushnir/.config/caddy"
+      prometheus_path      = "/home/akushnir/.config/prometheus"
+    }
+
+    # Standby/failover host
+    standby = {
+      host_ip  = "192.168.168.30"
+      hostname = "code-server-30"
+      ssh_user = "akushnir"
+    }
+
+    # Network storage (NAS)
+    nas = {
+      host_ip         = "192.168.168.56"
+      hostname        = "nas-storage"
+      nfs_version     = 4
+      mount_options   = "addr=192.168.168.56,vers=4,soft,timeo=180,bg"
+      exports = {
+        ollama_models = "/exports/ollama-models"
+        backups       = "/exports/backups"
+        snapshots     = "/exports/snapshots"
+        logs          = "/exports/logs"
+        cache         = "/exports/cache"
+      }
+      # All NAS-mounted volumes are immutable: Use for persistent storage only
+      backup_frequency = "daily"
+      retention_days   = 30
+    }
+
+    # Network configuration
+    network = {
+      default_gateway      = "192.168.168.254"
+      primary_dns          = "8.8.8.8"
+      secondary_dns        = "1.1.1.1"
+      network_cidr         = "192.168.168.0/24"
+      vxlan_tunnel_network = "192.168.100.0/30"
+      bgp_asn_primary      = 65000
+      bgp_asn_upstream     = 64512
+    }
+
+    # Service ports (all containerized)
+    service_ports = {
+      code_server       = 8080
+      oauth2_proxy      = 4180
+      caddy_http        = 80
+      caddy_https       = 443
+      ollama            = 11434
+      postgres          = 5432
+      redis             = 6379
+      prometheus        = 9090
+      grafana           = 3000
+      alertmanager      = 9093
+      jaeger            = 16686
+      varnish_main      = 6081
+      varnish_admin     = 6082
+      loki              = 3100
+      victorialogs      = 9428
+    }
+
+    # Environment-specific defaults
+    environment_defaults = {
+      timezone           = "UTC"
+      max_open_files    = 65535
+      max_processes     = 65535
+      gpu_enabled       = false # ← Set to true if NVIDIA hardware present on .31
+      gpu_device_count  = 0
+      max_connections   = 1000
+    }
+  }
+
   # ✅ PHASE 26-C: MULTI-TENANT ORGANIZATIONS
   organizations = {
     enabled = true

@@ -1,0 +1,147 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: phase-26a-rate-limits
+  namespace: monitoring
+  labels:
+    phase: "26a"
+    component: "rate-limiting"
+spec:
+  groups:
+  - name: rate_limiting.rules
+    interval: 30s
+    rules:
+    
+    # Alert: User approaching rate limit (90%+)
+    - alert: RateLimitApproaching
+      expr: |
+        (api_requests_current{user_id!=""} / api_requests_limit) > 0.9
+      for: 5m
+      annotations:
+        summary: "User {{ $labels.user_id }} approaching rate limit ({{ $value | humanizePercentage }})"
+        description: "User {{ $labels.user_id }} has consumed {{ $value | humanizePercentage }} of their {{ $labels.tier }} tier rate limit"
+        action: "Send warning email, offer paid upgrade"
+        
+    # Alert: User exceeded rate limit
+    - alert: RateLimitExceeded
+      expr: |
+        api_requests_rejected_total > 100
+      for: 1m
+      annotations:
+        summary: "Rate limits exceeded in last minute"
+        description: "{{ $value }} requests rejected due to rate limiting"
+        action: "Monitor abuse patterns, blacklist if necessary"
+    
+    # Alert: Rate limiter accuracy degraded
+    - alert: RateLimitAccuracyDegraded
+      expr: |
+        (rate(api_rate_limit_violations_total[5m]) / rate(api_requests_total[5m])) > 0.001
+      for: 10m
+      annotations:
+        summary: "Rate limit accuracy below 99.9%"
+        description: "Rate limiter false positive rate: {{ $value | humanizePercentage }}"
+        action: "Review rate limiter configuration, check for clock skew"
+    
+    # Alert: Rate limit header calculation latency
+    - alert: RateLimitHeaderLatencyHigh
+      expr: |
+        histogram_quantile(0.99, rate(api_rate_limit_calculation_duration_seconds_bucket[5m])) > 0.001
+      for: 5m
+      annotations:
+        summary: "Rate limit header calculation exceeds 1ms at p99"
+        description: "Current p99 latency: {{ $value | humanizeDuration }}"
+        action: "Optimize rate limiter algorithm, review cache hit rates"
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: phase-26a-slo
+  namespace: monitoring
+  labels:
+    phase: "26a"
+    component: "rate-limiting"
+spec:
+  groups:
+  - name: rate_limiting.slo
+    interval: 1m
+    rules:
+    
+    # SLO: API response time < 100ms p99 (baseline maintained)
+    - alert: APILatenciySLOBreach
+      expr: |
+        histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{path="/graphql"}[5m])) > 0.1
+      for: 10m
+      annotations:
+        summary: "GraphQL API latency exceeds 100ms p99"
+        description: "Current: {{ $value | humanizeDuration }}, SLO: 100ms"
+        action: "Investigate slow queries, check database performance"
+        
+    # SLO: Rate limit accuracy >= 99.9%
+    - alert: RateLimitAccuracySLOBreach
+      expr: |
+        (1 - (rate(api_rate_limit_violations_corrected_total[1h]) / rate(api_rate_limit_violations_total[1h]))) < 0.999
+      for: 30m
+      annotations:
+        summary: "Rate limit accuracy below 99.9% SLO"
+        description: "Current accuracy: {{ $value | humanizePercentage }}"
+        action: "Review rate limiter algorithm, audit rules"
+        
+    # SLO: API uptime >= 99.95% (monthly)
+    - alert: APIUptimeSLOBreach
+      expr: |
+        (1 - (rate(http_requests_failed_total[30d]) / rate(http_requests_total[30d]))) < 0.9995
+      for: 1h
+      annotations:
+        summary: "API uptime below 99.95% monthly SLO"
+        description: "Current monthly uptime: {{ $value | humanizePercentage }}"
+        action: "Review service health, check for cascading failures"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phase-26a-rate-limit-config
+  namespace: monitoring
+data:
+  rate_limits.yaml: |
+    # SINGLE SOURCE OF TRUTH for rate limiting configuration
+    tiers:
+      free:
+        requests_per_minute: 60
+        requests_per_day: 10000
+        concurrent_queries: 5
+        max_payload_kb: 1024
+        cache_ttl_seconds: 300
+        
+      pro:
+        requests_per_minute: 1000
+        requests_per_day: 500000
+        concurrent_queries: 50
+        max_payload_kb: 10240
+        cache_ttl_seconds: 3600
+        
+      enterprise:
+        requests_per_minute: 10000
+        requests_per_day: 100000000
+        concurrent_queries: 500
+        max_payload_kb: 102400
+        cache_ttl_seconds: 86400
+    
+    headers:
+      limit_header: "X-RateLimit-Limit"
+      remaining_header: "X-RateLimit-Remaining"
+      reset_header: "X-RateLimit-Reset"
+      retry_after_header: "Retry-After"
+    
+    enforcement:
+      algorithm: "token-bucket"
+      window_size_seconds: 60
+      burst_multiplier: 1.5
+      grace_period_seconds: 5
+    
+    monitoring:
+      prometheus_port: 9090
+      metrics_path: "/metrics"
+      accuracy_target: 0.999
+      false_positive_target: 0.001

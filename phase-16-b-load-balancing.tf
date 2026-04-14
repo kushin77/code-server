@@ -141,13 +141,15 @@ resource "docker_container" "haproxy_primary" {
 
   healthcheck {
     test         = ["CMD-SHELL", "curl -f http://localhost:8404/stats || exit 1"]
-    interval     = duration_sec(var.health_check_interval_sec)
-    timeout      = duration_sec(var.health_check_timeout_sec)
+    interval     = "30s"
+    timeout      = "10s"
     retries      = 3
     start_period = "20s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   depends_on = [docker_image.haproxy]
 
@@ -199,13 +201,15 @@ resource "docker_container" "haproxy_backup" {
 
   healthcheck {
     test         = ["CMD-SHELL", "curl -f http://localhost:8405/stats || exit 1"]
-    interval     = duration_sec(var.health_check_interval_sec)
-    timeout      = duration_sec(var.health_check_timeout_sec)
+    interval     = "30s"
+    timeout      = "10s"
     retries      = 3
     start_period = "20s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   depends_on = [docker_image.haproxy]
 
@@ -224,7 +228,8 @@ resource "docker_container" "keepalived_primary" {
   image         = docker_image.keepalived[0].image_id
   network_mode  = "host"
   privileged    = true
-  capabilities  = ["NET_ADMIN"]
+
+  cap_add = ["NET_ADMIN"]
 
   env = [
     "KEEPALIVED_PRIORITY=150",
@@ -241,13 +246,15 @@ resource "docker_container" "keepalived_primary" {
 
   healthcheck {
     test         = ["CMD-SHELL", "ip addr | grep ${var.virtual_ip} || exit 1"]
-    interval     = duration_sec(var.health_check_interval_sec)
-    timeout      = duration_sec(var.health_check_timeout_sec)
+    interval     = "30s"
+    timeout      = "10s"
     retries      = 3
     start_period = "10s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   depends_on = [docker_image.keepalived]
 
@@ -262,7 +269,8 @@ resource "docker_container" "keepalived_backup" {
   image         = docker_image.keepalived[0].image_id
   network_mode  = "host"
   privileged    = true
-  capabilities  = ["NET_ADMIN"]
+
+  cap_add = ["NET_ADMIN"]
 
   env = [
     "KEEPALIVED_PRIORITY=100",
@@ -279,13 +287,15 @@ resource "docker_container" "keepalived_backup" {
 
   healthcheck {
     test         = ["CMD-SHELL", "ip addr | grep ${var.virtual_ip} || echo 'Standby mode'"]
-    interval     = duration_sec(var.health_check_interval_sec)
-    timeout      = duration_sec(var.health_check_timeout_sec)
+    interval     = "30s"
+    timeout      = "10s"
     retries      = 3
     start_period = "10s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   depends_on = [docker_image.keepalived]
 

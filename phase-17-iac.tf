@@ -139,7 +139,9 @@ resource "docker_container" "pglogical_primary" {
     start_period = "40s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   depends_on = [docker_image.pglogical_replicator]
 
@@ -224,7 +226,9 @@ resource "docker_container" "route53_agent" {
     start_period = "10s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   lifecycle {
     create_before_destroy = true
@@ -261,7 +265,9 @@ resource "docker_container" "dr_failover_controller" {
     start_period = "10s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   lifecycle {
     create_before_destroy = true

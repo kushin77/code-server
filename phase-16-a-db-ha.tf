@@ -141,7 +141,9 @@ resource "docker_container" "postgres_primary" {
     start_period = "40s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   depends_on = [docker_image.postgresql_ha]
 

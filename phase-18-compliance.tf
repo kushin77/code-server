@@ -116,8 +116,6 @@ resource "docker_container" "loki_audit_logs" {
     read_only      = true
   }
 
-  healthy = true
-
   healthcheck {
     test         = ["CMD", "wget", "-q", "--spider", "http://localhost:3100/ready"]
     interval     = "30s"
@@ -126,7 +124,9 @@ resource "docker_container" "loki_audit_logs" {
     start_period = "20s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   depends_on = [docker_image.loki_logs]
 
@@ -170,9 +170,11 @@ resource "docker_container" "fluent_bit_collector" {
     start_period = "10s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
-  depends_on = [docker_container.loki_audit_logs]
+  depends_on = [docker_image.fluent_bit, docker_container.loki_audit_logs]
 
   lifecycle {
     create_before_destroy = true
@@ -224,7 +226,9 @@ resource "docker_container" "grafana_soc2_dashboard" {
     start_period = "30s"
   }
 
-  restart_policy = "unless-stopped"
+  restart_policy {
+    condition = "unless-stopped"
+  }
 
   depends_on = [docker_image.grafana_compliance]
 

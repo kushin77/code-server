@@ -289,14 +289,11 @@ services:
     volumes:
       - ./scripts/observability/rca-engine.py:/app/rca-engine.py:ro
     environment:
-      - PROMETHEUS_URL=http://prometheus:9090
-      - ALERTMANAGER_URL=http://alertmanager:9093
+      - PROMETHEUS_URL=http://192.168.168.31:9090
+      - ALERTMANAGER_URL=http://192.168.168.31:9093
       - LOG_LEVEL=INFO
     working_dir: /app
     command: ["python", "rca-engine.py", "--daemon"]
-    depends_on:
-      - prometheus
-      - alertmanager
     healthcheck:
       test: ["CMD", "python", "-c", "import http.client; conn = http.client.HTTPConnection('localhost', 9094); conn.request('GET', '/metrics'); print(conn.getresponse().status)"]
       interval: 30s
@@ -322,13 +319,11 @@ services:
     volumes:
       - ./scripts/observability/anomaly-detector.py:/app/anomaly-detector.py:ro
     environment:
-      - PROMETHEUS_URL=http://prometheus:9090
+      - PROMETHEUS_URL=http://192.168.168.31:9090
       - ANOMALY_THRESHOLD=2.0
       - LOG_LEVEL=INFO
     working_dir: /app
     command: ["python", "anomaly-detector.py"]
-    depends_on:
-      - prometheus
     healthcheck:
       test: ["CMD", "python", "-c", "import http.client; conn = http.client.HTTPConnection('localhost', 9095); conn.request('GET', '/metrics'); print(conn.getresponse().status)"]
       interval: 30s

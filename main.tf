@@ -183,20 +183,9 @@ resource "local_file" "docker_compose_yml" {
 }
 
 # ════════════════════════════════════════════════════════════════════════════
-# RESOURCE 3: Generate Caddyfile for local development
-# ════════════════════════════════════════════════════════════════════════════
-resource "local_file" "caddyfile" {
-  filename = "${path.module}/config/caddy/Caddyfile"
-
-  content = templatefile("${path.module}/Caddyfile.tpl", {
-    code_server_host  = "localhost"
-    code_server_port  = local.network.code_server_port
-    oauth2_proxy_port = local.network.oauth2_proxy_port
-  })
-
-  depends_on = [null_resource.workspace_setup]
-}
-
+# NOTE: Caddyfile templating disabled - using static config in repo root
+# The Caddyfile is now committed directly to the repository (not generated)
+# Template files (Caddyfile.tpl) are no longer used
 # ════════════════════════════════════════════════════════════════════════════
 # RESOURCE 4: Generate .env for docker-compose secrets (DO NOT COMMIT)
 # ════════════════════════════════════════════════════════════════════════════

@@ -1,15 +1,10 @@
-# ════════════════════════════════════════════════════════════════════════════
-# Caddyfile — Development Environment
-#
-# Used with: docker-compose -f docker-compose.yml -f docker-compose.override.yml
-# 
-# - HTTP only (no TLS)
-# - Direct port exposure (127.0.0.1:8080)
-# - No auth proxy (basic-auth from code-server)
-# - Development logging and caching disabled
-# ════════════════════════════════════════════════════════════════════════════
+# Caddyfile — Development (Default)
+# COMPOSITION: @import Caddyfile.base for shared blocks
+# Configuration: HTTP only, no TLS, development-friendly caching
 
-# Global configuration
+@import Caddyfile.base
+
+# Global configuration for development
 {
     auto_https off
     log default {
@@ -17,33 +12,12 @@
     }
 }
 
-# HTTP only in development
+# HTTP only listener (development)
 :80 {
-    # Compression
-    encode gzip
+    import compression_standard
+    import security_headers
+    import reverse_proxy_code_server
     
-    # Security headers (basic)
-    header {
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
-    
-    # Development-friendly cache control (no caching)
+    # Development: disable caching for rapid iteration
     header Cache-Control "no-cache, no-store, must-revalidate"
-    
-    # Reverse proxy to code-server service
-    reverse_proxy code-server:8080 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
-    
-    # Logging
-    log {
-        output stdout
-        format json
-    }
 }

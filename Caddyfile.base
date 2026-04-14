@@ -1,28 +1,14 @@
-# Caddyfile.base
-# Shared configuration blocks for all Caddyfile variants (dev, onprem, production)
-# 
-# USAGE: In variant files, import this file and override specific blocks
-# @import /etc/caddy/Caddyfile.base
-#
-# Or use named segments:
-# (security_headers) { ... }
-# then in server block: import security_headers
+# Caddyfile.base — Shared composition blocks for all variants
+# IMMUTABLE: Single source of truth for production, dev, on-premises
+# PATTERN: Each variant @imports this base and combines blocks
+# See: ADR-004 Configuration Consolidation
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GLOBAL OPTIONS
-# ─────────────────────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════════════════════
+# COMPRESSION (gzip) — Used by all variants
+# ═════════════════════════════════════════════════════════════════════════════
 
-(default_global) {
-    # Auto HTTPS disabled by default (override in production)
-    auto_https off
-    
-    # Email for certificate notifications
-    email {$ACME_EMAIL:admin@kushnir.cloud}
-    
-    # Production logging format (JSON structured)
-    log default {
-        format json
-    }
+(compression_standard) {
+    encode gzip
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -106,13 +92,9 @@
     header @health Cache-Control "no-cache, no-store, must-revalidate"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# COMPRESSION CONFIGURATION
-# ─────────────────────────────────────────────────────────────────────────────
-
-(compression_standard) {
-    encode gzip
-}
+# ═════════════════════════════════════════════════════════════════════════════
+# ADVANCED COMPRESSION (optional for high-traffic)
+# ═════════════════════════════════════════════════════════════════════════════
 
 (compression_advanced) {
     encode {

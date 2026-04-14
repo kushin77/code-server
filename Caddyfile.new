@@ -1,46 +1,35 @@
-# Caddyfile.new — on-prem IDE reverse proxy (HTTP+HTTPS with automatic cert generation)
-# 
-# IMPORTS: Shared blocks from Caddyfile.base
-# Proxies directly to code-server:8080
-# Supports automatic certificate generation via Let's Encrypt
-#
-# Composition: @see Caddyfile.base for shared configuration
+# Caddyfile.new — On-Premises IDE (HTTP + HTTPS)
+# COMPOSITION: @import Caddyfile.base for shared blocks
+# Configuration: Automatic certificate generation via Let's Encrypt, dual HTTP/HTTPS
 
 @import Caddyfile.base
 
+# Global configuration for on-premises
 {
-    email admin@kushnir.cloud
+    auto_https on
+    email {$ACME_EMAIL:admin@kushnir.cloud}
 }
 
-# HTTPS endpoint with automatic certificate generation
+# HTTPS listener (main domain)
 ide.kushnir.cloud {
     import compression_standard
-    import security_headers
+    import security_headers_strict
     import cache_control_rules
-
-    # Reverse proxy to code-server
-    reverse_proxy code-server:8080 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-Proto https
-    }
+    import reverse_proxy_code_server
 }
 
-# HTTP on port 80 - redirect to HTTPS and serve direct proxies
+# HTTP listener (port 80 - redirect to HTTPS + health checks)
 :80 {
-    import compression_standard
-    import security_headers
-
-    # Redirect HTTPS-aware requests to HTTPS
-    @needsHttps {
-        not path /health /healthz /api/health
+    @health path /health /healthz /api/health
+    
+    # Allow health checks over HTTP
+    handle @health {
+        reverse_proxy code-server:8080 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
     }
-    redir @needsHttps https://{host}{uri} permanent
-
-    # Health checks and API endpoints work on HTTP too
-    reverse_proxy code-server:8080 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-Proto http
-    }
+    
+    # Redirect everything else to HTTPS
+    redir /* https://{host}{uri} permanent
 }

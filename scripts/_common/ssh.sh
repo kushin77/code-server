@@ -106,3 +106,35 @@ ssh_in_deploy_dir() {
 ssh_compose() {
     ssh_in_deploy_dir "docker compose $*"
 }
+
+# Verify key-only SSH authentication for one or more remote targets.
+# Usage:
+#   verify_passwordless_ssh                       # checks primary + standby
+#   verify_passwordless_ssh "user1@host1" "user2@host2"
+verify_passwordless_ssh() {
+    local targets=("$@")
+    local failed=0
+
+    if [[ ${#targets[@]} -eq 0 ]]; then
+        targets=(
+            "$DEPLOY_USER@$DEPLOY_HOST"
+            "$STANDBY_USER@$STANDBY_HOST"
+        )
+    fi
+
+    for target in "${targets[@]}"; do
+        if ssh $SSH_OPTS "$target" "echo passwordless-ok" >/dev/null 2>&1; then
+            log_success "Passwordless SSH verified: $target"
+        else
+            log_failure "Passwordless SSH failed: $target"
+            failed=1
+        fi
+    done
+
+    if [[ $failed -ne 0 ]]; then
+        log_error "One or more passwordless SSH checks failed"
+        return 1
+    fi
+
+    return 0
+}

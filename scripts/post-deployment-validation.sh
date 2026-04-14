@@ -5,8 +5,9 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-HOST=${1:-192.168.168.31}
-SSH_CMD="ssh -o StrictHostKeyChecking=no akushnir@$HOST"
+HOST=${1:-$DEPLOY_HOST}
+# shellcheck disable=SC2086
+SSH_CMD="ssh $SSH_OPTS ${DEPLOY_USER}@$HOST"
 
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║          TIER 1: POST-DEPLOYMENT VALIDATION                ║"

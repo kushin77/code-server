@@ -113,9 +113,12 @@ Operational scripts for infrastructure, networking, and system management:
 - `manage-users.sh` - Create/update/delete system users ✅ ACTIVE
 - `setup-cloudflare-tunnel.sh` - Configure Cloudflare tunnel access ✅ ACTIVE
 - `automated-dns-configuration.sh` - Manage DNS records ✅ ACTIVE
-- `automated-iac-validation.sh` - Validate infrastructure-as-code ✅ ACTIVE
-- `deploy-iac.ps1` - Windows PowerShell IaC deployment ✅ ACTIVE
-- `deploy-iac.sh` - Shell version for Linux/Mac ✅ ACTIVE
+- `iac-validation.sh` - Validate infrastructure-as-code ✅ ACTIVE
+- `deploy-iac.sh` - Shell version for Linux ✅ ACTIVE
+- `deploy.sh` - Main deployment orchestration ✅ ACTIVE
+- `deploy-services.sh` - Container/service deployment ✅ ACTIVE
+- `deployment-validation-onprem.sh` - On-prem validation suite ✅ ACTIVE
+- `verify-passwordless-access.sh` - SSH key-only verification ✅ ACTIVE
 - `fix-docker-compose.sh` - Repair docker-compose configuration ✅ ACTIVE
 - `fix-github-auth.sh` - Troubleshoot GitHub authentication ✅ ACTIVE
 - `fix-onprem.sh` - Fix on-premises deployment issues ✅ ACTIVE
@@ -154,8 +157,8 @@ Tests, validation, and quality checks:
 - `validate-config.sh` - Validate all configuration files ✅ ACTIVE
 - `CRASH_SCAN_SUMMARY.md` - Summarize dependency scan results (documentation)
 - `fix-compose.py` - Python utility to fix docker-compose (requires Python)
-- `ci-merge-automation.ps1` - Automated CI/CD merge logic ✅ ACTIVE
-- `admin-merge.ps1` - Administrative merge operations ✅ ACTIVE
+- `ci-merge-automation.sh` - Automated CI/CD merge logic ✅ ACTIVE
+- `admin-merge.sh` - Administrative merge operations ✅ ACTIVE
 
 ---
 
@@ -223,8 +226,8 @@ The following scripts are redundant or superseded. **Target for deletion after v
 ### `/ci/`
 
 CI/CD related scripts:
-- `admin-merge.ps1` - Administrative merge for protected branches
-- `ci-merge-automation.ps1` - Automated CI/CD workflows
+- `admin-merge.sh` - Administrative merge for protected branches
+- `ci-merge-automation.sh` - Automated CI/CD workflows
 
 ### `/deploy/`
 

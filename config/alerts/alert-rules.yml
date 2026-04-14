@@ -1,0 +1,81 @@
+---
+groups:
+  - name: alerts
+    interval: 30s
+    rules:
+      # P1: Database Failover Detected
+      - alert: DatabaseFailoverDetected
+        expr: pg_replication_lag_seconds > 60
+        for: 1m
+        annotations:
+          summary: "PostgreSQL replication lag critical"
+          description: "Replication lag {{ $value }}s - failover may be triggered"
+        labels:
+          severity: critical
+          page: "true"
+
+      # P1: Database Primary Down
+      - alert: DatabasePrimaryDown
+        expr: up{job="postgres"} == 0
+        for: 30s
+        annotations:
+          summary: "PostgreSQL primary database unreachable"
+          description: "Failed to connect to database primary - failover activated"
+        labels:
+          severity: critical
+          page: "true"
+
+      # P2: Latency Spike
+      - alert: LatencySpike
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.2
+        for: 5m
+        annotations:
+          summary: "High latency detected (p99 > 200ms)"
+          description: "Latency spike detected - investigate slow queries"
+        labels:
+          severity: high
+          page: "false"
+
+      # P2: Error Rate High
+      - alert: ErrorRateHigh
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.001
+        for: 5m
+        annotations:
+          summary: "Error rate above threshold"
+          description: "Error rate {{ $value }} - check application logs"
+        labels:
+          severity: high
+          page: "false"
+
+      # P2: Redis Memory Critical
+      - alert: RedisMemoryCritical
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        annotations:
+          summary: "Redis memory usage critical (>90%)"
+          description: "Redis approaching memory limit - eviction policy active"
+        labels:
+          severity: high
+          page: "false"
+
+      # P3: Certificate Expiry
+      - alert: CertificateNearExpiry
+        expr: ssl_certificate_not_after_seconds - time() < 604800
+        for: 1h
+        annotations:
+          summary: "SSL certificate expires in < 7 days"
+          description: "Certificate {{ $labels.certificate }} expires soon"
+        labels:
+          severity: medium
+          page: "false"
+
+      # P3: Disk Space Low
+      - alert: DiskSpaceLow
+        expr: disk_free_bytes / disk_total_bytes < 0.1
+        for: 10m
+        annotations:
+          summary: "Disk space running low (<10%)"
+          description: "Available disk space: {{ $value }}%"
+        labels:
+          severity: medium
+          page: "false"

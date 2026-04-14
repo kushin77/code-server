@@ -39,8 +39,14 @@ readonly DEPLOY_DIR="${DEPLOY_DIR:-/home/akushnir/code-server-enterprise}"
 readonly STANDBY_HOST="${STANDBY_HOST:-192.168.168.30}"
 readonly STANDBY_USER="${STANDBY_USER:-akushnir}"
 
-# SSH options (no interactive prompts in CI)
-readonly SSH_OPTS="${SSH_OPTS:--o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=10}"
+# NAS storage / backup target
+readonly NAS_HOST="${NAS_HOST:-192.168.168.56}"
+readonly NAS_USER="${NAS_USER:-akushnir}"
+readonly NAS_MOUNT_POINT="${NAS_MOUNT_POINT:-/mnt/nas/code-server-enterprise}"
+readonly NAS_SSH_OPTS="${NAS_SSH_OPTS:--o StrictHostKeyChecking=accept-new -o BatchMode=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o PreferredAuthentications=publickey -o ConnectTimeout=10}"
+
+# SSH options (key-only auth, non-interactive, deterministic host key behavior)
+readonly SSH_OPTS="${SSH_OPTS:--o StrictHostKeyChecking=accept-new -o BatchMode=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o PreferredAuthentications=publickey -o ConnectTimeout=10}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DOMAIN & ACCESS

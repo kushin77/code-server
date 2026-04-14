@@ -1,6 +1,0 @@
-
-  sed -n '1,369p' "$FILE"
-  echo "  redis-cache-data:"
-  echo "    driver: local"
-  echo ""
-  sed -n '392,398p' "$FILE"

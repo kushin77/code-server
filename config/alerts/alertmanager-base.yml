@@ -1,0 +1,88 @@
+---
+# alertmanager-base.yml
+# Base AlertManager configuration with shared route structure and common receivers
+#
+# USAGE: Use environment variable interpolation or merge with variant configs
+# This file defines the default routing structure that variants can extend or override
+#
+# Variants:
+# - alertmanager.yml - Simple setup for dev/test
+# - alertmanager-production.yml - Enterprise setup with multiple receivers
+
+global:
+  resolve_timeout: 5m
+
+# Default route structure (all variants use same grouping strategy)
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+
+  # Severity-based routing (common to all variants)
+  routes:
+    # Critical alerts (P1) — immediate escalation
+    - match:
+        severity: critical
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 1h
+      receiver: 'critical-handler'
+      continue: false
+
+    # High severity (P2) — urgent but not immediate
+    - match:
+        severity: high
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: 'high-handler'
+      continue: false
+
+    # Medium severity (P3) — standard timeline
+    - match:
+        severity: medium
+      group_wait: 5m
+      group_interval: 10m
+      repeat_interval: 12h
+      receiver: 'medium-handler'
+      continue: false
+
+    # Low severity (P4) — batch/daily digest
+    - match:
+        severity: low
+      group_wait: 1h
+      group_interval: 1h
+      repeat_interval: 24h
+      receiver: 'low-handler'
+      continue: false
+
+# Alert deduplication (common to all variants)
+inhibit_rules:
+  # Suppress warning if critical is firing
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['alertname', 'cluster', 'service']
+
+  # Suppress low if medium is firing
+  - source_match:
+      severity: medium
+    target_match:
+      severity: low
+    equal: ['alertname', 'cluster', 'service']
+
+  # Suppress if service is down
+  - source_match:
+      alertname: ServiceDown
+    target_match_re:
+      alertname: 'Service.*'
+    equal: ['service', 'cluster']
+
+# Template configuration (all variants can use these)
+templates:
+  - '/etc/alertmanager/slack-messages.tmpl'
+  - '/etc/alertmanager/pagerduty-messages.tmpl'
+  - '/etc/alertmanager/email-messages.tmpl'

@@ -1,0 +1,38 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Caddy reverse proxy with OpenTelemetry instrumentation (Phase 24-A)
+# Builds caddy with xcaddy to include otelcaddy (OpenTelemetry plugin)
+# Pin to v2.9.1 for immutability
+# ════════════════════════════════════════════════════════════════════════════
+
+FROM caddy:2.9.1-builder as caddy-builder
+
+# Build caddy with otelcaddy (OpenTelemetry plugin for Caddy)
+RUN xcaddy build --with github.com/otelcaddy/otelcaddy
+
+FROM alpine:3.19
+
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata libcap
+
+# Copy caddy binary from builder
+COPY --from=caddy-builder /usr/bin/caddy /usr/bin/caddy
+
+# Set up entrypoint for OTEL logging
+RUN cat > /usr/local/bin/caddy-entrypoint.sh << 'EOF'
+#!/bin/sh
+set -e
+
+echo "[caddy-entrypoint] Starting Caddy with OpenTelemetry instrumentation"
+
+# Enable OTEL via environment variables
+export OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4317}"
+export OTEL_EXPORTER_OTLP_PROTOCOL="${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}"
+export OTEL_SERVICE_NAME="${OTEL_SERVICE_NAME:-caddy-proxy}"
+
+# Run caddy
+exec /usr/bin/caddy run --config /etc/caddy/Caddyfile "$@"
+EOF
+
+RUN chmod +x /usr/local/bin/caddy-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/caddy-entrypoint.sh"]

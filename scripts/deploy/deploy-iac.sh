@@ -11,11 +11,12 @@ source "${SCRIPT_DIR}/scripts/logging.sh" || {
     exit 1
 }
 
-# Deployment target (default: 192.168.168.32)
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.32}"
+# Deployment target (default: primary on-prem host)
+DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 DEPLOY_SSH_USER="${DEPLOY_SSH_USER:-akushnir}"
 DEPLOY_SSH_KEY="${DEPLOY_SSH_KEY:-/home/akushnir/.ssh/id_ed25519}"
 DEPLOY_SSH_PORT="${DEPLOY_SSH_PORT:-22}"
+SSH_COMMON_OPTS="-o BatchMode=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o PreferredAuthentications=publickey -o StrictHostKeyChecking=accept-new"
 IS_REMOTE=false
 
 # Parse command line arguments
@@ -40,7 +41,7 @@ deploy_remote() {
     log_info "Preparing remote deployment to ${user}@${host}:${port}"
 
     # Test SSH connectivity
-    if ! ssh -i "${key}" -p "${port}" -o StrictHostKeyChecking=no "${user}@${host}" "echo OK" &>/dev/null; then
+    if ! ssh -i "${key}" -p "${port}" ${SSH_COMMON_OPTS} "${user}@${host}" "echo OK" &>/dev/null; then
         log_error "Cannot connect to ${user}@${host}:${port}"
         return 1
     fi
@@ -54,14 +55,14 @@ deploy_remote() {
 
     # Copy to remote
     log_info "Uploading to remote host..."
-    scp -i "${key}" -P "${port}" -r . "${user}@${host}:/home/${user}/code-server-deploy/" || {
+    scp -i "${key}" -P "${port}" ${SSH_COMMON_OPTS} -r . "${user}@${host}:/home/${user}/code-server-deploy/" || {
         log_error "Failed to upload deployment package"
         return 1
     }
 
     # Execute remote deployment
     log_info "Executing remote deployment..."
-    ssh -i "${key}" -p "${port}" "${user}@${host}" "
+    ssh -i "${key}" -p "${port}" ${SSH_COMMON_OPTS} "${user}@${host}" "
         cd /home/${user}/code-server-deploy && \
         docker-compose down 2>/dev/null || true && \
         docker-compose up -d && \

@@ -50,16 +50,15 @@
 # No manual intervention required - everything is code
 
 set -e
-
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -euo pipefail
+
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Configuration from environment
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 DEPLOY_ENV="${DEPLOY_ENV:-production}"
 DEPLOYMENT_DIR="/home/${DEPLOY_USER}/code-server-immutable-$(date +%Y%m%d-%H%M%S)"
 
@@ -93,7 +92,8 @@ validate_environment() {
     echo "✓ All required local commands available"
 
     # Check SSH connectivity
-    if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    # shellcheck disable=SC2086
+    if ! ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'echo "SSH connectivity verified" && docker --version' &>/dev/null; then
         echo "ERROR: Cannot connect to ${DEPLOY_USER}@${DEPLOY_HOST}"
         return 1
@@ -177,7 +177,8 @@ prepare_deployment_files() {
     # Copy core deployment files
     echo "Copying deployment files..."
 
-    scp -o StrictHostKeyChecking=no -r \
+    # shellcheck disable=SC2086
+    scp $SSH_OPTS -r \
         "${PARENT_DIR}/docker-compose.yml" \
         "${PARENT_DIR}/Caddyfile" \
         "${PARENT_DIR}/.env.production" \
@@ -187,7 +188,8 @@ prepare_deployment_files() {
     }
 
     echo "Renaming .env.production to .env..."
-    ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" \
         "cd ${DEPLOYMENT_DIR} && mv .env.production .env && chmod 600 .env"
 
     echo "✓ Deployment files prepared in ${DEPLOYMENT_DIR}"
@@ -201,7 +203,8 @@ deploy_services() {
     echo "═══════════════════════════════════════════════════════════"
     echo ""
 
-    ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << 'DEPLOY_SCRIPT'
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" << 'DEPLOY_SCRIPT'
 cd DEPLOYMENT_DIR_PLACEHOLDER
 echo "Pulling latest images..."
 docker-compose pull
@@ -218,7 +221,8 @@ docker-compose ps
 DEPLOY_SCRIPT
 
     # Replace placeholder
-    ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << EOF
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" << EOF
 cd ${DEPLOYMENT_DIR}
 echo "Pulling latest images..."
 docker-compose pull
@@ -246,7 +250,8 @@ validate_deployment() {
     echo ""
 
     echo "Checking service health..."
-    ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << EOF
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" << EOF
 cd ${DEPLOYMENT_DIR}
 
 echo "Docker Configuration Validation:"

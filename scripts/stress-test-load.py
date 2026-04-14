@@ -15,7 +15,14 @@ from statistics import mean, stdev, median
 
 HOST = "192.168.168.31"
 ENDPOINT = f"http://localhost:3000/health"
-SSH_CMD = f"ssh -o StrictHostKeyChecking=no akushnir@{HOST}"
+SSH_CMD = (
+    f"ssh -o StrictHostKeyChecking=accept-new "
+    f"-o BatchMode=yes "
+    f"-o PasswordAuthentication=no "
+    f"-o KbdInteractiveAuthentication=no "
+    f"-o PreferredAuthentications=publickey "
+    f"akushnir@{HOST}"
+)
 
 def ssh_exec(cmd):
     """Execute command on remote host"""

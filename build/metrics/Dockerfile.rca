@@ -1,0 +1,18 @@
+# RCA Engine container — root cause analysis from alerts
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install required Python packages
+# Pinned versions per CVE remediation (Issue #281)
+RUN pip install --no-cache-dir \
+    requests==2.32.3 \
+    urllib3==2.2.0 \
+    prometheus-client \
+    pyyaml
+
+# Copy RCA engine script
+COPY scripts/observability/rca-engine.py .
+
+# Run RCA engine in daemon mode
+ENTRYPOINT ["python", "rca-engine.py", "--daemon"]

@@ -200,25 +200,25 @@ resource "local_file" "env_file" {
 # To populate from GSM: scripts/fetch-gsm-secrets.sh
 
 # Code Server
-CODE_SERVER_PASSWORD=$${var.code_server_password}
+CODE_SERVER_PASSWORD=${var.code_server_password}
 
 # Google OAuth (from GSM)
-GOOGLE_CLIENT_ID=$${var.google_client_id}
-GOOGLE_CLIENT_SECRET=$${var.google_client_secret}
-OAUTH2_PROXY_COOKIE_SECRET=$${var.oauth2_proxy_cookie_secret}
+GOOGLE_CLIENT_ID=${var.google_client_id}
+GOOGLE_CLIENT_SECRET=${var.google_client_secret}
+OAUTH2_PROXY_COOKIE_SECRET=${var.oauth2_proxy_cookie_secret}
 
 # Domain routing
-DOMAIN=$${var.domain}
+DOMAIN=${var.external_domain}
 
 # GitHub token (optional, for higher rate limits)
-GITHUB_TOKEN=$${var.github_token}
+GITHUB_TOKEN=${var.github_token}
 
 # Workspace volume mount
-WORKSPACE_PATH=$${local.storage.workspace_dir}
+WORKSPACE_PATH=${local.storage.workspace_dir}
 
 # Ollama configuration
-OLLAMA_NUM_THREAD=$${var.ollama_num_threads}
-OLLAMA_NUM_GPU=$${var.ollama_num_gpu}
+OLLAMA_NUM_THREAD=${var.ollama_num_threads}
+OLLAMA_NUM_GPU=${var.ollama_num_gpu}
 
 EOT
 

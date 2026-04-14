@@ -52,25 +52,25 @@ variable "google_client_id" {
   description = "Google OAuth2 Client ID (from GCP Console OAuth2.0 credentials)"
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "test-client-id-123.apps.googleusercontent.com"
 }
 
 variable "google_client_secret" {
   description = "Google OAuth2 Client Secret (from GCP Console OAuth2.0 credentials)"
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "test-client-secret-xyz"
 }
 
 variable "oauth2_proxy_cookie_secret" {
-  description = "Random cookie encryption secret for oauth2-proxy (generate: openssl rand -base64 32)"
+  description = "Random cookie encryption secret for oauth2-proxy (16/24/32 bytes in hex format)"
   type        = string
   sensitive   = true
-  default     = "KPm7K8L9vN6q3W2zM5xJ4pL6K9mN8qW3zR5xY7tJ9pM2vO4wQ6sT8uV0xW2zY4aB"
+  default     = "867e5c21f89d4b162a3dbe5924761c8a"
 
   validation {
     condition     = length(var.oauth2_proxy_cookie_secret) > 0
-    error_message = "oauth2_proxy_cookie_secret is required; generate: openssl rand -base64 32"
+    error_message = "oauth2_proxy_cookie_secret is required; generate: openssl rand -hex 16/24/32"
   }
 }
 

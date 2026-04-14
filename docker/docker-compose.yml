@@ -166,8 +166,6 @@ services:
       start_period: 10s
     depends_on:
       - code-server
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:

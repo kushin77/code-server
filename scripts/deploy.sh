@@ -67,14 +67,11 @@ set -euo pipefail
 PROJECT_DIR="$$(cd "$$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$$PROJECT_DIR"
 
-# Source common libraries (Phase 2.2: Error Handling Integration)
+# Bootstrap: single entrypoint loads config, logging, utils, error-handler, docker, ssh
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/logging.sh" || { echo "FATAL: Cannot source logging library"; exit 1; }
-source "$SCRIPT_DIR/_common/utils.sh" || { log_fatal "Cannot source utils library"; }
-source "$SCRIPT_DIR/_common/error-handler.sh" || { log_fatal "Cannot source error-handler library"; }
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-# Configure logging
-export LOG_LEVEL=1  # 0=debug, 1=info, 2=warn, 3=error, 4=fatal
+# Override log destination for this script
 export LOG_FILE="${PROJECT_DIR}/deployment.log"
 
 # Setup error handling

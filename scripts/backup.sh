@@ -32,14 +32,9 @@
 ################################################################################
 set -euo pipefail
 
-# Source common libraries (Phase 2.2: Error Handling Integration)
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/_common/logging.sh" || { echo "FATAL: Cannot source logging library"; exit 1; }
-source "$SCRIPT_DIR/_common/utils.sh" || { echo "FATAL: Cannot source utils library"; exit 1; }
-source "$SCRIPT_DIR/_common/error-handler.sh" || { echo "FATAL: Cannot source error-handler library"; exit 1; }
-
-# Configure logging
-export LOG_LEVEL=1  # 0=debug, 1=info, 2=warn, 3=error, 4=fatal
+# Bootstrap: single entrypoint loads config, logging, utils, error-handler, docker, ssh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 BACKUP_DIR="$SCRIPT_DIR/../backups"
 mkdir -p "$BACKUP_DIR" || log_fatal "Cannot create backup directory: $BACKUP_DIR"

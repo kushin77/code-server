@@ -202,3 +202,54 @@ export -f enable_debug disable_debug print_debug
 export -f assert_success assert_failure assert_equal assert_not_empty assert_file
 export -f validate_exit check_exit
 export -f push_context pop_context get_context with_context
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRECONDITION ASSERTIONS (contract enforcement at script startup)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Assert a required environment variable is set and non-empty
+# Usage: assert_env DEPLOY_HOST
+#        assert_env PASSWORD "Password must be set before running this script"
+assert_env() {
+    local var_name="$1"
+    local hint="${2:-Set $var_name before running this script}"
+    local value="${!var_name:-}"
+    if [[ -z "$value" ]]; then
+        log_fatal "Required environment variable '$var_name' is not set. $hint"
+    fi
+    log_debug "✓ Env var $var_name is set"
+}
+
+# Assert multiple environment variables are all set
+# Usage: assert_envs DEPLOY_HOST DEPLOY_USER DOMAIN
+assert_envs() {
+    for var in "$@"; do
+        assert_env "$var"
+    done
+}
+
+# Assert Docker daemon is accessible on the remote deploy host
+# Requires: ssh.sh to be loaded (uses ssh_exec)
+# Usage: assert_docker
+assert_docker() {
+    if ! type ssh_exec &>/dev/null; then
+        log_warn "assert_docker: ssh.sh not loaded — skipping remote docker check"
+        return 0
+    fi
+    if ! ssh_exec "docker info > /dev/null 2>&1"; then
+        log_fatal "Docker daemon is not accessible on $DEPLOY_USER@$DEPLOY_HOST"
+    fi
+    log_debug "✓ Docker daemon accessible on $DEPLOY_HOST"
+}
+
+# Assert current user has SSH key access to deploy host
+# Usage: assert_deploy_access
+assert_deploy_access() {
+    if ! type assert_ssh_up &>/dev/null; then
+        log_warn "assert_deploy_access: ssh.sh not loaded — skipping"
+        return 0
+    fi
+    assert_ssh_up "$DEPLOY_HOST" "$DEPLOY_USER"
+}
+
+export -f assert_env assert_envs assert_docker assert_deploy_access

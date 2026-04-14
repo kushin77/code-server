@@ -70,31 +70,51 @@ _colorize_level() {
     esac
 }
 
-# Core logging function
+# Core logging function — supports both human text and JSON (Loki/Grafana) output
 _log() {
     local level=$1
     shift
-    local msg="$@"
-    local level_name=$(_level_name "$level")
-    local colored_level=$(_colorize_level "$level" "$level_name")
-    local timestamp=$(_timestamp)
-    
+    local msg="$*"
+    local level_name
+    level_name=$(_level_name "$level")
+    local timestamp
+    timestamp=$(_timestamp)
+
     # Only log if level meets minimum threshold
     if [ "$level" -lt "$LOG_LEVEL" ]; then
         return 0
     fi
-    
-    # Format: [TIMESTAMP] [LEVEL] Message
-    local formatted="[$timestamp] [$level_name] $msg"
-    
+
+    # ── JSON mode (LOG_FORMAT=json) — for Loki / Grafana / log aggregation ──
+    if [[ "${LOG_FORMAT:-text}" == "json" ]]; then
+        # Escape double-quotes and backslashes in msg for valid JSON
+        local json_msg="${msg//\\/\\\\}"
+        json_msg="${json_msg//\"/\\\"}"
+        local json_line="{\"ts\":\"$timestamp\",\"level\":\"$level_name\",\"script\":\"${SCRIPT_NAME:-$(basename "$0")}\",\"msg\":\"$json_msg\"}"
+        case "$level" in
+            0|1) echo "$json_line" >&1 ;;
+            2|3|4) echo "$json_line" >&2 ;;
+        esac
+        if [ -n "${LOG_FILE:-}" ]; then
+            echo "$json_line" >> "$LOG_FILE"
+        fi
+        return 0
+    fi
+
+    # ── Text mode (default) ──
+    local colored_level
+    colored_level=$(_colorize_level "$level" "$level_name")
+    local formatted="[$timestamp] [$colored_level] $msg"
+    local plain="[$timestamp] [$level_name] $msg"
+
     case "$level" in
-        0|1) echo "$formatted" >&1 ;;  # DEBUG, INFO to stdout
-        2|3|4) echo "$formatted" >&2 ;; # WARN, ERROR, FATAL to stderr
+        0|1) echo -e "$formatted" >&1 ;;
+        2|3|4) echo -e "$formatted" >&2 ;;
     esac
-    
-    # Write to log file if configured
-    if [ -n "$LOG_FILE" ]; then
-        echo "[$timestamp] [$level_name] $msg" >> "$LOG_FILE"
+
+    # Write plain (no ANSI) to log file if configured
+    if [ -n "${LOG_FILE:-}" ]; then
+        echo "$plain" >> "$LOG_FILE"
     fi
 }
 

@@ -4,7 +4,12 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install required Python packages
-RUN pip install --no-cache-dir requests prometheus-client pyyaml
+# Pinned versions per CVE remediation (Issue #281)
+RUN pip install --no-cache-dir \
+    requests==2.32.3 \
+    urllib3==2.2.0 \
+    prometheus-client \
+    pyyaml
 
 # Copy RCA engine script
 COPY scripts/observability/rca-engine.py .

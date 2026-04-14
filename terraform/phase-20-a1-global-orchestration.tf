@@ -91,7 +91,7 @@ locals {
     }
     
     prometheus = {
-      image    = "prom/prometheus:latest"
+      image    = "prom/prometheus:v2.48.0"
       image_digest = "sha256:a7c7eda2b1d0a8f4c7e8f5a8c9e8f7a8b9c8d7e1f2a3b4c5d6e7f8a9b0c1d"
       
       ports = {
@@ -121,7 +121,7 @@ locals {
     }
     
     grafana = {
-      image    = "grafana/grafana:latest"
+      image    = "grafana/grafana:10.2.3"
       image_digest = "sha256:f7a8c9e8f5a8c9e8f7a8b9c8d7e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d"
       
       ports = {

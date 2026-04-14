@@ -102,8 +102,8 @@ resource "docker_image" "postgresql_ha" {
 
 resource "docker_image" "pgbouncer" {
   count         = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
-  name          = "edoburu/pgbouncer:latest"
-  pull_triggers = ["latest"]
+  name          = "edoburu/pgbouncer:1.21.1"
+  pull_triggers = ["1.21.1"]
   
   lifecycle {
     prevent_destroy = false

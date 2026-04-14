@@ -269,10 +269,4 @@ variable "phase_25_enabled" {
   default     = true
 }
 
-variable "graphql_api_portal_enabled" {
-  description = "Enable GraphQL API & Developer Portal (Phase 25)"
-  type        = bool
-  default     = true
-}
-
 // ─────────────────────────────────────────────────────────────────────────────

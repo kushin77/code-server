@@ -63,3 +63,5 @@ backup.tfstate
 workspace/*
 !workspace/.gitkeep
 terraform.tfvars
+data/postgresql/
+data/

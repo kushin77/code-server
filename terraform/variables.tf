@@ -282,4 +282,13 @@ variable "enable_dns_access_control" {
   default     = true
 }
 
+variable "phase_22_b_enabled" {
+  description = "Enable Phase 22-B Advanced Networking (Istio, BGP, CloudFlare CDN)"
+  type        = bool
+  default     = false
+}
+
+# NOTE: cloudflare_zone_id, cloudflare_api_token, cloudflare_account_id already defined above
+# Removed duplicate declarations to comply with terraform unique variable requirement
+
 // ─────────────────────────────────────────────────────────────────────────────

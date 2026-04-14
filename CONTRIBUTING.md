@@ -1,6 +1,6 @@
-# Contributing — Engineering Constitution
+# Contributing — Production-First Engineering Constitution
 
-This repository operates at **FAANG-level standards**. Every contribution must be:
+This repository operates under **PRODUCTION-FIRST MANDATE**. Every contribution must be:
 
 - **Secure by default** — Zero hardcoded secrets, least privilege IAM, explicit trust boundaries
 - **Observable by default** — Structured logging, metrics, tracing, health endpoints

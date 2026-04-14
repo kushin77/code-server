@@ -406,7 +406,7 @@ export const createLoaders = (prisma) => ({
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_service_account" "graphql_api" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "graphql-api"

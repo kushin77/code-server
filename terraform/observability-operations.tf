@@ -266,7 +266,7 @@ resource "kubernetes_deployment" "cost_engine" {
 }
 
 resource "kubernetes_service_account" "cost_engine" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name      = "cost-engine"
@@ -275,7 +275,7 @@ resource "kubernetes_service_account" "cost_engine" {
 }
 
 resource "kubernetes_cluster_role" "cost_engine" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name = "cost-engine"
@@ -295,7 +295,7 @@ resource "kubernetes_cluster_role" "cost_engine" {
 }
 
 resource "kubernetes_cluster_role_binding" "cost_engine" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name = "cost-engine-binding"

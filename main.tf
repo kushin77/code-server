@@ -147,6 +147,9 @@ locals {
     code_server_cpus_limit   = local.resources.code_server.limits.cpus
     llama_model              = "llama2:70b-chat"
     enable_ollama            = true
+    # DNS & ACME configuration (Phase 21+)
+    external_domain          = var.external_domain
+    acme_email               = var.acme_email
   }
 }
 

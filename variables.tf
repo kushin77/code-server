@@ -25,6 +25,18 @@ variable "domain" {
   default     = "ide.kushnir.cloud"
 }
 
+variable "external_domain" {
+  description = "External domain for DNS-based access (for on-prem: e.g., '192.168.168.31.nip.io'; for production: 'kushnir.cloud')"
+  type        = string
+  default     = "192.168.168.31.nip.io"
+}
+
+variable "acme_email" {
+  description = "Email for Let's Encrypt ACME certificate notifications (required for HTTPS)"
+  type        = string
+  default     = "ops@kushnir.cloud"
+}
+
 variable "config_dir" {
   description = "Configuration directory (by default, project root)"
   type        = string

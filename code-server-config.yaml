@@ -1,21 +1,30 @@
 # code-server Configuration
 # Deploy to: ~/.config/code-server/config.yaml
+#
+# CRITICAL: This file uses DNS-first architecture
+# - External access via DOMAIN environment variable (from docker-compose)
+# - All service-to-service communication uses container DNS names
+# - No hardcoded IPs - environment-driven configuration
 
 bind-addr: 0.0.0.0:8080
 auth: password
 password: ${CODE_SERVER_PASSWORD}
-cert: true  # Enable HTTPS with auto-generated self-signed cer
+cert: true  # Enable HTTPS with auto-generated self-signed cert
             # Required for secure context (crypto.subtle, webviews, clipboard)
 
 # First run: accept self-signed cert in browser via Advanced -> Proceed
 
-# Security
+# Security & DNS Configuration
+# CRITICAL: Keep proxy-domain list comprehensive for all access patterns
 proxy-domain:
   - localhost
   - 127.0.0.1
-  - 192.168.168.32
-  - 192.168.168.31
-  - ide.kushnir.cloud
+  - "*.nip.io"  # Dynamic DNS resolution for on-prem (e.g., 192.168.168.31.nip.io)
+  - ${DOMAIN:-192.168.168.31.nip.io}  # External domain from Caddy/environment
+  - code-server.${DOMAIN:-192.168.168.31.nip.io}
+  - ide.kushnir.cloud  # Production domain
+  - kushnir.cloud  # Production root domain
+  - "192.168.*.*"  # All private network IPs (on-prem deployments)
   - "${DEPLOY_HOST:localhost}"
 
 # Logging for audit trail
@@ -34,3 +43,8 @@ max-connections: 100
 
 # Session timeout (30 minutes)
 session-timeout: 1800000
+
+# DNS Configuration (Phase 21+)
+# Resolves service discovery issues in containerized environments
+# Services communicate via container DNS (code-server:8080, ollama:11434, etc.)
+# External clients access via DOMAIN variable + Caddy reverse proxy

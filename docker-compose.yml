@@ -194,6 +194,11 @@ services:
       - caddy-config:/config
       - caddy-data:/data
     environment:
+      # ─── DNS & TLS Configuration (Phase 21+) ──────────────────────
+      # For production: DOMAIN=kushnir.cloud (real DNS + Let's Encrypt)
+      # For on-prem: DOMAIN=192.168.168.31.nip.io (nip.io dynamic DNS)
+      - DOMAIN=${DOMAIN:-192.168.168.31.nip.io}
+      - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}
       - ACME_AGREE=true
       # OTEL Instrumentation for distributed tracing (Phase 24-A)
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317

@@ -1,0 +1,108 @@
+# Caddyfile.production — Production IDE at ide.kushnir.cloud
+# COMPOSITION: @import Caddyfile.base for shared blocks
+# Full TLS 1.3, CloudFlare DNS-01, enterprise headers, rate limiting
+
+@import Caddyfile.base
+
+# Global configuration for production
+{
+    auto_https on
+    email {$ACME_EMAIL:security@kushnir.cloud}
+    
+    # ACME provider: Let's Encrypt with CloudFlare DNS-01
+    acme_dns cloudflare {$CLOUDFLARE_API_TOKEN}
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+    
+    # Production logging (JSON, rotated)
+    log default {
+        format json
+        output file /var/log/caddy/caddy.log {
+            roll_size 100mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        level info
+    }
+}
+
+# IDE SERVICE (ide.kushnir.cloud) — Main production endpoint
+ide.kushnir.cloud {
+    # TLS with CloudFlare DNS-01 challenge
+    tls {
+        issuer acme {
+            disable_issuance_limits
+            challenges dns cloudflare {$CLOUDFLARE_API_TOKEN}
+            resolvers 1.1.1.1 1.0.0.1
+        }
+    }
+    
+    # Production-grade servers (HTTP/3 support)
+    servers {
+        protocols h1 h2 h3
+        strict_sni_host on
+    }
+    
+    # Shared blocks from base
+    import compression_advanced
+    import security_headers_strict
+    import rate_limiting_production
+    
+    # Health check (no auth)
+    @health path /health /healthz
+    handle @health {
+        respond "OK\n" 200
+    }
+    
+    # All other traffic → OAuth2-Proxy → Code-Server
+    reverse_proxy oauth2-proxy:4180 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-Host {host}
+        
+        # WebSocket support
+        transport http {
+            read_timeout 60s
+            write_timeout 60s
+            dial_timeout 10s
+            max_conns_per_host 100
+            keep_alive_timeout 90s
+        }
+    }
+    
+    # Production logging
+    log {
+        output file /var/log/caddy/ide.kushnir.cloud.log {
+            roll_size 100mb
+            roll_keep 14
+            roll_keep_for 336h
+        }
+        format json
+        level info
+    }
+}
+
+# HTTP redirect (port 80)
+:80 {
+    @health path /health /healthz
+    handle @health {
+        respond "OK\n" 200
+    }
+    
+    redir /* https://{host}{uri} permanent
+}
+#
+# Check A+ SSL Labs rating:
+#   https://www.ssllabs.com/ssltest/analyze.html?d=ide.kushnir.cloud
+#
+# Verify HSTS preload:
+#   https://hstspreload.org/?domain=ide.kushnir.cloud
+#
+# Inspect CSP:
+#   curl -I https://ide.kushnir.cloud | grep Content-Security-Policy
+#
+# Load test:
+#   ab -n 10000 -c 100 https://ide.kushnir.cloud/health
+#   vegeta: echo "GET https://ide.kushnir.cloud" | vegeta attack -duration=60s
+#
+

@@ -927,6 +927,15 @@ archive-phases:
 		mv "$$f" scripts/_archive/phase-history/; \
 		count=$$((count + 1)); \
 	 done; \
+	 for d in scripts/phase-*/; do \
+		[ -d "$$d" ] || continue; \
+		base=$$(basename "$$d"); \
+		mkdir -p "scripts/_archive/phase-history/$$base"; \
+		mv "$$d"*.sh "scripts/_archive/phase-history/$$base/" 2>/dev/null || true; \
+		mv "$$d"*.py "scripts/_archive/phase-history/$$base/" 2>/dev/null || true; \
+		rmdir "$$d" 2>/dev/null || true; \
+		count=$$((count + 1)); \
+	 done; \
 	 echo "✅ Archived $$count phase history scripts to scripts/_archive/phase-history/"
 	@echo "   Active script count: $$(find scripts -maxdepth 1 -name '*.sh' | wc -l)"
 

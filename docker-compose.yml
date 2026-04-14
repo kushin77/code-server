@@ -275,6 +275,72 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # ─── RCA Engine (Root Cause Analysis) ────────────────────────────────────
+  # Analyzes alerts from Prometheus to identify root causes
+  rca-engine:
+    image: python:3.11-slim
+    container_name: rca-engine
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "9094:9094"  # Metrics endpoint
+    volumes:
+      - ./scripts/observability/rca-engine.py:/app/rca-engine.py:ro
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - ALERTMANAGER_URL=http://alertmanager:9093
+      - LOG_LEVEL=INFO
+    working_dir: /app
+    command: ["python", "rca-engine.py", "--daemon"]
+    depends_on:
+      - prometheus
+      - alertmanager
+    healthcheck:
+      test: ["CMD", "python", "-c", "import http.client; conn = http.client.HTTPConnection('localhost', 9094); conn.request('GET', '/metrics'); print(conn.getresponse().status)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Anomaly Detector ────────────────────────────────────────────────────
+  # Detects anomalies in Prometheus metrics using statistical analysis
+  anomaly-detector:
+    image: python:3.11-slim
+    container_name: anomaly-detector
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "9095:9095"  # Metrics endpoint
+    volumes:
+      - ./scripts/observability/anomaly-detector.py:/app/anomaly-detector.py:ro
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - ANOMALY_THRESHOLD=2.0
+      - LOG_LEVEL=INFO
+    working_dir: /app
+    command: ["python", "anomaly-detector.py"]
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "python", "-c", "import http.client; conn = http.client.HTTPConnection('localhost', 9095); conn.request('GET', '/metrics'); print(conn.getresponse().status)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks & Volumes
 # ─────────────────────────────────────────────────────────────────────────────

@@ -15,6 +15,9 @@
 
 set -eu
 
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 readonly RESTRICTED_COMMANDS=(
     "wget" "curl" "fetch"
     "scp" "sftp" "rcp"

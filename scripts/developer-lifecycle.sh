@@ -12,6 +12,8 @@
 
 set -eu
 
+
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly DB_FILE="${DB_FILE:-/etc/developer-access/developers.db}"
 readonly AUDIT_LOG="${AUDIT_LOG:-/var/log/developer-access-audit.log}"

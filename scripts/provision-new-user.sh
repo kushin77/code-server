@@ -4,6 +4,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 EMAIL="${1}"
 ROLE="${2:-developer}"
 DISPLAY_NAME="${3:-${EMAIL%%@*}}"

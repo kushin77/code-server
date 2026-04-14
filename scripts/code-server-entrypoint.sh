@@ -4,6 +4,9 @@ set -eu
 # ── Patch product.json ────────────────────────────────────────────────────────
 # Remove defaultChatAgent (causes Copilot Chat install-loop) and ensure both
 # github.copilot and github.copilot-chat are in trustedExtensionAuthAccess
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 PRODUCT_JSON=$(find /usr/lib/code-server -name "product.json" -type f | head -1)
 if [ -n "$PRODUCT_JSON" ] && [ -f "$PRODUCT_JSON" ]; then
   /usr/bin/node -e "const fs = require('fs'); const product = JSON.parse(fs.readFileSync('$PRODUCT_JSON', 'utf8')); delete product.defaultChatAgent; const trusted = Array.isArray(product.trustedExtensionAuthAccess) ? product.trustedExtensionAuthAccess : []; product.trustedExtensionAuthAccess = [...new Set([...trusted, 'github.copilot', 'github.copilot-chat'])]; fs.writeFileSync('$PRODUCT_JSON', JSON.stringify(product, null, 2) + '\n');" 2>/dev/null || echo "[entrypoint] WARNING: Could not patch product.json"

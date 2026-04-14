@@ -13,6 +13,8 @@
 
 set -eu
 
+
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PHASES_DIR="${PHASES_DIR:-.}"
 readonly LOG_DIR="${LOG_DIR:-./logs}"

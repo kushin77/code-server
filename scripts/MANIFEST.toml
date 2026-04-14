@@ -258,7 +258,228 @@ purpose  = "SUPERSEDED by _common/utils.sh + _common/error-handler.sh."
 deprecated_by = "_common/init.sh"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# NOTE: All phase-*.sh scripts (100+) are historical deployment artifacts.
-# Run `make archive-phases` to move them to scripts/_archive/phase-history/.
-# They are excluded from this manifest's active tracking.
+# ACTIVE SCRIPTS — added Phase 5 batch migration
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "redeploy.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Post-merge deployment orchestration triggered by GitHub Actions."
+called_by = [".github/workflows/deploy.yml"]
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "nas-mount-31.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "NAS mount automation and validation for host-31."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "gpu-deploy-31.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "GPU deployment and validation for host-31."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "cleanup-container-overlap.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Removes duplicate/stale containers and resolves port conflicts."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "code-server-entrypoint.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Docker entrypoint for the code-server container."
+
+[[script]]
+file     = "deploy-kushnir-cloud.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Idempotent deploy for ide.kushnir.cloud — containerised, no host mutation."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "docker-health-monitor.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Continuous Docker container health monitoring with alerting."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "enforce-governance.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Enforces code governance policies across the repository."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "fetch-gsm-secrets.sh"
+category = "security"
+status   = "active"
+owner    = "platform"
+purpose  = "Fetches secrets from Google Secret Manager into .env."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "ide-access-restrictions.sh"
+category = "security"
+status   = "active"
+owner    = "security"
+purpose  = "Applies and validates IDE access restriction rules."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "incident-simulation.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Incident simulation and runbook testing tool."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "infrastructure-assessment-31.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Full infrastructure assessment for host-31 services."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "init-repo-governance.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "One-time repository governance setup (hooks, MANIFEST, CI checks)."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "memory-monitor.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Memory usage monitoring and OOM alerting for Docker containers."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "p0-monitoring-bootstrap.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "P0 monitoring stack bootstrap (Prometheus, Grafana, AlertManager)."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "p0-operations-deployment-validation.sh"
+category = "validation"
+status   = "active"
+owner    = "oncall"
+purpose  = "Validates P0-tier service deployment and SLO compliance."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "p0-p3-operations-master.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Master orchestrator for P0-P3 priority operations tasks."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "post-deployment-validation.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Post-deployment smoke tests: container health, port availability, HTTP checks."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "pre-flight-checklist.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Pre-deployment readiness checks before any deployment begins."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "priority-enforcer.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Enforces issue priority labels and SLO response times."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "priority-issue-cli.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "CLI tool for managing GitHub issue priorities and assignments."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "production-operations-setup-p0.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Sets up P0-tier production operations tooling and alerting."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "provision-new-user.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Provisions a new developer user with appropriate IDE access role."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "security-hardening-p2.sh"
+category = "security"
+status   = "active"
+owner    = "security"
+purpose  = "P2 security hardening: TLS, auth, container hardening, audit config."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "validate-copilot.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Validates Copilot Chat extension activation and Ollama connectivity."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "validate-host-31.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Host-31 specific validation suite (network, storage, Docker)."
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "vscode-crash-diagnostics.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Collects diagnostics when code-server crashes: logs, state, metrics."
+depends  = ["_common/init.sh"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTE: All phase-*.sh scripts (130+) are historical deployment artifacts
+# archived to scripts/_archive/phase-history/. Historical one-off scripts
+# (gpu, fix-host, tier, setup, etc.) are in scripts/_archive/historical/.
+# Neither directory is tracked in this manifest's active entries.
 # ─────────────────────────────────────────────────────────────────────────────

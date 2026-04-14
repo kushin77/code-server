@@ -15,6 +15,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 # Configuration
 MONITORING_DIR="${MONITORING_DIR:-.}/monitoring"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)

@@ -7,6 +7,8 @@
 
 set -euo pipefail
 
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 # Color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'

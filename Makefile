@@ -946,18 +946,25 @@ governance:
 	@echo "════════════════════════════════════════════════════════════"
 	@echo ""
 	@echo "📚 Library Adoption:"
-	@count=$$(grep -rl "_common/" scripts/*.sh 2>/dev/null | grep -v "_common/" | wc -l); \
+	@count=$$(grep -rl "_common/init\.sh\|_common/logging\.sh" scripts/*.sh 2>/dev/null | grep -v "_common/" | wc -l); \
 	 total=$$(find scripts -maxdepth 1 -name "*.sh" | wc -l); \
-	 echo "  $$count / $$total active scripts use _common/ library"
+	 pct=$$((count * 100 / total)); \
+	 echo "  $$count / $$total active scripts use _common/ library ($$pct%)"
 	@echo ""
 	@echo "🔒 Security:"
-	@echo "  Hardcoded IPs:"; \
-	 grep -rl "192\.168\." scripts/*.sh 2>/dev/null | grep -v "_common/" | wc -l | xargs echo "    Count:"
+	@hardcoded=$$(grep -rl "192\.168\." scripts/*.sh 2>/dev/null | grep -v "_common/" | wc -l); \
+	 echo "  Hardcoded IPs in active scripts: $$hardcoded (should be 0)"
+	@violations=$$(grep -rl "^log_info() {" scripts/*.sh 2>/dev/null | grep -vE "_common/|logging\.sh|common-functions\.sh" | wc -l); \
+	 echo "  Inline log_info() violations: $$violations (should be 0)"
 	@echo ""
 	@echo "📋 Script Registry:"
 	@[ -f scripts/MANIFEST.toml ] \
 		&& echo "  ✅ MANIFEST.toml exists ($$(grep -c '^file' scripts/MANIFEST.toml) entries)" \
 		|| echo "  ❌ MANIFEST.toml missing — run: make manifest-init"
+	@echo ""
+	@echo "🗂  Archive:"
+	@echo "  Phase history: $$(find scripts/_archive/phase-history -name '*.sh' 2>/dev/null | wc -l) scripts"
+	@echo "  Historical: $$(find scripts/_archive/historical -name '*.sh' 2>/dev/null | wc -l) scripts"
 	@echo ""
 	@echo "Pre-commit hooks: $$([ -f .pre-commit-config.yaml ] && echo '✅ configured' || echo '❌ missing')"
 	@echo ""

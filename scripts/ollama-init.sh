@@ -5,6 +5,9 @@
 
 set -eu
 
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 OLLAMA_ENDPOINT="${OLLAMA_ENDPOINT:-http://ollama:11434}"
 WORKSPACE_PATH="${WORKSPACE_PATH:-.}"
 MODELS=("llama2:70b-chat" "codegemma" "neural-chat" "mistral")

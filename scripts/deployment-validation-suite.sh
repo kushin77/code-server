@@ -4,6 +4,8 @@
 
 set -e
 
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
 DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 DEPLOY_USER="${DEPLOY_USER:-akushnir}"

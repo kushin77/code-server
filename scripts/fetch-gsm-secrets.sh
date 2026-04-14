@@ -7,6 +7,9 @@
 #        ./fetch-gsm-secrets.sh > .env    (writes to env file)
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 readonly GSM_PROJECT="${GSM_PROJECT:-nexusshield-prod}"
 
 fetch_gsm_secret() {

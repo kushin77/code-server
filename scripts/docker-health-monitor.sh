@@ -4,6 +4,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 CHECK_INTERVAL=30
 RESTART_THRESHOLD=3
 LOG_FILE="/tmp/docker-health-monitor.log"

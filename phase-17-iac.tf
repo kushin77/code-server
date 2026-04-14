@@ -4,20 +4,6 @@
 # Timeline: 14 hours (sequential, after Phase 16 stable)
 # Date: April 15-16, 2026
 
-terraform {
-  required_version = ">= 1.6.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-  }
-}
-
 # ───────────────────────────────────────────────────────────────────────────
 # PHASE 17: MULTI-REGION CONFIGURATION
 # ───────────────────────────────────────────────────────────────────────────

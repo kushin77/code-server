@@ -4,20 +4,6 @@
 # Timeline: 14 hours (parallel with Phases 16-A/B)
 # Date: April 14-15, 2026
 
-terraform {
-  required_version = ">= 1.6.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-  }
-}
-
 # ───────────────────────────────────────────────────────────────────────────
 # PHASE 18-B: SOC 2 TYPE II COMPLIANCE CONFIGURATION
 # ───────────────────────────────────────────────────────────────────────────

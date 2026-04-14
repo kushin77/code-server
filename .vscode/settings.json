@@ -1,0 +1,17 @@
+{
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false
+  },
+  "github.copilot.advanced": {
+    "debug.overrideChatURL": "",
+    "debug.testOverrideProxyUrl": "",
+    "debug.overrideEngine": "",
+    "debug.overrideChatModel": ""
+  },
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": true,
+    "markdown": true
+  }
+}

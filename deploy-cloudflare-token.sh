@@ -44,22 +44,42 @@ echo ""
 
 # Step 2: Deploy to production
 echo "Step 2: Deploying token to production server..."
+echo ""
+echo "Creating GSM secret with provided token..."
+echo "$CF_TOKEN" | gcloud secrets versions add prod-cloudflare-tunnel-token \
+    --project="gcp-eiq" \
+    --data-file=-
+    
+if [ $? -ne 0 ]; then
+    echo "❌ Failed to create GSM secret"
+    exit 1
+fi
+
+echo "✅ Secret created in GSM"
+echo ""
+
+echo "Deploying to production..."
 ssh akushnir@192.168.168.31 << 'SSH_EOF'
 cd code-server-enterprise
 
 # Fetch token from GSM using the fetch script
-bash scripts/fetch-gsm-secrets.sh > .env.fetched
-
-# Extract just the token line
-CLOUDFLARE_TOKEN=$(grep CLOUDFLARE_TUNNEL_TOKEN .env.fetched || echo "")
+if bash scripts/fetch-gsm-secrets.sh > .env.fetched 2>/dev/null; then
+    CLOUDFLARE_TOKEN=$(grep -v '^$' .env.fetched | grep '^CLOUDFLARE_TUNNEL_TOKEN=' | tail -1)
+else
+    echo "⚠️  GSM fetch had warnings but may have partial data"
+    CLOUDFLARE_TOKEN=$(grep '^CLOUDFLARE_TUNNEL_TOKEN=' .env.fetched || echo "")
+fi
 
 if [ -z "$CLOUDFLARE_TOKEN" ]; then
     echo "❌ Failed to fetch token from GSM"
     exit 1
 fi
 
+# Merge with existing .env (remove old token line first)
+sed -i '/^CLOUDFLARE_TUNNEL_TOKEN=/d' .env
 echo "$CLOUDFLARE_TOKEN" >> .env
 rm -f .env.fetched
+
 echo "✅ Token deployed to .env"
 SSH_EOF
 

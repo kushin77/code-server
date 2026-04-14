@@ -23,6 +23,11 @@ fetch_gsm_secret() {
         echo "Run: gcloud auth login   then retry" >&2
         return 1
     }
+    # Handle placeholder values (e.g., "YOUR_ACTUAL_TOKEN_HERE")
+    if [[ "$value" == "YOUR_ACTUAL_TOKEN_HERE" || "$value" == "PLACEHOLDER"* || -z "$value" ]]; then
+        echo "WARNING: $secret_id contains placeholder value in GSM, skipping" >&2
+        return 0
+    fi
     printf -v "$var_name" '%s' "$value"
     export "$var_name"
     echo "export ${var_name}=<redacted>" >&2

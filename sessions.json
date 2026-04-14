@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "sessions": [],
+  "metadata": {
+    "createdAt": "2026-04-14T00:00:00Z",
+    "lastModified": "2026-04-14T00:00:00Z",
+    "format": "safe-json"
+  },
+  "constraints": {
+    "maxSessions": 100,
+    "maxSessionSize": 10485760,
+    "timeoutMs": 3600000,
+    "validateOnLoad": true,
+    "autoCleanup": true
+  }
+}

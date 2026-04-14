@@ -336,9 +336,7 @@ resource "kubernetes_manifest" "authz_policy_default" {
       name      = "default-deny"
       namespace = "code-server"
     }
-    spec = {
-      {} # Default deny all (need explicit allow rules)
-    }
+    spec = {} # Default deny all — no selectors/rules = deny all by default
   }
 
   depends_on = [helm_release.istiod]

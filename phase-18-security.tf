@@ -282,7 +282,7 @@ variable "dlp_config" {
 resource "docker_container" "compliance_dashboard" {
   count         = var.phase_18_enabled && var.soc2_automated_controls_enabled ? 1 : 0
   name          = "compliance-soc2-dashboard"
-  image         = "prometheus:v2.48.0"
+  image         = "prom/prometheus:v2.48.0"
   network_mode  = "host"
 
   ports {

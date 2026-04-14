@@ -72,7 +72,7 @@ services:
       - ollama-data:/root/.ollama
     healthcheck:
       # ollama container healthcheck using wget
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:11434/api/tags || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

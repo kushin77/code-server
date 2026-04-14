@@ -33,7 +33,7 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "automated-iac-validation.sh"
+file     = "iac-validation.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -105,7 +105,13 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "deployment-validation-31.sh"
+file     = "deployment-validation-onprem.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "verify-passwordless-access.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -243,7 +249,7 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "phase-23-deploy.sh"
+file     = "deploy-observability-stack.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"

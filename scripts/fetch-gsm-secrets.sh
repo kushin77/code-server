@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # fetch-gsm-secrets.sh
-# Fetches code-server secrets from Google Secret Manager (gcp-eiq project)
+# Fetches code-server secrets from Google Secret Manager
 # Mimics eiq-org pattern: gcloud secrets versions access → env var injection
 # Requires: gcloud auth login (or service account activation)
 # Usage: source ./fetch-gsm-secrets.sh   (sources env vars into current shell)
@@ -10,7 +10,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-readonly GSM_PROJECT="${GSM_PROJECT:-gcp-eiq}"
+# Project resolution order:
+# 1) GSM_PROJECT (explicit for this script)
+# 2) GOOGLE_PROJECT_ID (shared CI/infra variable)
+# 3) kushnir-cloud (repository default)
+readonly GSM_PROJECT="${GSM_PROJECT:-${GOOGLE_PROJECT_ID:-kushnir-cloud}}"
 
 fetch_gsm_secret() {
     local secret_id="$1"

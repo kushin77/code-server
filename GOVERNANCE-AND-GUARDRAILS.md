@@ -102,18 +102,17 @@ alertmanager.yml            # Active
 
 ❌ **FORBIDDEN**:
 ```
-deploy-iac.ps1  # Targets 192.168.168.32 (old)
 deploy.sh       # Hardcoded prod IP in script
 ```
 
 ✅ **REQUIRED**:
 ```
-scripts/deploy/deploy.sh         # Parameterized
+scripts/deploy/deploy-iac.sh     # Parameterized
 terraform/                       # Infrastructure as Code
 environment variables            # HOST, REGION, etc.
 ```
 
-**Why**: deploy-iac.ps1 and deploy-iac.sh targeted wrong production host, would cause deployment failure.
+**Why**: hardcoded deployment targets cause production drift and failover breakage.
 
 **Enforcement**:
 - Pre-commit hook: Reject hardcoded IPs (pattern: `192\.168\..*`)

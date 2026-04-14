@@ -782,26 +782,18 @@ OAUTH2_PROXY_CLIENT_SECRET=${CLIENT_SECRET}
 
 ### 6. Script Function Libraries
 
-**Pattern**: Consolidate common operations into reusable shell/PowerShell libraries.
+**Pattern**: Consolidate common operations into reusable shell libraries.
 
-**Bash Library** (`scripts/logging.sh`):
+**Shell Libraries** (`scripts/logging.sh`, `scripts/_common/ssh.sh`):
 ```bash
 #!/bin/bash
 # Structured logging with timestamps and colors
 log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO] $1"; }
 log_error() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1" >&2; }
 log_success() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [SUCCESS] $1"; }
-```
 
-**PowerShell Library** (`scripts/common-functions.ps1`):
-```powershell
-function Get-PRCheckStatus {
-    # Unified PR status retrieval via GitHub CLI
-}
-
-function Merge-PullRequest {
-    # Unified PR merge with validation
-}
+source scripts/_common/init.sh
+verify_passwordless_ssh
 ```
 
 **Usage**:

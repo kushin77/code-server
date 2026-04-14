@@ -47,9 +47,8 @@
 
 set -e
 
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 ENV_FILE="${SCRIPT_DIR}/.env.production"
 
 echo "====== AUTOMATED PRODUCTION ENVIRONMENT GENERATION ======"
@@ -69,7 +68,7 @@ require_env() {
 
 # Function to generate secure random value
 generate_secret() {
-    openssl rand -base64 "${1:-32}"
+    openssl rand -hex "${1:-16}"
 }
 
 echo "Gathering configuration from environment..."
@@ -86,7 +85,7 @@ DEPLOY_ENV="${DEPLOY_ENV:-production}"
 
 # Generate credentials
 CODE_SERVER_PASSWORD=$(generate_secret 16)
-OAUTH2_PROXY_COOKIE_SECRET=$(generate_secret 32)
+OAUTH2_PROXY_COOKIE_SECRET=$(generate_secret 16)
 REDIS_PASSWORD=$(generate_secret 16)
 
 echo "Generating .env.production..."

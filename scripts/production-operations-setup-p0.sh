@@ -16,11 +16,11 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 
 ENVIRONMENT="production"
 MONITORING_NAMESPACE="monitoring"
-PROMETHEUS_HOST="192.168.168.31"
+PROMETHEUS_HOST="${DEPLOY_HOST}"
 PROMETHEUS_PORT="9090"
-GRAFANA_HOST="192.168.168.31"
+GRAFANA_HOST="${DEPLOY_HOST}"
 GRAFANA_PORT="3000"
-LOKI_HOST="192.168.168.31"
+LOKI_HOST="${DEPLOY_HOST}"
 LOKI_PORT="3100"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -363,7 +363,8 @@ EOF
 capture_baseline_metrics() {
     echo "Capturing baseline metrics..."
 
-    ssh -o StrictHostKeyChecking=no akushnir@192.168.168.31 << 'SSHEOF'
+  # shellcheck disable=SC2086
+  ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" << 'SSHEOF'
 
     echo "=== BASELINE METRICS CAPTURE ===" > /tmp/baseline-metrics.txt
     echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S UTC')" >> /tmp/baseline-metrics.txt

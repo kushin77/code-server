@@ -2,15 +2,18 @@
 # Comprehensive IaC Deployment Validation & Testing
 # Executes full deployment, validates all services, runs benchmarks
 
-set -e
-
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
+set -euo pipefail
+
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VALIDATION_REPORT="${SCRIPT_DIR}/DEPLOYMENT-VALIDATION-REPORT.md"
+
+remote_exec() {
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" "$@"
+}
 
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║  IaC DEPLOYMENT VALIDATION & TESTING SUITE                 ║"
@@ -56,12 +59,11 @@ test_ssh_connectivity() {
 
     echo "Testing SSH connection to ${DEPLOY_USER}@${DEPLOY_HOST}..."
 
-    if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no \
-        "${DEPLOY_USER}@${DEPLOY_HOST}" 'echo "SSH connection successful" && uname -a' &>/dev/null; then
+    if remote_exec 'echo "SSH connection successful" && uname -a' &>/dev/null; then
         echo "✅ SSH connectivity verified"
 
         # Get system info
-        local SYSINFO=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+        local SYSINFO=$(remote_exec \
             'free -h | grep Mem | awk "{print \$2, \$3, \$7}"' 2>/dev/null)
         echo "   Host: ${DEPLOY_HOST}"
         echo "   Memory: $SYSINFO"
@@ -102,7 +104,7 @@ validate_services() {
     echo ""
 
     # Get deployment directory
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR=$(remote_exec \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
 
     if [ -z "$DEPLOY_DIR" ]; then
@@ -115,7 +117,8 @@ validate_services() {
 
     # Check service status
     echo "Service Status:"
-    ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << EOF
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" << EOF
 cd "$DEPLOY_DIR"
 docker-compose ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 EOF
@@ -123,7 +126,7 @@ EOF
     echo ""
 
     # Verify all 5 services running
-    local RUNNING=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local RUNNING=$(remote_exec \
         "cd $DEPLOY_DIR && docker-compose ps -q | wc -l" 2>/dev/null)
 
     if [ "$RUNNING" -eq 5 ]; then
@@ -140,7 +143,7 @@ run_health_checks() {
     echo "═════════════════════════════════════════════════════════════"
     echo ""
 
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR=$(remote_exec \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
 
     if [ -z "$DEPLOY_DIR" ]; then
@@ -151,7 +154,8 @@ run_health_checks() {
     echo "Running health checks..."
     echo ""
 
-    ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
 DEPLOY_DIR=$(ls -td code-server-immutable-* 2>/dev/null | head -1)
 if [ -z "$DEPLOY_DIR" ]; then exit 0; fi
 cd "$DEPLOY_DIR"
@@ -185,7 +189,7 @@ run_performance_tests() {
     echo "═════════════════════════════════════════════════════════════"
     echo ""
 
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR=$(remote_exec \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
 
     if [ -z "$DEPLOY_DIR" ]; then
@@ -196,7 +200,8 @@ run_performance_tests() {
     echo "Testing service response times..."
     echo ""
 
-    ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
 DEPLOY_DIR=$(ls -td code-server-immutable-* 2>/dev/null | head -1)
 if [ -z "$DEPLOY_DIR" ]; then exit 0; fi
 
@@ -223,7 +228,7 @@ run_security_audit() {
     echo "═════════════════════════════════════════════════════════════"
     echo ""
 
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR=$(remote_exec \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
 
     if [ -z "$DEPLOY_DIR" ]; then
@@ -234,7 +239,8 @@ run_security_audit() {
     echo "Running security checks..."
     echo ""
 
-    ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
 DEPLOY_DIR=$(ls -td code-server-immutable-* 2>/dev/null | head -1)
 if [ -z "$DEPLOY_DIR" ]; then exit 0; fi
 cd "$DEPLOY_DIR"
@@ -266,7 +272,7 @@ generate_final_report() {
     echo "═════════════════════════════════════════════════════════════"
     echo ""
 
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR=$(remote_exec \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
 
     cat > "$VALIDATION_REPORT" << EOF
@@ -356,7 +362,7 @@ ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd ${DEPLOY_DIR} && docker-compose ps"
 Verify all components:
 \`\`\`bash
 ./scripts/verify-iac-complete.sh
-./scripts/automated-iac-validation.sh
+./scripts/iac-validation.sh
 \`\`\`
 
 ## Conclusion

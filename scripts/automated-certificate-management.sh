@@ -3,15 +3,14 @@
 # Manages Let's Encrypt certificates with automatic renewal
 # Integrates with Caddy for zero-downtime ACME
 
-set -e
-
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -euo pipefail
+
 CERT_DIR="${SCRIPT_DIR}/certs"
 ACME_EMAIL="${ACME_EMAIL:-admin@kushnir.cloud}"
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 
 echo "====== AUTOMATED SSL/TLS CERTIFICATE MANAGEMENT ======"
 echo ""
@@ -117,18 +116,21 @@ EOF
 # Function to deploy to remote host
 deploy_certificates() {
     local host=$1
-    local user="akushnir"
+    local user="${DEPLOY_USER}"
+    local remote_cert_dir="${DEPLOY_DIR}/certs"
 
     echo ""
     echo "Deploying certificates to ${host}..."
 
     # Create certificate directory on remote
-    ssh -o StrictHostKeyChecking=no "${user}@${host}" \
-        "mkdir -p /home/${user}/code-server-immutable-*/certs" || true
+    # shellcheck disable=SC2086
+    ssh $SSH_OPTS "${user}@${host}" \
+        "mkdir -p ${remote_cert_dir}" || true
 
     # Copy certificates
-    scp -o StrictHostKeyChecking=no -r "${CERT_DIR}"/* \
-        "${user}@${host}:/home/${user}/code-server-immutable-20260413-211419/certs/" || true
+    # shellcheck disable=SC2086
+    scp $SSH_OPTS -r "${CERT_DIR}"/* \
+        "${user}@${host}:${remote_cert_dir}/" || true
 
     echo "✓ Certificates deployed to ${host}"
 }

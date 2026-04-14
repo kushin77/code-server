@@ -49,6 +49,12 @@ else
     fail "DEPLOY_USER not defined"
 fi
 
+if "${SCRIPT_DIR}/verify-passwordless-access.sh" >/dev/null 2>&1; then
+    pass "Passwordless SSH verified for external deployment hosts"
+else
+    fail "Passwordless SSH verification failed (run scripts/verify-passwordless-access.sh)"
+fi
+
 echo ""
 echo "📋 PHASE 2: CONFIGURATION FILES"
 echo "═════════════════════════════════════════════════════════════"

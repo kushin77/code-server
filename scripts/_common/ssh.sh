@@ -106,3 +106,67 @@ ssh_in_deploy_dir() {
 ssh_compose() {
     ssh_in_deploy_dir "docker compose $*"
 }
+
+# Verify key-only SSH authentication for one or more remote targets.
+# Usage:
+#   verify_passwordless_ssh                       # checks primary + standby
+#   verify_passwordless_ssh "user1@host1" "user2@host2"
+verify_passwordless_ssh() {
+    local targets=("$@")
+    local failed=0
+
+    if [[ ${#targets[@]} -eq 0 ]]; then
+        targets=(
+            "$DEPLOY_USER@$DEPLOY_HOST"
+            "$STANDBY_USER@$STANDBY_HOST"
+        )
+    fi
+
+    for target in "${targets[@]}"; do
+        if ssh $SSH_OPTS "$target" "echo passwordless-ok" >/dev/null 2>&1; then
+            log_success "Passwordless SSH verified: $target"
+        else
+            log_failure "Passwordless SSH failed: $target"
+            failed=1
+        fi
+    done
+
+    if [[ $failed -ne 0 ]]; then
+        log_error "One or more passwordless SSH checks failed"
+        return 1
+    fi
+
+    return 0
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NAS HELPERS (192.168.168.56)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Execute a command on the NAS host
+# Usage: nas_exec "ls /volume1/backups"
+nas_exec() {
+    log_debug "nas_exec → $NAS_USER@$NAS_HOST: $*"
+    # shellcheck disable=SC2086
+    ssh $NAS_SSH_OPTS "$NAS_USER@$NAS_HOST" "$@"
+}
+
+# Upload a file to the NAS
+# Usage: nas_upload ./backup.tar.gz /volume1/backups/backup.tar.gz
+nas_upload() {
+    local src="$1"
+    local dst="$2"
+    require_file "$src"
+    log_debug "nas_upload: $src → $NAS_USER@$NAS_HOST:$dst"
+    # shellcheck disable=SC2086
+    scp $NAS_SSH_OPTS "$src" "$NAS_USER@$NAS_HOST:$dst"
+}
+
+# Assert NAS is reachable via key-only SSH
+# Usage: nas_assert_up
+nas_assert_up() {
+    if ! timeout "${SSH_CONNECT_TIMEOUT:-10}" ssh $NAS_SSH_OPTS "$NAS_USER@$NAS_HOST" "echo OK" >/dev/null 2>&1; then
+        log_fatal "Cannot SSH to NAS $NAS_USER@$NAS_HOST — verify key auth and network"
+    fi
+    log_debug "✓ NAS SSH confirmed: $NAS_USER@$NAS_HOST"
+}

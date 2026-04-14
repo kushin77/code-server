@@ -17,17 +17,17 @@ LOG_FILE="${LOG_DIR}/nas-mount-${TIMESTAMP}.log"
 DRY_RUN=false
 ACTION="${1:-all}"
 
-# NAS Configuration
-NAS_PRIMARY="192.168.168.10"
-NAS_SECONDARY="192.168.168.11"
-NAS_ARCHIVE="192.168.168.12"
+# NAS Configuration — source from _common/config.sh (NAS_HOST=192.168.168.56)
+NAS_PRIMARY="${NAS_HOST:-192.168.168.56}"
+NAS_SECONDARY="${NAS_HOST:-192.168.168.56}"
+NAS_ARCHIVE="${NAS_HOST:-192.168.168.56}"
 
 # Mount Points
 MOUNTS=(
-  "models:${NAS_PRIMARY}:/export/models:/mnt/models:nfs4"
-  "data:${NAS_PRIMARY}:/export/data:/mnt/data:nfs4"
-  "backups:${NAS_SECONDARY}:/export/backups:/mnt/backups:nfs3"
-  "archive:${NAS_ARCHIVE}:/export/archive:/mnt/archive:nfs4"
+  "models:${NAS_PRIMARY}:/volume1/models:/mnt/nas/models:nfs4"
+  "data:${NAS_PRIMARY}:/volume1/data:/mnt/nas/data:nfs4"
+  "backups:${NAS_PRIMARY}:/volume1/backups:/mnt/nas/backups:nfs4"
+  "archive:${NAS_PRIMARY}:/volume1/archive:/mnt/nas/archive:nfs4"
 )
 
 mkdir -p "$LOG_DIR"

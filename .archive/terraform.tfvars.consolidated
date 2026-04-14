@@ -1,0 +1,122 @@
+# ════════════════════════════════════════════════════════════════════════════
+# terraform.tfvars - CONSOLIDATED PRODUCTION CONFIGURATION
+# ════════════════════════════════════════════════════════════════════════════
+# This file consolidates all deployment environments (Phase 14+) into a single
+# source of truth. Semantic configuration: all "phases" stripped, focuses on
+# what the infrastructure IS (primary/standby hosts, SLO targets).
+#
+# Usage:
+#   terraform apply -var-file=terraform.tfvars
+# Or with environment variables:
+#   export TF_VAR_domain="ide.kushnir.cloud"
+#   terraform apply
+#
+# DO NOT COMMIT: terraform.tfvars (contains secrets)
+# SAFE TO COMMIT: terraform.tfvars.example (template with redacted values)
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── DEPLOYMENT TARGETS ──────────────────────────────────────────────────────
+
+# Primary on-premises production host
+production_primary_host = "192.168.168.31"
+production_standby_host = "192.168.168.30"
+
+# SSH connectivity
+deploy_host      = "192.168.168.31"
+deploy_user      = "akushnir"
+# GENERATE VIA: ssh-keygen -t ed25519 -f ~/.ssh/akushnir-31 -C "akushnir@192.168.168.31"
+deploy_ssh_key_path = "~/.ssh/akushnir-31"
+
+# ── NAS STORAGE CONFIGURATION ──────────────────────────────────────────────
+
+nas_primary_endpoint   = "192.168.168.56"   # NAS primary (replicated)
+nas_primary_path       = "/export/primary"   # NFS export
+nas_primary_mount_point = "/mnt/nas-primary"
+
+nas_backup_endpoint    = "192.168.168.56"   # Backup target (same host, different export)
+nas_backup_path        = "/export/backup"
+nas_backup_mount_point = "/mnt/nas-backup"
+
+nas_protocol      = "nfs4"
+nas_mount_options = "rw,hard,intr,timeo=600,retrans=2,_netdev"
+
+# ── STORAGE ALLOCATION (GB) ────────────────────────────────────────────────
+
+storage_ollama      = 2000   # Large language models
+storage_codeserver  = 500    # IDE data + extensions
+storage_workspace   = 1000   # User project workspaces
+
+# ── SERVICE LEVEL OBJECTIVES ───────────────────────────────────────────────
+
+slo_target_p99_latency_ms   = 100    # P99 response time
+slo_target_error_rate_pct   = 0.1    # Error rate threshold
+slo_target_availability_pct = 99.9   # Uptime target
+
+enable_auto_rollback = true
+
+# ── GENERAL CONFIGURATION ──────────────────────────────────────────────────
+
+domain = "ide.kushnir.cloud"
+environment = "production"
+
+code_server_password = "change-me-in-production"  # CHANGE IN GSM
+code_server_version  = "4.115.0"
+code_server_memory_limit = "4g"
+code_server_cpus_limit   = "2.0"
+
+caddy_version = "2.7.6"
+enable_https  = true
+
+# ── OLLAMA LOCAL INFERENCE ────────────────────────────────────────────────
+
+enable_ollama = true
+ollama_default_model = "llama2:70b-chat"  # Default LLM for code-server
+ollama_num_threads   = 8
+ollama_num_gpu       = 0  # CPU-only for now (set >0 if GPU available)
+
+# ── OPTIONAL CLOUD SERVICES ────────────────────────────────────────────────
+
+enable_cloudflare_tunnel      = false  # Default: direct IP access (nip.io)
+enable_kubernetes_orchestration = false
+enable_observability_operations = true
+enable_api_gateway              = true
+enable_dns_access_control       = true
+
+log_level = "info"
+
+# ── SECRETS (from Google Secret Manager) ────────────────────────────────────
+# FETCH THESE VIA: source scripts/fetch-gsm-secrets.sh
+# PROJECT: gcp-eiq
+# DO NOT EDIT MANUALLY - pull from GSM instead
+
+google_client_id                  = ""  # prod-portal-google-oauth-client-id
+google_client_secret              = ""  # prod-portal-google-oauth-client-secret
+oauth2_proxy_cookie_secret        = ""  # Cookie encryption key (32 hex chars = 16 bytes)
+github_token                      = ""  # GitHub API token (optional)
+cloudflare_api_token              = ""  # Cloudflare Zone API token (if tunnel enabled)
+cloudflare_zone_id                = ""  # Cloudflare Zone ID
+cloudflare_account_id             = ""  # Cloudflare Account ID
+godaddy_api_key                   = ""  # GoDaddy DNS API key
+godaddy_api_secret                = ""  # GoDaddy DNS API secret
+
+# ── RESOURCE TAGS ──────────────────────────────────────────────────────────
+
+tags = {
+  Project             = "code-server-enterprise"
+  Environment         = "production"
+  IaC                 = "terraform"
+  ManagedBy           = "terraform"
+  CostCenter          = "engineering"
+  DataClassification  = "internal"
+  Immutable           = "true"
+  CreatedAt           = "2026-04-14"  # For audit purposes
+}
+
+# ════════════════════════════════════════════════════════════════════════════
+# DEPRECATIONS (removed from this consolidated version)
+# ════════════════════════════════════════════════════════════════════════════
+# - phase_14_enabled: Feature flag removed (always enabled in production)
+# - phase_14_canary_percentage: Canary deployments handled by infrastructure
+# - bastion_host/bastion_user: Direct SSH to 192.168.168.31 now standard
+# - docker_host/docker_context: Unified to remote Docker via SSH
+# ════════════════════════════════════════════════════════════════════════════

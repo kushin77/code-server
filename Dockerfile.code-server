@@ -57,6 +57,50 @@ RUN mkdir -p /opt/vsix \
     && echo "[build] Cached github.copilot-chat v0.42.3" || echo "[build] SKIP: Could not cache github.copilot-chat"); \
     rm -f /tmp/github-copilot.vsix.gz /tmp/github-copilot-chat.vsix.gz || true
 
+# ════════════════════════════════════════════════════════════════════════════
+# OpenTelemetry Instrumentation Setup (Phase 24-A)
+# Enables automatic distributed tracing via OTEL SDK
+# ════════════════════════════════════════════════════════════════════════════
+USER root
+RUN npm install --global \
+    @opentelemetry/auto-instrumentations-node@1.49.0 \
+    @opentelemetry/sdk-node@0.49.0 \
+    @opentelemetry/sdk-trace-node@0.49.0 \
+    @opentelemetry/exporter-trace-otlp-grpc@0.49.0 \
+    @opentelemetry/resources@1.24.0 \
+    @opentelemetry/semantic-conventions@1.24.0 \
+    @opentelemetry/api@1.8.0 && \
+    npm cache clean --force || true
+
+# Create tracer initialization script
+RUN cat > /usr/local/lib/otel-tracer-init.js << 'EOF'
+// Auto-instrument all Node.js core modules and popular packages
+const nodeSDK = require('@opentelemetry/sdk-node').NodeSDK;
+const getNodeAutoInstrumentations = require('@opentelemetry/auto-instrumentations-node').getNodeAutoInstrumentations;
+const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-grpc');
+const { Resource } = require('@opentelemetry/resources');
+const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+
+const sdk = new nodeSDK({
+  resource: new Resource({
+    [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'code-server',
+    [SemanticResourceAttributes.SERVICE_VERSION]: '4.115.0',
+  }),
+  traceExporter: new OTLPTraceExporter({
+    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4317',
+  }),
+  instrumentations: [getNodeAutoInstrumentations()],
+});
+
+sdk.start();
+
+process.on('SIGTERM', () => {
+  sdk.shutdown()
+    .then(() => process.exit(0))
+    .catch((err) => { console.log('Error shutting down SDK', err); process.exit(1); });
+});
+EOF
+
 COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
 RUN chmod +x /usr/local/bin/code-server-entrypoint.sh
 

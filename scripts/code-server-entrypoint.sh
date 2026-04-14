@@ -56,6 +56,14 @@ if [ ! -f "$SETTINGS_DIR/settings.json" ] && [ -f /etc/code-server/settings.json
 fi
 
 # ── Start code-server (background so trap can catch SIGTERM) ─────────────────
+# Enable OTEL instrumentation if OTEL_EXPORTER_OTLP_ENDPOINT is set
+if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]; then
+  echo "[entrypoint] Enabling OpenTelemetry instrumentation"
+  export NODE_OPTIONS="--require /usr/local/lib/otel-tracer-init.js --enable-source-maps"
+else
+  export NODE_OPTIONS="--enable-source-maps"
+fi
+
 /usr/bin/code-server "$@" &
 CS_PID=$!
 wait "$CS_PID"

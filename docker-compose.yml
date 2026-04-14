@@ -26,6 +26,13 @@ services:
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:11434
+      # OTEL Instrumentation for distributed tracing (Phase 24-A)
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SDK_DISABLED=false
+      - OTEL_SERVICE_NAME=code-server
+      - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=4.115.0,hostname=code-server
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
     command:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
@@ -190,6 +197,11 @@ services:
       - caddy-data:/data
     environment:
       - ACME_AGREE=true
+      # OTEL Instrumentation for distributed tracing (Phase 24-A)
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=caddy-proxy
+      - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=2-alpine,hostname=caddy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
       interval: 30s

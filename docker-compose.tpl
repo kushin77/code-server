@@ -37,6 +37,13 @@ services:
       - GITHUB_TOKEN=$${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:${ollama_port}
       - OLLAMA_DEFAULT_MODEL=${llama_model}
+      # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SDK_DISABLED=false
+      - OTEL_SERVICE_NAME=code-server
+      - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=4.115.0,hostname=code-server
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
     command:
       - "--bind-addr=0.0.0.0:${code_server_port}"
       - "--disable-telemetry"
@@ -208,6 +215,11 @@ services:
       - caddy-data:/data
     environment:
       - ACME_AGREE=true
+      # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=caddy-proxy
+      - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=${caddy_version},hostname=caddy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/healthz || exit 1"]
       interval: 30s

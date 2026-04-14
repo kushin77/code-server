@@ -33,13 +33,13 @@ variable "postgres_version" {
 variable "pgbouncer_version" {
   description = "pgBouncer version (pinned for immutability)"
   type        = string
-  default     = "1.21.0"
+  default     = "1.15.0"
 }
 
 variable "patroni_enabled" {
   description = "Enable Patroni for automated HA failover"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "pgbouncer_enabled" {
@@ -108,8 +108,8 @@ resource "docker_image" "postgresql_ha" {
 
 resource "docker_image" "pgbouncer" {
   count         = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
-  name          = "edoburu/pgbouncer:1.21.1"
-  pull_triggers = ["1.21.1"]
+  name          = "pgbouncer/pgbouncer:${var.pgbouncer_version}"
+  pull_triggers = [var.pgbouncer_version]
   
   lifecycle {
     prevent_destroy = false

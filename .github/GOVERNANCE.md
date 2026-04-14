@@ -6,7 +6,7 @@
 
 - **Problem**: Unlimited Actions runs, uncontrolled API calls, orphaned workflows costing $$$
 - **Solution**: Repository-level rules, workflow quotas, approval gates, and automated enforcement
-- **Timeline**: 30-day rollout with monitoring and adjustment
+- **Enforcement**: Immediate — ship now, iterate continuously
 
 ---
 
@@ -188,13 +188,13 @@ Continuous Monitoring
 
 ### 4.1 Approval Requirements
 
-| Change Type | Approval Required | Timeline | Cost Impact Check |
-|-------------|-------------------|----------|-------------------|
-| New workflow | Lead | 24hrs | Required if >$50/mo |
-| Workflow delete | None | Immediate | None |
-| API endpoint add | Lead | 48hrs | Required if >$10/mo |
-| Quota increase | CTO | 5 business days | Required |
-| Budget override | Finance | 7 business days | Mandatory |
+| Change Type | Approval Required | Cost Impact Check |
+|-------------|-------------------|
+| New workflow | Lead | Required if >$50/mo |
+| Workflow delete | None | None |
+| API endpoint add | Lead | Required if >$10/mo |
+| Quota increase | CTO | Required |
+| Budget override | Finance | Mandatory |
 
 ### 4.2 Audit & Compliance
 
@@ -303,11 +303,7 @@ See companion files:
 
 ---
 
-## 8. Implementation Timeline
+## 8. Implementation
 
-**Week 1**: Rules definition & automation
-**Week 2**: Repository onboarding + enforcement
-**Week 3**: Monitoring & alerting setup
-**Week 4**: Review, tune, and document
-
-See [GOVERNANCE-ROLLOUT.md](GOVERNANCE-ROLLOUT.md) for detailed timeline.
+**Status**: LIVE — enforce immediately on all new PRs and repos.
+All items are continuously active. No rollout schedule. No phases. Ship now.

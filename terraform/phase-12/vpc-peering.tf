@@ -53,11 +53,11 @@ provider "aws" {
 
 # VPC Peering Connection: US West ← → EU West
 resource "aws_vpc_peering_connection" "us_eu" {
-  provider      = aws.us_west
-  vpc_id        = var.vpc_id_us_west
-  peer_vpc_id   = var.vpc_id_eu_west
-  peer_region   = var.secondary_region
-  auto_accept   = false
+  provider    = aws.us_west
+  vpc_id      = var.vpc_id_us_west
+  peer_vpc_id = var.vpc_id_eu_west
+  peer_region = var.secondary_region
+  auto_accept = false
 
   tags = {
     Name = "peering-us-eu"
@@ -77,11 +77,11 @@ resource "aws_vpc_peering_connection_accepter" "us_eu" {
 
 # VPC Peering Connection: US West ← → AP South
 resource "aws_vpc_peering_connection" "us_ap" {
-  provider      = aws.us_west
-  vpc_id        = var.vpc_id_us_west
-  peer_vpc_id   = var.vpc_id_ap_south
-  peer_region   = var.tertiary_region
-  auto_accept   = false
+  provider    = aws.us_west
+  vpc_id      = var.vpc_id_us_west
+  peer_vpc_id = var.vpc_id_ap_south
+  peer_region = var.tertiary_region
+  auto_accept = false
 
   tags = {
     Name = "peering-us-ap"
@@ -101,11 +101,11 @@ resource "aws_vpc_peering_connection_accepter" "us_ap" {
 
 # VPC Peering Connection: EU West ← → AP South
 resource "aws_vpc_peering_connection" "eu_ap" {
-  provider      = aws.eu_west
-  vpc_id        = var.vpc_id_eu_west
-  peer_vpc_id   = var.vpc_id_ap_south
-  peer_region   = var.tertiary_region
-  auto_accept   = false
+  provider    = aws.eu_west
+  vpc_id      = var.vpc_id_eu_west
+  peer_vpc_id = var.vpc_id_ap_south
+  peer_region = var.tertiary_region
+  auto_accept = false
 
   tags = {
     Name = "peering-eu-ap"
@@ -199,7 +199,7 @@ resource "aws_network_acl_rule" "peering_inbound" {
 
   network_acl_id = each.value.network_acl_id
   rule_number    = 100 + index(keys(aws_network_acl_rule.peering_inbound), each.key)
-  protocol       = "-1"  # All protocols
+  protocol       = "-1" # All protocols
   rule_action    = "allow"
   cidr_block     = each.value.cidr_block
   from_port      = 0

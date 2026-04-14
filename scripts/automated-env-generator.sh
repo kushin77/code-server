@@ -38,7 +38,7 @@
 #   ./scripts/automated-env-generator.sh validate
 #
 # Recent Changes:
-#   2026-04-14: Added env validation assertions (Phase 2.2)
+#   2026-04-14: Added env validation assertions 
 #   2026-04-13: Initial creation with secret generation
 #
 ################################################################################
@@ -137,3 +137,4 @@ echo "  cp $ENV_FILE .env"
 echo "  docker-compose up -d"
 echo ""
 echo "✅ Production environment ready"
+

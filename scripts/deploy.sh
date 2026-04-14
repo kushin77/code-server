@@ -1,51 +1,4 @@
 #!/bin/bash
-################################################################################
-# File: deploy.sh
-# Owner: DevOps/Infrastructure Team
-# Purpose: Idempotent infrastructure deployment orchestrator
-# Last Modified: April 14, 2026
-# Compatibility: Ubuntu 22.04+, Bash 4.0+, Terraform 1.4+, Docker 20.10+
-#
-# Dependencies:
-#   - terraform (>= 1.4) — Infrastructure as Code
-#   - docker-compose (>= 2.0) — Container orchestration
-#   - jq — JSON parsing for validation
-#   - curl — Health check verification
-#
-# Related Files:
-#   - terraform/main.tf — Infrastructure definition
-#   - docker-compose.yml — Container services
-#   - scripts/deployment-validation-suite.sh — Post-deploy tests
-#   - .github/workflows/deploy.yml — CI/CD integration
-#
-# Usage:
-#   bash scripts/deploy.sh                # Full deployment
-#   bash scripts/deploy.sh --validate-only  # Validation only
-#   bash scripts/deploy.sh --rollback       # Rollback to previous
-#
-# Orchestration:
-#   1) terraform apply (pin versions, generate docker-compose.yml)
-#   2) docker-compose build (rebuild with explicit versions)
-#   3) docker-compose up (start all services)
-#   4) health checks (validate all services operational)
-#   5) integration tests (verify critical paths)
-#
-# Exit Codes:
-#   0 — Successful deployment
-#   1 — Terraform failed
-#   2 — Docker build failed
-#   3 — Health checks failed
-#   4 — Integration tests failed
-#
-# Examples:
-#   ./scripts/deploy.sh                   # Full deployment with validation
-#   ./scripts/deploy.sh --validate-only   # Check readiness without deploying
-#
-# Recent Changes:
-#   2026-04-14: Integrated error-handler and logging libraries (Phase 2.2)
-#   2026-04-13: Created idempotent deployment pattern
-#
-################################################################################
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -64,26 +17,16 @@ set -euo pipefail
 # Exit code: 0 = success, 1 = deployment failed
 # ─────────────────────────────────────────────────────────────────────────────
 
-PROJECT_DIR="$$(cd "$$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$$PROJECT_DIR"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 
-# Bootstrap: single entrypoint loads config, logging, utils, error-handler, docker, ssh
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-
-# Override log destination for this script
-export LOG_FILE="${PROJECT_DIR}/deployment.log"
-
-# Precondition assertions — fail fast before any side effects
-assert_deploy_access   # SSH reachable at DEPLOY_HOST
-assert_docker          # Docker daemon responding on remote
-
-# Setup error handling
-add_cleanup cleanup_deployment_handler
+LOG_FILE="${PROJECT_DIR}/deployment.log"
+exec 1> >(tee -a "$LOG_FILE")
+exec 2>&1
 
 echo "════════════════════════════════════════════════════════════════════════════"
 echo "IDEMPOTENT DEPLOYMENT: code-server-enterprise"
-echo "Timestamp: $$(date -Iseconds)"
+echo "Timestamp: $(date -Iseconds)"
 echo "════════════════════════════════════════════════════════════════════════════"
 
 # Step 1: Terraform init + apply (generates docker-compose.yml with versions)
@@ -121,22 +64,22 @@ echo ""
 echo "Step 4: Waiting for all services to be healthy..."
 MAX_WAIT=120
 ELAPSED=0
-while [ $$ELAPSED -lt $$MAX_WAIT ]; do
-  HEALTHY=$$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
-  TOTAL=$$(docker compose ps --format json | jq 'length')
-  echo "  [$$ELAPSED/$$MAX_WAIT] Healthy services: $$HEALTHY/$$TOTAL"
+while [ $ELAPSED -lt $MAX_WAIT ]; do
+  HEALTHY=$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
+  TOTAL=$(docker compose ps --format json | jq 'length')
+  echo "  [$ELAPSED/$MAX_WAIT] Healthy services: $HEALTHY/$TOTAL"
   
-  if [ "$$HEALTHY" -eq "$$TOTAL" ]; then
+  if [ "$HEALTHY" -eq "$TOTAL" ]; then
     echo "✅ All services healthy"
     break
   fi
   
   sleep 5
-  ELAPSED=$$((ELAPSED + 5))
+  ELAPSED=$((ELAPSED + 5))
 done
 
-if [ $$ELAPSED -ge $$MAX_WAIT ]; then
-  echo "⚠️  WARNING: Services not fully healthy after $$MAX_WAIT seconds (may still be starting)"
+if [ $ELAPSED -ge $MAX_WAIT ]; then
+  echo "⚠️  WARNING: Services not fully healthy after $MAX_WAIT seconds (may still be starting)"
   docker compose ps
 fi
 

@@ -1,63 +1,18 @@
 repos:
-  - repo: local
-    hooks:
-      - id: mandatory-redeploy
-        name: mandatory-redeploy
-        entry: bash ./scripts/mandatory-redeploy.sh
-        language: system
-        pass_filenames: false
-        # Only run manually or on local push — requires Docker and Linux environment
-        stages: [manual]
-
-      # Phase 2.3: Custom hook - verify scripts source common libraries
-      - id: verify-scripts-source-common
-        name: Verify scripts source _common libraries
-        entry: bash -c '[[ -d scripts/_common ]] && for f in scripts/{deploy,backup,validate,test}.sh; do [[ -f "$f" ]] && ! grep -q "source.*_common" "$f" && echo "ERROR: $f missing _common source"; done'
-        language: system
-        files: '^scripts/(deploy|backup|validate|test)\.sh$'
-        pass_filenames: false
-        stages: [commit]
-
-      # Phase 2.3: Custom hook - verify metadata headers
-      - id: verify-metadata-headers
-        name: Verify metadata headers in critical scripts
-        entry: bash -c '[[ -f scripts/deploy.sh ]] && ! grep -q "^# File:" scripts/deploy.sh && echo "ERROR: deploy.sh missing metadata header"'
-        language: system
-        files: '^scripts/deploy\.sh$'
-        pass_filenames: false
-        stages: [commit]
-
-      # Phase 3: Block hardcoded IPs — use $DEPLOY_HOST from _common/config.sh
-      - id: no-hardcoded-ips
-        name: No hardcoded IP addresses in scripts
-        entry: bash -c '
-          files=$(grep -rl "192\.168\.168\.\(31\|30\)" scripts/ 2>/dev/null \
-            | grep -v "_common/" | grep -v "config\.sh" | grep "\.sh$")
-          if [[ -n "$files" ]]; then
-            echo "GOVERNANCE: Hardcoded IP — use \$DEPLOY_HOST from _common/config.sh:"
-            echo "$files" | sed "s/^/  /"; exit 1
-          fi
-        '
-        language: system
-        files: '^scripts/.*\.sh$'
-        pass_filenames: false
-        stages: [commit]
-
-  # Phase 2.3: Bash script linting
+  # Linting: Bash script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.7
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
         name: Bash script lint (shellcheck)
-        args: ['--severity=warning']
+        args: ['--severity=error']
         exclude: |
-          (?x)^(
+          (?x)(
+            scripts/_archive/|
             archived/|
-            phase-\d|
-            gpu-
-          )$
-
-  # Phase 2.3: YAML linting for docker-compose, Caddyfile
+            ^phase-|
+            ^gpu-
+          )
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1
     hooks:

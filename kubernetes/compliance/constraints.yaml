@@ -1,0 +1,175 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PodSecurityContext
+metadata:
+  name: pod-security-context-enforcement
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: pod-security
+spec:
+  match:
+    excludedNamespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+    - gatekeeper-system
+  parameters:
+    message: "Pod must define securityContext with runAsNonRoot: true"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: AllowedImageRegistries
+metadata:
+  name: allowed-image-registries-enforcement
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: image-registry
+spec:
+  match:
+    excludedNamespaces:
+    - kube-system
+    - kube-public
+  parameters:
+    allowedRegistries:
+    - "docker.io/"
+    - "gcr.io/"
+    - "ghcr.io/"
+    - "quay.io/"
+    - "registry.k8s.io/"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequireResourceLimits
+metadata:
+  name: resource-limits-required
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: resource-limits
+spec:
+  match:
+    excludedNamespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+    - gatekeeper-system
+  parameters:
+    cpuLimit: "2"
+    memoryLimit: "4Gi"
+    message: "Containers must define CPU and memory limits"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequiredLabels
+metadata:
+  name: required-labels-enforcement
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: labels
+spec:
+  match:
+    excludedNamespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+    - gatekeeper-system
+  parameters:
+    labels:
+    - "app.kubernetes.io/name"
+    - "phase"
+    message: "Resources must have required labels"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequireNetworkPolicies
+metadata:
+  name: network-policies-required
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: network-policy
+spec:
+  match:
+    namespaceSelector:
+      matchLabels:
+        network-policies: required
+  parameters:
+    message: "Namespace must have network policies defined"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: DataClassificationRequired
+metadata:
+  name: data-classification-required
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: data-classification
+spec:
+  match:
+    namespaceSelector:
+      matchLabels:
+        data-classification: required
+  parameters:
+    message: "Resources must be labeled with data classification"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: EncryptionRequired
+metadata:
+  name: encryption-required
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: encryption
+spec:
+  match:
+    namespaceSelector:
+      matchLabels:
+        encryption: required
+  parameters:
+    message: "Storage resources must have encryption enabled"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: AuditLoggingRequired
+metadata:
+  name: audit-logging-required
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: audit-logging
+spec:
+  match:
+    namespaceSelector:
+      matchLabels:
+        audit-logging: required
+  parameters:
+    message: "Workloads must have audit logging enabled"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: AccessControlPolicy
+metadata:
+  name: access-control-enforcement
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: access-control
+spec:
+  match:
+    namespaceSelector:
+      matchLabels:
+        access-control: required
+  parameters:
+    message: "Sensitive resources must define access control labels"
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: DeletionProtection
+metadata:
+  name: critical-resource-deletion-protection
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy: deletion-protection
+spec:
+  match:
+    namespaceSelector:
+      matchLabels:
+        deletion-protection: enabled
+  parameters:
+    message: "Critical resources must have deletion protection enabled"

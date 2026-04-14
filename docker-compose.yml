@@ -4,35 +4,53 @@
 # Regenerate: terraform apply
 # ════════════════════════════════════════════════════════════════════════════
 
-version: "3.9"
-
 services:
   # ─── code-server ────────────────────────────────────────────────────────────
   # VS Code running in the browser with Copilot Chat support
   # Image pinned to specific base + extensions freeze at build time
   code-server:
-    # Production-ready upstream image
-    image: codercom/code-server:4.115.0
+    build:
+      context: .
+      dockerfile: Dockerfile.code-server
+      args:
+        # ALL VERSIONS FROZEN HERE FOR IMMUTABILITY
+        CODE_SERVER_VERSION: "4.115.0"
+        COPILOT_VERSION: "1.388.0"
+        COPILOT_CHAT_VERSION: "0.43.2026040705"
+    image: code-server-patched:4.115.0
     container_name: code-server
-    restart: always
+    restart: unless-stopped
     networks:
       - enterprise
-    # Expose directly for direct IDE access + route through Caddy for proxy
-    ports:
-      - "0.0.0.0:8080:8080"
+    expose:
+      - "8080"
     environment:
-      # Use strong password from .env, not defaults
       - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - SERVICE_URL=https://open-vsx.org/vscode/gallery
+      - ITEM_URL=https://open-vsx.org/vscode/item
+      - CS_DISABLE_FILE_DOWNLOADS=false
+      # Navigator shim patched out at build time (see Dockerfile.code-server)
+      - NODE_OPTIONS=--enable-source-maps
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:11434
+      - OLLAMA_DEFAULT_MODEL=llama2:70b-chat
+      # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SDK_DISABLED=false
+      - OTEL_SERVICE_NAME=code-server
+      - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=4.115.0,hostname=code-server
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
     command:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
       - "--cert=false"
-      - "--auth=password"
+      - "--auth=none"
     volumes:
       - code-server-enterprise-data:/home/coder
+      - ./workspace:/home/coder/workspace
+      - ./config/settings.json:/etc/code-server/settings.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
@@ -61,8 +79,8 @@ services:
     restart: unless-stopped
     networks:
       - enterprise
-    ports:
-      - "0.0.0.0:11434:11434"
+    expose:
+      - "11434"
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_KEEP_ALIVE=5m
@@ -70,9 +88,9 @@ services:
       - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
     volumes:
       - ollama-data:/root/.ollama
+      - ./workspace:/home/coder/workspace:ro
     healthcheck:
-      # ollama container healthcheck using wget
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null || exit 1"]
+      test: ["CMD", "/bin/bash", "-c", "</dev/tcp/localhost/11434"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -129,6 +147,9 @@ services:
       - enterprise
     expose:
       - "4180"
+    user: "0:0"
+    env_file:
+      - .env
     environment:
       OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
       OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
@@ -159,15 +180,13 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4180/ping"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:4180/ping"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
     depends_on:
       - code-server
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -177,98 +196,45 @@ services:
   # ─── caddy ──────────────────────────────────────────────────────────────────
   # Reverse proxy + TLS (pinned to 2.7.6)
   caddy:
-    # Production TLS termination
-    image: caddy:2-alpine
+    image: caddy:2.7.6
     container_name: caddy
-    restart: always
+    restart: unless-stopped
     networks:
       - enterprise
     ports:
-      - "0.0.0.0:80:80"
-      - "0.0.0.0:443:443"
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-config:/config
       - caddy-data:/data
     environment:
+      # ─── DNS & TLS Configuration (Phase 21+) ──────────────────────────
+      # For production: DOMAIN=kushnir.cloud (real DNS + Let's Encrypt)
+      # For on-prem: DOMAIN=192.168.168.31.nip.io (nip.io or static IP)
+      - DOMAIN=${DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL}
       - ACME_AGREE=true
+      # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=caddy-proxy
+      - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=2.7.6,hostname=caddy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:80/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     depends_on:
-      - code-server
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-  # ─── OpenTelemetry Collector ────────────────────────────────────────────────
-  # Collects traces, metrics, logs from all services
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.92.0
-    container_name: otel-collector
-    restart: always
-    networks:
-      - enterprise
-    ports:
-      - "4317:4317"  # gRPC receiver
-      - "4318:4318"  # HTTP receiver
-      - "9411:9411"  # Zipkin receiver
-      - "8888:8888"  # Prometheus metrics
-    volumes:
-      - ./otel-config.yml:/etc/otel/config.yaml:ro
-    command: ["--config=/etc/otel/config.yaml"]
-    environment:
-      - GOGC=80
-    depends_on:
-      - jaeger
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/metrics"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - oauth2-proxy
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-  # ─── Jaeger (Distributed Tracing) ───────────────────────────────────────────
-  # Stores and visualizes traces from OTel Collector
-  jaeger:
-    image: jaegertracing/all-in-one:1.50
-    container_name: jaeger
-    restart: always
-    networks:
-      - enterprise
-    ports:
-      - "5775:5775/udp"   # Zipkin compact thrift
-      - "6831:6831/udp"   # Jaeger compact thrift
-      - "6832:6832/udp"   # Jaeger binary thrift
-      - "5778:5778"       # trace collector HTTP
-      - "16686:16686"     # UI dashboard
-      - "14268:14268"     # jaeger collector HTTP
-      - "14250:14250"     # gRPC
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-      - METRICS_STORAGE_TYPE=prometheus
-    volumes:
-      - jaeger-data:/badger
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:16686/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks & Volumes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -285,8 +251,4 @@ volumes:
   ollama-data:
     driver: local
   caddy-config:
-    driver: local
-  caddy-data:
-    driver: local
-  jaeger-data:
     driver: local

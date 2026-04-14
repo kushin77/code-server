@@ -1,0 +1,336 @@
+# ════════════════════════════════════════════════════════════════════════════
+# PHASE 22-B: SERVICE MESH (ISTIO) - ON-PREMISES EDITION
+# ════════════════════════════════════════════════════════════════════════════
+# Purpose: Traffic management, mTLS, canary deployments, distributed tracing
+# Status: ELITE - Immutable (v1.19.3), Independent, Duplicate-Free
+# On-Premises Focus: On-prem Kubernetes cluster (192.168.168.31)
+# ════════════════════════════════════════════════════════════════════════════
+
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.24"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
+    }
+  }
+}
+
+# ─── Locals: Immutable Configuration ─────────────────────────────────────────
+locals {
+  istio_namespace = "istio-system"
+  istio_version   = "1.19.3" # PINNED - Never change
+  
+  # Service Mesh settings
+  mtls_mode            = "STRICT"
+  canary_init_weight   = 10
+  canary_max_weight    = 90
+  circuit_breaker_rate = 5
+  
+  # Tracing integration
+  jaeger_endpoint = "http://jaeger.observability:16686"
+  
+  # Common labels for consistency
+  common_labels = {
+    phase      = "22-b"
+    component  = "service-mesh"
+    managed_by = "terraform"
+  }
+}
+
+# ─── Istio System Namespace ──────────────────────────────────────────────────
+resource "kubernetes_namespace" "istio_system" {
+  metadata {
+    name = local.istio_namespace
+    labels = {
+      "istio-injection" = "enabled"
+    }
+  }
+}
+
+# ─── Istio CRD Installation (via Helm) ───────────────────────────────────────
+resource "helm_release" "istio_base" {
+  name       = "istio-base"
+  repository = "https://istio-release.storage.googleapis.com/charts"
+  chart      = "base"
+  version    = local.istio_version
+  namespace  = kubernetes_namespace.istio_system.metadata[0].name
+
+  depends_on = [kubernetes_namespace.istio_system]
+}
+
+# ─── Istio Control Plane (Istiod) ───────────────────────────────────────────
+resource "helm_release" "istiod" {
+  name       = "istiod"
+  repository = "https://istio-release.storage.googleapis.com/charts"
+  chart      = "istiod"
+  version    = local.istio_version
+  namespace  = local.istio_namespace
+
+  values = [
+    yamlencode({
+      global = {
+        meshID = "mesh"
+      }
+      pilot = {
+        replicaCount = 2
+        resources = {
+          requests = {
+            cpu    = "100m"
+            memory = "128Mi"
+          }
+          limits = {
+            cpu    = "500m"
+            memory = "512Mi"
+          }
+        }
+      }
+      telemetry = {
+        enabled = true
+      }
+    })
+  ]
+
+  depends_on = [helm_release.istio_base]
+}
+
+# ─── Istio Ingress Gateway ──────────────────────────────────────────────────
+resource "helm_release" "istio_ingress" {
+  name       = "istio-ingressgateway"
+  repository = "https://istio-release.storage.googleapis.com/charts"
+  chart      = "gateway"
+  version    = local.istio_version
+  namespace  = local.istio_namespace
+
+  values = [
+    yamlencode({
+      replicaCount = 2
+      service = {
+        type = "LoadBalancer"
+      }
+      resources = {
+        requests = {
+          cpu    = "100m"
+          memory = "128Mi"
+        }
+        limits = {
+          cpu    = "500m"
+          memory = "512Mi"
+        }
+      }
+    })
+  ]
+
+  depends_on = [helm_release.istiod]
+}
+
+# ─── Mutual TLS Policy (STRICT mode) ─────────────────────────────────────────
+resource "kubernetes_manifest" "peer_authentication" {
+  manifest = {
+    apiVersion = "security.istio.io/v1beta1"
+    kind       = "PeerAuthentication"
+    metadata = {
+      name      = "default"
+      namespace = local.istio_namespace
+    }
+    spec = {
+      mtls = {
+        mode = local.mtls_mode
+      }
+    }
+  }
+
+  depends_on = [helm_release.istiod]
+}
+
+# ─── Virtual Service with Canary Deployment ─────────────────────────────────
+resource "kubernetes_manifest" "virtual_service_canary" {
+  manifest = {
+    apiVersion = "networking.istio.io/v1beta1"
+    kind       = "VirtualService"
+    metadata = {
+      name      = "code-server-canary"
+      namespace = "default"
+      labels    = local.common_labels
+    }
+    spec = {
+      hosts = ["code-server"]
+      http = [
+        {
+          match = [
+            {
+              uri = {
+                prefix = "/"
+              }
+            }
+          ]
+          route = [
+            {
+              destination = {
+                host = "code-server"
+                port = {
+                  number = 8080
+                }
+              }
+              weight = local.canary_init_weight
+            },
+            {
+              destination = {
+                host = "code-server-v2"
+                port = {
+                  number = 8080
+                }
+              }
+              weight = 100 - local.canary_init_weight
+            }
+          ]
+          timeout = "10s"
+        }
+      ]
+    }
+  }
+
+  depends_on = [helm_release.istiod]
+}
+
+# ─── Circuit Breaker Configuration ──────────────────────────────────────────
+resource "kubernetes_manifest" "destination_rule" {
+  manifest = {
+    apiVersion = "networking.istio.io/v1beta1"
+    kind       = "DestinationRule"
+    metadata = {
+      name      = "code-server"
+      namespace = "default"
+      labels    = local.common_labels
+    }
+    spec = {
+      host = "code-server"
+      trafficPolicy = {
+        outlierDetection = {
+          consecutive5xxErrors = 5
+          interval             = "30s"
+          baseEjectionTime     = "30s"
+          maxEjectionPercent   = 50
+        }
+        connectionPool = {
+          http = {
+            http1MaxPendingRequests = local.circuit_breaker_rate
+            http2MaxRequests        = local.circuit_breaker_rate * 10
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [helm_release.istiod]
+}
+
+# ─── Telemetry Configuration (Jaeger Integration) ──────────────────────────
+resource "kubernetes_manifest" "telemetry" {
+  manifest = {
+    apiVersion = "telemetry.istio.io/v1alpha1"
+    kind       = "Telemetry"
+    metadata = {
+      name      = "custom-telemetry"
+      namespace = local.istio_namespace
+    }
+    spec = {
+      tracing = [
+        {
+          providers = [
+            {
+              name = "jaeger"
+            }
+          ]
+          randomSamplingPercentage = 100
+        }
+      ]
+      metrics = [
+        {
+          providers = [
+            {
+              name = "prometheus"
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  depends_on = [helm_release.istiod]
+}
+
+# ─── Request Authentication (RBAC) ──────────────────────────────────────────
+resource "kubernetes_manifest" "request_auth" {
+  manifest = {
+    apiVersion = "security.istio.io/v1beta1"
+    kind       = "RequestAuthentication"
+    metadata = {
+      name      = "jwt-auth"
+      namespace = "default"
+    }
+    spec = {
+      jwtRules = [
+        {
+          issuer  = "https://accounts.google.com"
+          jwksUri = "https://www.googleapis.com/oauth2/v3/certs"
+        }
+      ]
+    }
+  }
+
+  depends_on = [helm_release.istiod]
+}
+
+# ─── Authorization Policy ────────────────────────────────────────────────────
+resource "kubernetes_manifest" "auth_policy" {
+  manifest = {
+    apiVersion = "security.istio.io/v1beta1"
+    kind       = "AuthorizationPolicy"
+    metadata = {
+      name      = "default"
+      namespace = "default"
+    }
+    spec = {
+      rules = [
+        {
+          from = [
+            {
+              source = {
+                principals = ["cluster.local/ns/default/sa/code-server"]
+              }
+            }
+          ]
+          to = [
+            {
+              operation = {
+                methods = ["GET", "POST"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  depends_on = [helm_release.istiod]
+}
+
+# ─── Outputs ─────────────────────────────────────────────────────────────────
+output "istio_version" {
+  value       = local.istio_version
+  description = "Istio version deployed (immutable, pinned)"
+}
+
+output "mtls_mode" {
+  value       = local.mtls_mode
+  description = "Service-to-service mTLS mode (STRICT)"
+}
+
+output "ingress_gateway_namespace" {
+  value       = local.istio_namespace
+  description = "Namespace where Istio ingress gateway is deployed"
+}

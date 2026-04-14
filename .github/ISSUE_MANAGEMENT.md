@@ -166,16 +166,12 @@ Need clarification or design input.
 
 ## Milestone Structure
 
-### Monthly Milestones
-- **1 month out**: High-level planning (40% of issues)
-- **2-3 weeks out**: Detailed planning (60% of issues)
-- **Current month**: Execution (80% assigned)
-- **Next 3 months**: Roadmap/backlog (lower priority)
+> **No sprints. No monthly milestones. No roadmaps. Work is P0 → P1 → P2 → P3, shipped ASAP.**
 
-### Milestone Conventions
-- `M-2026-04`: April 2026
-- `Sprint-N`: 2-week sprints
-- `Phase-12`: Project phase milestone
+### Priority-Based Execution
+- Work the highest-priority open issue right now
+- Close issues as they complete — no batching into sprints
+- Every issue ships as fast as it can be built correctly
 
 ---
 
@@ -221,7 +217,7 @@ Need clarification or design input.
 is:open status/ready -has:assignee label:effort/s
 ```
 
-**What's blocking the current sprint?**
+**What's blocking the current work?**
 ```
 is:open status/blocked label:P1-high
 ```

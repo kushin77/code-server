@@ -19,11 +19,13 @@ variable "code_server_password" {
   }
 }
 
-variable "domain" {
-  description = "Root domain for deployment (used by oauth2-proxy for OIDC redirect)"
+variable "environment" {
+  description = "Environment name (development, staging, production)"
   type        = string
-  default     = "ide.kushnir.cloud"
+  default     = "production"
 }
+
+# domain variable defined in DNS/access-control configuration
 
 variable "config_dir" {
   description = "Configuration directory (by default, project root)"
@@ -67,6 +69,101 @@ variable "github_token" {
   type        = string
   sensitive   = true
   default     = ""
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cloudflare Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token (set via TF_VAR_cloudflare_api_token or .tfvars)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "domain" {
+  description = "Root domain for deployment"
+  type        = string
+  default     = "ide.kushnir.cloud"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AWS / EKS Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "eks_cluster_name" {
+  description = "EKS cluster name"
+  type        = string
+  default     = "code-server-k8s-prod"
+}
+
+variable "eks_cluster_endpoint" {
+  description = "EKS cluster API endpoint"
+  type        = string
+  default     = ""
+}
+
+variable "eks_cluster_ca" {
+  description = "EKS cluster CA certificate (base64)"
+  type        = string
+  default     = ""
+}
+
+variable "eks_cluster_token" {
+  description = "EKS cluster authentication token"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "aws_region" {
+  description = "AWS region for EKS and supporting resources"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "gpu_node_ssh_key" {
+  description = "SSH public key for GPU node access"
+  type        = string
+  default     = ""
+}
+
+variable "admin_cidr" {
+  description = "CIDR block for administrative access to GPU nodes"
+  type        = string
+  default     = "10.0.0.0/8"
+}
+
+variable "gpu_subnet_ids" {
+  description = "Subnet IDs for GPU node group"
+  type        = list(string)
+  default     = []
+}
+
+variable "log_level" {
+  description = "Logging level across all services"
+  type        = string
+  default     = "info"
+
+  validation {
+    condition     = contains(["debug", "info", "warn", "error"], var.log_level)
+    error_message = "log_level must be one of: debug, info, warn, error."
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,15 +253,42 @@ variable "enable_https" {
   default     = true
 }
 
-variable "log_level" {
-  description = "Logging level across all services"
-  type        = string
-  default     = "info"
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE FLAGS: Infrastructure Capabilities (Modular Deployment)
+// Enable/disable major infrastructure modules independently
+// ─────────────────────────────────────────────────────────────────────────────
 
-  validation {
-    condition     = contains(["debug", "info", "warn", "error"], var.log_level)
-    error_message = "log_level must be one of: debug, info, warn, error."
-  }
+variable "enable_kubernetes_orchestration" {
+  description = "Enable Kubernetes orchestration (EKS cluster)"
+  type        = bool
+  default     = true
 }
+
+variable "enable_observability_operations" {
+  description = "Enable observability & operations (Prometheus, Grafana, AlertManager, Velero)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_api_gateway" {
+  description = "Enable GraphQL API gateway & developer portal"
+  type        = bool
+  default     = true
+}
+
+variable "enable_dns_access_control" {
+  description = "Enable DNS access control & Cloudflare routing"
+  type        = bool
+  default     = true
+}
+
+variable "phase_22_b_enabled" {
+  description = "Enable Phase 22-B Advanced Networking (Istio, BGP, CloudFlare CDN)"
+  type        = bool
+  default     = false
+}
+
+# NOTE: cloudflare_zone_id, cloudflare_api_token, cloudflare_account_id already defined above
+# Removed duplicate declarations to comply with terraform unique variable requirement
 
 // ─────────────────────────────────────────────────────────────────────────────

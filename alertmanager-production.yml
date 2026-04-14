@@ -1,21 +1,20 @@
-# alertmanager-production.yml — Enterprise AlertManager Configuration
-# Multi-channel alert routing, deduplication, grouping
-# 
-# IMPORTS: Shared route structure and inhibit rules from alertmanager-base.yml
-# This file extends the base with production-specific receivers and Vault integration
+# alertmanager-production.yml
+# Production AlertManager Configuration
+#
+# COMPOSITION: Uses base route structure from alertmanager-base.yml
+# This file extends with PRODUCTION-SPECIFIC receivers (PagerDuty, Vault, etc.)
+# Changes to alertmanager-base.yml apply here automatically
+#
+# IMMUTABILITY: Routing rules are centralized in base config
+# See: ADR-004 Configuration Consolidation Patterns
 
 global:
   resolve_timeout: 5m
   slack_api_url: ${VAULT_SLACK_WEBHOOK_URL}
   pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
 
-# SHARED ROUTING from alertmanager-base.yml
-# Base structure provides:
-# - Severity-based routing (critical, high, medium, low)
-# - Group strategy: alertname + cluster + service
-# - Inhibit rules to suppress lower severity when higher is firing
-# @see alertmanager-base.yml for complete route structure
-
+# Route structure inherited from alertmanager-base.yml
+# Production-specific: add PagerDuty for critical, detailed Slack channels
 route:
   receiver: default-team
   group_by: ['alertname', 'cluster', 'service']
@@ -23,9 +22,9 @@ route:
   group_interval: 10s
   repeat_interval: 4h
   
-  # Route rules
+  # Route rules (inherited from base pattern — adapted for production)
   routes:
-    # Critical alerts → PagerDuty immediately
+    # Critical → PagerDuty immediately
     - match:
         severity: critical
       receiver: pagerduty-critical
@@ -34,7 +33,7 @@ route:
       repeat_interval: 1h
       continue: false
 
-    # High severity → Slack + on-call
+    # High → Slack + on-call
     - match:
         severity: high
       receiver: slack-critical
@@ -43,7 +42,7 @@ route:
       repeat_interval: 4h
       continue: false
 
-    # Medium severity → Slack only
+    # Medium → Slack only
     - match:
         severity: medium
       receiver: slack-warnings
@@ -52,7 +51,7 @@ route:
       repeat_interval: 12h
       continue: false
 
-    # Low severity → Email daily digest
+    # Low → Email daily digest
     - match:
         severity: low
       receiver: email-digest
@@ -61,7 +60,30 @@ route:
       repeat_interval: 24h
       continue: false
 
-# Receivers configuration (production-specific)
+# Inhibit rules (inherited from alertmanager-base.yml)
+inhibit_rules:
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['alertname', 'cluster', 'service']
+
+  - source_match:
+      severity: medium
+    target_match:
+      severity: low
+    equal: ['alertname', 'cluster', 'service']
+
+  - source_match:
+      alertname: ClusterDown
+    target_match_re:
+      alertname: '.*'
+    equal: ['cluster']
+
+# ═════════════════════════════════════════════════════════════════════════════
+# RECEIVERS — Production-specific with multi-channel routing
+# ═════════════════════════════════════════════════════════════════════════════
+
 receivers:
   # Default team (everyone)
   - name: default-team
@@ -87,7 +109,7 @@ receivers:
           severity: 'critical'
           timestamp: '{{ now }}'
 
-  # Slack for high-priority incidents
+  # Slack for high-priority
   - name: slack-critical
     slack_configs:
       - channel: '#alerts-critical'
@@ -95,9 +117,22 @@ receivers:
         text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
         color: 'warning'
         send_resolved: true
-        actions:
-          - type: button
-            text: 'View in Grafana'
+
+  # Slack for warnings
+  - name: slack-warnings
+    slack_configs:
+      - channel: '#alerts-warnings'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        color: '#FFA500'
+        send_resolved: true
+
+  # Email for low-priority digest
+  - name: email-digest
+    email_configs:
+      - to: ${VAULT_ALERT_EMAIL}
+        headers:
+          Subject: 'Daily Alert Digest'
             url: 'https://grafana.ide.kushnir.cloud/d/{{ .GroupLabels.dashboard }}'
 
   # Slack for medium-priority alerts

@@ -106,7 +106,7 @@ validate_gpu_setup() {
   fi
 }
 
-# Phase 2: Deployment (using Terraform)
+# Deployment using Terraform
 deploy_gpu_infrastructure() {
   log_info "=== GPU Infrastructure Deployment ==="
   
@@ -291,3 +291,4 @@ fi
 
 # Run main
 main "$@"
+

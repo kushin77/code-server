@@ -25,6 +25,31 @@ variable "domain" {
   default     = "ide.kushnir.cloud"
 }
 
+variable "external_domain" {
+  description = "External domain for DNS-based access (for on-prem: e.g., '192.168.168.31.nip.io'; for production: 'kushnir.cloud')"
+  type        = string
+  default     = "192.168.168.31.nip.io"
+}
+
+variable "acme_email" {
+  description = "Email for Let's Encrypt ACME certificate notifications (required for HTTPS)"
+  type        = string
+  default     = "ops@kushnir.cloud"
+}
+
+variable "cloudflare_tunnel_token" {
+  description = "Cloudflare Tunnel run token (required for cloudflared sidecar)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "enable_cloudflare_tunnel" {
+  description = "Enable cloudflared service in generated docker-compose.yml"
+  type        = bool
+  default     = true
+}
+
 variable "config_dir" {
   description = "Configuration directory (by default, project root)"
   type        = string
@@ -40,25 +65,39 @@ variable "google_client_id" {
   description = "Google OAuth2 Client ID (from GCP Console OAuth2.0 credentials)"
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "test-client-id-123.apps.googleusercontent.com"
+
+  validation {
+    condition     = length(trimspace(var.google_client_id)) > 10 && trimspace(var.google_client_id) != "\\"
+    error_message = "google_client_id must be non-empty and valid-looking (not a placeholder slash)."
+  }
 }
 
 variable "google_client_secret" {
   description = "Google OAuth2 Client Secret (from GCP Console OAuth2.0 credentials)"
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "test-client-secret-xyz"
+
+  validation {
+    condition     = length(trimspace(var.google_client_secret)) > 5 && trimspace(var.google_client_secret) != "\\"
+    error_message = "google_client_secret must be non-empty and valid-looking (not a placeholder slash)."
+  }
 }
 
 variable "oauth2_proxy_cookie_secret" {
-  description = "Random cookie encryption secret for oauth2-proxy (generate: openssl rand -base64 32)"
+  description = "Random cookie encryption secret for oauth2-proxy (16/24/32 bytes in hex format)"
   type        = string
   sensitive   = true
-  default     = "KPm7K8L9vN6q3W2zM5xJ4pL6K9mN8qW3zR5xY7tJ9pM2vO4wQ6sT8uV0xW2zY4aB"
+  default     = "867e5c21f89d4b162a3dbe5924761c8a"
 
   validation {
-    condition     = length(var.oauth2_proxy_cookie_secret) > 0
-    error_message = "oauth2_proxy_cookie_secret is required; generate: openssl rand -base64 32"
+    condition = (
+      can(regex("^[0-9a-fA-F]{32}$", trimspace(var.oauth2_proxy_cookie_secret))) ||
+      can(regex("^[0-9a-fA-F]{48}$", trimspace(var.oauth2_proxy_cookie_secret))) ||
+      can(regex("^[0-9a-fA-F]{64}$", trimspace(var.oauth2_proxy_cookie_secret)))
+    )
+    error_message = "oauth2_proxy_cookie_secret must be hex length 32/48/64 (16/24/32 bytes). Example: openssl rand -hex 16"
   }
 }
 

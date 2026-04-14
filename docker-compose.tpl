@@ -4,8 +4,6 @@
 # Regenerate: terraform apply
 # ════════════════════════════════════════════════════════════════════════════
 
-version: "3.9"
-
 services:
   # ─── code-server ────────────────────────────────────────────────────────────
   # VS Code running in the browser with Copilot Chat support
@@ -37,6 +35,13 @@ services:
       - GITHUB_TOKEN=$${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:${ollama_port}
       - OLLAMA_DEFAULT_MODEL=${llama_model}
+      # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SDK_DISABLED=false
+      - OTEL_SERVICE_NAME=code-server
+      - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=4.115.0,hostname=code-server
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
     command:
       - "--bind-addr=0.0.0.0:${code_server_port}"
       - "--disable-telemetry"
@@ -60,8 +65,6 @@ services:
         reservations:
           memory: 512m
           cpus: '0.25'
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -87,13 +90,11 @@ services:
       - ${ollama_volume}:/root/.ollama
       - ${workspace_dir}:${workspace_path}:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${ollama_port}/api/tags"]
+      test: ["CMD", "/bin/bash", "-c", "</dev/tcp/localhost/${ollama_port}"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-    security_opt:
-      - no-new-privileges:true
     deploy:
       resources:
         limits:
@@ -146,6 +147,9 @@ services:
       - ${network_name}
     expose:
       - "${oauth2_proxy_port}"
+    user: "0:0"
+    env_file:
+      - .env
     environment:
       OAUTH2_PROXY_CLIENT_ID: "$${GOOGLE_CLIENT_ID}"
       OAUTH2_PROXY_CLIENT_SECRET: "$${GOOGLE_CLIENT_SECRET}"
@@ -176,15 +180,13 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${oauth2_proxy_port}/ping"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:${oauth2_proxy_port}/ping"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
     depends_on:
       - code-server
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -207,22 +209,54 @@ services:
       - caddy-config:/config
       - caddy-data:/data
     environment:
+      # ─── DNS & TLS Configuration (Phase 21+) ──────────────────────────
+      # For production: DOMAIN=kushnir.cloud (real DNS + Let's Encrypt)
+      # For on-prem: DOMAIN=${external_domain} (nip.io or static IP)
+      - DOMAIN=$${DOMAIN}
+      - ACME_EMAIL=$${ACME_EMAIL}
       - ACME_AGREE=true
+      # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=caddy-proxy
+      - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=${caddy_version},hostname=caddy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/healthz || exit 1"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:80/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
     depends_on:
       - oauth2-proxy
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+
+%{ if enable_cloudflared }
+  # ─── cloudflared ────────────────────────────────────────────────────────────
+  # Cloudflare Tunnel sidecar (enabled only when token is provided via Terraform)
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.0
+    container_name: cloudflared
+    restart: unless-stopped
+    networks:
+      - ${network_name}
+    env_file:
+      - .env
+    command:
+      - tunnel
+      - run
+      - --token=$${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - caddy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+%{ endif }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks & Volumes

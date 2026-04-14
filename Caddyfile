@@ -1,49 +1,126 @@
 # ════════════════════════════════════════════════════════════════════════════
-# Caddyfile — Development Environment
-#
-# Used with: docker-compose -f docker-compose.yml -f docker-compose.override.yml
+# Caddyfile — Production & On-Premises Configuration
 # 
-# - HTTP only (no TLS)
-# - Direct port exposure (127.0.0.1:8080)
-# - No auth proxy (basic-auth from code-server)
-# - Development logging and caching disabled
+# Supports both:
+# - Production: https://ide.kushnir.cloud (with Let's Encrypt TLS)
+# - On-Prem: http://code-server.192.168.168.31.nip.io (HTTP, no TLS)
 # ════════════════════════════════════════════════════════════════════════════
 
-# Global configuration
 {
-    auto_https off
     log default {
         format json
+        output stdout
+    }
+    
+    # Email for Let's Encrypt ACME
+    email {$ACME_EMAIL:admin@kushnir.cloud}
+    
+    # Let's Encrypt CA (or self-signed if no ACME)
+    # Disable for on-prem by setting ACME_CA=
+    acme_ca {$ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
+    
+    # On-prem: disable auto_https to avoid TLS issues with nip.io
+    # Valid values: off (disable), disable_redirects, disable_certs, ignore_loaded_certs
+    auto_https off
+}
+
+# Primary production domain - HTTPS
+ide.kushnir.cloud {
+    encode gzip
+    
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    header X-Content-Type-Options "nosniff"
+    header X-Frame-Options "DENY"
+    header X-XSS-Protection "1; mode=block"
+    header Referrer-Policy "strict-origin-when-cross-origin"
+    header Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    
+    reverse_proxy code-server:8080 {
+        flush_interval -1
     }
 }
 
-# HTTP only in development
-:80 {
-    # Compression
+# Alias for secondary domain (if configured)
+code-server.{$DOMAIN:kushnir.cloud} {
     encode gzip
-    
-    # Security headers (basic)
-    header {
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
-    
-    # Development-friendly cache control (no caching)
-    header Cache-Control "no-cache, no-store, must-revalidate"
-    
-    # Reverse proxy to code-server service
     reverse_proxy code-server:8080 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
-    
-    # Logging
-    log {
-        output stdout
-        format json
+        flush_interval -1
     }
 }
+
+# Admin dashboards
+grafana.kushnir.cloud {
+    encode gzip
+    reverse_proxy grafana:3000
+}
+
+prometheus.kushnir.cloud {
+    encode gzip
+    reverse_proxy prometheus:9090
+}
+
+jaeger.kushnir.cloud {
+    encode gzip
+    reverse_proxy jaeger:16686
+}
+
+# Health check endpoint
+kushnir.cloud {
+    @health_checks path /health /healthz /.well-known/health
+    handle @health_checks {
+        respond "OK" 200
+    }
+    
+    handle {
+        reverse_proxy code-server:8080 {
+            flush_interval -1
+        }
+    }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ON-PREMISES CONFIGURATION (nip.io dynamic DNS for on-prem at 192.168.168.31)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# On-prem code-server (HTTP only)
+code-server.192.168.168.31.nip.io,
+ide.192.168.168.31.nip.io {
+    encode gzip
+    reverse_proxy code-server:8080 {
+        flush_interval -1
+    }
+}
+
+# On-prem Grafana
+grafana.192.168.168.31.nip.io {
+    encode gzip
+    reverse_proxy grafana:3000
+}
+
+# On-prem Prometheus
+prometheus.192.168.168.31.nip.io {
+    encode gzip
+    reverse_proxy prometheus:9090
+}
+
+# On-prem Jaeger
+jaeger.192.168.168.31.nip.io {
+    encode gzip
+    reverse_proxy jaeger:16686
+}
+
+# On-prem health check
+192.168.168.31.nip.io {
+    @health_checks path /health /healthz /.well-known/health
+    handle @health_checks {
+        respond "OK" 200
+    }
+    
+    handle {
+        reverse_proxy code-server:8080 {
+            flush_interval -1
+        }
+    }
+}
+
+

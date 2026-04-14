@@ -1,0 +1,350 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: containerimagewhitelist
+  annotations:
+    description: "Container images must come from approved registries"
+spec:
+  crd:
+    spec:
+      names:
+        kind: ContainerImageWhitelist
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            allowedRegistries:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package containerimagewhitelist
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          image := container.image
+          not allowed_image(image)
+          msg := sprintf("Image '%v' comes from untrusted registry. Allowed: %v", [image, input.parameters.allowedRegistries])
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.initContainers[_]
+          image := container.image
+          not allowed_image(image)
+          msg := sprintf("Init image '%v' from untrusted registry", [image])
+        }
+        
+        allowed_image(image) {
+          registry := split(image, "/")[0]
+          registry == input.parameters.allowedRegistries[_]
+        }
+
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requirerequestslimits
+  annotations:
+    description: "All containers must have resource requests and limits"
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequireRequestsLimits
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package requirerequestslimits
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.resources.requests
+          msg := sprintf("Container '%v' missing resource requests", [container.name])
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.resources.limits
+          msg := sprintf("Container '%v' missing resource limits", [container.name])
+        }
+
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requirelabels
+  annotations:
+    description: "Resources must have required labels for tracking"
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequireLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            requiredLabels:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package requirelabels
+        
+        violation[{"msg": msg}] {
+          not has_required_label
+          msg := sprintf("Missing required labels: %v", [input.parameters.requiredLabels])
+        }
+        
+        has_required_label {
+          labels := input.review.object.metadata.labels
+          required := input.parameters.requiredLabels[_]
+          labels[required]
+        }
+
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: pspbaseline
+  annotations:
+    description: "Pod security baseline policies"
+spec:
+  crd:
+    spec:
+      names:
+        kind: PSPBaseline
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package pspbaseline
+        
+        violation[{"msg": "Container must not run as root"}] {
+          container := input.review.object.spec.containers[_]
+          container.securityContext.runAsUser == 0
+        }
+        
+        violation[{"msg": "Privileged containers not allowed"}] {
+          container := input.review.object.spec.containers[_]
+          container.securityContext.privileged == true
+        }
+
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requireauditannotations
+  annotations:
+    description: "All workloads must have audit annotations"
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequireAuditAnnotations
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            requiredAnnotations:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package requireauditannotations
+        
+        violation[{"msg": msg}] {
+          required := input.parameters.requiredAnnotations[_]
+          not input.review.object.metadata.annotations[required]
+          msg := sprintf("Missing required audit annotation: %v", [required])
+        }
+
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ContainerImageWhitelist
+metadata:
+  name: container-image-whitelist
+spec:
+  parameters:
+    allowedRegistries:
+      - "docker.io"
+      - "ghcr.io"
+      - "quay.io"
+      - "nvidia"
+      - "citusdata"
+      - "postgres"
+  match:
+    excludedNamespaces: ["kube-system", "kube-node-lease", "gatekeeper-system"]
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+      - apiGroups: ["batch"]
+        kinds: ["Job", "CronJob"]
+
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequireRequestsLimits
+metadata:
+  name: require-requests-limits
+spec:
+  match:
+    excludedNamespaces: ["kube-system", "gatekeeper-system"]
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet"]
+
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequireLabels
+metadata:
+  name: require-labels
+spec:
+  parameters:
+    requiredLabels:
+      - app
+      - phase
+  match:
+    excludedNamespaces: ["kube-system", "gatekeeper-system"]
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: PSPBaseline
+metadata:
+  name: psp-baseline
+spec:
+  match:
+    excludedNamespaces: ["kube-system", "gatekeeper-system", "nvidia-device-plugin"]
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: RequireAuditAnnotations
+metadata:
+  name: require-audit-annotations
+spec:
+  parameters:
+    requiredAnnotations:
+      - audit-user
+      - audit-reason
+  match:
+    excludedNamespaces: ["kube-system", "gatekeeper-system"]
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet"]
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-policy
+  namespace: kube-system
+data:
+  audit-policy.yaml: |
+    apiVersion: audit.k8s.io/v1
+    kind: Policy
+    rules:
+      # Log all requests at Metadata level
+      - level: Metadata
+        omitStages:
+          - RequestReceived
+      
+      # Log pod exec with request/response body
+      - level: RequestResponse
+        verbs: ["create", "update", "patch", "delete"]
+        resources:
+          - group: ""
+            resources: ["pods/exec", "pods/portforward"]
+      
+      # Log ConfigMap and Secret changes
+      - level: RequestResponse
+        verbs: ["create", "update", "patch"]
+        resources:
+          - group: ""
+            resources: ["configmaps", "secrets"]
+      
+      # Log RBAC changes
+      - level: RequestResponse
+        verbs: ["create", "update", "patch"]
+        resources:
+          - group: "rbac.authorization.k8s.io"
+            resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
+      
+      # Log resource quota/limit changes
+      - level: RequestResponse
+        verbs: ["create", "update", "patch"]
+        resources:
+          - group: ""
+            resources: ["resourcequotas", "limitranges"]
+      
+      # Default: log at Metadata level
+      - level: Metadata
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-prometheus-rules
+  namespace: monitoring
+data:
+  compliance-rules.yml: |
+    groups:
+      - name: compliance_violations
+        interval: 30s
+        rules:
+          - alert: GatekeeperViolationDetected
+            expr: increase(gatekeeper_violations_total[5m]) > 0
+            labels:
+              severity: warning
+              component: compliance
+            annotations:
+              summary: "Gatekeeper policy violation detected"
+              description: "{{ $value }} violations in last 5 minutes"
+
+          - alert: UnauditedResourceChange
+            expr: increase(audit_log_unaudited_changes_total[5m]) > 0
+            labels:
+              severity: critical
+              component: compliance
+            annotations:
+              summary: "Unaudited resource change detected"
+              description: "Resource modified without audit trail"
+
+          - alert: UnauthorizedImageRegistry
+            expr: increase(gatekeeper_image_violations_total[5m]) > 0
+            labels:
+              severity: warning
+              component: compliance
+            annotations:
+              summary: "Container image from unauthorized registry attempted"
+              description: "{{ $value }} image violations in last 5 minutes"
+
+          - alert: MissingResourceLimits
+            expr: increase(gatekeeper_limit_violations_total[5m]) > 0
+            labels:
+              severity: info
+              component: compliance
+            annotations:
+              summary: "Pod deployed without resource limits"
+              description: "{{ $value }} limit violations in last 5 minutes"

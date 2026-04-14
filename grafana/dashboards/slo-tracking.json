@@ -1,0 +1,339 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.2.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "SLA / SLI / SLO Tracking — Error budget burn rates and 30-day reliability tracking",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "Correlation Dashboard",
+      "url": "/d/phase23-correlation",
+      "type": "link",
+      "icon": "external link"
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "── Error Budget Status (30-day rolling window) ──",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 0.25 },
+              { "color": "green",  "value": 0.50 }
+            ]
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
+      "id": 2,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "title": "Availability Error Budget Remaining",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "clamp_min(slo:availability:error_budget_remaining, 0)",
+          "instant": true,
+          "legendFormat": "Budget Remaining"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 0.25 },
+              { "color": "green",  "value": 0.50 }
+            ]
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 1 },
+      "id": 3,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "title": "Latency Error Budget Remaining",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "clamp_min(slo:latency:error_budget_remaining, 0)",
+          "instant": true,
+          "legendFormat": "Budget Remaining"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 6 },
+              { "color": "red",    "value": 14.4 }
+            ]
+          },
+          "unit": "short",
+          "displayName": "× normal rate"
+        }
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 1 },
+      "id": 4,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "title": "Current Burn Rate (1h)",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "slo:availability:burn_rate_1h",
+          "instant": true,
+          "legendFormat": "Burn Rate"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 10,
+      "title": "── Burn Rate Trends ──",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Budget Exhaustion Threshold" },
+            "properties": [
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 4] } },
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 11,
+      "title": "Availability Burn Rates (1h and 6h)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "slo:availability:burn_rate_1h",
+          "legendFormat": "Burn Rate 1h"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "slo:availability:burn_rate_6h",
+          "legendFormat": "Burn Rate 6h"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "vector(1)",
+          "legendFormat": "Sustainable rate (1×)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "vector(14.4)",
+          "legendFormat": "Budget Exhaustion Threshold"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 12,
+      "title": "Error Budget Remaining (30-day rolling)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "clamp_min(slo:availability:error_budget_remaining, 0)",
+          "legendFormat": "Availability Budget"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "clamp_min(slo:latency:error_budget_remaining, 0)",
+          "legendFormat": "Latency Budget"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "vector(0.1)",
+          "legendFormat": "Critical threshold (10%)"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "id": 20,
+      "title": "── SLI Actual vs Target ──",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+      "id": 21,
+      "title": "Availability SLI — Actual vs Target (99.95%)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "sli:availability:ratio_rate5m",
+          "legendFormat": "Actual Availability"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "slo:availability:target",
+          "legendFormat": "Target (99.95%)"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+      "id": 22,
+      "title": "Latency SLI — % Requests < 100ms vs Target (95%)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "sli:latency:ratio_rate5m",
+          "legendFormat": "Actual Latency SLI"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "slo:latency:target",
+          "legendFormat": "Target (95%)"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "id": 30,
+      "title": "── Error Budget Consumed (Minutes) ──",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 2.16 },
+              { "color": "red",    "value": 4.32 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 26 },
+      "id": 31,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "title": "Downtime Consumed (30-day budget = 4.32 min at 99.95%)",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "slo:availability:budget_consumed_minutes",
+          "instant": true,
+          "legendFormat": "Minutes Used"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+      "fieldConfig": {
+        "defaults": { "unit": "m" }
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 26 },
+      "id": 32,
+      "title": "Budget Consumption Over Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "slo:availability:budget_consumed_minutes",
+          "legendFormat": "Minutes of downtime used"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-uid-001" },
+          "expr": "vector(4.32)",
+          "legendFormat": "Monthly budget limit (4.32 min)"
+        }
+      ]
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 38,
+  "tags": ["phase23", "slo", "sli", "error-budget"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+   "title": "SLO / Error Budget Tracking",
+  "uid": "phase23-slo",
+  "version": 1
+}

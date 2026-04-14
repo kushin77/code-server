@@ -1,67 +1,27 @@
-# Terraform
-.terraform/
-.terraform.lock.hcl
-terraform.tfstate
-terraform.tfstate.*
-crash.log
-crash.*.log
-*.tfplan
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
 
-# Logs
-*.log
-deployment.log
+tmp-fix-*.py
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Local temporary files
-*.tmp
-*.bak
-*.backup
-
-# Sensitive data (if accidentally created)
-*.pem
-*.key
+# Secrets and credentials — NEVER commit
 .env
-.env.local
-
-# User session and secrets (never commit)
-sessions/
-.secrets/
-
-# Docker
-docker-compose.override.yml
-
-# Caddy
-*.crt
+.env.*
+temp_env
 *.key
+*.pem
+*.crt
+!*.crt.example
 
-# Build artifacts
-node_modules/
-dist/
-build/
-*.d.ts
-*.d.ts.map
-*.js.map
+# Terraform state and provider cache
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
 
-# Terraform backup
-backup.tfstate
-
-workspace/*
-!workspace/.gitkeep
-terraform.tfvars
-data/postgresql/
+# Runtime / persistent data volumes
 data/
+archived/
+
+# Backup/temp files
+*.bak
+*.bak.*
+docker-compose*.bak*
+

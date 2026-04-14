@@ -12,9 +12,14 @@
 
 set -eu
 
-
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+# Initialize script directory FIRST, before sourcing anything
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source common initialization (if available)
+if [[ -f "$SCRIPT_DIR/_common/init.sh" ]]; then
+    source "$SCRIPT_DIR/_common/init.sh"
+fi
+
 readonly DB_FILE="${DB_FILE:-/etc/developer-access/developers.db}"
 readonly AUDIT_LOG="${AUDIT_LOG:-/var/log/developer-access-audit.log}"
 readonly SSL_CERT_DIR="${SSL_CERT_DIR:-/etc/developer-access/certs}"
@@ -167,14 +172,15 @@ grant_access() {
     init_db
     
     # Insert or update record
-    sqlite3 "$DB_FILE" <<SQL || {
-        echo -e "${RED}✗ Failed to update database${NC}" >&2
-        log_audit "grant" "$username" "$actor" "failure" "Database update failed"
-        return 1
-    }
+    sqlite3 "$DB_FILE" << 'SQL'
 INSERT OR REPLACE INTO developers (username, email, grant_date, expiration_date, status, reason, created_by, updated_at)
 VALUES ('$username', '$email', '$grant_date', '$expiration_date', 'active', '$reason', '$actor', CURRENT_TIMESTAMP);
 SQL
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}✗ Failed to update database${NC}" >&2
+        log_audit "grant" "$username" "$actor" "failure" "Database update failed"
+        return 1
+    fi
     
     # Create SSH key if not exists
     if [[ ! -f "$HOME/.ssh/${username}_key" ]]; then
@@ -239,14 +245,15 @@ revoke_access() {
     
     # Update database status
     init_db
-    sqlite3 "$DB_FILE" <<SQL || {
-        echo -e "${RED}✗ Failed to update database${NC}" >&2
-        return 1
-    }
+    sqlite3 "$DB_FILE" << 'SQL'
 UPDATE developers
 SET status = 'revoked', updated_at = CURRENT_TIMESTAMP
 WHERE username = '$username' AND status = 'active';
 SQL
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}✗ Failed to update database${NC}" >&2
+        return 1
+    fi
     
     # Revoke Cloudflare Access
     revoke_cloudflare_token "$username" "$email"

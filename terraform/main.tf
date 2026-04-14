@@ -21,12 +21,38 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
   }
 }
 
 provider "docker" {
   host = var.docker_host
 }
+
+provider "aws" {
+  region = "us-east-1" # Primary region (default)
+}
+
+provider "aws" {
+  alias  = "secondary"
+  region = "us-west-2" # Secondary region for DR
+}
+
+# Cloudflare/DNS layer disabled for database HA deployment
+# Uncomment after DNS access-control layer is deployed with valid Cloudflare credentials
+# provider "cloudflare" {
+#   api_token = var.cloudflare_api_token
+# }
+
+# NOTE: Kubernetes and Helm providers declared but not configured for database HA deployment
+# They will be properly configured in orchestration layer when EKS cluster is ready
 
 # ════════════════════════════════════════════════════════════════════════════
 # SINGLE SOURCE OF TRUTH FOR ALL INFRASTRUCTURE
@@ -51,104 +77,7 @@ provider "docker" {
 #
 # ════════════════════════════════════════════════════════════════════════════
 
-locals {
-  # ─────────────────────────────────────────────────────────────────────────
-  # Service Identity & Environment
-  # ─────────────────────────────────────────────────────────────────────────
-  service_name = "code-server-enterprise"
-  environment  = "production"
-  region       = "us-central1"
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Version Pinning — ALL VERSIONS FROZEN HERE (immutability guarantee)
-  # ─────────────────────────────────────────────────────────────────────────
-  versions = {
-    code_server  = "4.115.0"         # Base image version (matches VS Code 1.115.0)
-    copilot      = "1.388.0"         # GitHub Copilot extension
-    copilot_chat = "0.43.2026040705" # GitHub Copilot Chat extension
-    ollama       = "0.1.27"          # Local LLM server
-    oauth2_proxy = "v7.5.1"          # OIDC proxy for auth
-    caddy        = "2.7.6"           # Reverse proxy + auto TLS
-    node_base    = "22.11.0"         # Node.js (embedded in code-server)
-  }
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Network & Port Configuration
-  # ─────────────────────────────────────────────────────────────────────────
-  network = {
-    name              = "enterprise"
-    code_server_port  = 8080
-    oauth2_proxy_port = 4180
-    caddy_http_port   = 80
-    caddy_https_port  = 443
-    ollama_port       = 11434
-  }
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Storage Configuration
-  # ─────────────────────────────────────────────────────────────────────────
-  storage = {
-    data_volume    = "${local.service_name}-data"
-    ollama_volume  = "ollama-data"
-    workspace_path = "/home/coder/workspace"
-    workspace_dir  = "${path.module}/workspace" # Local path on deploy host
-  }
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Resource Limits (immutable — scaling requires new deployment)
-  # ─────────────────────────────────────────────────────────────────────────
-  resources = {
-    code_server = {
-      limits       = { memory = "4g", cpus = "2.0" }
-      reservations = { memory = "512m", cpus = "0.25" }
-    }
-    ollama = {
-      limits       = { memory = "32g", cpus = "8.0" }
-      reservations = { memory = "8g", cpus = "2.0" }
-    }
-  }
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Tags & Labels (for auditing and automation)
-  # ─────────────────────────────────────────────────────────────────────────
-  tags = {
-    Name        = local.service_name
-    Environment = local.environment
-    Region      = local.region
-    ManagedBy   = "terraform"
-    Version     = "1.0.0"
-    IaC         = "true"
-    Immutable   = "true"
-    Idempotent  = "true"
-  }
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Export versions for docker-compose template
-  # ─────────────────────────────────────────────────────────────────────────
-  docker_compose_vars = {
-    service_name             = local.service_name
-    code_server_version      = local.versions.code_server
-    copilot_version          = local.versions.copilot
-    copilot_chat_version     = local.versions.copilot_chat
-    ollama_version           = local.versions.ollama
-    oauth2_proxy_version     = local.versions.oauth2_proxy
-    caddy_version            = local.versions.caddy
-    network_name             = local.network.name
-    code_server_port         = local.network.code_server_port
-    oauth2_proxy_port        = local.network.oauth2_proxy_port
-    caddy_http_port          = local.network.caddy_http_port
-    caddy_https_port         = local.network.caddy_https_port
-    ollama_port              = local.network.ollama_port
-    data_volume              = local.storage.data_volume
-    ollama_volume            = local.storage.ollama_volume
-    workspace_path           = local.storage.workspace_path
-    workspace_dir            = local.storage.workspace_dir
-    code_server_memory_limit = local.resources.code_server.limits.memory
-    code_server_cpus_limit   = local.resources.code_server.limits.cpus
-    llama_model              = "llama2:70b-chat"
-    enable_ollama            = true
-  }
-}
+# Consolidated locals now in locals.tf - see that file for single source of truth
 
 # ════════════════════════════════════════════════════════════════════════════
 # RESOURCE 1: Ensure output directory exists
@@ -163,39 +92,13 @@ resource "null_resource" "workspace_setup" {
 # RESOURCE 2: Generate docker-compose.yml (SINGLE SOURCE OF TRUTH)
 # 
 # CRITICAL: This is GENERATED from Terraform, never manually edited.
-# Re-running terraform apply regenerates this file with current versions.
-# ════════════════════════════════════════════════════════════════════════════
-resource "local_file" "docker_compose_yml" {
-  filename = "${path.module}/docker-compose.yml"
-
-  content = templatefile("${path.module}/docker-compose.tpl", local.docker_compose_vars)
-
-  # Ensure workspace exists first
-  depends_on = [null_resource.workspace_setup]
-
-  lifecycle {
-    # Track this as managed by Terraform; warn if manually edited
-    ignore_changes = []
-  }
-}
+# NOTE: Configuration file generation is handled by local files in repo root
+# - docker-compose.yml: Generated by Terraform or committed version
+# - Caddyfile: Static config in repo root (no templating)
+# Database HA deployment uses AWS RDS, not local PostgreSQL setup
 
 # ════════════════════════════════════════════════════════════════════════════
-# RESOURCE 3: Generate Caddyfile for local development
-# ════════════════════════════════════════════════════════════════════════════
-resource "local_file" "caddyfile" {
-  filename = "${path.module}/config/caddy/Caddyfile"
-
-  content = templatefile("${path.module}/Caddyfile.tpl", {
-    code_server_host  = "localhost"
-    code_server_port  = local.network.code_server_port
-    oauth2_proxy_port = local.network.oauth2_proxy_port
-  })
-
-  depends_on = [null_resource.workspace_setup]
-}
-
-# ════════════════════════════════════════════════════════════════════════════
-# RESOURCE 4: Generate .env for docker-compose secrets (DO NOT COMMIT)
+# RESOURCE: Generate .env for docker-compose secrets (DO NOT COMMIT)
 # ════════════════════════════════════════════════════════════════════════════
 resource "local_file" "env_file" {
   filename = "${path.module}/.env"
@@ -360,7 +263,8 @@ echo "✅ TLS: Let's Encrypt (auto-renewed)"
 echo "════════════════════════════════════════════════════════════════════════════"
 EOT
 
-  depends_on = [local_file.docker_compose_yml]
+  # depends_on commented out for database HA (docker_compose_yml resource disabled)
+  # depends_on = [local_file.docker_compose_yml]
 }
 
 # Make deploy script executable
@@ -378,10 +282,10 @@ resource "null_resource" "make_deploy_executable" {
 output "deployment_summary" {
   description = "Summary of IaC deployment configuration"
   value = {
-    service_name          = local.service_name
-    environment           = local.environment
-    pinned_versions       = local.versions
-    network               = local.network
-    storage_volumes       = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
+    service_name    = local.service_name
+    environment     = local.environment
+    pinned_versions = local.versions
+    network         = local.network
+    storage_volumes = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
   }
 }

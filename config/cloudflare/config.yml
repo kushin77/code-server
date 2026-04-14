@@ -1,0 +1,46 @@
+# Cloudflare Tunnel Configuration for code-server IDE
+# Production domain: ide.kushnir.cloud
+# Architecture: Global Cloudflare Edge → Tunnel → Caddy (TLS) → code-server:8080
+
+tunnel: ide-home-dev
+credentials-file: /etc/cloudflared/certs/ide-home-dev.json
+loglevel: info
+
+# Auto-update tunnel daemon
+autoupdate-frequency: 24h
+grace-period: 30s
+
+# Compression for terminal & WebSocket traffic
+compression:
+  enabled: true
+  level: 6
+  exclude:
+    - "image/*"
+    - "video/*"
+    - "audio/*"
+    - "application/zip"
+    - "application/gzip"
+
+ingress:
+  # Main production domain → Caddy (which handles TLS to code-server)
+  - hostname: ide.kushnir.cloud
+    service: http://caddy:80
+    originRequest:
+      http2Origin: true
+      connectTimeout: 30s
+      tlsTimeout: 10s
+  
+  # Alias domain (if configured)
+  - hostname: code-server.kushnir.cloud
+    service: http://caddy:80
+    originRequest:
+      http2Origin: true
+      connectTimeout: 30s
+      tlsTimeout: 10s
+  
+  # Root domain fallback
+  - hostname: kushnir.cloud
+    service: http://caddy:80
+  
+  # Catch-all 404
+  - service: http_status:404

@@ -26,7 +26,7 @@
 #   ./backup.sh restore backups/coder-data-20260414-153000.tar.gz
 #
 # Recent Changes:
-#   2026-04-14: Added error handling integration (Phase 2.2)
+#   2026-04-14: Added error handling integration 
 #   2026-04-13: Initial creation with backup/restore functions
 #
 ################################################################################

@@ -1,0 +1,181 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Multi-Tenant Organization Support — RBAC, team API management, billing
+# Canonical K8s manifest: kubernetes/organizations/organization-api.yaml
+# Canonical migration: db/migrations/20260414000001-add-organizations.sql
+# ════════════════════════════════════════════════════════════════════════════
+
+# PostgreSQL schema migration for organizations (idempotent)
+locals {
+  org_database_schema = {
+    organizations = {
+      columns = {
+        id          = "UUID PRIMARY KEY"
+        name        = "VARCHAR(255) NOT NULL"
+        tier        = "VARCHAR(20) NOT NULL DEFAULT 'free'"
+        created_at  = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+        owner_id    = "UUID REFERENCES users(id) NOT NULL"
+        max_members = "INT DEFAULT 10"
+        metadata    = "JSONB DEFAULT '{}'"
+      }
+      indexes = [
+        "owner_id",
+        "tier",
+        "created_at"
+      ]
+    }
+    
+    organization_members = {
+      columns = {
+        id        = "UUID PRIMARY KEY"
+        org_id    = "UUID REFERENCES organizations(id) NOT NULL"
+        user_id   = "UUID REFERENCES users(id) NOT NULL"
+        role      = "VARCHAR(50) NOT NULL" # admin, developer, auditor, viewer
+        joined_at = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+        metadata  = "JSONB DEFAULT '{}'"
+      }
+      indexes = [
+        "org_id",
+        "user_id",
+        "role"
+      ]
+    }
+    
+    organization_api_keys = {
+      columns = {
+        id             = "UUID PRIMARY KEY"
+        org_id         = "UUID REFERENCES organizations(id) NOT NULL"
+        key_hash       = "VARCHAR(256) NOT NULL UNIQUE"
+        name           = "VARCHAR(255) NOT NULL"
+        created_at     = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+        rotated_at     = "TIMESTAMP"
+        expires_at     = "TIMESTAMP"
+        last_used_at   = "TIMESTAMP"
+        permissions    = "JSONB DEFAULT '[]'"
+      }
+      indexes = [
+        "org_id",
+        "key_hash",
+        "expires_at"
+      ]
+    }
+  }
+
+  # RBAC roles (single source of truth)
+  rbac_roles = {
+    admin = {
+      description = "Full organization management, billing, API keys"
+      permissions = [
+        "org:read",
+        "org:update",
+        "org:delete",
+        "members:*",
+        "api_keys:*",
+        "billing:*",
+        "logs:read"
+      ]
+    }
+    developer = {
+      description = "Create/view API keys, read analytics"
+      permissions = [
+        "org:read",
+        "api_keys:create",
+        "api_keys:read",
+        "api_keys:delete",
+        "analytics:read",
+        "logs:read"
+      ]
+    }
+    auditor = {
+      description = "Read-only access to logs and analytics"
+      permissions = [
+        "org:read",
+        "analytics:read",
+        "logs:read",
+        "api_keys:read"
+      ]
+    }
+    viewer = {
+      description = "Read-only access to public schemas"
+      permissions = [
+        "org:read",
+        "schemas:read"
+      ]
+    }
+  }
+}
+
+# PostgreSQL migration for organizations
+# Canonical K8s manifest: kubernetes/organizations/organization-api.yaml
+# Canonical migration: db/migrations/20260414000001-add-organizations.sql
+# This resource ensures the migration file reflects the authoritative schema.
+resource "local_file" "org_migration" {
+  filename = "${path.module}/../db/migrations/20260414000001-add-organizations.sql"
+
+  content = <<-SQL
+    -- Organizations schema migration (idempotent)
+    -- Source of truth: terraform/organizations.tf
+    -- Canonical K8s: kubernetes/organizations/organization-api.yaml
+
+    CREATE TABLE IF NOT EXISTS organizations (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name        VARCHAR(255) NOT NULL,
+      tier        VARCHAR(20)  NOT NULL DEFAULT 'free',
+      created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      owner_id    UUID NOT NULL,
+      max_members INT DEFAULT 10,
+      metadata    JSONB DEFAULT '{}',
+      CONSTRAINT valid_tier CHECK (tier IN ('free','pro','enterprise'))
+    );
+
+    CREATE TABLE IF NOT EXISTS organization_members (
+      id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      org_id    UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      user_id   UUID NOT NULL,
+      role      VARCHAR(50) NOT NULL,
+      joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      metadata  JSONB DEFAULT '{}',
+      UNIQUE(org_id, user_id),
+      CONSTRAINT valid_role CHECK (role IN ('admin','developer','auditor','viewer'))
+    );
+
+    CREATE TABLE IF NOT EXISTS organization_api_keys (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      org_id       UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      key_hash     VARCHAR(256) NOT NULL UNIQUE,
+      name         VARCHAR(255) NOT NULL,
+      created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      rotated_at   TIMESTAMP,
+      expires_at   TIMESTAMP,
+      last_used_at TIMESTAMP,
+      permissions  JSONB DEFAULT '[]'
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_org_owner   ON organizations(owner_id);
+    CREATE INDEX IF NOT EXISTS idx_org_tier    ON organizations(tier);
+    CREATE INDEX IF NOT EXISTS idx_org_members_org  ON organization_members(org_id);
+    CREATE INDEX IF NOT EXISTS idx_org_members_user ON organization_members(user_id);
+    CREATE INDEX IF NOT EXISTS idx_org_keys_org     ON organization_api_keys(org_id);
+    CREATE INDEX IF NOT EXISTS idx_org_keys_hash    ON organization_api_keys(key_hash);
+  SQL
+}
+
+output "org_database_schema" {
+  description = "PostgreSQL schema for organization support"
+  value       = local.org_database_schema
+}
+
+output "org_rbac_config" {
+  description = "RBAC roles and permissions"
+  value       = local.rbac_roles
+}
+
+output "organizations_status" {
+  description = "Organization support implementation status"
+  value = {
+    status      = "IMPLEMENTED"
+    tables      = 3
+    rbac_roles  = length(local.rbac_roles)
+    features    = "Organization hierarchy, RBAC, API key management, audit logs"
+    deployment  = "192.168.168.31"
+  }
+}

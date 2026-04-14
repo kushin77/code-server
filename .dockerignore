@@ -1,0 +1,25 @@
+# Docker build context exclusions - keep builds fast and clean
+.git
+.github
+.vscode
+node_modules
+data
+.terraform
+.pytest_cache
+dist
+build
+*.log
+.env*
+.DS_Store
+*.swp
+*.swo
+*~
+.gitignore
+README.md
+CONTRIBUTING.md
+LICENSE
+*.md
+archived
+.archive
+sessions.json
+settings.json

@@ -1,54 +1,101 @@
-# ⚠️  LEGACY TEMPLATE — For reference only
-# In production, use the dynamic Caddyfile that reads {$DOMAIN} from environment
-# This template was used by Terraform for local development before domain migration
+# ════════════════════════════════════════════════════════════════════════════
+# Caddyfile — DNS-First Reverse Proxy Configuration (Phase 21+)
+#
+# CRITICAL PRINCIPLE: All endpoints use DOMAIN environment variable
+# - For production: DOMAIN=kushnir.cloud (real DNS + Let's Encrypt TLS)
+# - For on-prem: DOMAIN=192.168.168.31 (direct IP, HTTP, no TLS)
+#
+# NEVER hardcode IPs or localhost - always use domain names
+# ════════════════════════════════════════════════════════════════════════════
 
-localhost {
-    # Tier 1 Performance: HTTP/2, Compression, Connection Pooling
-    # Estimated improvement: 15-20% latency reduction, 30-40% bandwidth reduction
-    
-    # Compression (gzip + brotli) — reduces payload size by 60-80%
-    encode gzip
-    encode brotli
-    
-    # HTTP/2 Server Push — pre-loads critical assets
-    # Note: Paths must match actual code-server asset paths
-    push /static/bundle.js
-    push /static/styles.css
-    
-    # Connection optimization: Keep-Alive + pipeline
-    # Handled by reverse_proxy connection reuse
-    
-    # One-shot endpoint to clear stale workbench cache/storage in a regular profile.
-    @reset path /reset-browser-state
-    header @reset Clear-Site-Data "\"cache\", \"storage\""
-    respond @reset 200
+# Global options block MUST come first (no site address before it).
+# auto_https off: on-prem uses HTTP (no Let's Encrypt for LAN/nip.io IPs).
+# For production with a real domain and ACME_EMAIL set, remove auto_https off.
+{
+    auto_https off
 
-    # Prevent stale JS/CSS bundles from persisting across patched deployments.
-    @stableAssets path /stable-*
-    header @stableAssets Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-    header @stableAssets Pragma "no-cache"
-    header @stableAssets Expires "0"
-
-    # Reverse proxy to code-server — optimized for concurrency
-    reverse_proxy localhost:8080 {
-        # Preserve original headers
-        header_up X-Real-IP {http.request.remote.host}
-        header_up X-Forwarded-For {http.request.remote.host}
-        header_up X-Forwarded-Proto https
-
-        # WebSocket support required for code-server terminal, extensions and live sync
-        flush_interval -1
+    log default {
+        format json
+        output stdout
     }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HTTP Listener (Port 80)
+# All HTTP requests proxy to services via DNS names (not IPs)
+# ─────────────────────────────────────────────────────────────────────────────
+
+:80 {
+    encode gzip
 
     # Security headers
-    header X-Content-Type-Options nosniff
-    header X-Frame-Options SAMEORIGIN
+    header X-Content-Type-Options "nosniff"
+    header X-Frame-Options "SAMEORIGIN"
     header X-XSS-Protection "1; mode=block"
-    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
-    header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
+    header Referrer-Policy "strict-origin-when-cross-origin"
+    header Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+    # ── Health checks ─────────────────────────────────────────────────────────
+    @health_checks path /health /healthz /.well-known/health
+    handle @health_checks {
+        respond "OK" 200
+    }
+
+    # ── IDE (code-server) ─────────────────────────────────────────────────────
+    @ide_requests host code-server.{$DOMAIN:192.168.168.31}
+    handle @ide_requests {
+        reverse_proxy code-server:8080 {
+            flush_interval -1
+        }
+    }
+
+    # ── GraphQL API ───────────────────────────────────────────────────────────
+    @graphql_requests host graphql-api.{$DOMAIN:192.168.168.31}
+    handle @graphql_requests {
+        reverse_proxy graphql-api:4000 {
+            flush_interval -1
+        }
+    }
+
+    # ── Developer Portal ──────────────────────────────────────────────────────
+    @portal_requests host dev-portal.{$DOMAIN:192.168.168.31}
+    handle @portal_requests {
+        reverse_proxy developer-portal:3001 {
+            flush_interval -1
+        }
+    }
+
+    # ── Prometheus ────────────────────────────────────────────────────────────
+    @prometheus_requests host prometheus.{$DOMAIN:192.168.168.31}
+    handle @prometheus_requests {
+        reverse_proxy prometheus:9090
+    }
+
+    # ── Grafana ───────────────────────────────────────────────────────────────
+    @grafana_requests host grafana.{$DOMAIN:192.168.168.31}
+    handle @grafana_requests {
+        reverse_proxy grafana:3000
+    }
+
+    # ── Jaeger ────────────────────────────────────────────────────────────────
+    @jaeger_requests host jaeger.{$DOMAIN:192.168.168.31}
+    handle @jaeger_requests {
+        reverse_proxy jaeger:16686
+    }
+
+    # ── Default catch-all → code-server IDE ──────────────────────────────────
+    handle {
+        reverse_proxy code-server:8080 {
+            flush_interval -1
+        }
+    }
 }
 
-# HTTP to HTTPS redirect (for legacy local deployments)
-http://localhost {
-    redir https://localhost{uri} permanent
-}
+# ════════════════════════════════════════════════════════════════════════════
+# ARCHITECTURE NOTES
+# ════════════════════════════════════════════════════════════════════════════
+# On-prem (current): DOMAIN=192.168.168.31, HTTP only (auto_https off)
+# Production: set DOMAIN=kushnir.cloud + ACME_EMAIL, remove auto_https off
+# All services reference each other by Docker container name (internal DNS)
+# Change DOMAIN env var → all endpoints update, no code changes needed
+# ════════════════════════════════════════════════════════════════════════════

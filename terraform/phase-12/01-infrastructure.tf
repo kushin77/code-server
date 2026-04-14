@@ -3,7 +3,7 @@
 
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -76,75 +76,75 @@ variable "enable_pod_security" {
 
 locals {
   federation_id = "${var.federation_name}-prod"
-  
+
   regions = [
     {
-      region_id      = "us-west"
-      location       = "us-west1"
-      node_count     = 5
-      machine_type   = "n2-standard-4"
-      disk_size      = 200
-      network_cidr   = "10.0.0.0/20"
-      pods_cidr      = "10.4.0.0/14"
-      services_cidr  = "10.0.16.0/20"
-      replica_id     = "us-west-primary"
-      tier           = "primary"
+      region_id     = "us-west"
+      location      = "us-west1"
+      node_count    = 5
+      machine_type  = "n2-standard-4"
+      disk_size     = 200
+      network_cidr  = "10.0.0.0/20"
+      pods_cidr     = "10.4.0.0/14"
+      services_cidr = "10.0.16.0/20"
+      replica_id    = "us-west-primary"
+      tier          = "primary"
     },
     {
-      region_id      = "eu-west"
-      location       = "eu-west1"
-      node_count     = 4
-      machine_type   = "n2-standard-4"
-      disk_size      = 200
-      network_cidr   = "10.16.0.0/20"
-      pods_cidr      = "10.20.0.0/14"
-      services_cidr  = "10.36.0.0/20"
-      replica_id     = "eu-west-primary"
-      tier           = "secondary"
+      region_id     = "eu-west"
+      location      = "eu-west1"
+      node_count    = 4
+      machine_type  = "n2-standard-4"
+      disk_size     = 200
+      network_cidr  = "10.16.0.0/20"
+      pods_cidr     = "10.20.0.0/14"
+      services_cidr = "10.36.0.0/20"
+      replica_id    = "eu-west-primary"
+      tier          = "secondary"
     },
     {
-      region_id      = "eu-central"
-      location       = "europe-west1"
-      node_count     = 3
-      machine_type   = "n1-standard-4"
-      disk_size      = 150
-      network_cidr   = "10.32.0.0/20"
-      pods_cidr      = "10.40.0.0/14"
-      services_cidr  = "10.48.0.0/20"
-      replica_id     = "eu-central-primary"
-      tier           = "tertiary"
+      region_id     = "eu-central"
+      location      = "europe-west1"
+      node_count    = 3
+      machine_type  = "n1-standard-4"
+      disk_size     = 150
+      network_cidr  = "10.32.0.0/20"
+      pods_cidr     = "10.40.0.0/14"
+      services_cidr = "10.48.0.0/20"
+      replica_id    = "eu-central-primary"
+      tier          = "tertiary"
     },
     {
-      region_id      = "ap-south"
-      location       = "asia-southeast1"
-      node_count     = 3
-      machine_type   = "n1-standard-2"
-      disk_size      = 150
-      network_cidr   = "10.64.0.0/20"
-      pods_cidr      = "10.68.0.0/14"
-      services_cidr  = "10.80.0.0/20"
-      replica_id     = "ap-south-primary"
-      tier           = "tertiary"
+      region_id     = "ap-south"
+      location      = "asia-southeast1"
+      node_count    = 3
+      machine_type  = "n1-standard-2"
+      disk_size     = 150
+      network_cidr  = "10.64.0.0/20"
+      pods_cidr     = "10.68.0.0/14"
+      services_cidr = "10.80.0.0/20"
+      replica_id    = "ap-south-primary"
+      tier          = "tertiary"
     },
     {
-      region_id      = "ap-northeast"
-      location       = "asia-northeast1"
-      node_count     = 3
-      machine_type   = "n1-standard-2"
-      disk_size      = 150
-      network_cidr   = "10.96.0.0/20"
-      pods_cidr      = "10.100.0.0/14"
-      services_cidr  = "10.112.0.0/20"
-      replica_id     = "ap-northeast-primary"
-      tier           = "tertiary"
+      region_id     = "ap-northeast"
+      location      = "asia-northeast1"
+      node_count    = 3
+      machine_type  = "n1-standard-2"
+      disk_size     = 150
+      network_cidr  = "10.96.0.0/20"
+      pods_cidr     = "10.100.0.0/14"
+      services_cidr = "10.112.0.0/20"
+      replica_id    = "ap-northeast-primary"
+      tier          = "tertiary"
     },
   ]
 
   common_labels = {
-    federation = local.federation_id
+    federation  = local.federation_id
     deployed_by = "terraform"
-    phase = "phase-12-1"
-    created_at = timestamp()
+    phase       = "phase-12-1"
+    created_at  = timestamp()
   }
 }
 

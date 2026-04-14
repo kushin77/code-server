@@ -13,7 +13,7 @@
 #   - terraform — Infrastructure code validation
 #
 # Related Files:
-#   - .pre-commit-config.yaml — Pre-commit hook configuration (Phase 2.3)
+#   - .pre-commit-config.yaml — Pre-commit hook configuration
 #   - .github/GOVERNANCE-ROLLOUT.md — Governance schedule
 #   - CONTRIBUTING.md — Developer guidelines
 #   - .github/workflows/validate-config.yml — CI validation
@@ -41,7 +41,7 @@
 #   ./scripts/init-repo-governance.sh --verify
 #
 # Recent Changes:
-#   2026-04-14: Integrated with Phase 2.3 pre-commit setup
+#   2026-04-14: Integrated with pre-commit setup
 #   2026-04-13: Initial creation with governance initialization
 #
 ################################################################################
@@ -330,3 +330,4 @@ echo "4. Review onboarding issue"
 echo "5. Request approval from DevOps team"
 echo ""
 echo "Contact: #devops-governance"
+

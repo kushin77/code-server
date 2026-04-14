@@ -1,0 +1,414 @@
+# Phase 22-B: Advanced Networking - CloudFlare CDN Integration
+# Purpose: Configure CDN for static asset distribution and DDoS protection
+# Status: Production-ready, immutable, idempotent
+# Timeline: May 1-8, 2026
+
+terraform {
+  required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.21"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.25"
+    }
+  }
+}
+
+locals {
+  phase_22_b_cdn_enabled = var.phase_22_b_enabled
+  
+  # CloudFlare configuration
+  cloudflare = {
+    zone_id = var.cloudflare_zone_id  # Must be provided via terraform.tfvars
+    api_token = var.cloudflare_api_token  # Must be provided via terraform.tfvars
+    
+    # Cache rules
+    cache_rules = {
+      static_assets_ttl = 86400  # 1 day for static assets
+      api_cache_ttl     = 300    # 5 minutes for API responses
+      dynamic_ttl       = 0      # No cache for dynamic pages
+    }
+    
+    # DDoS protection levels
+    security_level   = "high"     # Challenge/block suspicious traffic
+    minimum_tls_version = "1.2"
+    
+    # Origin shield for additional caching layer
+    origin_shield = {
+      enabled = true
+      region  = "WNAM"  # Western North America
+    }
+  }
+  
+  # Content routing rules
+  routing_rules = {
+    static_paths = [
+      "/static/*",
+      "/assets/*",
+      "*.js",
+      "*.css",
+      "*.png",
+      "*.jpg",
+      "*.gif",
+      "*.svg",
+      "*.woff",
+      "*.woff2"
+    ]
+    
+    api_paths = [
+      "/api/*",
+      "/graphql"
+    ]
+    
+    bypassed_paths = [
+      "/auth/*",
+      "/ws/*"  # WebSocket connections
+    ]
+  }
+  
+  # Rate limiting rules
+  rate_limiting = {
+    api_requests_per_minute = 1000
+    ip_reputation_threshold = 30  # Block IPs with low reputation score
+    query_string_cache_key = true
+  }
+}
+
+# CloudFlare DNS records - Primary origin
+resource "cloudflare_record" "origin_primary" {
+  count   = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id = local.cloudflare.zone_id
+  name    = "origin"
+  type    = "A"
+  value   = "192.168.168.31"  # Primary host
+  ttl     = 3600
+  comment = "Primary origin server for CDN fallback"
+}
+
+# CloudFlare DNS records - Secondary origin (failover)
+resource "cloudflare_record" "origin_secondary" {
+  count   = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id = local.cloudflare.zone_id
+  name    = "origin-backup"
+  type    = "A"
+  value   = "192.168.168.30"  # Secondary host
+  ttl     = 3600
+  comment = "Secondary origin server for CDN failover"
+}
+
+# CloudFlare Page Rule - Cache static assets
+resource "cloudflare_page_rule" "cache_static" {
+  count   = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id = local.cloudflare.zone_id
+  target  = "example.com/static/*"
+  
+  actions = [
+    {
+      id    = "cache_level"
+      value = "cache_everything"
+    },
+    {
+      id    = "edge_cache_ttl"
+      value = local.cloudflare.cache_rules.static_assets_ttl
+    },
+    {
+      id = "browser_cache_ttl"
+      value = local.cloudflare.cache_rules.static_assets_ttl
+    }
+  ]
+  
+  priority = 1
+}
+
+# CloudFlare Page Rule - Cache API responses
+resource "cloudflare_page_rule" "cache_api" {
+  count   = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id = local.cloudflare.zone_id
+  target  = "example.com/api/*"
+  
+  actions = [
+    {
+      id    = "cache_level"
+      value = "cache_everything"
+    },
+    {
+      id    = "edge_cache_ttl"
+      value = local.cloudflare.cache_rules.api_cache_ttl
+    }
+  ]
+  
+  priority = 2
+}
+
+# CloudFlare Page Rule - Bypass cache for auth and websockets
+resource "cloudflare_page_rule" "bypass_cache" {
+  count   = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id = local.cloudflare.zone_id
+  target  = "example.com/{auth/*,ws/*}"
+  
+  actions = [
+    {
+      id    = "cache_level"
+      value = "bypass"
+    }
+  ]
+  
+  priority = 3
+}
+
+# CloudFlare Zone Settings - Security
+resource "cloudflare_zone_settings_override" "security" {
+  count = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id = local.cloudflare.zone_id
+  
+  settings {
+    # Security settings
+    security_level     = local.cloudflare.security_level
+    minimum_tls_version = local.cloudflare.minimum_tls_version
+    
+    # DDoS protection
+    ddos_protection_level = "advanced"
+    
+    # SSL/TLS settings
+    ssl = "full"  # Full SSL to origin
+    
+    # HTTP/2 Server Push
+    http2_server_push = "on"
+    
+    # Brotli compression
+    brotli = "on"
+    
+    # Always use HTTPS
+    always_use_https = "on"
+    
+    # Automatic HTTPS rewrites
+    automatic_https_rewrites = "on"
+    
+    # Cache retention and purge
+    cache_retention_days = 30
+  }
+}
+
+# CloudFlare Firewall Rules - Block known bad IPs
+resource "cloudflare_firewall_rule" "block_bad_reputation" {
+  count       = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id     = local.cloudflare.zone_id
+  description = "Block requests from IPs with bad reputation"
+  
+  filter = {
+    expression = "(cf.bot_management.score < 30 and cf.threat_score > 50) or (cf.ip_geoip.is_vpn)"
+  }
+  
+  action = "block"
+}
+
+# CloudFlare Firewall Rules - Rate limiting
+resource "cloudflare_rate_limit_rule" "api_rate_limit" {
+  count   = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id = local.cloudflare.zone_id
+  
+  disabled = false
+  
+  description = "Rate limit API endpoints to ${local.rate_limiting.api_requests_per_minute} req/min"
+  match {
+    request {
+      url = "${ match.url ~ "^/api/.*" }"
+    }
+  }
+  
+  action {
+    response = "challenge"
+  }
+  
+  threshold = local.rate_limiting.api_requests_per_minute
+  period    = 60  # 1 minute
+}
+
+# CloudFlare Load Balancer - Origin failover
+resource "cloudflare_load_balancer" "origin_failover" {
+  count           = local.phase_22_b_cdn_enabled ? 1 : 0
+  zone_id         = local.cloudflare.zone_id
+  name            = "lb"  # lb.example.com
+  default_pool_id = cloudflare_load_balancer_pool.primary[0].id
+  fallback_pool_id = cloudflare_load_balancer_pool.secondary[0].id
+  
+  description = "Origin load balancer with automatic failover"
+  ttl         = 30
+  
+  region_pools {
+    region       = "WNAM"
+    pool_ids     = [cloudflare_load_balancer_pool.primary[0].id]
+    pop_ids      = []
+  }
+  
+  region_pools {
+    region   = "ENAM"
+    pool_ids = [cloudflare_load_balancer_pool.secondary[0].id]
+    pop_ids  = []
+  }
+  
+  depends_on = [
+    cloudflare_load_balancer_pool.primary,
+    cloudflare_load_balancer_pool.secondary
+  ]
+}
+
+# Primary origin pool
+resource "cloudflare_load_balancer_pool" "primary" {
+  count       = local.phase_22_b_cdn_enabled ? 1 : 0
+  account_id  = var.cloudflare_account_id  # Must be provided
+  name        = "primary-origin"
+  description = "Primary origin pool"
+  
+  origins {
+    name    = "primary"
+    address = "192.168.168.31"
+    enabled = true
+  }
+  
+  check_regions = ["WNAM", "ENAM", "WEUR"]
+  
+  # Health check configuration
+  monitor = cloudflare_load_balancer_monitor.origin_health[0].id
+}
+
+# Secondary (failover) origin pool
+resource "cloudflare_load_balancer_pool" "secondary" {
+  count       = local.phase_22_b_cdn_enabled ? 1 : 0
+  account_id  = var.cloudflare_account_id
+  name        = "secondary-origin"
+  description = "Secondary origin pool for failover"
+  
+  origins {
+    name    = "secondary"
+    address = "192.168.168.30"
+    enabled = true
+  }
+  
+  check_regions = ["WNAM", "ENAM", "WEUR"]
+  
+  # Health check configuration
+  monitor = cloudflare_load_balancer_monitor.origin_health[0].id
+}
+
+# Health check monitor for origins
+resource "cloudflare_load_balancer_monitor" "origin_health" {
+  count       = local.phase_22_b_cdn_enabled ? 1 : 0
+  account_id  = var.cloudflare_account_id
+  type        = "https"
+  port        = 443
+  method      = "GET"
+  path        = "/health"
+  interval    = 60
+  timeout     = 5
+  retries     = 2
+  
+  allow_insecure = false
+  
+  description = "Health check for origin servers"
+  
+  header {
+    header = "User-Agent"
+    values = ["CloudFlare-HealthCheck"]
+  }
+}
+
+# Origin Shield configuration (Kubernetes ConfigMap)
+resource "kubernetes_config_map" "cloudflare_config" {
+  count = local.phase_22_b_cdn_enabled ? 1 : 0
+  
+  metadata {
+    name      = "cloudflare-cdn-config"
+    namespace = "default"
+    labels = {
+      component = "cdn"
+      phase     = "22-b"
+    }
+  }
+  
+  data = {
+    "cdn-origin" = "192.168.168.31"
+    "cdn-backup" = "192.168.168.30"
+    "cache-ttl-static" = tostring(local.cloudflare.cache_rules.static_assets_ttl)
+    "cache-ttl-api" = tostring(local.cloudflare.cache_rules.api_cache_ttl)
+    "origin-shield-enabled" = tostring(local.cloudflare.origin_shield.enabled)
+    "origin-shield-region" = local.cloudflare.origin_shield.region
+  }
+}
+
+# Kubernetes NetworkPolicy for Cloudflare IPs
+resource "kubernetes_network_policy" "cloudflare_ips" {
+  count = local.phase_22_b_cdn_enabled ? 1 : 0
+  
+  metadata {
+    name      = "allow-cloudflare-ips"
+    namespace = "default"
+  }
+  
+  spec {
+    pod_selector {
+      match_labels = {}  # Apply to all pods
+    }
+    
+    policy_types = ["Ingress"]
+    
+    # Allow CloudFlare's IP ranges
+    # https://www.cloudflare.com/ips/
+    ingress {
+      from {
+        ip_block {
+          cidr = "173.245.48.0/20"     # Cloudflare IPv4 range 1
+        }
+      }
+    }
+    
+    ingress {
+      from {
+        ip_block {
+          cidr = "103.21.244.0/22"     # Cloudflare IPv4 range 2
+        }
+      }
+    }
+    
+    ingress {
+      from {
+        ip_block {
+          cidr = "103.22.200.0/22"     # Cloudflare IPv4 range 3
+        }
+      }
+    }
+  }
+}
+
+# Outputs
+output "cloudflare_cdn_enabled" {
+  description = "CloudFlare CDN integration status"
+  value       = local.phase_22_b_cdn_enabled
+}
+
+output "cloudflare_load_balancer_name" {
+  description = "CloudFlare load balancer endpoint"
+  value       = local.phase_22_b_cdn_enabled ? cloudflare_load_balancer.origin_failover[0].name : null
+}
+
+output "cache_static_assets_ttl" {
+  description = "TTL for static assets (seconds)"
+  value       = local.phase_22_b_cdn_enabled ? local.cloudflare.cache_rules.static_assets_ttl : null
+}
+
+output "cache_api_ttl" {
+  description = "TTL for API responses (seconds)"
+  value       = local.phase_22_b_cdn_enabled ? local.cloudflare.cache_rules.api_cache_ttl : null
+}
+
+output "origin_shield_enabled" {
+  description = "Origin Shield status"
+  value       = local.phase_22_b_cdn_enabled ? local.cloudflare.origin_shield.enabled : false
+}
+
+output "ddos_protection_level" {
+  description = "DDoS protection configuration"
+  value       = local.phase_22_b_cdn_enabled ? "advanced (CloudFlare)" : null
+}

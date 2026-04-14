@@ -1,0 +1,162 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: podisecuritycontext
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy-type: security
+  annotations:
+    description: "Pods must define securityContext with runAsNonRoot"
+spec:
+  crd:
+    spec:
+      names:
+        kind: PodSecurityContext
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package podisecuritycontext
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.runAsNonRoot
+          msg := sprintf("Container %v must run as non-root user", [container.name])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: allowedimageregistries
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy-type: security
+  annotations:
+    description: "Container images must come from approved registries"
+spec:
+  crd:
+    spec:
+      names:
+        kind: AllowedImageRegistries
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            allowedRegistries:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package allowedimageregistries
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          image := container.image
+          registries := object.get(input, ["parameters", "allowedRegistries"], [])
+          not any_registry_matches(image, registries)
+          msg := sprintf("Image %v from unapproved registry", [image])
+        }
+        any_registry_matches(image, registries) {
+          registry := registries[_]
+          startswith(image, registry)
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requireresourcelimits
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy-type: operational
+  annotations:
+    description: "Containers must define CPU and memory limits"
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequireResourceLimits
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package requireresourcelimits
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.resources.limits.cpu
+          msg := sprintf("Container %v must define CPU limit", [container.name])
+        }
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.resources.limits.memory
+          msg := sprintf("Container %v must define memory limit", [container.name])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requiredlabels
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy-type: operational
+  annotations:
+    description: "Resources must have required labels"
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequiredLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            labels:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package requiredlabels
+        violation[{"msg": msg}] {
+          required_labels := object.get(input, ["parameters", "labels"], [])
+          provided_labels := object.get(input.review.object, ["metadata", "labels"], {})
+          missing := [label | label := required_labels[_]; not provided_labels[label]]
+          count(missing) > 0
+          msg := sprintf("Missing required labels: %v", [missing])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: requirenetworkpolicies
+  namespace: gatekeeper-system
+  labels:
+    phase: "22-e"
+    policy-type: security
+  annotations:
+    description: "Namespaces must have network policies"
+spec:
+  crd:
+    spec:
+      names:
+        kind: RequireNetworkPolicies
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package requirenetworkpolicies
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "Namespace"
+          ns := input.review.object.metadata.name
+          msg := sprintf("Namespace %v must have network policies", [ns])
+        }

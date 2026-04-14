@@ -1,0 +1,74 @@
+version: '3.9'
+
+services:
+  graphql-api-server:
+    image: node:20-alpine
+    container_name: graphql-api-server
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/code_server"
+      REDIS_URL: "redis://redis:6379/0"
+    command: sleep infinity
+    volumes:
+      - graphql-data:/app/data
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  developer-portal:
+    image: node:20-alpine
+    container_name: developer-portal
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: "http://graphql-api-server:4000"
+    command: sleep infinity
+    volumes:
+      - portal-data:/app/data
+    depends_on:
+      - graphql-api-server
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-gateway:
+    image: nginx:1.25-alpine
+    container_name: api-gateway
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "8001:80"
+    depends_on:
+      - graphql-api-server
+      - developer-portal
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  enterprise:
+    external: true
+
+volumes:
+  graphql-data:
+  portal-data:

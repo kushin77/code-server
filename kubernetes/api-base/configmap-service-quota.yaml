@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phase-26-config
+  namespace: default
+data:
+  rate_limits.json: |
+    {
+      "free": {"requests_per_minute": 60, "requests_per_day": 10000, "concurrent_queries": 5},
+      "pro": {"requests_per_minute": 1000, "requests_per_day": 500000, "concurrent_queries": 50},
+      "enterprise": {"requests_per_minute": 10000, "requests_per_day": 100000000, "concurrent_queries": 500}
+    }
+  analytics_metrics.json: |
+    {
+      "request_volume": {"granularities": ["hour", "day", "week", "month"], "retention": "3 months"},
+      "error_tracking": {"error_types": ["400", "401", "403", "429", "500", "503"], "retention": "6 months"},
+      "latency_percentiles": {"percentiles": [50, 95, 99], "retention": "3 months"},
+      "cost_estimation": {"method": "compute_time * $rate_per_ms", "granularity": "per_query"}
+    }
+  webhook_events.json: |
+    {
+      "supported_events": [
+        "workspace.created", "workspace.updated", "workspace.deleted",
+        "file.created", "file.modified", "file.deleted",
+        "user.joined", "user.left", "user.disabled",
+        "api_key.created", "api_key.rotated", "api_key.revoked",
+        "organization.invited", "organization.joined"
+      ],
+      "retry_policy": {"max_attempts": 3, "initial_delay_sec": 1, "backoff_strategy": "exponential", "max_delay_sec": 60}
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phase-26-api-gateway
+  namespace: default
+  labels:
+    phase: "26"
+spec:
+  type: ClusterIP
+  selector:
+    phase: "26"
+  ports:
+  - port: 3000
+    name: http
+    protocol: TCP
+  - port: 9090
+    name: metrics
+    protocol: TCP
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: phase-26-pdb
+  namespace: default
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      phase: "26"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: phase-26-quota
+  namespace: default
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: "20Gi"
+    limits.cpu: "20"
+    limits.memory: "40Gi"
+  scopeSelector:
+    matchExpressions:
+    - operator: In
+      scopeName: PriorityClass
+      values: [api-tier]

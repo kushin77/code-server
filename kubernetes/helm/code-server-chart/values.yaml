@@ -1,0 +1,172 @@
+# kubernetes/helm/code-server-chart/values.yaml
+# Default values for code-server Helm chart
+# Override these with -f values-prod.yaml for production deployment
+
+# ═════════════════════════════════════════════════════════════════════════════
+# IMAGE CONFIGURATION (Digest-Pinned for Immutability)
+# ═════════════════════════════════════════════════════════════════════════════
+
+image:
+  repository: codercom/code-server
+  tag: "4.20.1"
+  # Digest-pinned for immutability (prevents auto-updates)
+  digest: "sha256:abc123def456..."  # Set during deployment
+  pullPolicy: IfNotPresent
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DEPLOYMENT CONFIGURATION
+# ═════════════════════════════════════════════════════════════════════════════
+
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8080
+  annotations: {}
+
+# ═════════════════════════════════════════════════════════════════════════════
+# RESOURCE LIMITS & REQUESTS
+# ═════════════════════════════════════════════════════════════════════════════
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "512Mi"
+  limits:
+    cpu: "2000m"
+    memory: "2Gi"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PERSISTENCE
+# ═════════════════════════════════════════════════════════════════════════════
+
+persistence:
+  enabled: true
+  storageClass: "gp3"
+  accessMode: ReadWriteOnce
+  size: "20Gi"
+  mountPath: /home/coder
+
+# ═════════════════════════════════════════════════════════════════════════════
+# AUTOSCALING
+# ═════════════════════════════════════════════════════════════════════════════
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# ═════════════════════════════════════════════════════════════════════════════
+# HEALTH CHECKS
+# ═════════════════════════════════════════════════════════════════════════════
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 2
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INGRESS
+# ═════════════════════════════════════════════════════════════════════════════
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: "ide.kushnir.cloud"
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: code-server-tls
+      hosts:
+        - ide.kushnir.cloud
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ENVIRONMENT VARIABLES
+# ═════════════════════════════════════════════════════════════════════════════
+
+env:
+  - name: CODE_SERVER_CONFIG_DIR
+    value: "/home/coder/.config/code-server"
+  - name: PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: code-server-credentials
+        key: password
+  - name: SUDO_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: code-server-credentials
+        key: sudo_password
+
+# ═════════════════════════════════════════════════════════════════════════════
+# NODE AFFINITY (Pin to specific node types)
+# ═════════════════════════════════════════════════════════════════════════════
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: node.kubernetes.io/instance-type
+              operator: In
+              values:
+                - t3.xlarge
+                - t3.2xlarge
+
+# ═════════════════════════════════════════════════════════════════════════════
+# POD DISRUPTION BUDGET (High Availability)
+# ═════════════════════════════════════════════════════════════════════════════
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ═════════════════════════════════════════════════════════════════════════════
+# RBAC
+# ═════════════════════════════════════════════════════════════════════════════
+
+serviceAccount:
+  create: true
+  name: code-server
+  annotations: {}
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SECURITY CONTEXT
+# ═════════════════════════════════════════════════════════════════════════════
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  capabilities:
+    drop:
+      - ALL
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false

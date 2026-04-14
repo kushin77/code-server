@@ -1,0 +1,149 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: graphql-api-rate-limit
+  namespace: production
+  labels:
+    phase: 26-a
+    app: graphql-api
+spec:
+  hosts:
+  - graphql-api.code-server.local
+  http:
+  - name: "rate-limited-traffic"
+    match:
+    - uri:
+        prefix: /graphql
+    route:
+    - destination:
+        host: graphql-api-rate-limit
+        port:
+          number: 80
+        subset: v1
+      weight: 100
+    - destination:
+        host: graphql-api-rate-limit
+        port:
+          number: 80
+        subset: canary
+      weight: 0
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+  - name: "health-checks"
+    match:
+    - uri:
+        prefix: /healthz
+    - uri:
+        prefix: /ready
+    route:
+    - destination:
+        host: graphql-api-rate-limit
+        port:
+          number: 80
+    timeout: 5s
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: graphql-api-rate-limit
+  namespace: production
+  labels:
+    phase: 26-a
+    app: graphql-api
+spec:
+  host: graphql-api-rate-limit
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 1000
+        maxRequestsPerConnection: 2
+        h2UpgradePolicy: UPGRADE
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minRequestVolume: 100
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: canary
+    labels:
+      version: canary
+---
+apiVersion: policy.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: graphql-api-rate-limit
+  namespace: production
+  labels:
+    phase: 26-a
+    app: graphql-api
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: graphql-api-rate-limit
+  namespace: production
+  labels:
+    phase: 26-a
+    app: graphql-api
+spec:
+  selector:
+    matchLabels:
+      app: graphql-api
+      component: rate-limiting
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/production/sa/api-gateway"]
+    to:
+    - operation:
+        methods: ["POST", "GET"]
+        paths: ["/graphql*"]
+  - from:
+    - source:
+        principals: ["cluster.local/ns/production/sa/monitoring"]
+    to:
+    - operation:
+        paths: ["/metrics"]
+  - from:
+    - source:
+        principals: ["cluster.local/ns/production/sa/health-check"]
+    to:
+    - operation:
+        paths: ["/healthz", "/ready"]
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: graphql-api-gateway
+  namespace: production
+  labels:
+    phase: 26-a
+    app: graphql-api
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: graphql-api-tls
+    hosts:
+    - "graphql-api.code-server.local"
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "graphql-api.code-server.local"

@@ -1,0 +1,96 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: phase-26-api
+  namespace: default
+spec:
+  hosts:
+  - "api.192.168.168.31.nip.io"
+  http:
+  - match:
+    - uri:
+        prefix: "/graphql"
+    route:
+    - destination:
+        host: organization-api
+        port:
+          number: 3001
+      weight: 100
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 5s
+  - match:
+    - uri:
+        prefix: "/webhooks"
+    route:
+    - destination:
+        host: webhook-dispatcher
+        port:
+          number: 8000
+      weight: 100
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: phase-26-api-dr
+  namespace: default
+spec:
+  host: "*.default.svc.cluster.local"
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+---
+apiVersion: networking.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: phase-26-jwt
+  namespace: default
+spec:
+  jwtRules:
+  - issuer: "https://oauth2.192.168.168.31.nip.io"
+    jwksUri: "https://oauth2.192.168.168.31.nip.io/.well-known/jwks.json"
+    audiences:
+    - "code-server-api"
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: phase-26-authz
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      phase: "26"
+  action: ALLOW
+  rules:
+  # Allow requests with valid JWT
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/default/sa/*"
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+  # Allow health checks
+  - to:
+    - operation:
+        paths: ["/health", "/ready", "/ping"]
+  # Deny all other requests
+---
+apiVersion: networking.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: phase-26-mtls
+  namespace: default
+spec:
+  mtls:
+    mode: STRICT

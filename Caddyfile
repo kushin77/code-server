@@ -19,7 +19,7 @@
     acme_ca {$ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
 
     # Enable automatic HTTPS for real domains (production)
-    # For on-prem with nip.io: disable and use http:// domains with self-signed certs
+    # For on-prem with nip.io: set ACME_CA empty and use http:// domains
     auto_https off
 }
 
@@ -76,39 +76,4 @@ kushnir.cloud {
         }
     }
 }
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# ON-PREMISES HTTP FALLBACK
-# For on-prem deployments using nip.io wildcard DNS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# On-prem: nip.io HTTP fallback
-code-server.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
-    encode gzip
-    header X-Content-Type-Options "nosniff"
-    
-    reverse_proxy code-server:8080 {
-        flush_interval -1
-    }
-}
-
-# On-prem: Observability dashboards
-grafana.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
-    encode gzip
-    reverse_proxy grafana:3000
-}
-
-prometheus.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
-    encode gzip
-    reverse_proxy prometheus:9090
-}
-
-jaeger.{$EXTERNAL_DOMAIN:192.168.168.31.nip.io} http://* {
-    encode gzip
-    reverse_proxy jaeger:16686
-}
-# ON-PREMISES CONFIGURATION (nip.io dynamic DNS for on-prem at 192.168.168.31)
-# ═══════════════════════════════════════════════════════════════════════════════
-# NOTE: Templates above using {$EXTERNAL_DOMAIN} handle all on-prem cases.
-# No additional hard-coded site blocks needed here.
 

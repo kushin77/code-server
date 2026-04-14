@@ -41,7 +41,7 @@ resource "docker_container" "varnish" {
     "VARNISH_PARAM_THREAD_POOL_TIMEOUT=300"
   ]
 
-  health_check {
+  healthcheck {
     test         = ["CMD", "curl", "-f", "http://localhost:6081/healthz || exit 1"]
     interval     = "15s"
     timeout      = "5s"
@@ -49,7 +49,7 @@ resource "docker_container" "varnish" {
     start_period = "30s"
   }
 
-  restart_policy = "always"
+  restart = "always"
   
   networks_advanced {
     name = "code-server-enterprise-network"
@@ -63,12 +63,17 @@ resource "docker_container" "varnish" {
     prevent_destroy = false # Immutable image version prevents unintended changes
   }
 
-  labels = {
-    com_codercom_service  = "varnish-cache"
-    com_codercom_tier     = "performance"
-    com_codercom_phase    = "22B"
-    com_codercom_iac      = "true"
-    com_codercom_immutable = "true"
+  labels {
+    label = "com.codercom.service"
+    value = "varnish-cache"
+  }
+  labels {
+    label = "com.codercom.tier"
+    value = "performance"
+  }
+  labels {
+    label = "com.codercom.iac"
+    value = "true"
   }
 }
 

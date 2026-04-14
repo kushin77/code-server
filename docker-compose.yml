@@ -69,7 +69,7 @@ services:
     container_name: ollama
     restart: unless-stopped
     # ✅ GPU ACCELERATION - Uncomment this line if NVIDIA GPU detected on host
-    # runtime: nvidia
+    runtime: nvidia
     networks:
       - enterprise
     expose:
@@ -84,11 +84,11 @@ services:
       #   2. Uncomment: runtime: nvidia (2 lines above)
       #   3. Change: OLLAMA_NUM_GPU=1 (or higher if multiple GPUs)
       #   4. Redeploy: docker-compose up -d ollama
-      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
+      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-1}
     # ✅ GPU device access (only used if runtime: nvidia is enabled)
-    # devices:
-    #   - /dev/nvidiactl
-    #   - /dev/nvidia0
+    devices:
+      - /dev/nvidiactl
+      - /dev/nvidia0
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
@@ -541,3 +541,4 @@ volumes:
     driver: local
   caddy-data:
     driver: local
+

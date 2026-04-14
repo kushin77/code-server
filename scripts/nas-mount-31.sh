@@ -386,3 +386,9 @@ if [[ $2 == "--dry-run" ]]; then
 fi
 
 main "$@"
+# Elite NAS Resilience
+nas_check() {
+  if ! mountpoint -q /mnt/nas/code-server-enterprise; then
+    sudo mount -a
+  fi
+}

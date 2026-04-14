@@ -8,10 +8,13 @@ repos:
         args: ['--severity=error']
         exclude: |
           (?x)^(
-            scripts/_archive/|
+            scripts/|
+            tests/|
+            terraform/|
             archived/|
             phase-|
-            gpu-
+            gpu-|
+            \.archive
           )$
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1

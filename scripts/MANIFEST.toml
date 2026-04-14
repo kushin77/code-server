@@ -1,561 +1,352 @@
-# scripts/MANIFEST.toml
-# ──────────────────────────────────────────────────────────────────────────────
-# SCRIPT REGISTRY — Every script in scripts/ MUST have an entry here.
-# Unregistered scripts are flagged as violations in CI (make index).
-#
-# FIELDS
-#   file       = filename (basename only)
-#   category   = deployment | operations | validation | security | archive | library
-#   status     = active | deprecated | historical | experimental
-#   owner      = platform | security | oncall | (team name)
-#   purpose    = one-line human description
-#   depends    = optional list of scripts/libs this depends on
-#   called_by  = optional list of callers (CI, Makefile, other scripts)
-#   deprecated_by = (if status=deprecated) replacement script
-#
-# ENFORCEMENT
-#   make index   — list unregistered scripts
-#   pre-commit   — verify-metadata-headers hook checks Status: field in header
-# ──────────────────────────────────────────────────────────────────────────────
-
-# ─────────────────────────────────────────────────────────────────────────────
-# LIBRARIES (category=library — not independently executed)
-# ─────────────────────────────────────────────────────────────────────────────
-
-[[script]]
-file     = "_common/init.sh"
-category = "library"
-status   = "active"
-owner    = "platform"
-purpose  = "Single bootstrap entrypoint. Source this instead of individual _common/* files."
-
-[[script]]
-file     = "_common/config.sh"
-category = "library"
-status   = "active"
-owner    = "platform"
-purpose  = "Single source of truth for DEPLOY_HOST, DOMAIN, container names, ports, paths."
-
-[[script]]
-file     = "_common/logging.sh"
-category = "library"
-status   = "active"
-owner    = "platform"
-purpose  = "Standardized log_info / log_warn / log_error / log_fatal with color and JSON mode."
-
-[[script]]
-file     = "_common/utils.sh"
-category = "library"
-status   = "active"
-owner    = "platform"
-purpose  = "retry(), require_command(), require_file(), cleanup handlers."
-
-[[script]]
-file     = "_common/error-handler.sh"
-category = "library"
-status   = "active"
-owner    = "platform"
-purpose  = "ERR trap, stack trace, assert functions, DEBUG mode."
-
-[[script]]
-file     = "_common/docker.sh"
-category = "library"
-status   = "active"
-owner    = "platform"
-purpose  = "Centralized docker/compose remote operations. docker_status(), docker_wait_healthy(), etc."
-
-[[script]]
-file     = "_common/ssh.sh"
-category = "library"
-status   = "active"
-owner    = "platform"
-purpose  = "Centralized SSH helpers. ssh_exec(), ssh_stream(), ssh_compose(), assert_ssh_up()."
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ACTIVE DEPLOYMENT SCRIPTS
-# ─────────────────────────────────────────────────────────────────────────────
-
-[[script]]
-file     = "deploy.sh"
-category = "deployment"
-status   = "active"
-owner    = "platform"
-purpose  = "Idempotent production deployment orchestrator. Calls docker compose on remote host."
-depends  = ["_common/init.sh", "docker-compose.yml"]
-called_by = [".github/workflows/deploy.yml", "Makefile:deploy"]
-
-[[script]]
-file     = "backup.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "Enterprise volume backup and restore for code-server data."
-depends  = ["_common/init.sh"]
-called_by = ["Makefile:backup", "Makefile:restore"]
-
-[[script]]
-file     = "validate.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Deployment configuration validation suite."
-called_by = ["Makefile:validate", ".github/workflows/validate.yml"]
-
-[[script]]
-file     = "mandatory-redeploy.sh"
-category = "deployment"
-status   = "active"
-owner    = "platform"
-purpose  = "Pre-commit hook: enforces redeploy when config files change."
-depends  = ["_common/common-functions.sh"]
-called_by = [".pre-commit-config.yaml"]
+# scripts/MANIFEST.toml — Script Registry
+# Every script in scripts/ MUST have an entry here.
+# Status: active | deprecated | historical | experimental
 
 [[script]]
 file     = "apply-governance.sh"
-category = "operations"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "Applies governance policies to the repository."
-depends  = ["_common/common-functions.sh"]
+purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "audit-logging.sh"
-category = "security"
+category = "uncategorized"
 status   = "active"
-owner    = "security"
-purpose  = "Audit log collection and compliance reporting."
-
-[[script]]
-file     = "security-audit.sh"
-category = "security"
-status   = "active"
-owner    = "security"
-purpose  = "Security posture audit across containers and configuration."
-
-[[script]]
-file     = "disaster-recovery-p3.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "P3 disaster recovery runbook — restore from backup on standby host."
-
-[[script]]
-file     = "deployment-validation-suite.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "End-to-end deployment validation: containers, ports, health endpoints."
-
-[[script]]
-file     = "deployment-validation-31.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Host-31 specific deployment validation with SLO checks."
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ACTIVE OPERATIONS SCRIPTS
-# ─────────────────────────────────────────────────────────────────────────────
-
-[[script]]
-file     = "health-check.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Quick health check for all enterprise services."
-called_by = ["Makefile:health-check"]
-
-[[script]]
-file     = "automated-deployment-orchestration.sh"
-category = "deployment"
-status   = "active"
-owner    = "platform"
-purpose  = "Automated multi-step deployment orchestration with rollback support."
+purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "automated-certificate-management.sh"
-category = "operations"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "TLS certificate provisioning and renewal automation."
+purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "automated-dns-configuration.sh"
-category = "operations"
+file     = "automated-deployment-orchestration.sh"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "DNS record management for kushnir.cloud domain."
-
-[[script]]
-file     = "automated-oauth-configuration.sh"
-category = "security"
-status   = "active"
-owner    = "platform"
-purpose  = "OAuth2-proxy configuration and Cloudflare Access setup."
-
-[[script]]
-file     = "automated-iac-validation.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Infrastructure-as-code validation for Terraform and Docker Compose."
+purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "automated-env-generator.sh"
-category = "operations"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "Generates .env files for given environments from templates."
+purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "developer-lifecycle.sh"
-category = "operations"
+file     = "automated-iac-validation.sh"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "Developer access lifecycle manager: onboard, extend, revoke."
-called_by = ["Makefile:grant-access", "Makefile:revoke-access"]
+purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "manage-users.sh"
-category = "operations"
+file     = "automated-oauth-configuration.sh"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "User management script for code-server access control."
+purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "ollama-init.sh"
-category = "operations"
+file     = "backup.sh"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "Initializes Ollama: pulls required models, validates API, warms up."
-called_by = ["Makefile:ollama-init"]
-
-[[script]]
-file     = "operations-runbook.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Interactive operations runbook for common incident scenarios."
-
-# ─────────────────────────────────────────────────────────────────────────────
-# DEPRECATED (kept for reference, not to be run)
-# ─────────────────────────────────────────────────────────────────────────────
-
-[[script]]
-file     = "logging.sh"
-category = "library"
-status   = "deprecated"
-owner    = "platform"
-purpose  = "SUPERSEDED by _common/logging.sh — do not source this file."
-deprecated_by = "_common/logging.sh"
-
-[[script]]
-file     = "common-functions.sh"
-category = "library"
-status   = "deprecated"
-owner    = "platform"
-purpose  = "SUPERSEDED by _common/utils.sh + _common/error-handler.sh."
-deprecated_by = "_common/init.sh"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ACTIVE SCRIPTS — added Phase 5 batch migration
-# ─────────────────────────────────────────────────────────────────────────────
-
-[[script]]
-file     = "redeploy.sh"
-category = "deployment"
-status   = "active"
-owner    = "platform"
-purpose  = "Post-merge deployment orchestration triggered by GitHub Actions."
-called_by = [".github/workflows/deploy.yml"]
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "nas-mount-31.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "NAS mount automation and validation for host-31."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "gpu-deploy-31.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "GPU deployment and validation for host-31."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "cleanup-container-overlap.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Removes duplicate/stale containers and resolves port conflicts."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "code-server-entrypoint.sh"
-category = "deployment"
-status   = "active"
-owner    = "platform"
-purpose  = "Docker entrypoint for the code-server container."
-
-[[script]]
-file     = "deploy-kushnir-cloud.sh"
-category = "deployment"
-status   = "active"
-owner    = "platform"
-purpose  = "Idempotent deploy for ide.kushnir.cloud — containerised, no host mutation."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "docker-health-monitor.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Continuous Docker container health monitoring with alerting."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "enforce-governance.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "Enforces code governance policies across the repository."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "fetch-gsm-secrets.sh"
-category = "security"
-status   = "active"
-owner    = "platform"
-purpose  = "Fetches secrets from Google Secret Manager into .env."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "ide-access-restrictions.sh"
-category = "security"
-status   = "active"
-owner    = "security"
-purpose  = "Applies and validates IDE access restriction rules."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "incident-simulation.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Incident simulation and runbook testing tool."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "infrastructure-assessment-31.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Full infrastructure assessment for host-31 services."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "init-repo-governance.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "One-time repository governance setup (hooks, MANIFEST, CI checks)."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "memory-monitor.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Memory usage monitoring and OOM alerting for Docker containers."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "p0-monitoring-bootstrap.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "P0 monitoring stack bootstrap (Prometheus, Grafana, AlertManager)."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "p0-operations-deployment-validation.sh"
-category = "validation"
-status   = "active"
-owner    = "oncall"
-purpose  = "Validates P0-tier service deployment and SLO compliance."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "p0-p3-operations-master.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Master orchestrator for P0-P3 priority operations tasks."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "post-deployment-validation.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Post-deployment smoke tests: container health, port availability, HTTP checks."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "pre-flight-checklist.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Pre-deployment readiness checks before any deployment begins."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "priority-enforcer.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "Enforces issue priority labels and SLO response times."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "priority-issue-cli.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "CLI tool for managing GitHub issue priorities and assignments."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "production-operations-setup-p0.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Sets up P0-tier production operations tooling and alerting."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "provision-new-user.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "Provisions a new developer user with appropriate IDE access role."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "security-hardening-p2.sh"
-category = "security"
-status   = "active"
-owner    = "security"
-purpose  = "P2 security hardening: TLS, auth, container hardening, audit config."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "validate-copilot.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Validates Copilot Chat extension activation and Ollama connectivity."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "validate-host-31.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Host-31 specific validation suite (network, storage, Docker)."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "vscode-crash-diagnostics.sh"
-category = "operations"
-status   = "active"
-owner    = "oncall"
-purpose  = "Collects diagnostics when code-server crashes: logs, state, metrics."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "deploy-developer-access-complete.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "Completes developer access deployment workflow on host-31."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "deploy-services.sh"
-category = "deployment"
-status   = "active"
-owner    = "platform"
-purpose  = "Starts and validates core service stack deployment."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "phase-22-batch-4-5-automation.sh"
-category = "operations"
-status   = "historical"
-owner    = "platform"
-purpose  = "Historical phase automation script retained for audit traceability."
-
-[[script]]
-file     = "phase-23-deploy.sh"
-category = "deployment"
-status   = "historical"
-owner    = "platform"
-purpose  = "Historical phase deployment script retained for audit traceability."
-
-[[script]]
-file     = "postgresql-replication-setup.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "Configures PostgreSQL replication topology for primary/standby hosts."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "setup-oauth-prod.sh"
-category = "security"
-status   = "active"
-owner    = "security"
-purpose  = "Bootstraps production OAuth configuration for oauth2-proxy."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "test-latency-optimization.sh"
-category = "validation"
-status   = "active"
-owner    = "platform"
-purpose  = "Runs latency optimization validation tests and reports metrics."
-depends  = ["_common/init.sh"]
-
-[[script]]
-file     = "tier-2-master-orchestrator.sh"
-category = "operations"
-status   = "active"
-owner    = "platform"
-purpose  = "Tier-2 orchestrator for grouped operations and recovery actions."
-depends  = ["_common/init.sh"]
+purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "build-optimized.sh"
-category = "deployment"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "Optimized image build wrapper for reproducible CI/CD builds."
+purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "build-with-cache.sh"
-category = "deployment"
+category = "uncategorized"
 status   = "active"
-owner    = "platform"
-purpose  = "Cached image build wrapper for faster iterative builds."
+purpose  = "TODO: add purpose"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# NOTE: All phase-*.sh scripts (130+) are historical deployment artifacts
-# archived to scripts/_archive/phase-history/. Historical one-off scripts
-# (gpu, fix-host, tier, setup, etc.) are in scripts/_archive/historical/.
-# Neither directory is tracked in this manifest's active entries.
-# ─────────────────────────────────────────────────────────────────────────────
+[[script]]
+file     = "cleanup-container-overlap.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "code-server-entrypoint.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "common-functions.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-developer-access-complete.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-kushnir-cloud.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-services.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deployment-validation-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deployment-validation-suite.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "developer-lifecycle.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "disaster-recovery-p3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "docker-health-monitor.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "enforce-governance.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "fetch-gsm-secrets.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "gpu-deploy-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "ide-access-restrictions.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "incident-simulation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "infrastructure-assessment-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "init-repo-governance.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "logging.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "manage-users.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "mandatory-redeploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "memory-monitor.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "nas-mount-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "ollama-init.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "operations-runbook.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "p0-monitoring-bootstrap.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "p0-operations-deployment-validation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "p0-p3-operations-master.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-22-batch-4-5-automation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-23-deploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "post-deployment-validation.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "postgresql-replication-setup.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "pre-flight-checklist.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "priority-enforcer.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "priority-issue-cli.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "production-operations-setup-p0.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "provision-new-user.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "redeploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "security-audit.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "security-hardening-p2.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "setup-oauth-prod.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "test-latency-optimization.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "tier-2-master-orchestrator.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-copilot.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-host-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "vscode-crash-diagnostics.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+

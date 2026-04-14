@@ -288,4 +288,17 @@ variable "enable_dns_access_control" {
   default     = true
 }
 
+# Semantic feature names (aliases for phases with explicit names)
+variable "operations_excellence_enabled" {
+  description = "Enable operations excellence platform (Phase 24 - cost engine, monitoring, auditing)"
+  type        = bool
+  default     = true
+}
+
+variable "graphql_api_portal_enabled" {
+  description = "Enable GraphQL API Portal (Phase 25 - developer platform, API management)"
+  type        = bool
+  default     = true
+}
+
 // ─────────────────────────────────────────────────────────────────────────────

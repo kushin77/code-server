@@ -9,12 +9,12 @@
 
 set -euo pipefail
 
-# Configuration from Terraform  
-KUBERNETES_VERSION="${KUBERNETES_VERSION:-1.28.0}"
-CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-containerd}"
-POD_CIDR="${POD_CIDR:-10.244.0.0/16}"
-SERVICE_CIDR="${SERVICE_CIDR:-10.96.0.0/12}"
-NODE_ROLE="${NODE_ROLE:-control-plane}"
+# Configuration from Terraform Variables (passed via templatefile)
+KUBERNETES_VERSION="${KUBERNETES_VERSION}"
+CONTAINER_RUNTIME="${CONTAINER_RUNTIME}"
+POD_CIDR="${POD_CIDR}"
+SERVICE_CIDR="${SERVICE_CIDR}"
+NODE_ROLE="${NODE_ROLE}"
 
 # Helper functions
 log() {

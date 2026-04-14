@@ -17,7 +17,7 @@ output "phase_24_velero_namespace" {
 
 output "phase_24_deployment_complete" {
   description = "Phase 24: Operations Excellence deployment status"
-  value       = var.operations_excellence_enabled
+  value       = var.enable_observability_operations
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -121,7 +121,7 @@ output "disaster_recovery_config" {
 
 output "security_vault_status" {
   description = "Vault initialization status"
-  value       = var.operations_excellence_enabled ? "configured" : "disabled"
+  value       = var.enable_observability_operations ? "configured" : "disabled"
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -164,12 +164,12 @@ locals {
 
 locals {
   execution_sequence = [
-    { phase = "24", name = "Operations Excellence", enabled = var.operations_excellence_enabled },
+    { phase = "24", name = "Operations Excellence", enabled = var.enable_observability_operations },
     { phase = "22-A", name = "Kubernetes", enabled = var.on_prem_kubernetes_enabled },
     { phase = "22-D", name = "GPU Infrastructure", enabled = var.on_prem_gpu_enabled },
     { phase = "17", name = "Disaster Recovery", enabled = true },  # Always planning DR
     { phase = "18", name = "Security Hardening", enabled = true },  # Always required
-    { phase = "25", name = "GraphQL API Portal", enabled = var.graphql_api_portal_enabled },
+    { phase = "25", name = "GraphQL API Portal", enabled = var.enable_api_gateway },
   ]
 }
 
@@ -188,8 +188,8 @@ output "infrastructure_status" {
     deployment_mode             = var.deployment_mode
     kubernetes_mode             = var.on_prem_kubernetes_enabled ? "on-prem-kubeadm" : "cloud-eks"
     gpu_enabled                 = var.on_prem_gpu_enabled
-    operations_excellence       = var.operations_excellence_enabled
-    graphql_api_portal          = var.graphql_api_portal_enabled
+    operations_excellence       = var.enable_observability_operations
+    graphql_api_portal          = var.enable_api_gateway
     disaster_recovery_baseline  = "4 hours (Phase 16-A stability)"
     timestamp                   = timestamp()
   }

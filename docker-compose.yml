@@ -26,6 +26,9 @@ services:
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:11434
+      # Structured JSON logging for Loki/Grafana ingestion
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_LEVEL=${LOG_LEVEL:-1}
     command:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
@@ -192,6 +195,8 @@ services:
       - caddy-data:/data
     environment:
       - ACME_AGREE=true
+      # Structured JSON logging for Loki/Grafana ingestion
+      - LOG_FORMAT=${LOG_FORMAT:-json}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/ || exit 1"]
       interval: 30s

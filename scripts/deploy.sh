@@ -74,6 +74,10 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 # Override log destination for this script
 export LOG_FILE="${PROJECT_DIR}/deployment.log"
 
+# Precondition assertions — fail fast before any side effects
+assert_deploy_access   # SSH reachable at DEPLOY_HOST
+assert_docker          # Docker daemon responding on remote
+
 # Setup error handling
 add_cleanup cleanup_deployment_handler
 

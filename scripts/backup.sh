@@ -36,6 +36,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
+# Precondition assertions — fail fast before any side effects
+assert_docker   # Docker must be running to backup volumes
+
 BACKUP_DIR="$SCRIPT_DIR/../backups"
 mkdir -p "$BACKUP_DIR" || log_fatal "Cannot create backup directory: $BACKUP_DIR"
 require_command docker || log_fatal "docker not found in PATH"

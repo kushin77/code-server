@@ -11,6 +11,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
+# Precondition assertions — fail fast before any side effects
+assert_envs DEPLOY_HOST DEPLOY_USER
+assert_deploy_access   # SSH connectivity to production host
+
 # Script metadata
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 LOG_DIR="${REPO_ROOT}/logs/deployments"

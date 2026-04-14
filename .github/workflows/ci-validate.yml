@@ -6,27 +6,65 @@ on:
     branches: [ main ]
 
 jobs:
-  validate:
+  pre-commit:
+    name: Pre-commit hooks (shellcheck, yamllint, governance)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
-      - name: Install pre-commit
-        run: python -m pip install --upgrade pip pre-commit
-      - name: Run pre-commit
+          python-version: '3.12'
+
+      - name: Install pre-commit + shellcheck
         run: |
-          echo "Skipping pre-commit validation - security checks passing (gitleaks, checkov, tfsec)"
-      - name: Run repo validate script
+          python -m pip install --upgrade pip pre-commit
+          sudo apt-get install -y shellcheck
+
+      - name: Cache pre-commit envs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit (all files)
+        run: pre-commit run --all-files --show-diff-on-failure
+        env:
+          SKIP: mandatory-redeploy,terraform_fmt,terraform_validate
+
+  governance:
+    name: Governance audit (library adoption + MANIFEST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install make + bash
+        run: sudo apt-get install -y make bash
+
+      - name: Library adoption audit (make lib-check)
+        run: make lib-check
+
+      - name: MANIFEST registry validation (make index)
         run: |
-          echo "Skipping full validation - security checks passing"
-      - name: Run tflint (optional)
-        run: |
-          if command -v tflint >/dev/null 2>&1; then
-            echo "Running tflint..."
-            tflint || true
-          else
-            echo "tflint not installed; skipping"
+          make index
+          # Fail if any active script is unregistered
+          violations=$(make index 2>&1 | grep -c '✗' || true)
+          if [[ "$violations" -gt 0 ]]; then
+            echo "::error::$violations script(s) not registered in scripts/MANIFEST.toml"
+            echo "Run: make manifest-init to regenerate, then commit"
+            exit 1
           fi
+
+      - name: Zero active log_info() governance violations
+        run: |
+          count=$(grep -rl "^log_info() {" scripts/*.sh 2>/dev/null \
+            | grep -vE "_common/|logging\.sh|common-functions\.sh" | wc -l || echo 0)
+          echo "Active log_info() violations: $count"
+          if [[ "$count" -gt 0 ]]; then
+            grep -rl "^log_info() {" scripts/*.sh 2>/dev/null \
+              | grep -vE "_common/|logging\.sh|common-functions\.sh" | sed 's/^/  /'
+            echo "::error::$count script(s) define inline log_info() — migrate to _common/init.sh"
+            exit 1
+          fi
+          echo "✅ Zero governance violations"

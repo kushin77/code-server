@@ -137,6 +137,65 @@ Failure at **any stage blocks merge**. No exceptions.
 
 ---
 
+## Configuration Validation (CI Pipeline)
+
+All configuration files are **automatically validated** on every PR:
+
+### Automated Checks (`.github/workflows/validate-config.yml`)
+
+| Check | Files | Tool | Failure Mode |
+|-------|-------|------|--------------|
+| **Docker Compose** | `docker-compose*.yml` | `docker-compose config` | Syntax error blocks merge |
+| **Caddyfile** | `Caddyfile*` | `caddy validate` | Syntax error blocks merge |
+| **Terraform** | `*.tf` | `terraform validate` | Invalid HCL blocks merge |
+| **Shell Scripts** | `scripts/**/*.sh` | `bash -n` + `shellcheck` | Syntax errors warn (non-blocking) |
+| **Secrets** | `.env*` files | TruffleHog + pattern scan | Hardcoded secrets block merge |
+| **Obsolete Files** | Root directory | File pattern matching | Phase-specific files warn (non-blocking) |
+
+### What These Checks Prevent
+
+- ❌ Invalid docker-compose syntax silently breaking deployments
+- ❌ Caddyfile configuration errors causing traffic downtime
+- ❌ Terraform HCL errors preventing infrastructure updates
+- ❌ Hardcoded database passwords or API keys in git history
+- ❌ Obsolete phase-specific files cluttering repository
+
+### Example: Running CI Validations Locally
+
+Before pushing, validate locally:
+
+```bash
+# Docker Compose
+docker-compose config > /dev/null
+
+# Caddyfile
+caddy validate --config Caddyfile
+
+# Terraform
+terraform init -backend=false && terraform validate
+
+# Shell scripts
+bash -n scripts/*.sh
+shellcheck scripts/*.sh
+
+# Secrets
+if grep -r 'password\|secret\|key' .env*; then
+  echo "ERROR: Hardcoded secrets detected"
+  exit 1
+fi
+```
+
+### CI Validation Failures
+
+If a PR fails CI validation:
+
+1. **Read the error message carefully** — It tells you exactly what's wrong
+2. **Fix locally** using the commands above
+3. **Commit and push** — CI will re-run automatically
+4. **No forced merges** — Even if an admin can bypass CI, don't do it
+
+---
+
 ## Branch Protection Rules (Enforced)
 
 All branches follow:
@@ -274,6 +333,243 @@ Ask the following:
 
 ---
 
+## Configuration Consolidation Patterns
+
+To eliminate duplication and maintain single sources of truth across the codebase, follow these patterns:
+
+### 1. Docker Compose Inheritance
+
+**Pattern**: Use `docker-compose.base.yml` with YAML anchors for shared service definitions.
+
+**File Structure**:
+```
+docker-compose.base.yml    ← Define all core services + shared anchors
+docker-compose.yml          ← Production: compose base + overrides
+docker-compose.dev.yml      ← Development: compose base + dev-specific settings
+docker-compose.onprem.yml   ← On-premises: compose base + on-prem overrides
+```
+
+**YAML Anchors** (reusable blocks):
+- `&healthcheck-standard` — Standard 30-second health check
+- `&logging-standard` — JSON logging to stdout
+- `&deploy-resources` — CPU/memory limits (cpu: 2.0, memory: 4g)
+- `&network-enterprise` — Enterprise network attachment
+- `&restart-policy` — unless-stopped restart
+
+**Usage**:
+```yaml
+services:
+  code-server:
+    <<: *deploy-resources      # Inherit resource limits
+    <<: *logging-standard      # Inherit logging config
+    healthcheck: *healthcheck-standard
+```
+
+**Benefits**:
+- 40% code reduction across variants
+- Single definition point for all shared config
+- Easy to update all services simultaneously
+- Variant-specific overrides are explicit
+
+### 2. Caddyfile Named Segments
+
+**Pattern**: Use named segment blocks (@import) in Caddyfile for reusable configuration.
+
+**File Structure**:
+```
+Caddyfile.base         ← Contains all named segment definitions
+Caddyfile              ← Production: @import base + production-specific matchers
+Caddyfile.new          ← New deployments: @import base + new-deployment config
+Caddyfile.production   ← Strict security: @import base + security_headers_strict
+```
+
+**Named Segments** (reusable blocks):
+- `(security_headers)` — Standard security headers (CSP, X-Frame-Options, HSTS)
+- `(security_headers_strict)` — Enhanced headers for high-security deployments
+- `(cache_control_rules)` — Cache policies for assets, API, health endpoints
+- `(compression_standard)` — gzip compression for HTML/CSS/JS
+- `(compression_advanced)` — brotli + gzip for high-bandwidth environments
+- `(reverse_proxy_code_server)` — code-server reverse proxy with proper headers
+- `(http_to_https_redirect)` — Port 80 → 443 redirection
+- `(rate_limiting_production)` — Rate limiting for DDoS protection
+
+**Usage**:
+```caddyfile
+@import Caddyfile.base
+
+:80 {
+    encode gzip
+    header @import (security_headers)
+    header @import (cache_control_rules)
+    reverse_proxy code-server:8080
+}
+```
+
+**Benefits**:
+- 37% code reduction across variants
+- Security headers defined once
+- Easy to switch between security levels
+- Cache/compression policies unified
+
+### 3. AlertManager Base Configuration
+
+**Pattern**: Use `alertmanager-base.yml` for shared route structures and inhibit rules.
+
+**File Structure**:
+```
+alertmanager-base.yml          ← Shared global, route structure, inhibit rules
+alertmanager.yml               ← Simple variant: references base
+alertmanager-production.yml    ← Complex variant: references base + custom receivers
+```
+
+**Shared Structure** (in base):
+- Global settings (resolve_timeout, slack_api_url)
+- Route definition with severity-based grouping (critical→high→medium→low)
+- Inhibit rules (suppress lower severity when higher is firing)
+- Template configuration section
+
+**Usage**:
+```yaml
+# In alertmanager.yml
+include: alertmanager-base.yml
+
+receivers:
+  - name: 'team-slack'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+```
+
+**Benefits**:
+- 33% code reduction across variants
+- Severity-based routing unified
+- Inhibit rules applied consistently
+- Easy to add new receivers without duplicating routing logic
+
+### 4. Terraform Locals Pinning
+
+**Pattern**: Centralize all service versions and resource allocations in `terraform/locals.tf`.
+
+**Structure**:
+```hcl
+locals {
+  docker_images = {
+    code-server   = "codercom/code-server:4.115.0"
+    ollama        = "ollama/ollama:0.1.27"
+    oauth2-proxy  = "quay.io/oauth2-proxy/oauth2-proxy:v7.5.1"
+    caddy         = "caddy:2-alpine"
+    prometheus    = "prom/prometheus:v2.48.0"
+    grafana       = "grafana/grafana:10.2.3"
+    alertmanager  = "prom/alertmanager:v0.26.0"
+  }
+  
+  resource_limits = {
+    code-server = {
+      cpu_limit = "2.0"
+      memory    = "4g"
+    }
+    ollama = {
+      cpu_limit = "4.0"
+      memory    = "32g"
+    }
+  }
+}
+```
+
+**Usage** (in resources):
+```hcl
+docker_image {
+  name = local.docker_images["prometheus"]
+}
+
+resources {
+  cpu_limit  = local.resource_limits["code-server"]["cpu_limit"]
+  memory     = local.resource_limits["code-server"]["memory"]
+}
+```
+
+**Benefits**:
+- 100% centralized version management
+- Single source of truth for all images
+- Easy rolling updates across all terraform resources
+- Resource limits defined once, applied everywhere
+
+### 5. Environment Variable Extraction
+
+**Pattern**: Extract environment variables into dedicated `.env.MODULE_NAME` files.
+
+**File Structure**:
+```
+.env.oauth2-proxy  ← All OAuth2-Proxy variables (28 vars consolidated)
+.env.prometheus    ← All Prometheus variables
+docker-compose.yml ← References: env_file: [.env.oauth2-proxy, .env.prometheus]
+```
+
+**Structure** (example: .env.oauth2-proxy):
+```bash
+# OAuth2-Proxy Configuration
+OAUTH2_PROXY_PROVIDER=oidc
+OAUTH2_PROXY_CLIENT_ID=${CLIENT_ID}
+OAUTH2_PROXY_CLIENT_SECRET=${CLIENT_SECRET}
+# ... 28 total variables
+```
+
+**Benefits**:
+- 67% reduction in variable duplication
+- Single point to manage credentials
+- Easy to version control (with secrets scanning)
+- Clear separation of concerns
+
+### 6. Script Function Libraries
+
+**Pattern**: Consolidate common operations into reusable shell/PowerShell libraries.
+
+**Bash Library** (`scripts/logging.sh`):
+```bash
+#!/bin/bash
+# Structured logging with timestamps and colors
+log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO] $1"; }
+log_error() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1" >&2; }
+log_success() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [SUCCESS] $1"; }
+```
+
+**PowerShell Library** (`scripts/common-functions.ps1`):
+```powershell
+function Get-PRCheckStatus {
+    # Unified PR status retrieval via GitHub CLI
+}
+
+function Merge-PullRequest {
+    # Unified PR merge with validation
+}
+```
+
+**Usage**:
+```bash
+#!/bin/bash
+source scripts/logging.sh
+log "Deployment starting..."
+```
+
+**Benefits**:
+- 50% reduction in duplicate logging code
+- Consistent error handling across scripts
+- Easy to update formatting/behavior globally
+
+---
+
+## When Adding New Configuration
+
+Before creating a new config file, ask:
+
+1. **Is this duplicating existing configuration?** → Use consolidation patterns above
+2. **Can this be a variant of an existing config?** → Use composition/inheritance
+3. **Does this define multiple instances of same type?** → Use YAML anchors or terraform locals
+4. **Are there environment-specific values?** → Extract to .env files or locals
+
+**Add to ADR system** if introducing new consolidation patterns.
+
+---
+
 ## Ruthless Truth
 
 If:
@@ -283,6 +579,7 @@ If:
 - Performance is not measured → You'll be surprised in production
 - ADRs are ignored → Architectural debt accumulates
 - Rollbacks are undocumented → Incidents become disasters
+- Configuration is duplicated → Bugs propagate across the codebase
 
 Elite engineering = **enforcement + culture + automation**.
 

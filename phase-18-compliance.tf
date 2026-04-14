@@ -146,7 +146,7 @@ resource "docker_container" "fluent_bit_collector" {
   network_mode  = "host"
 
   env = [
-    \"LOKI_ENDPOINT=https://loki.ide.kushnir.cloud/loki/api/v1/push\",
+    "LOKI_ENDPOINT=https://loki.ide.kushnir.cloud/loki/api/v1/push",
     "LOG_RETENTION_DAYS=${var.audit_log_retention_years * 365}",
   ]
 

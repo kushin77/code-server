@@ -13,11 +13,8 @@
 {$DOMAIN:192.168.168.31.nip.io}
 
 # Global Caddyfile configuration
+# Minimal settings for on-prem nip.io deployment (plain HTTP, no TLS)
 {
-    # For on-prem (*.nip.io): auto_https off (no TLS needed for internal domains)
-    # Production HTTPS configuration handled separately in kubernetes/helm
-    auto_https off
-    
     email {$ACME_EMAIL:ops@kushnir.cloud}
     
     log default {

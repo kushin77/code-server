@@ -19,8 +19,8 @@ variable "db_instance_count" {
   type        = number
   default     = 3
   validation {
-    condition     = var.db_instance_count >= 3 && var.db_instance_count <= 5
-    error_message = "db_instance_count must be between 3 and 5."
+    condition     = var.db_instance_count >= 2 && var.db_instance_count <= 3
+    error_message = "db_instance_count must be between 2 and 3 for this simplified deployment."
   }
 }
 
@@ -86,8 +86,8 @@ resource "docker_image" "postgresql_ha" {
 
 resource "docker_image" "pgbouncer" {
   count         = var.phase_16_a_enabled ? 1 : 0
-  name          = "pgbouncer:1.21.0"
-  pull_triggers = ["1.21.0"]
+  name          = "bitnami/pgbouncer:latest"
+  pull_triggers = ["latest"]
   
   lifecycle {
     prevent_destroy = false
@@ -96,8 +96,8 @@ resource "docker_image" "pgbouncer" {
 
 resource "docker_image" "patroni" {
   count         = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
-  name          = "patroni:3.0.2-alpine"
-  pull_triggers = ["3.0.2"]
+  name          = "bitnami/patroni:latest"
+  pull_triggers = ["latest"]
   
   lifecycle {
     prevent_destroy = false

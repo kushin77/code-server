@@ -274,6 +274,97 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ─── Prometheus (Metrics Collection) ─────────────────────────────────────
+  # Collects metrics from all services and evaluates alert rules
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── AlertManager (Alert Routing) ───────────────────────────────────────
+  # Routes alerts from Prometheus to notification channels
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "wget -q --spider http://localhost:9093/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Grafana (Metrics Dashboard) ─────────────────────────────────────────
+  # Visualizes metrics from Prometheus
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://${DOMAIN:-ide.kushnir.cloud}/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # ─── RCA Engine (Root Cause Analysis) ────────────────────────────────────
   # Analyzes alerts from Prometheus to identify root causes
   rca-engine:
@@ -283,6 +374,9 @@ services:
     image: rca-engine:latest
     container_name: rca-engine
     restart: always
+    depends_on:
+      - prometheus
+      - alertmanager
     networks:
       - enterprise
     ports:
@@ -312,6 +406,8 @@ services:
     image: anomaly-detector:latest
     container_name: anomaly-detector
     restart: always
+    depends_on:
+      - prometheus
     networks:
       - enterprise
     ports:
@@ -352,4 +448,10 @@ volumes:
   caddy-data:
     driver: local
   jaeger-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+  grafana-data:
     driver: local

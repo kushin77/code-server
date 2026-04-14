@@ -12,23 +12,7 @@
 # IDEMPOTENCY: Safe to re-apply, uses count for feature flags
 # INDEPENDENCE: Can deploy independently with feature flag
 
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.20"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.24"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.12"
-    }
-  }
-}
+# NOTE: Terraform configuration consolidated in main.tf for idempotency
 
 # ═════════════════════════════════════════════════════════════════════════════
 # FEATURE FLAG: Phase 22-A Kubernetes Orchestration
@@ -40,11 +24,8 @@ variable "phase_22_a_enabled" {
   default     = true
 }
 
-variable "eks_cluster_name" {
-  description = "EKS cluster name"
-  type        = string
-  default     = "code-server-k8s-prod"
-}
+# NOTE: EKS cluster variables (eks_cluster_name, eks_cluster_endpoint, etc) 
+# are consolidated in variables.tf for consistency
 
 variable "eks_cluster_version" {
   description = "Kubernetes version"
@@ -401,9 +382,7 @@ resource "aws_eks_node_group" "main" {
 # DATA SOURCES
 # ═════════════════════════════════════════════════════════════════════════════
 
-data "aws_availability_zones" "available" {
-  state = "available"
-}
+# aws_availability_zones data source defined in phase-22-d-gpu-infrastructure.tf
 
 data "aws_eks_cluster_auth" "cluster" {
   count = var.phase_22_a_enabled ? 1 : 0

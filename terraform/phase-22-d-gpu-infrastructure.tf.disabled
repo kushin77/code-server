@@ -1,55 +1,12 @@
 # ═════════════════════════════════════════════════════════════════════════════
-# Phase 22-D: GPU Infrastructure for ML/AI Workloads
+# ML/AI Infrastructure: GPU Compute Layer
 # ═════════════════════════════════════════════════════════════════════════════
 # Purpose: GPU-accelerated compute resources, ML frameworks, model serving
 # Status: Production-ready with auto-scaling, monitoring, cost optimization
-# Dependencies: Phase 22-A (EKS), Phase 22-B (Networking), Phase 22-C (Data sharding)
+# Dependencies: Kubernetes Orchestration, Networking (SDN), Database sharding
 # ═════════════════════════════════════════════════════════════════════════════
 
-terraform {
-  required_providers {
-    aws        = "~> 5.20"
-    kubernetes = "~> 2.24"
-    helm       = "~> 2.12"
-    kubectl    = "~> 1.14"
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
-
-provider "kubernetes" {
-  host                   = var.eks_cluster_endpoint
-  cluster_ca_certificate = base64decode(var.eks_cluster_ca)
-  token                  = var.eks_cluster_token
-}
-
-provider "helm" {
-  kubernetes {
-    host                   = var.eks_cluster_endpoint
-    cluster_ca_certificate = base64decode(var.eks_cluster_ca)
-    token                  = var.eks_cluster_token
-  }
-}
-
-provider "kubectl" {
-  host                   = var.eks_cluster_endpoint
-  cluster_ca_certificate = base64decode(var.eks_cluster_ca)
-  token                  = var.eks_cluster_token
-  load_config_file       = false
-}
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# VARIABLES
-# ═════════════════════════════════════════════════════════════════════════════
-
-variable "phase_22_d_enabled" {
-  description = "Enable Phase 22-D ML/AI infrastructure deployment"
-  type        = bool
-  default     = true
-}
+# NOTE: Terraform configuration consolidated in main.tf for idempotency
 
 variable "gpu_instance_type" {
   description = "GPU instance type for ML workloads (g4dn.xlarge/2xlarge/12xlarge)"
@@ -75,32 +32,12 @@ variable "gpu_node_count_desired" {
   default     = 2
 }
 
-variable "eks_cluster_endpoint" {
-  description = "EKS cluster API endpoint"
-  type        = string
-}
+# NOTE: EKS and common AWS variables are consolidated in variables.tf
 
-variable "eks_cluster_ca" {
-  description = "EKS cluster CA certificate (base64 encoded)"
-  type        = string
-}
-
-variable "eks_cluster_token" {
-  description = "EKS cluster API token"
-  type        = string
-  sensitive   = true
-}
-
-variable "eks_cluster_name" {
-  description = "EKS cluster name"
-  type        = string
-  default     = "code-server-eks"
-}
-
-variable "aws_region" {
-  description = "AWS region for GPU resources"
-  type        = string
-  default     = "us-west-2"
+variable "enable_ml_gpu_infrastructure" {
+  description = "Enable ML/AI GPU infrastructure deployment"
+  type        = bool
+  default     = true
 }
 
 variable "mlflow_artifact_bucket" {
@@ -125,10 +62,9 @@ variable "gpu_resource_requests_memory" {
 # ═════════════════════════════════════════════════════════════════════════════
 # DATA SOURCES
 # ═════════════════════════════════════════════════════════════════════════════
-
-data "aws_availability_zones" "available" {
-  state = "available"
-}
+# DATA SOURCES (Consolidated in data_sources.tf)
+# NOTE: aws_availability_zones is consolidated for consistency
+# ═════════════════════════════════════════════════════════════════════════════
 
 data "aws_eks_cluster" "main" {
   count = var.phase_22_d_enabled ? 1 : 0

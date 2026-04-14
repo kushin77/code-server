@@ -19,11 +19,13 @@ variable "code_server_password" {
   }
 }
 
-variable "domain" {
-  description = "Root domain for deployment (used by oauth2-proxy for OIDC redirect)"
+variable "environment" {
+  description = "Environment name (development, staging, production)"
   type        = string
-  default     = "ide.kushnir.cloud"
+  default     = "production"
 }
+
+# domain variable defined in DNS/access-control configuration
 
 variable "config_dir" {
   description = "Configuration directory (by default, project root)"
@@ -68,6 +70,13 @@ variable "github_token" {
   sensitive   = true
   default     = ""
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cloudflare Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+# cloudflare_api_token, cloudflare_zone_id, cloudflare_account_id defined in DNS/access-control layer
+# eks_cluster_endpoint, eks_cluster_ca, eks_cluster_token defined in compute layer
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Docker Configuration
@@ -154,17 +163,6 @@ variable "enable_https" {
   description = "Enable HTTPS/TLS (managed by Caddy with ACME)"
   type        = bool
   default     = true
-}
-
-variable "log_level" {
-  description = "Logging level across all services"
-  type        = string
-  default     = "info"
-
-  validation {
-    condition     = contains(["debug", "info", "warn", "error"], var.log_level)
-    error_message = "log_level must be one of: debug, info, warn, error."
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

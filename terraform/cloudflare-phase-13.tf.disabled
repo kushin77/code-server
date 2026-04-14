@@ -1,54 +1,12 @@
 # Phase 13: Cloudflare Infrastructure as Code (Terraform)
 # Implements production access to code-server via Cloudflare Tunnel & Access
 # Idempotent design - safe to apply multiple times (terraform state tracking)
-
-terraform {
-  required_version = ">= 1.0"
-  
-  required_providers {
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 4.0"
-    }
-  }
-
-  # Uncomment to enable remote state tracking (recommended for production)
-  # backend "s3" {
-  #   bucket         = "phase-13-terraform-state"
-  #   key            = "cloudflare/phase-13.tfstate"
-  #   region         = "us-east-1"
-  #   encrypt        = true
-  #   dynamodb_table = "terraform-locks"
-  # }
-}
+# NOTE: Terraform block consolidated in main.tf for idempotency
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONFIGURATION VARIABLES
+# CONFIGURATION VARIABLES (Phase-Specific)
+# NOTE: Common Cloudflare variables are consolidated in variables.tf
 # ─────────────────────────────────────────────────────────────────────────────
-
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token (set via TF_VAR_cloudflare_api_token or .tfvars)"
-  type        = string
-  sensitive   = true
-}
-
-variable "cloudflare_zone_id" {
-  description = "Cloudflare Zone ID (set via TF_VAR_cloudflare_zone_id or .tfvars)"
-  type        = string
-  sensitive   = true
-}
-
-variable "cloudflare_account_id" {
-  description = "Cloudflare Account ID (set via TF_VAR_cloudflare_account_id or .tfvars)"  
-  type        = string
-  sensitive   = true
-}
-
-variable "domain" {
-  description = "Domain for code-server access"
-  type        = string
-  default     = "ide.kushnir.cloud"
-}
 
 variable "tunnel_name" {
   description = "Cloudflare Tunnel name"
@@ -89,14 +47,6 @@ variable "tags" {
     ManagedBy   = "terraform"
     Project     = "code-server-enterprise"
   }
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PROVIDER CONFIGURATION
-# ─────────────────────────────────────────────────────────────────────────────
-
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

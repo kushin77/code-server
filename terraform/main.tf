@@ -21,12 +21,38 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
   }
 }
 
 provider "docker" {
   host = var.docker_host
 }
+
+provider "aws" {
+  region = "us-east-1"  # Primary region (default)
+}
+
+provider "aws" {
+  alias  = "secondary"
+  region = "us-west-2"  # Secondary region for DR
+}
+
+# Cloudflare provider disabled for Phase 16-A (database HA only)
+# Uncomment after Phase 13 is deployed with valid Cloudflare credentials
+# provider "cloudflare" {
+#   api_token = var.cloudflare_api_token
+# }
+
+# NOTE: Kubernetes and Helm providers declared but not configured for Phase 16-A
+# They will be properly configured in Phase 22 when EKS cluster is ready
 
 # ════════════════════════════════════════════════════════════════════════════
 # SINGLE SOURCE OF TRUTH FOR ALL INFRASTRUCTURE
@@ -53,11 +79,10 @@ provider "docker" {
 
 locals {
   # ─────────────────────────────────────────────────────────────────────────
-  # Service Identity & Environment
+  # Service Identity & Environment (defined in locals.tf)
+  # service_name, environment, region are imported from locals.tf for DRY
   # ─────────────────────────────────────────────────────────────────────────
-  service_name = "code-server-enterprise"
-  environment  = "production"
-  region       = "us-central1"
+  region       = "us-central1"  # For GCP services, AWS uses var.aws_region
 
   # ─────────────────────────────────────────────────────────────────────────
   # Version Pinning — ALL VERSIONS FROZEN HERE (immutability guarantee)
@@ -109,20 +134,6 @@ locals {
   }
 
   # ─────────────────────────────────────────────────────────────────────────
-  # Tags & Labels (for auditing and automation)
-  # ─────────────────────────────────────────────────────────────────────────
-  tags = {
-    Name        = local.service_name
-    Environment = local.environment
-    Region      = local.region
-    ManagedBy   = "terraform"
-    Version     = "1.0.0"
-    IaC         = "true"
-    Immutable   = "true"
-    Idempotent  = "true"
-  }
-
-  # ─────────────────────────────────────────────────────────────────────────
   # Export versions for docker-compose template
   # ─────────────────────────────────────────────────────────────────────────
   docker_compose_vars = {
@@ -163,36 +174,25 @@ resource "null_resource" "workspace_setup" {
 # RESOURCE 2: Generate docker-compose.yml (SINGLE SOURCE OF TRUTH)
 # 
 # CRITICAL: This is GENERATED from Terraform, never manually edited.
-# Re-running terraform apply regenerates this file with current versions.
-# ════════════════════════════════════════════════════════════════════════════
-resource "local_file" "docker_compose_yml" {
-  filename = "${path.module}/docker-compose.yml"
+# These resources generate configuration files but are commented out for database HA deployment
+# Database HA focuses only on AWS RDS HA infrastructure
+# Template files (docker-compose.tpl, Caddyfile.tpl) can be created in application layer
 
-  content = templatefile("${path.module}/docker-compose.tpl", local.docker_compose_vars)
+# resource "local_file" "docker_compose_yml" {
+#   filename = "${path.module}/docker-compose.yml"
+#   content = templatefile("${path.module}/docker-compose.tpl", local.docker_compose_vars)
+#   depends_on = [null_resource.workspace_setup]
+# }
 
-  # Ensure workspace exists first
-  depends_on = [null_resource.workspace_setup]
-
-  lifecycle {
-    # Track this as managed by Terraform; warn if manually edited
-    ignore_changes = []
-  }
-}
-
-# ════════════════════════════════════════════════════════════════════════════
-# RESOURCE 3: Generate Caddyfile for local development
-# ════════════════════════════════════════════════════════════════════════════
-resource "local_file" "caddyfile" {
-  filename = "${path.module}/config/caddy/Caddyfile"
-
-  content = templatefile("${path.module}/Caddyfile.tpl", {
-    code_server_host  = "localhost"
-    code_server_port  = local.network.code_server_port
-    oauth2_proxy_port = local.network.oauth2_proxy_port
-  })
-
-  depends_on = [null_resource.workspace_setup]
-}
+# resource "local_file" "caddyfile" {
+#   filename = "${path.module}/config/caddy/Caddyfile"
+#   content = templatefile("${path.module}/Caddyfile.tpl", {
+#     code_server_host  = "localhost"
+#     code_server_port  = local.network.code_server_port
+#     oauth2_proxy_port = local.network.oauth2_proxy_port
+#   })
+#   depends_on = [null_resource.workspace_setup]
+# }
 
 # ════════════════════════════════════════════════════════════════════════════
 # RESOURCE 4: Generate .env for docker-compose secrets (DO NOT COMMIT)
@@ -360,7 +360,8 @@ echo "✅ TLS: Let's Encrypt (auto-renewed)"
 echo "════════════════════════════════════════════════════════════════════════════"
 EOT
 
-  depends_on = [local_file.docker_compose_yml]
+  # depends_on commented out for database HA (docker_compose_yml resource disabled)
+  # depends_on = [local_file.docker_compose_yml]
 }
 
 # Make deploy script executable

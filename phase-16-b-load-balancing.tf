@@ -223,10 +223,6 @@ resource "docker_container" "keepalived_primary" {
   network_mode  = "host"
   privileged    = true
 
-  capabilities {
-    add = ["NET_ADMIN"]
-  }
-
   env = [
     "KEEPALIVED_PRIORITY=150",
     "KEEPALIVED_VIRTUAL_IP=${var.virtual_ip}",
@@ -261,10 +257,6 @@ resource "docker_container" "keepalived_backup" {
   image         = docker_image.keepalived[0].image_id
   network_mode  = "host"
   privileged    = true
-
-  capabilities {
-    add = ["NET_ADMIN"]
-  }
 
   env = [
     "KEEPALIVED_PRIORITY=100",

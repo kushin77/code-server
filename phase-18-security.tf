@@ -97,8 +97,10 @@ resource "docker_container" "consul_server" {
     "-server",
     "-ui",
     "-node=consul-${count.index + 1}",
-    "-bootstrap-expect=${var.vault_node_count}",
+    "-bootstrap-expect=1",
     "-client=0.0.0.0",
+    "-bind=127.0.0.1",
+    "-data-dir=/consul/data",
   ]
 
   ports {

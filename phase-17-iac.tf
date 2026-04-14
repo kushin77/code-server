@@ -100,7 +100,7 @@ locals {
 
 resource "docker_image" "pglogical_replicator" {
   count         = var.phase_17_enabled && var.pglogical_enabled ? 1 : 0
-  name          = "postgres:15.2-pglogical"
+  name          = "postgres:15.2-alpine"
   pull_triggers = ["15.2"]
 }
 

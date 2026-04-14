@@ -72,13 +72,13 @@ variable "soc2_automated_controls_enabled" {
 
 resource "docker_image" "vault" {
   count         = var.phase_18_enabled ? 1 : 0
-  name          = "vault:1.15.0"
+  name          = "hashicorp/vault:1.15.0"
   pull_triggers = ["1.15.0"]
 }
 
 resource "docker_image" "consul" {
   count         = var.phase_18_enabled ? 1 : 0
-  name          = "consul:1.17.0"
+  name          = "hashicorp/consul:1.17.0"
   pull_triggers = ["1.17.0"]
 }
 

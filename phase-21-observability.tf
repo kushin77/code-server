@@ -219,15 +219,8 @@ resource "docker_container" "alertmanager" {
     read_only      = false
   }
 
-  healthcheck {
-    test         = ["CMD", "wget", "-q", "--spider", "http://localhost:9093"]
-    interval     = "30s"
-    timeout      = "10s"
-    retries      = 3
-    start_period = "30s"
-  }
-
-  depends_on = [docker_image.alertmanager]
+  # healthcheck disabled due to terraform docker provider issues
+  # test         = ["CMD", "wget", "-q", "--spider", "http://localhost:9093"]
 
   lifecycle {
     create_before_destroy = true

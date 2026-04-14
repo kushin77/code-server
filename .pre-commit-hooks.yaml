@@ -1,17 +1,172 @@
 # Custom pre-commit hooks for code-server-enterprise
-# Phase 2.3: Code Quality & Governance Enforcement
+# Phase 2.3 / Phase 3: Code Quality & Governance Enforcement
 #
 # These hooks are referenced in .pre-commit-config.yaml
 # They enforce repository-specific standards and governance policies
 
 - id: verify-scripts-source-common
-  name: Verify scripts source _common libraries
-  description: Ensure all shell scripts source the common libraries for error handling, logging, and utilities
-  entry: bash -c 'for f in scripts/{deploy,backup,validate,test,health-check}.sh; do [[ -f "$f" ]] && ! grep -q "source.*_common" "$f" && echo "ERROR: $f must source _common libraries (logging.sh, utils.sh, error-handler.sh)"; done | head -5'
+  name: Verify scripts source _common/init.sh (not inline definitions)
+  description: >
+    Ensure all active shell scripts source _common/init.sh (or individual _common/*.sh files).
+    Inline log_info() definitions are a governance violation.
+  entry: bash -c '
+    fail=0
+    for f in scripts/*.sh; do
+      [[ -f "$f" ]] || continue
+      # Skip the _common libs and deprecated shims themselves
+      [[ "$f" == scripts/_common/* ]] && continue
+      [[ "$f" == "scripts/logging.sh" ]] && continue
+      [[ "$f" == "scripts/common-functions.sh" ]] && continue
+      # Skip archived phase scripts
+      [[ "$f" == *"/phase-"* ]] && continue
+      # Flag: inline log_info() definition (should use _common)
+      if grep -q "^log_info() {" "$f" 2>/dev/null; then
+        echo "GOVERNANCE VIOLATION: $f defines log_info() inline — source _common/init.sh instead"
+        fail=1
+      fi
+    done
+    exit $fail
+  '
   language: system
-  files: '^scripts/(deploy|backup|validate|test|health-check)\.sh$'
+  files: '^scripts/[^/]+\.sh$'
   pass_filenames: false
   stages: [commit]
+
+- id: verify-metadata-headers
+  name: Verify metadata headers in active scripts
+  description: Ensure active scripts have standardized headers (File, Owner, Purpose, Status).
+  entry: bash -c '
+    warn=0
+    for f in scripts/{deploy,backup,validate,test-deployment,health-check,disaster-recovery-p3,deployment-validation-suite}.sh; do
+      [[ -f "$f" ]] || continue
+      if ! grep -q "^# File:" "$f"; then
+        echo "WARN: $f missing # File: header (add standardized metadata header)"
+        warn=1
+      fi
+      if ! grep -q "^# Status:" "$f"; then
+        echo "WARN: $f missing # Status: header (active|deprecated|experimental)"
+        warn=1
+      fi
+    done
+    exit $warn
+  '
+  language: system
+  files: '^scripts/(deploy|backup|validate|test-deployment|health-check|disaster-recovery-p3|deployment-validation-suite)\.sh$'
+  pass_filenames: false
+  stages: [commit]
+
+- id: no-hardcoded-ips
+  name: Prevent hardcoded IP addresses in scripts
+  description: >
+    Block commits that hardcode 192.168.168.31 or 192.168.168.30 in scripts.
+    Use $DEPLOY_HOST / $STANDBY_HOST from _common/config.sh instead.
+  entry: bash -c '
+    files=$(grep -rl "192\.168\.168\.\(31\|30\)" scripts/ 2>/dev/null \
+      | grep -v "_common/" \
+      | grep -v "config\.sh" \
+      | grep "\.sh$")
+    if [[ -n "$files" ]]; then
+      echo "GOVERNANCE VIOLATION: Hardcoded IP address found — use \$DEPLOY_HOST from _common/config.sh:"
+      echo "$files" | sed "s/^/  /"
+      exit 1
+    fi
+  '
+  language: system
+  files: '^scripts/.*\.sh$'
+  pass_filenames: false
+  stages: [commit]
+
+- id: no-hardcoded-secrets
+  name: Prevent hardcoded secrets in code
+  description: Block commits that contain hardcoded passwords, API keys, or tokens
+  entry: bash -c '
+    # Check for patterns like password=literal (not password=$VAR or password=${VAR})
+    if grep -rE "(?i)(password|secret|token|api_key)\s*=\s*[\"'"'"'][^$\{]" scripts/ .env.* 2>/dev/null \
+       | grep -v "^.*#" \
+       | grep -v "example\|sample\|template\|placeholder\|changeme\|TODO" \
+       | grep -q .; then
+      echo "SECURITY VIOLATION: Hardcoded secret detected. Use environment variables instead."
+      exit 1
+    fi
+  '
+  language: system
+  stages: [commit]
+  pass_filenames: false
+
+- id: no-large-binaries
+  name: Prevent accidental commit of large binaries
+  description: Block files larger than 5MB to prevent repository bloat
+  entry: bash -c '
+    large=$(find . -type f -size +5M -not -path "./.git/*" -not -path "./.terraform/*" 2>/dev/null | head -3)
+    if [[ -n "$large" ]]; then
+      echo "ERROR: Large file detected (>5MB). Use git-lfs or move to _archive/:"
+      echo "$large" | sed "s/^/  /"
+      exit 1
+    fi
+  '
+  language: system
+  stages: [commit]
+  pass_filenames: false
+
+- id: verify-error-handling
+  name: Verify error handling in scripts (manual audit)
+  description: Warn if scripts don't have set -euo pipefail or _common/init.sh
+  entry: bash -c '
+    for f in scripts/*.sh; do
+      [[ -f "$f" ]] || continue
+      [[ "$f" == *"_common"* ]] && continue
+      [[ "$f" == "scripts/logging.sh" ]] && continue
+      [[ "$f" == "scripts/common-functions.sh" ]] && continue
+      if ! grep -qE "set -euo pipefail|source.*_common/init" "$f" 2>/dev/null; then
+        echo "AUDIT: $f — missing set -euo pipefail or _common/init.sh source"
+      fi
+    done | head -20
+  '
+  language: system
+  files: '^scripts/.*\.sh$'
+  pass_filenames: false
+  stages: [manual]
+
+- id: enforce-log-messages
+  name: Ensure scripts use log_* not bare echo (manual audit)
+  description: Check that scripts use log_* functions from _common/logging.sh
+  entry: bash -c '
+    for f in scripts/{deploy,backup,validate,test-deployment}.sh; do
+      [[ -f "$f" ]] || continue
+      echo_count=$(grep -c "^echo " "$f" 2>/dev/null || echo 0)
+      log_count=$(grep -c "log_" "$f" 2>/dev/null || echo 0)
+      if [[ "$echo_count" -gt "$log_count" ]]; then
+        echo "AUDIT: $f uses echo ($echo_count) more than log_* ($log_count) — migrate bare echos to log_info/log_warn"
+      fi
+    done
+  '
+  language: system
+  pass_filenames: false
+  stages: [manual]
+
+- id: check-test-coverage
+  name: Verify test coverage for critical paths (manual reminder)
+  entry: bash -c '
+    [[ -f scripts/test-deployment.sh ]] \
+      && echo "REMINDER: Verify test-deployment.sh covers the paths you just changed" \
+      || echo "WARNING: scripts/test-deployment.sh not found"
+  '
+  language: system
+  pass_filenames: false
+  stages: [manual]
+
+- id: enforce-documentation
+  name: Remind about CHANGELOG for multi-file changes
+  entry: bash -c '
+    count=$(git diff --cached --name-only 2>/dev/null | wc -l)
+    [[ "$count" -gt 5 ]] \
+      && echo "REMINDER: $count files staged — update CHANGELOG.md if this is a significant change" \
+      || true
+  '
+  language: system
+  pass_filenames: false
+  stages: [commit]
+  always_run: true
 
 - id: verify-metadata-headers
   name: Verify metadata headers in critical scripts

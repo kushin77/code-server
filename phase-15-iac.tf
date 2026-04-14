@@ -71,19 +71,6 @@ resource "docker_container" "redis_cluster_node_1" {
     read_only      = false
   }
   
-  labels {
-    key   = "phase"
-    value = "15"
-  }
-  labels {
-    key   = "component"
-    value = "redis-cluster"
-  }
-  labels {
-    key   = "environment"
-    value = var.phase_15_environment
-  }
-  
   healthcheck {
     test     = ["CMD", "redis-cli", "ping"]
     interval = "10s"
@@ -313,3 +300,4 @@ output "phase_15_status" {
     locust_healthy        = docker_container.load_test_master.status == "running"
   }
 }
+

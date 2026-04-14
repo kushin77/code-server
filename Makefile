@@ -858,3 +858,97 @@ v: validate    # Short for validate
 om: ollama-status  # Ollama status
 oi: ollama-init    # Ollama init
 op: ollama-pull-models  # Ollama pull
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CODE QUALITY & LIBRARY GOVERNANCE
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Verify all active scripts source _common/init.sh (not inline log_info definitions)
+lib-check:
+	@echo "════════════════════════════════════════════════════════════"
+	@echo "  LIBRARY ADOPTION AUDIT"
+	@echo "════════════════════════════════════════════════════════════"
+	@echo ""
+	@echo "✅ Scripts correctly sourcing _common/init.sh or _common/*.sh:"
+	@grep -rl "_common/init.sh\|_common/logging.sh" scripts/*.sh 2>/dev/null | grep -v "_common/" | sed 's/^/  ✓ /'
+	@echo ""
+	@echo "⚠️  Scripts with inline log_info() definitions (need migration):"
+	@grep -rl "^log_info() {" scripts/*.sh 2>/dev/null | grep -vE "_common/|logging.sh|common-functions.sh" | sed 's/^/  ✗ /'
+	@echo ""
+	@echo "⚠️  Scripts with hardcoded 192.168.168.31 (should use \$$DEPLOY_HOST from config.sh):"
+	@grep -rl "192\.168\.168\.31" scripts/*.sh 2>/dev/null | grep -v "_common/" | sed 's/^/  ✗ /'
+	@echo ""
+
+# Validate scripts against MANIFEST.toml registry
+index:
+	@echo "════════════════════════════════════════════════════════════"
+	@echo "  SCRIPT MANIFEST VALIDATION"
+	@echo "════════════════════════════════════════════════════════════"
+	@if [ ! -f scripts/MANIFEST.toml ]; then \
+		echo "❌ scripts/MANIFEST.toml not found — run: make manifest-init"; \
+		exit 1; \
+	fi
+	@REGISTERED=$$(grep -c '^file' scripts/MANIFEST.toml 2>/dev/null || echo 0); \
+	 TOTAL=$$(find scripts -maxdepth 1 -name "*.sh" | wc -l); \
+	 echo "  Registered in manifest: $$REGISTERED"; \
+	 echo "  Total .sh files:        $$TOTAL"; \
+	 echo ""
+	@echo "  Unregistered scripts (must be added to MANIFEST.toml or archived):"
+	@while IFS= read -r f; do \
+		name=$$(basename "$$f"); \
+		grep -q "file.*=.*\"$$name\"" scripts/MANIFEST.toml 2>/dev/null || echo "  ✗ $$name"; \
+	done < <(find scripts -maxdepth 1 -name "*.sh" | sort)
+
+# Generate initial MANIFEST.toml from existing scripts (run once)
+manifest-init:
+	@echo "# scripts/MANIFEST.toml — Script Registry" > scripts/MANIFEST.toml
+	@echo "# Every script in scripts/ MUST have an entry here." >> scripts/MANIFEST.toml
+	@echo "# Status: active | deprecated | historical | experimental" >> scripts/MANIFEST.toml
+	@echo "" >> scripts/MANIFEST.toml
+	@for f in scripts/*.sh; do \
+		name=$$(basename "$$f"); \
+		echo "[[script]]" >> scripts/MANIFEST.toml; \
+		echo "file     = \"$$name\"" >> scripts/MANIFEST.toml; \
+		echo "category = \"uncategorized\"" >> scripts/MANIFEST.toml; \
+		echo "status   = \"active\"" >> scripts/MANIFEST.toml; \
+		echo "purpose  = \"TODO: add purpose\"" >> scripts/MANIFEST.toml; \
+		echo "" >> scripts/MANIFEST.toml; \
+	done
+	@echo "✅ Generated scripts/MANIFEST.toml with $$(grep -c '^file' scripts/MANIFEST.toml) entries"
+	@echo "   Edit status/purpose for each script, then commit."
+
+# Archive all phase-* historical scripts (move to scripts/_archive/)
+archive-phases:
+	@echo "🗂  Archiving historical phase-* scripts..."
+	@mkdir -p scripts/_archive/phase-history
+	@count=0; \
+	 for f in scripts/phase-*.sh scripts/phase-*.py scripts/PHASE-*.sh; do \
+		[ -f "$$f" ] || continue; \
+		mv "$$f" scripts/_archive/phase-history/; \
+		count=$$((count + 1)); \
+	 done; \
+	 echo "✅ Archived $$count phase history scripts to scripts/_archive/phase-history/"
+	@echo "   Active script count: $$(find scripts -maxdepth 1 -name '*.sh' | wc -l)"
+
+# Show full governance status dashboard
+governance:
+	@echo "════════════════════════════════════════════════════════════"
+	@echo "  GOVERNANCE STATUS DASHBOARD"
+	@echo "════════════════════════════════════════════════════════════"
+	@echo ""
+	@echo "📚 Library Adoption:"
+	@count=$$(grep -rl "_common/" scripts/*.sh 2>/dev/null | grep -v "_common/" | wc -l); \
+	 total=$$(find scripts -maxdepth 1 -name "*.sh" | wc -l); \
+	 echo "  $$count / $$total active scripts use _common/ library"
+	@echo ""
+	@echo "🔒 Security:"
+	@echo "  Hardcoded IPs:"; \
+	 grep -rl "192\.168\." scripts/*.sh 2>/dev/null | grep -v "_common/" | wc -l | xargs echo "    Count:"
+	@echo ""
+	@echo "📋 Script Registry:"
+	@[ -f scripts/MANIFEST.toml ] \
+		&& echo "  ✅ MANIFEST.toml exists ($$(grep -c '^file' scripts/MANIFEST.toml) entries)" \
+		|| echo "  ❌ MANIFEST.toml missing — run: make manifest-init"
+	@echo ""
+	@echo "Pre-commit hooks: $$([ -f .pre-commit-config.yaml ] && echo '✅ configured' || echo '❌ missing')"
+	@echo ""

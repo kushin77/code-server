@@ -1,0 +1,264 @@
+# scripts/MANIFEST.toml
+# ──────────────────────────────────────────────────────────────────────────────
+# SCRIPT REGISTRY — Every script in scripts/ MUST have an entry here.
+# Unregistered scripts are flagged as violations in CI (make index).
+#
+# FIELDS
+#   file       = filename (basename only)
+#   category   = deployment | operations | validation | security | archive | library
+#   status     = active | deprecated | historical | experimental
+#   owner      = platform | security | oncall | (team name)
+#   purpose    = one-line human description
+#   depends    = optional list of scripts/libs this depends on
+#   called_by  = optional list of callers (CI, Makefile, other scripts)
+#   deprecated_by = (if status=deprecated) replacement script
+#
+# ENFORCEMENT
+#   make index   — list unregistered scripts
+#   pre-commit   — verify-metadata-headers hook checks Status: field in header
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LIBRARIES (category=library — not independently executed)
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "_common/init.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "Single bootstrap entrypoint. Source this instead of individual _common/* files."
+
+[[script]]
+file     = "_common/config.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "Single source of truth for DEPLOY_HOST, DOMAIN, container names, ports, paths."
+
+[[script]]
+file     = "_common/logging.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "Standardized log_info / log_warn / log_error / log_fatal with color and JSON mode."
+
+[[script]]
+file     = "_common/utils.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "retry(), require_command(), require_file(), cleanup handlers."
+
+[[script]]
+file     = "_common/error-handler.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "ERR trap, stack trace, assert functions, DEBUG mode."
+
+[[script]]
+file     = "_common/docker.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "Centralized docker/compose remote operations. docker_status(), docker_wait_healthy(), etc."
+
+[[script]]
+file     = "_common/ssh.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "Centralized SSH helpers. ssh_exec(), ssh_stream(), ssh_compose(), assert_ssh_up()."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ACTIVE DEPLOYMENT SCRIPTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "deploy.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Idempotent production deployment orchestrator. Calls docker compose on remote host."
+depends  = ["_common/init.sh", "docker-compose.yml"]
+called_by = [".github/workflows/deploy.yml", "Makefile:deploy"]
+
+[[script]]
+file     = "backup.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Enterprise volume backup and restore for code-server data."
+depends  = ["_common/init.sh"]
+called_by = ["Makefile:backup", "Makefile:restore"]
+
+[[script]]
+file     = "validate.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Deployment configuration validation suite."
+called_by = ["Makefile:validate", ".github/workflows/validate.yml"]
+
+[[script]]
+file     = "mandatory-redeploy.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Pre-commit hook: enforces redeploy when config files change."
+depends  = ["_common/common-functions.sh"]
+called_by = [".pre-commit-config.yaml"]
+
+[[script]]
+file     = "apply-governance.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Applies governance policies to the repository."
+depends  = ["_common/common-functions.sh"]
+
+[[script]]
+file     = "audit-logging.sh"
+category = "security"
+status   = "active"
+owner    = "security"
+purpose  = "Audit log collection and compliance reporting."
+
+[[script]]
+file     = "security-audit.sh"
+category = "security"
+status   = "active"
+owner    = "security"
+purpose  = "Security posture audit across containers and configuration."
+
+[[script]]
+file     = "disaster-recovery-p3.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "P3 disaster recovery runbook — restore from backup on standby host."
+
+[[script]]
+file     = "deployment-validation-suite.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "End-to-end deployment validation: containers, ports, health endpoints."
+
+[[script]]
+file     = "deployment-validation-31.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Host-31 specific deployment validation with SLO checks."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ACTIVE OPERATIONS SCRIPTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "health-check.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Quick health check for all enterprise services."
+called_by = ["Makefile:health-check"]
+
+[[script]]
+file     = "automated-deployment-orchestration.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Automated multi-step deployment orchestration with rollback support."
+
+[[script]]
+file     = "automated-certificate-management.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "TLS certificate provisioning and renewal automation."
+
+[[script]]
+file     = "automated-dns-configuration.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "DNS record management for kushnir.cloud domain."
+
+[[script]]
+file     = "automated-oauth-configuration.sh"
+category = "security"
+status   = "active"
+owner    = "platform"
+purpose  = "OAuth2-proxy configuration and Cloudflare Access setup."
+
+[[script]]
+file     = "automated-iac-validation.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Infrastructure-as-code validation for Terraform and Docker Compose."
+
+[[script]]
+file     = "automated-env-generator.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Generates .env files for given environments from templates."
+
+[[script]]
+file     = "developer-lifecycle.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Developer access lifecycle manager: onboard, extend, revoke."
+called_by = ["Makefile:grant-access", "Makefile:revoke-access"]
+
+[[script]]
+file     = "manage-users.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "User management script for code-server access control."
+
+[[script]]
+file     = "ollama-init.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Initializes Ollama: pulls required models, validates API, warms up."
+called_by = ["Makefile:ollama-init"]
+
+[[script]]
+file     = "operations-runbook.sh"
+category = "operations"
+status   = "active"
+owner    = "oncall"
+purpose  = "Interactive operations runbook for common incident scenarios."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEPRECATED (kept for reference, not to be run)
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "logging.sh"
+category = "library"
+status   = "deprecated"
+owner    = "platform"
+purpose  = "SUPERSEDED by _common/logging.sh — do not source this file."
+deprecated_by = "_common/logging.sh"
+
+[[script]]
+file     = "common-functions.sh"
+category = "library"
+status   = "deprecated"
+owner    = "platform"
+purpose  = "SUPERSEDED by _common/utils.sh + _common/error-handler.sh."
+deprecated_by = "_common/init.sh"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTE: All phase-*.sh scripts (100+) are historical deployment artifacts.
+# Run `make archive-phases` to move them to scripts/_archive/phase-history/.
+# They are excluded from this manifest's active tracking.
+# ─────────────────────────────────────────────────────────────────────────────

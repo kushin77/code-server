@@ -1,16 +1,35 @@
 #!/usr/bin/env bash
 # ════════════════════════════════════════════════════════════════════════════
 # scripts/logging.sh
-# Shared logging functions for all bash deployment scripts.
-# Source this file to get structured logging with timestamps.
-# 
-# USAGE:
+# ⚠️  DEPRECATED — Use scripts/_common/logging.sh instead.
+#
+# This file is a compatibility shim. It will be removed in a future release.
+# Migration: replace
 #   source "$(dirname "$0")/logging.sh"
-#   log "INFO" "Starting deployment..."
-#   log "ERROR" "Something failed"
+# with:
+#   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#   source "$SCRIPT_DIR/_common/init.sh"
+#
+# Status: DEPRECATED
+# Deprecated-By: scripts/_common/logging.sh
 # ════════════════════════════════════════════════════════════════════════════
 
-set -euo pipefail
+# Emit deprecation warning (visible in CI log, does not break caller)
+echo "⚠️  DEPRECATION WARNING: sourcing scripts/logging.sh is deprecated." >&2
+echo "   Migrate to: source \"\$SCRIPT_DIR/_common/init.sh\"" >&2
+
+# Forward to the canonical implementation
+_SHIM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$_SHIM_DIR/_common/logging.sh" ]]; then
+    # shellcheck source=_common/logging.sh
+    source "$_SHIM_DIR/_common/logging.sh"
+    unset _SHIM_DIR
+    return 0
+fi
+unset _SHIM_DIR
+
+# Fallback: original implementation in case _common/ isn't present yet
+
 
 # Color codes
 readonly RED='\033[0;31m'

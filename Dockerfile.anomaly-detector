@@ -1,0 +1,13 @@
+# Anomaly Detector container — statistical anomaly detection on metrics
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install required Python packages
+RUN pip install --no-cache-dir requests prometheus-client pyyaml numpy scipy pandas scikit-learn
+
+# Copy anomaly detector script
+COPY scripts/observability/anomaly-detector.py .
+
+# Run anomaly detector
+ENTRYPOINT ["python", "anomaly-detector.py"]

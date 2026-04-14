@@ -279,21 +279,20 @@ services:
   # ─── RCA Engine (Root Cause Analysis) ────────────────────────────────────
   # Analyzes alerts from Prometheus to identify root causes
   rca-engine:
-    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: Dockerfile.rca-engine
+    image: rca-engine:latest
     container_name: rca-engine
     restart: always
     networks:
       - enterprise
     ports:
       - "9094:9094"  # Metrics endpoint
-    volumes:
-      - ./scripts/observability/rca-engine.py:/app/rca-engine.py:ro
     environment:
       - PROMETHEUS_URL=http://192.168.168.31:9090
       - ALERTMANAGER_URL=http://192.168.168.31:9093
       - LOG_LEVEL=INFO
-    working_dir: /app
-    command: ["python", "rca-engine.py", "--daemon"]
     healthcheck:
       test: ["CMD", "python", "-c", "import http.client; conn = http.client.HTTPConnection('localhost', 9094); conn.request('GET', '/metrics'); print(conn.getresponse().status)"]
       interval: 30s
@@ -309,21 +308,20 @@ services:
   # ─── Anomaly Detector ────────────────────────────────────────────────────
   # Detects anomalies in Prometheus metrics using statistical analysis
   anomaly-detector:
-    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: Dockerfile.anomaly-detector
+    image: anomaly-detector:latest
     container_name: anomaly-detector
     restart: always
     networks:
       - enterprise
     ports:
       - "9095:9095"  # Metrics endpoint
-    volumes:
-      - ./scripts/observability/anomaly-detector.py:/app/anomaly-detector.py:ro
     environment:
       - PROMETHEUS_URL=http://192.168.168.31:9090
       - ANOMALY_THRESHOLD=2.0
       - LOG_LEVEL=INFO
-    working_dir: /app
-    command: ["python", "anomaly-detector.py"]
     healthcheck:
       test: ["CMD", "python", "-c", "import http.client; conn = http.client.HTTPConnection('localhost', 9095); conn.request('GET', '/metrics'); print(conn.getresponse().status)"]
       interval: 30s

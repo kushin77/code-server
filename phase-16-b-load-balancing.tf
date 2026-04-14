@@ -11,7 +11,7 @@
 variable "phase_16_b_enabled" {
   description = "Enable Phase 16-B Load Balancing deployment"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "haproxy_count" {

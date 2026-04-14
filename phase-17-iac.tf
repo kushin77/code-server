@@ -11,7 +11,7 @@
 variable "phase_17_enabled" {
   description = "Enable Phase 17 Multi-Region Replication deployment"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "primary_region" {

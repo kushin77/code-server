@@ -11,7 +11,7 @@
 variable "phase_18_enabled" {
   description = "Enable Phase 18 Security Hardening deployment"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "vault_node_count" {

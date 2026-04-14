@@ -11,7 +11,7 @@
 variable "phase_16_a_enabled" {
   description = "Enable Phase 16-A Database HA deployment"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "db_instance_count" {

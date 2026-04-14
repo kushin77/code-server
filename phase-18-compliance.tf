@@ -11,7 +11,7 @@
 variable "phase_18_compliance_enabled" {
   description = "Enable Phase 18-B SOC 2 Type II Compliance automation"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "soc2_trust_services_criteria" {

@@ -77,6 +77,16 @@ variable "pool_mode" {
 }
 
 # ───────────────────────────────────────────────────────────────────────────
+# DOCKER NETWORK FOR HA CLUSTER COMMUNICATION
+# ───────────────────────────────────────────────────────────────────────────
+
+resource "docker_network" "postgres_ha_network" {
+  count  = var.phase_16_a_enabled ? 1 : 0
+  name   = "postgres-ha-network"
+  driver = "bridge"
+}
+
+# ───────────────────────────────────────────────────────────────────────────
 # POSTGRESQL HA DOCKER SERVICES
 # ───────────────────────────────────────────────────────────────────────────
 
@@ -118,7 +128,9 @@ resource "docker_container" "postgres_primary" {
   count         = var.phase_16_a_enabled ? 1 : 0
   name          = "postgres-ha-primary"
   image         = docker_image.postgresql_ha[0].image_id
-  network_mode  = "bridge"
+  networks_advanced {
+    name = docker_network.postgres_ha_network[0].name
+  }
   
   env = [
     "POSTGRES_DB=code_server_db",
@@ -146,9 +158,7 @@ resource "docker_container" "postgres_primary" {
     start_period = "40s"
   }
 
-
-
-  depends_on = [docker_image.postgresql_ha]
+  depends_on = [docker_image.postgresql_ha, docker_network.postgres_ha_network]
 
   lifecycle {
     create_before_destroy = true
@@ -163,12 +173,14 @@ resource "docker_container" "postgres_replica" {
   count         = var.phase_16_a_enabled ? var.db_instance_count - 1 : 0
   name          = "postgres-ha-replica-${count.index + 1}"
   image         = docker_image.postgresql_ha[0].image_id
-  network_mode  = "bridge"
+  networks_advanced {
+    name = docker_network.postgres_ha_network[0].name
+  }
 
   env = [
     "PGUSER=replication_user",
     "PGPASSWORD=${random_password.replication_password[0].result}",
-    "PGMASTER=localhost",
+    "PGMASTER=postgres-ha-primary",
     "PGPORT=5432",
   ]
 
@@ -197,8 +209,6 @@ resource "docker_container" "postgres_replica" {
     start_period = "60s"
   }
 
-
-
   depends_on = [docker_container.postgres_primary]
 
   lifecycle {
@@ -214,7 +224,9 @@ resource "docker_container" "pgbouncer_pool" {
   count         = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
   name          = "pgbouncer-pool"
   image         = docker_image.pgbouncer[0].image_id
-  network_mode  = "bridge"
+  networks_advanced {
+    name = docker_network.postgres_ha_network[0].name
+  }
 
   env = [
     "PGBOUNCER_USER=pgbouncer",
@@ -246,8 +258,6 @@ resource "docker_container" "pgbouncer_pool" {
     start_period = "20s"
   }
 
-
-
   depends_on = [docker_container.postgres_primary]
 
   lifecycle {
@@ -263,7 +273,9 @@ resource "docker_container" "patroni_ha" {
   count         = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
   name          = "patroni-ha-controller"
   image         = docker_image.patroni[0].image_id
-  network_mode  = "bridge"
+  networks_advanced {
+    name = docker_network.postgres_ha_network[0].name
+  }
 
   env = [
     "PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data",
@@ -291,8 +303,6 @@ resource "docker_container" "patroni_ha" {
     retries      = 3
     start_period = "20s"
   }
-
-
 
   depends_on = [docker_container.postgres_primary]
 

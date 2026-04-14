@@ -69,7 +69,7 @@ alias logs='tail -f /var/log/*.log 2>/dev/null || echo "No logs readable"'
 # Safe git operations with logging
 git() {
     # Log the git operation
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] GIT: $@" >> "$DEVELOPER_SESSION_LOG"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] GIT: "$@"" >> "$DEVELOPER_SESSION_LOG"
     
     # Allow git operations (credential helper will handle SSH key access)
     command git "$@"

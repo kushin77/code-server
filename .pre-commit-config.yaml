@@ -7,15 +7,12 @@ repos:
         name: Bash script lint (shellcheck)
         args: ['--severity=error']
         exclude: |
-          (?x)^(
-            scripts/|
-            tests/|
-            terraform/|
+          (?x)(
+            scripts/_archive/|
             archived/|
-            phase-|
-            gpu-|
-            \.archive
-          )$
+            ^phase-|
+            ^gpu-
+          )
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1
     hooks:

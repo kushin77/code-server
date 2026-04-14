@@ -1,6 +1,6 @@
 # Consolidated AWS Data Sources
-# Shared across multiple phase modules for consistency and DRY principle
-# All phases reference these data sources; no duplicates in phase files
+# Shared across all infrastructure modules for consistency and DRY principle
+# All infrastructure layers reference these data sources; no duplicates in individual modules
 
 data "aws_vpc" "primary" {
   default = false

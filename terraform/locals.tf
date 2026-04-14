@@ -18,7 +18,7 @@ locals {
 
   # Image versions (pinned to specific digest for immutability)
   # ✅ These are immutable - won't auto-upgrade
-  # ✅ SINGLE SOURCE OF TRUTH - referenced by all modules and phases
+  # ✅ SINGLE SOURCE OF TRUTH - referenced by all modules and infrastructure layers
   docker_images = {
     code_server = "codercom/code-server:4.115.0"
     oauth2_proxy = "quay.io/oauth2-proxy/oauth2-proxy:v7.5.1"

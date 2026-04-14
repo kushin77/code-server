@@ -90,7 +90,8 @@ services:
       - ollama-data:/root/.ollama
       - ./workspace:/home/coder/workspace:ro
     healthcheck:
-      test: ["CMD", "/bin/bash", "-c", "</dev/tcp/localhost/11434"]
+      # ollama container healthcheck using curl
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

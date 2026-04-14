@@ -139,7 +139,7 @@ locals {
 # ════════════════════════════════════════════════════════════════════════════
 resource "null_resource" "workspace_setup" {
   provisioner "local-exec" {
-    command = "mkdir -p ${path.module}/workspace ${path.module}/config/caddy"
+    command = "powershell -Command \"New-Item -ItemType Directory -Force -Path '${path.module}/workspace', '${path.module}/config/caddy' | Out-Null\""
   }
 }
 
@@ -350,7 +350,8 @@ EOT
 # Make deploy script executable
 resource "null_resource" "make_deploy_executable" {
   provisioner "local-exec" {
-    command = "chmod +x ${local_file.deploy_script.filename}"
+    # Note: On Windows, scripts are executable by default. This is a no-op.
+    command = "powershell -Command \"Write-Host 'Scripts deployment ready (Windows)'\""
   }
   depends_on = [local_file.deploy_script]
 }

@@ -254,3 +254,25 @@ variable "enable_https" {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Phase 22-25: Feature Flags (Modular Deployment)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "phase_24_enabled" {
+  description = "Enable Phase 24: Operations Excellence (Velero backups, Karpenter auto-scaling)"
+  type        = bool
+  default     = true
+}
+
+variable "phase_25_enabled" {
+  description = "Enable Phase 25: GraphQL API & Developer Portal"
+  type        = bool
+  default     = true
+}
+
+variable "graphql_api_portal_enabled" {
+  description = "Enable GraphQL API & Developer Portal (Phase 25)"
+  type        = bool
+  default     = true
+}
+
+// ─────────────────────────────────────────────────────────────────────────────

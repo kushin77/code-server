@@ -133,7 +133,7 @@ receivers:
       - to: ${VAULT_ALERT_EMAIL}
         headers:
           Subject: 'Daily Alert Digest'
-            url: 'https://grafana.ide.kushnir.cloud/d/{{ .GroupLabels.dashboard }}'
+          Reference: 'https://grafana.ide.kushnir.cloud/d/{{ .GroupLabels.dashboard }}'
 
   # Slack for medium-priority alerts
   - name: slack-warnings

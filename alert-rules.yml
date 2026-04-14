@@ -1,3 +1,4 @@
+---
 groups:
   - name: alerts
     interval: 30s

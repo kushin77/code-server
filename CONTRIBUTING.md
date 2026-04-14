@@ -575,6 +575,78 @@ Caddyfile.production   ← Strict security: @import base + security_headers_stri
 **Named Segments** (reusable blocks):
 - `(security_headers)` — Standard security headers (CSP, X-Frame-Options, HSTS)
 - `(security_headers_strict)` — Enhanced headers for high-security deployments
+
+---
+
+## IaC Composition Pattern (Terraform → docker-compose)
+
+All Docker Compose configuration is **generated** from Terraform, never manually edited.
+
+### Workflow
+```
+main.tf (locals.versions, locals.network)
+  └── docker-compose.tpl  (templatefile)
+        └── docker-compose.yml  ← GENERATED — do not edit
+```
+
+### Adding a New Service
+
+1. **Add version to `main.tf` `locals.versions`**:
+   ```hcl
+   versions = {
+     my_service = "1.2.3"  # always pin exact version
+   }
+   ```
+
+2. **Add port to `main.tf` `locals.network`**:
+   ```hcl
+   network = {
+     my_service_port = 9000
+   }
+   ```
+
+3. **Add to `main.tf` `docker_compose_vars`**:
+   ```hcl
+   my_service_version = local.versions.my_service
+   my_service_port    = local.network.my_service_port
+   ```
+
+4. **Add service block to `docker-compose.tpl`**:
+   ```yaml
+   my-service:
+     image: vendor/my-service:${my_service_version}
+     container_name: my-service
+     restart: unless-stopped
+     networks:
+       - ${network_name}
+     expose:
+       - "${my_service_port}"
+     healthcheck:
+       test: ["CMD", "wget", "-q", "--spider", "http://localhost:${my_service_port}/health"]
+       interval: 30s
+       timeout: 5s
+       retries: 3
+   ```
+
+5. **Run terraform apply** to regenerate `docker-compose.yml`:
+   ```bash
+   ssh akushnir@192.168.168.31
+   cd code-server-enterprise
+   terraform apply -auto-approve
+   docker-compose up -d --force-recreate my-service
+   ```
+
+### Version Pinning Rules
+
+- **Always** use exact version tags (e.g., `v2.48.0`, `10.2.3`, `15-alpine`)
+- **Never** use `latest` or floating tags
+- **Never** hardcode versions in `docker-compose.tpl` — use template vars from `main.tf`
+- All versions live in `locals.versions` — single source of truth
+
+### Idempotency Guarantee
+
+Running `terraform apply` multiple times produces identical output. The generated `docker-compose.yml` is deterministic — same input vars always produce the same file.
+
 - `(cache_control_rules)` — Cache policies for assets, API, health endpoints
 - `(compression_standard)` — gzip compression for HTML/CSS/JS
 - `(compression_advanced)` — brotli + gzip for high-bandwidth environments

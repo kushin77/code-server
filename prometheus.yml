@@ -9,12 +9,10 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-            - localhost:9093
+            - alertmanager:9093
 
 rule_files:
   - /etc/prometheus/alert-rules.yml
-  - /etc/prometheus/prometheus-rules-phase-23.yml
-  - /etc/prometheus/alerts-phase-23.yml
 
 scrape_configs:
   - job_name: 'prometheus'
@@ -24,44 +22,26 @@ scrape_configs:
 
   - job_name: 'code-server'
     static_configs:
-      - targets: ['localhost:8080']
+      - targets: ['code-server:8080']
 
   - job_name: 'caddy'
     static_configs:
-      - targets: ['localhost:2019']
+      - targets: ['caddy:2019']
         labels:
           instance: caddy-proxy
 
-  - job_name: 'redis'
+  - job_name: 'grafana'
     static_configs:
-      - targets: ['localhost:6379']
-
-  - job_name: 'postgres'
-    static_configs:
-      - targets: ['localhost:5432']
-
-  # ── Phase 23: OTel Collector metrics ──────────────────────────────────────
-  - job_name: 'otel-collector'
-    static_configs:
-      - targets: ['otel-collector:8888']
+      - targets: ['grafana:3000']
         labels:
-          instance: otel-collector
+          instance: grafana
 
-  # Phase 23: OTel Collector exported metrics (app traces → Prometheus metrics)
-  - job_name: 'otel-collector-prom'
+  - job_name: 'alertmanager'
     static_configs:
-      - targets: ['otel-collector:8889']
+      - targets: ['alertmanager:9093']
         labels:
-          instance: otel-exporter
+          instance: alertmanager
 
-  # Phase 23: Anomaly detector sidecar metrics
-  - job_name: 'anomaly-detector'
-    static_configs:
-      - targets: ['anomaly-detector:9095']
-        labels:
-          instance: anomaly-detector
-
-  # Phase 23: Jaeger metrics
   - job_name: 'jaeger'
     static_configs:
       - targets: ['jaeger:14269']

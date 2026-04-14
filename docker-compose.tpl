@@ -258,6 +258,232 @@ services:
         max-file: "3"
 %{ endif }
 
+  # ─── postgres ────────────────────────────────────────────────────────────────
+  # Primary database (pinned to ${postgres_version})
+  postgres:
+    image: postgres:${postgres_version}
+    container_name: postgres
+    restart: unless-stopped
+    networks:
+      - ${network_name}
+    expose:
+      - "${postgres_port}"
+    environment:
+      - POSTGRES_DB=$${POSTGRES_DB:-code_server_db}
+      - POSTGRES_USER=$${POSTGRES_USER:-db_admin}
+      - POSTGRES_PASSWORD=$${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-db_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: '1.0'
+        reservations:
+          memory: 256m
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ─── redis ───────────────────────────────────────────────────────────────────
+  # In-memory store (pinned to ${redis_version})
+  redis:
+    image: redis:${redis_version}
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - ${network_name}
+    expose:
+      - "${redis_port}"
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 64m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── alertmanager ────────────────────────────────────────────────────────────
+  # Alert routing and notification (pinned to ${alertmanager_version})
+  alertmanager:
+    image: prom/alertmanager:${alertmanager_version}
+    container_name: alertmanager
+    restart: unless-stopped
+    networks:
+      - ${network_name}
+    expose:
+      - "${alertmanager_port}"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${alertmanager_port}/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.25'
+        reservations:
+          memory: 64m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── prometheus ──────────────────────────────────────────────────────────────
+  # Metrics collection (pinned to ${prometheus_version})
+  prometheus:
+    image: prom/prometheus:${prometheus_version}
+    container_name: prometheus
+    restart: unless-stopped
+    networks:
+      - ${network_name}
+    expose:
+      - "${prometheus_port}"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${prometheus_port}/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - alertmanager
+      - postgres
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: '1.0'
+        reservations:
+          memory: 256m
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ─── grafana ─────────────────────────────────────────────────────────────────
+  # Dashboards & visualization (pinned to ${grafana_version})
+  grafana:
+    image: grafana/grafana:${grafana_version}
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - ${network_name}
+    expose:
+      - "${grafana_port}"
+    environment:
+      - GF_SECURITY_ADMIN_USER=$${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=$${GRAFANA_ADMIN_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_PROTOCOL=http
+      - GF_SERVER_HTTP_PORT=${grafana_port}
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:${grafana_port}/api/health | grep -q 'ok'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+          cpus: '0.25'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── jaeger ──────────────────────────────────────────────────────────────────
+  # Distributed tracing (pinned to ${jaeger_version})
+  jaeger:
+    image: jaegertracing/all-in-one:${jaeger_version}
+    container_name: jaeger
+    restart: unless-stopped
+    networks:
+      - ${network_name}
+    expose:
+      - "16686"
+      - "14268"
+      - "14269"
+      - "6831"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:14269/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks & Volumes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -272,6 +498,12 @@ volumes:
   ${data_volume}:
     driver: local
   ${ollama_volume}:
+    driver: local
+  postgres-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
     driver: local
   caddy-config:
     driver: local

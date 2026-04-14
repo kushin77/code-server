@@ -70,6 +70,13 @@ locals {
     oauth2_proxy = "v7.5.1"          # OIDC proxy for auth
     caddy        = "2.7.6"           # Reverse proxy + auto TLS
     node_base    = "22.11.0"         # Node.js (embedded in code-server)
+    # ─── Observability stack (pinned) ───────────────────────────────────
+    prometheus   = "v2.48.0"         # Metrics scraping + TSDB
+    grafana      = "10.2.3"          # Dashboards + visualization
+    alertmanager = "v0.26.0"         # Alert routing + notification
+    postgres     = "15-alpine"       # Primary relational database
+    redis        = "7-alpine"        # In-memory cache + session store
+    jaeger       = "1.50"            # Distributed tracing
   }
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -82,6 +89,12 @@ locals {
     caddy_http_port   = 80
     caddy_https_port  = 443
     ollama_port       = 11434
+    # ─── Observability ports ───────────────────────────────────────────
+    prometheus_port   = 9090
+    grafana_port      = 3000
+    alertmanager_port = 9093
+    postgres_port     = 5432
+    redis_port        = 6379
   }
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -153,6 +166,18 @@ locals {
     external_domain    = var.external_domain
     acme_email         = var.acme_email
     enable_cloudflared = local.cloudflare_tunnel_enabled
+    # ─── Observability stack ────────────────────────────────────────────
+    prometheus_version   = local.versions.prometheus
+    grafana_version      = local.versions.grafana
+    alertmanager_version = local.versions.alertmanager
+    postgres_version     = local.versions.postgres
+    redis_version        = local.versions.redis
+    jaeger_version       = local.versions.jaeger
+    prometheus_port      = local.network.prometheus_port
+    grafana_port         = local.network.grafana_port
+    alertmanager_port    = local.network.alertmanager_port
+    postgres_port        = local.network.postgres_port
+    redis_port           = local.network.redis_port
   }
 }
 

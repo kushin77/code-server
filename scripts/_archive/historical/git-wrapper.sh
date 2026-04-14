@@ -40,7 +40,7 @@ log_git_operation() {
     local operation="$2"
     local repo="$3"
     local branch="$4"
-    
+
     if [ -w "$AUDIT_LOG" ] 2>/dev/null || [ -w "$(dirname "$AUDIT_LOG")" ]; then
         echo "[$TIMESTAMP] DEVELOPER:$DEVELOPER_ID | SESSION:$SESSION_ID | STATUS:$status | OP:$operation | REPO:$repo | BRANCH:$branch | CMD:$ORIGINAL_COMMAND" >> "$AUDIT_LOG"
     fi
@@ -55,10 +55,10 @@ case "$SUBCOMMAND" in
     push)
         # Get branch from push command
         BRANCH="${3:-main}"  # Fallback to main
-        
+
         # Audit log
         log_git_operation "ATTEMPT" "push" "$(pwd)" "$BRANCH"
-        
+
         # Check for dangerous branches (pushing to main/master without PR)
         if [[ "$BRANCH" == "main" ]] || [[ "$BRANCH" == "master" ]]; then
             echo "WARNING: Pushing to protected branch $BRANCH" >&2
@@ -66,23 +66,23 @@ case "$SUBCOMMAND" in
             echo "" >&2
         fi
         ;;
-    
+
     pull|fetch)
         # Get branch from pull command
         BRANCH="${3:-main}"
-        
+
         # Audit log
         log_git_operation "ATTEMPT" "$SUBCOMMAND" "$(pwd)" "$BRANCH"
         ;;
-    
+
     clone)
         # Get repository URL
         REPO_URL="$2"
-        
+
         # Audit log - clone is always logged
         log_git_operation "ATTEMPT" "clone" "$REPO_URL" ""
         ;;
-    
+
     *)
         # Other git commands (status, log, add, commit, etc)
         # These are allowed

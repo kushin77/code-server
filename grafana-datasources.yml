@@ -24,7 +24,7 @@ datasources:
     secureJsonData:
       # ✅ Leave empty for internal Docker communication
       httpHeaderValue1: ""
-    
+
     # ✅ Immutable settings
     basicAuth: false
     withCredentials: false
@@ -32,7 +32,7 @@ datasources:
     tlsAuthWithCACert: false
     tlsSkipVerify: false
     httpMethod: POST
-    
+
     # ✅ Custom headers for tracing
     customMetadata:
       component: global-orchestration-framework
@@ -59,7 +59,7 @@ datasources:
           matcherRegex: '"traceID":"([^"]+)'
           url: '$${value}'
           urlDisplayLabel: View Trace
-    
+
     basicAuth: false
     withCredentials: false
     tlsAuth: false
@@ -82,7 +82,7 @@ datasources:
         enabled: true
       lokiSearch:
         datasourceUid: loki-uid-002
-    
+
     basicAuth: false
     withCredentials: false
     tlsAuth: false
@@ -143,7 +143,7 @@ notificationChannels: []
   #   disableResolveMessage: false
   #   settings:
   #     addresses: ops-team@example.com
-  
+
   # Example Slack notification:
   # - name: Slack
   #   type: slack

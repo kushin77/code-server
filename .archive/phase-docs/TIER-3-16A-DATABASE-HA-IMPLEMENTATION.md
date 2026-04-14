@@ -1,10 +1,10 @@
 # Phase 16-A: PostgreSQL High Availability & Redundancy
 
-**Status:** IN PROGRESS  
-**Effort:** 6 hours  
-**Target Completion:** April 17, 2026  
-**Dependencies:** None (parallel with 16-B)  
-**Owner:** DevOps Team  
+**Status:** IN PROGRESS
+**Effort:** 6 hours
+**Target Completion:** April 17, 2026
+**Dependencies:** None (parallel with 16-B)
+**Owner:** DevOps Team
 
 ---
 
@@ -47,7 +47,7 @@ TARGET (High Availability):
   │  └─ Automatic routing to primary         │
   │                                          │
   └──────────────────────────────────────────┘
-  
+
 RPO: 0 seconds (zero-loss replication)
 RTO: <30 seconds (automatic failover)
 ```

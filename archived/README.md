@@ -97,19 +97,19 @@ Contains:
 
 ## How This Archive Happened
 
-**Date**: April 14, 2026  
+**Date**: April 14, 2026
 **Reason**: Technical debt cleanup — 50+ dead files from abandoned phases were causing confusion
 
 **Process**:
 1. Analyzed entire workspace for duplicates, overlaps, gaps
 2. Identified 25+ duplicate configurations
 3. Created organized directory structure
-4. Moved all dead code to `archived/` subdirectories  
+4. Moved all dead code to `archived/` subdirectories
 5. Deleted 2 scripts with wrong host targets (192.168.168.32)
 6. Fixed typos in active setup scripts
 7. Merged terraform/phase files (phase-21-observability.tf → main.tf)
 
-**Result**: 
+**Result**:
 - 50+ dead files organized in archive
 - Active codebase reduced to ~10 essential files
 - Clear separation: active (parent dir) vs historical (archived/)
@@ -157,7 +157,7 @@ docs/                     ✅ (architecture, deployments)
 Status: ✅ **CLEANUP COMPLETE** (April 14, 2026)
 
 - ✅ Archived 8 docker-compose files
-- ✅ Archived 2 Caddyfile variants  
+- ✅ Archived 2 Caddyfile variants
 - ✅ Deleted 2 wrong-host deployment scripts
 - ✅ Archived 15 fix/phase/GPU scripts
 - ✅ Archived 9 terraform phase files

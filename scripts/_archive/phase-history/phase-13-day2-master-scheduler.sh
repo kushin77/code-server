@@ -68,7 +68,7 @@ log_message() {
     local level=$1
     local message=$2
     local timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    
+
     {
         case "${level}" in
             INFO)
@@ -93,49 +93,49 @@ log_message() {
 # Function: Execute monitoring checkpoints
 execute_monitoring_checkpoints() {
     log_message "INFO" "Starting monitoring checkpoint collection"
-    
+
     # Run monitoring script
     bash "${SCRIPT_DIR}/phase-13-day2-monitoring-checkpoints.sh" 2>&1 | tee -a "${MASTER_LOG}"
-    
+
     log_message "INFO" "Monitoring checkpoints complete"
 }
 
 # Function: Wait for steady-state completion
 wait_for_steady_state() {
     log_message "INFO" "Entering steady-state monitoring phase"
-    
+
     local current_time
     local remaining_seconds
     local checkpoint_count=0
-    
+
     while true; do
         current_time=$(date -u +%s)
-        
+
         # Check if time to execute cool-down
         if [ ${current_time} -ge ${STEADY_STATE_END} ]; then
             log_message "INFO" "Steady-state phase complete - proceeding to cool-down"
             break
         fi
-        
+
         # Check if it's time for a checkpoint (every 4 hours)
         if [ $((current_time - START_TIME)) -ge $((CHECKPOINT_INTERVAL * (checkpoint_count + 1))) ]; then
             checkpoint_count=$((checkpoint_count + 1))
             hours=$((CHECKPOINT_INTERVAL * checkpoint_count / 3600))
             log_message "INFO" "Executing ${hours}-hour checkpoint..."
-            
+
             # Execute checkpoint (would integrate actual metrics)
             bash "${SCRIPT_DIR}/phase-13-day2-monitoring-checkpoints.sh" 2>&1 | tail -20 | tee -a "${MASTER_LOG}"
         fi
-        
+
         remaining_seconds=$((STEADY_STATE_END - current_time))
         hours=$((remaining_seconds / 3600))
         minutes=$(((remaining_seconds % 3600) / 60))
-        
+
         # Log status every 30 minutes
         if [ $((current_time % 1800)) -eq 0 ]; then
             log_message "INFO" "Steady-state in progress - ${hours}h ${minutes}m remaining"
         fi
-        
+
         # Sleep until next checkpoint or cool-down
         sleep 60
     done
@@ -144,25 +144,25 @@ wait_for_steady_state() {
 # Function: Execute cool-down phase
 execute_cooldown() {
     log_message "INFO" "Starting cool-down phase"
-    
+
     bash "${SCRIPT_DIR}/phase-13-day2-cooldown-and-validation.sh" "${REMOTE_HOST}" 2>&1 | tee -a "${MASTER_LOG}"
-    
+
     log_message "INFO" "Cool-down phase complete"
 }
 
 # Function: Generate final reports
 generate_final_reports() {
     log_message "INFO" "Generating final reports"
-    
+
     local metrics_dir="/tmp/phase-13-metrics"
-    
+
     # Collect all metric files
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "${REMOTE_USER}@${REMOTE_HOST}" << 'EOFCOLLECT'
-    
+
     echo "Aggregating final metrics..."
     mkdir -p /tmp/phase-13-metrics/final-report
-    
+
     # Bundle all metrics
     if [ -d /tmp/phase-13-metrics ]; then
         tar -czf /tmp/phase-13-metrics/final-report/metrics-bundle.tar.gz \
@@ -170,22 +170,22 @@ generate_final_reports() {
             /tmp/phase-13-metrics/*.json \
             2>/dev/null || true
     fi
-    
+
     echo "Metrics bundled successfully"
 
 EOFCOLLECT
-    
+
     log_message "INFO" "Final reports generated"
 }
 
 # Function: Execute go/no-go decision
 execute_go_nogo_decision() {
     log_message "INFO" "Executing go/no-go decision process"
-    
+
     bash "${SCRIPT_DIR}/phase-13-day2-go-nogo-decision.sh" "${REMOTE_HOST}" 2>&1 | tee -a "${MASTER_LOG}"
-    
+
     local decision_status=$?
-    
+
     if [ ${decision_status} -eq 0 ]; then
         log_message "SUCCESS" "Go/No-Go Decision: GO - Phase 13 Day 3 approved"
         return 0
@@ -201,7 +201,7 @@ generate_summary() {
     local total_duration=$((end_time - START_TIME))
     local hours=$((total_duration / 3600))
     local minutes=$(((total_duration % 3600) / 60))
-    
+
     echo ""
     echo "$(printf '%0.s═' {1..80})"
     echo "PHASE 13 DAY 2: EXECUTION SUMMARY"
@@ -212,7 +212,7 @@ generate_summary() {
     printf "  End: %s UTC\n" "$(date -u -d @${end_time} +%Y-%m-%dT%H:%M:%SZ)"
     printf "  Total Duration: %dh %dm (%.0fs)\n" "${hours}" "${minutes}" "${total_duration}"
     echo ""
-    
+
     echo "Phases Executed:"
     echo "  ✓ Ramp-Up Phase"
     echo "  ✓ Steady-State Monitoring"
@@ -220,14 +220,14 @@ generate_summary() {
     echo "  ✓ Metrics Collection"
     echo "  ✓ Go/No-Go Decision"
     echo ""
-    
+
     echo "Artifacts Generated:"
     echo "  • Master Execution Log: ${MASTER_LOG}"
     echo "  • Monitoring Checkpoints: ${LOG_DIR}/checkpoints.log"
     echo "  • Final Metrics Report: /tmp/phase-13-metrics/PHASE-13-DAY2-FINAL-REPORT.md"
     echo "  • Go/No-Go Decision: /tmp/phase-13-metrics/PHASE-13-GO-NOGO-DECISION.md"
     echo ""
-    
+
     echo "Next Steps:"
     echo "  1. Review final metrics in /tmp/phase-13-metrics/"
     echo "  2. Validate go/no-go decision"
@@ -242,30 +242,30 @@ main() {
     log_message "INFO" "Expected completion: $(date -u -d @${EXPECTED_END} +%Y-%m-%dT%H:%M:%SZ)"
     log_message "INFO" "Remote host: ${REMOTE_HOST}"
     echo ""
-    
+
     # Monitoring checkpoints (parallel background process in production)
     # execute_monitoring_checkpoints &
-    
+
     # Wait for steady-state to complete
     log_message "INFO" "Waiting for steady-state phase completion..."
     wait_for_steady_state
-    
+
     # Execute cool-down
     execute_cooldown
-    
+
     # Generate final reports
     generate_final_reports
-    
+
     # Execute go/no-go decision
     execute_go_nogo_decision
     FINAL_DECISION=$?
-    
+
     # Generate summary
     generate_summary
-    
+
     log_message "INFO" "=============== Phase 13 Day 2 Execution Complete ==============="
     log_message "INFO" "Master log: ${MASTER_LOG}"
-    
+
     return ${FINAL_DECISION}
 }
 

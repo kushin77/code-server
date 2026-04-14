@@ -35,22 +35,22 @@ while time.time() - start_time < test_duration_seconds:
         )
         status_code = result.stdout.decode().strip()
         request_count += 1
-        
+
         if status_code == "200":
             success_count += 1
         else:
             fail_count += 1
-            
+
         # Log progress every 5 seconds
         elapsed = time.time() - start_time
         if int(elapsed) % 5 == 0 and elapsed > int(elapsed) - request_interval * 2:
             rate = request_count / elapsed if elapsed > 0 else 0
             print(f"[{elapsed:.0f}s] Requests: {request_count:3d} | Success: {success_count:3d} | Failed: {fail_count:3d} | Rate: {rate:.2f} req/s")
-            
+
     except Exception as e:
         fail_count += 1
         request_count += 1
-    
+
     # Control request rate
     elapsed_request = time.time() - request_start
     if request_interval > elapsed_request:

@@ -23,7 +23,7 @@ validate_prerequisites() {
     echo "📋 PHASE 1: PRE-DEPLOYMENT VALIDATION"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
-    
+
     # Check local environment
     echo "Checking local environment..."
     for cmd in ssh scp docker docker-compose openssl curl jq git; do
@@ -33,7 +33,7 @@ validate_prerequisites() {
         fi
     done
     echo "✅ All local commands available"
-    
+
     # Verify credentials
     echo ""
     echo "Checking required environment variables..."
@@ -43,7 +43,7 @@ validate_prerequisites() {
         export GOOGLE_CLIENT_ID="test-client-id-for-validation"
         export GOOGLE_CLIENT_SECRET="test-client-secret-for-validation"
     fi
-    
+
     echo "✅ Environment variables validated"
     echo ""
 }
@@ -53,13 +53,13 @@ test_ssh_connectivity() {
     echo "🔌 CONNECTIVITY VERIFICATION: SSH CONNECTIVITY TEST"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
-    
+
     echo "Testing SSH connection to ${DEPLOY_USER}@${DEPLOY_HOST}..."
-    
+
     if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no \
         "${DEPLOY_USER}@${DEPLOY_HOST}" 'echo "SSH connection successful" && uname -a' &>/dev/null; then
         echo "✅ SSH connectivity verified"
-        
+
         # Get system info
         local SYSINFO=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
             'free -h | grep Mem | awk "{print \$2, \$3, \$7}"' 2>/dev/null)
@@ -77,16 +77,16 @@ execute_deployment() {
     echo "🚀 PHASE 3: EXECUTE DEPLOYMENT"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
-    
+
     echo "Starting automated deployment orchestration..."
     echo ""
-    
+
     # Run main deployment script
     bash "${SCRIPT_DIR}/automated-deployment-orchestration.sh" || {
         echo "❌ Deployment failed"
         return 1
     }
-    
+
     echo ""
     echo "✅ Deployment orchestration completed"
     echo ""
@@ -97,35 +97,35 @@ validate_services() {
     echo "✅ PHASE 4: SERVICE VALIDATION"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
-    
+
     echo "Validating service health on ${DEPLOY_HOST}..."
     echo ""
-    
+
     # Get deployment directory
     local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
-    
+
     if [ -z "$DEPLOY_DIR" ]; then
         echo "❌ Could not find deployment directory"
         return 1
     fi
-    
+
     echo "Deployment directory: $DEPLOY_DIR"
     echo ""
-    
+
     # Check service status
     echo "Service Status:"
     ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << EOF
 cd "$DEPLOY_DIR"
 docker-compose ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 EOF
-    
+
     echo ""
-    
+
     # Verify all 5 services running
     local RUNNING=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         "cd $DEPLOY_DIR && docker-compose ps -q | wc -l" 2>/dev/null)
-    
+
     if [ "$RUNNING" -eq 5 ]; then
         echo "✅ All 5 services running"
     else
@@ -139,18 +139,18 @@ run_health_checks() {
     echo "❤️  PHASE 5: HEALTH CHECKS"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
-    
+
     local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
-    
+
     if [ -z "$DEPLOY_DIR" ]; then
         echo "⚠️ Could not find deployment directory for health checks"
         return 0
     fi
-    
+
     echo "Running health checks..."
     echo ""
-    
+
     ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
 DEPLOY_DIR=$(ls -td code-server-immutable-* 2>/dev/null | head -1)
 if [ -z "$DEPLOY_DIR" ]; then exit 0; fi
@@ -184,18 +184,18 @@ run_performance_tests() {
     echo "⚡ PHASE 6: PERFORMANCE BENCHMARKS"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
-    
+
     local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
-    
+
     if [ -z "$DEPLOY_DIR" ]; then
         echo "⚠️ Could not run performance tests"
         return 0
     fi
-    
+
     echo "Testing service response times..."
     echo ""
-    
+
     ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
 DEPLOY_DIR=$(ls -td code-server-immutable-* 2>/dev/null | head -1)
 if [ -z "$DEPLOY_DIR" ]; then exit 0; fi
@@ -222,18 +222,18 @@ run_security_audit() {
     echo "🔒 PHASE 7: SECURITY AUDIT"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
-    
+
     local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
-    
+
     if [ -z "$DEPLOY_DIR" ]; then
         echo "⚠️ Could not run security audit"
         return 0
     fi
-    
+
     echo "Running security checks..."
     echo ""
-    
+
     ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
 DEPLOY_DIR=$(ls -td code-server-immutable-* 2>/dev/null | head -1)
 if [ -z "$DEPLOY_DIR" ]; then exit 0; fi
@@ -265,16 +265,16 @@ generate_final_report() {
     echo "📊 PHASE 8: GENERATE FINAL REPORT"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
-    
+
     local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
-    
+
     cat > "$VALIDATION_REPORT" << EOF
 # IaC Deployment Validation Report
 
-**Generated:** $(date -u +%Y-%m-%dT%H:%M:%SZ)  
-**Deployment Host:** ${DEPLOY_HOST}  
-**Deployment Directory:** ${DEPLOY_DIR}  
+**Generated:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+**Deployment Host:** ${DEPLOY_HOST}
+**Deployment Directory:** ${DEPLOY_DIR}
 **Status:** ✅ VALIDATION COMPLETE
 
 ## Summary
@@ -335,9 +335,9 @@ Full Infrastructure-as-Code deployment validation completed successfully on ${DE
 
 ## Access Points
 
-**Service URL:** https://${DOMAIN}  
-**SSH Access:** ssh ${DEPLOY_USER}@${DEPLOY_HOST}  
-**Deployment Dir:** ${DEPLOY_DIR}  
+**Service URL:** https://${DOMAIN}
+**SSH Access:** ssh ${DEPLOY_USER}@${DEPLOY_HOST}
+**Deployment Dir:** ${DEPLOY_DIR}
 
 ## Logs & Monitoring
 
@@ -378,7 +378,7 @@ EOF
 main() {
     echo "Starting comprehensive IaC deployment validation..."
     echo ""
-    
+
     validate_prerequisites || exit 1
     test_ssh_connectivity || exit 1
     execute_deployment || exit 1
@@ -387,7 +387,7 @@ main() {
     run_performance_tests || true  # Non-critical
     run_security_audit || exit 1
     generate_final_report || exit 1
-    
+
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
     echo "║          ✅ DEPLOYMENT VALIDATION COMPLETE                 ║"

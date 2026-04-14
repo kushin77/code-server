@@ -2,7 +2,7 @@
 
 ###############################################################################
 # GPU UPGRADE VIA DOCKER PRIVILEGED CONTAINER
-# 
+#
 # Strategy: Use passwordless docker sudo to run privileged container
 #           that executes driver upgrade with root access
 #
@@ -185,4 +185,3 @@ else
   error "GPU Driver Upgrade FAILED - still on $FINAL"
   exit 1
 fi
-

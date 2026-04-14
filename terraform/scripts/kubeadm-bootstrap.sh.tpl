@@ -90,7 +90,7 @@ case "$CONTAINER_RUNTIME" in
       sudo systemctl enable containerd
       sudo systemctl restart containerd
     fi
-    
+
     # Create containerd config (idempotent)
     if [ ! -d /etc/containerd ]; then
       sudo mkdir -p /etc/containerd
@@ -100,12 +100,12 @@ case "$CONTAINER_RUNTIME" in
       sudo systemctl restart containerd
     fi
     ;;
-    
+
   docker)
     if is_installed docker; then
       log "Docker already installed"
     else
-      log "Installing Docker..."  
+      log "Installing Docker..."
       curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
       echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
       sudo apt-get update -y
@@ -164,7 +164,7 @@ if [ "$NODE_ROLE" = "control-plane" ]; then
     log "Kubernetes control-plane already initialized (admin.conf exists)"
   else
     log "Initializing Kubernetes control-plane with kubeadm..."
-    
+
     # Create kubeadm config file
     cat > /tmp/kubeadm-config.yaml << EOF
 apiVersion: kubeadm.k8s.io/v1beta3
@@ -185,19 +185,19 @@ apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
 cgroupDriver: systemd
 EOF
-    
+
     # Initialize cluster
     sudo kubeadm init --config=/tmp/kubeadm-config.yaml
-    
+
     # Setup kubeconfig for current user
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
-    
+
     # Install CNI plugin (Flannel - simple, on-prem friendly)
     log "Installing Flannel CNI plugin..."
     kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-    
+
     log "Control-plane initialized successfully"
   fi
 
@@ -243,7 +243,7 @@ kubeadm version -o json | jq '.clientVersion.gitVersion'
 if [ "$NODE_ROLE" = "control-plane" ]; then
   kubectl cluster-info
   log "Cluster info retrieved successfully"
-  
+
   # Wait for all system pods to be ready
   log "Waiting for system pods to be ready..."
   kubectl wait --for=condition=Ready pod -l component=kube-apiserver -n kube-system --timeout=300s || true

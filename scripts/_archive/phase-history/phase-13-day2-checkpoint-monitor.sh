@@ -65,14 +65,14 @@ get_remaining_seconds() {
 
 check_infrastructure_health() {
     log_checkpoint "  Infrastructure Health Check:"
-    
+
     ssh -o StrictHostKeyChecking=no "${TARGET_USER}@${TARGET_HOST}" bash << 'CHECK_SCRIPT'
 echo "    Docker Containers:"
 docker ps --format 'table {{.Names}}\t{{.Status}}' | tail -3 | while read line; do
     echo "      $line"
 done
 echo "    Memory Utilization:"
-free -h | awk 'NR==2 {print "      Total: " $2 ", Used: " $3 " (" int($3/$2*100) "%)"}' 
+free -h | awk 'NR==2 {print "      Total: " $2 ", Used: " $3 " (" int($3/$2*100) "%)"}'
 echo "    Load Generators:"
 pgrep -f 'bash.*while' | wc -l | awk '{print "      Active: " $1 " processes"}'
 CHECK_SCRIPT
@@ -80,7 +80,7 @@ CHECK_SCRIPT
 
 check_slo_metrics() {
     log_checkpoint "  SLO Metrics:"
-    
+
     ssh -o StrictHostKeyChecking=no "${TARGET_USER}@${TARGET_HOST}" bash << 'SLO_SCRIPT'
 # Get latest metrics checkpoint
 LATEST_METRICS=$(ls -t /tmp/phase-13-metrics/metrics-*.log 2>/dev/null | head -1)
@@ -103,20 +103,20 @@ execute_checkpoint() {
     local checkpoint_num=$1
     local checkpoint_name=$2
     local checkpoint_secs=$3
-    
+
     log_checkpoint ""
     log_checkpoint "─────────────────────────────────────────────────────────────"
     log_checkpoint "CHECKPOINT $checkpoint_num: $checkpoint_name"
     log_checkpoint "─────────────────────────────────────────────────────────────"
     log_checkpoint "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
     log_checkpoint "Expected At: $checkpoint_secs seconds into Phase 13"
-    
+
     # Check infrastructure
     check_infrastructure_health
-    
+
     # Check SLO metrics
     check_slo_metrics
-    
+
     # Decision points
     case $checkpoint_secs in
         86100)
@@ -128,7 +128,7 @@ execute_checkpoint() {
             log_checkpoint "  [ACTION] Collecting final metrics for decision..."
             ;;
     esac
-    
+
     log_checkpoint ""
 }
 
@@ -142,29 +142,29 @@ main() {
     log_checkpoint "═══════════════════════════════════════════════════════════════"
     log_checkpoint "Start Time: $PHASE_13_START_TIME"
     log_checkpoint "Current Time: $(date '+%Y-%m-%d %H:%M:%S')"
-    
+
     local elapsed=$(get_elapsed_seconds)
     local remaining=$(get_remaining_seconds)
-    
+
     log_checkpoint "Elapsed: ${elapsed}s | Remaining: ${remaining}s"
     log_checkpoint "Checkpoint Log: $CHECKPOINT_LOG"
     log_checkpoint ""
-    
+
     # Infinite loop checking for checkpoint times
     while true; do
         local current_elapsed=$(get_elapsed_seconds)
-        
+
         # Check if Phase 13 is complete
         if [ "$current_elapsed" -ge 86400 ]; then
             log_checkpoint "✓ Phase 13 Day 2 Complete (${current_elapsed}s elapsed)"
             break
         fi
-        
+
         # Check each checkpoint
         for i in "${!CHECKPOINTS[@]}"; do
             local checkpoint_secs=${CHECKPOINTS[$i]}
             local checkpoint_name=${CHECKPOINT_NAMES[$i]}
-            
+
             # If we've reached this checkpoint (within 60 second window)
             if [ "$current_elapsed" -ge "$checkpoint_secs" ] && [ "$current_elapsed" -lt "$((checkpoint_secs + 60))" ]; then
                 # Check if we've already logged this checkpoint
@@ -173,11 +173,11 @@ main() {
                 fi
             fi
         done
-        
+
         # Sleep 30 seconds before next check
         sleep 30
     done
-    
+
     log_checkpoint "═══════════════════════════════════════════════════════════════"
     log_checkpoint "Phase 13 Day 2 Checkpoint Monitoring Complete"
     log_checkpoint "═══════════════════════════════════════════════════════════════"

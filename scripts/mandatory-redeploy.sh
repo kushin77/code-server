@@ -48,23 +48,23 @@ write_info "Waiting for services to become healthy..."
 local elapsed=0
 while (( elapsed < HEALTH_CHECK_TIMEOUT )); do
     local all_healthy=true
-    
+
     for service in "${SERVICES[@]}"; do
         local health
         health=$(docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}" "$service" 2>/dev/null || echo "error")
-        
+
         if [[ "$health" != "healthy" && "$health" != "none" ]]; then
             all_healthy=false
             break
         fi
     done
-    
+
     if $all_healthy; then
         write_success "All services are healthy"
         docker compose ps
         exit 0
     fi
-    
+
     sleep 5
     elapsed=$((elapsed + 5))
 done

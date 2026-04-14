@@ -1,9 +1,9 @@
 /**
  * Phase 12.2: CRDT Async Synchronization Engine
- * 
+ *
  * Implements asynchronous CRDT synchronization across regions
  * with automatic retry logic, conflict resolution, and monitoring.
- * 
+ *
  * Architecture: Event-driven, non-blocking, fully distributed
  */
 
@@ -62,7 +62,7 @@ interface SyncResult {
 
 /**
  * Asynchronous CRDT Sync Engine
- * 
+ *
  * Responsibilities:
  * - Fan out writes to all regions asynchronously
  * - Detect conflicts during synchronization
@@ -110,19 +110,19 @@ class CRDTAsyncSyncEngine extends EventEmitter {
       this.vectorClocks.set(region, vc);
     }
 
-    logger.info('CRDTAsyncSyncEngine initialized with regions: %s', 
+    logger.info('CRDTAsyncSyncEngine initialized with regions: %s',
       Array.from(this.nodes.keys()).join(', '));
   }
 
   /**
    * Enqueue a CRDT operation for async synchronization
-   * 
+   *
    * This is the main entry point for all write operations.
    * Uses vector clock to track causality.
    */
   async enqueueSync(event: Omit<SyncEvent, 'eventId' | 'timestamp' | 'vectorClock'>): Promise<string> {
     const eventId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Increment vector clock for the origin region
     const vc = this.vectorClocks.get(event.region)!;
     const currentClock = vc.get(event.region) || 0;
@@ -136,7 +136,7 @@ class CRDTAsyncSyncEngine extends EventEmitter {
     };
 
     this.syncQueue.push(fullEvent);
-    logger.debug('Event enqueued: %s (region: %s, op: %s)', 
+    logger.debug('Event enqueued: %s (region: %s, op: %s)',
       eventId, event.region, event.operation);
 
     // Emit event for observability
@@ -170,7 +170,7 @@ class CRDTAsyncSyncEngine extends EventEmitter {
 
     // Distribute writes to all regions asynchronously
     const syncPromise = Promise.all(
-      targetRegions.map(region => 
+      targetRegions.map(region =>
         this.syncToRegion(event, region)
           .catch(err => ({
             region,
@@ -203,7 +203,7 @@ class CRDTAsyncSyncEngine extends EventEmitter {
         this.inFlightSyncs.delete(event.eventId);
         // Process next event
         if (this.syncQueue.length > 0) {
-          this.processNextSync().catch(err => 
+          this.processNextSync().catch(err =>
             logger.error('Recursive sync processing error: %s', err.message)
           );
         }
@@ -228,7 +228,7 @@ class CRDTAsyncSyncEngine extends EventEmitter {
         const result = await this.sendSyncToRegion(event, targetNode, attempt);
 
         if (result.success) {
-          logger.debug('Sync to %s successful (eventId: %s)', 
+          logger.debug('Sync to %s successful (eventId: %s)',
             targetRegion, event.eventId);
           return {
             region: targetRegion,
@@ -240,19 +240,19 @@ class CRDTAsyncSyncEngine extends EventEmitter {
         // Operation failed, retry with exponential backoff
         lastError = new Error(result.error || 'Unknown error');
         const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
-        
+
         logger.warn('Sync to %s failed (attempt %d/%d), retrying in %dms: %s',
           targetRegion, attempt, maxRetries, backoffMs, result.error);
 
         await this.sleep(backoffMs);
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
-        
+
         if (attempt < maxRetries) {
           const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
           logger.warn('Sync to %s threw error (attempt %d/%d), retrying in %dms: %s',
             targetRegion, attempt, maxRetries, backoffMs, lastError.message);
-          
+
           await this.sleep(backoffMs);
         }
       }
@@ -344,8 +344,8 @@ class CRDTAsyncSyncEngine extends EventEmitter {
     }
 
     // Update running average latency
-    this.metrics.averageLatency = 
-      (this.metrics.averageLatency * (this.metrics.totalSyncs - 1) + result.latency) 
+    this.metrics.averageLatency =
+      (this.metrics.averageLatency * (this.metrics.totalSyncs - 1) + result.latency)
       / this.metrics.totalSyncs;
 
     logger.info('Sync complete: %s (success: %s, latency: %dms, regions: %s)',
@@ -362,7 +362,7 @@ class CRDTAsyncSyncEngine extends EventEmitter {
       ...this.metrics,
       queueLength: this.syncQueue.length,
       inFlightSyncs: this.inFlightSyncs.size,
-      successRate: this.metrics.totalSyncs > 0 
+      successRate: this.metrics.totalSyncs > 0
         ? (this.metrics.successfulSyncs / this.metrics.totalSyncs * 100).toFixed(2) + '%'
         : 'N/A',
       timestamp: new Date(),
@@ -378,15 +378,15 @@ class CRDTAsyncSyncEngine extends EventEmitter {
         try {
           // In production: ping regional node
           const isHealthy = true; // Placeholder
-          
+
           if (isHealthy) {
             this.emit('health-check-passed', { region });
           } else {
             this.emit('health-check-failed', { region });
           }
         } catch (err) {
-          this.emit('health-check-failed', { 
-            region, 
+          this.emit('health-check-failed', {
+            region,
             error: err instanceof Error ? err.message : String(err),
           });
         }
@@ -419,7 +419,7 @@ class CRDTAsyncSyncEngine extends EventEmitter {
    */
   async shutdown(): Promise<void> {
     this.stopHealthChecks();
-    
+
     // Wait for in-flight syncs to complete (timeout: 30s)
     const timeoutPromise = this.sleep(30000);
     const inFlightPromise = Promise.all(
@@ -452,7 +452,7 @@ class AsyncSyncManager {
     });
 
     this.engine.on('sync-complete', (result) => {
-      logger.info('Sync complete with %s resolution: %s', 
+      logger.info('Sync complete with %s resolution: %s',
         result.resolutionStrategy, result.success ? 'OK' : 'FAILED');
     });
 
@@ -469,8 +469,8 @@ class AsyncSyncManager {
    * Increment a counter across all regions
    */
   async incrementCounter(
-    key: string, 
-    value: number, 
+    key: string,
+    value: number,
     originRegion: string
   ): Promise<string> {
     return this.engine.enqueueSync({
@@ -486,8 +486,8 @@ class AsyncSyncManager {
    * Add element to a set across all regions
    */
   async addToSet(
-    key: string, 
-    element: string, 
+    key: string,
+    element: string,
     originRegion: string
   ): Promise<string> {
     return this.engine.enqueueSync({
@@ -503,8 +503,8 @@ class AsyncSyncManager {
    * Remove element from set
    */
   async removeFromSet(
-    key: string, 
-    element: string, 
+    key: string,
+    element: string,
     originRegion: string
   ): Promise<string> {
     return this.engine.enqueueSync({
@@ -520,8 +520,8 @@ class AsyncSyncManager {
    * Update a register (simple value) across all regions
    */
   async updateRegister(
-    key: string, 
-    value: any, 
+    key: string,
+    value: any,
     originRegion: string
   ): Promise<string> {
     return this.engine.enqueueSync({

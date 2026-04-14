@@ -6,8 +6,8 @@
 
 ## EXECUTIVE SUMMARY
 
-**Service Level Objective (SLO)**: Measurable, achievable target for service reliability  
-**Error Budget**: Amount of acceptable downtime/errors before breaching SLO  
+**Service Level Objective (SLO)**: Measurable, achievable target for service reliability
+**Error Budget**: Amount of acceptable downtime/errors before breaching SLO
 **Role**: Guides when to be conservative (if budget low) vs. aggressive (if budget high)
 
 ---
@@ -15,9 +15,9 @@
 ## PRODUCT SLOs (Customer-Facing)
 
 ### SLO 1: Availability (Uptime)
-**Target**: 99.9% uptime  
-**Definition**: Percentage of time service responds to user requests  
-**Measurement**: HTTP 200/3xx responses / Total requests  
+**Target**: 99.9% uptime
+**Definition**: Percentage of time service responds to user requests
+**Measurement**: HTTP 200/3xx responses / Total requests
 
 **Error Budget**:
 ```
@@ -32,8 +32,8 @@ Per year: 8.76 hours downtime allowed per year (≈ 9 hours)
 - Status: ✅ EXCEEDING TARGET
 
 ### SLO 2: Latency (Response Time)
-**Target**: P99 < 100ms  
-**Definition**: 99th percentile of HTTP request latency  
+**Target**: P99 < 100ms
+**Definition**: 99th percentile of HTTP request latency
 **Measurement**: Response time percentiles (p50, p99)
 
 **Error Budget**:
@@ -56,8 +56,8 @@ If p99 target = 100ms:
 - p99: 89ms (target: <100ms) - ✅ EXCEEDING
 
 ### SLO 3: Error Rate
-**Target**: < 0.1% errors (99.9% success rate)  
-**Definition**: HTTP 5xx responses / Total requests  
+**Target**: < 0.1% errors (99.9% success rate)
+**Definition**: HTTP 5xx responses / Total requests
 **Measurement**: (500+502+503+504) / Total requests
 
 **Error Budget**:
@@ -78,8 +78,8 @@ At 125 req/sec (current load):
 ## INTERNAL SLOs (Operations-Facing)
 
 ### SLO 4: Failover RTO (Recovery Time Objective)
-**Target**: Database failover < 30 seconds  
-**Definition**: Time from primary failure to replica accepting writes  
+**Target**: Database failover < 30 seconds
+**Definition**: Time from primary failure to replica accepting writes
 **Measurement**: Time between connection drop and first successful write to replica
 
 **Current Baseline**:
@@ -87,8 +87,8 @@ At 125 req/sec (current load):
 - Status: ✅ MEETING TARGET
 
 ### SLO 5: Failover RPO (Recovery Point Objective)
-**Target**: Data loss < 500KB WAL (write-ahead log)  
-**Definition**: Maximum data loss in bytes during failover  
+**Target**: Data loss < 500KB WAL (write-ahead log)
+**Definition**: Maximum data loss in bytes during failover
 **Measurement**: WAL file size retention
 
 **Current Baseline**:
@@ -96,8 +96,8 @@ At 125 req/sec (current load):
 - Status: ✅ EXCEEDING TARGET (< 500KB)
 
 ### SLO 6: Deployment Success Rate
-**Target**: >99% successful deployments  
-**Definition**: Deployments without rollback  
+**Target**: >99% successful deployments
+**Definition**: Deployments without rollback
 **Measurement**: Successful deploys / Total attempted deploys
 
 **Current Baseline**:
@@ -105,8 +105,8 @@ At 125 req/sec (current load):
 - Status: ✅ EXCEEDING TARGET
 
 ### SLO 7: MTBF (Mean Time Between Failures)
-**Target**: >720 hours between incidents  
-**Definition**: Average hours system runs without critical incident  
+**Target**: >720 hours between incidents
+**Definition**: Average hours system runs without critical incident
 **Measurement**: Hours since last P1 / Number of P1 incidents
 
 **Current Baseline**:
@@ -114,8 +114,8 @@ At 125 req/sec (current load):
 - Status: ✅ ON TRACK
 
 ### SLO 8: MTTR (Mean Time To Recovery)
-**Target**: P1 < 30 min, P2 < 2 hours  
-**Definition**: Time from incident detection to resolution  
+**Target**: P1 < 30 min, P2 < 2 hours
+**Definition**: Time from incident detection to resolution
 **Measurement**: Alert time → All-clear time
 
 **Expected Performance**:
@@ -154,7 +154,7 @@ Total: 43.2 minutes ✅
 ## BURN RATE & ALERTING
 
 ### Burn Rate Definition
-**Burn Rate**: How fast error budget is being consumed  
+**Burn Rate**: How fast error budget is being consumed
 **Formula**: Current error rate / SLO error rate
 
 **Example**:
@@ -269,7 +269,7 @@ Meaning: At this burn rate, we burn 1 month of error budget in 43.2 / 50 = 0.86 
 ## APDEX SCORE (Application Performance Index)
 
 ### Metric: Apdex
-**Definition**: Ratio of satisfied + tolerating responses / total responses  
+**Definition**: Ratio of satisfied + tolerating responses / total responses
 **Threshold**: T = apdex threshold (e.g., 100ms)
 
 **Scoring**:

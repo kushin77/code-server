@@ -7,7 +7,7 @@
 **Effort Level** (1-5 scale):
 - 1: < 1 hour to complete
 - 2: 1-3 hours
-- 3: 3-8 hours  
+- 3: 3-8 hours
 - 4: 8-16 hours
 - 5: 16+ hours / Epic
 

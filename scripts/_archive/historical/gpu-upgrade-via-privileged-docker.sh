@@ -2,7 +2,7 @@
 
 ###############################################################################
 # GPU DRIVER UPGRADE - VIA PRIVILEGED DOCKER CONTAINER
-# 
+#
 # Uses: Existing passwordless docker sudo (verified available)
 # Method: Run driver installation inside privileged container
 # Result: Driver upgraded on host without password prompt
@@ -130,4 +130,3 @@ else
   echo "  sudo bash /tmp/gpu-driver-upgrade-direct.sh"
   exit 1
 fi
-

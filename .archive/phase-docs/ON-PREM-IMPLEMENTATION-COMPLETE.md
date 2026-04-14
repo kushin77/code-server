@@ -1,9 +1,9 @@
 # ═════════════════════════════════════════════════════════════════════════════
 # ON-PREMISES INFRASTRUCTURE CONSOLIDATION & INTEGRATION GUIDE
 # ═════════════════════════════════════════════════════════════════════════════
-# Date: April 14, 2026  
-# Status: COMPLETE - Ready for immediate deployment  
-# Focus: Elite best practices, IaC immutability, on-premises deployment  
+# Date: April 14, 2026
+# Status: COMPLETE - Ready for immediate deployment
+# Focus: Elite best practices, IaC immutability, on-premises deployment
 # ═════════════════════════════════════════════════════════════════════════════
 
 ## Executive Summary
@@ -26,15 +26,15 @@ This refactoring consolidates all infrastructure-as-code into a cohesive, on-pre
 ## New Files Created
 
 ### 1. Phase 22-A: On-Premises Kubernetes (kubeadm)
-**File**: `terraform/phase-22-on-prem-kubernetes.tf`  
-**Lines**: 250  
+**File**: `terraform/phase-22-on-prem-kubernetes.tf`
+**Lines**: 250
 **Purpose**: Kubernetes cluster deployment via kubeadm (on bare-metal systems)
 
 **Features**:
 - ✅ Idempotent kubeadm initialization (safe to run multiple times)
 - ✅ Kernel module loading with safety checks
 - ✅ sysctl tuning for Kubernetes networking
-- ✅ Optional NVIDIA GPU support integration  
+- ✅ Optional NVIDIA GPU support integration
 - ✅ Local persistent volume provisioning
 - ✅ Helm package manager setup
 - ✅ Prometheus monitoring integration
@@ -75,8 +75,8 @@ terraform apply -var="on_prem_kubernetes_enabled=true" \
 ```
 
 ### 2. Phase 22-D: On-Premises GPU Infrastructure
-**File**: `terraform/phase-22-on-prem-gpu-infrastructure.tf`  
-**Lines**: 280  
+**File**: `terraform/phase-22-on-prem-gpu-infrastructure.tf`
+**Lines**: 280
 **Purpose**: NVIDIA GPU support for on-premises Kubernetes nodes
 
 **Features**:
@@ -111,9 +111,9 @@ terraform apply -var="on_prem_gpu_enabled=true" \
   -var="gpu_drivers_version=550.90.07"
 ```
 
-### 3. Phase Integration & Dependencies  
-**File**: `terraform/phase-integration-dependencies.tf`  
-**Lines**: 200  
+### 3. Phase Integration & Dependencies
+**File**: `terraform/phase-integration-dependencies.tf`
+**Lines**: 200
 **Purpose**: Enforce proper execution order and module integration
 
 **Features**:
@@ -148,8 +148,8 @@ output "infrastructure_status" {
 ```
 
 ### 4. Kubeadm Bootstrap Script Template
-**File**: `terraform/scripts/kubeadm-bootstrap.sh.tpl`  
-**Lines**: 350  
+**File**: `terraform/scripts/kubeadm-bootstrap.sh.tpl`
+**Lines**: 350
 **Purpose**: Idempotent kubernetes initialization script (called via SSH provisioner)
 
 **Features**:
@@ -248,7 +248,7 @@ fi
 variable "deployment_mode" {
   type    = string
   default = "on-prem"
-  
+
   validation {
     condition     = contains(["cloud", "on-prem", "hybrid"], var.deployment_mode)
     error_message = "Must be 'cloud', 'on-prem', or 'hybrid'"
@@ -267,8 +267,8 @@ terraform apply \
   -var="operations_excellence_enabled=true"
 ```
 
-**Result**: Full stack running on bare-metal/VM infrastructure  
-**Cost**: Hardware only (no cloud provider fees)  
+**Result**: Full stack running on bare-metal/VM infrastructure
+**Cost**: Hardware only (no cloud provider fees)
 **Control**: 100% on-premises, no external dependencies
 
 #### Scenario 2: Cloud-Only (AWS)
@@ -279,8 +279,8 @@ terraform apply \
   # Other AWS-specific modules enabled (not available yet)
 ```
 
-**Result**: EKS, Route53, DynamoDB (AWS native services)  
-**Cost**: AWS pay-as-you-go  
+**Result**: EKS, Route53, DynamoDB (AWS native services)
+**Cost**: AWS pay-as-you-go
 **Control**: Managed services, high availability built-in
 
 #### Scenario 3: Hybrid (On-Prem + Cloud DR)
@@ -292,8 +292,8 @@ terraform apply \
   -var="enable_cross_region_replication=true"
 ```
 
-**Result**: On-prem primary + AWS standby  
-**Cost**: Hybrid (on-prem + AWS)  
+**Result**: On-prem primary + AWS standby
+**Cost**: Hybrid (on-prem + AWS)
 **Control**: Best of both worlds (on-prem speed + cloud resilience)
 
 ---
@@ -371,16 +371,16 @@ terraform plan  # Should show no changes
 ## Known Limitations & Workarounds
 
 ### 1. cuDNN Installation (Manual Required)
-**Issue**: cuDNN requires NVIDIA account login (license)  
+**Issue**: cuDNN requires NVIDIA account login (license)
 **Workaround**: Manual download and installation documented in [docs/GPU_TROUBLESHOOTING_GUIDE.md](../../docs/GPU_TROUBLESHOOTING_GUIDE.md)
 
 ### 2. On-Prem DNS Failover (Manual vs. Automated)
-**In Cloud**: AWS Route53 automatic failover (~2 min RTO)  
-**On-Prem**: Manual DNS update required (~30 min RTO)  
+**In Cloud**: AWS Route53 automatic failover (~2 min RTO)
+**On-Prem**: Manual DNS update required (~30 min RTO)
 **Workaround**: Document manual procedure in runbook; plan cloud DR for true automation
 
-### 3. SSL/TLS Certificate Management  
-**On-Prem**: No Let's Encrypt renewal automation (requires external connectivity)  
+### 3. SSL/TLS Certificate Management
+**On-Prem**: No Let's Encrypt renewal automation (requires external connectivity)
 **Workaround**: Use internal CA (Vault PKI) or externally-managed certificates
 
 ---

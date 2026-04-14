@@ -14,7 +14,7 @@
 1. Open browser:     https://dash.cloudflare.com/
 2. Select domain:    kushnir.cloud
 3. Left sidebar:     Networks > Tunnels
-4. Find tunnel:      ide-home-dev  
+4. Find tunnel:      ide-home-dev
 5. Click tunnel name
 6. Copy button under "Token:"
    (format: aaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb)
@@ -178,7 +178,7 @@ docker logs cloudflared -f
 
 Current error: `Could not fetch prod-cloudflare-tunnel-token from GSM project=gcp-eiq`
 
-**Root cause**: gcloud interactive token refresh doesn't work over SSH  
+**Root cause**: gcloud interactive token refresh doesn't work over SSH
 **Workaround**: Use manual token injection (above) OR configure service account credentials
 
 **To enable GSM long-term:**
@@ -197,5 +197,5 @@ Current error: `Could not fetch prod-cloudflare-tunnel-token from GSM project=gc
 4. Restart cloudflared (2 min)
 5. Test HTTPS (2 min)
 
-**Total time: ~10 minutes**  
+**Total time: ~10 minutes**
 **Result: Full HTTPS working on ide.kushnir.cloud**

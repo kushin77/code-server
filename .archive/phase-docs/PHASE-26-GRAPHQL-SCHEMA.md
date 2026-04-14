@@ -1,17 +1,17 @@
 # Phase 26: Developer Ecosystem - GraphQL Schema Specification
 
-**Status**: Production Design - Ready for July 22 Implementation  
-**Timeline**: July 22 - August 12, 2026  
-**Effort**: 15+ hours (schema + resolver implementation)  
-**Complements**: REST API for flexible querying  
+**Status**: Production Design - Ready for July 22 Implementation
+**Timeline**: July 22 - August 12, 2026
+**Effort**: 15+ hours (schema + resolver implementation)
+**Complements**: REST API for flexible querying
 
 ---
 
 ## GraphQL API Overview
 
-**Endpoint**: `POST /graphql`  
-**Subscriptions**: `wss://api.ide.kushnir.cloud/graphql` (WebSocket)  
-**Authentication**: Bearer token (OAuth2) or API key  
+**Endpoint**: `POST /graphql`
+**Subscriptions**: `wss://api.ide.kushnir.cloud/graphql` (WebSocket)
+**Authentication**: Bearer token (OAuth2) or API key
 **Schema Introspection**: Enabled for developer tools
 
 ---
@@ -34,12 +34,12 @@ type Query {
   me: User! @auth
   user(id: ID!): User @auth
   users(first: Int = 20, after: String): UserConnection! @auth(role: ADMIN)
-  
+
   # Organization queries
   organization(id: ID!): Organization! @auth
   organizations(first: Int = 20, after: String): OrganizationConnection! @auth
   organizationByName(name: String!): Organization @auth
-  
+
   # Workspace queries
   workspace(id: ID!): Workspace! @auth
   workspaces(
@@ -50,20 +50,20 @@ type Query {
     sortBy: WorkspaceSortField = CREATED_AT,
     sortOrder: SortOrder = DESC
   ): WorkspaceConnection! @auth
-  
+
   # File queries
   files(
     workspaceId: ID!,
     path: String = "/",
     recursive: Boolean = false
   ): [File!]! @auth
-  
+
   file(workspaceId: ID!, path: String!): File @auth
-  
+
   # API Key queries
   apiKeys(organizationId: ID!): [ApiKey!]! @auth
   apiKey(id: ID!): ApiKey @auth
-  
+
   # Analytics queries
   usage(
     organizationId: ID!,
@@ -71,7 +71,7 @@ type Query {
     startDate: DateTime,
     endDate: DateTime
   ): UsageStats! @auth
-  
+
   analytics(
     organizationId: ID!,
     metric: AnalyticsMetric!,
@@ -79,7 +79,7 @@ type Query {
     startDate: DateTime,
     endDate: DateTime
   ): [AnalyticsDataPoint!]! @auth
-  
+
   # Webhook queries
   webhooks(organizationId: ID!): [Webhook!]! @auth
   webhook(id: ID!): Webhook @auth
@@ -89,11 +89,11 @@ type Query {
     first: Int = 20,
     after: String
   ): WebhookDeliveryConnection! @auth
-  
+
   # Health & Status
   health: HealthStatus!
   status: SystemStatus!
-  
+
   # Search
   search(
     query: String!,
@@ -112,18 +112,18 @@ type Mutation {
   createUser(input: CreateUserInput!): CreateUserPayload!
   updateUser(id: ID!, input: UpdateUserInput!): UpdateUserPayload! @auth
   deleteUser(id: ID!): DeleteUserPayload! @auth
-  
+
   # Organization mutations
   createOrganization(input: CreateOrganizationInput!): CreateOrganizationPayload! @auth
   updateOrganization(id: ID!, input: UpdateOrganizationInput!): UpdateOrganizationPayload! @auth(role: ADMIN)
   deleteOrganization(id: ID!): DeleteOrganizationPayload! @auth(role: ADMIN)
-  
+
   # Member mutations
   inviteMember(orgId: ID!, input: InviteMemberInput!): InviteMemberPayload! @auth(role: ADMIN)
   updateMember(orgId: ID!, memberId: ID!, input: UpdateMemberInput!): UpdateMemberPayload! @auth(role: ADMIN)
   removeMember(orgId: ID!, memberId: ID!): RemoveMemberPayload! @auth(role: ADMIN)
   acceptMemberInvite(token: String!): AcceptMemberInvitePayload!
-  
+
   # Workspace mutations
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspacePayload! @auth
   updateWorkspace(id: ID!, input: UpdateWorkspaceInput!): UpdateWorkspacePayload! @auth
@@ -131,17 +131,17 @@ type Mutation {
   startWorkspace(id: ID!): StartWorkspacePayload! @auth
   stopWorkspace(id: ID!): StopWorkspacePayload! @auth
   restartWorkspace(id: ID!): RestartWorkspacePayload! @auth
-  
+
   # File mutations
   writeFile(workspaceId: ID!, path: String!, content: String!): WriteFilePayload! @auth
   deleteFile(workspaceId: ID!, path: String!): DeleteFilePayload! @auth
   createDirectory(workspaceId: ID!, path: String!): CreateDirectoryPayload! @auth
-  
+
   # API Key mutations
   createApiKey(orgId: ID!, input: CreateApiKeyInput!): CreateApiKeyPayload! @auth
   rotateApiKey(id: ID!): RotateApiKeyPayload! @auth
   revokeApiKey(id: ID!): RevokeApiKeyPayload! @auth
-  
+
   # Webhook mutations
   createWebhook(orgId: ID!, input: CreateWebhookInput!): CreateWebhookPayload! @auth
   updateWebhook(id: ID!, input: UpdateWebhookInput!): UpdateWebhookPayload! @auth
@@ -157,13 +157,13 @@ type Subscription {
   # Workspace subscriptions (real-time updates)
   workspaceStatus(id: ID!): WorkspaceStatusUpdate! @auth
   workspaceActivity(id: ID!): WorkspaceActivity! @auth
-  
+
   # File subscriptions
   fileChanged(workspaceId: ID!, path: String!): FileChange! @auth
-  
+
   # Organization subscriptions
   organizationUpdated(id: ID!): Organization! @auth
-  
+
   # Analytics subscriptions
   usageUpdated(organizationId: ID!): UsageStats! @auth
 }
@@ -845,6 +845,6 @@ enum FileChangeType {
 
 ---
 
-**Status**: Specification Complete - Ready for Implementation July 22, 2026  
-**Next**: SDK Implementation (Python, TypeScript, Go, Java)  
+**Status**: Specification Complete - Ready for Implementation July 22, 2026
+**Next**: SDK Implementation (Python, TypeScript, Go, Java)
 **Owner**: Infrastructure Team

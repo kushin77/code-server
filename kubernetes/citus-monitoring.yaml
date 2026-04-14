@@ -195,29 +195,29 @@ data:
         # Connection settings
         max_connections: 200
         max_prepared_transactions: 100
-        
+
         # Shared memory
         shared_buffers: 256MB
         effective_cache_size: 512MB
         maintenance_work_mem: 64MB
         work_mem: 2MB
-        
+
         # Query planning
         random_page_cost: 1.1  # SSD cost (lower for fast I/O)
         effective_io_concurrency: 200
-        
+
         # Logging
         log_min_duration_statement: 1000  # Log queries > 1s
         log_connections: on
         log_disconnections: on
         log_statement: 'all'
-        
+
         # Replication
         wal_level: replica
         max_wal_senders: 5
         max_replication_slots: 5
         wal_keep_size: 1GB
-        
+
         # Citus-specific
         citus.shard_replication_factor: 2
         citus.shard_count: 4
@@ -227,7 +227,7 @@ data:
         citus.enable_split_and_merge: on
         citus.max_client_connections: 150
         citus.max_intermediate_result_size: 1GB
-        
+
         # Analytics queries (OLAP)
         citus.pull_intervals_on_worker: off
         citus.enable_repartition_joins: on
@@ -327,22 +327,22 @@ data:
       query: "SELECT COUNT(*) as count FROM citus_stat_transactions WHERE status = 'success'"
       metrics:
         - { name: pg_distributed_transaction_success_total, help: "Total successful distributed transactions", type: gauge }
-    
+
     pg_distributed_transaction_failures:
       query: "SELECT COUNT(*) as count FROM citus_stat_transactions WHERE status = 'failed'"
       metrics:
         - { name: pg_distributed_transaction_failures_total, help: "Total failed distributed transactions", type: gauge }
-    
+
     pg_slow_query_count:
       query: "SELECT COUNT(*) as count FROM pg_stat_statements WHERE mean_exec_time > 1000"
       metrics:
         - { name: pg_slow_query_count, help: "Number of queries with mean execution > 1000ms", type: gauge }
-    
+
     shard_data_distribution:
       query: "SELECT shardid, shardstate, count(*) as shard_count FROM pg_dist_placement GROUP BY shardid, shardstate"
       metrics:
         - { name: shard_node_count, help: "Number of shard placements per node", type: gauge, labels: [shardid, shardstate] }
-    
+
     citus_rebalance_status:
       query: "SELECT CASE WHEN is_sharded THEN 1 ELSE 0 END FROM citus_statistics LIMIT 1"
       metrics:

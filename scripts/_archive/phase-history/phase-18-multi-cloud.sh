@@ -32,7 +32,7 @@ setup_multi_cloud_infrastructure() {
 
     # 1.1: Create AWS configuration
     mkdir -p "${PROJECT_ROOT}/config/cloud/{aws,azure,gcp,hybrid}"
-    
+
     cat > "${PROJECT_ROOT}/config/cloud/aws/terraform.tf" << 'EOF'
 # AWS Infrastructure Configuration
 terraform {
@@ -388,40 +388,40 @@ metadata:
 data:
   sync-strategy: |
     # Cross-Cloud Synchronization Strategy
-    
+
     PRIMARY_REGION: us-east-1 (AWS)
     SECONDARY_REGION: eastus (Azure)
     TERTIARY_REGION: us-central1 (GCP)
-    
+
     SYNC_PROTOCOL: gRPC + TLS 1.3
     REPLICATION_INTERVAL: 5s (normal), 1s (critical)
     CONSISTENCY_LEVEL: strong (databases), eventual (cache)
-    
+
     DATABASE_SYNC:
       - Strategy: Multi-master PostgreSQL replication
       - Tool: Postgres-BDR or Patroni
       - Failover: <30s RTO
       - Consistency: Strong (ACID)
-    
+
     CACHE_SYNC:
       - Strategy: Redis Cluster replication
       - Tool: Redis Sentinel + custom sync daemon
       - Failover: <5s RTO
       - Consistency: Eventual (TTL-based)
-    
+
     STORAGE_SYNC:
       - Strategy: Object storage replication
       - Tool: S3, Azure Blob, GCS bucket replication
       - Frequency: Real-time
       - Consistency: Strong
-    
+
     DNS_ROUTING:
       - Primary: Route53 (AWS)
       - Secondary: Azure Traffic Manager
       - Tertiary: Google Cloud DNS
       - Health checks: Every 30s
       - Failover propagation: <2min
-    
+
     CONFLICT_RESOLUTION:
       - Last-write-wins for state data
       - Read-repair for inconsistencies
@@ -446,12 +446,12 @@ log_error() { echo "[✗] $@"; }
 sync_database() {
     local source=$1
     local dest=$2
-    
+
     log_info "Syncing database from $source to $dest..."
-    
+
     # Create replication slot
     psql -h "$source" -c "SELECT * FROM pg_create_logical_replication_slot('$dest', 'decoding_plugin')" || true
-    
+
     # Start replication
     pg_receivewal -D "/var/lib/pgsql/pg_wal/$dest" -h "$dest" &
 }
@@ -459,31 +459,31 @@ sync_database() {
 sync_cache() {
     local source=$1
     local dest=$2
-    
+
     log_info "Syncing cache from $source to $dest..."
-    
+
     # Export RDB from source
     redis-cli -h "$source" BGSAVE
     sleep 5
     redis-cli -h "$source" --rdb /tmp/dump.rdb
-    
+
     # Import to destination
     redis-cli -h "$dest" < /tmp/dump.rdb
-    
+
     log_success "Cache synced"
 }
 
 sync_storage() {
     local source=$1
     local dest=$2
-    
+
     log_info "Syncing storage from $source to $dest..."
-    
+
     # Use cloud provider tools
     aws s3 sync s3://code-server-primary s3://code-server-backup --region us-east-1
     az storage blob sync --source s3://code-server-primary --destination-container backups
     gsutil -m rsync -r gs://code-server-primary gs://code-server-backup
-    
+
     log_success "Storage synced"
 }
 
@@ -491,17 +491,17 @@ sync_storage() {
 while true; do
     for region in "${REGIONS[@]}"; do
         log_info "Checking sync status for $region..."
-        
+
         # Sync databases
         sync_database "${REGIONS[0]}" "$region"
-        
+
         # Sync caches
         sync_cache "${REGIONS[0]}" "$region"
-        
+
         # Sync storage
         sync_storage "${REGIONS[0]}" "$region"
     done
-    
+
     sleep $SYNC_INTERVAL
 done
 EOF
@@ -533,7 +533,7 @@ spec:
     name: code-server
   minReplicas: 2
   maxReplicas: 20
-  
+
   metrics:
   - type: Resource
     resource:
@@ -541,14 +541,14 @@ spec:
       target:
         type: Utilization
         averageUtilization: 70
-  
+
   - type: Resource
     resource:
       name: memory
       target:
         type: Utilization
         averageUtilization: 80
-  
+
   - type: Pods
     pods:
       metric:
@@ -556,7 +556,7 @@ spec:
       target:
         type: AverageValue
         averageValue: "1000"
-  
+
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300
@@ -568,7 +568,7 @@ spec:
         value: 2
         periodSeconds: 15
       selectPolicy: Min
-    
+
     scaleUp:
       stabilizationWindowSeconds: 0
       policies:
@@ -596,14 +596,14 @@ spec:
   - name: gke-node-pool
     minSize: 1
     maxSize: 20
-  
+
   scaleDownEnabled: true
   scaleDownUtilizationThreshold: 0.65
   scaleDownGpuUtilizationThreshold: 0.5
   scaleDownDelayAfterAdd: 10m
   scaleDownDelayAfterDelete: 0s
   scaleDownDelayAfterFailure: 3m
-  
+
   maxNodeProvisionTime: 15m
   maxTotalUnreadyPercentage: 45
   okTotalUnreadyCount: 3
@@ -619,31 +619,31 @@ metadata:
 data:
   cost-allocation: |
     # Cost Allocation & Optimization Strategy
-    
+
     MONITORING_TOOLS:
       - AWS Cost Explorer (AWS)
       - Azure Cost Management (Azure)
       - Google Cloud Cost Management (GCP)
-    
+
     TARGETS:
       - Compute: 40% of budget (auto-scaling reduces usage)
       - Storage: 30% of budget (lifecycle policies)
       - Network: 20% of budget (CDN optimization)
       - Database: 10% of budget (reserved instances)
-    
+
     OPTIMIZATION_STRATEGIES:
       1. Reserved Instances: 30% savings
       2. Spot/Preemptible: 70% savings (non-critical)
       3. Auto-scaling: 20-40% savings
       4. Storage Tiering: 50% savings
       5. Network Optimization: 15% savings
-    
+
     BUDGETS:
       Monthly_Limit: $50,000
       Alert_Threshold_1: $37,500 (75%)
       Alert_Threshold_2: $45,000 (90%)
       Enforce_Threshold: $52,500 (105%)
-    
+
     REPORTING:
       - Daily: Cost trending
       - Weekly: Department allocation
@@ -666,7 +666,7 @@ verify_phase_18() {
 
     # 4.1: Verify all Terraform configurations
     log_info "Verifying Terraform configurations..."
-    
+
     for cloud_dir in "${PROJECT_ROOT}/config/cloud"/{aws,azure,gcp}; do
         if [ -d "$cloud_dir" ]; then
             if terraform -chdir="$cloud_dir" validate &> /dev/null; then
@@ -679,13 +679,13 @@ verify_phase_18() {
 
     # 4.2: Verify configuration files
     log_info "Verifying configuration files..."
-    
+
     local config_files=(
         "${PROJECT_ROOT}/config/cloud/hybrid/cross-cloud-sync.yaml"
         "${PROJECT_ROOT}/config/cloud/hybrid/autoscaling.yaml"
         "${PROJECT_ROOT}/config/cloud/hybrid/cost-monitoring.yaml"
     )
-    
+
     for file in "${config_files[@]}"; do
         if [ -f "$file" ]; then
             log_success "✓ $(basename $file) verified"
@@ -707,13 +707,13 @@ main() {
 
     setup_multi_cloud_infrastructure || { log_error "Multi-cloud setup failed"; return 1; }
     echo ""
-    
+
     setup_cross_cloud_sync || { log_error "Cross-cloud sync setup failed"; return 1; }
     echo ""
-    
+
     setup_cost_optimization || { log_error "Cost optimization setup failed"; return 1; }
     echo ""
-    
+
     verify_phase_18 || { log_error "Verification failed"; return 1; }
     echo ""
 

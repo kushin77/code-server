@@ -1,7 +1,7 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 13 - TASK 1.2: ACCESS CONTROL VALIDATION
-# 
+#
 # Validate OAuth2-Proxy & MFA configuration
 # Idempotent: Safe to re-run multiple times
 # April 13, 2026 - Day 1 Execution
@@ -28,10 +28,10 @@ main() {
     log_info "================================"
     log_info "PHASE 13 - TASK 1.2: ACCESS CONTROL"
     log_info "================================"
-    
+
     mkdir -p "$(dirname "$LOG_FILE")"
     touch "$LOG_FILE"
-    
+
     # Verify oauth2-proxy container
     log_info "Checking oauth2-proxy service..."
     if ! docker-compose ps oauth2-proxy | grep -q "healthy"; then
@@ -39,7 +39,7 @@ main() {
         return 1
     fi
     log_success "oauth2-proxy container healthy"
-    
+
     # Test health endpoint
     log_info "Testing health check endpoint..."
     if curl -sf http://localhost:4180/ping > /dev/null 2>&1; then
@@ -48,7 +48,7 @@ main() {
         log_error "Health endpoint not responding"
         return 1
     fi
-    
+
     # Verify OAuth2 configuration
     log_info "Verifying OAuth2 configuration..."
     if [ -z "${GOOGLE_CLIENT_ID:-}" ] || [ -z "${GOOGLE_CLIENT_SECRET:-}" ]; then
@@ -56,7 +56,7 @@ main() {
         return 1
     fi
     log_success "OAuth2 credentials configured"
-    
+
     # Verify MFA
     log_info "Checking MFA configuration..."
     if docker-compose exec -T oauth2-proxy env | grep -q "MFA"; then
@@ -64,7 +64,7 @@ main() {
     else
         log_info "MFA not yet configured (optional for Phase 13)"
     fi
-    
+
     # Test access control path
     log_info "Testing access control path..."
     local response
@@ -75,7 +75,7 @@ main() {
         log_error "Unexpected response: $response"
         return 1
     fi
-    
+
     log_success ""
     log_success "✓ ACCESS CONTROL VALIDATION COMPLETE"
     return 0

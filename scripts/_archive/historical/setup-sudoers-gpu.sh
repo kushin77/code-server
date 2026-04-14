@@ -2,7 +2,7 @@
 
 ###############################################################################
 # SUDOERS CONFIGURATION FOR GPU FIXES
-# 
+#
 # This script configures passwordless sudo for GPU installation commands
 # on host 192.168.168.31
 #

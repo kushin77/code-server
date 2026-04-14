@@ -1,9 +1,9 @@
 # OAuth2 Dex Integration — Execution Summary
 
-**Session Date:** April 2026  
-**Status:** ✅ Configuration Complete → ⏳ Awaiting Credentials  
-**Target Domain:** https://ide.kushnir.cloud  
-**Production Host:** 192.168.168.31  
+**Session Date:** April 2026
+**Status:** ✅ Configuration Complete → ⏳ Awaiting Credentials
+**Target Domain:** https://ide.kushnir.cloud
+**Production Host:** 192.168.168.31
 
 ---
 

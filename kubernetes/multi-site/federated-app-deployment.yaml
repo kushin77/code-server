@@ -88,7 +88,7 @@ spec:
               values:
               - code-server
           topologyKey: kubernetes.io/hostname
-      
+
       # Distributed across different availability zones within region
       affinity:
         podAntiAffinity:
@@ -102,15 +102,15 @@ spec:
                 - zone-a
                 - zone-b
                 - zone-c
-      
+
       serviceAccountName: code-server
       terminationGracePeriodSeconds: 60
-      
+
       containers:
       - name: code-server
         image: code-server:phase-12-federated
         imagePullPolicy: IfNotPresent
-        
+
         ports:
         - name: http
           containerPort: 8080
@@ -118,7 +118,7 @@ spec:
         - name: metrics
           containerPort: 9090
           protocol: TCP
-        
+
         # Probes - critical for federation health
         livenessProbe:
           httpGet:
@@ -129,7 +129,7 @@ spec:
           timeoutSeconds: 5
           failureThreshold: 3
           successThreshold: 1
-        
+
         readinessProbe:
           httpGet:
             path: /health/ready
@@ -139,7 +139,7 @@ spec:
           timeoutSeconds: 3
           failureThreshold: 2
           successThreshold: 1
-        
+
         # Environment variables for federation
         env:
         # Deployment identifiers
@@ -159,7 +159,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        
+
         # Federation settings
         - name: FEDERATION_ENABLED
           value: "true"
@@ -167,7 +167,7 @@ spec:
           value: "true"
         - name: WRITE_PROPAGATION_TIMEOUT_MS
           value: "5000"
-        
+
         # Database settings (multi-primary)
         - name: DATABASE_URL
           valueFrom:
@@ -185,7 +185,7 @@ spec:
           value: "true"
         - name: DB_BDR_SLOT_NAME
           value: code-server_slot
-        
+
         # Cache settings (federation-aware)
         - name: REDIS_URL
           valueFrom:
@@ -198,7 +198,7 @@ spec:
           value: "true"
         - name: REDIS_REPLICATION_MODE
           value: "active-active"
-        
+
         # Event streaming (critical for convergence)
         - name: KAFKA_BROKERS
           valueFrom:
@@ -213,7 +213,7 @@ spec:
           value: "earliest"
         - name: KINESIS_STREAM_NAME
           value: "code-server-federation-events"
-        
+
         # CRDT settings
         - name: CRDT_SINK_ENABLED
           value: "true"
@@ -223,7 +223,7 @@ spec:
           value: "conflict-free"
         - name: CRDT_CONVERGENCE_TIMEOUT_MS
           value: "100"
-        
+
         # Session settings (global)
         - name: SESSION_STORE_TYPE
           value: "redis"
@@ -231,7 +231,7 @@ spec:
           value: "86400"
         - name: SESSION_REPLICATION_ENABLED
           value: "true"
-        
+
         # Observability
         - name: PROMETHEUS_ENABLED
           value: "true"
@@ -247,7 +247,7 @@ spec:
           value: "json"
         - name: LOG_LEVEL
           value: "info"
-        
+
         # Resilience (circuit breakers, timeouts)
         - name: CIRCUIT_BREAKER_DB_THRESHOLD
           value: "5"
@@ -257,7 +257,7 @@ spec:
           value: "5000"
         - name: CACHE_OPERATION_TIMEOUT_MS
           value: "1000"
-        
+
         # Performance tuning
         - name: HTTP_MAX_CONNECTIONS
           value: "1000"
@@ -267,13 +267,13 @@ spec:
           value: "50"
         - name: CACHE_LOCAL_TTL_SECONDS
           value: "300"
-        
+
         # Graceful shutdown
         - name: SHUTDOWN_GRACE_PERIOD_SECONDS
           value: "30"
         - name: DRAIN_TIMEOUT_SECONDS
           value: "25"
-        
+
         resources:
           requests:
             cpu: 1000m
@@ -283,7 +283,7 @@ spec:
             cpu: 2000m
             memory: 4Gi
             ephemeral-storage: 2Gi
-        
+
         volumeMounts:
         - name: config
           mountPath: /etc/code-server
@@ -292,7 +292,7 @@ spec:
           mountPath: /tmp/cache
         - name: logs
           mountPath: /var/log/code-server
-      
+
       volumes:
       - name: config
         configMap:

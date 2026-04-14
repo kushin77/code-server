@@ -1,9 +1,9 @@
 # Tier 2 #187: Read-Only IDE Access Implementation
 
-**Status:** In Progress  
-**Effort:** 4 hours  
-**Dependencies:** #185 (Cloudflare Tunnel) ✅ COMPLETED  
-**Owner:** Platform Team  
+**Status:** In Progress
+**Effort:** 4 hours
+**Dependencies:** #185 (Cloudflare Tunnel) ✅ COMPLETED
+**Owner:** Platform Team
 **Target Completion:** April 15, 2026
 
 ## Overview
@@ -48,7 +48,7 @@ Developer                Code-Server IDE              Linux Filesystem
 
 ### Step 1: Create Restricted Shell Wrapper
 
-**File:** `scripts/ide-access-restrictions.sh`  
+**File:** `scripts/ide-access-restrictions.sh`
 **Status:** ✅ CREATED
 
 Features:
@@ -110,7 +110,7 @@ ide.dev.yourdomain.com {
         uri /verify
         copy_headers Cf-Access-Jwt-Assertion
     }
-    
+
     reverse_proxy 127.0.0.1:8080 {
         header_uri / /
         websocket

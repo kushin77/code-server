@@ -1,10 +1,10 @@
 #!/bin/bash
 ###############################################################################
 # Phase 14 Canary Deployment Phase 2 (50% Traffic Cutover)
-# 
+#
 # Escalates from 10% to 50% traffic based on Phase 1 success
 # No database dependencies - uses Docker health checks
-# 
+#
 # Purpose: Continue traffic migration under continued monitoring
 # Timeline: 15 minutes (monitoring window before Phase 3 100% cutover)
 ###############################################################################
@@ -42,13 +42,13 @@ mkdir -p "$PHASE_STATE" "$BACKUP_DIR"
     echo "  ✓ All Phase 1 SLOs maintained"
     echo "  ✓ Ready to escalate to 50% traffic"
     echo ""
-    
+
     ###############################################################################
     # PRE-FLIGHT CHECKS
     ###############################################################################
-    
+
     echo "[1/4] Pre-flight validation (Phase 2 escalation)..."
-    
+
     # Check all required containers still running
     REQUIRED_CONTAINERS=("code-server" "caddy" "oauth2-proxy" "ssh-proxy" "redis")
     for container in "${REQUIRED_CONTAINERS[@]}"; do
@@ -57,39 +57,39 @@ mkdir -p "$PHASE_STATE" "$BACKUP_DIR"
             exit 1
         fi
     done
-    
+
     echo "✓ All required containers running"
-    
+
     # Verify resilience from Phase 1
     echo "✓ Container health (post-Phase 1):"
     docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "code-server|caddy|oauth2-proxy|ssh-proxy|redis"
-    
+
     # Check memory stability from Phase 1
     echo ""
     REDIS_MEM=$(docker exec redis redis-cli info memory 2>/dev/null | grep "used_memory_human" | cut -d':' -f2 | tr -d '\r')
     echo "✓ Memory check after Phase 1 (~15min):"
     echo "  Redis Used: $REDIS_MEM (target: <10MB for 24h test)"
-    
+
     echo ""
     echo "✓ Pre-flight validation complete"
     echo ""
-    
+
     ###############################################################################
     # BACKUP PRE-ESCALATION STATE
     ###############################################################################
-    
+
     echo "[2/4] Backup pre-escalation state..."
-    
+
     # Save metrics before escalation
     docker stats --no-stream --format "{{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" > "$BACKUP_DIR/stats-pre-50pct.$TIMESTAMP" 2>/dev/null || true
     echo "✓ Created pre-escalation metrics backup"
-    
+
     echo ""
-    
+
     ###############################################################################
     # ESCALATE TO 50% TRAFFIC
     ###############################################################################
-    
+
     echo "[3/4] Escalating to 50% traffic distribution..."
     echo ""
     echo "Traffic Distribution Change:"
@@ -100,13 +100,13 @@ mkdir -p "$PHASE_STATE" "$BACKUP_DIR"
     echo "  Primary (192.168.168.31): Handling increased load (10% → 50%)"
     echo "  Backup (192.168.168.30):  Load reduced (90% → 50%)"
     echo ""
-    
+
     # Verify Phase 14 infrastructure can handle 50% load
     echo "Stress test Phase 14 infrastructure with 50-request sequence..."
     HEALTHY=0
     FAILED=0
     LATENCY_TOTAL=0
-    
+
     for i in {1..50}; do
         START=$(date +%s%N)
         if curl -s -m 5 http://localhost:8080/health >/dev/null 2>&1; then
@@ -119,15 +119,15 @@ mkdir -p "$PHASE_STATE" "$BACKUP_DIR"
         fi
         sleep 0.05  # Slight delay between requests
     done
-    
+
     AVG_LATENCY=$((LATENCY_TOTAL / $((HEALTHY > 0 ? HEALTHY : 1))))
     ERROR_RATE=$((FAILED * 100 / 50))
-    
+
     echo "  ✓ Load test complete: $HEALTHY/50 successful"
     echo "  Average Latency: ${AVG_LATENCY}ms"
     echo "  Error Rate: ${ERROR_RATE}%"
     echo ""
-    
+
     # Validate SLOs for Phase 2
     if (( HEALTHY >= 48 )); then
         echo "✓ Phase 2 SLO PASS:"
@@ -140,21 +140,21 @@ mkdir -p "$PHASE_STATE" "$BACKUP_DIR"
         # Note: Actual rollback would be triggered here
         exit 1
     fi
-    
+
     echo ""
     echo "✓ Traffic escalation to 50% successful"
     echo ""
-    
+
     ###############################################################################
     # FINALIZE PHASE 2 DEPLOYMENT
     ###############################################################################
-    
+
     echo "[4/4] Finalizing Phase 2 deployment..."
-    
+
     # Create lock file
     touch "$LOCK_FILE"
     echo "✓ Phase 2 lock file created"
-    
+
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
     echo "✅ PHASE 14 CANARY DEPLOYMENT PHASE 2 (50%) - SUCCESS"
@@ -170,7 +170,7 @@ mkdir -p "$PHASE_STATE" "$BACKUP_DIR"
     echo ""
     echo "Ready to proceed to Phase 3 (100% traffic) after 15-minute monitoring"
     echo ""
-    
+
 } | tee "$LOG_FILE"
 
 echo "✅ Phase 2 (50%) deployment complete. Log: $LOG_FILE"

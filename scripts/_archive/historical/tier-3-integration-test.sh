@@ -26,13 +26,13 @@ run_test() {
   local test_name=$1
   local command=$2
   local expected=$3
-  
+
   TEST_COUNT=$((TEST_COUNT + 1))
-  
+
   echo -n "Test $TEST_COUNT: $test_name... "
-  
+
   local result=$($command 2>&1 || echo "FAILED")
-  
+
   if echo "$result" | grep -q "$expected"; then
     echo "✅ PASS"
     PASS_COUNT=$((PASS_COUNT + 1))
@@ -49,22 +49,22 @@ run_test() {
 measure_latency() {
   local url=$1
   local label=$2
-  
+
   echo ""
   echo "Measuring latency for: $label"
-  
+
   local total_time=0
   local samples=10
-  
+
   for i in $(seq 1 $samples); do
     local response_time=$(curl -s -o /dev/null -w "%{time_total}" "$url")
     total_time=$(echo "$total_time + $response_time" | bc)
     echo "  Sample $i: ${response_time}s"
   done
-  
+
   local avg_time=$(echo "scale=4; $total_time / $samples" | bc)
   echo "  Average: ${avg_time}s"
-  
+
   echo "$avg_time"
 }
 

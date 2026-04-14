@@ -32,10 +32,10 @@ export const options = {
     { duration: '1m', target: 100 },   // 100 users for 1 minute
     { duration: '1m', target: 250 },   // 250 users for 1 minute
     { duration: '1m', target: 500 },   // 500 users for 1 minute
-    
+
     // Sustained load
     { duration: '5m', target: 500 },   // 500 concurrent users for 5 minutes (target: 1000 req/sec)
-    
+
     // Ramp down
     { duration: '1m', target: 250 },   // 250 users for 1 minute
     { duration: '1m', target: 100 },   // 100 users for 1 minute
@@ -94,7 +94,7 @@ function makeGraphQLRequest(tier) {
 
   // Track metrics
   currentConcurrentRequests.add(1);
-  
+
   // Record request duration
   requestDuration.add(response.timings.duration);
 

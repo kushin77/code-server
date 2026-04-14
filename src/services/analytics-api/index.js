@@ -1,7 +1,7 @@
 /**
  * Phase 26-B: Analytics API
  * GraphQL API for accessing aggregated metrics and cost data
- * 
+ *
  * Endpoints:
  * POST /graphql - GraphQL queries
  * GET /health - Health check
@@ -70,7 +70,7 @@ const schema = buildSchema(`
       startTime: String
       endTime: String
     ): [Metric!]!
-    
+
     """Get hourly aggregated metrics"""
     hourlyMetrics(
       organizationId: String!
@@ -78,17 +78,17 @@ const schema = buildSchema(`
       endTime: String
       limit: Int
     ): [HourlyMetric!]!
-    
+
     """Get cost breakdown for organization"""
     costBreakdown(
       organizationId: String!
       startTime: String
       endTime: String
     ): CostData!
-    
+
     """Get dashboard summary"""
     dashboardSummary(organizationId: String!): Dashboard!
-    
+
     """List all organizations with their metrics"""
     organizations(limit: Int, offset: Int): [Organization!]!
   }
@@ -180,8 +180,8 @@ const root = {
         .join(' AND ');
 
       const query = `
-        SELECT 
-          timestamp, 
+        SELECT
+          timestamp,
           organization_id as organizationId,
           user_tier as userTier,
           metric_name as metricName,
@@ -225,7 +225,7 @@ const root = {
         .join(' AND ');
 
       const query = `
-        SELECT 
+        SELECT
           hour,
           organization_id as organizationId,
           user_tier as userTier,
@@ -273,7 +273,7 @@ const root = {
         .join(' AND ');
 
       const query = `
-        SELECT 
+        SELECT
           sum(api_calls_total) as totalApiCalls,
           sum(api_calls_cost) as apiCallsCost,
           sum(storage_cost) as storageCost,
@@ -337,7 +337,7 @@ const root = {
       const yesterday = new Date(now - 24 * 60 * 60 * 1000);
 
       const query24h = `
-        SELECT 
+        SELECT
           count(*) as totalRequests,
           avg(metric_value) as avgLatency,
           quantile(0.99)(metric_value) as p99Latency

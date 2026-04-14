@@ -83,7 +83,7 @@ class IncidentDetector:
     def __init__(self):
         self.detection_rules = self._load_detection_rules()
         self.incident_queue = []
-    
+
     def _load_detection_rules(self) -> Dict:
         """Load incident detection rules"""
         return {
@@ -144,33 +144,33 @@ class IncidentDetector:
                 "type": "performance"
             }
         }
-    
+
     def detect(self, metric_data: Dict) -> Optional[IncidentEvent]:
         """
         Detect incidents from metric data
-        
+
         Args:
             metric_data: Current metrics from Prometheus
-        
+
         Returns:
             IncidentEvent if incident detected, None otherwise
         """
         incidents = []
-        
+
         # Check each detection rule
         for rule_name, rule_config in self.detection_rules.items():
             metric = rule_config["metric"]
             threshold = rule_config["threshold"]
-            
+
             if metric in metric_data:
                 value = metric_data[metric]
-                
+
                 # Determine if threshold is exceeded
                 if rule_config["metric"] in ["availability_percent", "cache_hit_rate_percent"]:
                     violated = value < threshold  # Low threshold
                 else:
                     violated = value > threshold  # High threshold
-                
+
                 if violated:
                     incident = IncidentEvent(
                         timestamp=datetime.utcnow().isoformat(),
@@ -181,19 +181,19 @@ class IncidentDetector:
                         metrics={"violating_metric": value}
                     )
                     incidents.append(incident)
-        
+
         # Return highest severity incident
         if incidents:
             return max(incidents, key=lambda x: x.severity.value)
         return None
-    
+
     def classify(self, incident: IncidentEvent) -> IncidentEvent:
         """
         Classify incident by analyzing patterns
-        
+
         Args:
             incident: Detected incident event
-        
+
         Returns:
             Enhanced incident with classification
         """
@@ -205,33 +205,33 @@ class IncidentDetector:
             "disk": ["disk", "io", "saturation", "filesystem"],
             "application": ["error", "exception", "crash", "thread"]
         }
-        
+
         description_lower = incident.description.lower()
-        
+
         for root_cause, keywords in patterns.items():
             if any(keyword in description_lower for keyword in keywords):
                 incident.root_cause = root_cause
                 break
-        
+
         return incident
 
 class IncidentClassifier:
     """ML-based incident classification"""
-    
+
     def classify_severity(self, incident: IncidentEvent) -> Severity:
         """Enhance severity classification using ML"""
         # Simple heuristic: check if customer-impacting
         customer_impacting_keywords = ["error", "availability", "outage", "down"]
-        
+
         description_lower = incident.description.lower()
         if any(kw in description_lower for kw in customer_impacting_keywords):
             return Severity.P0
-        
+
         return incident.severity
 
 def main():
     detector = IncidentDetector()
-    
+
     # Example metrics
     test_metrics = {
         "service": "checkout",
@@ -241,10 +241,10 @@ def main():
         "memory_pressure_percent": 90,
         "cache_hit_rate_percent": 45
     }
-    
+
     # Detect incident
     incident = detector.detect(test_metrics)
-    
+
     if incident:
         print(f"Incident detected: {incident.incident_type}")
         print(f"Severity: {incident.severity.name}")
@@ -378,10 +378,10 @@ execute_remediation() {
     local incident_type="$1"
     local service="$2"
     local severity="$3"
-    
+
     echo "Executing remediation for: $incident_type (Severity: $severity)"
     echo "Service: $service"
-    
+
     if [[ -v REMEDIATION_ACTIONS[$incident_type] ]]; then
         echo "Remediation steps:"
         echo "${REMEDIATION_ACTIONS[$incident_type]}"
@@ -592,10 +592,10 @@ cat > /tmp/incident-postmortem.md << 'EOF'
 4. **Process**: Implement {PROCESS_CHANGE}
 
 ## Lessons Learned
-- **What Went Well**: 
+- **What Went Well**:
   - Fast detection (< 1 minute)
   - Effective auto-remediation
-  
+
 - **What Could Improve**:
   - Better documentation for {SCENARIO}
   - Need to improve {PROCESS}
@@ -642,7 +642,7 @@ route:
         - match:
             service: 'checkout'
           receiver: 'slack-critical-checkout'
-    
+
     # P1 High - Urgent action
     - match:
         severity: high
@@ -651,7 +651,7 @@ route:
       group_wait: 30s
       group_interval: 1m
       repeat_interval: 15m
-    
+
     # P2/P3 - Background action
     - match_re:
         severity: 'medium|low'

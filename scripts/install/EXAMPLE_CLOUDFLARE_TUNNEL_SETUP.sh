@@ -121,13 +121,13 @@ ingress:
     originRequest:
       # Enable compression for WebSocket (terminal)
       http2Origin: true
-  
+
   # Terminal proxy (optional, future)
   - hostname: terminal.yourdomain.com
     service: http://localhost:3000
     originRequest:
       http2Origin: true
-  
+
   # Default: return 404 for unmatched traffic
   - service: http_status:404
 
@@ -135,7 +135,7 @@ ingress:
 originRequest:
   connectTimeout: 30s
   noTLSVerify: false
-  
+
 # See full options at:
 # https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide/local-management/ingress/
 EOF
@@ -198,7 +198,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     cloudflared tunnel run "$TUNNEL_NAME" &
     TUNNEL_PID=$!
     sleep 5
-    
+
     echo ""
     echo "Step 9: Verifying connectivity..."
     if curl -s -o /dev/null -w "%{http_code}" "https://dev.yourdomain.com" | grep -q "200\|302"; then
@@ -207,7 +207,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     else
         echo "  ⚠️  Could not reach IDE yet (may need more time)"
     fi
-    
+
     echo ""
     echo "  Tunnel running (PID: $TUNNEL_PID)"
     echo "  Press Ctrl+C to stop"

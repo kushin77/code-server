@@ -39,12 +39,12 @@ echo "Testing connection concurrency and throughput..." | tee -a $REPORT
 for concurrent in 10 25 50 100 200; do
   echo "→ Testing $concurrent concurrent connections..." | tee -a $REPORT
   START=$(date +%s%N)
-  
+
   $SSH_CMD bash -c "
   timeout 30 ab -n 1000 -c $concurrent -q http://localhost:3000/health 2>/dev/null || true
   echo 'Status: OK'
   " 2>&1 | head -20 | tee -a $REPORT
-  
+
   END=$(date +%s%N)
   DURATION=$(( ($END - $START) / 1000000 ))
   echo "  Duration: ${DURATION}ms" | tee -a $REPORT

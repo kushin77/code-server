@@ -24,21 +24,21 @@ retry() {
     local cmd="$@"
     local attempt=1
     local delay=1
-    
+
     while [ $attempt -le "$max_attempts" ]; do
         if eval "$cmd"; then
             return 0
         fi
-        
+
         if [ $attempt -lt "$max_attempts" ]; then
             log_warn "Command failed (attempt $attempt/$max_attempts). Retrying in ${delay}s..."
             sleep "$delay"
             delay=$((delay * 2))  # Exponential backoff
         fi
-        
+
         attempt=$((attempt + 1))
     done
-    
+
     log_error "Command failed after $max_attempts attempts: $cmd"
     return 1
 }
@@ -125,7 +125,7 @@ mktemp_dir() {
     local temp_dir
     temp_dir=$(mktemp -d)
     log_debug "Created temporary directory: $temp_dir"
-    
+
     _cleanup_tempdir() {
         if [ -d "$temp_dir" ]; then
             rm -rf "$temp_dir"
@@ -133,7 +133,7 @@ mktemp_dir() {
         fi
     }
     add_cleanup _cleanup_tempdir
-    
+
     echo "$temp_dir"
 }
 
@@ -143,7 +143,7 @@ copy_file() {
     local dst=$2
     require_file "$src"
     cp "$src" "$dst"
-    
+
     if ! diff -q "$src" "$dst" > /dev/null 2>&1; then
         log_error "File verification failed after copy: $src -> $dst"
         return 1
@@ -194,7 +194,7 @@ array_contains() {
     local element=$1
     shift
     local arr=("$@")
-    
+
     for item in "${arr[@]}"; do
         if [ "$item" == "$element" ]; then
             return 0
@@ -208,7 +208,7 @@ array_join() {
     local separator=$1
     shift
     local arr=("$@")
-    
+
     local result=""
     for ((i=0; i<${#arr[@]}; i++)); do
         if [ $i -gt 0 ]; then
@@ -216,7 +216,7 @@ array_join() {
         fi
         result+="${arr[i]}"
     done
-    
+
     echo "$result"
 }
 
@@ -239,22 +239,22 @@ docker_wait_healthy() {
     local timeout=${2:-60}
     local elapsed=0
     local interval=2
-    
+
     log_info "Waiting for container to be healthy: $container"
-    
+
     while [ $elapsed -lt "$timeout" ]; do
         local health=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
-        
+
         if [ "$health" == "healthy" ]; then
             log_success "Container is healthy: $container"
             return 0
         fi
-        
+
         log_debug "Container health: $health (${elapsed}s/$timeout)"
         sleep $interval
         elapsed=$((elapsed + interval))
     done
-    
+
     log_error "Container did not become healthy within ${timeout}s: $container"
     return 1
 }

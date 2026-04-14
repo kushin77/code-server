@@ -21,80 +21,80 @@
 [33mΓò╡[0m[0m
 Γò╖
 Γöé Error: Reference to undeclared input variable
-Γöé 
+Γöé
 Γöé   on gpu-compute-infrastructure.tf line 68, in data "aws_eks_cluster" "main":
 Γöé   68:   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-Γöé 
+Γöé
 Γöé An input variable with the name "enable_gpu_compute_infrastructure" has not
 Γöé been declared. This variable can be declared with a variable
 Γöé "enable_gpu_compute_infrastructure" {} block.
 Γò╡
 Γò╖
 Γöé Error: Reference to undeclared input variable
-Γöé 
+Γöé
 Γöé   on gpu-compute-infrastructure.tf line 144, in data "aws_ami" "gpu_ami":
 Γöé  144:   count       = var.enable_gpu_compute_infrastructure ? 1 : 0
-Γöé 
+Γöé
 Γöé An input variable with the name "enable_gpu_compute_infrastructure" has not
 Γöé been declared. This variable can be declared with a variable
 Γöé "enable_gpu_compute_infrastructure" {} block.
 Γò╡
 Γò╖
 Γöé Error: Reference to undeclared input variable
-Γöé 
+Γöé
 Γöé   on gpu-compute-infrastructure.tf line 160, in resource "aws_key_pair" "gpu_nodes":
 Γöé  160:   count           = var.enable_gpu_compute_infrastructure ? 1 : 0
-Γöé 
+Γöé
 Γöé An input variable with the name "enable_gpu_compute_infrastructure" has not
 Γöé been declared. This variable can be declared with a variable
 Γöé "enable_gpu_compute_infrastructure" {} block.
 Γò╡
 Γò╖
 Γöé Error: Reference to undeclared input variable
-Γöé 
+Γöé
 Γöé   on gpu-compute-infrastructure.tf line 203, in resource "aws_iam_role" "gpu_node_role":
 Γöé  203:   count           = var.enable_gpu_compute_infrastructure ? 1 : 0
-Γöé 
+Γöé
 Γöé An input variable with the name "enable_gpu_compute_infrastructure" has not
 Γöé been declared. This variable can be declared with a variable
 Γöé "enable_gpu_compute_infrastructure" {} block.
 Γò╡
 Γò╖
 Γöé Error: Reference to undeclared input variable
-Γöé 
+Γöé
 Γöé   on gpu-compute-infrastructure.tf line 263, in resource "kubernetes_namespace" "ml":
 Γöé  263:   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-Γöé 
+Γöé
 Γöé An input variable with the name "enable_gpu_compute_infrastructure" has not
 Γöé been declared. This variable can be declared with a variable
 Γöé "enable_gpu_compute_infrastructure" {} block.
 Γò╡
 Γò╖
 Γöé Error: Reference to undeclared input variable
-Γöé 
+Γöé
 Γöé   on gpu-compute-infrastructure.tf line 283, in resource "kubernetes_cluster_role" "gpu_access":
 Γöé  283:   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-Γöé 
+Γöé
 Γöé An input variable with the name "enable_gpu_compute_infrastructure" has not
 Γöé been declared. This variable can be declared with a variable
 Γöé "enable_gpu_compute_infrastructure" {} block.
 Γò╡
 Γò╖
 Γöé Error: Reference to undeclared input variable
-Γöé 
+Γöé
 Γöé   on gpu-compute-infrastructure.tf line 329, in resource "kubernetes_namespace" "nvidia_device_plugin":
 Γöé  329:   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-Γöé 
+Γöé
 Γöé An input variable with the name "enable_gpu_compute_infrastructure" has not
 Γöé been declared. This variable can be declared with a variable
 Γöé "enable_gpu_compute_infrastructure" {} block.
 Γò╡
 Γò╖
 Γöé Error: Reference to undeclared input variable
-Γöé 
+Γöé
 Γöé   on gpu-compute-infrastructure.tf line 419, in resource "aws_s3_bucket" "mlflow_artifacts":
 Γöé  419:   count  = var.enable_gpu_compute_infrastructure ? 1 : 0
-Γöé 
+Γöé
 Γöé An input variable with the name "enable_gpu_compute_infrastructure" has not
 Γöé been declared. This variable can be declared with a variable
 Γöé "enable_gpu_compute_infrastructure" {} block.

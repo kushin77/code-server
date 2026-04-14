@@ -1,8 +1,8 @@
 # Code Quality & Documentation Standards
 
-**Applies To**: ALL code, configuration, and scripts in kushin77/code-server-enterprise  
-**Status**: MANDATORY  
-**Last Updated**: April 14, 2026  
+**Applies To**: ALL code, configuration, and scripts in kushin77/code-server-enterprise
+**Status**: MANDATORY
+**Last Updated**: April 14, 2026
 
 ---
 
@@ -34,12 +34,12 @@ Every file type must have a standardized header. This serves as:
 ################################################################################
 # Module: [Module Name]
 # Purpose: One-sentence description of what this module/file does
-# 
+#
 # Usage: Include in main.tf or other parent configuration
 # Example:
 #   module "containers" {
 #     source = "./modules/containers"
-#     
+#
 #     # Input variables...
 #   }
 #
@@ -117,9 +117,9 @@ terraform {
 #!/bin/bash
 ################################################################################
 # [Category]: script-name.sh
-# 
+#
 # Purpose: [One-sentence description of what this script does]
-# 
+#
 # Usage: [How to invoke this script]
 #   ./scripts/category/script-name.sh [required-arg] [optional-arg]
 #   ./scripts/category/script-name.sh --help
@@ -596,11 +596,11 @@ another_command
 ## Troubleshooting
 
 ### Issue: Something goes wrong
-**Cause**: Why this happens  
+**Cause**: Why this happens
 **Solution**: How to fix it
 
 ### Issue: Another problem
-**Cause**: Why  
+**Cause**: Why
 **Solution**: How to fix
 
 ## See Also
@@ -611,8 +611,8 @@ another_command
 
 ## Maintenance
 
-**Owner**: @username  
-**Last Updated**: 2026-04-14  
+**Owner**: @username
+**Last Updated**: 2026-04-14
 **Known Issues**: None currently
 ```
 
@@ -838,11 +838,11 @@ cleanup() {
 # 4. MAIN EXECUTION
 main() {
   log_info "Starting $SCRIPT_NAME"
-  
+
   preflight_checks || exit 2
   validate_inputs "$@" || exit 2
   main_operation "$@" || exit 1
-  
+
   log_info "$SCRIPT_NAME completed successfully"
 }
 
@@ -866,11 +866,11 @@ global:
   # Scrape every 15 seconds - balance between freshness and load
   # Override with PROMETHEUS_SCRAPE_INTERVAL environment variable
   scrape_interval: ${PROMETHEUS_SCRAPE_INTERVAL:-15s}
-  
+
   # Evaluate alert rules every 15 seconds
   # Must be <= global.scrape_interval
   evaluation_interval: 15s
-  
+
   # Keep metrics for 15 days - balance between history and disk space
   # Production default; override in environments/*.tfvars
   retention: 15d
@@ -885,7 +885,7 @@ variable "code_server_memory" {
   type        = string
   description = "Memory limit for code-server container (e.g., '2g', '4g')"
   default     = "2g"
-  
+
   # Developer notes explaining the choice
   # Why 2g? Code-server typically uses 400-600MB. Set to 2g for:
   # - Workspace growth (users add more files)

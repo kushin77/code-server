@@ -21,7 +21,7 @@ jobs:
             const { issue, action } = context.payload;
             const labels = issue.labels.map(l => l.name);
             const hasPriority = labels.some(l => /^P[0-3]$/.test(l));
-            
+
             // Check if issue has a priority label
             if (!hasPriority) {
               // Add "needs-priority" label to flag it
@@ -31,7 +31,7 @@ jobs:
                 issue_number: issue.number,
                 labels: ['needs-priority']
               });
-              
+
               // Add comment explaining priority requirement
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -51,7 +51,7 @@ This issue does not have a priority label. All issues **MUST** be assigned a pri
 ---
 *This check is automated. Issues without priority labels will be deprioritized in backlog triage.*`
               });
-              
+
               console.log(`⚠️ Added "needs-priority" label to issue #${issue.number}`);
             } else if (action === 'labeled' || action === 'unlabeled') {
               // Remove needs-priority label if a priority is now assigned
@@ -83,7 +83,7 @@ This issue does not have a priority label. All issues **MUST** be assigned a pri
             const { issue } = context.payload;
             const labels = issue.labels.map(l => l.name);
             const priority = labels.find(l => /^P[0-3]$/.test(l));
-            
+
             if (priority) {
               const priorityMap = {
                 'P0': '🔴 Critical',
@@ -91,9 +91,9 @@ This issue does not have a priority label. All issues **MUST** be assigned a pri
                 'P2': '🟡 Medium',
                 'P3': '🟢 Low'
               };
-              
+
               console.log(`✅ Issue #${issue.number} assigned priority: ${priorityMap[priority]}`);
-              
+
               // Optional: Create a workflow dispatch to update project board
               // This ensures issues are sorted in any linked GitHub Project Board
             }

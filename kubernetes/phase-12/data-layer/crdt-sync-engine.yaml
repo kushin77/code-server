@@ -61,7 +61,7 @@ spec:
 
   crdt-logic.sql: |
     -- CRDT Merge Functions for Conflict Resolution
-    
+
     -- LWW Counter: Keep highest value with timestamp
     CREATE OR REPLACE FUNCTION crdt.merge_counter(
       p_key TEXT,
@@ -73,14 +73,14 @@ spec:
       INSERT INTO crdt.crdt_counters (key, value, timestamp, replica_id)
       VALUES (p_key, p_value, p_timestamp, p_replica_id)
       ON CONFLICT (key, replica_id) DO UPDATE SET
-        value = CASE 
+        value = CASE
           WHEN EXCLUDED.timestamp > crdt_counters.timestamp THEN EXCLUDED.value
           ELSE crdt_counters.value
         END,
         timestamp = GREATEST(EXCLUDED.timestamp, crdt_counters.timestamp);
     END;
     $$ LANGUAGE plpgsql;
-    
+
     -- OR-Set Union: Add new elements, remove tombstoned
     CREATE OR REPLACE FUNCTION crdt.merge_set(
       p_key TEXT,
@@ -100,7 +100,7 @@ spec:
         timestamp = GREATEST(EXCLUDED.timestamp, crdt_sets.timestamp);
     END;
     $$ LANGUAGE plpgsql;
-    
+
     -- LWW Register: Keep most recent write
     CREATE OR REPLACE FUNCTION crdt.merge_register(
       p_key TEXT,
@@ -120,19 +120,19 @@ spec:
         timestamp = GREATEST(EXCLUDED.timestamp, crdt_registers.timestamp);
     END;
     $$ LANGUAGE plpgsql;
-    
+
     -- View for querying eventual consistency state
     CREATE OR REPLACE VIEW crdt.counter_view AS
     SELECT key, SUM(value) as total_value
     FROM crdt.crdt_counters
     GROUP BY key;
-    
+
     CREATE OR REPLACE VIEW crdt.set_view AS
     SELECT key, array_agg(DISTINCT element) as elements
     FROM crdt.crdt_sets
     WHERE is_added = TRUE
     GROUP BY key;
-    
+
     CREATE OR REPLACE VIEW crdt.register_view AS
     SELECT DISTINCT ON (key) key, value, timestamp
     FROM crdt.crdt_registers
@@ -217,7 +217,7 @@ spec:
         prometheus.io/port: "9090"
     spec:
       serviceAccountName: crdt-engine
-      
+
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -230,18 +230,18 @@ spec:
                       values:
                         - crdt-engine
                 topologyKey: kubernetes.io/hostname
-      
+
       containers:
         - name: crdt-engine
           image: node:20-alpine
           imagePullPolicy: IfNotPresent
-          
+
           ports:
             - containerPort: 8080
               name: api
             - containerPort: 9090
               name: metrics
-          
+
           env:
             - name: NODE_ENV
               value: "production"
@@ -259,13 +259,13 @@ spec:
                   fieldPath: metadata.name
             - name: CONFIG_PATH
               value: /etc/crdt-config/crdt-config.json
-          
+
           volumeMounts:
             - name: crdt-config
               mountPath: /etc/crdt-config
             - name: crdt-logic
               mountPath: /etc/crdt-logic
-          
+
           livenessProbe:
             httpGet:
               path: /health
@@ -274,7 +274,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
-          
+
           readinessProbe:
             httpGet:
               path: /ready
@@ -283,7 +283,7 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 2
-          
+
           resources:
             requests:
               cpu: 500m
@@ -291,7 +291,7 @@ spec:
             limits:
               cpu: 1000m
               memory: 1Gi
-      
+
       volumes:
         - name: crdt-config
           configMap:

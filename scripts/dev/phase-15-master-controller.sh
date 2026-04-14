@@ -62,17 +62,17 @@ EOF
 
 check_prerequisites() {
     log "Checking prerequisites..."
-    
+
     if ! command -v terraform &> /dev/null; then
         error "terraform not found"; return 1
     fi
     success "terraform available"
-    
+
     if ! command -v docker &> /dev/null; then
         error "docker not found"; return 1
     fi
     success "docker available"
-    
+
     return 0
 }
 

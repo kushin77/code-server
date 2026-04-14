@@ -17,7 +17,7 @@ LOG_DIR="$APPDATA/Code/logs"
 if [ -d "$LOG_DIR" ]; then
     echo "Recent logs found:"
     ls -lt "$LOG_DIR" | head -5
-    
+
     if grep -r "ERROR\|FATAL\|crash" "$LOG_DIR" 2>/dev/null | head -3; then
         echo "⚠️  Errors detected in logs"
     else

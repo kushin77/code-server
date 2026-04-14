@@ -1,8 +1,8 @@
 # Phase 27: Mobile SDK & Developer Onboarding
 ## Status: UNBLOCKED (Pending Phase 26 Completion May 3)
 
-**Created**: April 14, 2026  
-**Unblocks**: Upon Phase 26 completion (May 3, 2026, 6:00 AM PT)  
+**Created**: April 14, 2026
+**Unblocks**: Upon Phase 26 completion (May 3, 2026, 6:00 AM PT)
 **Duration**: 3 weeks (May 4-23, 2026)
 
 ---

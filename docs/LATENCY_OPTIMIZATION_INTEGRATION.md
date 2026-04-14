@@ -313,10 +313,10 @@ All services → Latency Monitor → SQLite DB → Analytics API
    ```
    GET /statistics?latency_type=keystroke&period=1h
    Response: {"p50": 45, "p95": 89, "p99": 120, "mean": 62, "min": 15, "max": 450}
-   
+
    GET /anomalies?threshold=3sigma
    Response: [{"time": "2026-04-13T14:23:10", "value": 550, "threshold": 150}]
-   
+
    GET /report?format=json
    Response: {
      "period": "24h",
@@ -354,7 +354,7 @@ class LatencyDatabase:
         """Returns p50, p95, p99 using quantiles()"""
         # SQL: SELECT value_ms FROM measurements WHERE latency_type=?
         # Statistics: min, max, mean, quantiles (p50, p95, p99)
-        
+
     def detect_anomalies(self, sigma_threshold: float = 3.0):
         """Find outliers using 3-sigma"""
         # Outlier = value > (mean + 3*stdev)
@@ -380,7 +380,7 @@ async def handle_git_push(token: str, repo: str) -> Response:
     start_time = time.time()
     result = perform_ssh_operation(token, repo)
     elapsed_ms = (time.time() - start_time) * 1000
-    
+
     # POST to latency monitor
     await httpx.AsyncClient().post(
         "http://localhost:8082/measure",
@@ -701,7 +701,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:8081']
     metrics_path: '/metrics'
-  
+
   - job_name: 'latency-monitor'
     static_configs:
       - targets: ['localhost:8082']
@@ -846,7 +846,7 @@ curl -I https://dev.example.com/ | grep -i content-encoding
 - Expected: Requires combination of all optimizations
 
 **Intercontinental (US → Europe)**:
-- Target: <250ms keystroke echo  
+- Target: <250ms keystroke echo
 - Tuning: batch_timeout = 30ms, compression = high
 - Expected: Network latency is limiting factor, software optimization maxes at 70%
 
@@ -909,6 +909,6 @@ If total exceeds 350ms:
 - [Gzip Compression Levels](https://en.wikipedia.org/wiki/Gzip#Compression_levels)
 - [Statistical Process Control (3-Sigma)](https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule)
 
-**Document Version**: 1.0  
-**Last Updated**: April 13, 2026  
+**Document Version**: 1.0
+**Last Updated**: April 13, 2026
 **Status**: Ready for Integration Testing

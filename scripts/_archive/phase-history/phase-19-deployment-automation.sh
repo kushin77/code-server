@@ -23,13 +23,13 @@ echo "Deploying $SERVICE version $TARGET_VERSION using $DEPLOYMENT_STRATEGY stra
 # Pre-deployment validation
 validate_deployment() {
   echo "1. Running pre-deployment validation..."
-  
+
   # Check docker image exists
   if ! docker pull "myregistry/${SERVICE}:${TARGET_VERSION}"; then
     echo "❌ Docker image not found: myregistry/${SERVICE}:${TARGET_VERSION}"
     return 1
   fi
-  
+
   # Run security scan
   echo "   Running security scan..."
   docker run --rm aquasec/trivy image "myregistry/${SERVICE}:${TARGET_VERSION}" | \
@@ -37,11 +37,11 @@ validate_deployment() {
       echo "❌ Critical vulnerabilities found"
       return 1
     }
-  
+
   # Check configurations
   echo "   Validating configuration..."
   kubectl apply -f ./k8s/ --dry-run=client > /dev/null || return 1
-  
+
   echo "✅ Pre-deployment validation passed"
   return 0
 }
@@ -70,10 +70,10 @@ deploy_with_strategy() {
 # Post-deployment verification
 verify_deployment() {
   echo "3. Running post-deployment verification..."
-  
+
   # Wait for service to stabilize
   sleep 30
-  
+
   # Run smoke tests
   POD=$(kubectl get pod -l app="$SERVICE" -o jsonpath='{.items[0].metadata.name}')
   if kubectl exec "$POD" -- /bin/sh -c "curl -s http://localhost:8080/health | jq -e '.status == \"ok\"'"; then
@@ -82,17 +82,17 @@ verify_deployment() {
     echo "❌ Smoke tests failed"
     return 1
   fi
-  
+
   # Check metrics
   error_rate=$(curl -s 'http://prometheus:9090/api/v1/query' \
     --data-urlencode "query=rate(http_requests_total{service=\"${SERVICE}\",status=~\"5..\"}[5m])" | \
     jq '.data.result[0].value[1]')
-  
+
   if (( $(echo "$error_rate > 0.01" | bc -l) )); then
     echo "❌ Error rate too high: $error_rate"
     return 1
   fi
-  
+
   echo "✅ Post-deployment verification passed"
   return 0
 }
@@ -120,12 +120,12 @@ cat > config/version-management.yaml <<'EOF'
 versionControl:
   # Semantic versioning
   format: "major.minor.patch-prerelease+build"
-  
+
   # Version registry
   registry:
     type: "postgres"
     connection: "postgres://postgres:password@localhost/versions"
-    
+
     # Track all versions
     fields:
       - service_name
@@ -161,13 +161,13 @@ rollbackPolicies:
       - availability < 99.5%
       - out_of_memory_errors > 10
     rollback_window: "10 minutes"
-  
+
   # Manual: Team can rollback any version
   manual:
     enabled: true
     allowed_roles: ["devops", "sre", "on-call"]
     require_approval: false
-    
+
   # Feature flags: Disable features instead of full rollback
   feature_flag_based:
     enabled: true
@@ -181,13 +181,13 @@ constraints:
   # Don't deploy unstable version to production
   - environment: production
     allowed_statuses: [stable]
-  
+
   - environment: staging
     allowed_statuses: [beta, stable]
-  
+
   - environment: development
     allowed_statuses: [alpha, beta, stable]
-  
+
   # Prevent large gaps in versions
   - max_version_jump: 2  # Can't skip 2 minor versions
 EOF

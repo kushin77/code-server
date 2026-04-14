@@ -50,7 +50,7 @@ resource "docker_container" "varnish" {
   }
 
   restart = "always"
-  
+
   networks_advanced {
     name = "code-server-enterprise-network"
   }
@@ -80,7 +80,7 @@ resource "docker_container" "varnish" {
 # Varnish Configuration - TTL Strategy
 resource "local_file" "varnish_config" {
   filename = "/home/akushnir/.config/varnish/default.vcl"
-  
+
   content = <<-EOT
     vcl 4.1;
 
@@ -90,7 +90,7 @@ resource "local_file" "varnish_config" {
     # ========================================================================
     # BACKEND DEFINITIONS
     # ========================================================================
-    
+
     backend caddy_backend {
       .host = "caddy";
       .port = "80";
@@ -125,7 +125,7 @@ resource "local_file" "varnish_config" {
     # ========================================================================
     # RECEIVE (Client Request)
     # ========================================================================
-    
+
     sub vcl_recv {
       # Set backend
       set req.backend_hint = backend_pool.backend();
@@ -160,14 +160,14 @@ resource "local_file" "varnish_config" {
 
       # Add cache status header
       set req.http.X-Cache-Status = "MISS";
-      
+
       return (hash);
     }
 
     # ========================================================================
     # HIT (Cache Hit)
     # ========================================================================
-    
+
     sub vcl_hit {
       set req.http.X-Cache-Status = "HIT";
       return (deliver);
@@ -176,7 +176,7 @@ resource "local_file" "varnish_config" {
     # ========================================================================
     # MISS (Cache Miss)
     # ========================================================================
-    
+
     sub vcl_miss {
       set req.http.X-Cache-Status = "MISS";
       return (fetch);
@@ -185,12 +185,12 @@ resource "local_file" "varnish_config" {
     # ========================================================================
     # BACKEND RESPONSE
     # ========================================================================
-    
+
     sub vcl_backend_response {
       # Set TTL based on status
-      if (beresp.status == 200 || beresp.status == 203 || beresp.status == 204 || 
-          beresp.status == 206 || beresp.status == 300 || beresp.status == 301 || 
-          beresp.status == 404 || beresp.status == 405 || beresp.status == 410 || 
+      if (beresp.status == 200 || beresp.status == 203 || beresp.status == 204 ||
+          beresp.status == 206 || beresp.status == 300 || beresp.status == 301 ||
+          beresp.status == 404 || beresp.status == 405 || beresp.status == 410 ||
           beresp.status == 414 || beresp.status == 501) {
         set beresp.ttl = 24h; # Cache successful responses
       } else {
@@ -206,7 +206,7 @@ resource "local_file" "varnish_config" {
     # ========================================================================
     # DELIVER (Response to Client)
     # ========================================================================
-    
+
     sub vcl_deliver {
       # Add cache status header
       if (obj.hits > 0) {
@@ -214,9 +214,9 @@ resource "local_file" "varnish_config" {
       } else {
         set resp.http.X-Cache = "MISS";
       }
-      
+
       set resp.http.X-Cache-TTL = obj.ttl;
-      
+
       return (deliver);
     }
   EOT
@@ -230,10 +230,10 @@ resource "local_file" "varnish_config" {
 
 resource "local_file" "caddy_waf_config" {
   filename = "/home/akushnir/.config/caddy/Caddyfile.waf"
-  
+
   content = <<-EOT
     # Caddy WAF Configuration - Rate Limiting & DDoS Protection
-    
+
     # Rate Limiting Configuration
     (rate_limit) {
       rate {
@@ -263,7 +263,7 @@ resource "local_file" "caddy_waf_config" {
     # API Endpoints - Stricter Rate Limiting
     /api/* {
       import rate_limit
-      
+
       rate {
         zone ip_api {
           key {http.request.remote}
@@ -281,7 +281,7 @@ resource "local_file" "caddy_waf_config" {
     # Webhook Endpoints - Moderate Rate Limiting
     /webhooks/* {
       import rate_limit
-      
+
       rate {
         zone ip_webhooks {
           key {http.request.remote}
@@ -322,7 +322,7 @@ resource "local_file" "caddy_waf_config" {
 
 resource "local_file" "prometheus_varnish_targets" {
   filename = "/home/akushnir/.config/prometheus/targets-varnish.yml"
-  
+
   content = <<-EOT
     # Varnish Cache Metrics
     - targets:

@@ -6,7 +6,7 @@
 # Features:
 #   - Automatic PoP routing through nearest Cloudflare data center
 #   - WebSocket compression (reduces terminal traffic 40-60%)
-#   - HTTP/2 Server Push for static assets  
+#   - HTTP/2 Server Push for static assets
 #   - Edge caching for static resources
 #   - Health check monitoring
 #
@@ -34,7 +34,7 @@ grace-period: 30s
 compression:
   enabled: true
   level: 6  # Balanced compression (1-9, 6 is recommended)
-  
+
   # Don't compress already-compressed formats
   exclude:
     - "image/*"
@@ -52,32 +52,32 @@ ingress:
   # Main code-server IDE
   - hostname: dev.example.com
     service: http://localhost:8080
-    
+
     # WebSocket compression for terminal & IDE communication
     wssOptions:
       compress: true
       compressionLevel: 6
-    
+
     # Override cache settings
     # Make terminal updates not cacheable (they're real-time)
     cacheTTL: 0
-    
+
     # Disable caching for WebSocket
     cacheOnCookie: false
-  
+
   # Git proxy server (separate endpoint)
   - hostname: git-proxy.dev.example.com
     service: https://localhost:8443
     noTLSVerify: true  # Self-signed cert internally
-    
+
     # Git updates should not be cached
     cacheTTL: 0
-  
+
   # Latency monitor metrics endpoint
   - hostname: metrics.dev.example.com
     service: http://localhost:9090
     cacheTTL: 300  # Cache metrics for 5 minutes
-  
+
   # Default catch-all
   - service: http_status:404
 
@@ -90,26 +90,26 @@ advancedOverrides:
   # Enable HTTP/2 Server Push for better performance
   http2:
     serverPush: true
-  
+
   # Aggressive caching for static assets
   cacheBehavior:
     - path: "/assets/*"
       cacheTTL: 604800  # Cache for 7 days
       cacheByDefault: true
-    
+
     - path: "/extensions/*"
       cacheTTL: 604800
       cacheByDefault: true
-    
+
     - path: "/themes/*"
       cacheTTL: 604800
       cacheByDefault: true
-    
+
     # DO NOT cache real-time data
     - path: "/ws/*"
       cacheTTL: 0
       cacheByDefault: false
-    
+
     - path: "/terminal/*"
       cacheTTL: 0
       cacheByDefault: false

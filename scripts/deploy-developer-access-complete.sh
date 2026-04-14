@@ -37,7 +37,7 @@ phase_2_oauth2_mfa() {
   # Verify Cloudflare Access configuration
   log_info "Verifying Cloudflare Access policy..."
   [[ -f "/.env" ]] && source "/.env"
-  
+
   if [[ -z "${OAUTH2_PROXY_CLIENT_ID:-}" ]]; then
     log_error "OAUTH2_PROXY_CLIENT_ID not set in .env - cannot proceed"
     return 1
@@ -88,7 +88,7 @@ EOF
 
   # Create auto-revocation cron job (runs daily)
   CRON_ENTRY="0 0 * * * /home/user/scripts/developer-auto-revoke-cron >> $DEVELOPERS_DIR/auto-revoke.log 2>&1"
-  
+
   if crontab -l 2>/dev/null | grep -q "developer-auto-revoke-cron"; then
     log_info "✓ Auto-revocation cron already configured"
   else
@@ -195,7 +195,7 @@ phase_6_latency_optimization() {
 
   # Cloudflare caching
   log_info "✓ Static asset caching at Cloudflare edge (7-day TTL)"
-  
+
   # Expected latencies
   log_info ""
   log_info "Expected latency after optimization:"
@@ -213,7 +213,7 @@ phase_6_latency_optimization() {
 
 main() {
   log_section "DEVELOPER ACCESS SYSTEM - COMPLETE DEPLOYMENT"
-  
+
   log_info "Deploying phases 2-6 (oauth2 → git-proxy → latency)"
   log_info "Execution time: ~5-10 minutes"
   log_info "All changes immutable (git + IaC)"

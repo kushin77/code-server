@@ -27,10 +27,10 @@ log_phase() { echo -e "${YELLOW}[PHASE]${NC} $@" | tee -a "${ORCHESTRATOR_LOG}";
 
 check_kubernetes_clusters() {
     log_info "Checking Kubernetes cluster connectivity..."
-    
+
     local clusters=("primary-cluster" "secondary-cluster" "tertiary-cluster")
     local cluster_status=()
-    
+
     for cluster in "${clusters[@]}"; do
         if kubectl --context="$cluster" cluster-info &>/dev/null; then
             log_success "✓ $cluster is accessible"
@@ -40,13 +40,13 @@ check_kubernetes_clusters() {
             cluster_status+=("UNAVAILABLE")
         fi
     done
-    
+
     return 0
 }
 
 check_container_runtime() {
     log_info "Checking container runtime..."
-    
+
     if command -v docker &>/dev/null; then
         local docker_status=$(docker info 2>&1 | head -1)
         log_success "✓ Docker: Available"
@@ -59,10 +59,10 @@ check_container_runtime() {
 
 check_required_tools() {
     log_info "Checking required tools..."
-    
+
     local required_tools=("kubectl" "helm" "kustomize" "terraform")
     local missing_tools=()
-    
+
     for tool in "${required_tools[@]}"; do
         if ! command -v "$tool" &>/dev/null; then
             missing_tools+=("$tool")
@@ -71,7 +71,7 @@ check_required_tools() {
             log_success "✓ $tool: Available"
         fi
     done
-    
+
     return 0
 }
 
@@ -133,7 +133,7 @@ orchestrate_deployment() {
 
 validate_configs() {
     log_info "Validating Phase 18 configurations..."
-    
+
     local config_dir="${PROJECT_ROOT}/config"
     local validation_passed=0
     local validation_failed=0
@@ -173,7 +173,7 @@ generate_deployment_report() {
     log_info "Generating Phase 18 deployment report..."
 
     local report_file="${PROJECT_ROOT}/PHASE-18-DEPLOYMENT-REPORT.md"
-    
+
     cat > "${report_file}" << 'EOF'
 # Phase 18: Enterprise Scaling & Multi-Cloud Architecture
 ## Deployment Report
@@ -281,7 +281,7 @@ See `phase-18-orchestrator-*.log` for detailed execution logs.
 **Phase 18 Status**: DEPLOYMENT COMPLETE
 **Recommended Action**: Proceed to Phase 19 (AI/ML Integration & Advanced Analytics)
 EOF
-    
+
     log_success "Deployment report generated: ${report_file}"
 }
 

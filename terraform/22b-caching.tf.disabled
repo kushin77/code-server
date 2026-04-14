@@ -18,25 +18,25 @@ terraform {
 # ─── Locals: Immutable Configuration ─────────────────────────────────────────
 locals {
   varnish_version = "7.3" # PINNED - Never change
-  
+
   # Cache settings (on-prem specific)
   api_cache_ttl        = 3600        # 1 hour for API responses
   static_cache_ttl     = 86400       # 24 hours for static content
   html_cache_ttl       = 1800        # 30 minutes for HTML
-  
+
   # Rate limiting per tier
   rate_limit_free      = 100         # requests/minute
   rate_limit_pro       = 1000        # requests/minute
   rate_limit_webhook   = 10000       # requests/minute
-  
+
   # DDoS thresholds
   ddos_request_rate    = 10000       # requests/second triggers alert
   ddos_concurrent_conns = 5000       # concurrent connections threshold
-  
+
   # On-prem specific settings
   varnish_memory       = "512M"
   cache_storage_path   = "/var/cache/varnish"
-  
+
   common_labels = {
     phase      = "22-b"
     component  = "cdn-caching"
@@ -107,34 +107,34 @@ resource "kubernetes_config_map" "caddy_rate_limits" {
           level warn
         }
       }
-      
+
       # Rate limiting by tier
       :8080 {
         # Middleware for rate limiting
         ratelimit /api/* {
           rate 100/m           # 100 requests per minute (free tier)
         }
-        
+
         ratelimit /api/pro/* {
           rate 1000/m          # 1000 requests per minute (pro tier)
         }
-        
+
         ratelimit /webhooks/* {
           rate 10000/m         # 10000 requests per minute (webhook)
         }
-        
+
         # Request size limits
         request_body /upload/* {
           max_size 500M
         }
-        
+
         # Timeout settings
         timeouts {
           read    10s
           write   10s
           idle    15s
         }
-        
+
         # Proxy to upstream
         reverse_proxy localhost:9090 {
           lb_policy random_choose 2
@@ -170,7 +170,7 @@ resource "kubernetes_config_map" "ddos_alerts" {
           annotations:
             summary: "DDoS alert: High request rate detected"
             dashboard: "grafana/dd-dos-dashboard"
-        
+
         # Alert on high concurrent connections
         - alert: DDoSHighConcurrentConnections
           expr: |
@@ -182,7 +182,7 @@ resource "kubernetes_config_map" "ddos_alerts" {
           annotations:
             summary: "DDoS alert: High concurrent connections"
             action: "Enable geo-blocking, implement rate limiting"
-        
+
         # Cache hit ratio monitoring
         - alert: CacheLowHitRatio
           expr: |
@@ -224,7 +224,7 @@ resource "kubernetes_config_map" "ddos_alerts" {
 locals {
   varnish_vcl = <<-EOT
     vcl 4.1;
-    
+
     # Backend definition
     backend api_backend {
       .host = "localhost";
@@ -233,13 +233,13 @@ locals {
       .first_byte_timeout = 10s;
       .between_bytes_timeout = 15s;
     }
-    
+
     sub vcl_recv {
       # Only cache GET/HEAD requests
       if (req.method != "GET" && req.method != "HEAD") {
         return (pass);
       }
-      
+
       # Cache control by path
       if (req.url ~ "^/api/") {
         set req.ttl = ${local.api_cache_ttl}s;
@@ -249,14 +249,14 @@ locals {
         set req.ttl = ${local.html_cache_ttl}s;
       }
     }
-    
+
     sub vcl_backend_response {
       # Cache successful responses
       if (beresp.status == 200 || beresp.status == 404) {
         set beresp.ttl = std.duration(req.ttl + "s", 1h);
       }
     }
-    
+
     sub vcl_deliver {
       # Add cache status headers
       if (obj.hits > 0) {

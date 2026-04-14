@@ -48,7 +48,7 @@ export const options = {
       ],
       gracefulRampDown: '1m',
     },
-    
+
     // Scenario 2: Free tier violation - constant 120 req/min per org
     // (exceeds free tier limit of 60 req/min)
     free_tier_violation: {
@@ -79,7 +79,7 @@ export const options = {
 export function rateLimitingTests() {
   const orgEntries = Object.entries(testOrgs);
   let currentOrgIndex = __VU % orgEntries.length;
-  
+
   const [orgId, orgConfig] = orgEntries[currentOrgIndex];
 
   group(`Rate Limiting - ${orgConfig.tier.toUpperCase()} Tier (${orgId})`, () => {
@@ -218,8 +218,8 @@ export function enterpriseTierTests() {
       const res = http.post(`${BASE_URL}/graphql`, payload, params);
       check(res, {
         'enterprise: status is 200': (r) => r.status === 200,
-        'enterprise: no rate limiting': (r) => 
-          !r.headers['X-RateLimit-Remaining'] || 
+        'enterprise: no rate limiting': (r) =>
+          !r.headers['X-RateLimit-Remaining'] ||
           r.headers['X-RateLimit-Remaining'] === 'unlimited',
       });
     }

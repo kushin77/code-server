@@ -58,7 +58,7 @@ if echo "$APP_RESPONSE" | grep -q "$APP_DOMAIN"; then
     echo -e "${GREEN}✅ Found existing application: $APP_ID${NC}"
 else
     echo -e "${YELLOW}Creating new Access Application...${NC}"
-    
+
     CREATE_APP=$(curl -s -X POST \
       "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/access/apps" \
       -H "Authorization: Bearer ${API_TOKEN}" \
@@ -70,7 +70,7 @@ else
         \"session_duration\": \"24h\",
         \"allowed_idle_timeout\": \"4h\"
       }")
-    
+
     APP_ID=$(echo "$CREATE_APP" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
     echo -e "${GREEN}✅ Created application: $APP_ID${NC}"
 fi

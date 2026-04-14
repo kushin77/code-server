@@ -60,43 +60,43 @@ get_remote_metrics() {
     local checkpoint=$1
     echo -e "${BLUE}[Checkpoint: ${checkpoint}]${NC}"
     echo "Fetching metrics from ${REMOTE_HOST}..."
-    
+
     # SSH into remote host and capture metrics
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "${REMOTE_USER}@${REMOTE_HOST}" << 'EOF'
-    
+
     echo "=== METRIC COLLECTION ==="
     echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo ""
-    
+
     # Container health
     echo "Container Status:"
     docker ps --filter "name=code-server-31" --format "{{.Names}}\t{{.Status}}\t{{.CPUPerc}}\t{{.MemUsage}}"
     echo ""
-    
+
     # Load test metrics
     if [ -f /tmp/phase-13-metrics/current-metrics.json ]; then
         echo "Load Test Metrics:"
         cat /tmp/phase-13-metrics/current-metrics.json | head -50
     fi
     echo ""
-    
+
     # System resources
     echo "System Resources:"
     free -h | head -2
     df -h / | tail -1
     echo ""
-    
+
     # Network metrics
     echo "Network Connectivity:"
     netstat -s | grep -E "(packets|dropped|error)" | head -5
     echo ""
-    
+
     # Process metrics
     echo "Code-Server Process:"
     ps aux | grep code-server | grep -v grep | awk '{print $1, $3, $4, $11}'
     echo ""
-    
+
 EOF
 }
 
@@ -104,12 +104,12 @@ EOF
 validate_slos() {
     local checkpoint=$1
     echo -e "${YELLOW}SLO Validation ($checkpoint):${NC}"
-    
+
     # These would be populated from actual metrics
     local p99_latency="TBD"
     local error_rate="TBD"
     local throughput="TBD"
-    
+
     echo "  p99 Latency: ${p99_latency} (target: < 100ms)"
     echo "  Error Rate: ${error_rate} (target: < 0.1%)"
     echo "  Throughput: ${throughput} (target: > 100 req/s)"
@@ -119,7 +119,7 @@ validate_slos() {
 # Function: Health check
 health_check() {
     echo -e "${BLUE}Health Check:${NC}"
-    
+
     # SSH health check
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
        -o ConnectTimeout=5 "${REMOTE_USER}@${REMOTE_HOST}" "true" 2>/dev/null; then
@@ -128,7 +128,7 @@ health_check() {
         echo -e "  ${RED}✗ SSH connection FAILED${NC}"
         return 1
     fi
-    
+
     # Container health
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
        "${REMOTE_USER}@${REMOTE_HOST}" "docker ps | grep -q code-server-31" 2>/dev/null; then
@@ -137,7 +137,7 @@ health_check() {
         echo -e "  ${RED}✗ Code-server container NOT running${NC}"
         return 1
     fi
-    
+
     # HTTP endpoint
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
        "${REMOTE_USER}@${REMOTE_HOST}" "curl -s -f http://localhost:8080/health >/dev/null" 2>/dev/null; then
@@ -146,7 +146,7 @@ health_check() {
         echo -e "  ${RED}✗ HTTP endpoint NOT responding${NC}"
         return 1
     fi
-    
+
     # Orchestrator process
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
        "${REMOTE_USER}@${REMOTE_HOST}" "pgrep -f 'phase-13.*orchestrator' >/dev/null" 2>/dev/null; then
@@ -155,7 +155,7 @@ health_check() {
         echo -e "  ${RED}✗ Orchestrator process NOT active${NC}"
         return 1
     fi
-    
+
     echo ""
 }
 
@@ -163,7 +163,7 @@ health_check() {
 generate_checkpoint_report() {
     local checkpoint=$1
     local timestamp=$2
-    
+
     {
         echo ""
         echo "================================================================================="
@@ -182,14 +182,14 @@ generate_checkpoint_report() {
 # Function: Main monitoring loop
 main() {
     mkdir -p "${LOG_DIR}"
-    
+
     # Print checkpoint schedule
     echo -e "${YELLOW}Checkpoint Schedule:${NC}"
     for i in "${!CHECKPOINTS[@]}"; do
         echo "  ${CHECKPOINTS[$i]}: ${CHECKPOINT_TIMES[$i]}"
     done
     echo ""
-    
+
     # Initial health check
     echo -e "${BLUE}Initial Health Assessment:${NC}"
     if health_check; then
@@ -198,15 +198,15 @@ main() {
         echo -e "${RED}✗ System issues detected - review above${NC}"
         exit 1
     fi
-    
+
     # Checkpoint monitoring loop
     # In production, this would run as a daemon
     echo -e "${YELLOW}Monitoring active. Checkpoints will be collected automatically.${NC}"
     echo ""
-    
+
     # Generate initial status report
     generate_checkpoint_report "Initial Status" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    
+
     # Continuous monitoring example
     for i in {1..5}; do
         echo -e "${BLUE}Monitoring iteration ${i}${NC}"
@@ -214,7 +214,7 @@ main() {
         health_check
         echo "---"
     done
-    
+
     echo -e "${GREEN}Checkpoint monitoring active. Logs saved to ${CHECKPOINT_LOG}${NC}"
 }
 

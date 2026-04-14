@@ -41,7 +41,7 @@
 #   ./scripts/automated-deployment-orchestration.sh apply
 #
 # Recent Changes:
-#   2026-04-14: Integrated phase boundaries and error recovery 
+#   2026-04-14: Integrated phase boundaries and error recovery
 #   2026-04-13: Initial creation with multi-phase orchestration
 #
 ################################################################################
@@ -82,7 +82,7 @@ validate_environment() {
     echo "STEP 1: VALIDATING ENVIRONMENT"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    
+
     # Check local commands
     for cmd in ssh scp docker docker-compose openssl curl jq; do
         if ! command -v $cmd &> /dev/null; then
@@ -91,7 +91,7 @@ validate_environment() {
         fi
     done
     echo "✓ All required local commands available"
-    
+
     # Check SSH connectivity
     if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'echo "SSH connectivity verified" && docker --version' &>/dev/null; then
@@ -109,7 +109,7 @@ configure_oauth() {
     echo "STEP 2a: CONFIGURING OAUTH"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    
+
     if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
         echo "⚠ OAuth credentials not provided"
         echo "  To enable OAuth2 authentication:"
@@ -120,7 +120,7 @@ configure_oauth() {
         echo ""
         return 0
     fi
-    
+
     echo "✓ OAuth credentials configured"
     echo "  Client ID: ${GOOGLE_CLIENT_ID:0:20}***"
     echo ""
@@ -132,14 +132,14 @@ generate_configuration() {
     echo "STEP 3: GENERATING PRODUCTION CONFIGURATION"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    
+
     # Generate .env
     bash "${SCRIPT_DIR}/automated-env-generator.sh" || {
         echo "ERROR: Failed to generate environment configuration"
         return 1
     }
     echo ""
-    
+
     # Generate certificates
     bash "${SCRIPT_DIR}/automated-certificate-management.sh" || {
         echo "WARNING: Certificate generation encountered issues (may not block)"
@@ -153,14 +153,14 @@ configure_dns() {
     echo "STEP 4: CONFIGURING DNS"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    
+
     if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
         echo "⚠ CloudFlare API token not provided (DNS configuration skipped)"
         echo "  To enable DNS automation, export CLOUDFLARE_API_TOKEN and CLOUDFLARE_ZONE_ID"
         echo ""
         return 0
     fi
-    
+
     bash "${SCRIPT_DIR}/automated-dns-configuration.sh" || {
         echo "WARNING: DNS configuration encountered issues"
     }
@@ -173,10 +173,10 @@ prepare_deployment_files() {
     echo "STEP 5: PREPARING DEPLOYMENT FILES"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    
+
     # Copy core deployment files
     echo "Copying deployment files..."
-    
+
     scp -o StrictHostKeyChecking=no -r \
         "${PARENT_DIR}/docker-compose.yml" \
         "${PARENT_DIR}/Caddyfile" \
@@ -185,11 +185,11 @@ prepare_deployment_files() {
         echo "ERROR: Failed to copy deployment files"
         return 1
     }
-    
+
     echo "Renaming .env.production to .env..."
     ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         "cd ${DEPLOYMENT_DIR} && mv .env.production .env && chmod 600 .env"
-    
+
     echo "✓ Deployment files prepared in ${DEPLOYMENT_DIR}"
     echo ""
 }
@@ -200,7 +200,7 @@ deploy_services() {
     echo "STEP 6: DEPLOYING SERVICES"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    
+
     ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << 'DEPLOY_SCRIPT'
 cd DEPLOYMENT_DIR_PLACEHOLDER
 echo "Pulling latest images..."
@@ -244,7 +244,7 @@ validate_deployment() {
     echo "STEP 7: VALIDATING DEPLOYMENT"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    
+
     echo "Checking service health..."
     ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" << EOF
 cd ${DEPLOYMENT_DIR}
@@ -276,7 +276,7 @@ generate_summary() {
     echo "STEP 8: SUMMARIZING DEPLOYMENT"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    
+
     cat > "${SCRIPT_DIR}/DEPLOYMENT-SUMMARY.md" << EOF
 # Automated Production Deployment Summary
 
@@ -404,7 +404,7 @@ EOF
 # Main execution flow
 main() {
     local START_TIME=$(date +%s)
-    
+
     # Execute all steps
     validate_environment || exit 1
     configure_oauth || true  # OAuth configuration is non-blocking
@@ -414,10 +414,10 @@ main() {
     deploy_services || exit 1
     validate_deployment || exit 1
     generate_summary
-    
+
     local END_TIME=$(date +%s)
     local DURATION=$((END_TIME - START_TIME))
-    
+
     echo "╔════════════════════════════════════════════════════════════╗"
     echo "║ ✅ DEPLOYMENT COMPLETE                                    ║"
     echo "║ Duration: ${DURATION} seconds                             ║"
@@ -430,4 +430,3 @@ main() {
 
 # Run with error handling
 main "$@"
-

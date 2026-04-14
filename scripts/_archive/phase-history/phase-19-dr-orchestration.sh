@@ -25,9 +25,9 @@ VERIFICATION_DIR="${VERIFICATION_DIR:-/backups/verify}"
 verify_backup() {
   local backup_path="$1"
   local backup_name=$(basename "$backup_path")
-  
+
   echo "Verifying backup: $backup_name"
-  
+
   # Check backup integrity
   if [[ -f "${backup_path}.sha256" ]]; then
     if sha256sum -c "${backup_path}.sha256" > /dev/null 2>&1; then
@@ -37,13 +37,13 @@ verify_backup() {
       return 1
     fi
   fi
-  
+
   # Test restore in temporary environment
   mkdir -p "$VERIFICATION_DIR/$backup_name"
-  
+
   # Restore from backup
   tar -xzf "$backup_path" -C "$VERIFICATION_DIR/$backup_name"
-  
+
   # Run verification tests
   if docker run --rm \
     -v "$VERIFICATION_DIR/$backup_name:/restore" \
@@ -54,7 +54,7 @@ verify_backup() {
     echo "❌ RESTORE FAILED: $backup_name"
     return 1
   fi
-  
+
   # Verify data consistency
   if docker run --rm \
     -v "$VERIFICATION_DIR/$backup_name:/restore" \
@@ -65,10 +65,10 @@ verify_backup() {
     echo "❌ DATA INCONSISTENCY: $backup_name"
     return 1
   fi
-  
+
   # Cleanup
   rm -rf "$VERIFICATION_DIR/$backup_name"
-  
+
   return 0
 }
 
@@ -113,13 +113,13 @@ spec:
             - -c
             - |
               #!/bin/bash
-              
+
               # Check replication lag
               LAG=$(psql -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) as lag;" -t | tr -d ' ')
-              
+
               if (( $(echo "$LAG > 300" | bc -l) )); then
                 echo "⚠️ Replication lag exceeded RPO: ${LAG}s > 300s"
-                
+
                 # Send alert
                 curl -X POST http://alertmanager:9093/api/v1/alerts \
                   -H 'Content-Type: application/json' \
@@ -154,18 +154,18 @@ test_failover() {
   local primary="$1"
   local failover="$2"
   local service="$3"
-  
+
   echo "Testing failover: $primary -> $failover ($service)"
-  
+
   # Simulate primary failure
   echo "1. Simulating primary failure..."
   kubectl drain "$primary" --ignore-daemonsets --delete-emptydir-data --dry-run=client
-  
+
   # Verify failover occurs
   echo "2. Verifying traffic shifts to failover..."
   local timeout=300
   local start_time=$(date +%s)
-  
+
   while (( $(date +%s) - start_time < timeout )); do
     if kubectl get svc "$service" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' | \
        grep -q "$(kubectl get svc $failover -o jsonpath='{.status.podIP}')"; then
@@ -174,7 +174,7 @@ test_failover() {
     fi
     sleep 5
   done
-  
+
   # Verify data consistency
   echo "3. Verifying data consistency..."
   if kubectl exec -n monitoring postgres-replica -- \
@@ -184,17 +184,17 @@ test_failover() {
     echo "❌ Data consistency check failed"
     return 1
   fi
-  
+
   # Measure RTO (Recovery Time Objective)
   local rto=$(($(date +%s) - start_time))
   echo "RTO measured: ${rto}s (target: ${RTO_TARGET})"
-  
+
   if (( rto < 3600 )); then
     echo "✅ RTO target met"
   else
     echo "⚠️ RTO exceeded target"
   fi
-  
+
   return 0
 }
 
@@ -223,7 +223,7 @@ regions:
       database: "db.us-east-1.rds.amazonaws.com"
       cache: "cache.us-east-1.elasticache.amazonaws.com"
     health_check_interval: "30s"
-    
+
   secondary:
     region: "us-west-2"
     endpoints:
@@ -231,7 +231,7 @@ regions:
       database: "db.us-west-2.rds.amazonaws.com"
       cache: "cache.us-west-2.elasticache.amazonaws.com"
     health_check_interval: "30s"
-    
+
   tertiary:
     region: "eu-west-1"
     endpoints:
@@ -251,7 +251,7 @@ failover_sequence:
     post_actions:
       - "verify_secondary_operational"
       - "restart_failed_primary"
-  
+
   # Secondary down
   - condition: "secondary_health_check_fail"
     action: "route_to_tertiary"
@@ -260,7 +260,7 @@ failover_sequence:
       - "data_replication_lag < 5m"
     post_actions:
       - "restart_failed_secondary"
-  
+
   # All regions down
   - condition: "all_regions_health_fail"
     action: "activate_disaster_recovery"
@@ -281,7 +281,7 @@ recovery:
       - "verify_functionality"
       - "sync_data_from_secondary"
       - "resume_as_primary"
-  
+
   canary_promotion:
     traffic_percentage: [5, 25, 50, 100]
     duration_per_stage: "5m"
@@ -302,21 +302,21 @@ cat > scripts/phase-19-dr-activation.sh <<'DRSITE'
 
 activate_dr_site() {
   echo "🚨 Activating Disaster Recovery Site"
-  
+
   # Step 1: Restore from latest valid backup
   echo "1. Restoring from latest backup..."
   LATEST_BACKUP=$(ls -t /backups/*.tar.gz | head -n 1)
-  
+
   if [[ -z "$LATEST_BACKUP" ]]; then
     echo "❌ No valid backup found"
     return 1
   fi
-  
+
   docker run --rm \
     -v "$(dirname $LATEST_BACKUP):/backup" \
     postgres:15 \
     pg_restore -d restored_db "/backup/$(basename $LATEST_BACKUP)"
-  
+
   # Step 2: Update DNS to point to DR site
   echo "2. Updating DNS for DR failover..."
   aws route53 change-resource-record-sets \
@@ -332,7 +332,7 @@ activate_dr_site() {
         }
       }]
     }'
-  
+
   # Step 3: Verify DR site operational
   echo "3. Verifying DR site operational..."
   for i in {1..30}; do
@@ -343,7 +343,7 @@ activate_dr_site() {
     echo "  Waiting for DR site to become operational ($i/30)..."
     sleep 10
   done
-  
+
   # Step 4: Notify stakeholders
   echo "4. Notifying stakeholders..."
   curl -X POST https://alerts.example.com/webhook \
@@ -353,7 +353,7 @@ activate_dr_site() {
       "message": "🚨 DISASTER RECOVERY ACTIVATED - System recovered from backup at ' $(date -u +%Y-%m-%dT%H:%M:%SZ) '",
       "severity": "critical"
     }'
-  
+
   echo "✅ DR site activation complete"
 }
 
@@ -383,7 +383,7 @@ Deployed Components:
 Recovery Objectives:
   RTO (Recovery Time Objective): < 1 hour
   RPO (Recovery Point Objective): < 5 minutes
-  
+
 Runbook Coverage:
   ✅ Primary region failure
   ✅ Secondary region failure

@@ -49,18 +49,18 @@ proxy:
   "*.key": true
   "*.pem": true
   "**/.*credentials*": true
-  
+
   # Hide SSH/config
   ".ssh": true
   ".config": true
   ".aws": true
   ".kube": true
-  
+
   # Hide git internals
   ".git/hooks": true
   ".git/objects": true
   ".git/refs/remotes": true
-  
+
   # Hide system files
   "node_modules": true
   ".venv": true

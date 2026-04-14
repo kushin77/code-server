@@ -184,6 +184,6 @@ kubectl rollout undo deployment/graphql-api -n default
 
 ---
 
-**Timeline**: Apr 17-19 (3 days, 12 hours effort)  
-**Status**: Ready to begin April 17  
+**Timeline**: Apr 17-19 (3 days, 12 hours effort)
+**Status**: Ready to begin April 17
 **Owner**: Infrastructure Team

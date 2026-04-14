@@ -448,4 +448,3 @@ output "audit_retention_compliance" {
 # - All incidents captured and persisted
 # - All RBAC decisions logged
 # - Query-able for SOC 2 assessments and audits
-

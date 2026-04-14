@@ -150,10 +150,10 @@ class DatabaseManager:
         try:
             with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(f"""
-                    SELECT 
-                        ev.id, 
-                        ev.webhook_id, 
-                        ev.event_type, 
+                    SELECT
+                        ev.id,
+                        ev.webhook_id,
+                        ev.event_type,
                         ev.event_data,
                         ev.retry_count,
                         w.url,

@@ -20,7 +20,7 @@ spec:
   geo-routing.yaml: |
     version: "1.0"
     routing_policy: "geographic"
-    
+
     regions:
       - name: "us-west-2"
         domain: "api.us-west.multi-region.example.com"
@@ -28,50 +28,50 @@ spec:
         priority: 1
         weight: 50
         latency_target_ms: 50
-        
+
       - name: "eu-west-1"
         domain: "api.eu-west.multi-region.example.com"
         cidr: "10.1.0.0/16"
         priority: 2
         weight: 30
         latency_target_ms: 80
-        
+
       - name: "ap-south-1"
         domain: "api.ap-south.multi-region.example.com"
         cidr: "10.2.0.0/16"
         priority: 3
         weight: 20
         latency_target_ms: 120
-    
+
     geo_location_rules:
       "North America":
         region: "us-west-2"
         countries: ["US", "CA", "MX"]
-        
+
       "Europe":
         region: "eu-west-1"
         countries: ["GB", "DE", "FR", "IE"]
-        
+
       "Asia Pacific":
         region: "ap-south-1"
         countries: ["IN", "SG", "AU"]
-        
+
       "Default":
         region: "us-west-2"
-    
+
     failover_rules:
       - primary: "us-west-2"
         secondary: "eu-west-1"
         tertiary: "ap-south-1"
-        
+
       - primary: "eu-west-1"
         secondary: "ap-south-1"
         tertiary: "us-west-2"
-        
+
       - primary: "ap-south-1"
         secondary: "us-west-2"
         tertiary: "eu-west-1"
-    
+
     health_check:
       enabled: true
       path: "/health"
@@ -134,7 +134,7 @@ spec:
                 name: multi-region-ingress
                 port:
                   number: 8080
-    
+
     - host: "api.us-west.multi-region.example.com"
       http:
         paths:
@@ -357,7 +357,7 @@ spec:
           annotations:
             summary: "Regional endpoint {{ $labels.endpoint }} is down"
             description: "Endpoint {{ $labels.endpoint }} has failed health checks"
-        
+
         - alert: HighLatencyDetected
           expr: |
             histogram_quantile(0.99, http_request_duration_seconds{region=~"us-west|eu-west|ap-south"}) > 1

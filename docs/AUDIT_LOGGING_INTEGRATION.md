@@ -164,7 +164,7 @@ def handle_git_operation(developer_id, operation, repo, branch, request):
     try:
         # Perform operation
         result = execute_git_operation(operation, repo, branch)
-        
+
         # Log success
         audit.log_event(
             event_type=f'GIT_{operation.upper()}',
@@ -178,7 +178,7 @@ def handle_git_operation(developer_id, operation, repo, branch, request):
             }
         )
         return result
-    
+
     except Exception as e:
         # Log failure
         audit.log_event(

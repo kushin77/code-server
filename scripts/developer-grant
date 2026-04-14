@@ -113,7 +113,7 @@ fi
 if grep -q "^${EMAIL}," "$DEVELOPERS_CSV"; then
     warning "Email already in database"
     EXISTING_STATUS=$(grep "^${EMAIL}," "$DEVELOPERS_CSV" | cut -d',' -f6)
-    
+
     if [ "$EXISTING_STATUS" = "active" ]; then
         error "Developer $EMAIL already has active access. Use developer-extend or developer-revoke."
     else
@@ -194,7 +194,7 @@ send_email_notification() {
     local TO="$1"
     local LINK="$2"
     local EXPIRY="$3"
-    
+
     # In production, use proper email service (sendmail, AWS SES, etc.)
     # This is a placeholder
     log "Email would be sent to: $TO"

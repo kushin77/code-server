@@ -33,7 +33,7 @@ log() {
   local message=$1
   local level=${2:-INFO}
   local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-  
+
   case $level in
     INFO)
       echo -e "${BLUE}[INFO]${NC} $message" | tee -a "$DEPLOYMENT_LOG"
@@ -53,13 +53,13 @@ log() {
 phase_banner() {
   local phase_num=$1
   local phase_name=$2
-  
+
   DEPLOY_PHASE=$((DEPLOY_PHASE + 1))
   echo ""
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║ PHASE $DEPLOY_PHASE: $phase_name" | sed 's/$/                            /' | cut -c1-66
   echo "╚══════════════════════════════════════════════════════════════╝"
-  
+
   log "Starting Phase $DEPLOY_PHASE: $phase_name"
 }
 
@@ -69,72 +69,72 @@ phase_banner() {
 
 check_prerequisites() {
   log "Checking prerequisites..."
-  
+
   local missing_tools=()
-  
+
   # Check required tools
   for tool in curl docker docker-compose git bash jq; do
     if ! command -v $tool &> /dev/null; then
       missing_tools+=("$tool")
     fi
   done
-  
+
   if [ ${#missing_tools[@]} -gt 0 ]; then
     log "Missing required tools: ${missing_tools[*]}" ERROR
     return 1
   fi
-  
+
   log "All prerequisites present" SUCCESS
   return 0
 }
 
 validate_source_code() {
   log "Validating source code integrity..."
-  
+
   local required_files=(
     "scripts/production-operations-setup-p0.sh"
     "docker-compose.yml"
   )
-  
+
   local missing_files=()
-  
+
   for file in "${required_files[@]}"; do
     if [ ! -f "$PROJECT_ROOT/$file" ]; then
       missing_files+=("$file")
     fi
   done
-  
+
   if [ ${#missing_files[@]} -gt 0 ]; then
     log "Missing source files: ${missing_files[*]}" ERROR
     return 1
   fi
-  
+
   log "All source files present" SUCCESS
   return 0
 }
 
 validate_docker_infrastructure() {
   log "Validating Docker infrastructure..."
-  
+
   # Check if Docker daemon is running
   if ! docker ps > /dev/null 2>&1; then
     log "Docker daemon is not running" ERROR
     return 1
   fi
-  
+
   log "Docker daemon is operational" SUCCESS
   return 0
 }
 
 validate_configuration() {
   log "Validating environment configuration..."
-  
+
   local required_env_vars=(
     "PROMETHEUS_HOST"
     "GRAFANA_HOST"
     "LOKI_HOST"
   )
-  
+
   for var in "${required_env_vars[@]}"; do
     if [ -z "${!var:-}" ]; then
       log "Setting default for $var..."
@@ -145,12 +145,12 @@ validate_configuration() {
       esac
     fi
   done
-  
+
   log "Configuration validated with environment variables:" SUCCESS
   log "  PROMETHEUS_HOST=$PROMETHEUS_HOST"
   log "  GRAFANA_HOST=$GRAFANA_HOST"
   log "  LOKI_HOST=$LOKI_HOST"
-  
+
   return 0
 }
 
@@ -160,161 +160,161 @@ validate_configuration() {
 
 start_monitoring_infrastructure() {
   log "Starting monitoring infrastructure services..."
-  
+
   if [ -f "$PROJECT_ROOT/docker-compose.yml" ]; then
     docker-compose -f "$PROJECT_ROOT/docker-compose.yml" up -d || {
       log "Failed to start docker-compose services" ERROR
       return 1
     }
-    
+
     log "Infrastructure started, waiting for health checks..." INFO
-    
+
     # Wait for services to be ready
     local max_attempts=30
     local attempt=0
-    
+
     while [ $attempt -lt $max_attempts ]; do
       if curl -s http://localhost:9090 > /dev/null 2>&1; then
         log "Prometheus is healthy" SUCCESS
         break
       fi
-      
+
       attempt=$((attempt + 1))
       sleep 1
     done
-    
+
     if [ $attempt -eq $max_attempts ]; then
       log "Prometheus failed to become healthy" WARN
     fi
   else
     log "docker-compose.yml not found, skipping infrastructure startup" WARN
   fi
-  
+
   return 0
 }
 
 deploy_p0_operations() {
   phase_banner "P0 Operations" "Deploy Monitoring and Alerting"
-  
+
   log "Executing P0 operations setup..."
-  
+
   if [ ! -x "$SCRIPT_DIR/production-operations-setup-p0.sh" ]; then
     log "P0 script not executable, fixing permissions..."
     chmod +x "$SCRIPT_DIR/production-operations-setup-p0.sh"
   fi
-  
+
   cd "$PROJECT_ROOT"
   bash "$SCRIPT_DIR/production-operations-setup-p0.sh" 2>&1 | tee -a "$DEPLOYMENT_LOG" || {
     log "P0 operations setup completed with warnings (some features may be optional)" WARN
   }
-  
+
   log "P0 operations setup executed" SUCCESS
   return 0
 }
 
 validate_monitoring_dashboards() {
   phase_banner "Monitoring" "Validate Monitoring Dashboards"
-  
+
   log "Validating monitoring dashboards..."
-  
+
   # Check if SLO dashboard definition exists
   if [ -f "/tmp/slo-dashboard.json" ]; then
     log "SLO dashboard definition found" SUCCESS
   else
     log "SLO dashboard definition not found (will be created by P0 script)" WARN
   fi
-  
+
   # Attempt to query Prometheus
   if curl -s http://localhost:9090/api/v1/query?query=up > /dev/null 2>&1; then
     log "Prometheus API is responsive" SUCCESS
-    
+
     # Get list of metrics
     METRICS=$(curl -s http://localhost:9090/api/v1/label/__name__/values 2>/dev/null | jq '.data | length' 2>/dev/null || echo "N/A")
     log "Prometheus has $METRICS metrics available"
   else
     log "Prometheus not yet available (may still be starting)" WARN
   fi
-  
+
   return 0
 }
 
 validate_alerting_rules() {
   phase_banner "Alerting" "Validate Alerting Rules"
-  
+
   log "Validating alerting rules..."
-  
+
   # Check if alerting rules are configured
   if curl -s http://localhost:9090/api/v1/rules 2>/dev/null | grep -q '"groups"'; then
     log "Alerting rules are configured in Prometheus" SUCCESS
   else
     log "Alerting rules validation (may be loading)" WARN
   fi
-  
+
   return 0
 }
 
 validate_grafana_dashboards() {
   phase_banner "Grafana" "Validate Grafana Dashboards"
-  
+
   log "Validating Grafana dashboards..."
-  
+
   # Check if Grafana is responding
   if curl -s http://localhost:3000/api/health > /dev/null 2>&1; then
     log "Grafana API is responsive" SUCCESS
-    
+
     # List available dashboards
     DASHBOARDS=$(curl -s http://localhost:3000/api/search 2>/dev/null | jq '. | length' 2>/dev/null || echo "unknown")
     log "Grafana has $DASHBOARDS dashboards configured"
   else
     log "Grafana not yet available (may still be starting)" WARN
   fi
-  
+
   return 0
 }
 
 validate_logging_infrastructure() {
   phase_banner "Logging" "Validate Logging Aggregation"
-  
+
   log "Validating logging infrastructure..."
-  
+
   # Check if Loki is responding
   if curl -s http://localhost:3100/ready > /dev/null 2>&1; then
     log "Loki is healthy" SUCCESS
   else
     log "Loki not yet available (may still be starting)" WARN
   fi
-  
+
   return 0
 }
 
 validate_incident_response() {
   phase_banner "Incident Response" "Validate On-Call Setup"
-  
+
   log "Validating incident response infrastructure..."
-  
+
   # Check if alertmanager is responding
   if curl -s http://localhost:9093 > /dev/null 2>&1; then
     log "Alertmanager is responsive" SUCCESS
   else
     log "Alertmanager not yet available (may still be starting)" WARN
   fi
-  
+
   log "On-call rotation should be configured externally (PagerDuty, Opsgenie, etc.)"
   log "Runbooks available in scripts/incident-runbooks/"
-  
+
   return 0
 }
 
 generate_p0_report() {
   phase_banner "Reporting" "Generate P0 Deployment Report"
-  
+
   local deploy_end=$(date +%s)
   local deploy_duration=$((deploy_end - DEPLOY_START))
   local deploy_minutes=$((deploy_duration / 60))
   local deploy_seconds=$((deploy_duration % 60))
-  
+
   log "Generating P0 deployment report..."
-  
+
   cat > "$PROJECT_ROOT/P0-OPERATIONS-DEPLOYMENT-REPORT.md" << EOF
 # P0 Operations Deployment Report
 
@@ -326,7 +326,7 @@ generate_p0_report() {
 P0 operations infrastructure has been deployed. This includes:
 
 ✅ Monitoring Dashboard (SLO tracking)
-✅ Prometheus Metrics Collection  
+✅ Prometheus Metrics Collection
 ✅ Grafana Visualization
 ✅ Loki Log Aggregation
 ✅ Alertmanager Configuration
@@ -424,7 +424,7 @@ Full log available at: $DEPLOYMENT_LOG
 **Next Priority: Tier 3 Caching Deployment Validation**
 
 EOF
-  
+
   log "Report generated: $PROJECT_ROOT/P0-OPERATIONS-DEPLOYMENT-REPORT.md" SUCCESS
 }
 
@@ -443,12 +443,12 @@ main() {
   echo "║    Production Monitoring & Incident Response Setup           ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
   echo ""
-  
+
   log "Deployment started at $(date '+%Y-%m-%d %H:%M:%S')" INFO
   log "Project root: $PROJECT_ROOT" INFO
   log "Deployment log: $DEPLOYMENT_LOG" INFO
   echo ""
-  
+
   # Phase 1: Validation
   phase_banner "Validation" "Pre-Deployment Validation"
   check_prerequisites || { cleanup_on_error; exit 1; }
@@ -456,16 +456,16 @@ main() {
   validate_docker_infrastructure || { cleanup_on_error; exit 1; }
   validate_configuration || { cleanup_on_error; exit 1; }
   echo ""
-  
+
   # Phase 2: Infrastructure
   phase_banner "Infrastructure" "Start Monitoring Infrastructure"
   start_monitoring_infrastructure || { cleanup_on_error; exit 1; }
   echo ""
-  
+
   # Phase 3: P0 Operations
   deploy_p0_operations || { cleanup_on_error; exit 1; }
   echo ""
-  
+
   # Phase 4: Validation
   validate_monitoring_dashboards || true
   validate_alerting_rules || true
@@ -473,17 +473,17 @@ main() {
   validate_logging_infrastructure || true
   validate_incident_response || true
   echo ""
-  
+
   # Phase 5: Reporting
   generate_p0_report
   echo ""
-  
+
   # Success
   local deploy_end=$(date +%s)
   local deploy_duration=$((deploy_end - DEPLOY_START))
   local deploy_minutes=$((deploy_duration / 60))
   local deploy_seconds=$((deploy_duration % 60))
-  
+
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║ ✅ P0 DEPLOYMENT COMPLETE ✅                                ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
@@ -507,7 +507,7 @@ main() {
   echo "  4. Review incident response procedures"
   echo "  5. Deploy Tier 3 caching with P0 monitoring active"
   echo ""
-  
+
   log "Deployment completed successfully" SUCCESS
 }
 

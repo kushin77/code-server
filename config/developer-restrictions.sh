@@ -70,7 +70,7 @@ alias logs='tail -f /var/log/*.log 2>/dev/null || echo "No logs readable"'
 git() {
     # Log the git operation
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] GIT: "$@"" >> "$DEVELOPER_SESSION_LOG"
-    
+
     # Allow git operations (credential helper will handle SSH key access)
     command git "$@"
 }
@@ -79,9 +79,9 @@ git() {
 export_project_review() {
     local format="${1:-tar}"
     local output_dir="/tmp/dev-session"
-    
+
     echo "Exporting project for review..."
-    
+
     case "$format" in
         tar)
             echo "Creating tar.gz archive..."
@@ -147,15 +147,15 @@ session_remaining() {
     local session_limit=14400  # 4 hours (matches Cloudflare Access default)
     local elapsed=$(($(date +%s) - SESSION_START_TIME))
     local remaining=$((session_limit - elapsed))
-    
+
     if [ $remaining -le 0 ]; then
         echo "SESSION EXPIRED - Please reauthenticate"
         return 1
     fi
-    
+
     local hours=$((remaining / 3600))
     local minutes=$(( (remaining % 3600) / 60 ))
-    
+
     echo "Session time remaining: ${hours}h ${minutes}m"
 }
 
@@ -244,7 +244,7 @@ fi
 # Cleanup function to run when session exits
 cleanup_session() {
     local session_duration=$(($(date +%s) - SESSION_START_TIME))
-    
+
     {
         echo ""
         echo "=== DEVELOPER SESSION END ==="
@@ -252,10 +252,10 @@ cleanup_session() {
         echo "Duration: $((session_duration / 60)) minutes"
         echo "=========================="
     } >> "$DEVELOPER_SESSION_LOG" 2>/dev/null || true
-    
+
     # Clean up credential cache
     rm -rf "/tmp/dev-git-creds-${DEVELOPER_USERNAME}-${DEVELOPER_SESSION_ID:0:8}" 2>/dev/null || true
-    
+
     echo "Session logged. Thank you for using code-server."
 }
 
@@ -263,7 +263,7 @@ trap cleanup_session EXIT
 
 ###############################################################################
 # NOTES:
-# 
+#
 # This profile script is sourced by /bin/bash when starting the shell.
 # It sets up a secure environment for developers using code-server
 # with read-only access.

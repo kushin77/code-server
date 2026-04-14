@@ -5,7 +5,7 @@ Configure developers' machines to use the git proxy server.
 
 Usage:
   git config --global credential.helper cloudflare-proxy
-  
+
 Or per-repo:
   git config credential.helper cloudflare-proxy
 """
@@ -48,7 +48,7 @@ def get_cloudflare_token() -> Optional[str]:
     token = os.getenv("CF_ACCESS_TOKEN")
     if token:
         return token
-    
+
     # Try to get from Cloudflare local machine auth
     try:
         result = subprocess.run(
@@ -60,18 +60,18 @@ def get_cloudflare_token() -> Optional[str]:
             return result.stdout.decode().strip()
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
-    
+
     raise RuntimeError("Unable to obtain Cloudflare Access token. Ensure CF_ACCESS_TOKEN is set or cloudflared is running.")
 
 
 def call_proxy(operation: str, **kwargs) -> dict:
     """Call the git proxy server API"""
-    
+
     token = get_cloudflare_token()
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     import requests
-    
+
     if operation == "get":
         # Ask proxy to authenticate
         response = requests.post(
@@ -112,7 +112,7 @@ def call_proxy(operation: str, **kwargs) -> dict:
         return {}
     else:
         raise ValueError(f"Unknown operation: {operation}")
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -121,38 +121,38 @@ def call_proxy(operation: str, **kwargs) -> dict:
 
 def main():
     """Main credential helper entry point"""
-    
+
     if len(sys.argv) < 2:
         print("Usage: git-credential-cloudflare-proxy <operation>", file=sys.stderr)
         sys.exit(1)
-    
+
     operation = sys.argv[1]
-    
+
     try:
         # Read input from git
         data = read_git_input()
-        
+
         if operation == "get":
             # Ask proxy to authenticate
             result = call_proxy("get", host=data.get("host", "github.com"))
-            
+
             # Output in git credential helper format
             print(f"host={data['host']}")
             print(f"protocol={data.get('protocol', 'https')}")
             print(f"username={result.get('username', 'git')}")
             print("password=authenticated-via-proxy")
-        
+
         elif operation == "store":
             # No-op, credentials handled by proxy
             pass
-        
+
         elif operation == "erase":
             # No-op
             pass
-        
+
         else:
             raise ValueError(f"Unknown operation: {operation}")
-    
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

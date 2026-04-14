@@ -30,7 +30,7 @@ with open(FILE + '.new', 'w') as f:
     # Write all lines up to and including the correct networks section
     for i in range(min(392, len(lines))):
         f.write(lines[i])
-    
+
     # Now add redis-cache-data volume if it wasn't added yet
     # Check if redis-data was in the volumes section
     volumes_section = ''.join(lines[:392])
@@ -57,13 +57,13 @@ try:
     with open(FILE + '.new', 'r') as f:
         yaml.safe_load(f)
     print("✓ YAML is valid!")
-    
+
     # Replace original
     import shutil
     shutil.copy(FILE, FILE + '.broken')
     shutil.copy(FILE + '.new', FILE)
     print("✓ docker-compose.yml fixed!")
-    
+
 except yaml.YAMLError as e:
     print(f"✗ YAML error: {e}")
     # Show what we generated

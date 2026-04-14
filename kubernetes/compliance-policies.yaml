@@ -21,21 +21,21 @@ spec:
     - target: admission.k8s.gatekeeper.sh
       rego: |
         package containerimagewhitelist
-        
+
         violation[{"msg": msg}] {
           container := input.review.object.spec.containers[_]
           image := container.image
           not allowed_image(image)
           msg := sprintf("Image '%v' comes from untrusted registry. Allowed: %v", [image, input.parameters.allowedRegistries])
         }
-        
+
         violation[{"msg": msg}] {
           container := input.review.object.spec.initContainers[_]
           image := container.image
           not allowed_image(image)
           msg := sprintf("Init image '%v' from untrusted registry", [image])
         }
-        
+
         allowed_image(image) {
           registry := split(image, "/")[0]
           registry == input.parameters.allowedRegistries[_]
@@ -60,13 +60,13 @@ spec:
     - target: admission.k8s.gatekeeper.sh
       rego: |
         package requirerequestslimits
-        
+
         violation[{"msg": msg}] {
           container := input.review.object.spec.containers[_]
           not container.resources.requests
           msg := sprintf("Container '%v' missing resource requests", [container.name])
         }
-        
+
         violation[{"msg": msg}] {
           container := input.review.object.spec.containers[_]
           not container.resources.limits
@@ -97,12 +97,12 @@ spec:
     - target: admission.k8s.gatekeeper.sh
       rego: |
         package requirelabels
-        
+
         violation[{"msg": msg}] {
           not has_required_label
           msg := sprintf("Missing required labels: %v", [input.parameters.requiredLabels])
         }
-        
+
         has_required_label {
           labels := input.review.object.metadata.labels
           required := input.parameters.requiredLabels[_]
@@ -128,12 +128,12 @@ spec:
     - target: admission.k8s.gatekeeper.sh
       rego: |
         package pspbaseline
-        
+
         violation[{"msg": "Container must not run as root"}] {
           container := input.review.object.spec.containers[_]
           container.securityContext.runAsUser == 0
         }
-        
+
         violation[{"msg": "Privileged containers not allowed"}] {
           container := input.review.object.spec.containers[_]
           container.securityContext.privileged == true
@@ -163,7 +163,7 @@ spec:
     - target: admission.k8s.gatekeeper.sh
       rego: |
         package requireauditannotations
-        
+
         violation[{"msg": msg}] {
           required := input.parameters.requiredAnnotations[_]
           not input.review.object.metadata.annotations[required]
@@ -269,35 +269,35 @@ data:
       - level: Metadata
         omitStages:
           - RequestReceived
-      
+
       # Log pod exec with request/response body
       - level: RequestResponse
         verbs: ["create", "update", "patch", "delete"]
         resources:
           - group: ""
             resources: ["pods/exec", "pods/portforward"]
-      
+
       # Log ConfigMap and Secret changes
       - level: RequestResponse
         verbs: ["create", "update", "patch"]
         resources:
           - group: ""
             resources: ["configmaps", "secrets"]
-      
+
       # Log RBAC changes
       - level: RequestResponse
         verbs: ["create", "update", "patch"]
         resources:
           - group: "rbac.authorization.k8s.io"
             resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
-      
+
       # Log resource quota/limit changes
       - level: RequestResponse
         verbs: ["create", "update", "patch"]
         resources:
           - group: ""
             resources: ["resourcequotas", "limitranges"]
-      
+
       # Default: log at Metadata level
       - level: Metadata
 

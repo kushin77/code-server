@@ -48,45 +48,45 @@ sudo tee "$DOCKER_CONFIG" > /dev/null <<'EOF'
         }
     },
     "default-runtime": "runc",
-    
+
     "storage-driver": "overlay2",
     "storage-opts": [
         "overlay2.override_kernel_check=true"
     ],
-    
+
     "log-driver": "json-file",
     "log-opts": {
         "max-size": "100m",
         "max-file": "10",
         "labels": "com.docker.ps.app"
     },
-    
+
     "metrics-addr": "127.0.0.1:9323",
     "experimental": true,
     "userland-proxy": false,
-    
+
     "default-ipc": "private",
     "ipc-mode": "private",
-    
+
     "max-concurrent-downloads": 10,
     "max-concurrent-uploads": 5,
-    
+
     "data-root": "/var/lib/docker",
-    
+
     "bridge": "none",
     "ip": "0.0.0.0",
     "ip-forward": true,
     "ip-masq": true,
     "iptables": true,
-    
+
     "live-restore": true,
     "help": false,
-    
+
     "labels": [
         "com.docker.system=host-31",
         "com.docker.optimization=enabled"
     ],
-    
+
     "log-level": "info",
     "pidfile": "/var/run/docker.pid"
 }

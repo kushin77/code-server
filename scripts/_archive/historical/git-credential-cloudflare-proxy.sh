@@ -21,16 +21,16 @@ case "$operation" in
       [[ -z "$key" ]] && break
       cred[$key]="$value"
     done
-    
+
     protocol="${cred[protocol]}"
     host="${cred[host]}"
     username="${cred[username]}"
-    
+
     # Call proxy to authenticate (proxy handles SSH key)
     response=$(curl -s -H "Authorization: Bearer $SESSION_TOKEN" \
       "$PROXY_URL/credentials?host=$host&username=$username" \
       --data "protocol=$protocol")
-    
+
     if [ $? -eq 0 ]; then
       # Return credential in git credential protocol format
       echo "protocol=${cred[protocol]}"
@@ -42,12 +42,12 @@ case "$operation" in
       exit 1
     fi
     ;;
-    
+
   store)
     # Git wants to store credentials (we don't - handled by proxy)
     # Just discard the request
     ;;
-    
+
   erase)
     # Git wants to forget credentials (no-op for proxy mode)
     ;;

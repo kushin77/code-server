@@ -31,7 +31,7 @@ log_skip() { echo -e "${YELLOW}[SKIP]${NC} $@" | tee -a "${TEST_LOG}"; ((TESTS_S
 
 test_kubefed_config_exists() {
     log_info "Test: KubeFed configuration files exist"
-    
+
     if [ -f "${PROJECT_ROOT}/config/multi-cluster/kubefed-config.yaml" ]; then
         log_pass "kubefed-config.yaml exists"
     else
@@ -43,9 +43,9 @@ test_kubefed_config_exists() {
 
 test_kubefed_config_syntax() {
     log_info "Test: KubeFed YAML syntax validation"
-    
+
     local config_file="${PROJECT_ROOT}/config/multi-cluster/kubefed-config.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "KubeFed config not found"
         return 0
@@ -63,9 +63,9 @@ test_kubefed_config_syntax() {
 
 test_istio_federation_config() {
     log_info "Test: Istio multi-cluster configuration"
-    
+
     local config_file="${PROJECT_ROOT}/config/multi-cluster/istio-federation.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Istio federation config not found"
         return 0
@@ -87,9 +87,9 @@ test_istio_federation_config() {
 
 test_resource_quotas_config() {
     log_info "Test: Resource quotas configuration"
-    
+
     local config_file="${PROJECT_ROOT}/config/cost-optimization/resource-quotas.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Resource quotas config not found"
         return 0
@@ -107,9 +107,9 @@ test_resource_quotas_config() {
 
 test_autoscaling_policy() {
     log_info "Test: Horizontal Pod Autoscaler configuration"
-    
+
     local config_file="${PROJECT_ROOT}/config/cost-optimization/pod-disruption-budgets.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Autoscaling policy not found"
         return 0
@@ -128,9 +128,9 @@ test_autoscaling_policy() {
 
 test_hpa_scaling_logic() {
     log_info "Test: HPA scaling behavior logic"
-    
+
     local config_file="${PROJECT_ROOT}/config/cost-optimization/pod-disruption-budgets.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "HPA config not found"
         return 0
@@ -153,9 +153,9 @@ test_hpa_scaling_logic() {
 
 test_argocd_config() {
     log_info "Test: ArgoCD multi-cluster configuration"
-    
+
     local config_file="${PROJECT_ROOT}/config/gitops/argocd-multi-cluster.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "ArgoCD config not found"
         return 0
@@ -173,9 +173,9 @@ test_argocd_config() {
 
 test_argocd_rbac() {
     log_info "Test: ArgoCD RBAC policies"
-    
+
     local config_file="${PROJECT_ROOT}/config/gitops/argocd-multi-cluster.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "ArgoCD RBAC not found"
         return 0
@@ -193,9 +193,9 @@ test_argocd_rbac() {
 
 test_flux_config() {
     log_info "Test: Flux v2 configuration"
-    
+
     local config_file="${PROJECT_ROOT}/config/gitops/flux-multi-cluster.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Flux config not found"
         return 0
@@ -217,9 +217,9 @@ test_flux_config() {
 
 test_terraform_providers() {
     log_info "Test: Terraform multi-cloud providers"
-    
+
     local config_file="${PROJECT_ROOT}/config/multi-cloud/terraform-config.hcl"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Terraform config not found"
         return 0
@@ -238,9 +238,9 @@ test_terraform_providers() {
 
 test_terraform_variables() {
     log_info "Test: Terraform cluster variables"
-    
+
     local config_file="${PROJECT_ROOT}/config/multi-cloud/terraform-config.hcl"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Terraform variables not found"
         return 0
@@ -258,9 +258,9 @@ test_terraform_variables() {
 
 test_cloud_agnostic_mesh() {
     log_info "Test: Cloud-agnostic service mesh"
-    
+
     local config_file="${PROJECT_ROOT}/config/multi-cloud/cloud-agnostic-mesh.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Cloud-agnostic mesh config not found"
         return 0
@@ -278,9 +278,9 @@ test_cloud_agnostic_mesh() {
 
 test_multi_cloud_routing_weights() {
     log_info "Test: Multi-cloud traffic routing weights"
-    
+
     local config_file="${PROJECT_ROOT}/config/multi-cloud/cloud-agnostic-mesh.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Multi-cloud routing not found"
         return 0
@@ -302,7 +302,7 @@ test_multi_cloud_routing_weights() {
 
 test_all_config_files_exist() {
     log_info "Test: All Phase 18 configuration files exist"
-    
+
     local required_files=(
         "config/multi-cluster/kubefed-config.yaml"
         "config/multi-cluster/istio-federation.yaml"
@@ -332,7 +332,7 @@ test_all_config_files_exist() {
 
 test_deployment_scripts_exist() {
     log_info "Test: Phase 18 deployment scripts exist"
-    
+
     local required_scripts=(
         "scripts/phase-18-enterprise-scaling.sh"
         "scripts/phase-18-orchestrator.sh"
@@ -361,10 +361,10 @@ test_deployment_scripts_exist() {
 
 test_federation_and_gitops_integration() {
     log_info "Test: Federation and GitOps integration"
-    
+
     local federation_config="${PROJECT_ROOT}/config/multi-cluster/kubefed-config.yaml"
     local gitops_config="${PROJECT_ROOT}/config/gitops/argocd-multi-cluster.yaml"
-    
+
     if [ ! -f "${federation_config}" ] || [ ! -f "${gitops_config}" ]; then
         log_skip "Integration test configs not found"
         return 0
@@ -382,9 +382,9 @@ test_federation_and_gitops_integration() {
 
 test_cost_optimization_and_scaling() {
     log_info "Test: Cost optimization and autoscaling integration"
-    
+
     local cost_config="${PROJECT_ROOT}/config/cost-optimization/pod-disruption-budgets.yaml"
-    
+
     if [ ! -f "${cost_config}" ]; then
         log_skip "Cost optimization config not found"
         return 0
@@ -406,9 +406,9 @@ test_cost_optimization_and_scaling() {
 
 test_expected_cost_savings() {
     log_info "Test: Cost optimization targets are configured"
-    
+
     local config_file="${PROJECT_ROOT}/config/cost-optimization/pod-disruption-budgets.yaml"
-    
+
     if [ ! -f "${config_file}" ]; then
         log_skip "Cost config not found"
         return 0
@@ -426,9 +426,9 @@ test_expected_cost_savings() {
 
 test_failover_rto_capability() {
     log_info "Test: Multi-cluster failover RTO capability"
-    
+
     local federation_config="${PROJECT_ROOT}/config/multi-cluster/istio-federation.yaml"
-    
+
     if [ ! -f "${federation_config}" ]; then
         log_skip "Failover config not found"
         return 0
@@ -451,7 +451,7 @@ test_failover_rto_capability() {
 print_summary() {
     local total=$((TESTS_PASSED + TESTS_FAILED + TESTS_SKIPPED))
     local pass_rate=0
-    
+
     if [ $total -gt 0 ]; then
         pass_rate=$(( (TESTS_PASSED * 100) / total ))
     fi
@@ -533,7 +533,7 @@ main() {
 
     # Print summary
     print_summary
-    
+
     log_info "Test Log: ${TEST_LOG}"
     return 0
 }

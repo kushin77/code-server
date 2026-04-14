@@ -65,7 +65,7 @@ data "cloudflare_zone" "main" {
 # CLOUDFLARE TUNNEL (Idempotent Resource)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Create tunnel record in Cloudflare 
+# Create tunnel record in Cloudflare
 # Note: Tunnel secret/token must be configured manually or via cloudflared CLI
 # This Terraform creates the CNAME and access policies
 resource "cloudflare_tunnel_route" "code_server" {

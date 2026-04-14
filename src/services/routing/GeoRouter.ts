@@ -1,7 +1,7 @@
 /**
  * Geographic Router - Global request routing with region awareness
  * Phase 12.3: Geographic Routing
- * 
+ *
  * Responsibilities:
  * - Route requests to optimal region based on user location and region state
  * - Support latency-based routing with region health consideration

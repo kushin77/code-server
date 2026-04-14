@@ -48,12 +48,12 @@ evaluate_criterion() {
     local target=$3
     local comparison=$4  # "less", "greater", "equal"
     local is_critical=$5  # "true" or "false"
-    
+
     GO_CRITERIA_TOTAL=$((GO_CRITERIA_TOTAL + 1))
-    
+
     local status="UNKNOWN"
     local passes=false
-    
+
     case "${comparison}" in
         less)
             if (( $(echo "$actual < $target" | bc -l) )); then
@@ -77,7 +77,7 @@ evaluate_criterion() {
             status="UNKNOWN"
             ;;
     esac
-    
+
     # Determine color
     local color="${GREEN}"
     if [ "${status}" = "FAIL" ]; then
@@ -86,9 +86,9 @@ evaluate_criterion() {
             NOGO_TRIGGERED=true
         fi
     fi
-    
+
     printf "  ${color}[${status}]${NC} ${name}: ${actual} (target: ${target})\n"
-    
+
     return 0
 }
 
@@ -96,27 +96,27 @@ evaluate_criterion() {
 collect_final_metrics() {
     echo -e "${BLUE}Collecting Final Metrics from ${REMOTE_HOST}${NC}"
     echo ""
-    
+
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "${REMOTE_USER}@${REMOTE_HOST}" << 'EOFMETRICS' > "${METRICS_DIR}/collected-metrics.txt" 2>&1 || true
-    
+
     echo "[FINAL METRICS COLLECTION - $(date -u +%Y-%m-%dT%H:%M:%SZ)]"
     echo ""
-    
+
     echo "=== Load Test Execution Summary ==="
     if [ -f /tmp/phase-13-orchestrator-summary.txt ]; then
         cat /tmp/phase-13-orchestrator-summary.txt
     fi
     echo ""
-    
+
     echo "=== Container Final State ==="
     docker inspect code-server-31 --format 'State: {{.State.Status}}, Uptime: {{.State.StartedAt}}' 2>/dev/null || echo "Container state unknown"
     echo ""
-    
+
     echo "=== Final Resource Metrics ==="
     docker stats code-server-31 --no-stream 2>/dev/null || echo "Stats unavailable"
     echo ""
-    
+
     echo "=== Load Test Metrics ==="
     if [ -f /tmp/phase-13-metrics/final-metrics.json ]; then
         cat /tmp/phase-13-metrics/final-metrics.json
@@ -124,7 +124,7 @@ collect_final_metrics() {
         echo "Metrics file not found - using aggregated data"
     fi
     echo ""
-    
+
     echo "=== System Health ==="
     df -h /
     echo ""
@@ -132,7 +132,7 @@ collect_final_metrics() {
     echo ""
 
 EOFMETRICS
-    
+
     echo -e "${GREEN}Metrics collected${NC}"
     echo ""
 }
@@ -141,10 +141,10 @@ EOFMETRICS
 evaluate_metrics() {
     echo -e "${BLUE}Evaluating SLO Compliance${NC}"
     echo ""
-    
+
     # For now, we'll use placeholder values
     # In production, these would be parsed from actual metrics files
-    
+
     # Simulated metric values (would come from /tmp/phase-13-metrics/final-metrics.json)
     local p99_latency=75.5
     local p95_latency=42.3
@@ -152,7 +152,7 @@ evaluate_metrics() {
     local throughput=125
     local availability=99.95
     local unplanned_restarts=0
-    
+
     echo "Collected Metrics:"
     echo "  p99 Latency: ${p99_latency}ms"
     echo "  p95 Latency: ${p95_latency}ms"
@@ -161,10 +161,10 @@ evaluate_metrics() {
     echo "  Availability: ${availability}%"
     echo "  Unplanned Restarts: ${unplanned_restarts}"
     echo ""
-    
+
     echo "SLO Evaluation:"
     echo ""
-    
+
     # Evaluate Go criteria
     evaluate_criterion "p99 Latency Target" "${p99_latency}" "${SLO_P99_LATENCY_MS}" "less" "false"
     evaluate_criterion "p95 Latency Target" "${p95_latency}" "${SLO_P95_LATENCY_MS}" "less" "false"
@@ -172,29 +172,29 @@ evaluate_metrics() {
     evaluate_criterion "Throughput Target" "${throughput}" "${SLO_THROUGHPUT_MIN}" "greater" "true"
     evaluate_criterion "Availability Target" "${availability}" "${SLO_AVAILABILITY_PERCENT}" "greater" "true"
     evaluate_criterion "Unplanned Restarts" "${unplanned_restarts}" "0" "equal" "true"
-    
+
     echo ""
-    
+
     # No-Go thresholds
     echo "No-Go Escalation Checks:"
     echo ""
-    
+
     if (( $(echo "$p99_latency > $NOGO_P99_LATENCY_MS" | bc -l) )); then
         echo -e "  ${RED}[NOGO]${NC} p99 Latency exceeded escalation threshold: ${p99_latency}ms > ${NOGO_P99_LATENCY_MS}ms"
         NOGO_TRIGGERED=true
     else
         echo -e "  ${GREEN}[PASS]${NC} p99 Latency acceptable: ${p99_latency}ms <= ${NOGO_P99_LATENCY_MS}ms"
     fi
-    
+
     if (( $(echo "$error_rate > $NOGO_ERROR_RATE_PERCENT" | bc -l) )); then
         echo -e "  ${RED}[NOGO]${NC} Error rate exceeded: ${error_rate}% > ${NOGO_ERROR_RATE_PERCENT}%"
         NOGO_TRIGGERED=true
     else
         echo -e "  ${GREEN}[PASS]${NC} Error rate acceptable: ${error_rate}% <= ${NOGO_ERROR_RATE_PERCENT}%"
     fi
-    
+
     echo ""
-    
+
     echo "SLO Pass Rate: ${GO_CRITERIA_MET}/${GO_CRITERIA_TOTAL} criteria met"
     echo ""
 }
@@ -203,9 +203,9 @@ evaluate_metrics() {
 verify_infrastructure() {
     echo -e "${BLUE}Infrastructure Health Check${NC}"
     echo ""
-    
+
     local all_healthy=true
-    
+
     # SSH connectivity
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
        -o ConnectTimeout=5 "${REMOTE_USER}@${REMOTE_HOST}" "true" 2>/dev/null; then
@@ -214,7 +214,7 @@ verify_infrastructure() {
         echo -e "  ${RED}✗ SSH connectivity FAILED${NC}"
         all_healthy=false
     fi
-    
+
     # Container running
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
        "${REMOTE_USER}@${REMOTE_HOST}" "docker ps | grep -q code-server-31" 2>/dev/null; then
@@ -223,21 +223,21 @@ verify_infrastructure() {
         echo -e "  ${RED}✗ Code-server container not running${NC}"
         all_healthy=false
     fi
-    
+
     # Memory health
     local available_memory=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "${REMOTE_USER}@${REMOTE_HOST}" \
         "free -h | awk 'NR==2{print \$7}'" 2>/dev/null || echo "unknown")
     echo -e "  ${GREEN}✓ Available memory: ${available_memory}${NC}"
-    
+
     # Disk space
     local available_disk=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "${REMOTE_USER}@${REMOTE_HOST}" \
         "df -h / | awk 'NR==2{print \$4}'" 2>/dev/null || echo "unknown")
     echo -e "  ${GREEN}✓ Available disk: ${available_disk}${NC}"
-    
+
     echo ""
-    
+
     if [ "${all_healthy}" = "true" ]; then
         return 0
     else
@@ -249,18 +249,18 @@ verify_infrastructure() {
 generate_decision_report() {
     local decision=$1
     local rationale=$2
-    
+
     {
         echo "# Phase 13 Day 2: Go/No-Go Decision Report"
         echo ""
         echo "**Decision Date**: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         echo "**Decision**: **${decision}**"
         echo ""
-        
+
         echo "## Decision Rationale"
         echo "${rationale}"
         echo ""
-        
+
         echo "## SLO Compliance Summary"
         echo "- Criteria Met: ${GO_CRITERIA_MET}/${GO_CRITERIA_TOTAL}"
         if [ "${GO_CRITERIA_MET}" = "${GO_CRITERIA_TOTAL}" ]; then
@@ -269,14 +269,14 @@ generate_decision_report() {
             echo "- Status: ⚠️ PARTIAL COMPLIANCE"
         fi
         echo ""
-        
+
         echo "## Specific Findings"
         echo "- p99 Latency: Within SLO target"
         echo "- Error Rate: Within acceptable range"
         echo "- Infrastructure: Healthy"
         echo "- Container: Stable throughout 24h test"
         echo ""
-        
+
         echo "## Approved For"
         if [ "${decision}" = "GO" ]; then
             echo "✅ Phase 13 Day 3 execution authorized"
@@ -288,7 +288,7 @@ generate_decision_report() {
             echo "❌ Further investigation required"
         fi
         echo ""
-        
+
         echo "## Next Actions"
         if [ "${decision}" = "GO" ]; then
             echo "1. Proceed with Phase 13 Day 3 execution"
@@ -303,17 +303,17 @@ generate_decision_report() {
             echo "5. Schedule Phase 13 Day 2 retry after fixes"
         fi
         echo ""
-        
+
         echo "## Approvals Required"
         echo "- Infrastructure Team Lead: ____________________"
         echo "- Security Lead: ____________________"
         echo "- Product Owner: ____________________"
         echo ""
-        
+
         echo "---"
         echo "**Generated**: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         echo "**System**: Phase 13 Automation (Copilot Engineering)"
-        
+
     } | tee "${DECISION_REPORT}"
 }
 
@@ -321,19 +321,19 @@ generate_decision_report() {
 main() {
     echo -e "${YELLOW}Phase 13 Day 2 Go/No-Go Decision Process${NC}"
     echo ""
-    
+
     # Verify infrastructure
     if ! verify_infrastructure; then
         echo -e "${RED}Infrastructure health check failed${NC}"
         NOGO_TRIGGERED=true
     fi
-    
+
     # Collect final metrics
     collect_final_metrics
-    
+
     # Evaluate SLO compliance
     evaluate_metrics
-    
+
     # Make decision
     if [ "${NOGO_TRIGGERED}" = "true" ] || [ "${GO_CRITERIA_MET}" -lt "${GO_CRITERIA_TOTAL}" ]; then
         DECISION="NO-GO"
@@ -344,7 +344,7 @@ main() {
         RATIONALE="All SLO criteria met. Phase 13 Day 2 validation successful. Ready for Phase 13 Day 3."
         SYMBOL="${GREEN}✅${NC}"
     fi
-    
+
     echo ""
     echo "$(printf '%0.s═' {1..80})"
     echo -e "DECISION: ${SYMBOL} ${DECISION}"
@@ -352,13 +352,13 @@ main() {
     echo ""
     echo "Rationale: ${RATIONALE}"
     echo ""
-    
+
     # Generate decision report
     generate_decision_report "${DECISION}" "${RATIONALE}"
-    
+
     echo -e "${GREEN}Decision report saved to ${DECISION_REPORT}${NC}"
     echo ""
-    
+
     if [ "${DECISION}" = "GO" ]; then
         echo -e "${GREEN}✓ Phase 13 Day 2 COMPLETE - Ready for Phase 13 Day 3${NC}"
         return 0

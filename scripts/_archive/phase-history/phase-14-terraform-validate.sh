@@ -32,9 +32,9 @@ FAIL=0
 check() {
     local name=$1
     local cmd=$2
-    
+
     echo -n "▶ $name ... "
-    
+
     if eval "$cmd" > /tmp/check_output.txt 2>&1; then
         echo -e "${GREEN}✓ PASS${NC}"
         ((PASS++))

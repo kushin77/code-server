@@ -261,7 +261,7 @@ resource "aws_iam_role_policy" "gpu_node_s3_mlflow" {
 
 resource "kubernetes_namespace" "ml" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name = "ml-platform"
     labels = {
@@ -272,7 +272,7 @@ resource "kubernetes_namespace" "ml" {
 
 resource "kubernetes_service_account" "ml_trainer" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "ml-trainer"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -281,7 +281,7 @@ resource "kubernetes_service_account" "ml_trainer" {
 
 resource "kubernetes_cluster_role" "gpu_access" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name = "gpu-access"
   }
@@ -302,7 +302,7 @@ resource "kubernetes_cluster_role" "gpu_access" {
 
 resource "kubernetes_cluster_role_binding" "gpu_access" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name = "gpu-access-binding"
   }
@@ -327,7 +327,7 @@ resource "kubernetes_cluster_role_binding" "gpu_access" {
 
 resource "kubernetes_namespace" "nvidia_device_plugin" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name = "nvidia-device-plugin"
   }
@@ -450,7 +450,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "mlflow_artifacts"
 
 resource "kubernetes_persistent_volume_claim" "mlflow_database" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "mlflow-database-pvc"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -469,7 +469,7 @@ resource "kubernetes_persistent_volume_claim" "mlflow_database" {
 
 resource "kubernetes_deployment" "mlflow_server" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "mlflow-server"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -583,7 +583,7 @@ resource "kubernetes_deployment" "mlflow_server" {
 
 resource "kubernetes_service" "mlflow_server" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "mlflow-server"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -705,7 +705,7 @@ resource "helm_release" "jupyterhub" {
 
 resource "kubernetes_persistent_volume_claim" "feast_registry" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "feast-registry-pvc"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -724,7 +724,7 @@ resource "kubernetes_persistent_volume_claim" "feast_registry" {
 
 resource "kubernetes_deployment" "feast_server" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "feast-feature-server"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -808,7 +808,7 @@ resource "kubernetes_deployment" "feast_server" {
 
 resource "kubernetes_service" "feast_server" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "feast-feature-server"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -834,7 +834,7 @@ resource "kubernetes_service" "feast_server" {
 
 resource "kubernetes_config_map" "gpu_monitoring_dashboard" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "gpu-monitoring-dashboard"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -861,7 +861,7 @@ resource "kubernetes_config_map" "gpu_monitoring_dashboard" {
 
 resource "kubernetes_resource_quota" "ml_gpu" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "ml-gpu-quota"
     namespace = kubernetes_namespace.ml[0].metadata[0].name
@@ -880,7 +880,7 @@ resource "kubernetes_resource_quota" "ml_gpu" {
 
 resource "kubernetes_limit_range" "ml_limits" {
   count = var.enable_gpu_compute_infrastructure ? 1 : 0
-  
+
   metadata {
     name      = "ml-limit-range"
     namespace = kubernetes_namespace.ml[0].metadata[0].name

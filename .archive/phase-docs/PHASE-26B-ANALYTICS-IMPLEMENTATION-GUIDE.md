@@ -5,10 +5,10 @@
 
 ## OVERVIEW
 
-**Duration**: 15 hours (Apr 20-24)  
-**Components**: ClickHouse, aggregator, Grafana, React UI  
-**Deployment**: Kubernetes on 192.168.168.31  
-**Scalability**: 5-50 concurrent dashboards, 1M metrics/sec ingestion  
+**Duration**: 15 hours (Apr 20-24)
+**Components**: ClickHouse, aggregator, Grafana, React UI
+**Deployment**: Kubernetes on 192.168.168.31
+**Scalability**: 5-50 concurrent dashboards, 1M metrics/sec ingestion
 **Availability Target**: 99.95%
 
 ---
@@ -333,7 +333,7 @@ remote_write:
 
 ### Python Aggregator Service
 
-**Purpose**: 
+**Purpose**:
 - Consume raw metrics from Prometheus/ClickHouse
 - Perform aggregations (hourly, daily, monthly)
 - Calculate costs based on compute time
@@ -376,15 +376,15 @@ BATCH_SIZE = 10000
 
 class AnalyticsAggregator:
     """Aggregates raw metrics into analytics dataset"""
-    
+
     def __init__(self, clickhouse_client):
         self.client = clickhouse_client
-    
+
     @aggregation_duration.labels(aggregation_type='hourly').time()
     def aggregate_hourly(self):
         """Aggregate metrics to hourly granularity"""
         logger.info("Starting hourly aggregation")
-        
+
         query = """
         INSERT INTO metrics.request_metrics_hourly
         SELECT
@@ -402,7 +402,7 @@ class AnalyticsAggregator:
         WHERE timestamp >= subtractHours(now(), 2)
         GROUP BY toStartOfHour(timestamp), org_id, path, method, status
         """
-        
+
         try:
             self.client.execute(query)
             aggregations_processed.labels(aggregation_type='hourly').inc()
@@ -410,12 +410,12 @@ class AnalyticsAggregator:
             logger.info("Hourly aggregation completed")
         except Exception as e:
             logger.error(f"Hourly aggregation failed: {e}")
-    
+
     @aggregation_duration.labels(aggregation_type='cost').time()
     def calculate_costs(self):
         """Calculate costs based on compute usage"""
         logger.info("Starting cost calculation")
-        
+
         query = f"""
         INSERT INTO metrics.cost_metrics
         SELECT
@@ -429,7 +429,7 @@ class AnalyticsAggregator:
         WHERE timestamp >= subtractDays(now(), 1)
         GROUP BY timestamp, org_id, user_id, tier
         """
-        
+
         try:
             self.client.execute(query)
             aggregations_processed.labels(aggregation_type='cost').inc()
@@ -437,7 +437,7 @@ class AnalyticsAggregator:
             logger.info("Cost calculation completed")
         except Exception as e:
             logger.error(f"Cost calculation failed: {e}")
-    
+
     def get_org_metrics(self, org_id, days=30):
         """Retrieve aggregated metrics for an organization"""
         query = f"""
@@ -452,7 +452,7 @@ class AnalyticsAggregator:
         GROUP BY timestamp
         ORDER BY timestamp DESC
         """
-        
+
         try:
             result = self.client.execute(query)
             clickhouse_queries.labels(query_type='org_metrics').inc()
@@ -460,7 +460,7 @@ class AnalyticsAggregator:
         except Exception as e:
             logger.error(f"Failed to get org metrics: {e}")
             return []
-    
+
     def get_error_summary(self, org_id, hours=24):
         """Get error summary for org"""
         query = f"""
@@ -476,7 +476,7 @@ class AnalyticsAggregator:
         ORDER BY count DESC
         LIMIT 20
         """
-        
+
         try:
             result = self.client.execute(query)
             clickhouse_queries.labels(query_type='error_summary').inc()
@@ -1017,38 +1017,38 @@ const aggregatorPort = process.env.AGGREGATOR_PORT || 5000;
 
 async function getOrgMetrics(orgId, days) {
   const cacheKey = `analytics:org:${orgId}:${days}d`;
-  
+
   // Try cache first (1-hour TTL)
   const cached = await redisClient.getAsync(cacheKey);
   if (cached) {
     return JSON.parse(cached);
   }
-  
+
   // Fetch from aggregator
   const response = await axios.get(
     `http://${aggregatorHost}:${aggregatorPort}/api/v1/analytics/org/${orgId}/metrics?days=${days}`
   );
-  
+
   // Cache result
   await redisClient.setexAsync(cacheKey, 3600, JSON.stringify(response.data));
-  
+
   return response.data;
 }
 
 async function getErrorSummary(orgId, hours) {
   const cacheKey = `analytics:org:${orgId}:errors:${hours}h`;
-  
+
   const cached = await redisClient.getAsync(cacheKey);
   if (cached) {
     return JSON.parse(cached);
   }
-  
+
   const response = await axios.get(
     `http://${aggregatorHost}:${aggregatorPort}/api/v1/analytics/org/${orgId}/errors?hours=${hours}`
   );
-  
+
   await redisClient.setexAsync(cacheKey, 1800, JSON.stringify(response.data));
-  
+
   return response.data;
 }
 
@@ -1088,12 +1088,12 @@ app.get('/api/v1/analytics/org/:org_id/metrics', async (req, res) => {
   try {
     const { org_id } = req.params;
     const days = req.query.days || 30;
-    
+
     // Verify org ownership
     if (!req.user || req.user.org_id !== org_id) {
       throw new Error('Unauthorized');
     }
-    
+
     const metrics = await getOrgMetrics(org_id, days);
     apiRequests.labels('get_org_metrics', 200).inc();
     res.json(metrics);
@@ -1111,11 +1111,11 @@ app.get('/api/v1/analytics/org/:org_id/errors', async (req, res) => {
   try {
     const { org_id } = req.params;
     const hours = req.query.hours || 24;
-    
+
     if (!req.user || req.user.org_id !== org_id) {
       throw new Error('Unauthorized');
     }
-    
+
     const errors = await getErrorSummary(org_id, hours);
     apiRequests.labels('get_error_summary', 200).inc();
     res.json(errors);

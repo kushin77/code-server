@@ -1,10 +1,10 @@
 # FAANG-Style Repository Reorganization Plan
 **Code-Server-Enterprise Repository Structure Overhaul**
 
-**Status**: PROPOSAL  
-**Priority**: HIGH (Prerequisite for governance mandate)  
-**Timeline**: 3-4 weeks (phased implementation)  
-**Effort**: ~40-50 hours  
+**Status**: PROPOSAL
+**Priority**: HIGH (Prerequisite for governance mandate)
+**Timeline**: 3-4 weeks (phased implementation)
+**Effort**: ~40-50 hours
 
 ---
 
@@ -491,7 +491,7 @@ Every shell script MUST include:
 #
 # Script Name: deploy.sh
 # Purpose: Deploy containers to production using docker-compose
-# 
+#
 # Usage:
 #   ./scripts/lifecycle/deploy.sh
 #   ./scripts/lifecycle/deploy.sh --dry-run    # Preview changes
@@ -577,7 +577,7 @@ Purpose:
 
 Usage:
     from src.auth.jwt import generate_token, verify_token
-    
+
     token = generate_token(user_id=123)
     user_id = verify_token(token)
 
@@ -611,20 +611,20 @@ logger = logging.getLogger(__name__)
 
 class JWTManager:
     """Handles JWT token lifecycle (generation, validation, refresh).
-    
+
     Attributes:
         secret_key (str): Signing key for tokens
         algorithm (str): JWT signing algorithm (default: HS256)
         expiry_minutes (int): Token expiration in minutes
-        
+
     RELATED CLASSES:
         - OAuth2Provider (uses JWTManager for token handling)
         - PermissionManager (validates token claims)
     """
-    
+
     def __init__(self, secret_key: str, algorithm: str = "HS256"):
         """Initialize JWT manager.
-        
+
         Args:
             secret_key (str): Secret key for signing tokens
             algorithm (str): Algorithm for signing (HS256, RS256, etc.)
@@ -646,7 +646,7 @@ Every TypeScript component MUST include:
  *
  * Usage:
  *   import LoginForm from '@/components/LoginForm'
- *   
+ *
  *   <LoginForm onSuccess={() => navigate('/dashboard')} />
  *
  * Props:
@@ -700,7 +700,7 @@ interface LoginFormProps {
  * LoginForm: Renders login form and handles authentication
  * @param props - Component props
  * @returns React component
- * 
+ *
  * ERROR HANDLING:
  *   - Catches network errors and displays user-friendly message
  *   - Logs all errors to console for debugging
@@ -741,10 +741,10 @@ export default LoginForm
 # Usage Example:
 #   module "compute" {
 #     source = "./modules/compute"
-#     
+#
 #     instance_type = "t3.xlarge"
 #     environment = "production"
-#     
+#
 #     tags = {
 #       Application = "code-server"
 #       Environment = "production"
@@ -774,7 +774,7 @@ export default LoginForm
 
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -791,7 +791,7 @@ variable "instance_type" {
   description = "EC2 instance type (e.g., t3.xlarge, m5.2xlarge)"
   type        = string
   default     = "t3.xlarge"
-  
+
   validation {
     condition     = can(regex("^[a-z][a-z0-9-]*\\.[a-z0-9]+$", var.instance_type))
     error_message = "Instance type must be valid AWS instance type"
@@ -808,7 +808,7 @@ variable "instance_type" {
 #
 # File Name: prometheus.yml
 # Purpose: Configure Prometheus metrics scraping and retention
-# 
+#
 # Usage:
 #   - Mounted in Prometheus container at /etc/prometheus/prometheus.yml
 #   - Reload with: curl -X POST http://localhost:9090/-/reload
@@ -862,13 +862,13 @@ scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ['localhost:9090']
-  
+
   # Application metrics
   - job_name: code-server
     static_configs:
       - targets: ['localhost:8080']
     scrape_interval: 30s         # Override global interval
-    
+
   # More scrape configs...
 ```
 
@@ -1234,10 +1234,9 @@ clean:            ## Clean up temporary files and Docker artifacts
 
 This reorganization **improves navigability dramatically without changing any code logic**. All existing tests continue to work with updated paths. The main benefit is:
 
-✅ **Before**: "Where do I find X?" → Dig through 200+ files  
+✅ **Before**: "Where do I find X?" → Dig through 200+ files
 ✅ **After**: "Where do I find X?" → Check proper directory (scripts/, docs/, infra/, etc.)
 
 The metadata headers also provide **self-documenting code** - any new engineer can read a script header and understand what it does, when it was last updated, and how to use it.
 
 **This is a significant quality-of-life improvement for the entire team.**
-

@@ -23,7 +23,7 @@ alert() {
 check_vscode_memory() {
     if command -v ps &> /dev/null; then
         local used_pct=$(ps aux | grep -i code | grep -v grep | awk '{sum+=$6} END {print int(sum/1024*100/$(nproc))}' 2>/dev/null || echo "0")
-        
+
         if [ "$used_pct" -gt "$MEMORY_THRESHOLD_PCT" ]; then
             alert "WARN" "VS Code memory usage high: $used_pct% (threshold: $MEMORY_THRESHOLD_PCT%)"
             alert "INFO" "Recommendation: Disable extensions or increase system RAM"
@@ -39,10 +39,10 @@ check_vscode_memory() {
 check_docker_memory() {
     if command -v docker &> /dev/null; then
         local containers=$(docker ps --format "{{.Names}}")
-        
+
         for container in $containers; do
             local mem_usage=$(docker stats --no-stream $container 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
-            
+
             if [ "$mem_usage" -gt "$MEMORY_THRESHOLD_PCT" ]; then
                 alert "WARN" "Docker container [$container] memory high: $mem_usage%"
                 alert "INFO" "Consider: docker update --memory=4g $container"
@@ -58,7 +58,7 @@ check_docker_memory() {
 # Function to check for zombie processes
 check_zombie_processes() {
     local zombie_count=$(ps aux | awk '$8 ~ /Z/ {count++} END {print count+0}')
-    
+
     if [ "$zombie_count" -gt 0 ]; then
         alert "WARN" "Found $zombie_count zombie processes - may indicate crashes"
         alert "INFO" "Recommendation: Restart the service or investigate parent process"
@@ -72,12 +72,12 @@ check_zombie_processes() {
 # Main loop
 main() {
     alert "INFO" "Memory Monitor started (threshold: $MEMORY_THRESHOLD_PCT%, interval: ${CHECK_INTERVAL}s)"
-    
+
     while true; do
         check_vscode_memory || true
         check_docker_memory || true
         check_zombie_processes || true
-        
+
         echo "---" >> "$LOG_FILE"
         sleep "$CHECK_INTERVAL"
     done

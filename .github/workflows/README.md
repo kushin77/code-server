@@ -89,7 +89,7 @@ services:
 ```yaml
 - name: Audit dependencies
   run: npm audit --audit-level=moderate  # Adjust severity
-  
+
 - uses: snyk/actions/node@master
   secrets.SNYK_TOKEN  # Requires Snyk account
 ```

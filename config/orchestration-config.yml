@@ -40,7 +40,7 @@ regions:
       orchestrator: http://orchestrator-us-east-1:8000
       prometheus: http://prometheus-us-east-1:9090
       api_gateway: http://api-gateway-us-east-1:8000
-    
+
     # Health check configuration
     health_check:
       enabled: true
@@ -48,7 +48,7 @@ regions:
       timeout: 10
       path: /health
       expected_status: 200
-    
+
     # Monitoring configuration
     monitoring:
       enabled: true
@@ -69,14 +69,14 @@ regions:
       orchestrator: http://orchestrator-us-west-2:8000
       prometheus: http://prometheus-us-west-2:9090
       api_gateway: http://api-gateway-us-west-2:8000
-    
+
     health_check:
       enabled: true
       interval: 30
       timeout: 10
       path: /health
       expected_status: 200
-    
+
     monitoring:
       enabled: true
       metrics_scrape_interval: 15
@@ -96,14 +96,14 @@ regions:
       orchestrator: http://orchestrator-eu-west-1:8000
       prometheus: http://prometheus-eu-west-1:9090
       api_gateway: http://api-gateway-eu-west-1:8000
-    
+
     health_check:
       enabled: true
       interval: 30
       timeout: 10
       path: /health
       expected_status: 200
-    
+
     monitoring:
       enabled: true
       metrics_scrape_interval: 15
@@ -116,13 +116,13 @@ regions:
 service_discovery:
   enabled: true
   mode: registry  # registry, dns, direct
-  
+
   registry:
     ttl: 30  # seconds
     max_cache_size: 10000
     automatic_cleanup: true
     cleanup_interval: 300  # seconds
-  
+
   service_registry:
     code-server:
       port: 8080
@@ -132,7 +132,7 @@ service_discovery:
         - primary
         - secondary
         - tertiary
-    
+
     api-gateway:
       port: 8000
       protocol: http
@@ -147,28 +147,28 @@ service_discovery:
 config_management:
   enabled: true
   mode: distributed  # centralized, distributed, hybrid
-  
+
   distribution:
     # Version-tracked updates
     versioning: true
     max_versions: 50
-    
+
     # Atomic updates across regions
     atomic_updates: true
     rollback_on_failure: true
-    
+
     # Update strategy
     strategy: rolling  # rolling, blue-green, canary
     canary_percentage: 5  # if canary
     rollback_timeout: 600  # seconds
-  
+
   feature_flags:
     multi_region_failover: true
     cross_cloud_routing: false
     predictive_failover: false
     cost_optimization: true
     ml_based_routing: false
-    
+
     # Gradual rollout configuration
     gradual_rollout:
       enabled: true
@@ -180,14 +180,14 @@ config_management:
 # ========================================
 monitoring:
   enabled: true
-  
+
   # Prometheus configuration
   prometheus:
     enabled: true
     scrape_interval: 15
     evaluation_interval: 15
     retention: 30  # days
-    
+
     # Exported metrics
     metrics:
       - region_health
@@ -196,18 +196,18 @@ monitoring:
       - failover_events
       - service_discovery_latency
       - config_distribution_status
-  
+
   # Health metrics
   health_metrics:
     enabled: true
     collect_interval: 30
     report_unhealthy: true
-    
+
     thresholds:
       latency_p99: 100  # milliseconds
       error_rate: 0.1  # percentage
       availability: 99.9  # percentage
-  
+
   # Alerting rules
   alerting:
     enabled: true
@@ -215,7 +215,7 @@ monitoring:
       - slack
       - email
       - pagerduty
-    
+
     rules:
       # Critical alerts
       critical:
@@ -223,24 +223,24 @@ monitoring:
           threshold: 60  # seconds
           duration: 1m
           severity: critical
-        
+
         - name: failover_failed
           threshold: 1
           duration: 30s
           severity: critical
-      
+
       # Warning alerts
       warning:
         - name: high_latency
           threshold: 200  # milliseconds P99
           duration: 5m
           severity: warning
-        
+
         - name: high_error_rate
           threshold: 1.0  # percentage
           duration: 5m
           severity: warning
-      
+
       # Info alerts
       info:
         - name: failover_executed
@@ -253,7 +253,7 @@ monitoring:
 # ========================================
 failover:
   enabled: true
-  
+
   # Failover decision logic
   decisions:
     # Health-based failover
@@ -261,19 +261,19 @@ failover:
       enabled: true
       consecutive_failures: 3
       health_check_timeout: 10
-    
+
     # Latency-based failover
     latency:
       enabled: true
       threshold_p99: 200  # milliseconds
       window: 300  # seconds
-    
+
     # Error rate-based failover
     error_rate:
       enabled: true
       threshold: 5.0  # percentage
       window: 300  # seconds
-  
+
   # Failover execution
   execution:
     pre_flight_checks: true
@@ -281,7 +281,7 @@ failover:
     verify_secondary: true
     record_events: true
     notify_ops: true
-  
+
   # Recovery configuration
   recovery:
     auto_recover_primary: true
@@ -308,16 +308,16 @@ security:
     enabled: true
     verify_certificates: true
     min_version: "1.2"
-  
+
   authentication:
     enabled: false  # For staging
     type: mutual_tls
-  
+
   rate_limiting:
     enabled: true
     requests_per_second: 1000
     burst_size: 2000
-  
+
   audit:
     enabled: true
     log_all_actions: true
@@ -329,13 +329,13 @@ security:
 logging:
   level: INFO
   format: json
-  
+
   outputs:
     - type: file
       path: /var/log/orchestrator/orchestrator.log
       max_size_mb: 100
       max_retain_files: 10
-    
+
     - type: stdout
       format: json
 
@@ -349,25 +349,25 @@ integrations:
     host: prometheus
     port: 9090
     scrape_interval: 30
-  
+
   # Grafana integration
   grafana:
     enabled: true
     host: grafana
     port: 3000
     dashboard_uid: "phase-20-a1-global"
-  
+
   # External systems integration
   external_systems:
     # Cloud provider integrations
     aws:
       enabled: false  # Staging only
       region: us-east-1
-    
+
     azure:
       enabled: false
       tenant_id: ""
-    
+
     gcp:
       enabled: false
       project_id: ""
@@ -378,14 +378,14 @@ integrations:
 deployment:
   # Deployment strategy
   strategy: rolling-update
-  
+
   # Health checks during deployment
   health_checks: true
-  
+
   # Rollback on failure
   auto_rollback: true
   rollback_timeout: 600  # seconds
-  
+
   # Post-deployment validation
   validation:
     enabled: true

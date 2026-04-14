@@ -18,7 +18,7 @@ set -e
 CHROOT=/host
 log() { echo "[$(date +'%H:%M:%S')] $*"; }
 
-log "=== GPU Driver Upgrade via Docker ===" 
+log "=== GPU Driver Upgrade via Docker ==="
 
 # Update host package cache
 log "Updating package lists..."

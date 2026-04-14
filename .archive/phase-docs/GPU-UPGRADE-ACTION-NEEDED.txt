@@ -96,13 +96,13 @@ P0 Issues Status:
 
 Critical Path:
   NOW: Complete GPU driver installation (5 min)
-      → Reboot (5 min) 
+      → Reboot (5 min)
       → Verify (2 min)
   THEN: Unlock Phase 12+ deployments
 
 Git Commits:
-  ✓ 9d7e18b: feat(governance) 
-  ✓ de0e5de: docs(p0) 
+  ✓ 9d7e18b: feat(governance)
+  ✓ de0e5de: docs(p0)
   ✓ 5eef198: feat(gpu) - sudoers
   ✓ b6e918a: feat(gpu) - Phase 1 driver upgrade
 

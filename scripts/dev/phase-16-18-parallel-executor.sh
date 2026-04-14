@@ -26,17 +26,17 @@ success() {
 main() {
     log "Phase 16-18 Parallel Executor"
     log "Mode: ${EXECUTION_MODE}"
-    
+
     if [[ ! "${EXECUTION_MODE}" =~ ^(dry-run|execute)$ ]]; then
         error "Invalid mode: ${EXECUTION_MODE}"
         exit 1
     fi
-    
+
     if ! command -v terraform &>/dev/null; then
         error "terraform not found"
         exit 1
     fi
-    
+
     success "All prerequisites met"
     success "Ready for ${EXECUTION_MODE}"
 }

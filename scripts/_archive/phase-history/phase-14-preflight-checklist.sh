@@ -26,7 +26,7 @@ FAIL_COUNT=0
 check_item() {
     local description=$1
     local result=$2
-    
+
     if [ "$result" = "PASS" ]; then
         echo "  ✅ $description"
         ((PASS_COUNT++))

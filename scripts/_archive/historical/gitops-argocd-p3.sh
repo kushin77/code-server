@@ -46,7 +46,7 @@ spec:
       requests:
         cpu: 250m
         memory: 128Mi
-  
+
   # RBAC Configuration
   rbac:
     default: "role:viewer"  # All users start as read-only
@@ -55,11 +55,11 @@ spec:
       p, role:readonly, *, get, *, allow
       p, role:dev, applications, *, *, allow
       p, role:dev, repositories, get, *, allow
-      
+
       g, admins, role:admin
       g, devs, role:dev
       g, viewers, role:readonly
-  
+
   # Notifications
   notifications:
     enabled: true
@@ -67,18 +67,18 @@ spec:
       - recipients:
         - slack://webhook-id
         selector: "app-sync-failed"
-  
+
   # Security
   server:
     insecure: false
     https:
       enabled: true
-    
+
     autoscale:
       enabled: true
       minReplicas: 2
       maxReplicas: 5
-  
+
   # Repository Configuration
   repositoryCredentials:
     - url: "https://github.com/kushin77"
@@ -89,7 +89,7 @@ spec:
       usernameSecret:
         name: github-credentials
         key: username
-  
+
   # Resource Quotas
   controller:
     resources:
@@ -99,14 +99,14 @@ spec:
       requests:
         cpu: 500m
         memory: 256Mi
-  
+
   # Repo Server Configuration
   repoServer:
     autoscale:
       enabled: true
       minReplicas: 2
       maxReplicas: 5
-    
+
     resources:
       limits:
         cpu: 1000m
@@ -114,7 +114,7 @@ spec:
       requests:
         cpu: 500m
         memory: 256Mi
-  
+
   # ApplicationSet Controller
   applicationSet:
     resources:
@@ -159,22 +159,22 @@ metadata:
   namespace: argocd
 spec:
   project: default
-  
+
   source:
     repoURL: https://github.com/kushin77/eiq-linkedin
     targetRevision: main
     path: deploy/production
-    
+
     helm:
       releaseName: production
       values: |
         replicas: 3
-        
+
         image:
           repository: gcr.io/kushin77/eiq-linkedin
           tag: latest
           pullPolicy: IfNotPresent
-        
+
         resources:
           limits:
             cpu: 1000m
@@ -182,13 +182,13 @@ spec:
           requests:
             cpu: 500m
             memory: 256Mi
-        
+
         autoscaling:
           enabled: true
           minReplicas: 3
           maxReplicas: 10
           targetCPUUtilizationPercentage: 70
-        
+
         ingress:
           enabled: true
           className: nginx
@@ -197,22 +197,22 @@ spec:
               paths:
                 - path: /
                   pathType: Prefix
-  
+
   destination:
     server: https://kubernetes.default.svc
     namespace: production
-  
+
   syncPolicy:
     automated:
       prune: true     # Delete resources not in Git
       selfHeal: true  # Auto-sync on cluster drift
       allow:
         empty: false
-    
+
     syncOptions:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
-    
+
     retry:
       limit: 5
       backoff:
@@ -229,23 +229,23 @@ metadata:
   namespace: argocd
 spec:
   project: default
-  
+
   source:
     repoURL: https://github.com/kushin77/eiq-linkedin
     targetRevision: develop
     path: deploy/staging
-    
+
     helm:
       releaseName: staging
       values: |
         replicas: 2
         image:
           tag: develop
-  
+
   destination:
     server: https://kubernetes.default.svc
     namespace: staging
-  
+
   syncPolicy:
     automated:
       prune: true
@@ -264,22 +264,22 @@ metadata:
   namespace: argocd
 spec:
   project: default
-  
+
   source:
     repoURL: https://github.com/kushin77/eiq-linkedin
     targetRevision: main
     path: deploy/infrastructure
-    
+
     kustomize:
       images:
         - name: prometheus
           newName: prom/prometheus
           newTag: latest
-  
+
   destination:
     server: https://kubernetes.default.svc
     namespace: infrastructure
-  
+
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
@@ -295,12 +295,12 @@ metadata:
   namespace: argocd
 spec:
   project: default
-  
+
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
     chart: kube-prometheus-stack
     targetRevision: 48.0.0
-    
+
     helm:
       releaseName: prometheus
       values: |
@@ -314,13 +314,13 @@ spec:
                   resources:
                     requests:
                       storage: 50Gi
-        
+
         grafana:
           adminPassword: ${GRAFANA_PASSWORD}
           persistence:
             enabled: true
             size: 10Gi
-        
+
         alertmanager:
           alertmanagerSpec:
             storage:
@@ -329,11 +329,11 @@ spec:
                   resources:
                     requests:
                       storage: 10Gi
-  
+
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
-  
+
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
@@ -380,31 +380,31 @@ spec:
             revision: develop
             replicas: 2
             canaryWeight: 0
-  
+
   template:
     metadata:
       name: "{{ name }}"
       labels:
         environment: "{{ name }}"
-    
+
     spec:
       project: default
-      
+
       source:
         repoURL: https://github.com/kushin77/eiq-linkedin
         targetRevision: "{{ revision }}"
         path: deploy/{{ name }}
-        
+
         helm:
           releaseName: "{{ name }}"
           values: |
             replicas: {{ replicas }}
             canaryWeight: {{ canaryWeight }}
-      
+
       destination:
         server: https://kubernetes.default.svc
         namespace: "{{ namespace }}"
-      
+
       syncPolicy:
         automated:
           prune: true
@@ -428,21 +428,21 @@ spec:
                   weight: 100
                 - color: green
                   weight: 0
-  
+
   template:
     metadata:
       name: "production-{{ color }}"
       labels:
         color: "{{ color }}"
-    
+
     spec:
       project: default
-      
+
       source:
         repoURL: https://github.com/kushin77/eiq-linkedin
         targetRevision: main
         path: deploy/production
-        
+
         helm:
           releaseName: "production-{{ color }}"
           parameters:
@@ -450,11 +450,11 @@ spec:
               value: "{{ color }}"
             - name: "trafficWeight"
               value: "{{ weight }}"
-      
+
       destination:
         server: https://kubernetes.default.svc
         namespace: production-{{ color }}
-      
+
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
@@ -801,12 +801,12 @@ wait_for_sync() {
   local timeout=${2:-600}
   local interval=10
   local elapsed=0
-  
+
   echo "⏳ Waiting for $app to sync..."
-  
+
   while [[ $elapsed -lt $timeout ]]; do
     local sync_status=$(argocd app get "$app" -o json | jq -r '.status.operationState.phase')
-    
+
     if [[ "$sync_status" == "Succeeded" ]]; then
       echo "✅ Sync succeeded"
       return 0
@@ -815,45 +815,45 @@ wait_for_sync() {
       argocd app get "$app"
       return 1
     fi
-    
+
     sleep $interval
     elapsed=$((elapsed + interval))
     echo "  Elapsed: ${elapsed}s / ${timeout}s"
   done
-  
+
   echo "⏱️  Sync timeout (${timeout}s)"
   return 1
 }
 
 validate_slos() {
   local app=$1
-  
+
   echo "📊 Validating SLOs..."
-  
+
   # Query Prometheus for current metrics
   local p95=$(prometheus_query 'histogram_quantile(0.95, request_duration_seconds)')
   local p99=$(prometheus_query 'histogram_quantile(0.99, request_duration_seconds)')
   local error_rate=$(prometheus_query 'rate(errors_total[5m])')
-  
+
   local p95_target=300
   local p99_target=500
   local error_target=1
-  
+
   if (( $(echo "$p95 > $p95_target" | bc -l) )); then
     echo "⚠️  P95 latency ($p95ms) exceeds target ($p95_target ms)"
     return 1
   fi
-  
+
   if (( $(echo "$p99 > $p99_target" | bc -l) )); then
     echo "⚠️  P99 latency ($p99ms) exceeds target ($p99_target ms)"
     return 1
   fi
-  
+
   if (( $(echo "$error_rate > $error_target" | bc -l) )); then
     echo "⚠️  Error rate ($error_rate%) exceeds target ($error_target %)"
     return 1
   fi
-  
+
   echo "✅ All SLOs validated"
   return 0
 }
@@ -864,9 +864,9 @@ validate_slos() {
 
 deploy_canary() {
   local app=$1
-  
+
   echo "🔄 Deploying canary (5% traffic)..."
-  
+
   # Create canary variant
   cat <<YAML | kubectl apply -f -
 apiVersion: argoproj.io/v1alpha1
@@ -891,77 +891,77 @@ spec:
       prune: true
       selfHeal: true
 YAML
-  
+
   wait_for_sync "${app}-canary" || return 1
-  
+
   echo "⏳ Monitoring canary (5 minutes)..."
   sleep 300
-  
+
   validate_slos "${app}-canary" || {
     echo "❌ Canary failed validation, rolling back..."
     kubectl delete application "${app}-canary" -n argocd
     return 1
   }
-  
+
   echo "✅ Canary validated, proceeding to production..."
 }
 
 deploy_bluegreen() {
   local app=$1
-  
+
   echo "🟢 Deploying green (inactive)..."
-  
+
   # Deploy green version at 0% traffic
   kubectl set env deployment/${app}-green \
     TRAFFIC_WEIGHT=0 \
     --record
-  
+
   wait_for_sync "${app}-green" || return 1
-  
+
   echo "🧪 Running validation tests on green..."
   # Run integration tests
   kubectl run ${app}-test \
     --image=gcr.io/testing:latest \
     --command -- /test.sh ${app}-green
-  
+
   echo "🔀 Switching traffic: blue → green..."
-  
+
   # Shift traffic
   kubectl patch virtualservice ${app} -p \
     '{"spec":{"hosts":[{"name":"'${app}'","http":[{"route":[{"destination":{"host":"'${app}'-green"},"weight":100},{"destination":{"host":"'${app}'-blue"},"weight":0}]}]}]}'
-  
+
   echo "✅ Traffic switched to green"
-  
+
   echo "⏳ Monitoring (5 minutes)..."
   sleep 300
-  
+
   validate_slos "${app}" || {
     echo "❌ Green failed, rolling back to blue..."
     kubectl patch virtualservice ${app} -p \
       '{"spec":{"hosts":[{"name":"'${app}'","http":[{"route":[{"destination":{"host":"'${app}'-blue"},"weight":100},{"destination":{"host":"'${app}'-green"},"weight":0}]}]}]}'
     return 1
   }
-  
+
   echo "✅ Blue-green deployment complete"
 }
 
 deploy_rolling() {
   local app=$1
-  
+
   echo "📈 Performing rolling deployment..."
-  
+
   # Update application to trigger rolling update
   argocd app set ${app} \
     --helm-set image.tag=${REVISION} \
     --revision ${REVISION}
-  
+
   argocd app sync ${app} || return 1
-  
+
   wait_for_sync ${app} || return 1
-  
+
   # Monitor rollout
   kubectl rollout status deployment/${app} -n ${NAMESPACE}
-  
+
   echo "✅ Rolling deployment complete"
 }
 
@@ -976,13 +976,13 @@ main() {
   echo "║           DryRun: $DRY_RUN                                      ║"
   echo "╚════════════════════════════════════════════════════════════════╝"
   echo ""
-  
+
   if [[ "$DRY_RUN" == "true" ]]; then
     echo "🔍 Checking what would be deployed..."
     argocd app diff ${APP_NAME} --revision ${REVISION}
     return 0
   fi
-  
+
   # Strategy selection based on namespace
   case ${NAMESPACE} in
     canary)
@@ -999,7 +999,7 @@ main() {
       return 1
       ;;
   esac
-  
+
   echo ""
   echo "✅ DEPLOYMENT COMPLETE"
   echo "  Application: $APP_NAME"

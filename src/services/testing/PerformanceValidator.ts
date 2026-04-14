@@ -1,7 +1,7 @@
 /**
  * Performance Validation Framework - Phase 12.4
  * Validates system meets SLA and performance targets
- * 
+ *
  * Responsibilities:
  * - Define SLA requirements per region
  * - Validate performance metrics

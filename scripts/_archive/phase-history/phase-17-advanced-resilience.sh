@@ -41,13 +41,13 @@ circuitBreakers:
     successThreshold: 2
     timeout: 30s
     halfOpenRequests: 3
-    
+
   oauth2-service:
     failureThreshold: 3
     successThreshold: 1
     timeout: 15s
     halfOpenRequests: 1
-    
+
   cache-service:
     failureThreshold: 10
     successThreshold: 3
@@ -59,12 +59,12 @@ bulkheads:
     threadPoolSize: 50
     queueSize: 100
     keepAliveTime: 60s
-    
+
   oauth2-service:
     threadPoolSize: 20
     queueSize: 50
     keepAliveTime: 30s
-    
+
   cache-service:
     threadPoolSize: 100
     queueSize: 200
@@ -76,7 +76,7 @@ retryPolicies:
     maxBackoff: 10s
     multiplier: 2
     maxRetries: 3
-    
+
   linear:
     initialBackoff: 500ms
     increment: 500ms
@@ -112,14 +112,14 @@ DURATION="${2:-60}"
 # TEST 1: Latency injection
 test_latency_injection() {
     log_info "Testing latency injection resilience..."
-    
+
     # Simulate 500ms latency
     for i in {1..10}; do
         start=$(date +%s%N)
         curl -s "$TARGET_URL" > /dev/null 2>&1 || true
         end=$(date +%s%N)
         latency=$(( (end - start) / 1000000 ))
-        
+
         if [ $latency -lt 5000 ]; then
             log_success "✓ Request handled despite latency injection"
         fi
@@ -129,10 +129,10 @@ test_latency_injection() {
 # TEST 2: Partial service outage
 test_partial_outage() {
     log_info "Testing partial service outage resilience..."
-    
+
     success=0
     failed=0
-    
+
     for i in {1..20}; do
         if curl -sf "$TARGET_URL" > /dev/null 2>&1; then
             success=$((success + 1))
@@ -140,7 +140,7 @@ test_partial_outage() {
             failed=$((failed + 1))
         fi
     done
-    
+
     total=$((success + failed))
     if [ $success -gt $((total / 2)) ]; then
         log_success "✓ System handled partial outage (${success}/${total} succeeded)"
@@ -150,13 +150,13 @@ test_partial_outage() {
 # TEST 3: Cascading failure prevention
 test_cascade_prevention() {
     log_info "Testing cascading failure prevention..."
-    
+
     # Rapid fire requests to trigger circuit breaker
     for i in {1..50}; do
         curl -s "$TARGET_URL" > /dev/null 2>&1 || true &
     done
     wait
-    
+
     # Now verify service still responds
     sleep 2
     if curl -sf "$TARGET_URL" > /dev/null 2>&1; then
@@ -169,12 +169,12 @@ test_cascade_prevention() {
 # TEST 4: Timeout tolerance
 test_timeout_tolerance() {
     log_info "Testing timeout tolerance..."
-    
+
     # Set 1 second timeout
     timeout 1 curl -s "$TARGET_URL" > /dev/null 2>&1 || true
-    
+
     sleep 2
-    
+
     # Verify recovery
     if curl -sf "$TARGET_URL" > /dev/null 2>&1; then
         log_success "✓ System recovered from timeout"
@@ -184,19 +184,19 @@ test_timeout_tolerance() {
 # TEST 5: Bulkhead isolation
 test_bulkhead_isolation() {
     log_info "Testing bulkhead isolation..."
-    
+
     # Overwhelm one service
     for i in {1..100}; do
         curl -s "$TARGET_URL" > /dev/null 2>&1 &
     done
-    
+
     sleep 1
-    
+
     # Verify other services still work
     if curl -sf "$TARGET_URL" > /dev/null 2>&1; then
         log_success "✓ Bulkhead isolation protected other services"
     fi
-    
+
     wait
 }
 
@@ -227,13 +227,13 @@ bulkheads:
     size: 50
     queue: 100
     timeout: 30s
-    
+
   cache-operations:
     type: threadpool
     size: 100
     queue: 200
     timeout: 5s
-    
+
   auth-operations:
     type: semaphore
     size: 20
@@ -244,12 +244,12 @@ isolation:
     cpu_limit: 50%
     memory_limit: 512Mi
     connection_limit: 100
-    
+
   oauth2-service:
     cpu_limit: 25%
     memory_limit: 256Mi
     connection_limit: 50
-    
+
   cache-service:
     cpu_limit: 30%
     memory_limit: 1Gi
@@ -293,14 +293,14 @@ rules:
     - weak-encryption
     - exposed-credentials
     - insecure-deserialization
-    
+
   vulnerability:
     - memory-leak
     - null-pointer-exception
     - buffer-overflow
     - race-condition
     - deadlock
-    
+
   code-quality:
     - duplicate-code
     - complex-function
@@ -451,7 +451,7 @@ compliance:
         - access-controls
         - audit-logging
         - data-retention
-        
+
     - name: HIPAA
       status: ready-for-deployment
       requirements:
@@ -459,7 +459,7 @@ compliance:
         - encryption-in-transit
         - access-logging
         - role-based-access
-        
+
     - name: PCI-DSS
       status: implemented
       requirements:
@@ -467,7 +467,7 @@ compliance:
         - password-security
         - access-restriction
         - monitoring-logging
-        
+
     - name: SOC2
       status: implemented
       requirements:
@@ -483,18 +483,18 @@ policies:
     requireDigits: true
     requireSymbols: true
     expiryDays: 90
-    
+
   encryption:
     algorithm: AES-256
     mode: GCM
     tlsVersion: 1.3
     certificatePinning: true
-    
+
   audit:
     logLevel: INFO
     retention: 90days
     immutable: true
-    
+
   dataProtection:
     pii_masking: true
     encryption_keys_rotated: 90days
@@ -525,32 +525,32 @@ slos:
     measurement: uptime
     window: 30 days
     error_budget: 21.6 minutes/month
-    
+
   latency_p50:
     target: 50ms
     unit: milliseconds
     measurement: percentile_50
     window: 5 minutes
-    
+
   latency_p95:
     target: 100ms
     unit: milliseconds
     measurement: percentile_95
     window: 5 minutes
-    
+
   latency_p99:
     target: 200ms
     unit: milliseconds
     measurement: percentile_99
     window: 5 minutes
-    
+
   error_rate:
     target: 0.1%
     unit: percentage
     measurement: error_count / total_requests
     window: 5 minutes
     error_budget: 1 error per 1000 requests
-    
+
   capacity:
     target: 85%
     unit: percentage
@@ -568,12 +568,12 @@ budget_alerts:
     threshold: 50%
     action: warning
     escalation: none
-    
+
   - name: budget-75-percent
     threshold: 75%
     action: alert
     escalation: engineering-team
-    
+
   - name: budget-exceeded
     threshold: 100%
     action: page
@@ -646,19 +646,19 @@ incidents:
       response_time: 15 minutes
       escalation: CEO, VPEng
       communication: Every 15 minutes
-      
+
     - name: Sev2-High
       impact: Partial service outage (>10% users)
       response_time: 30 minutes
       escalation: Director, Manager
       communication: Every 30 minutes
-      
+
     - name: Sev3-Medium
       impact: Degraded service (<10% users)
       response_time: 1 hour
       escalation: Team Lead
       communication: Daily updates
-      
+
     - name: Sev4-Low
       impact: Minor issues, workaround available
       response_time: 4 hours
@@ -670,32 +670,32 @@ response_procedures:
     action: Declare incident
     owner: On-call engineer
     duration: 0-5 minutes
-    
+
   - step: 2
     action: Establish war room
     owner: Incident commander
     duration: 5-15 minutes
-    
+
   - step: 3
     action: Investigate root cause
     owner: Engineering team
     duration: 15-60 minutes
-    
+
   - step: 4
     action: Implement fix
     owner: Senior engineer
     duration: 30-120 minutes
-    
+
   - step: 5
     action: Deploy fix
     owner: DevOps
     duration: 5-15 minutes
-    
+
   - step: 6
     action: Monitor recovery
     owner: On-call
     duration: 15-30 minutes
-    
+
   - step: 7
     action: Post-mortem
     owner: Incident commander
@@ -763,13 +763,13 @@ main() {
 
     deploy_resilience_patterns || { log_error "Resilience deployment failed"; return 1; }
     echo ""
-    
+
     deploy_security_scanning || { log_error "Security scanning deployment failed"; return 1; }
     echo ""
-    
+
     deploy_slo_tracking || { log_error "SLO deployment failed"; return 1; }
     echo ""
-    
+
     verify_phase_17 || { log_error "Verification failed"; return 1; }
     echo ""
 

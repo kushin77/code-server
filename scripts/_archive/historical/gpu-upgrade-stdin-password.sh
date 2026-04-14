@@ -72,4 +72,3 @@ if [ "$MAJOR_NEW" -ge 555 ]; then
 else
   error "Driver upgrade failed - still on $NEW"
 fi
-

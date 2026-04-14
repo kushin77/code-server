@@ -118,10 +118,10 @@ if gh pr merge "$PR_NUMBER" --repo "$REPO" --merge 2>&1 | grep -q "Pull Request 
     write_success "PR #$PR_NUMBER merged successfully"
 else
     write_error "Merge failed"
-    
+
     write_info ""
     write_info "Restoring original branch protection..."
-    
+
     if gh api -X PUT repos/"$owner"/"$repo_name"/branches/main/protection \
         --input <(echo "$original_protection") > /dev/null 2>&1; then
         write_success "Original protection restored"
@@ -129,7 +129,7 @@ else
         write_error "⚠️  Failed to restore branch protection! Manual intervention required:"
         write_error "   gh api -X PUT repos/$owner/$repo_name/branches/main/protection"
     fi
-    
+
     exit 1
 fi
 

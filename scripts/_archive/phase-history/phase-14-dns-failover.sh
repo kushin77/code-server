@@ -104,7 +104,7 @@ if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
         -H "Content-Type: application/json" \
         "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/dns_records" \
         -d "{\"type\":\"A\",\"name\":\"${DOMAIN}\",\"content\":\"${PRODUCTION_IP}\",\"ttl\":60}")
-    
+
     if echo "$RESPONSE" | jq -e '.success' > /dev/null 2>&1; then
         echo "  ✅ Cloudflare DNS updated successfully"
     else

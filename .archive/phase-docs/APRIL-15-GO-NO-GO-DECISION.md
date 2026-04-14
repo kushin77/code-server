@@ -1,8 +1,8 @@
 # APRIL 15: PRE-EXECUTION GO/NO-GO DECISION FRAMEWORK
 
-**Date**: April 15, 2026  
-**Decision Time**: 16:00 UTC (6 hours before team briefing)  
-**Authority**: Engineering leadership + Incident Commander  
+**Date**: April 15, 2026
+**Decision Time**: 16:00 UTC (6 hours before team briefing)
+**Authority**: Engineering leadership + Incident Commander
 **Status**: 🟢 **READY FOR FINAL APPROVAL**
 
 ---
@@ -59,7 +59,7 @@ Use this checklist on April 15 at 16:00 UTC to make final decision on April 17 e
 
 - [ ] **Prometheus Metrics Flowing**
   - Dashboard: http://192.168.168.31:9090
-  - Query: `up{job="api"}` 
+  - Query: `up{job="api"}`
   - Requirement: Shows value "1" (UP) for all jobs
   - Status: Verified [INSERT DATE/TIME]
   - **If FAIL**: STOP - Fix Prometheus scraping
@@ -256,7 +256,7 @@ Confidence Level (1-10): _____
    - How do we fix it?
    - New timeline for re-evaluation
 
-3. **Revised Timeline**: 
+3. **Revised Timeline**:
    - TBD based on failure reason
    - Earliest: April 18 if minor (quick fix)
    - Latest: April 20 if major (full re-test needed)
@@ -286,6 +286,6 @@ Confidence Level (1-10): _____
 
 ---
 
-**APRIL 15 PRE-EXECUTION READINESS CHECKLIST**  
-**Status**: 🟢 **READY FOR FINAL REVIEW**  
+**APRIL 15 PRE-EXECUTION READINESS CHECKLIST**
+**Status**: 🟢 **READY FOR FINAL REVIEW**
 **Last Updated**: April 14, 2026, 14:30 UTC

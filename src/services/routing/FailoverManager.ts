@@ -1,7 +1,7 @@
 /**
  * Failover Manager - Intelligent failover with circuit breaker pattern
  * Phase 12.3: Geographic Routing
- * 
+ *
  * Responsibilities:
  * - Monitor region health and trigger failover when needed
  * - Implement circuit breaker pattern to prevent cascading failures

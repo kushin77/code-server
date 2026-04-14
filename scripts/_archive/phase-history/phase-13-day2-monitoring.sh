@@ -65,7 +65,7 @@ check_docker_daemon() {
 
 check_containers() {
     log_monitor "Container Status Check:"
-    
+
     # Get list of all containers
     local containers=$(docker ps -a --format '{{.Names}}\t{{.Status}}')
     echo "$containers" | while read name status; do
@@ -75,7 +75,7 @@ check_containers() {
             log_monitor "  ✓ $name: $status"
         fi
     done
-    
+
     # Check for specific required containers (Phase 13: code-server infrastructure)
     local required_containers=("code-server-31" "caddy-31" "ssh-proxy-31")
     for container in "${required_containers[@]}"; do
@@ -89,9 +89,9 @@ check_containers() {
 
 check_memory() {
     local mem_info=$(free -m | awk 'NR==2 {printf "%d\t%d\t%.1f", $2, $3, ($3/$2)*100}')
-    
+
     IFS=$'\t' read total used percent <<< "$mem_info"
-    
+
     if (( $(echo "$percent > $MEMORY_THRESHOLD" | bc -l) )); then
         log_alert "Memory usage: ${percent}% ($used MB / $total MB) — exceeds threshold"
         return 1
@@ -104,10 +104,10 @@ check_memory() {
 check_disk() {
     while IFS= read -r line; do
         if [ -z "$line" ]; then continue; fi
-        
+
         local usage=$(echo "$line" | awk '{print $5}' | sed 's/%//')
         local mount=$(echo "$line" | awk '{print $6}')
-        
+
         if (( usage > DISK_THRESHOLD )); then
             log_alert "Disk usage on $mount: ${usage}% — exceeds threshold"
             return 1
@@ -115,14 +115,14 @@ check_disk() {
             log_monitor "  ✓ $mount: ${usage}% available"
         fi
     done < <(df -h | tail -n +2)
-    
+
     return 0
 }
 
 check_code_server_health() {
     # Test code-server endpoint via Caddy reverse proxy (port 80)
     local status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/ 2>&1)
-    
+
     if [ "$status" = "200" ]; then
         log_monitor "✓ code-server health: HTTP $status (responding via Caddy reverse proxy)"
         return 0
@@ -146,15 +146,15 @@ check_network_connectivity() {
 check_resource_limits() {
     # Check if any container is hitting resource limits
     local container_stats=$(docker stats --no-stream --format '{{.Container}}\t{{.CPUPerc}}\t{{.MemPerc}}' 2>/dev/null || true)
-    
+
     echo "$container_stats" | while read container cpu mem; do
         local cpu_pct=$(echo "$cpu" | sed 's/%//')
         local mem_pct=$(echo "$mem" | sed 's/%//')
-        
+
         if (( $(echo "$cpu_pct > $CPU_WARNING_THRESHOLD" | bc -l) )); then
             log_alert "  $container CPU: ${cpu_pct}%"
         fi
-        
+
         if (( $(echo "$mem_pct > $MEMORY_THRESHOLD" | bc -l) )); then
             log_alert "  $container Memory: ${mem_pct}%"
         fi
@@ -167,7 +167,7 @@ check_resource_limits() {
 
 main() {
     mkdir -p "$LOG_DIR"
-    
+
     log_monitor "═══════════════════════════════════════════════════════════════════════════"
     log_monitor "PHASE 13 DAY 2: REAL-TIME HEALTH MONITORING"
     log_monitor "═══════════════════════════════════════════════════════════════════════════"
@@ -182,16 +182,16 @@ main() {
     log_monitor ""
     log_monitor "Starting continuous health monitoring..."
     log_monitor ""
-    
+
     local iteration=0
-    
+
     while true; do
         iteration=$((iteration + 1))
-        
+
         log_monitor "───────────────────────────────────────────────────────────────────────────"
         log_monitor "Health Check #$iteration - $(date '+%H:%M:%S')"
         log_monitor "───────────────────────────────────────────────────────────────────────────"
-        
+
         # Execute all health checks
         check_docker_daemon || true
         check_containers || true
@@ -200,9 +200,9 @@ main() {
         check_code_server_health || true
         check_network_connectivity || true
         check_resource_limits || true
-        
+
         log_monitor ""
-        
+
         # Wait for next check
         sleep "$MONITORING_INTERVAL"
     done

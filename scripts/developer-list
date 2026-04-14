@@ -82,7 +82,7 @@ fi
 is_expired() {
     local expiry_date="$1"
     local current_date=$(date '+%Y-%m-%d')
-    
+
     [ "$current_date" > "$expiry_date" ] && echo "yes" || echo "no"
 }
 
@@ -90,7 +90,7 @@ is_expired() {
 format_status() {
     local status="$1"
     local expiry="$2"
-    
+
     if [ "$status" = "revoked" ]; then
         echo -e "${RED}revoked${NC}"
     elif [ "$(is_expired "$expiry")" = "yes" ]; then
@@ -104,7 +104,7 @@ format_status() {
 remaining_days() {
     local expiry_date="$1"
     local current_date=$(date '+%Y-%m-%d')
-    
+
     if [ "$current_date" \> "$expiry_date" ]; then
         echo "0"
     else
@@ -123,12 +123,12 @@ output_table() {
     # Print header
     printf "${BLUE}%-30s %-20s %-12s %-12s %-10s${NC}\n" "Email" "Name" "Granted" "Expires" "Status"
     printf "%-30s %-20s %-12s %-12s %-10s\n" "$(printf '%.0s-' {1..30})" "$(printf '%.0s-' {1..20})" "$(printf '%.0s-' {1..12})" "$(printf '%.0s-' {1..12})" "$(printf '%.0s-' {1..10})"
-    
+
     # Print rows (skip header)
     tail -n +2 "$DEVELOPERS_CSV" | while IFS=',' read -r email name grant_date expiry_date duration status cloudflare_id invite_code share_link notes; do
         # Skip empty lines
         [ -z "$email" ] && continue
-        
+
         # Apply filters
         if [ "$FILTER" != "all" ]; then
             if [ "$FILTER" = "active" ] && [ "$status" != "active" ]; then
@@ -139,7 +139,7 @@ output_table() {
                 continue
             fi
         fi
-        
+
         STATUS_COLOR=$(format_status "$status" "$expiry_date")
         printf "%-30s %-20s %-12s %-12s ${STATUS_COLOR}\n" "$email" "$name" "$grant_date" "$expiry_date"
     done
@@ -151,7 +151,7 @@ output_json() {
     tail -n +2 "$DEVELOPERS_CSV" | while IFS=',' read -r email name grant_date expiry_date duration status cloudflare_id invite_code share_link notes; do
         # Skip empty lines
         [ -z "$email" ] && continue
-        
+
         # Apply filters
         if [ "$FILTER" != "all" ]; then
             if [ "$FILTER" = "active" ] && [ "$status" != "active" ]; then
@@ -162,13 +162,13 @@ output_json() {
                 continue
             fi
         fi
-        
+
         if [ "$first" = true ]; then
             first=false
         else
             echo ","
         fi
-        
+
         printf '  {\n'
         printf '    "email": "%s",\n' "$email"
         printf '    "name": "%s",\n' "$name"
@@ -188,12 +188,12 @@ output_json() {
 output_csv() {
     # Print header
     echo "email,name,granted,expires,duration_days,status,remaining_days,expired"
-    
+
     # Print rows
     tail -n +2 "$DEVELOPERS_CSV" | while IFS=',' read -r email name grant_date expiry_date duration status cloudflare_id invite_code share_link notes; do
         # Skip empty lines
         [ -z "$email" ] && continue
-        
+
         # Apply filters
         if [ "$FILTER" != "all" ]; then
             if [ "$FILTER" = "active" ] && [ "$status" != "active" ]; then
@@ -204,7 +204,7 @@ output_csv() {
                 continue
             fi
         fi
-        
+
         printf '%s,%s,%s,%s,%s,%s,%d,%s\n' \
             "$email" "$name" "$grant_date" "$expiry_date" "$duration" "$status" \
             "$(remaining_days "$expiry_date")" \
@@ -219,7 +219,7 @@ output_csv() {
 print_stats() {
     echo ""
     echo -e "${BLUE}========== STATISTICS ==========${NC}"
-    
+
     TOTAL=$(tail -n +2 "$DEVELOPERS_CSV" | wc -l)
     ACTIVE=$(tail -n +2 "$DEVELOPERS_CSV" | awk -F',' '$6 == "active"' | wc -l)
     REVOKED=$(tail -n +2 "$DEVELOPERS_CSV" | awk -F',' '$6 == "revoked"' | wc -l)
@@ -231,7 +231,7 @@ print_stats() {
         }
         END { print count }
     ')
-    
+
     echo "Total developers:        $TOTAL"
     echo "Active developers:       $ACTIVE"
     echo "Revoked developers:      $REVOKED"

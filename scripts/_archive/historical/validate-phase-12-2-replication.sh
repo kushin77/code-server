@@ -42,7 +42,7 @@ error() {
 # ==============================================================================
 test_vector_clocks() {
   log "INFO" "Testing vector clock consistency..."
-  
+
   # Check if vector-clock module can be imported
   if node -e "require('./src/services/replication/VectorClock.ts')" &>/dev/null; then
     success "Vector clock module found and loadable"
@@ -50,13 +50,13 @@ test_vector_clocks() {
     error "Failed to load vector clock module"
     return 1
   fi
-  
+
   log "INFO" "Vector clock operations:"
   log "INFO" "  - Tick (increment local clock)"
   log "INFO" "  - Update (receive remote clock)"
   log "INFO" "  - Happens-before (causality check)"
   log "INFO" "  - Concurrent (conflict detection)"
-  
+
   return 0
 }
 
@@ -65,7 +65,7 @@ test_vector_clocks() {
 # ==============================================================================
 test_crdt_types() {
   log "INFO" "Testing CRDT type definitions..."
-  
+
   # Check if CRDT module can be imported
   if node -e "require('./src/services/replication/CRDTTypes.ts')" &>/dev/null; then
     success "CRDT types module found and loadable"
@@ -73,13 +73,13 @@ test_crdt_types() {
     error "Failed to load CRDT types module"
     return 1
   fi
-  
+
   log "INFO" "Supported CRDT types:"
   log "INFO" "  - LWW-Counter (Last-Write-Wins Counter)"
   log "INFO" "  - OR-Set (Observed-Remove Set)"
   log "INFO" "  - LWW-Register (Last-Write-Wins Register)"
   log "INFO" "  - OR-Map (Observed-Remove Map)"
-  
+
   return 0
 }
 
@@ -88,7 +88,7 @@ test_crdt_types() {
 # ==============================================================================
 test_conflict_resolver() {
   log "INFO" "Testing conflict resolver..."
-  
+
   # Check if conflict resolver module can be imported
   if node -e "require('./src/services/replication/ConflictResolver.ts')" &>/dev/null; then
     success "Conflict resolver module found and loadable"
@@ -96,18 +96,18 @@ test_conflict_resolver() {
     error "Failed to load conflict resolver module"
     return 1
   fi
-  
+
   log "INFO" "Resolution strategies:"
   log "INFO" "  - LWW (Last-Write-Wins)"
   log "INFO" "  - FWW (First-Write-Wins)"
   log "INFO" "  - Replica-ID based"
   log "INFO" "  - Custom resolution"
-  
+
   log "INFO" "Conflict detection capabilities:"
   log "INFO" "  - Concurrent operation detection"
   log "INFO" "  - Vector clock causality analysis"
   log "INFO" "  - Conflict history tracking"
-  
+
   return 0
 }
 
@@ -116,7 +116,7 @@ test_conflict_resolver() {
 # ==============================================================================
 test_sync_protocol() {
   log "INFO" "Testing sync protocol..."
-  
+
   # Check if sync protocol module can be imported
   if node -e "require('./src/services/replication/SyncProtocol.ts')" &>/dev/null; then
     success "Sync protocol module found and loadable"
@@ -124,20 +124,20 @@ test_sync_protocol() {
     error "Failed to load sync protocol module"
     return 1
   fi
-  
+
   log "INFO" "Protocol features:"
   log "INFO" "  - Operation send/receive"
   log "INFO" "  - Vector clock maintenance"
   log "INFO" "  - Envelope creation and validation"
   log "INFO" "  - Checksum computation (SHA-256)"
   log "INFO" "  - Clock skew validation"
-  
+
   log "INFO" "Sync capabilities:"
   log "INFO" "  - Request/response pattern"
   log "INFO" "  - Batch processing (configurable batch size)"
   log "INFO" "  - Compression support (gzip, brotli)"
   log "INFO" "  - Operation deduplication"
-  
+
   return 0
 }
 
@@ -146,7 +146,7 @@ test_sync_protocol() {
 # ==============================================================================
 test_replication_service() {
   log "INFO" "Testing replication service..."
-  
+
   # Check if replication service module can be imported
   if node -e "require('./src/services/replication/ReplicationService.ts')" &>/dev/null; then
     success "Replication service module found and loadable"
@@ -154,19 +154,19 @@ test_replication_service() {
     error "Failed to load replication service module"
     return 1
   fi
-  
+
   log "INFO" "Service capabilities:"
   log "INFO" "  - Multi-region peer management"
   log "INFO" "  - Periodic sync scheduling"
   log "INFO" "  - Health checking"
   log "INFO" "  - Event emission"
   log "INFO" "  - Metrics tracking"
-  
+
   log "INFO" "Data operations:"
   log "INFO" "  - Write (with replication)"
   log "INFO" "  - Read (from local replica)"
   log "INFO" "  - Conflict detection and resolution"
-  
+
   return 0
 }
 
@@ -175,7 +175,7 @@ test_replication_service() {
 # ==============================================================================
 test_validator() {
   log "INFO" "Testing replication validator..."
-  
+
   # Check if validator module can be imported
   if node -e "require('./src/services/replication/ReplicationValidator.ts')" &>/dev/null; then
     success "Validator module found and loadable"
@@ -183,20 +183,20 @@ test_validator() {
     error "Failed to load validator module"
     return 1
   fi
-  
+
   log "INFO" "Validation checks:"
   log "INFO" "  - Vector clock consistency"
   log "INFO" "  - Peer connectivity"
   log "INFO" "  - Operation log integrity"
   log "INFO" "  - Data convergence"
   log "INFO" "  - Conflict resolution"
-  
+
   log "INFO" "Reporting capabilities:"
   log "INFO" "  - Consistency reports"
   log "INFO" "  - Convergence estimation"
   log "INFO" "  - Error/warning collection"
   log "INFO" "  - Metrics computation"
-  
+
   return 0
 }
 
@@ -205,7 +205,7 @@ test_validator() {
 # ==============================================================================
 test_configuration() {
   log "INFO" "Testing configuration files..."
-  
+
   # Check Kubernetes manifests
   if [ -f "${PROJECT_ROOT}/kubernetes/phase-12/data-layer/crdt-sync-engine.yaml" ]; then
     success "CRDT sync engine Kubernetes manifest found"
@@ -215,7 +215,7 @@ test_configuration() {
   else
     warning "CRDT sync engine manifest not found"
   fi
-  
+
   if [ -f "${PROJECT_ROOT}/kubernetes/phase-12/data-layer/postgres-multi-primary.yaml" ]; then
     success "PostgreSQL Multi-Primary Kubernetes manifest found"
     log "INFO" "  - Multi-primary replication setup"
@@ -223,7 +223,7 @@ test_configuration() {
   else
     warning "PostgreSQL multi-primary manifest not found"
   fi
-  
+
   return 0
 }
 
@@ -269,9 +269,9 @@ main() {
   log "INFO" "║   PHASE 12.2 DATA REPLICATION LAYER - VALIDATION TEST     ║"
   log "INFO" "╚════════════════════════════════════════════════════════════╝"
   log "INFO" ""
-  
+
   local all_passed=true
-  
+
   # Run all tests
   test_vector_clocks || all_passed=false
   test_crdt_types || all_passed=false
@@ -280,9 +280,9 @@ main() {
   test_replication_service || all_passed=false
   test_validator || all_passed=false
   test_configuration || all_passed=false
-  
+
   print_summary
-  
+
   if [ "$all_passed" = true ]; then
     success "All validation tests passed!"
     exit 0

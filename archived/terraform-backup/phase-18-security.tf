@@ -405,4 +405,3 @@ output "security_status" {
 # - Consul distributed consensus
 # - RTO: < 30 seconds (automatic failover)
 # - RPO: 0 seconds (no data loss)
-

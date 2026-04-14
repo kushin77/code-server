@@ -1,8 +1,8 @@
 # SCOPE VIOLATION - CRITICAL ALERT
 ## Copilot Instructions vs Actual Workspace Mismatch
 
-**Issue Date**: Current session  
-**Severity**: 🔴 CRITICAL - Scope violation detected  
+**Issue Date**: Current session
+**Severity**: 🔴 CRITICAL - Scope violation detected
 **Status**: UNRESOLVED - Requires clarification
 
 ---
@@ -14,9 +14,9 @@ The copilot-instructions.md file contains explicit scope restrictions:
 ```
 ## Scope - NO OTHER REPOS
 
-✅ **ONLY REPO**: kushin77/code-server  
-❌ **NEVER**: eiq-linkedin, GCP-landing-zone, code-server-enterprise, or any other repo  
-❌ **NEVER**: Multi-repo governance or cross-repo references  
+✅ **ONLY REPO**: kushin77/code-server
+❌ **NEVER**: eiq-linkedin, GCP-landing-zone, code-server-enterprise, or any other repo
+❌ **NEVER**: Multi-repo governance or cross-repo references
 ❌ **NEVER**: Landing zone compliance or IaC infrastructure concerns
 ```
 
@@ -32,7 +32,7 @@ This is a direct scope violation - the instructions explicitly forbid work on co
 ```
 ## Scope - NO OTHER REPOS
 
-✅ **ONLY REPO**: kushin77/code-server  
+✅ **ONLY REPO**: kushin77/code-server
 ❌ **NEVER**: eiq-linkedin, GCP-landing-zone, **code-server-enterprise**, or any other repo
 ```
 
@@ -48,8 +48,8 @@ All work completed in this session (Phase 25, Phase 22-B, etc.) while in the cod
 
 ## Resolution Required
 
-**Option 1**: Clarify that code-server-enterprise IS the authorized workspace (override instructions)  
-**Option 2**: Switch to kushin77/code-server repository (local clone required)  
+**Option 1**: Clarify that code-server-enterprise IS the authorized workspace (override instructions)
+**Option 2**: Switch to kushin77/code-server repository (local clone required)
 **Option 3**: Update copilot-instructions.md to include code-server-enterprise in authorized repos
 
 ---
@@ -62,5 +62,5 @@ The persistent hook blocking task completion may be intentional - preventing com
 
 ---
 
-**Document Created**: To alert to scope violation  
+**Document Created**: To alert to scope violation
 **Status**: AWAITING CLARIFICATION

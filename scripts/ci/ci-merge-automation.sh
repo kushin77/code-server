@@ -81,9 +81,9 @@ require_github_cli
 get_pr_check_status() {
     local pr_number="$1"
     local output
-    
+
     output=$(gh pr checks "$pr_number" --repo "$REPO" 2>&1 || echo "ERROR")
-    
+
     if echo "$output" | grep -q "All checks passed"; then
         echo "PASSED"
     elif echo "$output" | grep -q "Some checks failed"; then
@@ -98,14 +98,14 @@ get_pr_check_status() {
 get_pr_check_details() {
     local pr_number="$1"
     local output
-    
+
     output=$(gh pr checks "$pr_number" --repo "$REPO" 2>&1 || echo "")
-    
+
     local pending
     local failed
     pending=$(echo "$output" | grep -c "pending" || echo 0)
     failed=$(echo "$output" | grep -c "failed" || echo 0)
-    
+
     if [[ $pending -gt 0 || $failed -gt 0 ]]; then
         echo "$pending pending, $failed failed"
     else
@@ -115,9 +115,9 @@ get_pr_check_details() {
 
 merge_pr() {
     local pr_number="$1"
-    
+
     write_info "→ Merging PR #$pr_number..."
-    
+
     if gh pr merge "$pr_number" --repo "$REPO" --merge 2>&1 | grep -q "Pull Request successfully merged"; then
         write_success "✅ PR #$pr_number merged to main"
         return 0
@@ -133,37 +133,37 @@ monitor_ci() {
     write_info "Check interval: $CHECK_INTERVAL seconds"
     write_info "Repository: $REPO"
     write_info ""
-    
+
     local iteration=0
-    
+
     while true; do
         ((iteration++))
         local timestamp
         timestamp=$(date '+%H:%M:%S')
-        
+
         write_warning "[$timestamp] Check #$iteration"
-        
+
         local status9 status10 status11
         status9=$(get_pr_check_status "$PR_PHASE9")
         status10=$(get_pr_check_status "$PR_PHASE10")
         status11=$(get_pr_check_status "$PR_PHASE11")
-        
+
         local detail9 detail10 detail11
         detail9=$(get_pr_check_details "$PR_PHASE9")
         detail10=$(get_pr_check_details "$PR_PHASE10")
         detail11=$(get_pr_check_details "$PR_PHASE11")
-        
+
         write_info "  PR #$PR_PHASE9 (Phase 9):   $status9 - $detail9"
         write_info "  PR #$PR_PHASE10 (Phase 10):  $status10 - $detail10"
         write_info "  PR #$PR_PHASE11 (Phase 11):  $status11 - $detail11"
-        
+
         # Check if all passed
         if [[ "$status9" == "PASSED" && "$status10" == "PASSED" && "$status11" == "PASSED" ]]; then
             write_success ""
             write_success "🎉 ALL CI CHECKS PASSED! Ready for merge sequence."
             return 0
         fi
-        
+
         # Check for any failures
         if [[ "$status9" == "FAILED" || "$status10" == "FAILED" || "$status11" == "FAILED" ]]; then
             write_error ""
@@ -173,7 +173,7 @@ monitor_ci() {
             [[ "$status11" == "FAILED" ]] && write_error "  → PR #$PR_PHASE11 failed - check GitHub Actions logs"
             return 1
         fi
-        
+
         write_info "  → Waiting $CHECK_INTERVAL seconds for next check..."
         write_info ""
         sleep "$CHECK_INTERVAL"
@@ -182,7 +182,7 @@ monitor_ci() {
 
 execute_merge_sequence() {
     write_section "MERGE SEQUENCE EXECUTION"
-    
+
     write_info ""
     write_info "Step 1: Merge PR #$PR_PHASE9 (Phase 9) to main"
     if ! merge_pr "$PR_PHASE9"; then
@@ -190,7 +190,7 @@ execute_merge_sequence() {
         return 1
     fi
     sleep 5
-    
+
     write_info ""
     write_info "Step 2: Merge PR #$PR_PHASE10 (Phase 10) to main"
     if ! merge_pr "$PR_PHASE10"; then
@@ -198,14 +198,14 @@ execute_merge_sequence() {
         return 1
     fi
     sleep 5
-    
+
     write_info ""
     write_info "Step 3: Merge PR #$PR_PHASE11 (Phase 11) to main"
     if ! merge_pr "$PR_PHASE11"; then
         write_error "❌ Phase 11 merge failed - aborting sequence"
         return 1
     fi
-    
+
     write_success ""
     write_success "✅ ALL THREE PHASES MERGED TO MAIN!"
     write_success "   Code-server is now production-ready with:"
@@ -214,18 +214,18 @@ execute_merge_sequence() {
     write_success "   • Phase 11: Advanced resilience & HA/DR"
     write_success "   📋 Next: Deploy Phase 12 multi-region federation"
     write_info ""
-    
+
     return 0
 }
 
 show_current_status() {
     write_section "Current CI Status"
-    
+
     local status9 status10 status11
     status9=$(get_pr_check_status "$PR_PHASE9")
     status10=$(get_pr_check_status "$PR_PHASE10")
     status11=$(get_pr_check_status "$PR_PHASE11")
-    
+
     write_info "PR #$PR_PHASE9 (Phase 9):  $status9"
     write_info "PR #$PR_PHASE10 (Phase 10): $status10"
     write_info "PR #$PR_PHASE11 (Phase 11): $status11"
@@ -248,7 +248,7 @@ if $MONITOR; then
 elif $MERGE; then
     local status9
     status9=$(get_pr_check_status "$PR_PHASE9")
-    
+
     if [[ "$status9" == "PASSED" ]]; then
         execute_merge_sequence
     else

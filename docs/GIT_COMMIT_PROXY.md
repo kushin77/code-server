@@ -6,7 +6,7 @@
 
 **Problem**: Developers need Git functionality but must NOT have access to:
 - SSH keys (`~/.ssh/id_rsa`)
-- GitHub credentials  
+- GitHub credentials
 - Protected branch direct access
 
 **Solution**: All git operations are routed through an authenticated proxy server running on the home server.
@@ -411,6 +411,6 @@ git push origin new-branch  # Should succeed via proxy
 
 ---
 
-**Status**: Implementation complete and documented  
-**Last Updated**: April 13, 2026  
+**Status**: Implementation complete and documented
+**Last Updated**: April 13, 2026
 **Owner**: Platform Engineering Team

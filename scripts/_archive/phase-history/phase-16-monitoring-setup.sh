@@ -4,7 +4,7 @@
 # Phase 16 Monitoring & SLO Configuration
 # Purpose: Deploy Phase 16-specific Prometheus/Grafana configuration
 # Timeline: April 21-27, 2026
-# 
+#
 # Usage: bash scripts/phase-16-monitoring-setup.sh
 #
 ################################################################################
@@ -41,9 +41,9 @@ log_error() {
 
 create_prometheus_rules() {
     log "Creating Prometheus alert rules for Phase 16..."
-    
+
     mkdir -p "${CONFIG_DIR}/prometheus"
-    
+
     cat > "${CONFIG_DIR}/prometheus/phase-16-rules.yml" << 'EOF'
 groups:
   - name: phase_16_slo_alerts
@@ -119,7 +119,7 @@ groups:
           description: "Pod {{ $labels.pod_name }} restarted in last hour"
 
 EOF
-    
+
     log_success "Prometheus rules created"
 }
 
@@ -129,9 +129,9 @@ EOF
 
 create_grafana_dashboards() {
     log "Creating Grafana dashboards for Phase 16..."
-    
+
     mkdir -p "${CONFIG_DIR}/grafana/dashboards"
-    
+
     # Dashboard 1: Phase 16 SLO Overview
     cat > "${CONFIG_DIR}/grafana/dashboards/phase-16-slo.json" << 'EOF'
 {
@@ -325,9 +325,9 @@ EOF
 
 create_alertmanager_config() {
     log "Creating AlertManager configuration for Phase 16..."
-    
+
     mkdir -p "${CONFIG_DIR}/alertmanager"
-    
+
     cat > "${CONFIG_DIR}/alertmanager/phase-16-routes.yml" << 'EOF'
 route:
   receiver: 'phase-16-critical'
@@ -396,7 +396,7 @@ grouping_labels:
   - alertname
 
 EOF
-    
+
     log_success "AlertManager configuration created"
 }
 
@@ -406,7 +406,7 @@ EOF
 
 create_slo_recording_rules() {
     log "Creating SLO recording rules..."
-    
+
     cat > "${CONFIG_DIR}/prometheus/phase-16-slo-rules.yml" << 'EOF'
 groups:
   - name: phase_16_slo_recording
@@ -444,7 +444,7 @@ groups:
           30
 
 EOF
-    
+
     log_success "SLO recording rules created"
 }
 
@@ -454,9 +454,9 @@ EOF
 
 create_notification_templates() {
     log "Creating notification templates..."
-    
+
     mkdir -p "${CONFIG_DIR}/templates"
-    
+
     cat > "${CONFIG_DIR}/templates/phase-16-alert.tmpl" << 'EOF'
 {{define "phase16_alert"}}
 Phase 16 Production Rollout Alert
@@ -476,7 +476,7 @@ Runbook: {{.Annotations.runbook}}
 Dashboard: http://localhost:3000/d/phase-16-slo
 {{end}}
 EOF
-    
+
     log_success "Notification templates created"
 }
 
@@ -487,15 +487,15 @@ EOF
 main() {
     echo -e "${BLUE}=== Phase 16 Monitoring Setup ===${NC}"
     echo "Creating comprehensive monitoring configuration for Phase 16..."
-    
+
     mkdir -p "$CONFIG_DIR"
-    
+
     create_prometheus_rules
     create_grafana_dashboards
     create_alertmanager_config
     create_slo_recording_rules
     create_notification_templates
-    
+
     echo -e "\n${GREEN}✅ Phase 16 Monitoring Setup Complete${NC}"
     echo "Configuration files created in: $CONFIG_DIR"
     echo ""

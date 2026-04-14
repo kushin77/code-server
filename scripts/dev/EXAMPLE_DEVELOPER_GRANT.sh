@@ -29,7 +29,7 @@ send_email() {
     local recipient="$1"
     local subject="$2"
     local body="$3"
-    
+
     # For demo, just save to file. In production, use mail/sendmail
     cat > "/tmp/email-$recipient.txt" << EOF
 To: $recipient

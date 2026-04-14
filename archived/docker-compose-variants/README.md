@@ -1,6 +1,6 @@
 # Docker Compose Files - Archive
 
-**Last Updated**: April 14, 2026  
+**Last Updated**: April 14, 2026
 **Status**: Consolidated and Archived (Phase 1, Task 1.2)
 
 ## Consolidation Summary
@@ -100,6 +100,6 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.override.yml up -d
 
 ---
 
-**Archive Created**: Phase 1, Task 1.2 Consolidation  
-**Maintained By**: DevOps Team  
+**Archive Created**: Phase 1, Task 1.2 Consolidation
+**Maintained By**: DevOps Team
 **Next Review**: Week of April 21, 2026

@@ -28,9 +28,9 @@ jobs:
         run: |
           # Get default branch
           DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
-          
+
           echo "🔍 Scanning for merged branches (default: $DEFAULT_BRANCH)..."
-          
+
           # Find branches merged into default branch (excluding protected branches)
           MERGED_BRANCHES=$(git branch -r --merged origin/$DEFAULT_BRANCH | \
             grep -v "origin/$DEFAULT_BRANCH" | \
@@ -38,7 +38,7 @@ jobs:
             grep -v "origin/develop" | \
             grep -v "origin/release" | \
             sed 's|origin/||')
-          
+
           if [ -z "$MERGED_BRANCHES" ]; then
             echo "✅ No merged branches to clean up"
           else
@@ -52,19 +52,19 @@ jobs:
       - name: Delete Old Feature Branches
         run: |
           echo "🔍 Scanning for old feature branches (>30 days inactive)..."
-          
+
           CUTOFF_DATE=$(date -d "30 days ago" +%s)
           DELETED_COUNT=0
-          
+
           # Get all remote branches
           git for-each-ref --sort=-committerdate refs/remotes/origin/ --format='%(refname:short)|%(committerdate:unix)' | while IFS='|' read branch date; do
             BRANCH_NAME="${branch#origin/}"
-            
+
             # Skip protected branches
             if [[ "$BRANCH_NAME" =~ ^(main|develop|release|hotfix)/ ]]; then
               continue
             fi
-            
+
             # Check if branch is older than cutoff
             if [ "$date" -lt "$CUTOFF_DATE" ]; then
               echo "  - Deleting old branch: $BRANCH_NAME (last commit: $(date -d @$date '+%Y-%m-%d'))"
@@ -72,7 +72,7 @@ jobs:
               ((DELETED_COUNT++))
             fi
           done
-          
+
           echo "✅ Cleanup complete ($DELETED_COUNT branches)"
 
       - name: Cleanup Local Branches
@@ -97,25 +97,25 @@ jobs:
         with:
           script: |
             const summary = `## 🗑️ Branch Cleanup Report
-            
+
             **Date**: ${new Date().toISOString().split('T')[0]}
             **Status**: ✅ Completed
-            
+
             ### Summary
             - Removed: Merged branches from default branch
             - Removed: Feature branches inactive >30 days
             - Pruned: Local references to deleted remote branches
-            
+
             ### Protected Branches (Not Deleted)
             - main
             - develop
             - release/*
             - hotfix/*
-            
+
             ### Next Run
             Scheduled for next Monday at 2:00 AM UTC
-            
+
             [View Workflow Run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})
             `;
-            
+
             core.summary.addRaw(summary);

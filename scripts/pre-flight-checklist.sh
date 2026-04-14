@@ -130,7 +130,7 @@ cd "$PARENT_DIR"
 
 if git rev-parse --git-dir > /dev/null 2>&1; then
     pass "Git repository initialized"
-    
+
     # Check for uncommitted changes
     if git status --porcelain | grep -q .; then
         warn "Uncommitted changes exist"
@@ -138,7 +138,7 @@ if git rev-parse --git-dir > /dev/null 2>&1; then
     else
         pass "All changes committed"
     fi
-    
+
     # Check for untracked files
     UNTRACKED=$(git ls-files --others --exclude-standard | wc -l)
     if [ "$UNTRACKED" -gt 0 ]; then
@@ -146,7 +146,7 @@ if git rev-parse --git-dir > /dev/null 2>&1; then
     else
         pass "No untracked files"
     fi
-    
+
     # Check remote
     if git remote -v | grep -q origin; then
         pass "Git remote configured"

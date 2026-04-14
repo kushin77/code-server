@@ -25,7 +25,7 @@ caddy:
   environment:
     # Primary: Domain for external access
     - DOMAIN=${DOMAIN:-192.168.168.31.nip.io}
-    
+
     # Secondary: ACME email for Let's Encrypt
     - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}
 ```
@@ -57,7 +57,7 @@ The Caddyfile uses `{$DOMAIN}` placeholder to dynamically accept any domain:
     handle @ide_requests {
         reverse_proxy code-server:8080
     }
-    
+
     # Metrics endpoint
     @prometheus_requests host prometheus.{$DOMAIN:192.168.168.31.nip.io}
     handle @prometheus_requests {

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Phase 14 Pre-Validation Readiness Check
-echo "=== PHASE 14 PRE-VALIDATION READINESS CHECK ===" 
+echo "=== PHASE 14 PRE-VALIDATION READINESS CHECK ==="
 echo "Timestamp: $(date -u)"
 echo ""
 echo "=== SERVICE HEALTH CHECK ==="
@@ -29,4 +29,4 @@ echo ""
 echo "=== HTTPS ENDPOINT TEST ==="
 curl -s -k -I https://localhost/ 2>&1 | head -3 || echo "Testing HTTPS..."
 echo ""
-echo "=== PRE-VALIDATION READINESS: ✅ COMPLETE ===" 
+echo "=== PRE-VALIDATION READINESS: ✅ COMPLETE ==="

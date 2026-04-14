@@ -355,4 +355,3 @@ output "load_balancing_status" {
 # - ASG min: 2, desired: 3, max: 10
 # - Horizontal scaling based on CPU/memory metrics
 # - HAProxy backends auto-discovered via service registry
-

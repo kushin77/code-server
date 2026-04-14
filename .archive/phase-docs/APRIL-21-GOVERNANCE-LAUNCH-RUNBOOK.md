@@ -1,10 +1,10 @@
 # APRIL 21, 2026 - PHASE 3 GOVERNANCE LAUNCH RUNBOOK
 ## Phase 3: Governance & Guardrails - Team Training & Soft-Launch Activation
 
-**Date**: April 21, 2026  
-**Duration**: 30 minutes (live session) + 1 week soft-launch period  
-**Attendees**: Full engineering team (8-12 developers)  
-**Format**: Live training + Q&A  
+**Date**: April 21, 2026
+**Duration**: 30 minutes (live session) + 1 week soft-launch period
+**Attendees**: Full engineering team (8-12 developers)
+**Format**: Live training + Q&A
 **Owner**: Infrastructure & Governance Teams
 
 ---
@@ -170,23 +170,23 @@ Examples:
 1. Show test PR: test-ci-validation-pr
    - Point out CI workflow is running
    - Show workflow details
-   
+
 2. Demo PASSING check:
    - docker-compose.yml ✅
      - Valid YAML syntax ✅
      - All images pinned ✅
      - Health checks present ✅
      - Resource limits defined ✅
-   
+
 3. Demo FAILING checks (intentional violations):
    - Caddyfile ❌
      - Syntax error: missing closing brace
      - Error message: "expected closing brace at line 24"
-   
+
    - shell-script.sh ❌
      - Unquoted variable warning
      - Error message: "variable expansion without quotes at line 12"
-   
+
 4. Show how to fix:
    - Edit Caddyfile, save, push
    - CI automatically retriggers
@@ -213,7 +213,7 @@ A: For April 21-25 (soft-launch), you CAN merge even with failures.
 ```
 A: Read the error messages! They tell you exactly what's wrong.
    Example: "Image must be pinned to version, not 'latest'"
-   
+
    Run checks locally:
    - docker-compose config (validates YAML)
    - terraform validate (validates HCL)
@@ -226,7 +226,7 @@ A: Yes! If a rule doesn't make sense for your use case:
    1. Comment on GitHub Issue #256
    2. Provide context why exception is needed
    3. Team votes on approval
-   
+
    Example: "We need image:latest for canary deployments"
    → Discussion → Decision → Rule update
 ```
@@ -246,7 +246,7 @@ A: Soft-launch applies to all PRs, existing and new.
 A: Timeline:
    - April 21-25: Soft-launch (CI feedback, PRs can merge anyway)
    - April 28: Hard enforcement (failed checks block merge)
-   
+
    This gives everyone 1 week to learn and ask questions.
 ```
 
@@ -386,11 +386,11 @@ After training, measure:
 
 ### Training Success Indicators
 
-✅ **Technical Clarity**: Team understands error messages  
-✅ **Process Clarity**: Team knows the 3-week timeline  
-✅ **Support Clarity**: Team knows where to get help  
-✅ **Engagement**: Team provides actionable feedback  
-✅ **Adoption**: Team fixes violations during soft-launch  
+✅ **Technical Clarity**: Team understands error messages
+✅ **Process Clarity**: Team knows the 3-week timeline
+✅ **Support Clarity**: Team knows where to get help
+✅ **Engagement**: Team provides actionable feedback
+✅ **Adoption**: Team fixes violations during soft-launch
 
 ---
 
@@ -404,7 +404,7 @@ After training, measure:
 ### Problem: "Error message is confusing"
 - **Cause**: Validation tool output is terse
 - **Fix**: Team lead interprets, comments in PR with translation
-- **Example**: 
+- **Example**:
   - Error: "schema validation failed"
   - Translation: "Your docker-compose.yml is missing 'version' field"
 
@@ -465,6 +465,6 @@ After training, measure:
 
 ---
 
-**Owner**: Infrastructure Team  
-**Last Updated**: April 14, 2026  
+**Owner**: Infrastructure Team
+**Last Updated**: April 14, 2026
 **Status**: Ready for execution

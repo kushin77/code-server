@@ -66,7 +66,7 @@ docker-compose logs -f [service-name]
 
 Contains shared service definitions used by all environments:
 - Service names and images
-- Container networking  
+- Container networking
 - Volume mounts
 - Common environment variables
 
@@ -215,8 +215,8 @@ All containers share `code-server-enterprise_enterprise` network.
 
 ## Maintenance
 
-**Owner**: @akushnir  
-**Last Updated**: April 14, 2026  
+**Owner**: @akushnir
+**Last Updated**: April 14, 2026
 **Status**: Active production containers
 
 ---

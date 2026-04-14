@@ -27,9 +27,9 @@ log_error() { echo -e "${RED}[✗]${NC} $@" | tee -a "${LOG_FILE}"; }
 
 setup_aws_autoscaling() {
     log_info "Setting up AWS Auto Scaling..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/aws"
-    
+
     # AWS CloudWatch monitoring for auto-scaling decision
     cat > "${PROJECT_ROOT}/config/aws/asg-launch-template.json" << 'EOF'
 {
@@ -136,9 +136,9 @@ EOF
 
 setup_azure_autoscaling() {
     log_info "Setting up Azure Auto Scaling..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/azure"
-    
+
     # VMSS autoscale settings
     cat > "${PROJECT_ROOT}/config/azure/vmss-autoscale.json" << 'EOF'
 {
@@ -241,9 +241,9 @@ EOF
 
 setup_gcp_autoscaling() {
     log_info "Setting up GCP Auto Scaling..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/gcp"
-    
+
     # GKE HPA with custom metrics
     cat > "${PROJECT_ROOT}/config/gcp/gcp-hpa-custom.yaml" << 'EOF'
 apiVersion: autoscaling/v2
@@ -311,7 +311,7 @@ spec:
             severity: warning
           annotations:
             summary: "High CPU usage detected"
-            
+
         - alert: HighMemoryUsage
           expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.85
           for: 5m
@@ -379,9 +379,9 @@ EOF
 
 setup_cost_aware_scaling() {
     log_info "Setting up cost-aware scaling policies..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/cost-scaling"
-    
+
     # Spot instance management
     cat > "${PROJECT_ROOT}/config/cost-scaling/spot-instance-policy.yaml" << 'EOF'
 apiVersion: batch/v1
@@ -423,14 +423,14 @@ costAwarenessRules:
       condition: "cpu_utilization < 60%"
       action: "use_spot_instances"
       costSavings: "70%"
-      
+
     - name: "use-reserved-instances"
       priority: 2
       condition: "consistent_baseline_load"
       action: "allocate_reserved_capacity"
       commitment: "1-year"
       costSavings: "40%"
-      
+
     - name: "dynamic-region-selection"
       priority: 3
       condition: "latency_requirement < 100ms"
@@ -448,7 +448,7 @@ costAwarenessRules:
       scaleUpAt: "06:00"
       targetCapacity: 30%
       costSavings: "35%"
-    
+
     predictiveScaling:
       enabled: true
       lookbackWindow: 30days
@@ -465,9 +465,9 @@ EOF
 
 setup_metrics_server() {
     log_info "Setting up Kubernetes metrics server..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/metrics"
-    
+
     cat > "${PROJECT_ROOT}/config/metrics/metrics-server.yaml" << 'EOF'
 apiVersion: v1
 kind: Namespace
@@ -534,9 +534,9 @@ EOF
 
 setup_scaling_observability() {
     log_info "Setting up observability for scaling events..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/scaling-observability"
-    
+
     cat > "${PROJECT_ROOT}/config/scaling-observability/scaling-events.yaml" << 'EOF'
 apiVersion: v1
 kind: ConfigMap
@@ -550,10 +550,10 @@ data:
         rules:
           - record: kubernetes:scale:up:total
             expr: rate(kubernetes_io_scale_up_triggered_total[5m])
-          
+
           - record: kubernetes:scale:down:total
             expr: rate(kubernetes_io_scale_down_triggered_total[5m])
-          
+
           - alert: FrequentScaling
             expr: rate(kubernetes_io_scale_up_triggered_total[5m]) > 0.5
             for: 10m
@@ -590,7 +590,7 @@ EOF
 
 validate_autoscaling() {
     log_info "Validating autoscaling configurations..."
-    
+
     local checks=(
         "config/aws/asg-launch-template.json"
         "config/aws/cloudwatch-config.json"
@@ -600,7 +600,7 @@ validate_autoscaling() {
         "config/metrics/metrics-server.yaml"
         "config/scaling-observability/scaling-events.yaml"
     )
-    
+
     for check in "${checks[@]}"; do
         if [ -f "${PROJECT_ROOT}/${check}" ]; then
             log_success "✓ ${check}"
@@ -609,7 +609,7 @@ validate_autoscaling() {
             return 1
         fi
     done
-    
+
     return 0
 }
 
@@ -620,7 +620,7 @@ validate_autoscaling() {
 main() {
     log_info "Phase 18: Auto-Scaling Integration"
     log_info "Start: $(date)"
-    
+
     setup_aws_autoscaling || return 1
     setup_azure_autoscaling || return 1
     setup_gcp_autoscaling || return 1
@@ -628,10 +628,10 @@ main() {
     setup_metrics_server || return 1
     setup_scaling_observability || return 1
     validate_autoscaling || return 1
-    
+
     log_success "Auto-Scaling integration complete"
     log_success "Log: ${LOG_FILE}"
-    
+
     return 0
 }
 

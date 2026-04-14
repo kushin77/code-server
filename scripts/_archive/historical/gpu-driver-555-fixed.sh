@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# GPU Driver Upgrade: 470.x → 555.x with CUDA 12.4 
+# GPU Driver Upgrade: 470.x → 555.x with CUDA 12.4
 # Fixed version with correct Ubuntu 22.04 repository
 # Requires: sudo access, internet connectivity
 #
@@ -162,4 +162,3 @@ log "Next steps:"
 log "  1. Reboot for kernel module updates: sudo reboot"
 log "  2. Verify after reboot: nvidia-smi"
 log "  3. Test Docker GPU: docker run --rm --gpus all nvidia/cuda:12.4-runtime nvidia-smi"
-

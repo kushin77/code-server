@@ -1,16 +1,16 @@
 # Governance & Guardrails: kushin77/code-server-enterprise
 
-**Effective**: April 14, 2026  
-**Scope**: All contributions, all developers, all phases  
+**Effective**: April 14, 2026
+**Scope**: All contributions, all developers, all phases
 **Status**: **Mandatory** — Non-compliance blocks PRs
 
 ---
 
 ## Mission: Zero Accumulation of Dead Code
 
-**Goal**: Prevent 50+ dead files from accumulating again  
-**Method**: Guardrails, governance, and automated checks  
-**Enforcement**: CI/CD, code review, monthly audits  
+**Goal**: Prevent 50+ dead files from accumulating again
+**Method**: Guardrails, governance, and automated checks
+**Enforcement**: CI/CD, code review, monthly audits
 
 ---
 
@@ -191,8 +191,8 @@ Why does this exist? What problem does it solve?
 
 ### Rule 2.2: Monthly Dead Code Audit
 
-**Frequency**: First Monday of each month  
-**Owner**: Tech Lead / DevOps  
+**Frequency**: First Monday of each month
+**Owner**: Tech Lead / DevOps
 **Duration**: ~1 hour
 
 **Checklist**:
@@ -512,7 +512,7 @@ Some rules need flexibility. Here's the process:
 
 **Duration**: 3 months (expires 2026-07-14)
 
-**Scope**: 
+**Scope**:
 - Only in `tests/docker-compose.test.yml`
 - Never deployed to production
 - Auto-deleted after test run
@@ -606,23 +606,23 @@ Every new developer must read:
 
 ## Questions & Escalation
 
-**Q**: My feature requires a phase-numbered terraform file  
+**Q**: My feature requires a phase-numbered terraform file
 **A**: Open an exception request. Likely you don't need a phase file — use main.tf with feature flags or variables.
 
-**Q**: I need a docker-compose variant for testing  
+**Q**: I need a docker-compose variant for testing
 **A**: Use `tests/docker-compose.test.yml` (not in root). Delete after test.
 
-**Q**: The monthly audit found my unused file  
+**Q**: The monthly audit found my unused file
 **A**: Either justify keeping it (opens GitHub issue discussion) or archive it.
 
-**Q**: Can I make an exception to these rules?  
+**Q**: Can I make an exception to these rules?
 **A**: Yes, file an exception request with tech lead approval and expiration date.
 
 ---
 
-**Status**: ✅ **EFFECTIVE IMMEDIATELY**  
-**Enforcement**: Starting with next PR after April 14, 2026  
-**Review Cycle**: Quarterly (April, July, October, January)  
+**Status**: ✅ **EFFECTIVE IMMEDIATELY**
+**Enforcement**: Starting with next PR after April 14, 2026
+**Review Cycle**: Quarterly (April, July, October, January)
 **Next Review**: July 14, 2026
 
 ---

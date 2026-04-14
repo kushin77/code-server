@@ -27,9 +27,9 @@ log_error() { echo -e "${RED}[✗]${NC} $@" | tee -a "${LOG_FILE}"; }
 
 setup_cost_tracking() {
     log_info "Setting up cost tracking framework..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/billing"
-    
+
     # Cost allocation and tagging strategy
     cat > "${PROJECT_ROOT}/config/billing/tagging-strategy.yaml" << 'EOF'
 taggingStrategy:
@@ -46,7 +46,7 @@ taggingStrategy:
       description: "Team or person responsible for the resource"
     - key: "BackupPolicy"
       values: ["daily", "weekly", "none"]
-    
+
   optional:
     - key: "Project"
     - key: "BusinessUnit"
@@ -66,11 +66,11 @@ taggingStrategy:
       - rule: "by-environment"
         weight: 40
         tags: ["Environment"]
-      
+
       - rule: "by-cost-center"
         weight: 35
         tags: ["CostCenter"]
-      
+
       - rule: "by-application"
         weight: 25
         tags: ["Application"]
@@ -90,7 +90,7 @@ finopsFramework:
       - name: "GCP Billing"
         frequency: "daily"
         recipients: ["finance@company.com"]
-    
+
     dashboards:
       - name: "monthly-cost-summary"
         updateFrequency: "daily"
@@ -108,7 +108,7 @@ finopsFramework:
       frequency: "weekly"
       threshold: "30%"  # Flag if utilization < 30%
       action: "recommend"
-    
+
     idleResourceDetection:
       enabled: true
       frequency: "daily"
@@ -116,7 +116,7 @@ finopsFramework:
         - cpu: "< 5% for 7 days"
         - network: "< 1 kbps for 7 days"
       action: "notify"
-    
+
     unusedResourceCleanup:
       enabled: true
       frequency: "weekly"
@@ -143,12 +143,12 @@ finopsFramework:
         limit: 50000
         threshold: [70, 90, 100]
         owner: "VP-Engineering"
-      
+
       - name: "operations-monthly"
         limit: 30000
         threshold: [70, 90, 100]
         owner: "VP-Operations"
-    
+
     alerts:
       - when: "threshold-exceeded"
         notify:
@@ -169,16 +169,16 @@ EOF
 
 setup_reservations() {
     log_info "Setting up reservation management..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/reservations"
-    
+
     # AWS Reserved Instance strategy
     cat > "${PROJECT_ROOT}/config/reservations/aws-ri-strategy.yaml" << 'EOF'
 awsReservedInstances:
   target:
     coverage: 70%
     savingsTarget: 45%
-  
+
   instanceTypes:
     compute:
       - instanceType: "t3.large"
@@ -186,25 +186,25 @@ awsReservedInstances:
         reservationType: "1-year"
         paymentOption: "all-upfront"
         expectedSavings: "40%"
-      
+
       - instanceType: "c5.xlarge"
         baselineDemand: 3
         reservationType: "3-year"
         paymentOption: "partial-upfront"
         expectedSavings: "50%"
-    
+
     memory:
       - instanceType: "r5.xlarge"
         baselineDemand: 2
         reservationType: "1-year"
         paymentOption: "all-upfront"
         expectedSavings: "38%"
-  
+
   purchasing:
     strategy: "blended"
     adjustmentFrequency: "quarterly"
     lookbackPeriod: "90days"
-  
+
   flexibility:
     regionFlexibility: true
     azFlexibility: true
@@ -217,26 +217,26 @@ azureReservedInstances:
   target:
     coverage: 65%
     savingsTarget: 35%
-  
+
   instanceTypes:
     compute:
       - vmSize: "Standard_DS2_v2"
         baselineDemand: 5
         reservationTerm: "1Year"
         expectedSavings: "33%"
-      
+
       - vmSize: "Standard_D4s_v3"
         baselineDemand: 3
         reservationTerm: "3Year"
         expectedSavings: "40%"
-    
+
     storage:
       - type: "ManagedDisk"
         tier: "Premium"
         baselineDemand: "500GB"
         reservationTerm: "1Year"
         expectedSavings: "20%"
-  
+
   database:
     - sku: "Standard_B_gen5_1"
       baselineDemand: 2
@@ -250,32 +250,32 @@ gcpCommitments:
   target:
     coverage: 60%
     savingsTarget: 30%
-  
+
   commitmentPlans:
     compute:
       - machineType: "n1-standard-2"
         baselineDemand: 5
         commitmentLength: "1-year"
         expectedSavings: "25%"
-      
+
       - machineType: "n1-standard-4"
         baselineDemand: 3
         commitmentLength: "3-year"
         expectedSavings: "30%"
-    
+
     memory:
       - machineType: "n1-highmem-2"
         baselineDemand: 2
         commitmentLength: "1-year"
         expectedSavings: "25%"
-  
+
   resourceCommitments:
     - resource: "vCPU"
       region: "us-central1"
       quantity: 32
       term: "1-year"
       expectedSavings: "25%"
-    
+
     - resource: "Memory"
       region: "us-central1"
       quantity: "128GB"
@@ -292,9 +292,9 @@ EOF
 
 setup_spot_instances() {
     log_info "Setting up spot instances strategy..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/spot-strategy"
-    
+
     # Spot instance management policy
     cat > "${PROJECT_ROOT}/config/spot-strategy/spot-policy.yaml" << 'EOF'
 spotInstanceStrategy:
@@ -306,14 +306,14 @@ spotInstanceStrategy:
         maxPrice: "0.50"  # 50% of on-demand
         pools: 5
         expectedCostSavings: "70%"
-      
+
       - name: "analytics"
         priority: "medium"
         tolerance: "fault-tolerant"
         maxPrice: "0.40"
         pools: 3
         expectedCostSavings: "70%"
-      
+
       - name: "testing"
         priority: "low"
         tolerance: "interruptible"
@@ -338,7 +338,7 @@ spotInstanceStrategy:
         weight: 20
       - family: "m5"
         weight: 20
-    
+
     azDistribution: "balanced"
 
   fallback:
@@ -365,9 +365,9 @@ EOF
 
 setup_resource_optimization() {
     log_info "Setting up resource optimization engine..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/optimization"
-    
+
     # Right-sizing recommendations engine
     cat > "${PROJECT_ROOT}/config/optimization/rightsizing-engine.yaml" << 'EOF'
 rightSizingEngine:
@@ -386,7 +386,7 @@ rightSizingEngine:
       - metric: "network_io"
         threshold: 10
         action: "downsize"
-    
+
     recommendations:
       targetUtilization:
         cpu: 60
@@ -398,11 +398,11 @@ rightSizingEngine:
       - name: "compute-rightsizing"
         applicableTo: ["ec2", "vm", "gke-node"]
         potentialSavings: "25-40%"
-      
+
       - name: "storage-optimization"
         applicableTo: ["ebs", "managed-disk", "persistent-disk"]
         potentialSavings: "20-35%"
-      
+
       - name: "data-transfer-optimization"
         applicableTo: ["cross-region", "cross-az"]
         potentialSavings: "15-25%"
@@ -425,20 +425,20 @@ idleResourceDetection:
       - type: "instance"
         idleThreshold: "5% cpu for 7 days"
         action: "flag-for-review"
-      
+
       - type: "container"
         idleThreshold: "0 requests for 14 days"
         action: "recommend-termination"
-    
+
     storage:
       - type: "volume"
         idleThreshold: "0 IOPS for 30 days"
         action: "recommend-deletion"
-      
+
       - type: "bucket"
         idleThreshold: "no access for 90 days"
         action: "recommend-archival"
-    
+
     database:
       - type: "instance"
         idleThreshold: "< 100 connections for 30 days"
@@ -464,9 +464,9 @@ EOF
 
 setup_billing_integration() {
     log_info "Setting up billing integration..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/billing-integration"
-    
+
     # Multi-cloud billing aggregation
     cat > "${PROJECT_ROOT}/config/billing-integration/billing-aggregator.yaml" << 'EOF'
 billingAggregator:
@@ -476,13 +476,13 @@ billingAggregator:
       integrationMethod: "cost-explorer-api"
       refreshFrequency: "6h"
       credentials: "iam-role"
-    
+
     azure:
       enabled: true
       integrationMethod: "cost-management-api"
       refreshFrequency: "6h"
       credentials: "managed-identity"
-    
+
     gcp:
       enabled: true
       integrationMethod: "billing-api"
@@ -493,7 +493,7 @@ billingAggregator:
     currency: "USD"
     exchangeRateUpdate: "daily"
     inflationAdjustment: true
-    
+
   granularity:
     - level: "account"
       dimensions: ["date", "service", "region", "resource-type"]
@@ -517,7 +517,7 @@ billingAggregator:
     - name: "spikes"
       threshold: "20% above baseline"
       recipients: ["finance@company.com"]
-    
+
     - name: "anomalies"
       method: "statistical"
       sensitivity: 2.0
@@ -533,9 +533,9 @@ EOF
 
 setup_chargeback_model() {
     log_info "Setting up chargeback and allocation model..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/chargeback"
-    
+
     # Chargeback allocation rules
     cat > "${PROJECT_ROOT}/config/chargeback/allocation-model.yaml" << 'EOF'
 chargebackModel:
@@ -579,12 +579,12 @@ chargebackModel:
       baselineAllocation: 60%
       peakBonus: 10%
       minimumCharge: 5000
-    
+
     research:
       baselineAllocation: 25%
       peakBonus: 5%
       minimumCharge: 2000
-    
+
     operations:
       baselineAllocation: 15%
       shared: true
@@ -609,9 +609,9 @@ EOF
 
 setup_budget_management() {
     log_info "Setting up budget management..."
-    
+
     mkdir -p "${PROJECT_ROOT}/config/budgets"
-    
+
     # Multi-cloud budget definitions
     cat > "${PROJECT_ROOT}/config/budgets/budget-definitions.yaml" << 'EOF'
 budgetFramework:
@@ -658,15 +658,15 @@ budgetFramework:
     - threshold: 50%
       action: "inform"
       recipients: ["budget-owner"]
-    
+
     - threshold: 75%
       action: "warn"
       recipients: ["budget-owner", "finance"]
-    
+
     - threshold: 90%
       action: "alert"
       recipients: ["budget-owner", "finance", "cto"]
-    
+
     - threshold: 100%
       action: "escalate"
       recipients: ["budget-owner", "finance", "cto", "ceo"]
@@ -687,7 +687,7 @@ EOF
 
 validate_cost_framework() {
     log_info "Validating cost optimization framework..."
-    
+
     local checks=(
         "config/billing/tagging-strategy.yaml"
         "config/billing/finops-config.yaml"
@@ -701,7 +701,7 @@ validate_cost_framework() {
         "config/chargeback/allocation-model.yaml"
         "config/budgets/budget-definitions.yaml"
     )
-    
+
     for check in "${checks[@]}"; do
         if [ -f "${PROJECT_ROOT}/${check}" ]; then
             log_success "✓ ${check}"
@@ -710,7 +710,7 @@ validate_cost_framework() {
             return 1
         fi
     done
-    
+
     return 0
 }
 
@@ -721,7 +721,7 @@ validate_cost_framework() {
 main() {
     log_info "Phase 18: Cost Optimization & Billing Framework"
     log_info "Start: $(date)"
-    
+
     setup_cost_tracking || return 1
     setup_reservations || return 1
     setup_spot_instances || return 1
@@ -730,10 +730,10 @@ main() {
     setup_chargeback_model || return 1
     setup_budget_management || return 1
     validate_cost_framework || return 1
-    
+
     log_success "Cost optimization framework complete"
     log_success "Log: ${LOG_FILE}"
-    
+
     return 0
 }
 

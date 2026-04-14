@@ -60,25 +60,25 @@ variable "phase_18_services" {
     # Core IDE Access
     "ide"         = "Code-Server IDE (8080 -> 443)"
     "api"         = "Code-Server API (8080 -> 443)"
-    
+
     # Compliance & Audit (Phase 18)
     "loki"        = "Loki Audit Logs (3100)"
     "grafana"     = "Grafana Compliance Dashboard (3000)"
     "prometheus"  = "Prometheus Metrics (9090)"
-    
+
     # Security (Phase 18)
     "vault"       = "HashiCorp Vault (8200)"
     "consul"      = "Consul Service Registry (8500)"
-    
+
     # Database (Phase 16+17)
     "db"          = "PostgreSQL Primary (5432)"
     "db-replica"  = "PostgreSQL Replica (5433)"
     "pgbouncer"   = "PgBouncer Connection Pool (6432)"
-    
+
     # Load Balancers (Phase 16)
     "lb1"         = "Load Balancer 1 (8404)"
     "lb2"         = "Load Balancer 2 (8405)"
-    
+
     # Security Proxy
     "git-proxy"   = "Git SSH Proxy (2222)"
     "ssh-proxy"   = "SSH Proxy (2221)"
@@ -128,7 +128,7 @@ resource "cloudflare_record" "root_primary" {
   type    = "A"
   value   = var.primary_ip
   ttl     = var.ttl_seconds
-  
+
   comment = "Phase 18-20: Primary infrastructure endpoint"
   tags    = ["phase-18-20", "dns", "primary"]
 }
@@ -141,7 +141,7 @@ resource "cloudflare_record" "root_secondary" {
   value   = var.secondary_ip
   ttl     = var.ttl_seconds
   priority = 10
-  
+
   comment = "Phase 18-20: Secondary failover endpoint"
   tags    = ["phase-18-20", "dns", "failover"]
 }
@@ -158,7 +158,7 @@ resource "cloudflare_record" "ide" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 18-20: Code-Server IDE (proxied via Cloudflare)"
   tags    = ["phase-18-20", "ide", "proxied"]
 }
@@ -171,7 +171,7 @@ resource "cloudflare_record" "api" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 18-20: Code-Server API"
   tags    = ["phase-18-20", "api", "proxied"]
 }
@@ -187,7 +187,7 @@ resource "cloudflare_record" "loki" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 18: Loki Audit Log Aggregation (SOC2)"
   tags    = ["phase-18", "compliance", "audit"]
 }
@@ -199,7 +199,7 @@ resource "cloudflare_record" "grafana" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 18: Grafana Compliance Dashboard (SOC2 Type II)"
   tags    = ["phase-18", "compliance", "monitoring"]
 }
@@ -211,7 +211,7 @@ resource "cloudflare_record" "prometheus" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 18: Prometheus Metrics & Monitoring"
   tags    = ["phase-18", "monitoring", "metrics"]
 }
@@ -227,7 +227,7 @@ resource "cloudflare_record" "vault" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 18: HashiCorp Vault - Secrets Management"
   tags    = ["phase-18", "security", "secrets"]
 }
@@ -239,7 +239,7 @@ resource "cloudflare_record" "consul" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 18: Consul - Service Registry & Discovery"
   tags    = ["phase-18", "security", "registry"]
 }
@@ -256,7 +256,7 @@ resource "cloudflare_record" "vault_node" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 18: Vault Node ${count.index} - HA cluster"
   tags    = ["phase-18", "vault-cluster", "node-${count.index}"]
 }
@@ -272,7 +272,7 @@ resource "cloudflare_record" "db" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = false  # Database requires direct connection
-  
+
   comment = "Phase 16: PostgreSQL Primary (HA mirror)"
   tags    = ["phase-16", "database", "primary"]
 }
@@ -284,7 +284,7 @@ resource "cloudflare_record" "db_replica" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = false
-  
+
   comment = "Phase 16: PostgreSQL Read Replica"
   tags    = ["phase-16", "database", "replica"]
 }
@@ -296,7 +296,7 @@ resource "cloudflare_record" "pgbouncer" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = false
-  
+
   comment = "Phase 16: PgBouncer Connection Pool"
   tags    = ["phase-16", "database", "connection-pool"]
 }
@@ -312,7 +312,7 @@ resource "cloudflare_record" "lb1" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 16: Load Balancer 1 (Keepalived HA)"
   tags    = ["phase-16", "load-balancer", "lb1"]
 }
@@ -324,7 +324,7 @@ resource "cloudflare_record" "lb2" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = true
-  
+
   comment = "Phase 16: Load Balancer 2 (Keepalived HA)"
   tags    = ["phase-16", "load-balancer", "lb2"]
 }
@@ -340,7 +340,7 @@ resource "cloudflare_record" "git_proxy" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = false
-  
+
   comment = "Git SSH Proxy (port 2222)"
   tags    = ["security", "git-proxy"]
 }
@@ -352,7 +352,7 @@ resource "cloudflare_record" "ssh_proxy" {
   value   = var.root_domain
   ttl     = var.ttl_seconds
   proxied = false
-  
+
   comment = "SSH Proxy (port 2221)"
   tags    = ["security", "ssh-proxy"]
 }

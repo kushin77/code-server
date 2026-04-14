@@ -46,50 +46,50 @@ main() {
     log "Target Host: $REMOTE_HOST"
     log "Remote User: $REMOTE_USER"
     log ""
-    
+
     # STAGE 1: PRE-FLIGHT VALIDATION (8:00am - 8:15am)
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log "STAGE 1: PRE-FLIGHT VALIDATION (8:00am - 8:15am)"
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     preflight_validation
-    
+
     # STAGE 2: MONITORING ACTIVATION (8:15am - 8:25am)
     log ""
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log "STAGE 2: MONITORING ACTIVATION (8:15am - 8:25am)"
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     activate_monitoring
-    
+
     # STAGE 3: ENABLE PRODUCTION ACCESS (8:25am - 8:35am)
     log ""
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log "STAGE 3: ENABLE PRODUCTION ACCESS (8:25am - 8:35am) - MANUAL STEPS"
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     enable_production_access
-    
+
     # STAGE 4: INITIAL SCALE TEST (8:40am - 9:45am)
     log ""
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log "STAGE 4: INITIAL SCALE TEST (8:40am - 9:45am)"
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     # Note: Actual load test would be done separately, this is just the framework
     log "ℹ Scale test would be executed here with staged load:"
     log "  Phase 4.1 (8:40am): 5 developers  (5 min monitoring)"
     log "  Phase 4.2 (8:50am): 25 developers (10 min monitoring)"
     log "  Phase 4.3 (9:05am): 50+ developers (40 min monitoring)"
-    
+
     # STAGE 5: LAUNCH CONFIRMATION (9:45am - 10:00am)
     log ""
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log "STAGE 5: LAUNCH CONFIRMATION (9:45am - 10:00am)"
     log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     launch_confirmation
-    
+
     # FINAL SUMMARY
     log ""
     log "╔════════════════════════════════════════════════════════════════════╗"
@@ -103,10 +103,10 @@ main() {
 preflight_validation() {
     local pass_count=0
     local fail_count=0
-    
+
     log "Executing 6-point pre-flight validation:"
     log ""
-    
+
     # Check 1: SSH Connectivity
     log "Check 1/6: SSH Connectivity to $REMOTE_HOST"
     if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
@@ -117,7 +117,7 @@ preflight_validation() {
         log "  ✗ SSH connectivity FAILED"
         ((fail_count++))
     fi
-    
+
     # Check 2: Container Status
     log "Check 2/6: All 3 containers running"
     local container_count=$(ssh -o StrictHostKeyChecking=no \
@@ -130,7 +130,7 @@ preflight_validation() {
         log "  ✗ Only $container_count/3 containers UP"
         ((fail_count++))
     fi
-    
+
     # Check 3: HTTP Health
     log "Check 3/6: HTTP endpoint responding"
     local http_status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 || echo "000")
@@ -141,7 +141,7 @@ preflight_validation() {
         log "  ✗ HTTP status: $http_status"
         ((fail_count++))
     fi
-    
+
     # Check 4: Memory Available
     log "Check 4/6: Memory availability (≥20GB required)"
     local mem_gb=$(ssh -o StrictHostKeyChecking=no \
@@ -153,7 +153,7 @@ preflight_validation() {
         log "  ✗ Memory available: ${mem_gb}GB (need ≥20GB)"
         ((fail_count++))
     fi
-    
+
     # Check 5: Disk Space
     log "Check 5/6: Disk space (>1GB required)"
     local disk_kb=$(ssh -o StrictHostKeyChecking=no \
@@ -166,7 +166,7 @@ preflight_validation() {
         log "  ✗ Disk available: ${disk_gb}GB (need >1GB)"
         ((fail_count++))
     fi
-    
+
     # Check 6: Network Configuration
     log "Check 6/6: Network configuration"
     local net_status=$(ssh -o StrictHostKeyChecking=no \
@@ -179,16 +179,16 @@ preflight_validation() {
         log "  ✗ Docker network missing"
         ((fail_count++))
     fi
-    
+
     log ""
     log "Pre-Flight Summary:"
     log "  Passed: $pass_count/6 ✓"
     log "  Failed: $fail_count/6"
-    
+
     if [[ "$fail_count" -gt 0 ]]; then
         error "Pre-flight validation FAILED - cannot proceed with launch"
     fi
-    
+
     log ""
     log "✓ PRE-FLIGHT VALIDATION COMPLETE - All checks passed"
 }
@@ -197,20 +197,20 @@ preflight_validation() {
 activate_monitoring() {
     log "Activating monitoring infrastructure:"
     log ""
-    
+
     # Step 1: Verify Prometheus
     log "Step 1/4: Verify Prometheus metrics collection"
     log "  Status: READY (deployed in Phase 14 preparation)"
     log "  Metrics: 15+ standard metrics configured"
     log "  Scrape interval: 15 seconds"
-    
+
     # Step 2: Verify Grafana
     log "Step 2/4: Verify Grafana dashboards"
     log "  Status: READY (3 dashboards configured)"
     log "  Dashboard 1: Executive SLO Overview"
     log "  Dashboard 2: Operational Metrics Detail"
     log "  Dashboard 3: Developer Experience Metrics"
-    
+
     # Step 3: Activate Alerting
     log "Step 3/4: Activate alerting rules"
     log "  Critical Alerts: 6 rules configured"
@@ -221,13 +221,13 @@ activate_monitoring() {
     log "     - Disk space low (<10%, 1min)"
     log "     - Connection limit (>90%, 1min)"
     log "  Warning Alerts: 3 rules configured"
-    
+
     # Step 4: Activate escalation
     log "Step 4/4: Activate escalation procedures"
     log "  PagerDuty: ✓ Integration ready"
     log "  Slack: ✓ #code-server-production ready"
     log "  SMS: ✓ Critical escalation ready"
-    
+
     log ""
     log "✓ MONITORING ACTIVATION COMPLETE"
 }
@@ -238,14 +238,14 @@ enable_production_access() {
     log ""
     log "These steps must be completed before proceeding to scale test:"
     log ""
-    
+
     log "Step 1: Update DNS Records"
     log "  Required: Point production domain to 192.168.168.31"
     log "  Example: code-server.example.com → 192.168.168.31"
     log "  Verification: dig code-server.example.com"
     log "  [ ] COMPLETED"
     log ""
-    
+
     log "Step 2: Enable Cloudflare CDN"
     log "  Required: Activate CDN caching for performance"
     log "  Config:"
@@ -255,14 +255,14 @@ enable_production_access() {
     log "    - Compression: GZIP"
     log "  [ ] COMPLETED"
     log ""
-    
+
     log "Step 3: Configure TLS/SSL"
     log "  Required: Verify HTTPS/TLS is active"
     log "  Verification: curl -v https://code-server.example.com"
     log "  Expected: 200 OK with TLS 1.3"
     log "  [ ] COMPLETED"
     log ""
-    
+
     log "Step 4: Enable OAuth2 Authentication"
     log "  Required: Connect GitHub OAuth2 for developer access"
     log "  Config:"
@@ -271,7 +271,7 @@ enable_production_access() {
     log "    - Redirect URI: https://code-server.example.com/auth/callback"
     log "  [ ] COMPLETED"
     log ""
-    
+
     log "Step 5: Enable Firewall Rules"
     log "  Required: Allow public access on ports 80/443"
     log "  Rules:"
@@ -280,7 +280,7 @@ enable_production_access() {
     log "    - Allow SSH only from office IPs"
     log "  [ ] COMPLETED"
     log ""
-    
+
     log "⚠️  Confirm ALL manual steps completed before proceeding:"
     log "   Please type 'CONFIRM_MANUAL_STEPS_COMPLETE' to continue"
     log ""
@@ -290,7 +290,7 @@ enable_production_access() {
 launch_confirmation() {
     log "Final launch confirmation:"
     log ""
-    
+
     log "✓ Infrastructure verified operational"
     log "✓ Monitoring deployment complete"
     log "✓ All 6 pre-flight checks passed"
@@ -298,7 +298,7 @@ launch_confirmation() {
     log "✓ On-call team ready"
     log "✓ Incident response procedures verified"
     log ""
-    
+
     log "═════════════════════════════════════════════════════════════════════"
     log "✓ PRODUCTION GO-LIVE STATUS: SUCCESS"
     log "═════════════════════════════════════════════════════════════════════"

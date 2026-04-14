@@ -1,7 +1,7 @@
 # HTTPS Deployment Guide — Cloudflare Tunnel + TLS
 
 ## Status
-✅ **Infrastructure code ready**  
+✅ **Infrastructure code ready**
 ⏳ **Blocked on Cloudflare Tunnel token acquisition**
 
 ## Quick Start (Production Domain: ide.kushnir.cloud)
@@ -121,7 +121,7 @@ docker logs cloudflared
 
 ### Error: "SSL_PROTOCOL_ERROR" on browser
 - **Cause**: cloudflared not connected (check above) OR Caddy not running
-- **Fix**: 
+- **Fix**:
   ```bash
   docker logs cloudflared
   docker logs caddy
@@ -156,7 +156,7 @@ docker logs cloudflared
 ### caddy
 - **Image**: caddy:2.8
 - **Config**: `Caddyfile` (reverse proxy + TLS)
-- **Routes**: 
+- **Routes**:
   - `ide.kushnir.cloud` → code-server:8080 (HTTPS)
   - `code-server.192.168.168.31.nip.io` → code-server:8080 (HTTP, on-prem)
 

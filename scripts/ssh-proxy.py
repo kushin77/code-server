@@ -22,17 +22,17 @@ def main():
     parser.add_argument('--target', default='localhost:22', help='Target SSH server')
     parser.add_argument('--log-level', default='info', help='Log level')
     parser.add_argument('--audit-config', help='Audit config file')
-    
+
     args = parser.parse_args()
-    
+
     logger.info(f"SSH Proxy starting (PHASE 13 STUB)")
     logger.info(f"Listen: {args.listen}")
     logger.info(f"Target: {args.target}")
-    
+
     # Minimal health check endpoint placeholder
     logger.info("SSH Proxy running (minimal implementation for Phase 13)")
     logger.info("Full audit logging implementation deferred to Phase 14")
-    
+
     # Keep process alive
     try:
         import time

@@ -270,4 +270,3 @@ SELECT 'PostgreSQL Enterprise Setup Complete' as status,
        current_database() as database,
        current_user as user,
        NOW() as timestamp;
-

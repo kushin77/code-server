@@ -2,7 +2,7 @@
 # ============================================================================
 # PHASE 13 DAY 1 - REMOTE EXECUTION WRAPPER FOR HOST 31
 # Execute Phase 13 Day 1 tasks directly on 192.168.168.31 via SSH
-# 
+#
 # Usage:
 #   ./scripts/phase-13-day1-remote.sh <host31_address> <username> <ssh_key>
 #   ./scripts/phase-13-day1-remote.sh 192.168.168.31 akushnir ~/.ssh/akushnir-31
@@ -130,7 +130,7 @@ if [ -f "$RESULTS_DIR"/*.log ]; then
     else
         echo -e "${YELLOW}[!] Phase 13 Day 1: Check logs for details${NC}"
     fi
-    
+
     # Show notable lines from log
     echo ""
     echo "Key Results:"

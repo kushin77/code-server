@@ -1,9 +1,9 @@
 # Tier 2 #184: Git Commit Proxy Implementation
 
-**Status:** In Progress  
-**Effort:** 4 hours  
-**Dependencies:** #185 (Cloudflare Tunnel) ✅ COMPLETED  
-**Owner:** Platform Team  
+**Status:** In Progress
+**Effort:** 4 hours
+**Dependencies:** #185 (Cloudflare Tunnel) ✅ COMPLETED
+**Owner:** Platform Team
 **Target Completion:** April 15, 2026
 
 ## Overview
@@ -36,7 +36,7 @@ Developer Machine                    Home Server (Proxy)           GitHub
 
 ### Step 1: Deploy Git Proxy Server on Home Server
 
-**File:** `scripts/git-proxy-server.py`  
+**File:** `scripts/git-proxy-server.py`
 **Status:** ✅ CREATED
 
 Features:
@@ -209,7 +209,7 @@ WantedBy=multi-user.target
 ```caddyfile
 git-proxy.dev.yourdomain.com {
     reverse_proxy localhost:8001
-    
+
     # Rate limiting: 100 req/min per IP
     rate_limit {
         zones http://localhost:8001

@@ -22,7 +22,7 @@
 | `workflow_dispatch` | 50 | 10 | 2 | Manual triggers (audited) |
 | `repository_dispatch` | 25 | 5 | 1 | External signals (strict) |
 
-**Enforcement**: 
+**Enforcement**:
 - GitHub API rate limiter + custom quota service
 - Auto-disable workflows exceeding limits
 - Slack notifications to team leads
@@ -217,7 +217,7 @@ Continuous Monitoring
   - Disable non-essential workflows
   - Investigate new api calls
   - Escalate to CTO
-  
+
 - **🟠 High**: Monthly spend 100-150% of budget → 24-hour review
   - Identify cost drivers
   - Plan optimization

@@ -58,7 +58,7 @@ data:
           description: "Rate limit violations: {{ $value }} violations/sec"
         labels:
           severity: warning
-      
+
       # Latency overhead from rate limiter
       - alert: RateLimiterLatencyHigh
         expr: |
@@ -69,7 +69,7 @@ data:
           description: "p99 latency: {{ $value }}s"
         labels:
           severity: warning
-      
+
       # Redis connectivity issues
       - alert: RateLimiterRedisErrors
         expr: |
@@ -80,7 +80,7 @@ data:
           description: "Error rate: {{ $value }} errors/sec"
         labels:
           severity: critical
-      
+
       # Request rejection rate too high
       - alert: HighRequestRejectionRate
         expr: |
@@ -91,16 +91,16 @@ data:
           description: "Rejection rate: {{ $value | humanizePercentage }}"
         labels:
           severity: warning
-      
+
       # Per-tier metrics
       - record: tier:api_requests:rate1m
         expr: |
           sum(rate(api_requests_total[1m])) by (tier)
-      
+
       - record: tier:api_requests_rejected:rate1m
         expr: |
           sum(rate(api_requests_rejected_total[1m])) by (tier)
-      
+
       - record: tier:rate_limit_violations:rate1m
         expr: |
           sum(rate(api_rate_limit_violations_total[1m])) by (tier)

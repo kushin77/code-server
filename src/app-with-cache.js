@@ -1,6 +1,6 @@
 /**
  * Express Application with Tier 3 Multi-Tier Caching
- * 
+ *
  * Example showing complete integration of L1/L2 cache into Express app
  * All configuration via environment variables (IaC pattern)
  * Middleware stacking order is critical for cache effectiveness
@@ -37,17 +37,17 @@ function createApp() {
   // Request logging
   app.use((req, res, next) => {
     const start = Date.now();
-    
+
     res.on('finish', () => {
       const duration = Date.now() - start;
       const cacheStatus = res.get('X-Cache-Status') || 'MISS';
-      
+
       console.log(
         `[${new Date().toISOString()}] ${req.method} ${req.path}` +
         ` ${res.statusCode} ${duration}ms [${cacheStatus}]`
       );
     });
-    
+
     next();
   });
 
@@ -82,7 +82,7 @@ function createApp() {
         heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB',
       },
     };
-    
+
     res.status(200).json(health);
   });
 
@@ -106,14 +106,14 @@ function createApp() {
    */
   app.get('/api/users/:id', async (req, res) => {
     const userId = req.params.id;
-    
+
     // Simulate backend lookup (would be database query in production)
     const userData = await simulateBackendFetch(`user:${userId}`, 100);
-    
+
     // Mark response as cacheable
     res.set('Cache-Control', 'public, max-age=300');
     res.set('X-Cache-TTL', '300');
-    
+
     res.json({
       id: userId,
       data: userData,
@@ -128,10 +128,10 @@ function createApp() {
    */
   app.get('/api/items', async (req, res) => {
     const items = await simulateBackendFetch('items:all', 150);
-    
+
     res.set('Cache-Control', 'public, max-age=600'); // 10 minutes
     res.set('X-Cache-TTL', '600');
-    
+
     res.json({
       items: items,
       count: items.length,
@@ -146,12 +146,12 @@ function createApp() {
    */
   app.post('/api/items', async (req, res) => {
     const { name, description } = req.body;
-    
+
     // Validate input
     if (!name) {
       return res.status(400).json({ error: 'name required' });
     }
-    
+
     // Save to backend (would be database INSERT)
     const newItem = {
       id: Math.random().toString(36),
@@ -159,18 +159,18 @@ function createApp() {
       description,
       createdAt: new Date().toISOString(),
     };
-    
+
     // ╔═══════════════════════════════════════════════════════════════╗
     // ║  CACHE INVALIDATION HOOK                                      ║
     // ║  After mutation, invalidate affected cache entries            ║
     // ╚═══════════════════════════════════════════════════════════════╝
     const invalidate = cacheBootstrap.getInvalidationHook();
-    
+
     // Invalidate the /api/items list cache
     await invalidate('/api/items*');
     // Also invalidate related caches if applicable
     await invalidate('/api/stats*');
-    
+
     res.status(201).json({
       ...newItem,
       cached: false,
@@ -186,15 +186,15 @@ function createApp() {
   app.put('/api/items/:id', async (req, res) => {
     const itemId = req.params.id;
     const updates = req.body;
-    
+
     // Update backend
     const updatedItem = { id: itemId, ...updates, updatedAt: new Date() };
-    
+
     // Invalidate specific item cache + list cache
     const invalidate = cacheBootstrap.getInvalidationHook();
     await invalidate(`/api/items/${itemId}`);
     await invalidate(`/api/items`); // Also invalidate list
-    
+
     res.json({
       ...updatedItem,
       message: 'Updated and caches invalidated',
@@ -207,14 +207,14 @@ function createApp() {
    */
   app.delete('/api/items/:id', async (req, res) => {
     const itemId = req.params.id;
-    
+
     // Delete from backend
-    
+
     // Invalidate caches
     const invalidate = cacheBootstrap.getInvalidationHook();
     await invalidate(`/api/items/${itemId}`);
     await invalidate(`/api/items`);
-    
+
     res.json({
       id: itemId,
       deleted: true,
@@ -228,7 +228,7 @@ function createApp() {
    */
   app.get('/api/cache-status', (req, res) => {
     const metrics = cacheBootstrap.monitoring;
-    
+
     res.json({
       l1: {
         hits: metrics.l1Hits,
@@ -252,7 +252,7 @@ function createApp() {
 
   app.use((err, req, res, next) => {
     console.error('[ERROR]', err);
-    
+
     res.status(500).json({
       error: 'Internal Server Error',
       message: err.message,
@@ -266,15 +266,15 @@ function createApp() {
 
   process.on('SIGTERM', async () => {
     console.log('[APP] Received SIGTERM, shutting down gracefully...');
-    
+
     // Stop accepting new requests
     server.close(() => {
       console.log('[APP] HTTP server closed');
     });
-    
+
     // Shutdown cache services
     await cacheBootstrap.shutdown();
-    
+
     process.exit(0);
   });
 
@@ -304,7 +304,7 @@ if (require.main === module) {
   const app = createApp();
   const PORT = parseInt(process.env.PORT || '3000');
   const HOST = process.env.HOST || '0.0.0.0';
-  
+
   const server = app.listen(PORT, HOST, () => {
     console.log(`[APP] Express server listening on ${HOST}:${PORT}`);
     console.log('[APP] Tier 3 multi-tier caching ENABLED');

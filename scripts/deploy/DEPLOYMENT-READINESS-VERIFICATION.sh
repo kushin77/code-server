@@ -167,15 +167,15 @@ bash health-check.sh
 
 All phases verified READY for production deployment.
 
-**IaC Quality**: IMMUTABLE (version-pinned, digest-locked)  
-**Execution Pattern**: IDEMPOTENT (safe multiple runs)  
-**Deployment Timeline**: COMPRESSED (Apr 14-18)  
-**Production Status**: GO FOR LAUNCH  
+**IaC Quality**: IMMUTABLE (version-pinned, digest-locked)
+**Execution Pattern**: IDEMPOTENT (safe multiple runs)
+**Deployment Timeline**: COMPRESSED (Apr 14-18)
+**Production Status**: GO FOR LAUNCH
 
 ---
 
-**Report Generated** at $(date -u -Iseconds)  
-**Repository**: kushin77/code-server (branch: dev)  
+**Report Generated** at $(date -u -Iseconds)
+**Repository**: kushin77/code-server (branch: dev)
 **Git Commit**: $(git rev-parse HEAD)
 EOF
 

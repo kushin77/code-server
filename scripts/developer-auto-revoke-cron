@@ -72,11 +72,11 @@ tail -n +2 "$DEVELOPERS_CSV" | while IFS=',' read -r email name grant_date expir
     # Skip empty lines or non-active developers
     [ -z "$email" ] && continue
     [ "$status" != "active" ] && continue
-    
+
     # Check if expiry date has passed
     if [ "$CURRENT_DATE" \> "$expiry_date" ] || [ "$CURRENT_DATE" = "$expiry_date" ]; then
         log "EXPIRED: $email (expiry: $expiry_date, status: $status)"
-        
+
         # Revoke access by calling developer-revoke
         if command -v developer-revoke &> /dev/null; then
             log "Revoking access for: $email"
@@ -94,14 +94,14 @@ done
 
 if [ $REVOKED_COUNT -gt 0 ]; then
     log "Auto-revoked $REVOKED_COUNT developer(s)"
-    
+
     # Send summary email
     send_summary_email() {
         local count="$1"
         # In production, use email service
         log "Batch notification would be sent: $count developers revoked"
     }
-    
+
     send_summary_email "$REVOKED_COUNT"
 else
     log "No expired developers to revoke"
@@ -120,11 +120,11 @@ if [ -f "$REVOCATION_LOG" ]; then
     # Keep only recent entries (>90 days)
     grep "${CUTOFF_DATE}" "$REVOCATION_LOG" > "$TEMP_LOG" 2>/dev/null || true
     grep "^\\[" "$REVOCATION_LOG" | tail -1000 >> "$TEMP_LOG" 2>/dev/null || true
-    
+
     # Remove duplicates
     sort -u "$TEMP_LOG" > "$REVOCATION_LOG"
     rm -f "$TEMP_LOG"
-    
+
     log "Log cleanup complete (kept 1000 most recent entries)"
 fi
 

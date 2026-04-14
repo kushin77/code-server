@@ -1,8 +1,8 @@
 # Phase 3 Governance Rollout - Implementation Checklist
 
-**Phase**: Phase 3 - Governance Implementation  
-**Dates**: April 21-28, 2026  
-**Owner**: @kushin77 (DevOps Lead)  
+**Phase**: Phase 3 - Governance Implementation
+**Dates**: April 21-28, 2026
+**Owner**: @kushin77 (DevOps Lead)
 **Status**: 📋 READY FOR EXECUTION
 
 ---
@@ -47,14 +47,14 @@ GitHub Settings → branch/main → Requirements
 **Test Cases**:
 1. ✅ Valid case: Modify comment in docker-compose.yml
    - Expected: All checks PASS
-   
+
 2. ✅ Modification: Fix a Terraform format issue
    - Expected: `terraform fmt` check PASS
-   
+
 3. ❌ Secrets detection: Add fake API key to .env.backup
    - Expected: Secrets scanning FAIL
    - Action: Move to .gitignore, re-run checks
-   
+
 4. ❌ Syntax error: Break docker-compose.yml YAML
    - Expected: docker-compose validation FAIL
    - Action: Fix YAML, re-run checks
@@ -116,7 +116,7 @@ This document explains the automated checks that run on every PR.
 - **Check**: TruffleHog + regex patterns for API keys, tokens, creds
 - **Why**: Prevent credential leakage to git
 - **Failure**: ❌ PR cannot merge if secrets detected
-- **How to fix**: 
+- **How to fix**:
   - Remove credentials from file
   - Move to .env (gitignore)
   - Use Vault/AWS Secrets Manager in production
@@ -279,4 +279,3 @@ Topics:
 - Secrets: ALWAYS block immediately (no grace period)
 - Format: ⚠️ info only (developers can fix before committing)
 - Syntax: ⏳ after Phase 3 feedback (depends on rule clarity)
-

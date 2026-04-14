@@ -72,13 +72,13 @@ WARMUP_REQUESTS=0
 while [ $(($(date +%s) - WARMUP_START)) -lt $WARMUP_DURATION ]; do
   # Randomize endpoints to exercise different cache paths
   ENDPOINT=$((RANDOM % 3))
-  
+
   case $ENDPOINT in
     0) curl -s -X GET "$TARGET_URL/api/users/$((RANDOM % 100))" > /dev/null 2>&1 ;;
     1) curl -s -X GET "$TARGET_URL/api/items" > /dev/null 2>&1 ;;
     2) curl -s -X GET "$TARGET_URL/api/cache-status" > /dev/null 2>&1 ;;
   esac
-  
+
   WARMUP_REQUESTS=$((WARMUP_REQUESTS + 1))
 done
 
@@ -92,94 +92,94 @@ echo ""
 if [ "$USE_AB" = false ]; then
   echo "🚀 Load Test Phase (curl-based)"
   echo "═══════════════════════════════════════════════════════════════"
-  
+
   RESULTS_FILE="/tmp/load-test-results-$$.txt"
   > "$RESULTS_FILE"  # Clear file
-  
+
   TEST_START=$(date +%s%N)
   TOTAL_REQUESTS=0
   TOTAL_TIME=0
   MIN_TIME=999999
   MAX_TIME=0
   ERRORS=0
-  
+
   # Ramp-up: gradually increase concurrency
   echo "Ramping up to $CONCURRENT_USERS concurrent users over ${RAMP_UP_TIME}s..."
-  
+
   CONCURRENT=1
   INCREMENT=$((CONCURRENT_USERS / RAMP_UP_TIME))
   [ $INCREMENT -lt 1 ] && INCREMENT=1
-  
+
   while [ $CONCURRENT -lt $CONCURRENT_USERS ]; do
     CONCURRENT=$((CONCURRENT + INCREMENT))
     [ $CONCURRENT -gt $CONCURRENT_USERS ] && CONCURRENT=$CONCURRENT_USERS
     echo "  Current concurrency: $CONCURRENT"
     sleep 1
   done
-  
+
   echo ""
   echo "Running sustained load for ${DURATION}s..."
-  
+
   # Main load test loop
   TEST_END=$(($(date +%s) + DURATION))
-  
+
   while [ $(date +%s) -lt $TEST_END ]; do
     # Run parallel requests
     for i in $(seq 1 $CONCURRENT_USERS); do
       {
         ENDPOINT=$((RANDOM % 3))
         START_TIME=$(date +%s%N)
-        
+
         case $ENDPOINT in
           0) HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL/api/users/$((RANDOM % 100))") ;;
           1) HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL/api/items") ;;
           2) HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL/metrics") ;;
         esac
-        
+
         END_TIME=$(date +%s%N)
         ELAPSED=$(((END_TIME - START_TIME) / 1000000))  # Convert to ms
-        
+
         echo "$ELAPSED:$HTTP_CODE" >> "$RESULTS_FILE"
       } &
     done
-    
+
     wait  # Wait for all background requests to complete
   done
-  
+
   TEST_TOTAL=$(($(date +%s%N) - TEST_START))
-  
+
   # ─────────────────────────────────────────────────────────────────────────────
   # Parse Results
   # ─────────────────────────────────────────────────────────────────────────────
-  
+
   echo ""
   echo "📊 Analyzing Results..."
-  
+
   if [ -f "$RESULTS_FILE" ] && [ -s "$RESULTS_FILE" ]; then
     TOTAL_REQUESTS=$(wc -l < "$RESULTS_FILE")
-    
+
     # Extract times and HTTP codes
     TIMES=$(cut -d: -f1 "$RESULTS_FILE")
     CODES=$(cut -d: -f2 "$RESULTS_FILE")
-    
+
     MIN_TIME=$(echo "$TIMES" | sort -n | head -1)
     MAX_TIME=$(echo "$TIMES" | sort -n | tail -1)
     TOTAL_TIME=$(echo "$TIMES" | awk '{sum+=$1} END {print sum}')
     AVG_TIME=$(echo "scale=2; $TOTAL_TIME / $TOTAL_REQUESTS" | bc)
-    
+
     # P50, P95, P99
     P50=$(echo "$TIMES" | sort -n | sed "s/^//" | awk '{a[NR]=$1} END {print a[int(NR*0.5)]}')
     P95=$(echo "$TIMES" | sort -n | sed "s/^//" | awk '{a[NR]=$1} END {print a[int(NR*0.95)]}')
     P99=$(echo "$TIMES" | sort -n | sed "s/^//" | awk '{a[NR]=$1} END {print a[int(NR*0.99)]}')
-    
+
     # Count HTTP errors
     ERRORS=$(echo "$CODES" | grep -v "^200" | wc -l || true)
     SUCCESS_RATE=$(echo "scale=2; ($TOTAL_REQUESTS - $ERRORS) / $TOTAL_REQUESTS * 100" | bc)
-    
+
     # Throughput
     THROUGHPUT=$(echo "scale=2; $TOTAL_REQUESTS / $DURATION" | bc)
   fi
-  
+
   # ─────────────────────────────────────────────────────────────────────────────
   # Load Testing - ApacheBench (if available)
   # ─────────────────────────────────────────────────────────────────────────────
@@ -187,24 +187,24 @@ if [ "$USE_AB" = false ]; then
 elif [ "$USE_AB" = true ]; then
   echo "🚀 Load Test Phase (ApacheBench)"
   echo "═══════════════════════════════════════════════════════════════"
-  
+
   AB_RESULTS="/tmp/ab-results-$$.txt"
-  
+
   # Run ApacheBench
   ab -n $((CONCURRENT_USERS * DURATION / 10)) \
      -c $CONCURRENT_USERS \
      "$TARGET_URL/api/items" \
      | tee "$AB_RESULTS"
-  
+
   # Parse ApacheBench results
   TOTAL_REQUESTS=$(grep "Requests per second" "$AB_RESULTS" | awk '{print $4}')
   THROUGHPUT=$(grep "Requests per second" "$AB_RESULTS" | awk '{print $4}')
   AVG_TIME=$(grep "Time per request" "$AB_RESULTS" | head -1 | awk '{print $4}')
   P95=$(grep "95%" "$AB_RESULTS" | awk '{print $2}' || echo "N/A")
-  
+
   MIN_TIME=$(grep "min" "$AB_RESULTS" | awk '{print $2}' || echo "N/A")
   MAX_TIME=$(grep "max" "$AB_RESULTS" | awk '{print $2}' || echo "N/A")
-  
+
   ERRORS=$(grep "Failed requests" "$AB_RESULTS" | awk '{print $3}' || echo "0")
 fi
 
@@ -289,15 +289,15 @@ if command -v jq &> /dev/null; then
   L1_MISSES=$(echo "$CACHE_STATUS" | jq '.l1.misses // 0' 2>/dev/null || echo "N/A")
   L2_HITS=$(echo "$CACHE_STATUS" | jq '.l2.hits // 0' 2>/dev/null || echo "N/A")
   L2_MISSES=$(echo "$CACHE_STATUS" | jq '.l2.misses // 0' 2>/dev/null || echo "N/A")
-  
+
   echo "L1 Cache:"
   echo "  Hits:   $L1_HITS"
   echo "  Misses: $L1_MISSES"
-  
+
   echo "L2 Cache:"
   echo "  Hits:   $L2_HITS"
   echo "  Misses: $L2_MISSES"
-  
+
   # Calculate hit rates
   if [ "$L1_HITS" != "N/A" ] && [ "$L1_MISSES" != "N/A" ]; then
     TOTAL_L1=$((L1_HITS + L1_MISSES))

@@ -16,9 +16,9 @@ cat > scripts/phase-19-cost-monitoring.sh <<'COSTMON'
 
 update_cost_tracking() {
   local cloud_provider="${1:-aws}"
-  
+
   echo "Fetching cost data from $cloud_provider..."
-  
+
   # AWS Cost Explorer API
   if [[ "$cloud_provider" == "aws" ]]; then
     aws ce get-cost-and-usage \
@@ -28,18 +28,18 @@ update_cost_tracking() {
       --metrics "BlendedCost" \
       --group-by Type=DIMENSION,Key=SERVICE \
       --output json > /tmp/aws-costs.json
-    
+
     # Parse and push to Prometheus
-    cat /tmp/aws-costs.json | jq -r '.ResultsByTime[] | .Groups[] | 
+    cat /tmp/aws-costs.json | jq -r '.ResultsByTime[] | .Groups[] |
       "cost_by_service{service=\"\(.Keys[0])\",timestamp=\"\(..[0])\",amount=\"\(.Metrics.BlendedCost.Amount)\"}"' \
       | curl -X POST --data-binary @- http://pushgateway:9091/metrics/job/aws-costs
   fi
-  
+
   # GCP Billing API
   if [[ "$cloud_provider" == "gcp" ]]; then
     gcloud billing accounts describe --format=json | \
       jq '.billingAccountId' > /tmp/billing-account-id
-    
+
     bq query --use_legacy_sql=false \
       "SELECT service.description as service, SUM(cast(cost as float64)) as total_cost
        FROM \`bigquery-public-data.cloud_billing.gcp_billing_export_v1_*\`
@@ -77,25 +77,25 @@ import subprocess
 class CostAnalyzer:
     def __init__(self):
         self.baseline_multiplier = 1.2  # 20% increase threshold
-        
+
     def get_historical_costs(self, days=30):
         """Get last 30 days of cost data"""
         query = f"SELECT timestamp, total_cost FROM cost_metrics WHERE timestamp > now() - INTERVAL {days} day"
         # Execute query against metrics database
         # Returns: [(timestamp, cost), ...]
         return [(datetime.now() - timedelta(days=i), 100 + i*5) for i in range(days)]
-    
+
     def detect_anomalies(self):
         """Detect cost anomalies"""
         historical = self.get_historical_costs(30)
-        
+
         if len(historical) < 7:
             return []
-        
+
         # Calculate baseline (average of last 7 days)
         recent_costs = [cost for ts, cost in historical[-7:]]
         baseline = sum(recent_costs) / len(recent_costs)
-        
+
         # Look for spikes
         anomalies = []
         for ts, cost in historical[-1:]:
@@ -107,24 +107,24 @@ class CostAnalyzer:
                     'baseline': baseline,
                     'increase_percentage': increase
                 })
-        
+
         return anomalies
-    
+
     def recommend_optimizations(self):
         """Recommend cost optimizations"""
         recommendations = []
-        
+
         # Check for unused resources
         # Check for oversized instances
         # Check for unused storage
         # Check for transfer costs
-        
+
         print("=== Cost Optimization Recommendations ===")
         print("1. Rightsize instances: 15% can be downsized")
         print("2. Purchase reserved instances: 40% savings potential")
         print("3. Enable S3 intelligent tiering: 30% storage savings")
         print("4. Review data transfer: $500/month savings potential")
-        
+
         return recommendations
 
 analyzer = CostAnalyzer()
@@ -155,12 +155,12 @@ cost_allocation:
         - database:     $1800/month
         - cache:        $800/month
         - storage:      $600/month
-    
+
     - environment:     # Dev, staging, prod
         - production:   $4200/month
         - staging:      $1000/month
         - development:  $500/month
-    
+
     - team:            # Allocate to owning teams
         - platform:     $3500/month
         - backend:      $2000/month
@@ -172,11 +172,11 @@ chargeback_model:
     - compute:
         - cpu_per_core_hour: $0.50
         - memory_per_gb_hour: $0.10
-    
+
     - storage:
         - hot_storage_per_gb_month: $0.50
         - cold_storage_per_gb_month: $0.05
-    
+
     - network:
         - data_transfer_per_gb: $0.12
         - api_calls_per_million: $0.50
@@ -185,11 +185,11 @@ budgets:
   - team: "platform"
     monthly_budget: $4000
     alert_threshold: 0.80  # Alert at 80%
-    
+
   - team: "backend"
     monthly_budget: $2500
     alert_threshold: 0.85
-    
+
   - team: "data"
     monthly_budget: $500
     alert_threshold: 0.90
@@ -214,19 +214,19 @@ cat > scripts/phase-19-cost-optimization.sh <<'OPTIM'
 
 optimize_compute() {
   echo "Optimizing compute costs..."
-  
+
   # Right-size instances
   echo "1. Analyzing instance utilization..."
   kubectl top nodes | tail -n +2 | while read node cpu memory rest; do
     cpu_pct=${cpu%m}
     mem_pct=${memory%Mi}
-    
+
     if [[ $cpu_pct -lt 20 ]]; then
       echo "  ⚠️ Node $node underutilized (CPU: ${cpu_pct}%)"
       echo "    Action: Schedule for downsizing"
     fi
   done
-  
+
   # Purchase reserved instances
   echo "2. Recommending reserved instance purchases..."
   aws ec2 get-reserved-instances-offerings \
@@ -237,7 +237,7 @@ optimize_compute() {
 
 optimize_storage() {
   echo "Optimizing storage costs..."
-  
+
   # Enable S3 intelligent tiering
   echo "1. Enabling S3 Intelligent-Tiering..."
   aws s3api list-buckets --query 'Buckets[].Name' --output text | \
@@ -245,7 +245,7 @@ optimize_storage() {
       --bucket {} \
       --id AutoArchiveOldVersions \
       --intelligent-tiering-configuration file:///tmp/tiering-config.json 2>/dev/null || true
-  
+
   # Delete old snapshots
   echo "2. Cleaning up old snapshots..."
   aws ec2 describe-snapshots --owner-ids self --query 'Snapshots[?StartTime<=`'$(date -u -d '30 days ago' +%Y-%m-%d)'`].SnapshotId' --output text | \
@@ -254,12 +254,12 @@ optimize_storage() {
 
 optimize_network() {
   echo "Optimizing network costs..."
-  
+
   # Consolidate NAT gateways
   echo "1. Reviewing NAT gateway usage..."
   aws ec2 describe-nat-gateways --filter Name=state,Values=available | \
     jq -r '.NatGateways[] | "\(.NatGatewayId): \(.CreateTime)"'
-  
+
   # Use VPC endpoints for AWS services
   echo "2. Setting up VPC endpoints for AWS services..."
   aws ec2 create-vpc-endpoint \

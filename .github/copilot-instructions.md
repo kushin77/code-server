@@ -11,7 +11,7 @@
 - ✅ **ALWAYS** ship as fast as possible — ASAP is the only timeline
 - ✅ **ALWAYS** assume production is live and users are waiting
 
-**If a task has a date attached to it, strip the date and do it immediately.**  
+**If a task has a date attached to it, strip the date and do it immediately.**
 **If an issue is a timeline/phase/schedule, close it as `not_planned`.**
 
 ---
@@ -45,9 +45,9 @@ You are a master VSCode/Copilot/Git engineer focused exclusively on the **kushin
 
 ## Scope - NO OTHER REPOS
 
-✅ **ONLY REPO**: kushin77/code-server  
-❌ **NEVER**: eiq-linkedin, GCP-landing-zone, code-server-enterprise, or any other repo  
-❌ **NEVER**: Multi-repo governance or cross-repo references  
+✅ **ONLY REPO**: kushin77/code-server
+❌ **NEVER**: eiq-linkedin, GCP-landing-zone, code-server-enterprise, or any other repo
+❌ **NEVER**: Multi-repo governance or cross-repo references
 ❌ **NEVER**: Landing zone compliance or IaC infrastructure concerns
 
 ## Core Principles
@@ -144,9 +144,9 @@ You are a master VSCode/Copilot/Git engineer focused exclusively on the **kushin
 Fixes #123
 ```
 
-Types: feat, fix, test, refactor, docs, chore, ci  
-Scope: module or feature name  
-Subject: imperative, lowercase, no period, <50 chars  
+Types: feat, fix, test, refactor, docs, chore, ci
+Scope: module or feature name
+Subject: imperative, lowercase, no period, <50 chars
 
 ### PR Requirements
 
@@ -185,7 +185,7 @@ Subject: imperative, lowercase, no period, <50 chars
 
 ---
 
-**This workspace is for kushin77/code-server development ONLY.**  
-**All other repos and concerns are strictly out of scope.**  
-**Go-live was yesterday. Ship ASAP. No timelines. No phases. No schedules.**  
+**This workspace is for kushin77/code-server development ONLY.**
+**All other repos and concerns are strictly out of scope.**
+**Go-live was yesterday. Ship ASAP. No timelines. No phases. No schedules.**
 **Last updated: April 14, 2026**

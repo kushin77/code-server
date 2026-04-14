@@ -122,10 +122,10 @@ echo "New total duration: $NEW_DURATION days"
 
 if [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$CLOUDFLARE_AUTH_TOKEN" ] && [ -n "$old_cf_id" ]; then
     echo -e "${YELLOW}Updating Cloudflare Access policy...${NC}"
-    
+
     # Calculate decision duration for Cloudflare policy
     CF_DECISION_DURATION_S=$((NEW_DURATION * 86400))
-    
+
     # Update Cloudflare Access rule with new expiry
     RESPONSE=$(curl -s -X PUT \
         "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/access/policies/${old_cf_id}" \
@@ -138,7 +138,7 @@ if [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$CLOUDFLARE_AUTH_TOKEN" ] && [ -n "$
           \"require\": {\"group\": {\"id\": \"dev-contractors\"}},
           \"precedence\": 10
         }" 2>&1)
-    
+
     if echo "$RESPONSE" | grep -q '"success":true'; then
         echo -e "${GREEN}✓ Cloudflare policy updated${NC}"
     else
@@ -208,7 +208,7 @@ New total duration: ${NEW_DURATION} days
 Reason: ${REASON}
 
 Your existing credentials remain valid. No action needed."
-    
+
     echo "$EMAIL_BODY" | mail -s "$SUBJECT" "$old_email" 2>/dev/null || true
     echo "Notification email sent to: $old_email"
 fi

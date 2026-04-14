@@ -1,6 +1,6 @@
 # kubernetes/helm/code-server-chart/Chart.yaml
 # Helm Chart for code-server on Kubernetes
-# 
+#
 # Usage:
 #   helm install code-server ./helm/code-server-chart -f values-prod.yaml
 #   helm upgrade code-server ./helm/code-server-chart -f values-prod.yaml
@@ -17,7 +17,7 @@ keywords:
   - ide
   - kubernetes
   - docker
-  
+
 maintainers:
   - name: Code Server Platform Team
     email: platform@kushnir.cloud

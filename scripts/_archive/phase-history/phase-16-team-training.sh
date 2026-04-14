@@ -238,13 +238,13 @@ SOP-002: Alert Investigation & Triage
     - Action: Page on-call engineer immediately
     - Investigation: Check affected service logs
     - Escalation: Escalate after 3 minutes if unresolved
-  
+
   Medium-Severity Alert (P2):
     - Response time: <5 minutes
     - Action: Start investigation, don't page immediately
     - Investigation: Correlate with other metrics
     - Escalation: Escalate after 15 minutes if unresolved
-  
+
   Low-Severity Alert (P3):
     - Response time: <30 minutes
     - Action: Document and investigate
@@ -256,14 +256,14 @@ SOP-003: Service Restart Procedure
     - Container status = "Restarting" (unstable)
     - Memory leak detected (continuous growth)
     - Service hangs or becomes unresponsive
-  
+
   How to restart safely:
     1. Notify team: "Restarting [service] - expected <30s downtime"
     2. Run: docker-compose restart [service]
     3. Monitor: Watch dashboard for 2 minutes
     4. Verify: Service health check passing
     5. Document: Log incident in team chat
-  
+
   DO NOT restart without checking:
     - Whether service is processing requests
     - If there's planned maintenance window
@@ -275,18 +275,18 @@ SOP-004: Latency Investigation (p99 >100ms)
     2. Look for error spike that might cause retries
     3. Check network latency (SSH to host and ping)
     4. Review recent deployments/configuration changes
-  
+
   If resource-constrained:
     - Scale service: docker-compose up -d --no-deps --scale [service]=2
     - Or restart if temporary: docker-compose restart [service]
     - Monitor and document pattern
-  
+
   If application issue:
     - Check application logs: docker logs [service]
     - Look for exceptions, timeout errors
     - Check database/dependency status
     - May require code fix (escalate if needed)
-  
+
   Recovery confirmation:
     - Watch p99 latency return to baseline (<50ms)
     - Confirm error rate returns to normal (<0.05%)
@@ -294,18 +294,18 @@ SOP-004: Latency Investigation (p99 >100ms)
 
 SOP-005: Container Failure Recovery
   Detection: AlertManager alert or dashboard shows "Not running"
-  
+
   Investigation:
     1. Check status: docker ps | grep [service]
     2. Get logs: docker logs --tail 50 [service]
     3. Check resources: free -m && df -h
     4. For crash loop: inspect ExitCode in logs
-  
+
   Recovery by issue type:
     - OOMKilled (memory): Increase memory limit in docker-compose.yml
     - Die (normal exit): Check process logs for error
     - Unhealthy: May self-recover, wait 30s before restart
-  
+
   Persistent issues:
     - Escalate to DevOps team for investigation
     - Consider temporary manual workaround if possible
@@ -317,7 +317,7 @@ SOP-006: Data Integrity Check (weekly)
     2. Check backup timestamp: Should be <24hrs old
     3. Verify multi-region replicas: Check replication status
     4. Data consistency: Spot-check key metrics/logs persistency
-  
+
   If backup is missing:
     - Escalate immediately (potential data loss risk)
     - Check backup service status
@@ -330,18 +330,18 @@ SOP-007: Security Incident Response
     - Unusual API usage patterns
     - Data access from unexpected IP
     - Configuration changes by unauthorized user
-  
+
   Immediate Actions:
     1. Isolate affected user/session (revoke auth tokens)
     2. Review audit logs: Check what was accessed
     3. Preserve evidence: Don't restart services yet
     4. Notify security team
-  
+
   Investigation:
     - Check OAuth2-Proxy logs for auth attempts
     - Review Caddy access logs for IP patterns
     - Check filesystem changes for tampering
-  
+
   Follow-up:
     - Implement additional controls if needed
     - Update security runbook with findings

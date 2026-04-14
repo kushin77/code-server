@@ -32,7 +32,7 @@ deploy_api_gateway() {
 
     # 1.1: Create Kong configuration
     mkdir -p "${PROJECT_ROOT}/config/kong"
-    
+
     cat > "${PROJECT_ROOT}/config/kong/kong.conf" << 'EOF'
 # Kong API Gateway Configuration
 
@@ -81,7 +81,7 @@ services:
     port: 3000
     protocol: http
     path: /api
-    
+
     routes:
       - name: api-route
         paths:
@@ -90,24 +90,24 @@ services:
           - http
           - https
         strip_path: false
-    
+
     plugins:
       - name: rate-limiting
         config:
           minute: 1000
           hour: 50000
-      
+
       - name: correlation-id
         config:
           header_name: X-Correlation-ID
           generator: uuid#counter
-      
+
       - name: request-transformer
         config:
           add:
             headers:
               - X-Kong-Timestamp:$(date +%s)
-      
+
       - name: prometheus
         config:
           metrics:
@@ -121,7 +121,7 @@ services:
     host: oauth2-proxy
     port: 4180
     protocol: http
-    
+
     routes:
       - name: auth-route
         paths:
@@ -135,7 +135,7 @@ services:
     host: redis-cache
     port: 6379
     protocol: tcp
-    
+
     routes:
       - name: cache-route
         protocols:
@@ -225,7 +225,7 @@ deploy_distributed_tracing() {
 
     # 2.1: Create Jaeger configuration
     mkdir -p "${PROJECT_ROOT}/config/jaeger"
-    
+
     cat > "${PROJECT_ROOT}/config/jaeger/jaeger-config.yaml" << 'EOF'
 samplers:
   type: const
@@ -330,7 +330,7 @@ const tracer = initTracer(config, options);
 
 module.exports = {
   tracer,
-  
+
   // Middleware for Express.js
   tracingMiddleware: (req, res, next) => {
     const wireCtx = tracer.extract('http_headers', req.headers);
@@ -517,7 +517,7 @@ verify_phase_16() {
 
     # 4.1: Verify all configuration files
     log_info "Verifying Phase 16 configurations..."
-    
+
     local required_files=(
         "config/kong/kong.conf"
         "config/kong/services.yaml"
@@ -540,7 +540,7 @@ verify_phase_16() {
 
     # 4.2: Validate YAML syntax
     log_info "Validating YAML configuration syntax..."
-    
+
     for yaml_file in ${PROJECT_ROOT}/config/{kong,jaeger,linkerd}/*.yaml; do
         if [ -f "$yaml_file" ]; then
             if command -v yq &> /dev/null; then
@@ -567,13 +567,13 @@ main() {
 
     deploy_api_gateway || { log_error "API Gateway deployment failed"; return 1; }
     echo ""
-    
+
     deploy_distributed_tracing || { log_error "Distributed tracing deployment failed"; return 1; }
     echo ""
-    
+
     deploy_service_mesh || { log_error "Service mesh deployment failed"; return 1; }
     echo ""
-    
+
     verify_phase_16 || { log_error "Phase 16 verification failed"; return 1; }
     echo ""
 

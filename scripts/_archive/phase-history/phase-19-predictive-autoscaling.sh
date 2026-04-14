@@ -38,7 +38,7 @@ class LoadForecast:
             0: 0.8, 1: 0.85, 2: 0.9, 3: 0.95, 4: 1.0,  # Mon-Fri
             5: 0.5, 6: 0.4  # Sat-Sun
         }
-    
+
     def arima_forecast(self, historical_data, periods=12):
         """Forecast using ARIMA model"""
         try:
@@ -49,7 +49,7 @@ class LoadForecast:
         except Exception as e:
             print(f"ARIMA forecast failed: {e}", file=sys.stderr)
             return None
-    
+
     def prophet_forecast(self, df, periods=12):
         """Forecast using Facebook Prophet"""
         try:
@@ -66,7 +66,7 @@ class LoadForecast:
         except Exception as e:
             print(f"Prophet forecast failed: {e}", file=sys.stderr)
             return None
-    
+
     def pattern_based_forecast(self, current_hour, current_dow, current_load):
         """Simple pattern-based forecast"""
         pattern_multiplier = (
@@ -74,16 +74,16 @@ class LoadForecast:
             self.daily_pattern.get(current_dow, 0.8)
         )
         return int(self.baseline * pattern_multiplier)
-    
+
     def ensemble_forecast(self, historical_data, periods=12):
         """Combine multiple forecast methods for robust prediction"""
         forecasts = {}
-        
+
         # ARIMA forecast
         arima_result = self.arima_forecast(historical_data, periods)
         if arima_result:
             forecasts['arima'] = arima_result
-        
+
         # Pattern-based forecast
         now = datetime.now()
         pattern_forecast = []
@@ -96,7 +96,7 @@ class LoadForecast:
             )
             pattern_forecast.append(predicted)
         forecasts['pattern'] = pattern_forecast
-        
+
         # Average the forecasts
         if forecasts:
             num_forecasts = len(forecasts)
@@ -105,7 +105,7 @@ class LoadForecast:
                 avg = sum(f[i] for f in forecasts.values()) / num_forecasts
                 ensemble.append(max(10, int(avg)))  # Min 10 instances
             return ensemble
-        
+
         return None
 
 # Example usage
@@ -115,14 +115,14 @@ if __name__ == "__main__":
         30, 25, 20, 15, 20, 40, 80, 120, 150, 160, 170, 180,
         200, 190, 180, 170, 140, 200, 190, 160, 120, 90, 60, 50
     ]
-    
+
     forecaster = LoadForecast()
     forecast = forecaster.ensemble_forecast(historical, periods=12)
-    
+
     print("=== Load Forecast (Next 12 Hours) ===")
     for i, predicted in enumerate(forecast or []):
         print(f"Hour +{i}: {predicted} concurrent users")
-    
+
     print("\n=== Scaling Recommendations ===")
     current_load = historical[-1]
     for i, predicted in enumerate(forecast or []):
@@ -160,7 +160,7 @@ spec:
       target:
         type: Utilization
         averageUtilization: 75
-  
+
   # Based on current memory
   - type: Resource
     resource:
@@ -168,7 +168,7 @@ spec:
       target:
         type: Utilization
         averageUtilization: 80
-  
+
   # Based on custom metric (predicted load)
   - type: Pods
     pods:
@@ -177,7 +177,7 @@ spec:
       target:
         type: AverageValue
         averageValue: "100"
-  
+
   # Based on request rate
   - type: Pods
     pods:
@@ -186,7 +186,7 @@ spec:
       target:
         type: AverageValue
         averageValue: "1000"
-  
+
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 60
@@ -198,7 +198,7 @@ spec:
         value: 4   # Or add 4 pods
         periodSeconds: 15
       selectPolicy: Max
-    
+
     scaleDown:
       stabilizationWindowSeconds: 300
       policies:
@@ -229,7 +229,7 @@ scaling_policies:
     max_instances: 100
     scale_up_threshold: 0.75
     scale_down_threshold: 0.30
-  
+
   # Off-peak (17-09): Use spot instances
   off_peak:
     time_range: "17:00-09:00"
@@ -240,7 +240,7 @@ scaling_policies:
     max_instances: 30
     scale_up_threshold: 0.80
     scale_down_threshold: 0.20
-  
+
   # Weekends: Minimize costs
   weekends:
     day_of_week: [5, 6]  # Sat, Sun
@@ -249,7 +249,7 @@ scaling_policies:
     min_instances: 3
     max_instances: 20
     scale_up_threshold: 0.85
-  
+
   # Special events (forecast high demand)
   special_events:
     events:
@@ -268,11 +268,11 @@ scaling_policies:
       us-east-1:
         preferred_instance_types: [on-demand, reserved]
         cost_per_unit: 0.5
-      
+
       us-west-2:
         preferred_instance_types: [spot, reserved]
         cost_per_unit: 0.4
-      
+
       eu-west-1:
         preferred_instance_types: [spot, on-demand]
         cost_per_unit: 0.6
@@ -303,7 +303,7 @@ spec:
             image: bitnami/kubectl:latest
             command: ["kubectl", "scale", "deployment", "api-server", "--replicas=50"]
           restartPolicy: OnFailure
-  
+
   # Scale down after hours (6 PM)
   - schedule: "0 18 * * 1-5"
     jobTemplate:
@@ -316,7 +316,7 @@ spec:
             image: bitnami/kubectl:latest
             command: ["kubectl", "scale", "deployment", "api-server", "--replicas=10"]
           restartPolicy: OnFailure
-  
+
   # Minimal weekend scaling
   - schedule: "0 0 * * 0,6"
     jobTemplate:

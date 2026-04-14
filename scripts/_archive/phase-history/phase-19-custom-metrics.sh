@@ -2,7 +2,7 @@
 
 ################################################################################
 # Phase 19: Custom Metrics & Advanced Observability Layer
-# 
+#
 # Purpose: Deploy comprehensive custom metrics, business KPIs, and advanced
 #          observability dashboards across the enterprise infrastructure
 #
@@ -64,13 +64,13 @@ import threading
 
 # Business Metrics
 transaction_volume = Counter(
-    'transactions_total', 
+    'transactions_total',
     'Total transactions processed',
     ['service', 'status']
 )
 
 transaction_value = Counter(
-    'transaction_value_total', 
+    'transaction_value_total',
     'Total transaction value in cents',
     ['service', 'currency']
 )
@@ -189,7 +189,7 @@ def simulate_metrics():
         for _ in range(10):
             latency = random.gauss(0.05, 0.02)
             api_request_latency.labels(
-                endpoint='/api/checkout', 
+                endpoint='/api/checkout',
                 method='POST'
             ).observe(max(0, latency))
 
@@ -220,11 +220,11 @@ if __name__ == '__main__':
     # Start HTTP server
     start_http_server(9100)
     print("Custom Exporter started on port 9100")
-    
+
     # Start metrics simulation
     metrics_thread = threading.Thread(target=simulate_metrics, daemon=True)
     metrics_thread.start()
-    
+
     # Keep running
     while True:
         time.sleep(1)
@@ -565,10 +565,10 @@ cost_anomaly = Counter(
 recording_rules:
   - record: cost_per_service:monthly
     expr: 'cost_per_service_usd * 30'
-  
+
   - record: cost_by_region:monthly
     expr: 'sum(cost_per_region_usd) by (region)'
-  
+
   - record: cost_efficiency_ratio
     expr: 'cost_per_service_usd / resource_utilization_percent{resource_type="cpu"}'
 EOF

@@ -355,4 +355,3 @@ output "global_failover_status" {
 # - Phase 16: Base infrastructure (DB HA + LB)
 # - Phase 17: Multi-region replication (sequential after Phase 16 stable)
 # - Automatic failover: DNS switch + promote read replica to primary
-

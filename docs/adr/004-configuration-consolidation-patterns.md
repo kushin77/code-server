@@ -1,9 +1,9 @@
 # ADR-004: Configuration Consolidation Patterns
 
-**Status**: Accepted  
-**Date**: April 14, 2026  
-**Decision Makers**: Architecture Team  
-**Stakeholders**: DevOps, Platform Engineering, All Contributors  
+**Status**: Accepted
+**Date**: April 14, 2026
+**Decision Makers**: Architecture Team
+**Stakeholders**: DevOps, Platform Engineering, All Contributors
 
 ## Context
 
@@ -105,7 +105,7 @@ services:
         path *.js *.css *.png *.jpg *.svg
     }
     header @assets Cache-Control "public, max-age=31536000"
-    
+
     @health {
         path /health /healthz /ping
     }
@@ -214,7 +214,7 @@ locals {
     grafana       = "grafana/grafana:10.2.3"
     alertmanager  = "prom/alertmanager:v0.26.0"
   }
-  
+
   resource_limits = {
     code-server = {
       cpu_limit = "2.0"
@@ -238,7 +238,7 @@ resource "docker_image" "prometheus" {
 
 resource "docker_container" "prometheus" {
   image = docker_image.prometheus.image_id
-  
+
   memory = parseint(regex("[0-9]+", local.resource_limits["prometheus"].memory), 10)
   memory_swap = parseint(regex("[0-9]+", local.resource_limits["prometheus"].memory), 10)
 }
@@ -320,17 +320,17 @@ $status = Get-PRCheckStatus -PRNumber 123
 ## Consequences
 
 ### Positive
-✅ **Low risk**: Existing variants still work, base is additive  
-✅ **Backward compatible**: Can add to existing configs incrementally  
-✅ **Cleaner codebase**: 35-40% code reduction across 4 modules  
-✅ **Faster updates**: Change once, applies everywhere  
-✅ **Better onboarding**: New contributors see single examples  
-✅ **Type safety**: Terraform locals provide validation  
+✅ **Low risk**: Existing variants still work, base is additive
+✅ **Backward compatible**: Can add to existing configs incrementally
+✅ **Cleaner codebase**: 35-40% code reduction across 4 modules
+✅ **Faster updates**: Change once, applies everywhere
+✅ **Better onboarding**: New contributors see single examples
+✅ **Type safety**: Terraform locals provide validation
 
 ### Considerations
-⚠️ **YAML anchor syntax**: Requires familiarity with `<<` and `*` references  
-⚠️ **Caddyfile matchers**: Named segments can mask Caddyfile parsing errors  
-⚠️ **Debugging**: May need to `docker-compose config` or `caddyfile validate` to expand includes  
+⚠️ **YAML anchor syntax**: Requires familiarity with `<<` and `*` references
+⚠️ **Caddyfile matchers**: Named segments can mask Caddyfile parsing errors
+⚠️ **Debugging**: May need to `docker-compose config` or `caddyfile validate` to expand includes
 
 ### Mitigations
 - **Documentation**: CONTRIBUTING.md updated with pattern examples
@@ -340,22 +340,22 @@ $status = Get-PRCheckStatus -PRNumber 123
 
 ## Implementation Timeline
 
-✅ **Phase 1 (6 hours)**: Core consolidations  
-- docker-compose.base.yml + variant composition  
-- .env.oauth2-proxy extraction  
-- scripts/common-functions.ps1, scripts/logging.sh  
-- terraform/locals.tf expansion  
+✅ **Phase 1 (6 hours)**: Core consolidations
+- docker-compose.base.yml + variant composition
+- .env.oauth2-proxy extraction
+- scripts/common-functions.ps1, scripts/logging.sh
+- terraform/locals.tf expansion
 
-✅ **Phase 2 (15 hours)**: Best practices  
-- Caddyfile.base + segment consolidation  
-- alertmanager-base.yml creation  
-- phase-21-observability.tf version pinning  
+✅ **Phase 2 (15 hours)**: Best practices
+- Caddyfile.base + segment consolidation
+- alertmanager-base.yml creation
+- phase-21-observability.tf version pinning
 
-✅ **Phase 3 (5 hours)**: Polish & integration  
-- CONTRIBUTING.md pattern documentation  
-- Bash script library integration  
-- PowerShell function library adoption  
-- ADR documentation (this file)  
+✅ **Phase 3 (5 hours)**: Polish & integration
+- CONTRIBUTING.md pattern documentation
+- Bash script library integration
+- PowerShell function library adoption
+- ADR documentation (this file)
 
 ## Related ADRs
 
@@ -381,5 +381,5 @@ $status = Get-PRCheckStatus -PRNumber 123
 
 ---
 
-**Status**: Accepted (April 14, 2026)  
+**Status**: Accepted (April 14, 2026)
 **Implementation**: Complete with 35-40% code reduction achieved

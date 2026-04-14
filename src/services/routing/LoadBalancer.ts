@@ -1,7 +1,7 @@
 /**
  * Load Balancer - Distribute traffic across regions with multiple strategies
  * Phase 12.3: Geographic Routing
- * 
+ *
  * Responsibilities:
  * - Implement multiple load balancing strategies
  * - Distribute traffic based on region capacity and health

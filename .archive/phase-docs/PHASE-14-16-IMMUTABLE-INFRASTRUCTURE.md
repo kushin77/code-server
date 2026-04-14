@@ -83,17 +83,17 @@ Database Deployment (Immutable):
   - Standby PostgreSQL (192.168.168.30)
   - Both deployed from same Docker image
   - Configuration via environment variables only
-  
+
 Virtual IP (192.168.168.40):
   - Managed by Keepalived
   - Always points to active database
   - Automatic failover (no manual intervention)
-  
+
 Data Durability:
   - Streaming replication (synchronous)
   - WAL archiving to S3
   - Point-in-time recovery capability
-  
+
 Configuration Immutability:
   - postgresql.conf: environment-driven
   - pg_hba.conf: generated from template
@@ -109,18 +109,18 @@ Load Balancer (Immutable):
   - Configuration via:
     * haproxy.cfg: generated from Terraform
     * Environment variables for dynamic backend IPs
-  
+
   - VIP Failover:
     * Primary HAProxy (192.168.168.50)
     * Secondary HAProxy (standby)
     * Keepalived manages automatic failover
-  
+
   - Backend Auto-Scaling:
     * Kubernetes integration (if needed)
     * Auto-scale on CPU/memory metrics
     * New instances use immutable image
     * Old instances terminate cleanly
-  
+
   - Session State:
     * Sticky sessions via source IP hash
     * No server-local session storage

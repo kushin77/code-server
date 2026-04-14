@@ -43,12 +43,12 @@ All documentation goes in `docs/` directory. **NEVER** in root.
 ```markdown
 # [Document Title]
 
-**Purpose**: One-sentence description  
-**Audience**: Who is this for? (developers, ops, everyone)  
-**Last Updated**: YYYY-MM-DD  
-**Author**: @username  
-**Status**: ACTIVE | DRAFT | DEPRECATED  
-**Related**: [Link to related docs](../path/to/doc.md)  
+**Purpose**: One-sentence description
+**Audience**: Who is this for? (developers, ops, everyone)
+**Last Updated**: YYYY-MM-DD
+**Author**: @username
+**Status**: ACTIVE | DRAFT | DEPRECATED
+**Related**: [Link to related docs](../path/to/doc.md)
 
 ## Table of Contents
 <!-- For docs > 100 lines -->
@@ -75,9 +75,9 @@ All documentation goes in `docs/` directory. **NEVER** in root.
 ```markdown
 # ADR-###: [Decision Title]
 
-**Date**: YYYY-MM-DD  
-**Status**: PROPOSED | APPROVED | IMPLEMENTED | SUPERSEDED  
-**Deciders**: @person1, @person2  
+**Date**: YYYY-MM-DD
+**Status**: PROPOSED | APPROVED | IMPLEMENTED | SUPERSEDED
+**Deciders**: @person1, @person2
 
 ## Context
 What question did we need to answer? What are the constraints?
@@ -124,11 +124,11 @@ Results: positive and negative
 ```markdown
 # Runbook: [Procedure Name]
 
-**Severity**: CRITICAL | HIGH | MEDIUM | LOW  
-**Owner**: @person  
-**Estimated Time**: X minutes  
-**Requires Approvals**: Yes | No  
-**Last Tested**: YYYY-MM-DD  
+**Severity**: CRITICAL | HIGH | MEDIUM | LOW
+**Owner**: @person
+**Estimated Time**: X minutes
+**Requires Approvals**: Yes | No
+**Last Tested**: YYYY-MM-DD
 
 ## Prerequisites
 - [ ] Requirement 1
@@ -280,7 +280,7 @@ terraform/
 
 module "my_new_feature" {
   source = "./modules/my-feature-category"
-  
+
   var_name = var.var_defined_in_variables_tf
 }
 
@@ -477,10 +477,10 @@ tests/
 
 ### NEVER in Git
 
-❌ Passwords, API keys, tokens, certificates, SSH keys  
-❌ `.env` file with real values  
-❌ `terraform.tfvars` with real values  
-❌ `*.pem`, `*.key`, `*.p12` files  
+❌ Passwords, API keys, tokens, certificates, SSH keys
+❌ `.env` file with real values
+❌ `terraform.tfvars` with real values
+❌ `*.pem`, `*.key`, `*.p12` files
 
 ### Solution
 

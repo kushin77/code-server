@@ -2,7 +2,7 @@
 ################################################################################
 # P0 Monitoring Bootstrap - Production Operations Setup
 # Simplified version without jq dependency
-# 
+#
 # Initializes monitoring infrastructure for Phase 14 production:
 # - Prometheus (metrics collection)
 # - Grafana (dashboards)
@@ -204,4 +204,3 @@ log "Logs: $LOG_FILE"
 log ""
 
 exit 0
-

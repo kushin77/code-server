@@ -1,9 +1,9 @@
 /**
  * Batch Endpoint Middleware for Express/Fastify
- * 
+ *
  * POST /api/batch - Accept up to 10 requests per batch
  * Responses maintain order and include per-request status
- * 
+ *
  * Request format:
  * {
  *   "requests": [
@@ -11,7 +11,7 @@
  *     { "method": "POST", "path": "/api/posts", "headers": { ... }, "body": { ... } }
  *   ]
  * }
- * 
+ *
  * Response format:
  * {
  *   "status": 207,  // Multi-status
@@ -33,7 +33,7 @@ class BatchEndpointMiddleware {
         this.circuitBreaker = new CircuitBreaker(options.circuitBreaker);
         this.maxBatchSize = options.maxBatchSize || 10;
         this.requestTimeout = options.requestTimeout || 30000;
-        
+
         this.metrics = {
             totalBatches: 0,
             totalRequests: 0,
@@ -43,7 +43,7 @@ class BatchEndpointMiddleware {
             createdAt: new Date().toISOString()
         };
     }
-    
+
     /**
      * Register batch endpoint (Express example)
      */
@@ -52,47 +52,47 @@ class BatchEndpointMiddleware {
             await this.handleBatch(req, res);
         });
     }
-    
+
     /**
      * Handle batch request
      */
     async handleBatch(req, res) {
         const startTime = Date.now();
-        
+
         try {
             // Validate request
             const { requests } = req.body;
-            
+
             if (!Array.isArray(requests)) {
                 return res.status(400).json({
                     error: 'Invalid request: requests must be an array',
                     received: typeof requests
                 });
             }
-            
+
             if (requests.length === 0) {
                 return res.status(400).json({
                     error: 'Invalid request: requests array cannot be empty'
                 });
             }
-            
+
             if (requests.length > this.maxBatchSize) {
                 return res.status(400).json({
                     error: `Batch size exceeds maximum of ${this.maxBatchSize}`,
                     requested: requests.length
                 });
             }
-            
+
             this.metrics.totalBatches++;
             this.metrics.totalRequests += requests.length;
-            
+
             // Execute through circuit breaker
             const responses = await this.circuitBreaker.execute(async () => {
                 return await Promise.allSettled(
                     requests.map(req => this._executeRequest(req))
                 );
             });
-            
+
             // Process results
             const results = responses.map((result, idx) => {
                 if (result.status === 'fulfilled') {
@@ -113,11 +113,11 @@ class BatchEndpointMiddleware {
                     };
                 }
             });
-            
+
             // Update metrics
             const latency = Date.now() - startTime;
             this.metrics.avgLatency = (this.metrics.avgLatency || 0) * 0.8 + latency * 0.2;
-            
+
             // Return 207 Multi-Status response
             res.status(207).json({
                 status: 207,
@@ -128,7 +128,7 @@ class BatchEndpointMiddleware {
                     circuitBreakerStatus: this.circuitBreaker.state
                 }
             });
-            
+
         } catch (error) {
             res.status(500).json({
                 error: 'Batch processing failed',
@@ -137,7 +137,7 @@ class BatchEndpointMiddleware {
             });
         }
     }
-    
+
     /**
      * Execute individual request in batch
      * @private
@@ -163,7 +163,7 @@ class BatchEndpointMiddleware {
             }, Math.random() * 50);
         });
     }
-    
+
     /**
      * Get batch processing metrics
      */

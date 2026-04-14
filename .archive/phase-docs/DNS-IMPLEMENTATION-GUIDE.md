@@ -238,6 +238,6 @@ docker-compose up -d
 
 ---
 
-**Status**: Ready for production deployment  
-**Owner**: Infrastructure Team  
+**Status**: Ready for production deployment
+**Owner**: Infrastructure Team
 **Last Updated**: April 14, 2026

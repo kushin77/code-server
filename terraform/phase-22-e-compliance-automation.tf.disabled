@@ -49,7 +49,7 @@ locals {
     enabled                = var.enable_phase_22e_compliance
     namespace              = var.compliance_namespace
     gatekeeper_version     = var.gatekeeper_version
-    
+
     # Policy categories
     policy_categories = {
       security     = "Pod security, network policies, image registry"
@@ -57,7 +57,7 @@ locals {
       operational  = "Resource limits, deletion protection, annotations"
       remediation  = "Auto-fix violations, config correction"
     }
-    
+
     # Gatekeeper configuration
     gatekeeper = {
       audit_version        = var.gatekeeper_version
@@ -68,7 +68,7 @@ locals {
       constraint_violation = "audit"
       loglevel             = "INFO"
     }
-    
+
     # Capabilities
     capabilities = [
       "Pod security policy enforcement",

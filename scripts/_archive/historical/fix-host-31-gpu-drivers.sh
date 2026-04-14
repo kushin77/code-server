@@ -54,7 +54,7 @@ echo "Downloading NVIDIA driver $DRIVER_VERSION..."
 cd /tmp
 wget -q https://us.download.nvidia.com/XFree86/Linux-x86_64/${DRIVER_VERSION}/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run
 
-# Make executable  
+# Make executable
 chmod +x NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run
 
 # Install driver (non-interactive)
@@ -75,15 +75,15 @@ INSTALLED_VERSION=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader)
 
 if [ "$INSTALLED_VERSION" == "$DRIVER_VERSION" ]; then
     echo "✓ GPU driver successfully upgraded to $DRIVER_VERSION"
-    
+
     # Restart GPU-dependent services
     echo "Restarting GPU-dependent services..."
     sudo systemctl start ollama 2>/dev/null || true
     docker start ollama 2>/dev/null || true
-    
+
     # Cleanup
     rm -f "$STATE_FILE" /tmp/NVIDIA-Linux-x86_64-${DRIVER_VERSION}.run
-    
+
     echo "✓ GPU driver upgrade COMPLETE"
     exit 0
 else

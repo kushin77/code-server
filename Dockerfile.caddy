@@ -24,7 +24,7 @@ set -e
 
 echo "[caddy-entrypoint] Starting Caddy with OpenTelemetry instrumentation"
 
-# Enable OTEL via environment variables  
+# Enable OTEL via environment variables
 export OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4317}"
 export OTEL_EXPORTER_OTLP_PROTOCOL="${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}"
 export OTEL_SERVICE_NAME="${OTEL_SERVICE_NAME:-caddy-proxy}"

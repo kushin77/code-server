@@ -87,7 +87,7 @@ cat << 'EOF'
 # IPv4 streaming replication - Secondary (EU-WEST-1)
 host  replication  replicator  10.0.0.0/8  md5
 
-# IPv4 streaming replication - Tertiary (APAC) 
+# IPv4 streaming replication - Tertiary (APAC)
 host  replication  replicator  10.1.0.0/8  md5
 EOF
 log_success "pg_hba.conf entries documented"
@@ -193,16 +193,16 @@ cat << 'EOF'
 
 # Check replication process activity
 psql -U postgres -d postgres << EOSQL
-SELECT slot_name, slot_type, active, restart_lsn, confirmed_flush_lsn 
+SELECT slot_name, slot_type, active, restart_lsn, confirmed_flush_lsn
 FROM pg_replication_slots;
 
 -- Check connected replicas
-SELECT pid, usename, application_name, client_addr, sync_state, 
-       write_lag, flush_lag, replay_lag 
+SELECT pid, usename, application_name, client_addr, sync_state,
+       write_lag, flush_lag, replay_lag
 FROM pg_stat_replication;
 
 -- Check LSN position
-SELECT pg_current_wal_lsn() as current_lsn, 
+SELECT pg_current_wal_lsn() as current_lsn,
        pg_walfile_name(pg_current_wal_lsn()) as wal_file;
 EOSQL
 
@@ -226,33 +226,33 @@ TERTIARY_HOST="postgres.apac"
 
 while true; do
   echo "=== Replication Status ($(date)) ==="
-  
+
   # Primary view
   echo "Primary replication slots:"
   psql -h "$PRIMARY_HOST" -U postgres -d postgres -c \
     "SELECT slot_name, active, restart_lsn FROM pg_replication_slots;"
-  
+
   # Secondary replication lag
   echo "Secondary replication lag:"
   SECONDARY_LAG=$(psql -h "$SECONDARY_HOST" -U postgres -d postgres -t -c \
     "SELECT extract(epoch from (now() - pg_last_wal_playback_time())) as seconds;" 2>/dev/null || echo "N/A")
   echo "Lag (seconds): $SECONDARY_LAG"
-  
+
   # Tertiary replication lag
   echo "Tertiary replication lag:"
   TERTIARY_LAG=$(psql -h "$TERTIARY_HOST" -U postgres -d postgres -t -c \
     "SELECT extract(epoch from (now() - pg_last_wal_playback_time())) as seconds;" 2>/dev/null || echo "N/A")
   echo "Lag (seconds): $TERTIARY_LAG"
-  
+
   # Alert on excessive lag
   if (( $(echo "$SECONDARY_LAG > 5" | bc -l 2>/dev/null) )); then
     echo "⚠ WARNING: Secondary lag > 5 seconds (lag: $SECONDARY_LAG)"
   fi
-  
+
   if (( $(echo "$TERTIARY_LAG > 30" | bc -l 2>/dev/null) )); then
     echo "⚠ WARNING: Tertiary lag > 30 seconds (lag: $TERTIARY_LAG)"
   fi
-  
+
   sleep 30
 done
 EOF
@@ -270,45 +270,45 @@ SECONDARY_HOST="postgres.eu-west-1"
 # Step 1: Verify primary is down
 if ! timeout 5 bash -c "echo > /dev/tcp/$PRIMARY_HOST/5432" 2>/dev/null; then
   echo "Primary confirmed down"
-  
+
   # Step 2: Promote secondary
   echo "Promoting secondary ($SECONDARY_HOST) to primary..."
   ssh postgres@$SECONDARY_HOST "
     # Trigger promotion (creates promote_trigger_file)
     touch /var/lib/postgresql/promote
-    
+
     # Wait for promotion to complete
     sleep 5
-    
+
     # Verify we're now primary
     psql -U postgres -d postgres -c 'SELECT pg_is_wal_replay_paused();'
   "
-  
+
   # Step 3: Update replication slots for new primary
   ssh postgres@$SECONDARY_HOST "
     psql -U postgres -d postgres << EOSQL
     -- Create replication slot for new primary
     SELECT * FROM pg_create_physical_replication_slot('apac_new_replica', false);
-    
+
     -- Verify we're in primary mode
     SELECT pg_is_in_recovery();
 EOSQL
   "
-  
+
   # Step 4: Configure tertiary to replicate from new primary
   echo "Updating tertiary replication to point to new primary..."
   ssh postgres@$TERTIARY_HOST "
     # Stop PostgreSQL
     systemctl stop postgresql
-    
+
     # Update recovery.conf
     sed -i \"s/^primary_conninfo.*/primary_conninfo = 'host=$SECONDARY_HOST port=5432 user=replicator password=REPLICATION_PASSWORD'/\" \
       /var/lib/postgresql/14/main/recovery.conf
-    
+
     # Restart PostgreSQL
     systemctl start postgresql
   "
-  
+
   # Step 5: Alert operations team
   echo "Failover complete. New primary: $SECONDARY_HOST"
   # Send alert to Slack, PagerDuty, etc.
@@ -330,7 +330,7 @@ TERTIARY="postgres.apac"
 get_checksums() {
   local host=$1
   psql -h "$host" -U postgres -d code_server << EOSQL
-    SELECT schemaname, tablename, 
+    SELECT schemaname, tablename,
            md5(array_agg(md5((t.*)::text) ORDER BY md5((t.*)::text))::text) as table_hash
     FROM (SELECT schemaname, tablename FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')) as tables,
          LATERAL (SELECT * FROM ONLY public."${tables.tablename}") as t
@@ -372,10 +372,10 @@ PRIMARY="postgres.us-east-1"
 
 while true; do
   echo "=== Replication Performance ($(date)) ==="
-  
+
   psql -h "$PRIMARY" -U postgres -d postgres << EOSQL
     -- Replication status
-    SELECT 
+    SELECT
       application_name,
       sync_state,
       (EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::integer) as replication_lag_seconds,
@@ -386,18 +386,18 @@ while true; do
     ORDER BY application_name;
 
     -- WAL activity (per second)
-    SELECT 
+    SELECT
       'WAL_POSITION' as metric,
       pg_current_wal_lsn()::text as value;
-    
+
     -- Checkpoint activity
-    SELECT 
+    SELECT
       checkpoints_timed + checkpoints_req as total_checkpoints,
       checkpoint_write_time,
       checkpoint_sync_time
     FROM pg_stat_bgwriter;
 EOSQL
-  
+
   sleep 60
 done
 EOF

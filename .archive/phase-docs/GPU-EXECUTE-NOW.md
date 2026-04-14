@@ -36,7 +36,7 @@ sudo bash /tmp/gpu-driver-upgrade-direct.sh
 
 ✅ **GPU Upgrade Script**: `/tmp/gpu-driver-upgrade-direct.sh`
 - Driver 470.256.02 → 555.x
-- CUDA 11.4 → 12.4 
+- CUDA 11.4 → 12.4
 - NVIDIA Container Toolkit
 - Duration: ~15 minutes
 
@@ -50,7 +50,7 @@ sudo bash /tmp/gpu-driver-upgrade-direct.sh
 Run the script and verify success with:
 
 ```bash
-nvidia-smi  
+nvidia-smi
 # Should show Driver Version: 555.x
 
 docker run --rm --gpus all nvidia/cuda:12.4-runtime nvidia-smi
@@ -66,4 +66,3 @@ docker run --rm --gpus all nvidia/cuda:12.4-runtime nvidia-smi
 ---
 
 **Everything is ready. Execute the command above to complete GPU Phase 1.**
-

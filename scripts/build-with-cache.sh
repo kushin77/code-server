@@ -4,7 +4,7 @@ set -e
 # Build with maximum Docker cache utilization
 # Expected speedup: 4-6x for warm builds (cached layers)
 
-BUILD_TARGET= 
+BUILD_TARGET=
 REGISTRY=
 BUILDKIT_PROGRESS=
 

@@ -26,7 +26,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Mark node as unschedulable (prevents new pods)
    kubectl cordon <node-name>
-   
+
    # Drain existing workloads (3-minute grace period)
    kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data --grace-period=180
    ```
@@ -35,7 +35,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Trigger auto-scaling to provision replacement
    gcloud compute instance-groups managed abandon-instances <instance-group> <instance-id>
-   
+
    # Auto-scaler provisions new node (~2-3 minutes)
    # Monitor replacement: kubectl watch nodes
    ```
@@ -88,7 +88,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Check replication role
    kubectl exec postgres-1 -- psql -c "SELECT pg_is_in_recovery();"
    # Should return: f (false = now primary)
-   
+
    # Verify write access
    kubectl exec postgres-1 -- psql -c "INSERT INTO health_check (timestamp) VALUES (NOW());"
    ```
@@ -146,7 +146,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Trigger cache warmer for critical data
    kubectl exec redis-warmer -- /bin/sh -c './warm-critical-cache.sh'
-   
+
    # Monitor: grep "Cache warm" /var/log/application.log
    ```
 
@@ -187,10 +187,10 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Kill debug pods (can consume significant disk)
    kubectl delete pod -A --field-selector=status.phase=Failed,status.phase=Unknown
-   
+
    # Clear old logs (be careful!)
    kubectl logs -n <namespace> <pod> --tail=0 > /dev/null
-   
+
    # Clean old images
    docker image prune -a --force --filter "until=720h"
    ```
@@ -200,7 +200,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Add new disk to node
    gcloud compute disks create disk-<timestamp> --size=50GB
    gcloud compute instances attach-disk <instance> --disk=disk-<timestamp>
-   
+
    # Mount disk
    sudo mkdir /mnt/data
    sudo mkfs.ext4 /dev/sdb
@@ -212,7 +212,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Check available space
    df -h
    # Should show critical threshold < 80%
-   
+
    # Monitor impact on pods
    kubectl get events -A --sort-by='.lastTimestamp' | tail -20
    ```
@@ -241,7 +241,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # etcd health shows "unhealthy" for isolated nodes
    kubectl -n kube-system exec -it etcd-<node> -- etcdctl endpoint health
-   
+
    # Look for "failed: 0" entries
    ```
 
@@ -258,7 +258,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Try waiting for auto-recovery (30 seconds)
    sleep 30
    kubectl get nodes
-   
+
    # If still NotReady, remove from cluster
    kubectl delete node <bad-node> --ignore-daemonsets
    ```
@@ -268,7 +268,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Check etcd consistency
    kubectl -n kube-system exec etcd-<primary> -- \
      etcdctl endpoint health
-   
+
    # Verify no data loss
    kubectl get all -A | wc -l  # Should match previous count
    ```
@@ -277,7 +277,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # After network recovery, rejoin node
    kubectl uncordon <recovered-node>
-   
+
    # Monitor join: kubectl logs -f -n kube-system <kubelet-pod>
    ```
 
@@ -307,7 +307,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Alert triggers when Usage > Threshold (e.g., 800Mi for 1Gi limit)
    kubectl top pod <pod-name>
-   
+
    # Check memory over time
    curl -s 'prometheus:9090/api/v1/query_range' \
      --data-urlencode 'query=container_memory_usage_bytes{pod="<pod>"}' \
@@ -320,7 +320,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Get memory profile
    kubectl port-forward <pod> 6060:6060 &
    go tool pprof http://localhost:6060/debug/pprof/heap -http=:8080
-   
+
    # Identify top memory consumers
    ```
 
@@ -328,7 +328,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Send SIGTERM to pod (allows cleanup)
    kubectl delete pod <pod-name> --grace-period=30
-   
+
    # Kubernetes automatically restarts (via ReplicaSet)
    ```
 
@@ -336,7 +336,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Watch pod restart
    kubectl get pod <pod-name> -w
-   
+
    # Verify new container memory
    kubectl top pod <pod-name>
    # Should show normal usage
@@ -366,7 +366,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Find pod with high CPU
    kubectl top pods -A | sort -k3 -rn | head -5
-   
+
    # Check if normal or anomaly
    curl -s 'prometheus:9090/api/v1/query' \
      --data-urlencode 'query=rate(cpu{container="api-server"}[5m])' | jq
@@ -376,7 +376,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Get detailed process list
    kubectl exec <pod> -- top -b -n 1 | head -20
-   
+
    # Check for infinite loops in logs
    kubectl logs <pod> | tail -100 | grep -E "loop|retry|Exception" | uniq -c
    ```
@@ -385,7 +385,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Manual scale (for immediate relief)
    kubectl scale deployment <service> --replicas=10
-   
+
    # Or trigger HPA (if configured)
    kubectl patch hpa <service> -p '{"spec":{"minReplicas":5,"maxReplicas":20}}'
    ```
@@ -394,7 +394,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Verify requests distributed evenly
    kubectl top pods -l app=<service> | awk 'NR>1 {print $3}' | sort -n
-   
+
    # Check response latency
    curl -w 'Total time: %{time_total}s\n' http://<service>/health
    ```
@@ -432,7 +432,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    kubectl exec postgres-0 -- psql -c \
      "SELECT count(*) as active_connections FROM pg_stat_activity;"
    # Should be < max_connections - 10
-   
+
    # Monitor: grafana dashboard "Database Connections"
    ```
 
@@ -440,10 +440,10 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Find long-running queries
    kubectl exec postgres-0 -- psql -c \
-     "SELECT pid, usename, query, now() - query_start as duration 
-      FROM pg_stat_activity 
-      WHERE state = 'active' 
-      ORDER BY duration DESC 
+     "SELECT pid, usename, query, now() - query_start as duration
+      FROM pg_stat_activity
+      WHERE state = 'active'
+      ORDER BY duration DESC
       LIMIT 10;"
    ```
 
@@ -451,11 +451,11 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Gracefully terminate idle connections
    kubectl exec postgres-0 -- psql -c \
-     "SELECT pg_terminate_backend(pid) 
-      FROM pg_stat_activity 
-      WHERE state = 'idle' 
+     "SELECT pg_terminate_backend(pid)
+      FROM pg_stat_activity
+      WHERE state = 'idle'
       AND query_start < NOW() - INTERVAL '5 minutes';"
-   
+
    # Kill specific long query
    kubectl exec postgres-0 -- psql -c "SELECT pg_terminate_backend(<pid>);"
    ```
@@ -464,7 +464,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Rolling restart to reset all connections
    kubectl rollout restart deployment/api-server
-   
+
    # Monitor: kubectl rollout status deployment/api-server
    ```
 
@@ -472,7 +472,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Check connection count drops
    watch 'kubectl exec postgres-0 -- psql -c "SELECT count(*) FROM pg_stat_activity;"'
-   
+
    # Verify query latency normalizes
    curl -s prometheus:9090/api/v1/query?query=sql_query_latency_seconds | jq '.data.result'
    ```
@@ -501,7 +501,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Check application logs
    kubectl logs -f deployment/api-server --tail=100 | grep -E "ERROR|Exception"
-   
+
    # Get error rate by endpoint
    curl -s 'prometheus:9090/api/v1/query' \
      --data-urlencode 'query=rate(http_requests_total{status=~"5.."}[5m]) by (endpoint)' | \
@@ -512,7 +512,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Check recent deployments
    kubectl rollout history deployment/api-server
-   
+
    # Check if error correlates with recent change
    kubectl logs deployment/api-server | grep -A 5 -B 5 "ERROR" | head -20
    ```
@@ -521,7 +521,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Instant rollback (< 2 minutes)
    ./scripts/phase-19-instant-rollback.sh api-server previous
-   
+
    # Monitor: kubectl get deployment/api-server -w
    ```
 
@@ -530,7 +530,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Disable affected feature via feature flag
    kubectl edit configmap feature-flags
    # Set problematic feature to enabled: false
-   
+
    # Or isolate affected pods
    kubectl scale deployment/<affected-service> --replicas=0
    kubectl scale deployment/<backup-service> --replicas=5
@@ -569,12 +569,12 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Check PostgreSQL slow query log
    kubectl exec postgres-0 -- tail -100 /var/log/postgresql/slow.log | \
      grep "Query Time" | sort -t ':' -k 2 -rn | head -10
-   
+
    # Or from pg_stat_statements
    kubectl exec postgres-0 -- psql -c \
-     "SELECT query, calls, total_time, mean_time 
-      FROM pg_stat_statements 
-      ORDER BY mean_time DESC 
+     "SELECT query, calls, total_time, mean_time
+      FROM pg_stat_statements
+      ORDER BY mean_time DESC
       LIMIT 10;"
    ```
 
@@ -583,7 +583,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Get EXPLAIN ANALYZE for slow query
    kubectl exec postgres-0 -- psql -c \
      "EXPLAIN ANALYZE SELECT ... FROM ..."
-   
+
    # Look for "Sequential Scan" (bad) vs "Index Scan" (good)
    ```
 
@@ -591,9 +591,9 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Add index to frequently scanned columns
    kubectl exec postgres-0 -- psql -c \
-     "CREATE INDEX CONCURRENTLY idx_<table>_<column> 
+     "CREATE INDEX CONCURRENTLY idx_<table>_<column>
       ON <table>(<column>);"
-   
+
    # CONCURRENTLY allows continued operation
    ```
 
@@ -601,7 +601,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Optimize application query
    # Example: Add WHERE clauses, pagination, selective columns
-   
+
    # Verify with new execution plan
    kubectl exec postgres-0 -- psql -c "EXPLAIN ANALYZE <new-query>;"
    ```
@@ -641,7 +641,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Check audit logs for failed auth
    kubectl logs -f audit-logger | grep "reason\":\"Forbidden" | tail -20
-   
+
    # Monitor: grep "failed" /var/log/auth.log
    ```
 
@@ -649,7 +649,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Revoke suspicious credentials/tokens
    kubectl delete secret <suspicious-token> -n <namespace>
-   
+
    # Kill any active sessions
    kubectl logs -f audit-logger | grep "<user>" | grep "token:.*" | awk '{print $NF}' | \
      xargs -I {} kubectl delete secret {} -A
@@ -659,7 +659,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Find all actions taken with compromised account
    kubectl logs audit-logger | grep "user:\"<attacker>\"" | jq '.verb, .objectRef' | uniq
-   
+
    # Check what resources were accessed
    # Check what was modified/deleted
    ```
@@ -669,7 +669,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # If data accessed: Assume potential breach
    # If data modified: Initiate rollback procedure
    # If data deleted: Restore from backup
-   
+
    # Rotate all credentials that might have been exposed
    ./scripts/phase-19-secret-management.sh
    ```
@@ -685,13 +685,13 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
 6. **Notify stakeholders**
    ```
    Incident Communication Template:
-   
+
    INCIDENT: Unauthorized access attempt
    SEVERITY: P0-Critical
    DETECTED: <timestamp>
    CONTAINED: <timestamp>
    SCOPE: <describe affected resources>
-   ACTIONS TAKEN: 
+   ACTIONS TAKEN:
      - Revoked credentials
      - Killed sessions
      - Rotated secrets
@@ -723,12 +723,12 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Verify what data was accessed
    kubectl logs audit-logger | grep "data_exfiltration\|unauthorized_export"
-   
+
    # Check database audit logs for bulk exports
    kubectl exec postgres-0 -- psql -c \
-     "SELECT * FROM audit_log 
-      WHERE event_type = 'SELECT' 
-      AND rows_returned > 1000 
+     "SELECT * FROM audit_log
+      WHERE event_type = 'SELECT'
+      AND rows_returned > 1000
       AND timestamp > NOW() - INTERVAL '1 hour';"
    ```
 
@@ -736,10 +736,10 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Kill all external connections
    kubectl exec postgres-0 -- psql -c \
-     "SELECT pg_terminate_backend(pid) 
-      FROM pg_stat_activity 
+     "SELECT pg_terminate_backend(pid)
+      FROM pg_stat_activity
       WHERE usename != 'postgres';"
-   
+
    # Take affected service offline
    kubectl scale deployment/api-server --replicas=0
    ```
@@ -749,11 +749,11 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Identify affected customers
    affected_customer_ids=$(
      kubectl exec postgres-0 -- psql -c \
-       "SELECT DISTINCT customer_id FROM access_log 
-        WHERE accessed_at > <breach_time> 
+       "SELECT DISTINCT customer_id FROM access_log
+        WHERE accessed_at > <breach_time>
         AND action = 'export';"
    )
-   
+
    echo "$affected_customer_ids" > /tmp/affected-customers.txt
    ```
 
@@ -761,7 +761,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # If encryption key was compromised, rotate immediately
    ./scripts/phase-19-secret-management.sh --rotate-data-keys
-   
+
    # Re-encrypt all databases with new keys
    # This may take hours - plan accordingly
    ```
@@ -769,13 +769,13 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
 5. **Regulatory notification** (GDPR/HIPAA)
    ```bash
    Template:
-   
+
    GDPR Data Breach Notification:
    - Notify affected individuals within 72 hours
    - Notify regulatory authorities
    - Provide info on data protection measures we've taken
    - Provide info on breach investigation plan
-   
+
    Required Info:
    - What data was breached (PII, email, passwords, etc.)
    - When was it discovered
@@ -822,7 +822,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    current_rate=$(curl -s 'prometheus:9090/api/v1/query' \
      --data-urlencode 'query=rate(http_requests_total[1m])' | \
      jq '.data.result[0].value[1] | tonumber')
-   
+
    normal_rate=1000  # RPS
    if (( $(echo "$current_rate > $normal_rate * 5" | bc -l) )); then
      echo "DDoS DETECTED: $current_rate RPS (normal: $normal_rate)"
@@ -835,7 +835,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # AWS: Enable AWS Shield Advanced
    # GCP: Enable Cloud Armor
    # Cloudflare: Enable DDoS protection
-   
+
    # Example: Cloudflare API
    curl -X POST "https://api.cloudflare.com/client/v4/zones/<zone-id>/security/events" \
      -H "X-Auth-Key: <key>" \
@@ -847,7 +847,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Kubernetes ingress rate limiting
    kubectl patch ingress nginx-ingress -p \
      '{"metadata":{"annotations":{"nginx.ingress.kubernetes.io/limit-rps":"100"}}}'
-   
+
    # Application-level rate limiting by IP
    kubectl exec api-server-pod -- \
      /bin/sh -c 'echo "limit_req_zone \$binary_remote_addr zone=api:10m rate=10r/s;" > /etc/nginx/conf.d/limit.conf'
@@ -865,7 +865,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Auto-scale if not already at max
    kubectl patch hpa api-server -p '{"spec":{"maxReplicas":100}}'
-   
+
    # Monitor: kubectl get hpa -w
    ```
 
@@ -875,7 +875,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    watch 'curl -s "prometheus:9090/api/v1/query" \
      --data-urlencode "query=rate(http_requests_total[1m])" | \
      jq ".data.result[0].value[1]"'
-   
+
    # Monitor origin IP diversity
    curl -s 'prometheus:9090/api/v1/query' \
      --data-urlencode 'query=count(http_requests_total) by (origin_ip)' | \
@@ -908,7 +908,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # List certificates and expiry dates
    kubectl get certificate -A -o custom-columns=NAME:.metadata.name,EXPIRY:.status.notAfter
-   
+
    # Check specific certificate
    openssl s_client -connect api.example.com:443 2>/dev/null | \
      openssl x509 -noout -dates
@@ -918,7 +918,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # cert-manager automatically renews 30 days before expiry
    # Check status: kubectl describe certificate -n production
-   
+
    # Manual renewal if automated fails
    kubectl delete secret tls-certificate -n production
    # cert-manager will auto-recreate with new cert
@@ -930,7 +930,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    kubectl get secret tls-certificate -o jsonpath='{.data.tls\.crt}' | \
      base64 -d | \
      openssl x509 -noout -dates
-   
+
    # Should show new expiry date 90 days from now
    ```
 
@@ -945,7 +945,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Verify new certificate is served
    curl -v https://api.example.com 2>&1 | grep "subject="
-   
+
    # SSL Labs test
    curl https://www.ssllabs.com/api/v3/analyze?host=api.example.com | jq '.grade'
    ```
@@ -974,7 +974,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```
    From: customer@example.com
    Subject: GDPR Data Deletion Request
-   
+
    Please delete all personal data associated with my account
    Account ID: customer_123
    Email: customer@example.com
@@ -984,9 +984,9 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Confirm customer email matches account
    kubectl exec postgres-0 -- psql -c \
-     "SELECT email, account_created, last_login FROM customers 
+     "SELECT email, account_created, last_login FROM customers
       WHERE id = 'customer_123';"
-   
+
    # Verify request email matches
    ```
 
@@ -994,9 +994,9 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Find all tables with customer_id
    kubectl exec postgres-0 -- psql -c \
-     "SELECT tablename FROM pg_tables 
+     "SELECT tablename FROM pg_tables
       WHERE tablename LIKE '%customer%' OR tablename LIKE '%user%';"
-   
+
    # Count records
    kubectl exec postgres-0 -- psql -c \
      "SELECT 'customers' as table_name, COUNT(*) as count FROM customers WHERE id = 'customer_123'
@@ -1013,7 +1013,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
      -U postgres -d app \
      -t customers -t orders -t payments | \
      gzip > /backup/customer_123_$(date +%s).sql.gz
-   
+
    # Soft delete (mark as deleted)
    kubectl exec postgres-0 -- psql -c \
      "BEGIN;
@@ -1021,7 +1021,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
       UPDATE orders SET deleted_at = NOW() WHERE customer_id = 'customer_123';
       UPDATE payments SET deleted_at = NOW() WHERE customer_id = 'customer_123';
       COMMIT;"
-   
+
    # Audit log deletion
    echo "GDPR Request: Deleted customer_123 at $(date)" >> /var/log/compliance.log
    ```
@@ -1037,18 +1037,18 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
 6. **Notify customer**
    ```
    Subject: Your Data Has Been Deleted
-   
+
    Dear Customer,
-   
+
    Your personal data has been deleted as requested.
-   
+
    Deletion Details:
    - Request received: <date>
    - Deletion completed: <date>
    - Records deleted: <count>
-   
+
    You can continue to use other services.
-   
+
    Best regards,
    Privacy Team
    ```
@@ -1075,10 +1075,10 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Export authentication logs (6 months)
    kubectl logs audit-logger --tail=999999 > /audit-logs/auth-$(date +%Y-%m).log
-   
+
    # Users and access
    kubectl get events -A --sort-by='.metadata.creationTimestamp' > /audit-logs/events.log
-   
+
    # Deployments and changes
    git log --format="%ai %an: %s" > /audit-logs/git-history.log
    ```
@@ -1088,7 +1088,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Export RBAC policies
    kubectl get roles,rolebindings,clusterroles,clusterrolebindings -A -o yaml > \
      /audit-logs/rbac-policies.yaml
-   
+
    # Verify least privilege
    # Each role should have minimal permissions
    ```
@@ -1097,7 +1097,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Collect incident logs from past 12 months
    ls -la /var/log/incidents/ | grep -E "202[5-6]" > /audit-logs/incidents-summary.log
-   
+
    # MTTD/MTTR metrics
    grep "MTTD\|MTTR" /var/log/incidents/*.log > /audit-logs/incident-metrics.log
    ```
@@ -1114,27 +1114,27 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    cat > /audit-logs/SOC2-EVIDENCE-SUMMARY.md <<'EOF'
    # SOC 2 Type II Evidence Summary
-   
+
    ## CC (Common Criteria)
-   
+
    ### CC1 - Security Objectives
    - Access controls implemented: ✅ (RBAC policies)
    - Change management process: ✅ (git + code review)
    - Monitoring in place: ✅ (Prometheus + Loki)
-   
+
    ### CC2 - Communication of Responsibilities
    - Roles documented: ✅ (team handbook)
    - Responsibilities assigned: ✅ (on-call rotation)
-   
+
    ### CC3-CC9 - Risk Management & Monitoring
    - Risk assessments conducted: ✅ (quarterly)
    - Incidents tracked: ✅ (incident logs)
    - Metrics monitored: ✅ (SLOs/SLIs)
-   
+
    ## MTTD/MTTR Evidence
    - MTTD: Median 1 minute (alerting configured)
    - MTTR: Median 5 minutes (runbooks documented)
-   
+
    ## Data Protection
    - Encryption at rest: ✅ (etcd, RDS)
    - Encryption in transit: ✅ (TLS 1.3)
@@ -1145,19 +1145,19 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
 6. **Prepare for auditor interview**
    ```
    Auditor Questions Preparation:
-   
+
    Q1: How do you manage access control?
    A: RBAC roles with least privilege, MFA for human access, service accounts for automation
-   
+
    Q2: How do you detect security incidents?
    A: Continuous monitoring, alerting < 1min, audit logs retained 7 years
-   
+
    Q3: Can you describe a recent incident?
    A: <Select actual incident from logs, describe detection, containment, resolution>
-   
+
    Q4: How do you ensure data integrity?
    A: Backups tested weekly, checksums verified, replication monitoring
-   
+
    Q5: How do you manage change?
    A: Git history, code review, automated testing, deployment validation
    ```
@@ -1188,7 +1188,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Get compute usage by instance type
    gcloud compute instances list --format="table(name,machineType)" | awk '{print $2}' | \
      sed 's|.*/||' | sort | uniq -c | sort -rn
-   
+
    # Get usage hours (365 days * 24 hours)
    # Example: 5 x n1-standard-4 = 43,800 hours/year
    ```
@@ -1199,11 +1199,11 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    on_demand_cost_per_hour=0.1  # $0.10 per hour
    annual_hours=8760
    on_demand_annual=$((on_demand_cost_per_hour * annual_hours))  # $876/year
-   
+
    # Reserved instance cost (example, 1-year commitment)
    reserved_cost=500  # $500 one-time
    reserved_annual_total=$((reserved_cost + (on_demand_cost_per_hour * 0.70 * annual_hours)))  # ~$656/year
-   
+
    # Savings
    savings=$((on_demand_annual - reserved_annual_total))  # ~$220/year (25%)
    ```
@@ -1213,7 +1213,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # AWS example
    aws ec2 purchase-reserved-instances --reserved-instances-offering-ids \
      12345678-1234-1234-1234-123456789012 --instance-count 5
-   
+
    # GCP example
    gcloud compute commitments create my-commitment \
      --zone=us-central1-a \
@@ -1225,7 +1225,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Verify reserved instances are actually being used
    gcloud billing accounts list
    gcloud billing budgets list
-   
+
    # Check Commitment Utilization
    gcloud compute commitments describe my-commitment --format="value(status,plan)"
    ```
@@ -1254,7 +1254,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # - Non-time-sensitive analytics
    # - Development/staging environments
    # - Stateless services with auto-recovery
-   
+
    suitable_workloads=(
      "analytics-pipeline"
      "batch-processor"
@@ -1272,7 +1272,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
      --enable-autoscaling \
      --min-nodes=1 \
      --max-nodes=10
-   
+
    # Label spot nodes
    kubectl label nodes -l cloud.google.com/gke-preemptible=true \
      node-type=spot
@@ -1316,13 +1316,13 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    # Compare on-demand vs spot costs
    on_demand=$(gcloud billing accounts describe <account> --format="value(displayName)" | \
      awk '/on-demand/{sum+=$NF} END {print sum}')
-   
+
    spot=$(gcloud billing accounts describe <account> --format="value(displayName)" | \
      awk '/spot/{sum+=$NF} END {print sum}')
-   
+
    savings=$((on_demand - spot))
    savings_percent=$((savings * 100 / on_demand))
-   
+
    echo "Spot savings: \$$savings ($savings_percent%)"
    ```
 
@@ -1347,10 +1347,10 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Check storage by age
    kubectl exec postgres-0 -- psql -c \
-     "SELECT created_at, size_bytes 
-      FROM storage_usage 
-      WHERE created_at < NOW() - INTERVAL '30 days' 
-      GROUP BY DATE(created_at) 
+     "SELECT created_at, size_bytes
+      FROM storage_usage
+      WHERE created_at < NOW() - INTERVAL '30 days'
+      GROUP BY DATE(created_at)
       ORDER BY created_at DESC;"
    ```
 
@@ -1381,7 +1381,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
      }
    }
    EOF
-   
+
    # Apply policy
    gsutil lifecycle set lifecycle-policy.json gs://my-bucket
    ```
@@ -1390,7 +1390,7 @@ This document contains 50+ operational procedures for Phase 19 Advanced Operatio
    ```bash
    # Verify data movement
    gsutil du -s -h gs://my-bucket/
-   
+
    # Check breakdown by storage class
    gsutil du -s -h -c -D gs://my-bucket/ | \
      awk '{print $NF}' | sort | uniq -c

@@ -19,26 +19,26 @@ terraform {
 locals {
   vyos_version = "1.4" # PINNED - Never change
   quagga_version = "1.2.4" # PINNED - Never change
-  
+
   # BGP Configuration
   bgp_asn_primary   = 65000         # Autonomous System Number (on-prem)
   bgp_asn_upstream  = 64512         # Upstream provider ASN
-  
+
   # Primary/Standby failover
   primary_router_ip   = "192.168.168.31"
   standby_router_ip   = "192.168.168.30"
   failure_threshold   = 2            # failures before failover
   health_check_interval = 5          # seconds
-  
+
   # Traffic engineering
   local_preference_primary  = 200    # Higher = preferred
   local_preference_standby  = 100
-  
+
   # On-prem specific
   management_vlan    = 100
   data_vlan          = 101
   uplink_interface   = "eth0"
-  
+
   common_labels = {
     phase      = "22-b"
     component  = "bgp-routing"
@@ -52,7 +52,7 @@ locals {
     protocols {
         bgp {
             asn: ${local.bgp_asn_primary}
-            
+
             address-family {
                 ipv4-unicast {
                     redistribute {
@@ -61,7 +61,7 @@ locals {
                     network 192.168.168.0/24
                 }
             }
-            
+
             neighbor ${local.bgp_asn_upstream} {
                 remote-as ${local.bgp_asn_upstream}
                 address-family {
@@ -73,7 +73,7 @@ locals {
                     }
                 }
             }
-            
+
             neighbor ${local.standby_router_ip} {
                 remote-as ${local.bgp_asn_primary}
                 update-source ${local.primary_router_ip}
@@ -87,7 +87,7 @@ locals {
             }
         }
     }
-    
+
     policy {
         route-map "UPSTREAM_OUT" {
             rule 10 {
@@ -100,7 +100,7 @@ locals {
                 }
             }
         }
-        
+
         route-map "IBGP_IN" {
             rule 10 {
                 action permit
@@ -118,20 +118,20 @@ locals {
   healthcheck_script = <<-EOT
     #!/bin/bash
     # BGP Health Check for Primary/Standby Failover
-    
+
     PRIMARY="${local.primary_router_ip}"
     STANDBY="${local.standby_router_ip}"
     THRESHOLD=${local.failure_threshold}
     INTERVAL=${local.health_check_interval}
-    
+
     failure_count=0
-    
+
     while true; do
       # Check primary router connectivity
       if ! ping -c 1 -W 2 $PRIMARY >/dev/null 2>&1; then
         ((failure_count++))
         echo "[$(date)] Health check failed for primary ($PRIMARY). Failures: $failure_count"
-        
+
         if [ $failure_count -ge $THRESHOLD ]; then
           echo "[$(date)] FAILOVER: Switching to standby router ($STANDBY)"
           # Trigger failover (implementation specific)
@@ -146,7 +146,7 @@ locals {
         failure_count=0
         echo "[$(date)] Health check passed for primary ($PRIMARY)"
       fi
-      
+
       sleep $INTERVAL
     done
   EOT
@@ -180,7 +180,7 @@ locals {
         }
       }
     },
-    
+
     "IBGP_IN" = {
       rule_10 = {
         action = "permit"
@@ -189,7 +189,7 @@ locals {
         }
       }
     },
-    
+
     "OUTBOUND" = {
       rule_10 = {
         match = {
@@ -209,10 +209,10 @@ locals {
   traffic_engineering = {
     # Load balancing ratio (primary:standby)
     load_balance = "80:20"
-    
+
     # Failover timeout
     failover_timeout_seconds = 30
-    
+
     # FlowSpec rules (upstream DDoS mitigation)
     flowspec_rules = [
       {
@@ -222,7 +222,7 @@ locals {
         action      = "discard"
       }
     ]
-    
+
     # BGP communities for classification
     communities = {
       "INTERNAL"   = "65000:1000"
@@ -251,7 +251,7 @@ locals {
         annotations:
           summary: "BGP peer down: {{ $labels.peer }}"
           action: "Check network connectivity, review BGP logs"
-      
+
       # Route count anomaly
       - alert: BGPRouteAnomaloutput
         expr: |
@@ -263,7 +263,7 @@ locals {
         annotations:
           summary: "Unusual BGP route changes detected"
           dashboard: "grafana/bgp-monitoring"
-      
+
       # Failover Health
       - alert: FailoverThresholdApproaching
         expr: |
@@ -285,7 +285,7 @@ locals {
       "10.0.0.0/8",          # Private networks
       "172.16.0.0/12"
     ],
-    
+
     "CUSTOMER_ROUTES" = [
       "203.0.113.0/24"       # Example customer network
     ]

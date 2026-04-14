@@ -12,7 +12,7 @@ export const useAuthStore = create<types.AuthState>((set) => ({
   isAuthenticated: !!localStorage.getItem('auth_token'),
   isLoading: false,
   error: null,
-  
+
   setToken: (token) => {
     if (token) {
       localStorage.setItem('auth_token', token)
@@ -22,13 +22,13 @@ export const useAuthStore = create<types.AuthState>((set) => ({
       set({ token: null, isAuthenticated: false })
     }
   },
-  
+
   setUser: (user) => set({ user }),
-  
+
   setOrg: (org) => set({ org }),
-  
+
   setError: (error) => set({ error }),
-  
+
   clearAuth: () => {
     localStorage.removeItem('auth_token')
     set({ token: null, user: null, org: null, isAuthenticated: false })
@@ -44,29 +44,29 @@ export const useUserStore = create<types.UserState>((set) => ({
   selectedUser: null,
   filters: {},
   isLoading: false,
-  
+
   setUsers: (users) => set({ users }),
-  
+
   addUser: (user) => set((state) => ({ users: [user, ...state.users] })),
-  
+
   updateUser: (user) => {
     set((state) => ({
       users: state.users.map((u) => (u.id === user.id ? user : u)),
       selectedUser: state.selectedUser?.id === user.id ? user : state.selectedUser,
     }))
   },
-  
+
   removeUser: (userId) => {
     set((state) => ({
       users: state.users.filter((u) => u.id !== userId),
       selectedUser: state.selectedUser?.id === userId ? null : state.selectedUser,
     }))
   },
-  
+
   setSelectedUser: (user) => set({ selectedUser: user }),
-  
+
   setLoading: (loading) => set({ isLoading: loading }),
-  
+
   fetchUsers: async () => {
     // Placeholder: will be called by hooks
   },
@@ -109,10 +109,10 @@ export const useRoleStore = create<types.RoleState>((set) => ({
       permissions: [],
     },
   ],
-  
+
   setRoles: (roles) => set({ roles }),
-  
+
   addRole: (role) => set((state) => ({ roles: [...state.roles, role] })),
-  
+
   removeRole: (roleId) => set((state) => ({ roles: state.roles.filter((r) => r.id !== roleId) })),
 }))

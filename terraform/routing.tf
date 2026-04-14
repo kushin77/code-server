@@ -14,12 +14,12 @@ locals {
   vyos_version = "1.4.0" # Immutable version
   primary_host = "192.168.168.31"
   standby_host = "192.168.168.30"
-  
+
   # BGP Configuration
   bgp_asn = 65001
   ibgp_asn_primary = 65101 # AS for primary datacenter
   ibgp_asn_standby = 65102 # AS for standby datacenter
-  
+
   # Health Check Parameters
   health_check_interval = 5  # seconds
   health_check_timeout = 3   # seconds
@@ -29,7 +29,7 @@ locals {
 # VyOS Configuration File - BGP Routing & Failover
 resource "local_file" "vyos_config" {
   filename = "/home/akushnir/.config/vyos/config.boot"
-  
+
   content = <<-EOT
     # VyOS 1.4.0 - Advanced Routing Configuration
     # BGP + OSPF + BFD for high-availability failover
@@ -51,13 +51,13 @@ resource "local_file" "vyos_config" {
     # ====================================================================
     # BGP CONFIGURATION - INTERIOR GATEWAY PROTOCOL FOR FAILOVER
     # ====================================================================
-    
+
     protocols {
         bgp {
             # Primary ASN (65001) = Primary datacenter
             local-as 65001
             router-id 192.168.168.254
-            
+
             # Graceful restart configuration
             graceful-restart {
                 period 120
@@ -119,7 +119,7 @@ resource "local_file" "vyos_config" {
             # ================================================================
             # ROUTE MAPS - TRAFFIC ENGINEERING & FAILOVER DECISION
             # ================================================================
-            
+
             # Primary gets lower AS-path (higher preference)
             route-map PREPEND-PRIMARY {
                 rule 10 {
@@ -182,7 +182,7 @@ resource "local_file" "vyos_config" {
         # ====================================================================
         # BFD provides sub-second failure detection vs BGP's 30-180s
         # Used with BGP to trigger rapid failover
-        
+
         bfd {
             peer 192.168.168.31 {
                 interval 300        # 300ms between keepalives
@@ -198,7 +198,7 @@ resource "local_file" "vyos_config" {
         # ====================================================================
         # OSPF (Open Shortest Path First) - BACKUP FAILOVER PROTOCOL
         # ====================================================================
-        
+
         ospf {
             area 0.0.0.0 {
                 network 192.168.168.0/24
@@ -217,7 +217,7 @@ resource "local_file" "vyos_config" {
     # ====================================================================
     # HEALTH CHECKS - DETERMINE BGP ROUTE PREFERENCES
     # ====================================================================
-    
+
     service {
         health-check {
             monitor primary {
@@ -252,11 +252,11 @@ resource "local_file" "vyos_config" {
     # ====================================================================
     # QUALITY OF SERVICE (QoS) - TRAFFIC PRIORITIZATION
     # ====================================================================
-    
+
     traffic-policy {
         shaper traffic-shaper-priority {
             bandwidth 10G  # Total interface bandwidth
-            
+
             class 10 {
                 bandwidth 80%   # 8G for normal traffic
                 priority high   # Lower latency
@@ -283,7 +283,7 @@ resource "local_file" "vyos_config" {
     # ====================================================================
     # PORT FORWARDING - LOAD BALANCING
     # ====================================================================
-    
+
     nat {
         rule 100 {
             description Load-Balance-HTTP
@@ -327,7 +327,7 @@ resource "local_file" "vyos_config" {
     # ====================================================================
     # FIREWALL RULES
     # ====================================================================
-    
+
     firewall {
         name ALLOW-BGP {
             rule 10 {
@@ -353,12 +353,12 @@ resource "local_file" "vyos_config" {
     # ====================================================================
     # SYSTEM CONFIGURATION
     # ====================================================================
-    
+
     system {
         host-name vyos
         domain-name kushnir.cloud
         time-zone UTC
-        
+
         ntp {
             server time1.google.com
             server time2.google.com
@@ -381,7 +381,7 @@ resource "local_file" "vyos_config" {
 
 resource "local_file" "failover_automation" {
   filename = "/home/akushnir/failover-automation.sh"
-  
+
   content = <<-EOT
     #!/bin/bash
     # VyOS Failover Automation - Monitors primary/standby health
@@ -419,7 +419,7 @@ resource "local_file" "failover_automation" {
     update_bgp_metric() {
         local host=$1
         local metric=$2  # 100=healthy, 200=degraded, 1000=failed
-        
+
         # This would be called via VyOS API or SSH to update BGP metrics
         # For now, we just log the decision
         log "Updating BGP metric for $host to $metric"
@@ -459,7 +459,7 @@ resource "local_file" "failover_automation" {
         if health_check "$PRIMARY_HOST"; then
             log "Primary is healthy"
             PRIMARY_FAILURES=0
-            
+
             # If we were failed over, try to fail back
             if [ "$PRIMARY_IS_PRIMARY" = false ]; then
                 failback_to_primary
@@ -467,7 +467,7 @@ resource "local_file" "failover_automation" {
         else
             PRIMARY_FAILURES=$((PRIMARY_FAILURES + 1))
             log "Primary check failed ($PRIMARY_FAILURES/$FAILURE_THRESHOLD)"
-            
+
             if [ "$PRIMARY_FAILURES" -ge "$FAILURE_THRESHOLD" ] && [ "$PRIMARY_IS_PRIMARY" = true ]; then
                 failover_to_standby
             fi
@@ -495,7 +495,7 @@ resource "local_file" "failover_automation" {
 
 resource "local_file" "prometheus_routing_targets" {
   filename = "/home/akushnir/.config/prometheus/targets-routing.yml"
-  
+
   content = <<-EOT
     # VyOS Routing Appliance Metrics
     - targets:

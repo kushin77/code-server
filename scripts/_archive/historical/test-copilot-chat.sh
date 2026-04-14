@@ -71,10 +71,10 @@ if [ -d "$LOG_DIR" ]; then
   LATEST_LOG=$(ls -t "$LOG_DIR" 2>/dev/null | head -1)
   if [ -n "$LATEST_LOG" ] && [ -f "$LOG_DIR/$LATEST_LOG/exthost1/remoteexthost.log" ]; then
     EXTHOST_LOG="$LOG_DIR/$LATEST_LOG/exthost1/remoteexthost.log"
-    
+
     # Check for PendingMigrationError
     PENDING_COUNT=$(grep -c 'PendingMigrationError.*navigator' "$EXTHOST_LOG" 2>/dev/null || echo "0")
-    
+
     if [ "$PENDING_COUNT" = "0" ]; then
       echo "✅ PASS: No PendingMigrationError for navigator (fatal issue fixed)" | tee -a "$REPORT"
     else
@@ -82,10 +82,10 @@ if [ -d "$LOG_DIR" ]; then
       echo "   First occurrence:" | tee -a "$REPORT"
       grep -m1 'PendingMigrationError.*navigator' "$EXTHOST_LOG" 2>/dev/null | sed 's/^/   /' | tee -a "$REPORT"
     fi
-    
+
     # Check for copilot-chat activation
     CHAT_ACTIVATION=$(grep -i 'activat.*github.copilot-chat\|github.copilot-chat.*activat' "$EXTHOST_LOG" 2>/dev/null && echo "found" || echo "not_yet")
-    
+
     if [ "$CHAT_ACTIVATION" = "found" ]; then
       echo "✅ INFO: Copilot Chat extension activation detected" | tee -a "$REPORT"
     else

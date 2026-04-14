@@ -117,4 +117,3 @@ scrape_configs:
 # remote_read:
 #   - url: https://mimir.example.com/prometheus/api/v1/read
 #     read_recent: true
-

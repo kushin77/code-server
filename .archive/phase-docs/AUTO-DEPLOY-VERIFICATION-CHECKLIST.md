@@ -1,7 +1,7 @@
 # Automatic Merge → Cleanup → Redeploy: Checklist & Verification
 
-**Last Updated**: April 14, 2026  
-**Purpose**: Verify the automation is working correctly  
+**Last Updated**: April 14, 2026
+**Purpose**: Verify the automation is working correctly
 **Target Audience**: Everyone
 
 ---
@@ -79,7 +79,7 @@ Settings → Secrets and variables → Actions
 - [ ] Description:
   ```
   Testing the automated merge → cleanup → redeploy pipeline.
-  
+
   Closes #[issue-number]
   ```
 - [ ] Click "Submit new issue"
@@ -127,10 +127,10 @@ GitHub → Code → Branches → test/auto-deploy-verification
   ```
   ## Description
   Testing automated deployment orchestration.
-  
+
   ## Linked Issues
   Closes #1234
-  
+
   ## Testing
   - [x] Code is ready for deployment
   ```
@@ -456,5 +456,5 @@ When setting up this automation for a team, have:
 
 ---
 
-**Last verified**: _________________________ Date: _______  
+**Last verified**: _________________________ Date: _______
 **Next verification due**: _________________________ Date: _______

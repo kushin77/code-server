@@ -82,7 +82,7 @@ test_result() {
     local test_name="$1"
     local result="$2"  # "PASS" or "FAIL"
     local details="${3:-}"
-    
+
     if [ "$result" = "PASS" ]; then
         echo -e "${GREEN}✅ $test_name: PASSED${NC}"
         ((TESTS_PASSED++))
@@ -93,7 +93,7 @@ test_result() {
         fi
         ((TESTS_FAILED++))
     fi
-    
+
     echo "$(date +%s) $test_name=$result" >> "${LOG_DIR}/test-results.tsv"
 }
 
@@ -104,7 +104,7 @@ test_result() {
 check_service_health() {
     local endpoint="$1"
     local timeout="${2:-5}"
-    
+
     if curl -s -f -m "$timeout" "$endpoint" > /dev/null 2>&1; then
         return 0
     else
@@ -114,7 +114,7 @@ check_service_health() {
 
 measure_endpoint_latency() {
     local endpoint="$1"
-    
+
     local response_time=$(curl -s -o /dev/null -w '%{time_total}' "$endpoint" 2>/dev/null || echo "999")
     echo "$response_time"
 }
@@ -122,9 +122,9 @@ measure_endpoint_latency() {
 check_region_services() {
     local region="$1"
     local host="$2"
-    
+
     log_info "Checking services in region: $region"
-    
+
     # Code server health
     if ssh -o StrictHostKeyChecking=no "$host" "curl -s http://localhost:9000/health" > /dev/null 2>&1; then
         log_success "Code server ($region): HEALTHY"
@@ -141,14 +141,14 @@ check_region_services() {
 
 validate_test_environment() {
     log "Validating test environment..."
-    
+
     # Check SSH connectivity
     for region in "$PRIMARY_REGION" "$SECONDARY_REGION"; do
         case "$region" in
             "$PRIMARY_REGION") host=$PRIMARY_HOST ;;
             "$SECONDARY_REGION") host=$SECONDARY_HOST ;;
         esac
-        
+
         if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$host" "echo ok" > /dev/null 2>&1; then
             log_success "SSH connectivity ($region): OK"
         else
@@ -156,7 +156,7 @@ validate_test_environment() {
             return 1
         fi
     done
-    
+
     # Check Docker availability
     if ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker ps > /dev/null" 2>&1; then
         log_success "Docker availability: OK"
@@ -164,7 +164,7 @@ validate_test_environment() {
         log_error "Docker availability: FAILED"
         return 1
     fi
-    
+
     log_success "Test environment validation: PASSED"
 }
 
@@ -174,19 +174,19 @@ validate_test_environment() {
 
 test_single_pod_restart() {
     log_info "TEST: Single pod restart"
-    
+
     local test_name="Single Pod Restart"
     local start_time=$(date +%s)
-    
+
     # Kill one code-server pod
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" <<'EOF'
 POD_ID=$(docker ps --filter "name=code-server" --format "{{.ID}}" | head -1)
 docker kill "$POD_ID"
 EOF
-    
+
     log "Pod killed, waiting for recovery..."
     sleep 5
-    
+
     # Monitor recovery
     local recovered=false
     for i in {1..12}; do  # 12 * 5 = 60 seconds max
@@ -196,10 +196,10 @@ EOF
         fi
         sleep 5
     done
-    
+
     local end_time=$(date +%s)
     local recovery_time=$((end_time - start_time))
-    
+
     if $recovered && [ $recovery_time -lt 60 ]; then
         test_result "$test_name" "PASS" "Recovery time: ${recovery_time}s"
     else
@@ -209,10 +209,10 @@ EOF
 
 test_database_failover() {
     log_info "TEST: Database failover"
-    
+
     local test_name="Database Failover"
     local start_time=$(date +%s)
-    
+
     # Check primary database status
     log "Checking primary database..."
     if ! ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker exec postgres-us-east pg_isready" 2>/dev/null | grep -q "accepting"; then
@@ -220,30 +220,30 @@ test_database_failover() {
         test_result "$test_name" "FAIL" "Primary database unavailable"
         return 1
     fi
-    
+
     # Simulate primary database failure
     log "Killing primary database..."
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker kill postgres-us-east || true"
-    
+
     sleep 10
-    
+
     # Verify secondary promotion
     log "Checking secondary database..."
     local secondary_ready=false
     if ssh -o StrictHostKeyChecking=no "$SECONDARY_HOST" "docker exec postgres-us-west pg_ctl promote -D /var/lib/postgresql/data" 2>/dev/null; then
         secondary_ready=true
     fi
-    
+
     sleep 10
-    
+
     # Restore primary
     log "Restoring primary database..."
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker-compose up -d postgres-us-east" > /dev/null 2>&1
     sleep 15
-    
+
     local end_time=$(date +%s)
     local failover_time=$((end_time - start_time))
-    
+
     if $secondary_ready && [ $failover_time -lt $MAX_FAILOVER_TIME ]; then
         test_result "$test_name" "PASS" "Failover time: ${failover_time}s"
     else
@@ -253,42 +253,42 @@ test_database_failover() {
 
 test_network_partition() {
     log_info "TEST: Network partition resilience"
-    
+
     local test_name="Network Partition Resilience"
-    
+
     log "Simulating network partition..."
-    
+
     # Block traffic between regions (using iptables or tc)
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" <<'EOF'
 # Create network partition
 iptables -I FORWARD -d 192.168.168.32 -j DROP
 iptables -I FORWARD -s 192.168.168.32 -j DROP
 EOF
-    
+
     log "Network partitioned, waiting for detection..."
     sleep 10
-    
+
     # Check if services implement split-brain prevention
     local primary_healthy=false
     local secondary_healthy=false
-    
+
     if check_region_services "$PRIMARY_REGION" "$PRIMARY_HOST"; then
         primary_healthy=true
     fi
-    
+
     if check_region_services "$SECONDARY_REGION" "$SECONDARY_HOST"; then
         secondary_healthy=true
     fi
-    
+
     # Restore network
     log "Restoring network..."
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" <<'EOF'
 iptables -D FORWARD -d 192.168.168.32 -j DROP
 iptables -D FORWARD -s 192.168.168.32 -j DROP
 EOF
-    
+
     sleep 5
-    
+
     # Both regions should be healthy (no split-brain)
     if $primary_healthy && ! $secondary_healthy; then
         # Primary took exclusive ownership - good
@@ -303,9 +303,9 @@ EOF
 
 test_load_during_failover() {
     log_info "TEST: Load testing during failover"
-    
+
     local test_name="Load During Failover"
-    
+
     # Start background load generation
     log "Starting load generation..."
     (
@@ -315,24 +315,24 @@ test_load_during_failover() {
         done
     ) &
     local load_pid=$!
-    
+
     sleep 5
-    
+
     # Trigger failover
     log "Triggering failover during load..."
     local start_time=$(date +%s)
-    
+
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker kill postgres-us-east || true" &
-    
+
     # Monitor load test
     local failed_requests=0
     wait $load_pid 2>/dev/null || true
-    
+
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
-    
+
     log "Failover completed in ${duration}s with ~${failed_requests} failed requests"
-    
+
     if [ $duration -lt $MAX_SERVICE_DOWNTIME ]; then
         test_result "$test_name" "PASS" "Service maintained during failover"
     else
@@ -342,36 +342,36 @@ test_load_during_failover() {
 
 test_data_consistency_after_failover() {
     log_info "TEST: Data consistency after failover"
-    
+
     local test_name="Data Consistency Post-Failover"
-    
+
     # Get data checksums before failover
     log "Recording pre-failover checksums..."
     local pre_checksum=$(ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" <<'EOF'
 docker exec postgres-us-east psql -U postgres -d code_server -Atc "SELECT md5(string_agg(id::text, '' ORDER BY id)) FROM users" 2>/dev/null || echo "0"
 EOF
 )
-    
+
     log "Pre-failover checksum: $pre_checksum"
-    
+
     # Trigger failover
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker kill postgres-us-east || true"
     sleep 10
-    
+
     # Promote secondary and get checksums
     ssh -o StrictHostKeyChecking=no "$SECONDARY_HOST" "docker exec postgres-us-west pg_ctl promote -D /var/lib/postgresql/data" > /dev/null 2>&1
     sleep 5
-    
+
     local post_checksum=$(ssh -o StrictHostKeyChecking=no "$SECONDARY_HOST" <<'EOF'
 docker exec postgres-us-west psql -U postgres -d code_server -Atc "SELECT md5(string_agg(id::text, '' ORDER BY id)) FROM users" 2>/dev/null || echo "0"
 EOF
 )
-    
+
     log "Post-failover checksum: $post_checksum"
-    
+
     # Restore primary
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker-compose up -d postgres-us-east" > /dev/null 2>&1
-    
+
     if [ "$pre_checksum" = "$post_checksum" ] && [ "$pre_checksum" != "0" ]; then
         test_result "$test_name" "PASS" "Data integrity maintained"
     else
@@ -381,17 +381,17 @@ EOF
 
 test_rpo_compliance() {
     log_info "TEST: RPO (Recovery Point Objective) compliance"
-    
+
     local test_name="RPO Compliance (<1 min)"
-    
+
     # Measure replication lag
     local lag=$(ssh -o StrictHostKeyChecking=no "$SECONDARY_HOST" <<'EOF'
 docker exec postgres-us-west psql -U postgres -d code_server -Atc "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::int" 2>/dev/null || echo "120"
 EOF
 )
-    
+
     log "Current replication lag: ${lag}s"
-    
+
     if [ "${lag}" -lt $MAX_REPLICATION_LAG ]; then
         test_result "$test_name" "PASS" "RPO met: ${lag}s < ${MAX_REPLICATION_LAG}s"
     else
@@ -401,17 +401,17 @@ EOF
 
 test_rto_compliance() {
     log_info "TEST: RTO (Recovery Time Objective) compliance"
-    
+
     local test_name="RTO Compliance (<5 min)"
-    
+
     local start_time=$(date +%s)
-    
+
     # Simulate failure and measure recovery
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker kill postgres-us-east || true"
-    
+
     # Wait for automatic failover
     sleep 30
-    
+
     # Verify secondary is promoted and accepting connections
     local recovered=false
     for i in {1..30}; do
@@ -421,13 +421,13 @@ test_rto_compliance() {
         fi
         sleep 1
     done
-    
+
     local end_time=$(date +%s)
     local recovery_time=$((end_time - start_time))
-    
+
     # Restore primary
     ssh -o StrictHostKeyChecking=no "$PRIMARY_HOST" "docker-compose up -d postgres-us-east" > /dev/null 2>&1
-    
+
     if $recovered && [ $recovery_time -lt $MAX_FAILOVER_TIME ]; then
         test_result "$test_name" "PASS" "RTO met: ${recovery_time}s < ${MAX_FAILOVER_TIME}s"
     else
@@ -442,7 +442,7 @@ test_rto_compliance() {
 quick_test_suite() {
     log "Running QUICK test suite..."
     echo ""
-    
+
     test_single_pod_restart
     test_rpo_compliance
     test_rto_compliance
@@ -451,7 +451,7 @@ quick_test_suite() {
 thorough_test_suite() {
     log "Running THOROUGH test suite..."
     echo ""
-    
+
     test_single_pod_restart
     test_database_failover
     test_network_partition
@@ -473,13 +473,13 @@ print_test_summary() {
     echo ""
     echo -e "${GREEN}Passed: $TESTS_PASSED${NC}"
     echo -e "${RED}Failed: $TESTS_FAILED${NC}"
-    
+
     local total=$((TESTS_PASSED + TESTS_FAILED))
     if [ $total -gt 0 ]; then
         local pass_rate=$((TESTS_PASSED * 100 / total))
         echo "Pass Rate: ${pass_rate}%"
     fi
-    
+
     echo ""
     echo "Test log: ${LOG_DIR}/failover-test-${TIMESTAMP}.log"
     echo "Results: ${LOG_DIR}/test-results.tsv"
@@ -494,17 +494,17 @@ main() {
     echo -e "${BLUE}  PHASE 18: FAILOVER TESTING AUTOMATION${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
     echo ""
-    
+
     # Pre-flight checks
     if ! validate_test_environment; then
         log_error "Test environment validation failed"
         exit 1
     fi
-    
+
     echo ""
-    
+
     local mode="${1:-quick}"
-    
+
     case "$mode" in
         "quick")
             quick_test_suite
@@ -540,7 +540,7 @@ main() {
             exit 0
             ;;
     esac
-    
+
     print_test_summary
 }
 

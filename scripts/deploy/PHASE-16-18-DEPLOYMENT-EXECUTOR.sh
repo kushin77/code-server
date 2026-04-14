@@ -34,9 +34,9 @@ error() {
 
 deploy_phase_16_a() {
     log "=== PHASE 16-A: DATABASE HA DEPLOYMENT ==="
-    
+
     local start_time=$(date +%s)
-    
+
     log "Creating PostgreSQL primary container..."
     docker run -d \
         --name postgres-ha-primary \
@@ -53,7 +53,7 @@ deploy_phase_16_a() {
         --health-retries=3 \
         --restart=unless-stopped \
         postgres:15.2-alpine
-    
+
     log "Waiting for PostgreSQL primary to be healthy..."
     for i in {1..40}; do
         if docker exec postgres-ha-primary pg_isready -U db_admin 2>/dev/null; then
@@ -66,7 +66,7 @@ deploy_phase_16_a() {
         fi
         sleep 5
     done
-    
+
     log "Creating PostgreSQL replica containers..."
     for i in {1..2}; do
         docker run -d \
@@ -85,7 +85,7 @@ deploy_phase_16_a() {
             --restart=unless-stopped \
             postgres:15.2-alpine
     done
-    
+
     log "Creating pgBouncer connection pool..."
     docker run -d \
         --name pgbouncer-pool \
@@ -96,7 +96,7 @@ deploy_phase_16_a() {
         -v /etc/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro \
         --restart=unless-stopped \
         edoburu/pgbouncer:1.21.0
-    
+
     log "Creating Patroni HA orchestrator..."
     docker run -d \
         --name patroni-ha-controller \
@@ -106,10 +106,10 @@ deploy_phase_16_a() {
         -e PATRONI_RESTAPI_LISTEN=0.0.0.0:8008 \
         --restart=unless-stopped \
         patroni:3.0.2-alpine
-    
+
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
-    
+
     success "Phase 16-A completed in ${duration} seconds"
     echo "PHASE 16-A: COMPLETED (${duration}s)" >> "${PHASE_RESULTS}"
 }
@@ -120,9 +120,9 @@ deploy_phase_16_a() {
 
 deploy_phase_16_b() {
     log "=== PHASE 16-B: LOAD BALANCING DEPLOYMENT ==="
-    
+
     local start_time=$(date +%s)
-    
+
     log "Creating HAProxy primary load balancer..."
     docker run -d \
         --name haproxy-lb-primary \
@@ -138,7 +138,7 @@ deploy_phase_16_b() {
         --health-retries=3 \
         --restart=unless-stopped \
         haproxy:2.8.5-alpine
-    
+
     log "Creating HAProxy backup load balancer..."
     docker run -d \
         --name haproxy-lb-backup \
@@ -154,7 +154,7 @@ deploy_phase_16_b() {
         --health-retries=3 \
         --restart=unless-stopped \
         haproxy:2.8.5-alpine
-    
+
     log "Creating Keepalived primary VIP controller..."
     docker run -d \
         --name keepalived-vip-primary \
@@ -167,7 +167,7 @@ deploy_phase_16_b() {
         -v /etc/keepalived:/etc/keepalived:ro \
         --restart=unless-stopped \
         arcts/keepalived:2.2.7
-    
+
     log "Creating Keepalived backup VIP controller..."
     docker run -d \
         --name keepalived-vip-backup \
@@ -180,10 +180,10 @@ deploy_phase_16_b() {
         -v /etc/keepalived:/etc/keepalived:ro \
         --restart=unless-stopped \
         arcts/keepalived:2.2.7
-    
+
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
-    
+
     success "Phase 16-B completed in ${duration} seconds"
     echo "PHASE 16-B: COMPLETED (${duration}s)" >> "${PHASE_RESULTS}"
 }
@@ -194,9 +194,9 @@ deploy_phase_16_b() {
 
 deploy_phase_18() {
     log "=== PHASE 18: SECURITY HARDENING DEPLOYMENT ==="
-    
+
     local start_time=$(date +%s)
-    
+
     log "Creating Consul service registry cluster..."
     for i in {1..3}; do
         docker run -d \
@@ -216,10 +216,10 @@ deploy_phase_18() {
                 -bootstrap-expect=3 \
                 -client=0.0.0.0 || true
     done
-    
+
     log "Waiting for Consul cluster to stabilize..."
     sleep 10
-    
+
     log "Creating Vault HA cluster..."
     for i in {1..3}; do
         docker run -d \
@@ -238,17 +238,17 @@ deploy_phase_18() {
             --restart=unless-stopped \
             vault:1.15.0 server -config=/vault/config/vault.hcl || true
     done
-    
+
     log "Setting up TLS certificates for mTLS..."
     mkdir -p /etc/tls/{certs,keys,ca}
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
         -keyout /etc/tls/keys/server.key \
         -out /etc/tls/certs/server.crt \
         -subj "/C=US/ST=CA/L=San Francisco/O=Code Server/CN=code-server" 2>/dev/null || true
-    
+
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
-    
+
     success "Phase 18 completed in ${duration} seconds"
     echo "PHASE 18: COMPLETED (${duration}s)" >> "${PHASE_RESULTS}"
 }
@@ -259,9 +259,9 @@ deploy_phase_18() {
 
 deploy_phase_17() {
     log "=== PHASE 17: MULTI-REGION REPLICATION DEPLOYMENT ==="
-    
+
     local start_time=$(date +%s)
-    
+
     log "Creating pglogical replicator containers..."
     docker run -d \
         --name pglogical-replicator-primary \
@@ -274,7 +274,7 @@ deploy_phase_17() {
         -v /var/lib/postgresql/pglogical-primary:/var/lib/postgresql/data \
         --restart=unless-stopped \
         postgres:15.2-alpine
-    
+
     log "Creating DR failover controller..."
     docker run -d \
         --name dr-failover-controller \
@@ -284,10 +284,10 @@ deploy_phase_17() {
         -e FAILOVER_TIMEOUT=60 \
         --restart=unless-stopped \
         alpine:latest sleep infinity
-    
+
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
-    
+
     success "Phase 17 completed in ${duration} seconds"
     echo "PHASE 17: COMPLETED (${duration}s)" >> "${PHASE_RESULTS}"
 }
@@ -301,58 +301,58 @@ main() {
     log "PHASE 16-18 DEPLOYMENT EXECUTOR"
     log "Start Time: ${TIMESTAMP}"
     log "================================"
-    
+
     # Pre-flight checks
     log "Running pre-flight checks..."
-    
+
     if ! command -v docker &> /dev/null; then
         error "docker is not installed"
         exit 1
     fi
-    
+
     if ! docker network inspect phase13-net &> /dev/null; then
         log "Creating docker network phase13-net..."
         docker network create phase13-net --driver bridge 2>/dev/null || true
     fi
-    
+
     success "Pre-flight checks passed"
-    
+
     # Deploy phases in parallel/sequential order
     log "Starting Phase deployments..."
-    
+
     # Phases 16-A, 16-B, and 18 can run in parallel
     log "Deploying Phase 16-A (Database HA)..."
     deploy_phase_16_a &
     PID_16A=$!
-    
+
     log "Deploying Phase 16-B (Load Balancing)..."
     deploy_phase_16_b &
     PID_16B=$!
-    
+
     log "Deploying Phase 18 (Security Hardening)..."
     deploy_phase_18 &
     PID_18=$!
-    
+
     # Wait for all parallel phases to complete
     log "Waiting for parallel phases to complete..."
     wait $PID_16A $PID_16B $PID_18
-    
+
     success "All parallel phases completed"
-    
+
     # Phase 17 is sequential after Phase 16
     log "Deploying Phase 17 (Multi-Region Replication - sequential)..."
     deploy_phase_17
-    
+
     # Final summary
     log "================================"
     log "DEPLOYMENT COMPLETE"
     log "================================"
-    
+
     cat "${PHASE_RESULTS}" | tee -a "${LOG_FILE}"
-    
+
     log "Final Status:"
     docker ps --filter "name=postgres-ha\|haproxy-lb\|vault-ha\|consul-server\|pglogical" --format "table {{.Names}}\t{{.Status}}"
-    
+
     log "Logs available at: ${LOG_FILE}"
     log "Results available at: ${PHASE_RESULTS}"
 }

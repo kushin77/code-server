@@ -45,22 +45,22 @@ spec:
               ENDPOINTS="https://ide.kushnir.cloud/health
 https://ide.kushnir.cloud/api/ping
 https://ide.kushnir.cloud/api/projects"
-              
+
               echo "$ENDPOINTS" | while read endpoint; do
                 start_time=$(date +%s%N)
-                
+
                 response=$(curl -s -w "\n%{http_code}" "$endpoint" 2>&1)
                 status_code=$(echo "$response" | tail -n1)
                 body=$(echo "$response" | head -n-1)
-                
+
                 end_time=$(date +%s%N)
                 latency=$((($end_time - $start_time) / 1000000))  # ms
-                
+
                 # Export Prometheus metrics
                 echo "# HELP synthetic_probe_success Synthetic probe success"
                 echo "# TYPE synthetic_probe_success gauge"
                 echo "synthetic_probe_success{endpoint=\"$endpoint\",region=\"$(hostname)\"} $([ \"$status_code\" = \"200\" ] && echo 1 || echo 0)"
-                
+
                 echo "# HELP synthetic_probe_latency_ms Probe latency in milliseconds"
                 echo "# TYPE synthetic_probe_latency_ms gauge"
                 echo "synthetic_probe_latency_ms{endpoint=\"$endpoint\",region=\"$(hostname)\"} $latency"
@@ -85,16 +85,16 @@ mkdir -p "$OUTPUT_DIR"
 test_journey() {
   local journey_name="$1"
   local steps="$2"
-  
+
   echo "Testing journey: $journey_name"
-  
+
   # Initialize session
   SESSION=$(curl -s -c /tmp/cookies.txt "$BASE_URL/api/auth/csrf" | jq -r '.csrf_token')
-  
+
   # Execute journey steps
   echo "$steps" | while IFS='|' read -r method endpoint body; do
     start=$(date +%s%N)
-    
+
     if [ "$method" = "POST" ]; then
       response=$(curl -s -b /tmp/cookies.txt \
         -H "Content-Type: application/json" \
@@ -105,14 +105,14 @@ test_journey() {
       response=$(curl -s -b /tmp/cookies.txt \
         "$BASE_URL$endpoint")
     fi
-    
+
     end=$(date +%s%N)
     latency=$((($end - $start) / 1000000))
-    
+
     status=$(echo "$response" | jq -r '.status // "error"')
-    
+
     echo "  $method $endpoint: ${latency}ms (status: $status)"
-    
+
     # Log result
     echo "$journey_name|$method|$endpoint|$latency|$status" >> "$OUTPUT_DIR/journey-results.csv"
   done
@@ -193,7 +193,7 @@ contracts:
       status: "ok"
       timestamp: "2026-*"
     max_latency: 100  # ms
-    
+
   - endpoint: /api/projects
     method: GET
     expected_status: 200
@@ -202,7 +202,7 @@ contracts:
     max_latency: 500
     required_headers:
       - Authorization
-    
+
   - endpoint: /api/auth/login
     method: POST
     expected_status: 200
@@ -213,7 +213,7 @@ contracts:
       token: "*"
       expires_in: "*"
     max_latency: 1000
-    
+
   - endpoint: /api/projects
     method: POST
     expected_status: 201
@@ -242,12 +242,12 @@ test_with_condition() {
   local latency="$2"
   local jitter="$3"
   local loss="$4"
-  
+
   echo "Testing with: $condition (latency=${latency}ms, jitter=${jitter}ms, loss=${loss}%)"
-  
+
   # Apply network condition
   sudo tc qdisc add dev eth0 root netem delay "${latency}ms" "${jitter}ms" loss "${loss}%"
-  
+
   # Run endpoint tests
   for i in {1..10}; do
     start=$(date +%s%N)
@@ -256,10 +256,10 @@ test_with_condition() {
     latency=$((($end - $start) / 1000000))
     echo "  Request $i: ${latency}ms"
   done
-  
+
   # Remove network condition
   sudo tc qdisc del dev eth0 root
-  
+
   echo ""
 }
 
@@ -295,13 +295,13 @@ spec:
       for: 5m
       annotations:
         summary: "Service availability below 95% SLA"
-    
+
     - alert: HighProbeLatency
       expr: synthetic_probe_latency_ms > 1000
       for: 5m
       annotations:
         summary: "Synthetic probe latency > 1s"
-    
+
     - alert: JourneyTimeoutIncreasing
       expr: rate(synthetic_journey_timeout[5m]) > 0.01
       annotations:

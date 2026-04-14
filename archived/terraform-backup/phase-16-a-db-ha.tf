@@ -100,7 +100,7 @@ resource "docker_image" "postgresql_ha" {
   count         = var.phase_16_a_enabled ? 1 : 0
   name          = "postgres:15.2-alpine"
   pull_triggers = ["15.2"]
-  
+
   lifecycle {
     prevent_destroy = false
   }
@@ -110,7 +110,7 @@ resource "docker_image" "pgbouncer" {
   count         = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
   name          = "pgbouncer/pgbouncer:${var.pgbouncer_version}"
   pull_triggers = [var.pgbouncer_version]
-  
+
   lifecycle {
     prevent_destroy = false
   }
@@ -120,7 +120,7 @@ resource "docker_image" "patroni" {
   count         = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
   name          = "patroni:3.0.2-alpine"
   pull_triggers = ["3.0.2-alpine"]
-  
+
   lifecycle {
     prevent_destroy = false
   }
@@ -137,7 +137,7 @@ resource "docker_container" "postgres_primary" {
   networks_advanced {
     name = docker_network.postgres_ha_network[0].name
   }
-  
+
   env = [
     "POSTGRES_DB=code_server_db",
     "POSTGRES_USER=db_admin",
@@ -374,7 +374,7 @@ output "replication_status" {
 # ───────────────────────────────────────────────────────────────────────────
 # IMMUTABILITY & IDEMPOTENCY NOTES
 # ───────────────────────────────────────────────────────────────────────────
-# 
+#
 # IMMUTABILITY:
 # - PostgreSQL version pinned to 15.2
 # - pgBouncer version pinned to 1.21.0
@@ -392,4 +392,3 @@ output "replication_status" {
 # - Backups retained for 30 days
 # - Automatic failover via Patroni (promoted replica becomes primary)
 # - RTO: < 5 minutes, RPO: < 1 second
-

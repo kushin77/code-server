@@ -13,7 +13,7 @@ EXTERNAL_DOMAIN=ide.kushnir.cloud
 # ════════════════════════════════════════════════════════════
 # CLOUDFLARE TUNNEL TOKEN (REQUIRED FOR HTTPS)
 # ════════════════════════════════════════════════════════════
-# 
+#
 # Instructions to obtain token:
 # 1. Visit: https://dash.cloudflare.com/
 # 2. Select domain: kushnir.cloud
@@ -21,7 +21,7 @@ EXTERNAL_DOMAIN=ide.kushnir.cloud
 # 4. Find tunnel: ide-home-dev
 # 5. Copy the authentication token (format: NNNN-XXXXXXXXXXXX...)
 # 6. Replace the value below with your actual token
-# 
+#
 # Token format: 64+ character hex string starting with 4 digits
 # Example: aaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 #

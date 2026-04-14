@@ -4,16 +4,16 @@ set -euo pipefail
 # ─────────────────────────────────────────────────────────────────────────────
 # Idempotent Deployment Script
 # Orchestrates: Terraform → docker-compose rebuild → startup verification
-# 
+#
 # Usage:  bash scripts/deploy.sh
-# 
+#
 # What it does:
 #   1. Runs terraform apply to generate docker-compose.yml with pinned versions
 #   2. Rebuilds Docker images (--no-cache for immutability verification)
 #   3. Brings up all services
 #   4. Waits for all healthchecks to pass
 #   5. Validates critical paths (extension activations, oauth2-proxy auth)
-# 
+#
 # Exit code: 0 = success, 1 = deployment failed
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -68,12 +68,12 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
   HEALTHY=$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
   TOTAL=$(docker compose ps --format json | jq 'length')
   echo "  [$ELAPSED/$MAX_WAIT] Healthy services: $HEALTHY/$TOTAL"
-  
+
   if [ "$HEALTHY" -eq "$TOTAL" ]; then
     echo "✅ All services healthy"
     break
   fi
-  
+
   sleep 5
   ELAPSED=$((ELAPSED + 5))
 done

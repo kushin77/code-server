@@ -1,7 +1,7 @@
 /**
  * Phase 26-C: Organization API
  * Multi-tenant organizations with RBAC (4 roles)
- * 
+ *
  * Roles:
  * - admin: Full access to organization
  * - developer: Can create/manage resources
@@ -241,8 +241,8 @@ app.post('/organizations', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO organizations (name, slug, tier) 
-       VALUES ($1, $2, $3) 
+      `INSERT INTO organizations (name, slug, tier)
+       VALUES ($1, $2, $3)
        RETURNING id, name, slug, tier, created_at`,
       [name, slug, tier || 'free']
     );
@@ -257,8 +257,8 @@ app.post('/organizations', async (req, res) => {
 
     // Audit log
     await pool.query(
-      `INSERT INTO organization_audit_logs 
-       (organization_id, actor_id, action, resource_type, resource_id) 
+      `INSERT INTO organization_audit_logs
+       (organization_id, actor_id, action, resource_type, resource_id)
        VALUES ($1, $2, $3, $4, $5)`,
       [org.id, userId, 'created', 'organization', org.id]
     );
@@ -309,17 +309,17 @@ app.post('/organizations/:id/members', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO organization_members 
-       (organization_id, user_id, role) 
-       VALUES ($1, $2, $3) 
+      `INSERT INTO organization_members
+       (organization_id, user_id, role)
+       VALUES ($1, $2, $3)
        RETURNING id, role, created_at`,
       [id, userId, role || 'viewer']
     );
 
     // Audit log
     await pool.query(
-      `INSERT INTO organization_audit_logs 
-       (organization_id, actor_id, action, resource_type, resource_id) 
+      `INSERT INTO organization_audit_logs
+       (organization_id, actor_id, action, resource_type, resource_id)
        VALUES ($1, $2, $3, $4, $5)`,
       [id, actorId, 'member_added', 'member', userId]
     );
@@ -348,17 +348,17 @@ app.post('/organizations/:id/api-keys', async (req, res) => {
     const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
 
     const result = await pool.query(
-      `INSERT INTO organization_api_keys 
-       (organization_id, name, key_hash) 
-       VALUES ($1, $2, $3) 
+      `INSERT INTO organization_api_keys
+       (organization_id, name, key_hash)
+       VALUES ($1, $2, $3)
        RETURNING id, name, created_at`,
       [id, name || 'default', keyHash]
     );
 
     // Audit log
     await pool.query(
-      `INSERT INTO organization_audit_logs 
-       (organization_id, actor_id, action, resource_type) 
+      `INSERT INTO organization_audit_logs
+       (organization_id, actor_id, action, resource_type)
        VALUES ($1, $2, $3, $4)`,
       [id, actorId, 'api_key_created', 'api_key']
     );
@@ -381,10 +381,10 @@ app.get('/organizations/:id/audit-logs', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, actor_id, action, resource_type, resource_id, created_at 
-       FROM organization_audit_logs 
-       WHERE organization_id = $1 
-       ORDER BY created_at DESC 
+      `SELECT id, actor_id, action, resource_type, resource_id, created_at
+       FROM organization_audit_logs
+       WHERE organization_id = $1
+       ORDER BY created_at DESC
        LIMIT 100`,
       [id]
     );

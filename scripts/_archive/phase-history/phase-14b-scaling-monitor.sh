@@ -25,16 +25,16 @@ NC='\033[0m'
 get_latency_percentiles() {
   # Simulated latency percentiles during scaling
   # In production: collect from actual monitoring system
-  
+
   local day=$1
   local developer_count=$((3 + (day - 1) * 7))
-  
+
   # Expected latency degradation pattern (conservative estimate)
   # Day 1: 3 dev (pilot already running)
   # Day 2: 10 dev (+7)
   # Day 3: 17 dev (+7)
   # etc.
-  
+
   case $day in
     1) echo "p50=42ms p95=76ms p99=85ms" ;;
     2) echo "p50=43ms p95=78ms p99=87ms" ;;
@@ -48,7 +48,7 @@ get_latency_percentiles() {
 
 get_error_rate() {
   local day=$1
-  
+
   case $day in
     1) echo "0.02%" ;;
     2) echo "0.03%" ;;
@@ -89,15 +89,15 @@ echo "─────────────┼──────┼───�
 for day in {1..7}; do
   dev_count=$((3 + (day - 1) * 7))
   date_str=$(date -d "2026-04-14 +$((day-1)) days" +'%b %d')
-  
+
   latency=$(get_latency_percentiles $day)
   error=$(get_error_rate $day)
-  
+
   # Parse latency
   p50=$(echo $latency | awk '{print $1}' | cut -d= -f2)
   p95=$(echo $latency | awk '{print $2}' | cut -d= -f2)
   p99=$(echo $latency | awk '{print $3}' | cut -d= -f2)
-  
+
   printf "%-11s | %4d | %5s | %5s | %5s | %5s | ~40%% | 2.0G\n" \
     "$date_str" "$dev_count" "$p50" "$p95" "$p99" "$error"
 done

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Read-Only IDE Access Wrapper for Code-Server
-# 
+#
 # Purpose: Prevent developers from using code-server to bypass security
 # by implementing a restricted shell that blocks dangerous commands.
 #
@@ -58,52 +58,52 @@ log_access() {
 is_restricted_command() {
     local cmd="$1"
     local base_cmd=$(basename "$cmd" 2>/dev/null || echo "$cmd")
-    
+
     for restricted in "${RESTRICTED_COMMANDS[@]}"; do
         if [[ "$base_cmd" == "$restricted" ]] || [[ "$base_cmd" == "${restricted%% *}" ]]; then
             return 0  # True - is restricted
         fi
     done
-    
+
     return 1  # False - not restricted
 }
 
 is_allowed_path() {
     local path="$1"
     local abs_path=$(cd "$path" 2>/dev/null && pwd || echo "$path")
-    
+
     for allowed in "${ALLOWED_PATHS[@]}"; do
         if [[ "$abs_path" == "$allowed" ]] || [[ "$abs_path" == "$allowed"/* ]]; then
             return 0  # True - is allowed
         fi
     done
-    
+
     return 1  # False - not allowed
 }
 
 check_command() {
     local cmd="$1"
-    
+
     # Block restricted commands at execution
     if is_restricted_command "$cmd"; then
         echo -e "${RED}❌ Error: Command '$cmd' is not allowed in read-only IDE mode${NC}" >&2
         log_access "$cmd" "BLOCKED"
         return 1
     fi
-    
+
     return 0
 }
 
 check_file_access() {
     local path="$1"
     local op="${2:-read}"
-    
+
     # Allow reading config files
     if [[ "$op" == "read" ]]; then
         if is_allowed_path "$path"; then
             return 0
         fi
-        
+
         # Allowed read-only paths
         case "$path" in
             /etc/hostname|/etc/timezone|/etc/locale.conf|/usr/share/zoneinfo/*)
@@ -119,33 +119,33 @@ check_file_access() {
                 ;;
         esac
     fi
-    
+
     # Restrict writes to non-whitelist paths
     if [[ "$op" == "write" ]] || [[ "$op" == "modify" ]]; then
         if is_allowed_path "$path"; then
             return 0
         fi
-        
+
         echo -e "${RED}❌ Error: Cannot modify '$path' in read-only IDE mode${NC}" >&2
         log_access "write:$path" "BLOCKED"
         return 1
     fi
-    
+
     return 0
 }
 
 # Shell trap to intercept command execution
 trap_cmd() {
     local cmd="$BASH_COMMAND"
-    
+
     # Don't intercept empty commands or shell built-ins
     if [[ -z "$cmd" ]] || [[ "$cmd" == "echo"* ]] || [[ "$cmd" == "builtin"* ]]; then
         return 0
     fi
-    
+
     # Check first token (the actual command)
     local first_token=$(echo "$cmd" | awk '{print $1}')
-    
+
     # Skip if it's a builtin or legitimate operation
     case "$first_token" in
         ls|cd|pwd|echo|cat|less|more|grep|find|sed|awk|head|tail)
@@ -165,11 +165,11 @@ trap_cmd() {
 setup_readonly_namespace() {
     # This requires running with --userns or in a container
     # For regular bash, we'll use software restrictions instead
-    
+
     # Create temporary writable directory
     local tmpdir="/tmp/code-server-$$"
     mkdir -p "$tmpdir"
-    
+
     # Only allow writes to project directories
     export TMPDIR="$tmpdir"
     export HOME_PROJECTS="$HOME/projects"
@@ -178,12 +178,12 @@ setup_readonly_namespace() {
 # Interactive shell with restrictions
 launch_restricted_shell() {
     local shell_type="${SHELL##*/}"
-    
+
     if [[ "$shell_type" == "bash" ]]; then
         # Enable command checking
         shopt -s extdebug
         trap trap_cmd DEBUG
-        
+
         # Start interactive bash
         exec bash --restricted --norc --noprofile
     elif [[ "$shell_type" == "zsh" ]]; then
@@ -282,14 +282,14 @@ EOF
 main() {
     # Initialize for code-server or interactive shell
     show_allowed_commands
-    
+
     # Set up restricted environment
     setup_readonly_namespace
-    
+
     # Log entry
     PRIMARY_IP="${SSH_CLIENT%% *}"
     log_access "shell-login" "ALLOWED"
-    
+
     # If code-server is running, it will use this shell
     # Otherwise, start interactive restricted shell
     if [[ "${CODE_SERVER_SESSION:-0}" == "1" ]]; then

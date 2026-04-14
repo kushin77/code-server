@@ -149,7 +149,7 @@ log "Generating automated sudoers configuration..."
 cat > /tmp/gpu-install-sudoers.sh << 'SUDOERS'
 #!/bin/bash
 # Add this to /etc/sudoers.d/gpu-driver-install-555:
-# 
+#
 # Cmnd_Alias GPU_INSTALL = /usr/bin/apt-get update, \
 #   /usr/bin/apt-get install nvidia-driver-555, \
 #   /usr/bin/apt-get install cuda-runtime-12-4, \
@@ -185,17 +185,17 @@ log "Creating privileged container with host GPU access..."
 # Test if we can run privileged docker
 if sudo docker version > /dev/null 2>&1; then
   success "Passwordless docker sudo confirmed"
-  
+
   # Try to run the installation in a privileged container
   log "Executing driver installation in privileged container..."
-  
+
   sudo docker run --rm \
     --privileged \
     --volume /tmp/install-driver-host.sh:/install-driver-host.sh:ro \
     --volume /etc/sudoers.d:/etc/sudoers.d \
     gpu-driver-555:latest \
     bash -c "bash /install-driver-host.sh" 2>&1 | tee /tmp/driver-install.log || true
-    
+
   if grep -q "Installation complete" /tmp/driver-install.log; then
     success "Driver installation via docker succeeded!"
   else
@@ -309,4 +309,3 @@ log "Status File: /tmp/gpu-infrastructure-state/upgrade-plan.json"
 log "Log File: /tmp/driver-upgrade-automated.log"
 log ""
 log "[✓] Ready for automated execution!"
-

@@ -54,21 +54,21 @@ log_error() {
 
 run_preflight() {
     log "Running pre-flight checks..."
-    
+
     # Check Docker
     if ! docker ps > /dev/null 2>&1; then
         log_error "Docker daemon not responding"
         return 1
     fi
     log_success "Docker daemon: operational"
-    
+
     # Check Kong is running (prerequisite from Monday)
     if ! docker ps --format "{{.Names}}" | grep -q "^kong$"; then
         log_error "Kong not running - deploy Kong first (Phase 17 Monday)"
         return 1
     fi
     log_success "Kong API Gateway: running (prerequisite met)"
-    
+
     # Check disk space (Cassandra needs space for trace storage)
     local available_gb=$(df | tail -1 | awk '{print int($4 / 1024 / 1024)}')
     if [ "$available_gb" -lt 20 ]; then
@@ -76,14 +76,14 @@ run_preflight() {
         return 1
     fi
     log_success "Disk space: ${available_gb}GB available (sufficient for Cassandra)"
-    
+
     # Check existing Jaeger containers
     if docker ps -a --format "{{.Names}}" | grep -q jaeger; then
         log_error "Jaeger containers already exist, remove first: docker rm -f jaeger-*"
         return 1
     fi
     log_success "Jaeger containers: not running (clean state)"
-    
+
     log_success "All pre-flight checks: PASSED"
     return 0
 }
@@ -94,10 +94,10 @@ run_preflight() {
 
 deploy_cassandra() {
     log "Deploying Cassandra for trace storage..."
-    
+
     # Create Cassandra data volume
     docker volume create jaeger_cassandra_data || log "Volume may already exist"
-    
+
     # Deploy Cassandra
     docker run -d \
         --name jaeger-cassandra \
@@ -109,10 +109,10 @@ deploy_cassandra() {
         -v jaeger_cassandra_data:/var/lib/cassandra \
         -p 9042:9042 \
         cassandra:4.0
-    
+
     log "Waiting for Cassandra to start (this takes ~30-60 seconds)..."
     sleep 30
-    
+
     # Wait for Cassandra to be ready
     local max_retries=30
     local retry=0
@@ -125,13 +125,13 @@ deploy_cassandra() {
         log "Cassandra startup: retry $retry/30"
         sleep 2
     done
-    
+
     if [ $retry -eq $max_retries ]; then
         log_error "Cassandra failed to start"
         docker logs jaeger-cassandra
         return 1
     fi
-    
+
     # Initialize Cassandra keyspace for Jaeger
     log "Initializing Cassandra keyspace for Jaeger..."
     docker exec jaeger-cassandra cqlsh <<EOF || log "Keyspace may already exist"
@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS traces (
 
 CREATE INDEX IF NOT EXISTS idx_start_time ON traces(start_time);
 EOF
-    
+
     log_success "Cassandra deployment: complete"
 }
 
@@ -165,7 +165,7 @@ EOF
 
 deploy_jaeger_collector() {
     log "Deploying Jaeger Collector..."
-    
+
     docker run -d \
         --name jaeger-collector \
         --network kong-net \
@@ -179,10 +179,10 @@ deploy_jaeger_collector() {
         /go/bin/collector-linux \
         --cassandra.servers=jaeger-cassandra \
         --cassandra.keyspace=jaeger_v1
-    
+
     log "Waiting for Jaeger Collector to start..."
     sleep 3
-    
+
     # Verify collector health
     local max_retries=20
     local retry=0
@@ -194,13 +194,13 @@ deploy_jaeger_collector() {
         retry=$((retry + 1))
         sleep 1
     done
-    
+
     if [ $retry -eq $max_retries ]; then
         log_error "Jaeger Collector failed to start"
         docker logs jaeger-collector
         return 1
     fi
-    
+
     log_success "Jaeger Collector deployment: complete"
 }
 
@@ -210,7 +210,7 @@ deploy_jaeger_collector() {
 
 deploy_jaeger_query() {
     log "Deploying Jaeger Query (UI)..."
-    
+
     docker run -d \
         --name jaeger-query \
         --network kong-net \
@@ -221,10 +221,10 @@ deploy_jaeger_query() {
         /go/bin/query-linux \
         --cassandra.servers=jaeger-cassandra \
         --cassandra.keyspace=jaeger_v1
-    
+
     log "Waiting for Jaeger UI to start..."
     sleep 3
-    
+
     # Verify UI health
     local max_retries=20
     local retry=0
@@ -236,13 +236,13 @@ deploy_jaeger_query() {
         retry=$((retry + 1))
         sleep 1
     done
-    
+
     if [ $retry -eq $max_retries ]; then
         log_error "Jaeger Query failed to start"
         docker logs jaeger-query
         return 1
     fi
-    
+
     log_success "Jaeger Query deployment: complete"
 }
 
@@ -252,18 +252,18 @@ deploy_jaeger_query() {
 
 deploy_jaeger_agent_sidecars() {
     log "Configuring Jaeger Agent sidecars..."
-    
+
     # Identify all code-server pods
     local containers=$(docker ps --format "{{.Names}}" | grep -E "code-server|git-proxy|api-gateway" || echo "")
-    
+
     if [ -z "$containers" ]; then
         log_error "No application containers found to instrument with Jaeger agents"
         log "Once application containers are running, agents can be added"
         return 0  # Non-fatal - agents will be added when containers exist
     fi
-    
+
     log "Deploying Jaeger agents as sidecars for: $containers"
-    
+
     # Deploy a Jaeger agent that can be referenced by containers
     docker run -d \
         --name jaeger-agent \
@@ -278,7 +278,7 @@ deploy_jaeger_agent_sidecars() {
         --agent.processors=zipkin.thrift,compact,binary \
         --reporter.tcpReporter.logSpans=true \
         --reporter.tcpReporter.host=jaeger-collector
-    
+
     log_success "Jaeger Agent deployment: complete"
     log "Note: Application containers must be configured to report to agent"
     log "  Environment variables for span reporting:"
@@ -294,20 +294,20 @@ deploy_jaeger_agent_sidecars() {
 
 configure_kong_jaeger_integration() {
     log "Configuring Kong to send traces to Jaeger..."
-    
+
     local kong_admin="http://localhost:8001"
-    
+
     # Enable distributed tracing in Kong
     log "Updating Kong configuration for Jaeger integration..."
-    
+
     # Add request logging plugin to all routes if not already present
     local routes=$(curl -s "$kong_admin/routes" | jq -r '.data[].id' || echo "")
-    
+
     if [ -z "$routes" ]; then
         log "No routes found yet - Kong routes will be configured to send to Jaeger later"
         return 0
     fi
-    
+
     # For each route, enable tracing (if not already enabled)
     while IFS= read -r route_id; do
         log "Adding trace forwarding to route: $route_id"
@@ -318,7 +318,7 @@ configure_kong_jaeger_integration() {
             -d config.include_credential=false \
             | jq '.' || log "Trace plugin already exists or failed"
     done <<< "$routes"
-    
+
     log_success "Kong-Jaeger integration: configured"
 }
 
@@ -328,7 +328,7 @@ configure_kong_jaeger_integration() {
 
 validate_jaeger_deployment() {
     log "Validating Jaeger deployment..."
-    
+
     # Check Cassandra
     log "Checking Cassandra..."
     if docker ps --format "{{.Names}}" | grep -q "jaeger-cassandra"; then
@@ -337,7 +337,7 @@ validate_jaeger_deployment() {
         log_error "Cassandra: not running"
         return 1
     fi
-    
+
     # Check Collector
     log "Checking Jaeger Collector..."
     if curl -s http://localhost:14269/ > /dev/null 2>&1; then
@@ -346,7 +346,7 @@ validate_jaeger_deployment() {
         log_error "Jaeger Collector: not responsive"
         return 1
     fi
-    
+
     # Check Query UI
     log "Checking Jaeger Query UI..."
     if curl -s http://localhost:16686/ > /dev/null 2>&1; then
@@ -355,7 +355,7 @@ validate_jaeger_deployment() {
         log_error "Jaeger Query UI: not responsive"
         return 1
     fi
-    
+
     # Check Agent
     log "Checking Jaeger Agent..."
     if docker ps --format "{{.Names}}" | grep -q "jaeger-agent"; then
@@ -364,7 +364,7 @@ validate_jaeger_deployment() {
         log_error "Jaeger Agent: not running"
         return 1
     fi
-    
+
     log_success "Jaeger deployment validation: PASSED"
 }
 
@@ -423,28 +423,28 @@ main() {
     echo -e "${BLUE}  Timeline: April 29, 2026 (Phase 17 Week 1 Tuesday)${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
     echo ""
-    
+
     log "Starting Jaeger deployment..."
     log "Timestamp: $(date)"
     log "Working directory: $ROOT_DIR"
-    
+
     # Execute deployment steps
     if ! run_preflight; then
         log_error "Pre-flight checks failed"
         exit 1
     fi
-    
+
     deploy_cassandra
     deploy_jaeger_collector
     deploy_jaeger_query
     deploy_jaeger_agent_sidecars
     configure_kong_jaeger_integration
-    
+
     if ! validate_jaeger_deployment; then
         log_error "Jaeger validation failed"
         exit 1
     fi
-    
+
     print_summary
     log "Jaeger deployment complete!"
 }

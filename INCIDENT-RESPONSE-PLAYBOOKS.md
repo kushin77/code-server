@@ -1,7 +1,7 @@
 # INCIDENT RESPONSE PLAYBOOKS & WAR ROOM PROTOCOLS
 
-**Status**: Production Incident Response Framework  
-**Created**: April 14, 2026 @ 00:45 UTC  
+**Status**: Production Incident Response Framework
+**Created**: April 14, 2026 @ 00:45 UTC
 **Owner**: DevOps + On-Call Infrastructure Team
 
 ---
@@ -51,7 +51,7 @@ War room escalation requested if:
    # SSH to production host
    curl http://localhost:9090/api/v1/query \
      'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1m]))'
-   
+
    # Check if pattern is consistent across 3 queries (15 sec each)
    ```
 
@@ -107,7 +107,7 @@ IF spike resolves within 5 minutes:
 IF spike persists 5 min or occurs 2+ times:
   → Try mitigation (scale/restart)
   → If no improvement in 2 min: ROLLBACK
-  
+
 IF rollback triggered:
   → Auto-execute: terraform apply -var=phase_14_enabled=false
   → Begin post-mortem within 15 min
@@ -200,15 +200,15 @@ SHORT-TERM (5-10 min):
   Option A: Restart affected service
     docker restart code-server
     (Clears memory, temporary fix)
-    
+
   Option B: Adjust resource limits
     docker update --memory="4g" code-server
     (Allows slightly more buffer time)
-    
+
 MEDIUM-TERM (15-30 min):
   - Deploy fixed version with patch
   - Identify & fix memory accumulation
-  
+
 LONG-TERM:
   - Code review for leak source
   - Add memory monitoring alert
@@ -220,7 +220,7 @@ LONG-TERM:
 IF restart resolves:
   → Continue with close monitoring
   → Schedule code fix within 24h
-  
+
 IF restart doesn't help:
   → ROLLBACK immediately
   → Investigate code version for leak source
@@ -264,7 +264,7 @@ IF restart doesn't help:
 If restarted successfully:
   → Monitor cache hit rate recovery
   → Continue Phase 15
-  
+
 If restart fails:
   → Disable cache (app falls back to direct DB)
   → Continue with degraded performance
@@ -326,7 +326,7 @@ Recent Actions:
   2026-04-14 01:45:23 - Detected SLO breach (p99 p99: 145ms)
   2026-04-14 01:45:45 - War room activated
   2026-04-14 01:46:00 - Diagnosis: Slow DB query identified
-  
+
 Current Investigation:
   [List current work]
 
@@ -366,7 +366,7 @@ Action Items (for next 7 days):
 
 Prevention (for next occurrence):
   [What will we do differently]
-  
+
 Stakeholder Notification:
   [ ] Slack: #phase-14-war-room
   [ ] Email: exec-team@company.com

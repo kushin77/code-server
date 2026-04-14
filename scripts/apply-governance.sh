@@ -102,11 +102,11 @@ local failed=0
 for repo in "${REPOS[@]}"; do
     ((processed++))
     write_info "[$processed/${#REPOS[@]}] Processing $OWNER/$repo..."
-    
+
     if $VERBOSE; then
         write_info "  Getting repository info..."
     fi
-    
+
     # Get repository info
     local repo_info
     repo_info=$(gh api repos/"$OWNER"/"$repo" \
@@ -115,15 +115,15 @@ for repo in "${REPOS[@]}"; do
         ((failed++))
         continue
     }
-    
+
     local default_branch
     default_branch=$(echo "$repo_info" | jq -r '.default_branch')
-    
+
     if $VERBOSE; then
         write_info "  Default branch: $default_branch"
         write_info "  Applying branch protection rules..."
     fi
-    
+
     # Create protection payload
     local protection_payload
     protection_payload=$(cat << 'EOF'
@@ -144,7 +144,7 @@ for repo in "${REPOS[@]}"; do
 }
 EOF
 )
-    
+
     if $DRY_RUN; then
         write_warning "[DRY RUN] Would apply branch protection for $default_branch"
         if $VERBOSE; then
@@ -160,16 +160,16 @@ EOF
             write_warning "  Branch protection partially applied (may have existing config)"
         fi
     fi
-    
+
     # Check workflows
     if $VERBOSE; then
         write_info "  Checking workflows..."
     fi
-    
+
     local workflow_count
     workflow_count=$(gh api repos/"$OWNER"/"$repo"/contents/.github/workflows \
         --jq '.[].name | select(. != null)' 2>/dev/null | wc -l || echo 0)
-    
+
     if [[ $workflow_count -eq 0 ]]; then
         write_warning "  No workflows found in .github/workflows"
     else
@@ -177,10 +177,10 @@ EOF
             write_info "  Found $workflow_count workflows"
         fi
     fi
-    
+
     write_success "$OWNER/$repo governance rules applied"
     ((successful++))
-    
+
     # Delay to avoid rate limiting (GitHub: 5000 req/hour)
     sleep 0.5
 done

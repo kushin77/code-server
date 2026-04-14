@@ -14,7 +14,7 @@ ALTER SYSTEM SET hot_standby = on;
 SELECT pg_reload_conf();
 SQL
 
-# Create replication slot  
+# Create replication slot
 psql -h localhost -U db_admin -d postgres -c \
   "SELECT * FROM pg_create_physical_replication_slot('replica_slot_1');" 2>/dev/null || true
 

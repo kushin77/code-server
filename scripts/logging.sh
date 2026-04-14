@@ -61,10 +61,10 @@ log() {
     local level="${1:-INFO}"
     shift  # Remove $1 from arguments
     local message="$*"
-    
+
     local formatted
     formatted="[$timestamp] [$level] $message"
-    
+
     # Color output based on level
     case "$level" in
         ERROR)
@@ -85,7 +85,7 @@ log() {
             echo -e "${CYAN}${formatted}${NC}"
             ;;
     esac
-    
+
     # Always write to file
     echo "$formatted" >> "$LOG_FILE"
 }
@@ -147,10 +147,10 @@ run_command() {
     local description="$1"
     shift
     local command="$@"
-    
+
     log_info "Running: $description"
     log_debug "Command: $command"
-    
+
     if $command; then
         log_success "✓ $description completed successfully"
         return 0
@@ -164,12 +164,12 @@ verify_command_exists() {
     # Verify that a required command exists
     local cmd="$1"
     local description="${2:-$cmd}"
-    
+
     if ! command -v "$cmd" &> /dev/null; then
         log_error "$description is not installed or not in PATH"
         return 1
     fi
-    
+
     log_debug "✓ $description found: $(command -v $cmd)"
     return 0
 }

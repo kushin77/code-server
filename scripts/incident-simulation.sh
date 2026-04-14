@@ -49,14 +49,14 @@ scenario_tunnel_failure() {
   echo ""
   echo "🔔 Alert Triggered: $(date)"
   INCIDENT_DETECTED_TIME=$(date +%s%N)
-  
+
   # Simulate: On-call receives alert
   sleep 2
   echo ""
   echo "👨‍💼 On-Call Engineer: Acknowledged incident"
   echo "⏱️  Time to acknowledge: 2s"
   echo ""
-  
+
   # Step 1: Verify tunnel status
   echo "Step 1️⃣  Verify Tunnel Status"
   echo "  Command: cloudflared tunnel info"
@@ -67,7 +67,7 @@ scenario_tunnel_failure() {
     echo "  Actual: Tunnel INACTIVE (no process)"
   fi
   sleep 1
-  
+
   # Step 2: Check logs
   echo ""
   echo "Step 2️⃣  Check Tunnel Logs"
@@ -75,7 +75,7 @@ scenario_tunnel_failure() {
   echo "  Expected: Connection refused errors"
   echo "  Action: Identify root cause (network issue vs. service issue)"
   sleep 1
-  
+
   # Step 3: Attempt restart
   echo ""
   echo "Step 3️⃣  Restart Cloudflare Tunnel"
@@ -84,17 +84,17 @@ scenario_tunnel_failure() {
   echo "  Status: Waiting 10s for tunnel to stabilize..."
   sleep 3
   echo "  ✓ Tunnel connection restored"
-  
+
   INCIDENT_RESOLVED_TIME=$(date +%s%N)
   RESPONSE_TIME_MS=$(( (INCIDENT_RESOLVED_TIME - INCIDENT_DETECTED_TIME) / 1000000 ))
-  
+
   echo ""
   echo "📊 Incident Timeline:"
   echo "  Detected: 00:00s"
   echo "  Response Goal: < 5s"
   echo "  Actual Response: ~${RESPONSE_TIME_MS}ms ($(( RESPONSE_TIME_MS / 1000 ))s)"
   echo ""
-  
+
   echo "✅ Resolution: Tunnel connection restored"
   echo "📝 Post-Incident Action:"
   echo "  - Check for repeated failures"
@@ -118,18 +118,18 @@ scenario_high_latency() {
   echo ""
   echo "🔔 Alert Triggered: $(date)"
   INCIDENT_DETECTED_TIME=$(date +%s%N)
-  
+
   sleep 1
   echo "👨‍💼 On-Call Engineer: Investigating performance"
   echo ""
-  
+
   # Step 1: Check metrics
   echo "Step 1️⃣  Check Performance Metrics"
   echo "  Command: curl -s http://localhost:9090/metrics | grep latency"
   echo "  Expected: p99_latency_ms > 100"
   echo "  Action: Identify which operations are slow"
   sleep 1
-  
+
   # Step 2: Check system resources
   echo ""
   echo "Step 2️⃣  Check System Resources"
@@ -138,7 +138,7 @@ scenario_high_latency() {
   echo "  Disk I/O: 60% (elevated)"
   echo "  Action: Disk I/O might be bottleneck"
   sleep 1
-  
+
   # Step 3: Check network
   echo ""
   echo "Step 3️⃣  Check Network"
@@ -147,7 +147,7 @@ scenario_high_latency() {
   echo "  Total Time: 150ms (normal)"
   echo "  Action: Backend response is normal"
   sleep 1
-  
+
   # Step 4: Check application logs
   echo ""
   echo "Step 4️⃣  Check Application Logs"
@@ -155,16 +155,16 @@ scenario_high_latency() {
   echo "  Found: Slow database queries (>500ms)"
   echo "  Cause: Audit log table not indexed"
   sleep 1
-  
+
   # Step 5: Apply fix
   echo ""
   echo "Step 5️⃣  Apply Optimization"
   echo "  Command: sqlite3 ~/.audit/audit.db 'CREATE INDEX idx_timestamp ON audit_log(timestamp);'"
   echo "  Status: Index created"
-  
+
   INCIDENT_RESOLVED_TIME=$(date +%s%N)
   RESPONSE_TIME_MS=$(( (INCIDENT_RESOLVED_TIME - INCIDENT_DETECTED_TIME) / 1000000 ))
-  
+
   echo ""
   echo "📊 Incident Timeline:"
   echo "  Detection: 00:00s"
@@ -172,7 +172,7 @@ scenario_high_latency() {
   echo "  Fix Applied: 00:07s (create index)"
   echo "  Actual Response Time: ~${RESPONSE_TIME_MS}ms ($(( RESPONSE_TIME_MS / 1000 ))s)"
   echo ""
-  
+
   echo "✅ Resolution: Database index optimized, latency restored to normal"
   echo "📝 Post-Incident Action:"
   echo "  - Review all database indexes"
@@ -196,18 +196,18 @@ scenario_audit_failure() {
   echo ""
   echo "🔔 Alert Triggered: $(date)"
   INCIDENT_DETECTED_TIME=$(date +%s%N)
-  
+
   sleep 1
   echo "👨‍💼 On-Call Engineer: CRITICAL - Compliance incident"
   echo ""
-  
+
   # Step 1: Verify audit system
   echo "Step 1️⃣  Verify Audit System Status"
   echo "  Command: systemctl status git-rca-audit"
   echo "  Status: RUNNING (but not actually logging)"
   echo "  Action: Check audit log health"
   sleep 1
-  
+
   # Step 2: Check disk space
   echo ""
   echo "Step 2️⃣  Check Disk Space"
@@ -216,7 +216,7 @@ scenario_audit_failure() {
   echo "  Audit log size: 8.5 GB"
   echo "  Action: Immediate cleanup required"
   sleep 1
-  
+
   # Step 3: Archive old logs
   echo ""
   echo "Step 3️⃣  Archive and Rotate Logs"
@@ -224,17 +224,17 @@ scenario_audit_failure() {
   echo "  Status: Archived logs older than 30 days"
   echo "  Freed Space: 3.2 GB"
   sleep 1
-  
+
   # Step 4: Verify logging resumed
   echo ""
   echo "Step 4️⃣  Verify Audit Logging Resumed"
   echo "  Command: tail /var/log/git-rca-audit.log"
   echo "  Status: New entries appearing"
   echo "  Sample: [2026-04-13 14:05:23] User alice auth success"
-  
+
   INCIDENT_RESOLVED_TIME=$(date +%s%N)
   RESPONSE_TIME_MS=$(( (INCIDENT_RESOLVED_TIME - INCIDENT_DETECTED_TIME) / 1000000 ))
-  
+
   echo ""
   echo "📊 Incident Timeline:"
   echo "  Alert Triggered: 00:00s"
@@ -242,7 +242,7 @@ scenario_audit_failure() {
   echo "  Resolution: 00:06s (disk cleanup)"
   echo "  Actual Response Time: ~${RESPONSE_TIME_MS}ms ($(( RESPONSE_TIME_MS / 1000 ))s)"
   echo ""
-  
+
   echo "✅ Resolution: Audit logging fully operational"
   echo "📝 Post-Incident Action:"
   echo "  - Increase log rotation frequency"
@@ -267,19 +267,19 @@ scenario_key_compromise() {
   echo ""
   echo "🔔 Alert Triggered: $(date)"
   INCIDENT_DETECTED_TIME=$(date +%s%N)
-  
+
   sleep 1
   echo "👨‍💼 On-Call Engineer: CRITICAL SECURITY INCIDENT"
   echo "🔒 Security Team: Actively investigating"
   echo ""
-  
+
   # Step 1: Revoke compromised key
   echo "Step 1️⃣  Revoke Compromised Key"
   echo "  Key ID: rsa-4096-alice-dev-2026"
   echo "  Command: ssh-key revoke rsa-4096-alice-dev-2026"
   echo "  Status: Key revoked in central authentication"
   sleep 1
-  
+
   # Step 2: Audit access
   echo ""
   echo "Step 2️⃣  Audit Unauthorized Access"
@@ -288,7 +288,7 @@ scenario_key_compromise() {
   echo "  Time Range: 14:00 - 14:15 UTC"
   echo "  Files Accessed: 3 (config.yaml, secrets.txt, deploy.sh)"
   sleep 1
-  
+
   # Step 3: Issue new key
   echo ""
   echo "Step 3️⃣  Issue New Key"
@@ -297,7 +297,7 @@ scenario_key_compromise() {
   echo "  Command: ssh-keygen -t rsa -b 4096 -C 'alice-dev@example.com'"
   echo "  Status: New key generated and distributed securely"
   sleep 1
-  
+
   # Step 4: Notify user
   echo ""
   echo "Step 4️⃣  Notify Developer"
@@ -305,17 +305,17 @@ scenario_key_compromise() {
   echo "  Content: SSH key compromised, new key issued, access logs attached"
   echo "  Action required: Update local SSH config"
   sleep 1
-  
+
   # Step 5: Security review
   echo ""
   echo "Step 5️⃣  Trigger Security Review"
   echo "  Action: Review all commits from compromised key"
   echo "  Action: Scan for data exfiltration"
   echo "  Action: Update security policies"
-  
+
   INCIDENT_RESOLVED_TIME=$(date +%s%N)
   RESPONSE_TIME_MS=$(( (INCIDENT_RESOLVED_TIME - INCIDENT_DETECTED_TIME) / 1000000 ))
-  
+
   echo ""
   echo "📊 Incident Timeline:"
   echo "  Alert: 00:00s"
@@ -324,7 +324,7 @@ scenario_key_compromise() {
   echo "  User Notified: 00:06s"
   echo "  Actual Response Time: ~${RESPONSE_TIME_MS}ms ($(( RESPONSE_TIME_MS / 1000 ))s)"
   echo ""
-  
+
   echo "✅ Interim Resolution: Compromised key revoked, new key issued"
   echo "📝 Post-Incident Action:"
   echo "  - Complete forensic analysis (24-48 hours)"
@@ -391,7 +391,7 @@ print_training_material() {
 generate_report() {
   local scenario=$1
   local response_time=$2
-  
+
   {
     echo "# Incident Simulation Report"
     echo "Date: $(date)"
@@ -423,7 +423,7 @@ generate_report() {
     echo "✅ Fix applied within RTO budget"
     echo "✅ Service restored to normal operation"
     echo "✅ Incident documented for compliance"
-    
+
   } | tee "$REPORT_FILE"
 }
 

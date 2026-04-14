@@ -1,15 +1,15 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 13: FINAL PRODUCTION READINESS VALIDATION
-# 
+#
 # Comprehensive verification that all Phase 13 components meet:
 # - Infrastructure as Code (IaC) principles
 # - Immutability requirements
 # - Idempotency standards
-# 
+#
 # This script runs once before April 14 deployment
 # Exit code 0 = READY, Exit code 1 = NOT READY
-# 
+#
 # April 13, 2026
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -72,9 +72,9 @@ category_fail() {
 
 validate_iac() {
     log_category "INFRASTRUCTURE AS CODE (IaC)"
-    
+
     local failures=0
-    
+
     # Terraform files exist
     log_check "Terraform configuration files exist"
     if [ -f "$REPO_ROOT/terraform/cloudflare-phase-13.tf" ]; then
@@ -83,7 +83,7 @@ validate_iac() {
         result_fail "cloudflare-phase-13.tf not found"
         failures=$((failures + 1))
     fi
-    
+
     # Terraform has resource definitions
     log_check "Terraform resources properly defined"
     if grep -q "resource \"cloudflare" "$REPO_ROOT/terraform/cloudflare-phase-13.tf"; then
@@ -92,7 +92,7 @@ validate_iac() {
         result_fail "No cloudflare resources found"
         failures=$((failures + 1))
     fi
-    
+
     # Docker Compose exists
     log_check "docker-compose.yml defines all services"
     if [ -f "$REPO_ROOT/docker-compose.yml" ]; then
@@ -107,7 +107,7 @@ validate_iac() {
         result_fail "docker-compose.yml not found"
         failures=$((failures + 1))
     fi
-    
+
     # Dockerfiles exist
     log_check "All required Dockerfiles present"
     if [ -f "$REPO_ROOT/Dockerfile.ssh-proxy" ] && \
@@ -118,7 +118,7 @@ validate_iac() {
         result_fail "Missing Dockerfile(s)"
         failures=$((failures + 1))
     fi
-    
+
     # GitHub Actions workflow
     log_check "GitHub Actions workflow defined"
     if [ -f "$REPO_ROOT/.github/workflows/phase-13-deploy.yml" ]; then
@@ -132,7 +132,7 @@ validate_iac() {
         result_fail "phase-13-deploy.yml not found"
         failures=$((failures + 1))
     fi
-    
+
     # Systemd services defined
     log_check "Systemd services defined (IaC)"
     if [ -f "$REPO_ROOT/config/systemd/ssh-proxy.service" ] && \
@@ -142,7 +142,7 @@ validate_iac() {
         result_fail "Missing systemd service files"
         failures=$((failures + 1))
     fi
-    
+
     if [ $failures -eq 0 ]; then
         category_pass
     else
@@ -156,9 +156,9 @@ validate_iac() {
 
 validate_immutability() {
     log_category "IMMUTABILITY (Version Control)"
-    
+
     local failures=0
-    
+
     # All config files tracked in git
     log_check "Configuration files tracked in git"
     if git -C "$REPO_ROOT" ls-files | grep -q "config/"; then
@@ -167,7 +167,7 @@ validate_immutability() {
         result_fail "Config files not in git"
         failures=$((failures + 1))
     fi
-    
+
     # Terraform files tracked
     log_check "Terraform files tracked in git"
     if git -C "$REPO_ROOT" ls-files | grep -q "terraform/"; then
@@ -176,7 +176,7 @@ validate_immutability() {
         result_fail "Terraform files not in git"
         failures=$((failures + 1))
     fi
-    
+
     # Scripts tracked
     log_check "All scripts tracked in git"
     if git -C "$REPO_ROOT" ls-files | grep -q "scripts/phase-13"; then
@@ -185,7 +185,7 @@ validate_immutability() {
         result_fail "Phase 13 scripts not in git"
         failures=$((failures + 1))
     fi
-    
+
     # No untracked Phase 13 files
     log_check "No untracked Phase 13 files"
     local untracked=$(git -C "$REPO_ROOT" ls-files --others --exclude-standard | grep -c "phase-13\|PHASE-13" || true)
@@ -195,7 +195,7 @@ validate_immutability() {
         result_fail "$untracked untracked Phase 13 files found"
         failures=$((failures + 1))
     fi
-    
+
     # Audit logging config marked immutable
     log_check "Audit logging config marked immutable"
     if grep -q "immutable" "$REPO_ROOT/config/audit-logging.conf"; then
@@ -204,7 +204,7 @@ validate_immutability() {
         result_fail "Audit config not marked immutable"
         failures=$((failures + 1))
     fi
-    
+
     # No hardcoded secrets in code
     log_check "No secrets in version control"
     local secret_count=0
@@ -214,7 +214,7 @@ validate_immutability() {
     else
         result_pass
     fi
-    
+
     if [ $failures -eq 0 ]; then
         category_pass
     else
@@ -228,9 +228,9 @@ validate_immutability() {
 
 validate_idempotency() {
     log_category "IDEMPOTENCY (Safe Re-entrance)"
-    
+
     local failures=0
-    
+
     # Orchestrator has state tracking
     log_check "Master orchestrator implements state tracking"
     if grep -q "state\|STATE\|deployment.state" "$SCRIPT_DIR/phase-13-orchestrator.sh"; then
@@ -239,7 +239,7 @@ validate_idempotency() {
         result_fail "No state tracking in orchestrator"
         failures=$((failures + 1))
     fi
-    
+
     # Orchestrator has idempotent checks
     log_check "Orchestrator skips completed tasks"
     if grep -q "is_task_complete\|status.*completed" "$SCRIPT_DIR/phase-13-orchestrator.sh"; then
@@ -248,7 +248,7 @@ validate_idempotency() {
         result_fail "No skip logic in orchestrator"
         failures=$((failures + 1))
     fi
-    
+
     # Task scripts have existence checks
     log_check "Task scripts check for existing resources"
     local idempotent_count=0
@@ -263,7 +263,7 @@ validate_idempotency() {
         result_fail "Only $idempotent_count/5+ tasks have idempotency checks"
         failures=$((failures + 1))
     fi
-    
+
     # Terraform has for_each or count (idempotent resource management)
     log_check "Terraform uses idempotent resource management"
     if grep -q "for_each\|count" "$REPO_ROOT/terraform/cloudflare-phase-13.tf"; then
@@ -272,7 +272,7 @@ validate_idempotency() {
         result_fail "No for_each/count in Terraform (may cause re-creation)"
         failures=$((failures + 1))
     fi
-    
+
     # Docker has restart policies
     log_check "Docker services have restart policies"
     if grep -q "restart_policy\|restart:\|unless-stopped" "$REPO_ROOT/docker-compose.yml"; then
@@ -281,7 +281,7 @@ validate_idempotency() {
         result_fail "No restart policies defined"
         failures=$((failures + 1))
     fi
-    
+
     # Systemd services have restart on failure
     log_check "Systemd services restart on failure"
     if grep -q "Restart=\|RestartSec=" "$REPO_ROOT/config/systemd/ssh-proxy.service"; then
@@ -290,7 +290,7 @@ validate_idempotency() {
         result_fail "No restart policy in systemd service"
         failures=$((failures + 1))
     fi
-    
+
     if [ $failures -eq 0 ]; then
         category_pass
     else
@@ -304,9 +304,9 @@ validate_idempotency() {
 
 validate_orchestration() {
     log_category "ORCHESTRATION (Integration)"
-    
+
     local failures=0
-    
+
     # Master orchestrator syntax valid
     log_check "Master orchestrator has valid shell syntax"
     if bash -n "$SCRIPT_DIR/phase-13-orchestrator.sh" 2>/dev/null; then
@@ -315,7 +315,7 @@ validate_orchestration() {
         result_fail "Syntax error in orchestrator"
         failures=$((failures + 1))
     fi
-    
+
     # All task scripts present
     log_check "All 5 task scripts present"
     local task_count=0
@@ -330,7 +330,7 @@ validate_orchestration() {
         result_fail "Only $task_count/5 task scripts found"
         failures=$((failures + 1))
     fi
-    
+
     # Validation scripts present
     log_check "Validation scripts available"
     if [ -f "$SCRIPT_DIR/phase-13-validation-checklist.sh" ] && \
@@ -340,7 +340,7 @@ validate_orchestration() {
         result_fail "Validation scripts missing"
         failures=$((failures + 1))
     fi
-    
+
     # Configuration files consistent
     log_check "Configuration files are consistent"
     if [ -f "$REPO_ROOT/config/audit-logging.conf" ] && \
@@ -350,7 +350,7 @@ validate_orchestration() {
         result_fail "Configuration files missing"
         failures=$((failures + 1))
     fi
-    
+
     if [ $failures -eq 0 ]; then
         category_pass
     else
@@ -364,7 +364,7 @@ validate_orchestration() {
 
 validate_documentation() {
     log_category "DOCUMENTATION (Completeness)"
-    
+
     local failures=0
     local required_docs=(
         "PHASE-13-ORCHESTRATION-FINAL-COMPLETION-REPORT.md"
@@ -373,7 +373,7 @@ validate_documentation() {
         "PHASE-13-FINAL-TEST-STATUS-READY.md"
         "PHASE-13-DEPLOYMENT-DAY-APRIL-14.md"
     )
-    
+
     log_check "All prerequisite documentation exists"
     local doc_count=0
     for doc in "${required_docs[@]}"; do
@@ -387,7 +387,7 @@ validate_documentation() {
         result_fail "Only $doc_count/${#required_docs[@]} docs found"
         failures=$((failures + 1))
     fi
-    
+
     if [ $failures -eq 0 ]; then
         category_pass
     else
@@ -401,9 +401,9 @@ validate_documentation() {
 
 validate_git_status() {
     log_category "GIT REPOSITORY STATUS"
-    
+
     local failures=0
-    
+
     # Repository is clean
     log_check "Working directory is clean"
     local status=$(git -C "$REPO_ROOT" status --short | wc -l)
@@ -413,7 +413,7 @@ validate_git_status() {
         result_fail "$status uncommitted changes"
         failures=$((failures + 1))
     fi
-    
+
     # On main branch
     log_check "On main branch"
     local branch=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
@@ -423,7 +423,7 @@ validate_git_status() {
         result_fail "On $branch branch (need main)"
         failures=$((failures + 1))
     fi
-    
+
     # Recent commits exist
     log_check "Recent Phase 13 commits present"
     if git -C "$REPO_ROOT" log --oneline -5 | grep -i "phase-13\|orchestration\|deployment"; then
@@ -432,7 +432,7 @@ validate_git_status() {
         result_fail "No recent Phase 13 commits"
         failures=$((failures + 1))
     fi
-    
+
     if [ $failures -eq 0 ]; then
         category_pass
     else
@@ -447,24 +447,24 @@ validate_git_status() {
 generate_report() {
     local total_categories=$((CATEGORIES_PASSED + CATEGORIES_FAILED))
     local pass_rate=$(( (PASSED_CHECKS * 100) / TOTAL_CHECKS ))
-    
+
     echo ""
     echo -e "${BLUE}════════════════════════════════════════════${NC}"
     echo -e "${BLUE}PHASE 13 FINAL PRODUCTION READINESS REPORT${NC}"
     echo -e "${BLUE}════════════════════════════════════════════${NC}"
     echo ""
-    
+
     echo "Test Categories:" | tee -a "$VALIDATION_LOG"
     echo "  Passed:  $CATEGORIES_PASSED" | tee -a "$VALIDATION_LOG"
     echo "  Failed:  $CATEGORIES_FAILED" | tee -a "$VALIDATION_LOG"
     echo ""
-    
+
     echo "Individual Checks:" | tee -a "$VALIDATION_LOG"
     echo "  Total:   $TOTAL_CHECKS" | tee -a "$VALIDATION_LOG"
     echo "  Passed:  $PASSED_CHECKS" | tee -a "$VALIDATION_LOG"
     echo "  Pass Rate: $pass_rate%" | tee -a "$VALIDATION_LOG"
     echo ""
-    
+
     # Generate JSON report
     cat > "$VALIDATION_REPORT" << EOF
 {
@@ -489,9 +489,9 @@ generate_report() {
   "report_file": "$VALIDATION_REPORT"
 }
 EOF
-    
+
     echo -e "${BLUE}════════════════════════════════════════════${NC}"
-    
+
     # Go/No-Go decision
     if [ $CATEGORIES_FAILED -eq 0 ] && [ $pass_rate -ge 95 ]; then
         echo -e "${GREEN}✓ GO FOR DEPLOYMENT${NC}"
@@ -534,7 +534,7 @@ main() {
     echo ""
     echo "Validation Log: $VALIDATION_LOG"
     echo ""
-    
+
     # Run all validations
     validate_iac
     validate_immutability
@@ -542,7 +542,7 @@ main() {
     validate_orchestration
     validate_documentation
     validate_git_status
-    
+
     # Generate report and decide
     generate_report
 }

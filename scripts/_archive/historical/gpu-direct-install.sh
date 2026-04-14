@@ -16,7 +16,7 @@ log ""
 log "Updating package database..."
 apt-get update -qq 2>&1 | grep -i nvidia || log "Package lists updated"
 
-# Step 2: Install build essentials  
+# Step 2: Install build essentials
 log "Installing build dependencies..."
 apt-get install -y build-essential dkms 2>&1 | tail -3
 
@@ -37,4 +37,3 @@ log ""
 log "✅ Installation complete - reboot recommended"
 
 ) |& tee /tmp/gpu-install-$(date +%s).log
-

@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # tier-2-phase-3-validation.sh
-# 
+#
 # Validates Phase 3 (Batching + Circuit Breaker) deployment
 # Tests: Service instantiation, batch processing, failure detection
 #
@@ -39,14 +39,14 @@ log() {
 
 check_services_exist() {
     log "INFO" "Checking if service files exist..."
-    
+
     local services=(
         "batching-service.js"
         "circuit-breaker-service.js"
         "batch-endpoint-middleware.js"
         "metrics-exporter.js"
     )
-    
+
     local all_exist=true
     for service in "${services[@]}"; do
         if [ -f "${WORKSPACE_ROOT}/services/${service}" ]; then
@@ -56,13 +56,13 @@ check_services_exist() {
             all_exist=false
         fi
     done
-    
+
     return $([ "$all_exist" = true ] && echo 0 || echo 1)
 }
 
 validate_service_syntax() {
     log "INFO" "Validating service file syntax..."
-    
+
     # Basic syntax checks for Node.js files
     local services=(
         "batching-service.js"
@@ -70,10 +70,10 @@ validate_service_syntax() {
         "batch-endpoint-middleware.js"
         "metrics-exporter.js"
     )
-    
+
     for service in "${services[@]}"; do
         local file="${WORKSPACE_ROOT}/services/${service}"
-        
+
         # Check for syntax issues
         if grep -q "module.exports" "$file"; then
             log "INFO" "✓ ${service} has proper export"
@@ -81,28 +81,28 @@ validate_service_syntax() {
             log "ERROR" "✗ ${service} missing module.exports"
             return 1
         fi
-        
+
         # Check for class definition
         if grep -q "^class " "$file"; then
             log "INFO" "✓ ${service} defines a class"
         else
             log "WARN" "! ${service} does not define a class"
         fi
-        
+
         # Check for async methods
         if grep -q "async " "$file"; then
             log "INFO" "✓ ${service} has async methods"
         fi
     done
-    
+
     return 0
 }
 
 validate_service_features() {
     log "INFO" "Validating critical service features..."
-    
+
     local all_valid=true
-    
+
     # BatchingService validations
     if grep -q "processBatch\|addRequest" "${WORKSPACE_ROOT}/services/batching-service.js"; then
         log "INFO" "✓ BatchingService has batch processing methods"
@@ -110,7 +110,7 @@ validate_service_features() {
         log "ERROR" "✗ BatchingService missing batch methods"
         all_valid=false
     fi
-    
+
     # CircuitBreaker validations
     if grep -q "STATE = {" "${WORKSPACE_ROOT}/services/circuit-breaker-service.js"; then
         log "INFO" "✓ CircuitBreaker defines states"
@@ -118,14 +118,14 @@ validate_service_features() {
         log "ERROR" "✗ CircuitBreaker missing state definitions"
         all_valid=false
     fi
-    
+
     if grep -q "CLOSED.*OPEN.*HALF_OPEN" "${WORKSPACE_ROOT}/services/circuit-breaker-service.js"; then
         log "INFO" "✓ CircuitBreaker includes all 3 states"
     else
         log "ERROR" "✗ CircuitBreaker missing required states"
         all_valid=false
     fi
-    
+
     # Batch Endpoint validations
     if grep -q "POST.*api/batch\|/api/batch" "${WORKSPACE_ROOT}/services/batch-endpoint-middleware.js"; then
         log "INFO" "✓ Batch endpoint middleware includes /api/batch route"
@@ -133,20 +133,20 @@ validate_service_features() {
         log "ERROR" "✗ Batch endpoint missing /api/batch route"
         all_valid=false
     fi
-    
+
     # Metrics validations
     if grep -q "export.*Prometheus\|prometheus" "${WORKSPACE_ROOT}/services/metrics-exporter.js"; then
         log "INFO" "✓ Metrics exporter configured for Prometheus"
     else
         log "WARN" "! Metrics exporter name suggests Prometheus format"
     fi
-    
+
     return $([ "$all_valid" = true ] && echo 0 || echo 1)
 }
 
 count_lines() {
     log "INFO" "Calculating total lines of code..."
-    
+
     local total=0
     for service in "${WORKSPACE_ROOT}"/services/*.js; do
         if [ -f "$service" ]; then
@@ -155,7 +155,7 @@ count_lines() {
             log "INFO" "  $(basename "$service"): ${lines} lines"
         fi
     done
-    
+
     log "INFO" "Total Phase 3 code: ${total} lines"
     echo "$total"
 }
@@ -166,7 +166,7 @@ count_lines() {
 
 generate_validation_report() {
     log "INFO" "Generating Phase 3 validation report..."
-    
+
     cat > "${WORKSPACE_ROOT}/.tier2-state/phase-3-validation-report.json" <<EOF
 {
   "phase": 3,
@@ -223,7 +223,7 @@ generate_validation_report() {
   "nextPhaseName": "Load Testing Suite"
 }
 EOF
-    
+
     log "INFO" "✓ Validation report created"
 }
 
@@ -237,39 +237,39 @@ main() {
     log "INFO" "=================================================="
     log "INFO" "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     log "INFO" ""
-    
+
     # Check idempotency
     if [ -f "${STATE_FILE}" ]; then
         log "INFO" "Phase 3 already validated. This is idempotent."
         log "INFO" "To re-validate, remove: ${STATE_FILE}"
         return 0
     fi
-    
+
     # Run validations
     if ! check_services_exist; then
         log "ERROR" "Service files missing - validation FAILED"
         return 1
     fi
-    
+
     if ! validate_service_syntax; then
         log "ERROR" "Syntax validation failed"
         return 1
     fi
-    
+
     if ! validate_service_features; then
         log "ERROR" "Feature validation failed"
         return 1
     fi
-    
+
     # Generate report
     generate_validation_report
-    
+
     # Count code
     local total_lines=$(count_lines)
-    
+
     # Mark as complete
     touch "${STATE_FILE}"
-    
+
     log "INFO" ""
     log "INFO" "=================================================="
     log "INFO" "PHASE 3 VALIDATION: SUCCESS ✓"
@@ -281,7 +281,7 @@ main() {
     log "INFO" "Next: Integrate services into application"
     log "INFO" "       Then proceed to Phase 4 (Load Testing)"
     log "INFO" ""
-    
+
     return 0
 }
 

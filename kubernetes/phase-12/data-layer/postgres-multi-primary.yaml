@@ -15,15 +15,15 @@ spec:
     wal_keep_size = 1GB
     hot_standby = on
     max_replication_slots = 5
-    
+
     # CRDT-compatible settings
     synchronous_commit = remote_apply
     synchronous_standby_names = '*'
-    
+
     # Logical replication for CRDT data types
     logical_decoding_work_mem = 64MB
     max_logical_replication_workers = 4
-    
+
     # Performance tuning
     shared_buffers = 4GB
     effective_cache_size = 12GB
@@ -36,21 +36,21 @@ spec:
     CREATE EXTENSION IF NOT EXISTS hstore;
     CREATE EXTENSION IF NOT EXISTS uuid-ossp;
     CREATE EXTENSION IF NOT EXISTS "uuid";
-    
+
     -- Create replication user
     CREATE USER replication WITH REPLICATION ENCRYPTED PASSWORD 'CHANGE_ME_SECURE_PASSWORD';
     GRANT CONNECT ON DATABASE postgres TO replication;
-    
+
     -- Create monitor user for health checks
     CREATE USER monitor WITH PASSWORD 'CHANGE_ME_MONITOR_PASSWORD';
     GRANT CONNECT ON DATABASE postgres TO monitor;
-    
+
     -- Create logical replication slot for CRDT synchronization
     SELECT pg_create_logical_replication_slot('crdt_sync_slot', 'test_decoding');
-    
+
     -- Create schema for CRDT data types
     CREATE SCHEMA crdt;
-    
+
     -- CRDT Counter type (Last-Write-Wins)
     CREATE TABLE crdt.crdt_counters (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -60,7 +60,7 @@ spec:
       replica_id TEXT NOT NULL,
       UNIQUE(key, replica_id)
     );
-    
+
     -- CRDT Set type (Add-Wins)
     CREATE TABLE crdt.crdt_sets (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -71,7 +71,7 @@ spec:
       is_added BOOLEAN DEFAULT TRUE,
       UNIQUE(key, element, replica_id)
     );
-    
+
     -- CRDT Register type (Last-Write-Wins)
     CREATE TABLE crdt.crdt_registers (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -82,16 +82,16 @@ spec:
       version BIGINT DEFAULT 1,
       PRIMARY KEY(key, replica_id)
     );
-    
+
     -- Create indexes for performance
     CREATE INDEX idx_crdt_counters_key ON crdt.crdt_counters(key);
     CREATE INDEX idx_crdt_sets_key ON crdt.crdt_sets(key);
     CREATE INDEX idx_crdt_registers_key ON crdt.crdt_registers(key);
-    
+
     -- Grant replication permissions
     GRANT ALL PRIVILEGES ON SCHEMA crdt TO replication;
     GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA crdt TO replication;
-    
+
 ---
 apiVersion: v1
 kind: Secret
@@ -183,7 +183,7 @@ spec:
                     values:
                       - postgres
               topologyKey: kubernetes.io/hostname
-      
+
       initContainers:
         - name: init-permissions
           image: postgres:16-alpine
@@ -199,13 +199,13 @@ spec:
         - name: postgres
           image: postgres:16-alpine
           imagePullPolicy: IfNotPresent
-          
+
           ports:
             - containerPort: 5432
               name: postgresql
             - containerPort: 9187
               name: metrics
-          
+
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -228,7 +228,7 @@ spec:
                   fieldPath: status.podIP
             - name: REPLICA_ID
               value: $(POD_NAME)
-          
+
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
@@ -236,7 +236,7 @@ spec:
               mountPath: /etc/postgresql
             - name: postgres-init
               mountPath: /docker-entrypoint-initdb.d
-          
+
           livenessProbe:
             exec:
               command:
@@ -247,7 +247,7 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
-          
+
           readinessProbe:
             exec:
               command:
@@ -258,7 +258,7 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 2
-          
+
           resources:
             requests:
               cpu: 1000m
@@ -266,7 +266,7 @@ spec:
             limits:
               cpu: 2000m
               memory: 4Gi
-        
+
         - name: postgres-exporter
           image: prometheuscommunity/postgres-exporter:latest
           ports:

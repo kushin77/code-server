@@ -27,13 +27,13 @@ AUDIT_DB_FILE = os.path.join(AUDIT_LOG_DIR, 'audit.db')
 
 class AuditQuery:
     """Query interface for audit logs"""
-    
+
     def __init__(self, db_file=AUDIT_DB_FILE):
         if not os.path.exists(db_file):
             print(f"Error: Audit database not found at {db_file}")
             exit(1)
         self.db_file = db_file
-    
+
     def query_events(
         self,
         developer_id=None,
@@ -46,101 +46,101 @@ class AuditQuery:
         offset=0
     ):
         """Query events with flexible filtering"""
-        
+
         conn = sqlite3.connect(self.db_file)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        
+
         query = "SELECT * FROM audit_events WHERE 1=1"
         params = []
-        
+
         if developer_id:
             query += " AND developer_id = ?"
             params.append(developer_id)
-        
+
         if event_type:
             query += " AND event_type = ?"
             params.append(event_type)
-        
+
         if start_time:
             query += " AND timestamp >= ?"
             params.append(start_time)
-        
+
         if end_time:
             query += " AND timestamp <= ?"
             params.append(end_time)
-        
+
         if status:
             query += " AND status = ?"
             params.append(status)
-        
+
         if component:
             query += " AND component = ?"
             params.append(component)
-        
+
         query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
-        
+
         cursor.execute(query, params)
         results = [dict(row) for row in cursor.fetchall()]
         conn.close()
-        
+
         return results
-    
+
     def get_event_types(self):
         """Get all unique event types"""
         conn = sqlite3.connect(self.db_file)
         cursor = conn.cursor()
-        
+
         cursor.execute("SELECT DISTINCT event_type FROM audit_events ORDER BY event_type")
         types = [row[0] for row in cursor.fetchall()]
         conn.close()
-        
+
         return types
-    
+
     def get_developers(self):
         """Get all unique developers"""
         conn = sqlite3.connect(self.db_file)
         cursor = conn.cursor()
-        
+
         cursor.execute("SELECT DISTINCT developer_id FROM audit_events ORDER BY developer_id")
         developers = [row[0] for row in cursor.fetchall()]
         conn.close()
-        
+
         return developers
-    
+
     def get_compliance_report(self, developer_id, days=7):
         """Generate compliance report for a developer"""
-        
+
         # Calculate start time
         start_time = (datetime.now() - timedelta(days=days)).isoformat()
-        
+
         events = self.query_events(
             developer_id=developer_id,
             start_time=start_time,
             limit=10000
         )
-        
+
         # Analyze events
         total = len(events)
         violations = sum(1 for e in events if e['status'] in ['denied', 'blocked'])
         blocked = sum(1 for e in events if e['status'] == 'blocked')
-        
+
         # Event breakdown
         event_types = {}
         for event in events:
             et = event['event_type']
             event_types[et] = event_types.get(et, 0) + 1
-        
+
         # Component breakdown
         components = {}
         for event in events:
             comp = event['component']
             components[comp] = components.get(comp, 0) + 1
-        
+
         # Calculate compliance score
         compliance_score = max(0, 100 - (violations * 10))
-        
+
         return {
             'developer_id': developer_id,
             'period_days': days,
@@ -152,26 +152,26 @@ class AuditQuery:
             'event_breakdown': event_types,
             'component_breakdown': components
         }
-    
+
     def get_security_report(self, days=7):
         """Generate security report for all developers"""
-        
+
         start_time = (datetime.now() - timedelta(days=days)).isoformat()
-        
+
         conn = sqlite3.connect(self.db_file)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        
+
         # Get all events in period
         cursor.execute("""
-            SELECT * FROM audit_events 
+            SELECT * FROM audit_events
             WHERE timestamp >= ? AND status IN ('denied', 'blocked', 'error')
             ORDER BY timestamp DESC
         """, (start_time,))
-        
+
         violations = [dict(row) for row in cursor.fetchall()]
         conn.close()
-        
+
         return {
             'period_days': days,
             'total_violations': len(violations),
@@ -179,7 +179,7 @@ class AuditQuery:
             'by_developer': self._group_by_field(violations, 'developer_id'),
             'violations': violations[:100]  # Return top 100
         }
-    
+
     @staticmethod
     def _group_by_field(events, field):
         """Group events by a field"""
@@ -195,7 +195,7 @@ class AuditQuery:
 
 def display_events(events, format='table'):
     """Display events in specified format"""
-    
+
     if format == 'json':
         print(json.dumps(events, indent=2, default=str))
     elif format == 'csv':
@@ -218,7 +218,7 @@ def display_events(events, format='table'):
                     event.get('component', '')
                 ]
                 table_data.append(row)
-            
+
             headers = ['Timestamp', 'Event Type', 'Developer', 'Status', 'Component']
             print(tabulate(table_data, headers=headers, tablefmt='grid'))
         else:
@@ -226,7 +226,7 @@ def display_events(events, format='table'):
 
 def display_compliance_report(report):
     """Display compliance report"""
-    
+
     print(f"\n{'='*60}")
     print(f"COMPLIANCE REPORT - {report['developer_id']}")
     print(f"{'='*60}")
@@ -236,35 +236,35 @@ def display_compliance_report(report):
     print(f"Blocked Attempts: {report['blocked_attempts']}")
     print(f"Compliance Score: {report['compliance_score']}/100 - {report['status'].upper()}")
     print()
-    
+
     print("Event Breakdown:")
     for event_type, count in sorted(report['event_breakdown'].items()):
         print(f"  {event_type}: {count}")
-    
+
     print("\nComponent Breakdown:")
     for component, count in sorted(report['component_breakdown'].items()):
         print(f"  {component}: {count}")
-    
+
     print(f"{'='*60}\n")
 
 def display_security_report(report):
     """Display security report"""
-    
+
     print(f"\n{'='*60}")
     print(f"SECURITY REPORT")
     print(f"{'='*60}")
     print(f"Period: {report['period_days']} days")
     print(f"Total Violations: {report['total_violations']}")
     print()
-    
+
     print("Violations by Type:")
     for event_type, count in sorted(report['by_type'].items(), key=lambda x: x[1], reverse=True):
         print(f"  {event_type}: {count}")
-    
+
     print("\nTop Violators:")
     for developer, count in sorted(report['by_developer'].items(), key=lambda x: x[1], reverse=True)[:10]:
         print(f"  {developer}: {count}")
-    
+
     print(f"\n{'='*60}\n")
 
 ###############################################################################
@@ -287,7 +287,7 @@ Examples:
   %(prog)s --list-events                   # List all event types
         """
     )
-    
+
     parser.add_argument('--developer', help='Filter by developer ID')
     parser.add_argument('--event-type', help='Filter by event type')
     parser.add_argument('--component', help='Filter by component (IDE, Terminal, Git, etc.)')
@@ -296,26 +296,26 @@ Examples:
     parser.add_argument('--until', help='End timestamp (ISO format)')
     parser.add_argument('--limit', type=int, default=100, help='Limit results (default: 100)')
     parser.add_argument('--offset', type=int, default=0, help='Skip N results')
-    
+
     parser.add_argument('--format', choices=['table', 'json', 'csv'], default='table',
                        help='Output format (default: table)')
-    
+
     parser.add_argument('--violations', action='store_true', help='Show blocked/denied events')
     parser.add_argument('--compliance-report', metavar='DEVELOPER',
                        help='Generate compliance report for developer')
     parser.add_argument('--security-report', action='store_true',
                        help='Generate overall security report')
     parser.add_argument('--days', type=int, default=7, help='Report period in days (default: 7)')
-    
+
     parser.add_argument('--list-developers', action='store_true', help='List all developers')
     parser.add_argument('--list-events', action='store_true', help='List all event types')
     parser.add_argument('--stats', action='store_true', help='Show statistics')
-    
+
     args = parser.parse_args()
-    
+
     # Create query interface
     query = AuditQuery()
-    
+
     # Handle list commands
     if args.list_developers:
         developers = query.get_developers()
@@ -323,31 +323,31 @@ Examples:
         for dev in developers:
             print(f"  {dev}")
         return
-    
+
     if args.list_events:
         events = query.get_event_types()
         print(f"Event Types ({len(events)}):")
         for event in events:
             print(f"  {event}")
         return
-    
+
     # Handle compliance report
     if args.compliance_report:
         report = query.get_compliance_report(args.compliance_report, args.days)
         display_compliance_report(report)
         return
-    
+
     # Handle security report
     if args.security_report:
         report = query.get_security_report(args.days)
         display_security_report(report)
         return
-    
+
     # Handle regular queries
     status = args.status
     if args.violations and not status:
         status = ['blocked', 'denied']
-    
+
     events = query.query_events(
         developer_id=args.developer,
         event_type=args.event_type,
@@ -358,7 +358,7 @@ Examples:
         limit=args.limit,
         offset=args.offset
     )
-    
+
     # Display results
     print(f"Found {len(events)} events\n")
     display_events(events, format=args.format)

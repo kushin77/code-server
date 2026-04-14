@@ -136,4 +136,3 @@ nvidia-smi --query-gpu=index,name,memory.total,driver_version --format=csv,nohea
 log ""
 log "Note: Reboot recommended for full functionality"
 log "      Run: sudo reboot"
-

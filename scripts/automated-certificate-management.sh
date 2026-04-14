@@ -23,14 +23,14 @@ mkdir -p "$CERT_DIR"
 generate_self_signed() {
     local domain=$1
     echo "Generating self-signed certificate for bootstrap..."
-    
+
     openssl req -x509 -newkey rsa:4096 -nodes \
         -keyout "${CERT_DIR}/${domain}.key" \
         -out "${CERT_DIR}/${domain}.crt" \
         -days 365 \
         -subj "/CN=${domain}/O=Development/C=US" \
         -addext "subjectAltName=DNS:${domain},DNS:*.${domain}"
-    
+
     echo "✓ Self-signed certificate generated"
     echo "   Key: ${CERT_DIR}/${domain}.key"
     echo "   Cert: ${CERT_DIR}/${domain}.crt"
@@ -40,9 +40,9 @@ generate_self_signed() {
 generate_acme_config() {
     local domain=$1
     local email=$2
-    
+
     echo "Generating ACME configuration..."
-    
+
     # This config is injected into Caddyfile
     cat > "${CERT_DIR}/acme.conf" << 'EOF'
 # ACME Configuration - Auto-injected into Caddyfile
@@ -51,19 +51,19 @@ generate_acme_config() {
 {
     acme_ca https://acme-v02.api.letsencrypt.org/directory
     acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    
+
     # Certificate storage location (persisted in volumes)
     storage file_system {
         root /data/caddy/certificates
     }
-    
+
     # Email for Let's Encrypt notifications
     email ACME_EMAIL
 }
 EOF
-    
+
     sed -i "s|ACME_EMAIL|${email}|g" "${CERT_DIR}/acme.conf"
-    
+
     echo "✓ ACME configuration generated"
     echo "   Config: ${CERT_DIR}/acme.conf"
     echo "   Email: ${email}"
@@ -72,7 +72,7 @@ EOF
 # Function to set up DNS validation
 setup_dns_validation() {
     local domain=$1
-    
+
     echo ""
     echo "DNS Validation Setup (Cloudflare):"
     echo "  1. Export Cloudflare API token:"
@@ -88,7 +88,7 @@ setup_dns_validation() {
 # Function to create renewal script
 create_renewal_script() {
     local script="${CERT_DIR}/renew-certificates.sh"
-    
+
     cat > "$script" << 'EOF'
 #!/bin/bash
 # Automated Certificate Renewal - IaC
@@ -118,18 +118,18 @@ EOF
 deploy_certificates() {
     local host=$1
     local user="akushnir"
-    
+
     echo ""
     echo "Deploying certificates to ${host}..."
-    
+
     # Create certificate directory on remote
     ssh -o StrictHostKeyChecking=no "${user}@${host}" \
         "mkdir -p /home/${user}/code-server-immutable-*/certs" || true
-    
+
     # Copy certificates
     scp -o StrictHostKeyChecking=no -r "${CERT_DIR}"/* \
         "${user}@${host}:/home/${user}/code-server-immutable-20260413-211419/certs/" || true
-    
+
     echo "✓ Certificates deployed to ${host}"
 }
 

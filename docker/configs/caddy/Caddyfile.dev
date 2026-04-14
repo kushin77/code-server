@@ -2,7 +2,7 @@
 # Caddyfile — Development Environment
 #
 # Used with: docker-compose -f docker-compose.yml -f docker-compose.override.yml
-# 
+#
 # - HTTP only (no TLS)
 # - Direct port exposure (127.0.0.1:8080)
 # - No auth proxy (basic-auth from code-server)
@@ -21,7 +21,7 @@
 :80 {
     # Compression
     encode gzip
-    
+
     # Security headers (basic)
     header {
         X-Content-Type-Options "nosniff"
@@ -29,10 +29,10 @@
         Referrer-Policy "strict-origin-when-cross-origin"
         -Server
     }
-    
+
     # Development-friendly cache control (no caching)
     header Cache-Control "no-cache, no-store, must-revalidate"
-    
+
     # Reverse proxy to code-server:8080
     reverse_proxy code-server:8080 {
         header_up Host {host}
@@ -40,7 +40,7 @@
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
     }
-    
+
     # Logging
     log {
         output stdout

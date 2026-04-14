@@ -1,13 +1,13 @@
 /**
  * Tier 3 Caching Bootstrap
  * Integrates L1/L2 multi-tier cache into Express application
- * 
+ *
  * This module:
  * - Initializes L1 and L2 cache services
  * - Configures middleware for Express pipeline
  * - Sets up cache invalidation hooks
  * - Exports metrics for monitoring
- * 
+ *
  * IaC Pattern: Stateless service initialization
  * All configuration via environment variables
  */
@@ -81,7 +81,7 @@ class CacheBootstrap {
   /**
    * Get cache invalidation hook for mutations
    * Usage: In route handlers
-   * 
+   *
    * Example:
    *   app.post('/api/data', (req, res) => {
    *     // Save data

@@ -31,50 +31,50 @@ orchestrate_multi_cloud_deployment() {
     log_info "Phase 18: Multi-Cloud Deployment Orchestration"
     log_info "========================================="
     log_info "Start Time: $(date)"
-    
+
     # Step 1: Multi-cloud infrastructure
     log_info ""
     log_info "Step 1/5: Setting up multi-cloud infrastructure..."
-    
+
     if bash "${PROJECT_ROOT}/scripts/phase-18-multi-cloud.sh" "${PROJECT_ROOT}" >> "${PHASE_LOG}" 2>&1; then
         log_success "Multi-cloud infrastructure setup complete"
     else
         log_error "Multi-cloud infrastructure setup failed"
         return 1
     fi
-    
+
     # Step 2: Kubernetes clusters
     log_info ""
     log_info "Step 2/5: Deploying Kubernetes clusters..."
-    
+
     if bash "${PROJECT_ROOT}/scripts/phase-18-kubernetes.sh" "${PROJECT_ROOT}" >> "${PHASE_LOG}" 2>&1; then
         log_success "Kubernetes cluster deployments configured"
     else
         log_error "Kubernetes deployment configuration failed"
         return 1
     fi
-    
+
     # Step 3: Create integration test suite
     log_info ""
     log_info "Step 3/5: Creating integration test suite..."
-    
+
     create_integration_tests || { log_error "Integration test creation failed"; return 1; }
     log_success "Integration test suite created"
-    
+
     # Step 4: Deployment summary
     log_info ""
     log_info "Step 4/5: Generating deployment summary..."
-    
+
     generate_phase_18_summary || { log_error "Summary generation failed"; return 1; }
     log_success "Deployment summary generated"
-    
+
     # Step 5: Post-deployment validation
     log_info ""
     log_info "Step 5/5: Validating deployment..."
-    
+
     validate_phase_18_deployment || { log_error "Validation failed"; return 1; }
     log_success "Deployment validation complete"
-    
+
     return 0
 }
 
@@ -84,9 +84,9 @@ orchestrate_multi_cloud_deployment() {
 
 create_integration_tests() {
     log_info "Creating Phase 18 integration tests..."
-    
+
     mkdir -p "${PROJECT_ROOT}/tests/phase-18"
-    
+
     # Test 1: Terraform validation
     cat > "${PROJECT_ROOT}/tests/phase-18/test-terraform.sh" << 'EOF'
 #!/bin/bash
@@ -104,7 +104,7 @@ TEST_RESULT=0
 for cloud_dir in "${PROJECT_ROOT}/config/cloud"/{aws,azure,gcp}; do
     if [ -d "$cloud_dir" ]; then
         log_test "Testing Terraform for $(basename $cloud_dir)..."
-        
+
         if terraform -chdir="$cloud_dir" validate > /dev/null 2>&1; then
             log_pass "Terraform validation passed for $(basename $cloud_dir)"
         else
@@ -165,7 +165,7 @@ EOF
 
 generate_phase_18_summary() {
     log_info "Generating Phase 18 summary..."
-    
+
     cat > "${PROJECT_ROOT}/PHASE-18-DEPLOYMENT-SUMMARY.md" << 'EOF'
 # Phase 18: Multi-Cloud Deployment & Enterprise Scaling
 ## Architecture Summary
@@ -324,7 +324,7 @@ All Phase 18 components are production-ready and ready for deployment.
 EOF
 
     log_success "Phase 18 summary created"
-    
+
     return 0
 }
 
@@ -334,9 +334,9 @@ EOF
 
 validate_phase_18_deployment() {
     log_info "Validating Phase 18 deployment..."
-    
+
     local failed=0
-    
+
     # Check critical files exist
     local required_files=(
         "${PROJECT_ROOT}/scripts/phase-18-multi-cloud.sh"
@@ -351,7 +351,7 @@ validate_phase_18_deployment() {
         "${PROJECT_ROOT}/charts/code-server/Chart.yaml"
         "${PROJECT_ROOT}/PHASE-18-DEPLOYMENT-SUMMARY.md"
     )
-    
+
     for file in "${required_files[@]}"; do
         if [ -f "$file" ]; then
             log_success "✓ $(basename $file) verified"
@@ -376,9 +376,9 @@ validate_phase_18_deployment() {
 
 main() {
     orchestrate_multi_cloud_deployment
-    
+
     local exit_code=$?
-    
+
     echo ""
     if [ $exit_code -eq 0 ]; then
         log_success "========================================="

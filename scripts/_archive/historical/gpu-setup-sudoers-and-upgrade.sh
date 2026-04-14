@@ -31,4 +31,3 @@ success "Sudoers configuration updated"
 # Now try the driver upgrade with sudoers in place
 log "Executing GPU driver upgrade with passwordless sudo"
 sudo bash /tmp/gpu-driver-upgrade-direct.sh
-

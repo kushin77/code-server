@@ -77,34 +77,34 @@ CONTAINER_COUNT=$($SSH_CMD "docker ps -q | wc -l" 2>/dev/null || echo "0")
 if [ "$CONTAINER_COUNT" -gt 0 ]; then
     echo "ℹ Found $CONTAINER_COUNT running containers"
     echo "  Proceeding with deployment (will restart services)..."
-    
+
     # Copy updated files
     echo "  Copying updated docker-compose.yml to remote..."
     scp -o StrictHostKeyChecking=no "$REPO_DIR/docker-compose.yml" "akushnir@$HOST:/tmp/docker-compose.yml.new" 2>/dev/null || true
-    
+
     echo "  Copying updated Caddyfile.tpl to remote..."
     scp -o StrictHostKeyChecking=no "$REPO_DIR/Caddyfile.tpl" "akushnir@$HOST:/tmp/Caddyfile.tpl.new" 2>/dev/null || true
-    
+
     # Verify checksums match
     echo "  Verifying file integrity..."
     LOCAL_CHECKSUM=$(md5sum "$REPO_DIR/docker-compose.yml" | awk '{print $1}')
     REMOTE_CHECKSUM=$($SSH_CMD "md5sum /tmp/docker-compose.yml.new | awk '{print \$1}'" 2>/dev/null || echo "0")
-    
+
     if [ "$LOCAL_CHECKSUM" = "$REMOTE_CHECKSUM" ]; then
         echo "✓ File integrity verified"
     else
         echo "⚠ Checksum mismatch - file may be corrupted"
     fi
-    
+
     echo ""
     echo "Step 6: Restarting Docker services..."
     $SSH_CMD "cd /home/akushnir/code-server-deployment && docker-compose pull && docker-compose up -d --no-deps --build code-server caddy" || true
-    
+
     sleep 5
-    
+
     echo "  Checking container health..."
     HEALTHY=$($SSH_CMD "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'code-server|caddy' | grep 'Up' | wc -l" 2>/dev/null || echo "0")
-    
+
     if [ "$HEALTHY" -ge 2 ]; then
         echo "✓ Containers restarted successfully"
     else

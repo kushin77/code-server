@@ -480,6 +480,6 @@ source "$(dirname "$0")/../_common/error-handler.sh"
 
 ---
 
-**Last Updated**: April 14, 2026  
-**Maintained By**: DevOps Team  
+**Last Updated**: April 14, 2026
+**Maintained By**: DevOps Team
 **Status**: Phase 1, Task 1.6 Complete

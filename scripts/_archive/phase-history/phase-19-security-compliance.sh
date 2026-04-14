@@ -171,15 +171,15 @@ days_since_last_secret_rotation = Gauge(
 # ============================================================================
 class ComplianceMonitoring:
     """Real-time compliance monitoring"""
-    
+
     def __init__(self, prometheus_url: str = "http://localhost:9090"):
         self.prometheus_url = prometheus_url
         self.compliance_rules = self._define_rules()
         self.violation_history = []
-    
+
     def _define_rules(self) -> Dict[str, Dict]:
         """Define compliance control rules"""
-        
+
         return {
             ComplianceFramework.GDPR.value: {
                 'data-retention': {
@@ -250,61 +250,61 @@ class ComplianceMonitoring:
                 }
             }
         }
-    
+
     def _check_data_retention(self) -> Tuple[bool, str]:
         """Check GDPR data retention"""
         # Stub implementation
         return True, "Data retention policy compliant"
-    
+
     def _check_consent(self) -> Tuple[bool, str]:
         return True, "User consent tracking enabled"
-    
+
     def _check_tls_encryption(self) -> Tuple[bool, str]:
         return True, "TLS 1.3 enforced"
-    
+
     def _check_rbac(self) -> Tuple[bool, str]:
         return True, "RBAC policies configured"
-    
+
     def _check_encryption_at_rest(self) -> Tuple[bool, str]:
         return True, "AES-256 encryption enabled"
-    
+
     def _check_audit_logging(self) -> Tuple[bool, str]:
         return True, "Audit logging enabled"
-    
+
     def _check_card_isolation(self) -> Tuple[bool, str]:
         return True, "Card data properly isolated"
-    
+
     def _check_network_segmentation(self) -> Tuple[bool, str]:
         return True, "Network segmentation enforced"
-    
+
     def _check_vuln_scanning(self) -> Tuple[bool, str]:
         return True, "Vulnerability scanning enabled"
-    
+
     def _check_change_mgmt(self) -> Tuple[bool, str]:
         return True, "Change management enabled"
-    
+
     def _check_incident_logging(self) -> Tuple[bool, str]:
         return True, "Incident logging configured"
-    
+
     def _check_access_review(self) -> Tuple[bool, str]:
         return True, "Access review scheduled"
-    
+
     def check_compliance(self) -> Dict[str, Dict]:
         """Run all compliance checks"""
-        
+
         results = {}
-        
+
         for framework, rules in self.compliance_rules.items():
             framework_violations = []
             framework_compliant = True
-            
+
             for control_id, rule in rules.items():
                 try:
                     is_compliant, message = rule['check']()
-                    
+
                     if not is_compliant:
                         framework_compliant = False
-                        
+
                         violation = ComplianceViolation(
                             violation_id=f"v-{datetime.utcnow().timestamp()}",
                             timestamp=datetime.utcnow(),
@@ -317,9 +317,9 @@ class ComplianceMonitoring:
                             auto_remediated=False,
                             remediation_time_minutes=None
                         )
-                        
+
                         framework_violations.append(violation)
-                        
+
                         # Try auto-remediation
                         if 'auto_remediation' in rule:
                             logger.info(f"Auto-remediating: {control_id} → {rule['auto_remediation']}")
@@ -328,10 +328,10 @@ class ComplianceMonitoring:
                             # Simulate remediation time
                             time.sleep(1)
                             violation.remediation_time_minutes = (time.time() - start_time) / 60
-                
+
                 except Exception as e:
                     logger.error(f"Compliance check error ({framework}.{control_id}): {e}")
-            
+
             results[framework] = {
                 'compliant': framework_compliant,
                 'violations': [asdict(v) for v in framework_violations],
@@ -339,21 +339,21 @@ class ComplianceMonitoring:
                 'controls_checked': len(rules),
                 'controls_passing': len(rules) - len(framework_violations)
             }
-            
+
             # Update metrics
             compliance_score.labels(framework=framework).set(results[framework]['compliance_score'])
-            
+
             for violation in framework_violations:
                 violation_count.labels(
                     framework=framework,
                     severity=violation.severity
                 ).inc()
-                
+
                 if violation.auto_remediated:
                     violations_auto_remediated.labels(framework=framework).inc()
-        
+
         self.violation_history.extend([v for vlist in [r['violations'] for r in results.values()] for v in vlist])
-        
+
         return results
 
 
@@ -362,19 +362,19 @@ class ComplianceMonitoring:
 # ============================================================================
 class SecurityScanning:
     """Continuous security scanning"""
-    
+
     def __init__(self):
         self.vulnerability_database = {}
         self.scanned_components = {}
-    
+
     def scan_dependencies(self, services: List[str]) -> List[SecurityVulnerability]:
         """Scan dependencies for vulnerabilities"""
-        
+
         vulns = []
-        
+
         # Stub: Simulated vulnerabilities for demo
         # In production: Use SAST tools (e.g., Trivy, Snyk, Dependabot)
-        
+
         for service in services:
             try:
                 # Run Trivy scan (if available)
@@ -386,7 +386,7 @@ class SecurityScanning:
                     text=True,
                     timeout=60
                 )
-                
+
                 if result.stdout:
                     try:
                         scan_data = json.loads(result.stdout)
@@ -394,16 +394,16 @@ class SecurityScanning:
                         logger.info(f"✓ Scanned {service} for vulnerabilities")
                     except json.JSONDecodeError:
                         logger.warning(f"Could not parse Trivy output for {service}")
-                
+
             except Exception as e:
                 logger.warning(f"Dependency scan failed for {service}: {e}")
-        
+
         logger.info(f"✓ Found {len(vulns)} vulnerabilities")
         return vulns
-    
+
     def check_sbom(self, service: str) -> Tuple[bool, Dict]:
         """Verify Software Bill of Materials (SBOM)"""
-        
+
         try:
             # Check for SBOM file
             cmd = f"find . -name 'sbom.json' | grep {service}"
@@ -413,12 +413,12 @@ class SecurityScanning:
                 capture_output=True,
                 timeout=10
             )
-            
+
             if result.returncode == 0:
                 return True, {'service': service, 'sbom_verified': True}
             else:
                 return False, {'service': service, 'sbom_verified': False}
-        
+
         except Exception as e:
             logger.error(f"SBOM verification failed: {e}")
             return False, {'error': str(e)}
@@ -429,14 +429,14 @@ class SecurityScanning:
 # ============================================================================
 class SecretRotation:
     """Automated secret rotation"""
-    
+
     def __init__(self):
         self.secret_inventory = {}
         self.rotation_schedule = {}
-    
+
     def create_rotation_schedule(self) -> Dict:
         """Create secret rotation schedule"""
-        
+
         return {
             'api_keys': {'rotation_days': 90},
             'db_passwords': {'rotation_days': 30},
@@ -444,25 +444,25 @@ class SecretRotation:
             'oauth_tokens': {'rotation_days': 7},
             'ssh_keys': {'rotation_days': 180}
         }
-    
+
     def rotate_secrets(self) -> List[SecretRotationEvent]:
         """Rotate secrets according to schedule"""
-        
+
         events = []
-        
+
         for secret_type, schedule in self.create_rotation_schedule().items():
             try:
                 # Check if rotation is due
                 # For demo: Always rotate
-                
+
                 logger.info(f"Rotating {secret_type}...")
-                
+
                 # Generate new secret
                 new_secret = self._generate_secret(secret_type)
-                
+
                 # Update all systems
                 systems_updated = self._update_systems(secret_type, new_secret)
-                
+
                 event = SecretRotationEvent(
                     secret_id=f"{secret_type}-{datetime.utcnow().timestamp()}",
                     secret_type=secret_type,
@@ -475,21 +475,21 @@ class SecretRotation:
                     systems_updated=systems_updated,
                     audit_log_entry=f"Rotated {secret_type} at {datetime.utcnow().isoformat()}"
                 )
-                
+
                 events.append(event)
-                
+
                 secret_rotations_successful.labels(secret_type=secret_type).inc()
-                
+
                 logger.info(f"✓ Rotated {secret_type}")
-                
+
             except Exception as e:
                 logger.error(f"Secret rotation failed for {secret_type}: {e}")
-        
+
         return events
-    
+
     def _generate_secret(self, secret_type: str) -> str:
         """Generate new secret"""
-        
+
         if secret_type == 'api_keys':
             return base64.b64encode(os.urandom(32)).decode()
         elif secret_type == 'db_passwords':
@@ -498,12 +498,12 @@ class SecretRotation:
             return base64.b64encode(os.urandom(32)).decode()
         else:
             return base64.b64encode(os.urandom(32)).decode()
-    
+
     def _update_systems(self, secret_type: str, new_secret: str) -> List[str]:
         """Update all systems with new secret"""
-        
+
         systems = []
-        
+
         # Build system list based on secret type
         if secret_type == 'db_passwords':
             systems = ['api-service', 'worker-service']
@@ -511,14 +511,14 @@ class SecretRotation:
             systems = ['api-service', 'cache-wrapper']
         elif secret_type == 'oauth_tokens':
             systems = ['oauth2-proxy', 'api-service']
-        
+
         # Simulate update
         for system in systems:
             try:
                 logger.info(f"  Updating {system} with new {secret_type}")
             except Exception as e:
                 logger.error(f"Failed to update {system}: {e}")
-        
+
         return systems
 
 
@@ -527,52 +527,52 @@ class SecretRotation:
 # ============================================================================
 class SecurityComplianceEngine:
     """Main security and compliance engine"""
-    
+
     def __init__(self):
         self.compliance = ComplianceMonitoring()
         self.scanning = SecurityScanning()
         self.secrets = SecretRotation()
-    
+
     def run_security_cycle(self, services: List[str]) -> Dict:
         """Execute one complete security cycle"""
-        
+
         results = {
             'timestamp': datetime.utcnow().isoformat(),
             'compliance': {},
             'security_scan': {},
             'secret_rotation': {}
         }
-        
+
         try:
             logger.info("Running compliance checks...")
             results['compliance'] = self.compliance.check_compliance()
-            
+
             logger.info("Scanning for vulnerabilities...")
             vulns = self.scanning.scan_dependencies(services)
             results['security_scan'] = {
                 'vulnerabilities_found': len(vulns),
-                'by_severity': {s.value: sum(1 for v in vulns if v.severity == s) 
+                'by_severity': {s.value: sum(1 for v in vulns if v.severity == s)
                                for s in VulnerabilitySeverity}
             }
-            
+
             logger.info("Planning secret rotations...")
             rotation_events = self.secrets.rotate_secrets()
             results['secret_rotation'] = {
                 'rotations_completed': len([e for e in rotation_events if e.rotation_success]),
                 'by_type': {}
             }
-            
+
             for event in rotation_events:
                 if event.secret_type not in results['secret_rotation']['by_type']:
                     results['secret_rotation']['by_type'][event.secret_type] = 0
                 results['secret_rotation']['by_type'][event.secret_type] += 1
-            
+
             logger.info("✓ Security cycle complete")
-        
+
         except Exception as e:
             logger.error(f"Security cycle error: {e}")
             results['error'] = str(e)
-        
+
         return results
 
 
@@ -581,45 +581,45 @@ class SecurityComplianceEngine:
 # ============================================================================
 def main():
     """Main entry point"""
-    
+
     # Start metrics server
     try:
         start_http_server(9203)
         logger.info("✓ Security/Compliance metrics server started on :9203")
     except Exception as e:
         logger.warning(f"Could not start metrics server: {e}")
-    
+
     engine = SecurityComplianceEngine()
     services = ['api-service', 'worker-service', 'database', 'cache']
-    
+
     logger.info("✓ Security & Compliance Engine started")
     cycle_count = 0
-    
+
     while True:
         try:
             cycle_count += 1
             logger.info(f"\n{'='*60}")
             logger.info(f"Security Cycle #{cycle_count} - {datetime.utcnow().isoformat()}")
             logger.info(f"{'='*60}")
-            
+
             results = engine.run_security_cycle(services)
-            
+
             # Log summary
             logger.info(f"\nCompliance Results:")
             for framework, data in results.get('compliance', {}).items():
                 logger.info(f"  {framework}: Score {data['compliance_score']}% "
                           f"({data['controls_passing']}/{data['controls_checked']} controls passing)")
-            
+
             logger.info(f"\nSecurity Scan Results:")
             logger.info(f"  Vulnerabilities: {results['security_scan'].get('vulnerabilities_found', 0)}")
-            
+
             logger.info(f"\nSecret Rotation:")
             logger.info(f"  Rotations: {results['secret_rotation'].get('rotations_completed', 0)}")
-            
+
             # Sleep before next cycle
             logger.info("\nNext security cycle in 300 seconds...")
             time.sleep(300)
-            
+
         except KeyboardInterrupt:
             logger.info("✓ Security engine shut down gracefully")
             break

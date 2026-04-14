@@ -138,7 +138,7 @@ if ! command -v nvidia-smi &> /dev/null; then
 else
     success "nvidia-smi utility available"
     PASS_COUNT=$((PASS_COUNT + 1))
-    
+
     # Driver version
     DRIVER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)
     if [[ $DRIVER == 555.* ]] || [[ $DRIVER == 56[0-9].* ]]; then
@@ -148,19 +148,19 @@ else
         warn "NVIDIA driver: $DRIVER (older version, working but consider upgrading)"
         WARN_COUNT=$((WARN_COUNT + 1))
     fi
-    
+
     # CUDA version (from driver)
     CUDA=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1)
     if [ ! -z "$CUDA" ]; then
         success "GPU compute capability: $CUDA"
         PASS_COUNT=$((PASS_COUNT + 1))
     fi
-    
+
     # GPU count and health
     GPU_COUNT=$(nvidia-smi --query-gpu=count --format=csv,noheader | head -1)
     success "GPU count: $GPU_COUNT"
     PASS_COUNT=$((PASS_COUNT + 1))
-    
+
     # GPU status table
     echo ""
     echo "GPU Status Details:"
@@ -181,7 +181,7 @@ if command -v nvcc &> /dev/null; then
         warn "CUDA installed but version is $CUDA_VER (expected 12.4)"
         WARN_COUNT=$((WARN_COUNT + 1))
     fi
-    
+
     # CUDA paths
     if [ -d /usr/local/cuda-12.4 ]; then
         success "CUDA toolkit directory: /usr/local/cuda-12.4"
@@ -237,7 +237,7 @@ if docker run --rm --runtime=nvidia nvidia/cuda:12.4-base nvidia-smi > /tmp/dock
     GPU_COUNT_DOCKER=$(grep "GPU  Name" /tmp/docker-gpu-test.txt | wc -l)
     success "GPU accessible in Docker container: $GPU_COUNT_DOCKER device(s)"
     PASS_COUNT=$((PASS_COUNT + 1))
-    
+
     # Show GPU output
     echo ""
     echo "GPU output inside container:"
@@ -266,7 +266,7 @@ box "7. NAS STORAGE HEALTH"
 if mount | grep -q "/mnt/nas-export"; then
     success "NAS mount /mnt/nas-export is active"
     PASS_COUNT=$((PASS_COUNT + 1))
-    
+
     # Check capacity
     NAS_AVAIL=$(df /mnt/nas-export | tail -1 | awk '{print $4}')
     NAS_USE=$(df /mnt/nas-export | tail -1 | awk '{print $5}' | tr -d '%')
@@ -277,7 +277,7 @@ if mount | grep -q "/mnt/nas-export"; then
         warn "NAS approaching capacity: ${NAS_USE}% used"
         WARN_COUNT=$((WARN_COUNT + 1))
     fi
-    
+
     # Test write
     if touch /mnt/nas-export/.test-$$ 2>/dev/null && rm -f /mnt/nas-export/.test-$$ 2>/dev/null; then
         success "NAS write capability verified"

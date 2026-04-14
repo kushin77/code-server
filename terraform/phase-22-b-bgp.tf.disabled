@@ -34,20 +34,20 @@ locals {
         description = "Secondary Failover"
       }
     ]
-    
+
     redistribute = {
       connected_routes = true
       static_routes    = true
       ospf_routes      = false
     }
-    
+
     communities = {
       preferred_path = "65001:100"
       backup_path    = "65001:200"
       local_only     = "65001:300"
     }
   }
-  
+
   # ExaBGP configuration for pure K8s deployment
   exabgp_config = {
     namespace       = "bgp-system"
@@ -56,14 +56,14 @@ locals {
     replicas        = 2
     healthcheck_port = 6000
   }
-  
+
   resource_limits = {
     exabgp_cpu_request    = "50m"
     exabgp_cpu_limit      = "200m"
     exabgp_memory_request = "64Mi"
     exabgp_memory_limit   = "256Mi"
   }
-  
+
   # Route optimization parameters
   route_optimization = {
     convergence_time_ms = 500          # BGP convergence target
@@ -76,7 +76,7 @@ locals {
 # Namespace for BGP services
 resource "kubernetes_namespace" "bgp_system" {
   count = local.phase_22_b_bgp_enabled ? 1 : 0
-  
+
   metadata {
     name = local.exabgp_config.namespace
     labels = {
@@ -89,14 +89,14 @@ resource "kubernetes_namespace" "bgp_system" {
 resource "kubernetes_config_map" "exabgp_peers" {
   count     = local.phase_22_b_bgp_enabled ? 1 : 0
   namespace = kubernetes_namespace.bgp_system[0].metadata[0].name
-  
+
   metadata {
     name = "exabgp-peers"
     labels = {
       component = "bgp-peers"
     }
   }
-  
+
   data = {
     "exabgp.conf" = templatefile("${path.module}/templates/exabgp-config.tpl", {
       local_asn     = local.bgp_config.local_asn
@@ -112,7 +112,7 @@ resource "kubernetes_config_map" "exabgp_peers" {
 # ExaBGP Deployment
 resource "kubernetes_deployment" "exabgp" {
   count = local.phase_22_b_bgp_enabled ? 1 : 0
-  
+
   metadata {
     name      = "exabgp"
     namespace = kubernetes_namespace.bgp_system[0].metadata[0].name
@@ -120,30 +120,30 @@ resource "kubernetes_deployment" "exabgp" {
       component = "bgp-control-plane"
     }
   }
-  
+
   spec {
     replicas = local.exabgp_config.replicas
-    
+
     selector {
       match_labels = {
         component = "exabgp"
       }
     }
-    
+
     template {
       metadata {
         labels = {
           component = "exabgp"
         }
       }
-      
+
       spec {
         service_account_name = kubernetes_service_account.exabgp[0].metadata[0].name
-        
+
         container {
           name  = "exabgp"
           image = "${local.exabgp_config.image_repo}:${local.exabgp_config.image_tag}"
-          
+
           ports = [
             {
               name          = "bgp"
@@ -161,7 +161,7 @@ resource "kubernetes_deployment" "exabgp" {
               protocol       = "TCP"
             }
           ]
-          
+
           env = [
             {
               name  = "EXABGP_BGP_HOLDTIME"
@@ -176,12 +176,12 @@ resource "kubernetes_deployment" "exabgp" {
               value = "false"  # Set to "true" for troubleshooting
             }
           ]
-          
+
           volume_mount {
             name       = "exabgp-config"
             mount_path = "/etc/exabgp"
           }
-          
+
           resources = {
             requests = {
               cpu    = local.resource_limits.exabgp_cpu_request
@@ -192,7 +192,7 @@ resource "kubernetes_deployment" "exabgp" {
               memory = local.resource_limits.exabgp_memory_limit
             }
           }
-          
+
           liveness_probe {
             http_get {
               path   = "/status"
@@ -203,7 +203,7 @@ resource "kubernetes_deployment" "exabgp" {
             timeout_seconds       = 5
             failure_threshold     = 3
           }
-          
+
           readiness_probe {
             http_get {
               path   = "/status"
@@ -214,7 +214,7 @@ resource "kubernetes_deployment" "exabgp" {
             timeout_seconds       = 3
             failure_threshold     = 2
           }
-          
+
           security_context {
             run_as_non_root = true
             run_as_user     = 65534  # nobody user
@@ -224,14 +224,14 @@ resource "kubernetes_deployment" "exabgp" {
             }
           }
         }
-        
+
         volume {
           name = "exabgp-config"
           config_map {
             name = kubernetes_config_map.exabgp_peers[0].metadata[0].name
           }
         }
-        
+
         affinity {
           pod_anti_affinity {
             preferred_during_scheduling_ignored_during_execution = [
@@ -256,14 +256,14 @@ resource "kubernetes_deployment" "exabgp" {
       }
     }
   }
-  
+
   depends_on = [kubernetes_config_map.exabgp_peers]
 }
 
 # ServiceAccount for ExaBGP
 resource "kubernetes_service_account" "exabgp" {
   count = local.phase_22_b_bgp_enabled ? 1 : 0
-  
+
   metadata {
     name      = "exabgp"
     namespace = kubernetes_namespace.bgp_system[0].metadata[0].name
@@ -273,7 +273,7 @@ resource "kubernetes_service_account" "exabgp" {
 # Service for ExaBGP API access
 resource "kubernetes_service" "exabgp_api" {
   count = local.phase_22_b_bgp_enabled ? 1 : 0
-  
+
   metadata {
     name      = "exabgp-api"
     namespace = kubernetes_namespace.bgp_system[0].metadata[0].name
@@ -281,14 +281,14 @@ resource "kubernetes_service" "exabgp_api" {
       component = "exabgp"
     }
   }
-  
+
   spec {
     type = "ClusterIP"
-    
+
     selector = {
       component = "exabgp"
     }
-    
+
     port {
       name       = "api"
       port       = 5000
@@ -302,22 +302,22 @@ resource "kubernetes_service" "exabgp_api" {
 resource "kubernetes_config_map" "bgp_policies" {
   count     = local.phase_22_b_bgp_enabled ? 1 : 0
   namespace = kubernetes_namespace.bgp_system[0].metadata[0].name
-  
+
   metadata {
     name = "bgp-policies"
     labels = {
       component = "bgp-control-plane"
     }
   }
-  
+
   data = {
     redistribute_connected = local.bgp_config.redistribute.connected_routes ? "yes" : "no"
     redistribute_static    = local.bgp_config.redistribute.static_routes ? "yes" : "no"
-    
+
     preferred_path_community  = local.bgp_config.communities.preferred_path
     backup_path_community     = local.bgp_config.communities.backup_path
     local_only_community      = local.bgp_config.communities.local_only
-    
+
     convergence_target_ms = tostring(local.route_optimization.convergence_time_ms)
   }
 }
@@ -325,21 +325,21 @@ resource "kubernetes_config_map" "bgp_policies" {
 # NetworkPolicy for BGP security
 resource "kubernetes_network_policy" "bgp_network_policy" {
   count = local.phase_22_b_bgp_enabled ? 1 : 0
-  
+
   metadata {
     name      = "bgp-network-policy"
     namespace = kubernetes_namespace.bgp_system[0].metadata[0].name
   }
-  
+
   spec {
     pod_selector {
       match_labels = {
         component = "exabgp"
       }
     }
-    
+
     policy_types = ["Ingress", "Egress"]
-    
+
     # Allow BGP inbound from peers
     ingress {
       from {
@@ -352,7 +352,7 @@ resource "kubernetes_network_policy" "bgp_network_policy" {
         protocol = "TCP"
       }
     }
-    
+
     # Allow API inbound
     ingress {
       from {
@@ -365,7 +365,7 @@ resource "kubernetes_network_policy" "bgp_network_policy" {
         protocol = "TCP"
       }
     }
-    
+
     # Allow outbound BGP
     egress {
       to {
@@ -378,7 +378,7 @@ resource "kubernetes_network_policy" "bgp_network_policy" {
         protocol = "TCP"
       }
     }
-    
+
     # Allow DNS
     egress {
       to {
@@ -399,7 +399,7 @@ resource "kubernetes_network_policy" "bgp_network_policy" {
 # Monitoring service for BGP metrics
 resource "kubernetes_service_monitor" "exabgp_metrics" {
   count = local.phase_22_b_bgp_enabled ? 1 : 0
-  
+
   metadata {
     name      = "exabgp-metrics"
     namespace = kubernetes_namespace.bgp_system[0].metadata[0].name
@@ -407,14 +407,14 @@ resource "kubernetes_service_monitor" "exabgp_metrics" {
       release = "prometheus"
     }
   }
-  
+
   spec {
     selector {
       match_labels = {
         component = "exabgp"
       }
     }
-    
+
     endpoints {
       port = "api"
     }

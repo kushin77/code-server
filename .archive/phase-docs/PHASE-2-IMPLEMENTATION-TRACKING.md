@@ -163,7 +163,7 @@ log_success "Complete"
   - Terraform validation
   - File security checks (detect-private-key, trailing-whitespace, etc)
   - 4 custom local hooks for repository standards
-  
+
 - ✅ Created .pre-commit-hooks.yaml with 8 custom hooks:
   - verify-scripts-source-common (enforces library integration)
   - verify-metadata-headers (enforces standardized headers)
@@ -193,7 +193,7 @@ repos:
       - verify-scripts-source-common (enforces _common library usage)
       - verify-metadata-headers (enforces standardized headers)
       - no-hardcoded-secrets (detects credentials)
-      
+
   - shellcheck-py (external)
   - yamllint (external)
   - terraform hooks

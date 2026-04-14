@@ -5,14 +5,14 @@
 
 ## OVERVIEW
 
-**Combined Duration**: 23 hours (Apr 25-May 1)  
-**Components**: 
+**Combined Duration**: 23 hours (Apr 25-May 1)
+**Components**:
 - Organization API service (Node.js, 3 replicas)
 - Webhook dispatcher (Python, 3 replicas)
 - PostgreSQL schema migrations
 - React management UI
-**Deployment**: Kubernetes on 192.168.168.31  
-**Scalability**: 50+ organizations, 1M webhooks/day  
+**Deployment**: Kubernetes on 192.168.168.31
+**Scalability**: 50+ organizations, 1M webhooks/day
 **Availability Target**: 99.95%
 
 ---
@@ -42,12 +42,12 @@ CREATE TABLE IF NOT EXISTS organizations (
   max_api_keys INT NOT NULL DEFAULT 5,
   webhook_quota_per_day INT NOT NULL DEFAULT 1000,
   storage_quota_mb INT NOT NULL DEFAULT 100,
-  
+
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP,
-  
+
   CONSTRAINT valid_tier CHECK (tier IN ('free', 'pro', 'enterprise')),
   CONSTRAINT valid_slug CHECK (slug ~ '^[a-z0-9][a-z0-9-]{2,62}[a-z0-9]$')
 );
@@ -64,15 +64,15 @@ CREATE TABLE IF NOT EXISTS organization_members (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role VARCHAR(50) NOT NULL DEFAULT 'developer',
   email VARCHAR(255) NOT NULL,
-  
+
   permissions JSONB DEFAULT '{}',
   invited_at TIMESTAMP,
   joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   disabled_at TIMESTAMP,
-  
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
+
   CONSTRAINT valid_role CHECK (role IN ('admin', 'developer', 'auditor', 'viewer')),
   UNIQUE(org_id, user_id)
 );
@@ -86,18 +86,18 @@ CREATE TABLE IF NOT EXISTS organization_api_keys (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   created_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
-  
+
   name VARCHAR(255) NOT NULL,
   key_hash VARCHAR(256) NOT NULL UNIQUE,  -- SHA-256 of actual key
   prefix VARCHAR(20) UNIQUE NOT NULL,  -- For display/identification
-  
+
   permissions JSONB NOT NULL DEFAULT '[]',
   rate_limit_per_minute INT,
-  
+
   last_used_at TIMESTAMP,
   expires_at TIMESTAMP,
   rotated_at TIMESTAMP,
-  
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   revoked_at TIMESTAMP
@@ -113,13 +113,13 @@ CREATE TABLE IF NOT EXISTS organization_invitations (
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   invited_email VARCHAR(255) NOT NULL,
   invited_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
-  
+
   role VARCHAR(50) NOT NULL DEFAULT 'developer',
   token_hash VARCHAR(256) NOT NULL UNIQUE,
-  
+
   accepted_at TIMESTAMP,
   expires_at TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '7 days'),
-  
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -131,17 +131,17 @@ CREATE TABLE IF NOT EXISTS organization_audit_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-  
+
   action VARCHAR(100) NOT NULL,
   resource_type VARCHAR(50) NOT NULL,
   resource_id VARCHAR(255),
-  
+
   changes JSONB,  -- {before, after}
   ip_address INET,
   user_agent TEXT,
-  
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
+
   CONSTRAINT valid_action CHECK (action IN ('created', 'updated', 'deleted', 'invited', 'joined', 'left', 'role_changed', 'key_created', 'key_rotated', 'key_revoked'))
 );
 
@@ -225,12 +225,12 @@ class OrganizationManager {
   constructor(pool) {
     this.pool = pool;
   }
-  
+
   async createOrganization(userId, name, slug) {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      
+
       // Create organization
       const result = await client.query(
         `INSERT INTO organizations (name, slug, owner_id, tier)
@@ -238,23 +238,23 @@ class OrganizationManager {
          RETURNING id, name, slug, tier`,
         [name, slug, userId]
       );
-      
+
       const orgId = result.rows[0].id;
-      
+
       // Add owner as admin member
       await client.query(
         `INSERT INTO organization_members (org_id, user_id, role, email)
          VALUES ($1, $2, 'admin', (SELECT email FROM users WHERE id = $2))`,
         [orgId, userId]
       );
-      
+
       // Audit log
       await client.query(
         `INSERT INTO organization_audit_logs (org_id, user_id, action, resource_type)
          VALUES ($1, $2, 'created', 'organization')`,
         [orgId, userId]
       );
-      
+
       await client.query('COMMIT');
       return result.rows[0];
     } catch (error) {
@@ -264,7 +264,7 @@ class OrganizationManager {
       client.release();
     }
   }
-  
+
   async addMember(orgId, email, role) {
     // Verify org and permissions
     const result = await this.pool.query(
@@ -275,26 +275,26 @@ class OrganizationManager {
     );
     return result.rows[0];
   }
-  
+
   async createApiKey(orgId, userId, name, permissions) {
     const key = crypto.randomBytes(32).toString('hex');
     const keyHash = crypto.createHash('sha256').update(key).digest('hex');
     const prefix = key.substring(0, 20);
-    
+
     const result = await this.pool.query(
       `INSERT INTO organization_api_keys (org_id, created_by_user_id, name, key_hash, prefix, permissions)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, prefix, created_at`,
       [orgId, userId, name, keyHash, prefix, JSON.stringify(permissions)]
     );
-    
+
     return {
       ...result.rows[0],
       key: key,  // Only returned once!
       message: 'Save this key securely. It will not be shown again.'
     };
   }
-  
+
   async listMembers(orgId) {
     const result = await this.pool.query(
       `SELECT id, email, role, joined_at, disabled_at
@@ -305,7 +305,7 @@ class OrganizationManager {
     );
     return result.rows;
   }
-  
+
   async updateMemberRole(orgId, memberId, newRole) {
     const result = await this.pool.query(
       `UPDATE organization_members
@@ -316,7 +316,7 @@ class OrganizationManager {
     );
     return result.rows[0];
   }
-  
+
   async removeMember(orgId, memberId) {
     await this.pool.query(
       `UPDATE organization_members
@@ -582,17 +582,17 @@ CREATE TABLE IF NOT EXISTS webhooks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
-  
+
   endpoint_url TEXT NOT NULL,
   events TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
   active BOOLEAN DEFAULT true,
-  
+
   retry_policy JSONB DEFAULT '{"max_retries": 3, "backoff_ms": 1000}',
   timeout_ms INT DEFAULT 30000,
-  
+
   secret_key VARCHAR(256),  -- For HMAC-SHA256 signing
   headers JSONB,
-  
+
   created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -607,20 +607,20 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   webhook_id UUID NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
   org_id UUID NOT NULL,
-  
+
   event_type VARCHAR(100) NOT NULL,
   event_data JSONB NOT NULL,
-  
+
   delivery_status VARCHAR(50) DEFAULT 'pending',  -- pending, delivered, failed, expired
   retry_count INT DEFAULT 0,
-  
+
   first_attempt_at TIMESTAMP,
   last_attempt_at TIMESTAMP,
   delivered_at TIMESTAMP,
-  
+
   http_status INT,
   error_message TEXT,
-  
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '7 days')
 );
@@ -683,18 +683,18 @@ class WebhookDispatcher:
         self.max_retries = max_retries
         self.backoff_ms = backoff_ms
         self.session = None
-    
+
     async def init_session(self):
         """Initialize aiohttp session"""
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(limit_per_host=10, limit=100),
             timeout=aiohttp.ClientTimeout(total=60)
         )
-    
+
     async def close_session(self):
         if self.session:
             await self.session.close()
-    
+
     def sign_payload(self, payload, secret):
         """Generate HMAC-SHA256 signature"""
         signature = hmac.new(
@@ -703,12 +703,12 @@ class WebhookDispatcher:
             hashlib.sha256
         ).hexdigest()
         return signature
-    
+
     async def deliver_webhook(self, webhook_id, org_id, event_type, event_data, secret_key):
         """Deliver webhook with retry logic"""
         retry_count = 0
         last_error = None
-        
+
         while retry_count <= self.max_retries:
             try:
                 # Get webhook endpoint
@@ -721,11 +721,11 @@ class WebhookDispatcher:
                 webhook = cur.fetchone()
                 cur.close()
                 conn.close()
-                
+
                 if not webhook:
                     logger.warning(f"Webhook {webhook_id} not found")
                     return False
-                
+
                 # Prepare payload
                 payload = json.dumps({
                     "event_type": event_type,
@@ -733,10 +733,10 @@ class WebhookDispatcher:
                     "timestamp": datetime.utcnow().isoformat(),
                     "webhook_id": str(webhook_id)
                 })
-                
+
                 # Sign payload
                 signature = self.sign_payload(payload, secret_key)
-                
+
                 # Deliver with timeout
                 headers = {
                     'Content-Type': 'application/json',
@@ -744,9 +744,9 @@ class WebhookDispatcher:
                     'X-Webhook-Signature': f'sha256={signature}',
                     'X-Webhook-ID': str(webhook_id)
                 }
-                
+
                 start_time = time.time()
-                
+
                 async with self.session.post(
                     webhook['endpoint_url'],
                     data=payload,
@@ -755,7 +755,7 @@ class WebhookDispatcher:
                 ) as response:
                     latency = time.time() - start_time
                     webhook_latency.observe(latency)
-                    
+
                     if response.status >= 200 and response.status < 300:
                         # Success
                         self._log_delivery(webhook_id, org_id, 'delivered', response.status, None)
@@ -765,14 +765,14 @@ class WebhookDispatcher:
                     else:
                         last_error = f"HTTP {response.status}"
                         logger.warning(f"Webhook {webhook_id} failed: {last_error}")
-            
+
             except asyncio.TimeoutError:
                 last_error = "Timeout"
                 logger.error(f"Webhook {webhook_id} timed out")
             except Exception as e:
                 last_error = str(e)
                 logger.error(f"Webhook {webhook_id} error: {e}")
-            
+
             # Retry with exponential backoff
             if retry_count < self.max_retries:
                 wait_time = (self.backoff_ms * (2 ** retry_count)) / 1000
@@ -782,13 +782,13 @@ class WebhookDispatcher:
                 retry_count += 1
             else:
                 break
-        
+
         # All retries failed
         self._log_delivery(webhook_id, org_id, 'failed', None, last_error)
         webhook_deliveries.labels(status='failed').inc()
         logger.error(f"Webhook {webhook_id} permanently failed after {self.max_retries} retries: {last_error}")
         return False
-    
+
     def _log_delivery(self, webhook_id, org_id, status, http_status, error_message):
         """Log webhook delivery result"""
         try:
@@ -797,7 +797,7 @@ class WebhookDispatcher:
             cur.execute(
                 """
                 UPDATE webhook_events
-                SET delivery_status = %s, http_status = %s, error_message = %s, 
+                SET delivery_status = %s, http_status = %s, error_message = %s,
                     last_attempt_at = %s, delivered_at = CASE WHEN %s = 'delivered' THEN %s END
                 WHERE webhook_id = %s AND delivery_status = 'pending'
                 """,
@@ -830,14 +830,14 @@ async def dispatch_webhook():
         event_type = data.get('event_type')
         event_data = data.get('event_data', {})
         secret_key = data.get('secret_key')
-        
+
         webhook_events_received.labels(event_type=event_type).inc()
-        
+
         # Dispatch asynchronously
         asyncio.create_task(
             dispatcher.deliver_webhook(webhook_id, org_id, event_type, event_data, secret_key)
         )
-        
+
         return jsonify({"status": "queued"}), 202
     except Exception as e:
         logger.error(f"Dispatch failed: {e}")
@@ -968,11 +968,11 @@ export function OrganizationManager() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   useEffect(() => {
     fetchOrganizations();
   }, []);
-  
+
   async function fetchOrganizations() {
     try {
       setLoading(true);
@@ -984,7 +984,7 @@ export function OrganizationManager() {
       setLoading(false);
     }
   }
-  
+
   async function selectOrganization(orgId) {
     try {
       setLoading(true);
@@ -997,7 +997,7 @@ export function OrganizationManager() {
       setLoading(false);
     }
   }
-  
+
   async function addMember(email, role) {
     try {
       await axios.post(
@@ -1009,7 +1009,7 @@ export function OrganizationManager() {
       setError(err.message);
     }
   }
-  
+
   async function removeMember(memberId) {
     try {
       await axios.delete(
@@ -1020,13 +1020,13 @@ export function OrganizationManager() {
       setError(err.message);
     }
   }
-  
+
   return (
     <div className="organization-manager">
       <h2>Organizations</h2>
-      
+
       {error && <div className="error">{error}</div>}
-      
+
       <div className="org-list">
         {orgs.map(org => (
           <div
@@ -1040,7 +1040,7 @@ export function OrganizationManager() {
           </div>
         ))}
       </div>
-      
+
       {selectedOrg && (
         <div className="members-panel">
           <h3>Members</h3>
@@ -1086,7 +1086,7 @@ export function WebhookManager() {
     endpoint_url: '',
     events: []
   });
-  
+
   async function createWebhook() {
     try {
       const response = await axios.post(
@@ -1099,7 +1099,7 @@ export function WebhookManager() {
       alert(`Failed to create webhook: ${err.message}`);
     }
   }
-  
+
   async function deleteWebhook(webhookId) {
     try {
       await axios.delete(
@@ -1110,11 +1110,11 @@ export function WebhookManager() {
       alert(`Failed to delete webhook: ${err.message}`);
     }
   }
-  
+
   return (
     <div className="webhook-manager">
       <h3>Webhooks</h3>
-      
+
       <form onSubmit={(e) => { e.preventDefault(); createWebhook(); }}>
         <input
           type="text"
@@ -1132,7 +1132,7 @@ export function WebhookManager() {
         />
         <button type="submit">Create Webhook</button>
       </form>
-      
+
       <table>
         <thead>
           <tr>

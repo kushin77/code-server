@@ -1,6 +1,6 @@
 # alertmanager-base.yml
 # Base AlertManager configuration with shared route structure and common receivers
-# 
+#
 # USAGE: Use environment variable interpolation or merge with variant configs
 # This file defines the default routing structure that variants can extend or override
 #
@@ -18,7 +18,7 @@ route:
   group_interval: 5m
   repeat_interval: 4h
   receiver: 'default'
-  
+
   # Severity-based routing (common to all variants)
   routes:
     # Critical alerts (P1) — immediate escalation

@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # Phase 14 Progressive Traffic Ramp: 25% → 50% → 100%
-# 
+#
 # Idempotent: Run in sequence, each phase checks previous completion
 # Immutable: No destructions, only config changes via backup+restore
 # Creates three scripts: 25pct, 50pct, 100pct for maximum control
@@ -30,24 +30,24 @@ read_current_phase() {
 
 ramp_25pct() {
     local current=$(read_current_phase)
-    
+
     # Idempotency check
     if [[ "$current" -ge 25 ]]; then
         echo "Already at phase $current%. Skipping to next phase."
         return 0
     fi
-    
+
     if [[ ! -f "$PHASE_STATE/canary-10pct.lock" ]]; then
         echo "ERROR: Canary 10% not applied yet. Run phase-14-canary-10pct.sh first"
         return 1
     fi
-    
+
     echo "=== Phase 14 Ramp: 10% → 25% ==="
     echo "Start: $(date)"
-    
+
     # Backup current config
     cp -v /tmp/load-balancer-10pct.conf "$BACKUP_DIR/load-balancer-10pct.$TIMESTAMP.bak"
-    
+
     # Apply 25% weighting: Old 75%, New 25%
     cat > /tmp/load-balancer-25pct.conf << 'EOF'
 upstream backend {
@@ -58,13 +58,13 @@ upstream backend {
     check_http_expect_alive http_2xx;
 }
 EOF
-    
+
     echo "nginx -t && systemctl reload nginx"
-    
+
     # Record state
     mkdir -p "$LOCK_DIR"
     echo "25" > "$LOCK_DIR/current-phase.txt"
-    
+
     echo "✓ Ramped to 25%"
     echo "  Old Infrastructure: 75%"
     echo "  New Infrastructure: 25%"
@@ -78,23 +78,23 @@ EOF
 
 ramp_50pct() {
     local current=$(read_current_phase)
-    
+
     if [[ "$current" -ge 50 ]]; then
         echo "Already at phase $current%. Skipping to next phase."
         return 0
     fi
-    
+
     if [[ "$current" -lt 25 ]]; then
         echo "ERROR: Must complete 25% phase first"
         return 1
     fi
-    
+
     echo "=== Phase 14 Ramp: 25% → 50% ==="
     echo "Start: $(date)"
-    
+
     # Backup current config
     cp -v /tmp/load-balancer-25pct.conf "$BACKUP_DIR/load-balancer-25pct.$TIMESTAMP.bak"
-    
+
     # Apply 50% weighting: Old 50%, New 50%
     cat > /tmp/load-balancer-50pct.conf << 'EOF'
 upstream backend {
@@ -105,12 +105,12 @@ upstream backend {
     check_http_expect_alive http_2xx;
 }
 EOF
-    
+
     echo "nginx -t && systemctl reload nginx"
-    
+
     # Record state
     echo "50" > "$LOCK_DIR/current-phase.txt"
-    
+
     echo "✓ Ramped to 50%"
     echo "  Old Infrastructure: 50%"
     echo "  New Infrastructure: 50%"
@@ -124,23 +124,23 @@ EOF
 
 ramp_100pct() {
     local current=$(read_current_phase)
-    
+
     if [[ "$current" -ge 100 ]]; then
         echo "Already at 100%. Already complete."
         return 0
     fi
-    
+
     if [[ "$current" -lt 50 ]]; then
         echo "ERROR: Must complete 50% phase first"
         return 1
     fi
-    
+
     echo "=== Phase 14 Ramp: 50% → 100% ==="
     echo "Start: $(date)"
-    
+
     # Backup current config
     cp -v /tmp/load-balancer-50pct.conf "$BACKUP_DIR/load-balancer-50pct.$TIMESTAMP.bak"
-    
+
     # Apply 100% weighting: Old 0%, New 100%
     cat > /tmp/load-balancer-100pct.conf << 'EOF'
 upstream backend {
@@ -151,15 +151,15 @@ upstream backend {
     check_http_expect_alive http_2xx;
 }
 EOF
-    
+
     echo "nginx -t && systemctl reload nginx"
-    
+
     # Record state
     echo "100" > "$LOCK_DIR/current-phase.txt"
-    
+
     # Create success marker
     touch "$PHASE_STATE/go-live-100pct.complete"
-    
+
     echo "✓ Traffic Cutover COMPLETE"
     echo "  Old Infrastructure: DEPRECATED (0%)"
     echo "  New Infrastructure: 100% (PRODUCTION)"

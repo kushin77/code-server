@@ -99,7 +99,7 @@ log_audit() {
     local message="$1"
     local status="${2:-INFO}"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     if [ -w "$(dirname "$AUDIT_LOG")" ]; then
         echo "[$timestamp] $status | Developer: $DEVELOPER_ID | Session: $SESSION_ID | $message" >> "$AUDIT_LOG"
     fi
@@ -110,7 +110,7 @@ log_command() {
     local allowed="${2:-DENIED}"
     local reason="${3:-No reason provided}"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     if [ -w "$(dirname "$COMMAND_LOG")" ]; then
         echo "[$timestamp] $allowed | User: $DEVELOPER_ID | Session: $SESSION_ID | Cmd: $command | Reason: $reason" >> "$COMMAND_LOG"
     fi
@@ -120,30 +120,30 @@ log_command() {
 
 is_blocked_command() {
     local cmd="$1"
-    
+
     # Check against all blocked patterns
     for pattern in "${BLOCKED_PATTERNS[@]}"; do
         if [[ $cmd =~ $pattern ]]; then
             return 0  # Command is blocked
         fi
     done
-    
+
     return 1  # Command is allowed
 }
 
 is_blocked_path() {
     local path="$1"
-    
+
     # Expand path if needed
     if [[ "$path" == \~* ]]; then
         path="${path/#\~/$HOME}"
     fi
-    
+
     # Resolve symlinks
     if [ -e "$path" ]; then
         path=$(readlink -f "$path")
     fi
-    
+
     # Check against blocked paths
     for blocked in "${BLOCKED_READ_PATHS[@]}"; do
         # Match both exact paths and paths under the directory
@@ -151,19 +151,19 @@ is_blocked_path() {
             return 0  # Path is blocked
         fi
     done
-    
+
     return 1  # Path is allowed
 }
 
 is_safe_directory() {
     local current_dir="$1"
-    
+
     for safe_dir in "${SAFE_DIRS[@]}"; do
         if [[ "$current_dir" == "$safe_dir" ]] || [[ "$current_dir" == "$safe_dir"/* ]]; then
             return 0  # Directory is safe
         fi
     done
-    
+
     return 1  # Directory is not in safe list
 }
 
@@ -173,7 +173,7 @@ is_safe_directory() {
 setup_command_interception() {
     # Use BASH_CMD trap in interactive shells
     # This won't catch all commands, but combined with history file, covers most
-    
+
     # Create a wrapper function that checks commands before execution
     eval 'preexec_cmd() {
         if is_blocked_command "$BASH_COMMAND"; then
@@ -185,7 +185,7 @@ setup_command_interception() {
             return 0
         fi
     }'
-    
+
     # Note: BASH_CMD trap has limitations with piped commands
     # For more robust interception, consider using wrapper functions for common tools
 }
@@ -197,33 +197,33 @@ if [ -z "$1" ]; then
     # Interactive shell (-i flag)
     # Setup command tracking
     log_audit "Interactive shell started"
-    
+
     # Initialize restricted environment
     export PS1="[restricted] \u@\h:\W\$ "
     export HISTFILE="/home/${DEVELOPER_ID}/.bash_history_readonly_session"
-    
+
     # Start real shell with command tracking
     # Note: We use exec to replace this process with the real shell
     exec "$REAL_SHELL" -i \
         -c "source /etc/profile.d/developer-restrictions.sh 2>/dev/null || true; \
             trap 'preexec_cmd' DEBUG; \
             exec \"$REAL_SHELL\" -i"
-    
+
 else
     # Non-interactive execution (command passed)
     local cmd="$*"
-    
+
     if is_blocked_command "$cmd"; then
         log_command "$cmd" "DENIED" "Blocked dangerous command pattern"
         echo "Error: This command is not allowed in read-only access mode" >&2
         echo "Blocked: $cmd" >&2
         exit 1
     fi
-    
+
     # Log and execute
     log_command "$cmd" "ALLOWED" "Safe command"
     log_audit "Executing command: $cmd"
-    
+
     # Execute through real shell
     exec "$REAL_SHELL" -c "$cmd"
 fi

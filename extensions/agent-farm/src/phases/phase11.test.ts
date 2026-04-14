@@ -1,14 +1,14 @@
 /**
  * Phase 11: Advanced Resilience & HA/DR Test Suite
  * Comprehensive tests for circuit breakers, failover, chaos engineering, and resilience orchestration
- * 
+ *
  * Test Coverage:
  * - Circuit breaker state machine and metrics
  * - Failover management and replica health
  * - Chaos engineering and failure injection
  * - Resilience agent orchestration
  * - HA/DR scenarios and recovery
- * 
+ *
  * Standards: FAANG-level TypeScript strict mode
  * Total: 180+ test cases, 95%+ coverage
  */
@@ -61,7 +61,7 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
 
     it('should reject requests when OPEN', async () => {
       const breaker = createCircuitBreaker('test', { failureThreshold: 1, resetTimeout: 30000 });
-      
+
       try {
         await breaker.execute(() => Promise.reject(new Error('Fail')));
       } catch {}
@@ -73,7 +73,7 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
 
     it('should transition OPEN -> HALF_OPEN after reset timeout', async () => {
       const breaker = createCircuitBreaker('test', { failureThreshold: 1, resetTimeout: 30000 });
-      
+
       try {
         await breaker.execute(() => Promise.reject(new Error('Fail')));
       } catch {}
@@ -82,17 +82,17 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
 
       // Advance time past reset timeout
       jest.advanceTimersByTime(31000);
-      
+
       expect(breaker.getMetrics().state).toBe('HALF_OPEN');
     });
 
     it('should transition HALF_OPEN -> CLOSED on success', async () => {
-      const breaker = createCircuitBreaker('test', { 
-        failureThreshold: 1, 
+      const breaker = createCircuitBreaker('test', {
+        failureThreshold: 1,
         resetTimeout: 30000,
         halfOpenRequests: 2
       });
-      
+
       try {
         await breaker.execute(() => Promise.reject(new Error('Fail')));
       } catch {}
@@ -107,12 +107,12 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
     });
 
     it('should transition HALF_OPEN -> OPEN on any failure', async () => {
-      const breaker = createCircuitBreaker('test', { 
-        failureThreshold: 1, 
+      const breaker = createCircuitBreaker('test', {
+        failureThreshold: 1,
         resetTimeout: 30000,
         halfOpenRequests: 3
       });
-      
+
       try {
         await breaker.execute(() => Promise.reject(new Error('Fail')));
       } catch {}
@@ -155,7 +155,7 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
 
     it('should track rejected requests', async () => {
       const breaker = createCircuitBreaker('test', { failureThreshold: 1, resetTimeout: 30000 });
-      
+
       try {
         await breaker.execute(() => Promise.reject(new Error('Fail')));
       } catch {}
@@ -170,7 +170,7 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
 
     it('should update lastFailureTime and lastSuccessTime', async () => {
       const breaker = createCircuitBreaker('test', { failureThreshold: 5, resetTimeout: 30000 });
-      
+
       await breaker.execute(() => Promise.resolve('ok'));
       const afterSuccess = Date.now();
 
@@ -220,8 +220,8 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
     });
 
     it('should respect halfOpenRequests threshold', async () => {
-      const breaker = createCircuitBreaker('test', { 
-        failureThreshold: 1, 
+      const breaker = createCircuitBreaker('test', {
+        failureThreshold: 1,
         resetTimeout: 30000,
         halfOpenRequests: 4
       });
@@ -284,7 +284,7 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
       const breaker = createCircuitBreaker('test', { failureThreshold: 2, resetTimeout: 30000 });
 
       const timeoutError = new Error('Timeout');
-      
+
       await expect(breaker.execute(() => Promise.reject(timeoutError))).rejects.toThrow();
       await expect(breaker.execute(() => Promise.reject(timeoutError))).rejects.toThrow();
 
@@ -381,9 +381,9 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
 
       manager.registerReplica('replica-2');
       const beforeUpdate = Date.now();
-      
+
       manager.updateReplicaHealth('replica-2', true, 10, 100);
-      
+
       const replica = manager.getReplicas().find(r => r.replicaId === 'replica-2');
       expect(replica?.lastHeartbeat).toBeGreaterThanOrEqual(beforeUpdate);
     });
@@ -1740,7 +1740,7 @@ function createResilienceAgent() {
       const closedCount = cbMetrics.filter(m => m.state === 'CLOSED').length;
       const openCount = cbMetrics.filter(m => m.state === 'OPEN').length;
       const halfOpenCount = cbMetrics.filter(m => m.state === 'HALF_OPEN').length;
-      
+
       return {
         timestamp: Date.now(),
         circuitBreakers: {

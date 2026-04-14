@@ -1,8 +1,8 @@
 # GitHub Issues Triage Report - kushin77/code-server
 ## Low Hanging Fruit First Analysis
 
-**Report Date:** April 13, 2026  
-**Repository:** kushin77/code-server  
+**Report Date:** April 13, 2026
+**Repository:** kushin77/code-server
 **Total Open Issues Analyzed:** 30+
 
 ---
@@ -19,7 +19,7 @@
 - **Status:** ✅ Ready - No dependencies
 - **Time Estimate:** 1 hour
 - **Why:** Pure documentation, no code. Doesn't block anything, enables everything.
-- **Action:** 
+- **Action:**
   1. Review architecture decision
   2. Document final decision & reasoning
   3. Get team sign-off
@@ -208,7 +208,7 @@
 TIER 1 (Week 1 - QUICK WINS)
 ├─ #181: Architecture (1h)
 ├─ #185: Cloudflare Setup (2h) [Needs #181]
-├─ #229: Pre-flight (2h) 
+├─ #229: Pre-flight (2h)
 └─ #220: Performance (2h)
 
 TIER 2 (Week 2 - GOOD PROJECTS)
@@ -294,6 +294,6 @@ TIER 3 (Week 3+ - MAJOR PROJECTS)
 
 ---
 
-**Status:** Ready for triage label creation and execution  
-**Owner:** Team leads  
+**Status:** Ready for triage label creation and execution
+**Owner:** Team leads
 **Next Review:** Weekly during standup

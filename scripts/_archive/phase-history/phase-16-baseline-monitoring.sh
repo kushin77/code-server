@@ -71,22 +71,22 @@ EOF
 collect_container_metrics() {
     local service=$1
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     # Get metrics from docker via SSH
     local metrics=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no akushnir@$PRODUCTION_HOST \
         "docker stats --no-stream --format 'table {{.Names}}\t{{.CPUPerc}}\t{{.MemUsage}}' 2>/dev/null | grep $service || echo 'offline'" 2>/dev/null)
-    
+
     if [ "$metrics" != "offline" ]; then
         # Parse metrics
         local cpu=$(echo "$metrics" | awk '{print $2}' | sed 's/%//')
         local mem_usage=$(echo "$metrics" | awk '{print $4}' | sed 's/M.*//')
-        
+
         # Get total memory for percentage
         local total_mem=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no akushnir@$PRODUCTION_HOST \
             "free -m | grep Mem | awk '{print \$2}'" 2>/dev/null)
-        
+
         local mem_pct=$((mem_usage * 100 / total_mem))
-        
+
         echo "$timestamp,$service,$cpu,$mem_usage,$mem_pct,running"
         return 0
     else
@@ -98,24 +98,24 @@ collect_container_metrics() {
 # Function to collect Prometheus metrics
 collect_prometheus_metrics() {
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     # Collect key metrics from Prometheus
     local p99_latency=$(curl -s "$PROMETHEUS_URL/api/v1/query?query=histogram_quantile(0.99,rate(request_latency_seconds_bucket[5m]))" 2>/dev/null | \
         jq -r '.data.result[0].value[1]' 2>/dev/null || echo "N/A")
-    
+
     local error_rate=$(curl -s "$PROMETHEUS_URL/api/v1/query?query=rate(http_requests_total{status=~'5..'}[5m])" 2>/dev/null | \
         jq -r '.data.result[0].value[1]' 2>/dev/null || echo "N/A")
-    
+
     local throughput=$(curl -s "$PROMETHEUS_URL/api/v1/query?query=rate(http_requests_total[1m])" 2>/dev/null | \
         jq -r '.data.result[0].value[1]' 2>/dev/null || echo "N/A")
-    
+
     echo "$timestamp,prometheus_p99_latency=$p99_latency,error_rate=$error_rate,throughput=$throughput"
 }
 
 # Function to check for alerts
 check_alerts() {
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     # Get active alerts from AlertManager
     curl -s "http://192.168.168.31:9093/api/v1/alerts?state=active" 2>/dev/null | \
         jq -r '.data[] | "\(.labels.alertname),\(.labels.severity),\(.state),\(.annotations.description)"' 2>/dev/null | \
@@ -127,12 +127,12 @@ check_alerts() {
 # Function to check container health
 check_container_health() {
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no akushnir@$PRODUCTION_HOST \
         "docker ps --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null" 2>/dev/null | tail -n +2 | \
         while IFS=$'\t' read -r container status; do
             [ -z "$container" ] && continue
-            
+
             if [[ ! $status =~ "Up" ]]; then
                 echo "$timestamp,container_health_check,$container,$status" >> "$EVENTS_LOG"
             fi
@@ -154,34 +154,34 @@ while [ $SAMPLE_COUNT -lt $TOTAL_SAMPLES ]; do
     ELAPSED=$(($(date +%s) - START_TIME))
     REMAINING=$((DURATION_HOURS * 3600 - ELAPSED))
     REMAINING_MINS=$((REMAINING / 60))
-    
+
     # Progress indicator
     if [ $((SAMPLE_COUNT % 10)) -eq 0 ]; then
         log "Sample $SAMPLE_COUNT/$TOTAL_SAMPLES - Time elapsed: $((ELAPSED / 60))min - Remaining: ${REMAINING_MINS}min"
     fi
-    
+
     # Collect metrics from each service
     for service in code-server prometheus grafana redis alertmanager caddy oauth2-proxy ssh-proxy promtail loki ollama; do
         METRICS=$(collect_container_metrics "$service" 2>/dev/null || echo "")
         [ -n "$METRICS" ] && echo "$METRICS" >> "$METRICS_LOG"
     done
-    
+
     # Collect Prometheus metrics every 5 samples (5 minutes)
     if [ $((SAMPLE_COUNT % 5)) -eq 0 ]; then
         PROM_METRICS=$(collect_prometheus_metrics 2>/dev/null)
         [ -n "$PROM_METRICS" ] && echo "$PROM_METRICS" >> "$METRICS_LOG"
     fi
-    
+
     # Check for alerts every 10 samples (10 minutes)
     if [ $((SAMPLE_COUNT % 10)) -eq 0 ]; then
         check_alerts 2>/dev/null
     fi
-    
+
     # Check container health every 20 samples (20 minutes)
     if [ $((SAMPLE_COUNT % 20)) -eq 0 ]; then
         check_container_health 2>/dev/null
     fi
-    
+
     # Sleep before next sample
     sleep $SAMPLE_INTERVAL
 done

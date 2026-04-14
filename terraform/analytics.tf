@@ -48,7 +48,7 @@ locals {
 # ClickHouse deployment for time-series analytics
 resource "local_file" "clickhouse_deployment" {
   filename = "${path.module}/../kubernetes/analytics/clickhouse-deployment.yaml"
-  
+
   content = <<-EOT
     apiVersion: v1
     kind: ConfigMap
@@ -134,7 +134,7 @@ resource "local_file" "clickhouse_deployment" {
 # Analytics aggregator service
 resource "local_file" "analytics_aggregator" {
   filename = "${path.module}/../kubernetes/analytics/analytics-aggregator-deployment.yaml"
-  
+
   content = <<-EOT
     apiVersion: apps/v1
     kind: Deployment

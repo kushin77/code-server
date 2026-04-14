@@ -140,14 +140,14 @@ echo ""
 
 if [ "$DEPLOY_CACHE" = true ]; then
     log "Step 2: Deploying Redis Cache Layer..."
-    
+
     if [ -f "$PROJECT_DIR/docker-compose-phase-15.yml" ]; then
         log "Found docker-compose-phase-15.yml"
-        
+
         # Deploy redis cache
         if docker-compose -f "$PROJECT_DIR/docker-compose-phase-15.yml" up -d 2>&1 | tee -a "$LOG_FILE"; then
             sleep 3
-            
+
             # Verify redis
             if echo "ping" | nc -w 1 localhost 6379 2>/dev/null || [ $? -eq 0 ]; then
                 success "Redis cache deployed and responding"
@@ -162,7 +162,7 @@ if [ "$DEPLOY_CACHE" = true ]; then
         error "docker-compose-phase-15.yml not found"
         exit 1
     fi
-    
+
     log "Redis deployment complete"
     echo ""
 fi
@@ -173,7 +173,7 @@ fi
 
 if [ "$DEPLOY_OBSV" = true ]; then
     log "Step 3: Deploying Advanced Observability..."
-    
+
     if [ -f "$SCRIPT_DIR/phase-15-advanced-observability.sh" ]; then
         if bash "$SCRIPT_DIR/phase-15-advanced-observability.sh" 2>&1 | tee -a "$LOG_FILE"; then
             success "Advanced observability deployed"
@@ -185,7 +185,7 @@ if [ "$DEPLOY_OBSV" = true ]; then
         error "phase-15-advanced-observability.sh not found"
         exit 1
     fi
-    
+
     log "Observability deployment complete"
     echo ""
 fi
@@ -233,7 +233,7 @@ echo ""
 
 if [ "$RUN_TESTS" = true ]; then
     log "Step 5: Executing Load Tests (Mode: $MODE)..."
-    
+
     if [ -f "$SCRIPT_DIR/phase-15-extended-load-test.sh" ]; then
         TEST_ARGS=""
         case $MODE in
@@ -244,7 +244,7 @@ if [ "$RUN_TESTS" = true ]; then
                 TEST_ARGS="--extended"
                 ;;
         esac
-        
+
         if bash "$SCRIPT_DIR/phase-15-extended-load-test.sh" $TEST_ARGS 2>&1 | tee -a "$LOG_FILE"; then
             success "Load tests completed successfully"
         else
@@ -255,7 +255,7 @@ if [ "$RUN_TESTS" = true ]; then
         error "phase-15-extended-load-test.sh not found"
         exit 1
     fi
-    
+
     log "Load testing complete"
     echo ""
 fi
@@ -266,9 +266,9 @@ fi
 
 if [ "$MODE" = "report" ] || [ "$RUN_TESTS" = true ]; then
     log "Step 6: Generating Report..."
-    
+
     REPORT_FILE="$LOG_DIR/phase-15-report-$(date +%s).txt"
-    
+
     {
         echo "=========================================="
         echo "Phase 15 Execution Report"
@@ -304,7 +304,7 @@ if [ "$MODE" = "report" ] || [ "$RUN_TESTS" = true ]; then
         echo ""
         echo "=========================================="
     } | tee "$REPORT_FILE"
-    
+
     log "Report written to: $REPORT_FILE"
 fi
 

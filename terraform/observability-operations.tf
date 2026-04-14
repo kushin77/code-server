@@ -469,4 +469,3 @@ output "backup_retention_days" {
   description = "Backup retention period"
   value       = var.backup_retention_days
 }
-

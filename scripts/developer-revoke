@@ -155,7 +155,7 @@ log "Sending revocation notification..."
 send_revocation_email() {
     local TO="$1"
     local REASON="$2"
-    
+
     # In production, use proper email service
     log "Revocation email would be sent to: $TO"
     log "Subject: IDE Access Revoked"

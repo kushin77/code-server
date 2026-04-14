@@ -12,16 +12,16 @@ CREATE TABLE IF NOT EXISTS webhooks (
   url TEXT NOT NULL,
   description TEXT,
   secret_hash VARCHAR(255) NOT NULL,  -- SHA256 hash of webhook secret (never store plaintext)
-  
+
   -- Event filtering
   events_subscribed JSONB NOT NULL DEFAULT '[]'::jsonb,  -- Array of event types
   is_active BOOLEAN DEFAULT true,
-  
+
   -- Retry configuration
   max_retries INTEGER DEFAULT 3,
   retry_timeout_seconds INTEGER DEFAULT 30,
   backoff_multiplier DECIMAL(3, 1) DEFAULT 2.0,
-  
+
   -- Metadata
   created_by_user_id UUID NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS webhooks (
   last_delivery_at TIMESTAMP,
   last_success_at TIMESTAMP,
   consecutive_failures INTEGER DEFAULT 0,
-  
+
   CONSTRAINT uk_webhook_org_url UNIQUE (organization_id, url),
   INDEX idx_webhooks_organization (organization_id),
   INDEX idx_webhooks_active (is_active),
@@ -43,24 +43,24 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   event_id UUID NOT NULL,  -- Reference to event in webhook_events table
   event_type VARCHAR(100) NOT NULL,  -- e.g., "workspace.created", "files.modified"
-  
+
   -- Attempt tracking
   attempt_number INTEGER NOT NULL DEFAULT 1,
   http_status_code INTEGER,
   response_body TEXT,
   error_message TEXT,
-  
+
   -- Timing
   scheduled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   sent_at TIMESTAMP,
   next_retry_at TIMESTAMP,
-  
+
   -- Success/failure
   is_successful BOOLEAN DEFAULT false,
   is_permanent_failure BOOLEAN DEFAULT false,  -- 4xx errors
-  
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
+
   INDEX idx_deliveries_webhook (webhook_id),
   INDEX idx_deliveries_organization (organization_id),
   INDEX idx_deliveries_event (event_id),
@@ -75,26 +75,26 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   event_type VARCHAR(100) NOT NULL,  -- e.g., "workspace.created", "api_key.rotated"
-  
+
   -- Event categorization
   category VARCHAR(50) NOT NULL,  -- workspace, files, users, api_keys, organizations
   action VARCHAR(50) NOT NULL,    -- created, updated, deleted, invited, joined, revoked, etc.
-  
+
   -- Event data
   resource_type VARCHAR(100) NOT NULL,  -- Affected resource type
   resource_id UUID,                     -- ID of affected resource
   actor_id UUID NOT NULL,               -- User who triggered event
-  
+
   -- Event payload
   payload JSONB NOT NULL DEFAULT '{}'::jsonb,  -- Full event data
-  
+
   -- Delivery tracking
   webhook_count INTEGER DEFAULT 0,      -- Number of webhooks subscribed to this event
   successful_deliveries INTEGER DEFAULT 0,
   failed_deliveries INTEGER DEFAULT 0,
-  
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
+
   CONSTRAINT immutable_event CHECK (created_at = created_at),
   INDEX idx_events_organization (organization_id),
   INDEX idx_events_type (event_type),
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   INDEX idx_events_actor (actor_id),
   INDEX idx_events_resource (resource_type, resource_id),
   INDEX idx_events_created (created_at DESC),
-  INDEX idx_events_recent ON webhook_events(created_at DESC) 
+  INDEX idx_events_recent ON webhook_events(created_at DESC)
     WHERE created_at > NOW() - INTERVAL '30 days'
 );
 
@@ -110,16 +110,16 @@ CREATE TABLE IF NOT EXISTS webhook_events (
 CREATE TABLE IF NOT EXISTS webhook_retry_policies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   webhook_id UUID NOT NULL UNIQUE REFERENCES webhooks(id) ON DELETE CASCADE,
-  
+
   -- Retry configuration
   max_attempts INTEGER DEFAULT 3,
   initial_delay_ms INTEGER DEFAULT 1000,      -- 1 second
   max_delay_ms INTEGER DEFAULT 60000,         -- 60 seconds
   backoff_type VARCHAR(50) DEFAULT 'exponential',  -- exponential or linear
-  
+
   -- Status codes that trigger retries (4xx considered permanent by default)
   retryable_status_codes INTEGER[] DEFAULT '{408,429,500,502,503,504}',
-  
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -129,17 +129,17 @@ CREATE TABLE IF NOT EXISTS webhook_signature_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   webhook_id UUID NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  
+
   signature_received VARCHAR(255) NOT NULL,
   signature_expected VARCHAR(255) NOT NULL,
   is_valid BOOLEAN NOT NULL,
-  
+
   -- Security context
   ip_address INET,
   user_agent TEXT,
-  
+
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  
+
   INDEX idx_sig_webhook (webhook_id),
   INDEX idx_sig_organization (organization_id),
   INDEX idx_sig_valid (is_valid),
@@ -189,7 +189,7 @@ DECLARE
   v_multiplier DECIMAL;
 BEGIN
   SELECT * INTO v_policy FROM webhook_retry_policies WHERE webhook_id = p_webhook_id;
-  
+
   IF v_policy IS NULL THEN
     -- Default policy
     v_delay_ms := 1000 * POWER(2, LEAST(p_attempt_number - 1, 5));  -- Cap exponential growth
@@ -202,14 +202,14 @@ BEGIN
     END IF;
     v_delay_ms := LEAST(v_delay_ms, v_policy.max_delay_ms);
   END IF;
-  
+
   RETURN p_last_retry + (v_delay_ms || ' ms')::INTERVAL;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Create view for active webhooks
 CREATE OR REPLACE VIEW active_webhooks AS
-SELECT 
+SELECT
   id, organization_id, name, url, description,
   events_subscribed, is_active, max_retries,
   created_by_user_id, created_at, updated_at,
@@ -219,13 +219,13 @@ WHERE is_active = true;
 
 -- Create view for pending deliveries
 CREATE OR REPLACE VIEW pending_webhook_deliveries AS
-SELECT 
+SELECT
   d.id, d.webhook_id, d.organization_id, d.event_id, d.event_type,
   d.attempt_number, d.next_retry_at,
   w.url, w.max_retries
 FROM webhook_deliveries d
 JOIN webhooks w ON d.webhook_id = w.id
-WHERE d.is_successful = false 
+WHERE d.is_successful = false
   AND d.is_permanent_failure = false
   AND d.next_retry_at <= NOW()
 ORDER BY d.next_retry_at ASC;

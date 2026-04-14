@@ -43,15 +43,15 @@ jobs:
             -F status=completed \
             --jq '.workflow_runs[] | select(.updated_at > (now - 7*24*60*60 | todate))' \
             > /tmp/runs.json
-          
+
           TOTAL_RUNS=$(jq 'length' /tmp/runs.json)
           FAILED_RUNS=$(jq '[.[] | select(.conclusion == "failure")] | length' /tmp/runs.json)
           SUCCESS_RATE=$((100 * (TOTAL_RUNS - FAILED_RUNS) / TOTAL_RUNS))
-          
+
           echo "total_runs=$TOTAL_RUNS" >> $GITHUB_OUTPUT
           echo "failed_runs=$FAILED_RUNS" >> $GITHUB_OUTPUT
           echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
-          
+
           echo "✓ Analyzed $TOTAL_RUNS workflow runs"
         env:
           GH_TOKEN: ${{ github.token }}
@@ -61,21 +61,21 @@ jobs:
         run: |
           # Estimate cost based on run duration and type
           # GitHub Actions pricing: Ubuntu-latest ($0.008/min)
-          
+
           TOTAL_RUNS=${{ steps.fetch-runs.outputs.total_runs }}
-          
+
           # Estimate average run duration: 15 minutes
           AVG_DURATION=15
           GITHUB_RATE=0.008  # per minute per runner
-          
+
           ESTIMATED_COST=$(echo "scale=2; $TOTAL_RUNS * $AVG_DURATION * $GITHUB_RATE" | bc)
           MONTHLY_PROJECTION=$(echo "scale=2; $ESTIMATED_COST * 4" | bc)
           ANNUAL_PROJECTION=$(echo "scale=2; $MONTHLY_PROJECTION * 12" | bc)
-          
+
           echo "weekly_cost=$ESTIMATED_COST" >> $GITHUB_OUTPUT
           echo "monthly_projection=$MONTHLY_PROJECTION" >> $GITHUB_OUTPUT
           echo "annual_projection=$ANNUAL_PROJECTION" >> $GITHUB_OUTPUT
-          
+
           echo "💰 Estimated weekly cost: \$$ESTIMATED_COST"
           echo "📊 Monthly projection: \$$MONTHLY_PROJECTION"
           echo "📈 Annual projection: \$$ANNUAL_PROJECTION"
@@ -93,7 +93,7 @@ jobs:
             else if (cat ~ /build|deploy/) category="ci-build";
             else if (cat ~ /deploy-prod/) category="deploy-prod";
             else category="other";
-            
+
             totals[category]++;
             if ($2 == "failure") failed[category]++;
           }
@@ -103,9 +103,9 @@ jobs:
               printf "%s: %d runs, %.1f%% failure\n", cat, totals[cat], fail_rate;
             }
           }' > /tmp/category_analysis.txt
-          
+
           cat /tmp/category_analysis.txt
-          
+
           # Check for expensive categories
           if grep -q "deploy-prod.*100" /tmp/category_analysis.txt; then
             echo "⚠️  Deploy-prod has 100% failure rate - investigate!"
@@ -116,15 +116,15 @@ jobs:
         run: |
           # Read governance config
           QUOTA_LIMIT=300  # ci-tests quota from governance.yaml
-          
+
           CI_TESTS_RUNS=$(jq '[.[] | select(.name | contains("test"))] | length' /tmp/runs.json)
           QUOTA_PERCENTAGE=$((100 * CI_TESTS_RUNS / QUOTA_LIMIT))
-          
+
           echo "ci_tests_runs=$CI_TESTS_RUNS" >> $GITHUB_OUTPUT
           echo "quota_percentage=$QUOTA_PERCENTAGE" >> $GITHUB_OUTPUT
-          
+
           echo "📋 ci-tests quota: $CI_TESTS_RUNS / $QUOTA_LIMIT ($QUOTA_PERCENTAGE%)"
-          
+
           if [[ $QUOTA_PERCENTAGE -gt 80 ]]; then
             echo "⚠️  WARNING: Quota usage >80%"
           fi
@@ -136,20 +136,20 @@ jobs:
         id: api-check
         run: |
           # Check for unauthorized external API calls in recent commits
-          
+
           SUSPICIOUS_APIS=0
-          
+
           # Get recent commits
           git log --oneline --since='7 days ago' | head -20 | while read commit; do
             COMMIT_HASH=$(echo "$commit" | awk '{print $1}')
-            
+
             # Check for suspicious API patterns
             if git show $COMMIT_HASH | grep -qE 'curl|requests\.get|fetch.*http|api\.' ; then
               echo "🔍 Potential API call in $COMMIT_HASH"
               ((SUSPICIOUS_APIS++))
             fi
           done
-          
+
           echo "api_sprawl_issues=$SUSPICIOUS_APIS" >> $GITHUB_OUTPUT
 
       - name: Generate cost report
@@ -157,12 +157,12 @@ jobs:
         run: |
           cat > /tmp/cost_report.md <<'EOF'
           # GitHub Actions Cost Report
-          
-          **Report Date**: ${{ env.REPORT_DATE }}  
+
+          **Report Date**: ${{ env.REPORT_DATE }}
           **Report Week**: ${{ env.REPORT_WEEK }}
-          
+
           ## Summary
-          
+
           | Metric | Value | Status |
           |--------|-------|--------|
           | Total Runs (7d) | ${{ steps.fetch-runs.outputs.total_runs }} | ✓ |
@@ -170,49 +170,49 @@ jobs:
           | Estimated Weekly Cost | \$${{ steps.cost-estimate.outputs.weekly_cost }} | 💰 |
           | Monthly Projection | \$${{ steps.cost-estimate.outputs.monthly_projection }} | 📊 |
           | Annual Projection | \$${{ steps.cost-estimate.outputs.annual_projection }} | 📈 |
-          
+
           ## Quota Compliance
-          
+
           | Category | Usage | Status |
           |----------|-------|--------|
           | ci-tests | ${{ steps.quota-check.outputs.ci_tests_runs }}/300 | ${{ steps.quota-check.outputs.quota_percentage }}% |
-          
+
           ## Workflow Analysis
-          
+
           ```
           $(cat /tmp/category_analysis.txt)
           ```
-          
+
           ## Risk Summary
-          
+
           ### Success Rate: ${{ steps.fetch-runs.outputs.success_rate }}%
           - If below 90%, investigate failing workflows
           - High failure rate == wasted minutes == wasted money
-          
+
           ### Cost Projection
           - Weekly: \$${{ steps.cost-estimate.outputs.weekly_cost }}
           - Monthly: \$${{ steps.cost-estimate.outputs.monthly_projection }}
           - Annual: \$${{ steps.cost-estimate.outputs.annual_projection }}
-          
+
           ### Optimization Opportunities
-          
+
           1. **Reduce workflow runs**: Cache dependencies, parallelize jobs
           2. **Improve success rate**: Fix flaky tests, improve CI reliability
           3. **Optimize runner size**: Use smaller runners for non-critical jobs
           4. **Batch scheduled jobs**: Combine cron jobs with similar schedules
-          
+
           ## Compliance Status
-          
+
           - ✓ Governance rules applied
           - ✓ Quota tracking enabled
           - ✓ API sprawl monitoring active
           - ⚠️ Requires manual review: Any quota >80%
-          
+
           ---
-          
+
           **Next Review**: ${{ steps.fetch-runs.outputs.total_runs > 50 && 'Urgent - High volume' || 'Scheduled' }}
           EOF
-          
+
           cat /tmp/cost_report.md
 
       - name: Create GitHub Issue (if needed)
@@ -223,7 +223,7 @@ jobs:
             const quotaPercent = ${{ steps.quota-check.outputs.quota_percentage }};
             const severity = quotaPercent > 100 ? 'critical' : 'warning';
             const labels = [severity, 'cost-control', 'governance'];
-            
+
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,

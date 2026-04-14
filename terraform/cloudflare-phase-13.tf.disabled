@@ -65,16 +65,16 @@ data "cloudflare_account" "main" {
 # CLOUDFLARE TUNNEL (Idempotent Resource)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Create tunnel record in Cloudflare 
+# Create tunnel record in Cloudflare
 # Note: Tunnel secret/token must be configured manually or via cloudflared CLI
 # This Terraform creates the CNAME and access policies
 resource "cloudflare_tunnel_route" "code_server" {
   # This is a simplified placeholder - actual tunnel routing requires
   # the tunnel to be created via cloudflared CLI first, then referenced here
-  
+
   account_id = var.cloudflare_account_id
   tunnel_id  = "temp_placeholder"  # Replace with actual tunnel ID after cloudflared CLI creation
-  
+
   # This resource creates DNS CNAME record pointing to tunnel
   # Format: tunnel_id.cfargotunnel.com
 }
@@ -105,11 +105,11 @@ resource "cloudflare_access_application" "code_server" {
   domain            = var.domain
   type              = "self_hosted"
   session_duration  = "${var.session_timeout_hours}h"
-  
+
   # Security settings
   auto_redirect_to_identity = true
   enable_binding_cookie     = true
-  
+
   tags = [
     var.tags["Phase"],
     var.tags["Environment"],
@@ -167,13 +167,13 @@ resource "cloudflare_logpush_job" "http_requests" {
   account_id = var.cloudflare_account_id
   enabled    = true
   frequency  = "low"  # Collect logs every 30 minutes
-  
+
   dataset = "http_requests"
-  
+
   destination_conf = "s3://phase-13-logs"  # Update with actual S3 bucket
-  
+
   ownership_challenge = cloudflare_logpush_job.http_requests.ownership_challenge_token != "" ? cloudflare_logpush_job.http_requests.ownership_challenge_token : null
-  
+
   filter = jsonencode({
     where = {
       and = [

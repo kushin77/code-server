@@ -10,7 +10,7 @@ free -h | head -2
 echo "---"
 df -h / | tail -1
 echo ""
-echo "=== CRITICAL SCRIPTS CHECK ===" 
+echo "=== CRITICAL SCRIPTS CHECK ==="
 for script in phase-13-day2-monitoring.sh phase-13-day2-orchestrator.sh phase-13-day2-load-test.sh; do
   if [ -f "/tmp/code-server-phase13/$script" ]; then
     echo "✓ $script"

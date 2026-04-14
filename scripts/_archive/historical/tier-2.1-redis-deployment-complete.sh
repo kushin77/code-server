@@ -87,28 +87,28 @@ main() {
     log "INFO" "════════════════════════════════════════════════════════════════"
     log "INFO" "PHASE 1: REDIS CACHE LAYER DEPLOYMENT"
     log "INFO" "════════════════════════════════════════════════════════════════"
-    
+
     # Check if already complete
     if [[ -f "${STATE_FILE}" ]]; then
         log "INFO" "Phase 1 already completed at: $(cat ${STATE_FILE})"
         return 0
     fi
-    
+
     log "INFO" "Idempotency checks..."
-    
+
     if check_redis_deployed && check_redis_config_applied; then
         log "INFO" "Redis already deployed and configured"
         date > "${STATE_FILE}"
         return 0
     fi
-    
+
     # Step 1: Backup existing configuration
     log "INFO" "Step 1: Backing up existing configuration..."
     DOCKER_COMPOSE_BACKUP=$(backup_config "${WORKSPACE_ROOT}/docker-compose.yml")
-    
+
     # Step 2: Add Redis to docker-compose.yml (if not already present)
     log "INFO" "Step 2: Configuring Redis in docker-compose.yml..."
-    
+
     if ! grep -q "redis:" "${WORKSPACE_ROOT}/docker-compose.yml"; then
         cat >> "${WORKSPACE_ROOT}/docker-compose.yml" << 'EOF'
 
@@ -131,7 +131,7 @@ main() {
       timeout: 5s
       retries: 5
     restart: unless-stopped
-      
+
 volumes:
   redis_data:
     driver: local
@@ -140,12 +140,12 @@ EOF
     else
         log "INFO" "Redis service already in docker-compose.yml"
     fi
-    
+
     # Step 3: Create Redis configuration file
     log "INFO" "Step 3: Creating Redis configuration..."
-    
+
     mkdir -p "${WORKSPACE_ROOT}/config"
-    
+
     cat > "${WORKSPACE_ROOT}/config/redis.conf" << 'EOF'
 # Redis Configuration for Tier 2 Cache Layer
 
@@ -205,82 +205,82 @@ cluster-enabled no
 # Module (disabled)
 # loadmodule /usr/local/lib/modules/module.so
 EOF
-    
+
     log "INFO" "Redis configuration created"
-    
+
     # Step 4: Start Redis container
     log "INFO" "Step 4: Starting Redis container..."
-    
+
     cd "${WORKSPACE_ROOT}"
-    
+
     if docker-compose up -d redis 2>&1 | tee -a "${LOG_FILE}"; then
         log "INFO" "Redis container started"
     else
         log "ERROR" "Failed to start Redis container"
         return 1
     fi
-    
+
     # Step 5: Wait for Redis to be healthy
     log "INFO" "Step 5: Waiting for Redis health check..."
-    
+
     local retry_count=0
     local max_retries=30
-    
+
     while [[ $retry_count -lt $max_retries ]]; do
         if docker exec redis redis-cli PING > /dev/null 2>&1; then
             log "INFO" "Redis health check PASSED"
             break
         fi
-        
+
         log "INFO" "Retry $((retry_count + 1))/$max_retries..."
         sleep 2
         ((retry_count++))
     done
-    
+
     if [[ $retry_count -eq $max_retries ]]; then
         log "ERROR" "Redis health check failed after $max_retries retries"
         return 1
     fi
-    
+
     # Step 6: Configure cache expiration policies
     log "INFO" "Step 6: Configuring cache TTL policies..."
-    
+
     # Session cache: 30 minutes
     # Extension cache: 24 hours
     # Config cache: 1 hour
-    
+
     log "INFO" "TTL Configuration:"
     log "INFO" "  - Sessions: 30 minutes (1800s)"
     log "INFO" "  - Extensions: 24 hours (86400s)"
     log "INFO" "  - Config: 1 hour (3600s)"
-    
+
     # Step 7: Verify configuration
     log "INFO" "Step 7: Verifying Redis configuration..."
-    
+
     docker exec redis redis-cli CONFIG GET maxmemory 2>&1 | tee -a "${LOG_FILE}"
     docker exec redis redis-cli CONFIG GET maxmemory-policy 2>&1 | tee -a "${LOG_FILE}"
     docker exec redis redis-cli INFO memory 2>&1 | tee -a "${LOG_FILE}"
-    
+
     # Step 8: Basic performance test
     log "INFO" "Step 8: Running basic performance test..."
-    
+
     log "INFO" "Testing write performance..."
     time docker exec redis redis-benchmark -t set -n 10000 -q 2>&1 | tee -a "${LOG_FILE}"
-    
+
     log "INFO" "Testing read performance..."
     time docker exec redis redis-benchmark -t get -n 10000 -q 2>&1 | tee -a "${LOG_FILE}"
-    
+
     log "INFO" "Testing mixed operations..."
     time docker exec redis redis-benchmark -t ping -n 10000 -q 2>&1 | tee -a "${LOG_FILE}"
-    
+
     # Step 9: Create success marker
     log "INFO" "Step 9: Recording completion..."
     date > "${STATE_FILE}"
-    
+
     # ========================================================================
     # SUMMARY
     # ========================================================================
-    
+
     cat << 'EOF' | tee -a "${LOG_FILE}"
 
 ════════════════════════════════════════════════════════════════════════════════
@@ -347,7 +347,7 @@ ROLLBACK PROCEDURE (if needed):
 ════════════════════════════════════════════════════════════════════════════════
 
 EOF
-    
+
     log "INFO" "Phase 1 (Redis Deployment) COMPLETE"
     return 0
 }

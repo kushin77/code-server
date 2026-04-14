@@ -51,7 +51,7 @@ class CodeServerLoadTest(TaskSet):
 
 class CodeServerUser(HttpUser):
     """Simulated Code-Server user"""
-    
+
     tasks = [CodeServerLoadTest]
     wait_time = between(1, 3)  # Wait 1-3 seconds between requests
 

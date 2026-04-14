@@ -9,7 +9,7 @@ terraform/
 ├── README.md (this file)
 ├── main.tf - SINGLE SOURCE OF TRUTH (all resources defined here)
 ├── variables.tf - Input variable definitions
-├── outputs.tf - Output definitions  
+├── outputs.tf - Output definitions
 ├── versions.tf - Provider version requirements
 ├── _locals.tf - Local values and computed variables
 ├── terraform.tfvars - Active variable values (gitignored)
@@ -196,8 +196,8 @@ terraform plan -var-file=environments/production.tfvars
 
 ## Maintenance
 
-**Owner**: @akushnir  
-**Last Updated**: April 14, 2026  
+**Owner**: @akushnir
+**Last Updated**: April 14, 2026
 **Status**: Active production infrastructure
 
 ---

@@ -32,7 +32,7 @@ deploy_eks_cluster() {
 
     # 1.1: Create EKS cluster using eksctl
     log_info "Creating EKS cluster..."
-    
+
     cat > "${PROJECT_ROOT}/config/eks-cluster.yaml" << 'EOF'
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
@@ -108,7 +108,7 @@ EOF
 
     # 1.2: Create namespace and RBAC
     mkdir -p "${PROJECT_ROOT}/config/k8s/aws"
-    
+
     cat > "${PROJECT_ROOT}/config/k8s/aws/namespace-rbac.yaml" << 'EOF'
 ---
 apiVersion: v1
@@ -172,7 +172,7 @@ deploy_aks_cluster() {
 
     # 2.1: Create AKS cluster config
     mkdir -p "${PROJECT_ROOT}/config/k8s/azure"
-    
+
     cat > "${PROJECT_ROOT}/config/k8s/azure/aks-cluster.yaml" << 'EOF'
 apiVersion: v1
 kind: ConfigMap
@@ -187,7 +187,7 @@ data:
     K8S_VERSION: 1.27
     NODE_COUNT: 3
     VM_SIZE: Standard_B2s
-    
+
     FEATURES:
       - Auto-scaling: true (1-20 nodes)
       - Monitoring: true (Container Insights)
@@ -258,7 +258,7 @@ deploy_gke_cluster() {
 
     # 3.1: Create GKE cluster config
     mkdir -p "${PROJECT_ROOT}/config/k8s/gcp"
-    
+
     cat > "${PROJECT_ROOT}/config/k8s/gcp/gke-cluster.yaml" << 'EOF'
 apiVersion: v1
 kind: ConfigMap
@@ -273,7 +273,7 @@ data:
     K8S_VERSION: 1.27
     MACHINE_TYPE: e2-standard-4
     NODE_COUNT: 3
-    
+
     FEATURES:
       - Autopilot: false (Standard cluster for control)
       - Autoscaling: true (1-20 nodes)
@@ -483,7 +483,7 @@ maintainers:
 EOF
 
     mkdir -p "${PROJECT_ROOT}/charts/code-server/templates"
-    
+
     cat > "${PROJECT_ROOT}/charts/code-server/templates/deployment.yaml" << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
@@ -727,22 +727,22 @@ main() {
 
     deploy_eks_cluster || { log_error "EKS deployment failed"; return 1; }
     echo ""
-    
+
     deploy_aks_cluster || { log_error "AKS deployment failed"; return 1; }
     echo ""
-    
+
     deploy_gke_cluster || { log_error "GKE deployment failed"; return 1; }
     echo ""
-    
+
     setup_cluster_federation || { log_error "Federation setup failed"; return 1; }
     echo ""
-    
+
     setup_helm_charts || { log_error "Helm setup failed"; return 1; }
     echo ""
-    
+
     setup_multi_cloud_monitoring || { log_error "Monitoring setup failed"; return 1; }
     echo ""
-    
+
     verify_k8s_deployment || { log_error "Verification failed"; return 1; }
     echo ""
 

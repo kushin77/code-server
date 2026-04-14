@@ -55,49 +55,49 @@ CHECK_COUNT=0
 while [ $(($(date -u +%s) - START_TIME)) -lt $OBSERVATION_SECONDS ]; do
   ELAPSED=$(($(date -u +%s) - START_TIME))
   ELAPSED_MIN=$((ELAPSED / 60))
-  
+
   CHECK_COUNT=$((CHECK_COUNT + 1))
   TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  
+
   echo "[T+${ELAPSED_MIN}min] SLO Monitoring Check #${CHECK_COUNT} at ${TIMESTAMP}"
-  
+
   # Query Prometheus for metrics (simulated values for demo)
   # In production, query actual Prometheus API
   P99_LATENCY=$(shuf -i 45-95 -n 1)  # Simulate within target range
   ERROR_RATE=$(echo "0.0" | awk '{print $1 + 0.01 * (rand() - 0.5)}')  # Near 0%
   AVAILABILITY=$(echo "99.98" | awk '{print $1 - 0.01 * rand()}')  # High availability
-  
+
   # Check thresholds
   P99_STATUS="✓"
   ERROR_STATUS="✓"
   AVAIL_STATUS="✓"
-  
+
   if (( $(echo "$P99_LATENCY > $P99_LATENCY_ALERT" | bc -l) )); then
     P99_STATUS="✗ ALERT"
     VIOLATIONS=$((VIOLATIONS + 1))
   fi
-  
+
   if (( $(echo "$ERROR_RATE > $ERROR_RATE_ALERT" | bc -l) )); then
     ERROR_STATUS="✗ ALERT"
     VIOLATIONS=$((VIOLATIONS + 1))
   fi
-  
+
   if (( $(echo "$AVAILABILITY < $AVAILABILITY_ALERT" | bc -l) )); then
     AVAIL_STATUS="✗ ALERT"
     VIOLATIONS=$((VIOLATIONS + 1))
   fi
-  
+
   echo "  p99 Latency: ${P99_LATENCY}ms (target: <${P99_LATENCY_TARGET}ms) - ${P99_STATUS}"
   echo "  Error Rate: ${ERROR_RATE}% (target: <${ERROR_RATE_TARGET}%) - ${ERROR_STATUS}"
   echo "  Availability: ${AVAILABILITY}% (target: >${AVAILABILITY_TARGET}%) - ${AVAIL_STATUS}"
-  
+
   # Check for rollback trigger
   if [ $VIOLATIONS -gt 2 ]; then
     echo ""
     echo "⚠️  SLO BREACH DETECTED - Multiple violations triggering rollback"
     echo "Initiating automatic rollback to pre-Phase-14 state..."
     echo ""
-    
+
     # Rollback procedure
     echo "$ terraform apply -var='phase_14_enabled=false' -auto-approve"
     echo "Plan: 1 to destroy, 3 to add"
@@ -107,11 +107,11 @@ while [ $(($(date -u +%s) - START_TIME)) -lt $OBSERVATION_SECONDS ]; do
     echo ""
     echo "Rollback Success: Traffic returned to standby (${STANDBY_HOST})"
     echo "Decision: NO-GO - Return to investigation phase"
-    
+
     echo "ROLLBACK_TRIGGERED" > "$DECISION_FILE"
     exit 1
   fi
-  
+
   # Save metrics snapshot
   cat > "$METRICS_FILE" <<EOF
 {
@@ -131,9 +131,9 @@ while [ $(($(date -u +%s) - START_TIME)) -lt $OBSERVATION_SECONDS ]; do
   "status": "monitoring"
 }
 EOF
-  
+
   echo ""
-  
+
   # Sleep before next check
   if [ $(($(date -u +%s) - START_TIME)) -lt $OBSERVATION_SECONDS ]; then
     sleep $CHECK_INTERVAL_SECONDS
@@ -166,7 +166,7 @@ if [ $VIOLATIONS -eq 0 ]; then
   echo "  2. Execute: terraform apply -var-file=terraform.phase-14.tfvars"
   echo "  3. Monitor Stage 2 for 60 minutes"
   echo "  4. Make GO/NO-GO decision for Stage 3"
-  
+
   echo "GO_DECISION" > "$DECISION_FILE"
 else
   echo "🔴 NO-GO DECISION: SLO violations detected"
@@ -180,7 +180,7 @@ else
   echo "  2. Identify root cause"
   echo "  3. Apply hotfix if needed"
   echo "  4. Potential retry after stabilization"
-  
+
   echo "NO_GO_DECISION" > "$DECISION_FILE"
 fi
 

@@ -40,7 +40,7 @@ locals {
 # Prometheus metrics for rate limit tracking
 resource "local_file" "rate_limiting_prometheus_rules" {
   filename = "${path.module}/../kubernetes/monitoring/rate-limit-rules.yaml"
-  
+
   content = <<-EOT
     apiVersion: monitoring.coreos.com/v1
     kind: PrometheusRule
@@ -59,7 +59,7 @@ resource "local_file" "rate_limiting_prometheus_rules" {
           for: 5m
           annotations:
             summary: "User {{ $labels.user_id }} approaching rate limit"
-        
+
         # Track rate limit accuracy (target: 99.9%)
         - alert: RateLimitAccuracyDegraded
           expr: |

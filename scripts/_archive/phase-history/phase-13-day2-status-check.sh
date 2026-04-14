@@ -29,11 +29,11 @@ calculate_elapsed_time() {
   local current_timestamp=$(date +%s)
   local start_epoch=$(date -d "$start_timestamp" +%s)
   local elapsed=$((current_timestamp - start_epoch))
-  
+
   local hours=$((elapsed / 3600))
   local minutes=$(((elapsed % 3600) / 60))
   local seconds=$((elapsed % 60))
-  
+
   printf "%02d:%02d:%02d" $hours $minutes $seconds
 }
 
@@ -41,11 +41,11 @@ format_percentage() {
   local progress=$1
   local total=$((24 * 3600))  # 24 hours in seconds
   local percent=$((progress * 100 / total))
-  
+
   if [ $percent -gt 100 ]; then
     percent=100
   fi
-  
+
   echo $percent
 }
 
@@ -53,7 +53,7 @@ check_load_test_active() {
   # Check if load generation is still active
   ssh -o ConnectTimeout=5 $REMOTE_USER@$REMOTE_HOST \
     "ps aux | grep -E 'curl|ab|wrk|load' | grep -v grep > /dev/null" 2>/dev/null
-  
+
   return $?
 }
 

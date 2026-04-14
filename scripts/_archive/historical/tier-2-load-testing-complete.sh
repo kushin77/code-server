@@ -82,7 +82,7 @@ log() {
 
 check_prerequisites() {
     log "INFO" "Checking prerequisites..."
-    
+
     # Check if services are running
     local services=("redis" "caddy")
     for service in "${services[@]}"; do
@@ -90,14 +90,14 @@ check_prerequisites() {
             log "WARN" "Service not running: $service"
         fi
     done
-    
+
     # Check load testing tool
     if ! command -v "$LOAD_TEST_TOOL" &> /dev/null; then
         log "ERROR" "Load testing tool not found: $LOAD_TEST_TOOL"
         log "INFO" "Installing apache2-utils..."
         sudo apt-get update -qq && sudo apt-get install -y -qq apache2-utils || true
     fi
-    
+
     log "INFO" "Prerequisites check complete"
 }
 
@@ -111,52 +111,52 @@ run_load_test() {
     local test_name="Test-${users}users-${duration}s"
     local test_results="${RESULTS_DIR}/${test_name}-${TIMESTAMP}.json"
     local test_log="${RESULTS_DIR}/${test_name}-${TIMESTAMP}.log"
-    
+
     log "INFO" "════════════════════════════════════════════════════════════════"
     log "INFO" "LOAD TEST: $test_name"
     log "INFO" "Users: ${users}, Duration: ${duration}s"
     log "INFO" "════════════════════════════════════════════════════════════════"
-    
+
     # Run Apache Bench
     # Note: Apache Bench has limitations - runs sequentially, not true concurrent
     # For production, use wrk or k6 for true concurrent testing
-    
+
     log "INFO" "Starting load test..."
-    
+
     local concurrent=$users
     local requests=$((users * 2))  # 2 requests per user
-    
+
     if ab -n "$requests" -c "$concurrent" -g "${test_log}" \
            -H "User-Agent: Tier2-LoadTest" \
            "http://localhost:3000/" 2>&1 | tee -a "${LOG_FILE}"; then
-        
+
         # Parse results
         log "INFO" "Load test completed, parsing results..."
-        
+
         # Extract key metrics from AB output
         local results=$(ab -n "$requests" -c "$concurrent" \
             "http://localhost:3000/" 2>&1)
-        
+
         # Save raw results
         echo "$results" > "${test_results}"
-        
+
         # Extract & log key metrics
         local rps=$(echo "$results" | grep "Requests per second" | awk '{print $4}')
         local time_per=$(echo "$results" | grep "Time per request" | head -1 | awk '{print $4}')
         local failed=$(echo "$results" | grep "Non-" | awk '{print $NF}')
-        
+
         log "INFO" "Results:"
         log "INFO" "  • Requests/sec: ${rps}"
         log "INFO" "  • Time per request: ${time_per}ms"
         log "INFO" "  • Failed requests: ${failed}"
-        
+
         # Check against targets
         if (( $(echo "$rps > ${TARGETS[throughput]}" | bc -l) )); then
             log "SUCCESS" "✓ Throughput PASS (${rps} > ${TARGETS[throughput]})"
         else
             log "WARN" "✗ Throughput FAIL (${rps} < ${TARGETS[throughput]})"
         fi
-        
+
         return 0
     else
         log "ERROR" "Load test failed"
@@ -166,23 +166,23 @@ run_load_test() {
 
 test_redis_performance() {
     log "INFO" "Testing Redis cache performance..."
-    
+
     log "INFO" "Checking cache hit rate..."
-    
+
     # Get Redis stats
     local redis_info=$(docker exec redis redis-cli INFO stats 2>/dev/null || echo "")
-    
+
     if [[ -n "$redis_info" ]]; then
         local hits=$(echo "$redis_info" | grep "keyspace_hits" | awk -F: '{print $2}' | tr -d $'\r')
         local misses=$(echo "$redis_info" | grep "keyspace_misses" | awk -F: '{print $2}' | tr -d $'\r')
-        
+
         if [[ -n "$hits" && -n "$misses" ]]; then
             # Calculate hit rate
             local total=$((hits + misses))
             if [[ $total -gt 0 ]]; then
                 local hit_rate=$((hits * 100 / total))
                 log "INFO" "Cache Hit Rate: ${hit_rate}% (${hits} hits, ${misses} misses)"
-                
+
                 if [[ $hit_rate -ge ${TARGETS[cache_hit_rate]} ]]; then
                     log "SUCCESS" "✓ Cache Hit Rate PASS (${hit_rate}% >= ${TARGETS[cache_hit_rate]}%)"
                 else
@@ -195,7 +195,7 @@ test_redis_performance() {
 
 test_batch_endpoint() {
     log "INFO" "Testing batch endpoint..."
-    
+
     # Create test batch request
     local batch_request=$(cat << 'BATCH_EOF'
 {
@@ -207,21 +207,21 @@ test_batch_endpoint() {
 }
 BATCH_EOF
 )
-    
+
     log "INFO" "Executing batch request (3 requests)..."
-    
+
     local start_time=$(date +%s%N)
-    
+
     local response=$(curl -s -X POST "http://localhost:3000/api/batch" \
         -H "Content-Type: application/json" \
         -d "$batch_request")
-    
+
     local end_time=$(date +%s%N)
     local latency=$(( (end_time - start_time) / 1000000 ))  # Convert to ms
-    
+
     log "INFO" "Batch response received"
     log "INFO" "Latency: ${latency}ms"
-    
+
     # Check if successful
     if echo "$response" | grep -q '"status":"success"'; then
         log "SUCCESS" "✓ Batch endpoint PASS (${latency}ms)"
@@ -233,12 +233,12 @@ BATCH_EOF
 
 test_circuit_breaker() {
     log "INFO" "Testing circuit breaker..."
-    
+
     # Get circuit breaker state
     local cb_state=$(curl -s "http://localhost:3000/api/circuit-breaker/state" 2>/dev/null || echo "{}")
-    
+
     log "INFO" "Circuit Breaker State: $cb_state"
-    
+
     if echo "$cb_state" | grep -q "CLOSED"; then
         log "SUCCESS" "✓ Circuit Breaker CLOSED (normal operation)"
     elif echo "$cb_state" | grep -q "OPEN"; then
@@ -250,17 +250,17 @@ test_circuit_breaker() {
 
 test_cdn_assets() {
     log "INFO" "Testing CDN asset performance..."
-    
+
     # Test static asset
     log "INFO" "Testing asset latency..."
-    
+
     local start=$(date +%s%N)
     local asset_response=$(curl -s -I "http://localhost:3000/assets/app.js")
     local end=$(date +%s%N)
     local asset_latency=$(( (end - start) / 1000000 ))
-    
+
     log "INFO" "Asset latency: ${asset_latency}ms"
-    
+
     # Check cache headers
     if echo "$asset_response" | grep -q "Cache-Control:.*immutable"; then
         log "SUCCESS" "✓ Asset cache headers present"
@@ -275,9 +275,9 @@ test_cdn_assets() {
 
 generate_report() {
     log "INFO" "Generating performance report..."
-    
+
     local report_file="${RESULTS_DIR}/TIER2-LOAD-TEST-REPORT-${TIMESTAMP}.md"
-    
+
     cat > "$report_file" << 'REPORT_EOF'
 # Tier 2 Load Test Report
 
@@ -360,7 +360,7 @@ generate_report() {
 - Approved for Production: TBD
 
 REPORT_EOF
-    
+
     log "INFO" "Report generated: $report_file"
 }
 
@@ -375,36 +375,36 @@ main() {
     log "INFO" "Timeline: ~2-3 hours for all tests"
     log "INFO" "Results directory: $RESULTS_DIR"
     echo ""
-    
+
     # Prerequisites
     check_prerequisites
-    
+
     # Run tests
     for scenario in "${TEST_SCENARIOS[@]}"; do
         IFS=: read -r users duration <<< "$scenario"
-        
+
         log "INFO" ""
         log "INFO" "Running scenario: ${users} users for ${duration}s"
-        
+
         if run_load_test "$users" "$duration"; then
             log "SUCCESS" "Test passed: ${users} users"
         else
             log "WARN" "Test failed or completed: ${users} users"
         fi
-        
+
         # Component tests after each scenario
         test_redis_performance
         test_batch_endpoint
         test_circuit_breaker
         test_cdn_assets
-        
+
         # Cool down between tests
         sleep 10
     done
-    
+
     # Generate final report
     generate_report
-    
+
     # Summary
     cat << 'SUMMARY_EOF' | tee -a "${LOG_FILE}"
 
@@ -451,7 +451,7 @@ NEXT STEPS:
 ════════════════════════════════════════════════════════════════════════════════
 
 SUMMARY_EOF
-    
+
     log "INFO" "Phase 4 (Load Testing) COMPLETE"
     return 0
 }

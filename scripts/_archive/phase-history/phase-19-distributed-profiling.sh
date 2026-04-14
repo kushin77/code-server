@@ -63,7 +63,7 @@ data:
             endpoint: 0.0.0.0:14268
           thrift_compact:
             endpoint: 0.0.0.0:6831/udp
-    
+
     processors:
       batch:
         timeout: 10s
@@ -86,13 +86,13 @@ data:
             type: probabilistic
             probabilistic:
               sampling_percentage: 10
-    
+
     exporters:
       jaeger:
         endpoint: jaeger-collector:14250
       prometheus:
         endpoint: "0.0.0.0:8888"
-    
+
     service:
       pipelines:
         traces:
@@ -129,13 +129,13 @@ spec:
               # Profile API server (CPU, memory, goroutine)
               go tool pprof -http=:8080 \
                 http://api-server:6060/debug/pprof/profile?seconds=30 &
-              
+
               # Collect heap profile
               curl -s http://api-server:6060/debug/pprof/heap > /tmp/heap-$(date +%s).prof
-              
+
               # Collect goroutine profile
               curl -s http://api-server:6060/debug/pprof/goroutine > /tmp/goroutine-$(date +%s).prof
-              
+
               # Generate flame graphs
               go-torch --url=http://api-server:6060 --time=30 --file=/tmp/flame-$(date +%s).svg
           restartPolicy: OnFailure
@@ -188,7 +188,7 @@ analysis:
     - name: "critical_path_analysis"
       description: "Identifies slowest service in request chain"
       query: |
-        SELECT 
+        SELECT
           service_name,
           operation_name,
           SUM(duration_ms) as total_duration,
@@ -200,7 +200,7 @@ analysis:
         GROUP BY service_name, operation_name
         ORDER BY total_duration DESC
         LIMIT 20
-    
+
     - name: "bottleneck_detection"
       description: "Finds services with highest error rates"
       query: |
@@ -213,7 +213,7 @@ analysis:
         WHERE start_time > NOW - INTERVAL 1 HOUR
         GROUP BY service_name
         HAVING error_rate > 0.01
-    
+
     - name: "dependency_latency"
       description: "Measures latency added by each dependency"
       query: |
@@ -235,12 +235,12 @@ analysis:
       threshold: 1000  # ms
       condition: "end_to_end_latency > threshold"
       severity: "warning"
-    
+
     - name: "service_latency_spike"
       threshold: 500   # ms increase
       condition: "service_latency_change > threshold"
       severity: "warning"
-    
+
     - name: "critical_path_slow"
       threshold: 2000  # ms
       condition: "critical_path_latency > threshold"
@@ -275,42 +275,42 @@ spec:
               # Query Jaeger for service dependencies
               curl -s 'http://jaeger-query:16686/api/v2/services' | \
                 jq '.data | map({service: .}) | sort_by(.service)' > /tmp/services.json
-              
+
               # Generate dependency graph
               cat > /tmp/generate-deps.py <<'PYTHON'
               import json
               import sys
-              
+
               with open('/tmp/services.json') as f:
                   services = json.load(f)
-              
+
               # Query traces for dependencies
               dependencies = {}
               for svc in services:
                   dependencies[svc['service']] = []
-              
+
               # Output as GraphML for visualization
               print('<?xml version="1.0" encoding="UTF-8"?>')
               print('<graphml xmlns="http://graphml.graphdrawing.org/xmlns">')
               print('<graph edgedefault="directed">')
-              
+
               for service in sorted(services):
                   print(f'  <node id="{service[\'service\']}"/>')
-              
+
               # Example dependencies (would come from trace analysis)
               deps = [
                   ('api-server', 'database'),
                   ('api-server', 'cache'),
                   ('cache', 'database'),
               ]
-              
+
               for src, dst in deps:
                   print(f'  <edge source="{src}" target="{dst}"/>')
-              
+
               print('</graph>')
               print('</graphml>')
               PYTHON
-              
+
               python /tmp/generate-deps.py > /tmp/service-graph.xml
 EOF
 
@@ -334,19 +334,19 @@ data:
         duration: 7d
         storage: elasticsearch
         indices_per_day: 1
-      
+
       # Warm storage: 30 days (medium performance)
       warm:
         duration: 30d
         storage: elasticsearch
         index_prefix: "jaeger-warm"
-      
+
       # Cold storage: 1 year (archive)
       cold:
         duration: 365d
         storage: s3
         bucket: "traces-archive"
-      
+
       # Cleanup policies
       cleanup:
         enabled: true

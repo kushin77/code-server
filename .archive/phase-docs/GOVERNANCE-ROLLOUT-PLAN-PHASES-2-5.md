@@ -1,9 +1,9 @@
 # Governance Rollout Plan: Phases 2-5 Implementation Guide
 
-**Document**: Governance & Guardrails Rollout Plan  
-**Status**: Phase 2 Complete ✅ | Phases 3-5 In Planning  
-**Timeline**: April 14 - May 2, 2026  
-**Owner**: @kushin77 (DevOps/Platform Lead)  
+**Document**: Governance & Guardrails Rollout Plan
+**Status**: Phase 2 Complete ✅ | Phases 3-5 In Planning
+**Timeline**: April 14 - May 2, 2026
+**Owner**: @kushin77 (DevOps/Platform Lead)
 
 ---
 
@@ -95,22 +95,22 @@ Topics:
    - Why: Prevent credential leakage to git
    - Example: API_KEY="sk-..." is detected and blocked
    - How to fix: Use .env files (gitignore) or Vault
-   
+
 2. Configuration must validate
    - Why: Prevent deployment failures
    - Example: docker-compose.yml must have valid YAML
    - How to fix: Run locally: `docker-compose config`
-   
+
 3. Scripts must pass syntax checks
    - Why: Prevent runtime failures
    - Example: bash -n script.sh must pass
    - How to fix: Test locally before PR
-   
+
 4. Terraform must validate
    - Why: Prevent infrastructure errors
    - Example: terraform validate must pass
    - How to fix: Run in terraform/ directory
-   
+
 5. Obsolete files detection
    - Why: Keep codebase clean
    - Example: don't merge phase-15-docker-compose.yml
@@ -156,11 +156,11 @@ The following issues were detected (non-blocking preview):
 ❌ Caddyfile: Invalid YAML on line 15
    Expected: valid Caddyfile syntax
    Found: Missing closing brace
-   
+
 ⚠️ Secrets: 1 potential secret detected
    Pattern: AWS_ACCESS_KEY="AKIA..."
    Fix: Move to .env or use Vault
-   
+
 📋 Terraform: terraform validate passed
 
 This is a PREVIEW. Checks will be non-blocking until Phase 4.
@@ -272,15 +272,15 @@ jobs:
 ### Branch Protection Settings
 
 **Required Status Checks**:
-✅ configuration-validation / secrets-scanning  
-✅ configuration-validation / docker-compose-validate  
-✅ configuration-validation / caddyfile-validate  
-✅ configuration-validation / terraform-validate  
-✅ configuration-validation / shell-script-validate  
+✅ configuration-validation / secrets-scanning
+✅ configuration-validation / docker-compose-validate
+✅ configuration-validation / caddyfile-validate
+✅ configuration-validation / terraform-validate
+✅ configuration-validation / shell-script-validate
 
 **Allowed Failures**:
-⚠️ configuration-validation / shell-check-lint  
-⚠️ configuration-validation / obsolete-file-detection  
+⚠️ configuration-validation / shell-check-lint
+⚠️ configuration-validation / obsolete-file-detection
 
 ### Escalation Path
 
@@ -290,7 +290,7 @@ jobs:
    ```bash
    # Example: Local Caddyfile validation
    caddy validate --config Caddyfile
-   
+
    # Example: Local docker-compose validation
    docker-compose config > /dev/null
    ```
@@ -305,9 +305,9 @@ jobs:
 3. **If false positive**: Comment in PR
    ```
    @kushin77 This appears to be a false positive:
-   
+
    [Explain why check result is incorrect]
-   
+
    Requested: Check this or disable this check
    ```
 
@@ -439,7 +439,7 @@ jobs:
 1. PR submitter explains exception request in PR body:
    ```markdown
    ## Governance Exception Request
-   
+
    Check: Secrets Scanning
    Violation: AWS key pattern detected (false positive)
    Reason: This is a public example key from AWS docs
@@ -624,19 +624,19 @@ git commit -m "Archive obsolete docker-compose variant"
 
 ## FAQ
 
-**Q: Can I merge a PR that fails CI checks?**  
+**Q: Can I merge a PR that fails CI checks?**
 A: No (after Phase 4). Checks block merge. Fix violations or request exception.
 
-**Q: What if CI is wrong (false positive)?**  
+**Q: What if CI is wrong (false positive)?**
 A: Comment in PR. Owner evaluates and may override or fix workflow.
 
-**Q: How do I handle secrets properly?**  
+**Q: How do I handle secrets properly?**
 A: Use .env files (git-ignored) or Vault for production.
 
-**Q: Can I ignore ShellCheck warnings?**  
+**Q: Can I ignore ShellCheck warnings?**
 A: During Phase 4 (warnings) yes. Phase 5 onwards, ShellCheck violations block.
 
-**Q: What if a governance rule doesn't make sense?**  
+**Q: What if a governance rule doesn't make sense?**
 A: Propose change in #engineering Slack. Owner evaluates, may update rule.
 
 ---
@@ -664,5 +664,5 @@ A: Propose change in #engineering Slack. Owner evaluates, may update rule.
 
 ---
 
-**Last Updated**: April 14, 2026  
+**Last Updated**: April 14, 2026
 **Next Review**: April 21, 2026 (Phase 3 execution)

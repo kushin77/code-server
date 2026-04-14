@@ -1,10 +1,10 @@
 # Phase 16-B: HAProxy Load Balancing & Auto-Scaling
 
-**Status:** IN PROGRESS  
-**Effort:** 6 hours  
-**Target Completion:** April 17, 2026  
-**Dependencies:** None (parallel with 16-A)  
-**Owner:** DevOps Team  
+**Status:** IN PROGRESS
+**Effort:** 6 hours
+**Target Completion:** April 17, 2026
+**Dependencies:** None (parallel with 16-A)
+**Owner:** DevOps Team
 
 ---
 
@@ -26,7 +26,7 @@ CURRENT (Single application):
   Problem: No scaling, no failover, bottleneck at 1000 req/s
 
 TARGET (Scaled & Load-Balanced):
-  Developers 
+  Developers
        ↓
   ┌─────────────────────┐
   │ HAProxy Primary     │────────┐
@@ -88,12 +88,12 @@ global
   log 127.0.0.1 local0
   maxconn 50000
   daemon
-  
+
   # Tuning for high throughput
   tune.maxconn 50000
   tune.http.maxhdr 16384
   tune.ssl.default-dh-param 2048
-  
+
   # Stats socket for monitoring
   stats socket /var/run/haproxy.sock mode 660 level admin
   stats timeout 30s
@@ -103,16 +103,16 @@ defaults
   log global
   option httplog
   option http-keep-alive
-  
+
   # Timeouts
   timeout connect 5000ms
   timeout client 50000ms
   timeout server 50000ms
   timeout http-request 10000ms
   timeout tunnel 1h
-  
+
   retries 3
-  
+
   # Error files
   errorfile 400 /etc/haproxy/errors/400.http
   errorfile 403 /etc/haproxy/errors/403.http
@@ -123,23 +123,23 @@ defaults
 frontend web_https
   bind *:443 ssl crt /etc/ssl/certs/code-server.pem
   bind *:80
-  
+
   # Redirect HTTP to HTTPS
   http-request redirect scheme https code 301 if !{ ssl_fc }
-  
+
   # ACLs: Route by hostname/path
   acl is_api path_beg /api/
   acl is_ide hdr(host) -i ide.dev.yourdomain.com
-  
+
   # Request rate limiting (per IP)
   declare counter http_requests_per_ip
   http-request track-sc0 src
   http-request deny if { sc_http_req_rate(0) gt 1000 }  # 1000 req/s per IP
-  
+
   # Logging
   option httplog
   log-request-file /var/log/haproxy/haproxy-requests.log
-  
+
   # Route to backend
   use_backend api_servers if is_api
   default_backend ide_servers
@@ -148,14 +148,14 @@ frontend web_https
 backend ide_servers
   mode http
   balance roundrobin  # or leastconn for persistent connections
-  
+
   # Session persistence (for stateful apps)
   cookie SERVERID insert indirect nocache
-  
+
   # Health checks (every 10 seconds)
   option httpchk GET /health HTTP/1.1\r\nHost:\ code-server
   option forwardfor
-  
+
   # Servers
   server app-1 192.168.168.31:8080 check fall 3 rise 2 cookie app1
   server app-2 192.168.168.41:8080 check fall 3 rise 2 cookie app2
@@ -166,10 +166,10 @@ backend ide_servers
 backend api_servers
   mode http
   balance leastconn  # Send to least-connected backend
-  
+
   # Health checks
   option httpchk GET /api/health HTTP/1.1\r\nHost:\ code-server
-  
+
   # Servers
   server api-1 192.168.168.31:8080 check
   server api-2 192.168.168.41:8080 check
@@ -200,11 +200,11 @@ vrrp_instance VI_1 {
   virtual_router_id 51
   priority 101  # Highest priority = master
   advert_int 1
-  
+
   virtual_ipaddress {
     192.168.168.35/32 dev eth0  # Virtual IP
   }
-  
+
   track_script {
     check_haproxy
   }
@@ -219,11 +219,11 @@ vrrp_instance VI_1 {
   virtual_router_id 51
   priority 100  # Lower priority = backup
   advert_int 1
-  
+
   virtual_ipaddress {
     192.168.168.35/32 dev eth0  # Same virtual IP
   }
-  
+
   track_script {
     check_haproxy
   }
@@ -250,9 +250,9 @@ resource "aws_launch_template" "app_server" {
   name_prefix = "app-"
   image_id = data.aws_ami.ubuntu_20_04.id
   instance_type = "t3.medium"
-  
+
   user_data = base64encode(file("${path.module}/scripts/bootstrap-app-server.sh"))
-  
+
   tag_specifications {
     resource_type = "instance"
     tags = {role = "app-server"}
@@ -265,14 +265,14 @@ resource "aws_autoscaling_group" "app_servers" {
   min_size = 3
   max_size = 50
   desired_capacity = 5
-  
+
   launch_template {
     id = aws_launch_template.app_server.id
     version = "$Latest"
   }
-  
+
   vpc_zone_identifier = [aws_subnet.private.id]
-  
+
   health_check_type = "ELB"
   health_check_grace_period = 300
 }
@@ -356,7 +356,7 @@ scrape_configs:
     static_configs:
       - targets: ['127.0.0.1:8404']
     metrics_path: '/stats;csv'
-    
+
   - job_name: 'autoscaling_group'
     ec2_sd_configs:
       - region: us-east-1
@@ -387,19 +387,19 @@ groups:
         annotations:
           severity: critical
           summary: "HAProxy is down"
-          
+
       - alert: BackendServerDown
         expr: haproxy_backend_up != 1
         for: 2m
         annotations:
           severity: warning
-          
+
       - alert: HighLatency
         expr: haproxy_backend_http_response_time_ms_quantile_p99 > 100
         for: 5m
         annotations:
           severity: warning
-          
+
       - alert: RateLimitExceeded
         expr: rate(haproxy_frontend_request_errors_total[5m]) > 100
         for: 1m

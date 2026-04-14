@@ -11,7 +11,7 @@ spec:
   - name: rate_limiting.rules
     interval: 30s
     rules:
-    
+
     # Alert: User approaching rate limit (90%+)
     - alert: RateLimitApproaching
       expr: |
@@ -21,7 +21,7 @@ spec:
         summary: "User {{ $labels.user_id }} approaching rate limit ({{ $value | humanizePercentage }})"
         description: "User {{ $labels.user_id }} has consumed {{ $value | humanizePercentage }} of their {{ $labels.tier }} tier rate limit"
         action: "Send warning email, offer paid upgrade"
-        
+
     # Alert: User exceeded rate limit
     - alert: RateLimitExceeded
       expr: |
@@ -31,7 +31,7 @@ spec:
         summary: "Rate limits exceeded in last minute"
         description: "{{ $value }} requests rejected due to rate limiting"
         action: "Monitor abuse patterns, blacklist if necessary"
-    
+
     # Alert: Rate limiter accuracy degraded
     - alert: RateLimitAccuracyDegraded
       expr: |
@@ -41,7 +41,7 @@ spec:
         summary: "Rate limit accuracy below 99.9%"
         description: "Rate limiter false positive rate: {{ $value | humanizePercentage }}"
         action: "Review rate limiter configuration, check for clock skew"
-    
+
     # Alert: Rate limit header calculation latency
     - alert: RateLimitHeaderLatencyHigh
       expr: |
@@ -66,7 +66,7 @@ spec:
   - name: rate_limiting.slo
     interval: 1m
     rules:
-    
+
     # SLO: API response time < 100ms p99 (baseline maintained)
     - alert: APILatenciySLOBreach
       expr: |
@@ -76,7 +76,7 @@ spec:
         summary: "GraphQL API latency exceeds 100ms p99"
         description: "Current: {{ $value | humanizeDuration }}, SLO: 100ms"
         action: "Investigate slow queries, check database performance"
-        
+
     # SLO: Rate limit accuracy >= 99.9%
     - alert: RateLimitAccuracySLOBreach
       expr: |
@@ -86,7 +86,7 @@ spec:
         summary: "Rate limit accuracy below 99.9% SLO"
         description: "Current accuracy: {{ $value | humanizePercentage }}"
         action: "Review rate limiter algorithm, audit rules"
-        
+
     # SLO: API uptime >= 99.95% (monthly)
     - alert: APIUptimeSLOBreach
       expr: |
@@ -113,33 +113,33 @@ data:
         concurrent_queries: 5
         max_payload_kb: 1024
         cache_ttl_seconds: 300
-        
+
       pro:
         requests_per_minute: 1000
         requests_per_day: 500000
         concurrent_queries: 50
         max_payload_kb: 10240
         cache_ttl_seconds: 3600
-        
+
       enterprise:
         requests_per_minute: 10000
         requests_per_day: 100000000
         concurrent_queries: 500
         max_payload_kb: 102400
         cache_ttl_seconds: 86400
-    
+
     headers:
       limit_header: "X-RateLimit-Limit"
       remaining_header: "X-RateLimit-Remaining"
       reset_header: "X-RateLimit-Reset"
       retry_after_header: "Retry-After"
-    
+
     enforcement:
       algorithm: "token-bucket"
       window_size_seconds: 60
       burst_multiplier: 1.5
       grace_period_seconds: 5
-    
+
     monitoring:
       prometheus_port: 9090
       metrics_path: "/metrics"

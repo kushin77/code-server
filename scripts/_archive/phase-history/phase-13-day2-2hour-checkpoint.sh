@@ -195,7 +195,7 @@ if [ $FAIL -eq 0 ]; then
     echo ""
     echo "  Load test proceeding normally. Continue monitoring."
     echo ""
-    
+
     # Save checkpoint
     cat > "$CHECKPOINT_MARKER" << EOF
 Checkpoint #${CHECKPOINT_NUM}
@@ -206,7 +206,7 @@ Error Rate: ${ERROR_RATE_PCT}%
 Containers: ${CONTAINER_COUNT}/3 running
 Memory: ${MEMORY_USED} / ${MEMORY_TOTAL}
 EOF
-    
+
     exit 0
 else
     echo "🟠 CHECKPOINT #${CHECKPOINT_NUM}: WARNING"
@@ -220,6 +220,6 @@ else
     echo "    3. Check logs for errors"
     echo "    4. Consider early halt if SLOs violated"
     echo ""
-    
+
     exit 1
 fi

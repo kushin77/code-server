@@ -350,7 +350,7 @@ export class ReplicationService extends EventEmitter {
     );
 
     // Calculate success rate
-    const totalOps = this.health.pendingOperations + 
+    const totalOps = this.health.pendingOperations +
                      Array.from(this.peers.values()).flatMap(p => p.appliedOperations).length;
     this.metrics.syncSuccessRate =
       totalOps > 0

@@ -103,11 +103,11 @@ EOF
     if command -v docker &> /dev/null; then
         cd "${PROJECT_ROOT}"
         docker-compose up -d redis-cache 2>&1 | tee -a "${DEPLOYMENT_LOG}"
-        
+
         # Wait for Redis to be ready
         log_info "Waiting for Redis to be ready..."
         sleep 5
-        
+
         if docker ps | grep -q "redis-cache"; then
             log_success "Redis cache deployed and running"
         else
@@ -132,7 +132,7 @@ EOF
 
     # Step 6: Health Check
     log_info "Step 6: Performing health checks..."
-    
+
     local health_checks_passed=0
     local health_checks_total=3
 

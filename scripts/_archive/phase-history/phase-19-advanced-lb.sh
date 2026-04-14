@@ -34,7 +34,7 @@ spec:
     retries:
       attempts: 3
       perTryTimeout: 2s
-  
+
   # Default route (least connections)
   - route:
     - destination:
@@ -107,14 +107,14 @@ sessionAffinity:
     secure: true
     sameSite: "Strict"
     ttl: "24h"
-  
+
   # Consistent hashing for distribution
   consistentHash:
     maglev:
       tableSize: 65537
     ring:
       minimumRingSize: 1024
-  
+
   # Failover behavior
   failover:
     enabled: true
@@ -133,7 +133,7 @@ healthChecks:
     timeout: "5s"
     unhealthy_threshold: 3
     healthy_threshold: 2
-  
+
   - path: "/api/ping"
     protocol: "http"
     interval: "30s"
@@ -156,7 +156,7 @@ geoRouting:
       healthCheck: "http://api-us-east-1:8080/health"
       latency_target: "50ms"
       capacity: 1000  # concurrent connections
-    
+
     us_west:
       endpoints:
         - "api-us-west-1.example.com:8080"
@@ -164,14 +164,14 @@ geoRouting:
       healthCheck: "http://api-us-west-1:8080/health"
       latency_target: "50ms"
       capacity: 1000
-    
+
     eu_west:
       endpoints:
         - "api-eu-west-1.example.com:8080"
       healthCheck: "http://api-eu-west-1:8080/health"
       latency_target: "100ms"
       capacity: 500
-    
+
     ap_southeast:
       endpoints:
         - "api-ap-southeast-1.example.com:8080"
@@ -184,7 +184,7 @@ geoRouting:
   geolocation:
     method: "geoip"  # Use MaxMind GeoIP2
     accuracy: "city"  # City-level accuracy
-    
+
   # Routing policies
   policies:
     - rule: "client_country == 'US'"
@@ -193,17 +193,17 @@ geoRouting:
           weight: 50
         - region: "us_west"
           weight: 50
-    
+
     - rule: "client_country in ['DE', 'FR', 'GB', 'IT']"
       route_to:
         - region: "eu_west"
           weight: 100
-    
+
     - rule: "client_country in ['SG', 'AU', 'NZ', 'JP']"
       route_to:
         - region: "ap_southeast"
           weight: 100
-    
+
     # Fallback
     - rule: "true"
       route_to:
@@ -229,29 +229,29 @@ echo "Starting canary deployment: $SERVICE v$CANARY_VERSION"
 
 for weight in "${CANARY_WEIGHT_STEPS[@]}"; do
   echo "Canary: $weight% traffic to new version"
-  
+
   # Update traffic split
   kubectl patch virtualservice "${SERVICE}-lb" \
     --type merge \
     -p "{\"spec\":{\"http\":[{\"route\":[{\"destination\":{\"host\":\"${SERVICE}\",\"subset\":\"v1\"},\"weight\":$((100-weight))},{\"destination\":{\"host\":\"${SERVICE}\",\"subset\":\"v2\"},\"weight\":${weight}}]}]}}"
-  
+
   # Monitor metrics
   echo "Monitoring for $STEP_DURATION..."
   start_time=$(date +%s)
-  
+
   while (( $(date +%s) - start_time < $(echo "$STEP_DURATION" | sed 's/m/*60/') )); do
     # Check error rate
     error_rate=$(curl -s 'http://prometheus:9090/api/v1/query' \
       --data-urlencode 'query=rate(http_requests_total{status=~"5.."}[1m])' | \
       jq '.data.result[0].value[1]' | tr -d '"')
-    
+
     # Check latency
     p99_latency=$(curl -s 'http://prometheus:9090/api/v1/query' \
       --data-urlencode 'query=histogram_quantile(0.99, http_request_duration_seconds)' | \
       jq '.data.result[0].value[1]' | tr -d '"')
-    
+
     echo "  Error rate: $error_rate, P99 latency: ${p99_latency}ms"
-    
+
     # Abort if metrics exceed thresholds
     if (( $(echo "$error_rate > 0.01" | bc -l) )); then
       echo "❌ Error rate exceeded threshold, rolling back..."
@@ -260,7 +260,7 @@ for weight in "${CANARY_WEIGHT_STEPS[@]}"; do
         -p "{\"spec\":{\"http\":[{\"route\":[{\"destination\":{\"host\":\"${SERVICE}\",\"subset\":\"v1\"},\"weight\":100}]}]}}"
       exit 1
     fi
-    
+
     sleep 10
   done
 done
@@ -318,7 +318,7 @@ sleep 120
 # Final verification
 if curl -s https://${SERVICE}.example.com/health | jq -e '.status == "ok"' > /dev/null; then
   echo "✅ Green version is operational, deployments completed successfully"
-  
+
   # Blue can now be scaled down or updated
   echo "5. Scaling down blue (old) version for next cycle..."
   kubectl scale deployment/${SERVICE}-blue --replicas=0

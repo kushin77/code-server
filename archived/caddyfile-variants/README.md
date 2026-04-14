@@ -1,6 +1,6 @@
 # Caddyfile Consolidation Archive
 
-**Last Updated**: April 14, 2026  
+**Last Updated**: April 14, 2026
 **Status**: Consolidated (Phase 1, Task 1.3)
 
 ## Consolidation Summary
@@ -82,6 +82,6 @@ services:
 
 ---
 
-**Archive Created**: Phase 1, Task 1.3 Consolidation  
-**Maintained By**: DevOps Team  
+**Archive Created**: Phase 1, Task 1.3 Consolidation
+**Maintained By**: DevOps Team
 **Next Review**: Week of April 21, 2026

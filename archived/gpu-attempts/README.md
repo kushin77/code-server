@@ -38,5 +38,5 @@ Rather than maintain untested GPU code, it was archived for future reference whe
 
 ---
 
-**Status**: Archived - not actively maintained  
+**Status**: Archived - not actively maintained
 **Related**: [../phase-summaries/](../phase-summaries/) • [../../docs/GOVERNANCE.md](../../docs/GOVERNANCE.md)

@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # Tier 2.2: CDN Integration (CloudFlare)
-# 
+#
 # Purpose: Integrate CloudFlare CDN for 50-70% asset latency reduction
 # Idempotent: Checks DNS/CNAME records, skips if already configured
 # Immutable: Creates backup of DNS settings before changes
@@ -40,43 +40,43 @@ mkdir -p "$STATE_DIR" "$BACKUP_DIR"
     echo "Start: $(date)"
     echo "Log: $LOG_FILE"
     echo ""
-    
+
     ###############################################################################
     # Pre-Flight Checks
     ###############################################################################
-    
+
     echo "[1/5] Pre-flight validation..."
-    
+
     # Check domain configuration
     if [[ -z "${DOMAIN_NAME:-}" ]]; then
         echo "⚠️  WARNING: DOMAIN_NAME not set in environment"
         echo "    Proceeding with placeholder: ide.kushnir.cloud"
         DOMAIN_NAME="ide.kushnir.cloud"
     fi
-    
+
     echo "✓ Domain configured: $DOMAIN_NAME"
     echo ""
-    
+
     ###############################################################################
     # Backup DNS Configuration
     ###############################################################################
-    
+
     echo "[2/5] Backing up DNS configuration..."
-    
+
     # Backup Caddyfile (reverse proxy config)
     if [[ -f "Caddyfile" ]]; then
         cp -v Caddyfile "$BACKUP_DIR/Caddyfile.$TIMESTAMP.bak"
         echo "✓ Caddyfile backed up"
     fi
-    
+
     echo ""
-    
+
     ###############################################################################
     # CloudFlare Configuration (IaC)
     ###############################################################################
-    
+
     echo "[3/5] Configuring CloudFlare cache headers..."
-    
+
     # Create Caddyfile with CloudFlare cache directives
     cat > /tmp/Caddyfile.cdn << 'EOF'
 # Caddyfile with CloudFlare CDN Configuration
@@ -85,7 +85,7 @@ mkdir -p "$STATE_DIR" "$BACKUP_DIR"
     # Global settings
     auto_https off  # CloudFlare handles HTTPS
     admin off       # Disable admin API
-    
+
     # CloudFlare metrics integration
     metrics {
         address localhost:9090
@@ -95,7 +95,7 @@ mkdir -p "$STATE_DIR" "$BACKUP_DIR"
 # Main domain
 ide.kushnir.cloud {
     # CloudFlare cache directives (https://developers.cloudflare.com/cache/get-started/)
-    
+
     # Static assets (long TTL)
     @assets {
         path /assets/*
@@ -111,7 +111,7 @@ ide.kushnir.cloud {
         header X-Cache-Control-Source "caddy"
         file_server
     }
-    
+
     # Extensions (longer TTL)
     @extensions {
         path /extensions/*
@@ -122,7 +122,7 @@ ide.kushnir.cloud {
         header X-Cache-Control-Source "caddy"
         file_server
     }
-    
+
     # API responses (conditional caching)
     @api {
         path /api/*
@@ -133,7 +133,7 @@ ide.kushnir.cloud {
         header X-Cache-Control-Source "caddy"
         reverse_proxy localhost:8080
     }
-    
+
     # Dynamic content (no caching)
     @dynamic {
         path /workspaces/*
@@ -147,32 +147,32 @@ ide.kushnir.cloud {
         header Expires "0"
         reverse_proxy localhost:8080
     }
-    
+
     # Default reverse proxy
     reverse_proxy localhost:8080 {
         header_up X-Forwarded-For {http.request.remote.ip}
         header_up X-Forwarded-Proto {http.request.proto}
         header_up X-Forwarded-Host {http.request.host}
-        
+
         # Keep-alive connections
         transport http {
             keepalive_idle_timeout 30s
         }
     }
-    
+
     # Health check endpoint (no caching)
     handle /health {
         respond "OK" 200
     }
-    
+
     # Metrics endpoint
     handle /metrics {
         reverse_proxy localhost:9090
     }
-    
+
     # Enable gzip compression (CloudFlare will respect)
     encode gzip
-    
+
     # Security headers
     header X-Frame-Options "SAMEORIGIN"
     header X-Content-Type-Options "nosniff"
@@ -180,16 +180,16 @@ ide.kushnir.cloud {
     header Referrer-Policy "strict-origin-when-cross-origin"
 }
 EOF
-    
+
     echo "✓ CloudFlare cache headers configured"
     echo ""
-    
+
     ###############################################################################
     # Validation
     ###############################################################################
-    
+
     echo "[4/5] Validating CDN configuration..."
-    
+
     # Verify Caddyfile syntax
     if command -v caddy &> /dev/null; then
         if caddy validate --config /tmp/Caddyfile.cdn 2>/dev/null; then
@@ -198,7 +198,7 @@ EOF
             echo "⚠️  WARNING: Caddyfile syntax check failed (may need manual review)"
         fi
     fi
-    
+
     # Check CloudFlare API availability (if token provided)
     if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
         echo "✓ CloudFlare API token detected"
@@ -207,15 +207,15 @@ EOF
         echo "⚠️  NOTE: CloudFlare API token not set"
         echo "  Manual DNS setup required (create CNAME to CloudFlare)"
     fi
-    
+
     echo ""
-    
+
     ###############################################################################
     # Create Lock File
     ###############################################################################
-    
+
     echo "[5/5] Recording CDN configuration..."
-    
+
     cat > "$LOCK_FILE" << EOF
 {
   "tier": "2.2-cdn",
@@ -233,14 +233,14 @@ EOF
   }
 }
 EOF
-    
+
     echo "✓ CDN configuration recorded"
     echo ""
-    
+
     ###############################################################################
     # Summary
     ###############################################################################
-    
+
     echo "╔════════════════════════════════════════════════════════════════════════════╗"
     echo "║                   CDN CONFIGURATION COMPLETE                               ║"
     echo "╚════════════════════════════════════════════════════════════════════════════╝"
@@ -264,7 +264,7 @@ EOF
     echo "  5. Proceed to Tier 2.3: Request Batching"
     echo ""
     echo "End: $(date)"
-    
+
 } | tee -a "$LOG_FILE"
 
 echo ""

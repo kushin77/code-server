@@ -1,9 +1,9 @@
 # Sprint Planning: April 15-21, 2026
 
-**Sprint Goal**: Enable Phase 2 governance automation + Phase 23-A observability foundation  
-**Duration**: April 15-21 (one week)  
-**Parallel Tracks**: 3  
-**Owner**: @kushin77 (DevOps/Platform Lead)  
+**Sprint Goal**: Enable Phase 2 governance automation + Phase 23-A observability foundation
+**Duration**: April 15-21 (one week)
+**Parallel Tracks**: 3
+**Owner**: @kushin77 (DevOps/Platform Lead)
 **Status**: 🟢 PLANNING PHASE
 
 ---
@@ -21,8 +21,8 @@
 
 ## Track 1: Phase 2 Branch Protection Setup (8 hours)
 
-**Objective**: Enable CI checks as required PR status checks + configure branch protection  
-**Timeline**: April 15-17 (Mon-Wed)  
+**Objective**: Enable CI checks as required PR status checks + configure branch protection
+**Timeline**: April 15-17 (Mon-Wed)
 **Success Criteria**: All PRs passing validation before merge
 
 ### Task 1.1: Enable Required Status Checks (2 hours)
@@ -108,8 +108,8 @@ git checkout -b test/governance-enforcement
 
 ## Track 2: Dependabot Security CVEs (6 hours)
 
-**Objective**: Address 5 vulnerabilities (2 high, 3 moderate) identified by Dependabot  
-**Timeline**: April 15-19 (Mon-Fri, parallelizable)  
+**Objective**: Address 5 vulnerabilities (2 high, 3 moderate) identified by Dependabot
+**Timeline**: April 15-19 (Mon-Fri, parallelizable)
 **Success Criteria**: Dependabot shows "0 vulnerabilities"
 
 ### Current Vulnerabilities (from GitHub alerts)
@@ -168,8 +168,8 @@ pytest tests/
 
 ## Track 3: Phase 23-A Observability Foundation (12 hours)
 
-**Objective**: Deploy OpenTelemetry + Jaeger distributed tracing infrastructure  
-**Timeline**: April 15-18 (Mon-Thu)  
+**Objective**: Deploy OpenTelemetry + Jaeger distributed tracing infrastructure
+**Timeline**: April 15-18 (Mon-Thu)
 **Success Criteria**: Jaeger UI shows traces from code-server, caddy, ollama
 
 ### Task 3.1: OTel Collector Deployment (3 hours)
@@ -336,8 +336,7 @@ After this sprint completes:
 
 ---
 
-**Sprint Status**: 🟢 READY TO START (April 15, 0900 UTC)  
-**Owner**: @kushin77  
-**Tracking**: GitHub Projects / Milestones  
+**Sprint Status**: 🟢 READY TO START (April 15, 0900 UTC)
+**Owner**: @kushin77
+**Tracking**: GitHub Projects / Milestones
 **Next Update**: April 15 EOD stance
-

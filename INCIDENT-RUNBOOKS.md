@@ -111,8 +111,8 @@
 2. **Check database slow queries**:
    ```bash
    docker exec postgres-ha-primary psql -U postgres -c "
-   SELECT query, mean_exec_time, calls 
-   FROM pg_stat_statements 
+   SELECT query, mean_exec_time, calls
+   FROM pg_stat_statements
    ORDER BY mean_exec_time DESC LIMIT 10;
    "
    ```
@@ -252,7 +252,7 @@
    ```bash
    docker exec redis redis-cli MEMORY STATS
    # Identify which keys consuming most memory
-   docker exec redis redis-cli KEYS "*" | wc -l  
+   docker exec redis redis-cli KEYS "*" | wc -l
    # If > 100K keys, flush and investigate
    docker exec redis redis-cli FLUSHDB ASYNC
    ```

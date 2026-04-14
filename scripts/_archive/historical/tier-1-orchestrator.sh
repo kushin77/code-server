@@ -130,9 +130,9 @@ if [ "$CONTAINER_COUNT" -gt 0 ]; then
     echo "  Restarting containers..."
     ssh $SSH_OPTS "akushnir@$HOST" "cd /home/akushnir/code-server-enterprise && docker-compose down 2>&1 && sleep 5 && docker-compose up -d 2>&1" >> "$LOG_FILE" 2>&1 || true
     sleep 10
-    
+
     HEALTHY=$(ssh $SSH_OPTS "akushnir@$HOST" "docker ps --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null | grep 'Up' | wc -l" || echo "0")
-    
+
     if [ "$HEALTHY" -ge 1 ]; then
         echo -e "${GREEN}✓ Services restarted successfully ($HEALTHY containers running)${NC}"
     else

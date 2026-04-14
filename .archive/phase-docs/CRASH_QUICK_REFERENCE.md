@@ -263,6 +263,6 @@ If issues persist after trying above steps:
 
 ---
 
-**Last Updated**: April 13, 2026  
-**Maintained By**: Infrastructure Team  
+**Last Updated**: April 13, 2026
+**Maintained By**: Infrastructure Team
 **Review Frequency**: Quarterly

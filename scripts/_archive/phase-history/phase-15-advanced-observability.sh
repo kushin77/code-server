@@ -394,7 +394,7 @@ loadBalancing:
   algorithm: least_request
   healthCheckInterval: 10s
   healthCheckTimeout: 5s
-  
+
   upstreamGroups:
     - name: "api_servers"
       weight: 1
@@ -406,7 +406,7 @@ loadBalancing:
       healthCheck:
         path: "/health"
         expectedStatus: 200
-    
+
     - name: "cache_servers"
       weight: 1
       members:
@@ -492,7 +492,7 @@ HEALTH_CHECK_URL="${3:-http://localhost:3000/health}"
 check_region_health() {
     local region=$1
     local endpoint=$2
-    
+
     if curl -sf "$endpoint" >/dev/null 2>&1; then
         echo "✓ Region $region is healthy"
         return 0
@@ -505,10 +505,10 @@ check_region_health() {
 failover_to_secondary() {
     local region=$1
     echo "Initiating failover to $region..."
-    
+
     # Update DNS to point to secondary
     # (Implementation-specific)
-    
+
     # Notify monitoring systems
     echo "Failover to $region complete"
 }
@@ -525,7 +525,7 @@ while true; do
             FAILURE_COUNT=0
         fi
     fi
-    
+
     sleep 30
 done
 EOF
@@ -546,7 +546,7 @@ phase_5_verification() {
 
     # 5.1: Verify all configurations
     log_info "Verifying Phase 15 configurations..."
-    
+
     local required_files=(
         "config/advanced-alert-rules.yml"
         "config/resource-utilization-rules.yml"
@@ -566,7 +566,7 @@ phase_5_verification() {
 
     # 5.2: Validate YAML/JSON syntax
     log_info "Validating configuration syntax..."
-    
+
     for yaml_file in ${DEPLOYMENT_DIR}/config/*.yaml ${DEPLOYMENT_DIR}/config/*.yml; do
         if [ -f "$yaml_file" ]; then
             if command -v yq &> /dev/null; then

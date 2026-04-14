@@ -1,8 +1,8 @@
 # Code-Server-Enterprise: Folder Reorganization Plan
 
-**Document Version**: 1.0  
-**Status**: IMPLEMENTATION PLAN  
-**Start Date**: April 14, 2026  
+**Document Version**: 1.0
+**Status**: IMPLEMENTATION PLAN
+**Start Date**: April 14, 2026
 **Estimated Duration**: 2-3 sprints (Phase 22)
 
 ---
@@ -35,11 +35,11 @@ The repository has grown ad-hoc through 21 development phases, resulting in:
 
 ### Reorganization Goals
 
-✅ **Single Source of Truth**: Each component defined once, referenced everywhere  
-✅ **Progressive Disclosure**: Simple surface, complexity hidden in layers  
-✅ **Discoverability**: New team member runs `ls` and understands structure  
-✅ **Governance**: Structure enforces guardrails, prevents bad patterns  
-✅ **Maintenance**: Updating a feature touches one location, not 8  
+✅ **Single Source of Truth**: Each component defined once, referenced everywhere
+✅ **Progressive Disclosure**: Simple surface, complexity hidden in layers
+✅ **Discoverability**: New team member runs `ls` and understands structure
+✅ **Governance**: Structure enforces guardrails, prevents bad patterns
+✅ **Maintenance**: Updating a feature touches one location, not 8
 
 ### Scope
 
@@ -581,7 +581,7 @@ Some scripts need renaming to clarify purpose:
 
 ### Risk: Broken References After Migration
 
-**Probability**: Medium  
+**Probability**: Medium
 **Impact**: High (broken deployments)
 
 **Mitigation**:
@@ -593,7 +593,7 @@ Some scripts need renaming to clarify purpose:
 
 ### Risk: Lost Files During Migration
 
-**Probability**: Low  
+**Probability**: Low
 **Impact**: High (git history loss)
 
 **Mitigation**:
@@ -604,7 +604,7 @@ Some scripts need renaming to clarify purpose:
 
 ### Risk: Deployment Process Breaks
 
-**Probability**: High  
+**Probability**: High
 **Impact**: High (can't deploy)
 
 **Mitigation**:
@@ -616,7 +616,7 @@ Some scripts need renaming to clarify purpose:
 
 ### Risk: Scripts Stop Working
 
-**Probability**: Medium  
+**Probability**: Medium
 **Impact**: High
 
 **Mitigation**:
@@ -668,6 +668,6 @@ Some scripts need renaming to clarify purpose:
 
 ---
 
-**Status**: READY FOR APPROVAL  
-**Date Prepared**: April 14, 2026  
+**Status**: READY FOR APPROVAL
+**Date Prepared**: April 14, 2026
 **Prepared By**: @akushnir

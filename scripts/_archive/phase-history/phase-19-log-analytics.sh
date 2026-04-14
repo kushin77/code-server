@@ -24,7 +24,7 @@ metadata:
 data:
   loki-config.yaml: |
     auth_enabled: false
-    
+
     ingester:
       chunk_idle_period: 3m
       chunk_retain_period: 1m
@@ -39,7 +39,7 @@ data:
       wal:
         enabled: true
         dir: /loki/wal
-    
+
     limits_config:
       reject_old_samples: true
       reject_old_samples_max_age: 168h
@@ -47,7 +47,7 @@ data:
       ingestion_burst_size_mb: 200
       max_streams_per_user: 50000
       cardinality_limit: 100000
-    
+
     schema_config:
       configs:
         - from: 2020-10-24
@@ -57,22 +57,22 @@ data:
           index:
             prefix: loki_index_
             period: 24h
-    
+
     server:
       http_listen_port: 3100
       http_server_read_timeout: 600s
       http_server_write_timeout: 600s
-    
+
     storage_config:
       aws:
         s3: s3://aws_access_key_id:aws_secret_access_key@s3.amazonaws.com/loki
         s3forcepathstyle: true
-      
+
       boltdb_shipper:
         active_index_directory: /loki/boltdb-shipper-active
         cache_location: /loki/boltdb-shipper-cache
         shared_store: s3
-      
+
       cache_config:
         enable_fifocache: true
         default_validity: 10m
@@ -118,7 +118,7 @@ with open('/tmp/error_logs.json') as f:
             log = json.loads(line)
             service = log.get('service', 'unknown')
             error_type = log.get('error_type', 'unknown')
-            
+
             errors_by_service[service] += 1
             errors_by_type[error_type] += 1
             total_errors += 1
@@ -200,7 +200,7 @@ archival:
       - pii_data
     archive_location: s3://hipaa-logs-archive
     encryption: AES-256
-    
+
   # SOC2 compliance: 3-year retention
   soc2:
     enabled: true
@@ -212,7 +212,7 @@ archival:
       - configuration_change
     archive_location: s3://soc2-logs-archive
     immutable: true
-    
+
   # GDPR compliance: Delete PII after 30 days / upon request
   gdpr:
     enabled: true
@@ -224,7 +224,7 @@ archival:
       - user_agent
     deletion_policy: "automatic_after_retention"
     request_handling: "automated"
-    
+
   # General security audit
   security_audit:
     enabled: true
@@ -252,21 +252,21 @@ groups:
         for: 5m
         annotations:
           summary: "High error rate detected"
-      
+
       - alert: SecurityAnomalyDetected
         expr: |
           count(logcli query '{severity="error", message=~".*unauthorized.*"}') > 10
         for: 1m
         annotations:
           summary: "Possible security incident"
-      
+
       - alert: OutOfMemoryDetected
         expr: |
           count(logcli query '{message=~".*out of memory.*"}') > 0
         for: 1m
         annotations:
           summary: "OOM condition detected"
-      
+
       - alert: DatabaseConnectionPoolExhausted
         expr: |
           count(logcli query '{message=~".*connection pool.*exhausted.*"}') > 0
@@ -330,23 +330,23 @@ queries:
   # Error investigation
   high_error_rate: |
     {severity="error"} | json | stats count() as total_errors by service
-  
+
   # Performance slowdown
   slow_requests: |
     {job="api-server"} | json | duration > 1000 | stats avg(duration) by handler
-  
+
   # Security investigation
   failed_auth: |
     {severity="warn", message=~".*authentication failed.*"} | json
-  
+
   # Resource pressure
   memory_pressure: |
     {message=~".*memory.*"} | json | stats count() by node
-  
+
   # Database issues
   slow_queries: |
     {service="database"} | json | duration > 500 | stats avg(duration) by query_type
-  
+
   # Trace correlation
   by_trace_id: |
     {trace_id="$TRACE_ID"} | json | sort by timestamp

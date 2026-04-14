@@ -21,7 +21,7 @@ route:
   group_wait: 10s
   group_interval: 10s
   repeat_interval: 4h
-  
+
   # Route rules (inherited from base pattern — adapted for production)
   routes:
     # Critical → PagerDuty immediately
@@ -234,4 +234,3 @@ receivers:
 #         annotations:
 #           summary: 'Redis keys being evicted (memory pressure)'
 #
-

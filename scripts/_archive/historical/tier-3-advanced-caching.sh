@@ -71,7 +71,7 @@ class L1CacheService {
    */
   get(key) {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       this.stats.misses++;
       return null;
@@ -455,7 +455,7 @@ class MultiTierCacheMiddleware {
   getStats() {
     return {
       ...this.stats,
-      hitRate: this.stats.totalRequests > 0 ? 
+      hitRate: this.stats.totalRequests > 0 ?
         (((this.stats.l1Hits + this.stats.l2Hits) / this.stats.totalRequests) * 100).toFixed(2) + '%' :
         '0%',
       l1: this.l1Cache.getStats(),
@@ -505,7 +505,7 @@ class CacheInvalidationService {
   static async invalidateByTTL() {
     // L1 cleanup happens automatically via LRU
     const l1Cleaned = l1Cache.clearExpired();
-    
+
     console.log(`[Cache] TTL-based invalidation: L1=${l1Cleaned} items`);
   }
 

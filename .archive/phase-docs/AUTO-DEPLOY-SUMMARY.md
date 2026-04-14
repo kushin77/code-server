@@ -2,7 +2,7 @@
 
 > **🤖 MANDATE**: Every successful merge to `main` automatically triggers:
 > 1. Branch cleanup (merged branch is deleted)
-> 2. Production deployment (code goes live automatically)  
+> 2. Production deployment (code goes live automatically)
 > 3. Issue auto-closure (linked issues are automatically closed)
 
 This document explains the system. **For full details, see the linked policies below.**
@@ -86,11 +86,11 @@ GitHub detects merge
 ✅ Code is LIVE in production
 ```
 
-**Time**: ~10 minutes from merge to live  
-**Human effort**: 0 (completely automatic)  
-**Branch cleanup**: Automatic  
-**Issue closure**: Automatic  
-**Deployment**: Automatic  
+**Time**: ~10 minutes from merge to live
+**Human effort**: 0 (completely automatic)
+**Branch cleanup**: Automatic
+**Issue closure**: Automatic
+**Deployment**: Automatic
 
 ---
 
@@ -158,7 +158,7 @@ git push origin feature/my-feature
 # 5. Watch the magic happen
 # GitHub Actions → post-merge-cleanup-deploy
 # Your branch: auto-deleted ✅
-# Code: auto-deployed ✅  
+# Code: auto-deployed ✅
 # Issues: auto-closed ✅
 ```
 
@@ -377,11 +377,11 @@ test/description         → Testing changes
 
 Every deployment creates a permanent record:
 
-✅ GitHub PR history (who, when, what)  
-✅ GitHub deployment records (status, timing)  
-✅ GitHub Actions logs (complete execution)  
-✅ Git commit log (code changes, signatures)  
-✅ Application logs (runtime behavior)  
+✅ GitHub PR history (who, when, what)
+✅ GitHub deployment records (status, timing)
+✅ GitHub Actions logs (complete execution)
+✅ Git commit log (code changes, signatures)
+✅ Application logs (runtime behavior)
 
 All changes are **traceable, reversible, and auditable**.
 
@@ -422,9 +422,9 @@ Found something to improve?
 
 ---
 
-**Last Updated**: April 14, 2026  
-**System Status**: ✅ READY FOR USE  
-**Maintenance**: DevOps Team  
+**Last Updated**: April 14, 2026
+**System Status**: ✅ READY FOR USE
+**Maintenance**: DevOps Team
 
 ---
 

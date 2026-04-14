@@ -11,7 +11,7 @@ set -euo pipefail
 ensure_state() {
     local phase=$1
     local state=$2
-    
+
     # Check current state before making changes
     case "$phase:$state" in
         14:stage1)
@@ -39,14 +39,14 @@ ensure_state() {
             fi
             ;;
     esac
-    
+
     return 1
 }
 
 idempotent_deploy() {
     local phase=$1
     local changes_made=0
-    
+
     # Attempt deployment with idempotency check
     if ! ensure_state "$phase" "status"; then
         case "$phase" in
@@ -96,7 +96,7 @@ idempotent_deploy() {
                 ;;
         esac
     fi
-    
+
     return $changes_made
 }
 
@@ -106,26 +106,26 @@ idempotent_deploy() {
 
 verify_infrastructure_immutability() {
     local host=$1
-    
+
     echo "Verifying infrastructure immutability on $host..."
-    
+
     ssh -o StrictHostKeyChecking=no "akushnir@$host" bash -c '
         # Check that configuration files are read-only
         echo "Checking configuration immutability..."
         stat -c "%A %n" /docker-compose.yml | grep -q "r--r--r--" && echo "✓ docker-compose.yml is immutable"
         stat -c "%A %n" /Caddyfile | grep -q "r--r--r--" && echo "✓ Caddyfile is immutable"
-        
+
         # Verify Docker images are signed/verified
         echo "Verifying Docker image integrity..."
         docker images --format "{{.Repository}}:{{.Tag}}" | while read image; do
             docker inspect "$image" > /dev/null && echo "✓ $image verified"
         done
-        
+
         # Check container restart policies
         echo "Verifying container restart policies..."
         docker ps --format "table {{.Names}}\t{{json .HostConfig.RestartPolicy}}" | \
             grep -q '"Name":"always"' && echo "✓ All containers have restart=always"
-        
+
         # Verify volumes are read-only where applicable
         echo "Checking volume mount permissions..."
         docker inspect $(docker ps -q) | grep -A5 "Mounts" | grep -q "ReadOnly.*true" && \
@@ -135,12 +135,12 @@ verify_infrastructure_immutability() {
 
 verify_idempotency() {
     local phase=$1
-    
+
     echo "Verifying idempotency of $phase deployment..."
-    
+
     # Run deployment twice, should produce no changes on second run
     terraform plan -var="phase_${phase}_enabled=true" > /tmp/plan1.out
-    
+
     if grep -q "No changes" /tmp/plan1.out; then
         echo "✓ $phase deployment is idempotent (no changes on re-apply)"
         return 0
@@ -156,16 +156,16 @@ verify_idempotency() {
 
 verify_independent_deployments() {
     echo "Verifying independent deployment capability..."
-    
+
     # Each phase should be independently deployable
     local phases=("14_stage1" "14_stage2" "14_stage3" "15_quick" "16_postgres" "16_haproxy")
-    
+
     for phase in "${phases[@]}"; do
         echo "Testing independent deployment: $phase"
-        
+
         # Check that dependencies are explicit
         terraform validate > /dev/null 2>&1 && echo "✓ $phase has valid configuration"
-        
+
         # Verify no implicit dependencies
         if ! grep -q "depends_on.*implicit" <(terraform show); then
             echo "✓ $phase has no implicit dependencies"
@@ -183,49 +183,49 @@ deploy_all_phases() {
     echo "==================================================================="
     echo "Start Time: $(date -u)"
     echo ""
-    
+
     # Verify Terraform state
     echo "Validating Terraform configuration..."
     terraform validate
     echo "✓ Terraform configuration valid"
     echo ""
-    
+
     # Verify immutability and idempotency before deployment
     echo "Verifying infrastructure properties..."
     verify_idempotency "14"
     verify_independent_deployments
     echo ""
-    
+
     # Deploy phases in sequence with idempotency checks
     echo "Deploying phases with idempotency assurance..."
     echo ""
-    
+
     # Phase 14 Stage 1
     echo "--- PHASE 14 STAGE 1 ---"
     idempotent_deploy "14_stage1"
     sleep 30
     verify_infrastructure_immutability "192.168.168.31"
     echo ""
-    
+
     # Phase 14 Stage 2
     echo "--- PHASE 14 STAGE 2 ---"
     idempotent_deploy "14_stage2"
     sleep 30
     verify_infrastructure_immutability "192.168.168.30"
     echo ""
-    
+
     # Phase 14 Stage 3
     echo "--- PHASE 14 STAGE 3 ---"
     idempotent_deploy "14_stage3"
     sleep 60
     echo ""
-    
+
     # Phase 15
     echo "--- PHASE 15 ---"
     idempotent_deploy "15_quick"
     sleep 30
     echo ""
-    
+
     # Phase 16
     echo "--- PHASE 16 ---"
     idempotent_deploy "16_postgres"
@@ -233,7 +233,7 @@ deploy_all_phases() {
     idempotent_deploy "16_haproxy"
     sleep 30
     echo ""
-    
+
     echo "==================================================================="
     echo "Deployment Complete"
     echo "End Time: $(date -u)"

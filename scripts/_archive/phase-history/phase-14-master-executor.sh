@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # Phase 14 Go-Live Master Execution Script
-# 
+#
 # Purpose: Orchestrate complete go-live process with safety gates
 # Idempotent: Uses state files to resume from interruptions
 # Immutable: Creates backups before any production changes
@@ -69,11 +69,11 @@ log_error() {
     echo "║                                                                            ║"
     echo "╚════════════════════════════════════════════════════════════════════════════╝"
     echo ""
-    
+
     log_info "Go-Live Master Executor Started"
     log_info "State Directory: $PHASE_STATE"
     echo ""
-    
+
 } | tee "$EXECUTION_LOG"
 
 mkdir -p "$PHASE_STATE"
@@ -85,10 +85,10 @@ mkdir -p "$PHASE_STATE"
 phase_0_preflight() {
     log_info "═══ PHASE 0: PRE-FLIGHT VALIDATION (5 min) ═══"
     echo ""
-    
+
     local checks_passed=0
     local checks_total=0
-    
+
     # Check 1: Docker health
     checks_total=$((checks_total + 1))
     log_info "[Pre-Flight 1/5] Docker container health..."
@@ -98,7 +98,7 @@ phase_0_preflight() {
     else
         log_error "code-server container not running"
     fi
-    
+
     # Check 2: Infrastructure connectivity
     checks_total=$((checks_total + 1))
     log_info "[Pre-Flight 2/5] Infrastructure connectivity..."
@@ -108,7 +108,7 @@ phase_0_preflight() {
     else
         log_warning "192.168.168.31 not responding (may be in standby)"
     fi
-    
+
     # Check 3: Load balancer
     checks_total=$((checks_total + 1))
     log_info "[Pre-Flight 3/5] Load balancer health..."
@@ -118,14 +118,14 @@ phase_0_preflight() {
     else
         log_error "Load balancer not responding on port 8080"
     fi
-    
+
     # Check 4: Backup system
     checks_total=$((checks_total + 1))
     log_info "[Pre-Flight 4/5] Backup system readiness..."
     mkdir -p "$PHASE_STATE/backups"
     log_success "Backup directory ready"
     checks_passed=$((checks_passed + 1))
-    
+
     # Check 5: Metrics collection
     checks_total=$((checks_total + 1))
     log_info "[Pre-Flight 5/5] Metrics collection..."
@@ -135,15 +135,15 @@ phase_0_preflight() {
     else
         log_warning "Metrics endpoint not available (non-critical)"
     fi
-    
+
     echo ""
     log_info "Pre-flight checks: $checks_passed/$checks_total passed"
-    
+
     if [[ $checks_passed -lt 3 ]]; then
         log_error "TOO MANY CRITICAL FAILURES - ABORTING GO-LIVE"
         return 1
     fi
-    
+
     echo ""
     log_success "Pre-flight validation complete"
     echo ""
@@ -156,13 +156,13 @@ phase_0_preflight() {
 phase_1_canary() {
     log_info "═══ PHASE 1: CANARY DEPLOYMENT 10% TRAFFIC (15 min) ═══"
     echo ""
-    
+
     log_info "Executing: $SCRIPT_DIR/phase-14-canary-10pct.sh"
-    
+
     if bash "$SCRIPT_DIR/phase-14-canary-10pct.sh"; then
         log_success "Canary 10% deployment complete"
         echo ""
-        
+
         log_warning "Now entering 15-minute monitoring window"
         log_warning "Monitor metrics: watch 'curl -s http://metrics:9090/...'"
         log_warning "Target: p99 < 150ms, errors < 0.1%"
@@ -182,13 +182,13 @@ phase_1_canary() {
 phase_2_ramp_25() {
     log_info "═══ PHASE 2: TRAFFIC RAMP 10% → 25% ═══"
     echo ""
-    
+
     log_info "Executing: $SCRIPT_DIR/phase-14-traffic-ramp.sh 25"
-    
+
     if bash "$SCRIPT_DIR/phase-14-traffic-ramp.sh" 25; then
         log_success "Ramped to 25% successfully"
         echo ""
-        
+
         log_warning "Monitoring window: 15 minutes"
         log_warning "Target: p99 < 200ms, errors < 0.5%"
         echo ""
@@ -205,13 +205,13 @@ phase_2_ramp_25() {
 phase_3_ramp_50() {
     log_info "═══ PHASE 3: TRAFFIC RAMP 25% → 50% ═══"
     echo ""
-    
+
     log_info "Executing: $SCRIPT_DIR/phase-14-traffic-ramp.sh 50"
-    
+
     if bash "$SCRIPT_DIR/phase-14-traffic-ramp.sh" 50; then
         log_success "Ramped to 50% successfully"
         echo ""
-        
+
         log_warning "CRITICAL OBSERVATION POINT: 15-minute monitoring window"
         log_warning "Target: p99 < 250ms, errors < 1%"
         log_warning "At 50/50 split, any issues will be immediately visible"
@@ -229,16 +229,16 @@ phase_3_ramp_50() {
 phase_4_complete_100() {
     log_info "═══ PHASE 4: COMPLETE CUTOVER 50% → 100% ═══"
     echo ""
-    
+
     log_info "Final decision point: All metrics must be GREEN"
     log_warning "Last chance to rollback before 100% cutover"
-    
+
     log_info "Executing: $SCRIPT_DIR/phase-14-traffic-ramp.sh 100"
-    
+
     if bash "$SCRIPT_DIR/phase-14-traffic-ramp.sh" 100; then
         log_success "Complete cutover to 100% successful"
         echo ""
-        
+
         log_success "GO-LIVE SUCCESSFUL - All traffic now on new infrastructure"
         echo ""
     else
@@ -254,23 +254,23 @@ phase_4_complete_100() {
 phase_5_stabilization() {
     log_info "═══ PHASE 5: STABILIZATION & VALIDATION (60 min) ═══"
     echo ""
-    
+
     log_info "[Stab 1/4] Running smoke tests..."
     sleep 10  # Simulate smoke test
     log_success "Smoke tests passed"
-    
+
     log_info "[Stab 2/4] Validating data integrity..."
     sleep 5  # Simulate data check
     log_success "Data integrity verified"
-    
+
     log_info "[Stab 3/4] Customer experience validation..."
     sleep 5  # Simulate user validation
     log_success "User experience verified"
-    
+
     log_info "[Stab 4/4] Final SLO validation..."
     sleep 5  # Simulate SLO check
     log_success "All SLOs met: p99=127ms, errors=0%, uptime=100%"
-    
+
     echo ""
     log_success "Stabilization phase complete"
     echo ""
@@ -283,9 +283,9 @@ phase_5_stabilization() {
 phase_6_postlaunch() {
     log_info "═══ PHASE 6: POST-LAUNCH DOCUMENTATION ═══"
     echo ""
-    
+
     log_info "Generating go-live report..."
-    
+
     cat > "$PHASE_STATE/go-live-report.md" << EOF
 # Phase 14 Go-Live Report
 
@@ -320,7 +320,7 @@ phase_6_postlaunch() {
 ---
 *Go-Live completed successfully at $(date)*
 EOF
-    
+
     log_success "Report generated: $PHASE_STATE/go-live-report.md"
     echo ""
     log_success "Post-launch documentation complete"
@@ -337,46 +337,46 @@ main() {
         log_error "Pre-flight validation failed - ABORTING"
         return 1
     fi
-    
+
     # Phase 1: Canary
     if ! phase_1_canary; then
         log_error "Canary deployment failed - INITIATE ROLLBACK"
         bash "$SCRIPT_DIR/phase-14-rollback.sh" "Canary phase failed"
         return 1
     fi
-    
+
     # Phase 2: Ramp 25%
     if ! phase_2_ramp_25; then
         log_error "Ramp to 25% failed - INITIATE ROLLBACK"
         bash "$SCRIPT_DIR/phase-14-rollback.sh" "Ramp to 25% failed"
         return 1
     fi
-    
+
     # Phase 3: Ramp 50%
     if ! phase_3_ramp_50; then
         log_error "Ramp to 50% failed - INITIATE ROLLBACK"
         bash "$SCRIPT_DIR/phase-14-rollback.sh" "Ramp to 50% failed"
         return 1
     fi
-    
+
     # Phase 4: Complete 100%
     if ! phase_4_complete_100; then
         log_error "Complete to 100% failed - INITIATE ROLLBACK"
         bash "$SCRIPT_DIR/phase-14-rollback.sh" "Complete to 100% failed"
         return 1
     fi
-    
+
     # Phase 5: Stabilization
     if ! phase_5_stabilization; then
         log_error "Stabilization failed - POST-INCIDENT REVIEW REQUIRED"
         return 1
     fi
-    
+
     # Phase 6: Post-Launch
     if ! phase_6_postlaunch; then
         log_error "Post-launch documentation failed (non-critical)"
     fi
-    
+
     # Final Summary
     {
         echo ""
@@ -394,7 +394,7 @@ main() {
         echo "Execution log: $EXECUTION_LOG"
         echo "Go-live report: $PHASE_STATE/go-live-report.md"
         echo ""
-        
+
     } | tee -a "$EXECUTION_LOG"
 }
 

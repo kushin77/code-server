@@ -111,7 +111,7 @@ SUCCESS_COUNT=0
 for i in {1..200}; do
     HTTP=$(curl -s -o /dev/null -w '%{http_code}' "http://${REMOTE_HOST}:8080/health" 2>/dev/null || echo "000")
     [ "$HTTP" = "200" ] && ((SUCCESS_COUNT++))
-    
+
     if [ $((i % 50)) -eq 0 ]; then
         echo "    ✓ Requests tested: $i/200"
     fi

@@ -1,7 +1,7 @@
 # Deployment Orchestration Guide
 
-**Document Version**: 1.0  
-**Last Updated**: April 14, 2026  
+**Document Version**: 1.0
+**Last Updated**: April 14, 2026
 **Audience**: DevOps Engineers, Engineering Leads, Build Engineers
 
 ---
@@ -92,7 +92,7 @@ GitHub Repository
 # post-merge-cleanup-deploy.yml / check-merge job
 Event: GitHub PR merged to main
   ↓
-Actions: 
+Actions:
   - Check if PR.merged == true
   - Extract PR number and branch name
   - Store in outputs for next jobs
@@ -359,8 +359,8 @@ tail -f logs/deployments/redeploy_*.log
 
 #### Scenario 1: Merge Detection Fails
 
-**Cause**: PR closed but not merged  
-**Behavior**: Workflow exits gracefully, no cleanup/deploy  
+**Cause**: PR closed but not merged
+**Behavior**: Workflow exits gracefully, no cleanup/deploy
 **Recovery**: Check PR status, manual redeploy if needed
 
 ```yaml
@@ -371,8 +371,8 @@ tail -f logs/deployments/redeploy_*.log
 
 #### Scenario 2: Branch Cleanup Fails
 
-**Cause**: Branch protected or already deleted  
-**Behavior**: Logs warning, continues with deployment  
+**Cause**: Branch protected or already deleted
+**Behavior**: Logs warning, continues with deployment
 **Recovery**: Manual cleanup later, doesn't block deployment
 
 ```bash
@@ -382,8 +382,8 @@ tail -f logs/deployments/redeploy_*.log
 
 #### Scenario 3: Deployment Fails
 
-**Cause**: Terraform apply failed or infrastructure issue  
-**Behavior**: Pipeline marks as failed, posts to PR, alerts team  
+**Cause**: Terraform apply failed or infrastructure issue
+**Behavior**: Pipeline marks as failed, posts to PR, alerts team
 **Recovery**: Fix issue, revert PR, or re-trigger deployment
 
 ```yaml
@@ -395,8 +395,8 @@ tail -f logs/deployments/redeploy_*.log
 
 #### Scenario 4: Health Check Fails
 
-**Cause**: Post-deployment health check doesn't pass  
-**Behavior**: Warns but deployment is already live  
+**Cause**: Post-deployment health check doesn't pass
+**Behavior**: Warns but deployment is already live
 **Recovery**: Investigate service logs, may need rollback
 
 ```bash

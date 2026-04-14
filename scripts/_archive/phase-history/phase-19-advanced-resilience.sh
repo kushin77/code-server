@@ -18,35 +18,35 @@ circuitBreakers:
   apiServer:
     # Failure thresholds
     failureThreshold: 0.5        # 50% failure rate trips breaker
-    slowCallThreshold: 0.8       # 80% slow calls trip breaker 
+    slowCallThreshold: 0.8       # 80% slow calls trip breaker
     slowCallDuration: 2000       # 2s = slow call
-    
+
     # Timing
     waitDuration: 60000          # 60s before attempting recovery
     halfOpenMaxRequests: 3       # Allow 3 requests in half-open state
     successThreshold: 2          # 2/3 success = close circuit
-    
+
     # Async recovery
     asyncRecoveryEnabled: true
     asyncRecoveryInterval: 5000  # 5s check interval
-    
+
     # Metrics & monitoring
     recordSuccessAttempts: true
     recordFailureAttempts: true
     recordSlowCallAttempts: true
-  
+
   database:
     failureThreshold: 0.3        # More sensitive (connection pools)
     slowCallThreshold: 0.6
     slowCallDuration: 1000       # 1s = slow
     waitDuration: 120000
-    
+
   cache:
     failureThreshold: 0.7        # More tolerant (can miss cache)
     slowCallThreshold: 0.9
     slowCallDuration: 500
     waitDuration: 10000          # Recover quickly
-  
+
   externalAPI:
     failureThreshold: 0.4
     slowCallThreshold: 0.7
@@ -58,11 +58,11 @@ states:
   CLOSED:
     description: "Normal operation, all requests pass through"
     action: "Forward all requests"
-  
+
   OPEN:
     description: "Circuit breaker tripped, failing fast"
     action: "Return cached response or fallback"
-    
+
   HALF_OPEN:
     description: "Testing if service recovered"
     action: "Allow limited requests, monitor success"
@@ -89,21 +89,21 @@ data:
         queueCapacity: 500
         keepAliveTime: 60s
         rejectionPolicy: "CALLER_RUNS"  # Reject or run in caller's thread
-      
+
       database:
         corePoolSize: 10
         maxPoolSize: 50
         queueCapacity: 100
         keepAliveTime: 30s
         rejectionPolicy: "ABORT"
-      
+
       cache:
         corePoolSize: 5
         maxPoolSize: 25
         queueCapacity: 50
         keepAliveTime: 10s
         rejectionPolicy: "DISCARD"
-      
+
       externalServices:
         corePoolSize: 15
         maxPoolSize: 75
@@ -133,26 +133,26 @@ check_shedding_needed() {
   queue_depth=$(curl -s http://prometheus:9090/api/v1/query \
     --data-urlencode 'query=queue_depth' | jq '.data.result[0].value[1]' | tr -d '"')
   queue_depth=${queue_depth:-0}
-  
+
   # Check thresholds
   should_shed=false
   reason=""
-  
+
   if (( $(echo "$cpu > $threshold_cpu" | bc -l) )); then
     should_shed=true
     reason="CPU utilization ${cpu}% > threshold ${threshold_cpu}%"
   fi
-  
+
   if (( $(echo "$memory > $threshold_memory" | bc -l) )); then
     should_shed=true
     reason="Memory utilization ${memory}% > threshold ${threshold_memory}%"
   fi
-  
+
   if (( $(echo "$queue_depth / 1000 > $threshold_queue" | bc -l) )); then
     should_shed=true
     reason="Queue depth ${queue_depth} > threshold ${threshold_queue}%"
   fi
-  
+
   if [ "$should_shed" = true ]; then
     echo "✅ Request shedding triggered: $reason"
     shed_requests
@@ -163,11 +163,11 @@ shed_requests() {
   # Update ingress/loadbalancer config to shed requests
   kubectl patch service api-server -n default \
     -p "{\"spec\":{\"sessionAffinity\":\"None\"}}"
-  
+
   # Log shedding event
   echo "$(date): Shedding ${shed_percentage}% of requests due to overload" \
     >> /var/log/request-shedding.log
-  
+
   # Send alert
   curl -X POST http://alertmanager:9093/api/v1/alerts \
     -H 'Content-Type: application/json' \
@@ -208,19 +208,19 @@ degradationStrategies:
       - primary: "api-server:8080"
         fallback: "api-server-replica:8080"
         degraded_mode: "cache-only"
-  
+
   database:
     handlers:
       - primary: "postgres-primary:5432"
         fallback: "postgres-replica:5432"
         degraded_mode: "read-only"
-  
+
   search:
     handlers:
       - primary: "elasticsearch:9200"
         fallback: "memcached-index:11211"
         degraded_mode: "basic-search"
-  
+
   recommendations:
     handlers:
       - primary: "ml-engine:9000"
@@ -234,19 +234,19 @@ degradationLogic:
     disabled_features: ["real-time-sync", "personalization"]
     performance_impact: "50% slower"
     data_freshness: "5 min staleness"
-  
+
   read_only:
     enabled_features: ["read", "query"]
     disabled_features: ["write", "update", "delete"]
     performance_impact: "No impact on reads"
     data_freshness: "100% fresh (no writes)"
-  
+
   basic_search:
     enabled_features: ["title-search", "exact-match"]
     disabled_features: ["fuzzy-search", "advanced-filters"]
     performance_impact: "Similar latency"
     data_freshness: "May miss some results"
-  
+
   trending_items:
     enabled_features: ["popular-items", "default-list"]
     disabled_features: ["personalized-recommendations"]
@@ -273,23 +273,23 @@ adjust_timeout() {
   local p99_latency=$(curl -s 'http://prometheus:9090/api/v1/query' \
     --data-urlencode "query=histogram_quantile(0.99, ${service}_latency)" | \
     jq '.data.result[0].value[1]' | tr -d '"')
-  
+
   local error_rate=$(curl -s 'http://prometheus:9090/api/v1/query' \
     --data-urlencode "query=rate(${service}_errors[5m])" | \
     jq '.data.result[0].value[1]' | tr -d '"')
-  
+
   local new_timeout=$DEFAULT_TIMEOUT
-  
+
   # Adjust based on p99 latency
   if [[ ! -z "$p99_latency" ]]; then
     new_timeout=$(( $(echo "$p99_latency * 1.2" | bc) ))
   fi
-  
+
   # Increase if error rate is high
   if [[ ! -z "$error_rate" ]] && (( $(echo "$error_rate > 0.01" | bc -l) )); then
     new_timeout=$(( $new_timeout * 2 ))
   fi
-  
+
   # Clamp to min/max
   if (( new_timeout < MIN_TIMEOUT )); then
     new_timeout=$MIN_TIMEOUT
@@ -297,9 +297,9 @@ adjust_timeout() {
   if (( new_timeout > MAX_TIMEOUT )); then
     new_timeout=$MAX_TIMEOUT
   fi
-  
+
   echo "Adjusting ${service} timeout to ${new_timeout}ms (was ${DEFAULT_TIMEOUT}ms)"
-  
+
   # Apply via configuration
   kubectl set env deployment/${service} \
     REQUEST_TIMEOUT="${new_timeout}" \
@@ -333,7 +333,7 @@ retryPolicies:
       - TemporaryDatabaseException
       - ConnectionTimeoutException
       - DeadlockException
-  
+
   externalAPI:
     maxRetries: 2
     initialDelay: 500
@@ -341,14 +341,14 @@ retryPolicies:
     multiplier: 2.0
     jitter: true
     retryableStatusCodes: [429, 500, 502, 503, 504]
-  
+
   cache:
     maxRetries: 1
     initialDelay: 50
     maxDelay: 500
     multiplier: 1.5
     jitter: false
-  
+
   # Exponential backoff formula: delay = min(maxDelay, initialDelay * multiplier^attempt) + jitter
   # Example: retry 1 = 100ms, retry 2 = 200ms, retry 3 = 400ms
 EOF

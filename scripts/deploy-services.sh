@@ -32,42 +32,42 @@ log_error() {
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check Docker
     if ! command -v docker &> /dev/null; then
         log_error "Docker is not installed"
         exit 1
     fi
-    
+
     # Check Docker Compose
     if ! command -v docker-compose &> /dev/null && ! command -v 'docker compose' &> /dev/null; then
         log_error "Docker Compose is not installed"
         exit 1
     fi
-    
+
     # Check Docker daemon
     if ! docker info &> /dev/null; then
         log_error "Docker daemon is not running"
         exit 1
     fi
-    
+
     # Create enterprise network if not exists
     if ! docker network inspect enterprise &> /dev/null; then
         log_info "Creating 'enterprise' Docker network..."
         docker network create --driver bridge enterprise
     fi
-    
+
     # Create volume directories
     mkdir -p /home/$(whoami)/.docker-volumes/{minio,velero,graphql-api,developer-portal}
     mkdir -p /home/$(whoami)/.config
-    
+
     log_info "✓ Prerequisites check passed"
 }
 
 # Create environment file if not exists
 create_env_file() {
     local env_file="${ROOT_DIR}/.env.phase24-25"
-    
+
     if [ ! -f "$env_file" ]; then
         log_warn "Creating $env_file with defaults"
         cat > "$env_file" << 'EOF'
@@ -100,7 +100,7 @@ EOF
 # Create nginx configuration for API gateway
 create_nginx_config() {
     local nginx_conf="/home/$(whoami)/.config/nginx-phase25.conf"
-    
+
     cat > "$nginx_conf" << 'EOF'
 user nginx;
 worker_processes auto;
@@ -183,20 +183,20 @@ EOF
 # Deploy Phase 24 (Operations Excellence)
 deploy_phase_24() {
     log_info "Deploying Phase 24: Operations Excellence..."
-    
+
     cd "$ROOT_DIR"
-    
+
     # Start services
     $DOCKER_COMPOSE_BIN -f docker-compose-phase-24-operations.yml \
         --env-file .env.phase24-25 \
         up -d
-    
+
     log_info "Phase 24 services starting..."
     sleep 10
-    
+
     # Check health
     log_info "Checking Phase 24 service health..."
-    
+
     local services=("minio" "velero-backup-agent" "cost-engine")
     for service in "${services[@]}"; do
         if docker ps | grep -q "$service"; then
@@ -205,7 +205,7 @@ deploy_phase_24() {
             log_warn "⚠️  $service failed to start"
         fi
     done
-    
+
     log_info "Phase 24 deployment complete!"
     echo ""
     echo "Access Points:"
@@ -217,20 +217,20 @@ deploy_phase_24() {
 # Deploy Phase 25 (GraphQL API & Portal)
 deploy_phase_25() {
     log_info "Deploying Phase 25: GraphQL API & Developer Portal..."
-    
+
     cd "$ROOT_DIR"
-    
+
     # Start services
     $DOCKER_COMPOSE_BIN -f docker-compose-phase-25-api.yml \
         --env-file .env.phase24-25 \
         up -d
-    
+
     log_info "Phase 25 services starting..."
     sleep 15
-    
+
     # Check health
     log_info "Checking Phase 25 service health..."
-    
+
     local services=("graphql-api-server" "developer-portal" "api-gateway-nginx")
     for service in "${services[@]}"; do
         if docker ps | grep -q "$service"; then
@@ -239,7 +239,7 @@ deploy_phase_25() {
             log_warn "⚠️  $service failed to start"
         fi
     done
-    
+
     log_info "Phase 25 deployment complete!"
     echo ""
     echo "Access Points:"
@@ -253,11 +253,11 @@ deploy_phase_25() {
 main() {
     log_info "Starting Phase 24-25 Docker Compose Deployment"
     log_info "Selected: $PHASE"
-    
+
     check_prerequisites
     create_env_file
     create_nginx_config
-    
+
     case "$PHASE" in
         phase24)
             deploy_phase_24
@@ -274,7 +274,7 @@ main() {
             exit 1
             ;;
     esac
-    
+
     log_info "✅ Deployment complete!"
     log_info "View logs: docker-compose -f docker-compose-phase-24-25.yml logs -f"
 }

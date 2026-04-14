@@ -4,7 +4,7 @@
 # Issue #179: One-command setup for complete dev environment
 #
 # Usage: bash onboard-dev.sh [OPTIONS]
-# 
+#
 # This script provisions a complete development environment for new developers
 # in under 1 hour, including:
 # - Repository clones
@@ -86,9 +86,9 @@ check_command() {
 
 phase_preflight() {
     heading "Pre-Flight Checks"
-    
+
     log "Checking system requirements..."
-    
+
     # Check OS
     if [[ "$OSTYPE" =~ ^linux ]]; then
         OS="linux"
@@ -99,26 +99,26 @@ phase_preflight() {
     else
         error "Unsupported OS: $OSTYPE"
     fi
-    
+
     # Check bash version
     if [[ ${BASH_VERSINFO[0]} -lt 4 ]]; then
         error "Bash 4.0+ required (current: $BASH_VERSION)"
     fi
     success "Bash version OK ($BASH_VERSION)"
-    
+
     # Check git
     if ! check_command git; then
         error "git not found - install with: apt-get install -y git"
     fi
     success "git found ($(git --version | cut -d' ' -f3))"
-    
+
     # Check internet connectivity
     if ! ping -c1 8.8.8.8 &>/dev/null; then
         warning "Internet connectivity check failed (some downloads may fail)"
     else
         success "Internet connectivity OK"
     fi
-    
+
     # Create directories
     mkdir -p "$REPOS_PATH" "$TOOLS_PATH"
     success "Directories created"
@@ -130,7 +130,7 @@ phase_preflight() {
 
 phase_repositories() {
     heading "Repository Setup"
-    
+
     # Main code-server repo
     log "Cloning code-server repository..."
     if [ ! -d "$REPOS_PATH/code-server" ]; then
@@ -144,13 +144,13 @@ phase_repositories() {
         git pull origin main
         success "code-server updated"
     fi
-    
+
     # Configure git remotes
     log "Configuring git remotes..."
     git remote set-url origin "https://github.com/${GITHUB_ORG}/code-server.git"
     git remote add upstream "https://github.com/${GITHUB_ORG}/code-server.git" 2>/dev/null || true
     success "Git remotes configured"
-    
+
     # Set git config
     log "Configuring git..."
     git config --global credential.helper store
@@ -163,7 +163,7 @@ phase_repositories() {
 
 phase_tools() {
     heading "Tool Installation"
-    
+
     # Install Docker
     log "Checking Docker..."
     if ! check_command docker; then
@@ -180,7 +180,7 @@ phase_tools() {
     else
         success "Docker already installed ($(docker --version | cut -d' ' -f3))"
     fi
-    
+
     # Install kubectl
     log "Checking kubectl..."
     if ! check_command kubectl; then
@@ -192,7 +192,7 @@ phase_tools() {
     else
         success "kubectl already installed ($(kubectl version --client --short 2>/dev/null | cut -d':' -f2))"
     fi
-    
+
     # Install dagger
     log "Checking Dagger..."
     if ! check_command dagger; then
@@ -202,7 +202,7 @@ phase_tools() {
     else
         success "Dagger already installed"
     fi
-    
+
     # Install ArgoCD CLI
     log "Checking ArgoCD CLI..."
     if ! check_command argocd; then
@@ -214,7 +214,7 @@ phase_tools() {
     else
         success "ArgoCD CLI already installed"
     fi
-    
+
     # Install Node.js/npm (for code-server extensions)
     log "Checking Node.js..."
     if ! check_command node; then
@@ -225,7 +225,7 @@ phase_tools() {
     else
         success "Node.js already installed ($(node --version))"
     fi
-    
+
     # Install Python (for various tools)
     log "Checking Python..."
     if ! check_command python3; then
@@ -243,17 +243,17 @@ phase_tools() {
 
 phase_kubernetes() {
     heading "Kubernetes Configuration"
-    
+
     # Check if kubeconfig exists
     if [ -f "$KUBECONFIG" ]; then
         log "kubeconfig already exists at $KUBECONFIG"
         log "Current context: $(kubectl config current-context 2>/dev/null || echo 'none')"
         return
     fi
-    
+
     # Try to get kubeconfig from cluster
     log "Attempting to retrieve kubeconfig from cluster..."
-    
+
     if [ -n "$KUBECONFIG_URL" ]; then
         log "Downloading kubeconfig from $KUBECONFIG_URL..."
         mkdir -p "$(dirname "$KUBECONFIG")"
@@ -272,15 +272,15 @@ phase_kubernetes() {
 
 phase_precommit() {
     heading "Pre-Commit Hooks Setup"
-    
+
     cd "$REPOS_PATH/code-server"
-    
+
     log "Installing pre-commit hooks..."
     if ! check_command pre-commit; then
         log "Installing pre-commit framework..."
         pip3 install pre-commit
     fi
-    
+
     # Install hooks
     pre-commit install
     success "Pre-commit hooks installed"
@@ -292,20 +292,20 @@ phase_precommit() {
 
 phase_codeserver() {
     heading "Code-Server Setup"
-    
+
     cd "$REPOS_PATH/code-server"
-    
+
     log "Installing dependencies..."
     if [ -f "package.json" ]; then
         npm install
         success "npm dependencies installed"
     fi
-    
+
     log "Building..."
     if [ -f "Makefile" ]; then
         make build 2>/dev/null || warning "Makefile build failed, continuing..."
     fi
-    
+
     success "code-server ready"
 }
 
@@ -315,7 +315,7 @@ phase_codeserver() {
 
 phase_configuration() {
     heading "Configuration"
-    
+
     # Create .env.development
     log "Creating development environment file..."
     cat > "$REPOS_PATH/code-server/.env.development" << 'EOF'
@@ -343,11 +343,11 @@ REDIS_URL=redis://localhost:6379/0
 JWT_SECRET=dev-secret-only-for-testing
 EOF
     success ".env.development created"
-    
+
     # Create git hooks
     log "Setting up git hooks..."
     mkdir -p "$REPOS_PATH/code-server/.git/hooks"
-    
+
     cat > "$REPOS_PATH/code-server/.git/hooks/pre-push" << 'EOF'
 #!/bin/bash
 echo "Running pre-push checks..."
@@ -363,9 +363,9 @@ EOF
 
 phase_validation() {
     heading "Validation"
-    
+
     local failed=0
-    
+
     # Check each tool
     echo "Tool validation:"
     check_command docker && success "Docker" || (warning "Docker" && ((failed++)))
@@ -374,13 +374,13 @@ phase_validation() {
     check_command argocd && success "ArgoCD CLI" || (warning "ArgoCD CLI" && ((failed++)))
     check_command node && success "Node.js" || (warning "Node.js" && ((failed++)))
     check_command python3 && success "Python" || (warning "Python 3" && ((failed++)))
-    
+
     if [ "$failed" -gt 0 ]; then
         warning "$failed tool(s) missing - some features may not work"
     else
         success "All tools available"
     fi
-    
+
     # Check repositories
     if [ -d "$REPOS_PATH/code-server" ]; then
         success "Repositories cloned"
@@ -395,10 +395,10 @@ phase_validation() {
 
 phase_finalization() {
     heading "Finalization & Next Steps"
-    
+
     log "Onboarding complete!"
     echo ""
-    
+
     # Print summary
     echo -e "${GREEN}Developer Environment Setup Complete${NC}"
     echo ""
@@ -406,7 +406,7 @@ phase_finalization() {
     echo "Tools Path: $TOOLS_PATH"
     echo "kubeconfig: $KUBECONFIG"
     echo ""
-    
+
     # Next steps
     echo -e "${BLUE}Next Steps:${NC}"
     echo "1. cd $REPOS_PATH/code-server"
@@ -416,7 +416,7 @@ phase_finalization() {
     echo "5. Make changes and commit"
     echo "6. Create pull request"
     echo ""
-    
+
     # Useful commands
     echo -e "${BLUE}Useful Commands:${NC}"
     echo "  make help              - Show all make targets"
@@ -427,7 +427,7 @@ phase_finalization() {
     echo "  make health-check      - System health check"
     echo "  make logs              - View service logs"
     echo ""
-    
+
     elapsed_time
     echo ""
 }
@@ -454,7 +454,7 @@ main() {
                 ;;
         esac
     done
-    
+
     if [ "$SHOW_HELP" = true ]; then
         echo "Developer Onboarding Script"
         echo ""
@@ -466,7 +466,7 @@ main() {
         echo ""
         return 0
     fi
-    
+
     # Run phases
     phase_preflight
     phase_repositories
@@ -481,4 +481,3 @@ main() {
 
 # Execute
 main "$@"
-

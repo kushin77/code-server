@@ -40,7 +40,7 @@ code
 ### Step 4: Check VS Code Logs
 ```powershell
 $logPath = "$env:APPDATA\Code\logs"
-Get-ChildItem $logPath -Recurse | Where-Object {$_.LastWriteTime -gt (Get-Date).AddHours(-1)} | 
+Get-ChildItem $logPath -Recurse | Where-Object {$_.LastWriteTime -gt (Get-Date).AddHours(-1)} |
   ForEach-Object {Select-String -Path $_.FullName -Pattern "ERROR|FATAL|crash" -Context 2}
 ```
 

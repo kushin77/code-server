@@ -1,8 +1,8 @@
 # Scripts Directory - Complete Index
 
-**Last Updated**: April 14, 2026  
-**Status**: Organized & Indexed (Phase 1 Task 1.1)  
-**Total Scripts**: 250+  
+**Last Updated**: April 14, 2026
+**Status**: Organized & Indexed (Phase 1 Task 1.1)
+**Total Scripts**: 250+
 
 > 💡 **TIP**: Use Ctrl+F (or Cmd+F) to search this page for any script name.
 
@@ -253,7 +253,7 @@ Shared libraries (source in your scripts):
 
 **Planned** (Phase 1, Task 1.6):
 - `logging.sh` - Standard logging functions
-- `utils.sh` - Common utility functions  
+- `utils.sh` - Common utility functions
 - `error-handler.sh` - Error handling and retry logic
 
 **Usage in scripts**:
@@ -482,8 +482,8 @@ All scripts MUST follow [CODE-QUALITY-STANDARDS.md](../docs/CODE-QUALITY-STANDAR
 
 ## Maintenance
 
-**Owner**: @akushnir  
-**Last Updated**: April 14, 2026  
+**Owner**: @akushnir
+**Last Updated**: April 14, 2026
 **Status**: Active
 
 ---

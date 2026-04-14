@@ -1,8 +1,8 @@
 # ADR-002: Configuration Consolidation via Composition and Inheritance
 
-**Status:** ✅ APPROVED  
-**Date:** April 14, 2026  
-**Decision:** Docker Compose inheritance model + centralized env extraction + shared script libraries  
+**Status:** ✅ APPROVED
+**Date:** April 14, 2026
+**Decision:** Docker Compose inheritance model + centralized env extraction + shared script libraries
 **Impact:** 35-40% code reduction, single source of truth for all service configurations
 
 ---
@@ -190,6 +190,6 @@ resource "docker_container" "code_server" {
 - Operations: ✅ `docker-compose.base.yml` is the canonical file; variants are additive
 - Observability: ✅ Logging library enforces consistent structured format
 
-**Supersedes:** Ad-hoc copy-paste configuration pattern  
-**Related:** ADR-001 (Cloudflare Tunnel Architecture), CONTRIBUTING.md §1–§6  
+**Supersedes:** Ad-hoc copy-paste configuration pattern
+**Related:** ADR-001 (Cloudflare Tunnel Architecture), CONTRIBUTING.md §1–§6
 **Issues:** Closes consolidation task in #255

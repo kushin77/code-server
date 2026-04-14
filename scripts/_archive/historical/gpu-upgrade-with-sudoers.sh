@@ -56,4 +56,3 @@ log ""
 sudo bash /tmp/gpu-driver-upgrade-direct.sh
 
 success "GPU Upgrade Complete!"
-

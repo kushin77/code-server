@@ -89,20 +89,20 @@ log "Categorizing root-level shell scripts..."
 
 for script in "$PROJECT_ROOT"/*.sh; do
     [[ -f "$script" ]] || continue
-    
+
     basename=$(basename "$script")
     category="other"
-    
+
     for cat in "${!SCRIPT_PATTERNS[@]}"; do
         if [[ "$basename" =~ ${SCRIPT_PATTERNS[$cat]} ]]; then
             category="$cat"
             break
         fi
     done
-    
+
     dest_dir="$PROJECT_ROOT/scripts/$category"
     dest_file="$dest_dir/$basename"
-    
+
     if [[ "$DRY_RUN" == true ]]; then
         log "  [DRY-RUN] Move $basename → scripts/$category/"
     else
@@ -129,14 +129,14 @@ log "Archiving phase summaries..."
 
 for doc in "$PROJECT_ROOT"/PHASE-*.md; do
     [[ -f "$doc" ]] || continue
-    
+
     basename=$(basename "$doc")
     # Extract phase number: PHASE-21-observability.md → phase-21
     phase_num=$(echo "$basename" | sed 's/PHASE-\([0-9]*\).*/phase-\1/')
-    
+
     dest_dir="$PROJECT_ROOT/archived/phase-summaries/$phase_num"
     dest_file="$dest_dir/$basename"
-    
+
     if [[ "$DRY_RUN" == true ]]; then
         log "  [DRY-RUN] Archive $basename → archived/phase-summaries/$phase_num/"
     else
@@ -154,11 +154,11 @@ log "Archiving GPU attempts..."
 
 for doc in "$PROJECT_ROOT"/GPU-*.md "$PROJECT_ROOT"/GPU-*.txt; do
     [[ -f "$doc" ]] || continue
-    
+
     basename=$(basename "$doc")
     dest_dir="$PROJECT_ROOT/archived/gpu-attempts"
     dest_file="$dest_dir/$basename"
-    
+
     if [[ "$DRY_RUN" == true ]]; then
         log "  [DRY-RUN] Archive $basename → archived/gpu-attempts/"
     else
@@ -176,9 +176,9 @@ log "Archiving execution and status reports..."
 
 for doc in "$PROJECT_ROOT"/EXECUTION-*.md "$PROJECT_ROOT"/FINAL-*.md "$PROJECT_ROOT"/APRIL-*.md; do
     [[ -f "$doc" ]] || continue
-    
+
     basename=$(basename "$doc")
-    
+
     # Extract date: APRIL-13-EVENING-*.md → 2026-04-13
     if [[ "$basename" =~ APRIL-([0-9]+) ]]; then
         date_str="2026-04-${BASH_REMATCH[1]}"
@@ -187,10 +187,10 @@ for doc in "$PROJECT_ROOT"/EXECUTION-*.md "$PROJECT_ROOT"/FINAL-*.md "$PROJECT_R
     else
         date_str="undated"
     fi
-    
+
     dest_dir="$PROJECT_ROOT/archived/status-reports/$date_str"
     dest_file="$dest_dir/$basename"
-    
+
     if [[ "$DRY_RUN" == true ]]; then
         log "  [DRY-RUN] Archive $basename → archived/status-reports/$date_str/"
     else
@@ -208,11 +208,11 @@ log "Archiving old terraform files..."
 
 for tf_file in "$PROJECT_ROOT"/phase-*.tf; do
     [[ -f "$tf_file" ]] || continue
-    
+
     basename=$(basename "$tf_file")
     dest_dir="$PROJECT_ROOT/archived/terraform-backup"
     dest_file="$dest_dir/$basename"
-    
+
     if [[ "$DRY_RUN" == true ]]; then
         log "  [DRY-RUN] Archive $basename → archived/terraform-backup/"
     else

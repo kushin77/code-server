@@ -74,20 +74,20 @@ Comprehensive cleanup of technical debt accumulated over multiple deployment pha
   - Single docker-compose.yml source of truth
   - No orphaned config files
   - No hardcoded IP/domain addresses
-  
+
 - [x] **TIER 2: Process Governance** (Code review enforced)
   - All changes must link to GitHub issues
   - Monthly dead code audits
   - Code review standards for infra code
   - ADRs for breaking changes
-  
+
 - [x] **TIER 3: Automation** (CI/CD checks)
   - Terraform validation
   - Dead code detection
   - Hardcoded IP/domain detection
   - File organization checks
   - PR title validation
-  
+
 - [x] **TIER 4: Documentation** (Standards)
   - Module READMEs required
   - ADRs for architecture decisions
@@ -283,5 +283,5 @@ See GOVERNANCE-AND-GUARDRAILS.md for FAQ and escalation process. Or comment belo
 
 ---
 
-**Priority**: P1  
+**Priority**: P1
 **Effort**: ~50 minutes (already complete) + ongoing governance

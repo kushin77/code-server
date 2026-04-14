@@ -57,7 +57,7 @@ orchestrate_phase_16() {
         if docker-compose -f docker-compose-kong.yml up -d 2>&1 | tee -a "${DEPLOYMENT_LOG}"; then
             log_success "Kong deployed successfully"
             sleep 10
-            
+
             # Verify Kong is ready
             if docker-compose -f docker-compose-kong.yml ps | grep -q "kong"; then
                 log_success "Kong containers running"
@@ -81,7 +81,7 @@ orchestrate_phase_16() {
         if docker-compose -f docker-compose-jaeger.yml up -d 2>&1 | tee -a "${DEPLOYMENT_LOG}"; then
             log_success "Jaeger deployed successfully"
             sleep 10
-            
+
             if docker-compose -f docker-compose-jaeger.yml ps | grep -q "jaeger"; then
                 log_success "Jaeger containers running"
             fi
@@ -96,7 +96,7 @@ orchestrate_phase_16() {
 
     # Step 5: Health checks
     log_info "Step 5: Performing health checks..."
-    
+
     health_passed=0
     health_total=3
 

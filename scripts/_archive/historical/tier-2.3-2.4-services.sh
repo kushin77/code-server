@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # Tier 2.3: Request Batching & Tier 2.4: Circuit Breaker Implementation
-# 
+#
 # Purpose: Optimize throughput via batch API and add graceful degradation
 # Idempotent: Checks for existing implementations, skips if deployed
 # Immutable: Backups created before code changes
@@ -40,15 +40,15 @@ mkdir -p "$STATE_DIR" "$BACKUP_DIR"
     echo "Start: $(date)"
     echo "Log: $LOG_FILE"
     echo ""
-    
+
     ###############################################################################
     # TIER 2.3: Request Batching
     ###############################################################################
-    
+
     echo "═══ TIER 2.3: REQUEST BATCHING IMPLEMENTATION ═══"
     echo ""
     echo "[1/4] Implementing batch API endpoint..."
-    
+
     # Create batch request handler
     cat > /tmp/batch-handler.js << 'EOFBATCH'
 // Request Batching Handler
@@ -76,20 +76,20 @@ const batchLimiter = rateLimit({
 router.post('/api/batch', batchLimiter, async (req, res) => {
     try {
         const { requests } = req.body;
-        
+
         // Validation
         if (!Array.isArray(requests)) {
             return res.status(400).json({
                 error: 'requests must be an array'
             });
         }
-        
+
         if (requests.length === 0 || requests.length > 10) {
             return res.status(400).json({
                 error: 'requests must contain 1-10 items'
             });
         }
-        
+
         // Execute requests in parallel
         const results = await Promise.all(
             requests.map(async (req) => {
@@ -101,7 +101,7 @@ router.post('/api/batch', batchLimiter, async (req, res) => {
                             error: 'Each request must have method and path'
                         };
                     }
-                    
+
                     // Route to appropriate handler
                     const result = await executeRequest(
                         req.method.toUpperCase(),
@@ -109,7 +109,7 @@ router.post('/api/batch', batchLimiter, async (req, res) => {
                         req.body,
                         req.headers
                     );
-                    
+
                     return result;
                 } catch (err) {
                     return {
@@ -119,12 +119,12 @@ router.post('/api/batch', batchLimiter, async (req, res) => {
                 }
             })
         );
-        
+
         // Return batched results
         return res.status(207).json({  // 207 Multi-Status
             results: results
         });
-        
+
     } catch (err) {
         return res.status(500).json({
             error: 'Batch processing failed',
@@ -144,20 +144,20 @@ async function executeRequest(method, path, body, headers) {
 
 module.exports = router;
 EOFBATCH
-    
+
     echo "✓ Batch API handler created"
     echo "  Endpoint: POST /api/batch"
     echo "  Max requests per batch: 10"
     echo "  Rate limit: 600 batches/min (6000 sub-requests/min)"
     echo "  Expected throughput: +30% improvement"
     echo ""
-    
+
     ###############################################################################
     # TIER 2.4: Circuit Breaker
     ###############################################################################
-    
+
     echo "[2/4] Implementing circuit breaker pattern..."
-    
+
     # Create circuit breaker module
     cat > /tmp/circuit-breaker.js << 'EOFCB'
 // Circuit Breaker Pattern Implementation
@@ -170,14 +170,14 @@ class CircuitBreaker {
         this.successThreshold = options.successThreshold || 2;    // 2 successes to close
         this.timeout = options.timeout || 30000;                  // 30 second timeout
         this.windowSize = options.windowSize || 100;              // Track last 100 requests
-        
+
         this.state = 'CLOSED';
         this.requestCount = 0;
         this.failureCount = 0;
         this.successCount = 0;
         this.lastFailureTime = null;
         this.nextAttemptTime = null;
-        
+
         // Metrics
         this.metrics = {
             totalRequests: 0,
@@ -186,33 +186,33 @@ class CircuitBreaker {
             circuitCloses: 0
         };
     }
-    
+
     // Record request success/failure
     recordResult(success) {
         this.requestCount++;
         this.metrics.totalRequests++;
-        
+
         if (!success) {
             this.failureCount++;
             this.metrics.totalFailures++;
             this.lastFailureTime = Date.now();
         }
-        
+
         // Reset window if full
         if (this.requestCount > this.windowSize) {
             this.requestCount = 0;
             this.failureCount = 0;
             this.successCount = 0;
         }
-        
+
         this.updateState();
     }
-    
+
     updateState() {
-        const failureRate = this.requestCount > 0 
-            ? this.failureCount / this.requestCount 
+        const failureRate = this.requestCount > 0
+            ? this.failureCount / this.requestCount
             : 0;
-        
+
         switch (this.state) {
             case 'CLOSED':
                 // Transition to OPEN if failure rate exceeds threshold
@@ -223,7 +223,7 @@ class CircuitBreaker {
                     console.warn(`[CircuitBreaker] CLOSED -> OPEN (${(failureRate*100).toFixed(1)}% failures)`);
                 }
                 break;
-                
+
             case 'OPEN':
                 // Transition to HALF_OPEN if timeout elapsed
                 if (Date.now() > this.nextAttemptTime) {
@@ -234,7 +234,7 @@ class CircuitBreaker {
                     console.warn('[CircuitBreaker] OPEN -> HALF_OPEN (timeout, attempting recovery)');
                 }
                 break;
-                
+
             case 'HALF_OPEN':
                 // Transition to CLOSED if enough successes
                 if (this.successCount >= this.successThreshold) {
@@ -254,7 +254,7 @@ class CircuitBreaker {
                 break;
         }
     }
-    
+
     // Check if request should proceed
     canRequest() {
         if (this.state === 'CLOSED') return true;
@@ -262,14 +262,14 @@ class CircuitBreaker {
         if (this.state === 'HALF_OPEN') return true;  // Attempt recovery
         return false;
     }
-    
+
     getState() {
         return {
             state: this.state,
             metrics: this.metrics,
             requestsInWindow: this.requestCount,
             failuresInWindow: this.failureCount,
-            failureRate: this.requestCount > 0 
+            failureRate: this.requestCount > 0
                 ? `${((this.failureCount / this.requestCount) * 100).toFixed(1)}%`
                 : 'N/A',
             nextRecoveryAttempt: this.nextAttemptTime
@@ -289,33 +289,33 @@ function circuitBreakerMiddleware(breaker) {
                 retryAfter: breaker.timeout / 1000
             });
         }
-        
+
         // Track response success
         res.on('finish', () => {
             const success = res.statusCode < 400;
             breaker.recordResult(success);
         });
-        
+
         next();
     };
 }
 
 module.exports = { CircuitBreaker, circuitBreakerMiddleware };
 EOFCB
-    
+
     echo "✓ Circuit breaker pattern implemented"
     echo "  Failure threshold: 50%"
     echo "  Timeout before recovery: 30 seconds"
     echo "  State machine: CLOSED -> OPEN -> HALF_OPEN -> CLOSED"
     echo "  Expected degradation: Graceful, <2% error rate increase"
     echo ""
-    
+
     ###############################################################################
     # Configuration & Validation
     ###############################################################################
-    
+
     echo "[3/4] Configuring service optimization..."
-    
+
     # Create configuration file
     cat > /tmp/tier-2-config.json << 'EOFCONFIG'
 {
@@ -356,16 +356,16 @@ EOFCB
   }
 }
 EOFCONFIG
-    
+
     echo "✓ Tier 2 configuration created"
     echo ""
-    
+
     ###############################################################################
     # Performance Expectations
     ###############################################################################
-    
+
     echo "[4/4] Documenting performance expectations..."
-    
+
     cat > /tmp/tier-2-performance.txt << 'EOFPERF'
 TIER 2 ENHANCEMENT PERFORMANCE EXPECTATIONS
 =====================================================
@@ -436,16 +436,16 @@ TESTING PROCEDURE
 5. Add Circuit Breaker, validate resilience
 6. Run to 500+ users, verify SLOs
 EOFPERF
-    
+
     echo "✓ Performance expectations documented"
     echo ""
-    
+
     ###############################################################################
     # Create Lock File
     ###############################################################################
-    
+
     echo "Recording service optimization state..."
-    
+
     cat > "$LOCK_FILE" << EOF
 {
   "tier": "2.3-2.4-services",
@@ -472,14 +472,14 @@ EOFPERF
   }
 }
 EOF
-    
+
     echo "✓ State recorded"
     echo ""
-    
+
     ###############################################################################
     # Summary
     ###############################################################################
-    
+
     echo "╔════════════════════════════════════════════════════════════════════════════╗"
     echo "║         SERVICE OPTIMIZATION CONFIGURATION COMPLETE                         ║"
     echo "╚════════════════════════════════════════════════════════════════════════════╝"
@@ -509,7 +509,7 @@ EOF
     echo "  5. Prepare for Tier 3: Kubernetes scaling"
     echo ""
     echo "End: $(date)"
-    
+
 } | tee -a "$LOG_FILE"
 
 echo ""

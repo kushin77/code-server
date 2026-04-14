@@ -73,7 +73,7 @@ async function handleChatRequest(
   token: vscode.CancellationToken
 ): Promise<vscode.ChatResult> {
   const prompt = request.prompt;
-  
+
   try {
     stream.progress('🤖 Analyzing request...');
 

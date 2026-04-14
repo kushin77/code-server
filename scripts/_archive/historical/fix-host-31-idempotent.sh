@@ -2,7 +2,7 @@
 
 ###############################################################################
 # GPU FIX EXECUTION - IaC Idempotent Approach
-# 
+#
 # Uses existing passwordless sudo access (docker, systemctl)
 # No additional sudo configuration needed
 #
@@ -52,11 +52,11 @@ else
   success "nvidia-smi found"
   DRIVER_VERSION=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)
   CUDA_VERSION=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1)
-  
+
   log "Current state:"
   echo "  Driver: $DRIVER_VERSION"
   echo "  CUDA capability: $CUDA_VERSION"
-  
+
   # Check if driver is 555.x or later (idempotent check)
   MAJOR_VERSION=$(echo $DRIVER_VERSION | cut -d. -f1)
   if [ "$MAJOR_VERSION" -ge 555 ]; then
@@ -78,8 +78,8 @@ log "Phase 2: Docker GPU Support Check"
 # Check if docker is running
 if sudo /usr/bin/docker ps > /dev/null 2>&1; then
   success "Docker is running"
-  
-  # Check if nvidia runtime is available  
+
+  # Check if nvidia runtime is available
   if sudo /usr/bin/docker run --rm --runtime=nvidia nvidia/cuda:12.4.1-runtime-ubuntu22.04 nvidia-smi > /dev/null 2>&1; then
     success "NVIDIA Container Runtime is already functional!"
     success "Docker can access GPUs"
@@ -127,7 +127,7 @@ log "Phase 4: GPU Validation"
 if command -v nvidia-smi &> /dev/null; then
   GPU_COUNT=$(nvidia-smi --list-gpus 2>/dev/null | wc -l)
   success "GPUs detected: $GPU_COUNT"
-  
+
   # List GPUs
   nvidia-smi --query-gpu=index,name,memory.total --format=csv,noheader 2>/dev/null | while IFS=, read -r idx name mem; do
     echo "  GPU $idx: $name ($mem)"

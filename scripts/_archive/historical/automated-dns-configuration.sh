@@ -39,7 +39,7 @@
 #   ./scripts/automated-dns-configuration.sh verify
 #
 # Recent Changes:
-#   2026-04-14: Added DNS propagation validation 
+#   2026-04-14: Added DNS propagation validation
 #   2026-04-13: Initial creation with DNS automation
 #
 ################################################################################
@@ -64,21 +64,21 @@ check_requirements() {
         echo "Set via: export CLOUDFLARE_API_TOKEN=<your-token>"
         return 1
     fi
-    
+
     if [ -z "$CF_ZONE_ID" ]; then
         echo "ERROR: CLOUDFLARE_ZONE_ID not set"
         echo "Retrieve from: https://dash.cloudflare.com/ -> Zone ID"
         echo "Set via: export CLOUDFLARE_ZONE_ID=<zone-id>"
         return 1
     fi
-    
+
     echo "✓ CloudFlare credentials configured"
 }
 
 # Function to get current DNS record
 get_dns_record() {
     local name=$1
-    
+
     curl -s -X GET "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records?name=${name}" \
         -H "Authorization: Bearer ${CF_API_TOKEN}" \
         -H "Content-Type: application/json" | \
@@ -89,9 +89,9 @@ get_dns_record() {
 create_dns_record() {
     local name=$1
     local ip=$2
-    
+
     echo "Creating DNS record: ${name} -> ${ip}"
-    
+
     curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records" \
         -H "Authorization: Bearer ${CF_API_TOKEN}" \
         -H "Content-Type: application/json" \
@@ -102,7 +102,7 @@ create_dns_record() {
             \"ttl\": 300,
             \"proxied\": false
         }" | jq '.result | {id:.id, name:.name, content:.content, status:.status}'
-    
+
     echo "✓ DNS record created"
 }
 
@@ -111,9 +111,9 @@ update_dns_record() {
     local name=$1
     local ip=$2
     local record_id=$3
-    
+
     echo "Updating DNS record: ${name} -> ${ip}"
-    
+
     curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records/${record_id}" \
         -H "Authorization: Bearer ${CF_API_TOKEN}" \
         -H "Content-Type: application/json" \
@@ -124,7 +124,7 @@ update_dns_record() {
             \"ttl\": 300,
             \"proxied\": false
         }" | jq '.result | {id:.id, name:.name, content:.content, status:.status}'
-    
+
     echo "✓ DNS record updated"
 }
 
@@ -133,13 +133,13 @@ configure_dns() {
     local primary_domain=$1
     local sub_domain="*.${primary_domain}"
     local ip=$2
-    
+
     echo "Configuring DNS records..."
     echo "  Primary Domain: ${primary_domain}"
     echo "  Wildcard Domain: ${sub_domain}"
     echo "  Target IP: ${ip}"
     echo ""
-    
+
     # Configure primary domain
     local primary_record=$(get_dns_record "$primary_domain")
     if [ -z "$primary_record" ] || [ "$primary_record" = "null" ]; then
@@ -148,7 +148,7 @@ configure_dns() {
         local record_id=$(echo "$primary_record" | jq -r '.id')
         update_dns_record "$primary_domain" "$ip" "$record_id"
     fi
-    
+
     # Configure wildcard domain
     local wildcard_record=$(get_dns_record "$sub_domain")
     if [ -z "$wildcard_record" ] || [ "$wildcard_record" = "null" ]; then
@@ -162,7 +162,7 @@ configure_dns() {
 # Function to verify DNS resolution
 verify_dns() {
     local domain=$1
-    
+
     echo ""
     echo "Verifying DNS propagation..."
     for attempt in {1..6}; do
@@ -174,7 +174,7 @@ verify_dns() {
         echo "  Attempt $attempt/6 - waiting..."
         sleep 10
     done
-    
+
     echo "⚠ DNS propagation pending (may take up to 24 hours)"
     return 0
 }
@@ -182,7 +182,7 @@ verify_dns() {
 # Function to save configuration
 save_config() {
     local config_file="${SCRIPT_DIR}/.dns-config"
-    
+
     cat > "$config_file" << EOF
 # DNS Configuration - IaC
 # Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -234,4 +234,3 @@ echo ""
 echo "Verification:"
 echo "  nslookup $DOMAIN"
 echo "  ping $DOMAIN"
-

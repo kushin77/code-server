@@ -169,7 +169,7 @@ resource "null_resource" "collect_system_info" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "=== Collecting System Information from ${var.deploy_host} ==="
-      
+
       ssh -i ${pathexpand(var.deploy_ssh_key_path)} ${var.deploy_user}@${var.deploy_host} << 'SSH_EOF'
       echo "Hostname: $(hostname)"
       echo "OS: $(cat /etc/os-release 2>/dev/null | grep PRETTY_NAME || echo 'Unknown')"

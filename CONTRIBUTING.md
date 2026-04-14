@@ -650,7 +650,7 @@ locals {
     grafana       = "grafana/grafana:10.2.3"
     alertmanager  = "prom/alertmanager:v0.26.0"
   }
-  
+
   resource_limits = {
     code-server = {
       cpu_limit = "2.0"

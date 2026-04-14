@@ -29,5 +29,5 @@ Each phase directory contains:
 
 ---
 
-**Status**: Read-only historical reference  
+**Status**: Read-only historical reference
 **Related**: [../README.md](../README.md) • [../../docs/GOVERNANCE.md](../../docs/GOVERNANCE.md)

@@ -22,11 +22,11 @@ Status reports from April 14, 2026
 
 ## Finding Information
 
-**By date**: Browse `YYYY-MM-DD/` directory  
-**By topic**: See current docs in `../../docs/` instead  
+**By date**: Browse `YYYY-MM-DD/` directory
+**By topic**: See current docs in `../../docs/` instead
 **By issue**: Check GitHub issues instead of archived reports
 
 ---
 
-**Status**: Read-only historical snapshot  
+**Status**: Read-only historical snapshot
 **Related**: [../README.md](../README.md) • [../../docs/GOVERNANCE.md](../../docs/GOVERNANCE.md)

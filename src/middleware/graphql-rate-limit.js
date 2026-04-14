@@ -14,25 +14,25 @@ const rateLimitMetrics = {
     help: 'Total API requests',
     labelNames: ['method', 'path', 'status', 'tier'],
   }),
-  
+
   requestsCurrent: new prometheus.Gauge({
     name: 'api_requests_current',
     help: 'Current requests against rate limit',
     labelNames: ['user_id', 'tier'],
   }),
-  
+
   requestsRejected: new prometheus.Counter({
     name: 'api_requests_rejected_total',
     help: 'Rejected requests due to rate limiting',
     labelNames: ['tier', 'reason'],
   }),
-  
+
   rateLimitViolations: new prometheus.Counter({
     name: 'api_rate_limit_violations_total',
     help: 'Rate limit violations detected',
     labelNames: ['tier'],
   }),
-  
+
   headerCalculationDuration: new prometheus.Histogram({
     name: 'api_rate_limit_calculation_duration_seconds',
     help: 'Duration of rate limit header calculation',
@@ -110,7 +110,7 @@ class GraphQLRateLimiter {
       // Check concurrent queries limit
       const concurrentKey = `concurrent:${userId}`;
       const concurrent = await this.redis.incr(concurrentKey);
-      
+
       if (concurrent > config.concurrentQueries) {
         await this.redis.decr(concurrentKey);
         this.metrics.requestsRejected.inc({ tier, reason: 'concurrent' });
@@ -125,7 +125,7 @@ class GraphQLRateLimiter {
       // Check minute-level rate limit (token bucket)
       const minuteKey = `ratelimit:minute:${userId}:${Math.floor(Date.now() / 60000)}`;
       const minuteRequests = await this.redis.incr(minuteKey);
-      
+
       // Set expiration (skip redundant SET if count > 1)
       if (minuteRequests === 1) {
         await this.redis.expire(minuteKey, 60);
@@ -134,7 +134,7 @@ class GraphQLRateLimiter {
       if (minuteRequests > config.requestsPerMinute) {
         this.metrics.requestsRejected.inc({ tier, reason: 'rate_limit_minute' });
         this.metrics.rateLimitViolations.inc({ tier });
-        
+
         // Calculate reset time
         const resetTime = Math.ceil(Date.now() / 60000) * 60;
         return {
@@ -148,7 +148,7 @@ class GraphQLRateLimiter {
       // Check daily rate limit
       const dayKey = `ratelimit:day:${userId}:${Math.floor(Date.now() / 86400000)}`;
       const dayRequests = await this.redis.incr(dayKey);
-      
+
       if (dayRequests === 1) {
         await this.redis.expire(dayKey, 86400);
       }
@@ -156,7 +156,7 @@ class GraphQLRateLimiter {
       if (dayRequests > config.requestsPerDay) {
         this.metrics.requestsRejected.inc({ tier, reason: 'rate_limit_day' });
         this.metrics.rateLimitViolations.inc({ tier });
-        
+
         const resetTime = Math.ceil(Date.now() / 86400000) * 86400;
         return {
           allowed: false,
@@ -212,7 +212,7 @@ class GraphQLRateLimiter {
    */
   getHeaders(limitResult, tier) {
     const config = this.getConfig(tier);
-    
+
     return {
       [RATE_LIMIT_HEADERS.limit]: config.requestsPerMinute.toString(),
       [RATE_LIMIT_HEADERS.remaining]: limitResult.remaining.toString(),
@@ -237,7 +237,7 @@ function createRateLimitMiddleware(redisClient) {
     const userTier = req.user?.tier || 'free';
 
     // For GraphQL requests, calculate query complexity
-    const queryComplexity = req.body?.query 
+    const queryComplexity = req.body?.query
       ? calculateQueryComplexity(req.body.query)
       : 1;
 

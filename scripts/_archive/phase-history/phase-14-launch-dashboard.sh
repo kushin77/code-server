@@ -51,7 +51,7 @@ update_status() {
 render_stage_indicator() {
   local stage=$1
   local status=${stage_status[$stage]}
-  
+
   case $status in
     "complete")
       echo "✅ COMPLETE"
@@ -71,16 +71,16 @@ render_stage_indicator() {
 calculate_progress() {
   local elapsed=$(($(date +%s) - $(date -d "$START_TIME" +%s)))
   local total=$((4 * 3600))  # 4 hours
-  
+
   if [ $elapsed -lt 0 ]; then
     elapsed=0
   fi
-  
+
   local progress=$((elapsed * 100 / total))
   if [ $progress -gt 100 ]; then
     progress=100
   fi
-  
+
   echo $progress
 }
 
@@ -88,7 +88,7 @@ draw_progress_bar() {
   local progress=$1
   local bar_width=40
   local filled=$((progress * bar_width / 100))
-  
+
   printf "["
   printf "%${filled}s" | tr ' ' '█'
   printf "%$((bar_width - filled))s" | tr ' ' '░'
@@ -97,7 +97,7 @@ draw_progress_bar() {
 
 render_dashboard() {
   clear
-  
+
   cat << 'EOF'
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    PHASE 14: PRODUCTION LAUNCH DASHBOARD                    ║
@@ -126,20 +126,20 @@ EOF
   echo "  ✓ Infrastructure checks: PENDING"
   echo "  ✓ Team notification: PENDING"
   echo ""
-  
+
   echo "Stage 2: DNS Cutover & Canary Deployment (Target: 19:20-20:50, 90 min)"
   echo "  Status: $(render_stage_indicator stage2)"
   echo "  ✓ Phase 1 (10% traffic): PENDING"
   echo "  ✓ Phase 2 (50% traffic): PENDING"
   echo "  ✓ Phase 3 (100% traffic): PENDING"
   echo ""
-  
+
   echo "Stage 3: Post-Launch Monitoring (Target: 20:50-21:50, 60 min)"
   echo "  Status: $(render_stage_indicator stage3)"
   echo "  ✓ Real-time metric collection: PENDING"
   echo "  ✓ SLO validation: PENDING"
   echo ""
-  
+
   echo "Stage 4: Final GO/NO-GO Decision (Target: 21:50, 5 min)"
   echo "  Status: $(render_stage_indicator stage4)"
   echo "  ✓ Decision report: PENDING"

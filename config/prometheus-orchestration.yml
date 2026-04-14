@@ -36,13 +36,13 @@ scrape_configs:
     scheme: 'http'
     honor_timestamps: true
     honor_labels: true
-    
+
     static_configs:
       - targets: ['localhost:9090']
         labels:
           service: 'prometheus'
           region: 'local'
-    
+
     # ✅ Relabeling (immutable)
     relabel_configs:
       - source_labels: [__scheme__]
@@ -61,20 +61,20 @@ scrape_configs:
     scheme: 'http'
     honor_timestamps: true
     honor_labels: false
-    
+
     static_configs:
       - targets: ['global-orchestrator:9205']
         labels:
           service: 'global-orchestrator'
           component: 'orchestration-engine'
           region: 'primary'
-    
+
     # ✅ Metric relabeling (immutable)
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: '^(orchestrator_.*|global_.*)'
         action: keep
-      
+
       - source_labels: [__name__]
         regex: '(up|scrape_duration_seconds|scrape_samples_scr.*)'
         action: keep
@@ -87,13 +87,13 @@ scrape_configs:
     scrape_timeout: 30s
     metrics_path: '/health-metrics'
     scheme: 'http'
-    
+
     static_configs:
       - targets: ['global-orchestrator:9205']
         labels:
           service: 'health-checker'
           type: 'regional-health'
-    
+
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: '(region_health|region_latency|region_error_rate|region_failover.*)'
@@ -107,13 +107,13 @@ scrape_configs:
     scrape_timeout: 20s
     metrics_path: '/discovery-metrics'
     scheme: 'http'
-    
+
     static_configs:
       - targets: ['global-orchestrator:9205']
         labels:
           service: 'service-discovery'
           type: 'endpoint-registry'
-    
+
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: '(discovery_.*|service_registry.*|endpoint_.*)'
@@ -127,13 +127,13 @@ scrape_configs:
     scrape_timeout: 30s
     metrics_path: '/config-metrics'
     scheme: 'http'
-    
+
     static_configs:
       - targets: ['global-orchestrator:9205']
         labels:
           service: 'config-distributor'
           type: 'global-config'
-    
+
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: '(config_.*|distribution_.*|version_.*)'
@@ -147,13 +147,13 @@ scrape_configs:
     scrape_timeout: 10s
     metrics_path: '/events-metrics'
     scheme: 'http'
-    
+
     static_configs:
       - targets: ['global-orchestrator:9205']
         labels:
           service: 'failover-monitor'
           type: 'incident-tracking'
-    
+
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: '(failover_.*|incident_.*|recovery_.*)'
@@ -167,13 +167,13 @@ scrape_configs:
     scrape_timeout: 15s
     metrics_path: '/metrics'
     scheme: 'http'
-    
+
     static_configs:
       - targets: ['127.0.0.1:8001']  # From docker-stats or cAdvisor
         labels:
           service: 'docker-monitoring'
           type: 'container-metrics'
-    
+
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: 'container_(.*)'
@@ -187,13 +187,13 @@ scrape_configs:
     scrape_timeout: 15s
     metrics_path: '/metrics'
     scheme: 'http'
-    
+
     static_configs:
       - targets: ['127.0.0.1:8080']  # If cAdvisor running
         labels:
           service: 'network-monitoring'
           type: 'network-stats'
-    
+
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: 'network_(.*)'

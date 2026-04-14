@@ -35,40 +35,40 @@ NC='\033[0m'
 onboard_developer() {
   local dev_id=$1
   local day=$2
-  
+
   echo "🔄 Onboarding: $dev_id (Day $day)"
-  
+
   # Step 1: Create Cloudflare Access user
   echo "  ✓ Creating Cloudflare Access entry..."
   # In real implementation: Add to Cloudflare Access groups
-  
+
   # Step 2: Create IDE workspace
   echo "  ✓ Creating workspace..."
   # In real implementation: Create user-specific workspace
-  
+
   # Step 3: Load SSH keys
   echo "  ✓ Loading SSH keys..."
   # In real implementation: Import developer SSH keys
-  
+
   # Step 4: Send welcome email
   echo "  ✓ Sending welcome email..."
   # In real implementation: Send IDE access email with instructions
-  
+
   # Step 5: Log onboarding event
   echo "  ✓ Recording onboarding..."
   # In real implementation: Log to audit system
-  
+
   echo "✅ Onboarded: $dev_id"
 }
 
 validate_developer() {
   local dev_id=$1
-  
+
   # Quick health check
   if [ -z "$dev_id" ]; then
     return 1
   fi
-  
+
   return 0
 }
 

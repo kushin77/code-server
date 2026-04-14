@@ -1,5 +1,5 @@
 # terraform.tfvars — Phase 14 Production Deployment Configuration
-# 
+#
 # Usage: terraform apply -var-file=terraform.phase-14.tfvars
 # Or inline: terraform apply -var='phase_14_enabled=true'
 #

@@ -1,10 +1,10 @@
 # Phase 17: Multi-Region Deployment & Disaster Recovery
 
-**Status:** IN PROGRESS  
-**Effort:** 14 hours (split into 17-A and 17-B)  
-**Target Completion:** April 21, 2026  
-**Dependencies:** Phase 16 (Infrastructure Scaling) ✅ COMPLETED  
-**Owner:** Platform & SRE Team  
+**Status:** IN PROGRESS
+**Effort:** 14 hours (split into 17-A and 17-B)
+**Target Completion:** April 21, 2026
+**Dependencies:** Phase 16 (Infrastructure Scaling) ✅ COMPLETED
+**Owner:** Platform & SRE Team
 
 ---
 
@@ -14,7 +14,7 @@
 
 Deploy code and data across multiple regions with automatic failover:
 - **Primary Region** (US-East-1): Production
-- **Secondary Region** (US-West-2): Warm standby  
+- **Secondary Region** (US-West-2): Warm standby
 - **DR Region** (EU-West-1): Cold backup
 - **Replication Lag**: <5 seconds
 - **DNS Failover**: Automatic in <2 minutes
@@ -53,7 +53,7 @@ Deploy code and data across multiple regions with automatic failover:
         If East-1 down ────→ DNS flip to West-2
         Traffic: 0 → 100% to US-West-2
         Promotion: 5 second lag
-        
+
 Optional:
          |
          ↓ (DR EU-West-1)
@@ -82,11 +82,11 @@ resource "aws_db_subnet_group" "primary" {
 resource "aws_rds_cluster" "primary" {
   cluster_identifier = "code-server-primary"
   engine = "aurora-postgresql"
-  
+
   # Global database for cross-region replication
   enable_http_endpoint = true
   backup_retention_period = 35
-  
+
   provider = aws.us-east-1
 }
 
@@ -99,10 +99,10 @@ resource "aws_rds_global_cluster" "main" {
 
 resource "aws_rds_cluster" "secondary" {
   cluster_identifier = "code-server-secondary"
-  
+
   global_cluster_identifier = aws_rds_global_cluster.main.id
   depends_on = [aws_rds_cluster.primary]
-  
+
   provider = aws.us-west-2
 }
 ```
@@ -152,12 +152,12 @@ resource "aws_route53_record" "code_server" {
   zone_id = aws_route53_zone.main.zone_id
   name = "code-server.dev.yourdomain.com"
   type = "A"
-  
+
   # Primary
   failover_routing_policy {
     type = "PRIMARY"
   }
-  
+
   set_identifier = "primary-us-east-1"
   alias {
     name = aws_lb.primary.dns_name
@@ -172,11 +172,11 @@ resource "aws_route53_record" "code_server_secondary" {
   zone_id = aws_route53_zone.main.zone_id
   name = "code-server.dev.yourdomain.com"
   type = "A"
-  
+
   failover_routing_policy {
     type = "SECONDARY"
   }
-  
+
   set_identifier = "secondary-us-west-2"
   alias {
     name = aws_lb.secondary.dns_name
@@ -195,7 +195,7 @@ resource "aws_vpn_connection" "primary_to_secondary" {
   type = "ipsec.1"
   customer_gateway_id = aws_customer_gateway.primary.id
   vpn_gateway_id = aws_vpn_gateway.secondary.id
-  
+
   options {
     static_routes_only = false
     tunnel1_phase1_encryption_algorithms = ["AES256"]
@@ -251,33 +251,33 @@ while true; do
   LAG=$(psql -h secondary-db -U moni -c \
     "SELECT EXTRACT(EPOCH FROM (now() - xact_start)) FROM pg_stat_replication;" \
     | grep -oE '[0-9]+')
-  
+
   if [[ $LAG -gt $REPL_LAG_THRESHOLD ]]; then
     echo "WARN: Replication lag $LAG seconds"
   fi
-  
+
   # Check primary health via Route53
   PRIMARY_HEALTH=$(aws route53 get-health-check-status \
     --health-check-id $PRIMARY_HC_ID \
     --query 'HealthCheckObservations[0].StatusReport.Status' \
     --output text)
-  
+
   if [[ "$PRIMARY_HEALTH" == "Failed" ]]; then
     echo "CRITICAL: Primary region unhealthy"
-    
+
     # Trigger failover
     promote_secondary_to_primary
-    
+
     # Disable replication (secondary becomes new primary)
     psql -h secondary-db -U admin << 'SQL'
     ALTER SUBSCRIPTION code_server_sub DISABLE;
     SELECT pg_promote();  -- Promote replica to primary
     SQL
-    
+
     echo "FAILOVER COMPLETE: Secondary is now primary"
     break
   fi
-  
+
   sleep 10
 done
 ```
@@ -292,7 +292,7 @@ wrk -t 4 -c 100 -d 2m https://code-server.dev.yourdomain.com/api/health &
 
 # 2. Verify replication lag
 echo "Replication lag:"
-psql -h secondary-db -c "SELECT now() - pg_last_xact_replay_timestamp() as lag;" 
+psql -h secondary-db -c "SELECT now() - pg_last_xact_replay_timestamp() as lag;"
 
 # 3. Simulate primary failure
 aws ec2 stop-instances --instance-ids i-primary-alb --region us-east-1
@@ -344,17 +344,17 @@ Target RPO: 0 (no data loss)
 Detection:
   - HAProxy health check fails (10s)
   - Monitoring alert fires
-  
+
 Action:
   1. HAProxy automatically removes failed server
   2. ASG detects unhealthy instance
   3. ASG terminates and replaces instance (3 min)
-  
+
 Verification:
   - New instance: healthy
   - Traffic: no gaps
   -Latency: normal
-  
+
 Expected Impact: <30 seconds of increased latency for existing connections
 
 ---
@@ -366,17 +366,17 @@ Target RPO: <5 seconds (streaming replication)
 Detection:
   - Connection timeout to primary
   - Monitoring alert in <10 seconds
-  
+
 Action:
   1. Standby automatic failover triggers
   2. pgBouncer detects: promotes standby
   3. DNS (optional): Switch to secondary region if needed
-  
+
 Verification:
   - SELECT current_primary(): Returns standby name
   - replication lag: 0 (no more replication)
   - Data: Verified intact
-  
+
 Expected Impact: <60 seconds downtime, zero data loss (streaming rep)
 
 ---
@@ -388,18 +388,18 @@ Target RPO: <5 seconds
 Detection:
   - Multiple health checks fail (30s)
   - Route53 detects primary region unhealthy
-  
+
 Action:
   1. Route53 fails over to secondary region
   2. DNS propagates globally (30-60s)
   3. Secondary becomes primary (no action needed)
   4. Clients connect to secondary region
-  
+
 Verification:
   - Data in secondary: Verified current
   - DNS resolves to secondary IP
   - No connection errors for new clients
-  
+
 Expected Impact: Old connections: timeout
              New connections: route to secondary
              Data: Consistent (replication)
@@ -413,19 +413,19 @@ Target RPO: Last backup (up to 24h old)
 Detection:
   - Both primary and secondary down
   - DR region only option
-  
+
 Action:
   1. Manual intervention required
   2. Restore from latest backup in DR region
   3. Verify data integrity
   4. Point DNS to DR region
   5. Document root cause
-  
+
 Verification:
   - DR region: Data restored and online
   - DNS: Pointing to DR
   - Alerting: Updated to monitor DR
-  
+
 Expected Impact: 2-4 hours of downtime
                 Data loss: Up to 24 hours (backup frequency)
 
@@ -438,16 +438,16 @@ Target RPO: <5 seconds
 Detection:
   - Replication lag increases rapidly
   - VPN connection down
-  
+
 Action:
   1. Try VPN reconnect
   2. If sustained >1 min: Assume full region failure
   3. Perform secondary region full failover
-  
+
 Verification:
   - VPN: Up or failed gracefully
   - Replication: Resumed or failed over
-  
+
 Expected Impact: Temporary lag spike or brief failover
 
 ---
@@ -459,17 +459,17 @@ Target RPO: Last backup (24h window)
 Detection:
   - Application reports missing data
   - Monitoring: anomaly detected
-  
+
 Action:
   1. Pause replication (stop slave)
   2. Restore point-in-time backup
   3. Resume replication
-  
+
 Verification:
   - Data: Restored to before deletion
   - Integrity: Checked
   - Replication: Caught up to present
-  
+
 Expected Impact: Data rolls back to backup point
 ```
 
@@ -481,7 +481,7 @@ Expected Impact: Data rolls back to backup point
 # Tool 1: Health Dashboard
 update_health_dashboard() {
   METRICS=$(cat <<SQL
-SELECT 
+SELECT
   'Primary' as region,
   (SELECT now() - pg_last_xact_replay_timestamp())::text as repl_lag,
   (SELECT count(*) FROM pg_stat_replication) as active_replicas,
@@ -491,7 +491,7 @@ SELECT 'Secondary', ..., ..., ...
 FROM secondary_db;
 SQL
   )
-  
+
   echo "$METRICS" | tee /tmp/dr_dashboard.txt
   # Send to Slack
   curl -X POST -d "{text: \"$METRICS\"}" $SLACK_WEBHOOK
@@ -500,12 +500,12 @@ SQL
 # Tool 2: Failover Trigger
 trigger_failover() {
   REGION=$1
-  
+
   if [[ "$REGION" == "primary" ]]; then
     # Failover from primary to secondary
     ssh secondary-db "sudo pg_promote"
     aws route53 change-resource-record-sets ... # Update DNS
-    
+
   elif [[ "$REGION" == "secondary" ]]; then
     # Failover from secondary to DR (manual)
     echo "Manual activation required for DR region"
@@ -520,12 +520,12 @@ verify_data_integrity() {
   # Compare checksums between regions
   PRIMARY_CHECKSUM=$(psql -h primary-db -c "SELECT md5(string_agg(*, '')) FROM ..." | tail -1)
   SECONDARY_CHECKSUM=$(psql -h secondary-db -c "SELECT md5(string_agg(*, '')) FROM ..." | tail -1)
-  
+
   if [[ "$PRIMARY_CHECKSUM" != "$SECONDARY_CHECKSUM" ]]; then
     echo "ERROR: Data mismatch between regions!"
     exit 1
   fi
-  
+
   echo "OK: Data consistent across regions"
 }
 ```

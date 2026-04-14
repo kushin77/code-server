@@ -123,12 +123,12 @@ jobs:
           export DOMAIN="${{ env.DOMAIN }}"
           export TUNNEL_NAME="${{ env.TUNNEL_NAME }}"
           export CODE_SERVER_PORT="${{ env.CODE_SERVER_PORT }}"
-          
+
           # Run tunnel setup (idempotent - safe to run multiple times)
           bash scripts/setup-cloudflare-tunnel.sh || {
             echo "⚠️  Tunnel setup completed with warnings (likely already exists)"
           }
-          
+
           # Verify tunnel status
           if cloudflared tunnel list 2>/dev/null | grep -q "$TUNNEL_NAME"; then
             echo "✅ Tunnel '$TUNNEL_NAME' verified"
@@ -147,7 +147,7 @@ jobs:
           export DOMAIN="${{ env.DOMAIN }}"
           export MFA_REQUIRED=true
           export SESSION_TIMEOUT=86400
-          
+
           # Check if script exists and is executable
           if [ -f scripts/setup-cloudflare-access.sh ]; then
             bash scripts/setup-cloudflare-access.sh || echo "⚠️  Access setup skipped (may require manual configuration)"
@@ -197,15 +197,15 @@ jobs:
         run: |
           echo "Collecting deployment artifacts..."
           mkdir -p deployment-logs
-          
+
           # Collect any Phase 13 state files
           if [ -f /tmp/phase-13-day1-*.log ]; then
             cp /tmp/phase-13-day1-*.log deployment-logs/ || true
           fi
-          
+
           # Docker status
           docker ps > deployment-logs/docker-status.txt || true
-          
+
           # Git status
           git status > deployment-logs/git-status.txt || true
           git log --oneline -10 >> deployment-logs/git-status.txt || true
@@ -226,31 +226,31 @@ jobs:
           **Deployment Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
           **Deployment ID**: ${{ env.DEPLOYMENT_ID }}
           **Run**: ${{ github.run_id }} (Attempt ${{ github.run_attempt }})
-          
+
           ## Configuration
           - Domain: ${{ env.DOMAIN }}
           - Tunnel: ${{ env.TUNNEL_NAME }}
           - Code-Server Port: ${{ env.CODE_SERVER_PORT }}
-          
+
           ## Tasks Executed
           - [x] Pre-flight checks
           - [x] Task 1.1: Cloudflare Tunnel deployment
           - [x] Task 1.2: Cloudflare Access configuration
           - [x] Task 1.3: Production verification
           - [x] Task 1.4: Security validation
-          
+
           ## Next Steps
           1. Verify tunnel is running: `cloudflared tunnel list`
           2. Add DNS CNAME record in Cloudflare dashboard
           3. Test developer access: `curl https://${{ env.DOMAIN }}`
           4. Proceed to Phase 13 Day 2-7 tasks
-          
+
           ## Links
           - [Cloudflare Dashboard](https://dash.cloudflare.com/)
           - [GitHub Actions Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
           - [Phase 13 Implementation Guide](PHASE-13-IMPLEMENTATION-GUIDE.md)
           SUMMARY
-          
+
           cat PHASE-13-CI-DEPLOYMENT-LOG.md
 
       - name: 'Commit deployment log'
@@ -273,11 +273,11 @@ jobs:
               labels: 'phase-13',
               state: 'open'
             });
-            
+
             if (issues.data.length > 0) {
               const issue = issues.data[0];
               const comment = `## ✅ Phase 13 Deployment Executed\n\n**Timestamp**: ${new Date().toISOString()}\n**Deployment ID**: ${{ env.DEPLOYMENT_ID }}\n\n### Completed Tasks:\n- ✅ Pre-flight checks\n- ✅ Task 1.1: Cloudflare Tunnel\n- ✅ Task 1.2: Access Configuration\n- ✅ Task 1.3: Production Verification\n- ✅ Task 1.4: Security Validation\n\n### Next Steps:\n1. Verify tunnel running\n2. Add DNS records\n3. Test developer access\n4. Proceed to Phase 13 Days 2-7\n\n[See deployment log](PHASE-13-CI-DEPLOYMENT-LOG.md)`;
-              
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,

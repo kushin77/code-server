@@ -1,10 +1,10 @@
 # Phase 3: Governance Training Materials
 
-**Session Date**: April 21, 2026 @ 2:00 PM UTC (10:00 AM EDT / 7:00 AM PDT)  
-**Duration**: 30 minutes  
-**Audience**: All engineers  
-**Format**: Video call + Slack Q&A  
-**Owner**: @kushin77 (DevOps/Platform Lead)  
+**Session Date**: April 21, 2026 @ 2:00 PM UTC (10:00 AM EDT / 7:00 AM PDT)
+**Duration**: 30 minutes
+**Audience**: All engineers
+**Format**: Video call + Slack Q&A
+**Owner**: @kushin77 (DevOps/Platform Lead)
 
 ---
 
@@ -272,7 +272,7 @@ git push
 ```
 Checks
 ✅ configuration-validation / secrets-scanning — Passed
-✅ configuration-validation / docker-compose-validate — Passed  
+✅ configuration-validation / docker-compose-validate — Passed
 ✅ configuration-validation / caddyfile-validate — Passed
 ✅ configuration-validation / terraform-validate — Passed
 ✅ configuration-validation / shell-script-validate — Passed
@@ -376,19 +376,19 @@ git push
 
 **Common Questions to Answer**:
 
-**Q: Will these checks block my PRs?**  
+**Q: Will these checks block my PRs?**
 A: Not until Phase 4 (April 25). Phase 2-3 are non-blocking (preview). You'll see results, but can still merge.
 
-**Q: What if the check is wrong (false positive)?**  
+**Q: What if the check is wrong (false positive)?**
 A: Comment in the PR. Owner will review and either fix the check or override it.
 
-**Q: Do I need to test locally before pushing?**  
+**Q: Do I need to test locally before pushing?**
 A: Recommended! It's faster than push → CI run → fix → push again. Test locally first.
 
-**Q: What if I have multiple violations?**  
+**Q: What if I have multiple violations?**
 A: Fix all of them in one commit. Push. CI re-runs for all checks.
 
-**Q: Can I merge a PR with CI failures (after Phase 4)?**  
+**Q: Can I merge a PR with CI failures (after Phase 4)?**
 A: No. Checks will block merge. Must fix violations first (or get exception from owner).
 
 **Open Q&A**: Ask in #engineering Slack anytime.
@@ -464,11 +464,11 @@ A: No. Checks will block merge. Must fix violations first (or get exception from
 
 ## Slides Summary
 
-**Slide 1** (Title): Governance & Code Quality  
-**Slide 2** (Why):  Why governance matters  
-**Slide 3** (What): The 5 CI checks (secrets, config, scripts, terraform, obsolete files)  
-**Slide 4** (Demo): Real PR example with CI results  
-**Slide 5** (How): How to fix violations + Q&A  
+**Slide 1** (Title): Governance & Code Quality
+**Slide 2** (Why):  Why governance matters
+**Slide 3** (What): The 5 CI checks (secrets, config, scripts, terraform, obsolete files)
+**Slide 4** (Demo): Real PR example with CI results
+**Slide 5** (How): How to fix violations + Q&A
 
 **Estimated timing**: 2 min + 5 min + 5 min + 3 min + 5 min = 20 min + 10 min buffer
 
@@ -488,11 +488,11 @@ A: No. Checks will block merge. Must fix violations first (or get exception from
 
 ---
 
-**Training Leader**: @kushin77  
-**Expected Attendance**: All engineers in code-server-enterprise project  
-**Follow-up**: Monthly governance training refresh (best practices)  
+**Training Leader**: @kushin77
+**Expected Attendance**: All engineers in code-server-enterprise project
+**Follow-up**: Monthly governance training refresh (best practices)
 
 ---
 
-**Last Updated**: April 14, 2026  
+**Last Updated**: April 14, 2026
 **Next Session**: Weekly governance sync (proposed: Mondays 2:00 PM UTC)

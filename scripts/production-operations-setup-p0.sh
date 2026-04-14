@@ -29,7 +29,7 @@ LOKI_PORT="3100"
 
 create_monitoring_dashboards() {
     echo "Creating production monitoring dashboards..."
-    
+
     # SLO Dashboard (IaC)
     cat > /tmp/slo-dashboard.json << 'EOF'
 {
@@ -94,7 +94,7 @@ create_monitoring_dashboards() {
   }
 }
 EOF
-    
+
     echo "✅ SLO dashboard definition created at /tmp/slo-dashboard.json"
 }
 
@@ -104,7 +104,7 @@ EOF
 
 create_alerting_rules() {
     echo "Creating alerting rules..."
-    
+
     # Prometheus alerting rules (IaC)
     cat > /tmp/alert-rules.yaml << 'EOF'
 groups:
@@ -197,7 +197,7 @@ groups:
       summary: "Cache hit rate low ({{ $value | humanizePercentage }})"
       action: "Review cache invalidation patterns, optimize TTLs"
 EOF
-    
+
     echo "✅ Alert rules created at /tmp/alert-rules.yaml"
 }
 
@@ -207,7 +207,7 @@ EOF
 
 create_incident_runbooks() {
     echo "Creating incident response runbooks..."
-    
+
     # High Latency Incident Runbook
     cat > /tmp/runbook-high-latency.md << 'EOF'
 # Incident: High Latency (P99 >1500ms)
@@ -303,11 +303,11 @@ docker exec redis redis-cli FLUSHDB
 4. Schedule post-mortem
 5. Update monitoring/alerts
 EOF
-    
+
     # Similar runbooks for other incidents
     cp /tmp/runbook-high-latency.md /tmp/runbook-high-error-rate.md
     cp /tmp/runbook-high-latency.md /tmp/runbook-container-crash.md
-    
+
     echo "✅ Incident runbooks created at /tmp/runbook-*.md"
 }
 
@@ -317,7 +317,7 @@ EOF
 
 create_oncall_rotation() {
     echo "Setting up on-call rotation..."
-    
+
     cat > /tmp/oncall-schedule.yaml << 'EOF'
 on_call_schedule:
   primary:
@@ -326,13 +326,13 @@ on_call_schedule:
       email: "sre-lead@company.com"
       availability: "24/7"
       escalation_time: "15 minutes"
-    
+
     - name: "Platform Engineer"
       phone: "+1-XXX-XXX-XXXX"
       email: "platform@company.com"
       availability: "9am-5pm UTC + on-call rotation"
       escalation_time: "30 minutes"
-  
+
   secondary:
     - name: "Engineering Lead"
       phone: "+1-XXX-XXX-XXXX"
@@ -346,13 +346,13 @@ escalation_policy:
     - "2. After 15 min: Page Platform Engineer"
     - "3. After 30 min: Page Engineering Lead"
     - "4. After 45 min: Executive escalation"
-  
+
   p2_warning:
     - "1. Create incident channel"
     - "2. Notify SRE team"
     - "3. After 30 min: Page secondary on-call"
 EOF
-    
+
     echo "✅ On-call schedule template created at /tmp/oncall-schedule.yaml"
 }
 
@@ -362,30 +362,30 @@ EOF
 
 capture_baseline_metrics() {
     echo "Capturing baseline metrics..."
-    
+
     ssh -o StrictHostKeyChecking=no akushnir@192.168.168.31 << 'SSHEOF'
-    
+
     echo "=== BASELINE METRICS CAPTURE ===" > /tmp/baseline-metrics.txt
     echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S UTC')" >> /tmp/baseline-metrics.txt
-    
+
     echo "" >> /tmp/baseline-metrics.txt
     echo "=== SYSTEM METRICS ===" >> /tmp/baseline-metrics.txt
     echo "Linux kernel: $(uname -r)" >> /tmp/baseline-metrics.txt
     nproc | xargs echo "CPU cores:" >> /tmp/baseline-metrics.txt
     free -h | head -2 >> /tmp/baseline-metrics.txt
     df -h | head -3 >> /tmp/baseline-metrics.txt
-    
+
     echo "" >> /tmp/baseline-metrics.txt
     echo "=== DOCKER METRICS ===" >> /tmp/baseline-metrics.txt
     docker stats --no-stream --format 'table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}' >> /tmp/baseline-metrics.txt
-    
+
     echo "" >> /tmp/baseline-metrics.txt
     echo "=== APPLICATION METRICS ===" >> /tmp/baseline-metrics.txt
     curl -s http://localhost:9090/api/v1/query?query=up >> /tmp/baseline-metrics.txt 2>&1 || echo "Prometheus not available" >> /tmp/baseline-metrics.txt
-    
+
     cat /tmp/baseline-metrics.txt
 SSHEOF
-    
+
     echo "✅ Baseline metrics captured"
 }
 
@@ -399,22 +399,22 @@ main() {
     echo "║          Monitoring, Alerting, Incident Response           ║"
     echo "╚════════════════════════════════════════════════════════════╝"
     echo ""
-    
+
     create_monitoring_dashboards
     echo ""
-    
+
     create_alerting_rules
     echo ""
-    
+
     create_incident_runbooks
     echo ""
-    
+
     create_oncall_rotation
     echo ""
-    
+
     capture_baseline_metrics
     echo ""
-    
+
     echo "╔════════════════════════════════════════════════════════════╗"
     echo "║              PRODUCTION OPERATIONS READY                   ║"
     echo "╚════════════════════════════════════════════════════════════╝"

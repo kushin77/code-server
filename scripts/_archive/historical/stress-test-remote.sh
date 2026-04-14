@@ -44,7 +44,7 @@
 #   ./scripts/stress-test-remote.sh 192.168.168.31 3600 100
 #
 # Recent Changes:
-#   2026-04-14: Added error handling + metrics collection 
+#   2026-04-14: Added error handling + metrics collection
 #   2026-04-13: Initial creation with load generation
 #
 ################################################################################
@@ -71,11 +71,11 @@ echo ""
 echo "=== TEST 3: HTTP CONCURRENCY TEST ==="
 for concurrent in 10 25 50 100; do
   echo -n "Testing $concurrent concurrent requests... "
-  
+
   START=$(date +%s%N)
   SUCCESS=0
   FAIL=0
-  
+
   # Use ApacheBench if available
   if command -v ab &> /dev/null; then
     RESULT=$(timeout 30 ab -n 500 -c $concurrent -q http://localhost:3000/health 2>/dev/null | grep "Requests per second")
@@ -92,11 +92,11 @@ for concurrent in 10 25 50 100; do
       done
       wait
     done
-    
+
     END=$(date +%s%N)
     DURATION=$(( ($END - $START) / 1000000000 ))
     RPS=$(( ($SUCCESS + $FAIL) / $DURATION ))
-    
+
     echo "Success: $SUCCESS | Fail: $FAIL | RPS: $RPS"
   fi
 done
@@ -192,4 +192,3 @@ docker stats --no-stream --format "table {{.Container}}\t{{.MemUsage}}\t{{.CPUPe
 echo ""
 echo "=== STRESS TEST COMPLETE ==="
 echo "End time: $(date)"
-

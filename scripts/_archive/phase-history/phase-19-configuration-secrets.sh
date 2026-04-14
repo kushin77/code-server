@@ -116,13 +116,13 @@ spec:
             - |
               # Rotate database passwords
               ./rotate-db-password.sh
-              
+
               # Rotate API keys
               ./rotate-api-keys.sh
-              
+
               # Rotate TLS certificates
               certbot renew --quiet
-              
+
               # Reload Kubernetes secrets
               kubectl rollout restart deployment/api-server
           restartPolicy: OnFailure
@@ -157,19 +157,19 @@ data:
   FEATURE_ADVANCED_SEARCH: "false"
   FEATURE_ML_RECOMMENDATIONS: "false"
   FEATURE_PAYMENT_V2: "true"
-  
+
   # Service configuration
   API_TIMEOUT: "30s"
   DATABASE_POOL_SIZE: "100"
   CACHE_TTL: "3600"
   RATE_LIMIT_REQUESTS_PER_SECOND: "1000"
-  
+
   # Logging configuration
   LOG_LEVEL: "info"
   LOG_FORMAT: "json"
   LOG_SAMPLING: "true"
   LOG_SAMPLING_RATIO: "0.1"
-  
+
   # Environmental
   ENVIRONMENT: "production"
   REGION: "us-east-1"
@@ -296,11 +296,11 @@ rules:
     - group: ""
       resources: ["secrets", "configmaps"]
     namespaces: ["production"]
-  
+
   # Log all authentication attempts
   - level: Metadata
     userGroups: ["system:serviceaccounts"]
-  
+
   # Log deployments and config changes
   - level: RequestResponse
     verbs: ["create", "update", "patch", "delete"]
@@ -309,7 +309,7 @@ rules:
       resources: ["deployments", "statefulsets"]
     - group: ""
       resources: ["services", "configmaps", "secrets"]
-  
+
   # Default catch-all
   - level: Metadata
 EOF
@@ -501,7 +501,7 @@ rotation_policies:
     grace_period: "7 days"  # Warn 7 days before rotation
     auto_rotate: true
     requires_approval: false
-    
+
   api_keys:
     frequency: "every 7 days"
     grace_period: "2 days"
@@ -509,26 +509,26 @@ rotation_policies:
     creates_new_key: true
     keeps_old_key: true  # For gradual rollover
     old_key_ttl: "48 hours"
-    
+
   tls_certificates:
     frequency: "every 90 days"
     grace_period: "30 days before expiry"
     auto_rotate: true
     certificate_authority: "letsencrypt"
     renewal_trigger: "60 days before expiry"
-    
+
   jwt_signing_keys:
     frequency: "every 60 days"
     grace_period: "14 days"
     auto_rotate: true
     dual_signing: true  # Support both old and new keys
     old_key_ttl: "14 days"  # Give time for token expiry
-    
+
   service_account_tokens:
     frequency: "every 90 days"
     grace_period: "7 days"
     auto_rotate: true
-    
+
   oauth_tokens:
     frequency: "weekly"
     grace_period: "1 day"

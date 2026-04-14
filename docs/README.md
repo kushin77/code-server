@@ -67,6 +67,6 @@ All documentation MUST follow standards in [GOVERNANCE.md](GOVERNANCE.md#documen
 
 ---
 
-**Last Updated**: April 14, 2026  
-**Owner**: @akushnir  
+**Last Updated**: April 14, 2026
+**Owner**: @akushnir
 **Related**: [GOVERNANCE.md](GOVERNANCE.md) • [../CONTRIBUTING.md](../CONTRIBUTING.md)

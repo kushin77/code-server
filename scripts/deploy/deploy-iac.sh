@@ -36,29 +36,29 @@ deploy_remote() {
     local user=$2
     local key=$3
     local port=$4
-    
+
     log_info "Preparing remote deployment to ${user}@${host}:${port}"
-    
+
     # Test SSH connectivity
     if ! ssh -i "${key}" -p "${port}" -o StrictHostKeyChecking=no "${user}@${host}" "echo OK" &>/dev/null; then
         log_error "Cannot connect to ${user}@${host}:${port}"
         return 1
     fi
     log_success "✓ SSH connectivity verified"
-    
+
     # Create deployment package
     log_info "Creating deployment package..."
     mkdir -p /tmp/code-server-deploy
     cp -r "${PROJECT_DIR}"/* /tmp/code-server-deploy/ 2>/dev/null || true
     cd /tmp/code-server-deploy
-    
+
     # Copy to remote
     log_info "Uploading to remote host..."
     scp -i "${key}" -P "${port}" -r . "${user}@${host}:/home/${user}/code-server-deploy/" || {
         log_error "Failed to upload deployment package"
         return 1
     }
-    
+
     # Execute remote deployment
     log_info "Executing remote deployment..."
     ssh -i "${key}" -p "${port}" "${user}@${host}" "
@@ -70,7 +70,7 @@ deploy_remote() {
         log_error "Remote deployment failed"
         return 1
     }
-    
+
     log_success "✓ Remote deployment successful"
     return 0
 }
@@ -203,7 +203,7 @@ main() {
     log INFO ""
 
     check_prerequisites
-    
+
     if [[ "${IS_REMOTE}" == "true" ]]; then
         log INFO "Deploying to remote host: ${DEPLOY_HOST}"
         deploy_remote "${DEPLOY_HOST}" "${DEPLOY_SSH_USER}" "${DEPLOY_SSH_KEY}" "${DEPLOY_SSH_PORT}" || {

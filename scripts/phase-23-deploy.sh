@@ -89,13 +89,13 @@ log_info "Importing Grafana dashboards..."
 for dashboard in "${PROJECT_DIR}/grafana/dashboards/phase-23-"*.json; do
     local_name="$(basename "${dashboard}")"
     ssh_upload "${dashboard}" "${PROJECT_DIR}/grafana/dashboards/${local_name}"
-    
+
     # Import via Grafana API
     IMPORT_RESULT=$(ssh_exec "curl -s -u '${GRAFANA_CREDS}' \
         -H 'Content-Type: application/json' \
         -d '{\"dashboard\": $(cat ${PROJECT_DIR}/grafana/dashboards/${local_name}), \"overwrite\": true, \"folderId\": 0}' \
         ${GRAFANA_HOST}/api/dashboards/import")
-    
+
     if echo "${IMPORT_RESULT}" | grep -q '"status":"success"'; then
         log_success "Imported dashboard: ${local_name}"
     else

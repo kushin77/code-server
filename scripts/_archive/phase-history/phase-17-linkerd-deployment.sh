@@ -54,21 +54,21 @@ log_error() {
 
 run_preflight() {
     log "Running pre-flight checks..."
-    
+
     # Check Docker
     if ! docker ps > /dev/null 2>&1; then
         log_error "Docker daemon not responding"
         return 1
     fi
     log_success "Docker daemon: operational"
-    
+
     # Check Kong
     if ! docker ps --format "{{.Names}}" | grep -q "^kong$"; then
         log_error "Kong not running - required for traffic routing"
         return 1
     fi
     log_success "Kong API Gateway: running (prerequisite met)"
-    
+
     # Note: Linkerd in Docker is simplified compared to Kubernetes
     # We'll deploy a simplified service mesh using Docker networking and proxies
     log "Simplified Linkerd deployment mode (Docker-based)"
@@ -82,10 +82,10 @@ run_preflight() {
 
 generate_mtls_certificates() {
     log "Generating mTLS certificates for service mesh..."
-    
+
     local certs_dir="${CONFIG_DIR}/certificates"
     mkdir -p "$certs_dir"
-    
+
     # Generate root CA certificate
     log "Generating Root CA..."
     openssl genrsa -out "$certs_dir/ca-key.pem" 4096
@@ -93,24 +93,24 @@ generate_mtls_certificates() {
         -out "$certs_dir/ca.pem" \
         -subj "/CN=Linkerd-CA" \
         2>/dev/null
-    
+
     log_success "Root CA certificate generated"
-    
+
     # Generate server certificates for each service
     local services=("code-server" "git-proxy" "api-gateway")
-    
+
     for service in "${services[@]}"; do
         log "Generating certificate for service: $service"
-        
+
         # Private key
         openssl genrsa -out "$certs_dir/${service}-key.pem" 2048
-        
+
         # Certificate request
         openssl req -new -key "$certs_dir/${service}-key.pem" \
             -out "$certs_dir/${service}.csr" \
             -subj "/CN=${service}.cluster.local" \
             2>/dev/null
-        
+
         # Sign certificate with CA
         openssl x509 -req -days 365 \
             -in "$certs_dir/${service}.csr" \
@@ -119,10 +119,10 @@ generate_mtls_certificates() {
             -CAcreateserial \
             -out "$certs_dir/${service}.pem" \
             2>/dev/null
-        
+
         log_success "Certificate for $service: generated"
     done
-    
+
     log_success "All mTLS certificates generated"
 }
 
@@ -132,13 +132,13 @@ generate_mtls_certificates() {
 
 deploy_linkerd_proxies() {
     log "Deploying Linkerd proxies for service mesh..."
-    
+
     # In Kubernetes, Linkerd would inject sidecar proxies automatically
     # In Docker, we simulate this with envoy proxies
     # For simplicity, this deployment uses iptables rules and networking
-    
+
     # Deploy Envoy proxy containers for inter-service communication
-    
+
     # Proxy for code-server (listens on 9080, forwards to code-server on 9000)
     log "Deploying Linkerd proxy for code-server..."
     docker run -d \
@@ -149,7 +149,7 @@ deploy_linkerd_proxies() {
         /usr/local/bin/envoy \
         -c /etc/envoy/envoy.yaml \
         || log "Envoy may need custom config - using simplified proxy"
-    
+
     # Proxy for git-proxy
     log "Deploying Linkerd proxy for git-proxy..."
     docker container ls -a --format "{{.Names}}" | grep -q git-proxy && \
@@ -161,7 +161,7 @@ deploy_linkerd_proxies() {
         TCP-LISTEN:2222,reuseaddr,fork \
         TCP:git-proxy:22 \
         || log "Git proxy simulation"
-    
+
     log_success "Linkerd proxies deployment: complete"
 }
 
@@ -171,7 +171,7 @@ deploy_linkerd_proxies() {
 
 create_circuit_breaker_config() {
     log "Creating circuit breaker configuration..."
-    
+
     cat > "${CONFIG_DIR}/linkerd-circuit-breaker-policy.yaml" << 'EOF'
 ---
 # Linkerd Circuit Breaker Policy for code-server
@@ -251,7 +251,7 @@ spec:
           interval: 1m
           maxErrorRatio: 0.03
 EOF
-    
+
     log_success "Circuit breaker configuration created"
 }
 
@@ -261,7 +261,7 @@ EOF
 
 create_retry_policy_config() {
     log "Creating retry policy configuration..."
-    
+
     cat > "${CONFIG_DIR}/linkerd-retry-policy.yaml" << 'EOF'
 ---
 # Linkerd Retry Policy for resilient service communication
@@ -305,7 +305,7 @@ spec:
           delay: 50ms
           maxDelay: 2000ms
 EOF
-    
+
     log_success "Retry policy configuration created"
 }
 
@@ -315,7 +315,7 @@ EOF
 
 create_load_balancing_config() {
     log "Creating load balancing configuration..."
-    
+
     cat > "${CONFIG_DIR}/linkerd-load-balancing-policy.yaml" << 'EOF'
 ---
 # Linkerd Load Balancing Policy for even distribution across pod replicas
@@ -362,7 +362,7 @@ spec:
   affinity:
     type: none
 EOF
-    
+
     log_success "Load balancing configuration created"
 }
 
@@ -372,7 +372,7 @@ EOF
 
 create_mtls_policy_config() {
     log "Creating mTLS policy for service mesh..."
-    
+
     cat > "${CONFIG_DIR}/linkerd-mtls-policy.yaml" << 'EOF'
 ---
 # Linkerd mTLS Policy - Enforce mutual TLS for all service-to-service communication
@@ -441,7 +441,7 @@ spec:
     matchLabels:
       app: api-gateway
 EOF
-    
+
     log_success "mTLS policy configuration created"
 }
 
@@ -451,7 +451,7 @@ EOF
 
 create_linkerd_monitoring_config() {
     log "Creating Linkerd monitoring configuration..."
-    
+
     cat > "${CONFIG_DIR}/prometheus-linkerd-rules.yml" << 'EOF'
 groups:
   - name: linkerd_metrics
@@ -505,7 +505,7 @@ alerts:
       summary: "Linkerd mesh error rate exceeds 1%"
       description: "Service mesh traffic is experiencing {{ $value }} error rate. Check downstream services."
 EOF
-    
+
     log_success "Linkerd monitoring configuration created"
 }
 
@@ -515,7 +515,7 @@ EOF
 
 validate_linkerd_deployment() {
     log "Validating Linkerd deployment..."
-    
+
     # Verify certificates generated
     if [ -f "${CONFIG_DIR}/certificates/ca.pem" ]; then
         log_success "mTLS certificates: generated"
@@ -523,7 +523,7 @@ validate_linkerd_deployment() {
         log_error "mTLS certificates: not found"
         return 1
     fi
-    
+
     # Verify policy files created
     if [ -f "${CONFIG_DIR}/linkerd-circuit-breaker-policy.yaml" ]; then
         log_success "Circuit breaker policies: created"
@@ -531,14 +531,14 @@ validate_linkerd_deployment() {
         log_error "Circuit breaker policies: not found"
         return 1
     fi
-    
+
     if [ -f "${CONFIG_DIR}/linkerd-mtls-policy.yaml" ]; then
         log_success "mTLS policies: created"
     else
         log_error "mTLS policies: not found"
         return 1
     fi
-    
+
     log_success "Linkerd deployment validation: PASSED"
 }
 
@@ -614,17 +614,17 @@ main() {
     echo -e "${BLUE}  Timeline: April 30, 2026 (Phase 17 Week 1 Wednesday)${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
     echo ""
-    
+
     log "Starting Linkerd service mesh deployment..."
     log "Timestamp: $(date)"
     log "Working directory: $ROOT_DIR"
-    
+
     # Execute deployment steps
     if ! run_preflight; then
         log_error "Pre-flight checks failed"
         exit 1
     fi
-    
+
     generate_mtls_certificates
     deploy_linkerd_proxies
     create_circuit_breaker_config
@@ -632,12 +632,12 @@ main() {
     create_load_balancing_config
     create_mtls_policy_config
     create_linkerd_monitoring_config
-    
+
     if ! validate_linkerd_deployment; then
         log_error "Linkerd validation failed"
         exit 1
     fi
-    
+
     print_summary
     log "Linkerd service mesh deployment complete!"
 }

@@ -47,13 +47,13 @@ developer_workload() {
   local user_total_latency=0
   local user_success=0
   local user_failed=0
-  
+
   echo "👤 User $user_id: Starting workload"
-  
+
   # Simulate typical developer session (10 minutes worth of actions)
   # Actions: browse files, edit, view diffs, run tests
   while [ $(($(date +%s%N) - $start_time)) -lt $((DURATION * 1000000000)) ]; do
-    
+
     # Action 1: Browse file (GET /api/files)
     local op_start=$(date +%s%N)
     if curl -s -f "http://localhost:8080/api/files" > /dev/null 2>&1; then
@@ -65,7 +65,7 @@ developer_workload() {
       ((user_failed++))
     fi
     sleep 0.2
-    
+
     # Action 2: Terminal input (POST /api/terminal)
     op_start=$(date +%s%N)
     if curl -s -f -X POST "http://localhost:8080/api/terminal" \
@@ -79,7 +79,7 @@ developer_workload() {
       ((user_failed++))
     fi
     sleep 0.3
-    
+
     # Action 3: File edit (PATCH /api/files/:id)
     op_start=$(date +%s%N)
     if curl -s -f -X PATCH "http://localhost:8080/api/files/test.sh" \
@@ -93,7 +93,7 @@ developer_workload() {
       ((user_failed++))
     fi
     sleep 0.5
-    
+
     # Action 4: Git status (GET /api/git/status)
     op_start=$(date +%s%N)
     if curl -s -f "http://localhost:8080/api/git/status" > /dev/null 2>&1; then
@@ -105,16 +105,16 @@ developer_workload() {
       ((user_failed++))
     fi
     sleep 0.8
-    
+
     ((iteration++))
   done
-  
+
   # Calculate user stats
   local user_avg_latency=0
   if [ $user_success -gt 0 ]; then
     user_avg_latency=$((user_total_latency / user_success))
   fi
-  
+
   echo "👤 User $user_id: Complete (iterations=$iteration, success=$user_success, failed=$user_failed, avg=${user_avg_latency}ms)"
 }
 
@@ -122,18 +122,18 @@ developer_workload() {
 ramp_up_users() {
   echo "📈 Ramping up users over $RAMP_UP seconds..."
   echo ""
-  
+
   local users_per_second=$((USERS / (RAMP_UP > 0 ? RAMP_UP : 1)))
-  
+
   for ((i=1; i<=USERS; i++)); do
     developer_workload $i &
-    
+
     # Space out user starts
     if [ $((i % users_per_second)) -eq 0 ] && [ $i -lt $USERS ]; then
       sleep 1
     fi
   done
-  
+
   # Wait for all users to complete
   wait
 }
@@ -142,12 +142,12 @@ ramp_up_users() {
 collect_metrics() {
   echo ""
   echo "📊 Collecting Metrics..."
-  
+
   if [ ! -f "$REQUEST_LOG" ]; then
     echo "⚠️  Request log not found"
     return 1
   fi
-  
+
   # Parse latency values from log
   local latencies=()
   while IFS= read -r line; do
@@ -155,18 +155,18 @@ collect_metrics() {
       latencies+=("${BASH_REMATCH[1]}")
     fi
   done < "$REQUEST_LOG"
-  
+
   local total_requests=${#latencies[@]}
   local total_latency=0
   local min_latency=999999
   local max_latency=0
   local p50_idx=$((total_requests / 2))
   local p99_idx=$((total_requests * 99 / 100))
-  
+
   # Calculate stats
   for latency in "${latencies[@]}"; do
     ((total_latency += latency))
-    
+
     if [ $latency -lt $min_latency ]; then
       min_latency=$latency
     fi
@@ -174,18 +174,18 @@ collect_metrics() {
       max_latency=$latency
     fi
   done
-  
+
   local avg_latency=0
   if [ $total_requests -gt 0 ]; then
     avg_latency=$((total_latency / total_requests))
   fi
-  
+
   # Sort for percentiles
   IFS=$'\n' sorted_latencies=($(printf '%s\n' "${latencies[@]}" | sort -n))
-  
+
   local p50=${sorted_latencies[$p50_idx]:-0}
   local p99=${sorted_latencies[$p99_idx]:-0}
-  
+
   echo ""
   echo "📈 Performance Metrics"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -196,41 +196,41 @@ collect_metrics() {
   printf "p50 Latency:     %8dms\n" "$p50"
   printf "p99 Latency:     %8dms\n" "$p99"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  
+
   # Throughput
   local throughput=$((total_requests / DURATION))
   printf "Throughput:      %8d req/s\n" "$throughput"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  
+
   # Check against targets
   echo ""
   echo "📋 Target Validation"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  
+
   if [ $p50 -lt 50 ]; then
     echo -e "${GREEN}✅${NC} p50 Latency < 50ms: PASS"
   else
     echo -e "${RED}❌${NC} p50 Latency < 50ms: FAIL (actual: ${p50}ms)"
   fi
-  
+
   if [ $p99 -lt 100 ]; then
     echo -e "${GREEN}✅${NC} p99 Latency < 100ms: PASS"
   else
     echo -e "${RED}❌${NC} p99 Latency < 100ms: FAIL (actual: ${p99}ms)"
   fi
-  
+
   if [ $max_latency -lt 500 ]; then
     echo -e "${GREEN}✅${NC} Max Latency < 500ms: PASS"
   else
     echo -e "${RED}⚠️${NC} Max Latency < 500ms: FAIL (actual: ${max_latency}ms)"
   fi
-  
+
   if [ $throughput -gt 100 ]; then
     echo -e "${GREEN}✅${NC} Throughput > 100 req/s: PASS"
   else
     echo -e "${YELLOW}⚠️${NC} Throughput > 100 req/s: CHECK (actual: ${throughput} req/s)"
   fi
-  
+
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
@@ -239,28 +239,28 @@ test_rto() {
   echo ""
   echo "🔄 Testing RTO (Recovery Time Objective)"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  
+
   # Simulate tunnel failure and measure recovery
   echo "⚠️  Simulating Cloudflare tunnel failure..."
-  
+
   local failure_time=$(date +%s%N)
-  
+
   # Wait for system to detect failure and failover
   # In production, this would test actual failover mechanism
   sleep 3
-  
+
   # Check if service is back online
   local recovery_time=$(($(date +%s%N) - failure_time))
   local recovery_seconds=$((recovery_time / 1000000000))
-  
+
   echo "Recovery time: ${recovery_seconds}s"
-  
+
   if [ $recovery_seconds -lt 5 ]; then
     echo -e "${GREEN}✅${NC} RTO < 5s: PASS"
   else
     echo -e "${YELLOW}⚠️${NC} RTO < 5s: FAIL (actual: ${recovery_seconds}s)"
   fi
-  
+
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
@@ -269,19 +269,19 @@ test_rpo() {
   echo ""
   echo "💾 Testing RPO (Recovery Point Objective)"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  
+
   # Check data consistency across replicas
   echo "Checking Git repository consistency..."
-  
+
   # In production, would verify:
   # - All commits replicated across sites
   # - No uncommitted data lost
   # - Audit logs fully persisted
-  
+
   echo -e "${GREEN}✅${NC} Git data consistency: PASS"
   echo -e "${GREEN}✅${NC} Audit log persistence: PASS"
   echo "RPO Target: < 1s (all commits persisted immediately)"
-  
+
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 

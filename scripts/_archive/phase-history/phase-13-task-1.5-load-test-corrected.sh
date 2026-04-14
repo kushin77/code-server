@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Purpose: Validate SLO targets under realistic load
 # Architecture: Test from inside Docker network (production-realistic)
-# 
+#
 # SLO Targets:
 #   - p99 Latency: < 100ms
 #   - Error Rate: < 0.1%
@@ -85,7 +85,7 @@ make_request() {
   local response=$(curl -s -w '%{http_code}' -o /dev/null http://localhost:8080/healthz 2>/dev/null || echo '000')
   local end_time=$(date +%s%3N)
   local latency=$((end_time - start_time))
-  
+
   echo "$latency $response"
 }
 
@@ -125,25 +125,25 @@ if [ -f "$LATENCY_LOG" ]; then
     TOTAL_REQUESTS=$(wc -l < "$LATENCY_LOG")
     SUCCESS_REQUESTS=$(awk '$2 == "200" || $2 == "000" {count++} END {print count+0}' "$LATENCY_LOG")
     FAILED_REQUESTS=$((TOTAL_REQUESTS - SUCCESS_REQUESTS))
-    
+
     # Calculate latency statistics
     LATENCIES=$(awk '{print $1}' "$LATENCY_LOG" | sort -n)
     AVG_LATENCY=$(echo "$LATENCIES" | awk '{sum+=$1} END {print int(sum/NR)}')
     MIN_LATENCY=$(echo "$LATENCIES" | head -1)
     MAX_LATENCY=$(echo "$LATENCIES" | tail -1)
-    
+
     # Calculate p99 (99th percentile)
     TOTAL_LINES=$(echo "$LATENCIES" | wc -l)
     P99_INDEX=$(( (TOTAL_LINES * 99 / 100) ))
     P99_LATENCY=$(echo "$LATENCIES" | sed -n "${P99_INDEX}p")
-    
+
     # Calculate error rate
     if [ "$TOTAL_REQUESTS" -gt 0 ]; then
         ERROR_RATE=$(awk "BEGIN {printf \"%.2f\", ($FAILED_REQUESTS / $TOTAL_REQUESTS) * 100}")
     else
         ERROR_RATE="0.00"
     fi
-    
+
     # Calculate throughput (requests per second)
     if [ "$LOAD_TEST_DURATION" -gt 0 ]; then
         THROUGHPUT=$(awk "BEGIN {printf \"%.2f\", $TOTAL_REQUESTS / $LOAD_TEST_DURATION}")

@@ -1,8 +1,8 @@
 # IDE OAuth2 Configuration Checklist
 
-**Date:** April 2026  
-**Status:** 🔄 Ready for credential population  
-**Target Domain:** https://ide.kushnir.cloud  
+**Date:** April 2026
+**Status:** 🔄 Ready for credential population
+**Target Domain:** https://ide.kushnir.cloud
 
 ---
 
@@ -31,7 +31,7 @@
   - [ ] Authorized redirect URI: https://ide.kushnir.cloud/oauth2/callback
   - [ ] **Client ID obtained:** `_____________________`
   - [ ] **Client Secret obtained:** `_____________________`
-  
+
 - [ ] Option B: Retrieve existing Dex credentials
   - [ ] Location verified: _____________________
   - [ ] **Client ID:** `_____________________`

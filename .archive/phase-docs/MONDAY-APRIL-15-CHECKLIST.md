@@ -1,8 +1,8 @@
 # Monday April 15, 2026 - Sprint Start Checklist
 
-**Sprint**: April 15-21 (Phase 2 + Dependabot CVEs + Phase 23-A)  
-**Owner**: @kushin77  
-**Time**: 09:00 UTC Start  
+**Sprint**: April 15-21 (Phase 2 + Dependabot CVEs + Phase 23-A)
+**Owner**: @kushin77
+**Time**: 09:00 UTC Start
 **Duration**: 5 business days
 
 ---
@@ -228,7 +228,6 @@ Pass to next engineer/session:
 
 ---
 
-**Status**: 🟢 READY FOR MONDAY START  
-**Owner**: @kushin77  
-**Start Time**: April 15, 09:00 UTC  
-
+**Status**: 🟢 READY FOR MONDAY START
+**Owner**: @kushin77
+**Start Time**: April 15, 09:00 UTC

@@ -1,6 +1,6 @@
 # Phase 13 Day 7: Production Go-Live & Incident Training
-**Issue #208 - P0 Priority**  
-**Scheduled**: April 20, 2026  
+**Issue #208 - P0 Priority**
+**Scheduled**: April 20, 2026
 **Duration**: 8 hours (09:00 UTC - 17:00 UTC)
 
 ---
@@ -55,7 +55,7 @@ Activate full production traffic migration to code-server infrastructure and con
 ```bash
 ssh akushnir@192.168.168.31
 # Verify DNS
-nslookup code-server.internal  
+nslookup code-server.internal
 
 # Verify SSL
 openssl s_client -connect code-server.internal:443 -showcerts
@@ -165,7 +165,7 @@ ssh akushnir@192.168.168.31 "docker exec caddy caddy config show | grep -A5 upst
 1. Alert fires: Error rate exceeded 1%
 2. Immediate: Open war room on Slack #incident-page
 3. Diagnosis: Check application logs for errors
-4. Action: 
+4. Action:
    - If application bug → Engage development team
    - If database issue → Check connection pool
    - If infrastructure → Check container status
@@ -374,13 +374,13 @@ bash scripts/phase-14-rollback.sh
 
 ## 📝 APPROVAL & SIGN-OFF
 
-**Execution Authority**: VP Engineering  
-**Incident Command Authority**: akushnir  
-**SRE Authority**: SRE Lead  
-**Security Authority**: Security Lead  
+**Execution Authority**: VP Engineering
+**Incident Command Authority**: akushnir
+**SRE Authority**: SRE Lead
+**Security Authority**: Security Lead
 
-**Approval Date**: April 18, 2026 (2 days pre-execution)  
-**Scheduled Execution**: April 20, 2026, 09:00 UTC  
+**Approval Date**: April 18, 2026 (2 days pre-execution)
+**Scheduled Execution**: April 20, 2026, 09:00 UTC
 **Estimated Duration**: 8 hours (09:00-17:00 UTC)
 
 ---

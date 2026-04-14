@@ -37,24 +37,24 @@ oauth2:
     algorithm: "RS256"  # Asymmetric signing
     expiration: 3600    # 1 hour
     refresh_expiration: 604800  # 7 days
-    
+
     # Token Security
     require_https: true
     secure_transport: true
     bearer_token_only: true
-    
+
   # Authorization Server Security
   server:
     authorization_endpoint: "https://auth.kushnir.cloud/oauth/authorize"
     token_endpoint: "https://auth.kushnir.cloud/oauth/token"
     introspection_endpoint: "https://auth.kushnir.cloud/oauth/introspect"
     revocation_endpoint: "https://auth.kushnir.cloud/oauth/revoke"
-    
+
     # HTTPS/TLS
     tls_version: "TLSv1.2"  # Minimum 1.2
     certificate_validation: true
     certificate_pin: true
-    
+
   # Scope Management
   scopes:
     - name: "read"
@@ -74,19 +74,19 @@ oauth2:
       enabled: true
       require_pkce: true  # PKCE for public clients
       code_lifetime: 600  # 10 minutes
-    
+
     refresh_token:
       enabled: true
       rotation: "every_use"  # Always issue new refresh token
       expiration: 604800     # 7 days
-    
+
     client_credentials:
       enabled: true
       scope_restrictions: true
-    
+
     implicit:
       enabled: false  # Disallow implicit flow
-    
+
     password:
       enabled: false  # Disallow password flow
 
@@ -97,11 +97,11 @@ oauth2:
     redirect_uri_validation: "exact"  # Exact match required
     response_types: ["code"]  # Only authorization code flow
     response_modes: ["form_post"]
-    
+
 security_headers:
   # HSTS: Enforce HTTPS
   strict_transport_security: "max-age=31536000; includeSubDomains; preload"
-  
+
   # CSP: Content Security Policy
   content_security_policy: |
     default-src 'none';
@@ -113,16 +113,16 @@ security_headers:
     frame-ancestors 'none';
     base-uri 'self';
     form-action 'self';
-  
+
   # X-Frame-Options: Clickjacking protection
   x_frame_options: "DENY"
-  
+
   # X-Content-Type-Options: MIME sniffing protection
   x_content_type_options: "nosniff"
-  
+
   # X-XSS-Protection: Legacy XSS protection
   x_xss_protection: "1; mode=block"
-  
+
   # Referrer-Policy: Information leak prevention
   referrer_policy: "no-referrer"
 
@@ -132,13 +132,13 @@ rate_limiting:
     requests_per_minute: 10
     burst: 20
     per: "ip"  # Per IP address
-  
+
   # Authorization endpoint rate limiting
   authorization_endpoint:
     requests_per_minute: 30
     burst: 60
     per: "ip"
-  
+
   # Introspection endpoint rate limiting
   introspection_endpoint:
     requests_per_minute: 100
@@ -158,7 +158,7 @@ logging:
     - "rate_limit_exceeded"
     - "csrf_attack_detected"
     - "certificate_error"
-  
+
   log_level: "INFO"
   retention_days: 90
   encryption: "AES-256"  # Encrypt sensitive logs
@@ -409,33 +409,33 @@ firewall:
       source: "0.0.0.0/0"
       action: "ALLOW"
       description: "HTTPS (TLS)"
-    
+
     # SSH from specific IPs only
     - protocol: TCP
       port: 22
       source: "10.0.0.0/8"
       action: "ALLOW"
       description: "SSH from internal network"
-    
+
     # Block everything else
     - protocol: ALL
       source: "0.0.0.0/0"
       action: "DENY"
       description: "Default deny"
-  
+
   egress:
     # Allow outbound HTTPS
     - protocol: TCP
       port: 443
       destination: "0.0.0.0/0"
       action: "ALLOW"
-    
+
     # Allow DNS
     - protocol: UDP
       port: 53
       destination: "8.8.8.8/32"
       action: "ALLOW"
-    
+
     # Block all other outbound
     - protocol: ALL
       destination: "0.0.0.0/0"
@@ -448,17 +448,17 @@ waf:
       pattern: "(?i)('|(AND|OR|UNION|SELECT|DROP|INSERT|UPDATE|DELETE))"
       action: "BLOCK"
       log: true
-    
+
     - id: "xss_detection"
       pattern: "(?i)(<script|onclick|onerror|onload|javascript:)"
       action: "BLOCK"
       log: true
-    
+
     - id: "path_traversal"
       pattern: "(?i)(\\.\\./|\\.\\\\)"
       action: "BLOCK"
       log: true
-    
+
     - id: "http_method_validation"
       pattern: "^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)$"
       action: "ALLOW"
@@ -466,25 +466,25 @@ waf:
 
 ddos_protection:
   enabled: true
-  
+
   rate_limiting:
     global:
       requests_per_second: 1000
       burst: 2000
-    
+
     per_ip:
       requests_per_second: 100
       burst: 200
-    
+
     per_user:
       requests_per_second: 50
       burst: 100
-  
+
   connection_limiting:
     max_connections: 10000
     max_connections_per_ip: 1000
     timeout: 30  # seconds
-  
+
   mitigation:
     - "IP reputation checking"
     - "Behavioral analysis"
@@ -498,12 +498,12 @@ tls:
     - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
     - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
     - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
-  
+
   certificate:
     provider: "Let's Encrypt"
     auto_renewal: true
     renewal_days_before: 30
-  
+
   hsts:
     enabled: true
     max_age: 31536000  # 1 year
@@ -516,7 +516,7 @@ vpn:
   protocol: "WireGuard"
   allowed_ips:
     - "10.0.0.0/8"  # Internal network
-  
+
   mfa_required: true
   audit_logging: true
 EOF
@@ -660,7 +660,7 @@ dependency_scanning:
     - "npm audit"
     - "snyk"
     - "OWASP Dependency-Check"
-  
+
   thresholds:
     critical: "fail"
     high: "warn"
@@ -673,7 +673,7 @@ container_scanning:
   tools:
     - "Trivy"
     - "Grype"
-  
+
   thresholds:
     critical: "fail"
     high: "warn"
@@ -685,7 +685,7 @@ sast:
   tools:
     - "SonarQube"
     - "Semgrep"
-  
+
   checks:
     - "sql_injection"
     - "xss"
@@ -700,7 +700,7 @@ dast:
   tools:
     - "OWASP ZAP"
     - "Burp Community"
-  
+
   scans:
     - "vulnerability_scan"
     - "penetration_test"
@@ -712,7 +712,7 @@ compliance:
     - "CWE Top 25"
     - "GDPR"
     - "CCPA"
-  
+
   audit_frequency: "monthly"
   report_required: true
 
@@ -722,7 +722,7 @@ secrets_management:
     - "git-secrets"
     - "TruffleHog"
     - "detect-secrets"
-  
+
   pre_commit_checks: true
   ci_checks: true
   deny_list:

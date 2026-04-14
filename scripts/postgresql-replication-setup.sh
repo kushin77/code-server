@@ -31,14 +31,14 @@ SUBSCRIPTION_NAME_PREFIX="replication_sub"
 test_postgres_connection() {
     local conn_string="$1"
     local timeout="${2:-10}"
-    
+
     log_info "Testing PostgreSQL connection: ${conn_string}"
-    
+
     if ! timeout "$timeout" psql "$conn_string" -c "SELECT version();" > /dev/null 2>&1; then
         log_error "Failed to connect to PostgreSQL: ${conn_string}"
         return 1
     fi
-    
+
     log_info "✓ PostgreSQL connection successful"
     return 0
 }
@@ -47,7 +47,7 @@ test_postgres_connection() {
 execute_pg_command() {
     local conn_string="$1"
     local sql="$2"
-    
+
     psql "$conn_string" -v ON_ERROR_STOP=1 -c "$sql" 2>&1 || {
         log_error "SQL execution failed: ${sql}"
         return 1
@@ -63,9 +63,9 @@ create_replication_slot() {
     local conn_string="$1"
     local source_region="$2"
     local slot_name="${REPLICATION_SLOT_PREFIX}_${source_region}"
-    
+
     log_info "Creating replication slot: ${slot_name}"
-    
+
     local sql="
         SELECT * FROM pg_create_logical_replication_slot(
             '${slot_name}',
@@ -73,7 +73,7 @@ create_replication_slot() {
             false
         );
     "
-    
+
     execute_pg_command "$conn_string" "$sql" || return 1
     log_info "✓ Replication slot created: ${slot_name}"
 }
@@ -82,9 +82,9 @@ create_replication_slot() {
 verify_replication_slot() {
     local conn_string="$1"
     local slot_name="$2"
-    
+
     local sql="SELECT slot_name, slot_type, active FROM pg_replication_slots WHERE slot_name = '${slot_name}';"
-    
+
     execute_pg_command "$conn_string" "$sql" || return 1
 }
 
@@ -92,15 +92,15 @@ verify_replication_slot() {
 drop_replication_slot() {
     local conn_string="$1"
     local slot_name="$2"
-    
+
     log_info "Dropping replication slot if exists: ${slot_name}"
-    
+
     local sql="
-        SELECT pg_drop_replication_slot(slot_name) 
-        FROM pg_replication_slots 
+        SELECT pg_drop_replication_slot(slot_name)
+        FROM pg_replication_slots
         WHERE slot_name = '${slot_name}';
     "
-    
+
     execute_pg_command "$conn_string" "$sql" || true
 }
 
@@ -112,14 +112,14 @@ drop_replication_slot() {
 create_publication() {
     local conn_string="$1"
     local publication="${PUBLICATION_NAME}"
-    
+
     log_info "Creating publication: ${publication}"
-    
+
     local sql="
-        CREATE PUBLICATION IF NOT EXISTS ${publication} 
+        CREATE PUBLICATION IF NOT EXISTS ${publication}
         FOR ALL TABLES;
     "
-    
+
     execute_pg_command "$conn_string" "$sql" || return 1
     log_info "✓ Publication created: ${publication}"
 }
@@ -127,9 +127,9 @@ create_publication() {
 # Enable CRDT-compatible write-ahead logging
 enable_wal_for_replication() {
     local conn_string="$1"
-    
+
     log_info "Configuring WAL for logical replication"
-    
+
     # These settings must be applied in postgresql.conf and require restart
     local settings=(
         "max_wal_senders = 10"
@@ -137,12 +137,12 @@ enable_wal_for_replication() {
         "max_replication_slots = 10"
         "hot_standby = on"
     )
-    
+
     log_info "Required postgresql.conf settings:"
     for setting in "${settings[@]}"; do
         log_info "  - ${setting}"
     done
-    
+
     log_warn "Note: WAL settings require PostgreSQL restart. Verify in postgresql.conf"
 }
 
@@ -156,17 +156,17 @@ create_subscription() {
     local source_conn_string="$2"
     local source_region="$3"
     local subscription="${SUBSCRIPTION_NAME_PREFIX}_${source_region}"
-    
+
     log_info "Creating subscription: ${subscription}"
-    
+
     # Extract source connection details
     local source_user=$(echo "$source_conn_string" | grep -oP '(?<=user=)[^ ]+' || echo "postgres")
     local source_password=$(echo "$source_conn_string" | grep -oP '(?<=password=)[^ ]+' || echo "")
     local source_dbname=$(echo "$source_conn_string" | grep -oP '(?<=dbname=)[^ ]+' || echo "postgres")
-    
+
     # Build connection string for source
     local source_dsn="postgresql://${source_user}:${source_password}@${source_region}:5432/${source_dbname}"
-    
+
     local sql="
         CREATE SUBSCRIPTION IF NOT EXISTS ${subscription}
         CONNECTION '${source_dsn}'
@@ -179,7 +179,7 @@ create_subscription() {
             synchronous_commit = 'remote_apply'
         );
     "
-    
+
     execute_pg_command "$target_conn_string" "$sql" || return 1
     log_info "✓ Subscription created: ${subscription}"
 }
@@ -187,18 +187,18 @@ create_subscription() {
 # Enable CRDT-safe conflict resolution
 configure_conflict_resolution() {
     local conn_string="$1"
-    
+
     log_info "Configuring conflict resolution for CRDT semantics"
-    
+
     # Create CRDT data types and resolution functions
     local sql="
         -- Enable UUID support for CRDT node IDs
         CREATE EXTENSION IF NOT EXISTS uuid-ossp;
-        
+
         -- Create CRDT-safe aggregate functions
         CREATE OR REPLACE FUNCTION crdt_max_int(int, int) RETURNS int AS '/usr/lib/postgresql/crdt', 'crdt_max_int' LANGUAGE c IMMUTABLE STRICT;
         CREATE AGGREGATE crdt_max(int) (SFUNC = crdt_max_int, STYPE = int);
-        
+
         -- Last-write-wins resolution strategy (with timestamp)
         CREATE OR REPLACE FUNCTION resolve_lww(
             local_val ANYELEMENT,
@@ -214,14 +214,14 @@ configure_conflict_resolution() {
             END IF;
         END;
         \\\$ LANGUAGE plpgsql IMMUTABLE;
-        
+
         -- Commutative semilattice ordering
         CREATE TYPE crdt_vector_clock AS (
             node_id uuid,
             clock_value bigint
         );
     "
-    
+
     execute_pg_command "$conn_string" "$sql" || return 1
     log_info "✓ Conflict resolution configured"
 }
@@ -233,16 +233,16 @@ configure_conflict_resolution() {
 # Check replication lag
 check_replication_lag() {
     local conn_string="$1"
-    
+
     log_info "Checking replication lag"
-    
+
     local sql="
-        SELECT 
+        SELECT
             slot_name,
             restart_lsn,
             confirmed_flush_lsn,
             pg_wal_lsn_diff(confirmed_flush_lsn, restart_lsn) as bytes_behind,
-            CASE 
+            CASE
                 WHEN confirmed_flush_lsn IS NULL THEN 'unknown'
                 WHEN confirmed_flush_lsn >= restart_lsn THEN 'caught_up'
                 ELSE 'behind'
@@ -250,18 +250,18 @@ check_replication_lag() {
         FROM pg_replication_slots
         WHERE slot_type = 'logical';
     "
-    
+
     execute_pg_command "$conn_string" "$sql" || return 1
 }
 
 # Monitor subscription status
 monitor_subscription_status() {
     local conn_string="$1"
-    
+
     log_info "Monitoring subscription status"
-    
+
     local sql="
-        SELECT 
+        SELECT
             subname,
             subowner,
             subenabled,
@@ -270,7 +270,7 @@ monitor_subscription_status() {
             subsynccommit
         FROM pg_subscription;
     "
-    
+
     execute_pg_command "$conn_string" "$sql" || return 1
 }
 
@@ -282,23 +282,23 @@ monitor_subscription_status() {
 setup_primary_region() {
     local region="$1"
     local conn_string="$2"
-    
+
     log_info "=========================================="
     log_info "Setting up PRIMARY region: ${region}"
     log_info "=========================================="
-    
+
     # Test connection
     test_postgres_connection "$conn_string" || return 1
-    
+
     # Configure WAL
     enable_wal_for_replication "$conn_string"
-    
+
     # Create replication slot
     create_replication_slot "$conn_string" "$region" || return 1
-    
+
     # Create publication
     create_publication "$conn_string" || return 1
-    
+
     log_info "✓ Primary region setup complete: ${region}"
 }
 
@@ -307,17 +307,17 @@ setup_replica_region() {
     local target_region="$1"
     local target_conn_string="$2"
     local source_regions=("${@:3}")
-    
+
     log_info "=========================================="
     log_info "Setting up REPLICA region: ${target_region}"
     log_info "=========================================="
-    
+
     # Test connection
     test_postgres_connection "$target_conn_string" || return 1
-    
+
     # Configure conflict resolution
     configure_conflict_resolution "$target_conn_string" || return 1
-    
+
     # Create subscriptions from all source regions
     for source_region in "${source_regions[@]}"; do
         if [ "$source_region" != "$target_region" ]; then
@@ -326,7 +326,7 @@ setup_replica_region() {
             # create_subscription "$target_conn_string" "$source_conn_string" "$source_region" || return 1
         fi
     done
-    
+
     log_info "✓ Replica region setup complete: ${target_region}"
 }
 
@@ -336,18 +336,18 @@ setup_multi_primary_replication() {
     log_info "MULTI-PRIMARY REPLICATION SETUP"
     log_info "Regions: ${PRIMARY_REGIONS[*]}"
     log_info "=========================================="
-    
+
     # Setup each region as primary
     for region in "${PRIMARY_REGIONS[@]}"; do
         # Note: In production, connection strings would come from AWS RDS endpoints
         local conn_string="postgresql://postgres@${region}-rds.aws.example.com:5432/codeserver"
-        
+
         setup_primary_region "$region" "$conn_string" || {
             log_error "Failed to setup primary region: ${region}"
             return 1
         }
     done
-    
+
     log_info "✓ Multi-primary replication setup complete"
 }
 
@@ -358,26 +358,26 @@ setup_multi_primary_replication() {
 # Validate replication setup
 validate_replication_setup() {
     local conn_string="$1"
-    
+
     log_info "Validating replication setup"
-    
+
     # Check replication slots
     log_info "Checking replication slots..."
     local slots_sql="SELECT COUNT(*) as slot_count FROM pg_replication_slots;"
     execute_pg_command "$conn_string" "$slots_sql" || return 1
-    
+
     # Check publications
     log_info "Checking publications..."
     local pub_sql="SELECT pubname FROM pg_publication;"
     execute_pg_command "$conn_string" "$pub_sql" || return 1
-    
+
     # Check subscriptions
     log_info "Checking subscriptions..."
     monitor_subscription_status "$conn_string" || return 1
-    
+
     # Check replication lag
     check_replication_lag "$conn_string" || return 1
-    
+
     log_info "✓ Replication validation complete"
 }
 
@@ -388,7 +388,7 @@ validate_replication_setup() {
 main() {
     log_info "Starting PostgreSQL Multi-Primary Replication Setup"
     log_info "Timestamp: ${TIMESTAMP}"
-    
+
     if [ $# -lt 2 ]; then
         cat << 'EOF'
 Usage: bash postgresql-replication-setup.sh <command> <region> [connection_string]
@@ -407,9 +407,9 @@ Examples:
 EOF
         return 1
     fi
-    
+
     local command="$1"
-    
+
     case "$command" in
         setup-primary)
             setup_primary_region "$2" "$3"

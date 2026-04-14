@@ -39,10 +39,10 @@ phase_14_preflight() {
     log "=========================================="
     log "PHASE 14 PRE-FLIGHT VALIDATION"
     log "=========================================="
-    
+
     local checks_passed=0
     local checks_failed=0
-    
+
     # Check 1: SSH connectivity
     log "Checking SSH connectivity to $REMOTE_HOST..."
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
@@ -53,13 +53,13 @@ phase_14_preflight() {
         error "✗ SSH connectivity failed"
         ((checks_failed++))
     fi
-    
+
     # Check 2: All containers running
     log "Checking container status..."
     local container_status=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "$REMOTE_USER@$REMOTE_HOST" \
         "docker ps --filter 'name=^(code-server|caddy|ssh-proxy)-31$' --format '{{.Status}}' | grep -c 'Up'" || echo "0")
-    
+
     if [[ "$container_status" == "3" ]]; then
         log "✓ All 3 containers running"
         ((checks_passed++))
@@ -67,7 +67,7 @@ phase_14_preflight() {
         error "✗ Not all containers running (found: $container_status/3)"
         ((checks_failed++))
     fi
-    
+
     # Check 3: HTTP health
     log "Checking HTTP endpoint health..."
     local http_status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 || echo "000")
@@ -78,7 +78,7 @@ phase_14_preflight() {
         error "✗ HTTP endpoint not responding (got $http_status)"
         ((checks_failed++))
     fi
-    
+
     # Check 4: Memory availability
     log "Checking memory availability..."
     local mem_available=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
@@ -90,7 +90,7 @@ phase_14_preflight() {
         error "✗ Insufficient memory: ${mem_available}GB (requirement: 20GB)"
         ((checks_failed++))
     fi
-    
+
     # Check 5: Disk space
     log "Checking disk space..."
     local disk_available=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
@@ -102,7 +102,7 @@ phase_14_preflight() {
         error "✗ Insufficient disk space: $(( disk_available / 1024 ))GB"
         ((checks_failed++))
     fi
-    
+
     # Check 6: Docker network
     log "Checking Docker network configuration..."
     local net_status=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
@@ -115,14 +115,14 @@ phase_14_preflight() {
         error "✗ Docker network not configured"
         ((checks_failed++))
     fi
-    
+
     log ""
     log "Pre-Flight Summary: $checks_passed passed, $checks_failed failed"
-    
+
     if [[ "$checks_failed" -gt 0 ]]; then
         error "Pre-flight checks failed - cannot proceed to production"
     fi
-    
+
     return 0
 }
 
@@ -131,27 +131,27 @@ collect_production_baseline() {
     log "=========================================="
     log "COLLECTING PRODUCTION BASELINE METRICS"
     log "=========================================="
-    
+
     mkdir -p "$METRICS_DIR"
-    
+
     # Baseline 1: Container metrics
     log "Collecting container baseline..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "$REMOTE_USER@$REMOTE_HOST" \
         "docker stats --no-stream --format 'table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}' > /tmp/docker-baseline.txt"
-    
+
     # Baseline 2: System metrics
     log "Collecting system baseline..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "$REMOTE_USER@$REMOTE_HOST" \
         "cat /proc/cpuinfo | grep -c processor; free -h; df -h /" > "$METRICS_DIR/system-baseline.txt" 2>&1
-    
+
     # Baseline 3: Network metrics
     log "Collecting network baseline..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
         "$REMOTE_USER@$REMOTE_HOST" \
         "netstat -tuln | grep LISTEN" > "$METRICS_DIR/network-baseline.txt" 2>&1
-    
+
     log "✓ Baseline metrics collected"
 }
 
@@ -160,7 +160,7 @@ deploy_monitoring() {
     log "=========================================="
     log "DEPLOYING MONITORING INFRASTRUCTURE"
     log "=========================================="
-    
+
     # Step 1: Deploy Prometheus scrape config
     log "Deploying Prometheus configuration..."
     cat > /tmp/prometheus-config.yml << 'EOF'
@@ -179,14 +179,14 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9100']
 EOF
-    
+
     log "✓ Prometheus configuration deployed"
-    
+
     # Step 2: Deploy Grafana dashboard config
     log "Deploying Grafana dashboards..."
     # This would normally push dashboard JSON to Grafana API
     log "✓ Grafana dashboards deployed"
-    
+
     # Step 3: Configure alerting rules
     log "Configuring alert rules..."
     cat > /tmp/alert-rules.yml << 'EOF'
@@ -200,7 +200,7 @@ groups:
           severity: critical
         annotations:
           summary: "High latency detected"
-      
+
       - alert: HighErrorRate
         expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.001
         for: 1m
@@ -208,7 +208,7 @@ groups:
           severity: critical
         annotations:
           summary: "High error rate detected"
-      
+
       - alert: ContainerRestart
         expr: increase(container_last_seen{status="restarted"}[5m]) > 0
         for: 1m
@@ -217,7 +217,7 @@ groups:
         annotations:
           summary: "Container restart detected"
 EOF
-    
+
     log "✓ Alert rules configured"
 }
 
@@ -226,18 +226,18 @@ enable_production_access() {
     log "=========================================="
     log "ENABLING PRODUCTION ACCESS"
     log "=========================================="
-    
+
     # Note: This is a placeholder - actual implementation would:
     # 1. Update DNS records
     # 2. Configure Cloudflare CDN
     # 3. Enable firewall rules
     # 4. Activate OAuth2
-    
+
     log "TODO: Update DNS records to production domain"
     log "TODO: Enable Cloudflare CDN caching"
     log "TODO: Configure firewall for public access"
     log "TODO: Verify HTTPS certificate validity"
-    
+
     log "⚠ Manual DNS configuration required"
     log "⚠ Manual Cloudflare setup required"
 }
@@ -247,28 +247,28 @@ configure_oncall() {
     log "=========================================="
     log "CONFIGURING ON-CALL ROTATION"
     log "=========================================="
-    
+
     # Step 1: Define on-call schedule
     log "Setting up on-call schedule..."
     cat > /tmp/oncall-schedule.txt << 'EOF'
 Week 1 (April 14-20):
   Primary On-Call: Engineer A
-  Secondary On-Call: Engineer B  
+  Secondary On-Call: Engineer B
   Tertiary On-Call: Engineer C
-  
+
 Escalation Policy:
   Level 1: Primary on-call (immediate page)
   Level 2: SRE Lead (5 min no response)
   Level 3: Platform Manager (15 min no response)
   Level 4: VP Engineering (30 min no response)
 EOF
-    
+
     log "✓ On-call schedule defined"
-    
+
     # Step 2: Configure PagerDuty integration
     log "Configuring PagerDuty integration..."
     log "✓ PagerDuty escalation policies ready"
-    
+
     # Step 3: Configure Slack notifications
     log "Configuring Slack notifications..."
     log "✓ Slack alerting channels ready"
@@ -279,24 +279,24 @@ generate_golive_report() {
     log "=========================================="
     log "GENERATING GO-LIVE REPORT"
     log "=========================================="
-    
+
     local report_file="PHASE-14-GOLIVE-REPORT-$(date +%Y%m%d-%H%M%S).md"
-    
+
     cat > "$report_file" << EOF
 # Phase 14 Production Go-Live Report
 
-**Initiated**: $PHASE_14_START  
-**Status**: READY FOR LAUNCH  
-**Host**: $REMOTE_HOST  
+**Initiated**: $PHASE_14_START
+**Status**: READY FOR LAUNCH
+**Host**: $REMOTE_HOST
 **User**: $REMOTE_USER
 
 ## Pre-Flight Checks
 
-✅ SSH Connectivity  
-✅ Container Status (3/3 running)  
-✅ HTTP Health (200 OK)  
-✅ Memory Available (20GB+)  
-✅ Disk Space Available (1GB+)  
+✅ SSH Connectivity
+✅ Container Status (3/3 running)
+✅ HTTP Health (200 OK)
+✅ Memory Available (20GB+)
+✅ Disk Space Available (1GB+)
 ✅ Docker Network Configured
 
 ## Baseline Metrics
@@ -308,16 +308,16 @@ generate_golive_report() {
 
 ## Monitoring Deployment
 
-✅ Prometheus configured  
-✅ Grafana dashboards deployed  
-✅ Alert rules configured  
+✅ Prometheus configured
+✅ Grafana dashboards deployed
+✅ Alert rules configured
 ✅ Log aggregation ready
 
 ## On-Call Configuration
 
-✅ Schedule defined  
-✅ PagerDuty integration configured  
-✅ Slack notifications ready  
+✅ Schedule defined
+✅ PagerDuty integration configured
+✅ Slack notifications ready
 ✅ Escalation policies defined
 
 ## SLO Targets
@@ -356,17 +356,17 @@ generate_golive_report() {
 
 ## Sign-Off
 
-**Infrastructure Team**: ✅ Ready  
-**SRE Team**: ✅ Ready  
-**Security Team**: ✅ Ready  
-**DevOps Lead**: ✅ Ready  
+**Infrastructure Team**: ✅ Ready
+**SRE Team**: ✅ Ready
+**Security Team**: ✅ Ready
+**DevOps Lead**: ✅ Ready
 **VP Engineering**: ⏳ Awaiting approval
 
 ---
 
 **Report Generated**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
 EOF
-    
+
     log "✓ Go-live report generated: $report_file"
     cat "$report_file"
 }
@@ -380,25 +380,25 @@ main() {
     log "Remote Host: $REMOTE_HOST"
     log "Log File: $LOG_FILE"
     log ""
-    
+
     # Step 1: Pre-flight checks
     phase_14_preflight
-    
+
     # Step 2: Collect baseline metrics
     collect_production_baseline
-    
+
     # Step 3: Deploy monitoring
     deploy_monitoring
-    
+
     # Step 4: Configure on-call
     configure_oncall
-    
+
     # Step 5: Enable production access
     enable_production_access
-    
+
     # Step 6: Generate report
     generate_golive_report
-    
+
     log ""
     log "=========================================="
     log "PHASE 14 GO-LIVE ORCHESTRATION COMPLETE"

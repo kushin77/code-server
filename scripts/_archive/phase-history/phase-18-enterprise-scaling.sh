@@ -631,16 +631,16 @@ main() {
 
     deploy_multi_cluster_federation || { log_error "Federation deployment failed"; return 1; }
     echo ""
-    
+
     deploy_cost_optimization || { log_error "Cost optimization deployment failed"; return 1; }
     echo ""
-    
+
     deploy_advanced_gitops || { log_error "GitOps deployment failed"; return 1; }
     echo ""
-    
+
     deploy_multi_cloud_abstraction || { log_error "Multi-cloud abstraction failed"; return 1; }
     echo ""
-    
+
     verify_phase_18 || { log_error "Phase 18 verification failed"; return 1; }
     echo ""
 

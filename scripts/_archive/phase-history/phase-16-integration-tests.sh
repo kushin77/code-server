@@ -63,7 +63,7 @@ test_kong_api_gateway() {
     correlation_id=$(curl -s -H "X-Correlation-ID: test-$(date +%s)" \
         -w "\nX-Correlation-ID: %{header{X-Correlation-ID}}" \
         "${kong_proxy_url}/api" 2>&1 | grep "X-Correlation-ID" | cut -d: -f2)
-    
+
     if [ -n "$correlation_id" ]; then
         log_success "✓ Correlation ID propagated: $correlation_id"
     else
@@ -109,7 +109,7 @@ test_jaeger_tracing() {
                 }]
             }]
         }' 2>&1)
-    
+
     if echo "$trace_response" | grep -q "accepted"; then
         log_success "✓ Jaeger collector accepting spans"
     else
@@ -152,7 +152,7 @@ test_linkerd_mesh() {
         # Check if control plane namespace exists
         if kubectl get namespace linkerd &> /dev/null; then
             log_success "✓ Linkerd namespace exists"
-            
+
             # Check control plane deployment
             if kubectl get deployment -n linkerd | grep -q "linkerd-controller"; then
                 log_success "✓ Linkerd controller running"
@@ -191,9 +191,9 @@ test_end_to_end() {
     # 4.1: Full request flow through Kong
     log_info "Testing full request flow through Kong gateway..."
     start_time=$(date +%s%N)
-    
+
     response=$(curl -s -w "\n%{http_code}" "${api_url}" 2>&1 | tail -1)
-    
+
     end_time=$(date +%s%N)
     request_time=$(( (end_time - start_time) / 1000000 ))
 
@@ -206,7 +206,7 @@ test_end_to_end() {
     # 4.2: Test request transformation
     log_info "Testing request/response transformation..."
     headers=$(curl -s -i "${api_url}" 2>&1 | head -20)
-    
+
     if echo "$headers" | grep -q "X-Kong-Timestamp"; then
         log_success "✓ Request headers transformed"
     else
@@ -217,7 +217,7 @@ test_end_to_end() {
     log_info "Testing concurrent requests through gateway..."
     success_count=0
     failed_count=0
-    
+
     for i in {1..50}; do
         if curl -sf "${api_url}" > /dev/null 2>&1; then
             success_count=$((success_count + 1))
@@ -226,7 +226,7 @@ test_end_to_end() {
         fi &
     done
     wait
-    
+
     total=$((success_count + failed_count))
     if [ $total -gt 0 ]; then
         success_rate=$((success_count * 100 / total))
@@ -242,7 +242,7 @@ test_end_to_end() {
 
 generate_test_report() {
     log_info "Generating test report..."
-    
+
     cat > "${TEST_RESULTS_FILE}" << 'EOF'
 {
   "phase": 16,
@@ -309,13 +309,13 @@ main() {
 
     test_kong_api_gateway "$@" || true
     echo ""
-    
+
     test_jaeger_tracing "$@" || true
     echo ""
-    
+
     test_linkerd_mesh "$@" || true
     echo ""
-    
+
     test_end_to_end "$@" || true
     echo ""
 

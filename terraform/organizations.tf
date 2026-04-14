@@ -23,7 +23,7 @@ locals {
         "created_at"
       ]
     }
-    
+
     organization_members = {
       columns = {
         id        = "UUID PRIMARY KEY"
@@ -39,7 +39,7 @@ locals {
         "role"
       ]
     }
-    
+
     organization_api_keys = {
       columns = {
         id             = "UUID PRIMARY KEY"

@@ -65,7 +65,7 @@ echo -e "${GREEN}✓ Phase 14 primary (192.168.168.31) verified operational${NC}
 for region in "${REGIONS[@]}"; do
   HOST="${region%:*}"
   LABEL="${region#*:}"
-  
+
   if ping -c 1 -W 2 "$HOST" > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Region $LABEL ($HOST) network accessible${NC}"
   else

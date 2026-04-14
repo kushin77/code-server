@@ -2,7 +2,7 @@
 ################################################################################
 # Phase 14 Production Go-Live Immediate Execution
 # Starts DNS failover, scales services, and monitors 24h SLO compliance
-# 
+#
 # Prerequisites: Phase 13 infrastructure stable (5/6+ containers)
 # Timeline: 30 min launch → 24h monitoring → Go/No-Go decision
 # Status: READY FOR IMMEDIATE EXECUTION
@@ -120,13 +120,13 @@ log "═════════════════════════
 {
     while true; do
         TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-        
+
         # Collect container stats
         docker stats --no-stream --format "{{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}" > "$METRICS_DIR/docker-stats-${TIMESTAMP// /_}.log" 2>/dev/null || true
-        
+
         # Check container status
         docker ps --format "{{.Names}}\t{{.Status}}" >> "$METRICS_DIR/container-status.log" 2>/dev/null || true
-        
+
         sleep 60
     done
 } &

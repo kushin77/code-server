@@ -17,7 +17,7 @@ scrape_configs:
         labels:
           job: system
           __path__: /var/log/*.log
-    
+
   # Docker container logs
   - job_name: docker
     docker: {}

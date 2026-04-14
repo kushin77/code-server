@@ -48,7 +48,7 @@ test_cuda_toolkit() {
   if command -v nvcc &> /dev/null; then
     CUDA_VER=$(nvcc --version | grep release | sed 's/.*release //' | sed 's/,.*//')
     echo -e "${GREEN}✓ CUDA version: $CUDA_VER${NC}"
-    
+
     # Check libraries
     if find /usr/local/cuda/lib64 -name "libcudart.so*" &> /dev/null; then
       echo -e "${GREEN}✓ CUDA runtime libraries found${NC}"
@@ -80,10 +80,10 @@ test_docker_gpu() {
     echo -e "${YELLOW}⚠ Docker not installed${NC}"
     return 1
   fi
-  
+
   if docker run --rm --runtime=nvidia nvidia/cuda:12.4-base nvidia-smi &> /dev/null; then
     echo -e "${GREEN}✓ Docker GPU access working${NC}"
-    
+
     # Quick GPU test in container
     GPU_COUNT=$(docker run --rm --runtime=nvidia nvidia/cuda:12.4-base nvidia-smi --list-gpus 2>/dev/null | wc -l)
     echo -e "${GREEN}✓ GPUs visible in container: $GPU_COUNT${NC}"
@@ -96,16 +96,16 @@ test_docker_gpu() {
 
 test_ollama_gpu() {
   echo -e "${BLUE}→ Ollama GPU Access${NC}"
-  
+
   if ! command -v docker &> /dev/null; then
     echo -e "${YELLOW}⚠ Docker not installed, skipping Ollama test${NC}"
     return 1
   fi
-  
+
   if docker ps --filter "name=ollama" --quiet | grep -q .; then
     if docker exec ollama nvidia-smi &> /dev/null 2>&1; then
       echo -e "${GREEN}✓ Ollama has GPU access${NC}"
-      
+
       # Check if model is available
       if docker exec ollama ollama list 2>/dev/null | grep -q "llama2"; then
         echo -e "${GREEN}✓ Ollama models available${NC}"
@@ -146,17 +146,17 @@ print_summary() {
   echo ""
   echo -e "${BLUE}=== Quick Check Summary ===${NC}"
   echo ""
-  
+
   # Count passes
   PASSED=0
   [[ $(test_gpu_hardware; echo $?) -eq 0 ]] && PASSED=$((PASSED + 1))
   [[ $(test_nvidia_smi; echo $?) -eq 0 ]] && PASSED=$((PASSED + 1))
   [[ $(test_cuda_toolkit; echo $?) -eq 0 ]] && PASSED=$((PASSED + 1))
   [[ $(test_docker_gpu; echo $?) -eq 0 ]] && PASSED=$((PASSED + 1))
-  
+
   TOTAL=4
   PCT=$((PASSED * 100 / TOTAL))
-  
+
   if [[ $PASSED -eq $TOTAL ]]; then
     echo -e "${GREEN}✓ All checks passed ($PASSED/$TOTAL)${NC}"
   else
@@ -164,7 +164,7 @@ print_summary() {
     echo ""
     echo "Run './gpu-deploy-31.sh troubleshoot' for detailed diagnostics"
   fi
-  
+
   echo ""
   echo "Next steps:"
   echo "  1. Run './gpu-deploy-31.sh validate' for full validation"
@@ -176,33 +176,33 @@ print_summary() {
 main() {
   echo -e "${BLUE}=== GPU Quick Check for 192.168.168.31 ===${NC}"
   echo ""
-  
+
   test_gpu_hardware
   echo ""
-  
+
   test_nvidia_smi
   echo ""
-  
+
   test_cuda_toolkit
   echo ""
-  
+
   test_cudnn
   echo ""
-  
+
   test_gpu_memory
   echo ""
-  
+
   test_gpu_temperature
   echo ""
-  
+
   test_gpu_clocks
   echo ""
-  
+
   test_docker_gpu
   echo ""
-  
+
   test_ollama_gpu
-  
+
   print_summary
 }
 

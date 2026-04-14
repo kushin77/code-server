@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # Tier 2.1: Redis Cache Layer Implementation
-# 
+#
 # Purpose: Deploy Redis caching layer for 40% latency reduction and 500+ user capacity
 # Idempotent: Checks for existing Redis, skips if already deployed
 # Immutable: Creates backups before any configuration changes
@@ -44,61 +44,61 @@ mkdir -p "$STATE_DIR" "$BACKUP_DIR"
     echo "Start: $(date)"
     echo "Log: $LOG_FILE"
     echo ""
-    
+
     ###############################################################################
     # Pre-Flight Checks
     ###############################################################################
-    
+
     echo "[1/6] Pre-flight validation..."
-    
+
     # Check Docker available
     if ! command -v docker &> /dev/null; then
         echo "ERROR: Docker not installed"
         exit 1
     fi
-    
+
     # Check if Redis already running
     if docker ps --format "{{.Names}}" 2>/dev/null | grep -q "^redis$"; then
         echo "⚠️  WARNING: Redis container already exists"
         echo "    Action: Preserving existing Redis, updating config"
     fi
-    
+
     # Check disk space (Redis needs 512MB min)
     available_kb=$(df /var/lib/docker 2>/dev/null | awk 'NR==2 {print $4}' || echo "999999")
     if [[ $available_kb -lt 524288 ]]; then
         echo "ERROR: Insufficient disk space for Redis (need 512MB, have $((available_kb/1024))MB)"
         exit 1
     fi
-    
+
     echo "✓ Pre-flight checks passed"
     echo ""
-    
+
     ###############################################################################
     # Backup Existing Configuration
     ###############################################################################
-    
+
     echo "[2/6] Creating immutable backups..."
-    
+
     # Backup Docker Compose
     if [[ -f "docker-compose.yml" ]]; then
         cp -v docker-compose.yml "$BACKUP_DIR/docker-compose.$TIMESTAMP.bak"
         echo "✓ docker-compose.yml backed up"
     fi
-    
+
     # Backup application config
     if [[ -f ".env" ]]; then
         cp -v .env "$BACKUP_DIR/.env.$TIMESTAMP.bak"
         echo "✓ .env backed up"
     fi
-    
+
     echo ""
-    
+
     ###############################################################################
     # Redis Docker Container Deployment
     ###############################################################################
-    
+
     echo "[3/6] Deploying Redis container..."
-    
+
     # Create Redis configuration file (idempotent)
     cat > /tmp/redis-tier2.conf << 'EOF'
 # Redis Configuration for Tier 2 Caching
@@ -139,19 +139,19 @@ lazyfree-lazy-expire yes
 lazyfree-lazy-server-del yes
 replica-lazy-flush yes
 EOF
-    
+
     echo "✓ Redis configuration created"
-    
+
     # Deploy Redis via Docker (create if not exists, preserve if exists)
     if ! docker ps --all --format "{{.Names}}" | grep -q "^redis$"; then
         echo "Creating Redis container..."
         docker run -d \
             --name redis \
             --network code-server-network 2>/dev/null || docker network create code-server-network 2>/dev/null || true
-        
+
         docker stop redis 2>/dev/null || true
         docker rm redis 2>/dev/null || true
-        
+
         docker run -d \
             --name redis \
             --network code-server-network \
@@ -159,21 +159,21 @@ EOF
             -v "/tmp/redis-tier2.conf:/usr/local/etc/redis/redis.conf:ro" \
             -v redis-data:/data \
             redis:7-alpine redis-server /usr/local/etc/redis/redis.conf
-        
+
         echo "✓ Redis container deployed"
     else
         echo "✓ Redis container already running"
     fi
-    
+
     sleep 3  # Wait for Redis to be ready
     echo ""
-    
+
     ###############################################################################
     # Configuration Integration (application-level caching)
     ###############################################################################
-    
+
     echo "[4/6] Integrating Redis with application..."
-    
+
     # Create Redis client initialization script
     cat > /tmp/redis-init.js << 'EOF'
 // Redis Client Initialization (Node.js)
@@ -277,7 +277,7 @@ function getCacheMetrics() {
     const hitRate = cacheStats.hits + cacheStats.misses > 0
         ? (cacheStats.hits / (cacheStats.hits + cacheStats.misses) * 100).toFixed(2)
         : 0;
-    
+
     return {
         hits: cacheStats.hits,
         misses: cacheStats.misses,
@@ -296,39 +296,39 @@ module.exports = {
     getCacheMetrics
 };
 EOF
-    
+
     echo "✓ Redis client initialization created"
     echo ""
-    
+
     ###############################################################################
     # Performance Validation
     ###############################################################################
-    
+
     echo "[5/6] Performance validation..."
-    
+
     # Test Redis connectivity
     if docker exec redis redis-cli ping 2>/dev/null | grep -q PONG; then
         echo "✓ Redis responding to health checks"
     else
         echo "⚠️  WARNING: Redis health check failed (may still be initializing)"
     fi
-    
+
     # Get Redis memory stats
     redis_memory=$(docker exec redis redis-cli INFO memory 2>/dev/null | grep "used_memory_human" | cut -d: -f2 | tr -d '\r')
     echo "✓ Redis memory usage: $redis_memory"
-    
+
     # Get Redis client count
     redis_clients=$(docker exec redis redis-cli INFO clients 2>/dev/null | grep "connected_clients" | cut -d: -f2 | tr -d '\r')
     echo "✓ Redis connected clients: $redis_clients"
-    
+
     echo ""
-    
+
     ###############################################################################
     # Create Lock File (Idempotency)
     ###############################################################################
-    
+
     echo "[6/6] Recording deployment state..."
-    
+
     cat > "$LOCK_FILE" << EOF
 {
   "tier": "2.1-redis",
@@ -346,14 +346,14 @@ EOF
   }
 }
 EOF
-    
+
     echo "✓ Deployment state recorded"
     echo ""
-    
+
     ###############################################################################
     # Summary & Metrics
     ###############################################################################
-    
+
     echo "╔════════════════════════════════════════════════════════════════════════════╗"
     echo "║                  REDIS DEPLOYMENT COMPLETE                                 ║"
     echo "╚════════════════════════════════════════════════════════════════════════════╝"
@@ -387,7 +387,7 @@ EOF
     echo "  4. Run full load test to 300+ users"
     echo ""
     echo "End: $(date)"
-    
+
 } | tee -a "$LOG_FILE"
 
 echo ""

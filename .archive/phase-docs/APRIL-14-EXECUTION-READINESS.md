@@ -139,6 +139,6 @@ If all SLOs are met during the 24-hour load test:
 
 ---
 
-**Prepared by**: kusnir  
-**Date**: April 13, 2026, 23:30 UTC  
+**Prepared by**: kusnir
+**Date**: April 13, 2026, 23:30 UTC
 **Status**: 🟢 READY FOR EXECUTION

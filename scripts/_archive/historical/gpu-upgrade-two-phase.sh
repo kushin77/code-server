@@ -67,7 +67,7 @@ log ""
 sudo bash /tmp/gpu-driver-upgrade-direct.sh 2>&1 || {
   log "[!] Phase 2 direct execution failed"
   log "[!] Attempting fallback: Create upgrade script in /tmp and execute via docker"
-  
+
   # Fallback: Run the actual commands via docker privileged container
   cat > /tmp/upgrade.sh << 'UPGRADE'
 #!/bin/bash
@@ -80,7 +80,7 @@ echo "[✓] Upgrade complete"
 UPGRADE
 
   chmod +x /tmp/upgrade.sh
-  
+
   sudo /usr/bin/docker run --rm \
     --privileged \
     -v /etc/apt:/etc/apt \
@@ -111,4 +111,3 @@ if [ "$MAJOR_NEW" -ge 555 ]; then
 else
   error "Driver still at $NEW (target: 555.x)"
 fi
-

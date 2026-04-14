@@ -1,6 +1,6 @@
 # Code Review: Duplication & Overlap Analysis
-**code-server-enterprise Workspace**  
-**Date**: April 14, 2026  
+**code-server-enterprise Workspace**
+**Date**: April 14, 2026
 **Focus**: Code duplication, overlaps, and consolidation opportunities
 
 ---
@@ -48,7 +48,7 @@ The workspace contains **12+ exact duplicate service definitions**, **45+ hardco
 ```yaml
 # Same 28 lines appear in:
 # - docker-compose.yml (lines ~120-147)
-# - docker-compose.tpl (lines ~120-147)  
+# - docker-compose.tpl (lines ~120-147)
 # - docker-compose-production.yml (lines ~100-127)
 
 OAUTH2_PROXY_COOKIE_SECURE: "true"
@@ -68,7 +68,7 @@ services:
   ollama: {...}
   oauth2-proxy: {...}
   caddy: {...}
-  
+
 # docker-compose.production.yml
 version: '3.8'
 services:
@@ -187,7 +187,7 @@ header {
 header @staticFileTypes Cache-Control "public, max-age=31536000"
 
 # API
-@api { 
+@api {
     path /api/*
 }
 header @api Cache-Control "public, max-age=600"
@@ -218,7 +218,7 @@ localhost:80 {
     reverse_proxy code-server:8080 { ... }
 }
 
-# Caddyfile.production  
+# Caddyfile.production
 import /etc/caddy/Caddyfile.base
 ide.kushnir.cloud {
     import security_headers
@@ -258,7 +258,7 @@ services:
     healthcheck:
       <<: *healthcheck-standard
       test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
-      
+
   ollama:
     healthcheck:
       <<: *healthcheck-standard
@@ -352,7 +352,7 @@ route:
   group_wait: 10s
   group_interval: 30s
   repeat_interval: 4h
-  
+
 # Both have identical PagerDuty receiver:
 pagerduty_configs:
   - service_key: ...
@@ -371,7 +371,7 @@ route:
 
 receivers:
   - name: 'null'  # base only
-    
+
 # alertmanager-production.yml (extends base, adds production receivers)
 # Using custom merge logic or separate file composition
 ```
@@ -502,7 +502,7 @@ header @stableAssets Cache-Control "max-age=31536000, immutable, public"
 
 ### Phase 1: Critical (Week 1)
 
-**Effort**: ~20 hours  
+**Effort**: ~20 hours
 **Benefit**: 60% code reduction in docker-compose, eliminates configuration sync bugs
 
 1. **Docker Compose Inheritance** (~8 hours)
@@ -528,7 +528,7 @@ header @stableAssets Cache-Control "max-age=31536000, immutable, public"
 
 ### Phase 2: Best Practices (Week 2)
 
-**Effort**: ~15 hours  
+**Effort**: ~15 hours
 **Benefit**: Reduced operational errors, easier configuration updates
 
 5. **Caddyfile Consolidation** (~5 hours)
@@ -556,7 +556,7 @@ header @stableAssets Cache-Control "max-age=31536000, immutable, public"
 
 ### Phase 3: Polish (Week 3)
 
-**Effort**: ~5 hours  
+**Effort**: ~5 hours
 **Benefit**: Code quality improvements, easier maintenance
 
 10. **Documentation** (~3 hours)
@@ -593,5 +593,5 @@ header @stableAssets Cache-Control "max-age=31536000, immutable, public"
 
 ---
 
-**Report Generated**: 2026-04-14  
+**Report Generated**: 2026-04-14
 **Analyst**: GitHub Copilot (code-server-enterprise workspace)

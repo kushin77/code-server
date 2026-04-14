@@ -28,10 +28,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 _error_handler() {
     local line_no=$1
     local error_code=$2
-    
+
     if [ "$error_code" != "0" ]; then
         log_error "Script failed with exit code $error_code at line $line_no"
-        
+
         # Print stack trace if available
         if [ "$DEBUG" == "1" ]; then
             log_error "Stack trace:"
@@ -41,7 +41,7 @@ _error_handler() {
             done
         fi
     fi
-    
+
     exit "$error_code"
 }
 
@@ -97,7 +97,7 @@ assert_equal() {
     local expected=$1
     local actual=$2
     local msg=${3:-""}
-    
+
     if [ "$expected" != "$actual" ]; then
         log_fatal "Assertion failed: expected '$expected' but got '$actual' $msg"
     fi
@@ -107,7 +107,7 @@ assert_equal() {
 assert_not_empty() {
     local value=$1
     local name=${2:-value}
-    
+
     if [ -z "$value" ]; then
         log_fatal "Assertion failed: $name must not be empty"
     fi
@@ -116,7 +116,7 @@ assert_not_empty() {
 # Assert file exists and is readable
 assert_file() {
     local file=$1
-    
+
     if [ ! -f "$file" ] || [ ! -r "$file" ]; then
         log_fatal "Assertion failed: file not found or not readable: $file"
     fi
@@ -131,15 +131,15 @@ validate_exit() {
     local expected_code=$1
     shift
     local cmd="$@"
-    
+
     "$@" > /dev/null 2>&1
     local actual_code=$?
-    
+
     if [ "$actual_code" != "$expected_code" ]; then
         log_error "Command '$cmd' returned $actual_code, expected $expected_code"
         return 1
     fi
-    
+
     log_debug "✓ Command returned expected exit code: $expected_code"
     return 0
 }
@@ -181,14 +181,14 @@ get_context() {
 with_context() {
     local context=$1
     shift
-    
+
     push_context "$context"
     local exit_code=0
-    
+
     if ! "$@"; then
         exit_code=$?
     fi
-    
+
     pop_context
     return $exit_code
 }

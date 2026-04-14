@@ -11,11 +11,11 @@ export class CodeAgent extends Agent {
     const content = context.content;
 
     // Simple pattern detection (expanded in full implementation)
-    
+
     // Check for long functions
     const functionRegex = /(function|const|let)\s+\w+\s*=?\s*(?:function|\(.*?\)\s*=>)?\s*{/g;
     const functions = Array.from(content.matchAll(functionRegex));
-    
+
     if (functions.length > 10) {
       recommendations.push('Consider breaking large file into multiple modules');
     }

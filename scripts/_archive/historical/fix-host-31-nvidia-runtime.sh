@@ -17,7 +17,7 @@ echo "=========================================="
 if command -v nvidia-container-runtime &>/dev/null; then
     CURRENT_VERSION=$(nvidia-container-runtime --version 2>/dev/null | grep version | awk '{print $NF}' || echo "unknown")
     echo "Current nvidia-container-runtime: $CURRENT_VERSION"
-    
+
     # Idempotency: Skip if already installed
     if [ "$CURRENT_VERSION" != "unknown" ]; then
         echo "✓ nvidia-container-runtime already installed (skipping)"
@@ -77,15 +77,15 @@ sudo systemctl restart docker
 sleep 2
 if command -v nvidia-container-runtime &>/dev/null; then
     echo "✓ nvidia-container-runtime installed successfully"
-    
+
     # Test GPU access in Docker
     echo "Testing GPU access in Docker container..."
     if docker run --rm --gpus all nvidia/cuda:12.4.0-runtime nvidia-smi  &>/dev/null; then
         echo "✓ Docker GPU access verified successfully"
-        
+
         # Cleanup
         rm -f "$STATE_FILE"
-        
+
         echo "✓ NVIDIA Container Runtime installation COMPLETE"
         exit 0
     else

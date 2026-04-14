@@ -1,8 +1,8 @@
 # GitHub Actions Cost Optimization - 14 Tactics for 70% Reduction
 
-**Target Reduction**: Current spend → 30% of current (70% reduction)  
-**Implementation Period**: 30 days  
-**Owner**: DevOps + Engineering Team  
+**Target Reduction**: Current spend → 30% of current (70% reduction)
+**Implementation Period**: 30 days
+**Owner**: DevOps + Engineering Team
 **Priority**: P0
 
 ---
@@ -23,14 +23,14 @@ This guide provides 14 tactics to reduce each category.
 
 ### Tactic 1: Reduce Workflow Frequency
 
-**Current State**: Every commit triggers CI/CD  
+**Current State**: Every commit triggers CI/CD
 **Target**: Selective triggers
 
 ```yaml
 # BEFORE
 on:
   push:  # Every push runs full CI
-    
+
 # AFTER
 on:
   push:
@@ -40,15 +40,15 @@ on:
       - '.github/workflows/**'  # And workflow changes
 ```
 
-**Impact**: -30% of workflow runs  
-**Effort**: 2 hours (update 30 workflows)  
+**Impact**: -30% of workflow runs
+**Effort**: 2 hours (update 30 workflows)
 **ROI**: High
 
 ---
 
 ### Tactic 2: Matrix Parallelization (Smart Parallelism)
 
-**Current State**: Sequential tests (2 hours)  
+**Current State**: Sequential tests (2 hours)
 **Target**: Parallel via matrix (30 min)
 
 ```yaml
@@ -71,15 +71,15 @@ jobs:
       - run: npm test:${{ matrix.suite }}
 ```
 
-**Impact**: -70% runner minutes (faster completion)  
-**Effort**: 3 hours (refactor test automation)  
+**Impact**: -70% runner minutes (faster completion)
+**Effort**: 3 hours (refactor test automation)
 **ROI**: Very High (also improves feedback time)
 
 ---
 
 ### Tactic 3: Caching Dependencies
 
-**Current State**: Download npm packages every run (2 min)  
+**Current State**: Download npm packages every run (2 min)
 **Target**: Cache dependencies (10 sec)
 
 ```yaml
@@ -89,37 +89,37 @@ jobs:
     key: node-${{ hashFiles('package-lock.json') }}
 ```
 
-**Impact**: -90% of npm install time per workflow  
-**Effort**: 1 hour (add to all workflows)  
+**Impact**: -90% of npm install time per workflow
+**Effort**: 1 hour (add to all workflows)
 **ROI**: Very High
 
 ---
 
 ### Tactic 4: Conditional Job Execution
 
-**Current State**: All jobs run on every push  
+**Current State**: All jobs run on every push
 **Target**: Skip unnecessary jobs
 
 ```yaml
 jobs:
   build:
     runs-on: ubuntu-latest
-  
+
   deploy:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main'  # Only on main
 ```
 
-**Impact**: -40% of deploy job runs  
-**Effort**: 2 hours  
+**Impact**: -40% of deploy job runs
+**Effort**: 2 hours
 **ROI**: High
 
 ---
 
 ### Tactic 5: Container Image Optimization
 
-**Current State**: Build large container images (10 min)  
+**Current State**: Build large container images (10 min)
 **Target**: Use pre-built images (instant)
 
 ```yaml
@@ -133,8 +133,8 @@ jobs:
 container: ubuntu:22.04
 ```
 
-**Impact**: -80% of Docker build time  
-**Effort**: 4 hours (create optimized base images)  
+**Impact**: -80% of Docker build time
+**Effort**: 4 hours (create optimized base images)
 **ROI**: Very High
 
 ---
@@ -143,7 +143,7 @@ container: ubuntu:22.04
 
 ### Tactic 6: Shorter Artifact Retention
 
-**Current State**: 90-day retention (standard GitHub default)  
+**Current State**: 90-day retention (standard GitHub default)
 **Target**: 7-day retention (or 30-day for releases)
 
 ```yaml
@@ -155,15 +155,15 @@ container: ubuntu:22.04
     retention-days: 7  # Was: default 90
 ```
 
-**Impact**: -85% of artifact storage  
-**Effort**: 1 hour (update all upload steps)  
+**Impact**: -85% of artifact storage
+**Effort**: 1 hour (update all upload steps)
 **ROI**: Very High
 
 ---
 
 ### Tactic 7: Compress Artifacts
 
-**Current State**: Raw binaries (50 MB)  
+**Current State**: Raw binaries (50 MB)
 **Target**: Compressed archives (10 MB)
 
 ```yaml
@@ -176,15 +176,15 @@ container: ubuntu:22.04
     path: build.tar.gz  # Instead of dist/
 ```
 
-**Impact**: -80% of artifact storage  
-**Effort**: 2 hours  
+**Impact**: -80% of artifact storage
+**Effort**: 2 hours
 **ROI**: High
 
 ---
 
 ### Tactic 8: Conditional Artifact Upload
 
-**Current State**: Upload on every run  
+**Current State**: Upload on every run
 **Target**: Upload only on main branch or failures
 
 ```yaml
@@ -197,8 +197,8 @@ container: ubuntu:22.04
     path: dist/
 ```
 
-**Impact**: -70% of artifact uploads  
-**Effort**: 1 hour  
+**Impact**: -70% of artifact uploads
+**Effort**: 1 hour
 **ROI**: High
 
 ---
@@ -207,20 +207,20 @@ container: ubuntu:22.04
 
 ### Tactic 9: Region-Specific Runners
 
-**Current State**: GitHub-hosted runners (default region)  
+**Current State**: GitHub-hosted runners (default region)
 **Target**: Region-closest runners
 
 Using `runs-on: ubuntu-latest-arm` for supported actions reduces data transfer by using closer infrastructure.
 
-**Impact**: -20% data transfer  
-**Effort**: 1 hour (testing)  
+**Impact**: -20% data transfer
+**Effort**: 1 hour (testing)
 **ROI**: Medium
 
 ---
 
 ### Tactic 10: Limit Logs Retention
 
-**Current State**: Keep all logs indefinitely  
+**Current State**: Keep all logs indefinitely
 **Target**: Delete after analysis period
 
 ```bash
@@ -229,8 +229,8 @@ gh api repos/$REPO/actions/artifacts --delete \
   --jq '.artifacts[] | select(.expires_at < now) | .id'
 ```
 
-**Impact**: -40% of log storage/transfer  
-**Effort**: 2 hours (automation script)  
+**Impact**: -40% of log storage/transfer
+**Effort**: 2 hours (automation script)
 **ROI**: Medium
 
 ---
@@ -239,7 +239,7 @@ gh api repos/$REPO/actions/artifacts --delete \
 
 ### Tactic 11: Remove Redundant Checks
 
-**Current State**: 5 linters running in sequence  
+**Current State**: 5 linters running in sequence
 **Target**: 1 combined linter
 
 ```yaml
@@ -259,15 +259,15 @@ jobs:
       - run: eslint . && prettier --check . && stylelint . && shellcheck scripts/* && yamllint config/
 ```
 
-**Impact**: -60% of lint job runs  
-**Effort**: 3 hours (consolidate workflows)  
+**Impact**: -60% of lint job runs
+**Effort**: 3 hours (consolidate workflows)
 **ROI**: High
 
 ---
 
 ### Tactic 12: On-Demand Workflows Only
 
-**Current State**: Scheduled tasks run every night (waste)  
+**Current State**: Scheduled tasks run every night (waste)
 **Target**: Manual trigger + metrics-based
 
 ```yaml
@@ -283,15 +283,15 @@ on:
     - cron: '0 2 * * 0'  # Once weekly, not daily
 ```
 
-**Impact**: -80% of scheduled job runs  
-**Effort**: 1 hour  
+**Impact**: -80% of scheduled job runs
+**Effort**: 1 hour
 **ROI**: Very High
 
 ---
 
 ### Tactic 13: Fail Fast Strategies
 
-**Current State**: Run all tests even if linting fails  
+**Current State**: Run all tests even if linting fails
 **Target**: Fail immediately on lint/type errors
 
 ```yaml
@@ -309,15 +309,15 @@ jobs:
       - run: npm test
 ```
 
-**Impact**: -25% of test job runs (wasted effort)  
-**Effort**: 2 hours  
+**Impact**: -25% of test job runs (wasted effort)
+**Effort**: 2 hours
 **ROI**: High
 
 ---
 
 ### Tactic 14: Merge Duplicate Workflows
 
-**Current State**: 40+ workflow files (many similar)  
+**Current State**: 40+ workflow files (many similar)
 **Target**: 8-10 reusable workflow templates
 
 **Current Duplication**:
@@ -351,8 +351,8 @@ jobs:
       test-suite: 'main'
 ```
 
-**Impact**: -30% of workflow runs + easier maintenance  
-**Effort**: 6 hours (significant refactor)  
+**Impact**: -30% of workflow runs + easier maintenance
+**Effort**: 6 hours (significant refactor)
 **ROI**: Very High
 
 ---
@@ -364,7 +364,7 @@ jobs:
 2. **Tactic 3**: Add caching (-10% minutes, 1 hr)
 3. **Tactic 6**: Reduce artifact retention (-15% storage, 1 hr)
 
-**Total Effort**: 2.5 hours  
+**Total Effort**: 2.5 hours
 **Immediate Impact**: 20-30% cost reduction
 
 ### Phase 2: Medium Wins (Days 4-10, additional 20% savings)
@@ -372,7 +372,7 @@ jobs:
 5. **Tactic 8**: Conditional uploads (-20% storage, 1 hr)
 6. **Tactic 13**: Fail fast (-10% minutes, 2 hr)
 
-**Total Effort**: 5 hours  
+**Total Effort**: 5 hours
 **Additional Impact**: 20% more reduction (cumulative ~45%)
 
 ### Phase 3: Major Refactors (Days 11-30, additional 25% savings)
@@ -380,7 +380,7 @@ jobs:
 8. **Tactic 5**: Container images (-40% build time, 4 hr)
 9. **Tactic 14**: Merge workflows (-30% runs, 6 hr)
 
-**Total Effort**: 13 hours  
+**Total Effort**: 13 hours
 **Additional Impact**: 25% more reduction (cumulative ~70%)
 
 ---
@@ -472,5 +472,5 @@ jobs:
 
 ---
 
-**Status**: Active — implement ASAP, no schedule  
+**Status**: Active — implement ASAP, no schedule
 **Owner**: DevOps Team + Engineering Representatives

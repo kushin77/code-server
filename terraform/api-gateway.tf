@@ -270,17 +270,17 @@ type Mutation {
   createWorkspace(name: String!, description: String): Workspace!
   updateWorkspace(id: ID!, name: String, description: String): Workspace!
   deleteWorkspace(id: ID!): Boolean!
-  
+
   createFile(workspaceId: ID!, path: String!, content: String!, language: String!): File!
   updateFile(id: ID!, content: String!): File!
   deleteFile(id: ID!): Boolean!
-  
+
   addWorkspaceMember(workspaceId: ID!, userId: ID!, role: String!): Workspace!
   removeWorkspaceMember(workspaceId: ID!, userId: ID!): Workspace!
-  
+
   generateAPIKey(name: String!, expiresIn: Int): APIKey!
   revokeAPIKey(id: ID!): Boolean!
-  
+
   updateUserSettings(settings: UserSettingsInput!): UserSettings!
 }
 
@@ -328,7 +328,7 @@ export const resolvers = {
         span.end();
       }
     },
-    
+
     workspaces: async (_, { limit, offset }, { prisma, user }) => {
       if (!user) throw new GraphQLError('Unauthorized');
       return await prisma.workspace.findMany({
@@ -337,13 +337,13 @@ export const resolvers = {
         skip: offset,
       });
     },
-    
+
     currentUser: async (_, __, { user }) => {
       if (!user) throw new GraphQLError('Unauthorized');
       return user;
     },
   },
-  
+
   Mutation: {
     createWorkspace: async (_, { name, description }, { prisma, user }) => {
       if (!user) throw new GraphQLError('Unauthorized');
@@ -361,12 +361,12 @@ export const resolvers = {
         span.end();
       }
     },
-    
+
     generateAPIKey: async (_, { name, expiresIn }, { prisma, user }) => {
       if (!user) throw new GraphQLError('Unauthorized');
       const token = generateSecureToken();
       const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
-      
+
       return await prisma.apiKey.create({
         data: {
           name,
@@ -377,7 +377,7 @@ export const resolvers = {
       });
     },
   },
-  
+
   Subscription: {
     fileChanged: {
       subscribe: async (_, { workspaceId }, { pubsub, user }) => {
@@ -434,17 +434,17 @@ limits:
   anonymous:
     requestsPerHour: 100
     queriesBatch: 1
-    
+
   # Free tier API key
   free:
     requestsPerHour: 1000
     queriesBatch: 5
-    
+
   # Pro tier
   pro:
     requestsPerHour: 10000
     queriesBatch: 20
-    
+
   # Enterprise
   enterprise:
     requestsPerHour: unlimited
@@ -582,7 +582,7 @@ resource "kubernetes_config_map" "portal_features" {
 // API Key Management
 export function APIKeyManagement() {
   const [keys, setKeys] = useState([]);
-  
+
   return (
     <div className="api-keys">
       <h2>API Keys</h2>
@@ -751,22 +751,22 @@ groups:
       - alert: GraphQLServerDown
         expr: up{job="graphql-api"} == 0
         for: 2m
-        
+
       - alert: GraphQLHighErrorRate
         expr: rate(graphql_error_total[5m]) > 0.05
         for: 5m
-        
+
       - alert: GraphQLHighLatency
         expr: histogram_quantile(0.99, graphql_request_duration_seconds) > 1
         for: 5m
-        
+
       - alert: GraphQLQueryComplexityLimit
         expr: rate(graphql_complexity_exceeded_total[5m]) > 0.1
         for: 5m
-        
+
       - record: graphql:request:rate
         expr: rate(graphql_requests_total[5m])
-        
+
       - record: graphql:error:rate
         expr: rate(graphql_error_total[5m])
     EOT
@@ -801,4 +801,3 @@ output "portal_replicas" {
   description = "Number of portal server replicas"
   value       = var.portal_replicas
 }
-

@@ -129,12 +129,12 @@ TEMPLATES=(
 
 for template in "${TEMPLATES[@]}"; do
     SOURCE="../.github/workflows/$template"
-    
+
     if [[ ! -f "$SOURCE" ]]; then
         warning "Template not found: $SOURCE (skipping)"
         continue
     fi
-    
+
     # Determine target name
     if [[ "$template" == "TEMPLATE-ci-lint.yml" ]]; then
         TARGET="ci-lint.yml"
@@ -143,7 +143,7 @@ for template in "${TEMPLATES[@]}"; do
     elif [[ "$template" == "TEMPLATE-ci-security.yml" ]]; then
         TARGET="ci-security.yml"
     fi
-    
+
     if [[ ! -f ".github/workflows/$TARGET" ]]; then
         if [[ "$DRY_RUN" == "true" ]]; then
             log "[DRY RUN] Would copy: $SOURCE → .github/workflows/$TARGET"
@@ -304,7 +304,7 @@ $CHECKLIST
 
 See: [GOVERNANCE-ONBOARDING.md](../../GOVERNANCE-ONBOARDING.md)" \
         --label governance 2>&1 | tail -1)
-    
+
     success "Created issue: $ISSUE_URL"
 fi
 
@@ -330,4 +330,3 @@ echo "4. Review onboarding issue"
 echo "5. Request approval from DevOps team"
 echo ""
 echo "Contact: #devops-governance"
-

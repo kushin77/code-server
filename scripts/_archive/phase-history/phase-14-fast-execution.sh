@@ -115,7 +115,7 @@ for i in {1..20}; do
     P99=$((RANDOM % 200 + 400))
     ERR=$((RANDOM % 2))
     AVAIL=$((99 + RANDOM % 2))
-    
+
     # Validate against targets
     if [ "$P95" -lt 500 ] && [ "$P99" -lt 1000 ] && [ "$ERR" -lt 1 ]; then
         STATUS="✅"
@@ -124,7 +124,7 @@ for i in {1..20}; do
         STATUS="⚠️"
     fi
     ((TOTAL_COUNT++))
-    
+
     echo "    [$i/20] P95=${P95}ms P99=${P99}ms E=${ERR}% A=${AVAIL}% $STATUS"
     sleep 0.5
 done

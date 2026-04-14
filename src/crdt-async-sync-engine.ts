@@ -1,14 +1,14 @@
 /**
  * CRDT Async Sync Engine
- * 
+ *
  * Handles asynchronous replication of CRDT state across regions
  * with built-in retry logic, batching, and conflict resolution.
  */
 
 import { EventEmitter } from 'events';
-import { 
-  Operation, 
-  SyncMessage, 
+import {
+  Operation,
+  SyncMessage,
   VectorClockManager,
   UniqueIdGenerator,
   CRDTValue,
@@ -103,7 +103,7 @@ export class CRDTAsyncSyncEngine extends EventEmitter {
    */
   registerTransport(remoteNodeId: string, transport: ReplicationTransport): void {
     this.transports.set(remoteNodeId, transport);
-    
+
     // Subscribe to messages from this transport
     transport.subscribe(async (message) => {
       await this.handleIncomingMessage(message);
@@ -338,9 +338,9 @@ export class CRDTAsyncSyncEngine extends EventEmitter {
    */
   importState(data: string): void {
     const state = JSON.parse(data);
-    
+
     this.vectorClockManager.merge(state.vectorClock);
-    
+
     for (const [crdtId, serialized] of state.localState) {
       const deserialized = deserializeCRDT(serialized, this.nodeId);
       this.localState.set(crdtId, deserialized);

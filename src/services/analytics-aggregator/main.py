@@ -236,15 +236,15 @@ class ClickHouseManager:
             """
 
             results = self.client.execute(query)
-            
+
             cost_records = []
             for timestamp, org_id, tier, api_calls in results:
                 config = COST_CONFIG.get(tier, COST_CONFIG['free'])
-                
+
                 api_calls_cost = (api_calls / 10) * config['per_api_call']
                 base_cost = config['base'] / 30 / 24  # distribute monthly cost hourly
                 total_cost = api_calls_cost + base_cost
-                
+
                 cost_records.append({
                     'timestamp': timestamp,
                     'organization_id': org_id,
@@ -256,7 +256,7 @@ class ClickHouseManager:
                     'base_cost': base_cost,
                     'total_cost': total_cost,
                 })
-            
+
             # Insert cost records
             if cost_records:
                 self.client.execute(
@@ -299,7 +299,7 @@ class PrometheusScraperScraper:
                 timeout=10
             )
             response.raise_for_status()
-            
+
             data = response.json()
             return data.get('data', {}).get('result', [])
         except Exception as e:
@@ -316,7 +316,7 @@ class PrometheusScraperScraper:
         for result in api_requests:
             labels = result.get('metric', {})
             value = float(result.get('value', [0, 0])[1])
-            
+
             metrics.append({
                 'timestamp': timestamp,
                 'organization_id': labels.get('organization_id', 'unknown'),
@@ -351,28 +351,28 @@ class PrometheusScraperScraper:
 
 def main():
     logger.info('Starting Phase 26-B Analytics Aggregator Service')
-    
+
     clickhouse = ClickHouseManager()
     prometheus = PrometheusScraperScraper()
-    
+
     hourly_tick = 0
-    
+
     while True:
         try:
             # Scrape and insert metrics
             metrics = prometheus.scrape_metrics()
             clickhouse.insert_raw_metrics(metrics)
-            
+
             # Every hour, aggregate metrics and calculate costs
             hourly_tick += AGGREGATION_INTERVAL
             if hourly_tick >= HOURLY_AGGREGATION_INTERVAL:
                 clickhouse.aggregate_hourly_metrics()
                 clickhouse.calculate_costs()
                 hourly_tick = 0
-            
+
             # Sleep until next aggregation
             time.sleep(AGGREGATION_INTERVAL)
-            
+
         except KeyboardInterrupt:
             logger.info('Shutting down analytics aggregator')
             break

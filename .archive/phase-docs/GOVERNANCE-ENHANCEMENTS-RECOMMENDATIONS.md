@@ -2,9 +2,9 @@
 
 **To make GOVERNANCE-AND-GUARDRAILS.md production-mandate ready**
 
-**Priority**: HIGH — Complete these before allowing open PRs  
-**Timeline**: ~5-8 days (1-2 hours/day for implementation)  
-**Effort**: Medium (mostly documentation + CI config changes)  
+**Priority**: HIGH — Complete these before allowing open PRs
+**Timeline**: ~5-8 days (1-2 hours/day for implementation)
+**Effort**: Medium (mostly documentation + CI config changes)
 
 ---
 
@@ -28,7 +28,7 @@ Runs on every PR, automatically blocks merge if fails.
   run: |
     docker compose -f docker-compose.base.yml -f docker-compose.yml config > /dev/null
     docker compose -f docker-compose.base.yml -f docker-compose.dev.yml config > /dev/null
-    
+
 # Blocks merge if validation fails
 ```
 
@@ -37,7 +37,7 @@ Runs on every PR, automatically blocks merge if fails.
 - name: Validate Caddyfile syntax
   run: |
     docker run --rm -v $(pwd):/data caddy:2-alpine caddy validate --config /data/Caddyfile
-    
+
 # Blocks merge if invalid
 ```
 
@@ -48,7 +48,7 @@ Runs on every PR, automatically blocks merge if fails.
     terraform init
     terraform validate
     terraform plan -no-color
-    
+
 # Blocks merge if invalid
 ```
 
@@ -59,7 +59,7 @@ Runs on every PR, automatically blocks merge if fails.
     for f in $(find . -name "*.sh" -type f); do
       bash -n "$f" || exit 1
     done
-    
+
 # Blocks merge if syntax errors found
 ```
 
@@ -72,7 +72,7 @@ Runs on every PR, automatically blocks merge if fails.
         if (!(Test-Path $_)) { throw "Syntax error in $_" }
       }
     }
-    
+
 # Blocks merge if syntax errors found
 ```
 
@@ -86,10 +86,10 @@ Prevents secrets, hardcoded IPs, versions in code.
     # Fail if image versions hardcoded (not using terraform/locals.tf)
     grep -r 'image.*:v[0-9]\|image.*:[0-9]\.[0-9]' terraform/ \
       | grep -v 'local\.' && exit 1 || true
-    
+
     # Fail if passwords/secrets found
     gitleaks detect --source text --verbose --exit-code 1
-    
+
     # Fail if hardcoded IPs (except comments/docs)
     grep -r '192\.168\|10\.0\.0' . --include="*.tf" --include="*.yml" \
       | grep -v '#' && exit 1 || true
@@ -110,13 +110,13 @@ Ensures new code follows docker-compose base.yml, Caddyfile.base, etc. patterns.
       echo "ERROR: Services defined in multiple files"
       exit 1
     fi
-    
+
     # Check 2: New Caddyfile configs use named segments
     if grep -E "header X-|cache-control" Caddyfile | grep -v '@import'; then
       echo "ERROR: Use named segments from Caddyfile.base"
       exit 1
     fi
-    
+
     # Check 3: AlertManager routes reference base
     if grep -l "alertmanager.*yml" . | xargs grep -L "include.*base"; then
       echo "ERROR: AlertManager must include base"
@@ -140,7 +140,7 @@ Ensures all scripts use centralized logging/function libraries.
         exit 1
       fi
     done
-    
+
     # All PowerShell scripts must source common-functions
     for f in scripts/*.ps1 *.ps1 **/*.ps1; do
       if ! grep -q '\. .*common-functions\|Import.*common' "$f"; then
@@ -160,7 +160,7 @@ Every PR must reference a GitHub issue.
 - name: Check GitHub issue link
   run: |
     PR_BODY="${{ github.event.pull_request.body }}"
-    
+
     if ! echo "$PR_BODY" | grep -iE 'fixes|relates to|implements #[0-9]+'; then
       echo "ERROR: PR must link to GitHub issue (Fixes #123)"
       exit 1
@@ -393,25 +393,25 @@ If any metric exceeds threshold:
 ```markdown
 ## Frequently Asked Questions (FAQ)
 
-**Q: Do I have to follow ALL these rules?**  
+**Q: Do I have to follow ALL these rules?**
 A: Yes for main branch. Feature branches are for exploration (but don't commit to main without compliance).
 
-**Q: Can I get an exception?**  
+**Q: Can I get an exception?**
 A: Only for security incidents, service outages, or data loss prevention. Must be approved by leadership.
 
-**Q: What if I disagree with a rule?**  
+**Q: What if I disagree with a rule?**
 A: Open an ADR proposing the change. Discuss with team. If consensus, update governance. Until then, follow current rules.
 
-**Q: My CI failed on a rule I think is wrong?**  
+**Q: My CI failed on a rule I think is wrong?**
 A: Post in #engineering asking for clarification. Don't force-push or ignore the failure.
 
-**Q: How do I know if I'm following patterns correctly?**  
+**Q: How do I know if I'm following patterns correctly?**
 A: Your code review should catch issues. See CONTRIBUTING.md checklist.
 
-**Q: What if I accidentally break a rule?**  
+**Q: What if I accidentally break a rule?**
 A: Acknowledge in PR, fix it, resubmit. Patterns matter more than perfection.
 
-**Q: Where do I report security issues?**  
+**Q: Where do I report security issues?**
 A: Don't use GitHub issues. Email security lead directly (akushnir@...).
 
 ---
@@ -611,4 +611,3 @@ Create `/docs/metrics/GOVERNANCE-SCORECARD.md` (updated monthly):
 - [ ] Leadership approval given
 
 **If all checked**: Publish governance-mandate.md and make it repo requirement
-

@@ -1,9 +1,9 @@
 # Governance Violations & Fixes
 ## Common Issues & How to Resolve Them
 
-**Status**: Training Material for April 21, 2026  
-**Purpose**: Help developers understand violations and fix them quickly  
-**Soft Launch**: April 21-25 (CI feedback, PRs not blocked)  
+**Status**: Training Material for April 21, 2026
+**Purpose**: Help developers understand violations and fix them quickly
+**Soft Launch**: April 21-25 (CI feedback, PRs not blocked)
 **Hard Enforcement**: April 28 (failed checks block merge)
 
 ---
@@ -309,8 +309,8 @@ Relates-To: #264, #269
 <footer>
 ```
 
-**Types**: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`  
-**Scope**: `phase-26-rate-limiting`, `observability`, `governance`, etc.  
+**Types**: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`
+**Scope**: `phase-26-rate-limiting`, `observability`, `governance`, etc.
 **Subject**: Imperative mood, lowercase, no period, <50 chars
 
 ---
@@ -406,10 +406,10 @@ git push
 
 ---
 
-**Questions?** Reply to GitHub Issue #274 or comment on your PR  
+**Questions?** Reply to GitHub Issue #274 or comment on your PR
 **Need help?** Tag @infrastructure-team in PR comments
 
 ---
 
-*Last Updated: April 14, 2026*  
+*Last Updated: April 14, 2026*
 *Applies to: All PRs to main branch after April 21*

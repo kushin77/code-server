@@ -109,27 +109,27 @@ if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
 else
     # Cloudflare API call
     echo "Using Cloudflare API..."
-    
+
     ZONE_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=${CLOUDFLARE_API_ZONE}" \
         -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
         -H "Content-Type: application/json" | jq -r '.result[0].id')
-    
+
     RECORD_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=${CLOUDFLARE_DNS_NAME}.${CLOUDFLARE_API_ZONE}" \
         -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
         -H "Content-Type: application/json" | jq -r '.result[0].id')
-    
+
     if [ -z "$ZONE_ID" ] || [ -z "$RECORD_ID" ] || [ "$ZONE_ID" = "null" ] || [ "$RECORD_ID" = "null" ]; then
         echo -e "${RED}✗ Failed to resolve Cloudflare Zone/Record IDs${NC}"
         exit 1
     fi
-    
+
     # Update DNS record
     UPDATE_RESPONSE=$(curl -s -X PUT \
         "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records/${RECORD_ID}" \
         -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
         -H "Content-Type: application/json" \
         --data "{\"type\":\"A\",\"name\":\"${CLOUDFLARE_DNS_NAME}.${CLOUDFLARE_API_ZONE}\",\"content\":\"${STAGING_IP}\",\"ttl\":60}")
-    
+
     if echo "$UPDATE_RESPONSE" | grep -q '"success":true'; then
         echo "✅ DNS A record updated: ide.kushnir.cloud → $STAGING_IP"
     else
@@ -259,9 +259,9 @@ echo ""
 cat > "/tmp/PHASE-14-ROLLBACK-ISSUE-TEMPLATE.txt" << EOF
 ## Phase 14 Production Rollback - Incident Report
 
-**Status**: Rolled back to staging (192.168.168.30)  
-**Timestamp**: $(date +'%Y-%m-%d %H:%M:%S UTC')  
-**Service**: ide.kushnir.cloud  
+**Status**: Rolled back to staging (192.168.168.30)
+**Timestamp**: $(date +'%Y-%m-%d %H:%M:%S UTC')
+**Service**: ide.kushnir.cloud
 
 ### Root Cause
 [TO BE DETERMINED - Requires log analysis]

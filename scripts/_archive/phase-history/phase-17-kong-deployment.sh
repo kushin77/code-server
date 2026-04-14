@@ -48,21 +48,21 @@ log_error() {
 
 run_preflight() {
     log "Running pre-flight checks..."
-    
+
     # Check Docker
     if ! docker ps > /dev/null 2>&1; then
         log_error "Docker daemon not responding"
         return 1
     fi
     log_success "Docker daemon: operational"
-    
+
     # Check PostgreSQL
     if docker ps --format "{{.Names}}" | grep -q postgres; then
         log_success "PostgreSQL: running"
     else
         log "PostgreSQL not running, will deploy as part of Kong stack"
     fi
-    
+
     # Check disk space
     local available_gb=$(df | tail -1 | awk '{print int($4 / 1024 / 1024)}')
     if [ "$available_gb" -lt 10 ]; then
@@ -70,14 +70,14 @@ run_preflight() {
         return 1
     fi
     log_success "Disk space: ${available_gb}GB available"
-    
+
     # Check existing Kong containers
     if docker ps -a --format "{{.Names}}" | grep -q kong; then
         log_error "Kong container already exists, remove first: docker rm -f kong"
         return 1
     fi
     log_success "Kong container: not running (clean state)"
-    
+
     log_success "All pre-flight checks: PASSED"
     return 0
 }
@@ -88,7 +88,7 @@ run_preflight() {
 
 create_kong_config() {
     log "Creating Kong configuration files..."
-    
+
     # Create Kong database config
     cat > "${CONFIG_DIR}/kong-postgres-init.sql" << 'EOF'
 -- Kong database initialization
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS kong_consumers (
     created_at timestamp DEFAULT now()
 );
 
--- Services table  
+-- Services table
 CREATE TABLE IF NOT EXISTS kong_services (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     name text UNIQUE,
@@ -144,7 +144,7 @@ GRANT ALL PRIVILEGES ON SCHEMA kong TO postgres;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA kong TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA kong TO postgres;
 EOF
-    
+
     log_success "Database init script created"
 }
 
@@ -154,7 +154,7 @@ EOF
 
 deploy_kong_containers() {
     log "Deploying Kong containers..."
-    
+
     # PostgreSQL for Kong
     log "Deploying PostgreSQL (Kong database backend)..."
     docker run -d \
@@ -165,10 +165,10 @@ deploy_kong_containers() {
         -e POSTGRES_PASSWORD=kong_secure_passwd \
         -v kong_postgres_data:/var/lib/postgresql/data \
         postgres:14-alpine
-    
+
     log "Waiting for PostgreSQL to start..."
     sleep 5
-    
+
     # Kong bootstrap
     log "Running Kong database migrations..."
     docker run --rm \
@@ -178,9 +178,9 @@ deploy_kong_containers() {
         -e KONG_PG_USER=kong \
         -e KONG_PG_PASSWORD=kong_secure_passwd \
         kong:3.4-alpine kong migrations bootstrap
-    
+
     log_success "Kong database migrations: complete"
-    
+
     # Kong API Gateway
     log "Deploying Kong API Gateway container..."
     docker run -d \
@@ -200,10 +200,10 @@ deploy_kong_containers() {
         -p 8001:8001 \
         -p 8444:8444 \
         kong:3.4-alpine
-    
+
     log "Waiting for Kong to start..."
     sleep 3
-    
+
     # Verify Kong startup
     local max_retries=30
     local retry=0
@@ -215,13 +215,13 @@ deploy_kong_containers() {
         retry=$((retry + 1))
         sleep 1
     done
-    
+
     if [ $retry -eq $max_retries ]; then
         log_error "Kong failed to start"
         docker logs kong
         return 1
     fi
-    
+
     log_success "Kong containers deployed successfully"
 }
 
@@ -231,25 +231,25 @@ deploy_kong_containers() {
 
 configure_kong_routes() {
     log "Configuring Kong routes and services..."
-    
+
     local kong_admin="http://localhost:8001"
-    
+
     # Service 1: code-server
     log "Creating code-server upstream..."
     curl -s -X POST "$kong_admin/services/" \
         -d name=code-server \
         -d protocol=http \
-        -d host=code-server \ 
+        -d host=code-server \
         -d port=9000 \
         | jq '.'
-    
+
     log "Creating code-server route..."
     curl -s -X POST "$kong_admin/services/code-server/routes" \
         -d "paths[]=/ide" \
         -d methods=GET \
         -d methods=POST \
         | jq '.'
-    
+
     # Service 2: git-proxy
     log "Creating git-proxy upstream..."
     curl -s -X POST "$kong_admin/services/" \
@@ -258,14 +258,14 @@ configure_kong_routes() {
         -d host=git-proxy \
         -d port=22 \
         | jq '.'
-    
+
     log "Creating git-proxy route..."
     curl -s -X POST "$kong_admin/services/git-proxy/routes" \
         -d "paths[]=/git" \
         -d methods=GET \
         -d methods=POST \
         | jq '.'
-    
+
     # Service 3: API Gateway
     log "Creating api-gateway upstream..."
     curl -s -X POST "$kong_admin/services/" \
@@ -274,7 +274,7 @@ configure_kong_routes() {
         -d host=api-gateway \
         -d port=5000 \
         | jq '.'
-    
+
     log "Creating api-gateway route..."
     curl -s -X POST "$kong_admin/services/api-gateway/routes" \
         -d "paths[]=/api" \
@@ -282,7 +282,7 @@ configure_kong_routes() {
         -d methods=POST \
         -d methods=DELETE \
         | jq '.'
-    
+
     log_success "Kong routes and services configured"
 }
 
@@ -292,9 +292,9 @@ configure_kong_routes() {
 
 configure_kong_plugins() {
     log "Configuring Kong plugins..."
-    
+
     local kong_admin="http://localhost:8001"
-    
+
     # Rate limiting plugin
     log "Enabling rate limiting plugin..."
     curl -s -X POST "$kong_admin/routes/code-server/plugins" \
@@ -302,7 +302,7 @@ configure_kong_plugins() {
         -d config.minute=600 \
         -d config.policy=local \
         | jq '.'
-    
+
     # OAuth2 validation plugin (if Jaeger collector available)
     log "Enabling OAuth2 validation plugin..."
     curl -s -X POST "$kong_admin/routes/code-server/plugins" \
@@ -310,14 +310,14 @@ configure_kong_plugins() {
         -d config.cache_credentials=true \
         -d config.mandatory_scope=true \
         | jq '.'
-    
+
     # Request logging plugin
     log "Enabling request logging plugin..."
     curl -s -X POST "$kong_admin/routes/code-server/plugins" \
         -d name=request-logger \
         -d config.http_endpoint=http://jaeger-collector:14268/api/traces \
         | jq '.' || log "Note: Jaeger collector not yet available, logging will activate in Phase 17 Week 1 Tuesday"
-    
+
     # CORS plugin
     log "Enabling CORS plugin..."
     curl -s -X POST "$kong_admin/routes/code-server/plugins" \
@@ -325,7 +325,7 @@ configure_kong_plugins() {
         -d config.origins=* \
         -d config.methods=GET,POST,HEAD,PUT,DELETE \
         | jq '.'
-    
+
     log_success "Kong plugins configured"
 }
 
@@ -335,10 +335,10 @@ configure_kong_plugins() {
 
 validate_kong_deployment() {
     log "Validating Kong deployment..."
-    
+
     local kong_admin="http://localhost:8001"
     local kong_proxy="http://localhost:8000"
-    
+
     # Health check
     log "Kong admin health check..."
     if curl -s "$kong_admin/status" | jq '.database.ok' | grep -q true; then
@@ -347,15 +347,15 @@ validate_kong_deployment() {
         log_error "Kong database connection failed"
         return 1
     fi
-    
+
     # List routes
     log "Configured routes:"
-    curl -s "$kong_admin/routes" | jq '.data[] | {name: .name, paths: .paths}' 
-    
+    curl -s "$kong_admin/routes" | jq '.data[] | {name: .name, paths: .paths}'
+
     # Test routing to code-server (should fail gracefully if code-server not up)
     log "Testing Kong proxy (code-server route should exist)..."
     curl -s -I "$kong_proxy/ide/" | head -5 || log "Code-server not yet running (this is OK)"
-    
+
     log_success "Kong validation: PASSED"
 }
 
@@ -405,27 +405,27 @@ main() {
     echo -e "${BLUE}  Timeline: April 28, 2026 (Phase 17 Week 1 Monday)${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
     echo ""
-    
+
     log "Starting Kong deployment..."
     log "Timestamp: $(date)"
     log "Working directory: $ROOT_DIR"
-    
+
     # Execute deployment steps
     if ! run_preflight; then
         log_error "Pre-flight checks failed"
         exit 1
     fi
-    
+
     create_kong_config
     deploy_kong_containers
     configure_kong_routes
     configure_kong_plugins
-    
+
     if ! validate_kong_deployment; then
         log_error "Kong validation failed"
         exit 1
     fi
-    
+
     print_summary
     log "Kong deployment complete!"
 }

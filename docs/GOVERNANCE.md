@@ -1,7 +1,7 @@
 # Code-Server-Enterprise Governance & Guardrails
 
-**Document Version**: 1.0  
-**Last Updated**: April 14, 2026  
+**Document Version**: 1.0
+**Last Updated**: April 14, 2026
 **Status**: GOVERNING DOCUMENT - All development must comply
 
 ---
@@ -410,12 +410,12 @@ services:
 # docker/configs/prometheus/prometheus.yml
 global:
   scrape_interval: ${PROMETHEUS_SCRAPE_INTERVAL:-15s}
-  
+
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-      
+
   - job_name: 'code-server'
     static_configs:
       - targets: ['code-server:${CODESERVER_METRIC_PORT:-7999}']
@@ -442,7 +442,7 @@ Every file type must have metadata headers:
 # Module: containers
 # Description: Docker container infrastructure for code-server deployment
 # Usage: Include in main.tf via module "containers" block
-# References: 
+# References:
 #   - Docs: docs/guides/DEPLOYMENT.md
 #   - ADR: docs/adc/ADR-001-CLOUDFLARE-TUNNEL.md
 # Author: @akushnir
@@ -472,7 +472,7 @@ terraform {
 # Examples:
 #   ./scripts/deploy/deploy-iac.sh production
 #   ./scripts/deploy/deploy-iac.sh staging -auto-approve
-# Requirements: 
+# Requirements:
 #   - SSH access to deployment host
 #   - Terraform >= 1.6
 #   - jq, curl installed
@@ -620,8 +620,8 @@ When making significant architectural decisions, create an ADR in `docs/adc/`:
 ```markdown
 # ADR-003: Decision Title
 
-**Date**: 2026-04-14  
-**Status**: IMPLEMENTED (Approved | Proposed | Superseded)  
+**Date**: 2026-04-14
+**Status**: IMPLEMENTED (Approved | Proposed | Superseded)
 **Deciders**: @akushnir, @reviewer
 
 ## Context
@@ -656,9 +656,9 @@ Every operational procedure must have a runbook in `docs/runbooks/`:
 ```markdown
 # Runbook: [Procedure Name]
 
-**Severity**: Critical | High | Medium | Low  
-**Time to Complete**: X minutes  
-**Requires Approvals**: Yes | No  
+**Severity**: Critical | High | Medium | Low
+**Time to Complete**: X minutes
+**Requires Approvals**: Yes | No
 
 ## Prerequisites
 - [ ] Docker running
@@ -822,6 +822,6 @@ If Z happens, do W
 
 ---
 
-**This document is GOVERNING for the kushin77/code-server-enterprise repository.**  
-**All team members must read and acknowledge understanding before contributing.**  
+**This document is GOVERNING for the kushin77/code-server-enterprise repository.**
+**All team members must read and acknowledge understanding before contributing.**
 **Changes to this document require discussion and consensus.**

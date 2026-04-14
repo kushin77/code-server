@@ -49,7 +49,7 @@ echo -e "${YELLOW}[2/6] Verifying DNS records in Cloudflare...${NC}\n"
 check_dns() {
     local subdomain=$1
     local expected_ip=$2
-    
+
     # Try nslookup (works on most systems)
     if command -v nslookup &> /dev/null; then
         resolved_ip=$(nslookup ${subdomain}.${DOMAIN} 8.8.8.8 2>/dev/null | grep -A1 "Name:" | grep "Address:" | awk '{print $(NF)}' | head -1)
@@ -60,7 +60,7 @@ check_dns() {
         echo -e "${GREEN}✅ ${subdomain}.${DOMAIN}: ${resolved_ip}${NC}"
         return 0
     fi
-    
+
     # Fallback to dig
     if command -v dig &> /dev/null; then
         resolved=$(dig +short ${subdomain}.${DOMAIN} @8.8.8.8)
@@ -71,7 +71,7 @@ check_dns() {
         echo -e "${GREEN}✅ ${subdomain}.${DOMAIN}: ${resolved}${NC}"
         return 0
     fi
-    
+
     echo -e "${YELLOW}⚠️  Cannot verify DNS (nslookup/dig not available)${NC}"
     return 0
 }

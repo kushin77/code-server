@@ -68,7 +68,7 @@ MASTER_LOG="$OUTPUT_DIR/phase-16-master-$(date +%Y%m%d-%H%M%S).log"
     # Check docker
     CONTAINERS=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no akushnir@$PRODUCTION_HOST \
         "docker ps -q 2>/dev/null | wc -l")
-    
+
     if [ "$CONTAINERS" -ge 10 ]; then
         success "Infrastructure healthy: $CONTAINERS containers running"
     else

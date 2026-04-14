@@ -1,10 +1,10 @@
 /**
  * Circuit Breaker Service for Tier 2 Resilience
- * 
+ *
  * 3-state pattern: CLOSED → OPEN → HALF_OPEN → CLOSED
  * Prevents cascading failures under high load
  * Gracefully degrades when system is overwhelmed
- * 
+ *
  * IaC Principles:
  * - Idempotent: State machine design, can safely reinitialize
  * - Immutable: Configuration passed at construction
@@ -20,7 +20,7 @@ class CircuitBreaker {
         OPEN: 'OPEN',          // Failing: requests rejected immediately
         HALF_OPEN: 'HALF_OPEN' // Testing: selective requests allowed
     };
-    
+
     constructor(options = {}) {
         // Configuration
         this.name = options.name || 'circuit-breaker';
@@ -28,7 +28,7 @@ class CircuitBreaker {
         this.resetTimeout = options.resetTimeout || 60000;           // 60 seconds to retry
         this.windowSize = options.windowSize || 30000;               // 30 second window
         this.maxHalfOpenRequests = options.maxHalfOpenRequests || 3; // Allow 3 test requests
-        
+
         // State
         this.state = CircuitBreaker.STATE.CLOSED;
         this.failures = 0;
@@ -36,7 +36,7 @@ class CircuitBreaker {
         this.consecutiveHalfOpenSuccesses = 0;
         this.lastFailureTime = null;
         this.nextAttemptTime = null;
-        
+
         // Metrics
         this.metrics = {
             name: this.name,
@@ -48,11 +48,11 @@ class CircuitBreaker {
             avgResponseTime: 0,
             createdAt: new Date().toISOString()
         };
-        
+
         // Request window tracking (for failure rate calculation)
         this.requestWindow = [];
     }
-    
+
     /**
      * Execute function through circuit breaker
      * @param {Function} fn - Async function to execute
@@ -62,11 +62,11 @@ class CircuitBreaker {
     async execute(fn, context = {}) {
         const startTime = Date.now();
         this.metrics.totalAttempts++;
-        
+
         // Check circuit state
         if (this.state === CircuitBreaker.STATE.OPEN) {
             const timeSinceOpen = Date.now() - this.lastFailureTime;
-            
+
             if (timeSinceOpen < this.resetTimeout) {
                 // Still in timeout, reject immediately
                 this.metrics.totalFailures++;
@@ -75,11 +75,11 @@ class CircuitBreaker {
                     `Retry after ${this.resetTimeout - timeSinceOpen}ms`
                 );
             }
-            
+
             // Time to transition to HALF_OPEN
             this._transitionTo(CircuitBreaker.STATE.HALF_OPEN);
         }
-        
+
         // In HALF_OPEN state, limit concurrent requests
         if (this.state === CircuitBreaker.STATE.HALF_OPEN &&
             this.consecutiveHalfOpenSuccesses >= this.maxHalfOpenRequests) {
@@ -88,7 +88,7 @@ class CircuitBreaker {
                 `Maximum ${this.maxHalfOpenRequests} test requests allowed in HALF_OPEN`
             );
         }
-        
+
         // Execute the function
         try {
             const result = await fn();
@@ -99,7 +99,7 @@ class CircuitBreaker {
             throw error;
         }
     }
-    
+
     /**
      * Record successful request
      */
@@ -108,10 +108,10 @@ class CircuitBreaker {
         this.metrics.totalSuccesses++;
         this.metrics.avgResponseTime = (this.metrics.avgResponseTime || 0) * 0.9 + responseTime * 0.1;
         this.requestWindow.push({ timestamp: Date.now(), success: true });
-        
+
         if (this.state === CircuitBreaker.STATE.HALF_OPEN) {
             this.consecutiveHalfOpenSuccesses++;
-            
+
             // If enough successes, transition back to CLOSED
             if (this.consecutiveHalfOpenSuccesses >= this.maxHalfOpenRequests) {
                 this._transitionTo(CircuitBreaker.STATE.CLOSED);
@@ -120,10 +120,10 @@ class CircuitBreaker {
                 this.consecutiveHalfOpenSuccesses = 0;
             }
         }
-        
+
         this._updateFailureRate();
     }
-    
+
     /**
      * Record failed request
      */
@@ -132,9 +132,9 @@ class CircuitBreaker {
         this.lastFailureTime = Date.now();
         this.metrics.totalFailures++;
         this.requestWindow.push({ timestamp: Date.now(), success: false });
-        
+
         this._updateFailureRate();
-        
+
         // Check if threshold exceeded
         if (this._getFailureRate() > this.failureThreshold) {
             if (this.state !== CircuitBreaker.STATE.OPEN) {
@@ -143,7 +143,7 @@ class CircuitBreaker {
             }
         }
     }
-    
+
     /**
      * Update failure rate based on request window
      */
@@ -151,26 +151,26 @@ class CircuitBreaker {
         // Clean up old requests outside window
         const cutoff = Date.now() - this.windowSize;
         this.requestWindow = this.requestWindow.filter(r => r.timestamp > cutoff);
-        
+
         // Calculate rate
         const failureCount = this.requestWindow.filter(r => !r.success).length;
-        this.metrics.failureRate = 
+        this.metrics.failureRate =
             this.requestWindow.length > 0 ? failureCount / this.requestWindow.length : 0;
     }
-    
+
     /**
      * Get current failure rate
      */
     _getFailureRate() {
         const cutoff = Date.now() - this.windowSize;
         const windowRequests = this.requestWindow.filter(r => r.timestamp > cutoff);
-        
+
         if (windowRequests.length === 0) return 0;
-        
+
         const failureCount = windowRequests.filter(r => !r.success).length;
         return failureCount / windowRequests.length;
     }
-    
+
     /**
      * Transition to new state
      */
@@ -184,7 +184,7 @@ class CircuitBreaker {
             this.state = newState;
         }
     }
-    
+
     /**
      * Get current state and metrics
      */
@@ -199,7 +199,7 @@ class CircuitBreaker {
             timestamp: new Date().toISOString()
         };
     }
-    
+
     /**
      * Reset circuit breaker
      */

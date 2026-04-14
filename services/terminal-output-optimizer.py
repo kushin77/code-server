@@ -89,7 +89,7 @@ class BatchMetrics:
 class TerminalBatchOptimizer:
     """
     Batches terminal output updates to reduce WebSocket message overhead.
-    
+
     Flow:
     1. Receive terminal output chunks
     2. Add to batch buffer
@@ -97,7 +97,7 @@ class TerminalBatchOptimizer:
     4. Compress if beneficial
     5. Send as single WebSocket frame
     """
-    
+
     def __init__(
         self,
         batch_timeout_ms: int = BATCH_TIMEOUT_MS,
@@ -107,13 +107,13 @@ class TerminalBatchOptimizer:
         self.batch_timeout = batch_timeout_ms / 1000.0
         self.max_batch_size = max_batch_size
         self.enable_compression = enable_compression
-        
+
         # Batching state
         self.batch_buffer: List[TerminalUpdate] = []
         self.batch_size = 0
         self.batch_created_at = time.time()
         self.pending_flush = False
-        
+
         # Metrics
         self.messages_sent = 0
         self.messages_batched = 0
@@ -121,7 +121,7 @@ class TerminalBatchOptimizer:
         self.bytes_saved = 0
         self.batch_start_time = time.time()
         self.batch_times: deque = deque(maxlen=100)
-    
+
     def add_update(self, data: str, update_type: str = 'output') -> Optional[Dict[str, Any]]:
         """
         Add an update to the batch.
@@ -132,10 +132,10 @@ class TerminalBatchOptimizer:
             data=data,
             type=update_type
         )
-        
+
         # Check if we should flush based on existing batch
         should_flush = False
-        
+
         if not self.batch_buffer:
             # Starting new batch
             self.batch_created_at = time.time()
@@ -144,12 +144,12 @@ class TerminalBatchOptimizer:
             elapsed = time.time() - self.batch_created_at
             if elapsed > self.batch_timeout:
                 should_flush = True
-            
+
             # Check size
             new_size = self.batch_size + len(data)
             if new_size > self.max_batch_size:
                 should_flush = True
-        
+
         # Flush if needed
         if should_flush and self.batch_buffer:
             batch = self._create_batch()
@@ -157,46 +157,46 @@ class TerminalBatchOptimizer:
             self.batch_size = len(data)
             self.batch_created_at = time.time()
             return batch
-        
+
         # Add to current batch
         self.batch_buffer.append(update)
         self.batch_size += len(data)
         self.pending_flush = True
-        
+
         return None
-    
+
     def flush(self) -> Optional[Dict[str, Any]]:
         """Flush current batch (even if not full)"""
         if not self.batch_buffer:
             return None
-        
+
         batch = self._create_batch()
         self.batch_buffer = []
         self.batch_size = 0
         self.pending_flush = False
-        
+
         return batch
-    
+
     def _create_batch(self) -> Dict[str, Any]:
         """Create a batch message from buffered updates"""
         batch_start = self.batch_created_at
         batch_end = time.time()
         batch_latency_ms = (batch_end - batch_start) * 1000
-        
+
         # Combine all updates
         combined_data = ''.join(update.data for update in self.batch_buffer)
-        
+
         # Compress if beneficial
         compressed_data = None
         compression_ratio = 0
-        
+
         if self.enable_compression and len(combined_data) > COMPRESSION_THRESHOLD:
             compressed = gzip.compress(combined_data.encode('utf-8'), compresslevel=6)
             compression_ratio = len(compressed) / len(combined_data)
-            
+
             if compression_ratio < 0.8:  # Only use if >20% savings
                 compressed_data = base64.b64encode(compressed).decode('ascii')
-        
+
         # Build batch message
         batch = {
             'type': 'batch',
@@ -208,40 +208,40 @@ class TerminalBatchOptimizer:
             'compression_ratio': compression_ratio,
             'latency_ms': batch_latency_ms
         }
-        
+
         # Update metrics
         self._update_metrics(batch, len(combined_data), compressed_data)
-        
+
         return batch
-    
+
     def _update_metrics(self, batch: Dict, original_size: int, compressed_data: Optional[str]):
         """Update performance metrics"""
         self.messages_batched += len(self.batch_buffer)
         self.messages_sent += 1
-        
+
         if compressed_data:
             sent_size = len(compressed_data)
         else:
             sent_size = original_size
-        
+
         self.bytes_sent += sent_size
         saved = original_size - sent_size
         self.bytes_saved += max(0, saved)
-        
+
         self.batch_times.append(batch['latency_ms'])
-    
+
     def get_metrics(self) -> BatchMetrics:
         """Get current performance metrics"""
         elapsed = time.time() - self.batch_start_time
         avg_batch_latency = sum(self.batch_times) / len(self.batch_times) if self.batch_times else 0
         messages_per_sec = self.messages_sent / elapsed if elapsed > 0 else 0
-        
+
         compression_ratio = (
-            self.bytes_saved / self.bytes_sent 
-            if self.bytes_sent > 0 
+            self.bytes_saved / self.bytes_sent
+            if self.bytes_sent > 0
             else 0
         )
-        
+
         return BatchMetrics(
             timestamp=datetime.utcnow(),
             messages_batched=self.messages_batched,
@@ -258,54 +258,54 @@ class TerminalBatchOptimizer:
 
 class OptimizedTerminalServer:
     """WebSocket server with batching optimization"""
-    
+
     def __init__(self, host: str = "127.0.0.1", port: int = 8765):
         self.host = host
         self.port = port
         self.optimizer = TerminalBatchOptimizer()
         self.clients: set = set()
         self.metrics_task = None
-    
+
     async def handler(self, websocket: WebSocketServerProtocol, path: str):
         """Handle incoming WebSocket connections"""
         self.clients.add(websocket)
         logger.info(f"Client connected: {websocket.remote_address}")
-        
+
         try:
             async for message in websocket:
                 try:
                     data = json.loads(message)
-                    
+
                     if data.get('type') == 'terminal_output':
                         # Add to batch
                         batch = self.optimizer.add_update(
                             data.get('data', ''),
                             data.get('output_type', 'output')
                         )
-                        
+
                         # If batch is complete, send it
                         if batch:
                             await self._broadcast_batch(json.dumps(batch))
-                    
+
                     elif data.get('type') == 'flush':
                         # Explicit flush request
                         batch = self.optimizer.flush()
                         if batch:
                             await self._broadcast_batch(json.dumps(batch))
-                    
+
                     elif data.get('type') == 'control':
                         # Control commands (resize, etc.) bypass batching
                         await self._broadcast_message(message)
-                
+
                 except json.JSONDecodeError:
                     logger.error(f"Invalid JSON from {websocket.remote_address}: {message}")
-        
+
         except websockets.exceptions.ConnectionClosed:
             logger.info(f"Client disconnected: {websocket.remote_address}")
-        
+
         finally:
             self.clients.remove(websocket)
-    
+
     async def _broadcast_batch(self, message: str):
         """Broadcast batch to all connected clients"""
         if self.clients:
@@ -313,7 +313,7 @@ class OptimizedTerminalServer:
                 *[client.send(message) for client in self.clients],
                 return_exceptions=True
             )
-    
+
     async def _broadcast_message(self, message: str):
         """Broadcast message to all connected clients"""
         if self.clients:
@@ -321,19 +321,19 @@ class OptimizedTerminalServer:
                 *[client.send(message) for client in self.clients],
                 return_exceptions=True
             )
-    
+
     async def _metrics_reporter(self):
         """Periodically report metrics"""
         while True:
             await asyncio.sleep(METRICS_INTERVAL)
             metrics = self.optimizer.get_metrics()
             logger.info(f"Metrics: {json.dumps(asdict(metrics), default=str)}")
-    
+
     async def start(self):
         """Start the WebSocket server"""
         if ENABLE_METRICS:
             self.metrics_task = asyncio.create_task(self._metrics_reporter())
-        
+
         server = await websockets.serve(
             self.handler,
             self.host,
@@ -341,7 +341,7 @@ class OptimizedTerminalServer:
             # Enable compression
             compression='deflate'
         )
-        
+
         logger.info(f"Optimized terminal server started on ws://{self.host}:{self.port}")
         return server
 
@@ -352,7 +352,7 @@ class OptimizedTerminalServer:
 async def main():
     """Start the optimized terminal server"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(
         description='Terminal Output Optimizer - WebSocket Batching Service'
     )
@@ -364,16 +364,16 @@ async def main():
                        help='Maximum batch size in bytes')
     parser.add_argument('--no-compression', action='store_true',
                        help='Disable compression')
-    
+
     args = parser.parse_args()
-    
+
     logger.info(f"Starting terminal optimizer:")
     logger.info(f"  Host: {args.host}")
     logger.info(f"  Port: {args.port}")
     logger.info(f"  Batch timeout: {args.batch_timeout}ms")
     logger.info(f"  Max batch size: {args.max_batch_size} bytes")
     logger.info(f"  Compression: {'enabled' if not args.no_compression else 'disabled'}")
-    
+
     server = OptimizedTerminalServer(args.host, args.port)
     await server.start()
     await asyncio.Future()  # Run forever

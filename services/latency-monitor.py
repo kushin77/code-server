@@ -89,12 +89,12 @@ class LatencyStats:
 
 class LatencyDatabase:
     """SQLite database for latency metrics"""
-    
+
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
-    
+
     def _init_db(self):
         """Initialize database schema"""
         with sqlite3.connect(self.db_path) as conn:
@@ -112,30 +112,30 @@ class LatencyDatabase:
                     metadata TEXT
                 )
             ''')
-            
+
             conn.execute('''
-                CREATE INDEX IF NOT EXISTS idx_timestamp 
+                CREATE INDEX IF NOT EXISTS idx_timestamp
                 ON latency_measurements(timestamp)
             ''')
-            
+
             conn.execute('''
-                CREATE INDEX IF NOT EXISTS idx_developer_timestamp 
+                CREATE INDEX IF NOT EXISTS idx_developer_timestamp
                 ON latency_measurements(developer_id, timestamp)
             ''')
-            
+
             conn.execute('''
-                CREATE INDEX IF NOT EXISTS idx_latency_type_timestamp 
+                CREATE INDEX IF NOT EXISTS idx_latency_type_timestamp
                 ON latency_measurements(latency_type, timestamp)
             ''')
-            
+
             conn.commit()
-    
+
     def insert_measurement(self, measurement: LatencyMeasurement):
         """Insert a latency measurement"""
         with sqlite3.connect(self.db_path) as conn:
             conn.execute('''
                 INSERT INTO latency_measurements
-                (timestamp, developer_id, session_id, latency_ms, latency_type, 
+                (timestamp, developer_id, session_id, latency_ms, latency_type,
                  status, source_location, destination, metadata)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
@@ -150,7 +150,7 @@ class LatencyDatabase:
                 json.dumps(measurement.metadata) if measurement.metadata else None
             ))
             conn.commit()
-    
+
     def get_statistics(
         self,
         latency_type: str,
@@ -158,16 +158,16 @@ class LatencyDatabase:
     ) -> LatencyStats:
         """Get aggregated statistics for a latency type"""
         cutoff_time = time.time() - (hours * 3600)
-        
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute('''
                 SELECT latency_ms, status FROM latency_measurements
                 WHERE latency_type = ? AND timestamp > ?
                 ORDER BY latency_ms
             ''', (latency_type, cutoff_time))
-            
+
             measurements = cursor.fetchall()
-            
+
             if not measurements:
                 return LatencyStats(
                     timestamp=datetime.utcnow(),
@@ -176,13 +176,13 @@ class LatencyDatabase:
                     min_ms=0, max_ms=0, mean_ms=0,
                     count=0, error_rate=0
                 )
-            
+
             latencies = [m[0] for m in measurements]
             statuses = [m[1] for m in measurements]
-            
+
             error_count = sum(1 for s in statuses if s != 'success')
             error_rate = error_count / len(measurements)
-            
+
             return LatencyStats(
                 timestamp=datetime.utcnow(),
                 latency_type=latency_type,
@@ -195,7 +195,7 @@ class LatencyDatabase:
                 count=len(measurements),
                 error_rate=error_rate
             )
-    
+
     def get_developer_statistics(
         self,
         developer_id: str,
@@ -203,20 +203,20 @@ class LatencyDatabase:
     ) -> Dict[str, LatencyStats]:
         """Get statistics grouped by latency type for a developer"""
         cutoff_time = time.time() - (hours * 3600)
-        
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute('''
                 SELECT DISTINCT latency_type FROM latency_measurements
                 WHERE developer_id = ? AND timestamp > ?
             ''', (developer_id, cutoff_time))
-            
+
             latency_types = [row[0] for row in cursor.fetchall()]
-        
+
         return {
             lt: self.get_statistics_for_developer(developer_id, lt, hours)
             for lt in latency_types
         }
-    
+
     def get_statistics_for_developer(
         self,
         developer_id: str,
@@ -225,16 +225,16 @@ class LatencyDatabase:
     ) -> LatencyStats:
         """Get statistics for a developer and latency type"""
         cutoff_time = time.time() - (hours * 3600)
-        
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute('''
                 SELECT latency_ms, status FROM latency_measurements
                 WHERE developer_id = ? AND latency_type = ? AND timestamp > ?
                 ORDER BY latency_ms
             ''', (developer_id, latency_type, cutoff_time))
-            
+
             measurements = cursor.fetchall()
-            
+
             if not measurements:
                 return LatencyStats(
                     timestamp=datetime.utcnow(),
@@ -243,13 +243,13 @@ class LatencyDatabase:
                     min_ms=0, max_ms=0, mean_ms=0,
                     count=0, error_rate=0
                 )
-            
+
             latencies = [m[0] for m in measurements]
             statuses = [m[1] for m in measurements]
-            
+
             error_count = sum(1 for s in statuses if s != 'success')
             error_rate = error_count / len(measurements)
-            
+
             return LatencyStats(
                 timestamp=datetime.utcnow(),
                 latency_type=latency_type,
@@ -262,11 +262,11 @@ class LatencyDatabase:
                 count=len(measurements),
                 error_rate=error_rate
             )
-    
+
     def cleanup_old_data(self, days: int = RETENTION_DAYS):
         """Delete measurements older than retention period"""
         cutoff_time = time.time() - (days * 86400)
-        
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
                 'DELETE FROM latency_measurements WHERE timestamp < ?',
@@ -274,7 +274,7 @@ class LatencyDatabase:
             )
             rows_deleted = cursor.rowcount
             conn.commit()
-        
+
         logger.info(f"Cleaned up {rows_deleted} old measurements")
 
 ###############################################################################
@@ -283,13 +283,13 @@ class LatencyDatabase:
 
 class LatencyCollector:
     """Collects latency measurements from WebSocket connections"""
-    
+
     def __init__(self, db: LatencyDatabase):
         self.db = db
         self.measurements: deque = deque(maxlen=10000)
         self.running = False
         self.collection_thread = None
-    
+
     def record_measurement(
         self,
         developer_id: str,
@@ -313,32 +313,32 @@ class LatencyCollector:
             destination=destination,
             metadata=metadata
         )
-        
+
         self.measurements.append(measurement)
         self.db.insert_measurement(measurement)
-        
+
         # Log measurement for immediate visibility
         logger.debug(f"Latency: {developer_id} - {latency_type}: {latency_ms:.2f}ms ({status})")
-    
+
     def get_stats(self, latency_type: str, hours: int = 24) -> LatencyStats:
         """Get aggregated statistics"""
         return self.db.get_statistics(latency_type, hours)
-    
+
     def get_developer_stats(self, developer_id: str, hours: int = 24) -> Dict[str, LatencyStats]:
         """Get statistics for a developer"""
         return self.db.get_developer_statistics(developer_id, hours)
-    
+
     def start_cleanup_thread(self):
         """Start background cleanup thread"""
         def cleanup_loop():
             while self.running:
                 time.sleep(3600)  # Cleanup every hour
                 self.db.cleanup_old_data()
-        
+
         self.running = True
         self.collection_thread = threading.Thread(target=cleanup_loop, daemon=True)
         self.collection_thread.start()
-    
+
     def stop(self):
         """Stop collector"""
         self.running = False
@@ -349,11 +349,11 @@ class LatencyCollector:
 
 class AnomalyDetector:
     """Detect latency anomalies"""
-    
+
     def __init__(self, db: LatencyDatabase, threshold_sigma: float = 3.0):
         self.db = db
         self.threshold_sigma = threshold_sigma
-    
+
     def detect_anomalies(
         self,
         latency_type: str,
@@ -361,21 +361,21 @@ class AnomalyDetector:
     ) -> List[Tuple[float, str]]:
         """Detect anomalous latency measurements"""
         stats = self.db.get_statistics(latency_type, hours)
-        
+
         # Calculate anomaly threshold using standard deviation
         # (would need full dataset, simplified here)
         anomalies = []
-        
+
         # If max exceeds p99 + 3x estimated stddev, it's anomalous
         suspected_stddev = (stats.p99_ms - stats.p50_ms) / 2
         anomaly_threshold = stats.p99_ms + (self.threshold_sigma * suspected_stddev)
-        
+
         if stats.max_ms > anomaly_threshold:
             anomalies.append((stats.max_ms, f"Anomalous max latency {stats.max_ms:.2f}ms"))
-        
+
         if stats.error_rate > 0.05:
             anomalies.append((stats.error_rate, f"High error rate {stats.error_rate*100:.1f}%"))
-        
+
         return anomalies
 
 ###############################################################################
@@ -384,19 +384,19 @@ class AnomalyDetector:
 
 class LatencyReporter:
     """Generate reports from latency data"""
-    
+
     def __init__(self, collector: LatencyCollector):
         self.collector = collector
-    
+
     def generate_summary(self, hours: int = 24) -> str:
         """Generate summary report"""
         latency_types = ['keystroke', 'terminal', 'git', 'websocket', 'tunnel_ingress']
-        
+
         report = f"=== Latency Summary ({hours}h) ===\n\n"
-        
+
         for lt in latency_types:
             stats = self.collector.get_stats(lt, hours)
-            
+
             if stats.count > 0:
                 report += f"{lt.upper()}:\n"
                 report += f"  p50: {stats.p50_ms:.1f}ms\n"
@@ -404,13 +404,13 @@ class LatencyReporter:
                 report += f"  p99: {stats.p99_ms:.1f}ms\n"
                 report += f"  min: {stats.min_ms:.1f}ms, max: {stats.max_ms:.1f}ms, mean: {stats.mean_ms:.1f}ms\n"
                 report += f"  count: {stats.count}, error_rate: {stats.error_rate*100:.1f}%\n\n"
-        
+
         return report
-    
+
     def generate_json(self, hours: int = 24) -> Dict:
         """Generate JSON report"""
         latency_types = ['keystroke', 'terminal', 'git', 'websocket', 'tunnel_ingress']
-        
+
         return {
             'timestamp': datetime.utcnow().isoformat(),
             'period_hours': hours,
@@ -426,19 +426,19 @@ class LatencyReporter:
 
 if __name__ == '__main__':
     import argparse
-    
+
     parser = argparse.ArgumentParser(description='Latency Monitor')
     parser.add_argument('--action', choices=['run', 'stats', 'report'], required=True)
     parser.add_argument('--hours', type=int, default=24)
     parser.add_argument('--latency-type', default='keystroke')
     parser.add_argument('--developer', default=None)
-    
+
     args = parser.parse_args()
-    
+
     db = LatencyDatabase()
     collector = LatencyCollector(db)
     reporter = LatencyReporter(collector)
-    
+
     if args.action == 'run':
         logger.info("Starting Latency Monitor")
         collector.start_cleanup_thread()
@@ -448,7 +448,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             collector.stop()
             logger.info("Latency Monitor stopped")
-    
+
     elif args.action == 'stats':
         if args.developer:
             stats = collector.get_developer_stats(args.developer, args.hours)
@@ -459,6 +459,6 @@ if __name__ == '__main__':
             stats = collector.get_stats(args.latency_type, args.hours)
             print(f"\n{args.latency_type}:")
             print(f"  p99: {stats.p99_ms:.1f}ms, count: {stats.count}")
-    
+
     elif args.action == 'report':
         print(reporter.generate_summary(args.hours))

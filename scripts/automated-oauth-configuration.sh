@@ -38,7 +38,7 @@
 #   ./scripts/automated-oauth-configuration.sh validate
 #
 # Recent Changes:
-#   2026-04-14: Added credential validation logging 
+#   2026-04-14: Added credential validation logging
 #   2026-04-13: Initial creation with OAuth setup automation
 #
 ################################################################################
@@ -63,16 +63,16 @@ if [ ! -z "$GOOGLE_CLIENT_ID" ] && [ ! -z "$GOOGLE_CLIENT_SECRET" ]; then
     echo "✓ Google OAuth credentials detected from environment"
     echo "  Client ID: ${GOOGLE_CLIENT_ID:0:20}***"
     echo ""
-    
+
     # Validate format
     if [ ${#GOOGLE_CLIENT_ID} -lt 20 ]; then
         echo "⚠ WARNING: Client ID seems short. Verify it's correct."
     fi
-    
+
     if [ ${#GOOGLE_CLIENT_SECRET} -lt 20 ]; then
         echo "⚠ WARNING: Client Secret seems short. Verify it's correct."
     fi
-    
+
     # Save to config
     cat > "$CONFIG_FILE" << EOF
 # Google OAuth Configuration
@@ -83,7 +83,7 @@ GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:0:10}...
 CONFIGURED_AT=$(date +%s)
 EOF
-    
+
     chmod 600 "$CONFIG_FILE"
     echo "✓ OAuth configuration saved"
     echo ""
@@ -161,21 +161,21 @@ read -r response
 if [ "$response" = "y" ] || [ "$response" = "Y" ]; then
     echo "Enter Google Client ID:"
     read -r CLIENT_ID
-    
+
     echo "Enter Google Client Secret:"
     read -rs CLIENT_SECRET  # -s hides input
     echo ""
-    
+
     # Validate
     if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
         echo "ERROR: Both Client ID and Client Secret are required"
         exit 1
     fi
-    
+
     # Export for current session
     export GOOGLE_CLIENT_ID="$CLIENT_ID"
     export GOOGLE_CLIENT_SECRET="$CLIENT_SECRET"
-    
+
     # Save to config
     cat > "$CONFIG_FILE" << EOF
 # Google OAuth Configuration
@@ -186,9 +186,9 @@ GOOGLE_CLIENT_ID=${CLIENT_ID}
 GOOGLE_CLIENT_SECRET=${CLIENT_SECRET:0:10}...
 CONFIGURED_AT=$(date +%s)
 EOF
-    
+
     chmod 600 "$CONFIG_FILE"
-    
+
     echo ""
     echo "✓ OAuth credentials configured"
     echo "✓ Ready to deploy with authentication"
@@ -208,4 +208,3 @@ fi
 
 echo ""
 echo "✓ OAuth configuration setup complete"
-

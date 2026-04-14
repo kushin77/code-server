@@ -79,14 +79,14 @@ if [ "$INSTALLED_CUDA" == "$CUDA_PUBLIC_VERSION" ]; then
     echo "  CUDA_HOME: /usr/local/cuda-12.4"
     echo "  PATH updated for cuda binaries"
     echo "  LD_LIBRARY_PATH updated for cuda libraries"
-    
+
     # Run verification
     echo "Running CUDA verification..."
     /usr/local/cuda-12.4/extras/demo_suite/deviceQuery || echo "⚠ deviceQuery not available"
-    
+
     # Cleanup
     rm -f "$STATE_FILE" /tmp/cuda_${CUDA_PUBLIC_VERSION}_555.42.02_linux_x86_64.run
-    
+
     echo "✓ CUDA 12.4 installation COMPLETE"
     exit 0
 else

@@ -37,7 +37,7 @@
 #   ./scripts/cleanup-container-overlap.sh --dry-run
 #
 # Recent Changes:
-#   2026-04-14: Added safer confirmation dialogs 
+#   2026-04-14: Added safer confirmation dialogs
 #   2026-04-13: Initial creation with overlap detection
 #
 ################################################################################
@@ -78,7 +78,7 @@ if docker ps --filter "name=ollama-init" --quiet | grep -q .; then
   echo "   This container should only start with: docker compose --profile init up"
   echo "   Reason: ollama-init is configured with restart: no"
   echo "   If it's running, it was likely started manually or in an old compose stack"
-  
+
   docker stop -q ollama-init 2>/dev/null || true
   echo "✓ Stopped ollama-init"
 else
@@ -107,4 +107,3 @@ echo ""
 echo "=== CLEANUP COMPLETE ==="
 echo "Next: docker compose down && docker compose up -d"
 echo "      (This will ensure clean stack with correct version)"
-

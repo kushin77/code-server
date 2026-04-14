@@ -120,20 +120,20 @@ SLO_PASSED=0
 
 while [ $CANARY_ELAPSED -lt $CANARY_DURATION ]; do
     TIMESTAMP=$(date '+%H:%M:%S')
-    
+
     # Sample metrics
     P99=$(shuf -i 5-25 -n 1)
     ERROR_RATE=$(shuf -i 0-1 -n 1)
     THROUGHPUT=$(shuf -i 450-550 -n 1)
-    
+
     echo "[$TIMESTAMP] P99: ${P99}ms | Error: ${ERROR_RATE}% | Throughput: ${THROUGHPUT} req/sec"
-    
+
     # Check SLOs
     if [ "$P99" -lt 100 ] && [ "$ERROR_RATE" -lt 1 ]; then
         ((SLO_PASSED++))
     fi
     ((SLO_CHECKS++))
-    
+
     sleep 3
     ((CANARY_ELAPSED+=3))
 done
@@ -188,13 +188,13 @@ SLO_SAMPLE_PASSED=0
 echo "Real-time metrics:"
 while [ $MONITORING_ELAPSED -lt $MONITORING_DURATION ]; do
     TIMESTAMP=$(date '+%H:%M:%S')
-    
+
     # Simulated production metrics
     P95=$(shuf -i 20-80 -n 1)
     P99=$(shuf -i 50-150 -n 1)
     ERROR_PCT=$(shuf -i 0-2 -n 1)
     AVAILABILITY=$((100 - $(shuf -i 0-1 -n 1))))
-    
+
     # Validate SLOs
     if [ "$P95" -lt 500 ] && [ "$P99" -lt 1000 ] && [ "$ERROR_PCT" -lt 1 ]; then
         STATUS="✅ PASS"
@@ -203,9 +203,9 @@ while [ $MONITORING_ELAPSED -lt $MONITORING_DURATION ]; do
         STATUS="⚠️  WARN"
     fi
     ((SLO_SAMPLE_COUNT++))
-    
+
     echo "[$TIMESTAMP] P95: ${P95}ms | P99: ${P99}ms | Error: ${ERROR_PCT}% | Avail: ${AVAILABILITY}% | $STATUS"
-    
+
     sleep 2
     ((MONITORING_ELAPSED+=2))
 done

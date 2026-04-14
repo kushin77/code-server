@@ -76,15 +76,15 @@ if command -v nvidia-smi &> /dev/null; then
     echo "Driver and CUDA Version:"
     nvidia-smi --query-gpu=driver_version,compute_cap --format=csv,noheader | head -1
     echo ""
-    
+
     echo "GPU Details:"
     nvidia-smi --query-gpu=index,name,memory.total,memory.free,temperature.gpu,power.draw,power.limit --format=csv
     echo ""
-    
+
     echo "GPU Compute Capabilities:"
     nvidia-smi --query-gpu=compute_cap --format=csv,noheader | sort -u
     echo ""
-    
+
     echo "CUDA Version (from nvcc):"
     if command -v nvcc &> /dev/null; then
         nvcc --version | grep release
@@ -126,11 +126,11 @@ if command -v docker &> /dev/null; then
     echo -e "${GREEN}✓ Docker Installed${NC}"
     docker --version
     echo ""
-    
+
     echo "Docker Daemon Status:"
     systemctl is-active docker 2>/dev/null || docker info > /dev/null 2>&1 && echo "✓ Docker daemon running" || echo "✗ Docker daemon not running"
     echo ""
-    
+
     # Check if NVIDIA Container Runtime is available
     echo "NVIDIA Container Runtime:"
     if docker run --rm --runtime=nvidia nvidia/cuda:12.4-base nvidia-smi &>/dev/null 2>&1; then
@@ -217,7 +217,7 @@ if [ -d "/mnt/nas-primary" ] && [ -w "/mnt/nas-primary" ]; then
         echo "✗ NAS write test failed"
     fi
     echo ""
-    
+
     echo "NAS Latency Baseline (1GB sequential read):"
     test_read="/mnt/nas-primary/.latency-test-$(date +%s)"
     if dd if=/dev/zero of="$test_read" bs=1M count=1000 2>&1 | head -1; then

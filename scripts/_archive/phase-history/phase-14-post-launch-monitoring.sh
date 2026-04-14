@@ -39,11 +39,11 @@ print_metrics() {
     local elapsed=$(($(date +%s) - START_TIME))
     local hours=$((elapsed / 3600))
     local minutes=$(((elapsed % 3600) / 60))
-    
+
     echo "📊 REAL-TIME METRICS"
     echo "════════════════════════════════════════════════════════════════"
     echo ""
-    
+
     # Latency metrics
     echo "  ${BLUE}Latency (p-percentiles)${NC}"
     echo "    p50: 42ms   (target: 50ms)   ${GREEN}✅${NC}"
@@ -51,7 +51,7 @@ print_metrics() {
     echo "    p99: 89ms   (target: 100ms)  ${GREEN}✅${NC}"
     echo "    max: 284ms  (target: 500ms)  ${GREEN}✅${NC}"
     echo ""
-    
+
     # Request metrics
     echo "  ${BLUE}Request Metrics${NC}"
     echo "    Throughput: 125 req/s (target: >100) ${GREEN}✅${NC}"
@@ -59,7 +59,7 @@ print_metrics() {
     echo "    Success: 12,487 requests"
     echo "    Failures: 4 (network timeouts)"
     echo ""
-    
+
     # Availability
     echo "  ${BLUE}Availability${NC}"
     echo "    Uptime: 99.95% (target: >99.9%) ${GREEN}✅${NC}"
@@ -67,7 +67,7 @@ print_metrics() {
     echo "    Last incident: 20:35 UTC (brief spike)"
     echo "    Mean Time to Recovery: 8 seconds"
     echo ""
-    
+
     # Container health
     echo "  ${BLUE}Container Health${NC}"
     echo "    code-server: Running (${GREEN}✅${NC})"
@@ -85,7 +85,7 @@ print_metrics() {
     echo "      CPU: 0.1 cores / 1 (10%)"
     echo "      Restarts: 0"
     echo ""
-    
+
     # Network metrics
     echo "  ${BLUE}Network Metrics${NC}"
     echo "    Tunnel Status: Connected (${GREEN}✅${NC})"
@@ -93,7 +93,7 @@ print_metrics() {
     echo "    DNS Resolution: 1ms (avg)"
     echo "    TLS Handshake: 85ms (avg)"
     echo ""
-    
+
     # SLO compliance
     echo "  ${BLUE}SLO Compliance${NC}"
     echo "    p99 Latency: ${GREEN}✅ PASS${NC} (89ms < 100ms)"
@@ -101,7 +101,7 @@ print_metrics() {
     echo "    Availability: ${GREEN}✅ PASS${NC} (99.95% > 99.9%)"
     echo "    Container Health: ${GREEN}✅ PASS${NC} (0 restarts)"
     echo ""
-    
+
     # Monitoring duration
     echo "  ${BLUE}Monitoring Status${NC}"
     echo "    Elapsed: ${hours}h ${minutes}m"
@@ -114,10 +114,10 @@ print_alerts() {
     echo "🚨 ACTIVE ALERTS & EVENTS"
     echo "════════════════════════════════════════════════════════════════"
     echo ""
-    
+
     echo "  ${GREEN}No Critical Alerts${NC}"
     echo ""
-    
+
     echo "  Recent Events:"
     echo "    20:50 UTC - Phase 14 launch initiated"
     echo "    20:52 UTC - DNS records updated successfully"
@@ -132,14 +132,14 @@ print_team_status() {
     echo "👥 TEAM STATUS"
     echo "════════════════════════════════════════════════════════════════"
     echo ""
-    
+
     echo "  On-Call Team:"
     echo "    ${GREEN}✅${NC} Infrastructure Lead: Monitoring & ready"
     echo "    ${GREEN}✅${NC} Operations: Active dashboards"
     echo "    ${GREEN}✅${NC} Security: Audit log monitoring"
     echo "    ${GREEN}✅${NC} DevOps: Rollback ready (5-min window)"
     echo ""
-    
+
     echo "  Action Items:"
     echo "    • Continue 1-hour monitoring (until 21:50 UTC)"
     echo "    • Watch for any latency spikes or errors"
@@ -150,7 +150,7 @@ print_team_status() {
 
 print_summary() {
     local overall_status="${GREEN}🟢 HEALTHY${NC}"
-    
+
     echo "📋 OVERALL STATUS"
     echo "════════════════════════════════════════════════════════════════"
     echo ""
@@ -177,7 +177,7 @@ main() {
     echo ""
     echo "Starting continuous monitoring..."
     echo ""
-    
+
     while true; do
         clear_screen
         print_header
@@ -186,7 +186,7 @@ main() {
         print_team_status
         print_summary
         print_footer
-        
+
         sleep "$REFRESH_INTERVAL"
     done
 }

@@ -75,7 +75,7 @@ for i in {1..50}; do
     RESPONSE_TIME=$(curl -s -o /dev/null -w '%{time_total}' "http://${TARGET_HOST}:8080/health" 2>/dev/null || echo "999")
     LATENCY_MS=$(echo "$RESPONSE_TIME * 1000" | bc | cut -d. -f1)
     LATENCY_SAMPLES+=("$LATENCY_MS")
-    
+
     if [ $((i % 10)) -eq 0 ]; then
         echo "    ✓ Samples collected: $i/50"
     fi
@@ -116,7 +116,7 @@ ERROR_COUNT=0
 
 for i in {1..100}; do
     HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://${TARGET_HOST}:8080/health" 2>/dev/null || echo "000")
-    
+
     if [ "$HTTP_CODE" = "200" ]; then
         ((SUCCESS_COUNT++))
     else
@@ -244,20 +244,20 @@ if [ $FAIL_COUNT -eq 0 ]; then
     echo "  • April 21-27: Onboard remaining 47 developers (7/day)"
     echo "  • April 28: Phase 14 complete"
     echo ""
-    
+
     exit 0
 else
     echo "🟠 DECISION: NO-GO - ISSUES DETECTED"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo "❌ Issues Found:"
-    
+
     if grep -q "FAIL" /tmp/slo_results.txt 2>/dev/null; then
         grep "FAIL" /tmp/slo_results.txt | while read line; do
             echo "  • $line"
         done
     fi
-    
+
     echo ""
     echo "Recommended Actions:"
     echo "  1. Investigate failures"
@@ -268,6 +268,6 @@ else
     echo "Escalation:"
     echo "  Page infrastructure lead for immediate investigation"
     echo ""
-    
+
     exit 1
 fi

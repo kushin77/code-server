@@ -1,9 +1,9 @@
 /**
  * CRDT Sync Protocol
- * 
+ *
  * Implements Conflict-free Replicated Data Type (CRDT) protocol for
  * multi-primary PostgreSQL replication across geographically distributed regions.
- * 
+ *
  * Supports:
  * - OR-Set (Observed-Remove Set) for add/remove semantics
  * - Counter with causal ordering

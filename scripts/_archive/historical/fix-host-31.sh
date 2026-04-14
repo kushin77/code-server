@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # HOST 192.168.168.31 - CRITICAL FIXES AUTOMATION SCRIPT
-# 
+#
 # This script executes Phase 1 critical fixes to make host production-ready:
 # 1. Fix Docker daemon startup issue
 # 2. Upgrade Docker server to match client version
@@ -118,14 +118,14 @@ if [ "$DOCKER_CLIENT_VERSION" = "$DOCKER_SERVER_VERSION" ]; then
 else
     warning "Version mismatch detected (client: $DOCKER_CLIENT_VERSION, server: $DOCKER_SERVER_VERSION)"
     log "Updating Docker server..."
-    
+
     sudo apt-get update
     sudo apt-get install -y --only-upgrade docker.io
-    
+
     log "Restarting Docker..."
     sudo systemctl restart docker
     sleep 5
-    
+
     DOCKER_SERVER_VERSION_NEW=$(docker info 2>/dev/null | grep "Server Version:" | awk '{print $3}')
     if [ "$DOCKER_CLIENT_VERSION" = "$DOCKER_SERVER_VERSION_NEW" ]; then
         success "Docker versions now match: $DOCKER_CLIENT_VERSION"
@@ -147,22 +147,22 @@ log "Current NVIDIA driver status:"
 if command -v nvidia-smi &> /dev/null; then
     DRIVER_VERSION=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)
     log "Current driver: $DRIVER_VERSION"
-    
+
     if [[ $DRIVER_VERSION == 555.* ]] || [[ $DRIVER_VERSION == 55[6-9].* ]]; then
         success "Driver is already 555.x or newer"
     else
         warning "Driver is $DRIVER_VERSION (outdated). Upgrading to 555.x..."
-        
+
         log "Adding NVIDIA driver repository..."
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CCA552A7136B3E06902585FF0D || true
-        
+
         log "Installing NVIDIA driver 555..."
         sudo apt-get update
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nvidia-driver-555 nvidia-utils-555
-        
+
         warning "⚠️  REBOOT REQUIRED for driver to take effect"
         warning "Before rebooting, verify no processes using GPU:"
-        
+
         if command -v nvidia-smi &> /dev/null; then
             nvidia-smi
         fi
@@ -185,7 +185,7 @@ log "================================================"
 if command -v nvcc &> /dev/null; then
     CUDA_VERSION=$(nvcc --version | tail -1 | awk '{print $5}')
     log "CUDA already installed: $CUDA_VERSION"
-    
+
     if [[ $CUDA_VERSION == 12.4* ]]; then
         success "CUDA 12.4 already installed"
     else
@@ -193,30 +193,30 @@ if command -v nvcc &> /dev/null; then
     fi
 else
     warning "CUDA toolkit not found. Installing CUDA 12.4..."
-    
+
     cd /tmp
     log "Downloading CUDA 12.4 installer (this may take 5-10 minutes)..."
-    
+
     # Download CUDA installer
     if [ ! -f "cuda_12.4.0_550.54.15_linux.run" ]; then
         wget -q --show-progress https://developer.download.nvidia.com/compute/cuda/12.4.0/local_installers/cuda_12.4.0_550.54.15_linux.run
     else
         log "CUDA installer already downloaded"
     fi
-    
+
     log "Installing CUDA (this may take 10-15 minutes)..."
     sudo sh cuda_12.4.0_550.54.15_linux.run --silent --override-driver-check --toolkit || true
-    
+
     log "Adding CUDA to PATH..."
     echo "export PATH=/usr/local/cuda-12.4/bin:\$PATH" >> ~/.bashrc
     echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:\$LD_LIBRARY_PATH" >> ~/.bashrc
-    
+
     # Source for current shell
     export PATH=/usr/local/cuda-12.4/bin:$PATH
     export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:$LD_LIBRARY_PATH
-    
+
     sleep 2
-    
+
     if command -v nvcc &> /dev/null; then
         success "CUDA 12.4 installed successfully"
         nvcc --version
@@ -238,21 +238,21 @@ if command -v nvidia-container-runtime &> /dev/null; then
     nvidia-container-runtime --version
 else
     warning "NVIDIA container runtime not found. Installing..."
-    
+
     log "Adding NVIDIA Docker repository..."
     distribution=$(. /etc/os-release; echo $ID$VERSION_ID)
     curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add - || true
     curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
         sudo tee /etc/apt/sources.list.d/nvidia-docker.list > /dev/null
-    
+
     log "Installing nvidia-container-runtime..."
     sudo apt-get update
     sudo apt-get install -y nvidia-container-runtime
-    
+
     log "Restarting Docker to recognize new runtime..."
     sudo systemctl restart docker
     sleep 5
-    
+
     if command -v nvidia-container-runtime &> /dev/null; then
         success "NVIDIA container runtime installed successfully"
         nvidia-container-runtime --version
@@ -419,4 +419,3 @@ echo ""
 log "To reboot now, run:"
 log "  sudo reboot"
 echo ""
-

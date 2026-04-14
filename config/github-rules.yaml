@@ -238,18 +238,18 @@ cost_tracking:
   alerts:
     slack_channel: "#devops-costs"
     webhook_url: "https://hooks.slack.com/services/..."
-    
+
     thresholds:
       - level: critical
         percentage: 150
         action: "disable_workflows"
         notify: ["cto", "finance"]
-        
+
       - level: high
         percentage: 100
         action: "notify_team"
         notify: ["team-leads"]
-        
+
       - level: medium
         percentage: 80
         action: "create_issue"
@@ -277,12 +277,12 @@ enforcement:
     - condition: ">10 consecutive failures"
       action: "disable_workflow"
       notify: "workflow_owner"
-      
+
     - condition: ">90 days inactive"
       action: "delete_workflow"
       notify: "workflow_owner"
       grace_period_days: 7
-      
+
     - condition: "quota_exceeded"
       action: "skip_run"
       notify: "team_lead"
@@ -292,11 +292,11 @@ enforcement:
     - artifacts:
         retention_days: 30
         action: "auto_delete"
-        
+
     - logs:
         retention_days: 90
         action: "auto_delete"
-        
+
     - docker_images:
         untagged_retention_days: 7
         action: "auto_delete"
@@ -309,7 +309,7 @@ enforcement:
       - no_hardcoded_secrets
       - no_unapproved_apis
       - branch_protection_enabled
-    
+
     on_violation:
       action: "create_issue"
       label: "governance-violation"
@@ -332,7 +332,7 @@ audit:
     - approval_denied
 
   retention: 12_months
-  
+
   reporting:
     daily: "cost_summary.json"
     weekly: "governance_report.md"
@@ -343,17 +343,17 @@ monitoring:
   metrics:
     - name: workflow_executions
       dimensions: [repo, category, status]
-      
+
     - name: workflow_duration
       dimensions: [repo, category]
       buckets: [5, 15, 30, 60, 120, 360]
-      
+
     - name: api_calls
       dimensions: [endpoint, repo]
-      
+
     - name: cost_per_workflow
       dimensions: [category, repo]
-      
+
     - name: quota_utilization
       dimensions: [category, repo]
 
@@ -364,7 +364,7 @@ monitoring:
         - quota_utilization
         - failed_runs
         - workflow_duration_trends
-        
+
     - name: "Cost Control"
       panels:
         - spend_vs_budget
@@ -388,7 +388,7 @@ exemptions:
     - description: "Large batch processing for data migration"
       normally_violates: "workflow_quota"
       approved_until: "2026-05-14"
-      
+
     - description: "Heavy ML model training"
       normally_violates: "job_duration"
       approved_until: "2026-08-01"

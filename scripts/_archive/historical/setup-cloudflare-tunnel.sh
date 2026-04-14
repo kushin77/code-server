@@ -35,7 +35,7 @@ if command -v cloudflared &> /dev/null; then
     cloudflared --version
 else
     echo -e "${YELLOW}⬇️  Installing cloudflared...${NC}"
-    
+
     # Detect OS and install accordingly
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         # Linux installation
@@ -50,7 +50,7 @@ else
         echo "   https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/"
         exit 1
     fi
-    
+
     echo -e "${GREEN}✅ cloudflared installed${NC}"
 fi
 
@@ -63,7 +63,7 @@ else
     echo -e "${YELLOW}🔐 Authenticating with Cloudflare...${NC}"
     echo "   Opening browser for authentication..."
     cloudflared login
-    
+
     if [ -f "$CONFIG_DIR/cert.pem" ]; then
         echo -e "${GREEN}✅ Authentication successful${NC}"
     else
@@ -115,25 +115,25 @@ ingress:
   # Code-Server IDE
   - hostname: $DOMAIN
     service: http://localhost:$CODE_SERVER_PORT
-    
+
   # Terminal Proxy (optional, if implemented)
   - hostname: terminal.${DOMAIN#*.}
     service: http://localhost:$TERMINAL_PORT
-    
+
   # Catch-all (return 404 for unknown routes)
   - service: http_status:404
 
 # Logging configuration
 logger:
   level: info
-  
+
 # Connection settings
 originRequest:
   http2Origin: true
   connectTimeout: 30s
   tlsTimeout: 10s
   tcpKeepAlive: 30s
-  
+
 # Advanced: http access logging
 accessLogs:
   enabled: true
@@ -153,7 +153,7 @@ echo "==============================="
 echo "Getting tunnel credentials..."
 if [ -f "$CONFIG_DIR/${TUNNEL_ID}.json" ]; then
     echo -e "${GREEN}✅ Tunnel credentials file exists${NC}"
-    
+
     # Show CNAME record needed
     echo ""
     echo -e "${YELLOW}📋 Add to Cloudflare DNS:${NC}"
@@ -178,7 +178,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         echo -e "${GREEN}✅ Systemd service already configured${NC}"
     else
         echo -e "${YELLOW}Setting up systemd service...${NC}"
-        
+
         # Create systemd service file (requires sudo)
         sudo tee /etc/systemd/system/cloudflared.service > /dev/null << EOF
 [Unit]
@@ -195,7 +195,7 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 EOF
-        
+
         sudo systemctl daemon-reload
         sudo systemctl enable cloudflared.service
         echo -e "${GREEN}✅ Systemd service configured${NC}"

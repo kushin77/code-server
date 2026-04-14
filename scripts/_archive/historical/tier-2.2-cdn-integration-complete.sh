@@ -77,16 +77,16 @@ backup_caddyfile() {
 
 apply_cache_headers() {
     local caddyfile="${WORKSPACE_ROOT}/Caddyfile"
-    
+
     log "INFO" "Applying CloudFlare-compatible cache headers..."
-    
+
     # Create new Caddyfile with cache configuration
     cat > "${caddyfile}.tier2" << 'CADDY_EOF'
 {
     # Global configuration
     auto_https off
     default_sni localhost
-    
+
     # Timeouts
     timeouts {
         read_header 10s
@@ -122,7 +122,7 @@ localhost:3000 {
     # Enable compression
     encode gzip
     encode br
-    
+
     # Asset caching - immutable, 1 year
     @assets {
         path_regexp \.(?:css|js|png|jpg|jpeg|gif|svg|woff|woff2|ico)$
@@ -132,7 +132,7 @@ localhost:3000 {
         header Vary "Accept-Encoding"
         file_server
     }
-    
+
     # Extension API caching - 24 hours
     @extensions {
         path /api/extensions*
@@ -142,7 +142,7 @@ localhost:3000 {
         header CDN-Cache-Control "max-age=86400"
         reverse_proxy localhost:3001
     }
-    
+
     # API caching - 10 minutes
     @api {
         path /api*
@@ -152,13 +152,13 @@ localhost:3000 {
         header CDN-Cache-Control "max-age=600"
         reverse_proxy localhost:3001
     }
-    
+
     # Health check endpoint (no cache)
     handle /health {
         header Cache-Control "no-cache, no-store, must-revalidate"
         respond "OK" 200
     }
-    
+
     # HTML and default (5 minutes)
     header Cache-Control "public, max-age=300"
     header Vary "Accept-Encoding"
@@ -170,14 +170,14 @@ localhost:3000 {
 #     # Same configuration as above
 # }
 CADDY_EOF
-    
+
     # Backup original
     if [[ -f "$caddyfile" ]]; then
         local backup_file="${BACKUP_DIR}/Caddyfile.${TIMESTAMP}.bak"
         cp "$caddyfile" "$backup_file"
         log "INFO" "Backed up original: $backup_file"
     fi
-    
+
     # Move new config into place
     mv "${caddyfile}.tier2" "$caddyfile"
     log "INFO" "Cache headers applied to Caddyfile"
@@ -189,9 +189,9 @@ CADDY_EOF
 
 validate_caddyfile() {
     log "INFO" "Validating Caddyfile syntax..."
-    
+
     cd "${WORKSPACE_ROOT}"
-    
+
     if docker-compose run --rm caddy caddy validate --config /etc/caddy/Caddyfile 2>&1 | tee -a "${LOG_FILE}"; then
         log "INFO" "Caddyfile validation PASSED"
         return 0
@@ -203,9 +203,9 @@ validate_caddyfile() {
 
 reload_caddy() {
     log "INFO" "Reloading Caddy with new configuration..."
-    
+
     cd "${WORKSPACE_ROOT}"
-    
+
     if docker-compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile 2>&1 | tee -a "${LOG_FILE}"; then
         log "INFO" "Caddy reload SUCCESSFUL"
         sleep 2
@@ -218,20 +218,20 @@ reload_caddy() {
 
 verify_cache_headers() {
     log "INFO" "Verifying cache headers in responses..."
-    
+
     local test_cases=(
         "http://localhost:3000/assets/app.js:immutable"
         "http://localhost:3000/api/extensions/list:86400"
         "http://localhost:3000/api/user/profile:600"
         "http://localhost:3000/:300"
     )
-    
+
     for test in "${test_cases[@]}"; do
         local url="${test%%:*}"
         local expected="${test#*:}"
-        
+
         log "INFO" "Testing: $url (expecting: $expected)"
-        
+
         if curl -s -I "$url" | grep -i "cache-control"; then
             log "INFO" "✓ Cache header present for: $url"
         else
@@ -323,57 +323,57 @@ main() {
     log "INFO" "════════════════════════════════════════════════════════════════"
     log "INFO" "PHASE 2: CDN INTEGRATION (CloudFlare)"
     log "INFO" "════════════════════════════════════════════════════════════════"
-    
+
     # Check if already complete
     if [[ -f "${STATE_FILE}" ]]; then
         log "INFO" "Phase 2 already completed at: $(cat ${STATE_FILE})"
         return 0
     fi
-    
+
     # Check idempotency
     if check_cache_headers_applied; then
         log "INFO" "Cache headers already applied"
         date > "${STATE_FILE}"
         return 0
     fi
-    
+
     # Step 1: Backup
     log "INFO" "Step 1: Backing up Caddyfile..."
     backup_caddyfile
-    
+
     # Step 2: Apply cache headers
     log "INFO" "Step 2: Applying cache headers..."
     apply_cache_headers
-    
+
     # Step 3: Validate
     log "INFO" "Step 3: Validating Caddyfile..."
     if ! validate_caddyfile; then
         log "ERROR" "Caddyfile validation failed"
         return 1
     fi
-    
+
     # Step 4: Reload Caddy
     log "INFO" "Step 4: Reloading Caddy..."
     if ! reload_caddy; then
         log "ERROR" "Caddy reload failed"
         return 1
     fi
-    
+
     # Step 5: Verify headers
     log "INFO" "Step 5: Verifying cache headers..."
     verify_cache_headers
-    
+
     # Step 6: CloudFlare instructions
     log "INFO" "Step 6: CloudFlare configuration guide..."
     cloudflare_instructions
-    
+
     # Step 7: Mark complete
     date > "${STATE_FILE}"
-    
+
     # ========================================================================
     # SUMMARY
     # ========================================================================
-    
+
     cat << 'EOF' | tee -a "${LOG_FILE}"
 
 ════════════════════════════════════════════════════════════════════════════════
@@ -432,7 +432,7 @@ NEXT STEPS:
 ════════════════════════════════════════════════════════════════════════════════
 
 EOF
-    
+
     log "INFO" "Phase 2 (CDN Integration) COMPLETE"
     return 0
 }

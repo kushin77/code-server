@@ -1,7 +1,7 @@
 #!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 13 - TASK 1.4: SSH PROXY SETUP WITH AUDIT LOGGING
-# 
+#
 # Deploy SSH proxy service and validate audit logging
 # Idempotent: Safe to re-run multiple times
 # April 13, 2026 - Day 1 Execution
@@ -27,10 +27,10 @@ main() {
     log_info "================================"
     log_info "PHASE 13 - TASK 1.4: SSH PROXY SETUP"
     log_info "================================"
-    
+
     mkdir -p "$(dirname "$LOG_FILE")"
     touch "$LOG_FILE"
-    
+
     # Build SSH proxy image
     log_info "Building SSH proxy Docker image..."
     if docker build -f "$SCRIPT_DIR/Dockerfile.ssh-proxy" -t ssh-proxy:local . > /dev/null 2>&1; then
@@ -39,14 +39,14 @@ main() {
         log_error "Failed to build SSH proxy image"
         return 1
     fi
-    
+
     # Start SSH proxy container
     log_info "Starting SSH proxy container..."
     docker-compose up -d ssh-proxy > /dev/null 2>&1
-    
+
     # Wait for container to stabilize
     sleep 3
-    
+
     # Verify SSH proxy container
     if ! docker-compose ps ssh-proxy | grep -q "Up"; then
         log_error "SSH proxy container failed to start"
@@ -54,7 +54,7 @@ main() {
         return 1
     fi
     log_success "SSH proxy container running"
-    
+
     # Check health endpoint
     log_info "Testing SSH proxy health endpoint..."
     if curl -sf http://localhost:3222/health > /dev/null 2>&1; then
@@ -62,7 +62,7 @@ main() {
     else
         log_warn "Health endpoint not yet responding (container may still be initializing)"
     fi
-    
+
     # Verify audit logging setup
     log_info "Verifying audit logging..."
     if [ -f "$SCRIPT_DIR/config/audit-logging.conf" ]; then
@@ -71,7 +71,7 @@ main() {
         log_error "Audit configuration missing"
         return 1
     fi
-    
+
     # Check audit log volumes
     log_info "Checking audit log volumes..."
     local audit_log_volume
@@ -81,7 +81,7 @@ main() {
     else
         log_warn "Audit log volume not yet mounted"
     fi
-    
+
     log_success ""
     log_success "✓ SSH PROXY SETUP COMPLETE"
     log_success "SSH proxy listening on port 2222"

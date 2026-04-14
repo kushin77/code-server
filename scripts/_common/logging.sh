@@ -54,12 +54,12 @@ _level_name() {
 _colorize_level() {
     local level=$1
     local name=$2
-    
+
     if [ "$LOG_NO_COLOR" == "1" ]; then
         echo "$name"
         return
     fi
-    
+
     case "$level" in
         0) echo -e "${COLOR_GRAY}${name}${COLOR_RESET}" ;;      # DEBUG: gray
         1) echo -e "${COLOR_GREEN}${name}${COLOR_RESET}" ;;      # INFO: green

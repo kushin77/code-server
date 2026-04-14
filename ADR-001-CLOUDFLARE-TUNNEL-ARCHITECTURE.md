@@ -1,8 +1,8 @@
 # ADR-001: Lean Remote Developer Access System via Cloudflare Tunnel
 
-**Status:** ✅ APPROVED  
-**Date:** April 13, 2026  
-**Decision:** Cloudflare Tunnel + Restricted Terminal + Git Proxy  
+**Status:** ✅ APPROVED
+**Date:** April 13, 2026
+**Decision:** Cloudflare Tunnel + Restricted Terminal + Git Proxy
 **Impact:** Enables secure, low-latency remote developer access without IP exposure
 
 ---
@@ -35,7 +35,7 @@
 
 ### Layer 2: Access Control (Cloudflare Access + MFA)
 - Require email-based authentication
-- Enforce TOTP multi-factor authentication  
+- Enforce TOTP multi-factor authentication
 - Session timeout (4 hours default)
 - Log all access attempts
 
@@ -196,7 +196,7 @@
 - [ ] Read-only IDE access working (code visible, not downloadable)
 - [ ] Terminal restricted (no download/exfiltration commands)
 - [ ] Git push/pull working via proxy
-- [ ] SSH keys never exposed to developers  
+- [ ] SSH keys never exposed to developers
 - [ ] All actions logged with developer ID + timestamp
 - [ ] p99 latency < 300ms for developers in any timezone
 - [ ] Setup takes < 2 hours total
@@ -250,10 +250,10 @@
 
 ## Sign-Off
 
-**Architecture Lead:** ✅ Approved  
-**Security Lead:** ✅ Approved  
-**DevOps Lead:** ✅ Approved  
-**Cost Owner:** ✅ Approved  
+**Architecture Lead:** ✅ Approved
+**Security Lead:** ✅ Approved
+**DevOps Lead:** ✅ Approved
+**Cost Owner:** ✅ Approved
 
 ---
 

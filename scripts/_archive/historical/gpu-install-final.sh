@@ -2,7 +2,7 @@
 
 ###############################################################################
 # GPU DRIVER UPGRADE - SUDOERS-FIRST APPROACH
-# 
+#
 # Step 1: Add akushnir to sudoers for GPU commands (requires ONE sudo)
 # Step 2: Execute driver upgrade (now passwordless)
 ###############################################################################
@@ -29,4 +29,3 @@ echo "[*] Executing GPU driver upgrade (now passwordless)..."
 echo ""
 
 sudo bash /tmp/gpu-driver-upgrade-direct.sh
-

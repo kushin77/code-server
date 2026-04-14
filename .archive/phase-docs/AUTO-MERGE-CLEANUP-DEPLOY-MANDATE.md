@@ -1,7 +1,7 @@
 # Automatic Merge → Cleanup → Redeploy Mandate
 
-**EFFECTIVE DATE**: April 14, 2026  
-**REQUIREMENT LEVEL**: Mandatory for all work  
+**EFFECTIVE DATE**: April 14, 2026
+**REQUIREMENT LEVEL**: Mandatory for all work
 **APPLIES TO**: All issues, tasks, epics, pull requests, and merges
 
 ---
@@ -24,7 +24,7 @@
 **All work that reaches production must follow the complete pipeline or it is not "done".**
 
 ```
-Issue Created 
+Issue Created
   ↓
 Branch created from main
   ↓
@@ -371,8 +371,8 @@ Every merge creates a permanent record:
 
 ## 🔄 Versioning & Updates
 
-**Current Policy Version**: 1.0  
-**Last Updated**: April 14, 2026  
+**Current Policy Version**: 1.0
+**Last Updated**: April 14, 2026
 **Next Review**: May 14, 2026
 
 Changes to this policy require:

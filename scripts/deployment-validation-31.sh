@@ -55,7 +55,7 @@ test_docker_compose() {
 
 test_services_running() {
     services=("code-server" "ollama" "cadvisor" "prometheus")
-    
+
     for service in "${services[@]}"; do
         if docker ps --filter "name=$service" --format "{{.Names}}" | grep -q "$service"; then
             log_pass "Service '$service' is running"
@@ -121,7 +121,7 @@ test_cudnn_library() {
         "/usr/local/cuda/lib64/libcudnn.so"
         "/opt/cudnn/lib64/libcudnn.so"
     )
-    
+
     found=0
     for path in "${cudnn_paths[@]}"; do
         if [ -f "$path" ]; then
@@ -130,7 +130,7 @@ test_cudnn_library() {
             break
         fi
     done
-    
+
     if [ $found -eq 0 ]; then
         log_fail "cuDNN library not found in standard locations"
     fi
@@ -157,7 +157,7 @@ test_docker_gpu_access() {
 
 test_nas_mounts() {
     mount_points=("/mnt/nas-primary" "/mnt/nas-backup")
-    
+
     for mount in "${mount_points[@]}"; do
         if mountpoint -q "$mount" 2>/dev/null; then
             log_pass "NAS mount point is healthy: $mount"
@@ -169,7 +169,7 @@ test_nas_mounts() {
 
 test_nas_writable() {
     test_file="/mnt/nas-primary/.deployment-test-$(date +%s)"
-    
+
     if touch "$test_file" 2>/dev/null && rm "$test_file"; then
         log_pass "NAS mount point is writable"
     else
@@ -182,7 +182,7 @@ test_nas_capacity() {
     if mountpoint -q "/mnt/nas-primary"; then
         available=$(df "/mnt/nas-primary" | tail -1 | awk '{print $4}')
         available_gb=$((available / 1024 / 1024))
-        
+
         if [ "$available_gb" -gt 500 ]; then
             log_pass "NAS has sufficient capacity: ${available_gb}GB free"
         else
@@ -272,7 +272,7 @@ test_environment_variables() {
         "OLLAMA_NUM_GPU"
         "CODE_SERVER_HOST"
     )
-    
+
     for var in "${required_vars[@]}"; do
         if [ -n "${!var}" ]; then
             log_pass "Environment variable set: $var"
@@ -338,7 +338,7 @@ main() {
     echo "Deployment Validation Test Suite - 192.168.168.31"
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
-    
+
     # Service Tests
     echo -e "${BLUE}Service Health Checks${NC}"
     test_docker_running
@@ -348,7 +348,7 @@ main() {
     test_ollama_responsive
     test_prometheus_running
     echo ""
-    
+
     # GPU Tests
     echo -e "${BLUE}GPU Validation${NC}"
     test_gpu_available
@@ -357,7 +357,7 @@ main() {
     test_gpu_memory
     test_docker_gpu_access
     echo ""
-    
+
     # NAS Tests
     echo -e "${BLUE}NAS/Storage Validation${NC}"
     test_nas_mounts
@@ -365,7 +365,7 @@ main() {
     test_nas_capacity
     test_nas_latency
     echo ""
-    
+
     # Network Tests
     echo -e "${BLUE}Network Validation${NC}"
     test_dns_resolution
@@ -373,30 +373,30 @@ main() {
     test_ssh_access
     test_firewall_rules
     echo ""
-    
+
     # Image Tests
     echo -e "${BLUE}Docker Image Validation${NC}"
     test_code_server_image
     test_ollama_image
     echo ""
-    
+
     # Configuration Tests
     echo -e "${BLUE}Configuration Validation${NC}"
     test_environment_variables
     echo ""
-    
+
     # Security Tests
     echo -e "${BLUE}Security Validation${NC}"
     test_ssh_keyauth_only
     test_no_hardcoded_secrets
     echo ""
-    
+
     # Performance Tests
     echo -e "${BLUE}Performance Baseline${NC}"
     test_cpu_performance
     test_memory_performance
     echo ""
-    
+
     # Summary
     echo "═══════════════════════════════════════════════════════════════"
     echo "Test Summary:"
@@ -404,7 +404,7 @@ main() {
     echo "  ${RED}Failed:${NC}  $TESTS_FAILED"
     echo "  ${YELLOW}Skipped:${NC} $TESTS_SKIPPED"
     echo "═══════════════════════════════════════════════════════════════"
-    
+
     if [ $TESTS_FAILED -gt 0 ]; then
         echo -e "${RED}VALIDATION FAILED${NC}"
         exit 1

@@ -1,16 +1,16 @@
 /**
  * Prometheus Metrics Exporter for Tier 2 Performance Monitoring
- * 
+ *
  * Exports metrics in Prometheus text format
  * Integrates with batching service, circuit breaker, and batch endpoint
- * 
+ *
  * Metrics:
  * - tier2_batch_requests_total (counter)
  * - tier2_batch_latency_ms (histogram)
  * - tier2_circuit_breaker_state (gauge)
  * - tier2_circuit_breaker_failures (counter)
  * - tier2_redis_hit_rate (gauge)
- * 
+ *
  * Endpoint: GET /metrics
  */
 
@@ -18,17 +18,17 @@ class MetricsExporter {
     constructor(options = {}) {
         this.namespace = options.namespace || 'tier2';
         this.prefix = `${this.namespace}_`;
-        
+
         this.counters = {};
         this.gauges = {};
         this.histograms = {};
-        
+
         this.startTime = Date.now();
         this.createdAt = new Date().toISOString();
-        
+
         this._initializeMetrics();
     }
-    
+
     /**
      * Initialize default metrics
      */
@@ -44,7 +44,7 @@ class MetricsExporter {
             [`${this.prefix}redis_hits`]: 0,
             [`${this.prefix}redis_misses`]: 0
         };
-        
+
         // Gauges
         this.gauges = {
             [`${this.prefix}batch_queue_size`]: 0,
@@ -53,7 +53,7 @@ class MetricsExporter {
             [`${this.prefix}redis_memory_bytes`]: 0,
             [`${this.prefix}uptime_seconds`]: 0
         };
-        
+
         // Histograms (bucketed)
         this.histograms = {
             [`${this.prefix}batch_latency_ms`]: {
@@ -66,7 +66,7 @@ class MetricsExporter {
             }
         };
     }
-    
+
     /**
      * Increment counter
      */
@@ -77,7 +77,7 @@ class MetricsExporter {
         }
         this.counters[fullName] += value;
     }
-    
+
     /**
      * Set gauge value
      */
@@ -85,7 +85,7 @@ class MetricsExporter {
         const fullName = this._formatMetricName(name);
         this.gauges[fullName] = value;
     }
-    
+
     /**
      * Record histogram observation
      */
@@ -99,7 +99,7 @@ class MetricsExporter {
             }
         }
     }
-    
+
     /**
      * Format metric name with prefix
      */
@@ -109,61 +109,61 @@ class MetricsExporter {
         }
         return `${this.prefix}${name}`;
     }
-    
+
     /**
      * Export metrics in Prometheus text format
      */
     export() {
         const lines = [];
-        
+
         // HELP sections
         lines.push('# HELP tier2_batch_requests_total Total batch requests processed');
         lines.push('# TYPE tier2_batch_requests_total counter');
-        
+
         // Counters
         Object.entries(this.counters).forEach(([name, value]) => {
             lines.push(`${name} ${value}`);
         });
-        
+
         lines.push('');
         lines.push('# HELP tier2_batch_queue_size Current size of batch queue');
         lines.push('# TYPE tier2_batch_queue_size gauge');
-        
+
         // Gauges
         Object.entries(this.gauges).forEach(([name, value]) => {
             lines.push(`${name} ${value}`);
         });
-        
+
         lines.push('');
         lines.push('# HELP tier2_batch_latency_ms Batch processing latency');
         lines.push('# TYPE tier2_batch_latency_ms histogram');
-        
+
         // Histograms
         Object.entries(this.histograms).forEach(([name, hist]) => {
             const buckets = hist.buckets || [];
             const observations = hist.observations || [];
-            
+
             // Calculate bucket counts
             buckets.forEach(bucket => {
                 const count = observations.filter(o => o <= bucket).length;
                 lines.push(`${name}_bucket{le="${bucket}"} ${count}`);
             });
-            
+
             lines.push(`${name}_bucket{le="+Inf"} ${observations.length}`);
             lines.push(`${name}_sum ${observations.reduce((a, b) => a + b, 0)}`);
             lines.push(`${name}_count ${observations.length}`);
         });
-        
+
         // System metrics
         lines.push('');
         lines.push('# HELP tier2_uptime_seconds Uptime in seconds');
         lines.push('# TYPE tier2_uptime_seconds gauge');
         const uptime = Math.floor((Date.now() - this.startTime) / 1000);
         lines.push(`${this.prefix}uptime_seconds ${uptime}`);
-        
+
         return lines.join('\n') + '\n';
     }
-    
+
     /**
      * Export as JSON (for debugging)
      */
@@ -180,7 +180,7 @@ class MetricsExporter {
                     sum: hist.observations.reduce((a, b) => a + b, 0),
                     min: hist.observations.length > 0 ? Math.min(...hist.observations) : 0,
                     max: hist.observations.length > 0 ? Math.max(...hist.observations) : 0,
-                    avg: hist.observations.length > 0 
+                    avg: hist.observations.length > 0
                         ? Math.round(hist.observations.reduce((a, b) => a + b, 0) / hist.observations.length)
                         : 0
                 };

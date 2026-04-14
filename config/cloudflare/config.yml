@@ -29,7 +29,7 @@ ingress:
       http2Origin: true
       connectTimeout: 30s
       tlsTimeout: 10s
-  
+
   # Alias domain (if configured)
   - hostname: code-server.kushnir.cloud
     service: http://caddy:80
@@ -37,10 +37,10 @@ ingress:
       http2Origin: true
       connectTimeout: 30s
       tlsTimeout: 10s
-  
+
   # Root domain fallback
   - hostname: kushnir.cloud
     service: http://caddy:80
-  
+
   # Catch-all 404
   - service: http_status:404

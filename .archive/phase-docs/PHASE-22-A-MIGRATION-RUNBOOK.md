@@ -1,9 +1,9 @@
 # PHASE-22-A-MIGRATION-RUNBOOK.md
 # Phase 22-A: Docker Compose → Kubernetes Migration Runbook
 
-**Effective Date**: April 14, 2026  
-**Status**: DRAFT - Ready for Phase 22-A Implementation  
-**Audience**: DevOps, SRE, Platform Engineers  
+**Effective Date**: April 14, 2026
+**Status**: DRAFT - Ready for Phase 22-A Implementation
+**Audience**: DevOps, SRE, Platform Engineers
 **Severity**: P1 (Production Cutover)
 
 ---
@@ -575,7 +575,7 @@ kubectl port-forward -n monitoring grafana-0 3000:3000
 
 ### 6.1 Blue-Green Deployment Setup
 
-**Timeline**: 2 hours  
+**Timeline**: 2 hours
 **Goal**: Gradually shift traffic from Docker Compose (Blue) to Kubernetes (Green)
 
 ```bash
@@ -839,6 +839,6 @@ After successful migration:
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: April 14, 2026  
+**Document Version**: 1.0
+**Last Updated**: April 14, 2026
 **Next Review**: May 14, 2026

@@ -80,13 +80,13 @@ invoke_github_api() {
     local endpoint="$2"
     local data="${3:-}"
     local raw="${4:-false}"
-    
+
     local gh_args=("api" "-X" "$method" "$endpoint")
-    
+
     if [[ -n "$data" ]]; then
         gh_args+=("-d" "$data")
     fi
-    
+
     if [[ "$raw" == "true" ]]; then
         gh "${gh_args[@]}" --raw
     else
@@ -101,7 +101,7 @@ invoke_github_api() {
 prompt_yn() {
     local prompt="$1"
     local response
-    
+
     while true; do
         read -p "$prompt (y/n): " response
         case "$response" in
@@ -136,7 +136,7 @@ require_command() {
 get_pr_status() {
     local pr_number="$1"
     local repo="${2:-kushin77/code-server}"
-    
+
     gh pr view "$pr_number" --repo "$repo" --json mergeStateStatus,state,statusCheckRollup \
         --jq '{state: .state, mergeState: .mergeStateStatus, checks: .statusCheckRollup}'
 }
@@ -144,7 +144,7 @@ get_pr_status() {
 get_pr_check_status() {
     local pr_number="$1"
     local repo="${2:-kushin77/code-server}"
-    
+
     gh pr checks "$pr_number" --repo "$repo"
 }
 
@@ -152,7 +152,7 @@ merge_pr() {
     local pr_number="$1"
     local repo="${2:-kushin77/code-server}"
     local method="${3:-merge}"
-    
+
     gh pr merge "$pr_number" --repo "$repo" --"$method"
 }
 
@@ -164,7 +164,7 @@ get_branch_protection() {
     local owner="$1"
     local repo="$2"
     local branch="${3:-main}"
-    
+
     gh api repos/"$owner"/"$repo"/branches/"$branch"/protection --jq '.'
 }
 
@@ -173,7 +173,7 @@ update_branch_protection() {
     local repo="$2"
     local branch="${3:-main}"
     local protection_json="$4"
-    
+
     gh api -X PUT repos/"$owner"/"$repo"/branches/"$branch"/protection -d "$protection_json"
 }
 
@@ -201,7 +201,7 @@ wait_for_service_healthy() {
     local service="$1"
     local timeout="${2:-180}"  # seconds
     local check_interval="${3:-5}"
-    
+
     local elapsed=0
     while (( elapsed < timeout )); do
         if docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}" "$service" 2>/dev/null | grep -q "healthy"; then
@@ -211,7 +211,7 @@ wait_for_service_healthy() {
         sleep "$check_interval"
         elapsed=$((elapsed + check_interval))
     done
-    
+
     write_error "Timeout waiting for service $service to be healthy"
     return 1
 }

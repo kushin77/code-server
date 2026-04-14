@@ -27,7 +27,7 @@ test_result() {
   local test_name=$1
   local status=$2
   local details=${3:-""}
-  
+
   if [ "$status" = "PASS" ]; then
     echo -e "${GREEN}✅ PASS${NC}: $test_name"
     ((PASSED++))

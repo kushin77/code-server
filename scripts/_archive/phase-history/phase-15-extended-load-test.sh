@@ -64,16 +64,16 @@ run_load_test_300() {
             (
                 while [ $(date +%s) -lt $end_time ]; do
                     local req_start=$(date +%s%N)
-                    
+
                     if http_response=$(curl -s -w "\n%{http_code}" -o /dev/null "$TARGET_URL" 2>&1); then
                         local req_end=$(date +%s%N)
                         local req_time=$(( (req_end - req_start) / 1000000 ))
-                        
+
                         if [ "$http_response" == "200" ] || [ "$http_response" == "302" ]; then
                             echo "${req_time}"
                         fi
                     fi
-                    
+
                     sleep 0.1
                 done
             ) &
@@ -113,21 +113,21 @@ run_load_test_1000() {
 
     for batch in $(seq 1 $batches); do
         log_info "Starting batch $batch of $batches..."
-        
+
         {
             for i in $(seq 1 $batch_size); do
                 (
                     request_count=0
                     while [ $(date +%s) -lt $end_time ] && [ $request_count -lt 10 ]; do
                         local req_start=$(date +%s%N)
-                        
+
                         if curl -s -f "$TARGET_URL" > /dev/null 2>&1; then
                             local req_end=$(date +%s%N)
                             local req_time=$(( (req_end - req_start) / 1000000 ))
                             echo "${req_time}"
                             request_count=$((request_count + 1))
                         fi
-                        
+
                         sleep 0.05
                     done
                 ) &
@@ -181,19 +181,19 @@ run_sustained_load_test() {
     while [ $(date +%s) -lt $end_time ]; do
         local elapsed=$(($(date +%s) - start_time))
         local hours=$((elapsed / 3600))
-        
+
         log_info "Checkpoint: ${hours}h elapsed - System stable"
-        
+
         # Log system metrics
         if command -v free &> /dev/null; then
             local mem_usage=$(free | awk '/^Mem:/ {printf "%.1f%%", $3/$2 * 100}')
             log_info "  Memory usage: ${mem_usage}"
         fi
-        
+
         if command -v uptime &> /dev/null; then
             log_info "  Load average: $(uptime | awk -F'load average:' '{print $2}')"
         fi
-        
+
         sleep $checkpoint_interval
     done
 
@@ -277,7 +277,7 @@ main() {
     # Run load tests
     run_load_test_300 || { log_error "Level 1 (300 users) failed"; return 1; }
     echo ""
-    
+
     run_load_test_1000 || { log_error "Level 2 (1000 users) failed"; return 1; }
     echo ""
 

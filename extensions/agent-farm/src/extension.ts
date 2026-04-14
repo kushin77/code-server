@@ -28,7 +28,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       vscode.window.showInformationMessage('Agent Farm: Analyzing...');
-      
+
       try {
         const codeContext: CodeContext = {
           uri: editor.document.uri,
@@ -73,7 +73,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       vscode.window.showInformationMessage('Analyzing file...');
-      
+
       try {
         const codeContext: CodeContext = {
           uri: editor.document.uri,
@@ -111,11 +111,11 @@ function showResults(results: AgentOutput[]) {
 
 function generateResultsHTML(results: AgentOutput[]): string {
   let html = '<html><body><h1>Agent Farm Results</h1>';
-  
+
   for (const result of results) {
     html += `<div><h2>${result.agentName}</h2>`;
     html += `<p>${result.summary}</p>`;
-    
+
     if (result.recommendations && result.recommendations.length > 0) {
       html += '<ul>';
       for (const rec of result.recommendations) {
@@ -123,10 +123,10 @@ function generateResultsHTML(results: AgentOutput[]): string {
       }
       html += '</ul>';
     }
-    
+
     html += '</div>';
   }
-  
+
   html += '</body></html>';
   return html;
 }

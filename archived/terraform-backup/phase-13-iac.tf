@@ -1,6 +1,6 @@
 # ════════════════════════════════════════════════════════════════════════════
 # PHASE 13 INFRASTRUCTURE AS CODE
-# 
+#
 # Idempotent, immutable configurations for Phase 13 deployment
 # April 13, 2026 - Day 1 Execution
 # ════════════════════════════════════════════════════════════════════════════

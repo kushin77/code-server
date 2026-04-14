@@ -1,10 +1,10 @@
 # Phase 18: Security Hardening & SOC2 Compliance
 
-**Status:** IN PROGRESS  
-**Effort:** 14 hours (split into 18-A and 18-B)  
-**Target Completion:** April 25, 2026  
-**Dependencies:** Phase 17 (Multi-Region) ✅ COMPLETED  
-**Owner:** Security & Compliance Team  
+**Status:** IN PROGRESS
+**Effort:** 14 hours (split into 18-A and 18-B)
+**Target Completion:** April 25, 2026
+**Dependencies:** Phase 17 (Multi-Region) ✅ COMPLETED
+**Owner:** Security & Compliance Team
 
 ---
 
@@ -106,7 +106,7 @@ EOF
 
 resource "aws_iam_policy" "require_mfa" {
   name = "require-mfa-for-all"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -129,11 +129,11 @@ resource "cloudflare_access_application" "code_server" {
   zone_id = cloudflare_zone.main.zone_id
   name = "Code Server IDE"
   domain = "ide.dev.yourdomain.com"
-  
+
   # Require MFA
   allowed_idps = ["saml"]
   session_duration = "24h"
-  
+
   # MFA policy
   policies = [
     {
@@ -233,19 +233,19 @@ async def rate_limit_by_identity(request: Request, call_next):
     # Extract developer identity from JWT
     token = request.headers.get("Authorization", "").split(" ")[-1]
     developer_id = decode_jwt(token).get("sub", "anonymous")
-    
+
     # Get rate limit for this developer (from Vault or database)
     limit_key = f"ratelimit:{developer_id}"
     current_count = redis_client.get(limit_key) or 0
     max_requests = 1000  # per minute
-    
+
     if int(current_count) >= max_requests:
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
-    
+
     # Increment counter
     redis_client.incr(limit_key)
     redis_client.expire(limit_key, 60)  # Reset every minute
-    
+
     response = await call_next(request)
     response.headers["X-RateLimit-Limit"] = str(max_requests)
     response.headers["X-RateLimit-Remaining"] = str(max_requests - int(current_count) - 1)
@@ -278,7 +278,7 @@ class AuditLogger:
             backupCount=365  # 1 year
         )
         self.logger.addHandler(handler)
-    
+
     def log_event(self, user, action, resource, result, details=""):
         event = {
             "timestamp": datetime.utcnow().isoformat(),
@@ -291,14 +291,14 @@ class AuditLogger:
             "user_agent": request.user_agent
         }
         self.logger.info(json.dumps(event))
-    
+
     def log_access(self, user, resource, permission):
         self.log_event(user, "ACCESS", resource, "ATTEMPT", f"Perm: {permission}")
-    
+
     def log_modification(self, user, resource, before, after):
-        self.log_event(user, "MODIFY", resource, "SUCCESS", 
+        self.log_event(user, "MODIFY", resource, "SUCCESS",
                       f"Before: {before}, After: {after}")
-    
+
     def log_failed_auth(self, user, reason):
         self.log_event(user, "AUTH_FAILED", "system", "FAILED", reason)
 
@@ -419,7 +419,7 @@ aws s3api head-object \
 resource "aws_rds_cluster" "code_server" {
   storage_encrypted = true
   kms_key_id = aws_kms_key.rds.arn
-  
+
   tags = {
     data-classification = "internal-confidential"
     pii-data = "true"
@@ -438,7 +438,7 @@ resource "aws_lb_listener" "https" {
   port = "443"
   protocol = "HTTPS"
   ssl_policy = "ELBSecurityPolicy-TLS-1-3-2021-06"  # TLS 1.3 only
-  
+
   certificate_arn = aws_acm_certificate.code_server.arn
 }
 
@@ -495,7 +495,7 @@ ALTER TABLE users ADD COLUMN email_encrypted TEXT;
 
 -- Encrypt existing data
 UPDATE users SET email_encrypted = pgp_pub_encrypt(
-  email, 
+  email,
   dearmor('-----BEGIN PGP PUBLIC KEY BLOCK-----
 ...key...
 -----END PGP PUBLIC KEY BLOCK-----')
@@ -519,17 +519,17 @@ resource "servicenow_change_request" "infrastructure_change" {
   priority = "medium"
   risk = "high"
   category = "Application"
-  
+
   # Approval rules
   approvers = [
     "security-lead@company.com",
     "ops-lead@company.com"
   ]
-  
+
   # Timeline
   scheduled_start = "2026-04-24T00:00:00Z"
   scheduled_end = "2026-04-25T18:00:00Z"
-  
+
   implementation_plan = <<-EOF
     1. Deploy Vault cluster
     2. Enable mTLS between services
@@ -538,7 +538,7 @@ resource "servicenow_change_request" "infrastructure_change" {
     5. Deploy DLP scanner
     6. Test failover scenarios
   EOF
-  
+
   rollback_plan = <<-EOF
     If any component fails:
     1. Revert to previous Terraform state
@@ -550,7 +550,7 @@ resource "servicenow_change_request" "infrastructure_change" {
 # 2. Deployment automation (only after approval)
 resource "null_resource" "deploy_after_approval" {
   depends_on = [servicenow_change_request.infrastructure_change]
-  
+
   provisioner "local-exec" {
     command = "terraform apply -auto-approve"
     environment = {

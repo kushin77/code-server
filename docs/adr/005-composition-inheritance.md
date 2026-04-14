@@ -1,9 +1,9 @@
 # ADR-005: Composition Inheritance for Configuration Management
 
-**Status**: Accepted  
-**Date**: April 14, 2026  
-**Supersedes**: N/A  
-**Related To**: ADR-004 (Consolidation Patterns)  
+**Status**: Accepted
+**Date**: April 14, 2026
+**Supersedes**: N/A
+**Related To**: ADR-004 (Consolidation Patterns)
 
 ## Context
 
@@ -141,11 +141,11 @@ receivers:
   - name: default
     slack_configs:
       - api_url: ${SLACK_DEFAULT_URL}
-  
+
   - name: critical-team
     pagerduty_configs:
       - service_key: ${PAGERDUTY_KEY}
-      
+
   - name: database-team
     email_configs:
       - to: database@company.com
@@ -332,16 +332,16 @@ module "code_server_dev" {
 ## Consequences
 
 ### Positive
-✅ **Clear invariants**: Base is immutable, variants are deltas  
-✅ **Safe updates**: Change base, all variants inherit automatically  
-✅ **Debuggable**: `docker-compose config`, `caddyfile fmt` show merged result  
-✅ **Familiar patterns**: Compose/override is standard Docker, Terraform pattern  
-✅ **Version control friendly**: Variants are small diffs, base is reference  
+✅ **Clear invariants**: Base is immutable, variants are deltas
+✅ **Safe updates**: Change base, all variants inherit automatically
+✅ **Debuggable**: `docker-compose config`, `caddyfile fmt` show merged result
+✅ **Familiar patterns**: Compose/override is standard Docker, Terraform pattern
+✅ **Version control friendly**: Variants are small diffs, base is reference
 
 ### Considerations
-⚠️ **Learning curve**: Developers must understand composition semantics  
-⚠️ **Debugging complexity**: May need to expand includes to understand conflicts  
-⚠️ **File ordering**: Must maintain consistent order across all scripts  
+⚠️ **Learning curve**: Developers must understand composition semantics
+⚠️ **Debugging complexity**: May need to expand includes to understand conflicts
+⚠️ **File ordering**: Must maintain consistent order across all scripts
 
 ### Mitigations
 - **Documentation**: This ADR + CONTRIBUTING.md with examples
@@ -378,5 +378,5 @@ module "code_server_dev" {
 
 ---
 
-**Status**: Accepted (April 14, 2026)  
+**Status**: Accepted (April 14, 2026)
 **Last Updated**: April 14, 2026

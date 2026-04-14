@@ -168,8 +168,8 @@ ssh akushnir@192.168.168.31 'bash ~/code-server-phase13/scripts/phase-14-rollbac
 | Operations Lead | ops-lead | infrastructure-lead |
 | Security Lead | security-lead | devops-lead |
 
-**Slack Channel**: #phase-13-execution  
-**Status Page**: https://internal-status.code-server.internal  
+**Slack Channel**: #phase-13-execution
+**Status Page**: https://internal-status.code-server.internal
 **On-Call Rotation**: https://oncall.code-server.internal
 
 ---
@@ -193,8 +193,8 @@ ssh akushnir@192.168.168.31 'bash ~/code-server-phase13/scripts/phase-14-rollbac
 
 **Status**: ✅ **GO FOR LAUNCH - APRIL 14 09:00 UTC**
 
-**Authorizing Lead**: Engineering/DevOps  
-**Date**: April 13, 2026  
+**Authorizing Lead**: Engineering/DevOps
+**Date**: April 13, 2026
 **Time**: 23:45 UTC
 
 Phase 13 Day 2 24-hour sustained load test is **APPROVED** to proceed.

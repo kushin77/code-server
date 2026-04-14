@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # P0-P3 Operations Stack Master Orchestrator
-# 
+#
 # Purpose: Execute all phase progressions and operational validations
 # Status: Quick wins (P0-P3 issues) orchestrator
 # Operations: Phase 13 load test → Phase 14 canary → Phase 15+ progressive
@@ -49,10 +49,10 @@ NC='\033[0m'
 # Initialize logging
 init_logging() {
     mkdir -p "$LOG_DIR" "$REPORT_DIR"
-    
+
     readonly MASTER_LOG="$LOG_DIR/p0-p3-operations-master.log"
     exec 2>> "$MASTER_LOG"
-    
+
     echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') | Starting P0-P3 Operations Master" | tee -a "$MASTER_LOG"
 }
 
@@ -62,7 +62,7 @@ log() {
     shift
     local msg="$*"
     local timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-    
+
     local color=""
     case "$level" in
         INFO)  color="$BLUE" ;;
@@ -70,7 +70,7 @@ log() {
         WARN)  color="$YELLOW" ;;
         ERROR) color="$RED" ;;
     esac
-    
+
     echo -e "${color}[${level}]${NC} ${timestamp} | ${msg}" | tee -a "$MASTER_LOG"
 }
 
@@ -78,36 +78,36 @@ log() {
 execute_phase() {
     local phase="$1"
     local tier="${2:-1}"
-    
+
     log "INFO" "Executing Phase $phase (Tier $tier)..."
-    
+
     # Check dependencies
     if [[ -n "${PHASE_DEPENDENCIES[$phase]:-}" ]]; then
         local depends_on="${PHASE_DEPENDENCIES[$phase]}"
         log "INFO" "Phase $phase depends on Phase $depends_on"
-        
+
         # Verify Phase dependency completed
         if [[ ! -f "$REPORT_DIR/phase-${depends_on}-completion.txt" ]]; then
             log "ERROR" "Phase $depends_on not completed yet"
             return 1
         fi
     fi
-    
+
     # Find and execute phase script
     local phase_script="$PHASES_DIR/scripts/phase-${phase}-tier-${tier}-executor.sh"
-    
+
     if [[ ! -f "$phase_script" ]]; then
         phase_script="$PHASES_DIR/scripts/phase-${phase}-master-executor.sh"
     fi
-    
+
     if [[ ! -f "$phase_script" ]]; then
         log "ERROR" "Phase script not found: $phase_script"
         return 1
     fi
-    
+
     # Execute with timeout
     local timeout_duration="${PHASE_TIMEOUT:-3600}"
-    
+
     if timeout "$timeout_duration" bash "$phase_script" > "$LOG_DIR/phase-${phase}-tier-${tier}.log" 2>&1; then
         # Create completion marker
         echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" > "$REPORT_DIR/phase-${phase}-completion.txt"
@@ -123,11 +123,11 @@ execute_phase() {
 # Validate phase results
 validate_phase() {
     local phase="$1"
-    
+
     log "INFO" "Validating Phase $phase results..."
-    
+
     local report_file="$REPORT_DIR/phase-${phase}-validation-report.txt"
-    
+
     # Run validation checks
     case "$phase" in
         13)
@@ -144,7 +144,7 @@ validate_phase() {
             return 1
             ;;
     esac
-    
+
     # Check if validation passed
     if grep -q "VALIDATION_RESULT: PASS" "$report_file"; then
         log "OK" "Phase $phase validation passed"
@@ -168,20 +168,20 @@ TARGET: 300 → 1000 → 3000 concurrent users over 24 hours
 
 METRICS:
 EOF
-    
+
     # Check SLO targets
     local p99_target=100
     local error_target=0.1
     local uptime_target=99.9
-    
+
     local p99_actual=$(curl -s http://monitoring:3000/api/metrics/p99 | jq '.value // 0')
     local error_actual=$(curl -s http://monitoring:3000/api/metrics/error_rate | jq '.value // 0')
     local uptime_actual=$(curl -s http://monitoring:3000/api/metrics/uptime | jq '.value // 0')
-    
+
     echo "  p99 latency:    ${p99_actual}ms (target: ${p99_target}ms) $(test $p99_actual -le $p99_target && echo '✓' || echo '✗')"
     echo "  error rate:     ${error_actual}% (target: <${error_target}%) $(test ${error_actual%.*} -le ${error_target%.*} && echo '✓' || echo '✗')"
     echo "  uptime:         ${uptime_actual}% (target: ${uptime_target}%) $(test ${uptime_actual%.*} -ge ${uptime_target%.*} && echo '✓' || echo '✗')"
-    
+
     # Determine pass/fail
     if [[ $(echo "$p99_actual <= $p99_target" | bc) -eq 1 ]] && \
        [[ $(echo "$error_actual < $error_target" | bc) -eq 1 ]] && \
@@ -206,14 +206,14 @@ STAGES:
 
 CANARY METRICS:
 EOF
-    
+
     # Check canary health
     local canary_error_rate=$(curl -s http://monitoring:3000/api/canary/error_rate | jq '.value // 0')
     local canary_latency=$(curl -s http://monitoring:3000/api/canary/p99 | jq '.value // 0')
-    
+
     echo "  Canary error rate:  ${canary_error_rate}% (must be <0.5%)"
     echo "  Canary p99:         ${canary_latency}ms (must be <120ms)"
-    
+
     # Determine pass/fail
     if [[ $(echo "$canary_error_rate < 0.5" | bc) -eq 1 ]] && \
        [[ $(echo "$canary_latency < 120" | bc) -eq 1 ]]; then
@@ -234,14 +234,14 @@ PHASE 15 PERFORMANCE OPTIMIZATION VALIDATION
 
 OPTIMIZATION TARGETS:
 EOF
-    
+
     # Check performance improvements
     local cache_hit_rate=$(curl -s http://monitoring:3000/api/cache/hit_rate | jq '.value // 0')
     local db_query_time=$(curl -s http://monitoring:3000/api/db/avg_query_time | jq '.value // 0')
-    
+
     echo "  Cache hit rate:     ${cache_hit_rate}% (target: >80%)"
     echo "  Avg DB query time:  ${db_query_time}ms (target: <10ms)"
-    
+
     # Determine pass/fail
     if [[ $(echo "$cache_hit_rate > 80" | bc) -eq 1 ]] && \
        [[ $(echo "$db_query_time < 10" | bc) -eq 1 ]]; then
@@ -256,9 +256,9 @@ EOF
 # Generate operations report
 generate_report() {
     local report_file="$REPORT_DIR/P0-P3-OPERATIONS-STATUS-$(date +%Y%m%d-%H%M%S).md"
-    
+
     log "INFO" "Generating operations report..."
-    
+
     cat > "$report_file" << 'EOF'
 # P0-P3 Operations Stack Report
 
@@ -273,7 +273,7 @@ Quick Wins execution delivering 4 high-priority issues:
 ## Timeline
 
 EOF
-    
+
     # Timeline entries
     for phase_num in 13 14 15; do
         if [[ -f "$REPORT_DIR/phase-${phase_num}-completion.txt" ]]; then
@@ -281,7 +281,7 @@ EOF
             echo "- Phase $phase_num: Completed $completion_time" >> "$report_file"
         fi
     done
-    
+
     cat >> "$report_file" << 'EOF'
 
 ## Phase Details
@@ -306,30 +306,30 @@ EOF
 ## Operations Health
 
 EOF
-    
+
     echo "$report_file"
 }
 
 # Rollback phase
 rollback_phase() {
     local phase="$1"
-    
+
     log "WARN" "Rolling back Phase $phase..."
-    
+
     # Check if rollback is safe (not production-critical)
     if [[ "$phase" -ge 14 ]]; then
         log "ERROR" "Cannot rollback Phase $phase - production critical"
         return 1
     fi
-    
+
     # Run rollback script
     local rollback_script="$PHASES_DIR/scripts/phase-${phase}-rollback.sh"
-    
+
     if [[ ! -f "$rollback_script" ]]; then
         log "ERROR" "Rollback script not found: $rollback_script"
         return 1
     fi
-    
+
     if bash "$rollback_script"; then
         # Remove completion marker
         rm -f "$REPORT_DIR/phase-${phase}-completion.txt"
@@ -344,34 +344,34 @@ rollback_phase() {
 # Main orchestrator
 run_operations_sequence() {
     log "INFO" "Starting P0-P3 Operations Sequence"
-    
+
     local current_phase=13
     local max_iterations=3
     local iteration=0
-    
+
     while [[ $iteration -lt $max_iterations ]] && [[ $current_phase -le 15 ]]; do
         log "INFO" "=== Iteration $((iteration+1)): Phase $current_phase ==="
-        
+
         # Execute phase
         if ! execute_phase "$current_phase"; then
             log "ERROR" "Phase $current_phase execution failed"
             break
         fi
-        
+
         # Validate phase
         if ! validate_phase "$current_phase"; then
             log "ERROR" "Phase $current_phase validation failed"
             # Could rollback here, but for P0-P3 we'll just alert
             break
         fi
-        
+
         # Move to next phase
         ((current_phase++))
         ((iteration++))
-        
+
         log "INFO" "Phase complete, moving to Phase $current_phase"
     done
-    
+
     # Generate final report
     local report=$(generate_report)
     log "OK" "Operations sequence complete. Report: $report"
@@ -409,7 +409,7 @@ EOF
 # Main
 main() {
     init_logging
-    
+
     case "${1:-help}" in
         execute)
             local phase="${3:-13}"

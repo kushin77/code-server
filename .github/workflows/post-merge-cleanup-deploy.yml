@@ -72,13 +72,13 @@ jobs:
         run: |
           BRANCH="${{ needs.check-merge.outputs.branch }}"
           echo "🗑️ Cleaning up branch: $BRANCH"
-          
+
           # Don't delete protected branches
           if [[ "$BRANCH" =~ ^(main|develop|release|hotfix)$ ]]; then
             echo "⚠️ Skipping protected branch: $BRANCH"
             exit 0
           fi
-          
+
           # Try to delete remote branch
           if git push origin --delete "$BRANCH" 2>/dev/null; then
             echo "✅ Successfully deleted remote branch: $BRANCH"
@@ -117,7 +117,7 @@ jobs:
           script: |
             const prNum = '${{ needs.check-merge.outputs.pr_number }}';
             console.log(`🚀 Triggering deployment pipeline for PR #${prNum}`);
-            
+
             // Create deployment record
             await github.rest.repos.createDeployment({
               owner: context.repo.owner,
@@ -135,7 +135,7 @@ jobs:
         with:
           script: |
             console.log('📋 Dispatching deployment workflow...');
-            
+
             try {
               const response = await github.rest.actions.createWorkflowDispatch({
                 owner: context.repo.owner,
@@ -147,7 +147,7 @@ jobs:
                   pr_number: '${{ needs.check-merge.outputs.pr_number }}'
                 }
               });
-              
+
               console.log('✅ Deployment workflow dispatched');
               return response;
             } catch (error) {
@@ -173,7 +173,7 @@ jobs:
         with:
           script: |
             const prNum = '${{ needs.check-merge.outputs.pr_number }}';
-            
+
             if (prNum === 'push-event') {
               console.log('ℹ️ Push event detected - skipping issue auto-close');
               return;
@@ -191,7 +191,7 @@ jobs:
             // Extract issue numbers from PR body (e.g., "Closes #123", "Fixes #456")
             const body = pr.data.body || '';
             const issueMatches = body.match(/(?:clos|fix|resolv)(?:es|ed)?\s+#(\d+)/gi);
-            
+
             if (!issueMatches) {
               console.log('ℹ️ No linked issues found in PR body');
               return;

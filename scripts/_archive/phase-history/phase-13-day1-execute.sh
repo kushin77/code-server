@@ -2,7 +2,7 @@
 # ============================================================================
 # PHASE 13 - DAY 1 EXECUTION SCRIPT (IDEMPOTENT)
 # April 14, 2026 - Infrastructure Team
-# 
+#
 # PURPOSE: Deploy Cloudflare tunnel, code-server cluster, SSH proxy
 # DESIGN: Fully idempotent (safe to re-run multiple times)
 # IaC: All operations tracked and reproducible
@@ -109,7 +109,7 @@ if [ -f "$HOME/.cloudflare/credentials.json" ]; then
     log_info "Skipping tunnel creation (idempotent re-run detected)"
 else
     log_info "No existing tunnel found - proceeding with creation..."
-    
+
     if [ -f "$SCRIPTS_DIR/setup-cloudflare-tunnel.sh" ]; then
         log_info "Executing setup-cloudflare-tunnel.sh..."
         bash "$SCRIPTS_DIR/setup-cloudflare-tunnel.sh" || {
@@ -138,7 +138,7 @@ if grep -q "cloudflare.access" "$REPO_ROOT/.env" 2>/dev/null; then
     log_info "Skipping access configuration (idempotent re-run detected)"
 else
     log_info "Configuring Cloudflare Access..."
-    
+
     if [ -f "$SCRIPTS_DIR/setup-cloudflare-access.sh" ]; then
         log_info "Executing setup-cloudflare-access.sh..."
         bash "$SCRIPTS_DIR/setup-cloudflare-access.sh" || {
@@ -169,7 +169,7 @@ POD_COUNT=$(kubectl get pods -l app=code-server --no-headers 2>/dev/null | wc -l
 if [ "$POD_COUNT" -gt "0" ]; then
     log_warn "Found $POD_COUNT existing code-server pod(s) - cluster may be partially deployed"
     log_info "Checking pod status..."
-    
+
     if kubectl get pods -l app=code-server --field-selector=status.phase=Running | grep -q "code-server"; then
         log_success "code-server pods are RUNNING (idempotent re-run detected)"
     else
@@ -178,7 +178,7 @@ if [ "$POD_COUNT" -gt "0" ]; then
     fi
 else
     log_info "No existing code-server pods found - proceeding with cluster deployment..."
-    
+
     if [ -f "$SCRIPTS_DIR/phase-12-1-infrastructure-setup.sh" ]; then
         log_info "Executing phase-12-1-infrastructure-setup.sh..."
         log_warn "This will take 30-40 minutes..."
@@ -207,11 +207,11 @@ if nc -zv localhost $SSH_PROXY_PORT 2>/dev/null; then
     log_success "SSH proxy already listening on port $SSH_PROXY_PORT (idempotent)"
 else
     log_info "Configuring SSH proxy server..."
-    
+
     # Ensure systemd service or docker container for SSH proxy
     if command -v docker &>/dev/null; then
         log_info "Docker available - checking for SSH proxy container..."
-        
+
         if docker ps --filter "ancestor=openssh-server:latest" | grep -q "openssh"; then
             log_success "SSH proxy container already running"
         else
@@ -250,7 +250,7 @@ log_info "Health Check 2: code-server pods..."
 if command -v kubectl &>/dev/null; then
     READY_PODS=$(kubectl get pods -l app=code-server --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l || echo "0")
     TOTAL_PODS=$(kubectl get pods -l app=code-server --no-headers 2>/dev/null | wc -l || echo "0")
-    
+
     if [ "$READY_PODS" -eq "3" ] && [ "$TOTAL_PODS" -eq "3" ]; then
         log_success "code-server: 3/3 pods READY"
     elif [ "$READY_PODS" -gt "0" ]; then

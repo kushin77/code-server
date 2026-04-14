@@ -24,7 +24,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     permissions:
       contents: read
       checks: write
@@ -67,7 +67,7 @@ jobs:
   spell-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    
+
     steps:
       - uses: actions/checkout@v4
 

@@ -45,7 +45,7 @@ FAILED_CHECKS=0
 
 check_image_immutability() {
     log_info "CHECK 1: Verifying container image immutability..."
-    
+
     # Check ssh-proxy uses digest
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if grep -q "python:3.11-slim@sha256:" "$REPO_ROOT/Dockerfile.ssh-proxy"; then
@@ -55,7 +55,7 @@ check_image_immutability() {
         log_error "ssh-proxy base image missing SHA256 digest"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check docker-compose has no floating tags
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if grep -E "(image:.*:latest|image:.*:main|image:.*:stable)" "$REPO_ROOT/docker-compose.yml" > /dev/null 2>&1; then
@@ -66,7 +66,7 @@ check_image_immutability() {
         log_success "No floating tags in docker-compose.yml"
         PASSED_CHECKS=$((PASSED_CHECKS + 1))
     fi
-    
+
     # Check all external images have version tags
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     local untagged=$(grep "image:" "$REPO_ROOT/docker-compose.yml" | grep -v ":.*-\|:.*\." | grep -v "local$" | wc -l)
@@ -85,7 +85,7 @@ check_image_immutability() {
 
 check_config_immutability() {
     log_info "CHECK 2: Verifying configuration immutability..."
-    
+
     # Check all config files are in Git
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if git -C "$REPO_ROOT" ls-files | grep -q "docker-compose.yml"; then
@@ -95,7 +95,7 @@ check_config_immutability() {
         log_error "docker-compose.yml NOT tracked in Git"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check Dockerfiles are versioned
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if git -C "$REPO_ROOT" ls-files | grep -q "Dockerfile"; then
@@ -105,7 +105,7 @@ check_config_immutability() {
         log_error "Dockerfiles NOT tracked in Git"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check config dir is versioned
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if git -C "$REPO_ROOT" ls-files | grep -q "config/"; then
@@ -115,7 +115,7 @@ check_config_immutability() {
         log_error "config/ NOT tracked in Git"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check no manual .env overrides in Git (should use secrets)
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if ! git -C "$REPO_ROOT" ls-files | grep -q "^\.env$"; then
@@ -133,9 +133,9 @@ check_config_immutability() {
 
 check_idempotency_patterns() {
     log_info "CHECK 3: Verifying idempotency patterns in scripts..."
-    
+
     local script_dir="$REPO_ROOT/scripts"
-    
+
     # Check phase-13 scripts have idempotency markers
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if grep -q "idempotent\|state.*check\|already.*running" "$script_dir/phase-13-day1-execute.sh"; then
@@ -145,7 +145,7 @@ check_idempotency_patterns() {
         log_warn "phase-13-day1-execute.sh missing idempotency comments"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check for bash set -euo pipefail (strict mode)
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if head -20 "$script_dir/phase-13-day1-execute.sh" | grep -q "set -euo pipefail"; then
@@ -163,7 +163,7 @@ check_idempotency_patterns() {
 
 check_version_pinning() {
     log_info "CHECK 4: Verifying version pinning for reproducibility..."
-    
+
     # Check code-server version pinned
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if grep -q "CODE_SERVER_VERSION=4\.[0-9]\+\.[0-9]\+" "$REPO_ROOT/Dockerfile.code-server"; then
@@ -173,7 +173,7 @@ check_version_pinning() {
         log_error "code-server version NOT pinned"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check extension versions pinned
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if grep -q "COPILOT_VERSION=" "$REPO_ROOT/Dockerfile.code-server" && \
@@ -184,7 +184,7 @@ check_version_pinning() {
         log_error "Extension versions NOT pinned"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check Python packages pinned
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if grep -q "fastapi==" "$REPO_ROOT/Dockerfile.ssh-proxy" && \
@@ -203,7 +203,7 @@ check_version_pinning() {
 
 check_docker_health() {
     log_info "CHECK 5: Verifying Docker services health..."
-    
+
     # Check docker running
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if command -v docker &> /dev/null; then
@@ -214,7 +214,7 @@ check_docker_health() {
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
         return
     fi
-    
+
     # Check docker-compose valid
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if docker-compose -f "$REPO_ROOT/docker-compose.yml" config > /dev/null 2>&1; then
@@ -224,7 +224,7 @@ check_docker_health() {
         log_error "docker-compose.yml is invalid"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check health checks defined
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     local healthchecks=$(grep -c "healthcheck:" "$REPO_ROOT/docker-compose.yml" || true)
@@ -243,7 +243,7 @@ check_docker_health() {
 
 check_git_state() {
     log_info "CHECK 6: Verifying Git repository state..."
-    
+
     # Check working tree clean
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if git -C "$REPO_ROOT" status --porcelain | grep -q .; then
@@ -254,7 +254,7 @@ check_git_state() {
         log_success "Working tree is clean"
         PASSED_CHECKS=$((PASSED_CHECKS + 1))
     fi
-    
+
     # Check HEAD is on main
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD | grep -q "^main$"; then
@@ -264,7 +264,7 @@ check_git_state() {
         log_warn "HEAD is not on main branch"
         FAILED_CHECKS=$((FAILED_CHECKS + 1))
     fi
-    
+
     # Check last commit has Phase 13 marker
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     if git -C "$REPO_ROOT" log -1 --oneline | grep -q "Phase 13\|phase-13"; then
@@ -290,11 +290,11 @@ print_summary() {
     echo "Passed:        ${GREEN}$PASSED_CHECKS${NC}"
     echo "Failed:        ${RED}$FAILED_CHECKS${NC}"
     echo ""
-    
+
     local pass_rate=$((PASSED_CHECKS * 100 / TOTAL_CHECKS))
     echo "Compliance Rate: ${GREEN}$pass_rate%${NC}"
     echo ""
-    
+
     if [ $FAILED_CHECKS -eq 0 ]; then
         echo -e "${GREEN}✓ PHASE 13 IaC COMPLIANCE: PASS${NC}"
         echo "All immutability, idempotency, and reproducibility checks passed."
@@ -313,7 +313,7 @@ print_summary() {
         echo "Critical failures must be fixed before deployment."
         exit 1
     fi
-    
+
     echo ""
     echo "Monitor Log: $MONITOR_LOG"
 }
@@ -331,7 +331,7 @@ main() {
     echo "Monitor Log: $MONITOR_LOG"
     echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
     echo ""
-    
+
     check_image_immutability
     echo ""
     check_config_immutability
@@ -344,7 +344,7 @@ main() {
     echo ""
     check_git_state
     echo ""
-    
+
     print_summary
 }
 

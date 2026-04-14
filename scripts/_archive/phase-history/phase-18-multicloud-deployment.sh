@@ -42,7 +42,7 @@ Parameters:
     Type: String
     Default: code-server-enterprise-eks
     Description: EKS Cluster Name
-  
+
   NodeCount:
     Type: Number
     Default: 3
@@ -493,10 +493,10 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
+
   cloud {
     organization = "code-server-enterprise"
-    
+
     workspaces {
       name = "phase-18"
     }
@@ -506,7 +506,7 @@ terraform {
 # Primary region deployment
 module "aws_primary" {
   source = "./modules/aws"
-  
+
   region = var.aws_primary_region
   environment = "production"
   cluster_name = "code-server-primary"
@@ -515,7 +515,7 @@ module "aws_primary" {
 # Secondary region for failover
 module "azure_secondary" {
   source = "./modules/azure"
-  
+
   region = var.azure_secondary_region
   environment = "production"
   cluster_name = "code-server-secondary"
@@ -524,7 +524,7 @@ module "azure_secondary" {
 # Tertiary region for distribution
 module "gcp_tertiary" {
   source = "./modules/gcp"
-  
+
   region = var.gcp_tertiary_region
   environment = "production"
   cluster_name = "code-server-tertiary"
@@ -533,11 +533,11 @@ module "gcp_tertiary" {
 # Multi-cloud networking
 module "networking" {
   source = "./modules/networking"
-  
+
   primary_cluster = module.aws_primary
   secondary_cluster = module.azure_secondary
   tertiary_cluster = module.gcp_tertiary
-  
+
   mesh_enabled = true
   mesh_provider = "istio"
 }

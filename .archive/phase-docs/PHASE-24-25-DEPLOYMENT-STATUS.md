@@ -1,18 +1,18 @@
 # Phase 24-25 Deployment Status Report
 
 ## Executive Summary
-✅ All Phase 24-25 terraform code is production-ready and validated  
-❌ Deployment to production host (192.168.168.31) failed due to infrastructure mismatch  
+✅ All Phase 24-25 terraform code is production-ready and validated
+❌ Deployment to production host (192.168.168.31) failed due to infrastructure mismatch
 ⚠️ **CRITICAL FINDING**: Production environment is Docker-based, not Kubernetes-based
 
 ## Infrastructure Analysis
 
 ### Current Production Setup (192.168.168.31)
 - **Orchestration**: Docker Compose (v2.39.1)
-- **Container Runtime**: Docker 
+- **Container Runtime**: Docker
 - **Deployment Model**: Docker container stack
 - **Network**: Docker bridge network + 192.168.168.0/24 management network
-- **Active Services**: 
+- **Active Services**:
   - code-server, ollama, caddy (proxy)
   - Monitoring: prometheus, grafana, alertmanager, jaeger, otel-collector
   - Data: postgres, redis
@@ -46,9 +46,9 @@ Error 3: Kubernetes provider - "cannot create REST client: no client config"
   - GraphQL API → Node.js container (Apollo Server)
   - Developer Portal → Next.js container
 
-**Effort**: 4-6 hours to create compose files  
-**Timeline**: Can be deployed today  
-**Risk**: Low (leverages existing Docker infrastructure)  
+**Effort**: 4-6 hours to create compose files
+**Timeline**: Can be deployed today
+**Risk**: Low (leverages existing Docker infrastructure)
 
 ### Option B: Provision Kubernetes First, Then Deploy Terraform
 **Required if using terraform modules as-is**
@@ -58,9 +58,9 @@ Error 3: Kubernetes provider - "cannot create REST client: no client config"
 - Configure terraform providers (AWS provider unnecessary for on-prem k8s)
 - Then run terraform apply
 
-**Effort**: 8-12 hours to provision production k8s  
-**Timeline**: Minimum 1-2 days  
-**Risk**: High (unfamiliar with on-prem k8s setup, production downtime risk)  
+**Effort**: 8-12 hours to provision production k8s
+**Timeline**: Minimum 1-2 days
+**Risk**: High (unfamiliar with on-prem k8s setup, production downtime risk)
 
 ### Option C: Disable Phase 24-25, Continue with Docker
 **Fallback option**
@@ -68,9 +68,9 @@ Error 3: Kubernetes provider - "cannot create REST client: no client config"
 - Extend existing docker-compose stack with additional monitoring/tooling
 - Focus on operational excellence within Docker model
 
-**Effort**: 1 hour cleanup  
-**Timeline**: Immediate  
-**Risk**: Loses advanced features (Velero DR, Karpenter autoscaling)  
+**Effort**: 1 hour cleanup
+**Timeline**: Immediate
+**Risk**: Loses advanced features (Velero DR, Karpenter autoscaling)
 
 ## Recommendation
 
@@ -93,7 +93,7 @@ Error 3: Kubernetes provider - "cannot create REST client: no client config"
 - ⏳ Awaiting direction on deployment strategy
 
 ---
-**Generated**: 2026-04-14 16:35 UTC  
-**Repository**: kushin77/code-server  
-**Target Host**: 192.168.168.31 (akushnir@192.168.168.31:22)  
+**Generated**: 2026-04-14 16:35 UTC
+**Repository**: kushin77/code-server
+**Target Host**: 192.168.168.31 (akushnir@192.168.168.31:22)
 **Status**: Awaiting deployment strategy confirmation

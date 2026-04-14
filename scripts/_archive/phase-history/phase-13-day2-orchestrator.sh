@@ -57,7 +57,7 @@ HEALTH_LOG="${LOG_DIRECTORY}/health-${EXECUTION_TIMESTAMP}.txt"
 init_logging() {
     mkdir -p "$LOG_DIRECTORY"
     touch "$METRICS_FILE" "$RESULTS_FILE" "$LATENCY_LOG" "$HEALTH_LOG"
-    
+
     log "═══════════════════════════════════════════════════════════════════════════"
     log "PHASE 13 DAY 2: MASTER ORCHESTRATOR"
     log "═══════════════════════════════════════════════════════════════════════════"
@@ -95,9 +95,9 @@ log_health() {
 
 verify_infrastructure() {
     log "Verifying infrastructure prerequisites..."
-    
+
     local failures=0
-    
+
     # Check Docker daemon
     if ! docker ps > /dev/null 2>&1; then
         log "ERROR: Docker daemon not responding"
@@ -105,7 +105,7 @@ verify_infrastructure() {
     else
         log "✓ Docker daemon operational"
     fi
-    
+
     # Check code-server container (native curl instead of docker exec)
     local code_server_status=$(docker ps --filter "name=$CODE_SERVER_CONTAINER" --format "{{.State}}" 2>/dev/null || echo "")
     if [ -z "$code_server_status" ] || [ "$code_server_status" != "running" ]; then
@@ -114,7 +114,7 @@ verify_infrastructure() {
     else
         log "✓ code-server container running"
     fi
-    
+
     # Check code-server health endpoint via localhost
     if ! curl -sf -m 5 "$CODE_SERVER_HEALTH_ENDPOINT" > /dev/null 2>&1; then
         log "ERROR: code-server health endpoint not responding"
@@ -122,7 +122,7 @@ verify_infrastructure() {
     else
         log "✓ code-server health endpoint responding"
     fi
-    
+
     # Check available memory
     local available_memory=$(free -m | awk '/^Mem:/{print $7}')
     if [ "$available_memory" -lt 2048 ]; then
@@ -130,7 +130,7 @@ verify_infrastructure() {
     else
         log "✓ Sufficient memory available: ${available_memory}MB"
     fi
-    
+
     if [ $failures -eq 0 ]; then
         log "Pre-flight validation: PASSED ✓"
         return 0
@@ -149,24 +149,24 @@ execute_ramp_up() {
     log "───────────────────────────────────────────────────────────────────────────"
     log "PHASE: Ramp-Up (0 → 100 concurrent users over 5 minutes)"
     log "───────────────────────────────────────────────────────────────────────────"
-    
+
     local start_time=$(date +%s)
     local end_time=$((start_time + RAMP_UP_DURATION))
     local current_users=0
-    
+
     while [ $(date +%s) -lt $end_time ]; do
         current_users=$((current_users + 1))
         if [ $current_users -gt 100 ]; then
             current_users=100
         fi
-        
+
         # Log current ramp-up progress
         log_metric "Ramp-up: $current_users concurrent users"
-        
+
         # Wait 1 second before adding next user
         sleep 1
     done
-    
+
     log "Ramp-up phase complete. Steady-state: 100 concurrent users"
 }
 
@@ -182,23 +182,23 @@ execute_steady_state() {
     log "Maintaining ${STEADY_STATE_USERS} concurrent users for 24 hours..."
     log "Health checks every ${HEALTH_CHECK_INTERVAL} seconds"
     log ""
-    
+
     local start_time=$(date +%s)
     local end_time=$((start_time + LOAD_TEST_DURATION))
     local last_health_check=0
     local iteration=0
-    
+
     while [ $(date +%s) -lt $end_time ]; do
         iteration=$((iteration + 1))
         local current_time=$(date +%s)
         local elapsed=$((current_time - start_time))
         local remaining=$((end_time - current_time))
-        
+
         # Perform health check every HEALTH_CHECK_INTERVAL seconds
         if [ $((current_time - last_health_check)) -ge $HEALTH_CHECK_INTERVAL ]; then
             perform_health_check
             last_health_check=$current_time
-            
+
             # Log progress every 5 minutes
             if [ $((iteration % 10)) -eq 0 ]; then
                 local elapsed_hours=$((elapsed / 3600))
@@ -206,10 +206,10 @@ execute_steady_state() {
                 log_metric "Progress: ${elapsed_hours}h elapsed, ${remaining_hours}h remaining"
             fi
         fi
-        
+
         sleep 1
     done
-    
+
     log "Steady-state phase complete."
 }
 
@@ -219,7 +219,7 @@ execute_steady_state() {
 
 perform_health_check() {
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    
+
     # Check code-server health
     if docker exec "$CODE_SERVER_CONTAINER" curl -sf "$CODE_SERVER_HEALTH_ENDPOINT" > /dev/null 2>&1; then
         local response_time=$(docker exec "$CODE_SERVER_CONTAINER" curl -s -w '%{time_total}' -o /dev/null "$CODE_SERVER_HEALTH_ENDPOINT")
@@ -227,7 +227,7 @@ perform_health_check() {
     else
         log_health "code-server: UNHEALTHY ✗"
     fi
-    
+
     # Check Docker daemon
     if docker info > /dev/null 2>&1; then
         local memory_usage=$(free -m | awk '/^Mem:/{printf "%.1f", ($3/$2)*100}')
@@ -235,7 +235,7 @@ perform_health_check() {
     else
         log_health "Docker daemon: UNHEALTHY ✗"
     fi
-    
+
     # Check container status
     local failing_containers=$(docker ps -a --filter status=exited --format '{{.Names}}' | wc -l)
     if [ $failing_containers -eq 0 ]; then
@@ -254,17 +254,17 @@ execute_cool_down() {
     log "───────────────────────────────────────────────────────────────────────────"
     log "PHASE: Cool-Down (100 → 0 concurrent users over 5 minutes)"
     log "───────────────────────────────────────────────────────────────────────────"
-    
+
     local start_time=$(date +%s)
     local end_time=$((start_time + RAMP_UP_DURATION))
     local current_users=$STEADY_STATE_USERS
-    
+
     while [ $(date +%s) -lt $end_time ] && [ $current_users -gt 0 ]; do
         current_users=$((current_users - 1))
         log_metric "Cool-down: $current_users concurrent users"
         sleep 1
     done
-    
+
     log "Cool-down phase complete. Load test finished."
 }
 
@@ -278,22 +278,22 @@ analyze_results() {
     log "PHASE 13 DAY 2: FINAL ANALYSIS"
     log "═══════════════════════════════════════════════════════════════════════════"
     log ""
-    
+
     # Parse latency log and calculate statistics (if data exists)
     if [ -f "$LATENCY_LOG" ] && [ -s "$LATENCY_LOG" ]; then
         log "Analyzing latency metrics..."
-        
+
         # Calculate percentiles (placeholder — actual implementation downloads ab/wrk)
-        local p50=$(sort -n "$LATENCY_LOG" | awk 'NR==int(NR/2)') 
+        local p50=$(sort -n "$LATENCY_LOG" | awk 'NR==int(NR/2)')
         local p99=$(sort -n "$LATENCY_LOG" | tail -1)
-        
+
         log "Latency Distribution:"
         log "  p50: ${p50}ms"
         log "  p99: ${p99}ms"
     else
         log "No latency data collected (expected for orchestrator framework)"
     fi
-    
+
     # Check health logs for anomalies
     if [ -f "$HEALTH_LOG" ] && [ -s "$HEALTH_LOG" ]; then
         local unhealthy_count=$(grep -c "UNHEALTHY" "$HEALTH_LOG" || echo "0")
@@ -311,26 +311,26 @@ analyze_results() {
 
 main() {
     init_logging
-    
+
     # Pre-flight validation (MUST PASS)
     if ! verify_infrastructure; then
         log "Pre-flight validation failed. Aborting."
         exit 1
     fi
-    
+
     log ""
     log "Starting Phase 13 Day 2 orchestration..."
     log "Duration: 24 hours + ramp-up/cool-down phases"
     log ""
-    
+
     # Execute load test phases
     execute_ramp_up
     execute_steady_state
     execute_cool_down
-    
+
     # Analyze and report results
     analyze_results
-    
+
     log ""
     log "═══════════════════════════════════════════════════════════════════════════"
     log "PHASE 13 DAY 2: EXECUTION COMPLETE"

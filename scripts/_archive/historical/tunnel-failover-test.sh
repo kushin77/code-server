@@ -136,7 +136,7 @@ echo ""
 if command -v systemctl &> /dev/null; then
   echo "Command that would auto-start: systemctl start cloudflared"
   echo "Status check command: systemctl is-active cloudflared"
-  
+
   # Don't actually run restart in test to avoid side effects
   echo "✓ Auto-recovery mechanism verified in systemd"
 fi
@@ -231,7 +231,7 @@ if git rev-parse HEAD >/dev/null 2>&1; then
   last_commit_time=$(git log -1 --format=%ai)
   echo "✅ Latest commit: $last_commit ($last_commit_time)"
   echo "✅ Uncommitted changes:"
-  
+
   if git status --porcelain | grep -q .; then
     echo "   File changes detected (in memory, not yet committed)"
   else

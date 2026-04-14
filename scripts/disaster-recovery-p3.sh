@@ -29,7 +29,7 @@ backup:
   # Database Backups
   database:
     enabled: true
-    
+
     # Full backups: Daily at 2 AM UTC
     full:
       schedule: "0 2 * * *"
@@ -37,19 +37,19 @@ backup:
       storage: "gcs://backups-prod/database/full"
       compression: "gzip"
       encryption: "AES-256"
-    
+
     # Incremental backups: Every 12 hours
     incremental:
       schedule: "0 0,12 * * *"
       retention_days: 7
       storage: "gcs://backups-prod/database/incremental"
-    
+
     # Point-in-time recovery: Transaction logs
     pitr:
       enabled: true
       retention_days: 7
       log_retention: "7 days"
-    
+
     # Backup validation
     validation:
       restore_test: "daily"
@@ -59,7 +59,7 @@ backup:
   # Application Data Backups
   application:
     enabled: true
-    
+
     # Configuration backups
     config:
       directories:
@@ -69,14 +69,14 @@ backup:
       schedule: "0 3 * * *"
       retention_days: 90
       storage: "gcs://backups-prod/config"
-    
+
     # Code repository
     repository:
       enabled: true
       git_mirror: true
       mirror_location: "gcs://backups-prod/git-mirror"
       schedule: "0 4 * * *"
-    
+
     # User data
     user_data:
       enabled: true
@@ -86,7 +86,7 @@ backup:
       schedule: "0 1 * * *"
       retention_days: 180
       storage: "gcs://backups-prod/user-data"
-    
+
     # Logs
     logs:
       enabled: true
@@ -97,12 +97,12 @@ backup:
   # Container/Image Backups
   container:
     enabled: true
-    
+
     registry_backup:
       schedule: "0 5 * * *"
       retention_days: 60
       backup_location: "gcs://backups-prod/images"
-    
+
     image_scanning:
       enabled: true
       frequency: "on-backup"
@@ -110,12 +110,12 @@ backup:
   # Cross-region Backup
   replication:
     enabled: true
-    
+
     regions:
       primary: "us-central1"
       replica: "us-east1"
       tertiary: "europe-west1"
-    
+
     replication_lag: "max 1 hour"
     sync_frequency: "continuous"
 
@@ -133,7 +133,7 @@ backup_monitoring:
     - "backup_size_anomaly"
     - "backup_restoration_failed"
     - "backup_encryption_error"
-  
+
   metrics:
     - "backup_duration"
     - "backup_size"
@@ -143,7 +143,7 @@ backup_monitoring:
 
 backup_testing:
   enabled: true
-  
+
   # Weekly restore tests
   restore_tests:
     frequency: "weekly"
@@ -151,7 +151,7 @@ backup_testing:
     environment: "staging"
     duration: "4 hours"
     notification: ["slack", "email"]
-  
+
   # Monthly disaster recovery drills
   dr_drills:
     frequency: "monthly"
@@ -195,39 +195,39 @@ LOG_FILE="/var/log/failover.log"
 
 failover_stage1_health_check() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [Stage1] Performing health checks..." >> "$LOG_FILE"
-  
+
   local primary_health=$(curl -s -o /dev/null -w "%{http_code}" https://primary.kushnir.cloud/health)
   local replica_health=$(curl -s -o /dev/null -w "%{http_code}" https://replica.kushnir.cloud/health)
-  
+
   if [[ "$primary_health" == "200" ]]; then
     echo "✅ Primary healthy (HTTP $primary_health)" >> "$LOG_FILE"
     return 1  # Primary OK, no failover needed
   fi
-  
+
   if [[ "$replica_health" == "200" ]]; then
     echo "✅ Replica ready to promote (HTTP $replica_health)" >> "$LOG_FILE"
     return 0  # Proceed with failover
   fi
-  
+
   echo "❌ Both primary and replica unhealthy" >> "$LOG_FILE"
   return 2  # Critical failure
 }
 
 failover_stage2_promotion() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [Stage2] Promoting replica to primary..." >> "$LOG_FILE"
-  
+
   # Stop replication on replica (will become primary)
   kubectl exec -n production replica-db-0 -- mysql -e "STOP SLAVE;"
   echo "✅ Stopped replica mode" >> "$LOG_FILE"
-  
+
   # Promote replica
   kubectl exec -n production replica-db-0 -- mysql -e "RESET SLAVE;"
   echo "✅ Promoted replica to primary" >> "$LOG_FILE"
-  
+
   # Update service endpoint
   kubectl patch service production-db -p '{"spec":{"selector":{"role":"primary"}}}'
   echo "✅ Updated service endpoint to replica" >> "$LOG_FILE"
-  
+
   # Start accepting writes
   kubectl set env deployment/production replicate_lag=0 --record
   echo "✅ Enabled write mode" >> "$LOG_FILE"
@@ -235,22 +235,22 @@ failover_stage2_promotion() {
 
 failover_stage3_traffic_shift() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [Stage3] Shifting traffic to new primary..." >> "$LOG_FILE"
-  
+
   # Update DNS records
   kubectl exec -n kube-system coredns-0 -- \
     /bin/sh -c "echo \"primarydb IN A $(kubectl get pod replica-db-0 -o jsonpath='{.status.podIP}')\""
   echo "✅ Updated DNS records" >> "$LOG_FILE"
-  
+
   # Gradual traffic shift (5% -> 25% -> 50% -> 100%)
   for percentage in 5 25 50 100; do
     echo "$(date '+%Y-%m-%d %H:%M:%S') Shifting $percentage% traffic to new primary" >> "$LOG_FILE"
-    
+
     kubectl patch virtualservice primary-vs \
       --type merge \
       -p "{\"spec\":{\"hosts\":[{\"name\":\"primary.kushnir.cloud\",\"http\":[{\"route\":[{\"destination\":{\"host\":\"primary\",\"port\":{\"number\":443}},\"weight\":$percentage},{\"destination\":{\"host\":\"secondary\"},\"weight\":$((100-percentage))}]}]}]}}"
-    
+
     sleep 300  # Wait 5 minutes between shifts
-    
+
     # Check error rates
     error_rate=$(prometheus_query 'rate(http_errors_total[5m])')
     if (( $(echo "$error_rate > 2.0" | bc -l) )); then
@@ -258,38 +258,38 @@ failover_stage3_traffic_shift() {
       return 1
     fi
   done
-  
+
   echo "✅ Traffic fully shifted to new primary" >> "$LOG_FILE"
 }
 
 failover_stage4_cleanup() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [Stage4] Cleaning up old primary..." >> "$LOG_FILE"
-  
+
   # Optionally rebuild failed primary as new replica
   echo "Detecting failed primary..."
-  
+
   local should_rebuild=$(grep -c "rebuild_failed_primary: true" "$FAILOVER_CONFIG" || echo 0)
-  
+
   if [[ "$should_rebuild" -gt 0 ]]; then
     echo "✅ Starting failed primary rebuild as new replica..." >> "$LOG_FILE"
-    
+
     # Start container
     docker start primary-db || docker run -d --name primary-db postgres
-    
+
     # Wait for startup
     sleep 30
-    
+
     # Set up replication
     docker exec primary-db psql -c "ALTER SYSTEM SET primary_conninfo = 'hostaddr=172.17.0.1 user=replicator password=secret'"
     docker exec primary-db psql -c "SELECT * FROM pg_basebackup(DIRECTORY '/backup', PROGRESS);"
-    
+
     echo "✅ Failed primary rebuilt as replica" >> "$LOG_FILE"
   fi
 }
 
 failover_stage5_verification() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [Stage5] Post-failover verification..." >> "$LOG_FILE"
-  
+
   # Verify new primary is healthy
   local health=$(curl -s https://primary.kushnir.cloud/health | jq '.status')
   [[ "$health" == '"healthy"' ]] || {
@@ -297,7 +297,7 @@ failover_stage5_verification() {
     return 1
   }
   echo "✅ New primary health verified" >> "$LOG_FILE"
-  
+
   # Verify data consistency
   local replica_lag=$(kubectl exec -n production new-primary-db-0 -- mysql -e "SHOW SLAVE STATUS\G" | grep Seconds_Behind_Master | awk '{print $NF}')
   if [[ "$replica_lag" -le 5 ]]; then
@@ -305,7 +305,7 @@ failover_stage5_verification() {
   else
     echo "⚠️  Warning: Replica lag ${replica_lag}s exceeds threshold" >> "$LOG_FILE"
   fi
-  
+
   # Verify application connectivity
   local app_status=$(curl -s https://primary.kushnir.cloud/status | jq '.database_connected')
   [[ "$app_status" == "true" ]] && echo "✅ Application connected to database" >> "$LOG_FILE"
@@ -320,7 +320,7 @@ main() {
   echo "║         AUTOMATED FAILOVER PROCEDURE INITIATED                ║"
   echo "║         $(date '+%Y-%m-%d %H:%M:%S')                                          ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
-  
+
   failover_stage1_health_check || {
     if [[ $? -eq 1 ]]; then
       echo "✅ Primary is healthy, no failover needed"
@@ -330,14 +330,14 @@ main() {
       exit 2
     fi
   }
-  
+
   echo "⚠️  Initiating failover sequence..."
-  
+
   failover_stage2_promotion || { echo "❌ Promotion failed"; exit 1; }
   failover_stage3_traffic_shift || { echo "❌ Traffic shift failed"; exit 1; }
   failover_stage4_cleanup || { echo "⚠️  Cleanup incomplete"; }
   failover_stage5_verification || { echo "❌ Verification failed"; exit 1; }
-  
+
   echo "✅ FAILOVER COMPLETE"
   echo "Summary:"
   echo "- New Primary: replica.kushnir.cloud"
@@ -620,7 +620,7 @@ class DataRestorationService {
 
     console.log(`[PITR] Replaying ${relevantLogs.length} log segments...`);
     // In production, use database-specific WAL replay mechanisms
-    
+
     return { replayed: relevantLogs.length };
   }
 }
@@ -647,27 +647,27 @@ testing:
     enabled: true
     schedule: "0 6 * * 0"  # Sunday 6 AM
     duration_minutes: 60
-    
+
     test_steps:
       - name: "restore_database"
         command: "restore_latest_backup"
         timeout: 1800
         alert_on_failure: true
-      
+
       - name: "verify_integrity"
         command: "run_integrity_checks"
         timeout: 300
         expected_status: "OK"
-      
+
       - name: "test_application_connection"
         command: "test_db_connectivity"
         timeout: 60
         expected_status: "connected"
-    
+
     notification:
       on_success: ["slack"]
       on_failure: ["email", "pagerduty"]
-  
+
   # Monthly disaster recovery drills
   monthly_dr_drill:
     enabled: true
@@ -677,7 +677,7 @@ testing:
       - "database_corruption"
       - "ransomware_recovery"
       - "data_loss_recovery"
-    
+
     drill_procedure:
       - "notify_team_start"
       - "document_baseline_metrics"
@@ -687,33 +687,33 @@ testing:
       - "document_timeline"
       - "notify_team_completion"
       - "schedule_postmortem"
-    
+
     success_criteria:
       - "rto_met: true"
       - "rpo_met: true"
       - "data_integrity: verified"
       - "no_data_loss: true"
-  
+
   # Quarterly full disaster recovery exercise
   quarterly_exercise:
     enabled: true
     schedule: "0 6 1 */3 *"  # First Friday of each quarter
     duration_hours: 8
-    
+
     scope:
       - "complete_environment_replication"
       - "full_data_restoration"
       - "application_validation"
       - "team_training"
       - "communication_simulation"
-    
+
     participants:
       - "ops_team"
       - "application_team"
       - "security_team"
       - "communications"
       - "management"
-    
+
     deliverables:
       - "detailed_timeline_report"
       - "lessons_learned_document"
@@ -730,7 +730,7 @@ metrics:
     - "data_loss_amount"
     - "recovery_success_rate"
     - "team_confidence_level"
-  
+
   targets:
     restore_duration: "< 2 hours"
     restore_success_rate: "100%"
@@ -741,11 +741,11 @@ reporting:
   test_results:
     frequency: "weekly"
     recipients: ["ops@", "management@"]
-  
+
   drill_summary:
     frequency: "monthly"
     recipients: ["all_staff@"]
-  
+
   quarterly_report:
     frequency: "quarterly"
     contents:

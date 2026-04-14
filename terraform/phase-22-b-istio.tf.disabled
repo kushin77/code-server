@@ -18,7 +18,7 @@ terraform {
 
 locals {
   phase_22_b_enabled = var.phase_22_b_enabled
-  
+
   istio = {
     namespace    = "istio-system"
     version      = "1.19.0"
@@ -26,20 +26,20 @@ locals {
     repo         = "https://istio-release.storage.googleapis.com/charts"
     release_name = "istio-base"
   }
-  
+
   istiod = {
     chart        = "istiod"
     release_name = "istiod"
     replicas     = 2
   }
-  
+
   ingress = {
     chart        = "gateway"
     release_name = "istio-ingressgateway"
     replicas     = 3
     service_type = "LoadBalancer"
   }
-  
+
   traffic_management = {
     circuit_breaker_threshold     = 50
     connection_pool_size          = 100
@@ -50,13 +50,13 @@ locals {
     min_request_volume            = 5
     split_external_local_endpoints = true
   }
-  
+
   resource_limits = {
     istiod_memory_request = "256Mi"
     istiod_memory_limit   = "512Mi"
     istiod_cpu_request    = "100m"
     istiod_cpu_limit      = "500m"
-    
+
     gateway_memory_request = "128Mi"
     gateway_memory_limit   = "256Mi"
     gateway_cpu_request    = "100m"
@@ -67,7 +67,7 @@ locals {
 # Namespace for Istio control plane
 resource "kubernetes_namespace" "istio_system" {
   count = local.phase_22_b_enabled ? 1 : 0
-  
+
   metadata {
     name = local.istio.namespace
     labels = {
@@ -85,17 +85,17 @@ resource "helm_release" "istio_base" {
   namespace        = kubernetes_namespace.istio_system[0].metadata[0].name
   version          = local.istio.version
   create_namespace = false
-  
+
   set {
     name  = "global.istioNamespace"
     value = local.istio.namespace
   }
-  
+
   set {
     name  = "defaultRevision"
     value = "default"
   }
-  
+
   depends_on = [kubernetes_namespace.istio_system]
 }
 
@@ -108,11 +108,11 @@ resource "helm_release" "istiod" {
   namespace        = kubernetes_namespace.istio_system[0].metadata[0].name
   version          = local.istio.version
   create_namespace = false
-  
+
   values = [
     yamlencode({
       replicaCount = local.istiod.replicas
-      
+
       resources = {
         requests = {
           cpu    = local.resource_limits.istiod_cpu_request
@@ -123,17 +123,17 @@ resource "helm_release" "istiod" {
           memory = local.resource_limits.istiod_memory_limit
         }
       }
-      
+
       pilot = {
         image = {
           repository = "gcr.io/gke-release/istiod"
           tag        = "1.19.0-gke.0"
         }
       }
-      
+
       global = {
         istioNamespace = local.istio.namespace
-        
+
         # Traffic management defaults
         proxy = {
           resources = {
@@ -150,7 +150,7 @@ resource "helm_release" "istiod" {
       }
     })
   ]
-  
+
   depends_on = [helm_release.istio_base]
 }
 
@@ -163,11 +163,11 @@ resource "helm_release" "istio_gateway" {
   namespace        = kubernetes_namespace.istio_system[0].metadata[0].name
   version          = local.istio.version
   create_namespace = false
-  
+
   values = [
     yamlencode({
       replicas = local.ingress.replicas
-      
+
       resources = {
         requests = {
           cpu    = local.resource_limits.gateway_cpu_request
@@ -178,25 +178,25 @@ resource "helm_release" "istio_gateway" {
           memory = local.resource_limits.gateway_memory_limit
         }
       }
-      
+
       service = {
         type = local.ingress.service_type
       }
-      
+
       serviceAccount = {
         create = true
         name   = "istio-ingressgateway"
       }
     })
   ]
-  
+
   depends_on = [helm_release.istiod]
 }
 
 # Enable sidecar injection for application namespace
 resource "kubernetes_namespace" "app_namespace" {
   count = local.phase_22_b_enabled ? 1 : 0
-  
+
   metadata {
     name = "code-server"
     labels = {
@@ -208,22 +208,22 @@ resource "kubernetes_namespace" "app_namespace" {
 # VirtualService for code-server application
 resource "kubernetes_manifest" "code_server_vs" {
   count = local.phase_22_b_enabled ? 1 : 0
-  
+
   manifest = {
     apiVersion = "networking.istio.io/v1beta1"
     kind       = "VirtualService"
-    
+
     metadata = {
       name      = "code-server"
       namespace = kubernetes_namespace.app_namespace[0].metadata[0].name
     }
-    
+
     spec = {
       hosts = [
         "code-server",
         "code-server.code-server.svc.cluster.local"
       ]
-      
+
       http = [
         {
           match = [
@@ -233,7 +233,7 @@ resource "kubernetes_manifest" "code_server_vs" {
               }
             }
           ]
-          
+
           route = [
             {
               destination = {
@@ -245,7 +245,7 @@ resource "kubernetes_manifest" "code_server_vs" {
               weight = 100
             }
           ]
-          
+
           timeout = "30s"
           retries = {
             attempts      = 3
@@ -255,26 +255,26 @@ resource "kubernetes_manifest" "code_server_vs" {
       ]
     }
   }
-  
+
   depends_on = [helm_release.istiod]
 }
 
 # DestinationRule for code-server (circuit breaker)
 resource "kubernetes_manifest" "code_server_dr" {
   count = local.phase_22_b_enabled ? 1 : 0
-  
+
   manifest = {
     apiVersion = "networking.istio.io/v1beta1"
     kind       = "DestinationRule"
-    
+
     metadata = {
       name      = "code-server"
       namespace = kubernetes_namespace.app_namespace[0].metadata[0].name
     }
-    
+
     spec = {
       host = "code-server"
-      
+
       trafficPolicy = {
         connectionPool = {
           http = {
@@ -283,7 +283,7 @@ resource "kubernetes_manifest" "code_server_dr" {
             h2UpgradePolicy          = "UPGRADE"
           }
         }
-        
+
         outlierDetection = {
           consecutive5xxErrors = local.traffic_management.consecutive_errors_threshold
           interval             = local.traffic_management.interval
@@ -293,7 +293,7 @@ resource "kubernetes_manifest" "code_server_dr" {
           splitExternalLocalOriginErrors = local.traffic_management.split_external_local_endpoints
         }
       }
-      
+
       subsets = [
         {
           name   = "v1"
@@ -304,28 +304,28 @@ resource "kubernetes_manifest" "code_server_dr" {
       ]
     }
   }
-  
+
   depends_on = [helm_release.istiod]
 }
 
 # Gateway for external traffic
 resource "kubernetes_manifest" "istio_gateway" {
   count = local.phase_22_b_enabled ? 1 : 0
-  
+
   manifest = {
     apiVersion = "networking.istio.io/v1beta1"
     kind       = "Gateway"
-    
+
     metadata = {
       name      = "code-server-gateway"
       namespace = kubernetes_namespace.app_namespace[0].metadata[0].name
     }
-    
+
     spec = {
       selector = {
         istio = "ingressgateway"
       }
-      
+
       servers = [
         {
           port = {
@@ -349,27 +349,27 @@ resource "kubernetes_manifest" "istio_gateway" {
       ]
     }
   }
-  
+
   depends_on = [helm_release.istio_gateway]
 }
 
 # VirtualService for gateway routing
 resource "kubernetes_manifest" "gateway_vs" {
   count = local.phase_22_b_enabled ? 1 : 0
-  
+
   manifest = {
     apiVersion = "networking.istio.io/v1beta1"
     kind       = "VirtualService"
-    
+
     metadata = {
       name      = "code-server-gateway"
       namespace = kubernetes_namespace.app_namespace[0].metadata[0].name
     }
-    
+
     spec = {
       gateways = ["code-server-gateway"]
       hosts = ["*"]
-      
+
       http = [
         {
           match = [
@@ -379,7 +379,7 @@ resource "kubernetes_manifest" "gateway_vs" {
               }
             }
           ]
-          
+
           route = [
             {
               destination = {
@@ -391,48 +391,48 @@ resource "kubernetes_manifest" "gateway_vs" {
               weight = 100
             }
           ]
-          
+
           timeout = "30s"
         }
       ]
     }
   }
-  
+
   depends_on = [kubernetes_manifest.istio_gateway]
 }
 
 # PeerAuthentication for mTLS
 resource "kubernetes_manifest" "mtls_policy" {
   count = local.phase_22_b_enabled ? 1 : 0
-  
+
   manifest = {
     apiVersion = "security.istio.io/v1beta1"
     kind       = "PeerAuthentication"
-    
+
     metadata = {
       name      = "default"
       namespace = kubernetes_namespace.app_namespace[0].metadata[0].name
     }
-    
+
     spec = {
       mtls = {
         mode = "PERMISSIVE"  # Start with PERMISSIVE, upgrade to STRICT post-deployment
       }
     }
   }
-  
+
   depends_on = [helm_release.istiod]
 }
 
 # Monitoring ConfigMap for Prometheus scrape config
 resource "kubernetes_config_map" "istio_monitoring" {
   count = local.phase_22_b_enabled ? 1 : 0
-  
+
   metadata {
     name      = "istio-prometheus-config"
     namespace = kubernetes_namespace.istio_system[0].metadata[0].name
   }
-  
+
   data = {
     "prometheus.yml" = base64encode(jsonencode({
       scrape_configs = [

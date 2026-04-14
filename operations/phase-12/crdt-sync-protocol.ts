@@ -1,13 +1,13 @@
 /**
  * Phase 12.2: CRDT Synchronization Protocol
  * Implements conflict-free replicated data types for multi-region consistency
- * 
+ *
  * Core Data Types:
  * - LWW Counter: Last-Write-Wins counter (tombstone-free)
  * - OR-Set: Add-Wins set (commutative)
  * - LWW Register: Last-Write-Wins register
  * - OR-Map: Nested eventually-consistent map
- * 
+ *
  * Synchronization: Lambda-based with exponential backoff retry logic
  */
 
@@ -20,18 +20,18 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export class VectorClock {
     private clock: Map<string, number>;
-    
+
     constructor(initialClock?: Record<string, number>) {
         this.clock = new Map(Object.entries(initialClock || {}));
     }
-    
+
     /**
      * Increment clock for a replica
      */
     increment(replicaId: string): void {
         this.clock.set(replicaId, (this.clock.get(replicaId) || 0) + 1);
     }
-    
+
     /**
      * Merge with another clock (take maximum per replica)
      */
@@ -41,13 +41,13 @@ export class VectorClock {
             this.clock.set(replicaId, Math.max(current, timestamp));
         }
     }
-    
+
     /**
      * Check if this clock happened-before another
      */
     happensBefore(other: VectorClock): boolean {
         let atLeastOneLess = false;
-        
+
         for (const [replicaId, timestamp] of this.clock) {
             const otherTs = other.clock.get(replicaId) || 0;
             if (timestamp > otherTs) {
@@ -57,24 +57,24 @@ export class VectorClock {
                 atLeastOneLess = true;
             }
         }
-        
+
         // Check if other has clocks this doesn't
         for (const [replicaId, timestamp] of other.clock) {
             if (!this.clock.has(replicaId) && timestamp > 0) {
                 atLeastOneLess = true;
             }
         }
-        
+
         return atLeastOneLess;
     }
-    
+
     /**
      * Check if concurrent with another clock
      */
     isConcurrent(other: VectorClock): boolean {
         return !this.happensBefore(other) && !other.happensBefore(this);
     }
-    
+
     /**
      * Export clock as object
      */
@@ -94,7 +94,7 @@ export class LWWCounter {
     timestamp: bigint;
     replicaId: string;
     vectorClock: VectorClock;
-    
+
     constructor(
         key: string,
         value: number,
@@ -108,14 +108,14 @@ export class LWWCounter {
         this.replicaId = replicaId;
         this.vectorClock = vectorClock || new VectorClock({ [replicaId]: 1 });
     }
-    
+
     /**
      * Merge with another counter - keeps highest value
      */
     merge(other: LWWCounter): LWWCounter {
         const vc = new VectorClock(this.vectorClock.toObject());
         vc.merge(other.vectorClock);
-        
+
         // LWW: compare timestamps
         if (other.timestamp > this.timestamp) {
             return new LWWCounter(other.key, other.value, other.replicaId, vc);
@@ -140,7 +140,7 @@ export class ORSet {
     elements: Map<string, { timestamp: bigint; replicaId: string; added: boolean }>;
     vectorClock: VectorClock;
     replicaId: string;
-    
+
     constructor(
         key: string,
         replicaId: string,
@@ -152,7 +152,7 @@ export class ORSet {
         this.replicaId = replicaId;
         this.vectorClock = vectorClock || new VectorClock({ [replicaId]: 1 });
     }
-    
+
     /**
      * Add element to set
      */
@@ -164,7 +164,7 @@ export class ORSet {
         });
         this.vectorClock.increment(this.replicaId);
     }
-    
+
     /**
      * Remove element from set (tombstone)
      */
@@ -178,7 +178,7 @@ export class ORSet {
         }
         this.vectorClock.increment(this.replicaId);
     }
-    
+
     /**
      * Get active elements (not tombstoned)
      */
@@ -191,7 +191,7 @@ export class ORSet {
         }
         return active;
     }
-    
+
     /**
      * Merge with another OR-Set
      */
@@ -199,14 +199,14 @@ export class ORSet {
         const merged = new ORSet(this.key, this.replicaId);
         merged.vectorClock.merge(this.vectorClock);
         merged.vectorClock.merge(other.vectorClock);
-        
+
         // Merge elements: keep if added by any replica
         const allElements = new Set([...this.elements.keys(), ...other.elements.keys()]);
-        
+
         for (const element of allElements) {
             const local = this.elements.get(element);
             const remote = other.elements.get(element);
-            
+
             if (!local && remote) {
                 merged.elements.set(element, remote);
             } else if (local && !remote) {
@@ -223,7 +223,7 @@ export class ORSet {
                 }
             }
         }
-        
+
         return merged;
     }
 }
@@ -240,7 +240,7 @@ export class LWWRegister {
     version: number;
     replicaId: string;
     vectorClock: VectorClock;
-    
+
     constructor(
         key: string,
         value: string | null,
@@ -255,7 +255,7 @@ export class LWWRegister {
         this.replicaId = replicaId;
         this.vectorClock = vectorClock || new VectorClock({ [replicaId]: 1 });
     }
-    
+
     /**
      * Update value
      */
@@ -265,17 +265,17 @@ export class LWWRegister {
         this.version++;
         this.vectorClock.increment(this.replicaId);
     }
-    
+
     /**
      * Merge with another register - keeps most recent
      */
     merge(other: LWWRegister): LWWRegister {
         const vc = new VectorClock(this.vectorClock.toObject());
         vc.merge(other.vectorClock);
-        
+
         const merged = new LWWRegister('', null, this.replicaId, vc);
         merged.key = this.key;
-        
+
         if (other.timestamp > this.timestamp) {
             merged.value = other.value;
             merged.timestamp = other.timestamp;
@@ -299,7 +299,7 @@ export class LWWRegister {
             }
             merged.timestamp = this.timestamp;
         }
-        
+
         return merged;
     }
 }
@@ -317,7 +317,7 @@ export class CRDTSyncEngine extends EventEmitter {
     private syncInterval: number;
     private maxRetries: number;
     private retryBackoff: number;
-    
+
     constructor(
         replicaId: string,
         regions: Record<string, string>,
@@ -326,7 +326,7 @@ export class CRDTSyncEngine extends EventEmitter {
         retryBackoff = 100
     ) {
         super();
-        
+
         this.replicaId = replicaId;
         this.regions = new Map(Object.entries(regions));
         this.counters = new Map();
@@ -336,7 +336,7 @@ export class CRDTSyncEngine extends EventEmitter {
         this.maxRetries = maxRetries;
         this.retryBackoff = retryBackoff;
     }
-    
+
     /**
      * Update a counter
      */
@@ -345,7 +345,7 @@ export class CRDTSyncEngine extends EventEmitter {
         this.counters.set(key, counter);
         this.emit('counter-updated', { key, value, replicaId: this.replicaId });
     }
-    
+
     /**
      * Add element to set
      */
@@ -358,7 +358,7 @@ export class CRDTSyncEngine extends EventEmitter {
         set.add(element);
         this.emit('set-updated', { key, element, operation: 'add' });
     }
-    
+
     /**
      * Remove element from set
      */
@@ -371,7 +371,7 @@ export class CRDTSyncEngine extends EventEmitter {
         set.remove(element);
         this.emit('set-updated', { key, element, operation: 'remove' });
     }
-    
+
     /**
      * Update register
      */
@@ -380,7 +380,7 @@ export class CRDTSyncEngine extends EventEmitter {
         this.registers.set(key, register);
         this.emit('register-updated', { key, value });
     }
-    
+
     /**
      * Merge remote state
      */
@@ -399,7 +399,7 @@ export class CRDTSyncEngine extends EventEmitter {
                 }
             }
         }
-        
+
         if (remoteState.sets) {
             for (const remote of remoteState.sets) {
                 const local = this.sets.get(remote.key);
@@ -410,7 +410,7 @@ export class CRDTSyncEngine extends EventEmitter {
                 }
             }
         }
-        
+
         if (remoteState.registers) {
             for (const remote of remoteState.registers) {
                 const local = this.registers.get(remote.key);
@@ -421,10 +421,10 @@ export class CRDTSyncEngine extends EventEmitter {
                 }
             }
         }
-        
+
         this.emit('merge-complete', { timestamp: Date.now() });
     }
-    
+
     /**
      * Get consistent view of all data
      */

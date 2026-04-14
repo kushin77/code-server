@@ -1,6 +1,6 @@
 # terraform/phase-22-kubernetes-eks.tf
 # Phase 22-A: Kubernetes Orchestration - EKS Cluster Infrastructure
-# 
+#
 # Provisions AWS EKS cluster with:
 # - Auto-scaling worker nodes (2-10)
 # - Networking: VPC, subnets, security groups
@@ -24,7 +24,7 @@ variable "phase_22_a_enabled" {
   default     = true
 }
 
-# NOTE: EKS cluster variables (eks_cluster_name, eks_cluster_endpoint, etc) 
+# NOTE: EKS cluster variables (eks_cluster_name, eks_cluster_endpoint, etc)
 # are consolidated in variables.tf for consistency
 
 variable "eks_cluster_version" {
@@ -454,7 +454,7 @@ output "kubeconfig" {
 # ═════════════════════════════════════════════════════════════════════════════
 # DEPLOYMENT CHECKLIST
 # ═════════════════════════════════════════════════════════════════════════════
-# 
+#
 # Pre-deployment:
 # 1. AWS credentials configured (aws configure)
 # 2. Terraform state backend configured

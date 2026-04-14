@@ -51,4 +51,3 @@ nvidia-smi --query-gpu=index,name,memory.total,driver_version --format=csv
 log ""
 log "⚠️  Reboot recommended to fully activate kernel modules"
 log "    sudo reboot"
-

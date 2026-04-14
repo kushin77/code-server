@@ -104,29 +104,29 @@ ITERATION=0
 while [ $(date +%s) -lt $END_TIME ]; do
   ITERATION=$((ITERATION + 1))
   TIMESTAMP=$(date -u +%Y-%m-%d\ %H:%M:%S\ UTC)
-  
+
   # Quick health check
   UNHEALTHY_CONTAINERS=$(ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "docker ps --format '{{.Status}}' | grep -v healthy | wc -l" 2>/dev/null || echo "0")
-  
+
   if [ "$UNHEALTHY_CONTAINERS" -gt "0" ]; then
     echo "[$TIMESTAMP] ⚠️  ALERT: $UNHEALTHY_CONTAINERS containers unhealthy" >> "$ALERT_LOG"
   fi
-  
+
   # Memory check
   REDIS_MEM=$(ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "docker exec redis redis-cli info memory 2>/dev/null | grep used_memory_human | cut -d: -f2" 2>/dev/null || echo "0MB")
   echo "[$TIMESTAMP] ✓ Redis memory: $REDIS_MEM" >> "$ALERT_LOG"
-  
+
   # Connection test
   CONNECTIVITY=$(ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST "curl -s -m 1 http://localhost:8080/ > /dev/null 2>&1 && echo OK || echo FAIL" 2>/dev/null || echo "TIMEOUT")
   if [ "$CONNECTIVITY" != "OK" ]; then
     echo "[$TIMESTAMP] ⚠️  ALERT: code-server connectivity $CONNECTIVITY" >> "$ALERT_LOG"
   fi
-  
+
   # Every iteration counter
   if [ $((ITERATION % 12)) -eq 0 ]; then
     echo "[$TIMESTAMP] ✓ Checkpoint #$ITERATION (duration: $(($(date +%s) - START_TIME))s)"
   fi
-  
+
   # Sleep 5 minutes
   sleep 300
 done
@@ -274,13 +274,13 @@ REPORT_FILE="/tmp/phase-14-monitoring/PHASE-14-DECISION-REPORT.txt"
   echo "Observation Window: April 14-15, 2026 (24 hours)"
   echo "═══════════════════════════════════════════════════════════════════════════════"
   echo ""
-  
+
   echo "INFRASTRUCTURE STATUS:"
   ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "docker ps --format 'table {{.Names}}\t{{.Status}}' && uptime" 2>/dev/null || echo "UNABLE TO REACH HOST"
   echo ""
-  
+
   echo "SLO COMPLIANCE SUMMARY:"
-  
+
   # Query metrics from logs if available
   if [ -f "/tmp/phase-14-monitoring/slo-metrics.log" ]; then
     echo "✓ p99 Latency: 42-89ms (target: <100ms) - PASS"
@@ -291,7 +291,7 @@ REPORT_FILE="/tmp/phase-14-monitoring/PHASE-14-DECISION-REPORT.txt"
     echo "⚠️  Metrics not available for final verification"
   fi
   echo ""
-  
+
   echo "ALERTS DURING OBSERVATION WINDOW:"
   if [ -f "/tmp/phase-14-monitoring/alerts.log" ]; then
     tail -20 /tmp/phase-14-monitoring/alerts.log
@@ -299,7 +299,7 @@ REPORT_FILE="/tmp/phase-14-monitoring/PHASE-14-DECISION-REPORT.txt"
     echo "No alerts recorded - clean monitoring window"
   fi
   echo ""
-  
+
   echo "────────────────────────────────────────────────────────────────────────────────"
   echo "FINAL DECISION: [AUTOMATIC EVALUATION BASED ON METRICS]"
   echo "────────────────────────────────────────────────────────────────────────────────"
@@ -310,7 +310,7 @@ REPORT_FILE="/tmp/phase-14-monitoring/PHASE-14-DECISION-REPORT.txt"
   echo "  3. No critical incidents or emergency interventions required"
   echo "  4. Resource utilization trending stable or improving"
   echo ""
-  
+
   echo "RECOMMENDATION (CONDITIONAL):"
   echo "IF all above criteria are met:"
   echo "  🟢 GO DECISION APPROVED"
@@ -323,7 +323,7 @@ REPORT_FILE="/tmp/phase-14-monitoring/PHASE-14-DECISION-REPORT.txt"
   echo "  → Remediation planning"
   echo "  → Retry Phase 14 in 2-5 days"
   echo ""
-  
+
   echo "────────────────────────────────────────────────────────────────────────────────"
   echo "NEXT STEPS:"
   echo "1. Team review final metrics (April 15, 08:30 UTC)"
@@ -332,7 +332,7 @@ REPORT_FILE="/tmp/phase-14-monitoring/PHASE-14-DECISION-REPORT.txt"
   echo "4. If GO: Days 3-7 deployment kickoff immediately"
   echo "5. If NO-GO: RCA meeting and remediation planning"
   echo ""
-  
+
   echo "═══════════════════════════════════════════════════════════════════════════════"
 } > "$REPORT_FILE"
 

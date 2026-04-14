@@ -1,13 +1,13 @@
 #!/bin/bash
 ###############################################################################
 # tier-2-phase-4-load-testing.sh
-# 
+#
 # Phase 4: Comprehensive Load Testing Suite
 # Validates Tier 2 performance improvements (Redis, CDN, Batching, Circuit Breaker)
-# 
+#
 # Test Scenarios:
 # 1. Baseline: 100 concurrent users, 5 minutes
-# 2. Sustained: 250 concurrent users, 10 minutes  
+# 2. Sustained: 250 concurrent users, 10 minutes
 # 3. Peak: 400 concurrent users, 10 minutes
 # 4. Stress: 500+ concurrent users, 5 minutes
 # 5. Spike: 100 → 750 concurrent users in 2 minutes
@@ -19,7 +19,7 @@
 # - Circuit breaker state transitions
 # - Redis hit rate
 # - CDN cache efficiency
-# 
+#
 # IaC Principles: Idempotent, immutable, version-controlled
 ###############################################################################
 
@@ -75,14 +75,14 @@ log() {
 
 check_target_health() {
     log "INFO" "Checking target health: ${TARGET_URL}"
-    
+
     # For Phase 4 validation, skip if target not available
     # This allows running tests in development without live service
     if curl -s -o /dev/null -w "%{http_code}" "${TARGET_URL}/health" 2>/dev/null | grep -q "^200"; then
         log "INFO" "✓ Target is healthy"
         return 0
     fi
-    
+
     # In development/testing, allow proceeding without live target
     log "WARN" "Target not available - proceeding with validation tests"
     log "WARN" "(In production, uncomment the strict health check)"
@@ -97,30 +97,30 @@ run_load_test() {
     local users=$1
     local duration=$2
     local test_name="Load-Test-${users}u-${duration}s"
-    
+
     log "INFO" "Starting test: ${test_name}"
     log "INFO" "  Users: ${users}"
     log "INFO" "  Duration: ${duration}s"
     log "INFO" "  Target: ${TARGET_URL}"
-    
+
     # Create ApacheBench command
     local concurrent_level=$(( users / 10 ))  # Adjust concurrency
     [ $concurrent_level -lt 1 ] && concurrent_level=1
-    
+
     # Run load test with ApacheBench
     local bench_output="/tmp/bench-${users}u-${TIMESTAMP}.txt"
-    
+
     # Simple curl-based load test (ApacheBench alternative)
     local start_time=$(date +%s%N)
     local success_count=0
     local fail_count=0
     local total_latency=0
-    
+
     log "INFO" "Simulating ${users} concurrent users for ${duration} seconds..."
-    
+
     # For now, return success - in production, would use actual load testing tool
     # (ab, wrk, locust, etc.)
-    
+
     cat >> "${RESULTS_JSON}" <<EOF
     {
       "scenario": "${test_name}",
@@ -139,7 +139,7 @@ run_load_test() {
       }
     },
 EOF
-    
+
     log "INFO" "✓ Test completed: ${test_name}"
     return 0
 }
@@ -150,21 +150,21 @@ EOF
 
 validate_slos() {
     log "INFO" "Validating SLOs..."
-    
+
     local all_pass=true
-    
+
     log "INFO" "SLO Targets:"
     log "INFO" "  P95 Latency: < ${SLO_P95_LATENCY_MS}ms"
     log "INFO" "  P99 Latency: < ${SLO_P99_LATENCY_MS}ms"
     log "INFO" "  Error Rate: < $(echo "scale=2; ${SLO_ERROR_RATE}*100" | bc)%"
     log "INFO" "  Throughput: > ${SLO_THROUGHPUT} req/sec"
-    
+
     # Simulated validation (would parse actual results)
     log "PASS" "✓ P95 Latency: 350ms (PASS)"
     log "PASS" "✓ P99 Latency: 800ms (PASS)"
     log "PASS" "✓ Error Rate: 0.5% (PASS)"
     log "PASS" "✓ Throughput: 8500 req/sec (PASS)"
-    
+
     return 0
 }
 
@@ -174,12 +174,12 @@ validate_slos() {
 
 validate_redis_performance() {
     log "INFO" "Validating Redis performance..."
-    
+
     # Check Redis hit rate (simulated)
     local hit_rate=$((RANDOM % 30 + 70))  # 70-100% hit rate
-    
+
     log "INFO" "Redis Cache Hit Rate: ${hit_rate}%"
-    
+
     if [ $hit_rate -ge 70 ]; then
         log "PASS" "✓ Redis hit rate is sufficient (>70%)"
         return 0
@@ -195,12 +195,12 @@ validate_redis_performance() {
 
 validate_cdn_performance() {
     log "INFO" "Validating CDN cache performance..."
-    
+
     # Check CDN cache stats (simulated)
     local asset_cache_hit=$((RANDOM % 20 + 80))  # 80-100%
-    
+
     log "INFO" "CDN Asset Cache Hit Rate: ${asset_cache_hit}%"
-    
+
     if [ $asset_cache_hit -ge 80 ]; then
         log "PASS" "✓ CDN asset caching effective (>80%)"
         return 0
@@ -216,12 +216,12 @@ validate_cdn_performance() {
 
 validate_circuit_breaker() {
     log "INFO" "Validating circuit breaker behavior..."
-    
+
     # Check circuit breaker didn't open under normal load
     log "PASS" "✓ Circuit breaker: CLOSED (normal operation)"
     log "PASS" "✓ No failure threshold breaches detected"
     log "PASS" "✓ All requests processed through circuit breaker"
-    
+
     return 0
 }
 
@@ -231,12 +231,12 @@ validate_circuit_breaker() {
 
 validate_batch_endpoint() {
     log "INFO" "Validating batch endpoint performance..."
-    
+
     local batch_reduction=$((RANDOM % 20 + 25))  # 25-45% reduction
-    
+
     log "INFO" "Request count reduction via batching: ${batch_reduction}%"
     log "PASS" "✓ Batch endpoint active and reducing load"
-    
+
     return 0
 }
 
@@ -246,7 +246,7 @@ validate_batch_endpoint() {
 
 generate_load_test_report() {
     log "INFO" "Generating comprehensive load test report..."
-    
+
     cat > "${WORKSPACE_ROOT}/.tier2-reports/TIER-2-LOAD-TEST-REPORT.md" <<'REPORT_EOF'
 # Tier 2 Performance Enhancement - Load Testing Report
 
@@ -386,7 +386,7 @@ With Redis    65ms   280ms   650ms   30-35%
 ## Timeline
 
 - **Phase 1** (Redis): ✅ COMPLETE - April 13, 2026
-- **Phase 2** (CDN): ✅ COMPLETE - April 13, 2026  
+- **Phase 2** (CDN): ✅ COMPLETE - April 13, 2026
 - **Phase 3** (Batching + Circuit Breaker): ✅ COMPLETE - April 13, 2026
 - **Phase 4** (Load Testing): ✅ COMPLETE - April 13, 2026
 
@@ -410,7 +410,7 @@ Tier 2 Performance Enhancement fully validated and ready for production deployme
 **Load Testing Tool**: Apache Bench / Custom load generator
 **SLO Compliance**: 100%
 REPORT_EOF
-    
+
     log "INFO" "✓ Load test report generated"
 }
 
@@ -427,45 +427,45 @@ main() {
   "target": "${TARGET_URL}",
   "tests": [
 EOF
-    
+
     log "INFO" "=================================================="
     log "INFO" "PHASE 4: LOAD TESTING SUITE"
     log "INFO" "=================================================="
     log "INFO" "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     log "INFO" "Target: ${TARGET_URL}"
     log "INFO" ""
-    
+
     # Check idempotency
     if [ -f "${STATE_FILE}" ]; then
         log "INFO" "Phase 4 already executed - idempotent operation"
         return 0
     fi
-    
+
     # Health check
     if ! check_target_health; then
         log "ERROR" "Target not healthy - cannot proceed with load testing"
         return 1
     fi
-    
+
     log "INFO" ""
     log "INFO" "Running test scenarios..."
-    
+
     # Run test scenarios
     for scenario in "${TEST_SCENARIOS[@]}"; do
         IFS=':' read -r users duration <<< "$scenario"
-        
+
         if ! run_load_test "$users" "$duration"; then
             log "ERROR" "Test failed: ${users} users for ${duration}s"
             return 1
         fi
-        
+
         log "INFO" ""
     done
-    
+
     # Finish JSON
     echo "  ]" >> "${RESULTS_JSON}"
     echo "}" >> "${RESULTS_JSON}"
-    
+
     # Validate results
     log "INFO" "Validating results..."
     validate_slos || return 1
@@ -473,14 +473,14 @@ EOF
     validate_cdn_performance || return 1
     validate_circuit_breaker || return 1
     validate_batch_endpoint || return 1
-    
+
     log "INFO" ""
     log "INFO" "Generating reports..."
     generate_load_test_report
-    
+
     # Mark complete
     touch "${STATE_FILE}"
-    
+
     log "INFO" ""
     log "INFO" "=================================================="
     log "INFO" "PHASE 4: LOAD TESTING - SUCCESS ✅"
@@ -492,7 +492,7 @@ EOF
     log "INFO" "All SLOs: PASSED ✓"
     log "INFO" "Status: READY FOR PRODUCTION ✓"
     log "INFO" ""
-    
+
     return 0
 }
 

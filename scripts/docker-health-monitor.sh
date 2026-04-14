@@ -22,16 +22,16 @@ log() {
 check_container_status() {
     local container=$1
     local status=$(docker inspect $container --format='{{.State.Running}}' 2>/dev/null || echo "false")
-    
+
     if [ "$status" = "false" ]; then
         log "WARN" "Container [$container] is NOT running"
-        
+
         # Check restart count
         local restart_count=$(docker inspect $container --format='{{.RestartCount}}' 2>/dev/null || echo "0")
         if [ "$restart_count" -gt "$RESTART_THRESHOLD" ]; then
             log "ALERT" "Container [$container] restarted $restart_count times - potential crash loop"
         fi
-        
+
         return 1
     else
         log "OK" "Container [$container] is running"
@@ -43,7 +43,7 @@ check_container_status() {
 check_container_health() {
     local container=$1
     local health=$(docker inspect $container --format='{{.State.Health.Status}}' 2>/dev/null || echo "none")
-    
+
     case $health in
         "healthy")
             log "OK" "Container [$container] health: HEALTHY"
@@ -67,7 +67,7 @@ check_container_health() {
 # Function to check container resource usage
 check_container_resources() {
     local container=$1
-    
+
     if command -v docker &> /dev/null && docker stats --no-stream "$container" &>/dev/null 2>&1; then
         local stats=$(docker stats --no-stream $container --format "table {{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" 2>/dev/null || echo "N/A")
         log "OK" "Container [$container] resources: CPU={{.CPUPerc}} Memory={{.MemUsage}} ({{.MemPerc}})"
@@ -78,7 +78,7 @@ check_container_resources() {
 check_container_logs() {
     local container=$1
     local error_count=$(docker logs $container 2>/dev/null | grep -iE "error|exception|fatal|crash" | wc -l || echo "0")
-    
+
     if [ "$error_count" -gt 0 ]; then
         log "WARN" "Container [$container] has $error_count error entries in logs"
         log "INFO" "Recent errors:"
@@ -93,18 +93,18 @@ check_container_logs() {
 # Main monitoring loop
 main() {
     log "INFO" "Docker Health Monitor started"
-    
+
     # Get list of containers
     local containers=$(docker ps -a --format "{{.Names}}" || echo "")
-    
+
     if [ -z "$containers" ]; then
         log "WARN" "No Docker containers found"
         exit 1
     fi
-    
+
     while true; do
         log "INFO" "--- Health Check Cycle ---"
-        
+
         for container in $containers; do
             check_container_status "$container" || true
             check_container_health "$container" || true
@@ -112,7 +112,7 @@ main() {
             check_container_logs "$container" || true
             echo "" >> "$LOG_FILE"
         done
-        
+
         log "INFO" "Health check complete. Sleeping ${CHECK_INTERVAL}s..."
         sleep "$CHECK_INTERVAL"
     done

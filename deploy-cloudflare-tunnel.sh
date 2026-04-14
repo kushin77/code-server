@@ -83,10 +83,10 @@ echo "Step 4: Deploying token to production server..."
 
 ssh "$PROD_HOST" << SSHEOF
   cd $PROD_DIR
-  
+
   # Add token to .env
   echo "CLOUDFLARE_TUNNEL_TOKEN=$TUNNEL_TOKEN" >> .env
-  
+
   # Verify
   if grep -q "CLOUDFLARE_TUNNEL_TOKEN=$TUNNEL_TOKEN" .env; then
     echo "✅ Token injected into .env"
@@ -94,15 +94,15 @@ ssh "$PROD_HOST" << SSHEOF
     echo "❌ ERROR: Token not properly added to .env"
     exit 1
   fi
-  
+
   # Start cloudflared service
   echo "Starting cloudflared service..."
   docker-compose up -d cloudflared
-  
+
   # Wait for health check
   echo "Waiting for tunnel connection..."
   sleep 5
-  
+
   # Check logs for success
   if docker logs cloudflared 2>&1 | grep -q "connected to edge\|INF"; then
     echo "✅ cloudflared is connected to Cloudflare edge"

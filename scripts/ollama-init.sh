@@ -22,20 +22,20 @@ log() {
 check_health() {
   local endpoint=$1
   local retries=0
-  
+
   while [ $retries -lt $MAX_RETRIES ]; do
     if curl -sf "$endpoint/api/tags" >/dev/null 2>&1; then
       log "✅ Ollama health check passed"
       return 0
     fi
-    
+
     retries=$((retries + 1))
     if [ $retries -lt $MAX_RETRIES ]; then
       log "⏳ Waiting for Ollama to be ready... ($retries/$MAX_RETRIES)"
       sleep $RETRY_DELAY
     fi
   done
-  
+
   log "❌ Ollama health check failed after $MAX_RETRIES attempts"
   return 1
 }
@@ -44,15 +44,15 @@ check_health() {
 pull_model() {
   local model=$1
   local endpoint=$2
-  
+
   # Check if model already exists before pulling (idempotent)
   if curl -sf "$endpoint/api/tags" 2>/dev/null | grep -q "\"name\":\"$model\"" 2>/dev/null; then
     log "✅ Model $model already exists (skipping pull)"
     return 0
   fi
-  
+
   log "⏳ Pulling $model..."
-  
+
   if curl -sf -X POST "$endpoint/api/pull" \
     -H "Content-Type: application/json" \
     -d "{\"name\":\"$model\"}" \
@@ -72,13 +72,13 @@ build_repo_index() {
   local workspace=$1
   local index_file="$workspace/.ollama-index.json"
   local index_hash_file="$workspace/.ollama-index.sha256"
-  
+
   # Calculate current workspace structure hash
   local current_hash=""
   if command -v find >/dev/null 2>&1; then
     current_hash=$(find "$workspace" -type f \( -name "*.ts" -o -name "*.js" -o -name "*.py" -o -name "*.go" -o -name "README*" \) 2>/dev/null | sort | sha256sum | awk '{print $1}' || echo "")
   fi
-  
+
   # Check if index is already current (idempotent)
   if [ -n "$current_hash" ] && [ -f "$index_hash_file" ]; then
     local stored_hash=$(cat "$index_hash_file" 2>/dev/null || echo "")
@@ -87,9 +87,9 @@ build_repo_index() {
       return 0
     fi
   fi
-  
+
   log "🔍 Building repository index..."
-  
+
   cat > "$index_file" << EOF
 {
   "indexed_at": "$(date -Iseconds)",
@@ -104,7 +104,7 @@ build_repo_index() {
   }
 }
 EOF
-  
+
   # Store hash for next run
   if [ -n "$current_hash" ]; then
     echo "$current_hash" > "$index_hash_file"
@@ -115,37 +115,37 @@ EOF
   }
 }
 EOF
-  
+
   log "✅ Repository index created at $index_file"
 }
 
 # Main initialization flow
 main() {
   log "🚀 Initializing Ollama integration..."
-  
+
   # Stage 1: Health check
   log "Stage 1: Checking Ollama connectivity..."
   if ! check_health "$OLLAMA_ENDPOINT"; then
     log "⚠️  Ollama not yet ready, continuing with startup..."
     # Don't exit here - Ollama may start after code-server
   fi
-  
+
   # Stage 2: Attempt to pull models (will retry as needed)
   log "Stage 2: Pulling elite models..."
   for model in "${MODELS[@]}"; do
     pull_model "$model" "$OLLAMA_ENDPOINT" || true
   done
-  
+
   # Stage 3: List available models
   log "Stage 3: Listing available models..."
   list_models "$OLLAMA_ENDPOINT" || true
-  
+
   # Stage 4: Build repository index (idempotent — checks hash)
   log "Stage 4: Building repository context index..."
   if [ -d "$WORKSPACE_PATH" ]; then
     build_repo_index "$WORKSPACE_PATH"
   fi
-  
+
   log "✅ Ollama initialization complete!"
   log "💡 You can now use @ollama in the VS Code chat view"
 }

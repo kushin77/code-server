@@ -1,7 +1,7 @@
 # Cloudflare Tunnel & Access Setup Guide
 
-**Issue**: #185 - IMPL: Cloudflare Tunnel Setup for Home Server IDE Access  
-**Status**: Implementation guide + scripts  
+**Issue**: #185 - IMPL: Cloudflare Tunnel Setup for Home Server IDE Access
+**Status**: Implementation guide + scripts
 **Date**: April 13, 2026
 
 ## Overview
@@ -68,11 +68,11 @@ ingress:
   # Main IDE access
   - hostname: dev.yourdomain.com
     service: http://localhost:8080
-  
+
   # Terminal proxy (future)
   - hostname: terminal.yourdomain.com
     service: http://localhost:3000
-  
+
   # Default 404
   - service: http_status:404
 
@@ -289,10 +289,10 @@ originRequest:
   headers:
     X-Custom-Auth: "code-server"
     X-Real-IP: "tunnel"
-  
+
   # Disable specific features
   disableChunkedEncoding: false
-  
+
   # Keep-alive
   http2Origin: true
   connectTimeout: 30s
@@ -328,8 +328,8 @@ The Makefile `make grant-access` target can be enhanced to:
 
 ---
 
-**Implementation Status**: Scripts + documentation complete  
-**Automation**: 2 setup scripts provided  
-**Manual Setup**: Dashboard configuration required for policies  
-**Testing**: Connectivity verification included  
+**Implementation Status**: Scripts + documentation complete
+**Automation**: 2 setup scripts provided
+**Manual Setup**: Dashboard configuration required for policies
+**Testing**: Connectivity verification included
 **Next Issue**: #187 (Read-only IDE access control)

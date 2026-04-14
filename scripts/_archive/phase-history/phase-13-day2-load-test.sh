@@ -76,7 +76,7 @@ init_logs() {
 make_request() {
     local worker_id=$1
     local start_ns=$(date +%s%N)
-    
+
     # Execute HTTP request with timeout
     local response=$(curl -s \
         --connect-timeout "$REQUEST_TIMEOUT" \
@@ -84,17 +84,17 @@ make_request() {
         -w "STATUS:%{http_code}\nTIME:%{time_total}" \
         -o /dev/null \
         "$TARGET_URL" 2>&1 || true)
-    
+
     local end_ns=$(date +%s%N)
     local latency_ms=$(( (end_ns - start_ns) / 1000000 ))
-    
+
     # Parse response
     local http_code=$(echo "$response" | grep "^STATUS:" | cut -d: -f2 || echo "000")
     local curl_time=$(echo "$response" | grep "^TIME:" | cut -d: -f2 || echo "0.000")
-    
+
     # Log metrics
     log_latency "$latency_ms $http_code"
-    
+
     if [ "$http_code" = "200" ]; then
         log_request "Worker $worker_id: SUCCESS ($latency_ms ms)"
     else
@@ -109,11 +109,11 @@ make_request() {
 run_concurrent_requests() {
     local end_time=$(($(date +%s) + LOAD_TEST_DURATION))
     local request_count=0
-    
+
     log "Starting load test: $CONCURRENT_USERS concurrent users, $LOAD_TEST_DURATION seconds"
     log "Target: $TARGET_URL"
     log ""
-    
+
     while [ $(date +%s) -lt $end_time ]; do
         # Spawn concurrent workers
         for i in $(seq 1 $CONCURRENT_USERS); do
@@ -121,13 +121,13 @@ run_concurrent_requests() {
                 make_request "$i"
             ) &
         done
-        
+
         # Wait for all workers to complete
         wait
-        
+
         request_count=$((request_count + CONCURRENT_USERS))
     done
-    
+
     log "Load test complete: $request_count total requests"
 }
 
@@ -141,29 +141,29 @@ analyze_metrics() {
     log "LOAD TEST RESULTS"
     log "═══════════════════════════════════════════════════════════════════════════"
     log ""
-    
+
     if [ ! -f "$LATENCY_LOG" ] || [ ! -s "$LATENCY_LOG" ]; then
         log_error "No latency data collected"
         return 1
     fi
-    
+
     # Parse latency data
     local total_requests=$(wc -l < "$LATENCY_LOG")
     local successful=$(awk '$2 == "200" {count++} END {print count+0}' "$LATENCY_LOG")
     local failed=$((total_requests - successful))
     local error_rate=$(awk "BEGIN {printf \"%.2f\", ($failed / $total_requests) * 100}")
-    
+
     # Latency statistics
     local latencies=$(awk '{print $1}' "$LATENCY_LOG" | sort -n)
     local p50=$(echo "$latencies" | awk 'NR==int(NR/2)+1')
     local p95=$(echo "$latencies" | awk 'NR==int(NR*0.95)+1')
     local p99=$(echo "$latencies" | awk 'NR==int(NR*0.99)+1')
     local p999=$(echo "$latencies" | awk 'NR==int(NR*0.999)+1')
-    
+
     # Throughput
     local duration_seconds=$LOAD_TEST_DURATION
     local throughput=$(awk "BEGIN {printf \"%.2f\", $total_requests / $duration_seconds}")
-    
+
     # Report
     log "Test Duration:        ${duration_seconds}s"
     log "Total Requests:       $total_requests"
@@ -178,15 +178,15 @@ analyze_metrics() {
     log "  p99:                $p99 ms"
     log "  p99.9:              $p999 ms"
     log ""
-    
+
     # SLO Validation
     log "═══════════════════════════════════════════════════════════════════════════"
     log "SLO VALIDATION"
     log "═══════════════════════════════════════════════════════════════════════════"
     log ""
-    
+
     local all_pass=true
-    
+
     # p99 latency target
     if [ "${p99%.*}" -lt 100 ]; then
         log "✓ p99 Latency: ${p99}ms < 100ms"
@@ -194,7 +194,7 @@ analyze_metrics() {
         log "✗ p99 Latency: ${p99}ms >= 100ms"
         all_pass=false
     fi
-    
+
     # Error rate target
     if (( $(echo "$error_rate < 0.1" | bc -l) )); then
         log "✓ Error Rate: ${error_rate}% < 0.1%"
@@ -202,7 +202,7 @@ analyze_metrics() {
         log "✗ Error Rate: ${error_rate}% >= 0.1%"
         all_pass=false
     fi
-    
+
     # Throughput target
     if (( $(echo "$throughput > 100" | bc -l) )); then
         log "✓ Throughput: ${throughput} req/s > 100 req/s"
@@ -210,9 +210,9 @@ analyze_metrics() {
         log "✗ Throughput: ${throughput} req/s <= 100 req/s"
         all_pass=false
     fi
-    
+
     log ""
-    
+
     if [ "$all_pass" = true ]; then
         log "═══════════════════════════════════════════════════════════════════════════"
         log "RESULT: 🟢 ALL SLOs PASSED"
@@ -235,11 +235,11 @@ main() {
     log "PHASE 13 DAY 2: LOAD TEST EXECUTOR"
     log "═══════════════════════════════════════════════════════════════════════════"
     log ""
-    
+
     # Initialize
     init_logs
     log ""
-    
+
     # Verify connectivity
     if ! curl -sf "$TARGET_URL" > /dev/null 2>&1; then
         log_error "Target not reachable: $TARGET_URL"
@@ -247,10 +247,10 @@ main() {
     fi
     log "✓ Target connectivity verified: $TARGET_URL"
     log ""
-    
+
     # Run load test
     run_concurrent_requests
-    
+
     # Analyze results
     analyze_metrics
 }

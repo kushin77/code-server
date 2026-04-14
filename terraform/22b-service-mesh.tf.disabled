@@ -23,16 +23,16 @@ terraform {
 locals {
   istio_namespace = "istio-system"
   istio_version   = "1.19.3" # PINNED - Never change
-  
+
   # Service Mesh settings
   mtls_mode            = "STRICT"
   canary_init_weight   = 10
   canary_max_weight    = 90
   circuit_breaker_rate = 5
-  
+
   # Tracing integration
   jaeger_endpoint = "http://jaeger.observability:16686"
-  
+
   # Common labels for consistency
   common_labels = {
     phase      = "22-b"

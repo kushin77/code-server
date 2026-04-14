@@ -1,0 +1,274 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 23: Advanced Observability — Alert Rules
+# SLO burn-rate alerts + anomaly alerts + correlation alerts
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-window multi-burn-rate alerting (Google SRE Workbook pattern)
+# ─────────────────────────────────────────────────────────────────────────────
+
+groups:
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SLO BURN RATE ALERTS (Availability)
+  # Fires when we're burning error budget faster than sustainable
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: slo_availability_alerts
+    rules:
+      # P0: Critical burn — consuming 14.4× monthly budget (budget gone in 2h)
+      - alert: SLOAvailabilityBurnRateCritical
+        expr: |
+          slo:availability:burn_rate_1h > 14.4
+          and
+          slo:availability:burn_rate_6h > 14.4
+        for: 2m
+        labels:
+          severity: critical
+          page: "true"
+          slo: availability
+          priority: P0
+        annotations:
+          summary: "CRITICAL: Availability SLO burning 14.4× faster than budget allows"
+          description: >
+            1h burn rate: {{ $value | humanize }}×.
+            At this rate the monthly error budget will be exhausted in < 2 hours.
+            Immediate action required.
+          runbook: "https://github.com/kushin77/code-server/blob/main/INCIDENT-RUNBOOKS.md#slo-burn-rate"
+
+      # P1: High burn — consuming 6× monthly budget (budget gone in 5h)
+      - alert: SLOAvailabilityBurnRateHigh
+        expr: |
+          slo:availability:burn_rate_1h > 6
+          and
+          slo:availability:burn_rate_6h > 6
+        for: 5m
+        labels:
+          severity: high
+          page: "true"
+          slo: availability
+          priority: P1
+        annotations:
+          summary: "High availability SLO burn rate (6×)"
+          description: >
+            1h burn rate: {{ $value | humanize }}×.
+            Monthly error budget will be exhausted in ~5 hours at this rate.
+          runbook: "https://github.com/kushin77/code-server/blob/main/INCIDENT-RUNBOOKS.md#slo-burn-rate"
+
+      # P2: Elevated burn — consuming 3× (budget gone in 10h)
+      - alert: SLOAvailabilityBurnRateElevated
+        expr: |
+          slo:availability:burn_rate_6h > 3
+        for: 15m
+        labels:
+          severity: medium
+          page: "false"
+          slo: availability
+          priority: P2
+        annotations:
+          summary: "Elevated availability SLO burn rate (3×)"
+          description: "6h burn rate: {{ $value | humanize }}×. Investigate within 2 hours."
+          runbook: "https://github.com/kushin77/code-server/blob/main/INCIDENT-RUNBOOKS.md#slo-burn-rate"
+
+      # Budget low: < 10% of monthly budget remaining
+      - alert: SLOAvailabilityBudgetLow
+        expr: slo:availability:error_budget_remaining < 0.10
+        for: 5m
+        labels:
+          severity: high
+          page: "true"
+          slo: availability
+          priority: P1
+        annotations:
+          summary: "Availability error budget < 10% remaining for the month"
+          description: "{{ $value | humanizePercentage }} of monthly error budget remains. No more incidents allowed."
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # SLO BURN RATE ALERTS (Latency)
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: slo_latency_alerts
+    rules:
+      - alert: SLOLatencyBurnRateCritical
+        expr: |
+          slo:latency:burn_rate_1h > 14.4
+        for: 2m
+        labels:
+          severity: critical
+          page: "true"
+          slo: latency
+          priority: P0
+        annotations:
+          summary: "CRITICAL: Latency SLO burning 14.4× faster than budget allows"
+          description: "p99 latency SLI critically degraded. Budget exhausted in < 2h at current rate."
+          runbook: "https://github.com/kushin77/code-server/blob/main/INCIDENT-RUNBOOKS.md#latency"
+
+      - alert: SLOLatencyBurnRateHigh
+        expr: |
+          slo:latency:burn_rate_1h > 6
+        for: 5m
+        labels:
+          severity: high
+          page: "true"
+          slo: latency
+          priority: P1
+        annotations:
+          summary: "High latency SLO burn rate"
+          description: "Latency SLO burn rate: {{ $value | humanize }}×. Investigate immediately."
+          runbook: "https://github.com/kushin77/code-server/blob/main/INCIDENT-RUNBOOKS.md#latency"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # ANOMALY DETECTION ALERTS
+  # Fires when a metric deviates significantly from its baseline (z-score)
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: anomaly_alerts
+    rules:
+      # Request rate anomaly (traffic spike or sudden drop)
+      - alert: AnomalyRequestRateSpike
+        expr: anomaly:http_requests:zscore > 3.0
+        for: 5m
+        labels:
+          severity: warning
+          category: anomaly
+          priority: P2
+        annotations:
+          summary: "Anomaly: HTTP request rate {{ $value | humanize }}σ above baseline"
+          description: >
+            Request rate is {{ $value | humanize }} standard deviations above the 1-hour baseline.
+            Possible causes: traffic surge, DDoS, deployment, bot activity.
+          correlation: "traffic_spike"
+
+      - alert: AnomalyRequestRateDrop
+        expr: anomaly:http_requests:zscore < -3.0
+        for: 5m
+        labels:
+          severity: warning
+          category: anomaly
+          priority: P2
+        annotations:
+          summary: "Anomaly: HTTP request rate {{ $value | humanize }}σ below baseline"
+          description: "Sudden traffic drop — possible upstream routing issue or service outage."
+          correlation: "traffic_drop"
+
+      # Latency anomaly (sudden spike)
+      - alert: AnomalyLatencySpike
+        expr: anomaly:latency_p99:zscore > 3.0
+        for: 3m
+        labels:
+          severity: high
+          category: anomaly
+          priority: P1
+        annotations:
+          summary: "Anomaly: p99 latency {{ $value | humanize }}σ above baseline"
+          description: >
+            p99 latency is {{ $value | humanize }} standard deviations above baseline.
+            Correlated possible causes: CPU pressure, garbage collection, database slowness.
+          correlation: "latency_spike"
+          runbook: "https://github.com/kushin77/code-server/blob/main/INCIDENT-RUNBOOKS.md#latency"
+
+      # Error rate anomaly
+      - alert: AnomalyErrorRateSpike
+        expr: anomaly:error_rate:zscore > 4.0
+        for: 3m
+        labels:
+          severity: critical
+          category: anomaly
+          priority: P0
+        annotations:
+          summary: "Anomaly: Error rate {{ $value | humanize }}σ above baseline — likely incident"
+          description: >
+            Error rate anomaly score: {{ $value | humanize }}σ.
+            This level of deviation almost always indicates an active incident.
+          correlation: "error_spike"
+          runbook: "https://github.com/kushin77/code-server/blob/main/INCIDENT-RUNBOOKS.md#error-budget"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # CORRELATION ALERTS
+  # Fires when correlated signals are simultaneously abnormal (cascade detection)
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: correlation_alerts
+    rules:
+      # Traffic AND latency both elevated — possible overload
+      - alert: CorrelationTrafficLatency
+        expr: correlation:traffic_latency:active == 1
+        for: 5m
+        labels:
+          severity: high
+          category: correlation
+          correlation_group: traffic_latency
+          priority: P1
+        annotations:
+          summary: "Correlated: High traffic → latency degradation (overload pattern)"
+          description: >
+            Both request rate (>50 rps) and p99 latency (>100ms) are elevated simultaneously.
+            This pattern indicates service overload or upstream bottleneck.
+          remediation: "Scale horizontally, check connection pools, enable rate limiting."
+
+      # CPU pressure AND latency elevated — CPU bound
+      - alert: CorrelationCPULatency
+        expr: correlation:cpu_latency:active == 1
+        for: 5m
+        labels:
+          severity: high
+          category: correlation
+          correlation_group: cpu_latency
+          priority: P1
+        annotations:
+          summary: "Correlated: High CPU → latency degradation (CPU-bound pattern)"
+          description: >
+            CPU utilization (>70%) and p99 latency (>200ms) are co-elevated.
+            Pattern indicates CPU-bound workload.
+          remediation: "Profile CPU usage, check for busy-loops, consider CPU limit adjustment."
+
+      # Errors AND timeouts co-elevated — cascade failure risk
+      - alert: CorrelationErrorsCascade
+        expr: correlation:errors_timeouts:active == 1
+        for: 3m
+        labels:
+          severity: critical
+          category: correlation
+          correlation_group: errors_cascade
+          priority: P0
+        annotations:
+          summary: "Correlated: Error surge → session timeouts (cascade failure pattern)"
+          description: >
+            Rising error rate and session timeouts are co-occurring.
+            This pattern indicates a cascade failure — multiple user sessions affected.
+          remediation: "Immediate incident response. Check all downstream dependencies."
+          runbook: "https://github.com/kushin77/code-server/blob/main/INCIDENT-RUNBOOKS.md#cascade"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # OTEL PIPELINE HEALTH ALERTS
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: otel_pipeline_alerts
+    rules:
+      - alert: OTelSpanDropping
+        expr: otel:spans:drop_rate > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: observability
+          priority: P2
+        annotations:
+          summary: "OTel Collector is dropping spans ({{ $value | humanize }}/s)"
+          description: >
+            Spans are being dropped by the OTel pipeline.
+            Traces are incomplete. Check collector memory and queue capacity.
+
+      - alert: OTelQueueFull
+        expr: otel:queue:fill_ratio > 0.8
+        for: 5m
+        labels:
+          severity: high
+          category: observability
+          priority: P1
+        annotations:
+          summary: "OTel Collector export queue > 80% full"
+          description: "Queue fill ratio: {{ $value | humanizePercentage }}. Spans will be dropped soon."
+
+      - alert: OTelExportFailure
+        expr: otel:export:success_ratio < 0.95
+        for: 10m
+        labels:
+          severity: high
+          category: observability
+          priority: P1
+        annotations:
+          summary: "OTel Collector export success rate < 95%"
+          description: "Export success ratio: {{ $value | humanizePercentage }}. Check Jaeger connectivity."

@@ -205,7 +205,70 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+  # ─── OpenTelemetry Collector ────────────────────────────────────────────────
+  # Collects traces, metrics, logs from all services
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.92.0
+    container_name: otel-collector
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "4317:4317"  # gRPC receiver
+      - "4318:4318"  # HTTP receiver
+      - "9411:9411"  # Zipkin receiver
+      - "8888:8888"  # Prometheus metrics
+    volumes:
+      - ./otel-config.yml:/etc/otel/config.yaml:ro
+    command: ["--config=/etc/otel/config.yaml"]
+    environment:
+      - GOGC=80
+    depends_on:
+      - jaeger
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # ─── Jaeger (Distributed Tracing) ───────────────────────────────────────────
+  # Stores and visualizes traces from OTel Collector
+  jaeger:
+    image: jaegertracing/all-in-one:1.50
+    container_name: jaeger
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "5775:5775/udp"   # Zipkin compact thrift
+      - "6831:6831/udp"   # Jaeger compact thrift
+      - "6832:6832/udp"   # Jaeger binary thrift
+      - "5778:5778"       # trace collector HTTP
+      - "16686:16686"     # UI dashboard
+      - "14268:14268"     # jaeger collector HTTP
+      - "14250:14250"     # gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - METRICS_STORAGE_TYPE=prometheus
+    volumes:
+      - jaeger-data:/badger
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16686/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks & Volumes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -224,4 +287,6 @@ volumes:
   caddy-config:
     driver: local
   caddy-data:
+    driver: local
+  jaeger-data:
     driver: local

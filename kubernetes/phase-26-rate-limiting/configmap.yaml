@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rate-limit-config
+  namespace: production
+  labels:
+    phase: 26-a
+    app: graphql-api
+    component: rate-limiting
+data:
+  tiers: |
+    {
+      "free": {
+        "requestsPerMinute": 60,
+        "requestsPerDay": 10000,
+        "concurrentQueries": 5,
+        "maxPayloadKb": 1024,
+        "ttlSeconds": 300
+      },
+      "pro": {
+        "requestsPerMinute": 1000,
+        "requestsPerDay": 500000,
+        "concurrentQueries": 50,
+        "maxPayloadKb": 10240,
+        "ttlSeconds": 3600
+      },
+      "enterprise": {
+        "requestsPerMinute": 10000,
+        "requestsPerDay": 100000000,
+        "concurrentQueries": 500,
+        "maxPayloadKb": 102400,
+        "ttlSeconds": 86400
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rate-limit-prometheus-rules
+  namespace: production
+  labels:
+    phase: 26-a
+    app: graphql-api
+    prometheus: "true"
+data:
+  rate-limit-rules.yaml: |
+    groups:
+    - name: phase_26_rate_limiting
+      interval: 30s
+      rules:
+      # Rate limit violation rate alert
+      - alert: HighRateLimitViolationRate
+        expr: |
+          rate(api_rate_limit_violations_total[5m]) > 0.5
+        for: 5m
+        annotations:
+          summary: "High rate limit violation rate detected"
+          description: "Rate limit violations: {{ $value }} violations/sec"
+        labels:
+          severity: warning
+      
+      # Latency overhead from rate limiter
+      - alert: RateLimiterLatencyHigh
+        expr: |
+          histogram_quantile(0.99, api_rate_limit_calculation_duration_seconds) > 0.01
+        for: 5m
+        annotations:
+          summary: "Rate limiter adding excessive latency"
+          description: "p99 latency: {{ $value }}s"
+        labels:
+          severity: warning
+      
+      # Redis connectivity issues
+      - alert: RateLimiterRedisErrors
+        expr: |
+          rate(api_rate_limiter_redis_errors_total[5m]) > 0.1
+        for: 2m
+        annotations:
+          summary: "Rate limiter Redis connection errors"
+          description: "Error rate: {{ $value }} errors/sec"
+        labels:
+          severity: critical
+      
+      # Request rejection rate too high
+      - alert: HighRequestRejectionRate
+        expr: |
+          rate(api_requests_rejected_total[5m]) > 0.01
+        for: 10m
+        annotations:
+          summary: "High percentage of requests being rejected"
+          description: "Rejection rate: {{ $value | humanizePercentage }}"
+        labels:
+          severity: warning
+      
+      # Per-tier metrics
+      - record: tier:api_requests:rate1m
+        expr: |
+          sum(rate(api_requests_total[1m])) by (tier)
+      
+      - record: tier:api_requests_rejected:rate1m
+        expr: |
+          sum(rate(api_requests_rejected_total[1m])) by (tier)
+      
+      - record: tier:rate_limit_violations:rate1m
+        expr: |
+          sum(rate(api_rate_limit_violations_total[1m])) by (tier)
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-credentials
+  namespace: production
+  labels:
+    phase: 26-a
+type: Opaque
+stringData:
+  username: code_server_user
+  password: ChangeMe!SecurePassword123

@@ -1,62 +1,59 @@
 #!/bin/bash
-# Ollama initialization and management script — FULLY IDEMPOTENT
-# Handles model pulling, repository indexing, and health checks
-# Safe to run multiple times — all operations are idempotent
+# ═══════════════════════════════════════════════════════════════════════════
+# Ollama Model Initialization & Code Repository Indexing
+# ═══════════════════════════════════════════════════════════════════════════
 
-set -eu
+set -euo pipefail
 
-
+# Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-OLLAMA_ENDPOINT="${OLLAMA_ENDPOINT:-http://ollama:11434}"
-WORKSPACE_PATH="${WORKSPACE_PATH:-.}"
-MODELS=("llama2:70b-chat" "codegemma" "neural-chat" "mistral")
-MAX_RETRIES=3
-RETRY_DELAY=5
+source "${SCRIPT_DIR}/_common/init.sh" || exit 1
 
-log() {
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"
-}
+# Configuration
+OLLAMA_ENDPOINT="${OLLAMA_ENDPOINT:-http://localhost:11434}"
+WORKSPACE_PATH="${WORKSPACE_PATH:-/home/coder/workspace}"
+MODELS=(
+  "llama2:70b-chat"
+  "codegemma"
+  "neural-chat"
+  "mistral"
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Utility Functions
+# ─────────────────────────────────────────────────────────────────────────────
 
 # Check Ollama health
 check_health() {
   local endpoint=$1
-  local retries=0
+  local max_retries=5
+  local retry_count=0
 
-  while [ $retries -lt $MAX_RETRIES ]; do
-    if curl -sf "$endpoint/api/tags" >/dev/null 2>&1; then
-      log "✅ Ollama health check passed"
+  while [ $retry_count -lt $max_retries ]; do
+    if curl -sf "${endpoint}/api/tags" > /dev/null 2>&1; then
+      log "✅ Ollama is healthy"
       return 0
     fi
-
-    retries=$((retries + 1))
-    if [ $retries -lt $MAX_RETRIES ]; then
-      log "⏳ Waiting for Ollama to be ready... ($retries/$MAX_RETRIES)"
-      sleep $RETRY_DELAY
+    retry_count=$((retry_count + 1))
+    if [ $retry_count -lt $max_retries ]; then
+      log "⏳ Waiting for Ollama... (attempt $retry_count/$max_retries)"
+      sleep 5
     fi
   done
 
-  log "❌ Ollama health check failed after $MAX_RETRIES attempts"
+  log "⚠️  Ollama not responding after $max_retries attempts"
   return 1
 }
 
-# Pull model from Ollama (IDEMPOTENT — checks if already exists)
+# Pull a model from Ollama
 pull_model() {
   local model=$1
   local endpoint=$2
 
-  # Check if model already exists before pulling (idempotent)
-  if curl -sf "$endpoint/api/tags" 2>/dev/null | grep -q "\"name\":\"$model\"" 2>/dev/null; then
-    log "✅ Model $model already exists (skipping pull)"
-    return 0
-  fi
-
-  log "⏳ Pulling $model..."
-
-  if curl -sf -X POST "$endpoint/api/pull" \
+  log "Pulling model: $model"
+  if curl -sf "${endpoint}/api/pull" \
     -H "Content-Type: application/json" \
-    -d "{\"name\":\"$model\"}" \
-    -w "%{http_code}" -o /dev/null | grep -q "200"; then
+    -d "{\"name\":\"$model\",\"stream\":false}" > /dev/null 2>&1; then
     log "✅ Successfully pulled $model"
     return 0
   else
@@ -67,7 +64,12 @@ pull_model() {
 
 # List available models
 list_models() {
-  local endpoint=$1 (IDEMPOTENT — checks hash to skip rebuild)
+  local endpoint=$1
+  log "📦 Fetching available models from Ollama..."
+  curl -sf "${endpoint}/api/tags" 2>/dev/null || log "⚠️  Could not fetch model list"
+}
+
+# Build repository index for code context (idempotent)
 build_repo_index() {
   local workspace=$1
   local index_file="$workspace/.ollama-index.json"
@@ -90,11 +92,11 @@ build_repo_index() {
 
   log "🔍 Building repository index..."
 
-  cat > "$index_file" << EOF
+  cat > "$index_file" << 'EOF'
 {
-  "indexed_at": "$(date -Iseconds)",
-  "workspace": "$workspace",
-  "hash": "$current_hash",
+  "indexed_at": "TIMESTAMP_PLACEHOLDER",
+  "workspace": "WORKSPACE_PLACEHOLDER",
+  "hash": "HASH_PLACEHOLDER",
   "structure": {
     "root_files": [],
     "key_directories": [],
@@ -108,18 +110,15 @@ EOF
   # Store hash for next run
   if [ -n "$current_hash" ]; then
     echo "$current_hash" > "$index_hash_file"
-  fi "key_dirPull models (idempotent — checks if already exist)
-  log "Stage 2: Pulling elite models (idempotent)
-    "config_files": [],
-    "documentation_files": []
-  }
-}
-EOF
+  fi
 
   log "✅ Repository index created at $index_file"
 }
 
-# Main initialization flow
+# ─────────────────────────────────────────────────────────────────────────────
+# Main Initialization Flow
+# ─────────────────────────────────────────────────────────────────────────────
+
 main() {
   log "🚀 Initializing Ollama integration..."
 
@@ -127,10 +126,9 @@ main() {
   log "Stage 1: Checking Ollama connectivity..."
   if ! check_health "$OLLAMA_ENDPOINT"; then
     log "⚠️  Ollama not yet ready, continuing with startup..."
-    # Don't exit here - Ollama may start after code-server
   fi
 
-  # Stage 2: Attempt to pull models (will retry as needed)
+  # Stage 2: Attempt to pull models
   log "Stage 2: Pulling elite models..."
   for model in "${MODELS[@]}"; do
     pull_model "$model" "$OLLAMA_ENDPOINT" || true
@@ -140,73 +138,15 @@ main() {
   log "Stage 3: Listing available models..."
   list_models "$OLLAMA_ENDPOINT" || true
 
-  # Stage 4: Build repository index (idempotent — checks hash)
+  # Stage 4: Build repository index (idempotent)
   log "Stage 4: Building repository context index..."
   if [ -d "$WORKSPACE_PATH" ]; then
     build_repo_index "$WORKSPACE_PATH"
+  else
+    log "⚠️  Workspace path not found: $WORKSPACE_PATH"
   fi
 
-  log "✅ Ollama initialization complete!"
-  log "💡 You can now use @ollama in the VS Code chat view"
+  log "✅ Ollama integration initialization complete"
 }
 
-# Help
-if [ "${1:-}" = "help" ] || [ "${1:-}" = "-h" ]; then
-  cat <<'EOF'
-Ollama management script for code-server-enterprise — FULLY IDEMPOTENT
-
-Usage: ollama-init.sh [command]
-
-Commands:
-  health        Check Ollama server health
-  pull-models   Pull all elite models (idempotent — checks if already exist)
-  list          List available models
-  index         Build repository context index (idempotent — checks hash)
-  status        Show status of models and system
-  help          Show this help
-
-Without arguments, runs full initialization.
-
-IMPORTANT: All commands are FULLY IDEMPOTENT — safe to run multiple times.
-- Model pulling: Skips pulling if model already exists (checks via API)
-- Repository indexing: Only rebuilds if workspace has changed (SHA256 check)
-- Health checks: Uses retry logic with backoff
-- All operations are transactional (atomic or skip if already done)
-
-Environment variables:
-  OLLAMA_ENDPOINT  Ollama API endpoint (default: http://ollama:11434)
-  WORKSPACE_PATH   Workspace directory for indexing (default: .)
-
-Examples:
-  ollama-init.sh                    # Full init (idempotent)
-  ollama-init.sh health             # Check health
-  ollama-init.sh pull-models        # Pull models (skips existing)
-  ollama-init.sh list               # List models
-  ollama-init.sh index              # Index repo (skips if unchanged)
-EOF
-  exit 0
-fi
-
-case "${1:-}" in
-  health)
-    check_health "$OLLAMA_ENDPOINT"
-    ;;
-  pull-models)
-    for model in "${MODELS[@]}"; do
-      pull_model "$model" "$OLLAMA_ENDPOINT" || true
-    done
-    ;;
-  list)
-    list_models "$OLLAMA_ENDPOINT"
-    ;;
-  index)
-    build_repo_index "$WORKSPACE_PATH"
-    ;;
-  status)
-    check_health "$OLLAMA_ENDPOINT" || true
-    list_models "$OLLAMA_ENDPOINT" || true
-    ;;
-  *)
-    main
-    ;;
-esac
+main "$@"

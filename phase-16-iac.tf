@@ -70,11 +70,21 @@ resource "docker_container" "postgres_primary" {
     read_only      = false
   }
   
-  labels = {
-    phase       = "16"
-    component   = "database-ha"
-    role        = "primary"
-    environment = var.phase_16_environment
+  labels {
+    key   = "phase"
+    value = "16"
+  }
+  labels {
+    key   = "component"
+    value = "database-ha"
+  }
+  labels {
+    key   = "role"
+    value = "primary"
+  }
+  labels {
+    key   = "environment"
+    value = var.phase_16_environment
   }
   
   healthcheck {
@@ -192,10 +202,17 @@ resource "docker_container" "pgbouncer_pool" {
     read_only      = false
   }
   
-  labels = {
-    phase       = "16"
-    component   = "connection-pooling"
-    environment = var.phase_16_environment
+  labels {
+    key   = "phase"
+    value = "16"
+  }
+  labels {
+    key   = "component"
+    value = "connection-pooling"
+  }
+  labels {
+    key   = "environment"
+    value = var.phase_16_environment
   }
   
   healthcheck {
@@ -235,10 +252,17 @@ resource "docker_container" "haproxy_lb" {
     external = 5435
   }
   
-  labels = {
-    phase       = "16"
-    component   = "load-balancer"
-    environment = var.phase_16_environment
+  labels {
+    key   = "phase"
+    value = "16"
+  }
+  labels {
+    key   = "component"
+    value = "load-balancer"
+  }
+  labels {
+    key   = "environment"
+    value = var.phase_16_environment
   }
   
   volumes {

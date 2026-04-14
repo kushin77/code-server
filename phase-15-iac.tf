@@ -71,10 +71,17 @@ resource "docker_container" "redis_cluster_node_1" {
     read_only      = false
   }
   
-  labels = {
-    phase       = "15"
-    component   = "redis-cluster"
-    environment = var.phase_15_environment
+  labels {
+    key   = "phase"
+    value = "15"
+  }
+  labels {
+    key   = "component"
+    value = "redis-cluster"
+  }
+  labels {
+    key   = "environment"
+    value = var.phase_15_environment
   }
   
   healthcheck {
@@ -109,10 +116,17 @@ resource "docker_container" "redis_cluster_node_2" {
     read_only      = false
   }
   
-  labels = {
-    phase       = "15"
-    component   = "redis-cluster"
-    environment = var.phase_15_environment
+  labels {
+    key   = "phase"
+    value = "15"
+  }
+  labels {
+    key   = "component"
+    value = "redis-cluster"
+  }
+  labels {
+    key   = "environment"
+    value = var.phase_15_environment
   }
   
   healthcheck {
@@ -147,10 +161,17 @@ resource "docker_container" "redis_cluster_node_3" {
     read_only      = false
   }
   
-  labels = {
-    phase       = "15"
-    component   = "redis-cluster"
-    environment = var.phase_15_environment
+  labels {
+    key   = "phase"
+    value = "15"
+  }
+  labels {
+    key   = "component"
+    value = "redis-cluster"
+  }
+  labels {
+    key   = "environment"
+    value = var.phase_15_environment
   }
   
   healthcheck {
@@ -186,10 +207,17 @@ resource "docker_container" "prometheus_observability" {
     read_only      = false
   }
   
-  labels = {
-    phase       = "15"
-    component   = "observability"
-    environment = var.phase_15_environment
+  labels {
+    key   = "phase"
+    value = "15"
+  }
+  labels {
+    key   = "component"
+    value = "observability"
+  }
+  labels {
+    key   = "environment"
+    value = var.phase_15_environment
   }
   
   healthcheck {
@@ -233,10 +261,17 @@ resource "docker_container" "load_test_master" {
     read_only      = false
   }
   
-  labels = {
-    phase       = "15"
-    component   = "load-testing"
-    environment = var.phase_15_environment
+  labels {
+    key   = "phase"
+    value = "15"
+  }
+  labels {
+    key   = "component"
+    value = "load-testing"
+  }
+  labels {
+    key   = "environment"
+    value = var.phase_15_environment
   }
   
   healthcheck {

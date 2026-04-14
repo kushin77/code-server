@@ -68,7 +68,7 @@ resource "local_file" "phase_26b_clickhouse_deployment" {
     kind: ConfigMap
     metadata:
       name: clickhouse-config
-      namespace: default
+      namespace: code-server
     data:
       config.xml: |
         <clickhouse>
@@ -84,7 +84,7 @@ resource "local_file" "phase_26b_clickhouse_deployment" {
     kind: Deployment
     metadata:
       name: clickhouse
-      namespace: default
+      namespace: code-server
     spec:
       replicas: 1
       selector:
@@ -97,7 +97,7 @@ resource "local_file" "phase_26b_clickhouse_deployment" {
         spec:
           containers:
           - name: clickhouse
-            image: clickhouse/clickhouse-server:24.1
+            image: clickhouse/clickhouse-server:24.1.2-alpine
             ports:
             - containerPort: 8123
               name: http
@@ -132,7 +132,7 @@ resource "local_file" "phase_26b_clickhouse_deployment" {
     kind: Service
     metadata:
       name: clickhouse
-      namespace: default
+      namespace: code-server
     spec:
       selector:
         app: clickhouse
@@ -154,7 +154,7 @@ resource "local_file" "phase_26b_analytics_aggregator" {
     kind: Deployment
     metadata:
       name: analytics-aggregator
-      namespace: default
+      namespace: code-server
     spec:
       replicas: 2
       selector:
@@ -167,7 +167,7 @@ resource "local_file" "phase_26b_analytics_aggregator" {
         spec:
           containers:
           - name: aggregator
-            image: python:3.11-slim
+            image: python:3.11.9-slim
             env:
             - name: PROMETHEUS_URL
               value: "http://prometheus:9090"
@@ -195,7 +195,7 @@ resource "local_file" "phase_26b_analytics_aggregator" {
     kind: Service
     metadata:
       name: analytics-aggregator
-      namespace: default
+      namespace: code-server
     spec:
       selector:
         app: analytics-aggregator

@@ -62,7 +62,7 @@ metadata:
     app: webhook-dispatcher
     phase: 26-d
 spec:
-  replicas: 2  # Run 2 dispatcher instances for HA
+  replicas: 3  # Run 3 dispatcher instances for HA (matches webhook_services.dispatcher.replicas)
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -246,8 +246,8 @@ spec:
     kind: Deployment
     name: webhook-dispatcher
   
-  minReplicas: 2
-  maxReplicas: 5  # Lower max for dispatcher (not high-traffic)
+  minReplicas: 3
+  maxReplicas: 10  # Scale with org/webhook growth
   
   metrics:
     - type: Resource

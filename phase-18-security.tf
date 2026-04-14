@@ -145,9 +145,7 @@ resource "docker_container" "consul_server" {
     start_period = "20s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
+
 
   depends_on = [docker_image.consul]
 
@@ -204,10 +202,6 @@ resource "docker_container" "vault_ha" {
     timeout      = "10s"
     retries      = 3
     start_period = "30s"
-  }
-
-  restart_policy {
-    condition = "unless-stopped"
   }
 
   depends_on = [docker_image.vault]
@@ -317,9 +311,7 @@ resource "docker_container" "compliance_dashboard" {
     start_period = "20s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
+
 
   depends_on = [docker_image.vault]
 

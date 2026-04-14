@@ -147,9 +147,7 @@ resource "docker_container" "haproxy_primary" {
     start_period = "20s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
+
 
   depends_on = [docker_image.haproxy]
 
@@ -207,10 +205,6 @@ resource "docker_container" "haproxy_backup" {
     start_period = "20s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
-
   depends_on = [docker_image.haproxy]
 
   lifecycle {
@@ -229,7 +223,9 @@ resource "docker_container" "keepalived_primary" {
   network_mode  = "host"
   privileged    = true
 
-  cap_add = ["NET_ADMIN"]
+  capabilities {
+    add = ["NET_ADMIN"]
+  }
 
   env = [
     "KEEPALIVED_PRIORITY=150",
@@ -252,10 +248,6 @@ resource "docker_container" "keepalived_primary" {
     start_period = "10s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
-
   depends_on = [docker_image.keepalived]
 
   lifecycle {
@@ -270,7 +262,9 @@ resource "docker_container" "keepalived_backup" {
   network_mode  = "host"
   privileged    = true
 
-  cap_add = ["NET_ADMIN"]
+  capabilities {
+    add = ["NET_ADMIN"]
+  }
 
   env = [
     "KEEPALIVED_PRIORITY=100",
@@ -293,9 +287,7 @@ resource "docker_container" "keepalived_backup" {
     start_period = "10s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
+
 
   depends_on = [docker_image.keepalived]
 
@@ -340,10 +332,10 @@ output "haproxy_stats_endpoint" {
 output "load_balancing_status" {
   description = "Load balancing configuration status"
   value = var.phase_16_b_enabled ? {
-    haproxy_primary_up = try(docker_container.haproxy_primary[0].state[0].running, false)
-    haproxy_backup_up  = try(docker_container.haproxy_backup[0].state[0].running, false)
-    keepalived_active  = try(docker_container.keepalived_primary[0].state[0].running, false)
-    keepalived_backup  = try(docker_container.keepalived_backup[0].state[0].running, false)
+    haproxy_primary_up = try(docker_container.haproxy_primary[0].id != "", false)
+    haproxy_backup_up  = try(docker_container.haproxy_backup[0].id != "", false)
+    keepalived_active  = try(docker_container.keepalived_primary[0].id != "", false)
+    keepalived_backup  = try(docker_container.keepalived_backup[0].id != "", false)
     algorithm          = var.load_balancer_algorithm
     vip                = var.virtual_ip
   } : null

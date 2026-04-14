@@ -141,9 +141,7 @@ resource "docker_container" "postgres_primary" {
     start_period = "40s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
+
 
   depends_on = [docker_image.postgresql_ha]
 
@@ -194,7 +192,7 @@ resource "docker_container" "postgres_replica" {
     start_period = "60s"
   }
 
-  restart_policy = "unless-stopped"
+
 
   depends_on = [docker_container.postgres_primary]
 
@@ -243,7 +241,7 @@ resource "docker_container" "pgbouncer_pool" {
     start_period = "20s"
   }
 
-  restart_policy = "unless-stopped"
+
 
   depends_on = [docker_container.postgres_primary]
 
@@ -289,7 +287,7 @@ resource "docker_container" "patroni_ha" {
     start_period = "20s"
   }
 
-  restart_policy = "unless-stopped"
+
 
   depends_on = [docker_container.postgres_primary]
 
@@ -345,7 +343,7 @@ output "patroni_endpoint" {
 output "replication_status" {
   description = "Database replication status"
   value = var.phase_16_a_enabled ? {
-    primary_up       = try(docker_container.postgres_primary[0].state[0].running, false)
+    primary_up       = try(docker_container.postgres_primary[0].id != "", false)
     replicas_up      = length(docker_container.postgres_replica)
     patroni_enabled  = var.patroni_enabled
     pool_mode        = var.pool_mode

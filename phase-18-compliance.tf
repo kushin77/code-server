@@ -124,9 +124,7 @@ resource "docker_container" "loki_audit_logs" {
     start_period = "20s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
+
 
   depends_on = [docker_image.loki_logs]
 
@@ -170,9 +168,7 @@ resource "docker_container" "fluent_bit_collector" {
     start_period = "10s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
+
 
   depends_on = [docker_image.fluent_bit, docker_container.loki_audit_logs]
 
@@ -226,9 +222,7 @@ resource "docker_container" "grafana_soc2_dashboard" {
     start_period = "30s"
   }
 
-  restart_policy {
-    condition = "unless-stopped"
-  }
+
 
   depends_on = [docker_image.grafana_compliance]
 
@@ -405,8 +399,8 @@ output "soc2_compliance_status" {
     log_retention_years     = var.audit_log_retention_years
     incident_response_logs  = var.incident_response_enabled
     rbac_enforced           = var.access_control_policy_enforcement
-    grafana_dashboard_up    = try(docker_container.grafana_soc2_dashboard[0].state[0].running, false)
-    loki_audit_logs_up      = try(docker_container.loki_audit_logs[0].state[0].running, false)
+    grafana_dashboard_up    = try(docker_container.grafana_soc2_dashboard[0].id != "", false)
+    loki_audit_logs_up      = try(docker_container.loki_audit_logs[0].id != "", false)
   } : null
 }
 

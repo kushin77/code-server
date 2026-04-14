@@ -70,7 +70,7 @@ variable "eks_region" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "aws_vpc" "kubernetes" {
-  count             = var.phase_22_a_enabled ? 1 : 0
+  count             = var.enable_kubernetes_orchestration ? 1 : 0
   cidr_block        = "10.0.0.0/16"
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -83,7 +83,7 @@ resource "aws_vpc" "kubernetes" {
 }
 
 resource "aws_subnet" "kubernetes_public" {
-  count                   = var.phase_22_a_enabled ? 2 : 0
+  count                   = var.enable_kubernetes_orchestration ? 2 : 0
   vpc_id                  = aws_vpc.kubernetes[0].id
   cidr_block              = "10.0.${count.index + 1}.0/24"
   availability_zone       = data.aws_availability_zones.available.names[count.index]
@@ -97,7 +97,7 @@ resource "aws_subnet" "kubernetes_public" {
 }
 
 resource "aws_subnet" "kubernetes_private" {
-  count             = var.phase_22_a_enabled ? 2 : 0
+  count             = var.enable_kubernetes_orchestration ? 2 : 0
   vpc_id            = aws_vpc.kubernetes[0].id
   cidr_block        = "10.0.${count.index + 10}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
@@ -111,7 +111,7 @@ resource "aws_subnet" "kubernetes_private" {
 
 # Internet Gateway
 resource "aws_internet_gateway" "kubernetes" {
-  count   = var.phase_22_a_enabled ? 1 : 0
+  count   = var.enable_kubernetes_orchestration ? 1 : 0
   vpc_id  = aws_vpc.kubernetes[0].id
 
   tags = {
@@ -122,7 +122,7 @@ resource "aws_internet_gateway" "kubernetes" {
 
 # NAT Gateway for private subnets
 resource "aws_eip" "nat" {
-  count  = var.phase_22_a_enabled ? 1 : 0
+  count  = var.enable_kubernetes_orchestration ? 1 : 0
   domain = "vpc"
 
   tags = {
@@ -134,7 +134,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "kubernetes" {
-  count         = var.phase_22_a_enabled ? 1 : 0
+  count         = var.enable_kubernetes_orchestration ? 1 : 0
   allocation_id = aws_eip.nat[0].id
   subnet_id     = aws_subnet.kubernetes_public[0].id
 
@@ -148,7 +148,7 @@ resource "aws_nat_gateway" "kubernetes" {
 
 # Route tables
 resource "aws_route_table" "public" {
-  count  = var.phase_22_a_enabled ? 1 : 0
+  count  = var.enable_kubernetes_orchestration ? 1 : 0
   vpc_id = aws_vpc.kubernetes[0].id
 
   route {
@@ -163,7 +163,7 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table" "private" {
-  count  = var.phase_22_a_enabled ? 1 : 0
+  count  = var.enable_kubernetes_orchestration ? 1 : 0
   vpc_id = aws_vpc.kubernetes[0].id
 
   route {
@@ -178,20 +178,20 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "public" {
-  count          = var.phase_22_a_enabled ? 2 : 0
+  count          = var.enable_kubernetes_orchestration ? 2 : 0
   subnet_id      = aws_subnet.kubernetes_public[count.index].id
   route_table_id = aws_route_table.public[0].id
 }
 
 resource "aws_route_table_association" "private" {
-  count          = var.phase_22_a_enabled ? 2 : 0
+  count          = var.enable_kubernetes_orchestration ? 2 : 0
   subnet_id      = aws_subnet.kubernetes_private[count.index].id
   route_table_id = aws_route_table.private[0].id
 }
 
 # Security group for EKS cluster
 resource "aws_security_group" "kubernetes" {
-  count       = var.phase_22_a_enabled ? 1 : 0
+  count       = var.enable_kubernetes_orchestration ? 1 : 0
   name        = "${var.eks_cluster_name}-sg"
   description = "Security group for EKS cluster"
   vpc_id      = aws_vpc.kubernetes[0].id
@@ -240,7 +240,7 @@ resource "aws_security_group" "kubernetes" {
 
 # EKS service role
 resource "aws_iam_role" "eks_cluster" {
-  count = var.phase_22_a_enabled ? 1 : 0
+  count = var.enable_kubernetes_orchestration ? 1 : 0
   name  = "${var.eks_cluster_name}-cluster-role"
 
   assume_role_policy = jsonencode({
@@ -263,14 +263,14 @@ resource "aws_iam_role" "eks_cluster" {
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  count      = var.phase_22_a_enabled ? 1 : 0
+  count      = var.enable_kubernetes_orchestration ? 1 : 0
   role       = aws_iam_role.eks_cluster[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
 # EKS node role
 resource "aws_iam_role" "eks_nodes" {
-  count = var.phase_22_a_enabled ? 1 : 0
+  count = var.enable_kubernetes_orchestration ? 1 : 0
   name  = "${var.eks_cluster_name}-node-role"
 
   assume_role_policy = jsonencode({
@@ -293,25 +293,25 @@ resource "aws_iam_role" "eks_nodes" {
 }
 
 resource "aws_iam_role_policy_attachment" "eks_nodes_policy" {
-  count      = var.phase_22_a_enabled ? 1 : 0
+  count      = var.enable_kubernetes_orchestration ? 1 : 0
   role       = aws_iam_role.eks_nodes[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  count      = var.phase_22_a_enabled ? 1 : 0
+  count      = var.enable_kubernetes_orchestration ? 1 : 0
   role       = aws_iam_role.eks_nodes[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_ecr_policy" {
-  count      = var.phase_22_a_enabled ? 1 : 0
+  count      = var.enable_kubernetes_orchestration ? 1 : 0
   role       = aws_iam_role.eks_nodes[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_ssm_policy" {
-  count      = var.phase_22_a_enabled ? 1 : 0
+  count      = var.enable_kubernetes_orchestration ? 1 : 0
   role       = aws_iam_role.eks_nodes[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
@@ -321,7 +321,7 @@ resource "aws_iam_role_policy_attachment" "eks_ssm_policy" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "aws_eks_cluster" "kubernetes" {
-  count    = var.phase_22_a_enabled ? 1 : 0
+  count    = var.enable_kubernetes_orchestration ? 1 : 0
   name     = var.eks_cluster_name
   role_arn = aws_iam_role.eks_cluster[0].arn
   version  = var.eks_cluster_version
@@ -353,7 +353,7 @@ resource "aws_eks_cluster" "kubernetes" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "aws_eks_node_group" "main" {
-  count            = var.phase_22_a_enabled ? 1 : 0
+  count            = var.enable_kubernetes_orchestration ? 1 : 0
   cluster_name     = aws_eks_cluster.kubernetes[0].name
   node_group_name  = "${var.eks_cluster_name}-ng-main"
   node_role_arn    = aws_iam_role.eks_nodes[0].arn
@@ -387,7 +387,7 @@ resource "aws_eks_node_group" "main" {
 # aws_availability_zones data source defined in phase-22-d-gpu-infrastructure.tf
 
 data "aws_eks_cluster_auth" "cluster" {
-  count = var.phase_22_a_enabled ? 1 : 0
+  count = var.enable_kubernetes_orchestration ? 1 : 0
   name  = aws_eks_cluster.kubernetes[0].name
 }
 

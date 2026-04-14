@@ -1,11 +1,13 @@
-# Phase 13: Cloudflare Infrastructure as Code (Terraform)
+# DNS & Access Control Infrastructure
 # Implements production access to code-server via Cloudflare Tunnel & Access
-# Idempotent design - safe to apply multiple times (terraform state tracking)
-# NOTE: Terraform block consolidated in main.tf for idempotency
+# - Tunnel routing via Cloudflare
+# - Identity-based access policies (email + MFA)
+# - Automatic certificate management
+# Idempotent: safe to apply multiple times (terraform state tracking)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONFIGURATION VARIABLES (Phase-Specific)
-# NOTE: Common Cloudflare variables are consolidated in variables.tf
+# DNS & ACCESS CONTROL CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
 # ─────────────────────────────────────────────────────────────────────────────
 
 variable "tunnel_name" {
@@ -42,7 +44,7 @@ variable "tags" {
   description = "Resource tags"
   type        = map(string)
   default = {
-    Phase       = "13"
+    Module      = "dns-access-control"
     Environment = "production"
     ManagedBy   = "terraform"
     Project     = "code-server-enterprise"
@@ -90,7 +92,7 @@ resource "cloudflare_record" "code_server_cname" {
   ttl     = 1  # Auto/Proxied
   proxied = true
 
-  comment = "Phase 13: Code-Server Tunnel CNAME (managed by Terraform)"
+  # comment: "Code-Server Tunnel CNAME via Cloudflare" (comment arg not supported in v4)
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -173,7 +175,7 @@ resource "cloudflare_logpush_job" "http_requests" {
   
   dataset = "http_requests"
   
-  destination_conf = "s3://phase-13-logs"  # Update with actual S3 bucket
+  destination_conf = "s3://code-server-logs"  # Update with actual S3 bucket
   
   ownership_challenge = null  # Set via out-of-band verification with cloudflared CLI
   
@@ -232,35 +234,25 @@ output "terraform_state" {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# NOTES FOR PHASE 13 IMPLEMENTATION
+# IMPLEMENTATION NOTES
 # ─────────────────────────────────────────────────────────────────────────────
-
+#
 # 1. INITIAL SETUP - CLI Prerequisite
-#    Before applying this Terraform, create tunnel via:
+#    Before applying, create tunnel via Cloudflare CLI:
 #    $ cloudflared tunnel create home-dev
 #    $ cloudflared tunnel list  # Get tunnel ID
 #    Then update tunnel_route.tunnel_id value above
 #
-# 2. APPLY TERRAFORM
+# 2. TERRAFORM WORKFLOW
 #    $ terraform init
-#    $ terraform plan
+#    $ terraform plan -var domain=<your-domain>
 #    $ terraform apply
 #
 # 3. IDEMPOTENCY
-#    Terraform state file tracks all resources
-#    Re-running 'terraform apply' is safe - only creates/modifies changed resources
+#    State file tracks all resources. Re-running apply is safe.
+#    Only creates/modifies resources that changed.
 #
-# 4. STATE MANAGEMENT
-#    For production, store state in S3/Terraform Cloud (see backend block above)
-#    This enables team collaboration and disaster recovery
-#
-# 5. MAINTENANCE
-#    To update access policies: Edit var.allowed_emails and re-run terraform apply
-#    To update session timeout: Edit var.session_timeout_hours and re-run
-#    All changes tracked in version control via git
-#
-# 6. CLOUDFLARE API RATE LIMITS
-#    Phase 13 uses approximately:
-#    - 5 API calls to create DNS records
-#    - 3 API calls for Access policies
-#    - Does not exceed free/pro tier limits
+# 4. MAINTENANCE
+#    - Add emails: var.allowed_emails list
+#    - Change timeout: var.session_timeout_hours
+#    - All changes tracked in git

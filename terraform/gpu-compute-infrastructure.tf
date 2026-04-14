@@ -1,9 +1,12 @@
 # ═════════════════════════════════════════════════════════════════════════════
-# Phase 22-D: GPU Infrastructure for ML/AI Workloads
+# GPU COMPUTE INFRASTRUCTURE FOR ML/AI WORKLOADS
 # ═════════════════════════════════════════════════════════════════════════════
 # Purpose: GPU-accelerated compute resources, ML frameworks, model serving
-# Status: Production-ready with auto-scaling, monitoring, cost optimization
-# Dependencies: Phase 22-A (EKS), Phase 22-B (Networking), Phase 22-C (Data sharding)
+# • Auto-scaling GPU node pools
+# • NVIDIA device plugin + DCGM exporter
+# • Multi-framework support (PyTorch, TensorFlow, HuggingFace)
+# • MLFlow model registry + artifact storage
+# • Cost optimization via Karpenter + spot instances (on-prem via taints/tolerations)
 # ═════════════════════════════════════════════════════════════════════════════
 
 # NOTE: Terraform configuration consolidated in main.tf for idempotency
@@ -34,8 +37,8 @@ variable "gpu_node_count_desired" {
 
 # NOTE: EKS and common AWS variables are consolidated in variables.tf
 
-variable "phase_22_d_enabled" {
-  description = "Enable Phase 22-D ML/AI infrastructure deployment"
+variable "enable_gpu_compute_infrastructure" {
+  description = "Enable GPU compute infrastructure for ML/AI workloads"
   type        = bool
   default     = true
 }
@@ -67,7 +70,7 @@ variable "gpu_resource_requests_memory" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 data "aws_eks_cluster" "main" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   name  = var.eks_cluster_name
 }
 
@@ -77,7 +80,7 @@ data "aws_eks_cluster" "main" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "aws_eks_node_group" "gpu_workers" {
-  count           = var.phase_22_d_enabled ? 1 : 0
+  count           = var.enable_gpu_compute_infrastructure ? 1 : 0
   cluster_name    = data.aws_eks_cluster.main[0].name
   node_group_name = "gpu-workers"
   node_role_arn   = aws_iam_role.gpu_node_role[0].arn
@@ -107,7 +110,7 @@ resource "aws_eks_node_group" "gpu_workers" {
 }
 
 resource "aws_launch_template" "gpu_nodes" {
-  count                  = var.phase_22_d_enabled ? 1 : 0
+  count                  = var.enable_gpu_compute_infrastructure ? 1 : 0
   name_prefix            = "gpu-node-"
   image_id               = data.aws_ami.gpu_ami[0].id
   instance_type          = var.gpu_instance_type
@@ -143,7 +146,7 @@ resource "aws_launch_template" "gpu_nodes" {
 
 # Latest GPU-optimized AMI (EKS-optimized with NVIDIA CUDA support)
 data "aws_ami" "gpu_ami" {
-  count       = var.phase_22_d_enabled ? 1 : 0
+  count       = var.enable_gpu_compute_infrastructure ? 1 : 0
   most_recent = true
   owners      = ["amazon"]
 
@@ -159,13 +162,13 @@ data "aws_ami" "gpu_ami" {
 }
 
 resource "aws_key_pair" "gpu_nodes" {
-  count           = var.phase_22_d_enabled ? 1 : 0
+  count           = var.enable_gpu_compute_infrastructure ? 1 : 0
   key_name_prefix = "gpu-node-"
   public_key      = var.gpu_node_ssh_key
 }
 
 resource "aws_security_group" "gpu_nodes" {
-  count       = var.phase_22_d_enabled ? 1 : 0
+  count       = var.enable_gpu_compute_infrastructure ? 1 : 0
   name_prefix = "gpu-nodes-"
   description = "Security group for GPU worker nodes"
   vpc_id      = data.aws_eks_cluster.main[0].vpc_config[0].vpc_id
@@ -202,7 +205,7 @@ resource "aws_security_group" "gpu_nodes" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "aws_iam_role" "gpu_node_role" {
-  count           = var.phase_22_d_enabled ? 1 : 0
+  count           = var.enable_gpu_compute_infrastructure ? 1 : 0
   name_prefix     = "gpu-node-role-"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -217,25 +220,25 @@ resource "aws_iam_role" "gpu_node_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "gpu_node_AmazonEKSWorkerNodePolicy" {
-  count      = var.phase_22_d_enabled ? 1 : 0
+  count      = var.enable_gpu_compute_infrastructure ? 1 : 0
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
   role       = aws_iam_role.gpu_node_role[0].name
 }
 
 resource "aws_iam_role_policy_attachment" "gpu_node_AmazonEKS_CNI_Policy" {
-  count      = var.phase_22_d_enabled ? 1 : 0
+  count      = var.enable_gpu_compute_infrastructure ? 1 : 0
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
   role       = aws_iam_role.gpu_node_role[0].name
 }
 
 resource "aws_iam_role_policy_attachment" "gpu_node_AmazonEC2ContainerRegistryReadOnly" {
-  count      = var.phase_22_d_enabled ? 1 : 0
+  count      = var.enable_gpu_compute_infrastructure ? 1 : 0
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.gpu_node_role[0].name
 }
 
 resource "aws_iam_role_policy" "gpu_node_s3_mlflow" {
-  count  = var.phase_22_d_enabled ? 1 : 0
+  count  = var.enable_gpu_compute_infrastructure ? 1 : 0
   name   = "gpu-node-s3-mlflow-policy"
   role   = aws_iam_role.gpu_node_role[0].id
   policy = jsonencode({
@@ -262,7 +265,7 @@ resource "aws_iam_role_policy" "gpu_node_s3_mlflow" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_namespace" "ml" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name = "ml-platform"
@@ -273,7 +276,7 @@ resource "kubernetes_namespace" "ml" {
 }
 
 resource "kubernetes_service_account" "ml_trainer" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "ml-trainer"
@@ -282,7 +285,7 @@ resource "kubernetes_service_account" "ml_trainer" {
 }
 
 resource "kubernetes_cluster_role" "gpu_access" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name = "gpu-access"
@@ -303,7 +306,7 @@ resource "kubernetes_cluster_role" "gpu_access" {
 }
 
 resource "kubernetes_cluster_role_binding" "gpu_access" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name = "gpu-access-binding"
@@ -328,7 +331,7 @@ resource "kubernetes_cluster_role_binding" "gpu_access" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_namespace" "nvidia_device_plugin" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name = "nvidia-device-plugin"
@@ -336,7 +339,7 @@ resource "kubernetes_namespace" "nvidia_device_plugin" {
 }
 
 resource "helm_release" "nvidia_device_plugin" {
-  count            = var.phase_22_d_enabled ? 1 : 0
+  count            = var.enable_gpu_compute_infrastructure ? 1 : 0
   name             = "nvidia-device-plugin"
   repository       = "https://nvidia.github.io/k8s-device-plugin"
   chart            = "nvidia-device-plugin"
@@ -370,7 +373,7 @@ resource "helm_release" "nvidia_device_plugin" {
 
 # GPU operator for comprehensive CUDA support
 resource "helm_release" "nvidia_gpu_operator" {
-  count            = var.phase_22_d_enabled ? 1 : 0
+  count            = var.enable_gpu_compute_infrastructure ? 1 : 0
   name             = "gpu-operator"
   repository       = "https://nvidia.github.io/gpu-operator"
   chart            = "gpu-operator"
@@ -418,7 +421,7 @@ resource "helm_release" "nvidia_gpu_operator" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "aws_s3_bucket" "mlflow_artifacts" {
-  count  = var.phase_22_d_enabled ? 1 : 0
+  count  = var.enable_gpu_compute_infrastructure ? 1 : 0
   bucket = var.mlflow_artifact_bucket
 
   lifecycle {
@@ -431,7 +434,7 @@ resource "aws_s3_bucket" "mlflow_artifacts" {
 }
 
 resource "aws_s3_bucket_versioning" "mlflow_artifacts" {
-  count  = var.phase_22_d_enabled ? 1 : 0
+  count  = var.enable_gpu_compute_infrastructure ? 1 : 0
   bucket = aws_s3_bucket.mlflow_artifacts[0].id
 
   versioning_configuration {
@@ -440,7 +443,7 @@ resource "aws_s3_bucket_versioning" "mlflow_artifacts" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "mlflow_artifacts" {
-  count  = var.phase_22_d_enabled ? 1 : 0
+  count  = var.enable_gpu_compute_infrastructure ? 1 : 0
   bucket = aws_s3_bucket.mlflow_artifacts[0].id
 
   rule {
@@ -451,7 +454,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "mlflow_artifacts"
 }
 
 resource "kubernetes_persistent_volume_claim" "mlflow_database" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "mlflow-database-pvc"
@@ -470,7 +473,7 @@ resource "kubernetes_persistent_volume_claim" "mlflow_database" {
 }
 
 resource "kubernetes_deployment" "mlflow_server" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "mlflow-server"
@@ -584,7 +587,7 @@ resource "kubernetes_deployment" "mlflow_server" {
 }
 
 resource "kubernetes_service" "mlflow_server" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "mlflow-server"
@@ -611,7 +614,7 @@ resource "kubernetes_service" "mlflow_server" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "helm_release" "seldon_core" {
-  count      = var.phase_22_d_enabled ? 1 : 0
+  count      = var.enable_gpu_compute_infrastructure ? 1 : 0
   name       = "seldon-core"
   repository = "https://seldon-charts.s3.amazonaws.com"
   chart      = "seldon-core"
@@ -651,7 +654,7 @@ resource "helm_release" "seldon_core" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "helm_release" "jupyterhub" {
-  count      = var.phase_22_d_enabled ? 1 : 0
+  count      = var.enable_gpu_compute_infrastructure ? 1 : 0
   name       = "jupyterhub"
   repository = "https://jupyterhub.github.io/helm-chart"
   chart      = "jupyterhub"
@@ -706,7 +709,7 @@ resource "helm_release" "jupyterhub" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_persistent_volume_claim" "feast_registry" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "feast-registry-pvc"
@@ -725,7 +728,7 @@ resource "kubernetes_persistent_volume_claim" "feast_registry" {
 }
 
 resource "kubernetes_deployment" "feast_server" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "feast-feature-server"
@@ -809,7 +812,7 @@ resource "kubernetes_deployment" "feast_server" {
 }
 
 resource "kubernetes_service" "feast_server" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "feast-feature-server"
@@ -835,7 +838,7 @@ resource "kubernetes_service" "feast_server" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_config_map" "gpu_monitoring_dashboard" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "gpu-monitoring-dashboard"
@@ -862,7 +865,7 @@ resource "kubernetes_config_map" "gpu_monitoring_dashboard" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_resource_quota" "ml_gpu" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "ml-gpu-quota"
@@ -881,7 +884,7 @@ resource "kubernetes_resource_quota" "ml_gpu" {
 }
 
 resource "kubernetes_limit_range" "ml_limits" {
-  count = var.phase_22_d_enabled ? 1 : 0
+  count = var.enable_gpu_compute_infrastructure ? 1 : 0
   
   metadata {
     name      = "ml-limit-range"

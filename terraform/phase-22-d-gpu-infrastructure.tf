@@ -81,6 +81,7 @@ resource "aws_eks_node_group" "gpu_workers" {
   cluster_name    = data.aws_eks_cluster.main[0].name
   node_group_name = "gpu-workers"
   node_role_arn   = aws_iam_role.gpu_node_role[0].arn
+  subnet_ids      = var.gpu_subnet_ids
 
   scaling_config {
     desired_size = var.gpu_node_count_desired
@@ -90,7 +91,7 @@ resource "aws_eks_node_group" "gpu_workers" {
 
   launch_template {
     id      = aws_launch_template.gpu_nodes[0].id
-    version = aws_launch_template.gpu_nodes[0].latest_version_number
+    version = aws_launch_template.gpu_nodes[0].latest_version
   }
 
   tags = {
@@ -294,11 +295,10 @@ resource "kubernetes_cluster_role" "gpu_access" {
   }
 
   rule {
-    api_groups       = [""]
-    resources        = ["pods"]
-    verbs            = ["get", "list", "watch"]
-    resource_names   = []
-    namespace_names  = [kubernetes_namespace.ml[0].metadata[0].name]
+    api_groups     = [""]
+    resources      = ["pods"]
+    verbs          = ["get", "list", "watch"]
+    resource_names = []
   }
 }
 
@@ -439,15 +439,13 @@ resource "aws_s3_bucket_versioning" "mlflow_artifacts" {
   }
 }
 
-resource "aws_s3_bucket_encryption" "mlflow_artifacts" {
+resource "aws_s3_bucket_server_side_encryption_configuration" "mlflow_artifacts" {
   count  = var.phase_22_d_enabled ? 1 : 0
   bucket = aws_s3_bucket.mlflow_artifacts[0].id
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
   }
 }
@@ -845,34 +843,18 @@ resource "kubernetes_config_map" "gpu_monitoring_dashboard" {
   }
 
   data = {
-    "gpu-dashboard.json" = file("${path.module}/gpu-dashboard.json")
+    "gpu-dashboard.json" = jsonencode({
+      title       = "GPU Metrics Dashboard"
+      description = "DCGM Exporter — GPU utilization, memory, temperature"
+      tags        = ["gpu", "dcgm"]
+      panels      = []
+    })
   }
 }
 
-resource "kubernetes_service_monitor" "gpu_metrics" {
-  count = var.phase_22_d_enabled ? 1 : 0
-  
-  metadata {
-    name      = "dcgm-exporter"
-    namespace = "gpu-operator-system"
-    labels = {
-      release = "prometheus"
-    }
-  }
-
-  spec {
-    selector {
-      match_labels = {
-        "app.kubernetes.io/name" = "dcgm-exporter"
-      }
-    }
-
-    endpoints {
-      port   = "metrics"
-      interval = "30s"
-    }
-  }
-}
+# NOTE: kubernetes_service_monitor is a Prometheus Operator CRD not natively supported
+# by the hashicorp/kubernetes provider. Deploy the ServiceMonitor via kubectl or helm.
+# Reference: https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs
 
 
 # ═════════════════════════════════════════════════════════════════════════════

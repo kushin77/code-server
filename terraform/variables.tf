@@ -75,8 +75,96 @@ variable "github_token" {
 // Cloudflare Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
-# cloudflare_api_token, cloudflare_zone_id, cloudflare_account_id defined in DNS/access-control layer
-# eks_cluster_endpoint, eks_cluster_ca, eks_cluster_token defined in compute layer
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token (set via TF_VAR_cloudflare_api_token or .tfvars)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "domain" {
+  description = "Root domain for deployment"
+  type        = string
+  default     = "ide.kushnir.cloud"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AWS / EKS Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "eks_cluster_name" {
+  description = "EKS cluster name"
+  type        = string
+  default     = "code-server-k8s-prod"
+}
+
+variable "eks_cluster_endpoint" {
+  description = "EKS cluster API endpoint"
+  type        = string
+  default     = ""
+}
+
+variable "eks_cluster_ca" {
+  description = "EKS cluster CA certificate (base64)"
+  type        = string
+  default     = ""
+}
+
+variable "eks_cluster_token" {
+  description = "EKS cluster authentication token"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "aws_region" {
+  description = "AWS region for EKS and supporting resources"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "gpu_node_ssh_key" {
+  description = "SSH public key for GPU node access"
+  type        = string
+  default     = ""
+}
+
+variable "admin_cidr" {
+  description = "CIDR block for administrative access to GPU nodes"
+  type        = string
+  default     = "10.0.0.0/8"
+}
+
+variable "gpu_subnet_ids" {
+  description = "Subnet IDs for GPU node group"
+  type        = list(string)
+  default     = []
+}
+
+variable "log_level" {
+  description = "Logging level across all services"
+  type        = string
+  default     = "info"
+
+  validation {
+    condition     = contains(["debug", "info", "warn", "error"], var.log_level)
+    error_message = "log_level must be one of: debug, info, warn, error."
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Docker Configuration

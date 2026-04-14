@@ -26,7 +26,9 @@ variable "phase_22_a_enabled" {
 
 # NOTE: EKS cluster variables (eks_cluster_name, eks_cluster_endpoint, etc) 
 # are consolidated in variables.tf for consistency
-
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 variable "eks_cluster_version" {
   description = "Kubernetes version"
   type        = string
@@ -84,7 +86,7 @@ resource "aws_subnet" "kubernetes_public" {
   count                   = var.phase_22_a_enabled ? 2 : 0
   vpc_id                  = aws_vpc.kubernetes[0].id
   cidr_block              = "10.0.${count.index + 1}.0/24"
-  availability_zone       = data.aws_availability_zones.available[0].names[count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
 
   tags = {
@@ -98,7 +100,7 @@ resource "aws_subnet" "kubernetes_private" {
   count             = var.phase_22_a_enabled ? 2 : 0
   vpc_id            = aws_vpc.kubernetes[0].id
   cidr_block        = "10.0.${count.index + 10}.0/24"
-  availability_zone = data.aws_availability_zones.available[0].names[count.index]
+  availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
     Name        = "${var.eks_cluster_name}-private-${count.index + 1}"
@@ -326,7 +328,7 @@ resource "aws_eks_cluster" "kubernetes" {
 
   vpc_config {
     subnet_ids              = concat(aws_subnet.kubernetes_public[*].id, aws_subnet.kubernetes_private[*].id)
-    security_groups         = [aws_security_group.kubernetes[0].id]
+    security_group_ids      = [aws_security_group.kubernetes[0].id]
     endpoint_private_access = true
     endpoint_public_access  = true
     public_access_cidrs     = ["0.0.0.0/0"]  # Restrict in production

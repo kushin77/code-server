@@ -57,9 +57,7 @@ data "cloudflare_zone" "main" {
   zone_id = var.cloudflare_zone_id
 }
 
-data "cloudflare_account" "main" {
-  account_id = var.cloudflare_account_id
-}
+# Note: cloudflare_account data source not available in provider v4+; use var.cloudflare_account_id directly
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CLOUDFLARE TUNNEL (Idempotent Resource)
@@ -71,9 +69,10 @@ data "cloudflare_account" "main" {
 resource "cloudflare_tunnel_route" "code_server" {
   # This is a simplified placeholder - actual tunnel routing requires
   # the tunnel to be created via cloudflared CLI first, then referenced here
-  
+
   account_id = var.cloudflare_account_id
   tunnel_id  = "temp_placeholder"  # Replace with actual tunnel ID after cloudflared CLI creation
+  network    = "0.0.0.0/0"         # Route all traffic through the tunnel
   
   # This resource creates DNS CNAME record pointing to tunnel
   # Format: tunnel_id.cfargotunnel.com
@@ -116,7 +115,7 @@ resource "cloudflare_access_application" "code_server" {
     "access-control"
   ]
 
-  comment = "Phase 13: Production code-server access control"
+  # comment: "Phase 13: Production code-server access control" (comment arg not supported in provider v4)
 }
 
 # Access Policy - Email-based access with MFA
@@ -138,7 +137,7 @@ resource "cloudflare_access_policy" "code_server_email_mfa" {
     }
   }
 
-  comment = "Phase 13: Allow email-verified users with MFA"
+  # comment: "Phase 13: Allow email-verified users with MFA" (comment not supported in provider v4)
 }
 
 # Fallback Policy - Deny all others
@@ -149,7 +148,11 @@ resource "cloudflare_access_policy" "code_server_default_deny" {
   precedence     = 999
   decision       = "deny"
 
-  comment = "Phase 13: Default policy - deny all unauthorized access"
+  include {
+    everyone = true
+  }
+
+  # comment: "Phase 13: Default policy - deny all unauthorized access" (comment not supported in provider v4)
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -172,7 +175,7 @@ resource "cloudflare_logpush_job" "http_requests" {
   
   destination_conf = "s3://phase-13-logs"  # Update with actual S3 bucket
   
-  ownership_challenge = cloudflare_logpush_job.http_requests.ownership_challenge_token != "" ? cloudflare_logpush_job.http_requests.ownership_challenge_token : null
+  ownership_challenge = null  # Set via out-of-band verification with cloudflared CLI
   
   filter = jsonencode({
     where = {
@@ -186,7 +189,7 @@ resource "cloudflare_logpush_job" "http_requests" {
     }
   })
 
-  comment = "Phase 13: HTTP request logging for code-server access"
+  # comment: "Phase 13: HTTP request logging for code-server access" (comment arg not supported in provider v4)
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

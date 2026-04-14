@@ -36,12 +36,7 @@ variable "gpu_node_count_desired" {
 }
 
 # NOTE: EKS and common AWS variables are consolidated in variables.tf
-
-variable "enable_gpu_compute_infrastructure" {
-  description = "Enable GPU compute infrastructure for ML/AI workloads"
-  type        = bool
-  default     = true
-}
+# NOTE: enable_gpu_compute_infrastructure feature flag defined in variables.tf
 
 variable "mlflow_artifact_bucket" {
   description = "S3 bucket for MLFlow artifacts"

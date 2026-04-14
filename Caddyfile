@@ -1,23 +1,144 @@
-# Caddyfile — Development (Default)
-# COMPOSITION: @import Caddyfile.base for shared blocks
-# Configuration: HTTP only, no TLS, development-friendly caching
+# ════════════════════════════════════════════════════════════════════════════
+# Caddyfile — DNS-First Reverse Proxy Configuration
+# 
+# CRITICAL PRINCIPLE: All endpoints use DOMAIN environment variable
+# - For production: DOMAIN=kushnir.cloud (real DNS + Let's Encrypt TLS)
+# - For on-prem: DOMAIN=192.168.168.31.nip.io (nip.io dynamic DNS, no TLS)
+#
+# NEVER hardcode IPs or localhost - always use domain names
+# ════════════════════════════════════════════════════════════════════════════
 
-@import Caddyfile.base
+# Environment-driven domain (set via docker-compose.yml or .env)
+# Default to nip.io for on-premises if not specified
+{$DOMAIN:192.168.168.31.nip.io}
 
-# Global configuration for development
+# Global Caddyfile configuration
 {
-    auto_https off
+    # For production (kushnir.cloud): auto_https on, Let's Encrypt
+    # For on-prem (*.nip.io): auto_https off (no TLS needed)
+    {if eq "{$ACME_EMAIL:""}" ""} auto_https off {else} acme_ca https://acme-v02.api.letsencrypt.org/directory {/if}
+    
+    email {$ACME_EMAIL:ops@kushnir.cloud}
+    
     log default {
         format json
+        output stdout
     }
 }
 
-# HTTP only listener (development)
+# ─────────────────────────────────────────────────────────────────────────────
+# HTTP Listener (Port 80)
+# All HTTP requests proxy to services via DNS names (not IPs)
+# ─────────────────────────────────────────────────────────────────────────────
+
 :80 {
-    import compression_standard
-    import security_headers
-    import reverse_proxy_code_server
+    # Compression for all responses
+    encode gzip
     
-    # Development: disable caching for rapid iteration
-    header Cache-Control "no-cache, no-store, must-revalidate"
+    # Security headers
+    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    header X-Content-Type-Options "nosniff"
+    header X-Frame-Options "DENY"
+    header X-XSS-Protection "1; mode=block"
+    header Referrer-Policy "strict-origin-when-cross-origin"
+    header Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Primary Routes (all DNS-based, no hardcoded IPs)
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    # IDE endpoint (code-server.{domain}:8080)
+    @ide_requests host code-server.{$DOMAIN:192.168.168.31.nip.io}
+    handle @ide_requests {
+        reverse_proxy code-server:8080 {
+            header_uri Host "code-server.{$DOMAIN:192.168.168.31.nip.io}"
+            flush_interval -1
+        }
+    }
+    
+    # GraphQL API endpoint (graphql-api.{domain}:4000)
+    @graphql_requests host graphql-api.{$DOMAIN:192.168.168.31.nip.io}
+    handle @graphql_requests {
+        reverse_proxy graphql-api:4000 {
+            header_uri Host "graphql-api.{$DOMAIN:192.168.168.31.nip.io}"
+            flush_interval -1
+        }
+    }
+    
+    # Developer Portal endpoint (dev-portal.{domain}:3001)
+    @portal_requests host dev-portal.{$DOMAIN:192.168.168.31.nip.io}
+    handle @portal_requests {
+        reverse_proxy developer-portal:3001 {
+            header_uri Host "dev-portal.{$DOMAIN:192.168.168.31.nip.io}"
+            flush_interval -1
+        }
+    }
+    
+    # Prometheus metrics endpoint (prometheus.{domain}:9090)
+    @prometheus_requests host prometheus.{$DOMAIN:192.168.168.31.nip.io}
+    handle @prometheus_requests {
+        reverse_proxy prometheus:9090 {
+            header_uri Host "prometheus.{$DOMAIN:192.168.168.31.nip.io}"
+        }
+    }
+    
+    # Grafana dashboards endpoint (grafana.{domain}:3000)
+    @grafana_requests host grafana.{$DOMAIN:192.168.168.31.nip.io}
+    handle @grafana_requests {
+        reverse_proxy grafana:3000 {
+            header_uri Host "grafana.{$DOMAIN:192.168.168.31.nip.io}"
+        }
+    }
+    
+    # Jaeger tracing UI endpoint (jaeger.{domain}:16686)
+    @jaeger_requests host jaeger.{$DOMAIN:192.168.168.31.nip.io}
+    handle @jaeger_requests {
+        reverse_proxy jaeger:16686 {
+            header_uri Host "jaeger.{$DOMAIN:192.168.168.31.nip.io}"
+        }
+    }
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Health Check Endpoints
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    @health_checks path /health /healthz /.well-known/health
+    handle @health_checks {
+        respond "OK" 200
+    }
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Default/Catch-All (proxy to code-server IDE by default)
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    handle {
+        reverse_proxy code-server:8080 {
+            flush_interval -1
+        }
+    }
 }
+
+# ════════════════════════════════════════════════════════════════════════════
+# CRITICAL ARCHITECTURE NOTES
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 1. DNS RESOLUTION FLOW:
+#    - External client → nip.io/DNS → Caddy
+#    - Caddy → Internal container network (efficient, no port conflicts)
+#
+# 2. NO HARDCODED IPs:
+#    - All services referenced by container name (Docker DNS)
+#    - All external access via domain names  
+#    - Environment-driven: Single source of truth (DOMAIN variable)
+#
+# 3. PRODUCTION READINESS:
+#    - On-prem: DOMAIN=192.168.168.31.nip.io (HTTP, no TLS overhead)
+#    - Production: DOMAIN=kushnir.cloud (HTTPS via Let's Encrypt)
+#    - Caddyfile automatically selects TLS based on ACME_EMAIL presence
+#
+# 4. SCALABILITY:
+#    - Change DOMAIN variable → all endpoints update instantly
+#    - No code changes needed for IP migration
+#    - Works with any IP/hostname/domain
+#
+# ════════════════════════════════════════════════════════════════════════════

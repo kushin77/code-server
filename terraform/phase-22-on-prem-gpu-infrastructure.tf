@@ -287,7 +287,7 @@ resource "null_resource" "k8s_nvidia_device_plugin" {
   ]) > 0 ? 1 : 0
 
   provisioner "local-exec" {
-    command = "set -euo pipefail && kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.0/nvidia-device-plugin.yml --kubeconfig=${pathexpand('~/.kube/config')} 2>/dev/null || echo 'GPU device plugin may already be installed'"
+    command = "kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.0/nvidia-device-plugin.yml --kubeconfig=$${HOME}/.kube/config || true"
   }
 
   depends_on = [null_resource.nvidia_gpu_drivers]
@@ -304,7 +304,7 @@ resource "null_resource" "gpu_node_labels" {
   }
 
   provisioner "local-exec" {
-    command = "set -euo pipefail && kubectl label nodes ${each.key} accelerator=nvidia gpu-type=nvidia-gpu --kubeconfig=${pathexpand('~/.kube/config')} --overwrite 2>/dev/null || echo 'Node labeling may require kubectl access'"
+    command = "kubectl label nodes $${each.key} accelerator=nvidia gpu-type=nvidia-gpu --kubeconfig=$${HOME}/.kube/config --overwrite || true"
   }
 
   depends_on = [null_resource.k8s_nvidia_device_plugin]
@@ -327,9 +327,4 @@ output "cuda_version" {
 output "gpu_driver_version" {
   description = "NVIDIA GPU driver version"
   value       = var.on_prem_gpu_enabled ? var.gpu_drivers_version : null
-}
-
-output "deployment_mode" {
-  description = "Confirms on-premises GPU deployment"
-  value       = "on-prem-gpu-infrastructure"
 }

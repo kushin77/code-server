@@ -254,17 +254,36 @@ variable "enable_https" {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Phase 22-25: Feature Flags (Modular Deployment)
+// FEATURE FLAGS: Infrastructure Capabilities (Modular Deployment)
+// Enable/disable major infrastructure modules independently
 // ─────────────────────────────────────────────────────────────────────────────
 
-variable "phase_24_enabled" {
-  description = "Enable Phase 24: Operations Excellence (Velero backups, Karpenter auto-scaling)"
+variable "enable_kubernetes_orchestration" {
+  description = "Enable Kubernetes orchestration (EKS cluster)"
   type        = bool
   default     = true
 }
 
-variable "phase_25_enabled" {
-  description = "Enable Phase 25: GraphQL API & Developer Portal"
+variable "enable_observability_operations" {
+  description = "Enable observability & operations (Prometheus, Grafana, AlertManager, Velero)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_api_gateway" {
+  description = "Enable GraphQL API gateway & developer portal"
+  type        = bool
+  default     = true
+}
+
+variable "enable_gpu_compute_infrastructure" {
+  description = "Enable GPU compute infrastructure (NVIDIA, ML/AI stack, Seldon)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_dns_access_control" {
+  description = "Enable DNS access control & Cloudflare routing"
   type        = bool
   default     = true
 }

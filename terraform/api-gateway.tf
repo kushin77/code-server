@@ -3,15 +3,10 @@
 # ═════════════════════════════════════════════════════════════════════════════
 # Purpose: Unified GraphQL API layer, self-service developer portal, automation
 # Status: Production-ready with enterprise API management
-# Dependencies: operations_excellence, observability, infrastructure
+# Dependencies: enable_api_gateway (root), observability, infrastructure
 # ═════════════════════════════════════════════════════════════════════════════
+# NOTE: Enabled via var.enable_api_gateway from root variables.tf (consolidated)
 # NOTE: terraform required_providers defined in main.tf (consolidated for idempotency)
-
-variable "graphql_api_portal_enabled" {
-  description = "Enable GraphQL API & Developer Portal module"
-  type        = bool
-  default     = true
-}
 
 variable "graphql_replicas" {
   description = "Number of GraphQL server replicas"
@@ -30,7 +25,7 @@ variable "portal_replicas" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_namespace" "api" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name = "api-gateway"
@@ -41,7 +36,7 @@ resource "kubernetes_namespace" "api" {
 }
 
 resource "kubernetes_deployment" "graphql_server" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "graphql-api-server"
@@ -162,7 +157,7 @@ resource "kubernetes_deployment" "graphql_server" {
 }
 
 resource "kubernetes_service" "graphql_server" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count     = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "graphql-api"
@@ -190,7 +185,7 @@ resource "kubernetes_service" "graphql_server" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_config_map" "graphql_schema" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "graphql-schema"
@@ -308,7 +303,7 @@ input UserSettingsInput {
 }
 
 resource "kubernetes_config_map" "graphql_resolvers" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "graphql-resolvers"
@@ -420,7 +415,7 @@ resource "kubernetes_service_account" "graphql_api" {
 }
 
 resource "kubernetes_config_map" "rate_limit_rules" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "api-rate-limits"
@@ -476,7 +471,7 @@ premiumFieldsCost:
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_deployment" "developer_portal" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "developer-portal"
@@ -548,7 +543,7 @@ resource "kubernetes_deployment" "developer_portal" {
 }
 
 resource "kubernetes_service" "developer_portal" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count     = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "developer-portal"
@@ -575,7 +570,7 @@ resource "kubernetes_service" "developer_portal" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_config_map" "portal_features" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "portal-features"
@@ -683,7 +678,7 @@ export function WebhookManagement() {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_ingress_v1" "api_gateway" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "api-gateway-ingress"
@@ -741,7 +736,7 @@ resource "kubernetes_ingress_v1" "api_gateway" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_config_map" "graphql_monitoring" {
-  count = var.graphql_api_portal_enabled ? 1 : 0
+  count = var.enable_api_gateway ? 1 : 0
   
   metadata {
     name      = "graphql-monitoring"

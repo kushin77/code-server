@@ -500,7 +500,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - NEXT_PUBLIC_GRAPHQL_URL=http://192.168.168.31:4000/graphql
+      # Use DOMAIN environment variable (never hardcode IPs)
+      # For on-prem: DOMAIN=192.168.168.31.nip.io
+      # For production: DOMAIN=kushnir.cloud
+      - NEXT_PUBLIC_GRAPHQL_URL=http://graphql-api.${DOMAIN:-192.168.168.31.nip.io}:4000/graphql
+      - NEXT_PUBLIC_API_URL=http://graphql-api.${DOMAIN:-192.168.168.31.nip.io}:4000
       - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/code-server
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=developer-portal

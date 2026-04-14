@@ -214,6 +214,11 @@ services:
       - caddy-config:/config
       - caddy-data:/data
     environment:
+      # ─── DNS & TLS Configuration (Phase 21+) ──────────────────────────
+      # For production: DOMAIN=kushnir.cloud (real DNS + Let's Encrypt)
+      # For on-prem: DOMAIN=${external_domain} (nip.io or static IP)
+      - DOMAIN=$${DOMAIN:${external_domain}}
+      - ACME_EMAIL=$${ACME_EMAIL:${acme_email}}
       - ACME_AGREE=true
       # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317

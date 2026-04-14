@@ -5,12 +5,8 @@
 # Status: Production-ready with offline-first architecture
 # Dependencies: infrastructure, observability
 # ═════════════════════════════════════════════════════════════════════════════
-
-variable "operations_excellence_enabled" {
-  description = "Enable Operations Excellence & Resilience module"
-  type        = bool
-  default     = true
-}
+# Note: Uses var.enable_observability_operations from root variables.tf (shared
+# with ops, monitoring, resilience features)
 
 variable "backup_retention_days" {
   description = "Backup retention in days"
@@ -29,7 +25,7 @@ variable "disaster_recovery_replicas" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_namespace" "velero" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name = "velero"
@@ -40,7 +36,7 @@ resource "kubernetes_namespace" "velero" {
 }
 
 resource "helm_release" "velero" {
-  count      = var.operations_excellence_enabled ? 1 : 0
+  count      = var.enable_observability_operations ? 1 : 0
   name       = "velero"
   repository = "https://vmware-tanzu.github.io/helm-charts"
   chart      = "velero"
@@ -113,7 +109,7 @@ resource "helm_release" "velero" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_namespace" "karpenter" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name = "karpenter"
@@ -124,7 +120,7 @@ resource "kubernetes_namespace" "karpenter" {
 }
 
 resource "helm_release" "karpenter" {
-  count      = var.operations_excellence_enabled ? 1 : 0
+  count      = var.enable_observability_operations ? 1 : 0
   name       = "karpenter"
   repository = "oci://public.ecr.aws/karpenter"
   chart      = "karpenter"
@@ -152,7 +148,7 @@ resource "helm_release" "karpenter" {
 }
 
 resource "kubernetes_manifest" "karpenter_provisioner" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   manifest = {
     apiVersion = "karpenter.sh/v1alpha5"
@@ -201,7 +197,7 @@ resource "kubernetes_manifest" "karpenter_provisioner" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_deployment" "cost_engine" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name      = "cost-optimization-engine"
@@ -323,7 +319,7 @@ resource "kubernetes_cluster_role_binding" "cost_engine" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_config_map" "dr_procedures" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name      = "disaster-recovery-procedures"
@@ -374,7 +370,7 @@ velero restore create --from-backup daily-YYYYMMDD \
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_config_map" "hpa_templates" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name      = "hpa-templates"
@@ -431,7 +427,7 @@ spec:
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_resource_quota" "operations_quota" {
-  count = var.operations_excellence_enabled ? 1 : 0
+  count = var.enable_observability_operations ? 1 : 0
   
   metadata {
     name      = "operations-excellence-quota"

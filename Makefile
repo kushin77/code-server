@@ -840,11 +840,11 @@ readonly-cleanup:
 
 # CI: Validate without applying
 ci-validate: validate
-	@echo "✅ CI validation passed"
+	@echo "CI validation passed"
 
 # CD: Deploy after approval
 cd-deploy: validate deploy
-	@echo "✅ CD deployment complete"
+	@echo "CD deployment complete"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ALIASES & SHORTCUTS
@@ -858,6 +858,130 @@ v: validate    # Short for validate
 om: ollama-status  # Ollama status
 oi: ollama-init    # Ollama init
 op: ollama-pull-models  # Ollama pull
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ELITE OPERATIONS — production targets for 192.168.168.31
+# All targets remote-only (Linux). Run: make <target>
+# ═══════════════════════════════════════════════════════════════════════════════
+
+REMOTE := ssh akushnir@192.168.168.31
+REMOTE_DIR := /home/akushnir/code-server-enterprise
+
+## elite-deploy: clean kill → NAS mount → secrets → pull → up → healthcheck
+elite-deploy:
+	$(REMOTE) "cd $(REMOTE_DIR) && bash scripts/deploy.sh"
+
+## elite-status: full production status (GPU, NAS, containers, VPN)
+elite-status:
+	$(REMOTE) " \
+	  echo '=== CONTAINERS ===' && docker ps --format 'table {{.Names}}\t{{.Status}}' && \
+	  echo '' && echo '=== GPU ===' && nvidia-smi --query-gpu=name,memory.used,utilization.gpu --format=csv,noheader && \
+	  echo '' && echo '=== NAS ===' && (mountpoint -q /mnt/nas-56 && df -h /mnt/nas-56 || echo 'NAS NOT MOUNTED') && \
+	  echo '' && echo '=== VPN ===' && (ip link show wg0 &>/dev/null && wg show wg0 || echo 'VPN NOT RUNNING') && \
+	  echo '' && echo '=== DISK ===' && df -h / "
+
+## elite-kill: stop all, purge orphan volumes (data safe — named volumes kept)
+elite-kill:
+	$(REMOTE) "cd $(REMOTE_DIR) && \
+	  docker compose down --remove-orphans --timeout 30 2>/dev/null || true && \
+	  docker volume prune -f && \
+	  docker image prune -f && \
+	  echo 'Cleanup done'"
+
+## elite-logs: stream all service logs
+elite-logs:
+	$(REMOTE) "cd $(REMOTE_DIR) && docker compose logs -f --tail=100"
+
+## elite-rebuild: hard rebuild (no cache)
+elite-rebuild:
+	$(REMOTE) "cd $(REMOTE_DIR) && \
+	  docker compose down --remove-orphans -v --timeout 30 2>/dev/null || true && \
+	  docker compose pull && \
+	  bash scripts/deploy.sh --skip-nas"
+
+## elite-git-sync: pull latest from GitHub and redeploy
+elite-git-sync:
+	$(REMOTE) "cd $(REMOTE_DIR) && \
+	  git fetch origin && \
+	  git reset --hard origin/main && \
+	  git clean -fd && \
+	  bash scripts/deploy.sh"
+
+## nas-mount: mount NAS 192.168.168.56 on 192.168.168.31
+nas-mount:
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/nas-mount-31.sh mount"
+
+## nas-status: NAS mount status and capacity
+nas-status:
+	$(REMOTE) "$(REMOTE_DIR)/scripts/nas-mount-31.sh status || sudo $(REMOTE_DIR)/scripts/nas-mount-31.sh status"
+
+## nas-test: NAS throughput benchmark
+nas-test:
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/nas-mount-31.sh test"
+
+## gpu-status: full GPU info (both cards)
+gpu-status:
+	$(REMOTE) "nvidia-smi"
+
+## gpu-test: run llama2:7b-chat inference on T1000
+gpu-test:
+	$(REMOTE) "docker exec ollama ollama run llama2:7b-chat 'What is 2+2? Reply in one word.' --verbose"
+
+## vpn-install: install and configure WireGuard on .31
+vpn-install:
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/vpn-setup.sh install && \
+	  sudo $(REMOTE_DIR)/scripts/vpn-setup.sh config && \
+	  sudo $(REMOTE_DIR)/scripts/vpn-setup.sh start"
+
+## vpn-addpeer: add a VPN peer (usage: make vpn-addpeer PEER=laptop)
+vpn-addpeer:
+	@[ -n "$(PEER)" ] || { echo "Usage: make vpn-addpeer PEER=<name>"; exit 1; }
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/vpn-setup.sh addpeer $(PEER)"
+
+## vpn-status: WireGuard interface and peer status
+vpn-status:
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/vpn-setup.sh status 2>/dev/null || echo 'VPN not running'"
+
+## vpn-test: run full VPN test suite
+vpn-test:
+	$(REMOTE) "cd $(REMOTE_DIR) && bash scripts/vpn-test.sh"
+
+## secrets-gen: generate new secrets (prints .env to stdout — pipe to .env)
+secrets-gen:
+	$(REMOTE) "cd $(REMOTE_DIR) && source scripts/lib/secrets.sh && secrets_generate"
+
+## secrets-push-gsm: push local .env secrets to Google Secret Manager
+secrets-push-gsm:
+	$(REMOTE) "cd $(REMOTE_DIR) && source scripts/lib/secrets.sh && secrets_push_to_gsm"
+
+## branch-clean: delete all local merged implementation branches
+branch-clean:
+	@git branch | grep -E 'implementation/|feat/elite' | xargs -r git branch -d
+	@echo "Local merged branches cleaned"
+
+## branch-clean-remote: delete all remote implementation branches
+branch-clean-remote:
+	@git branch -r | grep -E 'origin/implementation/' | sed 's|origin/||' | \
+	  xargs -r -I{} git push origin --delete {}
+	@echo "Remote implementation branches cleaned"
+
+## ollama-gpu: verify ollama is using GPU (T1000, device 1)
+ollama-gpu:
+	$(REMOTE) "nvidia-smi -i 1 --query-gpu=name,memory.used,utilization.gpu --format=csv,noheader && \
+	  docker exec ollama ollama list"
+
+## ollama-pull: pull baseline models onto NAS
+ollama-pull:
+	$(REMOTE) "docker exec ollama ollama pull llama2:7b-chat && docker exec ollama ollama pull codellama:7b"
+
+.PHONY: elite-deploy elite-status elite-kill elite-logs elite-rebuild elite-git-sync \
+        nas-mount nas-status nas-test \
+        gpu-status gpu-test \
+        vpn-install vpn-addpeer vpn-status vpn-test \
+        secrets-gen secrets-push-gsm \
+        branch-clean branch-clean-remote \
+        ollama-gpu ollama-pull
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CODE QUALITY & LIBRARY GOVERNANCE

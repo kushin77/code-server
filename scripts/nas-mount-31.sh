@@ -1,63 +1,171 @@
 #!/bin/bash
-# File:    nas-mount-31.sh
-# Owner:   Platform Engineering
-# Purpose: NAS mount automation and validation for 192.168.168.31
-# Status:  ACTIVE
-# Usage:   ./nas-mount-31.sh [mount|validate|backup|troubleshoot|all] [--dry-run]
+# ═══════════════════════════════════════════════════════════════════════════════
+# scripts/nas-mount-31.sh — NAS mount for 192.168.168.31
+# NAS: 192.168.168.56:/export  (primary storage)
+# Usage: sudo ./scripts/nas-mount-31.sh [mount|umount|status|test|dirs]
+# ═══════════════════════════════════════════════════════════════════════════════
+set -euo pipefail
 
-set -e
+NAS_HOST="192.168.168.56"
+NAS_EXPORT="/export"
+MOUNT_POINT="/mnt/nas-56"
+NFS_OPTS="vers=4.1,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
 
-# Bootstrap _common library (logging, utils, error-handler, config)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-
-LOG_DIR="/var/log"
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-LOG_FILE="${LOG_DIR}/nas-mount-${TIMESTAMP}.log"
-DRY_RUN=false
-ACTION="${1:-all}"
-
-# NAS Configuration
-NAS_PRIMARY="192.168.168.10"
-NAS_SECONDARY="192.168.168.11"
-NAS_ARCHIVE="192.168.168.12"
-
-# Mount Points
-MOUNTS=(
-  "models:${NAS_PRIMARY}:/export/models:/mnt/models:nfs4"
-  "data:${NAS_PRIMARY}:/export/data:/mnt/data:nfs4"
-  "backups:${NAS_SECONDARY}:/export/backups:/mnt/backups:nfs3"
-  "archive:${NAS_ARCHIVE}:/export/archive:/mnt/archive:nfs4"
+# Sub-directories provisioned on the NAS
+NAS_DIRS=(
+    "ollama"          # Ollama model cache (large files, ~10-40GB)
+    "code-server"     # Developer workspace (NFS-backed home dir)
+    "grafana"         # Grafana persistent data
+    "prometheus"      # Prometheus TSDB (30d retention)
+    "backups/postgres" # Postgres pg_dump backups
 )
 
-mkdir -p "$LOG_DIR"
+# ─────────────────────────────────────────────────────────────────────────────
 
-# Phase 1: Pre-mount validation
-validate_prerequisites() {
-  log_info "=== Pre-Mount Validation ==="
-  
-  local failed=0
-  
-  # Check NFS client
-  if dpkg -l | grep -q nfs-common; then
-    log_success "NFS client installed"
-  else
-    log_warning "NFS client not installed, installing..."
-    if [[ $DRY_RUN == false ]]; then
-      sudo apt update && sudo apt install -y nfs-common
+log()  { echo "[nas-mount] $*"; }
+ok()   { echo "[nas-mount] OK: $*"; }
+warn() { echo "[nas-mount] WARN: $*" >&2; }
+die()  { echo "[nas-mount] FATAL: $*" >&2; exit 1; }
+
+require_root() {
+    [[ $EUID -eq 0 ]] || die "This script must be run as root (sudo)"
+}
+
+check_nfs_client() {
+    if ! dpkg -l | grep -q nfs-common 2>/dev/null; then
+        log "Installing nfs-common..."
+        apt-get update -qq && apt-get install -y -qq nfs-common
     fi
-  fi
-  
-  # Check network connectivity
-  for nas in "$NAS_PRIMARY" "$NAS_SECONDARY" "$NAS_ARCHIVE"; do
-    if ping -c 1 -W 2 "$nas" &> /dev/null; then
-      log_success "NAS $nas reachable"
+    ok "nfs-common present"
+}
+
+ping_nas() {
+    if ping -c 2 -W 2 "$NAS_HOST" &>/dev/null; then
+        ok "NAS $NAS_HOST reachable"
     else
-      log_error "NAS $nas unreachable"
-      failed=$((failed + 1))
+        die "NAS $NAS_HOST unreachable — check network"
     fi
-  done
-  
+}
+
+mount_nas() {
+    require_root
+    check_nfs_client
+    ping_nas
+
+    mkdir -p "$MOUNT_POINT"
+
+    if mountpoint -q "$MOUNT_POINT"; then
+        ok "Already mounted at $MOUNT_POINT"
+        return 0
+    fi
+
+    log "Mounting ${NAS_HOST}:${NAS_EXPORT} → ${MOUNT_POINT}..."
+    mount -t nfs4 -o "$NFS_OPTS" "${NAS_HOST}:${NAS_EXPORT}" "$MOUNT_POINT"
+    ok "Mounted ${MOUNT_POINT}"
+
+    # Persist via fstab (idempotent)
+    local fstab_entry="${NAS_HOST}:${NAS_EXPORT} ${MOUNT_POINT} nfs4 ${NFS_OPTS},_netdev 0 0"
+    if ! grep -qF "$MOUNT_POINT" /etc/fstab; then
+        echo "$fstab_entry" >> /etc/fstab
+        ok "Added to /etc/fstab"
+    else
+        ok "Already in /etc/fstab"
+    fi
+
+    provision_dirs
+}
+
+provision_dirs() {
+    log "Provisioning NAS sub-directories..."
+    for dir in "${NAS_DIRS[@]}"; do
+        mkdir -p "${MOUNT_POINT}/${dir}"
+        ok "  ${MOUNT_POINT}/${dir}"
+    done
+
+    # Ensure akushnir user owns service directories
+    chown -R akushnir:akushnir \
+        "${MOUNT_POINT}/ollama" \
+        "${MOUNT_POINT}/code-server" \
+        "${MOUNT_POINT}/grafana" \
+        "${MOUNT_POINT}/prometheus" \
+        "${MOUNT_POINT}/backups" 2>/dev/null || true
+}
+
+umount_nas() {
+    require_root
+    if mountpoint -q "$MOUNT_POINT"; then
+        umount "$MOUNT_POINT"
+        ok "Unmounted $MOUNT_POINT"
+    else
+        warn "$MOUNT_POINT not mounted"
+    fi
+}
+
+status_nas() {
+    echo "=== NAS Mount Status ==="
+    echo "Host         : $NAS_HOST"
+    echo "Export       : $NAS_EXPORT"
+    echo "Mount point  : $MOUNT_POINT"
+
+    if mountpoint -q "$MOUNT_POINT"; then
+        echo "Status       : MOUNTED"
+        df -h "$MOUNT_POINT"
+        echo ""
+        echo "=== Sub-directories ==="
+        for dir in "${NAS_DIRS[@]}"; do
+            if [[ -d "${MOUNT_POINT}/${dir}" ]]; then
+                local size
+                size=$(du -sh "${MOUNT_POINT}/${dir}" 2>/dev/null | cut -f1)
+                echo "  ${dir}: ${size}"
+            else
+                echo "  ${dir}: MISSING"
+            fi
+        done
+    else
+        echo "Status       : NOT MOUNTED"
+        return 1
+    fi
+}
+
+test_nas() {
+    log "Testing NAS read/write throughput..."
+    if ! mountpoint -q "$MOUNT_POINT"; then
+        die "NAS not mounted — run: sudo $0 mount"
+    fi
+
+    local test_file="${MOUNT_POINT}/.write-test-$$"
+
+    # Write test
+    echo "Write (256MB):"
+    dd if=/dev/urandom of="$test_file" bs=1M count=256 conv=fsync 2>&1 | tail -1
+
+    # Read test
+    echo "Read (256MB):"
+    dd if="$test_file" of=/dev/null bs=1M 2>&1 | tail -1
+
+    rm -f "$test_file"
+    ok "NAS throughput test complete"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+case "${1:-status}" in
+    mount)   mount_nas ;;
+    umount)  umount_nas ;;
+    status)  status_nas ;;
+    test)    test_nas ;;
+    dirs)    provision_dirs ;;
+    *)
+        echo "Usage: sudo $0 [mount|umount|status|test|dirs]"
+        echo "  mount   — mount NAS and provision directories"
+        echo "  umount  — unmount NAS"
+        echo "  status  — show mount status and usage"
+        echo "  test    — throughput benchmark"
+        echo "  dirs    — provision sub-directories only"
+        exit 1
+        ;;
+esac
+
   # Check NFS services
   if rpcinfo -p "$NAS_PRIMARY" 2>/dev/null | grep -q nfs; then
     log_success "NFS service active on primary NAS"

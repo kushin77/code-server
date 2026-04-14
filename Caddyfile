@@ -14,9 +14,9 @@
 
 # Global Caddyfile configuration
 {
-    # For production (kushnir.cloud): auto_https on, Let's Encrypt
-    # For on-prem (*.nip.io): auto_https off (no TLS needed)
-    {if eq "{$ACME_EMAIL:""}" ""} auto_https off {else} acme_ca https://acme-v02.api.letsencrypt.org/directory {/if}
+    # For on-prem (*.nip.io): auto_https off (no TLS needed for internal domains)
+    # Production HTTPS configuration handled separately in kubernetes/helm
+    auto_https off
     
     email {$ACME_EMAIL:ops@kushnir.cloud}
     

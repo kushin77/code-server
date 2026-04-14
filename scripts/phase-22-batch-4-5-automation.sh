@@ -114,30 +114,6 @@ for script in "$PROJECT_ROOT"/*.sh; do
     fi
 done
 
-# Categorize PowerShell scripts
-log ""
-log "Categorizing root-level PowerShell scripts..."
-
-for script in "$PROJECT_ROOT"/*.ps1; do
-    [[ -f "$script" ]] || continue
-    
-    basename=$(basename "$script")
-    category="ci"  # Most .ps1 scripts are CI/automation
-    
-    dest_dir="$PROJECT_ROOT/scripts/$category"
-    dest_file="$dest_dir/$basename"
-    
-    if [[ "$DRY_RUN" == true ]]; then
-        log "  [DRY-RUN] Move $basename → scripts/$category/"
-    else
-        mkdir -p "$dest_dir"
-        if [[ -f "$script" && ! -f "$dest_file" ]]; then
-            mv "$script" "$dest_file"
-            success "Moved $basename to scripts/$category/"
-        fi
-    fi
-done
-
 # ─────────────────────────────────────────────────────────────────────────────
 # BATCH 5: Archive Historical Content
 # ─────────────────────────────────────────────────────────────────────────────

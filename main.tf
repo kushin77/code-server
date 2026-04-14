@@ -122,6 +122,8 @@ locals {
     Idempotent  = "true"
   }
 
+  cloudflare_tunnel_enabled = var.enable_cloudflare_tunnel && can(regex("^[-_A-Za-z0-9.]{40,}$", trimspace(var.cloudflare_tunnel_token))) && !startswith(trimspace(var.cloudflare_tunnel_token), "YOUR_")
+
   # ─────────────────────────────────────────────────────────────────────────
   # Export versions for docker-compose template
   # ─────────────────────────────────────────────────────────────────────────
@@ -148,8 +150,9 @@ locals {
     llama_model              = "llama2:70b-chat"
     enable_ollama            = true
     # DNS & ACME configuration (Phase 21+)
-    external_domain          = var.external_domain
-    acme_email               = var.acme_email
+    external_domain    = var.external_domain
+    acme_email         = var.acme_email
+    enable_cloudflared = local.cloudflare_tunnel_enabled
   }
 }
 
@@ -208,10 +211,15 @@ GOOGLE_CLIENT_SECRET=${var.google_client_secret}
 OAUTH2_PROXY_COOKIE_SECRET=${var.oauth2_proxy_cookie_secret}
 
 # Domain routing
-DOMAIN=${var.external_domain}
+DOMAIN=${var.domain}
+EXTERNAL_DOMAIN=${var.external_domain}
+ACME_EMAIL=${var.acme_email}
 
 # GitHub token (optional, for higher rate limits)
 GITHUB_TOKEN=${var.github_token}
+
+# Cloudflare Tunnel (optional - required for public HTTPS via Cloudflare)
+CLOUDFLARE_TUNNEL_TOKEN=${var.cloudflare_tunnel_token}
 
 # Workspace volume mount
 WORKSPACE_PATH=${local.storage.workspace_dir}
@@ -256,16 +264,16 @@ set -euo pipefail
 # Exit code: 0 = success, 1 = deployment failed
 # ─────────────────────────────────────────────────────────────────────────────
 
-PROJECT_DIR="$$(cd "$$(dirname "$${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$$PROJECT_DIR"
+PROJECT_DIR="$(cd "$(dirname "$${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 
 LOG_FILE="$${PROJECT_DIR}/deployment.log"
-exec 1> >(tee -a "$$LOG_FILE")
+exec 1> >(tee -a "$LOG_FILE")
 exec 2>&1
 
 echo "════════════════════════════════════════════════════════════════════════════"
 echo "IDEMPOTENT DEPLOYMENT: code-server-enterprise"
-echo "Timestamp: $$(date -Iseconds)"
+echo "Timestamp: $(date -Iseconds)"
 echo "════════════════════════════════════════════════════════════════════════════"
 
 # Step 1: Terraform init + apply (generates docker-compose.yml with versions)
@@ -303,22 +311,22 @@ echo ""
 echo "Step 4: Waiting for all services to be healthy..."
 MAX_WAIT=120
 ELAPSED=0
-while [ $$ELAPSED -lt $$MAX_WAIT ]; do
-  HEALTHY=$$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
-  TOTAL=$$(docker compose ps --format json | jq 'length')
-  echo "  [$$ELAPSED/$$MAX_WAIT] Healthy services: $$HEALTHY/$$TOTAL"
+while [ $ELAPSED -lt $MAX_WAIT ]; do
+  HEALTHY=$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
+  TOTAL=$(docker compose ps --format json | jq 'length')
+  echo "  [$ELAPSED/$MAX_WAIT] Healthy services: $HEALTHY/$TOTAL"
   
-  if [ "$$HEALTHY" -eq "$$TOTAL" ]; then
+  if [ "$HEALTHY" -eq "$TOTAL" ]; then
     echo "✅ All services healthy"
     break
   fi
   
   sleep 5
-  ELAPSED=$$((ELAPSED + 5))
+  ELAPSED=$((ELAPSED + 5))
 done
 
-if [ $$ELAPSED -ge $$MAX_WAIT ]; then
-  echo "⚠️  WARNING: Services not fully healthy after $$MAX_WAIT seconds (may still be starting)"
+if [ $ELAPSED -ge $MAX_WAIT ]; then
+  echo "⚠️  WARNING: Services not fully healthy after $MAX_WAIT seconds (may still be starting)"
   docker compose ps
 fi
 

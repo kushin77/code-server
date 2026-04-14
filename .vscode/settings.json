@@ -1,0 +1,6 @@
+{
+  "window.restoreWindows": "none",
+  "terminal.integrated.enablePersistentSessions": false,
+  "workbench.editor.restoreViewState": false,
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true
+}

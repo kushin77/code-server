@@ -67,8 +67,6 @@ services:
         reservations:
           memory: 512m
           cpus: '0.25'
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -94,13 +92,11 @@ services:
       - ${ollama_volume}:/root/.ollama
       - ${workspace_dir}:${workspace_path}:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${ollama_port}/api/tags"]
+      test: ["CMD", "/bin/bash", "-c", "</dev/tcp/localhost/${ollama_port}"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-    security_opt:
-      - no-new-privileges:true
     deploy:
       resources:
         limits:
@@ -186,7 +182,7 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${oauth2_proxy_port}/ping"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:${oauth2_proxy_port}/ping"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -227,20 +223,42 @@ services:
       - OTEL_SERVICE_NAME=caddy-proxy
       - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=${caddy_version},hostname=caddy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/healthz || exit 1"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:80/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
     depends_on:
       - oauth2-proxy
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+
+%{ if enable_cloudflared }
+  # ─── cloudflared ────────────────────────────────────────────────────────────
+  # Cloudflare Tunnel sidecar (enabled only when token is provided via Terraform)
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.0
+    container_name: cloudflared
+    restart: unless-stopped
+    networks:
+      - ${network_name}
+    env_file:
+      - .env
+    command:
+      - tunnel
+      - run
+      - --token=$${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - caddy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+%{ endif }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks & Volumes

@@ -37,6 +37,19 @@ variable "acme_email" {
   default     = "ops@kushnir.cloud"
 }
 
+variable "cloudflare_tunnel_token" {
+  description = "Cloudflare Tunnel run token (required for cloudflared sidecar)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "enable_cloudflare_tunnel" {
+  description = "Enable cloudflared service in generated docker-compose.yml"
+  type        = bool
+  default     = true
+}
+
 variable "config_dir" {
   description = "Configuration directory (by default, project root)"
   type        = string

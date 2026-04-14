@@ -162,7 +162,7 @@ jobs:
           
           if [ $FOUND -eq 1 ]; then
             echo ""
-            echo "These files should be in archived/ directory. See CODE-REVIEW-OVERLAP-GAPS-INCOMPLETE.md"
+            echo "Obsolete files should be moved to archived/ directory"
           else
             echo "✓ No obsolete files at root level"
           fi

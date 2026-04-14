@@ -9,7 +9,6 @@ global:
   external_labels:
     environment: 'production'
     component: 'global-orchestration-framework'
-    environment: 'staging'
     monitor: 'prometheus'
 
 # ✅ Alertmanager configurations (immutable)

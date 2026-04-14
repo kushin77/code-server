@@ -24,6 +24,10 @@ terraform {
   }
 }
 
+provider "docker" {
+  host = var.docker_host
+}
+
 # ════════════════════════════════════════════════════════════════════════════
 # SINGLE SOURCE OF TRUTH FOR ALL INFRASTRUCTURE
 # 

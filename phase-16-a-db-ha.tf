@@ -76,6 +76,12 @@ variable "pool_mode" {
   }
 }
 
+variable "postgres_data_root" {
+  description = "Host filesystem root path for PostgreSQL HA data volumes"
+  type        = string
+  default     = "/home/akushnir/code-server-enterprise/data/postgresql"
+}
+
 # ───────────────────────────────────────────────────────────────────────────
 # DOCKER NETWORK FOR HA CLUSTER COMMUNICATION
 # ───────────────────────────────────────────────────────────────────────────
@@ -112,8 +118,8 @@ resource "docker_image" "pgbouncer" {
 
 resource "docker_image" "patroni" {
   count         = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
-  name          = "patroni/patroni:v3.0.0"
-  pull_triggers = ["v3.0.0"]
+  name          = "patroni:3.0.2-alpine"
+  pull_triggers = ["3.0.2-alpine"]
   
   lifecycle {
     prevent_destroy = false
@@ -145,7 +151,7 @@ resource "docker_container" "postgres_primary" {
   }
 
   volumes {
-    host_path      = "c:/code-server-enterprise/data/postgresql/primary"
+    host_path      = "${var.postgres_data_root}/primary"
     container_path = "/var/lib/postgresql/data"
     read_only      = false
   }
@@ -191,7 +197,7 @@ resource "docker_container" "postgres_replica" {
   }
 
   volumes {
-    host_path      = "c:/code-server-enterprise/data/postgresql/replica-${count.index + 1}"
+    host_path      = "${var.postgres_data_root}/replica-${count.index + 1}"
     container_path = "/var/lib/postgresql/data"
     read_only      = false
   }

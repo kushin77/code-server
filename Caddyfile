@@ -8,12 +8,7 @@
 # NEVER hardcode IPs or localhost - always use domain names
 # ════════════════════════════════════════════════════════════════════════════
 
-# Environment-driven domain (set via docker-compose.yml or .env)
-# Default to nip.io for on-premises if not specified
-# Note: DOMAIN variable used below in site addresses
-
 # Global Caddyfile configuration
-# Minimal settings for on-prem nip.io deployment (plain HTTP, no TLS)
 {
     log default {
         format json
@@ -21,16 +16,16 @@
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HTTP Listener (Port 80)
-# All HTTP requests proxy to services via DNS names (not IPs)
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────── 
+# Site Configuration - Conditional on DOMAIN variable
+# For kushnir.cloud: Automatically enables HTTPS + Let's Encrypt
+# For nip.io: HTTP only (no HTTPS)
+# ───────────────────────────────────────────────────────────────────────────── 
 
-:80 {
-    # Compression for all responses
+# Code-server IDE (primary app)
+code-server.{$DOMAIN:192.168.168.31.nip.io} {
     encode gzip
     
-    # Security headers
     header Strict-Transport-Security "max-age=31536000; includeSubDomains"
     header X-Content-Type-Options "nosniff"
     header X-Frame-Options "DENY"
@@ -38,65 +33,56 @@
     header Referrer-Policy "strict-origin-when-cross-origin"
     header Permissions-Policy "geolocation=(), microphone=(), camera=()"
     
-    # ─────────────────────────────────────────────────────────────────────────
-    # Primary Routes (all DNS-based, no hardcoded IPs)
-    # ─────────────────────────────────────────────────────────────────────────
-    
-    # IDE endpoint (code-server.{domain}:8080)
-    @ide_requests host code-server.{$DOMAIN:192.168.168.31.nip.io}
-    handle @ide_requests {
-        reverse_proxy code-server:8080
+    reverse_proxy code-server:8080 {
+        flush_interval -1
     }
-    
-    # GraphQL API endpoint (graphql-api.{domain}:4000)
-    @graphql_requests host graphql-api.{$DOMAIN:192.168.168.31.nip.io}
-    handle @graphql_requests {
-        reverse_proxy graphql-api:4000
-    }
-    
-    # Developer Portal endpoint (dev-portal.{domain}:3001)
-    @portal_requests host dev-portal.{$DOMAIN:192.168.168.31.nip.io}
-    handle @portal_requests {
-        reverse_proxy developer-portal:3001
-    }
-    
-    # Prometheus metrics endpoint (prometheus.{domain}:9090)
-    @prometheus_requests host prometheus.{$DOMAIN:192.168.168.31.nip.io}
-    handle @prometheus_requests {
-        reverse_proxy prometheus:9090
-    }
-    
-    # Grafana dashboards endpoint (grafana.{domain}:3000)
-    @grafana_requests host grafana.{$DOMAIN:192.168.168.31.nip.io}
-    handle @grafana_requests {
-        reverse_proxy grafana:3000
-    }
-    
-    # Jaeger tracing UI endpoint (jaeger.{domain}:16686)
-    @jaeger_requests host jaeger.{$DOMAIN:192.168.168.31.nip.io}
-    handle @jaeger_requests {
-        reverse_proxy jaeger:16686
-    }
-    
-    # ─────────────────────────────────────────────────────────────────────────
-    # Health Check Endpoints
-    # ─────────────────────────────────────────────────────────────────────────
-    
+}
+
+# GraphQL API
+graphql-api.{$DOMAIN:192.168.168.31.nip.io} {
+    encode gzip
+    reverse_proxy graphql-api:4000
+}
+
+# Developer Portal
+dev-portal.{$DOMAIN:192.168.168.31.nip.io} {
+    encode gzip
+    reverse_proxy developer-portal:3001
+}
+
+# Prometheus (metrics)
+prometheus.{$DOMAIN:192.168.168.31.nip.io} {
+    encode gzip
+    reverse_proxy prometheus:9090
+}
+
+# Grafana (dashboards)
+grafana.{$DOMAIN:192.168.168.31.nip.io} {
+    encode gzip
+    reverse_proxy grafana:3000
+}
+
+# Jaeger (tracing)
+jaeger.{$DOMAIN:192.168.168.31.nip.io} {
+    encode gzip
+    reverse_proxy jaeger:16686
+}
+
+# Health check endpoint
+{$DOMAIN:192.168.168.31.nip.io} {
     @health_checks path /health /healthz /.well-known/health
     handle @health_checks {
         respond "OK" 200
     }
     
-    # ─────────────────────────────────────────────────────────────────────────
-    # Default/Catch-All (proxy to code-server IDE by default)
-    # ─────────────────────────────────────────────────────────────────────────
-    
+    # Default: proxy to code-server
     handle {
         reverse_proxy code-server:8080 {
             flush_interval -1
         }
     }
 }
+
 
 # ════════════════════════════════════════════════════════════════════════════
 # CRITICAL ARCHITECTURE NOTES

@@ -128,14 +128,6 @@ resource "null_resource" "production_dns_primary" {
     interpreter = ["/bin/bash", "-c"]
   }
 
-  tags = merge(
-    local.deployment_tags,
-    {
-      name        = "phase-14-dns-primary"
-      description = "Production primary DNS → ${local.production_config.primary.host}"
-    }
-  )
-
   lifecycle {
     create_before_destroy = false
   }
@@ -149,14 +141,6 @@ resource "null_resource" "production_dns_standby" {
     command     = "echo '[Phase 14: DNS Standby] Configured rollback route to ${local.production_config.standby.host}'"
     interpreter = ["/bin/bash", "-c"]
   }
-
-  tags = merge(
-    local.deployment_tags,
-    {
-      name        = "phase-14-dns-standby"
-      description = "Production standby DNS → ${local.production_config.standby.host}"
-    }
-  )
 
   lifecycle {
     create_before_destroy = false
@@ -188,14 +172,6 @@ resource "null_resource" "canary_deployment_stage_1" {
     interpreter = ["/bin/bash", "-c"]
   }
 
-  tags = merge(
-    local.deployment_tags,
-    {
-      name  = "phase-14-canary-stage-1"
-      stage = "10-percent"
-    }
-  )
-
   depends_on = [null_resource.production_dns_standby]
 }
 
@@ -215,14 +191,6 @@ resource "null_resource" "canary_deployment_stage_2" {
     EOF
     interpreter = ["/bin/bash", "-c"]
   }
-
-  tags = merge(
-    local.deployment_tags,
-    {
-      name  = "phase-14-canary-stage-2"
-      stage = "50-percent"
-    }
-  )
 
   depends_on = [null_resource.canary_deployment_stage_1]
 }
@@ -249,14 +217,6 @@ resource "null_resource" "canary_deployment_go_live" {
     EOF
     interpreter = ["/bin/bash", "-c"]
   }
-
-  tags = merge(
-    local.deployment_tags,
-    {
-      name  = "phase-14-go-live"
-      stage = "100-percent"
-    }
-  )
 
   depends_on = [null_resource.canary_deployment_stage_2]
 }
@@ -322,13 +282,6 @@ YAML
     interpreter = ["/bin/bash", "-c"]
   }
 
-  tags = merge(
-    local.deployment_tags,
-    {
-      name = "phase-14-slo-monitoring"
-    }
-  )
-
   depends_on = [null_resource.canary_deployment_go_live]
 }
 
@@ -384,13 +337,6 @@ BASH
     EOF
     interpreter = ["/bin/bash", "-c"]
   }
-
-  tags = merge(
-    local.deployment_tags,
-    {
-      name = "phase-14-rollback-procedure"
-    }
-  )
 
   depends_on = [null_resource.slo_monitoring_config]
 }

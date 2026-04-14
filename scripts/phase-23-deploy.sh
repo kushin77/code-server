@@ -6,6 +6,8 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 readonly PHASE="phase-23"
 readonly COMPOSE_FILE="${PROJECT_DIR}/docker-compose-phase-23.yml"
 readonly BASE_COMPOSE="${PROJECT_DIR}/docker-compose.yml"

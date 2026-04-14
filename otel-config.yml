@@ -75,9 +75,11 @@ processors:
         action: delete  # Remove PII from traces
 
 exporters:
-  # Jaeger exporter — send traces to local Jaeger backend
-  jaeger:
-    endpoint: "jaeger:14250"
+  # Zipkin exporter — send traces to Jaeger via Zipkin-compatible protocol
+  zipkin:
+    endpoint: "http://jaeger:9411/api/v2/spans"
+    format: "json"
+
     tls:
       insecure: true
     retry_on_failure:
@@ -110,7 +112,7 @@ service:
     traces:
       receivers:  [otlp, jaeger]
       processors: [memory_limiter, resource, attributes, batch]
-      exporters:  [jaeger]
+      exporters:  [zipkin]
     metrics:
       receivers:  [otlp, prometheus]
       processors: [memory_limiter, batch]

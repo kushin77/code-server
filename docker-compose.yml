@@ -309,7 +309,7 @@ services:
       - '--storage.path=/alertmanager'
       - '--log.level=warn'
     volumes:
-      - ./alertmanager-production.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager.default.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/healthy"]

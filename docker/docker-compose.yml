@@ -187,7 +187,7 @@ services:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/configs/caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro
       - caddy-config:/config
       - caddy-data:/data
     environment:

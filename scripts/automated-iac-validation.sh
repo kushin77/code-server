@@ -39,7 +39,7 @@
 #   ./scripts/automated-iac-validation.sh security
 #
 # Recent Changes:
-#   2026-04-14: Enhanced security validation reporting (Phase 2.2)
+#   2026-04-14: Enhanced security validation reporting 
 #   2026-04-13: Initial creation with comprehensive IaC validation
 #
 ################################################################################
@@ -367,3 +367,4 @@ else
     echo "❌ IaC AUDIT FAILED - $FAIL_COUNT test(s) failed"
     exit 1
 fi
+

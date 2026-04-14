@@ -125,7 +125,7 @@ validate_infrastructure() {
 
 # 10. Success criteria
 print_success_criteria() {
-  echo "Success Criteria (Phase 12.1):"
+  echo "Success Criteria :"
   echo "  ✓ 5 regional namespaces created and operational"
   echo "  ✓ Consul federation setup with service discovery working"
   echo "  ✓ VPC peering: 10 connections (5 choose 2) active"
@@ -166,3 +166,4 @@ echo ""
 echo "Estimated time: 2 weeks, 1-2 engineers"
 echo "Timeline: Week 1-2 of Phase 12 implementation"
 echo ""
+

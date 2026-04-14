@@ -37,7 +37,7 @@
 #   ./scripts/cleanup-container-overlap.sh --dry-run
 #
 # Recent Changes:
-#   2026-04-14: Added safer confirmation dialogs (Phase 2.2)
+#   2026-04-14: Added safer confirmation dialogs 
 #   2026-04-13: Initial creation with overlap detection
 #
 ################################################################################
@@ -107,3 +107,4 @@ echo ""
 echo "=== CLEANUP COMPLETE ==="
 echo "Next: docker compose down && docker compose up -d"
 echo "      (This will ensure clean stack with correct version)"
+

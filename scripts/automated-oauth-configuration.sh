@@ -38,7 +38,7 @@
 #   ./scripts/automated-oauth-configuration.sh validate
 #
 # Recent Changes:
-#   2026-04-14: Added credential validation logging (Phase 2.2)
+#   2026-04-14: Added credential validation logging 
 #   2026-04-13: Initial creation with OAuth setup automation
 #
 ################################################################################
@@ -208,3 +208,4 @@ fi
 
 echo ""
 echo "✓ OAuth configuration setup complete"
+

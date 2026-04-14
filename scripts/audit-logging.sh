@@ -42,7 +42,7 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 #   ./scripts/audit-logging.sh filter "authentication"
 #
 # Recent Changes:
-#   2026-04-14: Added compliance log validation (Phase 2.2)
+#   2026-04-14: Added compliance log validation 
 #   2026-04-13: Initial creation with audit log collection
 #
 ################################################################################
@@ -396,3 +396,4 @@ export -f audit_admin_grant
 export -f get_iso_timestamp
 export -f get_developer_id
 export -f json_escape
+

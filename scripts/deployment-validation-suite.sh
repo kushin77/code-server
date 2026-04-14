@@ -48,9 +48,9 @@ validate_prerequisites() {
     echo ""
 }
 
-# Phase 2: SSH connectivity test
+# Connectivity Verification: SSH connectivity test
 test_ssh_connectivity() {
-    echo "🔌 PHASE 2: SSH CONNECTIVITY TEST"
+    echo "🔌 CONNECTIVITY VERIFICATION: SSH CONNECTIVITY TEST"
     echo "═════════════════════════════════════════════════════════════"
     echo ""
     
@@ -295,7 +295,7 @@ Full Infrastructure-as-Code deployment validation completed successfully on ${DE
 - Required commands verified
 - Environment variables validated
 
-#### Phase 2: SSH Connectivity ✅
+#### Connectivity Verification: SSH Connectivity ✅
 - SSH connection to ${DEPLOY_HOST} verified
 - System information retrieved
 - Host accessibility confirmed

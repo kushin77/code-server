@@ -1,5 +1,5 @@
 # Custom pre-commit hooks for code-server-enterprise
-# Phase 2.3 / Phase 3: Code Quality & Governance Enforcement
+# Governance: Code Quality & Governance Enforcement
 #
 # These hooks are referenced in .pre-commit-config.yaml
 # They enforce repository-specific standards and governance policies
@@ -171,7 +171,7 @@
 - id: verify-metadata-headers
   name: Verify metadata headers in critical scripts
   description: Ensure critical scripts have standardized metadata headers with File, Owner, Purpose, etc.
-  entry: bash -c 'for f in scripts/{deploy,backup,validate,test,health-check}.sh; do [[ -f "$f" ]] && ! grep -q "^# File:" "$f" && echo "ERROR: $f missing standardized headers (add via Phase 2.1 task)"; done | head -5'
+  entry: bash -c 'for f in scripts/{deploy,backup,validate,test,health-check}.sh; do [[ -f "$f" ]] && ! grep -q "^# File:" "$f" && echo "ERROR: $f missing standardized headers"; done | head -5'
   language: system
   files: '^scripts/(deploy|backup|validate|test|health-check)\.sh$'
   pass_filenames: false

@@ -44,7 +44,7 @@
 #   ./scripts/stress-test-remote.sh 192.168.168.31 3600 100
 #
 # Recent Changes:
-#   2026-04-14: Added error handling + metrics collection (Phase 2.2)
+#   2026-04-14: Added error handling + metrics collection 
 #   2026-04-13: Initial creation with load generation
 #
 ################################################################################
@@ -192,3 +192,4 @@ docker stats --no-stream --format "table {{.Container}}\t{{.MemUsage}}\t{{.CPUPe
 echo ""
 echo "=== STRESS TEST COMPLETE ==="
 echo "End time: $(date)"
+

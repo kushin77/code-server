@@ -73,7 +73,7 @@ fi
 log "✓ Sufficient disk space (${AVAILABLE_GB}GB available)"
 
 ################################################################################
-# PHASE 2: Verify Docker Compose Configuration
+# Verify Docker Compose Configuration
 ################################################################################
 
 log ""
@@ -204,3 +204,4 @@ log "Logs: $LOG_FILE"
 log ""
 
 exit 0
+

@@ -81,11 +81,11 @@ check_command() {
 }
 
 ###############################################################################
-# PHASE 1: PRE-FLIGHT CHECKS
+# Pre-Flight Checks
 ###############################################################################
 
 phase_preflight() {
-    heading "PHASE 1: Pre-Flight Checks"
+    heading "Pre-Flight Checks"
     
     log "Checking system requirements..."
     
@@ -125,11 +125,11 @@ phase_preflight() {
 }
 
 ###############################################################################
-# PHASE 2: REPOSITORY SETUP
+# Repository Setup
 ###############################################################################
 
 phase_repositories() {
-    heading "PHASE 2: Repository Setup"
+    heading "Repository Setup"
     
     # Main code-server repo
     log "Cloning code-server repository..."
@@ -158,11 +158,11 @@ phase_repositories() {
 }
 
 ###############################################################################
-# PHASE 3: TOOL INSTALLATION
+# Tool Installation
 ###############################################################################
 
 phase_tools() {
-    heading "PHASE 3: Tool Installation"
+    heading "Tool Installation"
     
     # Install Docker
     log "Checking Docker..."
@@ -238,11 +238,11 @@ phase_tools() {
 }
 
 ###############################################################################
-# PHASE 4: KUBERNETES SETUP
+# Kubernetes Configuration
 ###############################################################################
 
 phase_kubernetes() {
-    heading "PHASE 4: Kubernetes Configuration"
+    heading "Kubernetes Configuration"
     
     # Check if kubeconfig exists
     if [ -f "$KUBECONFIG" ]; then
@@ -267,11 +267,11 @@ phase_kubernetes() {
 }
 
 ###############################################################################
-# PHASE 5: PRE-COMMIT HOOKS
+# Pre-Commit Hooks Setup
 ###############################################################################
 
 phase_precommit() {
-    heading "PHASE 5: Pre-Commit Hooks Setup"
+    heading "Pre-Commit Hooks Setup"
     
     cd "$REPOS_PATH/code-server"
     
@@ -287,11 +287,11 @@ phase_precommit() {
 }
 
 ###############################################################################
-# PHASE 6: CODE-SERVER SETUP
+# Code-Server Setup
 ###############################################################################
 
 phase_codeserver() {
-    heading "PHASE 6: code-server Setup"
+    heading "Code-Server Setup"
     
     cd "$REPOS_PATH/code-server"
     
@@ -310,11 +310,11 @@ phase_codeserver() {
 }
 
 ###############################################################################
-# PHASE 7: CONFIGURATION
+# Configuration
 ###############################################################################
 
 phase_configuration() {
-    heading "PHASE 7: Configuration"
+    heading "Configuration"
     
     # Create .env.development
     log "Creating development environment file..."
@@ -358,11 +358,11 @@ EOF
 }
 
 ###############################################################################
-# PHASE 8: VALIDATION
+# Validation
 ###############################################################################
 
 phase_validation() {
-    heading "PHASE 8: Validation"
+    heading "Validation"
     
     local failed=0
     
@@ -390,11 +390,11 @@ phase_validation() {
 }
 
 ###############################################################################
-# PHASE 9: FINALIZATION
+# Finalization
 ###############################################################################
 
 phase_finalization() {
-    heading "PHASE 9: Finalization & Next Steps"
+    heading "Finalization & Next Steps"
     
     log "Onboarding complete!"
     echo ""
@@ -481,3 +481,4 @@ main() {
 
 # Execute
 main "$@"
+

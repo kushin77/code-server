@@ -86,7 +86,7 @@ validate_prerequisites() {
   fi
 }
 
-# Phase 2: Mount NAS exports
+# Mount NAS Exports
 mount_nas_storage() {
   log_info "=== NAS Mount Configuration ==="
   
@@ -386,3 +386,4 @@ if [[ $2 == "--dry-run" ]]; then
 fi
 
 main "$@"
+

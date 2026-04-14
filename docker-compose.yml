@@ -42,7 +42,7 @@ services:
       resources:
         limits:   { memory: 2g,    cpus: '1.0' }
         reservations: { memory: 256m, cpus: '0.25' }
-    <<: *security
+
     logging: *logging
 
   # ─── Redis ───────────────────────────────────────────────────────────────────
@@ -70,7 +70,6 @@ services:
       resources:
         limits:   { memory: 768m, cpus: '0.5' }
         reservations: { memory: 64m }
-    <<: *security
     logging: *logging
 
   # ─── code-server ─────────────────────────────────────────────────────────────

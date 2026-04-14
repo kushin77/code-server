@@ -1,9 +1,27 @@
 
 tmp-fix-*.py
 
+# Secrets and credentials — NEVER commit
+.env
+.env.*
+temp_env
+*.key
+*.pem
+*.crt
+!*.crt.example
 
-# Terraform provider cache
+# Terraform state and provider cache
 .terraform/
 *.tfstate
 *.tfstate.backup
 .terraform.lock.hcl
+
+# Runtime / persistent data volumes
+data/
+archived/
+
+# Backup/temp files
+*.bak
+*.bak.*
+docker-compose*.bak*
+

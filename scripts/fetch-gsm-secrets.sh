@@ -32,11 +32,11 @@ echo "Fetching secrets from GSM project=${GSM_PROJECT}..." >&2
 
 # GoDaddy API credentials (DNS management)
 fetch_gsm_secret "prod-godaddy-api-key"    GODADDY_KEY
-fetch_gsm_secret "prod-godaddy-api-secret" GODADDY_SECRE
+fetch_gsm_secret "prod-godaddy-api-secret" GODADDY_SECRET
 
 # Google OAuth2 credentials (code-server login via oauth2-proxy)
 fetch_gsm_secret "prod-portal-google-oauth-client-id"     GOOGLE_CLIENT_ID
-fetch_gsm_secret "prod-portal-google-oauth-client-secret" GOOGLE_CLIENT_SECRE
+fetch_gsm_secret "prod-portal-google-oauth-client-secret" GOOGLE_CLIENT_SECRET
 
 # oauth2-proxy cookie secret
 fetch_gsm_secret "prod-portal-oauth2-cookie-secret" OAUTH2_PROXY_COOKIE_SECRET

@@ -1,13 +1,13 @@
 # ═════════════════════════════════════════════════════════════════════════════
-# Phase 24: Operations Excellence & Resilience
+# Operations Excellence & Resilience
 # ═════════════════════════════════════════════════════════════════════════════
 # Purpose: Auto-scaling, disaster recovery, cost optimization, on-premises focus
 # Status: Production-ready with offline-first architecture
-# Dependencies: Phase 22 (infrastructure), Phase 23 (observability)
+# Dependencies: infrastructure, observability
 # ═════════════════════════════════════════════════════════════════════════════
 
-variable "phase_24_enabled" {
-  description = "Enable Phase 24 operations excellence"
+variable "operations_excellence_enabled" {
+  description = "Enable Operations Excellence & Resilience module"
   type        = bool
   default     = true
 }
@@ -29,18 +29,18 @@ variable "disaster_recovery_replicas" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_namespace" "velero" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
     name = "velero"
     labels = {
-      phase = "24"
+      module = "operations-excellence"
     }
   }
 }
 
 resource "helm_release" "velero" {
-  count      = var.phase_24_enabled ? 1 : 0
+  count      = var.operations_excellence_enabled ? 1 : 0
   name       = "velero"
   repository = "https://vmware-tanzu.github.io/helm-charts"
   chart      = "velero"
@@ -113,7 +113,7 @@ resource "helm_release" "velero" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_namespace" "karpenter" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
     name = "karpenter"
@@ -124,7 +124,7 @@ resource "kubernetes_namespace" "karpenter" {
 }
 
 resource "helm_release" "karpenter" {
-  count      = var.phase_24_enabled ? 1 : 0
+  count      = var.operations_excellence_enabled ? 1 : 0
   name       = "karpenter"
   repository = "oci://public.ecr.aws/karpenter"
   chart      = "karpenter"
@@ -152,7 +152,7 @@ resource "helm_release" "karpenter" {
 }
 
 resource "kubernetes_manifest" "karpenter_provisioner" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   manifest = {
     apiVersion = "karpenter.sh/v1alpha5"
@@ -201,7 +201,7 @@ resource "kubernetes_manifest" "karpenter_provisioner" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_deployment" "cost_engine" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
     name      = "cost-optimization-engine"
@@ -270,7 +270,7 @@ resource "kubernetes_deployment" "cost_engine" {
 }
 
 resource "kubernetes_service_account" "cost_engine" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
     name      = "cost-engine"
@@ -279,7 +279,7 @@ resource "kubernetes_service_account" "cost_engine" {
 }
 
 resource "kubernetes_cluster_role" "cost_engine" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
     name = "cost-engine"
@@ -299,7 +299,7 @@ resource "kubernetes_cluster_role" "cost_engine" {
 }
 
 resource "kubernetes_cluster_role_binding" "cost_engine" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
     name = "cost-engine-binding"
@@ -323,7 +323,7 @@ resource "kubernetes_cluster_role_binding" "cost_engine" {
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_config_map" "dr_procedures" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
     name      = "disaster-recovery-procedures"
@@ -374,7 +374,7 @@ velero restore create --from-backup daily-YYYYMMDD \
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_config_map" "hpa_templates" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
     name      = "hpa-templates"
@@ -431,10 +431,10 @@ spec:
 # ═════════════════════════════════════════════════════════════════════════════
 
 resource "kubernetes_resource_quota" "operations_quota" {
-  count = var.phase_24_enabled ? 1 : 0
+  count = var.operations_excellence_enabled ? 1 : 0
   
   metadata {
-    name      = "phase-24-operations-quota"
+    name      = "operations-excellence-quota"
     namespace = "karpenter"
   }
 
@@ -473,3 +473,4 @@ output "backup_retention_days" {
   description = "Backup retention period"
   value       = var.backup_retention_days
 }
+

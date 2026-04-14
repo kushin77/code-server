@@ -387,7 +387,7 @@ export const resolvers = {
     fileChanged: {
       subscribe: async (_, { workspaceId }, { pubsub, user }) => {
         if (!user) throw new GraphQLError('Unauthorized');
-        return pubsub.asyncIterator([`FILE_CHANGED:${workspaceId}`]);
+        return pubsub.asyncIterator(["FILE_CHANGED:" + workspaceId]);
       },
     },
   },

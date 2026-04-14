@@ -143,6 +143,36 @@ locals {
       cpu_reservation    = "0.1"
     }
   }
+
+  # ✅ Version pinning for all components (immutability guarantee)
+  versions = {
+    code_server  = "4.115.0"
+    copilot      = "1.388.0"
+    copilot_chat = "0.43.2026040705"
+    ollama       = "0.1.27"
+    oauth2_proxy = "v7.5.1"
+    caddy        = "2.7.6"
+    prometheus   = "v2.48.0"
+    grafana      = "10.2.3"
+  }
+
+  # ✅ Network configuration
+  network = {
+    name              = "enterprise"
+    code_server_port  = 8080
+    oauth2_proxy_port = 4180
+    caddy_http_port   = 80
+    caddy_https_port  = 443
+    ollama_port       = 11434
+  }
+
+  # ✅ Storage configuration
+  storage = {
+    data_volume    = "${local.service_name}-data"
+    ollama_volume  = "ollama-data"
+    workspace_path = "/home/coder/workspace"
+    workspace_dir  = "${path.module}/workspace"
+  }
 }
 
 # ✅ Output computed values for debugging

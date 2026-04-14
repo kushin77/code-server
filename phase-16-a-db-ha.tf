@@ -42,6 +42,12 @@ variable "patroni_enabled" {
   default     = true
 }
 
+variable "pgbouncer_enabled" {
+  description = "Enable pgBouncer connection pooling"
+  type        = bool
+  default     = false
+}
+
 variable "backup_retention_days" {
   description = "Number of days to retain database backups"
   type        = number
@@ -85,8 +91,8 @@ resource "docker_image" "postgresql_ha" {
 }
 
 resource "docker_image" "pgbouncer" {
-  count         = var.phase_16_a_enabled ? 1 : 0
-  name          = "bitnami/pgbouncer:latest"
+  count         = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
+  name          = "edoburu/pgbouncer:latest"
   pull_triggers = ["latest"]
   
   lifecycle {
@@ -96,8 +102,8 @@ resource "docker_image" "pgbouncer" {
 
 resource "docker_image" "patroni" {
   count         = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
-  name          = "bitnami/patroni:latest"
-  pull_triggers = ["latest"]
+  name          = "patroni/patroni:v3.0.0"
+  pull_triggers = ["v3.0.0"]
   
   lifecycle {
     prevent_destroy = false
@@ -112,13 +118,12 @@ resource "docker_container" "postgres_primary" {
   count         = var.phase_16_a_enabled ? 1 : 0
   name          = "postgres-ha-primary"
   image         = docker_image.postgresql_ha[0].image_id
-  network_mode  = "host"
+  network_mode  = "bridge"
   
   env = [
     "POSTGRES_DB=code_server_db",
     "POSTGRES_USER=db_admin",
     "POSTGRES_PASSWORD=${random_password.db_password[0].result}",
-    "POSTGRES_INITDB_ARGS=-c max_wal_senders=10 -c max_replication_slots=10 -c wal_level=replica",
   ]
 
   ports {
@@ -128,7 +133,7 @@ resource "docker_container" "postgres_primary" {
   }
 
   volumes {
-    host_path      = "/var/lib/postgresql/primary"
+    host_path      = "c:/code-server-enterprise/data/postgresql/primary"
     container_path = "/var/lib/postgresql/data"
     read_only      = false
   }
@@ -158,7 +163,7 @@ resource "docker_container" "postgres_replica" {
   count         = var.phase_16_a_enabled ? var.db_instance_count - 1 : 0
   name          = "postgres-ha-replica-${count.index + 1}"
   image         = docker_image.postgresql_ha[0].image_id
-  network_mode  = "host"
+  network_mode  = "bridge"
 
   env = [
     "PGUSER=replication_user",
@@ -174,7 +179,7 @@ resource "docker_container" "postgres_replica" {
   }
 
   volumes {
-    host_path      = "/var/lib/postgresql/replica-${count.index + 1}"
+    host_path      = "c:/code-server-enterprise/data/postgresql/replica-${count.index + 1}"
     container_path = "/var/lib/postgresql/data"
     read_only      = false
   }
@@ -206,10 +211,10 @@ resource "docker_container" "postgres_replica" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "pgbouncer_pool" {
-  count         = var.phase_16_a_enabled ? 1 : 0
+  count         = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
   name          = "pgbouncer-pool"
   image         = docker_image.pgbouncer[0].image_id
-  network_mode  = "host"
+  network_mode  = "bridge"
 
   env = [
     "PGBOUNCER_USER=pgbouncer",
@@ -258,7 +263,7 @@ resource "docker_container" "patroni_ha" {
   count         = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
   name          = "patroni-ha-controller"
   image         = docker_image.patroni[0].image_id
-  network_mode  = "host"
+  network_mode  = "bridge"
 
   env = [
     "PATRONI_POSTGRESQL_DATA_DIR=/var/lib/postgresql/data",

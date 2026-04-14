@@ -1,0 +1,356 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-prometheus-rules
+  namespace: ml-platform
+data:
+  gpu-alerts.yml: |
+    groups:
+      - name: gpu_health
+        interval: 30s
+        rules:
+          # GPU Health Checks
+          - alert: GPUTemperatureHigh
+            expr: dcgm_fb_free_bytes / dcgm_fb_total_bytes < 0.1
+            for: 5m
+            labels:
+              severity: warning
+              component: gpu
+            annotations:
+              summary: "GPU {{ $labels.gpu }} memory usage high (> 90%)"
+              description: "GPU is approaching memory saturation"
+
+          - alert: GPUMemoryErrorsDetected
+            expr: increase(dcgm_single_bit_errors_total[5m]) > 10
+            labels:
+              severity: warning
+              component: gpu
+            annotations:
+              summary: "GPU {{ $labels.gpu }} single-bit ECC errors detected"
+              description: "{{ $value }} errors in last 5 minutes"
+
+          - alert: GPUDoubleErrorsDetected
+            expr: increase(dcgm_double_bit_errors_total[5m]) > 0
+            labels:
+              severity: critical
+              component: gpu
+            annotations:
+              summary: "GPU {{ $labels.gpu }} double-bit ECC error detected (critical)"
+              description: "Possible hardware failure or memory corruption"
+
+          - alert: GPUUtilizationLow
+            expr: dcgm_gpu_utilization < 10
+            for: 10m
+            labels:
+              severity: info
+              component: gpu
+            annotations:
+              summary: "GPU {{ $labels.gpu }} underutilized (< 10%)"
+              description: "Consider consolidating workloads or stopping idle jobs"
+
+          - alert: GPUPowerExceeded
+            expr: dcgm_power_usage_watts > 250
+            for: 5m
+            labels:
+              severity: warning
+              component: gpu
+            annotations:
+              summary: "GPU {{ $labels.gpu }} power consumption high"
+              description: "{{ $value }}W power draw detected"
+
+      - name: mlflow_health
+        interval: 30s
+        rules:
+          - alert: MLFlowServerDown
+            expr: up{job="mlflow-server"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              component: mlflow
+            annotations:
+              summary: "MLFlow server is unreachable"
+              description: "MLFlow experiment tracking unavailable"
+
+          - alert: MLFlowS3Unavailable
+            expr: mlflow_s3_failures_total > 10
+            for: 5m
+            labels:
+              severity: warning
+              component: mlflow
+            annotations:
+              summary: "MLFlow S3 artifact storage failures"
+              description: "{{ $value }} artifact upload failures in last 5 minutes"
+
+      - name: training_jobs
+        interval: 30s
+        rules:
+          - alert: TrainingJobOOM
+            expr: training_pod_memory_utilization > 0.95
+            for: 1m
+            labels:
+              severity: critical
+              component: training
+            annotations:
+              summary: "Training job {{ $labels.pod }} approaching OOM"
+              description: "Memory utilization > 95%"
+
+          - alert: HighGPUQueueDepth
+            expr: gpu_job_queue_depth > 20
+            for: 5m
+            labels:
+              severity: warning
+              component: gpu
+            annotations:
+              summary: "GPU job queue depth high"
+              description: "{{ $value }} jobs queued for GPU execution"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpu-metrics-collector
+  namespace: ml-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gpu-metrics-collector
+  template:
+    metadata:
+      labels:
+        app: gpu-metrics-collector
+    spec:
+      serviceAccountName: ml-trainer
+      containers:
+        - name: dcgm-exporter
+          image: nvidia/dcgm-exporter:3.1.3-3.1.4-ubuntu20.04
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9400
+              name: metrics
+          env:
+            - name: DCGM_EXPORTER_INTERVAL
+              value: "30000"  # 30 second collection interval
+            - name: DCGM_EXPORTER_KUBERNETES
+              value: "true"
+          volumeMounts:
+            - name: pod-resources
+              mountPath: /var/lib/kubelet/pod-resources
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 200m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: 9400
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9400
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          securityContext:
+            privileged: true
+
+      volumes:
+        - name: pod-resources
+          hostPath:
+            path: /var/lib/kubelet/pod-resources
+
+      nodeSelector:
+        nvidia.com/gpu: "true"
+
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gpu-metrics-collector
+  namespace: ml-platform
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9400
+      targetPort: 9400
+      name: metrics
+  selector:
+    app: gpu-metrics-collector
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gpu-metrics
+  namespace: ml-platform
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: gpu-metrics-collector
+  endpoints:
+    - port: metrics
+      interval: 30s
+      scrapeTimeout: 10s
+
+---
+# Example GPU Training Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpu-training-example
+  namespace: ml-platform
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        workload: ml-training
+    spec:
+      restartPolicy: Never
+      serviceAccountName: ml-trainer
+
+      containers:
+        - name: trainer
+          image: nvidia/cuda:12.3-devel-ubuntu22.04
+          command: ["python", "-m", "torch.utils.collect_env"]
+          imagePullPolicy: IfNotPresent
+
+          resources:
+            requests:
+              cpu: "4"
+              memory: "8Gi"
+              nvidia.com/gpu: 1
+            limits:
+              cpu: "8"
+              memory: "16Gi"
+              nvidia.com/gpu: 1
+
+          env:
+            - name: CUDA_VISIBLE_DEVICES
+              value: "0"
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow-server.ml-platform:5000"
+            - name: MLFLOW_EXPERIMENT_NAME
+              value: "gpu-training"
+
+          volumeMounts:
+            - name: training-data
+              mountPath: /data
+            - name: models
+              mountPath: /models
+
+      volumes:
+        - name: training-data
+          persistent_volume_claim:
+            claim_name: training-data-pvc
+
+        - name: models
+          persistent_volume_claim:
+            claim_name: models-pvc
+
+      nodeSelector:
+        nvidia.com/gpu: "true"
+
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - g4dn.xlarge
+                      - g4dn.2xlarge
+
+---
+# Persistent storage for training data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: training-data-pvc
+  namespace: ml-platform
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: gp3
+
+---
+# Persistent storage for trained models
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+  namespace: ml-platform
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: gp3
+
+---
+# HorizontalPodAutoscaler for GPU training jobs
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gpu-training-hpa
+  namespace: ml-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gpu-training-worker
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+      selectPolicy: Max

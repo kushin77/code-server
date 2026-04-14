@@ -48,24 +48,24 @@ locals {
       description = "Zero-trust tunnel for code-server enterprise"
       # Tunnel ID will be populated dynamically
     }
-    
+
     ssh_proxy = {
-      port                 = var.ssh_proxy_port
-      target_host          = "localhost"
-      target_port          = 22
-      key_logging_enabled  = true
-      audit_log_sinks      = ["file", "sqlite", "syslog"]
+      port                = var.ssh_proxy_port
+      target_host         = "localhost"
+      target_port         = 22
+      key_logging_enabled = true
+      audit_log_sinks     = ["file", "sqlite", "syslog"]
     }
-    
+
     audit_logging = {
       file_sink = {
-        path       = var.audit_log_path
-        max_size   = "1GB"
-        max_backups = 5
+        path         = var.audit_log_path
+        max_size     = "1GB"
+        max_backups  = 5
         max_age_days = 30
       }
       sqlite_sink = {
-        path = "/var/lib/code-server/audit.db"
+        path  = "/var/lib/code-server/audit.db"
         table = "ssh_access_audit"
       }
       syslog_sink = {
@@ -84,13 +84,13 @@ resource "local_file" "audit_logging_config" {
   count           = var.phase_13_enabled ? 1 : 0
   filename        = "${path.module}/config/audit-logging.conf"
   file_permission = "0600"
-  
+
   content = jsonencode({
-    version = "1.0"
+    version     = "1.0"
     description = "Phase 13 Audit Logging Configuration"
-    timestamp = timestamp()
-    immutable = true
-    
+    timestamp   = timestamp()
+    immutable   = true
+
     sinks = {
       file = {
         type     = "file"
@@ -107,17 +107,17 @@ resource "local_file" "audit_logging_config" {
           "status"
         ]
       }
-      
+
       sqlite = {
-        type      = "sqlite"
-        path      = local.phase_13_config.audit_logging.sqlite_sink.path
-        table     = local.phase_13_config.audit_logging.sqlite_sink.table
-        index_on  = ["timestamp", "user", "event_type"]
+        type     = "sqlite"
+        path     = local.phase_13_config.audit_logging.sqlite_sink.path
+        table    = local.phase_13_config.audit_logging.sqlite_sink.table
+        index_on = ["timestamp", "user", "event_type"]
         retention = {
           days = 90
         }
       }
-      
+
       syslog = {
         type     = "syslog"
         facility = local.phase_13_config.audit_logging.syslog_sink.facility
@@ -125,7 +125,7 @@ resource "local_file" "audit_logging_config" {
         format   = "rfc5424"
       }
     }
-    
+
     event_types = [
       "SSH_CONNECT",
       "SSH_AUTH_SUCCESS",
@@ -146,7 +146,7 @@ resource "local_file" "ssh_proxy_systemd" {
   count           = var.phase_13_enabled ? 1 : 0
   filename        = "${path.module}/config/ssh-proxy.service"
   file_permission = "0644"
-  
+
   content = <<-EOT
 [Unit]
 Description=Code-Server SSH Proxy with Audit Logging
@@ -210,50 +210,50 @@ resource "local_file" "cloudflare_tunnel_config" {
   count           = var.phase_13_enabled && var.cloudflare_account_id != "" ? 1 : 0
   filename        = "${path.module}/config/cloudflare-tunnel.json"
   file_permission = "0600"
-  
+
   content = jsonencode({
-    version  = "2024-04-13"
+    version   = "2024-04-13"
     immutable = true
-    
+
     tunnel = {
       name        = local.phase_13_config.cloudflare_tunnel.name
       description = local.phase_13_config.cloudflare_tunnel.description
       account_id  = var.cloudflare_account_id
     }
-    
+
     ingress = [
       {
-        hostname = "code-server.company.com"
-        service  = "https://localhost:443"
-        path     = "/"
+        hostname        = "code-server.company.com"
+        service         = "https://localhost:443"
+        path            = "/"
         tls_skip_verify = false
       },
       {
         service = "http"
       }
     ]
-    
+
     warp_routes = []
-    
+
     warp_routing = {
       enabled = false
     }
-    
+
     policy = {
-      mtls_auth = false
+      mtls_auth      = false
       jwt_validation = false
       auth_domain    = ""
     }
-    
+
     logging = {
       enabled = true
       level   = "info"
       file    = "/var/log/cloudflare-tunnel.log"
     }
-    
+
     metrics = {
-      enabled   = true
-      port      = 49312
+      enabled      = true
+      port         = 49312
       read_timeout = 30
     }
   })
@@ -267,53 +267,53 @@ resource "local_file" "load_test_config" {
   count           = var.phase_13_enabled ? 1 : 0
   filename        = "${path.module}/config/load-test.conf"
   file_permission = "0644"
-  
+
   content = jsonencode({
-    version  = "1.0"
+    version   = "1.0"
     immutable = true
     timestamp = timestamp()
-    
+
     load_test = {
       name = "Phase 13 Day 1 Load Test"
-      
+
       configuration = {
-        concurrent_users    = 5
-        ramp_up_time_sec    = 60
-        sustain_time_sec    = 600
-        ramp_down_time_sec  = 60
-        think_time_ms       = 1000
+        concurrent_users   = 5
+        ramp_up_time_sec   = 60
+        sustain_time_sec   = 600
+        ramp_down_time_sec = 60
+        think_time_ms      = 1000
       }
-      
+
       targets = [
         {
-          name = "SSH Connection"
+          name     = "SSH Connection"
           endpoint = "ssh://localhost:2222"
-          type = "ssh"
+          type     = "ssh"
         },
         {
-          name = "HTTP Health Check"
+          name     = "HTTP Health Check"
           endpoint = "https://localhost:443/healthz"
-          type = "http"
+          type     = "http"
         },
         {
-          name = "IDE Access"
+          name     = "IDE Access"
           endpoint = "https://localhost:443/"
-          type = "http"
+          type     = "http"
         }
       ]
-      
+
       metrics = {
-        p50_latency_target_ms = 50
-        p99_latency_target_ms = 100
-        p99_9_latency_target_ms = 200
-        error_rate_target_pct = 0.1
+        p50_latency_target_ms     = 50
+        p99_latency_target_ms     = 100
+        p99_9_latency_target_ms   = 200
+        error_rate_target_pct     = 0.1
         throughput_target_req_sec = 100
       }
-      
+
       success_criteria = {
-        all_metrics_within_target = true
+        all_metrics_within_target  = true
         zero_authentication_errors = true
-        zero_pod_restarts = true
+        zero_pod_restarts          = true
       }
     }
   })

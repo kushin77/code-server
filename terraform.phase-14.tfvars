@@ -12,29 +12,29 @@
 
 # Stage 1: Initial canary (10% of traffic)
 # Once SLOs validated for 60 min → Proceed to Stage 2
-phase_14_enabled              = true
-phase_14_canary_percentage    = 10
+phase_14_enabled           = true
+phase_14_canary_percentage = 10
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PRODUCTION INFRASTRUCTURE TARGETS
 # ──────────────────────────────────────────────────────────────────────────────
 
-production_primary_host  = "192.168.168.31"   # New primary (code-server-31)
-production_standby_host  = "192.168.168.30"   # Rollback target (code-server-30)
+production_primary_host = "192.168.168.31" # New primary (code-server-31)
+production_standby_host = "192.168.168.30" # Rollback target (code-server-30)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SERVICE LEVEL OBJECTIVE TARGETS (Phase 13 Baseline + Buffer)
 # ──────────────────────────────────────────────────────────────────────────────
 
-slo_target_p99_latency_ms    = 100    # Phase 13 baseline: 42-89ms
-slo_target_error_rate_pct    = 0.1    # Phase 13 baseline: 0.0%
-slo_target_availability_pct  = 99.9   # Phase 13 baseline: 99.98%
+slo_target_p99_latency_ms   = 100  # Phase 13 baseline: 42-89ms
+slo_target_error_rate_pct   = 0.1  # Phase 13 baseline: 0.0%
+slo_target_availability_pct = 99.9 # Phase 13 baseline: 99.98%
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SAFETY MECHANISMS
 # ──────────────────────────────────────────────────────────────────────────────
 
-enable_auto_rollback = true   # Automatic rollback on SLO breach
+enable_auto_rollback = true # Automatic rollback on SLO breach
 
 # ──────────────────────────────────────────────────────────────────────────────
 # VALIDATION

@@ -1,22 +1,5 @@
 # Terraform IaC - Phase 14-16 Complete Infrastructure
-
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.0"
-    }
-  }
-}
-
-provider "docker" {
-  host = "unix:///var/run/docker.sock"
-}
+# (terraform blocks defined in main.tf - this file provides resources only)
 
 # ============================================================================
 # PHASE 14: PRODUCTION CANARY DEPLOYMENT (3-Stage 10% → 50% → 100%)
@@ -45,7 +28,7 @@ resource "null_resource" "phase_14_stage_1" {
   }
 
   triggers = {
-    phase_14_enabled = var.phase_14_enabled
+    phase_14_enabled  = var.phase_14_enabled
     canary_percentage = var.phase_14_canary_percentage
   }
 }
@@ -72,7 +55,7 @@ resource "null_resource" "phase_14_stage_2" {
   }
 
   triggers = {
-    phase_14_enabled = var.phase_14_enabled
+    phase_14_enabled  = var.phase_14_enabled
     canary_percentage = var.phase_14_canary_percentage
   }
 }
@@ -99,7 +82,7 @@ resource "null_resource" "phase_14_stage_3" {
   }
 
   triggers = {
-    phase_14_enabled = var.phase_14_enabled
+    phase_14_enabled  = var.phase_14_enabled
     canary_percentage = var.phase_14_canary_percentage
   }
 }
@@ -287,7 +270,7 @@ variable "phase_14_canary_percentage" {
   description = "Percentage of traffic routed to primary (10, 50, or 100)"
   type        = number
   default     = 10
-  
+
   validation {
     condition     = contains([10, 50, 100], var.phase_14_canary_percentage)
     error_message = "Phase 14 canary percentage must be 10, 50, or 100."
@@ -319,12 +302,12 @@ variable "phase_16_load_balancing_enabled" {
 output "phase_14_status" {
   description = "Phase 14 deployment status"
   value = var.phase_14_enabled ? {
-    enabled    = true
-    stage      = "Canary ${var.phase_14_canary_percentage}%"
-    primary    = "192.168.168.31"
-    standby    = "192.168.168.30"
-    dns_route  = "10% to primary initially, then progressive"
-  } : {
+    enabled   = true
+    stage     = "Canary ${var.phase_14_canary_percentage}%"
+    primary   = "192.168.168.31"
+    standby   = "192.168.168.30"
+    dns_route = "10% to primary initially, then progressive"
+    } : {
     enabled = false
   }
 }
@@ -335,7 +318,7 @@ output "phase_15_status" {
     enabled = true
     redis   = "192.168.168.31:6380"
     test    = "Quick 30-min or Extended 24+ hours"
-  } : {
+    } : {
     enabled = false
   }
 }
@@ -343,10 +326,10 @@ output "phase_15_status" {
 output "phase_16_status" {
   description = "Phase 16 deployment status"
   value = {
-    postgresql_ha = var.phase_16_postgresql_ha_enabled ? "ACTIVE" : "DISABLED"
+    postgresql_ha  = var.phase_16_postgresql_ha_enabled ? "ACTIVE" : "DISABLED"
     load_balancing = var.phase_16_load_balancing_enabled ? "ACTIVE" : "DISABLED"
-    database_vip = "192.168.168.40"
-    haproxy_vip  = "192.168.168.50"
+    database_vip   = "192.168.168.40"
+    haproxy_vip    = "192.168.168.50"
   }
 }
 
@@ -357,6 +340,6 @@ output "infrastructure_targets" {
     standby_host = "192.168.168.30"
     database_vip = "192.168.168.40"
     haproxy_vip  = "192.168.168.50"
-    monitoring = "Prometheus + Grafana on primary"
+    monitoring   = "Prometheus + Grafana on primary"
   }
 }

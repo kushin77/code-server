@@ -7,8 +7,6 @@
 # Rollback    : git revert + make deploy  (<60 seconds)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-version: "3.9"
-
 # ── Reusable anchors ──────────────────────────────────────────────────────────
 x-logging: &logging
   driver: json-file
@@ -374,11 +372,7 @@ services:
 # ─────────────────────────────────────────────────────────────────────────────
 networks:
   enterprise:
-    name: enterprise
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
+    external: true   # pre-created: docker network create enterprise
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Volumes  (NAS-backed = /mnt/nas-56 bind mounts above; local SSD below)

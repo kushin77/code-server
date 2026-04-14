@@ -1,0 +1,250 @@
+# kubernetes/istio/canary-deployment-example.yaml
+# Example: Canary deployment with Istio traffic splitting
+#
+# This demonstrates gradual traffic shift from v1 → v2:
+# - Week 1: 5% traffic to v2
+# - Week 2: 25% traffic to v2
+# - Week 3: 50% traffic to v2
+# - Week 4: 100% traffic to v2
+#
+# Usage:
+# kubectl apply -f canary-deployment-example.yaml
+
+---
+# Version 2 deployment (new version)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-server-v2
+  namespace: code-server
+  labels:
+    app: code-server
+    version: v2
+    phase: 22-b
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: code-server
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: code-server
+        version: v2
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+      - name: code-server
+        image: codercom/code-server:4.21.0  # New version
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+---
+# Service for code-server (already exists, no change needed)
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-server
+  namespace: code-server
+  labels:
+    app: code-server
+spec:
+  selector:
+    app: code-server
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+
+---
+# Virtual Service with progressive traffic shifting
+# Week 1: v1=95%, v2=5%
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: code-server
+  namespace: code-server
+spec:
+  hosts:
+  - code-server
+  http:
+  - match:
+    - sourceLabels:
+        canary: "true"  # Route 5% of real traffic to v2
+    route:
+    - destination:
+        host: code-server
+        subset: v2
+        port:
+          number: 8080
+      weight: 100
+  - route:
+    - destination:
+        host: code-server
+        subset: v1
+        port:
+          number: 8080
+      weight: 95
+    - destination:
+        host: code-server
+        subset: v2
+        port:
+          number: 8080
+      weight: 5
+    timeout: 30s
+    retries:
+      attempts: 3
+      perRetryTimeout: 10s
+
+---
+# Destination Rule with circuit breaker
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: code-server
+  namespace: code-server
+spec:
+  host: code-server
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minEjectionDuration: 30s
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2
+
+---
+# RequestPolicy for rate limiting
+apiVersion: networking.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: code-server-jwt
+  namespace: code-server
+spec:
+  jwtRules:
+  # Add JWT validation rules if using token-based auth
+
+---
+# AuthorizationPolicy for fine-grained access control
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: code-server
+  namespace: code-server
+spec:
+  selector:
+    matchLabels:
+      app: code-server
+  rules:
+  # Allow from Caddy ingress
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/code-server/sa/default"
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/api/*", "/health"]
+  # Allow health checks
+  - from:
+    - source:
+        namespaces:
+        - "istio-system"
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/health"]
+
+# ═════════════════════════════════════════════════════════════════════════════
+# MIGRATION SCRIPT: Canary Traffic Shift (Week-by-week)
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# Week 1: Deploy v2, start canary (5%)
+# kubectl apply -f canary-deployment-example.yaml
+#
+# Monitor for 7 days:
+# kubectl logs --tail=100 -f deployment/code-server-v2 -n code-server
+# kubectl top pods -n code-server
+# kubectl get events -n code-server
+#
+# Week 2: Increase to 25%
+# kubectl patch virtualservice code-server -n code-server --type merge -p '
+# {
+#   "spec": {
+#     "http": [{
+#       "route": [
+#         {"destination": {"host": "code-server", "subset": "v1"}, "weight": 75},
+#         {"destination": {"host": "code-server", "subset": "v2"}, "weight": 25}
+#       ]
+#     }]
+#   }
+# }'
+#
+# Week 3: Increase to 50%
+# kubectl patch virtualservice code-server -n code-server --type merge -p '
+# {
+#   "spec": {
+#     "http": [{
+#       "route": [
+#         {"destination": {"host": "code-server", "subset": "v1"}, "weight": 50},
+#         {"destination": {"host": "code-server", "subset": "v2"}, "weight": 50}
+#       ]
+#     }]
+#   }
+# }'
+#
+# Week 4: 100% traffic to v2
+# kubectl patch virtualservice code-server -n code-server --type merge -p '
+# {
+#   "spec": {
+#     "http": [{
+#       "route": [
+#         {"destination": {"host": "code-server", "subset": "v2"}, "weight": 100}
+#       ]
+#     }]
+#   }
+# }'
+#
+# Delete v1 deployment
+# kubectl delete deployment code-server-v1 -n code-server
+#
+# ROLLBACK (if errors detected in v2):
+# kubectl patch virtualservice code-server -n code-server --type merge -p '
+# {
+#   "spec": {
+#     "http": [{
+#       "route": [
+#         {"destination": {"host": "code-server", "subset": "v1"}, "weight": 100}
+#       ]
+#     }]
+#   }
+# }'
+# kubectl scale deployment code-server-v2 --replicas=0 -n code-server

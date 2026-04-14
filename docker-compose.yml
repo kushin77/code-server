@@ -12,9 +12,6 @@ x-logging: &logging
   driver: json-file
   options: { max-size: "10m", max-file: "5" }
 
-x-security: &security
-  security_opt: [no-new-privileges:true]
-
 services:
 
   # ─── PostgreSQL ──────────────────────────────────────────────────────────────
@@ -105,7 +102,6 @@ services:
       resources:
         limits:   { memory: 4g,    cpus: '2.0' }
         reservations: { memory: 512m, cpus: '0.25' }
-    <<: *security
     logging: *logging
 
   # ─── Ollama (GPU MAX — T1000 8GB, device 1) ───────────────────────────────
@@ -211,7 +207,6 @@ services:
       start_period: 10s
     depends_on:
       code-server: { condition: service_healthy }
-    <<: *security
     logging: *logging
 
   # ─── Caddy (TLS termination + reverse proxy) ─────────────────────────────
@@ -267,7 +262,6 @@ services:
       resources:
         limits:   { memory: 2g,    cpus: '1.0' }
         reservations: { memory: 256m }
-    <<: *security
     logging: *logging
 
   # ─── Grafana ─────────────────────────────────────────────────────────────────
@@ -301,7 +295,6 @@ services:
       resources:
         limits:   { memory: 512m, cpus: '0.5' }
         reservations: { memory: 128m }
-    <<: *security
     logging: *logging
 
   # ─── AlertManager ────────────────────────────────────────────────────────────
@@ -328,7 +321,6 @@ services:
       resources:
         limits:   { memory: 256m, cpus: '0.25' }
         reservations: { memory: 64m }
-    <<: *security
     logging: *logging
 
   # ─── Jaeger (Distributed Tracing) ────────────────────────────────────────────
@@ -363,7 +355,6 @@ services:
       resources:
         limits:   { memory: 1g,    cpus: '0.5' }
         reservations: { memory: 128m }
-    <<: *security
     logging: *logging
 
 # ─────────────────────────────────────────────────────────────────────────────

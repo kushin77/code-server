@@ -1,22 +1,16 @@
 version: '3.9'
 
-services:
-  redis-cache:
-    image: redis:7-alpine
-    container_name: redis-cache-phase15
-    ports:
-      - "6380:6379"
-    volumes:
-      - ./config/redis-cache-config.conf:/usr/local/etc/redis/redis.conf:ro
-      - redis-cache-data:/data
-    command: redis-server /usr/local/etc/redis/redis.conf --maxmemory 2gb --maxmemory-policy allkeys-lru
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+# Phase 15: Advanced Performance & Observability
+# Note: Phase 15 uses existing Phase 14 Redis instance (localhost:6379)
+# No separate Redis instance deployed - avoiding duplicate containers
 
-volumes:
-  redis-cache-data:
-    driver: local
+services:
+  # Monitoring and observability services only
+  # Phase 14 Redis (stable, tested) is reused at redis:6379
+  
+  # Placeholder for future Phase 15 services
+  # (Advanced observability features, load testing harness, etc.)
+  noop:
+    image: busybox:latest
+    entrypoint: /bin/sh -c "echo 'Phase 15 uses Phase 14 Redis (localhost:6379)' && sleep 1"
+    restart: "no"

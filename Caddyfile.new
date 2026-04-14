@@ -1,0 +1,46 @@
+# Caddyfile.new — on-prem IDE reverse proxy (HTTP+HTTPS with automatic cert generation)
+# 
+# IMPORTS: Shared blocks from Caddyfile.base
+# Proxies directly to code-server:8080
+# Supports automatic certificate generation via Let's Encrypt
+#
+# Composition: @see Caddyfile.base for shared configuration
+
+@import Caddyfile.base
+
+{
+    email admin@kushnir.cloud
+}
+
+# HTTPS endpoint with automatic certificate generation
+ide.kushnir.cloud {
+    import compression_standard
+    import security_headers
+    import cache_control_rules
+
+    # Reverse proxy to code-server
+    reverse_proxy code-server:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto https
+    }
+}
+
+# HTTP on port 80 - redirect to HTTPS and serve direct proxies
+:80 {
+    import compression_standard
+    import security_headers
+
+    # Redirect HTTPS-aware requests to HTTPS
+    @needsHttps {
+        not path /health /healthz /api/health
+    }
+    redir @needsHttps https://{host}{uri} permanent
+
+    # Health checks and API endpoints work on HTTP too
+    reverse_proxy code-server:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto http
+    }
+}

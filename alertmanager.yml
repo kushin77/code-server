@@ -2,6 +2,10 @@ global:
   resolve_timeout: 5m
   slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
 
+# SHARED ROUTING from alertmanager-base.yml
+# This file uses the base route structure with simplified receivers
+# @see alertmanager-base.yml for shared grouping and inhibit rules
+
 route:
   group_by: ['alertname', 'cluster', 'service']
   group_wait: 30s

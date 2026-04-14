@@ -11,41 +11,28 @@ services:
   # VS Code running in the browser with Copilot Chat support
   # Image pinned to specific base + extensions freeze at build time
   code-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.code-server
-      args:
-        # ALL VERSIONS FROZEN HERE FOR IMMUTABILITY
-        CODE_SERVER_VERSION: "4.115.0"
-        COPILOT_VERSION: "1.388.0"
-        COPILOT_CHAT_VERSION: "0.43.2026040705"
-    image: code-server-patched:4.115.0
+    # Production-ready upstream image
+    image: codercom/code-server:4.115.0
     container_name: code-server
-    restart: unless-stopped
+    restart: always
     networks:
       - enterprise
+    # Don't expose directly in production — route through Caddy + oauth2-proxy
     expose:
       - "8080"
     environment:
+      # Use strong password from .env, not defaults
       - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
-      - SERVICE_URL=https://open-vsx.org/vscode/gallery
-      - ITEM_URL=https://open-vsx.org/vscode/item
-      - CS_DISABLE_FILE_DOWNLOADS=false
-      # Navigator shim patched out at build time (see Dockerfile.code-server)
-      - NODE_OPTIONS=--enable-source-maps
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:11434
-      - OLLAMA_DEFAULT_MODEL=llama2:70b-chat
     command:
-      - "--bind-addr=0.0.0.0:8080"
+      - "--bind-addr=127.0.0.1:8080"
       - "--disable-telemetry"
       - "--cert=false"
-      - "--auth=none"
+      - "--auth=password"
     volumes:
       - code-server-enterprise-data:/home/coder
-      - ./workspace:/home/coder/workspace
-      - ./config/settings.json:/etc/code-server/settings.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
@@ -60,8 +47,6 @@ services:
         reservations:
           memory: 512m
           cpus: '0.25'
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -76,8 +61,8 @@ services:
     restart: unless-stopped
     networks:
       - enterprise
-    expose:
-      - "11434"
+    ports:
+      - "0.0.0.0:11434:11434"
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_KEEP_ALIVE=5m
@@ -85,15 +70,13 @@ services:
       - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
     volumes:
       - ollama-data:/root/.ollama
-      - ./workspace:/home/coder/workspace:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      # ollama container has no curl/wget — use TCP port check
+      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/11434"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-    security_opt:
-      - no-new-privileges:true
     deploy:
       resources:
         limits:
@@ -194,30 +177,29 @@ services:
   # ─── caddy ──────────────────────────────────────────────────────────────────
   # Reverse proxy + TLS (pinned to 2.7.6)
   caddy:
-    image: caddy:2.7.6
+    # Production TLS termination
+    image: caddy:2-alpine
     container_name: caddy
-    restart: unless-stopped
+    restart: always
     networks:
       - enterprise
     ports:
-      - "80:80"
-      - "443:443"
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
     volumes:
-      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-config:/config
       - caddy-data:/data
     environment:
       - ACME_AGREE=true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/healthz || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 10s
     depends_on:
-      - oauth2-proxy
-    security_opt:
-      - no-new-privileges:true
+      - code-server
     logging:
       driver: json-file
       options:

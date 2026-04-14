@@ -1,8 +1,11 @@
 # Production Caddyfile — ide.kushnir.cloud
 # Full TLS 1.3 enforcement, CloudFlare integration, enterprise headers
 # Target: A+ SSL Labs rating, enterprise compliance
+#
+# IMPORTS: Shared blocks from Caddyfile.base
+# @see Caddyfile.base for common security headers, cache rules, compression
 
-{
+@import Caddyfile.base
     # Global configuration for all domains
     auto_https off  # We'll handle HTTPS explicitly for flexibility
     
@@ -41,36 +44,10 @@ ide.kushnir.cloud {
     }
     
     # ────────────────────────────────────────────────────
-    # Security Headers (Enterprise Grade)
+    # Use common security headers from Caddyfile.base
     # ────────────────────────────────────────────────────
     
-    # Strict Transport Security (HSTS)
-    header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-    
-    # Content Security Policy (CSP) — strict, allow only same origin
-    header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none'"
-    
-    # Prevent MIME type sniffing
-    header X-Content-Type-Options "nosniff"
-    
-    # Prevent clickjacking
-    header X-Frame-Options "DENY"
-    
-    # Disable XSS protection (CSP handles this in modern browsers)
-    header X-XSS-Protection "1; mode=block"
-    
-    # Referrer policy (privacy-focused)
-    header Referrer-Policy "strict-origin-when-cross-origin"
-    
-    # Feature policy (Permissions Policy)
-    header Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
-    
-    # Remove Server header (don't advertise Caddy version)
-    header -Server
-    
-    # Custom security headers
-    header X-Security-Policy "true"
-    header X-Enterprise: "true"
+    import security_headers_strict
     
     # ────────────────────────────────────────────────────
     # HTTP/3 and compression
@@ -82,45 +59,14 @@ ide.kushnir.cloud {
         strict_sni_host on
     }
     
-    # Compression
-    encode {
-        gzip
-        minimum_length 256
-        match {
-            header Content-Type text/*
-            header Content-Type application/json*
-            header Content-Type application/javascript*
-            header Content-Type application/xml*
-        }
-    }
+    # Advanced compression from Caddyfile.base
+    import compression_advanced
     
     # ────────────────────────────────────────────────────
-    # Rate Limiting (DDoS Protection)
+    # Rate Limiting (DDoS Protection) from Caddyfile.base
     # ────────────────────────────────────────────────────
     
-    # Global rate limit: 1000 req/sec per IP
-    rate_limit {
-        zone default {
-            key {remote_host}
-            rate 1000/s
-        }
-    }
-    
-    # Strict rate limit for auth endpoint (prevent brute force)
-    rate_limit /oauth2/* {
-        zone auth {
-            key {remote_host}
-            rate 10/s
-        }
-    }
-    
-    # Super strict for admin endpoints
-    rate_limit /api/admin/* {
-        zone admin {
-            key {remote_host}
-            rate 5/s
-        }
-    }
+    import rate_limiting_production
     
     # ────────────────────────────────────────────────────
     # Request ID and Tracing

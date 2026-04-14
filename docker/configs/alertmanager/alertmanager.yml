@@ -1,0 +1,115 @@
+# ════════════════════════════════════════════════════════════════════════════
+# AlertManager Configuration — Production
+#
+# Multi-channel alert routing, deduplication, grouping
+# Severity-based routing: critical → PagerDuty, high → Slack, medium/low → Email
+# ════════════════════════════════════════════════════════════════════════════
+
+global:
+  resolve_timeout: 5m
+  slack_api_url: ${SLACK_WEBHOOK_URL}
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+route:
+  receiver: default-team
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 4h
+  
+  # Severity-based routing
+  routes:
+    # Critical: PagerDuty immediately
+    - match:
+        severity: critical
+      receiver: pagerduty-critical
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 1h
+
+    # High: Slack + on-call
+    - match:
+        severity: high
+      receiver: slack-critical
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+
+    # Medium: Slack warnings
+    - match:
+        severity: medium
+      receiver: slack-warnings
+      group_wait: 5m
+      group_interval: 10m
+      repeat_interval: 12h
+
+    # Low: Email digest
+    - match:
+        severity: low
+      receiver: email-digest
+      group_wait: 1h
+      group_interval: 1h
+      repeat_interval: 24h
+
+# Inhibition rules: suppress lower severity when higher firing
+inhibit_rules:
+  # Suppress warning if critical firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster']
+  
+  # Suppress low if high firing
+  - source_match:
+      severity: 'high'
+    target_match:
+      severity: 'low'
+    equal: ['alertname', 'cluster']
+
+receivers:
+  # Default team receiver
+  - name: default-team
+    slack_configs:
+      - channel: '#alerts-general'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        send_resolved: true
+
+  # PagerDuty critical
+  - name: pagerduty-critical
+    slack_configs:
+      - channel: '#alerts-critical'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+        send_resolved: true
+    pagerduty_configs:
+      - service_key: ${PAGERDUTY_KEY}
+        description: '{{ .GroupLabels.alertname }}'
+
+  # Slack critical
+  - name: slack-critical
+    slack_configs:
+      - channel: '#alerts-critical'
+        title: '⚠️ HIGH: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        send_resolved: true
+
+  # Slack warnings
+  - name: slack-warnings
+    slack_configs:
+      - channel: '#alerts'
+        title: 'ℹ️ MEDIUM: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        send_resolved: false
+
+  # Email digest (low severity)
+  - name: email-digest
+    email_configs:
+      - to: ${ALERT_EMAIL}
+        from: alertmanager@kushnir.cloud
+        smarthost: smtp.gmail.com:587
+        auth_username: ${SMTP_USER}
+        auth_password: ${SMTP_PASSWORD}
+        headers:
+          Subject: '[AlertManager] Daily Digest'

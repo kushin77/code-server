@@ -18,14 +18,21 @@ locals {
 
   # Image versions (pinned to specific digest for immutability)
   # ✅ These are immutable - won't auto-upgrade
+  # ✅ SINGLE SOURCE OF TRUTH - referenced by all modules and phases
   docker_images = {
     code_server = "codercom/code-server:4.115.0"
-    # Note: Add digest after first pull: @sha256:...
-
     oauth2_proxy = "quay.io/oauth2-proxy/oauth2-proxy:v7.5.1"
-    # Note: Add digest after first pull: @sha256:...
-
     caddy = "caddy:latest"  # Built custom in Dockerfile.caddy
+    
+    # Phase 21: Observability & Operational Excellence
+    prometheus = "prom/prometheus:v2.48.0"
+    grafana = "grafana/grafana:10.2.3"
+    alertmanager = "prom/alertmanager:v0.26.0"
+    node_exporter = "prom/node-exporter:v1.7.0"
+    
+    # Additional observability (for future phases)
+    jaeger = "jaegertracing/all-in-one:latest"
+    loki = "grafana/loki:latest"
   }
 
   # ✅ Immutable tags and labels
@@ -88,6 +95,53 @@ locals {
     "NODE_OPTIONS"         = "--no-experimental-global-navigator"
     "OAUTH2_PROXY_PROVIDER" = "google"
     "OAUTH2_PROXY_OIDC_ISSUER_URL" = "https://accounts.google.com"
+  }
+
+  # ✅ Service resource limits (DOCKER DEPLOY RESOURCES)
+  # Single source of truth for all service resource allocation
+  resource_limits = {
+    code_server = {
+      memory_limit = "4g"
+      cpu_limit    = "2.0"
+      memory_reservation = "512m"
+      cpu_reservation    = "0.25"
+    }
+    ollama = {
+      memory_limit = "32g"
+      cpu_limit    = null  # Unlimited
+      memory_reservation = "8g"
+      cpu_reservation    = null
+    }
+    oauth2_proxy = {
+      memory_limit = "512m"
+      cpu_limit    = "0.5"
+      memory_reservation = "256m"
+      cpu_reservation    = "0.25"
+    }
+    caddy = {
+      memory_limit = "512m"
+      cpu_limit    = "0.5"
+      memory_reservation = "256m"
+      cpu_reservation    = "0.25"
+    }
+    prometheus = {
+      memory_limit = "512m"
+      cpu_limit    = "0.25"
+      memory_reservation = "256m"
+      cpu_reservation    = "0.125"
+    }
+    grafana = {
+      memory_limit = "512m"
+      cpu_limit    = "0.5"
+      memory_reservation = "256m"
+      cpu_reservation    = "0.25"
+    }
+    alertmanager = {
+      memory_limit = "256m"
+      cpu_limit    = "0.25"
+      memory_reservation = "128m"
+      cpu_reservation    = "0.1"
+    }
   }
 }
 

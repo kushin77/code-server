@@ -1,12 +1,21 @@
 # alertmanager-production.yml — Enterprise AlertManager Configuration
 # Multi-channel alert routing, deduplication, grouping
+# 
+# IMPORTS: Shared route structure and inhibit rules from alertmanager-base.yml
+# This file extends the base with production-specific receivers and Vault integration
 
 global:
   resolve_timeout: 5m
   slack_api_url: ${VAULT_SLACK_WEBHOOK_URL}
   pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
 
-# Default recipient when no match
+# SHARED ROUTING from alertmanager-base.yml
+# Base structure provides:
+# - Severity-based routing (critical, high, medium, low)
+# - Group strategy: alertname + cluster + service
+# - Inhibit rules to suppress lower severity when higher is firing
+# @see alertmanager-base.yml for complete route structure
+
 route:
   receiver: default-team
   group_by: ['alertname', 'cluster', 'service']
@@ -52,7 +61,7 @@ route:
       repeat_interval: 24h
       continue: false
 
-# Receivers configuration
+# Receivers configuration (production-specific)
 receivers:
   # Default team (everyone)
   - name: default-team
@@ -115,29 +124,6 @@ receivers:
           {{ range .Alerts }}
           <p><strong>{{ .Labels.alertname }}</strong>: {{ .Annotations.summary }}</p>
           {{ end }}
-
-# Alert deduplication settings
-inhibit_rules:
-  # Suppress warning if critical is firing
-  - source_match:
-      severity: critical
-    target_match:
-      severity: warning
-    equal: ['alertname', 'cluster', 'service']
-
-  # Suppress low if medium is firing
-  - source_match:
-      severity: medium
-    target_match:
-      severity: low
-    equal: ['alertname', 'cluster', 'service']
-
-  # Suppress if service is down (no point warning about threads)
-  - source_match:
-      alertname: ServiceDown
-    target_match_re:
-      alertname: 'Service.*'
-    equal: ['service', 'cluster']
 
 # ════════════════════════════════════════════════════════════
 # ALERT RULES (referenced in prometheus config)

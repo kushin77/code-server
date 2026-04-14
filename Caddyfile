@@ -1,79 +1,46 @@
-# Caddyfile — ide.kushnir.cloud IDE reverse proxy
-# Simplified for Docker deployment without Cloudflare DNS plugin
+# Caddyfile — Production IDE with Cloudflare Tunnel (Origin CA HTTPS)
+# 
+# IMPORTS: Shared blocks from Caddyfile.base
+# Uses Cloudflare Origin CA certificate for origin->Cloudflare connection  
+# Cloudflare Tunnel handles distribution; all HTTPS traffic proxied through tunnel
+#
+# Composition: @see Caddyfile.base for shared configuration (security_headers, cache_control_rules, etc.)
+
+@import Caddyfile.base
 
 {
-    # Disable automatic HTTPS for now (can be re-enabled with a Caddy image that includes DNS modules)
     auto_https off
 }
 
-ide.kushnir.cloud {
-    # TLS: Use self-signed certificates by default
-    # For production, use `caddy list-modules` to verify dns.providers.cloudflare is available
-    # Or use a custom Caddy build: docker.io/library/caddy:latest-alpine
-    
-    tls internal {
-        # Self-signed certificates for internal use
+# HTTPS catch-all for all domains (Cloudflare Tunnel traffic)
+:443 {
+    import compression_standard
+    import security_headers
+    import cache_control_rules
+
+    # Use Cloudflare Origin CA certificate (mounted in container at /etc/caddy/)
+    tls /etc/caddy/ide.kushnir.crt /etc/caddy/ide.kushnir.key {
+        protocols tls1.2 tls1.3
     }
 
-    encode gzip
-
-    # Security headers
-    header {
-        X-Content-Type-Options nosniff
-        # SAMEORIGIN (not DENY) — code-server uses iframes internally
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        # CSP: allow wss/ws for IDE terminals and extension host; blob:/data: for fonts/worker
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws: https:; worker-src 'self' blob:; frame-src 'self';"
-        -Server
-    }
-
-    # One-shot endpoint to clear stale workbench cache/storage in a regular profile.
-    @reset path /reset-browser-state
-    header @reset Clear-Site-Data "\"cache\", \"storage\""
-    respond @reset 200
-
-    # Prevent stale JS/CSS bundles from persisting across patched deployments.
-    @stableAssets path /stable-*
-    header @stableAssets Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-    header @stableAssets Pragma "no-cache"
-    header @stableAssets Expires "0"
-
-    # ─────────────────────────────────────────────────────────────────
-    # Tier 2 Cache Configuration (CloudFlare CDN Compatible)
-    # ─────────────────────────────────────────────────────────────────
-
-    # Static assets (immutable, cached for 1 year)
-    @assets path_regexp \.(css|js|png|jpg|jpeg|gif|svg|woff|woff2|ico|webp)$
-    header @assets Cache-Control "public, max-age=31536000, immutable"
-    header @assets Vary "Accept-Encoding"
-
-    # Extensions API (cached for 24 hours)
-    @extensions path /api/extensions*
-    header @extensions Cache-Control "public, max-age=86400"
-    header @extensions CDN-Cache-Control "max-age=86400"
-
-    # Dynamic API (cached for 10 minutes)
-    @api path /api*
-    header @api Cache-Control "public, max-age=600"
-    header @api CDN-Cache-Control "max-age=600"
-
-    # Health check (no cache)
-    @health path /health /healthz
-    header @health Cache-Control "no-cache, no-store, must-revalidate"
-
-    # All traffic → oauth2-proxy (handles Google Auth then forwards to code-server)
-    reverse_proxy oauth2-proxy:4180 {
+    # Reverse proxy to code-server with production headers
+    reverse_proxy code-server:8080 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-Proto https
-        # Preserve client IP through proxy chain
-        header_up X-Forwarded-For {remote_host}
+        header_up CF-Connecting-IP {remote_host}
     }
 }
 
-# HTTP → HTTPS redirect
-http://ide.kushnir.cloud {
-    redir https://{host}{uri} permanent
+# HTTP catch-all (port 80)
+:80 {
+    import compression_standard
+    import security_headers
+
+    # Health check endpoints work on HTTP
+    @health path /health /healthz
+    reverse_proxy @health code-server:8080
+
+    # Redirect everything else to HTTPS
+    redir / https://{host}{uri} permanent
 }

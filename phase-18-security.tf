@@ -17,10 +17,10 @@ variable "phase_18_enabled" {
 variable "vault_node_count" {
   description = "Number of Vault HA cluster nodes"
   type        = number
-  default     = 3
+  default     = 1
   validation {
-    condition     = var.vault_node_count >= 3 && var.vault_node_count <= 5
-    error_message = "vault_node_count must be between 3 and 5 for HA."
+    condition     = var.vault_node_count >= 1 && var.vault_node_count <= 5
+    error_message = "vault_node_count must be between 1 and 5 for HA."
   }
 }
 

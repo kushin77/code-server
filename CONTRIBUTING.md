@@ -78,7 +78,7 @@ Every PR must satisfy these non-negotiable gates:
 A change is complete **only when**:
 
 ✅ Secure — No vulnerability paths
-✅ Observable — Logs, metrics, traces exis
+✅ Observable — Logs, metrics, traces exist
 ✅ Load-tested — Performance validated
 ✅ Documented — Architecture, deployment, rollback clear
 ✅ Automated — Tests, builds, deploys all pass
@@ -89,7 +89,7 @@ A change is complete **only when**:
 
 ---
 
-## Local Development Checklis
+## Local Development Checklist
 
 Before opening a PR, validate locally:
 
@@ -97,7 +97,7 @@ Before opening a PR, validate locally:
 # Pre-commit checks
 pre-commit run --all-files
 
-# Repository validation scrip
+# Repository validation script
 ./scripts/validate.sh
 
 # IaC policy validation (OPA/Conftest)

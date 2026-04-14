@@ -4,7 +4,6 @@
 # Regenerate: terraform apply
 # ════════════════════════════════════════════════════════════════════════════
 
-
 services:
   # ─── code-server ────────────────────────────────────────────────────────────
   # VS Code running in the browser with Copilot Chat support
@@ -37,8 +36,8 @@ services:
       - OLLAMA_ENDPOINT=http://ollama:11434
       - OLLAMA_DEFAULT_MODEL=llama2:70b-chat
       # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
-#      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-#      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SDK_DISABLED=false
       - OTEL_SERVICE_NAME=code-server
       - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=4.115.0,hostname=code-server
@@ -217,8 +216,8 @@ services:
       - ACME_EMAIL=${ACME_EMAIL}
       - ACME_AGREE=true
       # ─── OpenTelemetry Instrumentation (Phase 24-A) ───────────────────
-#      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-#      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=caddy-proxy
       - OTEL_RESOURCE_ATTRIBUTES=environment=production,version=2.7.6,hostname=caddy
     healthcheck:
@@ -235,43 +234,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # ─── cloudflared ────────────────────────────────────────────────────────────
-  # Cloudflare Tunnel for HTTPS access to ide.kushnir.cloud
-  # Requires: CLOUDFLARE_TUNNEL_TOKEN from Cloudflare Dashboard
-  # (See CLOUDFLARE-TOKEN-SETUP.md for instructions)
-  # Conditional: Only starts if CLOUDFLARE_TUNNEL_TOKEN is non-empty
-  # Fallback: Use HTTP via nip.io if token unavailable (e.g., http://code-server.192.168.168.31.nip.io:8080)
-  cloudflared:
-    image: cloudflare/cloudflared:2024.12.0
-    container_name: cloudflared
-    restart: unless-stopped
-    networks:
-      - enterprise
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
-    command:
-      - tunnel
-      - run
-      - --token=${CLOUDFLARE_TUNNEL_TOKEN}
-    volumes:
-      - ./config/cloudflare/config.yml:/etc/cloudflared/config.yml:ro
-    healthcheck:
-      test: ["CMD", "cloudflared", "tunnel", "info"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    depends_on:
-      - caddy
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    # Only run if CLOUDFLARE_TUNNEL_TOKEN is set; skip if empty
-    profiles:
-      - ""  # Default profile - always loaded
-      # To disable: use 'docker-compose --profile disabled up'
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks & Volumes
@@ -289,6 +252,4 @@ volumes:
   ollama-data:
     driver: local
   caddy-config:
-    driver: local
-  caddy-data:
     driver: local

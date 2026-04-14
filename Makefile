@@ -894,10 +894,12 @@ index:
 	 echo "  Total .sh files:        $$TOTAL"; \
 	 echo ""
 	@echo "  Unregistered scripts (must be added to MANIFEST.toml or archived):"
+	@find scripts -maxdepth 1 -name "*.sh" | sort > /tmp/scripts-index-list.txt
 	@while IFS= read -r f; do \
 		name=$$(basename "$$f"); \
 		grep -q "file.*=.*\"$$name\"" scripts/MANIFEST.toml 2>/dev/null || echo "  ✗ $$name"; \
-	done < <(find scripts -maxdepth 1 -name "*.sh" | sort)
+	done < /tmp/scripts-index-list.txt
+	@rm -f /tmp/scripts-index-list.txt
 
 # Generate initial MANIFEST.toml from existing scripts (run once)
 manifest-init:

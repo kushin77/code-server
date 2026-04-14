@@ -66,6 +66,11 @@ variable "google_client_id" {
   type        = string
   sensitive   = true
   default     = "test-client-id-123.apps.googleusercontent.com"
+
+  validation {
+    condition     = length(trimspace(var.google_client_id)) > 10 && trimspace(var.google_client_id) != "\\"
+    error_message = "google_client_id must be non-empty and valid-looking (not a placeholder slash)."
+  }
 }
 
 variable "google_client_secret" {
@@ -73,6 +78,11 @@ variable "google_client_secret" {
   type        = string
   sensitive   = true
   default     = "test-client-secret-xyz"
+
+  validation {
+    condition     = length(trimspace(var.google_client_secret)) > 5 && trimspace(var.google_client_secret) != "\\"
+    error_message = "google_client_secret must be non-empty and valid-looking (not a placeholder slash)."
+  }
 }
 
 variable "oauth2_proxy_cookie_secret" {
@@ -82,8 +92,12 @@ variable "oauth2_proxy_cookie_secret" {
   default     = "867e5c21f89d4b162a3dbe5924761c8a"
 
   validation {
-    condition     = length(var.oauth2_proxy_cookie_secret) > 0
-    error_message = "oauth2_proxy_cookie_secret is required; generate: openssl rand -hex 16/24/32"
+    condition = (
+      can(regex("^[0-9a-fA-F]{32}$", trimspace(var.oauth2_proxy_cookie_secret))) ||
+      can(regex("^[0-9a-fA-F]{48}$", trimspace(var.oauth2_proxy_cookie_secret))) ||
+      can(regex("^[0-9a-fA-F]{64}$", trimspace(var.oauth2_proxy_cookie_secret)))
+    )
+    error_message = "oauth2_proxy_cookie_secret must be hex length 32/48/64 (16/24/32 bytes). Example: openssl rand -hex 16"
   }
 }
 

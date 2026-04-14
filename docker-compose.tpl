@@ -4,8 +4,6 @@
 # Regenerate: terraform apply
 # ════════════════════════════════════════════════════════════════════════════
 
-version: "3.9"
-
 services:
   # ─── code-server ────────────────────────────────────────────────────────────
   # VS Code running in the browser with Copilot Chat support

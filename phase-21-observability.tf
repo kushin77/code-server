@@ -78,9 +78,6 @@ resource "docker_container" "prometheus" {
   count         = var.phase_21_enabled && var.prometheus_enabled ? 1 : 0
   name          = "prometheus-operator"
   image         = "prom/prometheus:v2.48.0"
-  networks_advanced {
-    name = "bridge"
-  }
 
   command = [
     "--config.file=/etc/prometheus/prometheus.yml",
@@ -138,9 +135,6 @@ resource "docker_container" "grafana" {
   count         = var.phase_21_enabled && var.grafana_enabled ? 1 : 0
   name          = "grafana-dashboards"
   image         = "grafana/grafana:10.2.3"
-  networks_advanced {
-    name = "bridge"
-  }
 
   env = [
     "GF_SECURITY_ADMIN_PASSWORD=admin123",
@@ -200,9 +194,6 @@ resource "docker_container" "alertmanager" {
   count         = var.phase_21_enabled && var.alertmanager_enabled ? 1 : 0
   name          = "alertmanager-incidents"
   image         = "prom/alertmanager:v0.26.0"
-  networks_advanced {
-    name = "bridge"
-  }
 
   command = [
     "--config.file=/etc/alertmanager/config.yml",

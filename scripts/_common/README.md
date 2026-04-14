@@ -1,6 +1,182 @@
-# Shared Libraries - scripts/_common/
+# Shared Libraries — `scripts/_common/`
 
-**Overview**: Reusable shell functions for standardized script behavior across the codebase.
+**The canonical source for all reusable shell functions.** Every script in `scripts/` must source from here — never define `log_info()`, `retry()`, or connection constants inline.
+
+---
+
+## Quick Start (one line per script)
+
+```bash
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"   # ← This is the ONLY source line you need
+```
+
+For scripts one level down (e.g. `scripts/ci/`):
+```bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+```
+
+---
+
+## Module Reference
+
+### `init.sh` ← **Start Here**
+Single bootstrap entrypoint. Sources all modules below in the correct order.
+- Loads: `config.sh` → `logging.sh` → `utils.sh` → `error-handler.sh`
+- Auto-loads `docker.sh` and `ssh.sh` if present
+- Sets `set -euo pipefail` for the calling script
+- Guarded against double-sourcing
+
+---
+
+### `config.sh` — Environment Constants
+**Single source of truth.** Do not hardcode any of these values in any script.
+
+| Constant | Default | Override |
+|---|---|---|
+| `DEPLOY_HOST` | `192.168.168.31` | `export DEPLOY_HOST=...` |
+| `DEPLOY_USER` | `akushnir` | `export DEPLOY_USER=...` |
+| `DEPLOY_DIR` | `/home/akushnir/code-server-enterprise` | `export DEPLOY_DIR=...` |
+| `STANDBY_HOST` | `192.168.168.30` | |
+| `DOMAIN` | `ide.kushnir.cloud` | |
+| `REPO` | `kushin77/code-server` | |
+| `ENTERPRISE_NETWORK` | `code-server-enterprise_enterprise` | |
+| `CONTAINER_CODE_SERVER` | `code-server` | |
+| `CONTAINER_CADDY` | `caddy` | |
+| `CONTAINER_OLLAMA` | `ollama` | |
+| `PORT_CODE_SERVER` | `8080` | |
+| `PORT_GRAFANA` | `3000` | |
+| `PORT_PROMETHEUS` | `9090` | |
+| `LOG_FORMAT` | `text` | Set `json` for Loki ingestion |
+
+---
+
+### `logging.sh` — Structured Logging
+
+```bash
+log_debug "verbose detail"          # gray,  LOG_LEVEL=0
+log_info  "normal message"          # green, LOG_LEVEL=1
+log_warn  "something off"           # yellow,LOG_LEVEL=2
+log_error "non-fatal problem"       # red,   LOG_LEVEL=3
+log_fatal "abort now"               # red,   LOG_LEVEL=4, exits 1
+log_section "─── PHASE 1 ───"       # divider header
+log_success "all checks passed"     # green ✓
+log_exec   "docker compose up -d"   # log + execute
+```
+
+**JSON mode** (for Grafana Loki):
+```bash
+export LOG_FORMAT=json
+# Output: {"ts":"2026-04-14T...","level":"INFO","script":"deploy.sh","msg":"..."}
+```
+
+**Environment variables:**
+- `LOG_LEVEL` — 0=debug, 1=info (default), 2=warn, 3=error, 4=fatal
+- `LOG_NO_COLOR=1` — disable ANSI colors (CI environments)
+- `LOG_FILE=/path/to/file` — write to file in addition to stdout
+- `LOG_FORMAT=json` — structured output for log aggregation
+
+---
+
+### `utils.sh` — Utility Functions
+
+**Retry with exponential backoff:**
+```bash
+retry 3 docker pull myimage:tag
+retry 5 curl -sf http://localhost:8080/health
+```
+
+**Prerequisite enforcement:**
+```bash
+require_command docker
+require_commands docker curl jq ssh
+require_file /etc/caddy/Caddyfile
+require_dir /home/coder
+```
+
+**Cleanup handlers:**
+```bash
+add_cleanup "docker stop temp-container"
+add_cleanup "rm -f /tmp/deploy.lock"
+# handlers run automatically on EXIT
+```
+
+---
+
+### `error-handler.sh` — Error Trapping
+
+Automatically installed when sourced:
+- `ERR` trap with exit code and line number
+- Stack trace when `DEBUG=1`
+- `assert_eq`, `assert_ne`, `assert_true` functions
+
+```bash
+# Enable verbose tracing
+export DEBUG=1
+
+# Assertions
+assert_eq "$DEPLOY_HOST" "192.168.168.31" "Wrong host"
+assert_true "$(docker_is_running code-server)" "code-server must be running"
+```
+
+---
+
+### `ssh.sh` — Remote Execution
+
+```bash
+assert_ssh_up                          # confirm connectivity before work
+ssh_exec "docker ps"                   # run on DEPLOY_HOST
+ssh_standby "docker ps"                # run on STANDBY_HOST
+ssh_stream ./scripts/deploy.sh         # pipe local script to remote bash
+ssh_upload ./config.yml /remote/path   # scp wrapper
+ssh_in_deploy_dir "docker compose ps"  # cd DEPLOY_DIR + exec
+ssh_compose "up -d code-server"        # docker compose shortcut
+assert_port_open 443                   # TCP reachability check
+```
+
+---
+
+### `docker.sh` — Container Operations
+
+```bash
+docker_status code-server              # → "Up 2 hours (healthy)"
+docker_is_running code-server          # → 0/1
+docker_is_healthy prometheus           # → 0/1
+docker_wait_healthy grafana 60         # wait up to 60s
+assert_container_healthy alertmanager  # fatal if not healthy
+
+docker_start code-server caddy         # compose up
+docker_stop ollama                     # docker stop
+docker_restart caddy                   # docker restart
+docker_exec_in code-server "ls /home"  # docker exec
+docker_logs caddy 50                   # last 50 lines
+
+docker_status_all                      # formatted table all containers
+docker_healthcheck_all                 # full health check, returns 1 on failure
+
+assert_http_ok "http://localhost:8080/" 200   # HTTP endpoint check
+```
+
+---
+
+## Governance
+
+- **Violation**: defining `log_info()` inline in any script → blocked by pre-commit hook
+- **Violation**: hardcoding `192.168.168.31` → `$DEPLOY_HOST` from `config.sh`
+- **Audit**: `make lib-check` — shows all non-compliant scripts
+- **Registry**: `scripts/MANIFEST.toml` — every script must be registered
+
+## Deprecated (do not source)
+
+| File | Replacement |
+|---|---|
+| `scripts/logging.sh` | `_common/logging.sh` (via `init.sh`) |
+| `scripts/common-functions.sh` | `_common/utils.sh + error-handler.sh` (via `init.sh`) |
+
+Both files now emit a deprecation warning at source time and forward to the correct implementation.
+
 
 ## Files
 

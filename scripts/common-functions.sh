@@ -1,18 +1,35 @@
 #!/usr/bin/env bash
 ################################################################################
 # common-functions.sh
-# Shared bash functions for GitHub operations, formatting, CLI automation
-# Source this file in all bash scripts to avoid duplication
-# 
-# Usage:
-#   source ./scripts/common-functions.sh
-#   write_success "Operation completed"
-#   get_pr_check_status 123 "kushin77/code-server"
+# ⚠️  DEPRECATED — Use scripts/_common/init.sh instead.
 #
-# Author: GitHub Copilot | April 14, 2026
+# This file is a compatibility shim. It will be removed in a future release.
+# Migration: replace
+#   source ./scripts/common-functions.sh
+# with:
+#   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#   source "$SCRIPT_DIR/_common/init.sh"
+#
+# Status: DEPRECATED
+# Deprecated-By: scripts/_common/utils.sh + scripts/_common/error-handler.sh
 ################################################################################
 
-set -euo pipefail
+# Emit deprecation warning (visible in CI log, does not break caller)
+echo "⚠️  DEPRECATION WARNING: sourcing scripts/common-functions.sh is deprecated." >&2
+echo "   Migrate to: source \"\$SCRIPT_DIR/_common/init.sh\"" >&2
+
+# Forward to canonical implementations where possible
+_SHIM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$_SHIM_DIR/_common/logging.sh" ]] && [[ -f "$_SHIM_DIR/_common/utils.sh" ]]; then
+    source "$_SHIM_DIR/_common/logging.sh"
+    source "$_SHIM_DIR/_common/utils.sh"
+    unset _SHIM_DIR
+    return 0
+fi
+unset _SHIM_DIR
+
+# Fallback: original implementation below (kept intact for safety)
+
 
 # Color codes for terminal output
 readonly COLOR_RESET='\033[0m'

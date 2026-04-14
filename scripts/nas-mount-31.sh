@@ -1,12 +1,16 @@
 #!/bin/bash
-# NAS Mount Automation and Validation for 192.168.168.31
-# Purpose: Automated NAS mounting, validation, and backup scheduling
-# Usage: ./nas-mount-31.sh [mount|validate|backup|troubleshoot|all] [--dry-run]
+# File:    nas-mount-31.sh
+# Owner:   Platform Engineering
+# Purpose: NAS mount automation and validation for 192.168.168.31
+# Status:  ACTIVE
+# Usage:   ./nas-mount-31.sh [mount|validate|backup|troubleshoot|all] [--dry-run]
 
 set -e
 
-# Configuration
+# Bootstrap _common library (logging, utils, error-handler, config)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 LOG_DIR="/var/log"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 LOG_FILE="${LOG_DIR}/nas-mount-${TIMESTAMP}.log"
@@ -26,26 +30,7 @@ MOUNTS=(
   "archive:${NAS_ARCHIVE}:/export/archive:/mnt/archive:nfs4"
 )
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
 mkdir -p "$LOG_DIR"
-
-# Logging functions
-log() {
-  local level=$1
-  shift
-  echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [$level] $@" | tee -a "$LOG_FILE"
-}
-
-log_info() { log "INFO" "${BLUE}$@${NC}"; }
-log_success() { log "✓" "${GREEN}$@${NC}"; }
-log_warning() { log "⚠ " "${YELLOW}$@${NC}"; }
-log_error() { log "✗" "${RED}$@${NC}"; }
 
 # Phase 1: Pre-mount validation
 validate_prerequisites() {

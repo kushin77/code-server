@@ -1,28 +1,23 @@
 #!/bin/bash
-
-###############################################################################
-# Auto-Deploy Orchestration Script
-# Purpose: Handles post-merge deployment orchestration
-# Triggered by: GitHub Actions post-merge-cleanup-deploy.yml
-# Usage: ./redeploy.sh [options]
-###############################################################################
+# File:    redeploy.sh
+# Owner:   Platform Engineering
+# Purpose: Post-merge deployment orchestration triggered by GitHub Actions
+# Status:  ACTIVE
+# Usage:   ./redeploy.sh [options]
 
 set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Bootstrap _common library (logging, utils, error-handler, config, ssh, docker)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 # Script metadata
-SCRIPT_NAME="$(basename "$0")"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 LOG_DIR="${REPO_ROOT}/logs/deployments"
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
-LOG_FILE="${LOG_DIR}/redeploy_${TIMESTAMP}.log"
+export LOG_FILE="${LOG_DIR}/redeploy_${TIMESTAMP}.log"
+
+mkdir -p "$LOG_DIR"
 
 # Configuration
 DEPLOYMENT_TARGETS=("production" "staging")
@@ -30,32 +25,6 @@ DEFAULT_TARGET="production"
 DRY_RUN=false
 NOTIFY_SLACK=true
 VERBOSE=false
-
-###############################################################################
-# Logging Functions
-###############################################################################
-
-log_info() {
-    echo -e "${BLUE}ℹ️  ${*}${NC}" | tee -a "$LOG_FILE"
-}
-
-log_success() {
-    echo -e "${GREEN}✅ ${*}${NC}" | tee -a "$LOG_FILE"
-}
-
-log_warn() {
-    echo -e "${YELLOW}⚠️  ${*}${NC}" | tee -a "$LOG_FILE"
-}
-
-log_error() {
-    echo -e "${RED}❌ ${*}${NC}" | tee -a "$LOG_FILE"
-}
-
-log_section() {
-    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}" | tee -a "$LOG_FILE"
-    echo -e "${BLUE}▶ ${*}${NC}" | tee -a "$LOG_FILE"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}" | tee -a "$LOG_FILE"
-}
 
 ###############################################################################
 # Utility Functions

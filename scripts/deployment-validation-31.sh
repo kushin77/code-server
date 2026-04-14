@@ -1,36 +1,34 @@
 #!/bin/bash
-# Deployment Validation Test Suite for 192.168.168.31
-# Comprehensive validation covering services, GPU, NAS, network, and security
-# Usage: ./deployment-validation-31.sh [test_pattern]
+# File:    deployment-validation-31.sh
+# Owner:   Platform Engineering
+# Purpose: Deployment validation test suite for 192.168.168.31
+# Status:  ACTIVE
+# Usage:   ./deployment-validation-31.sh [test_pattern]
 
 set -e
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;36m'
-NC='\033[0m'
+
+# Bootstrap _common library (logging, utils, error-handler, config)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 TESTS_PASSED=0
 TESTS_FAILED=0
 TESTS_SKIPPED=0
 
+# Test-specific helpers (not in _common — test result tracking)
 log_pass() {
-    echo -e "${GREEN}✓${NC} $1"
+    echo -e "${COLOR_GREEN}✓${COLOR_RESET} $1"
     ((TESTS_PASSED++))
 }
 
 log_fail() {
-    echo -e "${RED}✗${NC} $1"
+    echo -e "${COLOR_RED}✗${COLOR_RESET} $1"
     ((TESTS_FAILED++))
 }
 
 log_skip() {
-    echo -e "${YELLOW}⊘${NC} $1"
+    echo -e "${COLOR_YELLOW}⊘${COLOR_RESET} $1"
     ((TESTS_SKIPPED++))
-}
-
-log_info() {
-    echo -e "${BLUE}➜${NC} $1"
 }
 
 # ============================================================================

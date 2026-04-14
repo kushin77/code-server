@@ -1,40 +1,23 @@
 #!/bin/bash
-# GPU Deployment and Validation Script for 192.168.168.31
-# Purpose: Automated deployment, validation, and troubleshooting of GPU infrastructure
-# Usage: ./gpu-deploy-31.sh [validate|deploy|troubleshoot|all] [--dry-run]
+# File:    gpu-deploy-31.sh
+# Owner:   Platform Engineering
+# Purpose: GPU deployment and validation for 192.168.168.31
+# Status:  ACTIVE
+# Usage:   ./gpu-deploy-31.sh [validate|deploy|troubleshoot|all] [--dry-run]
 
 set -e
 
-# Configuration
+# Bootstrap _common library (logging, utils, error-handler, config)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 LOG_DIR="${SCRIPT_DIR}/../logs"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 LOG_FILE="${LOG_DIR}/gpu-deploy-${TIMESTAMP}.log"
 DRY_RUN=false
 ACTION="${1:-all}"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
 mkdir -p "$LOG_DIR"
-
-# Logging function
-log() {
-  local level=$1
-  shift
-  local message="$@"
-  echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] [$level] $message" | tee -a "$LOG_FILE"
-}
-
-# Color-coded logging
-log_info() { log "INFO" "${BLUE}$@${NC}"; }
-log_success() { log "✓" "${GREEN}$@${NC}"; }
-log_warning() { log "⚠ " "${YELLOW}$@${NC}"; }
-log_error() { log "✗" "${RED}$@${NC}"; }
 
 # Execute with optional dry-run
 execute() {

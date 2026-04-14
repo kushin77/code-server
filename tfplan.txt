@@ -1,0 +1,775 @@
+[0m[1mnull_resource.workspace_setup: Refreshing state... [id=4772490888733706813][0m
+[0m[1mlocal_file.phase_14_deployment_config[0]: Refreshing state... [id=615c95a524d8ab0b21259a6a44605107b5605020][0m
+[0m[1mlocal_file.phase_13_deployment_state[0]: Refreshing state... [id=e02f44277a26eb4d1f9248d796edab9c5b00fe01][0m
+[0m[1mlocal_file.slo_monitoring_config[0]: Refreshing state... [id=289b3b50d0e1f1d47340016d770fded2241a1182][0m
+[0m[1mlocal_file.load_test_config[0]: Refreshing state... [id=35c34c6f3ccecd3031c06191c77eee143bf5257e][0m
+[0m[1mlocal_file.ssh_proxy_systemd[0]: Refreshing state... [id=d6e145a8959cedffc9a7c8d15054af7677437a6e][0m
+[0m[1mlocal_file.audit_logging_config[0]: Refreshing state... [id=e3ba1a6deea213fec2613067dc16aa72bbb17700][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+[31m-[0m/[32m+[0m destroy and then create replacement[0m
+
+Terraform will perform the following actions:
+
+[1m  # local_file.audit_logging_config[0][0m must be [1m[31mreplaced[0m
+[0m[31m-[0m/[32m+[0m[0m resource "local_file" "audit_logging_config" {
+      [33m~[0m[0m content              = jsonencode(
+            {
+              [31m-[0m[0m description = "Phase 13 Audit Logging Configuration"
+              [31m-[0m[0m event_types = [
+                  [31m-[0m[0m "SSH_CONNECT",
+                  [31m-[0m[0m "SSH_AUTH_SUCCESS",
+                  [31m-[0m[0m "SSH_AUTH_FAILURE",
+                  [31m-[0m[0m "SSH_COMMAND",
+                  [31m-[0m[0m "SSH_DISCONNECT",
+                  [31m-[0m[0m "SSH_KEY_ADDED",
+                  [31m-[0m[0m "SSH_KEY_REMOVED",
+                ]
+              [31m-[0m[0m immutable   = true
+              [31m-[0m[0m sinks       = {
+                  [31m-[0m[0m file   = {
+                      [31m-[0m[0m fields   = [
+                          [31m-[0m[0m "timestamp",
+                          [31m-[0m[0m "event_type",
+                          [31m-[0m[0m "user",
+                          [31m-[0m[0m "source_ip",
+                          [31m-[0m[0m "command",
+                          [31m-[0m[0m "key_fingerprint",
+                          [31m-[0m[0m "status",
+                        ]
+                      [31m-[0m[0m format   = "json"
+                      [31m-[0m[0m max_size = "1GB"
+                      [31m-[0m[0m path     = "/var/log/code-server-audit.log"
+                      [31m-[0m[0m type     = "file"
+                    }
+                  [31m-[0m[0m sqlite = {
+                      [31m-[0m[0m index_on  = [
+                          [31m-[0m[0m "timestamp",
+                          [31m-[0m[0m "user",
+                          [31m-[0m[0m "event_type",
+                        ]
+                      [31m-[0m[0m path      = "/var/lib/code-server/audit.db"
+                      [31m-[0m[0m retention = {
+                          [31m-[0m[0m days = 90
+                        }
+                      [31m-[0m[0m table     = "ssh_access_audit"
+                      [31m-[0m[0m type      = "sqlite"
+                    }
+                  [31m-[0m[0m syslog = {
+                      [31m-[0m[0m facility = "LOG_AUTH"
+                      [31m-[0m[0m format   = "rfc5424"
+                      [31m-[0m[0m priority = "LOG_NOTICE"
+                      [31m-[0m[0m type     = "syslog"
+                    }
+                }
+              [31m-[0m[0m timestamp   = "2026-04-14T00:23:31Z"
+              [31m-[0m[0m version     = "1.0"
+            }
+        ) -> (known after apply) [31m# forces replacement[0m[0m
+      [33m~[0m[0m content_base64sha256 = "/H8NdklYnjhR1HmAgtOnMUnfM5qOAVQP8kNdaa9e3To=" -> (known after apply)
+      [33m~[0m[0m content_base64sha512 = "jjZQs1YytzQ1gs4Aisw+rkIBNpTn0Ixf84rkKLrfah5g26tEcCj53eXvWkz0RFxndy8XWdSE7emEtFAmBc6jTw==" -> (known after apply)
+      [33m~[0m[0m content_md5          = "4f1f225272eb2c658fc87eddf8cf15be" -> (known after apply)
+      [33m~[0m[0m content_sha1         = "e3ba1a6deea213fec2613067dc16aa72bbb17700" -> (known after apply)
+      [33m~[0m[0m content_sha256       = "fc7f0d7649589e3851d4798082d3a73149df339a8e01540ff2435d69af5edd3a" -> (known after apply)
+      [33m~[0m[0m content_sha512       = "8e3650b35632b7343582ce008acc3eae42013694e7d08c5ff38ae428badf6a1e60dbab447028f9dde5ef5a4cf4445c67772f1759d484ede984b4502605cea34f" -> (known after apply)
+      [33m~[0m[0m id                   = "e3ba1a6deea213fec2613067dc16aa72bbb17700" -> (known after apply)
+        [90m# (3 unchanged attributes hidden)[0m[0m
+    }
+
+[1m  # local_file.caddyfile[0m will be created
+[0m  [32m+[0m[0m resource "local_file" "caddyfile" {
+      [32m+[0m[0m content              = <<-EOT
+            # ΓÜá∩╕Å  LEGACY TEMPLATE ΓÇö For reference only
+            # In production, use the dynamic Caddyfile that reads {$DOMAIN} from environment
+            # This template was used by Terraform for local development before domain migration
+            
+            localhost {
+                # Tier 1 Performance: HTTP/2, Compression, Connection Pooling
+                # Estimated improvement: 15-20% latency reduction, 30-40% bandwidth reduction
+                
+                # Compression (gzip + brotli) ΓÇö reduces payload size by 60-80%
+                encode gzip
+                encode brotli
+                
+                # HTTP/2 Server Push ΓÇö pre-loads critical assets
+                # Note: Paths must match actual code-server asset paths
+                push /static/bundle.js
+                push /static/styles.css
+                
+                # Connection optimization: Keep-Alive + pipeline
+                # Handled by reverse_proxy connection reuse
+                
+                # One-shot endpoint to clear stale workbench cache/storage in a regular profile.
+                @reset path /reset-browser-state
+                header @reset Clear-Site-Data "\"cache\", \"storage\""
+                respond @reset 200
+            
+                # Prevent stale JS/CSS bundles from persisting across patched deployments.
+                @stableAssets path /stable-*
+                header @stableAssets Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+                header @stableAssets Pragma "no-cache"
+                header @stableAssets Expires "0"
+            
+                # Reverse proxy to code-server ΓÇö optimized for concurrency
+                reverse_proxy localhost:8080 {
+                    # Preserve original headers
+                    header_up X-Real-IP {http.request.remote.host}
+                    header_up X-Forwarded-For {http.request.remote.host}
+                    header_up X-Forwarded-Proto https
+            
+                    # WebSocket support required for code-server terminal, extensions and live sync
+                    flush_interval -1
+                }
+            
+                # Security headers
+                header X-Content-Type-Options nosniff
+                header X-Frame-Options SAMEORIGIN
+                header X-XSS-Protection "1; mode=block"
+                header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+                header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
+            }
+            
+            # HTTP to HTTPS redirect (for legacy local deployments)
+            http://localhost {
+                redir https://localhost{uri} permanent
+            }
+        EOT
+      [32m+[0m[0m content_base64sha256 = (known after apply)
+      [32m+[0m[0m content_base64sha512 = (known after apply)
+      [32m+[0m[0m content_md5          = (known after apply)
+      [32m+[0m[0m content_sha1         = (known after apply)
+      [32m+[0m[0m content_sha256       = (known after apply)
+      [32m+[0m[0m content_sha512       = (known after apply)
+      [32m+[0m[0m directory_permission = "0777"
+      [32m+[0m[0m file_permission      = "0777"
+      [32m+[0m[0m filename             = "./config/caddy/Caddyfile"
+      [32m+[0m[0m id                   = (known after apply)
+    }
+
+[1m  # local_file.deploy_script[0m will be created
+[0m  [32m+[0m[0m resource "local_file" "deploy_script" {
+      [32m+[0m[0m content              = <<-EOT
+            #!/bin/bash
+            set -euo pipefail
+            
+            # ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+            # Idempotent Deployment Script
+            # Orchestrates: Terraform ΓåÆ docker-compose rebuild ΓåÆ startup verification
+            # 
+            # Usage:  bash scripts/deploy.sh
+            # 
+            # What it does:
+            #   1. Runs terraform apply to generate docker-compose.yml with pinned versions
+            #   2. Rebuilds Docker images (--no-cache for immutability verification)
+            #   3. Brings up all services
+            #   4. Waits for all healthchecks to pass
+            #   5. Validates critical paths (extension activations, oauth2-proxy auth)
+            # 
+            # Exit code: 0 = success, 1 = deployment failed
+            # ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+            
+            PROJECT_DIR="$$(cd "$$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+            cd "$$PROJECT_DIR"
+            
+            LOG_FILE="${PROJECT_DIR}/deployment.log"
+            exec 1> >(tee -a "$$LOG_FILE")
+            exec 2>&1
+            
+            echo "ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ"
+            echo "IDEMPOTENT DEPLOYMENT: code-server-enterprise"
+            echo "Timestamp: $$(date -Iseconds)"
+            echo "ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ"
+            
+            # Step 1: Terraform init + apply (generates docker-compose.yml with versions)
+            echo ""
+            echo "Step 1: Generating infrastructure config (Terraform)..."
+            if terraform init && terraform apply -auto-approve; then
+              echo "Γ£à Terraform apply completed"
+            else
+              echo "Γ¥î FATAL: Terraform apply failed"
+              exit 1
+            fi
+            
+            # Step 2: Build Docker images (immutability: --no-cache forces full rebuild)
+            echo ""
+            echo "Step 2: Building Docker images with pinned versions..."
+            if docker compose build --no-cache; then
+              echo "Γ£à Docker images built successfully"
+            else
+              echo "Γ¥î FATAL: Docker image build failed"
+              exit 1
+            fi
+            
+            # Step 3: Bring up services
+            echo ""
+            echo "Step 3: Deploying containers..."
+            if docker compose up -d; then
+              echo "Γ£à Containers started"
+            else
+              echo "Γ¥î FATAL: Docker compose up failed"
+              exit 1
+            fi
+            
+            # Step 4: Wait for healthchecks
+            echo ""
+            echo "Step 4: Waiting for all services to be healthy..."
+            MAX_WAIT=120
+            ELAPSED=0
+            while [ $$ELAPSED -lt $$MAX_WAIT ]; do
+              HEALTHY=$$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
+              TOTAL=$$(docker compose ps --format json | jq 'length')
+              echo "  [$$ELAPSED/$$MAX_WAIT] Healthy services: $$HEALTHY/$$TOTAL"
+              
+              if [ "$$HEALTHY" -eq "$$TOTAL" ]; then
+                echo "Γ£à All services healthy"
+                break
+              fi
+              
+              sleep 5
+              ELAPSED=$$((ELAPSED + 5))
+            done
+            
+            if [ $$ELAPSED -ge $$MAX_WAIT ]; then
+              echo "ΓÜá∩╕Å  WARNING: Services not fully healthy after $$MAX_WAIT seconds (may still be starting)"
+              docker compose ps
+            fi
+            
+            # Step 5: Verify critical paths
+            echo ""
+            echo "Step 5: Validating deployment..."
+            CHECKS_PASSED=0
+            
+            # Check code-server HTTP endpoint
+            if curl -sf http://localhost:8080/healthz > /dev/null 2>&1; then
+              echo "Γ£à code-server HTTP health check passed"
+              ((CHECKS_PASSED++))
+            else
+              echo "ΓÜá∩╕Å  code-server HTTP health check failed (may still be starting)"
+            fi
+            
+            # Check docker compose state
+            if docker compose ps code-server | grep -q "healthy\|running"; then
+              echo "Γ£à code-server container is running"
+              ((CHECKS_PASSED++))
+            else
+              echo "Γ¥î code-server container is not running"
+            fi
+            
+            echo ""
+            echo "ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ"
+            echo "DEPLOYMENT COMPLETE"
+            echo "Γ£à Access IDE at: https://ide.kushnir.cloud"
+            echo "Γ£à Authentication: Google OAuth2"
+            echo "Γ£à TLS: Let's Encrypt (auto-renewed)"
+            echo "ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ"
+        EOT
+      [32m+[0m[0m content_base64sha256 = (known after apply)
+      [32m+[0m[0m content_base64sha512 = (known after apply)
+      [32m+[0m[0m content_md5          = (known after apply)
+      [32m+[0m[0m content_sha1         = (known after apply)
+      [32m+[0m[0m content_sha256       = (known after apply)
+      [32m+[0m[0m content_sha512       = (known after apply)
+      [32m+[0m[0m directory_permission = "0777"
+      [32m+[0m[0m file_permission      = "0777"
+      [32m+[0m[0m filename             = "./scripts/deploy.sh"
+      [32m+[0m[0m id                   = (known after apply)
+    }
+
+[1m  # local_file.docker_compose_yml[0m will be created
+[0m  [32m+[0m[0m resource "local_file" "docker_compose_yml" {
+      [32m+[0m[0m content              = <<-EOT
+            # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+            # NOTE: This file is GENERATED by Terraform from docker-compose.tpl
+            # DO NOT EDIT MANUALLY ΓÇö all changes go in main.tf
+            # Regenerate: terraform apply
+            # ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+            
+            version: "3.9"
+            
+            services:
+              # ΓöÇΓöÇΓöÇ code-server ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+              # VS Code running in the browser with Copilot Chat support
+              # Image pinned to specific base + extensions freeze at build time
+              code-server:
+                build:
+                  context: .
+                  dockerfile: Dockerfile.code-server
+                  args:
+                    # ALL VERSIONS FROZEN HERE FOR IMMUTABILITY
+                    CODE_SERVER_VERSION: "4.115.0"
+                    COPILOT_VERSION: "1.388.0"
+                    COPILOT_CHAT_VERSION: "0.43.2026040705"
+                image: code-server-patched:4.115.0
+                container_name: code-server
+                restart: unless-stopped
+                networks:
+                  - enterprise
+                expose:
+                  - "8080"
+                environment:
+                  - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+                  - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+                  - SERVICE_URL=https://open-vsx.org/vscode/gallery
+                  - ITEM_URL=https://open-vsx.org/vscode/item
+                  - CS_DISABLE_FILE_DOWNLOADS=false
+                  # Navigator shim patched out at build time (see Dockerfile.code-server)
+                  - NODE_OPTIONS=--enable-source-maps
+                  - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+                  - OLLAMA_ENDPOINT=http://ollama:11434
+                  - OLLAMA_DEFAULT_MODEL=llama2:70b-chat
+                command:
+                  - "--bind-addr=0.0.0.0:8080"
+                  - "--disable-telemetry"
+                  - "--cert=false"
+                  - "--auth=none"
+                volumes:
+                  - code-server-enterprise-data:/home/coder
+                  - ./workspace:/home/coder/workspace
+                  - ./config/settings.json:/etc/code-server/settings.json:ro
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+                  interval: 30s
+                  timeout: 5s
+                  retries: 3
+                  start_period: 20s
+                deploy:
+                  resources:
+                    limits:
+                      memory: 4g
+                      cpus: '2.0'
+                    reservations:
+                      memory: 512m
+                      cpus: '0.25'
+                security_opt:
+                  - no-new-privileges:true
+                logging:
+                  driver: json-file
+                  options:
+                    max-size: "10m"
+                    max-file: "5"
+            
+              # ΓöÇΓöÇΓöÇ ollama ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+              # Local LLM server (pinned to 0.1.27)
+              ollama:
+                image: ollama/ollama:0.1.27
+                container_name: ollama
+                restart: unless-stopped
+                networks:
+                  - enterprise
+                expose:
+                  - "11434"
+                environment:
+                  - OLLAMA_HOST=0.0.0.0:11434
+                  - OLLAMA_KEEP_ALIVE=5m
+                  - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
+                  - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
+                volumes:
+                  - ollama-data:/root/.ollama
+                  - ./workspace:/home/coder/workspace:ro
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+                  start_period: 30s
+                security_opt:
+                  - no-new-privileges:true
+                deploy:
+                  resources:
+                    limits:
+                      memory: 32g
+                    reservations:
+                      memory: 8g
+                logging:
+                  driver: json-file
+                  options:
+                    max-size: "20m"
+                    max-file: "5"
+            
+              # ΓöÇΓöÇΓöÇ ollama-init ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+              # One-time service that pulls models on startup
+              ollama-init:
+                image: ollama/ollama:0.1.27
+                container_name: ollama-init
+                networks:
+                  - enterprise
+                environment:
+                  - OLLAMA_HOST=ollama:11434
+                volumes:
+                  - ollama-data:/root/.ollama
+                entrypoint: /bin/bash
+                command:
+                  - -c
+                  - |
+                    echo "≡ƒÜÇ Pulling elite LLM models..."
+                    echo "ΓÅ│ Pulling llama2:70b-chat..."
+                    ollama pull llama2:70b-chat || true
+                    echo "ΓÅ│ Pulling codegemma..."
+                    ollama pull codegemma || true
+                    echo "ΓÅ│ Pulling neural-chat..."
+                    ollama pull neural-chat || true
+                    echo "ΓÅ│ Pulling mistral..."
+                    ollama pull mistral || true
+                    echo "Γ£à All models ready"
+                    sleep infinity
+                depends_on:
+                  - ollama
+                restart: on-failure
+            
+              # ΓöÇΓöÇΓöÇ oauth2-proxy ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+              # Authentication sidecar (pinned to v7.5.1)
+              oauth2-proxy:
+                image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+                container_name: oauth2-proxy
+                restart: unless-stopped
+                networks:
+                  - enterprise
+                expose:
+                  - "4180"
+                environment:
+                  OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+                  OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+                  OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
+                  OAUTH2_PROXY_PROVIDER: "google"
+                  OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
+                  OAUTH2_PROXY_REDIRECT_URL: "https://${DOMAIN}/oauth2/callback"
+                  OAUTH2_PROXY_UPSTREAMS: "http://code-server:8080/"
+                  OAUTH2_PROXY_EMAIL_DOMAINS: ""
+                  OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
+                  OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
+                  OAUTH2_PROXY_COOKIE_SECURE: "true"
+                  OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
+                  OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
+                  OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
+                  OAUTH2_PROXY_COOKIE_REFRESH: "15m"
+                  OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+                  OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
+                  OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
+                  OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+                  OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+                  OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+                  OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
+                  OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
+                  OAUTH2_PROXY_AUTH_LOGGING: "true"
+                  OAUTH2_PROXY_REQUEST_LOGGING: "true"
+                  OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/oauth2"
+                volumes:
+                  - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:4180/ping"]
+                  interval: 30s
+                  timeout: 5s
+                  retries: 3
+                  start_period: 10s
+                depends_on:
+                  - code-server
+                security_opt:
+                  - no-new-privileges:true
+                logging:
+                  driver: json-file
+                  options:
+                    max-size: "10m"
+                    max-file: "3"
+            
+              # ΓöÇΓöÇΓöÇ caddy ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+              # Reverse proxy + TLS (pinned to 2.7.6)
+              caddy:
+                image: caddy:2.7.6
+                container_name: caddy
+                restart: unless-stopped
+                networks:
+                  - enterprise
+                ports:
+                  - "80:80"
+                  - "443:443"
+                volumes:
+                  - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+                  - caddy-config:/config
+                  - caddy-data:/data
+                environment:
+                  - ACME_AGREE=true
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:80/healthz || exit 1"]
+                  interval: 30s
+                  timeout: 5s
+                  retries: 3
+                  start_period: 15s
+                depends_on:
+                  - oauth2-proxy
+                security_opt:
+                  - no-new-privileges:true
+                logging:
+                  driver: json-file
+                  options:
+                    max-size: "10m"
+                    max-file: "3"
+            
+            # ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+            # Networks & Volumes
+            # ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+            networks:
+              enterprise:
+                driver: bridge
+                ipam:
+                  config:
+                    - subnet: 172.28.0.0/16
+            
+            volumes:
+              code-server-enterprise-data:
+                driver: local
+              ollama-data:
+                driver: local
+              caddy-config:
+                driver: local
+              caddy-data:
+                driver: local
+        EOT
+      [32m+[0m[0m content_base64sha256 = (known after apply)
+      [32m+[0m[0m content_base64sha512 = (known after apply)
+      [32m+[0m[0m content_md5          = (known after apply)
+      [32m+[0m[0m content_sha1         = (known after apply)
+      [32m+[0m[0m content_sha256       = (known after apply)
+      [32m+[0m[0m content_sha512       = (known after apply)
+      [32m+[0m[0m directory_permission = "0777"
+      [32m+[0m[0m file_permission      = "0777"
+      [32m+[0m[0m filename             = "./docker-compose.yml"
+      [32m+[0m[0m id                   = (known after apply)
+    }
+
+[1m  # local_file.env_file[0m will be created
+[0m  [32m+[0m[0m resource "local_file" "env_file" {
+      [32m+[0m[0m content              = <<-EOT
+            # ΓÜá∩╕Å  Generated by Terraform ΓÇö DO NOT COMMIT TO GIT
+            # This file contains secrets pulled from Google Secret Manager
+            # Regenerate: terraform apply
+            # 
+            # To populate from GSM: scripts/fetch-gsm-secrets.sh
+            
+            # Code Server
+            CODE_SERVER_PASSWORD=${var.code_server_password}
+            
+            # Google OAuth (from GSM)
+            GOOGLE_CLIENT_ID=${var.google_client_id}
+            GOOGLE_CLIENT_SECRET=${var.google_client_secret}
+            OAUTH2_PROXY_COOKIE_SECRET=${var.oauth2_proxy_cookie_secret}
+            
+            # Domain routing
+            DOMAIN=${var.domain}
+            
+            # GitHub token (optional, for higher rate limits)
+            GITHUB_TOKEN=${var.github_token}
+            
+            # Workspace volume mount
+            WORKSPACE_PATH=${local.storage.workspace_dir}
+            
+            # Ollama configuration
+            OLLAMA_NUM_THREAD=${var.ollama_num_threads}
+            OLLAMA_NUM_GPU=${var.ollama_num_gpu}
+        EOT
+      [32m+[0m[0m content_base64sha256 = (known after apply)
+      [32m+[0m[0m content_base64sha512 = (known after apply)
+      [32m+[0m[0m content_md5          = (known after apply)
+      [32m+[0m[0m content_sha1         = (known after apply)
+      [32m+[0m[0m content_sha256       = (known after apply)
+      [32m+[0m[0m content_sha512       = (known after apply)
+      [32m+[0m[0m directory_permission = "0777"
+      [32m+[0m[0m file_permission      = "0777"
+      [32m+[0m[0m filename             = "./.env"
+      [32m+[0m[0m id                   = (known after apply)
+    }
+
+[1m  # local_file.load_test_config[0][0m must be [1m[31mreplaced[0m
+[0m[31m-[0m/[32m+[0m[0m resource "local_file" "load_test_config" {
+      [33m~[0m[0m content              = jsonencode(
+            {
+              [31m-[0m[0m immutable = true
+              [31m-[0m[0m load_test = {
+                  [31m-[0m[0m configuration    = {
+                      [31m-[0m[0m concurrent_users   = 5
+                      [31m-[0m[0m ramp_down_time_sec = 60
+                      [31m-[0m[0m ramp_up_time_sec   = 60
+                      [31m-[0m[0m sustain_time_sec   = 600
+                      [31m-[0m[0m think_time_ms      = 1000
+                    }
+                  [31m-[0m[0m metrics          = {
+                      [31m-[0m[0m error_rate_target_pct     = 0.1
+                      [31m-[0m[0m p50_latency_target_ms     = 50
+                      [31m-[0m[0m p99_9_latency_target_ms   = 200
+                      [31m-[0m[0m p99_latency_target_ms     = 100
+                      [31m-[0m[0m throughput_target_req_sec = 100
+                    }
+                  [31m-[0m[0m name             = "Phase 13 Day 1 Load Test"
+                  [31m-[0m[0m success_criteria = {
+                      [31m-[0m[0m all_metrics_within_target  = true
+                      [31m-[0m[0m zero_authentication_errors = true
+                      [31m-[0m[0m zero_pod_restarts          = true
+                    }
+                  [31m-[0m[0m targets          = [
+                      [31m-[0m[0m {
+                          [31m-[0m[0m endpoint = "ssh://localhost:2222"
+                          [31m-[0m[0m name     = "SSH Connection"
+                          [31m-[0m[0m type     = "ssh"
+                        },
+                      [31m-[0m[0m {
+                          [31m-[0m[0m endpoint = "https://localhost:443/healthz"
+                          [31m-[0m[0m name     = "HTTP Health Check"
+                          [31m-[0m[0m type     = "http"
+                        },
+                      [31m-[0m[0m {
+                          [31m-[0m[0m endpoint = "https://localhost:443/"
+                          [31m-[0m[0m name     = "IDE Access"
+                          [31m-[0m[0m type     = "http"
+                        },
+                    ]
+                }
+              [31m-[0m[0m timestamp = "2026-04-14T00:23:31Z"
+              [31m-[0m[0m version   = "1.0"
+            }
+        ) -> (known after apply) [31m# forces replacement[0m[0m
+      [33m~[0m[0m content_base64sha256 = "g/0h9B39mIpYu8DrANlGbu8WeAj6RdnCTxS/Q+/drok=" -> (known after apply)
+      [33m~[0m[0m content_base64sha512 = "vpPUazhFfeYvV3th9q4jdY+J4LPFHE1s7m+ycGtXUnWUxqxxghS6nc4Hg/GvvO+y5oTpfMGjCJly9b3ZlAs/6g==" -> (known after apply)
+      [33m~[0m[0m content_md5          = "0b253b4489318f09edddeba9c9d0aaef" -> (known after apply)
+      [33m~[0m[0m content_sha1         = "35c34c6f3ccecd3031c06191c77eee143bf5257e" -> (known after apply)
+      [33m~[0m[0m content_sha256       = "83fd21f41dfd988a58bbc0eb00d9466eef167808fa45d9c24f14bf43efddae89" -> (known after apply)
+      [33m~[0m[0m content_sha512       = "be93d46b38457de62f577b61f6ae23758f89e0b3c51c4d6cee6fb2706b57527594c6ac718214ba9dce0783f1afbcefb2e684e97cc1a3089972f5bdd9940b3fea" -> (known after apply)
+      [33m~[0m[0m id                   = "35c34c6f3ccecd3031c06191c77eee143bf5257e" -> (known after apply)
+        [90m# (3 unchanged attributes hidden)[0m[0m
+    }
+
+[1m  # local_file.phase_13_deployment_state[0][0m must be [1m[31mreplaced[0m
+[0m[31m-[0m/[32m+[0m[0m resource "local_file" "phase_13_deployment_state" {
+      [33m~[0m[0m content              = <<-EOT
+            deployed:2026-04-14T00:23:31Z
+            version:1.0
+            immutable:true
+        EOT -> (known after apply) [31m# forces replacement[0m[0m
+      [33m~[0m[0m content_base64sha256 = "esQ8dtQvMwloK+FNj6eS8RwUh9i9q8SPbsG/mKv405o=" -> (known after apply)
+      [33m~[0m[0m content_base64sha512 = "hLcz/4WRDJqmfSqaWpb49hkqCfiKGZY6SA2qbGRqyAJrPjPc4y9GqjwQfWYJ8IQFCKGgF1nHV1QdHVoXo7SDAw==" -> (known after apply)
+      [33m~[0m[0m content_md5          = "57525e68c72498cb6e6f5aa891d70d44" -> (known after apply)
+      [33m~[0m[0m content_sha1         = "e02f44277a26eb4d1f9248d796edab9c5b00fe01" -> (known after apply)
+      [33m~[0m[0m content_sha256       = "7ac43c76d42f3309682be14d8fa792f11c1487d8bdabc48f6ec1bf98abf8d39a" -> (known after apply)
+      [33m~[0m[0m content_sha512       = "84b733ff85910c9aa67d2a9a5a96f8f6192a09f88a19963a480daa6c646ac8026b3e33dce32f46aa3c107d6609f0840508a1a01759c757541d1d5a17a3b48303" -> (known after apply)
+      [33m~[0m[0m id                   = "e02f44277a26eb4d1f9248d796edab9c5b00fe01" -> (known after apply)
+        [90m# (3 unchanged attributes hidden)[0m[0m
+    }
+
+[1m  # local_file.phase_14_deployment_config[0][0m must be [1m[31mreplaced[0m
+[0m[31m-[0m/[32m+[0m[0m resource "local_file" "phase_14_deployment_config" {
+      [33m~[0m[0m content              = jsonencode(
+            {
+              [31m-[0m[0m auto_rollback     = true
+              [31m-[0m[0m canary_percentage = 10
+              [31m-[0m[0m deployment_id     = "phase-14-2026-04-14-0023"
+              [31m-[0m[0m enabled           = true
+              [31m-[0m[0m phase             = "14"
+              [31m-[0m[0m primary_host      = "192.168.168.31"
+              [31m-[0m[0m slo_targets       = {
+                  [31m-[0m[0m availability_pct         = 99.9
+                  [31m-[0m[0m error_rate_pct           = 0.1
+                  [31m-[0m[0m measurement_interval_min = 5
+                  [31m-[0m[0m p99_latency_ms           = 100
+                }
+              [31m-[0m[0m stage_1_config    = {
+                  [31m-[0m[0m name               = "initial-canary"
+                  [31m-[0m[0m observation_min    = 60
+                  [31m-[0m[0m slo_critical       = true
+                  [31m-[0m[0m traffic_percentage = 10
+                }
+              [31m-[0m[0m stage_2_config    = {
+                  [31m-[0m[0m name               = "progressive-rollout"
+                  [31m-[0m[0m observation_min    = 60
+                  [31m-[0m[0m slo_critical       = true
+                  [31m-[0m[0m traffic_percentage = 50
+                }
+              [31m-[0m[0m stage_3_config    = {
+                  [31m-[0m[0m name               = "go-live"
+                  [31m-[0m[0m observation_min    = 1440
+                  [31m-[0m[0m slo_critical       = true
+                  [31m-[0m[0m traffic_percentage = 100
+                }
+              [31m-[0m[0m standby_host      = "192.168.168.30"
+              [31m-[0m[0m timestamp         = "2026-04-14T00:23:31Z"
+            }
+        ) -> (known after apply) [31m# forces replacement[0m[0m
+      [33m~[0m[0m content_base64sha256 = "CqFX+BZuBw3tJgW40YP/ky/bde6dTIrNacJEiq5ZyO4=" -> (known after apply)
+      [33m~[0m[0m content_base64sha512 = "JSytNmjSRlR88keoolADMKa1joURWGC5uSTtL1n3KY0Zgk1UU4JpWEUeIQro0hMrgUOpQBcppgUAoCU7USFwJg==" -> (known after apply)
+      [33m~[0m[0m content_md5          = "6bbfe25c8c2409f135c0e7fccdffe840" -> (known after apply)
+      [33m~[0m[0m content_sha1         = "615c95a524d8ab0b21259a6a44605107b5605020" -> (known after apply)
+      [33m~[0m[0m content_sha256       = "0aa157f8166e070ded2605b8d183ff932fdb75ee9d4c8acd69c2448aae59c8ee" -> (known after apply)
+      [33m~[0m[0m content_sha512       = "252cad3668d246547cf247a8a2500330a6b58e85115860b9b924ed2f59f7298d19824d5453826958451e210ae8d2132b8143a9401729a60500a0253b51217026" -> (known after apply)
+      [33m~[0m[0m id                   = "615c95a524d8ab0b21259a6a44605107b5605020" -> (known after apply)
+        [90m# (3 unchanged attributes hidden)[0m[0m
+    }
+
+[1m  # local_file.slo_monitoring_config[0][0m must be [1m[31mreplaced[0m
+[0m[31m-[0m/[32m+[0m[0m resource "local_file" "slo_monitoring_config" {
+      [33m~[0m[0m content              = <<-EOT
+            ---
+            # Phase 14 SLO Monitoring Configuration
+            phase: 14
+            deployment_id: phase-14-2026-04-14-0023
+            timestamp: 2026-04-14T00:23:31Z
+            
+            slo_targets:
+              p99_latency_ms: 100
+              error_rate_percent: 0.1
+              availability_percent: 99.9
+            
+            canary_deployment:
+              stage_1:
+                traffic_percentage: 10
+                observation_minutes: 60
+              
+              stage_2:
+                traffic_percentage: 50
+                observation_minutes: 60
+              
+              stage_3:
+                traffic_percentage: 100
+                observation_minutes: 1440
+            
+            deployment_targets:
+              primary:
+                host: 192.168.168.31
+              standby:
+                host: 192.168.168.30
+            
+            safeguards:
+              auto_rollback_enabled: true
+              rollback_rto_seconds: 300
+        EOT -> (known after apply) [31m# forces replacement[0m[0m
+      [33m~[0m[0m content_base64sha256 = "jCJPWoytnWDSOZDesKHP3kzLqZSoUUl46NJ0ozkIfVA=" -> (known after apply)
+      [33m~[0m[0m content_base64sha512 = "T7ecG80YWl7eYZBPaYO5dyr/357K/tHpvCGHJrYW9IcBb04dx0OJwzysAAPBAIMpTE4s5mn7XKaL28gjFpVaNQ==" -> (known after apply)
+      [33m~[0m[0m content_md5          = "fb936b5a66ad0fdbd533acbf00975a28" -> (known after apply)
+      [33m~[0m[0m content_sha1         = "289b3b50d0e1f1d47340016d770fded2241a1182" -> (known after apply)
+      [33m~[0m[0m content_sha256       = "8c224f5a8cad9d60d23990deb0a1cfde4ccba994a8514978e8d274a339087d50" -> (known after apply)
+      [33m~[0m[0m content_sha512       = "4fb79c1bcd185a5ede61904f6983b9772affdf9ecafed1e9bc218726b616f487016f4e1dc74389c33cac0003c10083294c4e2ce669fb5ca68bdbc82316955a35" -> (known after apply)
+      [33m~[0m[0m id                   = "289b3b50d0e1f1d47340016d770fded2241a1182" -> (known after apply)
+        [90m# (3 unchanged attributes hidden)[0m[0m
+    }
+
+[1m  # null_resource.make_deploy_executable[0m will be created
+[0m  [32m+[0m[0m resource "null_resource" "make_deploy_executable" {
+      [32m+[0m[0m id = (known after apply)
+    }
+
+[1m  # null_resource.workspace_setup[0m is tainted, so must be [1m[31mreplaced[0m
+[0m[31m-[0m/[32m+[0m[0m resource "null_resource" "workspace_setup" {
+      [33m~[0m[0m id = "4772490888733706813" -> (known after apply)
+    }
+
+[1mPlan:[0m [0m11 to add, 0 to change, 6 to destroy.
+
+Changes to Outputs:
+  [33m~[0m[0m phase_13_deployment_timestamp = "2026-04-14T00:23:31Z" -> (known after apply)
+  [33m~[0m[0m phase_14_deployment_status    = {
+      [33m~[0m[0m deployment_id         = "phase-14-2026-04-14-0023" -> (known after apply)
+        [90m# (5 unchanged attributes hidden)[0m[0m
+    }
+[90m
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ[0m
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.

@@ -19,8 +19,8 @@
     acme_ca {$ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
 
     # Enable automatic HTTPS for real domains (production)
-    # For on-prem with nip.io: set ACME_CA empty and use http:// domains
-    auto_https on
+    # For on-prem with nip.io: disable and use http:// domains with self-signed certs
+    auto_https off
 }
 
 # Primary production domain - HTTPS

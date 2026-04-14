@@ -1,0 +1,67 @@
+Validate Shell Scripts	Check bash script syntax	∩╗┐2026-04-14T21:23:55.9438831Z ##[group]Run for script in scripts/*.sh; do
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9439184Z [36;1mfor script in scripts/*.sh; do[0m
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9439445Z [36;1m  if [ -f "$script" ]; then[0m
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9439764Z [36;1m    bash -n "$script" && echo "Γ£ô $script syntax OK" || exit 1[0m
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9440075Z [36;1m  fi[0m
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9440250Z [36;1mdone[0m
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9462658Z shell: /usr/bin/bash -e {0}
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9462906Z ##[endgroup]
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9521137Z Γ£ô scripts/apply-governance.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9539690Z Γ£ô scripts/audit-logging.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9555371Z Γ£ô scripts/automated-certificate-management.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9573045Z Γ£ô scripts/automated-deployment-orchestration.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9588428Z Γ£ô scripts/automated-env-generator.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9603586Z Γ£ô scripts/automated-iac-validation.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9620471Z Γ£ô scripts/automated-oauth-configuration.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9635766Z Γ£ô scripts/backup.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9650448Z Γ£ô scripts/build-optimized.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9664777Z Γ£ô scripts/build-with-cache.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9679719Z Γ£ô scripts/cleanup-container-overlap.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9695292Z Γ£ô scripts/code-server-entrypoint.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9712044Z Γ£ô scripts/common-functions.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9729012Z Γ£ô scripts/deploy-developer-access-complete.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9745007Z Γ£ô scripts/deploy-kushnir-cloud.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9760967Z Γ£ô scripts/deploy-services.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9776720Z Γ£ô scripts/deploy.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9795256Z Γ£ô scripts/deployment-validation-31.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9812737Z Γ£ô scripts/deployment-validation-suite.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9831336Z Γ£ô scripts/developer-lifecycle.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9848658Z Γ£ô scripts/disaster-recovery-p3.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9865193Z Γ£ô scripts/docker-health-monitor.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9883282Z Γ£ô scripts/enforce-governance.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9898603Z Γ£ô scripts/fetch-gsm-secrets.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9915548Z Γ£ô scripts/gpu-deploy-31.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9932046Z Γ£ô scripts/ide-access-restrictions.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9951709Z Γ£ô scripts/incident-simulation.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9970393Z Γ£ô scripts/infrastructure-assessment-31.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:55.9987468Z Γ£ô scripts/init-repo-governance.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:56.0003424Z Γ£ô scripts/logging.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:56.0022613Z Γ£ô scripts/manage-users.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:56.0037587Z Γ£ô scripts/mandatory-redeploy.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:56.0052547Z Γ£ô scripts/memory-monitor.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:56.0070350Z Γ£ô scripts/nas-mount-31.sh syntax OK
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:56.0083514Z scripts/ollama-init.sh: line 70: syntax error near unexpected token `('
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:56.0084884Z scripts/ollama-init.sh: line 70: `  local endpoint=$1 (IDEMPOTENT ΓÇö checks hash to skip rebuild)'
+Validate Shell Scripts	Check bash script syntax	2026-04-14T21:23:56.0099702Z ##[error]Process completed with exit code 1.
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	∩╗┐2026-04-14T21:23:43.0350455Z ##[group]Run if [ -f docker-compose.yml ]; then
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0352242Z [36;1mif [ -f docker-compose.yml ]; then[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0353823Z [36;1m  # Try docker compose (modern) then docker-compose (legacy)[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0355565Z [36;1m  if command -v docker compose >/dev/null 2>&1; then[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0356992Z [36;1m    COMPOSE_CMD="docker compose"[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0358427Z [36;1m  elif command -v docker-compose >/dev/null 2>&1; then[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0359900Z [36;1m    COMPOSE_CMD="docker-compose"[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0361038Z [36;1m  else[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0363150Z [36;1m    echo "ΓÜá Docker not available, skipping docker-compose validation (syntax-only check via shell)"[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0365276Z [36;1m    # Minimal YAML validation[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0367046Z [36;1m    python3 -c "import yaml; yaml.safe_load(open('docker-compose.yml'))" || exit 1[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0369008Z [36;1m    echo "Γ£ô docker-compose.yml YAML syntax valid"[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0370322Z [36;1m    exit 0[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0371160Z [36;1m  fi[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0372407Z [36;1m  $COMPOSE_CMD config > /dev/null 2>&1 || exit 1[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0373860Z [36;1m  echo "Γ£ô docker-compose.yml syntax valid"[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0375063Z [36;1melse[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0375972Z [36;1m  echo "ΓÜá No docker-compose.yml found"[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0377144Z [36;1mfi[0m
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0400661Z shell: /usr/bin/bash -e {0}
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.0401919Z ##[endgroup]
+Validate docker-compose Configuration	Validate docker-compose.yml syntax	2026-04-14T21:23:43.2098996Z ##[error]Process completed with exit code 1.

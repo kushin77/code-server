@@ -17,7 +17,7 @@ services:
       - "3100:3100"
     volumes:
       - loki-data:/loki
-      - loki-config:/etc/loki
+      - ./config/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - audit-logs:/var/log/audit:ro
     environment:
       LOKI_CONFIG_FILE: /etc/loki/loki-config.yaml
@@ -93,7 +93,6 @@ services:
       "
     volumes:
       - loki-data:/var/lib/loki/data
-      - loki-config:/var/lib/loki/config
       - grafana-data:/var/lib/grafana
       - grafana-prov:/etc/grafana/provisioning
       - audit-logs:/var/log/audit
@@ -110,9 +109,6 @@ networks:
 volumes:
   loki-data:
     name: phase-18-loki-data
-    driver: local
-  loki-config:
-    name: phase-18-loki-config
     driver: local
   grafana-data:
     name: phase-18-grafana-data

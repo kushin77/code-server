@@ -96,7 +96,7 @@ resource "docker_container" "prometheus" {
   }
 
   volumes {
-    host_path      = "/etc/prometheus"
+    host_path      = "/home/akushnir/.config/prometheus"
     container_path = "/etc/prometheus"
     read_only      = false
   }
@@ -211,7 +211,7 @@ resource "docker_container" "alertmanager" {
   }
 
   volumes {
-    host_path      = "/etc/alertmanager"
+    host_path      = "/home/akushnir/.config/alertmanager"
     container_path = "/etc/alertmanager"
     read_only      = true
   }

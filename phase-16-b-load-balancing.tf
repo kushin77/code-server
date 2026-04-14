@@ -94,8 +94,8 @@ resource "docker_image" "haproxy" {
 
 resource "docker_image" "keepalived" {
   count         = var.phase_16_b_enabled ? 1 : 0
-  name          = "arcts/keepalived:2.2.7"
-  pull_triggers = ["2.2.7"]
+  name          = "osixia/keepalived:2.0.20"
+  pull_triggers = ["2.0.20"]
 }
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -103,11 +103,13 @@ resource "docker_image" "keepalived" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "haproxy_primary" {
-  count         = var.phase_16_b_enabled ? 1 : 0
+  count         = 0  # Disabled for now - requires extended configuration
   name          = "haproxy-lb-primary"
   image         = docker_image.haproxy[0].image_id
   network_mode  = "host"
   privileged    = true
+
+  command = ["haproxy", "-f", "/etc/haproxy/default.cfg"]
 
   ports {
     internal = 80
@@ -125,12 +127,6 @@ resource "docker_container" "haproxy_primary" {
     internal = 8404
     external = 8404
     protocol = "tcp"
-  }
-
-  volumes {
-    host_path      = "/etc/haproxy/haproxy.cfg"
-    container_path = "/usr/local/etc/haproxy/haproxy.cfg"
-    read_only      = true
   }
 
   volumes {
@@ -161,7 +157,7 @@ resource "docker_container" "haproxy_primary" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "haproxy_backup" {
-  count         = var.phase_16_b_enabled ? 1 : 0
+  count         = 0  # Disabled for now - requires extended configuration
   name          = "haproxy-lb-backup"
   image         = docker_image.haproxy[0].image_id
   network_mode  = "host"

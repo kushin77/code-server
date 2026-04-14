@@ -17,9 +17,9 @@ services:
     restart: always
     networks:
       - enterprise
-    # Don't expose directly in production — route through Caddy + oauth2-proxy
-    expose:
-      - "8080"
+    # Expose directly for direct IDE access + route through Caddy for proxy
+    ports:
+      - "0.0.0.0:8080:8080"
     environment:
       # Use strong password from .env, not defaults
       - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}

@@ -14,7 +14,7 @@
 #   - gcloud auth login (run once; token cached in ~/.config/gcloud)
 #   - docker + docker compose plugin
 #   - .env.template copied to .env and DOMAIN set (or export DOMAIN=... before running)
-#   - Ports 80/443 reachable from internet (router forward + windows-port-forward.ps1 on WSL2)
+#   - Ports 80/443 reachable from internet (router port forward must be configured)
 #
 # Usage:
 #   ./scripts/deploy-kushnir-cloud.sh [--skip-dns] [--dry-run]
@@ -129,5 +129,5 @@ log ""
 log "  Move to new host:"
 log "    1. Copy .env  (or re-run deploy to re-fetch from GSM)"
 log "    2. docker compose up -d"
-log "    3. On WSL2/Windows: .\\scripts\\windows-port-forward.ps1"
+log "    3. Configure router port forwarding (80:80, 443:443 to $(hostname -I | awk '{print $1}'))"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

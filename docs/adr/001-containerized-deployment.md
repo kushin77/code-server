@@ -1,4 +1,4 @@
-# 001. Containerized Code-Server Deployment on Windows
+# 001. Containerized Code-Server Deployment (Linux Production)
 
 **Status**: Accepted
 **Date**: 2026-01-27
@@ -7,13 +7,13 @@
 
 ---
 
-## Contex
+## Context
 
 Enterprise development requires:
 - **Multi-developer access** to isolated development environments
 - **Infrastructure as Code** management at scale
 - **Security enforcement** (authentication, RBAC, audit logging)
-- **Reproducible deployments** across Windows, Linux, macOS
+- **Reproducible Linux production deployments** (no Windows-only code paths)
 - **Resource isolation** to prevent one developer from impacting others
 
 Previously, code-server was deployed manually, leading to:
@@ -22,7 +22,7 @@ Previously, code-server was deployed manually, leading to:
 - Difficult scaling and onboarding
 - No audit trail for access/changes
 
-We needed a containerized, Terraform-managed approach to standardize deployments.
+We needed a containerized, Linux-native, Terraform-managed approach to standardize deployments and mandate production-grade operational practices.
 
 ---
 

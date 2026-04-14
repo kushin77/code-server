@@ -363,11 +363,11 @@ EOT
   depends_on = [local_file.docker_compose_yml]
 }
 
-# Make deploy script executable
+# Make deploy script executable (Linux production deployment)
 resource "null_resource" "make_deploy_executable" {
   provisioner "local-exec" {
-    # Note: On Windows, scripts are executable by default. This is a no-op.
-    command = "powershell -Command \"Write-Host 'Scripts deployment ready (Windows)'\""
+    # Ensure shell scripts are executable (Linux mandatory)
+    command = "chmod +x ./scripts/*.sh ./scripts/**/*.sh 2>/dev/null || true"
   }
   depends_on = [local_file.deploy_script]
 }

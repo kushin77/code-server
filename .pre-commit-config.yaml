@@ -3,10 +3,10 @@ repos:
     hooks:
       - id: mandatory-redeploy
         name: mandatory-redeploy
-        entry: pwsh -NoProfile -File ./scripts/mandatory-redeploy.ps1
+        entry: bash ./scripts/mandatory-redeploy.sh
         language: system
         pass_filenames: false
-        # Only run manually or on local push — not in CI (Linux runners don't have docker.exe)
+        # Only run manually or on local push — requires Docker and Linux environment
         stages: [manual]
 
       # Phase 2.3: Custom hook - verify scripts source common libraries

@@ -113,10 +113,199 @@ pytest tests/ -v --cov=. --cov-report=term
 pylint src/
 shellcheck scripts/*.sh
 
+# Pre-commit hooks (Phase 2.3) — REQUIRED for all commits
+pre-commit run --all-files
+```
 
 Failure in any local check = PR must address before review request.
 
 ---
+
+## Phase 2.3: Pre-Commit Hooks — Code Quality & Governance
+
+Pre-commit hooks automate enforcement of standards BEFORE code reaches version control.
+
+### Setup (One-time)
+
+```bash
+# Install pre-commit framework
+pip install pre-commit
+
+# Install hooks in your local repository
+pre-commit install
+
+# Verify installation
+pre-commit --version
+```
+
+### What Hooks Check
+
+| Hook | Purpose | Auto-Fix? | Stage |
+|------|---------|-----------|-------|
+| **shellcheck** | Bash script quality | ❌ | Commit |
+| **yamllint** | YAML syntax & format | ✅ | Commit |
+| **trailing-whitespace** | Clean trailing spaces | ✅ | Commit |
+| **end-of-file-fixer** | Add final newline | ✅ | Commit |
+| **check-yaml** | YAML validity | ❌ | Commit |
+| **check-json** | JSON syntax | ❌ | Commit |
+| **detect-private-key** | Block hardcoded secrets | ❌ | Commit |
+| **verify-scripts-source-common** | Scripts use logging/error libraries | ❌ | Commit |
+| **verify-metadata-headers** | Scripts have standardized headers | ❌ | Commit |
+| **no-hardcoded-secrets** | Block hardcoded passwords/tokens | ❌ | Commit |
+
+### Running Hooks
+
+**Automatically at commit time** (default):
+```bash
+git add .
+git commit -m "feat: ..."  # Hooks run automatically
+```
+
+**Manually on all files** (recommended before PR):
+```bash
+pre-commit run --all-files  # Check entire repo
+```
+
+**Manually on specific files**:
+```bash
+pre-commit run shellcheck --all-files  # Only shellcheck
+pre-commit run yamllint --all-files    # Only YAML linting
+```
+
+**Manual checks** (best practices, not enforced):
+```bash
+pre-commit run --all-files --hook-stage manual  # Run optional checks
+```
+
+### When Hooks Fail
+
+**If a hook fails:**
+
+1. **Auto-fixable hooks** (trailing-whitespace, end-of-file-fixer, yamllint):
+   ```bash
+   # Run again — these fix themselves
+   git add .
+   git commit -m "feat: ..."
+   ```
+
+2. **Manual fix required** (shellcheck, detect-private-key, etc.):
+   ```bash
+   # Fix the issue (e.g., remove hardcoded secret)
+   # Verify fix:
+   pre-commit run <hook-name>  # Re-run specific hook
+   # Then commit again
+   git commit -m "feat: ..."
+   ```
+
+3. **Bypass if absolutely necessary**:
+   ```bash
+   git commit -m "..." --no-verify  # Skip hooks (NOT RECOMMENDED)
+   ```
+   ⚠️ **Use `--no-verify` only in emergencies. CI will still check.**
+
+### Common Failures & Fixes
+
+**shellcheck failures**:
+```bash
+# Run shellcheck manually to see details
+shellcheck scripts/deploy.sh
+
+# Fix issues:
+# - Quote variables: "$var" not $var
+# - Use set -euo pipefail at script top
+# - Use functions for reusable logic
+```
+
+**Hardcoded secret detected**:
+```bash
+# WRONG - hardcoded password:
+docker run -e PASSWORD=admin123 ...
+
+# RIGHT - use environment variable:
+docker run -e PASSWORD="$PASSWORD" ...
+```
+
+**Missing metadata header**:
+```bash
+# Add to top of script (after #!/bin/bash):
+################################################################################
+# File: script-name.sh
+# Owner: Team Name
+# Purpose: Brief description
+# ...
+################################################################################
+```
+
+**Scripts not sourcing common libraries**:
+```bash
+# Add to script after header:
+source "$(dirname "$0")/_common/logging.sh"
+source "$(dirname "$0")/_common/utils.sh"
+source "$(dirname "$0")/_common/error-handler.sh"
+```
+
+---
+
+## Testing Locally
+
+Before pushing, verify your code meets all standards:
+
+```bash
+# 1. Run pre-commit hooks
+pre-commit run --all-files
+
+# 2. Validate configuration files
+docker-compose config > /dev/null
+terraform validate
+
+# 3. Run tests
+pytest tests/ -v
+
+# 4. Check with all security scans
+bash scripts/validate.sh
+
+# 5. Final verification before push
+git push --dry-run  # Verify what will be pushed
+```
+
+If all pass, you're ready for PR!
+
+---
+
+## CI/CD Validation (Automatic)
+
+The following run automatically on every PR in GitHub Actions:
+
+- **validate-config.yml** — Configuration syntax validation (6+ checks)
+- **Test Suite** — Unit, integration, E2E tests
+- **Security Scanning** — TruffleHog for secrets, Snyk for dependencies
+- **Performance Tests** — Benchmarks must not regress
+
+**If CI fails**, the PR cannot merge. Fix locally and push again.
+
+---
+
+## Phase 2 Integration (Error Handling & Logging)
+
+All shell scripts must now use standardized error handling (Phase 2.2):
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Source common libraries
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/logging.sh"
+source "$SCRIPT_DIR/_common/utils.sh"
+source "$SCRIPT_DIR/_common/error-handler.sh"
+
+# Use logging functions
+log_info "Operation starting..."
+require_command docker  # Verify docker is installed
+retry 3 docker pull image:tag  # Retry transient failures
+
+log_success "Operation complete"
+
 
 ## CI/CD Enforcement Pipeline
 

@@ -5,7 +5,7 @@ repos:
     hooks:
       - id: shellcheck
         name: Bash script lint (shellcheck)
-        args: ["--severity=warning"]
+        args: ['--severity=error']
         exclude: |
           (?x)^(
             scripts/_archive/|

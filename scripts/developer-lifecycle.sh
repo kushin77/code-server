@@ -12,9 +12,14 @@
 
 set -eu
 
-
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+# Initialize script directory FIRST, before sourcing anything
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source common initialization (if available)
+if [[ -f "$SCRIPT_DIR/_common/init.sh" ]]; then
+    source "$SCRIPT_DIR/_common/init.sh"
+fi
+
 readonly DB_FILE="${DB_FILE:-/etc/developer-access/developers.db}"
 readonly AUDIT_LOG="${AUDIT_LOG:-/var/log/developer-access-audit.log}"
 readonly SSL_CERT_DIR="${SSL_CERT_DIR:-/etc/developer-access/certs}"

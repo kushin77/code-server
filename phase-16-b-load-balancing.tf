@@ -334,7 +334,7 @@ output "haproxy_primary_https_endpoint" {
 
 output "haproxy_stats_endpoint" {
   description = "HAProxy statistics endpoint (primary)"
-  value       = var.phase_16_b_enabled ? "localhost:8404/stats" : null
+  value       = var.phase_16_b_enabled ? "https://lb1.ide.kushnir.cloud/stats" : null
 }
 
 output "load_balancing_status" {

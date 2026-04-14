@@ -6,7 +6,7 @@ metadata:
   organization: kushin77
   effective_date: 2026-04-14
   review_cycle: quarterly
-  contact: devops-team@example.com
+  contact: devops-team@ide.kushnir.cloud
 
 ---
 
@@ -258,8 +258,8 @@ cost_tracking:
   reporting:
     frequency: weekly
     recipients:
-      - devops-team@example.com
-      - finance@example.com
+      - devops-team@ide.kushnir.cloud
+      - finance@ide.kushnir.cloud
     metrics:
       - total_cost
       - cost_by_category

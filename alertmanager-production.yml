@@ -89,7 +89,7 @@ receivers:
         actions:
           - type: button
             text: 'View in Grafana'
-            url: 'https://grafana.example.com/d/{{ .GroupLabels.dashboard }}'
+            url: 'https://grafana.ide.kushnir.cloud/d/{{ .GroupLabels.dashboard }}'
 
   # Slack for medium-priority alerts
   - name: slack-warnings
@@ -105,8 +105,8 @@ receivers:
     email_configs:
       - to: '{{ template "email.to" }}'
         from: 'alerts@ide.kushnir.cloud'
-        smarthost: 'smtp.example.com:587'
-        auth_username: 'alerts@example.com'
+        smarthost: 'smtp.ide.kushnir.cloud:587'
+        auth_username: 'alerts@ide.kushnir.cloud'
         auth_password: ${VAULT_SMTP_PASSWORD}
         headers:
           Subject: 'Daily Alert Digest - {{ .GroupLabels.cluster }}'

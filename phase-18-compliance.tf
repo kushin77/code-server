@@ -146,7 +146,7 @@ resource "docker_container" "fluent_bit_collector" {
   network_mode  = "host"
 
   env = [
-    "LOKI_ENDPOINT=http://localhost:3100/loki/api/v1/push",
+    \"LOKI_ENDPOINT=https://loki.ide.kushnir.cloud/loki/api/v1/push\",
     "LOG_RETENTION_DAYS=${var.audit_log_retention_years * 365}",
   ]
 
@@ -389,12 +389,12 @@ resource "random_password" "grafana_admin_password" {
 
 output "compliance_dashboard_url" {
   description = "Grafana SOC 2 compliance dashboard URL"
-  value       = var.phase_18_compliance_enabled ? "http://localhost:3000" : null
+  value       = var.phase_18_compliance_enabled ? "https://grafana.ide.kushnir.cloud" : null
 }
 
 output "audit_logs_endpoint" {
   description = "Loki audit logs API endpoint"
-  value       = var.phase_18_compliance_enabled ? "http://localhost:3100" : null
+  value       = var.phase_18_compliance_enabled ? "https://loki.ide.kushnir.cloud" : null
 }
 
 output "soc2_compliance_status" {

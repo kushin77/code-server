@@ -168,10 +168,10 @@ resource "docker_container" "vault_ha" {
   privileged    = true
 
   env = [
-    "VAULT_ADDR=http://127.0.0.1:8200",
+    "VAULT_ADDR=https://vault.ide.kushnir.cloud",
     "VAULT_TOKEN_FILE=/vault/secrets/.vault-token",
     "VAULT_LOG_LEVEL=info",
-    "VAULT_API_ADDR=http://127.0.0.1:8200",
+    "VAULT_API_ADDR=https://vault.ide.kushnir.cloud",
   ]
 
   ports {
@@ -357,13 +357,13 @@ variable "audit_log_config" {
 output "vault_ha_endpoints" {
   description = "Vault HA cluster endpoints"
   value = var.phase_18_enabled ? [
-    for i in range(var.vault_node_count) : "http://localhost:${8200 + i}"
+    for i in range(var.vault_node_count) : "https://vault-${i}.ide.kushnir.cloud"
   ] : null
 }
 
 output "consul_ui_endpoint" {
   description = "Consul service registry UI"
-  value       = var.phase_18_enabled ? "http://localhost:8500/ui/" : null
+  value       = var.phase_18_enabled ? "https://consul.ide.kushnir.cloud/ui/" : null
 }
 
 output "security_status" {

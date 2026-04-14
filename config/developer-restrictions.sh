@@ -162,7 +162,7 @@ session_remaining() {
 # ==================== ENVIRONMENT VARIABLES ====================
 
 # GIT Configuration for proxy
-export GIT_PROXY_HOST="${GIT_PROXY_HOST:-git-proxy.dev.example.com}"
+export GIT_PROXY_HOST="${GIT_PROXY_HOST:-git-proxy.ide.kushnir.cloud}"
 export GIT_CREDENTIAL_CACHE_DAEMON_TIMEOUT=3600  # 1 hour
 
 # Cloudflare Access Token (set via environment at login)

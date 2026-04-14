@@ -17,10 +17,10 @@ variable "phase_16_a_enabled" {
 variable "db_instance_count" {
   description = "Number of PostgreSQL HA instances (primary + replicas)"
   type        = number
-  default     = 3
+  default     = 1
   validation {
-    condition     = var.db_instance_count >= 2 && var.db_instance_count <= 3
-    error_message = "db_instance_count must be between 2 and 3 for this simplified deployment."
+    condition     = var.db_instance_count >= 1 && var.db_instance_count <= 3
+    error_message = "db_instance_count must be between 1 and 3 for this simplified deployment."
   }
 }
 

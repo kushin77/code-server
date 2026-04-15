@@ -3,12 +3,13 @@
 	log {
 		format json
 		output stdout
-		level INFO
+		level info
 	}
 
-	# Let's Encrypt production certificates
-	acme_ca https://acme-v02.api.letsencrypt.org/directory
-	email ops@kushnir.cloud
+	# On-premises TLS: Use self-signed certificates (no public DNS for Let's Encrypt ACME)
+	# For production with public DNS, uncomment the ACME lines below:
+	# acme_ca https://acme-v02.api.letsencrypt.org/directory
+	# email ops@kushnir.cloud
 }
 
 # Security headers snippet
@@ -23,10 +24,20 @@
 	}
 }
 
-# Production domain with HTTPS and OAuth2 SSO
+# Production domain with HTTPS/TLS and OAuth2 SSO
+# On-prem deployment: Self-signed certificates (no public DNS for ACME)
 ide.kushnir.cloud {
+	# TLS: Internal self-signed certificates (on-premises)
+	tls internal
+
 	encode gzip
 	import security_headers
+
+	log {
+		format json
+		output stdout
+		level info
+	}
 
 	# Health check endpoints (no auth required)
 	@health path /healthz /ping /health

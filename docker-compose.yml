@@ -317,7 +317,6 @@ services:
     container_name: portal
     restart: always
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
     expose: ["80"]
     volumes:
       - ./portal/index.html:/usr/share/nginx/html/index.html:ro
@@ -341,9 +340,6 @@ services:
     container_name: caddy
     restart: always
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
-    cap_drop: [ALL]
-    cap_add: [NET_BIND_SERVICE]  # required to bind :80/:443
     ports:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443"
@@ -367,7 +363,6 @@ services:
     container_name: prometheus
     restart: always
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
     expose: ["9090"]
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -399,7 +394,6 @@ services:
     container_name: grafana
     restart: always
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
     expose: ["3000"]  # Internal network only (routed through oauth2-proxy)
     environment:
       GF_SECURITY_ADMIN_USER:     ${GRAFANA_ADMIN_USER:-admin}
@@ -432,7 +426,6 @@ services:
     container_name: alertmanager
     restart: always
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
     expose: ["9093"]
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'

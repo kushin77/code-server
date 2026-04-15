@@ -125,7 +125,7 @@ services:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
       - "--cert=false"
-      - "--auth=none"
+      - "--auth=password"  # Require password authentication (from PASSWORD env var)
     volumes:
       - code-server-data:/home/coder:rw
     healthcheck:

@@ -4,7 +4,15 @@
 # Date: April 15, 2026
 # ════════════════════════════════════════════════════════════════
 
-auth_enabled: false
+auth_enabled: true  # Enable authentication (X-Scope-OrgID header or basic auth required)
+
+# ════════════════════════════════════════════════════════════════
+# Authentication Configuration
+# ════════════════════════════════════════════════════════════════
+# Loki enforces X-Scope-OrgID header (tenant ID) for multi-tenancy
+# For single-tenant on-prem: all requests must include X-Scope-OrgID: default
+# Recommended: proxy through oauth2-proxy for OIDC/password auth
+auth_backend: default  # Use default backend (X-Scope-OrgID enforcement)
 
 server:
   http_listen_port: 3100

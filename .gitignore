@@ -65,3 +65,22 @@ workspace/*
 terraform.tfvars
 data/postgresql/
 data/
+
+# One-time ad-hoc admin scripts (not source-controlled)
+fix_gpu.py
+fix_*.py
+patch_*.py
+
+# Binary packages (do not commit)
+archived/*.deb
+archived/*.rpm
+archived/*.tar.gz
+
+# Archived phase scripts (historical reference, not active IaC)
+archived/scripts/
+
+# Environment-specific configs generated at deploy time
+config/environment/
+
+# Old deployment status docs (phase-specific, historical only)
+docs/archived/

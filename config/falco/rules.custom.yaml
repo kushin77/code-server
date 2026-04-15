@@ -1,209 +1,113 @@
-# Falco Custom Rules for Phase 8-B Runtime Security
-# 50+ custom security detection rules
+# Falco Custom Rules - Production Security Monitoring
+# Uses valid Falco condition syntax throughout
 
 - list: malware_binaries
-  items: [xmrig, cpuminer, mkxminer, ethminer, cgminer, minerd, stratum, cryptominer]
+  items: [xmrig, cpuminer, mkxminer, ethminer, cgminer, minerd, cryptominer]
 
-- list: dangerous_syscalls
-  items: [ptrace, process_vm_readv, process_vm_writev, perf_event_open, perfctl, kcmp, userfaultfd, renameat2, execveat]
-
-- list: suspicious_domains
-  items: [monero, pool.mining, stratum, getwork, difficulty]
-
-- rule: Unauthorized Process Execution
-  desc: Detect unauthorized process execution in containers
-  condition: >
-    spawned_process and 
-    container and 
-    not proc.name in (allowed_processes) and
-    not proc.name in (bash, sh, sshd, supervisord, start.sh)
-  output: >
-    Unauthorized process %proc.name spawned in container %container.name by user %user.name
-  priority: WARNING
-  tags: [process_monitoring, security, malware]
+- list: mining_ports
+  items: [3333, 4444, 5555, 7777, 14444, 14433]
 
 - rule: Cryptominer Detection
-  desc: Detect cryptocurrency mining activities
+  desc: Detect cryptocurrency mining processes in containers
   condition: >
-    spawned_process and 
-    container and 
-    (proc.name in (malware_binaries) or 
-     contains(proc.args, "pool.monero") or
-     contains(proc.args, "stratum") or
-     contains(proc.args, "getwork"))
+    spawned_process and
+    container and
+    proc.name in (malware_binaries)
   output: >
-    CRYPTOMINER DETECTED: %proc.name spawned in container %container.name
-    Args: %proc.args
+    CRYPTOMINER DETECTED: %proc.name spawned in container=%container.name
+    user=%user.name cmd=%proc.cmdline
   priority: CRITICAL
-  tags: [malware, crypto, container_escape]
+  tags: [malware, crypto, container]
 
-- rule: Privilege Escalation Attempt
-  desc: Detect privilege escalation attempts
+- rule: Suspicious Mining Port Connection
+  desc: Detect connections to known mining pool ports
   condition: >
-    syscall.name in (capset, setgid, setuid, seteuid, setreuid, setresuid) and 
-    container and 
-    proc.uid > 0 and 
-    auid > 0
+    outbound and
+    container and
+    fd.rport in (mining_ports)
   output: >
-    PRIVILEGE ESCALATION: Process %proc.name attempted to change capability/UID in container %container.name
-    Syscall: %syscall.name, User: %user.name -> UID: %proc.uid
-  priority: WARNING
-  tags: [privilege_escalation, security]
+    Possible crypto mining connection container=%container.name
+    dest=%fd.rip:%fd.rport cmdline=%proc.cmdline
+  priority: CRITICAL
+  tags: [malware, network_security, container]
 
-- rule: Shell Execution in Container
-  desc: Detect unexpected shell execution
+- rule: Privilege Escalation via Setuid
+  desc: Detect privilege escalation via setuid binaries
   condition: >
-    spawned_process and 
-    container and 
+    spawned_process and
+    container and
+    proc.name in (sudo, su, passwd) and
+    not user.name = root
+  output: >
+    Privilege escalation attempt user=%user.name proc=%proc.name
+    container=%container.name cmd=%proc.cmdline
+  priority: WARNING
+  tags: [privilege_escalation, container]
+
+- rule: Shell Spawned in Container
+  desc: Detect unexpected interactive shell in container
+  condition: >
+    spawned_process and
+    container and
     proc.name in (bash, sh) and
-    proc.ppid not in (supervisord, sshd, docker-init, tini) and
-    not proc.args contains "startup.sh"
+    proc.tty != 0 and
+    not proc.pname in (sshd, docker-init, supervisord)
   output: >
-    Unexpected shell execution: %proc.name in container %container.name
-    Parent: %proc.pname, User: %user.name
+    Unexpected shell container=%container.name shell=%proc.name
+    parent=%proc.pname user=%user.name
   priority: NOTICE
-  tags: [container_escape, interactive_shell]
+  tags: [container, shell]
 
-- rule: File Modification in Sensitive Paths
-  desc: Detect unauthorized file modifications in critical paths
+- rule: Write to Sensitive Path
+  desc: Detect writes to system configuration paths
   condition: >
-    open_write and 
-    (fd.name startswith /etc/ or 
-     fd.name startswith /root/ or
+    open_write and
+    container and
+    (fd.name startswith /etc/ or
      fd.name startswith /boot/ or
-     fd.name startswith /sys/) and
-    container and
-    user.name not in (root, sysadmin)
+     fd.name startswith /root/) and
+    not proc.name in (apt, dpkg, useradd, passwd)
   output: >
-    Sensitive file modification: %fd.name modified by %user.name in container %container.name
-    Process: %proc.name, Parent: %proc.pname
+    Write to sensitive path file=%fd.name proc=%proc.name
+    user=%user.name container=%container.name
   priority: WARNING
-  tags: [file_integrity, configuration]
+  tags: [file_integrity, container]
 
-- rule: Suspicious Network Activity
-  desc: Detect suspicious outbound network connections
+- rule: Sensitive File Access
+  desc: Detect access to private keys and credential files
   condition: >
-    outbound and 
-    (fd.name startswith "192.168" or 
-     fd.name startswith "10.") and
+    open_read and
     container and
-    user.uid > 0
-  output: >
-    Suspicious outbound connection: %fd.name from container %container.name
-    Process: %proc.name, User: %user.name
-  priority: NOTICE
-  tags: [network_security, data_exfiltration]
-
-- rule: Unauthorized File Access
-  desc: Detect unauthorized file access patterns
-  condition: >
-    open_read and 
-    (fd.name endswith ".key" or 
+    (fd.name endswith ".key" or
      fd.name endswith ".pem" or
-     fd.name endswith ".ssh" or
-     fd.name contains "credentials" or
-     fd.name contains "secrets") and
-    container and
-    user.uid > 0
+     fd.name contains "credentials") and
+    not proc.name in (sshd, nginx, caddy)
   output: >
-    Sensitive file access: %fd.name accessed by %user.name in container %container.name
-    Process: %proc.name
+    Sensitive file access file=%fd.name proc=%proc.name
+    user=%user.name container=%container.name
   priority: WARNING
-  tags: [secrets_management, compliance]
+  tags: [secrets, compliance]
 
-- rule: Malware Signatures
-  desc: Detect known malware signatures and patterns
+- rule: Reverse Shell Attempt
+  desc: Detect common reverse shell patterns in container args
   condition: >
-    spawned_process and 
-    container and 
-    (contains(proc.args, "base64 -d") or
-     contains(proc.args, "bash -i") or
-     contains(proc.args, "/dev/tcp") or
-     contains(proc.args, "nc -l") or
-     contains(proc.args, "ncat"))
-  output: >
-    Possible malware signature detected: %proc.name in container %container.name
-    Args: %proc.args
-  priority: CRITICAL
-  tags: [malware, shell_abuse, reverse_shell]
-
-- rule: Container Escape Attempt
-  desc: Detect potential container escape attempts
-  condition: >
-    syscall.name in (mount, umount, umount2) and 
+    spawned_process and
     container and
-    fd.name contains "/proc" or fd.name contains "/sys"
+    (proc.args contains "/dev/tcp" or
+     proc.args contains "bash -i")
   output: >
-    Container escape attempt: %syscall.name syscall from container %container.name
-    Target: %fd.name, Process: %proc.name
+    Possible reverse shell proc=%proc.name args=%proc.args
+    container=%container.name user=%user.name
   priority: CRITICAL
-  tags: [container_escape, privilege_escalation]
+  tags: [malware, shell_abuse, container]
 
-- rule: Botnet C&C Communication
-  desc: Detect botnet command-and-control communication
+- rule: Kernel Module Load Attempt
+  desc: Detect attempts to load kernel modules from containers
   condition: >
-    outbound and 
-    container and 
-    (contains(fd.name, "pool.mining") or
-     contains(fd.name, "stratum") or
-     contains(fd.name, "getwork") or
-     contains(fd.name, "difficulty"))
+    evt.type in (init_module, finit_module) and
+    container
   output: >
-    BOTNET C&C COMMUNICATION DETECTED: Container %container.name connecting to %fd.name
-    Process: %proc.name, User: %user.name
+    Kernel module load attempt proc=%proc.name
+    container=%container.name user=%user.name
   priority: CRITICAL
-  tags: [botnet, malware, network_security]
-
-- rule: Ransomware Activity
-  desc: Detect potential ransomware behavior patterns
-  condition: >
-    open_write and 
-    container and 
-    (fd.name endswith ".encrypted" or
-     fd.name endswith ".crypto" or
-     fd.name endswith ".locked" or
-     fd.name contains "README.") and
-    proc.name not in (tar, gzip, zip, rsync, backup)
-  output: >
-    RANSOMWARE ACTIVITY DETECTED: Suspicious file encryption pattern
-    File: %fd.name, Process: %proc.name in container %container.name
-  priority: CRITICAL
-  tags: [ransomware, data_protection, file_integrity]
-
-- rule: Unauthorized Kernel Module Loading
-  desc: Detect attempts to load kernel modules
-  condition: >
-    syscall.name in (init_module, finit_module) and 
-    container and
-    user.uid > 0
-  output: >
-    Unauthorized kernel module loading attempt: Process %proc.name in container %container.name
-    User: %user.name, Syscall: %syscall.name
-  priority: CRITICAL
-  tags: [kernel_exploitation, privilege_escalation, rootkit]
-
-- rule: Excessive Failed Login Attempts
-  desc: Detect brute force login attempts
-  condition: >
-    spawned_process and 
-    proc.name = sshd and
-    evt.type = failed_login_attempt
-  output: >
-    Excessive failed login attempts on %fd.name
-    Source: %fd.snet, User: %user.name, Container: %container.name
-  priority: WARNING
-  tags: [authentication, brute_force]
-
-- rule: Policy Violation Detection
-  desc: Detect policy enforcement failures
-  condition: >
-    syscall.name not in (allowed_syscalls) and 
-    container and
-    policy.enforce = true
-  output: >
-    POLICY VIOLATION: Syscall %syscall.name blocked for process %proc.name
-    Container: %container.name, User: %user.name
-  priority: NOTICE
-  tags: [policy_enforcement, compliance]
-
-# SLO targets: Detection latency < 100ms p99, false positive rate < 5%
+  tags: [kernel_exploitation, rootkit]

@@ -118,6 +118,10 @@ services:
     environment:
       OLLAMA_HOST:             0.0.0.0:11434
       CUDA_VISIBLE_DEVICES:    "1"          # T1000 8GB only
+      NVIDIA_VISIBLE_DEVICES:  "1"          # Required for container toolkit
+      NVIDIA_DRIVER_CAPABILITIES: all        # Full CUDA stack
+      # snap Docker injects NVIDIA libs via hostfs — must add to LD path
+      LD_LIBRARY_PATH:         /var/lib/snapd/hostfs/usr/lib/x86_64-linux-gnu
       OLLAMA_NUM_GPU:          "1"
       OLLAMA_GPU_LAYERS:       "99"         # full GPU offload
       OLLAMA_KEEP_ALIVE:       "24h"

@@ -48,6 +48,8 @@ services:
     container_name: redis
     restart: always
     networks: [enterprise]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     command: >
       redis-server
       --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
@@ -58,7 +60,7 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep -q PONG"]
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -124,7 +126,7 @@ services:
     volumes:
       - nas-ollama:/root/.ollama:rw  # models on NAS (large files)
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:11434/api/tags"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -340,11 +342,7 @@ services:
       COLLECTOR_OTLP_ENABLED:    "true"
       METRICS_STORAGE_TYPE:      prometheus
       SPAN_STORAGE_TYPE:         badger
-      BADGER_EPHEMERAL:          "false"
-      BADGER_DIRECTORY_VALUE:    /badger/data
-      BADGER_DIRECTORY_KEY:      /badger/key
-    volumes:
-      - jaeger-data:/badger
+      BADGER_EPHEMERAL:          "true"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:16686/"]
       interval: 30s

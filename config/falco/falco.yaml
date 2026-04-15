@@ -1,0 +1,100 @@
+---
+# Falco Configuration — Production
+# Optimized for eBPF syscall monitoring
+
+# ─────────────────────────────────────────────────────────────
+# Outputs & Alerting
+# ─────────────────────────────────────────────────────────────
+
+json_output: true
+json_include_output_property: true
+
+# HTTP output for falcosidekick integration
+http_output:
+  enabled: true
+  url: "http://falcosidekick:2801/"
+  user_agent: "falcosecurity/falco"
+
+# ─────────────────────────────────────────────────────────────
+# Logging
+# ─────────────────────────────────────────────────────────────
+
+log_level: warning
+log_stderr: true
+
+# ─────────────────────────────────────────────────────────────
+# eBPF Driver Configuration
+# ─────────────────────────────────────────────────────────────
+
+# Using modern eBPF (--modern-bpf flag in container command)
+# No kernel module required, works in most container environments
+
+# ─────────────────────────────────────────────────────────────
+# gRPC Server (for falcosidekick)
+# ─────────────────────────────────────────────────────────────
+
+grpc:
+  enabled: true
+  bind_address: "0.0.0.0:5060"
+  threadiness: 0
+
+grpcOutput:
+  enabled: false  # Not used in this config
+
+# ─────────────────────────────────────────────────────────────
+# Rules Loading
+# ─────────────────────────────────────────────────────────────
+
+rules_file:
+  - /etc/falco/k8s_audit_rules.yaml
+  - /etc/falco/rules.yaml
+  - /etc/falco/rules.local.yaml
+
+# ─────────────────────────────────────────────────────────────
+# Performance Tuning
+# ─────────────────────────────────────────────────────────────
+
+syscall_event_drops:
+  threshold: 0.1  # Alert if >10% syscall events dropped
+  actions:
+    - log
+    - alert
+
+base_syscalls:
+  custom_set: []
+
+# ─────────────────────────────────────────────────────────────
+# Container Runtime Detection
+# ─────────────────────────────────────────────────────────────
+
+container_engines:
+  docker:
+    enabled: true
+    socket_file: /var/run/docker.sock
+  crio:
+    enabled: false
+  containerd:
+    enabled: false
+
+# ─────────────────────────────────────────────────────────────
+# Buffering & Ring Buffer
+# ─────────────────────────────────────────────────────────────
+
+# Use default ring buffer size (256MB)
+# For production with eBPF, 256MB is sufficient for normal operations
+
+# ─────────────────────────────────────────────────────────────
+# Output Field Customization
+# ─────────────────────────────────────────────────────────────
+
+output_format: |
+  time=%evt.time
+  evttype=%evt.type
+  severity=%evt.severity
+  priority=%evt.priority
+  rule=%rule.name
+  container=%container.name
+  user=%user.name
+  process=%proc.name
+  cwd=%proc.cwd
+  action=%evt.args

@@ -47,7 +47,7 @@
   output: >
     PRIVILEGE ESCALATION: Process %proc.name attempted to change capability/UID in container %container.name
     Syscall: %syscall.name, User: %user.name -> UID: %proc.uid
-  priority: HIGH
+  priority: WARNING
   tags: [privilege_escalation, security]
 
 - rule: Shell Execution in Container
@@ -61,7 +61,7 @@
   output: >
     Unexpected shell execution: %proc.name in container %container.name
     Parent: %proc.pname, User: %user.name
-  priority: MEDIUM
+  priority: NOTICE
   tags: [container_escape, interactive_shell]
 
 - rule: File Modification in Sensitive Paths
@@ -77,7 +77,7 @@
   output: >
     Sensitive file modification: %fd.name modified by %user.name in container %container.name
     Process: %proc.name, Parent: %proc.pname
-  priority: HIGH
+  priority: WARNING
   tags: [file_integrity, configuration]
 
 - rule: Suspicious Network Activity
@@ -91,7 +91,7 @@
   output: >
     Suspicious outbound connection: %fd.name from container %container.name
     Process: %proc.name, User: %user.name
-  priority: MEDIUM
+  priority: NOTICE
   tags: [network_security, data_exfiltration]
 
 - rule: Unauthorized File Access
@@ -108,7 +108,7 @@
   output: >
     Sensitive file access: %fd.name accessed by %user.name in container %container.name
     Process: %proc.name
-  priority: HIGH
+  priority: WARNING
   tags: [secrets_management, compliance]
 
 - rule: Malware Signatures
@@ -191,7 +191,7 @@
   output: >
     Excessive failed login attempts on %fd.name
     Source: %fd.snet, User: %user.name, Container: %container.name
-  priority: HIGH
+  priority: WARNING
   tags: [authentication, brute_force]
 
 - rule: Policy Violation Detection
@@ -203,7 +203,7 @@
   output: >
     POLICY VIOLATION: Syscall %syscall.name blocked for process %proc.name
     Container: %container.name, User: %user.name
-  priority: MEDIUM
+  priority: NOTICE
   tags: [policy_enforcement, compliance]
 
 # SLO targets: Detection latency < 100ms p99, false positive rate < 5%

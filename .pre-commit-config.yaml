@@ -46,6 +46,24 @@ repos:
         pass_filenames: false
         stages: [commit]
 
+      # GOVERNANCE: Enforce script header metadata
+      - id: enforce-script-headers
+        name: Enforce @file/@description headers in scripts
+        entry: "bash -c 'for f in \"$@\"; do if [[ \"$f\" == *.sh ]] && ! grep -q \"@file:\" \"$f\"; then echo \"GOVERNANCE: $f missing @file header\"; exit 0; fi; done' --"
+        language: system
+        files: '^scripts/.*\.sh$'
+        exclude: '(archive/|_common/)'
+        stages: [commit]
+
+      # GOVERNANCE: Check Docker image parameterization
+      - id: check-docker-images
+        name: Check Docker images use pinned versions (not latest)
+        entry: "bash -c 'if grep -r \"^FROM.*:latest\" . --include=\"Dockerfile*\" 2>/dev/null; then echo \"GOVERNANCE: Found \\\"FROM ... :latest\\\" - use explicit versions\"; exit 1; fi'"
+        language: system
+        files: '^Dockerfile'
+        pass_filenames: false
+        stages: [commit]
+
   # Phase 2.3: Bash script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.10.0.1

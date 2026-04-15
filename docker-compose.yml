@@ -391,6 +391,102 @@ services:
         reservations: { memory: 128m }
     logging: *logging
 
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # PHASE 6 ENHANCEMENTS
+  # ═══════════════════════════════════════════════════════════════════════════════
+
+  # ─── Phase 6a: PgBouncer (Connection Pooling) ────────────────────────────────
+  pgbouncer:
+    image: edoburu/pgbouncer:1.18-latest
+    container_name: pgbouncer
+    restart: always
+    networks: [enterprise]
+    ports:
+      - "0.0.0.0:6432:6432"
+    environment:
+      DATABASES_HOST: postgres
+      DATABASES_PORT: 5432
+      DATABASES_USER:             ${POSTGRES_USER:-postgres}
+      DATABASES_PASSWORD:         ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      PGBOUNCER_POOL_MODE:        transaction
+      PGBOUNCER_MAX_CLIENT_CONN:  1000
+      PGBOUNCER_DEFAULT_POOL_SIZE: 100
+      PGBOUNCER_MIN_POOL_SIZE:    25
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "psql -h localhost -U ${POSTGRES_USER:-postgres} -c 'SELECT 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:   { memory: 512m, cpus: '0.25' }
+        reservations: { memory: 64m }
+    logging: *logging
+
+  # ─── Phase 6b: HashiCorp Vault (Secret Management) ─────────────────────────
+  vault:
+    image: vault:1.15.0
+    container_name: vault
+    restart: always
+    networks: [enterprise]
+    ports:
+      - "0.0.0.0:8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID:    ${VAULT_ROOT_TOKEN:?Set VAULT_ROOT_TOKEN in .env}
+      VAULT_DEV_LISTEN_ADDRESS:   0.0.0.0:8200
+      VAULT_ADDR:                 http://localhost:8200
+      VAULT_UI:                   "true"
+    volumes:
+      - vault-data:/vault/data
+    cap_add:
+      - IPC_LOCK
+    command: server -dev -dev-root-token-id=$${VAULT_DEV_ROOT_TOKEN_ID}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8200/v1/sys/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:   { memory: 1g,    cpus: '0.5' }
+        reservations: { memory: 128m }
+    logging: *logging
+
+  # ─── Phase 6c: Locust (Load Testing) ────────────────────────────────────────
+  locust:
+    image: locustio/locust:latest
+    container_name: locust
+    restart: "no"
+    networks: [enterprise]
+    ports:
+      - "0.0.0.0:8089:8089"
+    environment:
+      TARGET_HOST:     http://caddy:80
+      LOCUST_USERS:    ${LOCUST_USERS:-100}
+      LOCUST_SPAWN_RATE: ${LOCUST_SPAWN_RATE:-10}
+      LOCUST_RUN_TIME: ${LOCUST_RUN_TIME:-5m}
+    volumes:
+      - ./locustfile.py:/locustfile.py:ro
+    command: -f /locustfile.py --web -u $${LOCUST_USERS} -r $${LOCUST_SPAWN_RATE}
+    depends_on:
+      caddy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8089/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:   { memory: 2g,    cpus: '1.0' }
+        reservations: { memory: 512m }
+    logging: *logging
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks
 # ─────────────────────────────────────────────────────────────────────────────
@@ -414,6 +510,8 @@ volumes:
   alertmanager-data:
     driver: local
   jaeger-data:
+    driver: local
+  vault-data:
     driver: local
 
   # ── NAS-backed volumes (192.168.168.56:/export) ───────────────────────────

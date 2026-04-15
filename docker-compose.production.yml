@@ -89,7 +89,7 @@ services:
       TLS_MIN_VERSION: "1.3"
       ENFORCED_HOST: "ide.kushnir.cloud"
     volumes:
-      - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:

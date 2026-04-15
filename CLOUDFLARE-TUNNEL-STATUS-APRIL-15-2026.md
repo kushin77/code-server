@@ -85,7 +85,7 @@ ssh -L 8080:192.168.168.31:80 akushnir@192.168.168.31
 
 ### Option 3: DNS CNAME + Direct Access
 ```
-ide.kushnir.cloud CNAME → 192.168.168.31
+ide.kushnir.cloud CNAME → home-dev.cfargotunnel.com (Cloudflare Tunnel)
 Access: http://ide.kushnir.cloud:80 (on same LAN)
 ```
 

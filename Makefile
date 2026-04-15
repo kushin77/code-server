@@ -18,7 +18,8 @@ SHELL := /bin/bash
         latency-optimizer-install latency-monitor-install latency-services-start latency-services-stop latency-dashboard latency-report latency-test \
 		wireguard-install wireguard-status wireguard-genkeys nas-mount nas-mount-status vpn-enterprise-scan \
         pre-commit ci-validate cd-deploy d p s l v \
-        render-caddy-prod render-caddy-onprem render-caddy-simple render-caddy-all caddy-validate
+        render-caddy-prod render-caddy-onprem render-caddy-simple render-caddy-all caddy-validate \
+        inventory-validate generate-tfvars deploy-keepalived
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PRIMARY TARGETS (use these)
@@ -1200,3 +1201,38 @@ nas-mount:
 nas-mount-status:
 	@mountpoint -q /mnt/nas-56 && echo "✅ /mnt/nas-56 is mounted" || echo "❌ /mnt/nas-56 is NOT mounted"
 	@grep '192.168.168.56:/export' /etc/fstab && echo "✅ fstab entry exists" || echo "❌ fstab entry missing"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CANONICAL INVENTORY & TOPOLOGY (#364)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ✅ Validate topology inventory (environments/production/hosts.yml)
+inventory-validate:
+	@echo "🔍 Validating canonical inventory (environments/production/hosts.yml)..."
+	@test -f environments/production/hosts.yml || { echo "❌ environments/production/hosts.yml not found"; exit 1; }
+	@echo "  ✓ hosts.yml exists"
+	@command -v yq >/dev/null 2>&1 || { echo "⚠️  yq not found — installing check skipped; install via: snap install yq"; exit 0; }
+	@yq '.topology | keys | .[]' environments/production/hosts.yml 2>/dev/null | grep -q primary && echo "  ✓ topology.primary defined" || { echo "❌ topology.primary missing"; exit 1; }
+	@yq '.topology | keys | .[]' environments/production/hosts.yml 2>/dev/null | grep -q replica && echo "  ✓ topology.replica defined" || { echo "❌ topology.replica missing"; exit 1; }
+	@yq '.topology | keys | .[]' environments/production/hosts.yml 2>/dev/null | grep -q vip && echo "  ✓ topology.vip defined" || { echo "❌ topology.vip missing"; exit 1; }
+	@echo "  ✓ env.sh sources topology:"
+	@bash -c 'source scripts/lib/env.sh 2>/dev/null && echo "    PRIMARY_HOST=$$PRIMARY_HOST REPLICA_HOST=$$REPLICA_HOST VIP=$$VIP"' || echo "    (yq required)"
+	@echo "✅ Inventory validation passed"
+
+# ✅ Generate terraform.tfvars from canonical inventory
+generate-tfvars:
+	@echo "⚙️  Generating terraform.tfvars from environments/production/hosts.yml..."
+	@test -f environments/production/hosts.yml || { echo "❌ hosts.yml not found"; exit 1; }
+	@command -v yq >/dev/null 2>&1 || { echo "❌ yq is required: snap install yq"; exit 1; }
+	@PRIMARY=$$(yq '.topology.primary.ip' environments/production/hosts.yml); \
+	 REPLICA=$$(yq '.topology.replica.ip' environments/production/hosts.yml); \
+	 VIP=$$(yq '.topology.vip.ip' environments/production/hosts.yml); \
+	 printf 'primary_host = "%s"\nreplica_host = "%s"\nvip_host     = "%s"\n' "$$PRIMARY" "$$REPLICA" "$$VIP" > terraform.tfvars.generated
+	@echo "✅ Generated terraform.tfvars.generated:"
+	@cat terraform.tfvars.generated
+	@echo "   Copy to terraform.tfvars and add remaining secrets before running terraform"
+
+# ✅ Deploy Keepalived VRRP to primary + replica (requires SSH key access & VRRP_AUTH_PASS)
+deploy-keepalived:
+	@test -n "$$VRRP_AUTH_PASS" || { echo "❌ Set VRRP_AUTH_PASS: export VRRP_AUTH_PASS=<secret>"; exit 1; }
+	@bash scripts/deploy-keepalived.sh

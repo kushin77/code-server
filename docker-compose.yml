@@ -647,7 +647,7 @@ services:
     logging: *logging
 
   kong-migration:
-    image: kong:${KONG_VERSION:-3.4.1-alpine}
+    image: kong:${KONG_VERSION:-3.4.0}
     container_name: kong-migration
     restart: "no"
     networks: [enterprise]
@@ -669,7 +669,7 @@ services:
     logging: *logging
 
   kong:
-    image: kong:${KONG_VERSION:-3.4.1-alpine}
+    image: kong:${KONG_VERSION:-3.4.0}
     container_name: kong
     restart: unless-stopped
     networks: [enterprise]

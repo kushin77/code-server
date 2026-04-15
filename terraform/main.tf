@@ -359,7 +359,7 @@ echo "✅ TLS: Let's Encrypt (auto-renewed)"
 echo "════════════════════════════════════════════════════════════════════════════"
 EOT
 
-  depends_on = [local_file.docker_compose_yml]
+  depends_on = [local_file.docker_compose_reference]
 }
 
 # Make deploy script executable

@@ -51,7 +51,6 @@ services:
     container_name: postgres
     restart: always
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
     environment:
       POSTGRES_DB:       ${POSTGRES_DB}
       POSTGRES_USER:     ${POSTGRES_USER}
@@ -61,12 +60,6 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ${NAS_PRIMARY_MOUNT}/postgres-backups:/backups:rw
       - ./db/migrations:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: ${POSTGRES_HEALTHCHECK_INTERVAL}
-      timeout: ${POSTGRES_HEALTHCHECK_TIMEOUT}
-      retries: ${POSTGRES_HEALTHCHECK_RETRIES}
-      start_period: ${POSTGRES_HEALTHCHECK_START_PERIOD}
     deploy:
       resources:
         limits:
@@ -83,7 +76,6 @@ services:
     container_name: redis
     restart: always
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     command: >
@@ -95,12 +87,6 @@ services:
       --appendonly no
     volumes:
       - redis-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
-      interval: ${REDIS_HEALTHCHECK_INTERVAL}
-      timeout: ${REDIS_HEALTHCHECK_TIMEOUT}
-      retries: ${REDIS_HEALTHCHECK_RETRIES}
-      start_period: ${REDIS_HEALTHCHECK_START_PERIOD}
     deploy:
       resources:
         limits:

@@ -563,6 +563,37 @@ services:
         reservations: { memory: 32m }
     logging: *logging
 
+  # ─── Cloudflare Tunnel (Edge Security) ───────────────────────────────────────
+  # Replaces direct NAT/firewall hole-punch with Cloudflare edge ingress
+  # • Tunnel: secure encrypted connection from Cloudflare → 192.168.168.31:8080
+  # • WAF: blocks SQL injection, path traversal, scanners at edge
+  # • DNS: CNAME ide.kushnir.cloud → tunnel.cfargotunnel.com
+  # • Health: Cloudflare monitors tunnel availability + reachability
+  cloudflared:
+    image: cloudflare/cloudflared:${CLOUDFLARE_TUNNEL_VERSION:-2024.1.5}
+    container_name: cloudflared
+    restart: unless-stopped
+    networks: [enterprise]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in .env}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    expose:
+      - "7878"   # Prometheus metrics for tunnel status
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:   { memory: 256m,  cpus: '0.25' }
+        reservations: { memory: 128m }
+    labels:
+      service: "cloudflared"
+      tier: "edge"
+      com.example.description: "Cloudflare Tunnel for edge security + WAF"
+    logging: *logging
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks
 # ─────────────────────────────────────────────────────────────────────────────

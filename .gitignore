@@ -76,5 +76,11 @@ archived/*.deb
 archived/*.rpm
 archived/*.tar.gz
 
+# Archived phase scripts (historical reference, not active IaC)
+archived/scripts/
+
 # Environment-specific configs generated at deploy time
 config/environment/
+
+# Old deployment status docs (phase-specific, historical only)
+docs/archived/

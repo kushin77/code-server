@@ -117,14 +117,19 @@ dig +dnssec kushnir.cloud SOA
 
 ## Detailed Explanation
 
-### 1. A Records
+### 1. CNAME Records (Cloudflare Tunnel)
 
 ```
-ide.kushnir.cloud  → 192.168.168.31
-kushnir.cloud      → 192.168.168.31
+ide.kushnir.cloud      → home-dev.cfargotunnel.com
+kushnir.cloud          → home-dev.cfargotunnel.com
 ```
 
-These point your domain to your IDE server. Standard DNS entry.
+These point your domains to your Cloudflare Tunnel endpoint (IP-agnostic routing). The tunnel agent on 192.168.168.31 maintains an outbound connection to Cloudflare; traffic returns via that tunnel regardless of your server's IP.
+
+**Why CNAME instead of A record**: 
+- Server IP can change (failover, migration) without updating DNS
+- Cloudflare provides DDoS protection + WAF at edge
+- Tunnel auto-reconnects on IP change (no downtime)
 
 ---
 
@@ -503,9 +508,9 @@ If `.github/workflows/dns-monitor.yml` fires a P0 alert:
 
 3. **Revoke all GoDaddy API keys** and generate new ones
 
-4. **Roll back A records** to 192.168.168.31:
+4. **Roll back CNAME records** to Cloudflare Tunnel:
    ```bash
-   terraform apply -auto-approve -target='godaddy_domain_record.ide_a_record' -target='godaddy_domain_record.root_a_record'
+   terraform apply -auto-approve -target='godaddy_domain_record.ide_cname_cloudflare' -target='godaddy_domain_record.root_cname_cloudflare'
    ```
 
 5. **Alert security team** and enable 2FA on GoDaddy account

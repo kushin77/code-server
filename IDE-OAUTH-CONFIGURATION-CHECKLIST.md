@@ -15,7 +15,7 @@
 - [x] docker-compose service health checks configured
 - [ ] **Google OAuth2 credentials obtained** ← **BLOCKING**
 - [ ] .env file created with credentials
-- [ ] DNS record configured: ide.kushnir.cloud → 192.168.168.31
+- [ ] DNS record configured: ide.kushnir.cloud → CNAME → home-dev.cfargotunnel.com (Cloudflare Tunnel)
 
 ---
 
@@ -80,7 +80,7 @@
   - [ ] Name: ide
   - [ ] IPv4: 192.168.168.31
   - [ ] Save
-- [ ] Verify: `nslookup ide.kushnir.cloud` → 192.168.168.31
+- [ ] Verify: `dig ide.kushnir.cloud` → Returns CNAME to cfargotunnel.com (Cloudflare Tunnel)
 - [ ] Wait for DNS propagation (up to 5 minutes)
 
 ### Alternative: Terraform
@@ -199,7 +199,7 @@ docker-compose logs code-server | tail -20
 **Symptom:** Browser can't reach ide.kushnir.cloud
 
 **Checklist:**
-- [ ] Cloudflare DNS record created (A record ide → 192.168.168.31)
+- [ ] Cloudflare DNS record created (CNAME ide.kushnir.cloud → home-dev.cfargotunnel.com)
 - [ ] Wait for propagation (5-10 minutes)
 - [ ] Flush DNS cache: `ipconfig /flushdns` (Windows) or `sudo dscacheutil -flushcache` (Mac)
 - [ ] Test: `nslookup ide.kushnir.cloud 8.8.8.8`
@@ -259,7 +259,7 @@ docker-compose logs code-server | tail -20
    - Test service communication
 
 4. **Phase 4: DNS Configuration** (Ready to Execute)
-   - Configure Cloudflare DNS (ide.kushnir.cloud → 192.168.168.31)
+   - Configure Cloudflare DNS (CNAME: ide.kushnir.cloud → home-dev.cfargotunnel.com)
    - Wait for propagation
 
 5. **Phase 5: End-to-End Testing** (Ready to Execute)

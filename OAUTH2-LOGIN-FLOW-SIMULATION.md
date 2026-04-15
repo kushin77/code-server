@@ -272,7 +272,7 @@ All infrastructure components verified:
 - ✅ code-server running with --auth=none (no duplicate auth)
 - ✅ Repository operations verified functional
 
-**Next Action:** Configure DNS A-record `ide.kushnir.cloud A 192.168.168.31` to enable production OAuth login testing.
+**Next Action:** Configure DNS CNAME `ide.kushnir.cloud CNAME home-dev.cfargotunnel.com` (via Cloudflare Tunnel) to enable production OAuth login testing.
 
 ---
 

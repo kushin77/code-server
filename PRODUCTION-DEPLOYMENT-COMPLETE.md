@@ -107,7 +107,7 @@ Caddy (2.9.1)
 To enable end-to-end OAuth login testing, add DNS A-record:
 
 ```dns
-ide.kushnir.cloud  A  192.168.168.31
+ide.kushnir.cloud  CNAME  home-dev.cfargotunnel.com (Cloudflare Tunnel)
 ```
 
 Once DNS is configured:
@@ -172,7 +172,7 @@ docker-compose logs oauth2-proxy --follow
 
 ## Next Steps
 
-1. **Configure DNS**: Add A-record `ide.kushnir.cloud A 192.168.168.31`
+1. **Configure DNS**: Add CNAME record `ide.kushnir.cloud CNAME home-dev.cfargotunnel.com` (Cloudflare Tunnel - IP agnostic)
 2. **Test OAuth Login**: Access https://ide.kushnir.cloud, log in with Google
 3. **Verify Development**: Clone repo, make changes, verify git workflow
 4. **Set Production Monitoring**: Configure alerting thresholds in Prometheus/Grafana

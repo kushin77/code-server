@@ -41,7 +41,7 @@
 | 9 | **jaeger** | jaegertracing/all-in-one | 1.55 | 🟢 healthy | 16686 → 0.0.0.0:16686 | HTTP / | Distributed tracing |
 
 **Public endpoints** (accessible via proxy):
-- Code-Server: http://192.168.168.31:8080 or https://ide.kushnir.cloud (via Caddy)
+- Code-Server: https://ide.kushnir.cloud (via Cloudflare Tunnel CNAME)
 - Grafana: http://192.168.168.31:3000 or https://grafana.ide.kushnir.cloud (via Caddy)
 - Jaeger UI: http://192.168.168.31:16686 or https://jaeger.ide.kushnir.cloud (via Caddy)
 - Prometheus: http://192.168.168.31:9090 or https://prometheus.ide.kushnir.cloud (via Caddy)

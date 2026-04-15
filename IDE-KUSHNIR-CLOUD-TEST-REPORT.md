@@ -155,7 +155,7 @@ Code-server (--auth=none, no duplicate auth)
 ### Blocking Item (DNS Required)
 To complete full OAuth login testing, configure DNS A-record:
 ```
-ide.kushnir.cloud  A  192.168.168.31
+ide.kushnir.cloud  CNAME  home-dev.cfargotunnel.com (Cloudflare Tunnel)
 ```
 
 This is required for:

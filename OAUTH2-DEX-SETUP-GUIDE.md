@@ -24,7 +24,7 @@ You have existing oauth2-proxy v7.5.1 infrastructure that manages authentication
 1. Create/obtain Google OAuth2 credentials
 2. Populate `.env` file with credentials
 3. Restart containers with OAuth enabled
-4. Configure DNS (ide.kushnir.cloud → 192.168.168.31)
+4. Configure DNS (CNAME: ide.kushnir.cloud → home-dev.cfargotunnel.com via Cloudflare Tunnel)
 5. Test OAuth flow
 
 ---

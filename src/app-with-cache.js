@@ -9,6 +9,7 @@
 const express = require('express');
 const compression = require('compression');
 const CacheBootstrap = require('./cache-bootstrap');
+const { createDeduplicationMiddleware } = require('../services/request-deduplication-layer');
 
 /**
  * Create Express app with caching enabled
@@ -18,6 +19,12 @@ function createApp() {
 
   // Initialize caching infrastructure (singleton)
   const cacheBootstrap = CacheBootstrap.getInstance();
+  
+  // Initialize request deduplication (prevents concurrent duplicate requests)
+  const deduplicationMiddleware = createDeduplicationMiddleware({
+    windowMs: parseInt(process.env.DEDUP_WINDOW_MS || '500'),
+    maxCacheSize: parseInt(process.env.DEDUP_MAX_SIZE || '10000'),
+  });
 
   // ─────────────────────────────────────────────────────────────────────
   // Middleware Order (CRITICAL):
@@ -50,6 +57,13 @@ function createApp() {
     
     next();
   });
+
+  // ╔═══════════════════════════════════════════════════════════════╗
+  // ║  REQUEST DEDUPLICATION - MUST BE FIRST                        ║
+  // ║  Prevents duplicate concurrent requests to backend            ║
+  // ║  Returns cached response within dedup window (500ms default)  ║
+  // ╚═══════════════════════════════════════════════════════════════╝
+  app.use(deduplicationMiddleware);
 
   // ╔═══════════════════════════════════════════════════════════════╗
   // ║  CACHING MIDDLEWARE - MUST BE BEFORE ROUTES                  ║

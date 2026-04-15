@@ -69,6 +69,7 @@ resource "null_resource" "workspace_setup" {
 resource "local_file" "docker_compose_reference" {
   # Reference only - actual docker-compose.yml committed to repo
   filename = "${path.module}/../docker-compose.yml"
+  content  = file("${path.module}/../docker-compose.yml")
 
   # Ensure workspace exists first
   depends_on = [null_resource.workspace_setup]
@@ -87,8 +88,8 @@ resource "local_file" "caddyfile" {
 
   content = templatefile("${path.module}/../Caddyfile.tpl", {
     code_server_host  = "localhost"
-    code_server_port  = local.network.code_server_port
-    oauth2_proxy_port = local.network.oauth2_proxy_port
+    code_server_port  = local.code_server_port
+    oauth2_proxy_port = local.oauth2_port
   })
 
   depends_on = [null_resource.workspace_setup]

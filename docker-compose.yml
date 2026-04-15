@@ -501,47 +501,6 @@ services:
         reservations: { memory: 512m }
     logging: *logging
 
-  # ─── Phase 22d: Ollama AI Models ─────────────────────────────────────────────
-  # Profile: ai - Enable with: docker-compose --profile ai up -d
-  ollama:
-    image: ollama/ollama:${OLLAMA_VERSION}
-    container_name: ollama
-    restart: always
-    networks: [enterprise]
-    profiles: ["ai"]
-    ports:
-      - "0.0.0.0:${OLLAMA_PORT}:11434"
-    environment:
-      OLLAMA_HOST:                ${OLLAMA_HOST_ADDR}
-      OLLAMA_NUM_GPU:             ${OLLAMA_NUM_GPU:-1}
-      OLLAMA_GPU_LAYERS:          ${OLLAMA_GPU_LAYERS:-20}
-      OLLAMA_NUM_THREAD:          ${OLLAMA_NUM_THREAD:-8}
-      OLLAMA_NUM_PARALLEL:        ${OLLAMA_NUM_PARALLEL:-4}
-      OLLAMA_KEEP_ALIVE:          ${OLLAMA_KEEP_ALIVE:-5m}
-      OLLAMA_MAX_LOADED_MODELS:   ${OLLAMA_MAX_LOADED_MODELS:-3}
-      OLLAMA_MAX_VRAM:            ${OLLAMA_MAX_VRAM:-8gb}
-      CUDA_VISIBLE_DEVICES:       ${OLLAMA_CUDA_VISIBLE_DEVICES:-1}
-      NVIDIA_VISIBLE_DEVICES:     ${OLLAMA_NVIDIA_VISIBLE_DEVICES:-1}
-      FLASH_ATTENTION:            ${OLLAMA_FLASH_ATTENTION:-true}
-    volumes:
-      - nas-ollama:/root/.ollama
-    devices:
-      - ${OLLAMA_DEVICE_NVIDIA1}:/dev/nvidia1
-      - ${OLLAMA_DEVICE_NVIDIACTL}:/dev/nvidiactl
-      - ${OLLAMA_DEVICE_UVM}:/dev/uvm
-      - ${OLLAMA_DEVICE_UVM_TOOLS}:/dev/uvm_tools
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    deploy:
-      resources:
-        limits:   { memory: '${OLLAMA_MEMORY_LIMIT}', cpus: '2.0' }
-        reservations: { memory: 2g }
-    logging: *logging
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks
 # ─────────────────────────────────────────────────────────────────────────────

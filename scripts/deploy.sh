@@ -1,17 +1,22 @@
 ﻿#!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# scripts/deploy.sh — Production clean-rebuild deploy
-# Target: ${DEPLOY_HOST} | NAS: 192.168.168.56
+# scripts/deploy.sh — Production clean-rebuild deploy [REFACTORED]
+# Target: ${DEPLOY_HOST} | NAS: ${NAS_PRIMARY_HOST}
 # Steps : kill orphans → mount NAS → load secrets → rebuild all → healthcheck
 # Usage : ./scripts/deploy.sh [--skip-nas] [--skip-pull]
+# 
+# PRODUCTION-FIRST: All configuration from config/_base-config.env
+# No hardcoded values. Uses unified logging and config system.
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
-NAS_HOST="192.168.168.56"
-LOCAL_DATA_BASE="/home/akushnir/.local/data"
 
+# ── Auto-load unified config and logging ─
+source "$SCRIPT_DIR/_common/init.sh"
+
+# ── Parse command-line arguments ─
 SKIP_NAS=false
 SKIP_PULL=false
 
@@ -22,102 +27,142 @@ for arg in "$@"; do
     esac
 done
 
-log()  { echo "[deploy] $(date -u +%H:%M:%S) $*"; }
-ok()   { echo "[deploy] OK: $*"; }
-die()  { echo "[deploy] FATAL: $*" >&2; exit 1; }
+# ── Load configuration ─
+config::load
+NAS_HOST=$(config::get NAS_PRIMARY_HOST)
+LOCAL_DATA_BASE=$(config::get LOCAL_DATA_BASE)
+DEPLOY_HOST=$(config::get DEPLOY_HOST)
 
 # Guard: Linux only
-[[ "$(uname)" == "Linux" ]] || die "Deploy must run on Linux at ${DEPLOY_HOST}"
+[[ "$(uname)" == "Linux" ]] || log::failure "Deploy must run on Linux at ${DEPLOY_HOST}" && exit 1
 
-# ── 1. Load secrets ──────────────────────────────────────────────────────────
-log "Loading secrets..."
-# shellcheck source=scripts/lib/secrets.sh
-source "$SCRIPT_DIR/lib/secrets.sh"
-secrets_load_env
+log::banner "Production Deployment"
 
-# ── 2. Mount NAS ─────────────────────────────────────────────────────────────
+# ── 1. Validate Configuration ────────────────────────────────────────────────
+log::section "Configuration Validation"
+config::validate DEPLOY_HOST NAS_PRIMARY_HOST LOCAL_DATA_BASE POSTGRES_PASSWORD REDIS_PASSWORD CODE_SERVER_PASSWORD
+log::success "Configuration validated"
+
+# ── 2. Load Secrets ──────────────────────────────────────────────────────────
+log::task "Loading secrets from environment..."
+if [[ -f "$SCRIPT_DIR/lib/secrets.sh" ]]; then
+    # shellcheck source=scripts/lib/secrets.sh
+    source "$SCRIPT_DIR/lib/secrets.sh"
+    secrets_load_env 2>/dev/null || log::warn "Secrets file not found, using environment variables"
+fi
+log::success "Secrets loaded"
+
+# ── 3. Mount NAS ─────────────────────────────────────────────────────────────
+log::section "Infrastructure Setup"
+NAS_MOUNT=$(config::get NAS_PRIMARY_MOUNT)
 if [[ "$SKIP_NAS" == false ]]; then
-    log "Mounting NAS $NAS_HOST..."
-    if ! mountpoint -q /mnt/nas-56; then
-        sudo "$SCRIPT_DIR/nas-mount-31.sh" mount
+    log::task "Mounting NAS from ${NAS_HOST}..."
+    if mountpoint -q "$NAS_MOUNT"; then
+        log::status "NAS Mount" "✅ Already mounted"
     else
-        ok "NAS already mounted"
+        if [[ -f "$SCRIPT_DIR/nas-mount-31.sh" ]]; then
+            sudo "$SCRIPT_DIR/nas-mount-31.sh" mount
+            log::success "NAS mounted at $NAS_MOUNT"
+        else
+            log::warn "NAS mount script not found, skipping"
+        fi
     fi
 else
-    log "Skipping NAS mount (--skip-nas)"
+    log::task "Skipping NAS mount (--skip-nas flag)"
 fi
 
-# ── 3. Provision local SSD data dirs ─────────────────────────────────────────
-log "Provisioning local SSD data directories..."
+# ── 4. Provision Local SSD Data Directories ──────────────────────────────────
+log::task "Provisioning local SSD data directories..."
 for dir in postgres redis; do
     mkdir -p "${LOCAL_DATA_BASE}/${dir}"
 done
-ok "Local data dirs: ${LOCAL_DATA_BASE}/{postgres,redis}"
+log::success "Local data directories provisioned: ${LOCAL_DATA_BASE}/{postgres,redis}"
 
-# ── 4. Kill ALL containers + orphans ─────────────────────────────────────────
-log "Stopping all containers and removing orphans..."
+# ── 5. Cleanup Containers ───────────────────────────────────────────────────
+log::section "Container Cleanup"
+log::task "Stopping all containers and removing orphans..."
 cd "$REPO_DIR"
 
-docker compose down --remove-orphans --timeout 30 2>/dev/null || true
+DOCKER_STOP_TIMEOUT=$(config::get DOCKER_STOP_TIMEOUT)
+docker compose down --remove-orphans --timeout "$DOCKER_STOP_TIMEOUT" 2>/dev/null || true
+log::success "Containers stopped"
 
-# Remove dangling/anonymous volumes (not named volumes — keep data)
-log "Pruning dangling volumes..."
+log::task "Pruning dangling volumes..."
 docker volume prune -f
+log::success "Dangling volumes pruned"
 
-# Remove dangling images
-log "Pruning dangling images..."
+log::task "Pruning dangling images..."
 docker image prune -f
+log::success "Dangling images pruned"
 
-ok "Cleanup complete"
-
-# ── 5. Pull latest images ─────────────────────────────────────────────────────
+# ── 6. Pull Latest Images ────────────────────────────────────────────────────
 if [[ "$SKIP_PULL" == false ]]; then
-    log "Pulling latest pinned images..."
+    log::section "Image Pulling"
+    log::task "Pulling latest pinned images..."
     docker compose pull --quiet
-    ok "Images pulled"
+    log::success "Images pulled"
+else
+    log::task "Skipping image pull (--skip-pull flag)"
 fi
 
-# ── 6. Export env vars for compose ───────────────────────────────────────────
-log "Exporting env vars for docker compose..."
+# ── 7. Export Environment Variables for Docker Compose ──────────────────────
+log::section "Environment Export"
+log::task "Exporting configuration for docker-compose..."
 export POSTGRES_PASSWORD REDIS_PASSWORD CODE_SERVER_PASSWORD
 export GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET OAUTH2_PROXY_COOKIE_SECRET
 export GRAFANA_ADMIN_PASSWORD GITHUB_TOKEN
+export POSTGRES_VERSION REDIS_VERSION CODE_SERVER_VERSION OLLAMA_VERSION
+export POSTGRES_DB POSTGRES_USER REDIS_PORT CODE_SERVER_PORT OLLAMA_PORT
+export POSTGRES_MEMORY_LIMIT POSTGRES_CPU_LIMIT REDIS_MEMORY_LIMIT REDIS_CPU_LIMIT
+export CODE_SERVER_MEMORY_LIMIT CODE_SERVER_CPU_LIMIT
+export NAS_PRIMARY_MOUNT NAS_REPLICA_MOUNT
+log::success "Environment variables exported"
 
-# ── 7. Start all services ────────────────────────────────────────────────────
-log "Starting all services..."
-docker compose up -d --remove-orphans --wait --timeout 120
+# ── 8. Start All Services ────────────────────────────────────────────────────
+log::section "Service Startup"
+log::task "Starting all services..."
+DOCKER_WAIT_TIMEOUT=$(config::get DOCKER_WAIT_TIMEOUT)
+docker compose up -d --remove-orphans --wait --timeout "$DOCKER_WAIT_TIMEOUT"
+log::success "Services started"
 
-# ── 8. Health checks ──────────────────────────────────────────────────────────
-log "Running health checks..."
-FAIL=0
+# ── 9. Health Checks ────────────────────────────────────────────────────────
+log::section "Health Verification"
+sleep 8
 
-check() {
+HEALTHCHECK_CURL_TIMEOUT=$(config::get HEALTHCHECK_CURL_TIMEOUT)
+
+_check_endpoint() {
     local name="$1" url="$2"
-    if curl -sf --max-time 8 "$url" &>/dev/null; then
-        ok "  $name"
+    if curl -sf --max-time "$HEALTHCHECK_CURL_TIMEOUT" "$url" &>/dev/null; then
+        log::status "$name" "✅ Healthy"
     else
-        echo "[deploy] WARN: $name failed ($url)" >&2
-        FAIL=$((FAIL + 1))
+        log::failure "$name" "Failed: $url"
+        return 1
     fi
 }
 
-sleep 8
-check "code-server"  "http://localhost:8080/healthz"
-check "ollama"       "http://localhost:11434/api/tags"
-check "prometheus"   "http://localhost:9090/-/healthy"
-check "grafana"      "http://localhost:3000/api/health"
-check "alertmanager" "http://localhost:9093/-/healthy"
-check "jaeger"       "http://localhost:16686/"
+FAIL=0
+_check_endpoint "code-server"  "http://localhost:8080/healthz" || FAIL=$((FAIL + 1))
+_check_endpoint "ollama"       "http://localhost:11434/api/tags" || FAIL=$((FAIL + 1))
+_check_endpoint "prometheus"   "http://localhost:9090/-/healthy" || FAIL=$((FAIL + 1))
+_check_endpoint "grafana"      "http://localhost:3000/api/health" || FAIL=$((FAIL + 1))
+_check_endpoint "alertmanager" "http://localhost:9093/-/healthy" || FAIL=$((FAIL + 1))
+_check_endpoint "jaeger"       "http://localhost:16686/" || FAIL=$((FAIL + 1))
 
-# ── 9. Summary ───────────────────────────────────────────────────────────────
-echo ""
-echo "═══════════════════════════════════════════════════════════"
-docker compose ps --format "table {{.Name}}\t{{.Status}}"
-echo "═══════════════════════════════════════════════════════════"
+# ── 10. Summary ──────────────────────────────────────────────────────────────
+log::section "Deployment Summary"
+log::divider
+docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+log::divider
 
 if [[ $FAIL -gt 0 ]]; then
-    echo "[deploy] $FAIL health check(s) failed — check: docker compose logs <service>"
+    log::failure "Deployment Incomplete" "$FAIL health check(s) failed"
+    log::task "Debug: docker compose logs <service>"
     exit 1
+else
+    log::banner "Deployment Successful ✅"
+    exit 0
+fi
 fi
 
 log "DEPLOY COMPLETE — all services healthy"

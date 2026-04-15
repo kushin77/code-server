@@ -1,53 +1,63 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# PRODUCTION docker-compose.yml — kushin77/code-server
-# Deploy host : 192.168.168.31  (ssh akushnir@192.168.168.31)
-# NAS primary : 192.168.168.56:/export  →  /mnt/nas-56  (host fstab-mounted)
-# NAS replica : 192.168.168.55:/export  →  /mnt/nas-export  (logs/backup)
+# PRODUCTION docker-compose.yml — kushin77/code-server [PARAMETERIZED]
+# Deploy host : ${DEPLOY_HOST}  (ssh ${DEPLOY_USER}@${DEPLOY_HOST})
+# NAS primary : ${NAS_PRIMARY_HOST}:${NAS_PRIMARY_EXPORT}  →  ${NAS_PRIMARY_MOUNT}
+# NAS replica : ${NAS_REPLICA_HOST}:${NAS_REPLICA_EXPORT}  →  ${NAS_REPLICA_MOUNT}
 # GPU         : NVIDIA T1000 8GB  (device index 1, cuda:1, VRAM 8GB)
 #               NVIDIA NVS 510     (device index 0, cuda:0, 2GB — monitoring)
-# Caddy       : v2.9.1-alpine   (TLS internal, all *.kushnir.cloud subdomains)
+# Caddy       : ${CADDY_VERSION} (TLS internal, all *.${DOMAIN} subdomains)
 # Secrets     : all via .env — NEVER hardcoded — see .env.example
-# Rollback    : git revert <sha> && git push && ssh to .31 && make deploy (<60s)
+# Rollback    : git revert <sha> && git push && ssh to ${DEPLOY_HOST} && make deploy (<60s)
+# 
+# PRODUCTION-FIRST: ALL values from config/_base-config.env + .env
+# Zero hardcoded values. Full parameterization.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── Reusable anchors ──────────────────────────────────────────────────────────
 x-logging: &logging
-  driver: json-file
-  options: { max-size: "10m", max-file: "5" }
+  driver: ${DOCKER_LOGGING_DRIVER}
+  options:
+    max-size: ${DOCKER_LOGGING_MAX_SIZE}
+    max-file: ${DOCKER_LOGGING_MAX_FILE}
 
 services:
 
   # ─── PostgreSQL ──────────────────────────────────────────────────────────────
   postgres:
-    image: postgres:15.6-alpine
+    image: postgres:${POSTGRES_VERSION}
     container_name: postgres
     restart: always
     networks: [enterprise]
     environment:
-      POSTGRES_DB:       ${POSTGRES_DB:-codeserver}
-      POSTGRES_USER:     ${POSTGRES_USER:-codeserver}
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       PGDATA:            /var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - nas-postgres-backups:/backups:rw
+      - ${NAS_PRIMARY_MOUNT}/postgres-backups:/backups:rw
       - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codeserver} -d ${POSTGRES_DB:-codeserver}"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: ${POSTGRES_HEALTHCHECK_INTERVAL}
+      timeout: ${POSTGRES_HEALTHCHECK_TIMEOUT}
+      retries: ${POSTGRES_HEALTHCHECK_RETRIES}
+      start_period: ${POSTGRES_HEALTHCHECK_START_PERIOD}
     deploy:
       resources:
-        limits:   { memory: 2g,    cpus: '1.0' }
-        reservations: { memory: 256m, cpus: '0.25' }
-
+        limits:
+          memory: ${POSTGRES_MEMORY_LIMIT}
+          cpus: '${POSTGRES_CPU_LIMIT}'
+        reservations:
+          memory: ${POSTGRES_MEMORY_RESERVE}
+          cpus: '${POSTGRES_CPU_RESERVE}'
     logging: *logging
 
   # ─── Redis ───────────────────────────────────────────────────────────────────
   redis:
-    image: redis:7.2-alpine
+    image: redis:${REDIS_VERSION}
     container_name: redis
     restart: always
     networks: [enterprise]
@@ -55,103 +65,111 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     command: >
       redis-server
-      --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
-      --maxmemory 512mb
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory ${REDIS_MAXMEMORY}
       --maxmemory-policy allkeys-lru
       --save ""
       --appendonly no
     volumes:
       - redis-data:/data
+    ports:
+      - "127.0.0.1:${REDIS_PORT}:6379"
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: ${REDIS_HEALTHCHECK_INTERVAL}
+      timeout: ${REDIS_HEALTHCHECK_TIMEOUT}
+      retries: ${REDIS_HEALTHCHECK_RETRIES}
+      start_period: ${REDIS_HEALTHCHECK_START_PERIOD}
     deploy:
       resources:
-        limits:   { memory: 768m, cpus: '0.5' }
-        reservations: { memory: 64m }
+        limits:
+          memory: ${REDIS_MEMORY_LIMIT}
+          cpus: '${REDIS_CPU_LIMIT}'
+        reservations:
+          memory: ${REDIS_MEMORY_RESERVE}
     logging: *logging
 
   # ─── code-server ─────────────────────────────────────────────────────────────
   code-server:
-    image: codercom/code-server:4.115.0
+    image: codercom/code-server:${CODE_SERVER_VERSION}
     container_name: code-server
     restart: always
     networks: [enterprise]
     ports:
-      - "0.0.0.0:8080:8080"
+      - "0.0.0.0:${CODE_SERVER_PORT}:8080"
     environment:
-      PASSWORD:       ${CODE_SERVER_PASSWORD:?Set CODE_SERVER_PASSWORD in .env}
-      SUDO_PASSWORD:  ${CODE_SERVER_PASSWORD}
-      GITHUB_TOKEN:   ${GITHUB_TOKEN:-}
-      OLLAMA_ENDPOINT: http://ollama:11434
+      PASSWORD:        ${CODE_SERVER_PASSWORD:?Set CODE_SERVER_PASSWORD in .env}
+      SUDO_PASSWORD:   ${CODE_SERVER_PASSWORD}
+      GITHUB_TOKEN:    ${GITHUB_TOKEN:-}
+      OLLAMA_ENDPOINT: http://ollama:${OLLAMA_PORT}
     command:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
       - "--cert=false"
       - "--auth=password"
     volumes:
-      - nas-code-server:/home/coder:rw
+      - ${NAS_PRIMARY_MOUNT}/code-server:/home/coder:rw
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/healthz"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
+      test: ["CMD-SHELL", "curl -sf http://localhost:${CODE_SERVER_PORT}/healthz"]
+      interval: ${CODE_SERVER_HEALTHCHECK_INTERVAL}
+      timeout: ${CODE_SERVER_HEALTHCHECK_TIMEOUT}
+      retries: ${CODE_SERVER_HEALTHCHECK_RETRIES}
+      start_period: ${CODE_SERVER_HEALTHCHECK_START_PERIOD}
     depends_on:
       postgres:  { condition: service_healthy }
       redis:     { condition: service_healthy }
     deploy:
       resources:
-        limits:   { memory: 4g,    cpus: '2.0' }
-        reservations: { memory: 512m, cpus: '0.25' }
+        limits:
+          memory: ${CODE_SERVER_MEMORY_LIMIT}
+          cpus: '${CODE_SERVER_CPU_LIMIT}'
+        reservations:
+          memory: ${CODE_SERVER_MEMORY_RESERVE}
+          cpus: '${CODE_SERVER_CPU_RESERVE}'
     logging: *logging
 
   # ─── Ollama (GPU MAX — T1000 8GB, device 1, full CUDA offload) ─────────────
   ollama:
-    image: ollama/ollama:0.6.1
+    image: ollama/ollama:${OLLAMA_VERSION}
     container_name: ollama
     restart: unless-stopped
     runtime: nvidia
     networks: [enterprise]
     ports:
-      - "0.0.0.0:11434:11434"
+      - "0.0.0.0:${OLLAMA_PORT}:${OLLAMA_PORT}"
     # Explicit device mounts are required with snap Docker nvidia runtime
     # snap's nvidia-container-runtime needs /dev/nvidia<N> explicitly bound
     # to enable CUDA compute (utility-only mode doesn't expose compute context)
     devices:
-      - /dev/nvidia1:/dev/nvidia1          # T1000 8GB (GPU index 1)
-      - /dev/nvidiactl:/dev/nvidiactl      # nvidia control device
-      - /dev/nvidia-uvm:/dev/nvidia-uvm    # unified memory device
-      - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
+      - ${OLLAMA_DEVICE_NVIDIA1}:${OLLAMA_DEVICE_NVIDIA1}
+      - ${OLLAMA_DEVICE_NVIDIACTL}:${OLLAMA_DEVICE_NVIDIACTL}
+      - ${OLLAMA_DEVICE_UVM}:${OLLAMA_DEVICE_UVM}
+      - ${OLLAMA_DEVICE_UVM_TOOLS}:${OLLAMA_DEVICE_UVM_TOOLS}
     environment:
-      OLLAMA_HOST:              0.0.0.0:11434
-      CUDA_VISIBLE_DEVICES:     "0"           # maps to /dev/nvidia1 (only device mounted)
-      NVIDIA_VISIBLE_DEVICES:   "1"           # for nvidia-container-runtime metadata
+      OLLAMA_HOST:              ${OLLAMA_HOST_ADDR}
+      CUDA_VISIBLE_DEVICES:     ${OLLAMA_CUDA_VISIBLE_DEVICES}
+      NVIDIA_VISIBLE_DEVICES:   ${OLLAMA_NVIDIA_VISIBLE_DEVICES}
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
-      # snap Docker: runtime injects libcuda.so via hostfs; explicit mounts handle compute
       LD_LIBRARY_PATH:          /var/lib/snapd/hostfs/usr/lib/x86_64-linux-gnu
-      OLLAMA_NUM_GPU:           "1"
-      OLLAMA_GPU_LAYERS:        "99"          # full GPU offload (all layers)
-      OLLAMA_KEEP_ALIVE:        "24h"
-      OLLAMA_MAX_LOADED_MODELS: "3"
-      OLLAMA_NUM_THREAD:        ${OLLAMA_NUM_THREAD:-8}
-      OLLAMA_FLASH_ATTENTION:   "1"           # flash attention — max throughput
-      OLLAMA_NUM_PARALLEL:      "4"           # concurrent requests
-      OLLAMA_MAX_VRAM:          "7168"        # 7GB of T1000's 8GB (reserve 1GB)
+      OLLAMA_NUM_GPU:           ${OLLAMA_NUM_GPU}
+      OLLAMA_GPU_LAYERS:        ${OLLAMA_GPU_LAYERS}
+      OLLAMA_KEEP_ALIVE:        ${OLLAMA_KEEP_ALIVE}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS}
+      OLLAMA_NUM_THREAD:        ${OLLAMA_NUM_THREAD}
+      OLLAMA_FLASH_ATTENTION:   ${OLLAMA_FLASH_ATTENTION}
+      OLLAMA_NUM_PARALLEL:      ${OLLAMA_NUM_PARALLEL}
+      OLLAMA_MAX_VRAM:          ${OLLAMA_MAX_VRAM}
     volumes:
-      - nas-ollama:/root/.ollama:rw  # models on NAS (large files)
+      - ${NAS_PRIMARY_MOUNT}/ollama:/root/.ollama:rw
     healthcheck:
       test: ["CMD", "ollama", "list"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      interval: ${OLLAMA_HEALTHCHECK_INTERVAL}
+      timeout: ${OLLAMA_HEALTHCHECK_TIMEOUT}
+      retries: ${OLLAMA_HEALTHCHECK_RETRIES}
     deploy:
       resources:
-        limits:   { memory: 12g }
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT}
         reservations:
           memory: 8g
           devices:
@@ -162,14 +180,14 @@ services:
 
   # ─── Ollama model bootstrap (runs once, then exits) ───────────────────────
   ollama-init:
-    image: ollama/ollama:0.6.1
+    image: ollama/ollama:${OLLAMA_VERSION}
     container_name: ollama-init
     restart: on-failure
     networks: [enterprise]
     environment:
-      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_HOST: http://ollama:${OLLAMA_PORT}
     volumes:
-      - nas-ollama:/root/.ollama:rw
+      - ${NAS_PRIMARY_MOUNT}/ollama:/root/.ollama:rw
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |

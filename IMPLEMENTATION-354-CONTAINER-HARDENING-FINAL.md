@@ -2,7 +2,7 @@
 
 **Status**: ✅ COMPLETE AND DEPLOYED  
 **Date**: April 15, 2026  
-**Scope**: Production on-premises (192.168.168.31 + 192.168.168.30)
+**Scope**: Production on-premises (192.168.168.31 + 192.168.168.42)
 
 ---
 

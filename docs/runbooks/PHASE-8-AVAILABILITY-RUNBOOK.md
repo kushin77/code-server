@@ -185,7 +185,7 @@ sudo ufw allow 6379  # Redis
 
 ```bash
 # 1. Verify replica is healthy
-ssh akushnir@192.168.168.30
+ssh akushnir@192.168.168.42
 docker-compose ps
 
 # 2. Promote replica to primary
@@ -196,7 +196,7 @@ EOF
 
 # 3. Update HAProxy to use replica as primary
 # Edit /etc/haproxy/haproxy.cfg on primary
-# Or update docker-compose.yml: POSTGRES_HOST=192.168.168.30
+# Or update docker-compose.yml: POSTGRES_HOST=192.168.168.42
 docker-compose restart haproxy
 
 # 4. Bring primary back (when recovered)

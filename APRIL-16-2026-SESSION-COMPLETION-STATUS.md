@@ -85,7 +85,7 @@ Successfully completed Phase 7 (Infrastructure Resilience) and Phase 8 (SLO Dash
 ✅ AlertManager v0.26.0 (alerts configured)
 ✅ Jaeger 1.50 (tracing ready)
 
-### Replica Host (192.168.168.30)
+### Replica Host (192.168.168.42)
 ✅ Synced with primary
 ✅ Ready for failover (tested <60s RTO)
 

@@ -132,9 +132,9 @@ docker-compose restart pgbouncer
 ### Emergency Failover
 ```bash
 # If primary completely down:
-ssh akushnir@192.168.168.30
+ssh akushnir@192.168.168.42
 
-# On replica (192.168.168.30):
+# On replica (192.168.168.42):
 docker-compose ps
 
 # Promote replica to primary
@@ -144,7 +144,7 @@ SELECT pg_promote();
 EOF
 
 # Update primary's docker-compose.yml to point to new primary
-# docker-compose.yml: POSTGRES_HOST=192.168.168.30
+# docker-compose.yml: POSTGRES_HOST=192.168.168.42
 docker-compose restart code-server
 ```
 

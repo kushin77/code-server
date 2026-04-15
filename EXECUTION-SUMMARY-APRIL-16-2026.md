@@ -39,7 +39,7 @@
 - ✅ Full monitoring stack (Prometheus, Grafana, Jaeger, AlertManager)
 - ✅ OAuth2 authentication (oauth2-proxy v7.5.1)
 
-**Replica Host** (192.168.168.30):
+**Replica Host** (192.168.168.42):
 - ✅ Synced and ready
 - ✅ Failover tested <60 seconds
 - ✅ Data consistency verified (zero loss)
@@ -244,7 +244,7 @@ docker-compose ps --format 'table {{.Service}}\t{{.Status}}'
 - All work on 192.168.168.0/24 private network
 - NAS backup integration (192.168.168.55)
 - Production host: 192.168.168.31
-- Replica host: 192.168.168.30
+- Replica host: 192.168.168.42
 - Zero external cloud dependencies
 
 ---

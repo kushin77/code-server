@@ -2,7 +2,7 @@
 
 **Status**: ✅ READY FOR DEPLOYMENT  
 **Date**: April 16, 2026  
-**Scope**: Production on-premises (192.168.168.31 + 192.168.168.30)  
+**Scope**: Production on-premises (192.168.168.31 + 192.168.168.42)  
 **Objective**: Real-time SLO tracking, alerting, and reporting
 
 ---

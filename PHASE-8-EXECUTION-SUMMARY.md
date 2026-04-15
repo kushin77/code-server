@@ -227,7 +227,7 @@ slo:burn_rate:daily              # Current daily burn rate
 - Runbooks linked, not duplicated
 
 ### ✅ On-Premises Ready
-- Services: 192.168.168.31 (primary) + 192.168.168.30 (replica)
+- Services: 192.168.168.31 (primary) + 192.168.168.42 (replica)
 - No external URLs (except Slack webhook)
 - Monitoring: Local Prometheus + Grafana
 - Reporting: Local scripts + email

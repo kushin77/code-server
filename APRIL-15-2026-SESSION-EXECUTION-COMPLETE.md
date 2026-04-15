@@ -94,7 +94,7 @@ Successfully executed Phase 8 SLO Dashboard deployment to production infrastruct
 ✅ **Environment**: .env configured with all credentials
 ✅ **Replication**: PostgreSQL replication healthy
 
-### Replica Host (192.168.168.30)
+### Replica Host (192.168.168.42)
 ✅ Synced with primary  
 ✅ Ready for failover (RTO <60s validated)
 
@@ -161,7 +161,7 @@ slo:burn_rate:daily         # Daily burn rate
 - No configuration overlap
 
 ### ✅ On-Premises Ready
-- Services: 192.168.168.31 (primary) + 192.168.168.30 (replica)
+- Services: 192.168.168.31 (primary) + 192.168.168.42 (replica)
 - Monitoring: Local Prometheus + Grafana
 - No external dependencies (except optional Slack webhook)
 - Full network isolation (4-zone architecture from Phase 7)

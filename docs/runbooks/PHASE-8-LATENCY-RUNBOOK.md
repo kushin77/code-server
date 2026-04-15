@@ -50,7 +50,7 @@ redis-cli --bigkeys
 ### 4. Check Network Latency
 ```bash
 # Ping replica
-ping 192.168.168.30
+ping 192.168.168.42
 
 # Check DNS resolution time
 time nslookup code-server
@@ -90,7 +90,7 @@ redis-cli INFO stats | grep hit
 iftop -n
 
 # Check packet loss
-mtr 192.168.168.30
+mtr 192.168.168.42
 
 # Monitor disk I/O
 iostat -x 1 5

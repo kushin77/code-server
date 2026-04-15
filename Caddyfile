@@ -15,9 +15,10 @@
 		level  WARN
 	}
 
-	# Let's Encrypt ACME configuration for production
+	# Let's Encrypt ACME production (real certificates)
+	# Uses HTTP-01 challenge via Cloudflare Tunnel (kusnir.cloud → on-prem via tunnel)
 	acme_ca https://acme-v02.api.letsencrypt.org/directory
-	email admin@kushnir.cloud
+	email ops@kushnir.cloud
 }
 
 # -- Shared security headers --------------------------------------------------

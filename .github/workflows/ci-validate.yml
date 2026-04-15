@@ -68,3 +68,49 @@ jobs:
             exit 1
           fi
           echo "✅ Zero governance violations"
+
+  user-lifecycle:
+    name: User lifecycle regression tests (QA-001)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bash + jq + docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bash jq
+          # Note: docker is pre-installed on ubuntu-latest
+
+      - name: Run manage-users.sh regression tests
+        run: |
+          bash tests/test-manage-users-lifecycle.sh
+        continue-on-error: false
+
+      - name: Dry-run manage-users.sh help
+        run: |
+          bash scripts/manage-users.sh help 2>&1 | head -30
+          echo "✅ Script loads successfully"
+
+      - name: Validate manage-users.sh for common errors
+        run: |
+          echo "Checking for filename typos (allowed-emails.tx)..."
+          if grep -n 'allowed-emails\.tx[^t]' scripts/manage-users.sh >/dev/null 2>&1; then
+            echo "::error::Found 'allowed-emails.tx' typo in manage-users.sh"
+            grep -n 'allowed-emails\.tx[^t]' scripts/manage-users.sh
+            exit 1
+          fi
+          echo "✅ No filename typos detected"
+          
+          echo "Checking for atomic_write usage..."
+          if grep -q 'atomic_write' scripts/manage-users.sh; then
+            echo "✅ atomic_write function in use"
+          else
+            echo "::warning::atomic_write function not found"
+          fi
+          
+          echo "Checking for audit logging..."
+          if grep -q 'audit/user-provisioning.log' scripts/manage-users.sh; then
+            echo "✅ Audit logging configured"
+          else
+            echo "::warning::Audit logging not found"
+          fi

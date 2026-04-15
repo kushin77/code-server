@@ -60,7 +60,7 @@ During the comprehensive elite 0.01% infrastructure audit, **42 critical ambigui
 **Dependencies**:
 - [ ] Team available Tue-Thu for code review
 - [ ] Production window confirmed (non-peak hours)
-- [ ] Standby host (192.168.168.30) ready for canary
+- [ ] Standby host (192.168.168.42) ready for canary
 
 **Stakeholders**: Engineering team, DevOps, QA
 **Status**: ✅ Ready to proceed
@@ -81,13 +81,13 @@ During the comprehensive elite 0.01% infrastructure audit, **42 critical ambigui
 - Deploy P4: Platform improvements (compatibility tested)
 - Deploy P5: Final integration
 
-**Phase 2: Standby Replica (192.168.168.30)**
+**Phase 2: Standby Replica (192.168.168.42)**
 - Mirror deployment to standby after primary validated
 - No disruption to primary traffic
 - Enable HA failover capability
 
 **Phase 3: HA Setup**
-- Configure DNS failover (192.168.168.31 → 192.168.168.30)
+- Configure DNS failover (192.168.168.31 → 192.168.168.42)
 - Enable automated canary rollout
 
 **Rationale**:
@@ -113,7 +113,7 @@ During the comprehensive elite 0.01% infrastructure audit, **42 critical ambigui
 - vault-sync.ps1 → Delete (use AWS Secrets Manager CLI)
 
 **Rationale**:
-- Production is Linux (192.168.168.31, 192.168.168.30)
+- Production is Linux (192.168.168.31, 192.168.168.42)
 - No developer machines running Windows
 - PowerShell is Windows-only, incompatible with production
 - Bash is universal (macOS, Linux, Windows WSL2)
@@ -142,7 +142,7 @@ During the comprehensive elite 0.01% infrastructure audit, **42 critical ambigui
 - `/var/lib/docker/volumes/ollama-models` = NAS (shared, persistent)
 - `/var/backups` = NAS (immutable, versioned)
 
-**On Standby (192.168.168.30)**:
+**On Standby (192.168.168.42)**:
 - Mirror of primary via NAS
 - Can failover in <60 seconds
 
@@ -411,7 +411,7 @@ git filter-branch --tree-filter 'rm -rf archived/' HEAD
 
 **Requirements**:
 - 192.168.168.31 (primary) = permanent production host
-- 192.168.168.30 (standby) = HA failover
+- 192.168.168.42 (standby) = HA failover
 - 192.168.168.56 (NAS) = persistent storage
 - No GCP compute (no cloud VMs)
 - GCP used only for: Secret Manager, Monitoring (Stackdriver)

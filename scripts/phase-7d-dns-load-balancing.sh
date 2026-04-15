@@ -9,7 +9,7 @@ set -e
 
 # Configuration
 PRIMARY_HOST="192.168.168.31"
-REPLICA_HOST="192.168.168.42"
+REPLICA_HOST="192.168.168.30"  # On-premises standby host
 PRIMARY_WEIGHT=70
 REPLICA_WEIGHT=30
 DNS_DOMAIN="ide.kushnir.cloud"
@@ -87,7 +87,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
   -d '{
     "type": "A",
     "name": "ide",
-    "content": "192.168.168.42",
+    "content": "192.168.168.30",
     "ttl": 60,
     "priority": 20,
     "tags": ["replica"]
@@ -175,31 +175,31 @@ backend code_server
     balance roundrobin
     option httpchk GET /healthz HTTP/1.1\r\nHost:\ localhost
     server primary 192.168.168.31:8080 check inter 5s fall 3 rise 2 weight 70
-    server replica 192.168.168.42:8080 check inter 5s fall 3 rise 2 weight 30
+    server replica 192.168.168.30:8080 check inter 5s fall 3 rise 2 weight 30
 
 backend grafana
     balance roundrobin
     option httpchk GET /api/health HTTP/1.1\r\nHost:\ localhost
     server primary 192.168.168.31:3000 check inter 5s fall 3 rise 2 weight 70
-    server replica 192.168.168.42:3000 check inter 5s fall 3 rise 2 weight 30
+    server replica 192.168.168.30:3000 check inter 5s fall 3 rise 2 weight 30
 
 backend prometheus
     balance roundrobin
     option httpchk GET /-/healthy HTTP/1.1\r\nHost:\ localhost
     server primary 192.168.168.31:9090 check inter 5s fall 3 rise 2 weight 70
-    server replica 192.168.168.42:9090 check inter 5s fall 3 rise 2 weight 30
+    server replica 192.168.168.30:9090 check inter 5s fall 3 rise 2 weight 30
 
 backend jaeger
     balance roundrobin
     option httpchk GET / HTTP/1.1\r\nHost:\ localhost
     server primary 192.168.168.31:16686 check inter 5s fall 3 rise 2 weight 70
-    server replica 192.168.168.42:16686 check inter 5s fall 3 rise 2 weight 30
+    server replica 192.168.168.30:16686 check inter 5s fall 3 rise 2 weight 30
 
 backend alertmanager
     balance roundrobin
     option httpchk GET /-/healthy HTTP/1.1\r\nHost:\ localhost
     server primary 192.168.168.31:9093 check inter 5s fall 3 rise 2 weight 70
-    server replica 192.168.168.42:9093 check inter 5s fall 3 rise 2 weight 30
+    server replica 192.168.168.30:9093 check inter 5s fall 3 rise 2 weight 30
 '
 
 log_info "Deploying HAProxy configuration to primary host..."
@@ -243,7 +243,7 @@ backend code_server_sticky
     cookie SERVERID insert indirect nocache
     option httpchk GET /healthz HTTP/1.1\r\nHost:\ localhost
     server primary 192.168.168.31:8080 check inter 5s fall 3 rise 2 weight 70 cookie primary
-    server replica 192.168.168.42:8080 check inter 5s fall 3 rise 2 weight 30 cookie replica
+    server replica 192.168.168.30:8080 check inter 5s fall 3 rise 2 weight 30 cookie replica
 
 # Alternative: Source IP-based (deterministic)
 backend code_server_srcip
@@ -251,7 +251,7 @@ backend code_server_srcip
     hash-type consistent
     option httpchk GET /healthz HTTP/1.1\r\nHost:\ localhost
     server primary 192.168.168.31:8080 check inter 5s fall 3 rise 2 weight 70
-    server replica 192.168.168.42:8080 check inter 5s fall 3 rise 2 weight 30
+    server replica 192.168.168.30:8080 check inter 5s fall 3 rise 2 weight 30
 '
 
 log_success "Session affinity configured (cookie-based + source IP hashing)"

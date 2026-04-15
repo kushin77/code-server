@@ -58,7 +58,7 @@ scenarios:
     actions:
       - name: "block_primary_standby"
         type: "iptables"
-        rule: "DROP from 192.168.168.31 to 192.168.168.30"
+        rule: "DROP from 192.168.168.31 to 192.168.168.42"
         duration: 45
       
       - name: "monitor_consistency"

@@ -115,7 +115,7 @@ cat > /tmp/synthetic-monitor.sh << 'SYNTHETIC'
 #!/bin/bash
 # Synthetic monitoring: Regular health checks from 3 regions
 
-REGIONS=("us-east-1:192.168.168.31" "us-west-1:192.168.168.30" "eu-west-1:proxy.eu.example.com")
+REGIONS=("us-east-1:192.168.168.31" "us-west-1:192.168.168.42" "eu-west-1:proxy.eu.example.com")
 INTERVAL=60  # Check every 60 seconds
 TIMEOUT=5
 

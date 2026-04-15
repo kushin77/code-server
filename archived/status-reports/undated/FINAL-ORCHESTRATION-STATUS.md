@@ -177,7 +177,7 @@ Apr 16-17 EOD ──→ **PROJECT COMPLETE** ✅
 
 ### Infrastructure ✅
 - [x] Production host operational (192.168.168.31)
-- [x] Standby host ready (192.168.168.30)
+- [x] Standby host ready (192.168.168.42)
 - [x] Network configured (phase13-net bridge)
 - [x] Storage provisioned (/var/lib/postgresql, /var/lib/vault, /var/lib/consul)
 - [x] Docker daemon healthy

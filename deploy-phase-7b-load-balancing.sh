@@ -9,7 +9,7 @@ set -e
 
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 PRIMARY_HOST="192.168.168.31"
-STANDBY_HOST="192.168.168.30"
+STANDBY_HOST="192.168.168.42"
 LOG_FILE="phase-7b-deployment-$(date +%Y%m%d-%H%M%S).log"
 
 echo "╔════════════════════════════════════════════════════════════════════╗" | tee -a $LOG_FILE
@@ -59,7 +59,7 @@ zones:
     us_west:
       pool_id: "pool_standby"
       region: "us-west-1"
-      endpoint: "192.168.168.30"
+      endpoint: "192.168.168.42"
       description: "Standby production region"
       weight: 20
       health_check:
@@ -136,7 +136,7 @@ backend backend_global
     server primary 192.168.168.31:8080 check weight 80 inter 5000 rise 2 fall 3
     
     # Standby datacenter (20% weight)
-    server standby 192.168.168.30:8080 check weight 20 inter 5000 rise 2 fall 3
+    server standby 192.168.168.42:8080 check weight 20 inter 5000 rise 2 fall 3
 
 # Frontend for HTTP
 frontend http_in
@@ -204,7 +204,7 @@ STANDBY_WEIGHT=20
 
 echo "Traffic Distribution:" | tee -a $LOG_FILE
 echo "  Primary (192.168.168.31): ${PRIMARY_WEIGHT}%" | tee -a $LOG_FILE
-echo "  Standby (192.168.168.30): ${STANDBY_WEIGHT}%" | tee -a $LOG_FILE
+echo "  Standby (192.168.168.42): ${STANDBY_WEIGHT}%" | tee -a $LOG_FILE
 
 # Validate HAProxy is routing correctly
 echo "Validating HAProxy stats..." | tee -a $LOG_FILE
@@ -287,7 +287,7 @@ else
 fi
 
 echo "Test 2: Standby connectivity..." | tee -a $LOG_FILE
-if ping -c 1 -W 2 192.168.168.30 >/dev/null 2>&1; then
+if ping -c 1 -W 2 192.168.168.42 >/dev/null 2>&1; then
     echo "✅ Standby reachable" | tee -a $LOG_FILE
 else
     echo "⚠️  Standby unreachable" | tee -a $LOG_FILE
@@ -319,7 +319,7 @@ echo "   TTL: 30 seconds (fast failover)" | tee -a $LOG_FILE
 echo "" | tee -a $LOG_FILE
 echo "⚖️ LOAD BALANCER (HAProxy)" | tee -a $LOG_FILE
 echo "   Primary: 80% traffic (192.168.168.31)" | tee -a $LOG_FILE
-echo "   Standby: 20% traffic (192.168.168.30)" | tee -a $LOG_FILE
+echo "   Standby: 20% traffic (192.168.168.42)" | tee -a $LOG_FILE
 echo "   Health checks: Active (60s interval)" | tee -a $LOG_FILE
 echo "" | tee -a $LOG_FILE
 echo "📊 TRAFFIC STEERING" | tee -a $LOG_FILE

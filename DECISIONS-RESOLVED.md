@@ -94,7 +94,7 @@ File: scripts/_common/config.sh
 DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 NAS_HOST="${NAS_HOST:-192.168.168.56}"
-STANDBY_HOST="${STANDBY_HOST:-192.168.168.30}"
+STANDBY_HOST="${STANDBY_HOST:-192.168.168.42}"
 ```
 
 **Rationale**:
@@ -218,7 +218,7 @@ Alerts: AlertManager routes to email/Slack
 ```
 Current (P0-P2): PostgreSQL 15 (single node, NAS backup)
 - Simple, battle-tested
-- Replication to standby (192.168.168.30) via WAL
+- Replication to standby (192.168.168.42) via WAL
 
 Future (P5): Evaluate CockroachDB
 - True distributed (no single leader)

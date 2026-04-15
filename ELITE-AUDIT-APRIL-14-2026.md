@@ -282,7 +282,7 @@ Ready to Review:
 2. **PR #2: P1 Performance** → Code review + load test (high-impact)
    - Request deduplication, N+1 fixes, caching, indexes
    - Performance-validated before merge
-   - Optional: Deploy to standby (192.168.168.30) first
+   - Optional: Deploy to standby (192.168.168.42) first
 
 3. **PR #3: P2 Consolidation** → Peer review (organizational)
    - File consolidation, cleanup, standardization
@@ -332,7 +332,7 @@ Ready to Review:
 ## DEPLOYMENT AUTHORITY
 
 **Primary Host**: 192.168.168.31 (akushnir@)  
-**Standby Host**: 192.168.168.30 (replica/failover)  
+**Standby Host**: 192.168.168.42 (replica/failover)  
 **NAS**: 192.168.168.56:/exports  
 **Deployment Method**: SSH + Remote Docker  
 **Rollback Time**: <60 seconds (git revert)  

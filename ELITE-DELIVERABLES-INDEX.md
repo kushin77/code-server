@@ -136,7 +136,7 @@ All Services:        10/10 HEALTHY (100%)
 
 ### Infrastructure Resources
 - **Primary Host**: 192.168.168.31 (akushnir SSH key-only access)
-- **Standby Host**: 192.168.168.30 (replica, ready)
+- **Standby Host**: 192.168.168.42 (replica, ready)
 - **NAS Storage**: 192.168.168.56 (NFSv4 soft-mounted, 12TB usable)
 - **GPU**: Framework ready (OLLAMA_NUM_GPU configurable, 0=CPU default)
 - **Database**: PostgreSQL 15 + pgBouncer (3x throughput ready)

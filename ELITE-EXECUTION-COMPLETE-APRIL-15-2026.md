@@ -27,7 +27,7 @@ All 15 elite requirements successfully delivered and operationally verified on 1
 | Jaeger | 1.50 | 16686 | Up 16h | ✅ Healthy |
 | Ollama (GPU) | Latest | 11434 | Up 16h | ✅ Healthy |
 
-### SECONDARY HOST: 192.168.168.30 (Standby/Replica)
+### SECONDARY HOST: 192.168.168.42 (Standby/Replica)
 **Status:** ✅ READY (synced with primary)
 
 ### STORAGE: 192.168.168.56 (NAS - NFSv4)

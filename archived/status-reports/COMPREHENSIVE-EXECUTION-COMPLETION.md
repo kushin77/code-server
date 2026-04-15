@@ -227,7 +227,7 @@ This session transformed Phase 14-16 from "execution-ready" templates to compreh
 
 **Network**
 - DNS Routing: 10% → 192.168.168.31 ✅
-- Failover: 192.168.168.30 ready (RTO <5 min) ✅
+- Failover: 192.168.168.42 ready (RTO <5 min) ✅
 - Monitoring: Prometheus + Grafana active ✅
 - SLO Checks: Every 5 minutes ✅
 
@@ -281,7 +281,7 @@ This session transformed Phase 14-16 from "execution-ready" templates to compreh
 # From ANY administrator, ANY time
 terraform apply -var=phase_14_enabled=false -auto-approve
 
-# Result: All traffic reverts to 192.168.168.30 within 5 minutes
+# Result: All traffic reverts to 192.168.168.42 within 5 minutes
 # Automatic Slack notification sent to #phase-14-war-room
 ```
 

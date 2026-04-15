@@ -40,7 +40,7 @@
 
 **Infrastructure**:
 - Primary (192.168.168.31): code-server, caddy, oauth2-proxy, redis, PostgreSQL (4/6 healthy)
-- Standby (192.168.168.30): Ready for <5 min RTO failover
+- Standby (192.168.168.42): Ready for <5 min RTO failover
 
 **Git**: Commits d97274e-02c49e3 | Issue #230 #229 #225 #235
 

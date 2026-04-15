@@ -119,7 +119,7 @@ terraform/
 - Automated monitoring & alerting
 - Failover scenarios tested
 - Data persistence via NAS (192.168.168.56)
-- Standby replica at 192.168.168.30
+- Standby replica at 192.168.168.42
 
 ### ✅ Immutability & Infrastructure as Code
 - Terraform: Single source of truth (root terraform/)

@@ -270,7 +270,6 @@ services:
     restart: unless-stopped
     networks: [enterprise]
     security_opt: ["no-new-privileges:true"]
-    cap_drop: [ALL]
     expose: ["4180"]
     environment:
       OAUTH2_PROXY_CLIENT_ID:                 ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env}
@@ -405,7 +404,6 @@ services:
     restart: always
     networks: [enterprise]
     security_opt: ["no-new-privileges:true"]
-    cap_drop: [ALL]
     expose: ["3000"]  # Internal network only (routed through oauth2-proxy)
     environment:
       GF_SECURITY_ADMIN_USER:     ${GRAFANA_ADMIN_USER:-admin}

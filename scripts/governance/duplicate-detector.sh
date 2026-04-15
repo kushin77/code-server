@@ -53,44 +53,59 @@ check_env_duplicates() {
   fi
   
   echo "Scanning: .env and config/_base-config.env"
+  echo "Rule: Both files CAN have overlapping vars - .env overrides config/_base-config.env"
   
-  declare -A env_vars
   local duplicate_found=0
+  declare -A env_vars
   
-  # Check .env
-  if [[ -f ".env" ]]; then
-    while IFS='=' read -r key value; do
-      [[ "$key" =~ ^#.*$ ]] && continue
-      [[ -z "$key" ]] && continue
-      key_name="${key%%=*}"
-      if [[ -n "${env_vars[$key_name]:-}" ]]; then
-        log_error "DUPLICATE ENV VAR: $key_name defined in both files"
-        duplicate_found=1
-        ((FOUND_DUPLICATES++))
-      else
-        env_vars[$key_name]=".env"
-      fi
-    done < .env
-  fi
-  
-  # Check config/_base-config.env
+  # Check config/_base-config.env first (base layer)
   if [[ -f "config/_base-config.env" ]]; then
     while IFS='=' read -r key value; do
-      [[ "$key" =~ ^#.*$ ]] && continue
-      [[ -z "$key" ]] && continue
+      [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
       key_name="${key%%=*}"
-      if [[ -n "${env_vars[$key_name]:-}" ]]; then
-        log_error "DUPLICATE ENV VAR: $key_name defined in ${env_vars[$key_name]} and config/_base-config.env"
-        duplicate_found=1
-        ((FOUND_DUPLICATES++))
-      else
-        env_vars[$key_name]="config/_base-config.env"
-      fi
+      [[ -z "$key_name" ]] && continue
+      env_vars["${key_name}"]="config/_base-config.env"
     done < config/_base-config.env
   fi
   
+  # Check .env second (override layer) - duplicates here are ALLOWED
+  if [[ -f ".env" ]]; then
+    local env_overrides=0
+    while IFS='=' read -r key value; do
+      [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+      key_name="${key%%=*}"
+      [[ -z "$key_name" ]] && continue
+      
+      if [[ -n "${env_vars["$key_name"]:-}" ]]; then
+        ((env_overrides++))
+      fi
+      env_vars["${key_name}"]="override"
+    done < .env
+    
+    log_success ".env overrides $env_overrides base config variables (allowed)"
+  fi
+  
+  # Check for INTERNAL duplicates within .env itself
+  local .env_internal_dupes=0
+  declare -A env_check
+  if [[ -f ".env" ]]; then
+    while IFS='=' read -r key value; do
+      [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+      key_name="${key%%=*}"
+      [[ -z "$key_name" ]] && continue
+      
+      if [[ -n "${env_check[$key_name]:-}" ]]; then
+        log_error "DUPLICATE within .env: $key_name defined multiple times"
+        duplicate_found=1
+        ((.env_internal_dupes++))
+        ((FOUND_DUPLICATES++))
+      fi
+      env_check["$key_name"]=1
+    done < .env
+  fi
+  
   if [[ $duplicate_found -eq 0 ]]; then
-    log_success "No duplicate environment variables"
+    log_success "No duplicate environment variables within single files"
   fi
   
   return $duplicate_found
@@ -100,7 +115,7 @@ check_env_duplicates() {
 # 2. DETECT DUPLICATE SERVICE DEFINITIONS
 # ─────────────────────────────────────────────────────────────────────────────
 check_service_duplicates() {
-  log_header "CHECK 2: Docker Compose Service Duplicates"
+  log_header "CHECK 2: Docker Compose Service Definitions"
   
   if [[ ! -f "docker-compose.yml" ]]; then
     log_warning "docker-compose.yml not found"
@@ -111,20 +126,35 @@ check_service_duplicates() {
   
   local duplicate_found=0
   declare -A services
+  local in_services=0
+  local indent_level=0
   
-  # Extract service names (lines starting with "servicename:")
+  # Extract only top-level service names (2-space indent under services:)
   while IFS= read -r line; do
-    if [[ $line =~ ^[[:space:]]*([a-z0-9_-]+):[[:space:]]*$ ]]; then
-      service_name="${BASH_REMATCH[1]}"
-      # Skip global keys
-      [[ "$service_name" =~ ^(version|services|networks|volumes)$ ]] && continue
-      
-      if [[ -n "${services[$service_name]:-}" ]]; then
-        log_error "DUPLICATE SERVICE: '$service_name' defined multiple times"
-        duplicate_found=1
-        ((FOUND_DUPLICATES++))
-      else
-        services[$service_name]="docker-compose.yml"
+    # Check if we're entering services section
+    if [[ $line =~ ^services:[[:space:]]*$ ]]; then
+      in_services=1
+      continue
+    fi
+    
+    # Check if we're leaving services section
+    if [[ $in_services -eq 1 ]] && [[ $line =~ ^[a-z] ]]; then
+      in_services=0
+    fi
+    
+    # Only process lines while in services section
+    if [[ $in_services -eq 1 ]]; then
+      # Match lines with exactly 2-space indent followed by service name
+      if [[ $line =~ ^[[:space:]]{2}([a-z0-9_-]+):[[:space:]]*$ ]]; then
+        service_name="${BASH_REMATCH[1]}"
+        
+        if [[ -n "${services[$service_name]:-}" ]]; then
+          log_error "DUPLICATE SERVICE: '$service_name' defined multiple times"
+          duplicate_found=1
+          ((FOUND_DUPLICATES++))
+        else
+          services[$service_name]="docker-compose.yml"
+        fi
       fi
     fi
   done < docker-compose.yml
@@ -150,31 +180,47 @@ check_terraform_duplicates() {
   echo "Scanning: terraform/*.tf files"
   
   local duplicate_found=0
-  declare -A resources
+  local temp_resources=$(mktemp)
   
   # Find all resource definitions: resource "type" "name"
-  for tf_file in terraform/*.tf terraform/modules/**/*.tf 2>/dev/null; do
+  find terraform -name "*.tf" -type f 2>/dev/null | while read tf_file; do
     [[ ! -f "$tf_file" ]] && continue
     
-    while IFS= read -r line; do
-      if [[ $line =~ ^resource[[:space:]]\"([^\"]+)\"[[:space:]]\"([^\"]+)\" ]]; then
+    grep -n '^resource[[:space:]]"[^"]*"[[:space:]]"[^"]*"' "$tf_file" >> "$temp_resources" || true
+  done
+  
+  # Check for duplicates
+  if [[ -f "$temp_resources" ]]; then
+    local resource_id=""
+    declare -A res_seen
+    
+    while IFS=: read -r tf_file line content; do
+      if [[ $content =~ ^resource[[:space:]]\"([^\"]+)\"[[:space:]]\"([^\"]+)\" ]]; then
         res_type="${BASH_REMATCH[1]}"
         res_name="${BASH_REMATCH[2]}"
         res_id="${res_type}.${res_name}"
         
-        if [[ -n "${resources[$res_id]:-}" ]]; then
-          log_error "DUPLICATE RESOURCE: resource \"$res_type\" \"$res_name\" in $tf_file and ${resources[$res_id]}"
-          duplicate_found=1
-          ((FOUND_DUPLICATES++))
-        else
-          resources[$res_id]="$tf_file"
-        fi
+        # Store in associative array - this will fail in subshell so just report from temp file
+        echo "$res_id:$tf_file" >> "$temp_resources.check"
       fi
-    done < "$tf_file"
-  done
+    done < "$temp_resources"
+    
+    # Check for duplicates in the check file
+    if [[ -f "$temp_resources.check" ]]; then
+      sort "$temp_resources.check" | uniq -d | while read dup_entry; do
+        res_id="${dup_entry%%:*}"
+        log_error "DUPLICATE TERRAFORM RESOURCE: $res_id"
+        grep "^$dup_entry" "$temp_resources.check" | sed 's/^/  /'
+        duplicate_found=1
+        ((FOUND_DUPLICATES++))
+      done
+    fi
+    
+    rm -f "$temp_resources" "$temp_resources.check"
+  fi
   
   if [[ $duplicate_found -eq 0 ]]; then
-    log_success "No duplicate terraform resources (${#resources[@]} resources found)"
+    log_success "No duplicate terraform resources detected"
   fi
   
   return $duplicate_found

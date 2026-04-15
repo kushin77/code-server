@@ -531,6 +531,10 @@ services:
     privileged: true
     security_opt:
       - apparmor=unconfined
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     networks: [enterprise]
     volumes:
       - /var/run/docker.sock:/host/var/run/docker.sock:ro

@@ -34,10 +34,13 @@ fi
 
 GITHUB_TOKEN="$1"
 MODE="${2:-full}"
-PRIMARY_HOST="192.168.168.31"
-REPLICA_HOST="192.168.168.42"
 SSH_USER="akushnir"
 GITHUB_REPO="kushin77/code-server"
+
+# Source canonical inventory (defines PRIMARY_HOST, REPLICA_HOST, VIP, FQDNs)
+# shellcheck source=scripts/lib/env.sh
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+source "${REPO_ROOT}/scripts/lib/env.sh"
 
 echo "════════════════════════════════════════════════════════════════════════════"
 echo "  Deploy GitHub Actions Runners to Production Hosts"

@@ -129,10 +129,16 @@ log_ok "Inventory: environments/${ENV_NAME}/hosts.yml"
 # Network reachability to primary
 INVENTORY_FILE="${REPO_ROOT}/environments/${ENV_NAME}/hosts.yml"
 PRIMARY_IP=""
-if command -v yq &>/dev/null; then
-    PRIMARY_IP="$(yq '.hosts[] | select(.roles[] == "primary") | .ip' "${INVENTORY_FILE}" 2>/dev/null | head -1 || true)"
+if command -v yq &>/dev/null && [[ -f "${INVENTORY_FILE}" ]]; then
+    # Use canonical inventory (env.sh) when available
+    # shellcheck source=scripts/lib/env.sh
+    source "${REPO_ROOT}/scripts/lib/env.sh" 2>/dev/null || true
+    PRIMARY_IP="${PRIMARY_HOST:-}"
 fi
-PRIMARY_IP="${PRIMARY_IP:-192.168.168.31}"
+if [[ -z "${PRIMARY_IP}" ]]; then
+    log_warn "yq or inventory not available — reading primary IP from inventory fallback"
+    PRIMARY_IP="$(grep -A2 'role: primary' "${INVENTORY_FILE}" 2>/dev/null | grep 'ip:' | awk '{print $2}' || echo "")"
+fi
 
 if ! ping -c 2 -W 3 "${PRIMARY_IP}" &>/dev/null 2>&1; then
     log_warn "Cannot ping primary (${PRIMARY_IP}) — continuing (may be bootstrapping primary itself)"

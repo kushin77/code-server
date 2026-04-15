@@ -574,14 +574,14 @@ groups:
     rules:
       # P1: VIP not reachable — indicates both nodes down or VRRP misconfigured
       - alert: VIPNotReachable
-        expr: probe_success{instance="192.168.168.30"} == 0
+        expr: probe_success{instance="prod.internal"} == 0
         for: 30s
         labels:
           severity: critical
           component: vrrp
           page: "true"
         annotations:
-          summary: "Production VIP 192.168.168.30 is not responding"
+          summary: "Production VIP (prod.internal) is not responding"
           description: "The VRRP virtual IP has been unreachable for >30s. Both hosts may be down or VRRP is misconfigured."
           runbook: "docs/runbooks/vrrp-failover.md"
 

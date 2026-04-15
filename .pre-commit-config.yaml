@@ -29,10 +29,11 @@ repos:
 
       # Phase 3: Block hardcoded IPs - use $DEPLOY_HOST from _common/config.sh
       - id: no-hardcoded-ips
-        name: No hardcoded IP addresses in scripts
-        entry: "bash -c 'files=$(grep -rl \"192\\.168\\.168\\.\\(31\\|30\\|42\\)\" scripts/ 2>/dev/null | grep -v \"_common/\" | grep -v \"config\\.sh\" | grep \"\\.sh$\"); if [[ -n \"$files\" ]]; then echo \"GOVERNANCE: Hardcoded IP found - use \\$DEPLOY_HOST:\"; echo \"$files\" | sed \"s/^/  /\"; exit 1; fi'"
+        name: No hardcoded IP addresses in scripts/configs
+        entry: bash scripts/lib/check-no-ips.sh
         language: system
-        files: '^scripts/.*\.sh$'
+        files: \.(sh|tf|yml|yaml)$
+        exclude: ^(environments/|config/coredns/|\.archived/|deprecated/)
         pass_filenames: false
         stages: [commit]
 

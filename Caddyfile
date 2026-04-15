@@ -23,13 +23,92 @@
 	}
 }
 
-# Production domain with HTTPS and OAuth2
+# Production domain with HTTPS and OAuth2 SSO
 ide.kushnir.cloud {
 	encode gzip
 	import security_headers
 
-	reverse_proxy oauth2-proxy:4180 {
-		header_up Host       {upstream_hostport}
-		header_up X-Real-IP  {remote_host}
+	# Health check endpoints (no auth required)
+	@health path /healthz /ping /health
+	handle @health {
+		respond "OK" 200
+	}
+
+	# OAuth2 callback endpoint (no auth required)
+	@oauth path /oauth2*
+	handle @oauth {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host       {upstream_hostport}
+			header_up X-Real-IP  {remote_host}
+		}
+	}
+
+	# All other routes: authenticate via oauth2-proxy, then forward
+	# Default route
+	handle / {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host       {upstream_hostport}
+			header_up X-Real-IP  {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+			header_up X-Original-URI  {uri}
+		}
+	}
+
+	# IDE (Code Server)
+	handle /console* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host       {upstream_hostport}
+			header_up X-Real-IP  {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+
+	# Grafana (Observability Dashboards)
+	handle /grafana* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host       {upstream_hostport}
+			header_up X-Real-IP  {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+
+	# Prometheus (Metrics)
+	handle /prometheus* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host       {upstream_hostport}
+			header_up X-Real-IP  {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+
+	# Jaeger (Distributed Tracing)
+	handle /jaeger* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host       {upstream_hostport}
+			header_up X-Real-IP  {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+
+	# AlertManager (Alert Management)
+	handle /alertmanager* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host       {upstream_hostport}
+			header_up X-Real-IP  {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+
+	# Logging
+	log {
+		output stdout
+		format json
+		level info
 	}
 }

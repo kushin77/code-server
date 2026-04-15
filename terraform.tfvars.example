@@ -6,6 +6,27 @@
 # ════════════════════════════════════════════════════════════════════════════
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Deployment Host Configuration (for scaling & migration)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# When you outgrow current host and need to expand:
+# 1. Update deployment_host to new server IP/FQDN
+# 2. Update deployment_user if SSH user differs
+# 3. Run: terraform plan -out=tfplan
+# 4. Review changes, then: terraform apply tfplan
+# 5. All container configs deploy to new host automatically
+# ─────────────────────────────────────────────────────────────────────────────
+
+deployment_host = "192.168.168.31"  # Current production host (change to scale)
+deployment_user = "akushnir"         # SSH user on deployment host
+deployment_port = 22                 # SSH port
+
+# Example scaling scenario:
+# deployment_host = "192.168.168.32"  # New host when expanding
+# deployment_user = "akushnir"         # Same user
+# deployment_port = 22
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Service Configuration (safe to commit to git)
 # ─────────────────────────────────────────────────────────────────────────────
 

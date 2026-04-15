@@ -5,6 +5,16 @@ locals {
   environment  = "production"
   network_name = "${local.service_name}-network"
 
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Deployment Host Configuration (parameterized for scaling/migration)
+  # When expanding: change var.deployment_host to new host IP/FQDN, re-run terraform
+  # ─────────────────────────────────────────────────────────────────────────────
+  deployment_host = var.deployment_host
+  deployment_user = var.deployment_user
+  deployment_port = var.deployment_port
+  deployment_ssh  = "${var.deployment_user}@${var.deployment_host}"
+  deployment_path = "/home/${var.deployment_user}/code-server-enterprise"
+
   # Container configuration
   code_server_port = 8080
   oauth2_port      = 4180

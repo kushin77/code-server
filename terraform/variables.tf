@@ -73,6 +73,42 @@ variable "github_token" {
 // Docker Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Deployment Host Configuration (for scaling & migration)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "deployment_host" {
+  description = "SSH host for production deployment (IP or FQDN). Change this to scale/migrate infrastructure."
+  type        = string
+  default     = "192.168.168.31"
+
+  validation {
+    condition     = length(var.deployment_host) > 0
+    error_message = "deployment_host must be specified (IP or hostname)."
+  }
+}
+
+variable "deployment_user" {
+  description = "SSH user for production deployment"
+  type        = string
+  default     = "akushnir"
+}
+
+variable "deployment_port" {
+  description = "SSH port for production deployment"
+  type        = number
+  default     = 22
+
+  validation {
+    condition     = var.deployment_port > 0 && var.deployment_port <= 65535
+    error_message = "deployment_port must be 1-65535."
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Docker Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
 variable "docker_host" {
   description = "Docker daemon socket URI (e.g., unix:///var/run/docker.sock or tcp://docker:2375)"
   type        = string

@@ -40,7 +40,10 @@ ide.kushnir.cloud {
         header_up X-Forwarded-Proto {scheme}
     }
 
-    log { output stdout; format json }
+    log {
+        output stdout
+        format json
+    }
 }
 
 # ── Grafana ──────────────────────────────────────────────────────────────────
@@ -49,7 +52,10 @@ grafana.kushnir.cloud {
     encode gzip
     import security_headers
     reverse_proxy grafana:3000
-    log { output stdout; format json }
+    log {
+        output stdout
+        format json
+    }
 }
 
 # ── Prometheus (internal only — no oauth, restrict to VPN) ──────────────────
@@ -66,7 +72,10 @@ prometheus.kushnir.cloud {
     handle {
         respond "Forbidden" 403
     }
-    log { output stdout; format json }
+    log {
+        output stdout
+        format json
+    }
 }
 
 # ── AlertManager ─────────────────────────────────────────────────────────────
@@ -82,7 +91,10 @@ alertmanager.kushnir.cloud {
     handle {
         respond "Forbidden" 403
     }
-    log { output stdout; format json }
+    log {
+        output stdout
+        format json
+    }
 }
 
 # ── Jaeger Tracing UI ────────────────────────────────────────────────────────
@@ -98,7 +110,10 @@ jaeger.kushnir.cloud {
     handle {
         respond "Forbidden" 403
     }
-    log { output stdout; format json }
+    log {
+        output stdout
+        format json
+    }
 }
 
 # ── Ollama API (internal only) ───────────────────────────────────────────────

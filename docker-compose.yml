@@ -544,8 +544,10 @@ services:
       - /usr/bin/falco
       - --modern-bpf
       - -pc
-      - -o json_output=true
-      - -o json_include_output_property=true
+      - -o
+      - json_output=true
+      - -o
+      - json_include_output_property=true
     expose:
       - "5060"
       - "8765"

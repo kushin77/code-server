@@ -17,7 +17,8 @@ SHELL := /bin/bash
         logs-code-server logs-oauth2 logs-caddy \
         latency-optimizer-install latency-monitor-install latency-services-start latency-services-stop latency-dashboard latency-report latency-test \
 		wireguard-install wireguard-status wireguard-genkeys nas-mount nas-mount-status vpn-enterprise-scan \
-        pre-commit ci-validate cd-deploy d p s l v
+        pre-commit ci-validate cd-deploy d p s l v \
+        render-caddy-prod render-caddy-onprem render-caddy-simple render-caddy-all caddy-validate
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PRIMARY TARGETS (use these)
@@ -993,6 +994,55 @@ ollama-pull:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CODE QUALITY & LIBRARY GOVERNANCE
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Caddyfile render targets (#373) ─────────────────────────────────────────
+# Render Caddyfile variants from the single template source (Caddyfile.tpl)
+
+.PHONY: render-caddy-prod render-caddy-onprem render-caddy-simple render-caddy-all caddy-validate
+
+render-caddy-prod:
+	@echo "Rendering Caddyfile (production) from Caddyfile.tpl..."
+	@set -a && . ./.env 2>/dev/null || true && set +a && \
+	  CADDY_DOMAIN=$${CADDY_DOMAIN:-ide.kushnir.cloud} \
+	  CADDY_TLS_BLOCK=$${CADDY_TLS_BLOCK:-tls internal} \
+	  CADDY_LOG_LEVEL=$${CADDY_LOG_LEVEL:-info} \
+	  CODE_SERVER_UPSTREAM=$${CODE_SERVER_UPSTREAM:-oauth2-proxy:4180} \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT' \
+	  < Caddyfile.tpl > Caddyfile
+	@echo "✅ Caddyfile rendered (production)"
+
+render-caddy-onprem:
+	@echo "Rendering Caddyfile.onprem from Caddyfile.tpl..."
+	@CADDY_DOMAIN=":80" \
+	  CADDY_TLS_BLOCK="" \
+	  CADDY_LOG_LEVEL=info \
+	  CODE_SERVER_UPSTREAM=oauth2-proxy:4180 \
+	  GRAFANA_PORT=3001 PROMETHEUS_PORT=9090 ALERTMANAGER_PORT=9093 JAEGER_PORT=16686 \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT' \
+	  < Caddyfile.tpl > Caddyfile.onprem
+	@echo "✅ Caddyfile.onprem rendered (on-premises HTTP)"
+
+render-caddy-simple:
+	@echo "Rendering Caddyfile.simple from Caddyfile.tpl..."
+	@CADDY_DOMAIN=":80" \
+	  CADDY_TLS_BLOCK="" \
+	  CADDY_LOG_LEVEL=debug \
+	  CODE_SERVER_UPSTREAM=code-server:8080 \
+	  GRAFANA_PORT=3001 PROMETHEUS_PORT=9090 ALERTMANAGER_PORT=9093 JAEGER_PORT=16686 \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT' \
+	  < Caddyfile.tpl > Caddyfile.simple
+	@echo "✅ Caddyfile.simple rendered (simple dev mode)"
+
+render-caddy-all: render-caddy-prod render-caddy-onprem render-caddy-simple
+	@echo "✅ All Caddyfile variants rendered from template"
+
+caddy-validate:
+	@echo "Validating rendered Caddyfile syntax..."
+	@docker run --rm -v "$$(pwd)/Caddyfile:/etc/caddy/Caddyfile:ro" \
+	  caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile && \
+	  echo "✅ Caddyfile is valid" || echo "❌ Caddyfile has syntax errors"
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Verify all active scripts source _common/init.sh (not inline log_info definitions)

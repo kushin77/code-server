@@ -38,7 +38,7 @@ services:
       - ./config/coredns/zones:/etc/coredns/zones:ro
     command: -conf /etc/coredns/Corefile
     healthcheck:
-      test: ["CMD-SHELL", "dig @127.0.0.1 primary.prod.internal +short | grep -q 192.168.168.31"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

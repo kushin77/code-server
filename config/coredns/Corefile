@@ -2,6 +2,11 @@
 # =================================
 # Internal DNS resolver for *.prod.internal service discovery
 
+# Health check endpoint (for Docker healthcheck)
+.:8080 {
+    health
+}
+
 # Forward zone: prod.internal
 prod.internal {
     file /etc/coredns/zones/prod.internal.zone

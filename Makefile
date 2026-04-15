@@ -1098,6 +1098,8 @@ governance:
 # WIREGUARD VPN (run as root: sudo make wireguard-install)
 # ─────────────────────────────────────────────────────────────────────────────
 wireguard-install:
+	@echo "==> Fixing interrupted dpkg state..."
+	dpkg --configure -a 2>/dev/null || true
 	@echo "==> Installing WireGuard..."
 	apt-get update -qq && apt-get install -y wireguard wireguard-tools
 	@echo "==> Enabling ip forwarding..."

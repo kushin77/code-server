@@ -55,9 +55,7 @@ backup_postgresql() {
     
     local backup_file="${POSTGRES_BACKUP_DIR}/backup-$(date +%Y%m%d-%H%M%S).sql.gz"
     
-    ssh akushnir@${PRIMARY_HOST} \
-        "docker exec postgres pg_dump -U codeserver -d codeserver | gzip" \
-        > "${backup_file}" 2>>"${LOG_FILE}"
+    docker exec postgres pg_dump -U codeserver -d codeserver | gzip > "${backup_file}" 2>>"${LOG_FILE}"
     
     if [ $? -eq 0 ]; then
         local size=$(du -h "${backup_file}" | awk '{print $1}')
@@ -74,14 +72,12 @@ backup_redis() {
     
     local backup_file="${REDIS_BACKUP_DIR}/redis-dump-$(date +%Y%m%d-%H%M%S).rdb"
     
-    # SSH to primary and bgsave, then copy dump.rdb
-    ssh akushnir@${PRIMARY_HOST} \
-        "docker exec redis redis-cli -a redis-secure-default BGSAVE && sleep 2" 2>>"${LOG_FILE}"
+    # Trigger BGSAVE on local redis
+    docker exec redis redis-cli -a redis-secure-default BGSAVE 2>>"${LOG_FILE}"
+    sleep 2
     
-    # Copy redis dump.rdb from primary
-    ssh akushnir@${PRIMARY_HOST} \
-        "docker exec redis cat /data/dump.rdb" \
-        > "${backup_file}" 2>>"${LOG_FILE}"
+    # Copy redis dump.rdb from local container
+    docker exec redis cat /data/dump.rdb > "${backup_file}" 2>>"${LOG_FILE}"
     
     if [ $? -eq 0 ]; then
         local size=$(du -h "${backup_file}" | awk '{print $1}')

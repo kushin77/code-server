@@ -1,0 +1,74 @@
+version: '3.9'
+
+# Cloudflare Tunnel Service Configuration - Phase 2 Issue #181
+# Lean Remote Developer Access System
+# Provides remote code-server access without SSH key exposure
+# 
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.cloudflare-tunnel.yml up -d cloudflare-tunnel
+# 
+# Prerequisites:
+#   1. Tunnel token created: cloudflared tunnel create code-server-tunnel
+#   2. Token added to .env: CLOUDFLARE_TUNNEL_TOKEN=<token>
+#   3. DNS records configured in Cloudflare dashboard
+
+services:
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:2024.4.1
+    container_name: cloudflare-tunnel
+    command: tunnel run --config /etc/cloudflared/config.yml
+    
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+      TUNNEL_LOGLEVEL: info
+      TZ: UTC
+    
+    volumes:
+      - ./config/cloudflare-tunnel-config.yml:/etc/cloudflared/config.yml:ro
+      - cloudflare-logs:/var/log/cloudflared
+      - cloudflare-certs:/etc/cloudflared/certs:ro
+    
+    networks:
+      - code-server-network
+    
+    restart: unless-stopped
+    
+    depends_on:
+      - code-server
+      - oauth2-proxy
+    
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:9091/ready']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    
+    labels:
+      com.example.project: "code-server-enterprise"
+      com.example.phase: "2"
+      com.example.issue: "#181"
+      com.example.feature: "lean-remote-access"
+      com.example.owner: "elite-team"
+    
+    # Resource limits (tunnel is lightweight)
+    resources:
+      limits:
+        cpus: '0.5'
+        memory: 256M
+      reservations:
+        cpus: '0.25'
+        memory: 128M
+
+volumes:
+  cloudflare-logs:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+  
+  cloudflare-certs:
+    driver: local
+
+networks:
+  code-server-network:
+    driver: bridge

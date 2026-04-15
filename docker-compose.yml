@@ -264,7 +264,6 @@ services:
     container_name: oauth2-proxy
     restart: unless-stopped
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
     expose: ["4180"]
     environment:
       OAUTH2_PROXY_CLIENT_ID:                 ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env}

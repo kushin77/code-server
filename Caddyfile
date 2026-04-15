@@ -1,106 +1,17 @@
-# =============================================================================
-# Caddyfile -- PRODUCTION caddy v2.9.1-alpine
-# Host   : 192.168.168.31
-# TLS    : Internal CA (self-signed) for on-prem access
-# Routes : ide, grafana, prometheus, alertmanager, jaeger, ollama
-# Updated: 2026-04-15 (IP-based + domain-based access, internal CA)
-# =============================================================================
-
 {
 	admin off
-
 	log {
 		format json
 		output stdout
-		level  INFO
-	}
-
-	# Use internal CA for self-signed certificates
-	pki {
-		ca on-prem {
-			name "On-Prem Internal CA"
-		}
+		level INFO
 	}
 }
 
-# -- Shared security headers --------------------------------------------------
-(security_headers) {
-	header {
-		X-Content-Type-Options    "nosniff"
-		X-Frame-Options           "SAMEORIGIN"
-		X-XSS-Protection          "1; mode=block"
-		Referrer-Policy           "strict-origin-when-cross-origin"
-		Strict-Transport-Security "max-age=63072000; includeSubDomains"
-		-Server
-		-X-Powered-By
-	}
-}
-
-# -- On-prem + VPN access matcher --------------------------------------------
-(internal_only) {
-	@denied not remote_ip 192.168.168.0/24 10.8.0.0/24 10.0.0.0/8
-	handle @denied {
-		respond "Forbidden" 403
-	}
-}
-
-# -- IDE (code-server via oauth2-proxy) -- HTTP on port 80 ----
-# Simple HTTP proxy while TLS is troubleshot
+# HTTP only - simple port-based routing
+# Port 80 -> oauth2-proxy -> code-server
 :80 {
-	encode gzip
-	import security_headers
-
 	reverse_proxy oauth2-proxy:4180 {
-		header_up Host       {upstream_hostport}
-		header_up X-Real-IP  {remote_host}
+		header_up Host {upstream_hostport}
+		header_up X-Real-IP {remote_host}
 	}
 }
-
-# -- Grafana -- HTTP on port 3001 ----
-:3001 {
-	encode gzip
-	import security_headers
-
-	reverse_proxy grafana:3000
-}
-
-# -- Prometheus (LAN + VPN only) -- HTTP on port 9091 ----
-:9091 {
-	encode gzip
-	import security_headers
-	import internal_only
-
-	reverse_proxy prometheus:9090
-}
-
-# -- AlertManager (LAN + VPN only) -- HTTP on port 9094 ----
-:9094 {
-	encode gzip
-	import security_headers
-	import internal_only
-
-	reverse_proxy alertmanager:9093
-}
-
-# -- Jaeger (LAN + VPN only) -- HTTP on port 16687 ----
-:16687 {
-	encode gzip
-	import security_headers
-	import internal_only
-
-	reverse_proxy jaeger:16686
-}
-
-# -- Ollama (LAN + VPN only) -- HTTP on port 11435 ----
-:11435 {
-	import security_headers
-	import internal_only
-
-	reverse_proxy ollama:11434
-}
-
-# -- HTTP -> HTTPS redirect ---------------------------------------------------
-:80 {
-	redir https://{host}{uri} 301
-}
-

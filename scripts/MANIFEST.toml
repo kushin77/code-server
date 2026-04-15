@@ -539,13 +539,6 @@ depends  = ["_common/init.sh"]
 called_by = ["applies-ide-restrictions.sh", "code-server shell configuration"]
 
 [[script]]
-file     = "git-credential-proxy.py"
-category = "security"
-status   = "active"
-owner    = "security"
-purpose  = "Git credential helper that proxies SSH keys (Layer 4 of #187)"
-called_by = ["git credential.helper configuration"]
-
 [[script]]
 file     = "apply-ide-restrictions.sh"
 category = "operations"
@@ -600,3 +593,12 @@ called_by = ["Makefile:test-p1-access-control", "CI/CD test-p1-features"]
 # (gpu, fix-host, tier, setup, etc.) are in scripts/_archive/historical/.
 # Neither directory is tracked in this manifest's active entries.
 # ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "git-credential-cloudflare-proxy"
+status   = "ACTIVE"
+owner    = "Platform Engineering"
+purpose  = "Unified Git credential helper for Cloudflare proxy access - consolidated from 5 duplicate implementations"
+dependencies = ["_common/init.sh", "_common/config.sh"]
+consolidated_from = ["git-credential-proxy.py", "git-credential-helper.py", "git-credential-cloudflare-proxy.py", "git-credential-proxy.sh"]
+notes    = "GOV-004: Removed 4 duplicate implementations, retained canonical bash version (301 lines)"

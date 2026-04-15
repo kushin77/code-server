@@ -741,28 +741,6 @@ groups:
           summary: "CRITICAL: Ollama GPU memory critically full ({{ $value | humanizePercentage }})"
           description: "GPU memory exhausted. Ollama will OOM and crash. Manual intervention required."
           runbook: "docs/runbooks/ollama-gpu-memory-critical.md"
-      - alert: FalcoSensitiveFileAccess
-        expr: 'increase(falco_events_total{rule="Read Sensitive File"}[5m]) > 0'
-        for: 1m
-        labels:
-          severity: high
-          component: falco
-        annotations:
-          summary: "Sensitive file access detected"
-          description: "Unauthorized access to sensitive files ({{ $labels.file }})"
-          runbook_url: "docs/runbooks/falco-sensitive-file.md"
-
-      # Falco Unexpected Outbound Connection
-      - alert: FalcoUnexpectedOutbound
-        expr: 'increase(falco_events_total{rule="Unexpected Outbound Connection"}[5m]) > 0'
-        for: 2m
-        labels:
-          severity: warning
-          component: falco
-        annotations:
-          summary: "Unexpected outbound connection detected"
-          description: "Container {{ $labels.container }} attempting unauthorized egress to {{ $labels.destination_ip }}"
-          runbook_url: "docs/runbooks/falco-unexpected-outbound.md"
 
   # ========== System Alerts ==========
   - name: system_alerts

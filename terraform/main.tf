@@ -166,13 +166,13 @@ output "deployment_ready" {
   value       = true
 }
 
-# Make deploy script executable
+# Make deploy scripts executable
 resource "null_resource" "make_deploy_executable" {
   provisioner "local-exec" {
     # Make scripts executable on Linux/Mac
-    command = "chmod +x '${local_file.deploy_script.filename}' 2>/dev/null || true"
+    command = "chmod +x scripts/deploy.sh scripts/nas-mount-31.sh scripts/wireguard-install.sh 2>/dev/null || true"
   }
-  depends_on = [local_file.deploy_script]
+  depends_on = [null_resource.validate_scripts_exist]
 }
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -183,8 +183,8 @@ output "deployment_summary" {
   value = {
     service_name    = local.service_name
     environment     = local.environment
-    pinned_versions = local.versions
-    network         = local.network
-    storage_volumes = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
+    pinned_versions = local.docker_images
+    network_name    = local.network_name
+    storage_volumes = { data = local.data_volume, workspace = local.workspace_path }
   }
 }

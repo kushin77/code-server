@@ -134,7 +134,7 @@ groups:
           summary: "High memory usage detected"
           description: "Available memory is below 10% on {{ $labels.instance }}"
 
-  # ========== GPU Alerts (Host: 192.168.168.31) ==========
+  # ========== GPU Alerts (Host: primary.prod.internal) ==========
   - name: gpu_alerts
     interval: 15s
     rules:
@@ -146,7 +146,7 @@ groups:
           severity: critical
           component: gpu
           sla_impact: "yes"
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
         annotations:
           summary: "GPU {{ $labels.gpu_index }} is unavailable"
           description: "GPU {{ $labels.gpu_index }} not responding for 2 minutes. Check NVIDIA driver status."
@@ -158,7 +158,7 @@ groups:
         labels:
           severity: warning
           component: gpu
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
         annotations:
           summary: "GPU {{ $labels.gpu_index }} temperature is {{ $value }}°C"
           description: "GPU running above 85°C for 5 minutes. Check cooling and reduce load."
@@ -170,7 +170,7 @@ groups:
         labels:
           severity: critical
           component: gpu
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
         annotations:
           summary: "GPU {{ $labels.gpu_index }} CRITICAL temperature: {{ $value }}°C"
           description: "GPU exceeded 95°C. Shutting down workloads to prevent damage."
@@ -182,7 +182,7 @@ groups:
         labels:
           severity: warning
           component: gpu
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
         annotations:
           summary: "GPU {{ $labels.gpu_index }} memory utilization > 90%"
           description: "Less than 10% free VRAM. Reduce batch size or offload inference."
@@ -194,7 +194,7 @@ groups:
         labels:
           severity: warning
           component: gpu
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
         annotations:
           summary: "GPU {{ $labels.gpu_index }} power at {{ $value | humanizePercentage }} of limit"
           description: "Power consumption exceeds 95% of limit. Check thermal throttling."
@@ -375,7 +375,7 @@ groups:
         labels:
           severity: warning
           component: gpu
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
         annotations:
           summary: "GPU {{ $labels.gpu_index }} ECC errors: {{ $value }} in last hour"
           description: "{{ $value }} ECC errors detected. Monitor for hardware degradation."
@@ -643,7 +643,7 @@ groups:
         labels:
           severity: warning
           component: postgresql
-          replica_instance: "192.168.168.42"
+          replica_instance: "replica.prod.internal"
         annotations:
           summary: "PostgreSQL replication lag {{ $value }}s (threshold: 30s)"
           description: "Replica is falling behind primary. If primary fails, data loss risk increases."
@@ -655,7 +655,7 @@ groups:
         labels:
           severity: critical
           component: postgresql
-          replica_instance: "192.168.168.42"
+          replica_instance: "replica.prod.internal"
           sla_impact: "yes"
         annotations:
           summary: "CRITICAL: PostgreSQL replication lag {{ $value }}s — data loss risk"
@@ -668,7 +668,7 @@ groups:
         labels:
           severity: critical
           component: postgresql
-          replica_instance: "192.168.168.42"
+          replica_instance: "replica.prod.internal"
           sla_impact: "yes"
         annotations:
           summary: "CRITICAL: PostgreSQL replication is BROKEN on replica"
@@ -752,7 +752,7 @@ groups:
         labels:
           severity: warning
           component: ollama
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
         annotations:
           summary: "Ollama GPU memory {{ $value | humanizePercentage }} used — OOM risk"
           description: "GPU memory nearly exhausted. Model inference may fail. Reduce batch size or unload models."
@@ -765,7 +765,7 @@ groups:
         labels:
           severity: critical
           component: ollama
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
           sla_impact: "yes"
         annotations:
           summary: "CRITICAL: Ollama GPU memory critically full ({{ $value | humanizePercentage }})"

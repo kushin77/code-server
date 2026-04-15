@@ -23,7 +23,7 @@ receivers:
         endpoint: "0.0.0.0:4318"
         cors:
           allowed_origins:
-            - "http://192.168.168.31:*"
+            - "http://primary.prod.internal:*"
             - "https://ide.kushnir.cloud"
 
   # Jaeger receiver — accepts legacy Jaeger format from services using Jaeger SDK

@@ -341,8 +341,8 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER:     ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
-      GF_SERVER_DOMAIN:           ${DOMAIN:-192.168.168.31}
-      GF_SERVER_ROOT_URL:         "https://grafana.${DOMAIN:-192.168.168.31}"
+      GF_SERVER_DOMAIN:           ${DOMAIN:-primary.prod.internal}
+      GF_SERVER_ROOT_URL:         "https://grafana.${DOMAIN:-primary.prod.internal}"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_AUTH_ANONYMOUS_ENABLED:  "false"
       GF_LOG_LEVEL:               warn

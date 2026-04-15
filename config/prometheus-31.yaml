@@ -1,5 +1,5 @@
 ---
-# Prometheus Configuration for 192.168.168.31
+# Prometheus Configuration for primary.prod.internal (192.168.168.31)
 # For: GPU monitoring, NAS health, application metrics, system resource tracking
 # Updated: April 13, 2026
 
@@ -9,7 +9,7 @@ global:
   external_labels:
     cluster: 'code-server-enterprise'
     environment: 'on-premises'
-    host: '192.168.168.31'
+    host: 'primary.prod.internal'
     region: 'internal'
 
 # Alertmanager configuration
@@ -40,7 +40,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: '192.168.168.31:9100'
+        replacement: 'primary.prod.internal:9100'
 
   # NVIDIA GPU Metrics (DCGM Exporter)
   - job_name: 'nvidia-dcgm'
@@ -53,7 +53,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: '192.168.168.31:9400'
+        replacement: 'primary.prod.internal:9400'
 
   # Container Metrics (cAdvisor)
   - job_name: 'cadvisor'
@@ -64,7 +64,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: '192.168.168.31:8080'
+        replacement: 'primary.prod.internal:8080'
 
   # NAS Mount Point Health
   - job_name: 'nas-health'
@@ -79,7 +79,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: '192.168.168.31:9100'
+        replacement: 'primary.prod.internal:9100'
 
   # Code-Server Application Metrics
   - job_name: 'code-server'
@@ -91,7 +91,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: '192.168.168.31:8443'
+        replacement: 'primary.prod.internal:8443'
 
   # Ollama LLM Inference Metrics
   - job_name: 'ollama'
@@ -103,7 +103,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        replacement: '192.168.168.31:11434'
+        replacement: 'primary.prod.internal:11434'
 
   # Docker Daemon Metrics
   - job_name: 'docker'

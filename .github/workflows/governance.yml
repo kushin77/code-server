@@ -1,0 +1,260 @@
+name: Code Governance Enforcement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, phase-*]
+
+jobs:
+  governance-checks:
+    name: Governance Framework
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up tools
+        run: |
+          # Install required tools
+          sudo apt-get update
+          sudo apt-get install -y yamllint shellcheck
+          
+          # Install jscpd globally
+          npm install -g jscpd
+          
+          # Install gitleaks
+          curl -L https://github.com/gitleaks/gitleaks/releases/download/v8.20.0/gitleaks-linux-x64 -o /tmp/gitleaks
+          chmod +x /tmp/gitleaks
+          
+      - name: Run Gitleaks (Secret Scanning)
+        id: gitleaks
+        run: |
+          /tmp/gitleaks detect --source . --verbose --exit-code 0 > /tmp/gitleaks-report.json 2>&1 || true
+          LEAK_COUNT=$(jq '.[] | length' /tmp/gitleaks-report.json 2>/dev/null || echo 0)
+          echo "leaks=$LEAK_COUNT" >> $GITHUB_OUTPUT
+          
+          if [ "$LEAK_COUNT" -gt 0 ]; then
+            echo "❌ GITLEAKS FAILURE: Detected $LEAK_COUNT potential secrets"
+            cat /tmp/gitleaks-report.json | jq '.[] | "Secret type: \(.Tags | join(", ")) in file: \(.File) (line \(.StartLine))"' || true
+            exit 1
+          fi
+        continue-on-error: false
+
+      - name: Run YAMLLint (Config Validation)
+        id: yamllint
+        run: |
+          echo "Validating YAML files..."
+          find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            ! -path "./node_modules/*" \
+            ! -path "./.git/*" \
+            ! -path "./vendor/*" \
+            -exec yamllint -d "{extends: default, rules: {line-length: {max: 120}}}" {} + 2>&1 | tee /tmp/yamllint-report.txt
+          
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "❌ YAMLLINT FAILURE: YAML validation errors found"
+            exit 1
+          fi
+        continue-on-error: false
+
+      - name: Run ShellCheck (Script Linting)
+        id: shellcheck
+        run: |
+          echo "Linting shell scripts..."
+          FAILED=0
+          
+          find scripts -type f -name "*.sh" ! -path "*/_common/*" ! -path "*/archive/*" | while read script; do
+            if ! shellcheck -S warning "$script" 2>&1; then
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          
+          if [ $FAILED -gt 0 ]; then
+            echo "❌ SHELLCHECK FAILURE: $FAILED scripts have linting issues"
+            exit 1
+          fi
+        continue-on-error: false
+
+      - name: Check Script Headers (@file metadata)
+        id: headers
+        run: |
+          echo "Checking script headers..."
+          MISSING_HEADERS=0
+          
+          find scripts -type f -name "*.sh" ! -path "*/_common/*" ! -path "*/archive/*" -print0 | 
+          while IFS= read -r -d '' script; do
+            if ! grep -q "@file:" "$script"; then
+              echo "⚠️  Missing @file header in: $script"
+              MISSING_HEADERS=$((MISSING_HEADERS + 1))
+            fi
+          done
+          
+          if [ $MISSING_HEADERS -gt 0 ]; then
+            echo "⚠️  HEADER CHECK: $MISSING_HEADERS scripts missing @file metadata (warning only)"
+          fi
+        continue-on-error: true
+
+      - name: Check for Hardcoded IPs and Secrets
+        id: hardcoded
+        run: |
+          echo "Scanning for hardcoded values..."
+          VIOLATIONS=0
+          
+          # Check for hardcoded IPs (but allow localhost, 127.0.0.1, and documented examples)
+          if grep -r "192\.168\.\|10\.\|172\.\(1[6-9]\|2[0-9]\|3[01]\)\." scripts --include="*.sh" \
+             ! -f ".gitignore" | grep -v "EXAMPLE\|TODO\|FIXME" > /tmp/ips.txt 2>/dev/null; then
+            echo "⚠️  Potential hardcoded IPs found (check if parameterized):"
+            head -10 /tmp/ips.txt || true
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+          
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "⚠️  HARDCODED VALUES: Review findings above"
+          fi
+        continue-on-error: true
+
+      - name: Check Parameterization (docker-compose, Caddyfile, etc.)
+        id: parameterization
+        run: |
+          echo "Checking configuration parameterization..."
+          VIOLATIONS=0
+          
+          # Check docker-compose for hardcoded ports/hosts (should use ${VAR})
+          if grep -E "ports:|environment:" docker-compose*.yml docker-compose*.yaml 2>/dev/null | \
+             grep -v '\${' > /tmp/params.txt 2>/dev/null; then
+            echo "⚠️  Non-parameterized configuration found:"
+            head -5 /tmp/params.txt || true
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+          
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "⚠️  PARAMETERIZATION: Review findings above (warning only)"
+          fi
+        continue-on-error: true
+
+      - name: Check for Duplicate Code (jscpd)
+        id: duplication
+        run: |
+          echo "Scanning for code duplication..."
+          
+          jscpd --min-tokens 50 \
+            --ignore "node_modules/**,vendor/**,.git/**,docs/**" \
+            --reporters json \
+            --output /tmp/jscpd-report.json \
+            . 2>&1 || true
+          
+          if [ -f /tmp/jscpd-report.json ]; then
+            DUPLICATE_LINES=$(jq '.statistics.clonedLines // 0' /tmp/jscpd-report.json)
+            TOTAL_LINES=$(jq '.statistics.total // 1' /tmp/jscpd-report.json)
+            if [ "$TOTAL_LINES" -gt 0 ]; then
+              DUPLICATE_PCT=$(( (DUPLICATE_LINES * 100) / TOTAL_LINES ))
+              echo "Duplication: ${DUPLICATE_PCT}% ($DUPLICATE_LINES / $TOTAL_LINES lines)"
+              
+              if [ "$DUPLICATE_PCT" -gt 5 ]; then
+                echo "❌ DUPLICATION FAILURE: Duplication > 5% threshold"
+                jq '.duplicates | .[] | "Lines \(.startLine)-\(.endLine) in \(.firstFile): \(.secondFile)"' /tmp/jscpd-report.json | head -10 || true
+                exit 1
+              fi
+            fi
+          fi
+        continue-on-error: false
+
+      - name: Check Docker Image Parameterization
+        id: docker-params
+        run: |
+          echo "Checking Dockerfile image references..."
+          VIOLATIONS=0
+          
+          # Check that Docker images use explicit versions (not latest)
+          if grep "^FROM.*:latest" Dockerfile* 2>/dev/null; then
+            echo "❌ DOCKER FAILURE: Found 'FROM ... :latest' (must use explicit versions)"
+            exit 1
+          fi
+          
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "❌ DOCKER PARAMS: Issues found"
+            exit 1
+          fi
+        continue-on-error: false
+
+      - name: Terraform Format Check
+        id: terraform-fmt
+        run: |
+          if [ -d terraform ]; then
+            echo "Checking Terraform format..."
+            terraform -chdir=terraform fmt -check -recursive . || {
+              echo "❌ TERRAFORM FMT: Code not formatted. Run 'terraform fmt -recursive terraform/'"
+              exit 1
+            }
+          fi
+        continue-on-error: false
+
+      - name: Terraform Validation
+        id: terraform-validate
+        run: |
+          if [ -d terraform ]; then
+            echo "Validating Terraform files..."
+            terraform -chdir=terraform init -backend=false > /dev/null 2>&1
+            terraform -chdir=terraform validate || {
+              echo "❌ TERRAFORM VALIDATE: Syntax errors found"
+              exit 1
+            }
+          fi
+        continue-on-error: false
+
+      - name: Comment on PR with Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = {
+              gitleaks: '${{ steps.gitleaks.outcome }}',
+              yamllint: '${{ steps.yamllint.outcome }}',
+              shellcheck: '${{ steps.shellcheck.outcome }}',
+              headers: '${{ steps.headers.outcome }}',
+              hardcoded: '${{ steps.hardcoded.outcome }}',
+              parameterization: '${{ steps.parameterization.outcome }}',
+              duplication: '${{ steps.duplication.outcome }}',
+              dockerParams: '${{ steps.docker-params.outcome }}',
+              terraformFmt: '${{ steps.terraform-fmt.outcome }}',
+              terraformValidate: '${{ steps.terraform-validate.outcome }}'
+            };
+            
+            const passed = Object.values(results).filter(r => r === 'success').length;
+            const failed = Object.values(results).filter(r => r === 'failure').length;
+            const warned = Object.values(results).filter(r => r === 'neutral').length;
+            
+            let comment = `## 🏗️ Code Governance Report\n\n`;
+            comment += `| Check | Status |\n`;
+            comment += `|-------|--------|\n`;
+            
+            for (const [check, status] of Object.entries(results)) {
+              const icon = status === 'success' ? '✅' : status === 'failure' ? '❌' : '⚠️';
+              comment += `| ${check} | ${icon} ${status.toUpperCase()} |\n`;
+            }
+            
+            comment += `\n**Summary**: ${passed} passed, ${failed} failed, ${warned} warned\n\n`;
+            
+            if (failed > 0) {
+              comment += `### ❌ Blocking Issues\n`;
+              comment += `Review the logs above for details. All governance failures must be resolved before merge.\n`;
+            }
+            
+            if (warned > 0) {
+              comment += `### ⚠️ Warnings\n`;
+              comment += `Review warnings above. Not blocking, but recommend addressing before merge.\n`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

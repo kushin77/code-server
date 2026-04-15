@@ -1,9 +1,9 @@
 # =============================================================================
 # Caddyfile -- PRODUCTION caddy v2.9.1-alpine
 # Host   : 192.168.168.31
-# TLS    : Let's Encrypt ACME (production real certificates)
+# TLS    : Internal CA (self-signed) for on-prem access
 # Routes : ide, grafana, prometheus, alertmanager, jaeger, ollama
-# Updated: 2026-04-15 (caddy fmt compliant, real TLS for production)
+# Updated: 2026-04-15 (IP-based + domain-based access, internal CA)
 # =============================================================================
 
 {
@@ -12,13 +12,15 @@
 	log {
 		format json
 		output stdout
-		level  WARN
+		level  INFO
 	}
 
-	# Let's Encrypt ACME production (real certificates)
-	# Uses HTTP-01 challenge via Cloudflare Tunnel (kusnir.cloud → on-prem via tunnel)
-	acme_ca https://acme-v02.api.letsencrypt.org/directory
-	email ops@kushnir.cloud
+	# Use internal CA for self-signed certificates
+	pki {
+		ca on-prem {
+			name "On-Prem Internal CA"
+		}
+	}
 }
 
 # -- Shared security headers --------------------------------------------------
@@ -28,14 +30,13 @@
 		X-Frame-Options           "SAMEORIGIN"
 		X-XSS-Protection          "1; mode=block"
 		Referrer-Policy           "strict-origin-when-cross-origin"
-		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
 		-Server
 		-X-Powered-By
 	}
 }
 
 # -- On-prem + VPN access matcher --------------------------------------------
-# Subnets: LAN 192.168.168.0/24, WireGuard 10.8.0.0/24, OpenVPN 10.0.0.0/8
 (internal_only) {
 	@denied not remote_ip 192.168.168.0/24 10.8.0.0/24 10.0.0.0/8
 	handle @denied {
@@ -43,8 +44,9 @@
 	}
 }
 
-# -- IDE (code-server via oauth2-proxy) -- REAL CERTIFICATES VIA LET'S ENCRYPT -----
-ide.kushnir.cloud {
+# -- IDE (code-server via oauth2-proxy) -- HTTP on port 80 ----
+# Simple HTTP proxy while TLS is troubleshot
+:80 {
 	encode gzip
 	import security_headers
 
@@ -54,54 +56,47 @@ ide.kushnir.cloud {
 	}
 }
 
-# -- Grafana -- REAL CERTIFICATES VIA LET'S ENCRYPT ----
-grafana.kushnir.cloud {
+# -- Grafana -- HTTP on port 3001 ----
+:3001 {
 	encode gzip
 	import security_headers
+
 	reverse_proxy grafana:3000
 }
 
-# -- Prometheus (LAN + VPN only) -- REAL CERTIFICATES VIA LET'S ENCRYPT ----
-prometheus.kushnir.cloud {
+# -- Prometheus (LAN + VPN only) -- HTTP on port 9091 ----
+:9091 {
 	encode gzip
 	import security_headers
 	import internal_only
 
-	handle {
-		reverse_proxy prometheus:9090
-	}
+	reverse_proxy prometheus:9090
 }
 
-# -- AlertManager (LAN + VPN only) -- REAL CERTIFICATES VIA LET'S ENCRYPT ----
-alertmanager.kushnir.cloud {
+# -- AlertManager (LAN + VPN only) -- HTTP on port 9094 ----
+:9094 {
 	encode gzip
 	import security_headers
 	import internal_only
 
-	handle {
-		reverse_proxy alertmanager:9093
-	}
+	reverse_proxy alertmanager:9093
 }
 
-# -- Jaeger Tracing UI (LAN + VPN only) -- REAL CERTIFICATES VIA LET'S ENCRYPT ----
-jaeger.kushnir.cloud {
+# -- Jaeger (LAN + VPN only) -- HTTP on port 16687 ----
+:16687 {
 	encode gzip
 	import security_headers
 	import internal_only
 
-	handle {
-		reverse_proxy jaeger:16686
-	}
+	reverse_proxy jaeger:16686
 }
 
-# -- Ollama API (LAN + VPN only) -- REAL CERTIFICATES VIA LET'S ENCRYPT ----
-ollama.kushnir.cloud {
+# -- Ollama (LAN + VPN only) -- HTTP on port 11435 ----
+:11435 {
 	import security_headers
 	import internal_only
 
-	handle {
-		reverse_proxy ollama:11434
-	}
+	reverse_proxy ollama:11434
 }
 
 # -- HTTP -> HTTPS redirect ---------------------------------------------------

@@ -1,0 +1,17 @@
+{
+	admin off
+	log {
+		format json
+		output stdout
+		level INFO
+	}
+}
+
+# HTTP only - simple port-based routing
+# Port 80 -> oauth2-proxy -> code-server
+:80 {
+	reverse_proxy oauth2-proxy:4180 {
+		header_up Host {upstream_hostport}
+		header_up X-Real-IP {remote_host}
+	}
+}

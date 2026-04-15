@@ -125,7 +125,7 @@ services:
       - "0.0.0.0:9001:9001"  # MinIO Web Console
     environment:
       MINIO_ROOT_USER:     ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_password_change_me}
     command: server /minio-data --console-address ":9001"
     volumes:
       - minio-data:/minio-data

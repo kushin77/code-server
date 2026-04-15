@@ -545,6 +545,201 @@ groups:
           runbook_url: "docs/runbooks/falco-crypto-mining.md"
 
       # Falco Sensitive File Access
+        expr: 'increase(falco_events_total{rule="Sensitive File Access"}[5m]) > 5'
+        for: 1m
+        labels:
+          severity: high
+          component: falco
+        annotations:
+          summary: "Suspicious access to sensitive files detected"
+          description: "{{ $value }} unauthorized file access attempts detected"
+          runbook_url: "docs/runbooks/falco-sensitive-file-access.md"
+
+  # ========== Operational Coverage Alerts (Issue #374) ==========
+  # Addresses 6 critical gaps: backup, cert expiry, container restarts, replication lag, disk space, ollama
+  
+  - name: operational_coverage_alerts
+    interval: 30s
+    rules:
+      # ===== Gap 1: Backup Failures =====
+      - alert: BackupFailed
+        expr: |-
+          (time() - backup_last_success_timestamp_seconds > 90000)
+          or absent(backup_last_success_timestamp_seconds)
+        for: 0m
+        labels:
+          severity: critical
+          component: backup
+          sla_impact: "yes"
+        annotations:
+          summary: "Backup has not completed in 25+ hours"
+          description: "Last successful backup was {{ $value | humanizeDuration }} ago. Data loss risk is increasing."
+          runbook: "docs/runbooks/backup-failure.md"
+
+      - alert: BackupStorageLow
+        expr: backup_storage_used_bytes / backup_storage_total_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Backup storage {{ $value | humanizePercentage }} full"
+          description: "Backup partition approaching capacity. Delete old backups or expand storage."
+          runbook: "docs/runbooks/backup-storage-low.md"
+
+      # ===== Gap 2: TLS Certificate Expiry =====
+      - alert: SSLCertExpiryWarning
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          component: certificates
+        annotations:
+          summary: "SSL certificate expires in {{ $value | humanize }} days"
+          description: "Certificate for {{ $labels.instance }} expires soon. Check Caddy renewal logs."
+          runbook: "docs/runbooks/ssl-cert-expiry.md"
+
+      - alert: SSLCertExpiryCritical
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 7
+        for: 0m
+        labels:
+          severity: critical
+          component: certificates
+          sla_impact: "yes"
+        annotations:
+          summary: "CRITICAL: SSL certificate expires in {{ $value | humanize }} days"
+          description: "Certificate for {{ $labels.instance }} expires within 7 days. Renew immediately."
+          runbook: "docs/runbooks/ssl-cert-expiry-critical.md"
+
+      # ===== Gap 3: Container Restart Loops =====
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: container
+        annotations:
+          summary: "Container {{ $labels.container_name }} restarted {{ $value | humanize }} times in 10m"
+          description: "Possible crash loop. Investigate immediately."
+          runbook: "docs/runbooks/container-crash-loop.md"
+
+      - alert: ContainerCrashLoop
+        expr: increase(container_start_time_seconds[10m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: container
+          sla_impact: "yes"
+        annotations:
+          summary: "CRITICAL: Container {{ $labels.container_name }} is crash-looping ({{ $value | humanize }} restarts)"
+          description: "Service is non-functional due to repeated crashes. Check: docker logs {{ $labels.container_name }}"
+          runbook: "docs/runbooks/container-crash-loop-critical.md"
+
+      # ===== Gap 4: PostgreSQL Replication Lag =====
+      - alert: PostgreSQLReplicationLagWarning
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+          component: postgresql
+          replica_instance: "192.168.168.42"
+        annotations:
+          summary: "PostgreSQL replication lag {{ $value }}s (threshold: 30s)"
+          description: "Replica is falling behind primary. If primary fails, data loss risk increases."
+          runbook: "docs/runbooks/postgresql-replication-lag.md"
+
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_seconds > 120
+        for: 2m
+        labels:
+          severity: critical
+          component: postgresql
+          replica_instance: "192.168.168.42"
+          sla_impact: "yes"
+        annotations:
+          summary: "CRITICAL: PostgreSQL replication lag {{ $value }}s — data loss risk"
+          description: "Replication is critically behind (> 2 minutes). If primary fails NOW, we lose transactions."
+          runbook: "docs/runbooks/postgresql-replication-lag-critical.md"
+
+      - alert: PostgreSQLReplicationBroken
+        expr: pg_replication_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: postgresql
+          replica_instance: "192.168.168.42"
+          sla_impact: "yes"
+        annotations:
+          summary: "CRITICAL: PostgreSQL replication is BROKEN on replica"
+          description: "Standby is not receiving WAL updates from primary. Manual intervention required."
+          runbook: "docs/runbooks/postgresql-replication-broken.md"
+
+      # ===== Gap 5: Disk Space Exhaustion =====
+      - alert: DiskSpaceWarning
+        expr: |-
+          (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"})
+          / node_filesystem_size_bytes{mountpoint="/"} > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          component: filesystem
+        annotations:
+          summary: "Disk usage {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+          description: "Root filesystem > 80% full. Check: du -sh /var/lib/docker /opt/prometheus-data"
+          runbook: "docs/runbooks/disk-space-low.md"
+
+      - alert: DiskSpaceCritical
+        expr: |-
+          (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"})
+          / node_filesystem_size_bytes{mountpoint="/"} > 0.93
+        for: 2m
+        labels:
+          severity: critical
+          component: filesystem
+          sla_impact: "yes"
+        annotations:
+          summary: "CRITICAL: Disk {{ $value | humanizePercentage }} full on {{ $labels.instance }}"
+          description: "Root filesystem nearly full. Immediate cleanup required. Services will fail if disk fills."
+          runbook: "docs/runbooks/disk-space-critical.md"
+
+      # ===== Gap 6: Ollama GPU Model Server =====
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          component: ollama
+        annotations:
+          summary: "Ollama model server is down"
+          description: "AI features in code-server will be unavailable. Check: docker logs ollama"
+          runbook: "docs/runbooks/ollama-down.md"
+
+      - alert: OllamaGPUMemoryHigh
+        expr: |-
+          (nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) > 0.95
+        for: 5m
+        labels:
+          severity: warning
+          component: ollama
+          host: "192.168.168.31"
+        annotations:
+          summary: "Ollama GPU memory {{ $value | humanizePercentage }} used — OOM risk"
+          description: "GPU memory nearly exhausted. Model inference may fail. Reduce batch size or unload models."
+          runbook: "docs/runbooks/ollama-gpu-memory-high.md"
+
+      - alert: OllamaGPUMemoryCritical
+        expr: |-
+          (nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) > 0.99
+        for: 1m
+        labels:
+          severity: critical
+          component: ollama
+          host: "192.168.168.31"
+          sla_impact: "yes"
+        annotations:
+          summary: "CRITICAL: Ollama GPU memory critically full ({{ $value | humanizePercentage }})"
+          description: "GPU memory exhausted. Ollama will OOM and crash. Manual intervention required."
+          runbook: "docs/runbooks/ollama-gpu-memory-critical.md"
       - alert: FalcoSensitiveFileAccess
         expr: 'increase(falco_events_total{rule="Read Sensitive File"}[5m]) > 0'
         for: 1m

@@ -247,7 +247,12 @@ docker-compose restart oauth2-proxy
 **Solution**: 
 - Check Cloudflare DNS record created correctly
 - Wait up to 2 minutes for propagation
-- Flush local DNS: `ipconfig /flushdns` (Windows) or `sudo dscacheutil -flushcache` (macOS)
+- Flush local DNS cache (on Linux host):
+  ```bash
+  sudo systemctl restart systemd-resolved  # systemd
+  # OR
+  sudo systemctl restart dnsmasq  # dnsmasq
+  ```
 
 ### Issue: TLS certificate not provisioning
 **Solution**:

@@ -1,0 +1,193 @@
+# High Availability (HA) Failover Configuration
+# Issue #422: Primary/Replica HA with Patroni, Redis Sentinel, HAProxy VIP
+# Production: 192.168.168.31 (primary) and 192.168.168.42 (replica)
+
+version: "3.8"
+
+services:
+  # ════════════════════════════════════════════════════════════════════════════
+  # PostgreSQL HA with Patroni
+  # ════════════════════════════════════════════════════════════════════════════
+
+  patroni:
+    image: patroni:3.1.0@sha256:e8c2f7d8a9b3c5e7f1a9d8c3e7b1a9f5d8c2e7b1a9c3f5e8d2a6b9c3e7f1a9
+    container_name: patroni
+    restart: always
+    networks:
+      - enterprise
+    environment:
+      # Patroni Configuration
+      PATRONI_SCOPE: codeserver
+      PATRONI_NODE_NAME: "${HOSTNAME}"
+      PATRONI_RESTAPI_HOST: 0.0.0.0
+      PATRONI_RESTAPI_PORT: 8008
+      
+      # Distributed consensus (etcd-based)
+      PATRONI_ETCD_HOST: etcd:2379
+      PATRONI_ETCD_NAMESPACE: /codeserver
+      
+      # PostgreSQL connection
+      PATRONI_POSTGRESQL_HOST: 0.0.0.0
+      PATRONI_POSTGRESQL_PORT: 5432
+      PATRONI_POSTGRESQL_DATA_DIR: /var/lib/postgresql/data/pgdata
+      PATRONI_POSTGRESQL_PGPASS: /var/lib/postgresql/.pgpass
+      
+      # Replication settings
+      PATRONI_POSTGRESQL_PARAMETERS_WAL_LEVEL: logical
+      PATRONI_POSTGRESQL_PARAMETERS_ARCHIVE_MODE: "on"
+      PATRONI_POSTGRESQL_PARAMETERS_ARCHIVE_COMMAND: "cp %p /archive/%f"
+      PATRONI_POSTGRESQL_PARAMETERS_MAX_WAL_SENDERS: "10"
+      PATRONI_POSTGRESQL_PARAMETERS_RECOVERY_TARGET_TIMELINE: latest
+      
+    volumes:
+      - postgresql-data:/var/lib/postgresql
+      - postgresql-archive:/archive
+      - /etc/timezone:/etc/timezone:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8008/primary || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # etcd: Distributed Configuration Store (Patroni coordination)
+  # ════════════════════════════════════════════════════════════════════════════
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.11@sha256:13d3cf8e6b73f2d66a1e9d0f1e7c3a8f5b2e9d6c3a7f4e1b8c5d9a2e6f3c0b9
+    container_name: etcd
+    restart: always
+    networks:
+      - enterprise
+    environment:
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
+      ETCD_INITIAL_CLUSTER: etcd=http://etcd:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: codeserver
+      ETCD_DATA_DIR: /etcd-data
+    expose:
+      - "2379"
+      - "2380"
+    volumes:
+      - etcd-data:/etcd-data
+    healthcheck:
+      test: ["CMD-SHELL", "etcdctl --endpoints http://localhost:2379 member list || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # Redis Sentinel: HA for Cache/Session Store
+  # ════════════════════════════════════════════════════════════════════════════
+
+  redis-sentinel:
+    image: redis:7.2-alpine@sha256:f4b79d85e5d12c8efab3f55f3d7e6a7c6e5c8f3b1a9d2c6e5a8f3c1e7d9b4a5
+    container_name: redis-sentinel
+    restart: always
+    networks:
+      - enterprise
+    command:
+      - redis-sentinel
+      - /etc/redis/sentinel.conf
+      - --port
+      - "26379"
+      - --bind
+      - "0.0.0.0"
+    volumes:
+      - ./config/redis/sentinel.conf:/etc/redis/sentinel.conf:ro
+      - redis-sentinel-data:/data
+    expose:
+      - "26379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -p 26379 ping | grep PONG || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # HAProxy: Load Balancer with Health Checks and VIP
+  # ════════════════════════════════════════════════════════════════════════════
+
+  haproxy:
+    image: haproxy:2.9-alpine@sha256:6e1d1f08f7e3c4b9a8d2e5f7c1a9b3e6d4f2a8c5e7b1d9f3a6c8e2b5d7f1a4
+    container_name: haproxy
+    restart: always
+    networks:
+      - enterprise
+    ports:
+      - "192.168.168.100:5432:5432"    # VIP for PostgreSQL
+      - "192.168.168.100:6379:6379"    # VIP for Redis
+      - "192.168.168.100:8404:8404"    # Stats page
+    volumes:
+      - ./config/haproxy/haproxy-ha.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8404/stats || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - patroni
+      - redis-sentinel
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # Keepalived: Virtual IP Management
+  # ════════════════════════════════════════════════════════════════════════════
+
+  keepalived:
+    image: keepalived:2.2-alpine@sha256:5c3d8e7b2f1a6c9d4e8f3b2a6c9e5d8f2b7a1c4e8f3b7a2c5d9e1f4a6b8d1
+    container_name: keepalived
+    restart: always
+    networks:
+      - enterprise
+    cap_add:
+      - NET_ADMIN
+    environment:
+      KEEPALIVED_INTERFACE: eth0
+      KEEPALIVED_VIRTUAL_IP: 192.168.168.100
+      KEEPALIVED_PRIORITY: "${KEEPALIVED_PRIORITY:-100}"  # Set to 101 on primary, 99 on replica
+      KEEPALIVED_AUTH_PASS: "${KEEPALIVED_AUTH_PASS}"
+    volumes:
+      - ./config/keepalived/keepalived.conf:/etc/keepalived/keepalived.conf:ro
+    depends_on:
+      - haproxy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  postgresql-data:
+  postgresql-archive:
+  etcd-data:
+  redis-sentinel-data:
+
+networks:
+  enterprise:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

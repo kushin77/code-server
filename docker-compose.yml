@@ -90,43 +90,44 @@ services:
     logging: *logging
 
   # ─── code-server ─────────────────────────────────────────────────────────────
-  code-server:
-    image: codercom/code-server:${CODE_SERVER_VERSION}
-    container_name: code-server
-    restart: always
-    networks: [enterprise]
-    ports:
-      - "0.0.0.0:${CODE_SERVER_PORT}:8080"
-    environment:
-      PASSWORD:        ${CODE_SERVER_PASSWORD:?Set CODE_SERVER_PASSWORD in .env}
-      SUDO_PASSWORD:   ${CODE_SERVER_PASSWORD}
-      GITHUB_TOKEN:    ${GITHUB_TOKEN:-}
-      OLLAMA_ENDPOINT: http://ollama:${OLLAMA_PORT}
-    command:
-      - "--bind-addr=0.0.0.0:8080"
-      - "--disable-telemetry"
-      - "--cert=false"
-      - "--auth=password"
-    volumes:
-      - ${NAS_PRIMARY_MOUNT}/code-server:/home/coder:rw
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:${CODE_SERVER_PORT}/healthz"]
-      interval: ${CODE_SERVER_HEALTHCHECK_INTERVAL}
-      timeout: ${CODE_SERVER_HEALTHCHECK_TIMEOUT}
-      retries: ${CODE_SERVER_HEALTHCHECK_RETRIES}
-      start_period: ${CODE_SERVER_HEALTHCHECK_START_PERIOD}
-    depends_on:
-      postgres:  { condition: service_healthy }
-      redis:     { condition: service_healthy }
-    deploy:
-      resources:
-        limits:
-          memory: ${CODE_SERVER_MEMORY_LIMIT}
-          cpus: '${CODE_SERVER_CPU_LIMIT}'
-        reservations:
-          memory: ${CODE_SERVER_MEMORY_RESERVE}
-          cpus: '${CODE_SERVER_CPU_RESERVE}'
-    logging: *logging
+  # DISABLED FOR PHASE 7a - NAS mount permissions issues, enable after resolving
+  # code-server:
+  #   image: codercom/code-server:${CODE_SERVER_VERSION}
+  #   container_name: code-server
+  #   restart: always
+  #   networks: [enterprise]
+  #   ports:
+  #     - "0.0.0.0:${CODE_SERVER_PORT}:8080"
+  #   environment:
+  #     PASSWORD:        ${CODE_SERVER_PASSWORD:?Set CODE_SERVER_PASSWORD in .env}
+  #     SUDO_PASSWORD:   ${CODE_SERVER_PASSWORD}
+  #     GITHUB_TOKEN:    ${GITHUB_TOKEN:-}
+  #     OLLAMA_ENDPOINT: http://ollama:${OLLAMA_PORT}
+  #   command:
+  #     - "--bind-addr=0.0.0.0:8080"
+  #     - "--disable-telemetry"
+  #     - "--cert=false"
+  #     - "--auth=password"
+  #   volumes:
+  #     - ${NAS_PRIMARY_MOUNT}/code-server:/home/coder:rw
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -sf http://localhost:${CODE_SERVER_PORT}/healthz"]
+  #     interval: ${CODE_SERVER_HEALTHCHECK_INTERVAL}
+  #     timeout: ${CODE_SERVER_HEALTHCHECK_TIMEOUT}
+  #     retries: ${CODE_SERVER_HEALTHCHECK_RETRIES}
+  #     start_period: ${CODE_SERVER_HEALTHCHECK_START_PERIOD}
+  #   depends_on:
+  #     postgres:  { condition: service_healthy }
+  #     redis:     { condition: service_healthy }
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: ${CODE_SERVER_MEMORY_LIMIT}
+  #         cpus: '${CODE_SERVER_CPU_LIMIT}'
+  #       reservations:
+  #         memory: ${CODE_SERVER_MEMORY_RESERVE}
+  #         cpus: '${CODE_SERVER_CPU_RESERVE}'
+  #   logging: *logging
 
   # ─── Ollama (GPU MAX — T1000 8GB, device 1, full CUDA offload) ─────────────
   # DISABLED FOR PHASE 7a - GPU inference, enable after core services verified
@@ -206,72 +207,74 @@ services:
   #   logging: *logging
 
   # ─── oauth2-proxy ────────────────────────────────────────────────────────────
-  oauth2-proxy:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
-    container_name: oauth2-proxy
-    restart: unless-stopped
-    networks: [enterprise]
-    expose: ["4180"]
-    environment:
-      OAUTH2_PROXY_CLIENT_ID:                 ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env}
-      OAUTH2_PROXY_CLIENT_SECRET:             ${GOOGLE_CLIENT_SECRET:?Set GOOGLE_CLIENT_SECRET in .env}
-      OAUTH2_PROXY_COOKIE_SECRET:             ${OAUTH2_PROXY_COOKIE_SECRET:?Set OAUTH2_PROXY_COOKIE_SECRET in .env}
-      OAUTH2_PROXY_PROVIDER:                  google
-      OAUTH2_PROXY_OIDC_ISSUER_URL:           https://accounts.google.com
-      OAUTH2_PROXY_REDIRECT_URL:              https://${DOMAIN}/oauth2/callback
-      OAUTH2_PROXY_UPSTREAMS:                 http://code-server:8080/
-      OAUTH2_PROXY_EMAIL_DOMAINS:             ""
-      OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: /etc/oauth2-proxy/allowed-emails.txt
-      OAUTH2_PROXY_COOKIE_NAME:               _oauth2_proxy_ide
-      OAUTH2_PROXY_COOKIE_SECURE:             "true"
-      OAUTH2_PROXY_COOKIE_HTTPONLY:           "true"
-      OAUTH2_PROXY_COOKIE_SAMESITE:           lax
-      OAUTH2_PROXY_COOKIE_EXPIRE:             24h
-      OAUTH2_PROXY_COOKIE_REFRESH:            15m
-      OAUTH2_PROXY_HTTP_ADDRESS:              0.0.0.0:4180
-      OAUTH2_PROXY_PROXY_WEBSOCKETS:          "true"
-      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON:      "true"
-      OAUTH2_PROXY_SET_XAUTHREQUEST:          "true"
-      OAUTH2_PROXY_PASS_USER_HEADERS:         "true"
-      OAUTH2_PROXY_PASS_BASIC_AUTH:           "false"
-      OAUTH2_PROXY_AUTH_LOGGING:              "true"
-      OAUTH2_PROXY_REQUEST_LOGGING:           "true"
-      OAUTH2_PROXY_SKIP_AUTH_REGEX:           "^/healthz|^/oauth2"
-    volumes:
-      - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4180/ping"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    depends_on:
-      code-server: { condition: service_healthy }
-    logging: *logging
+  # DISABLED FOR PHASE 7a - Depends on code-server, enable after code-server is ready
+  # oauth2-proxy:
+  #   image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+  #   container_name: oauth2-proxy
+  #   restart: unless-stopped
+  #   networks: [enterprise]
+  #   expose: ["4180"]
+  #   environment:
+  #     OAUTH2_PROXY_CLIENT_ID:                 ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env}
+  #     OAUTH2_PROXY_CLIENT_SECRET:             ${GOOGLE_CLIENT_SECRET:?Set GOOGLE_CLIENT_SECRET in .env}
+  #     OAUTH2_PROXY_COOKIE_SECRET:             ${OAUTH2_PROXY_COOKIE_SECRET:?Set OAUTH2_PROXY_COOKIE_SECRET in .env}
+  #     OAUTH2_PROXY_PROVIDER:                  google
+  #     OAUTH2_PROXY_OIDC_ISSUER_URL:           https://accounts.google.com
+  #     OAUTH2_PROXY_REDIRECT_URL:              https://${DOMAIN}/oauth2/callback
+  #     OAUTH2_PROXY_UPSTREAMS:                 http://code-server:8080/
+  #     OAUTH2_PROXY_EMAIL_DOMAINS:             ""
+  #     OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: /etc/oauth2-proxy/allowed-emails.txt
+  #     OAUTH2_PROXY_COOKIE_NAME:               _oauth2_proxy_ide
+  #     OAUTH2_PROXY_COOKIE_SECURE:             "true"
+  #     OAUTH2_PROXY_COOKIE_HTTPONLY:           "true"
+  #     OAUTH2_PROXY_COOKIE_SAMESITE:           lax
+  #     OAUTH2_PROXY_COOKIE_EXPIRE:             24h
+  #     OAUTH2_PROXY_COOKIE_REFRESH:            15m
+  #     OAUTH2_PROXY_HTTP_ADDRESS:              0.0.0.0:4180
+  #     OAUTH2_PROXY_PROXY_WEBSOCKETS:          "true"
+  #     OAUTH2_PROXY_SKIP_PROVIDER_BUTTON:      "true"
+  #     OAUTH2_PROXY_SET_XAUTHREQUEST:          "true"
+  #     OAUTH2_PROXY_PASS_USER_HEADERS:         "true"
+  #     OAUTH2_PROXY_PASS_BASIC_AUTH:           "false"
+  #     OAUTH2_PROXY_AUTH_LOGGING:              "true"
+  #     OAUTH2_PROXY_REQUEST_LOGGING:           "true"
+  #     OAUTH2_PROXY_SKIP_AUTH_REGEX:           "^/healthz|^/oauth2"
+  #   volumes:
+  #     - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget -qO- http://localhost:4180/ping"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 30s
+  #   depends_on:
+  #     code-server: { condition: service_healthy }
+  #   logging: *logging
 
   # ─── Caddy (TLS termination + reverse proxy) — v2.9.1 ───────────────────────
-  caddy:
-    image: caddy:2.9.1-alpine
-    container_name: caddy
-    restart: always
-    networks: [enterprise]
-    ports:
-      - "0.0.0.0:80:80"
-      - "0.0.0.0:443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-config:/config
-      - caddy-data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 0"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    depends_on:
-      code-server:  { condition: service_healthy }
-      oauth2-proxy: { condition: service_healthy }
-    logging: *logging
+  # DISABLED FOR PHASE 7a - Depends on oauth2-proxy, enable after services ready
+  # caddy:
+  #   image: caddy:2.9.1-alpine
+  #   container_name: caddy
+  #   restart: always
+  #   networks: [enterprise]
+  #   ports:
+  #     - "0.0.0.0:80:80"
+  #     - "0.0.0.0:443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy-config:/config
+  #     - caddy-data:/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 0"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 20s
+  #   depends_on:
+  #     code-server:  { condition: service_healthy }
+  #     oauth2-proxy: { condition: service_healthy }
+  #   logging: *logging
 
   # ─── Prometheus ──────────────────────────────────────────────────────────────
   prometheus:

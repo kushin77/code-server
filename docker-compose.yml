@@ -289,7 +289,7 @@ services:
       - '--web.enable-admin-api'
       - '--log.level=warn'
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - nas-prometheus:/prometheus:rw
     healthcheck:

@@ -199,6 +199,175 @@ groups:
           summary: "GPU {{ $labels.gpu_index }} power at {{ $value | humanizePercentage }} of limit"
           description: "Power consumption exceeds 95% of limit. Check thermal throttling."
 
+  # ========== Operational Coverage Gaps (Issue #374) ==========
+  # 6 critical operational scenarios with no alert coverage before this issue
+  - name: operational_coverage
+    interval: 60s
+    rules:
+
+      # ─── Gap 1: Backup Failures (P0 operational risk) ───
+      - alert: BackupFailed
+        expr: (time() - backup_last_success_timestamp_seconds) > 90000  # 25 hours
+        for: 0m
+        labels:
+          severity: critical
+          operational_gap: "gap_1_backup"
+          runbook: "docs/runbooks/backup-failure.md"
+        annotations:
+          summary: "Backup has not completed in 25 hours"
+          description: "Last successful backup was {{ $value | humanizeDuration }} ago. Data loss risk is increasing."
+          runbook: "docs/runbooks/backup-failure.md"
+
+      - alert: BackupStorageLow
+        expr: (backup_storage_used_bytes / backup_storage_total_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_1_backup"
+        annotations:
+          summary: "Backup storage > 85% full"
+          description: "{{ $value | humanizePercentage }} of backup storage used. Clean old backups soon."
+
+      # ─── Gap 2: TLS Certificate Expiry ───
+      - alert: SSLCertExpiryWarning
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          operational_gap: "gap_2_ssl_cert"
+          runbook: "docs/runbooks/ssl-cert-renewal.md"
+        annotations:
+          summary: "SSL certificate expires in {{ $value | humanize }} days"
+          description: "Certificate for {{ $labels.instance }} expires soon. Check Caddy renewal logs."
+          runbook: "docs/runbooks/ssl-cert-renewal.md"
+
+      - alert: SSLCertExpiryCritical
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 7
+        for: 0m
+        labels:
+          severity: critical
+          operational_gap: "gap_2_ssl_cert"
+          runbook: "docs/runbooks/ssl-cert-renewal.md"
+        annotations:
+          summary: "CRITICAL: SSL certificate expires in {{ $value | humanize }} days"
+          description: "Certificate {{ $labels.instance }} expires soon. Renew immediately to avoid user-facing errors."
+          runbook: "docs/runbooks/ssl-cert-renewal.md"
+
+      # ─── Gap 3: Container Restart Loops ───
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds{name!=""}[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_3_container_restarts"
+        annotations:
+          summary: "Container {{ $labels.name }} has restarted {{ $value }} times in 10m"
+          description: "Possible crash loop. Check: docker logs {{ $labels.name }}"
+
+      - alert: ContainerCrashLoop
+        expr: increase(container_start_time_seconds{name!=""}[10m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          operational_gap: "gap_3_container_restarts"
+          runbook: "docs/runbooks/container-crash-debug.md"
+        annotations:
+          summary: "CRITICAL: Container {{ $labels.name }} is crash-looping ({{ $value }} restarts)"
+          description: "Container restarted {{ $value }} times in 10 minutes. Service is non-functional. Check logs immediately."
+          runbook: "docs/runbooks/container-crash-debug.md"
+
+      # ─── Gap 4: PostgreSQL Replication Lag ───
+      - alert: PostgreSQLReplicationLagWarning
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_4_replication_lag"
+        annotations:
+          summary: "PostgreSQL replication lag is {{ $value }}s (threshold: 30s)"
+          description: "Replica is falling behind primary. Check network and disk I/O on replica."
+
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_seconds > 120
+        for: 2m
+        labels:
+          severity: critical
+          operational_gap: "gap_4_replication_lag"
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+        annotations:
+          summary: "CRITICAL: PostgreSQL replication lag {{ $value }}s — data loss risk if primary fails"
+          description: "Replica is 2+ minutes behind. RPO violation imminent. Check replica health now."
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+
+      - alert: PostgreSQLReplicationBroken
+        expr: pg_replication_is_replica == 0 and on() pg_up{instance=~".*replica.*"} == 1
+        for: 2m
+        labels:
+          severity: critical
+          operational_gap: "gap_4_replication_lag"
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+        annotations:
+          summary: "PostgreSQL replication is BROKEN — standby not receiving WAL"
+          description: "Replica not acting as replica. Replication may have failed. Check replication status immediately."
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+
+      # ─── Gap 5: Disk Space Exhaustion ───
+      - alert: DiskSpaceWarning
+        expr: (1 - (node_filesystem_available_bytes / node_filesystem_size_bytes)) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_5_disk_space"
+        annotations:
+          summary: "Disk usage > 80% on {{ $labels.instance }}: {{ $value | humanizePercentage }}"
+          description: "Available disk space running low. Check: df -h / && du -sh /var/lib/docker"
+
+      - alert: DiskSpaceCritical
+        expr: (1 - (node_filesystem_available_bytes / node_filesystem_size_bytes)) > 0.93
+        for: 2m
+        labels:
+          severity: critical
+          operational_gap: "gap_5_disk_space"
+          runbook: "docs/runbooks/disk-space-cleanup.md"
+        annotations:
+          summary: "CRITICAL: Disk {{ $value | humanizePercentage }} full on {{ $labels.instance }}"
+          description: "Disk nearly full. Services may crash. Clean up immediately: df -h / && du -sh /var/lib/docker && du -sh /opt/prometheus-data"
+          runbook: "docs/runbooks/disk-space-cleanup.md"
+
+      # ─── Gap 6: Ollama GPU Model Server Failures ───
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          operational_gap: "gap_6_ollama"
+          runbook: "docs/runbooks/ollama-troubleshooting.md"
+        annotations:
+          summary: "Ollama model server is down"
+          description: "AI features in code-server will be degraded. Check: docker logs ollama"
+          runbook: "docs/runbooks/ollama-troubleshooting.md"
+
+      - alert: OllamaGPUMemoryHigh
+        expr: (nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) > 0.95
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_6_ollama"
+        annotations:
+          summary: "GPU memory {{ $value | humanizePercentage }} used — Ollama may OOM soon"
+          description: "Available VRAM critical. Running models may be evicted. Reduce batch size or unload models."
+
+      - alert: OllamaGPUMemoryOOM
+        expr: (nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) > 0.99
+        for: 1m
+        labels:
+          severity: critical
+          operational_gap: "gap_6_ollama"
+        annotations:
+          summary: "Ollama GPU memory exhausted ({{ $value | humanizePercentage }})"
+          description: "GPU out of memory. Ollama model loading will fail. Restart Ollama or reduce model size."
+
+
       # GPU ECC Errors
       - alert: GPUECCErrors
         expr: 'increase(dcgm_ecc_errors_corrected[1h]) > 10'

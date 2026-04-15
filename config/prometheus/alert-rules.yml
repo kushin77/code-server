@@ -660,3 +660,58 @@ groups:
         annotations:
           summary: "System memory pressure detected"
           description: "Available memory below 15% for 5 minutes. Potential OOM risk."
+
+  # ========== Cloudflare Tunnel Alerts ==========
+  - name: cloudflare_tunnel_alerts
+    interval: 30s
+    rules:
+      # P1: Cloudflare Tunnel Down
+      - alert: CloudflareTunnelDown
+        expr: cloudflared_tunnel_status{tunnel="code_server_primary"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cloudflare_tunnel
+          page: "true"
+        annotations:
+          summary: "CRITICAL: Cloudflare Tunnel disconnected (Primary)"
+          description: "ide.kushnir.cloud is unreachable via Cloudflare. Public access blocked."
+          runbook: "docs/runbooks/CLOUDFLARE-TUNNEL-TROUBLESHOOTING.md"
+
+      # P2: Cloudflare Tunnel High Latency
+      - alert: CloudflareTunnelLatency
+        expr: cloudflared_tunnel_latency_ms{tunnel="code_server_primary"} > 500
+        for: 5m
+        labels:
+          severity: high
+          component: cloudflare_tunnel
+          page: "false"
+        annotations:
+          summary: "Cloudflare Tunnel latency high ({{ $value | humanize }}ms)"
+          description: "Tunnel to ide.kushnir.cloud experiencing latency. Check network connectivity."
+          runbook: "docs/runbooks/CLOUDFLARE-TUNNEL-TROUBLESHOOTING.md"
+
+      # P2: Cloudflare WAF Block Rate Spike
+      - alert: CloudflareWAFBlockSpike
+        expr: rate(cloudflared_waf_blocked_requests_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: high
+          component: cloudflare_tunnel
+          page: "false"
+        annotations:
+          summary: "Cloudflare WAF blocking requests at elevated rate ({{ $value | humanize }}/sec)"
+          description: "WAF rule hit rate exceeded threshold. Check for attacks or misconfiguration."
+          runbook: "docs/runbooks/CLOUDFLARE-TUNNEL-TROUBLESHOOTING.md"
+
+      # P3: Cloudflare Tunnel Memory High
+      - alert: CloudflareTunnelMemoryHigh
+        expr: 'process_resident_memory_bytes{job="cloudflared"} / (128 * 1024 * 1024) > 0.8'
+        for: 10m
+        labels:
+          severity: warning
+          component: cloudflare_tunnel
+          page: "false"
+        annotations:
+          summary: "Cloudflared process memory high ({{ $value | humanizePercentage }})"
+          description: "Memory usage approaching container limit (128MB). Monitor for OOM."

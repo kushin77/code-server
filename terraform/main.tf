@@ -1,5 +1,38 @@
 terraform {
   required_version = ">= 1.7"
+  
+  # ═══════════════════════════════════════════════════════════════════════
+  # REMOTE STATE BACKEND — MinIO S3-compatible (Issue #417)
+  # ═══════════════════════════════════════════════════════════════════════
+  # Initialize with: terraform init -backend-config=backend-config.hcl
+  # Verify with: terraform state list (should show resources from remote)
+  # Migration: terraform init -migrate-state (moves local to remote)
+  #
+  # Security:
+  # - Credentials via AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars
+  # - State encrypted at rest in MinIO (TLS in transit via Caddy)
+  # - Local terraform.tfstate should be deleted after successful migration
+  # - gitignore: *.tfstate* (never commit local state)
+  #
+  # On-Premises Benefits:
+  # - No cloud vendor lock-in (MinIO is S3-compatible)
+  # - State stored on 192.168.168.31 (on-prem infrastructure)
+  # - Team collaboration with state locking
+  # - Disaster recovery (state is backed up with database)
+  # ═══════════════════════════════════════════════════════════════════════
+  
+  backend "s3" {
+    bucket         = "code-server-tfstate"
+    key            = "prod/terraform.tfstate"
+    region         = "us-east-1"
+    endpoint       = "http://minio:9000"
+    
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+    skip_requesting_account_id  = true
+    skip_region_validation      = true
+  }
+  
   required_providers {
     # Local file operations
     local = {

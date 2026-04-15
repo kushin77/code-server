@@ -326,3 +326,95 @@ variable "environment" {
     error_message = "Must be production, staging, or development."
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vault Production Configuration (Issue #413)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "vault_postgres_user" {
+  description = "PostgreSQL user for Vault storage backend"
+  type        = string
+  default     = "vault"
+  sensitive   = true
+}
+
+variable "vault_postgres_password" {
+  description = "PostgreSQL password for Vault storage backend"
+  type        = string
+  sensitive   = true
+  default     = ""  // Will use environment variable VAULT_POSTGRES_PASSWORD if not set
+}
+
+variable "vault_postgres_db" {
+  description = "PostgreSQL database for Vault storage backend"
+  type        = string
+  default     = "vault"
+}
+
+variable "vault_api_addr" {
+  description = "Vault API address for cluster communication"
+  type        = string
+  default     = "https://vault.kushnir.cloud:8200"
+}
+
+variable "vault_cluster_addr" {
+  description = "Vault cluster address (HA communication)"
+  type        = string
+  default     = "https://192.168.168.31:8201"
+}
+
+variable "vault_tls_cert_pem" {
+  description = "Vault TLS certificate (PEM format). If empty, self-signed will be generated."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "vault_tls_key_pem" {
+  description = "Vault TLS private key (PEM format). If empty, self-signed will be generated."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "vault_auto_unseal_enabled" {
+  description = "Enable auto-unseal for Vault (requires KMS or HTTPS seal for on-prem)"
+  type        = bool
+  default     = false  // Set to true once KMS or HTTPS seal configured
+}
+
+variable "vault_ha_enabled" {
+  description = "Enable HA mode for Vault (requires >= 2 instances)"
+  type        = bool
+  default     = true
+}
+
+variable "vault_log_level" {
+  description = "Vault log level (trace, debug, info, warn, err)"
+  type        = string
+  default     = "info"
+  validation {
+    condition     = contains(["trace", "debug", "info", "warn", "err"], var.vault_log_level)
+    error_message = "Must be trace, debug, info, warn, or err."
+  }
+}
+
+variable "vault_max_lease_ttl" {
+  description = "Maximum lease duration (in hours) for Vault tokens"
+  type        = number
+  default     = 768  // 32 days
+  validation {
+    condition     = var.vault_max_lease_ttl > 0
+    error_message = "vault_max_lease_ttl must be greater than 0."
+  }
+}
+
+variable "vault_default_lease_ttl" {
+  description = "Default lease duration (in hours) for Vault tokens"
+  type        = number
+  default     = 24  // 1 day
+  validation {
+    condition     = var.vault_default_lease_ttl > 0 && var.vault_default_lease_ttl <= var.vault_max_lease_ttl
+    error_message = "vault_default_lease_ttl must be 0 < ttl <= max_lease_ttl."
+  }
+}

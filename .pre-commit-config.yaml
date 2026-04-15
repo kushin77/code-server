@@ -12,7 +12,7 @@ repos:
       # Phase 2.3: Custom hook - verify scripts source common libraries
       - id: verify-scripts-source-common
         name: Verify scripts source _common libraries
-        entry: bash -c 'if [[ -d scripts/_common ]]; then for f in scripts/{deploy,backup,validate,test}.sh; do if [[ -f "$f" ]] && ! grep -q "source.*_common" "$f"; then echo "ERROR: $f missing _common source"; fi; done; fi'
+        entry: "bash -c 'if [[ -d scripts/_common ]]; then for f in scripts/{deploy,backup,validate,test}.sh; do if [[ -f \"$f\" ]] && ! grep -q \"source.*_common\" \"$f\"; then echo \"ERROR: $f missing _common source\"; fi; done; fi'"
         language: system
         files: '^scripts/(deploy|backup|validate|test)\.sh$'
         pass_filenames: false
@@ -21,7 +21,7 @@ repos:
       # Phase 2.3: Custom hook - verify metadata headers
       - id: verify-metadata-headers
         name: Verify metadata headers in critical scripts
-        entry: bash -c 'if [[ -f scripts/deploy.sh ]]; then if ! grep -q "^#!/bin/bash" scripts/deploy.sh; then echo "ERROR: deploy.sh missing bash shebang"; fi; fi'
+        entry: "bash -c 'if [[ -f scripts/deploy.sh ]]; then if ! grep -q \"^#!/bin/bash\" scripts/deploy.sh; then echo \"ERROR: deploy.sh missing bash shebang\"; fi; fi'"
         language: system
         files: '^scripts/deploy\.sh$'
         pass_filenames: false
@@ -30,7 +30,7 @@ repos:
       # Phase 3: Block hardcoded IPs — use $DEPLOY_HOST from _common/config.sh
       - id: no-hardcoded-ips
         name: No hardcoded IP addresses in scripts
-        entry: bash -c 'files=$(grep -rl "192\.168\.168\.\(31\|30\)" scripts/ 2>/dev/null | grep -v "_common/" | grep -v "config\.sh" | grep "\.sh$"); if [[ -n "$files" ]]; then echo "GOVERNANCE: Hardcoded IP found — use \$DEPLOY_HOST:"; echo "$files" | sed "s/^/  /"; exit 1; fi'
+        entry: "bash -c 'files=$(grep -rl \"192\\.168\\.168\\.\\(31\\|30\\)\" scripts/ 2>/dev/null | grep -v \"_common/\" | grep -v \"config\\.sh\" | grep \"\\.sh$\"); if [[ -n \"$files\" ]]; then echo \"GOVERNANCE: Hardcoded IP found — use \\$DEPLOY_HOST:\"; echo \"$files\" | sed \"s/^/  /\"; exit 1; fi'"
         language: system
         files: '^scripts/.*\.sh$'
         pass_filenames: false

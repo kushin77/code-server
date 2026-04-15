@@ -317,6 +317,87 @@ groups:
           severity: warning
           component: ollama
         annotations:
+          summary: "Ollama inference latency high (p99 > 5s)"
+          description: "Model inference latency exceeds 5 seconds. Check system load."
+
+  # ========== Falco Runtime Security Alerts ==========
+  - name: falco_security_alerts
+    interval: 15s
+    rules:
+      # Falco Critical Security Event
+      - alert: FalcoCriticalEvent
+        expr: 'increase(falco_events_total{priority="CRITICAL"}[5m]) > 0'
+        for: 0m
+        labels:
+          severity: critical
+          component: falco
+          sla_impact: "yes"
+        annotations:
+          summary: "Falco detected critical security event"
+          description: "Immediate investigation required — possible breach or container escape"
+          runbook_url: "docs/runbooks/falco-critical-event.md"
+
+      # Falco High Event Rate (possible attack)
+      - alert: FalcoHighEventRate
+        expr: 'rate(falco_events_total{priority="WARNING"}[5m]) > 0.5'
+        for: 5m
+        labels:
+          severity: high
+          component: falco
+        annotations:
+          summary: "Elevated Falco event rate — possible attack in progress"
+          description: "{{ $value | humanize }} events/sec detected. Review Falco logs immediately."
+          runbook_url: "docs/runbooks/falco-high-event-rate.md"
+
+      # Falco Container Privilege Escalation
+      - alert: FalcoContainerPrivilegeEscalation
+        expr: 'increase(falco_events_total{rule="Privilege Escalation Attempt"}[5m]) > 0'
+        for: 0m
+        labels:
+          severity: critical
+          component: falco
+          sla_impact: "yes"
+        annotations:
+          summary: "Privilege escalation attempt detected in container"
+          description: "Container {{ $labels.container }} attempting unauthorized privilege change"
+          runbook_url: "docs/runbooks/falco-privilege-escalation.md"
+
+      # Falco Crypto Mining Detection
+      - alert: FalcoCryptoMiningDetected
+        expr: 'increase(falco_events_total{rule="Crypto Mining Attempt"}[5m]) > 0'
+        for: 0m
+        labels:
+          severity: critical
+          component: falco
+          sla_impact: "yes"
+        annotations:
+          summary: "Crypto mining activity detected"
+          description: "Container {{ $labels.container }} connecting to suspicious mining pool"
+          runbook_url: "docs/runbooks/falco-crypto-mining.md"
+
+      # Falco Sensitive File Access
+      - alert: FalcoSensitiveFileAccess
+        expr: 'increase(falco_events_total{rule="Read Sensitive File"}[5m]) > 0'
+        for: 1m
+        labels:
+          severity: high
+          component: falco
+        annotations:
+          summary: "Sensitive file access detected"
+          description: "Unauthorized access to sensitive files ({{ $labels.file }})"
+          runbook_url: "docs/runbooks/falco-sensitive-file.md"
+
+      # Falco Unexpected Outbound Connection
+      - alert: FalcoUnexpectedOutbound
+        expr: 'increase(falco_events_total{rule="Unexpected Outbound Connection"}[5m]) > 0'
+        for: 2m
+        labels:
+          severity: warning
+          component: falco
+        annotations:
+          summary: "Unexpected outbound connection detected"
+          description: "Container {{ $labels.container }} attempting unauthorized egress to {{ $labels.destination_ip }}"
+          runbook_url: "docs/runbooks/falco-unexpected-outbound.md"
           summary: "Ollama p99 latency: {{ $value | humanizeDuration }}"
           description: "Exceeded 5 second target. Check GPU saturation."
 

@@ -22,7 +22,7 @@
   - code-server, caddy, oauth2-proxy, postgres, redis
   - prometheus, grafana, alertmanager, jaeger, ollama
 - **Infrastructure Host**: 192.168.168.31 (primary, all services healthy)
-- **Standby Host**: 192.168.168.30 (ready for failover)
+- **Standby Host**: 192.168.168.42 (ready for failover)
 - **Domain**: ide.elevatediq.ai (configured, domain-only access enforced)
 - **Monitoring**: Prometheus/Grafana/AlertManager active
 
@@ -372,7 +372,7 @@ Phase 4: ✅ COMPLETE (IaC consolidated, 10/10 services operational)
 Phase 5: ✅ READY (DNS/OAuth awaiting Cloudflare + GCP credentials)
 Phase 6: 🚀 READY TO DEPLOY (5 scripts, zero dependencies, no blockers)
 
-Infrastructure: 192.168.168.31 (primary) + 192.168.168.30 (standby)
+Infrastructure: 192.168.168.31 (primary) + 192.168.168.42 (standby)
 Services: 10/10 healthy
 Domain: ide.elevatediq.ai (OAuth protected, domain-only access)
 Risk: LOW (proven production patterns, <5 min rollback)

@@ -139,7 +139,7 @@ INFRASTRUCTURE VERIFICATION ✅
     ✅ Containers: 3/3 running, health checks passing
     ✅ Services: All responding with 2xx codes
     
-  Standby Host (192.168.168.30):
+  Standby Host (192.168.168.42):
     ✅ Replication status: <2 second lag
     ✅ Failover readiness: Can accept 100% traffic
     ✅ Rollback route: Tested successfully

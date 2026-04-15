@@ -29,7 +29,7 @@ terraform/
 │
 ├── hosts/ - Host-specific variable overrides
 │   ├── 192.168.168.31.tfvars - Primary host
-│   └── 192.168.168.30.tfvars - Failover host
+│   └── 192.168.168.42.tfvars - Failover host
 │
 └── state/ - Terraform state files (gitignored)
 ```

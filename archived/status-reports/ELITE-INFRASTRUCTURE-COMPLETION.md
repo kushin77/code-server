@@ -47,7 +47,7 @@ on_prem = {
     base_path = "/home/akushnir/.config"
   }
   standby = {
-    host_ip = "192.168.168.30"
+    host_ip = "192.168.168.42"
     ssh_user = "akushnir"
   }
   nas = {
@@ -74,7 +74,7 @@ on_prem = {
   - `postgres-backup`: NFS mounted from 192.168.168.56:/exports/backups
 - **Mount strategy**: Soft NFS (vers=4, soft, timeo=180, bg, noresvport)
 - **Failover**: Graceful fallback to local storage if NAS unavailable
-- **RTO**: Sub-5s recovery to standby (192.168.168.30) with models on NAS
+- **RTO**: Sub-5s recovery to standby (192.168.168.42) with models on NAS
 
 ### 5. Connection Pooling (✅ DEPLOYED)
 **pgBouncer 1.21+ sidecar service** — 3x throughput improvement:
@@ -193,7 +193,7 @@ d2f477c8  feat(infra): elite infrastructure optimizations - NAS, GPU, pgBouncer 
 │   ├─ Volumes: Local docker manages stateful data     │
 │   └─ Networks: enterprise (isolated)                  │
 │                                                      │
-│   STANDBY: 192.168.168.30  (manual spin-up)         │
+│   STANDBY: 192.168.168.42  (manual spin-up)         │
 │                                                      │
 │   NAS: 192.168.168.56/exports/*  (NFSv4, soft)      │
 │        ├─ ollama-models    (persistent LLM data)     │

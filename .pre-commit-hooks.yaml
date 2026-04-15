@@ -58,7 +58,7 @@
 - id: no-hardcoded-ips
   name: Prevent hardcoded IP addresses in scripts
   description: >
-    Block commits that hardcode 192.168.168.31 or 192.168.168.30 in scripts.
+    Block commits that hardcode 192.168.168.31 or 192.168.168.42 in scripts.
     Use $DEPLOY_HOST / $STANDBY_HOST from _common/config.sh instead.
   entry: bash -c '
     files=$(grep -rl "192\.168\.168\.\(31\|30\)" scripts/ 2>/dev/null \

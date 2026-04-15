@@ -665,7 +665,7 @@ variable "regions" {
       enable_backup     = true
     }
     replica = {
-      host              = "192.168.168.30"
+      host              = "192.168.168.42"
       port              = 22
       environment       = "staging"
       enable_monitoring = true

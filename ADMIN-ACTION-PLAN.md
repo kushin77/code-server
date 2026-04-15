@@ -273,7 +273,7 @@ docker-compose restart oauth2-proxy
 ### Emergency Contact
 - SSH: `ssh akushnir@192.168.168.31`
 - Primary host: 192.168.168.31
-- Standby/Replica: 192.168.168.30
+- Standby/Replica: 192.168.168.42
 
 ---
 

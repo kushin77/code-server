@@ -161,7 +161,7 @@ services:
       - |
         set -e
         echo "[ollama-init] waiting for ollama..."
-        until curl -sf http://ollama:11434/api/tags; do sleep 3; done
+        until wget -qO- http://ollama:11434/api/tags >/dev/null 2>&1; do sleep 3; done
         echo "[ollama-init] pulling llama2:7b-chat (fast baseline)"
         ollama pull llama2:7b-chat
         echo "[ollama-init] pulling codellama:7b (code model)"

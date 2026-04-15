@@ -704,7 +704,7 @@ services:
       KONG_LOG_LEVEL: notice
       KONG_PLUGINS: bundled,opentelemetry,request-transformer,response-transformer,rate-limiting,key-auth,correlation-id
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8001/status || exit 1"]
+      test: ["CMD-SHELL", "kong health"]
       interval: 30s
       timeout: 10s
       retries: 3

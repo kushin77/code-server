@@ -114,3 +114,106 @@ jobs:
           else
             echo "::warning::Audit logging not found"
           fi
+
+  qa-identity:
+    name: QA service account (QA-IDENTITY-003)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bash jq curl
+
+      - name: Validate QA service account configuration
+        run: |
+          echo "Checking QA service account setup..."
+          
+          # Check qa-service in allowed-emails.txt
+          if grep -q "^qa-service@ide.kushnir.cloud$" allowed-emails.txt; then
+            echo "✅ QA service email in allowlist"
+          else
+            echo "::error::QA service email missing from allowed-emails.txt"
+            exit 1
+          fi
+          
+          # Check qa-service metadata
+          if [[ -f "config/user-settings/qa-service/user-metadata.json" ]]; then
+            role=$(jq -r '.role' config/user-settings/qa-service/user-metadata.json)
+            echo "✅ QA service account configured (role: $role)"
+          else
+            echo "::error::QA service metadata not found"
+            exit 1
+          fi
+
+      - name: Test QA authentication fixture
+        run: |
+          echo "Testing QA auth fixture..."
+          
+          # Validate account
+          bash scripts/test-auth.sh validate
+          
+          # Bootstrap session
+          token=$(bash scripts/test-auth.sh token)
+          if [[ -z "$token" ]]; then
+            echo "::error::Failed to generate QA auth token"
+            exit 1
+          fi
+          echo "✅ QA auth token generated: ${token:0:20}..."
+          
+          # Export context
+          source scripts/test-auth.sh
+          export_qa_auth_context
+          
+          # Verify context
+          if [[ -z "${QA_AUTH_TOKEN:-}" ]]; then
+            echo "::error::QA auth context not exported"
+            exit 1
+          fi
+          echo "✅ QA auth context ready (email: $QA_AUTH_EMAIL, role: $QA_AUTH_ROLE)"
+
+      - name: Verify QA role permissions
+        run: |
+          echo "Verifying QA role permissions..."
+          
+          # QA should have developer role (code editing, no terminal)
+          role=$(jq -r '.role' config/user-settings/qa-service/user-metadata.json)
+          
+          if [[ "$role" != "developer" ]]; then
+            echo "::warning::QA role is '$role' (expected 'developer')"
+          fi
+          
+          # Verify permissions
+          features=$(jq '.features' config/user-settings/qa-service/user-metadata.json)
+          
+          if jq -e '.codeEditing == true' <<< "$features" >/dev/null; then
+            echo "✅ QA can edit code"
+          else
+            echo "❌ QA code editing disabled"
+          fi
+          
+          if jq -e '.terminal == false' <<< "$features" >/dev/null; then
+            echo "✅ QA terminal access disabled (expected)"
+          else
+            echo "⚠️  QA terminal access enabled"
+          fi
+
+      - name: Verify QA audit logging
+        run: |
+          echo "Checking QA audit logging..."
+          
+          # Check audit directory exists
+          if [[ -d "audit" ]]; then
+            echo "✅ Audit directory exists"
+          else
+            echo "⚠️  Audit directory not found (will be created at runtime)"
+          fi
+          
+          # Verify audit log references QA identity
+          if grep -q 'qa-service' audit/user-provisioning.log 2>/dev/null || \
+             grep -q 'qa-service' audit/qa-test-runs.log 2>/dev/null; then
+            echo "✅ QA audit entries found"
+          else
+            echo "ℹ️  No QA audit entries yet (normal for first run)"
+          fi

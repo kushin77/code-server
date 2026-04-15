@@ -30,16 +30,14 @@ log_stderr: true
 # No kernel module required, works in most container environments
 
 # ─────────────────────────────────────────────────────────────
-# gRPC Server (for falcosidekick)
+# gRPC Server - disabled (no TLS certs available in containerized deployment)
 # ─────────────────────────────────────────────────────────────
 
 grpc:
-  enabled: true
-  bind_address: "0.0.0.0:5060"
-  threadiness: 0
+  enabled: false
 
 grpcOutput:
-  enabled: false  # Not used in this config
+  enabled: false
 
 # Rules Loading
 rules_file:

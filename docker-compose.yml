@@ -538,8 +538,6 @@ services:
       - ./config/falco/rules.custom.yaml:/etc/falco/rules.custom.yaml:ro
       - falco-data:/var/lib/falco
     environment:
-      FALCO_GRPC_ENABLED: "true"
-      FALCO_GRPC_BIND_ADDRESS: "0.0.0.0:5060"
       DEBUG: "false"
     command:
       - /usr/bin/falco

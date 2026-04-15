@@ -38,7 +38,7 @@ repos:
 
   # Phase 2.3: Bash script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.7
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
         name: Bash script lint (shellcheck)

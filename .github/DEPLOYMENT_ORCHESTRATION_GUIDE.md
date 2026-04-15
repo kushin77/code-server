@@ -46,8 +46,7 @@ GitHub Repository
 │   ├── deploy.yml                       ← Deployment execution (called by orchestration)
 │   └── ci-validate.yml                  ← Pre-merge validation
 ├── scripts/
-│   ├── redeploy.sh                      ← Bash deployment orchestrator
-│   ├── redeploy.ps1                     ← PowerShell deployment orchestrator
+│   ├── redeploy.sh                      ← Bash deployment orchestrator (Linux-only)
 │   └── deploy-phase-12-all.sh           ← Actual deployment logic
 └── .github/
     └── AUTO-MERGE-CLEANUP-DEPLOY-MANDATE.md  ← This policy
@@ -72,7 +71,7 @@ GitHub Repository
   - Apply Terraform configurations
   - Report deployment results
 
-#### 3. **redeploy.sh / redeploy.ps1** (Local Scripts)
+#### 3. **redeploy.sh** (Local Script)
 - **Trigger**: Manual execution or CI/CD pipeline
 - **Responsibilities**:
   - Git state validation

@@ -1,137 +1,112 @@
-# ═══════════════════════════════════════════════════════════════════════════════
-# Caddyfile — PRODUCTION
-# Host: 192.168.168.31 | TLS: internal (on-prem self-signed)
-# Routes: ide, grafana, prometheus, alertmanager, jaeger, ollama
-# ═══════════════════════════════════════════════════════════════════════════════
+# =============================================================================
+# Caddyfile -- PRODUCTION  caddy v2.9.1-alpine
+# Host   : 192.168.168.31
+# TLS    : internal (on-prem self-signed CA)
+# Routes : ide, grafana, prometheus, alertmanager, jaeger, ollama
+# Updated: 2026-04-14  (caddy fmt compliant, no per-site log blocks)
+# =============================================================================
 
 {
-    admin off
-    log {
-        format json
-        output stdout
-        level  WARN
-    }
+	admin off
+
+	log {
+		format json
+		output stdout
+		level  WARN
+	}
 }
 
-# ── Shared security header snippet ──────────────────────────────────────────
+# -- Shared security headers --------------------------------------------------
 (security_headers) {
-    header {
-        X-Content-Type-Options    "nosniff"
-        X-Frame-Options           "SAMEORIGIN"
-        X-XSS-Protection          "1; mode=block"
-        Referrer-Policy           "strict-origin-when-cross-origin"
-        Strict-Transport-Security "max-age=63072000; includeSubDomains"
-        -Server
-        -X-Powered-By
-    }
+	header {
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "SAMEORIGIN"
+		X-XSS-Protection          "1; mode=block"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		-Server
+		-X-Powered-By
+	}
 }
 
-# ── IDE (code-server via oauth2-proxy) ──────────────────────────────────────
+# -- On-prem + VPN access matcher --------------------------------------------
+# Subnets: LAN 192.168.168.0/24, WireGuard 10.8.0.0/24, OpenVPN 10.0.0.0/8
+(internal_only) {
+	@denied not remote_ip 192.168.168.0/24 10.8.0.0/24 10.0.0.0/8
+	handle @denied {
+		respond "Forbidden" 403
+	}
+}
+
+# -- IDE (code-server via oauth2-proxy) --------------------------------------
 ide.kushnir.cloud {
-    tls internal
-    encode gzip
-    import security_headers
+	tls internal
+	encode gzip
+	import security_headers
 
-    # Auth via oauth2-proxy
-    reverse_proxy oauth2-proxy:4180 {
-        header_up Host              {upstream_hostport}
-        header_up X-Real-IP         {remote_host}
-        header_up X-Forwarded-For   {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
-
-    log {
-        output stdout
-        format json
-    }
+	reverse_proxy oauth2-proxy:4180 {
+		header_up Host       {upstream_hostport}
+		header_up X-Real-IP  {remote_host}
+	}
 }
 
-# ── Grafana ──────────────────────────────────────────────────────────────────
+# -- Grafana -----------------------------------------------------------------
 grafana.kushnir.cloud {
-    tls internal
-    encode gzip
-    import security_headers
-    reverse_proxy grafana:3000
-    log {
-        output stdout
-        format json
-    }
+	tls internal
+	encode gzip
+	import security_headers
+	reverse_proxy grafana:3000
 }
 
-# ── Prometheus (internal only — no oauth, restrict to VPN) ──────────────────
+# -- Prometheus (LAN + VPN only) ---------------------------------------------
 prometheus.kushnir.cloud {
-    tls internal
-    encode gzip
-    import security_headers
+	tls internal
+	encode gzip
+	import security_headers
+	import internal_only
 
-    # Restrict to on-prem subnet + VPN range
-    @allowed remote_ip 192.168.168.0/24 10.8.0.0/24
-    handle @allowed {
-        reverse_proxy prometheus:9090
-    }
-    handle {
-        respond "Forbidden" 403
-    }
-    log {
-        output stdout
-        format json
-    }
+	handle {
+		reverse_proxy prometheus:9090
+	}
 }
 
-# ── AlertManager ─────────────────────────────────────────────────────────────
+# -- AlertManager (LAN + VPN only) -------------------------------------------
 alertmanager.kushnir.cloud {
-    tls internal
-    encode gzip
-    import security_headers
+	tls internal
+	encode gzip
+	import security_headers
+	import internal_only
 
-    @allowed remote_ip 192.168.168.0/24 10.8.0.0/24
-    handle @allowed {
-        reverse_proxy alertmanager:9093
-    }
-    handle {
-        respond "Forbidden" 403
-    }
-    log {
-        output stdout
-        format json
-    }
+	handle {
+		reverse_proxy alertmanager:9093
+	}
 }
 
-# ── Jaeger Tracing UI ────────────────────────────────────────────────────────
+# -- Jaeger Tracing UI (LAN + VPN only) --------------------------------------
 jaeger.kushnir.cloud {
-    tls internal
-    encode gzip
-    import security_headers
+	tls internal
+	encode gzip
+	import security_headers
+	import internal_only
 
-    @allowed remote_ip 192.168.168.0/24 10.8.0.0/24
-    handle @allowed {
-        reverse_proxy jaeger:16686
-    }
-    handle {
-        respond "Forbidden" 403
-    }
-    log {
-        output stdout
-        format json
-    }
+	handle {
+		reverse_proxy jaeger:16686
+	}
 }
 
-# ── Ollama API (internal only) ───────────────────────────────────────────────
+# -- Ollama API (LAN + VPN only) ---------------------------------------------
 ollama.kushnir.cloud {
-    tls internal
-    import security_headers
+	tls internal
+	import security_headers
+	import internal_only
 
-    @allowed remote_ip 192.168.168.0/24 10.8.0.0/24
-    handle @allowed {
-        reverse_proxy ollama:11434
-    }
-    handle {
-        respond "Forbidden" 403
-    }
+	handle {
+		reverse_proxy ollama:11434
+	}
 }
 
-# ── Direct IP fallback (port 80 → redirect to HTTPS) ────────────────────────
+# -- HTTP -> HTTPS redirect ---------------------------------------------------
 :80 {
-    redir https://{host}{uri} 301
+	redir https://{host}{uri} 301
 }
 

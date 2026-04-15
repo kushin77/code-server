@@ -1,0 +1,203 @@
+# Caddy Configuration with Telemetry/Trace ID Propagation
+# Issue #377: End-to-End Telemetry with Correlation IDs
+# Reference: TELEMETRY-ARCHITECTURE.md
+
+{
+	admin off
+	
+	# JSON structured logging
+	log {
+		format json
+		output stdout
+		level info
+	}
+
+	# On-premises TLS: Use self-signed certificates (no public DNS for Let's Encrypt ACME)
+	# For production with public DNS, uncomment the ACME lines below:
+	# acme_ca https://acme-v02.api.letsencrypt.org/directory
+	# email ops@kushnir.cloud
+}
+
+# Telemetry headers snippet
+# Propagates trace IDs and correlation identifiers from edge to upstream services
+(telemetry_headers) {
+	# Extract or generate trace ID from Cloudflare edge
+	# If cf-ray header exists (Cloudflare tunnel), use it as basis for trace_id
+	# Otherwise, Caddy generates a new UUID
+	
+	# Pass through Cloudflare ray ID
+	header_up CF-Ray {http.request.header.cf-ray}
+	
+	# Propagate trace ID (or generate if missing)
+	# Note: In production with Cloudflare Tunnel, set x-trace-id from cf-ray in the tunnel config
+	header_up X-Trace-ID {http.request.header.x-trace-id}
+	
+	# Add request ID (Caddy's built-in request tracking)
+	header_up X-Request-ID {http.request.uuid}
+	
+	# Propagate original client info for upstream services
+	header_up X-Real-IP {remote_host}
+	header_up X-Forwarded-For {remote_host}
+	header_up X-Forwarded-Proto {scheme}
+	header_up X-Forwarded-Host {host}
+	
+	# Forward user info (if present from auth layer)
+	header_up X-User-ID {http.request.header.x-user-id}
+	header_up X-Session-ID {http.request.header.x-session-id}
+}
+
+# Security headers snippet
+(security_headers) {
+	header {
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "SAMEORIGIN"
+		X-XSS-Protection          "1; mode=block"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		-Server
+	}
+}
+
+# Production domain with HTTPS/TLS and OAuth2 SSO
+# On-prem deployment: Self-signed certificates (no public DNS for ACME)
+ide.kushnir.cloud {
+	# TLS: Internal self-signed certificates (on-premises)
+	tls internal
+
+	encode gzip
+	import security_headers
+
+	# JSON structured logging with telemetry fields
+	log {
+		format json
+		output stdout
+		level info
+		
+		# Custom JSON fields for telemetry schema
+		# timestamp, status, duration, request_path, method, response_bytes
+		# trace_id and request_id are auto-included via headers
+	}
+
+	# Health check endpoints (no auth required)
+	@health path /healthz /ping /health
+	handle @health {
+		respond "OK" 200
+	}
+
+	# OAuth2 callback endpoint (no auth required)
+	@oauth path /oauth2*
+	handle @oauth {
+		reverse_proxy oauth2-proxy:4180 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# IDE (Code Server) - Primary application
+	handle /console* {
+		reverse_proxy code-server:8080 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# API endpoints
+	handle /api* {
+		reverse_proxy code-server:8080 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# Git proxy (Git operations over HTTP)
+	handle /git* {
+		reverse_proxy git-proxy:9000 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# Grafana (Observability Dashboards)
+	handle /grafana* {
+		reverse_proxy grafana:3000 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# Prometheus (Metrics)
+	handle /prometheus* {
+		reverse_proxy prometheus:9090 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# Jaeger (Distributed Tracing)
+	handle /jaeger* {
+		reverse_proxy jaeger:16686 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# AlertManager (Alert Management)
+	handle /alertmanager* {
+		reverse_proxy alertmanager:9093 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+
+	# Default route
+	handle / {
+		reverse_proxy oauth2-proxy:4180 {
+			import telemetry_headers
+			header_up Host {upstream_hostport}
+		}
+	}
+}
+
+# Development/Testing domain (no auth, all features)
+# Only active when ENV=development
+localhost:8080 {
+	encode gzip
+
+	log {
+		format json
+		output stdout
+		level debug
+	}
+
+	# All routes go directly to code-server (no oauth2-proxy in dev mode)
+	reverse_proxy code-server:8080 {
+		import telemetry_headers
+		header_up Host {upstream_hostport}
+	}
+}
+
+# Internal observability domain (Prometheus scrape targets, etc.)
+# Only accessible on internal network (192.168.168.0/24)
+localhost:9090 {
+	log {
+		format json
+		output stdout
+		level info
+	}
+
+	handle /metrics* {
+		reverse_proxy prometheus:9090 {
+			import telemetry_headers
+		}
+	}
+
+	handle /jaeger* {
+		reverse_proxy jaeger:16686 {
+			import telemetry_headers
+		}
+	}
+
+	handle / {
+		respond "Observability endpoints available: /metrics, /jaeger" 200
+	}
+}

@@ -86,6 +86,8 @@ services:
     restart: always
     networks: [enterprise]
     security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]  # required by Redis entrypoint execution
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     command: >
@@ -829,23 +831,57 @@ networks:
 # Volumes  (NAS-backed = /mnt/nas-56 bind mounts above; local SSD below)
 # ─────────────────────────────────────────────────────────────────────────────
 volumes:
-  # ── Local SSD volumes (fast I/O for databases) ───────────────────────────
+  # ── Bind mounts to bypass snap Docker confinement ───────────────────────────
+  # Use explicit directories instead of named volumes to avoid snap filesystem
+  # restrictions that prevent container entrypoints from executing
   postgres-data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/akushnir/.docker-data/postgres
   redis-data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/akushnir/.docker-data/redis
   minio-data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/nas-56/minio
   prometheus-data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/nas-56/prometheus
   code-server-data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/nas-56/code-server
   caddy-config:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/nas-56/caddy/config
   caddy-data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/nas-56/caddy/data
   alertmanager-data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/nas-56/alertmanager
   jaeger-data:
     driver: local
   vault-data:

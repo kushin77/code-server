@@ -1,0 +1,128 @@
+---
+# Infrastructure Alerts
+# Node disk, memory, CPU, network, container runtime
+# Load order: 7
+
+groups:
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      # P0: Disk full / critical
+      - alert: DiskSpaceCritical
+        expr: |
+          (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Disk space is critical ({{ printf \"%.1f%%\" (mul $value 100) }} free)"
+          description: "{{ $labels.device }} on {{ $labels.instance }} has < 5% free space"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/disk-full.md"
+
+      # P1: Disk space running low
+      - alert: DiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Disk space is running low ({{ printf \"%.1f%%\" (mul $value 100) }} free)"
+          description: "{{ $labels.device }} on {{ $labels.instance }} has < 15% free space"
+
+      # P1: inode exhaustion
+      - alert: InodeExhaustion
+        expr: |
+          (node_filesystem_files_free / node_filesystem_files) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Inode space is running low ({{ printf \"%.1f%%\" (mul $value 100) }} free)"
+          description: "{{ $labels.device }} on {{ $labels.instance }} has < 10% free inodes"
+
+      # P1: Memory pressure (system swapping)
+      - alert: MemorySwapActive
+        expr: node_memory_SwapFree_bytes < node_memory_SwapTotal_bytes * 0.2
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "System is swapping memory"
+          description: "{{ $labels.instance }} is using swap - performance degradation expected"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/memory-swap.md"
+
+      # P2: High CPU (prolonged)
+      - alert: CPUUtilizationHigh
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) by (instance)) > 0.8
+        for: 15m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "CPU utilization is high ({{ printf \"%.1f%%\" (mul (sub 1 $value) 100) }})"
+          description: "{{ $labels.instance }} CPU usage > 80% for 15+ minutes"
+
+      # P2: High system load
+      - alert: SystemLoadHigh
+        expr: |
+          node_load5 / count(count(node_cpu_seconds_total) by (cpu)) > 2.0
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "System load is high ({{ printf \"%.2f\" $value }})"
+          description: "{{ $labels.instance }} load average 5m > 2x CPU count"
+
+      # P2: Network interface errors/dropped packets
+      - alert: NetworkPacketLoss
+        expr: |
+          rate(node_network_transmit_drop_total[5m]) > 0
+          or
+          rate(node_network_receive_drop_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Network packet loss detected on {{ $labels.device }}"
+          description: "{{ $labels.instance }} is experiencing packet drops - check network health"
+
+      # P3: High network latency (ping)
+      - alert: NetworkLatencyHigh
+        expr: probe_rtt_seconds > 0.1
+        for: 5m
+        labels:
+          severity: info
+          team: infrastructure
+        annotations:
+          summary: "Network latency is high ({{ printf \"%.2f\" (mul $value 1000) }}ms)"
+          description: "{{ $labels.instance }} has increased latency to upstream"
+
+      # P3: Docker daemon issues
+      - alert: DockerDaemonUnresponsive
+        expr: up{job="docker"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Docker daemon is unresponsive"
+          description: "Cannot connect to Docker daemon on {{ $labels.instance }}"
+
+      # P3: Container restart rate high
+      - alert: ContainerRestartRateHigh
+        expr: rate(container_restarts_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Container {{ $labels.container_name }} restarting frequently"
+          description: "Container restart rate > 0.1 restarts/second"

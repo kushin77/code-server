@@ -1,0 +1,145 @@
+---
+# SLO / SLI Multi-Window Burn Rate Alerts
+# Detects when error budget is being consumed faster than allowed
+# Based on: https://sre.google/sre-book/alerting-on-slos/
+# Load order: 3
+
+groups:
+  - name: slo_burn_rate_alerts
+    interval: 1m
+    rules:
+      # ===== Target: 99.9% availability (0.1% error budget) =====
+      # Error budget per period: 0.1% of requests can fail
+      # Daily budget: ~8.64 seconds of downtime
+      # Weekly budget: ~1 minute of downtime
+
+      # FAST BURN (1h window) — page on-call immediately if firing
+      # Threshold: 14.4x the allowed error rate (consumes 1 day's budget in 1 hour)
+      - alert: SLOErrorBudgetFastBurnCodeServer
+        expr: |
+          (
+            rate(http_requests_total{job="code-server", status=~"5.."}[1h])
+            /
+            rate(http_requests_total{job="code-server"}[1h])
+          ) > 14.4 * (1 - 0.999)
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          slo: availability
+          burn_rate: "14.4x"
+        annotations:
+          summary: "SLO fast burn rate: code-server error budget burning 14.4x faster than allowed"
+          description: |
+            Error budget for code-server is being consumed 14.4x faster than allowed.
+            Current error rate: {{ printf "%.3f%%" (mul (div $value 0.001) 100) }}
+            Allowed rate: 0.1%
+            If this continues for 1 hour, will exhaust 1 day of error budget.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-burn-fast.md"
+
+      # MEDIUM BURN (6h window) — warning/alert ops team
+      # Threshold: 6x the allowed error rate (consumes 1 day's budget in 6 hours)
+      - alert: SLOErrorBudgetMediumBurnCodeServer
+        expr: |
+          (
+            rate(http_requests_total{job="code-server", status=~"5.."}[6h])
+            /
+            rate(http_requests_total{job="code-server"}[6h])
+          ) > 6 * (1 - 0.999)
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          slo: availability
+          burn_rate: "6x"
+        annotations:
+          summary: "SLO medium burn rate: code-server error budget at risk"
+          description: |
+            Error budget is being consumed at 6x the allowed rate.
+            If this continues for 6 hours, will exhaust 1 day of error budget.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-burn-medium.md"
+
+      # SLOW BURN (30d window) — informational/trending
+      # Threshold: 0.3x the allowed error rate (if this continues, will miss SLO)
+      - alert: SLOErrorBudgetSlowBurnCodeServer
+        expr: |
+          (
+            rate(http_requests_total{job="code-server", status=~"5.."}[30d])
+            /
+            rate(http_requests_total{job="code-server"}[30d])
+          ) > (1 - 0.999)
+        for: 1h
+        labels:
+          severity: info
+          team: platform
+          slo: availability
+          burn_rate: "1x"
+        annotations:
+          summary: "SLO tracking: code-server error rate at (or above) allowed threshold"
+          description: |
+            Error rate is at the threshold for the SLO.
+            Current 30-day error rate: {{ printf "%.4f%%" (mul $value 100) }}
+            If this rate continues, SLO will not be met this month.
+
+      # ===== Database Replication SLO (99.99%) =====
+      # Detect when replication is lagging (consuming availability budget)
+      - alert: DatabaseReplicationLagHighBurn
+        expr: pg_replication_lag_seconds > 60
+        for: 5m
+        labels:
+          severity: critical
+          team: data
+          slo: database_replication
+        annotations:
+          summary: "Database replication lag is consuming availability budget"
+          description: |
+            PostgreSQL replication lag: {{ $value }}s
+            Replica is out of sync with primary - failover capacity reduced
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/db-replication-lag.md"
+
+      # ===== Backup/WAL Archival SLO (100% — no failures) =====
+      - alert: BackupFailureErrorBudgetBurn
+        expr: rate(backup_failures_total[1h]) > 0
+        for: 10m
+        labels:
+          severity: critical
+          team: data
+          slo: backup
+        annotations:
+          summary: "Backup is failing - consuming DR budget"
+          description: "Backup job failures detected - data recovery capability compromised"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-failure.md"
+
+  # Recording rules for SLI calculation (helper metrics for dashboards)
+  - name: slo_recording_rules
+    interval: 30s
+    rules:
+      # Availability SLI (successful request ratio)
+      - record: slo:availability:success_ratio_1h
+        expr: |
+          (
+            rate(http_requests_total{status!~"5.."}[1h])
+            /
+            rate(http_requests_total[1h])
+          ) or on() vector(1)
+
+      - record: slo:availability:success_ratio_30d
+        expr: |
+          (
+            rate(http_requests_total{status!~"5.."}[30d])
+            /
+            rate(http_requests_total[30d])
+          ) or on() vector(1)
+
+      # Replication SLI (lag vs SLA target)
+      - record: slo:replication:lag_acceptable
+        expr: pg_replication_lag_seconds <= 30
+
+      # Backup SLI (success rate)
+      - record: slo:backup:success_ratio_24h
+        expr: |
+          (
+            rate(backup_success_total[24h])
+            /
+            (rate(backup_success_total[24h]) + rate(backup_failures_total[24h]))
+          ) or on() vector(1)

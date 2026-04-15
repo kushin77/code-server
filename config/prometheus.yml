@@ -13,10 +13,10 @@ alerting:
         - targets:
             - alertmanager:9093
 
-# Alert rules
+# Alert rules - consolidated SSOT in rules/ directory
+# See: config/prometheus/rules/_index.yml for documentation
 rule_files:
-  - "alert-rules.yml"
-  - "alert-rules-gaps-374.yml"
+  - "prometheus/rules/*.yml"
 
 scrape_configs:
   # Self-scrape Prometheus metrics

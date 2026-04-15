@@ -22,7 +22,7 @@ locals {
   docker_images = {
     code_server = "codercom/code-server:4.115.0"
     oauth2_proxy = "quay.io/oauth2-proxy/oauth2-proxy:v7.5.1"
-    caddy = "caddy:latest"  # Built custom in Dockerfile.caddy
+    caddy = "caddy:2.7.6-alpine"  # ✅ PINNED — was :latest
     
     # Phase 21: Observability & Operational Excellence
     prometheus = "prom/prometheus:v2.48.0"
@@ -31,13 +31,13 @@ locals {
     node_exporter = "prom/node-exporter:v1.7.0"
     
     # Additional observability (for future phases)
-    jaeger = "jaegertracing/all-in-one:latest"
-    loki = "grafana/loki:latest"
+    jaeger = "jaegertracing/all-in-one:1.50.0"  # ✅ PINNED — was :latest
+    loki = "grafana/loki:2.9.7"  # ✅ PINNED — was :latest
   }
 
   # ✅ Immutable tags and labels
   tags = {
-    Environment = local.environmen
+    Environment = local.environment
     Service     = local.service_name
     ManagedBy   = "Terraform"
     IaC         = "Yes"
@@ -89,7 +89,7 @@ locals {
   # ✅ Environment variables (non-sensitive)
   common_env = {
     "TZ"                   = "UTC"
-    "NODE_ENV"             = local.environmen
+    "NODE_ENV"             = local.environment
     "SERVICE_URL"          = "https://open-vsx.org/vscode/gallery"
     "ITEM_URL"             = "https://open-vsx.org/vscode/item"
     "NODE_OPTIONS"         = "--no-experimental-global-navigator"
@@ -150,7 +150,7 @@ output "local_configuration" {
   description = "Computed local configuration"
   value = {
     service_name  = local.service_name
-    environment   = local.environmen
+    environment   = local.environment
     docker_images = local.docker_images
     security      = local.security
     health_check  = local.health_check

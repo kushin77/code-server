@@ -1,25 +1,52 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.7"
   required_providers {
+    # Local file operations
     local = {
       source  = "hashicorp/local"
       version = "~> 2.5"
     }
+    
+    # Null provider (for resource-less actions)
     null = {
       source  = "hashicorp/null"
-      version = "~> 3.0"
+      version = "~> 3.2"
     }
+    
+    # Docker container orchestration
     docker = {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
+    
+    # Random resource generation (secrets, tokens)
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.5"
+      version = "~> 3.6"
     }
+    
+    # AWS cloud provider (optional, for hybrid deployments)
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
+    }
+    
+    # Cloudflare DNS and tunneling
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.27"
+    }
+    
+    # GoDaddy DNS provider (on-premises domain management)
+    godaddy = {
+      source  = "n3integration/godaddy"
+      version = "~> 1.9"
+    }
+    
+    # HashiCorp Vault (secrets management)
+    vault = {
+      source  = "hashicorp/vault"
+      version = "~> 4.2"
     }
   }
 }

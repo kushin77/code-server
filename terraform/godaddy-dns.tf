@@ -7,15 +7,6 @@
 # Last Updated: April 15, 2026
 ################################################################################
 
-terraform {
-  required_providers {
-    godaddy = {
-      source  = "n3integration/godaddy"
-      version = "~> 1.9"
-    }
-  }
-}
-
 provider "godaddy" {
   key    = var.godaddy_api_key
   secret = var.godaddy_api_secret

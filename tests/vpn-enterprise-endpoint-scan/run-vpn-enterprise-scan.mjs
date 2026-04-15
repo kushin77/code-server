@@ -71,6 +71,10 @@ function endpointUrl(baseUrl, endpointPath) {
   return new URL(endpointPath, baseUrl).toString();
 }
 
+function isIpv4(value) {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(value);
+}
+
 async function runPlaywrightScan(config, endpoints) {
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
   const context = await browser.newContext({ ignoreHTTPSErrors: true });
@@ -313,7 +317,7 @@ function buildDebugLog(diagnostics) {
     logLine(`Starting enterprise VPN endpoint scan against ${config.baseUrl}`);
     await requireVpnInterface(vpnInterface);
 
-    const resolvedIps = await dns.resolve4(baseHost);
+    const resolvedIps = isIpv4(baseHost) ? [baseHost] : await dns.resolve4(baseHost);
     const routeEvidence = [];
 
     for (const ip of resolvedIps) {

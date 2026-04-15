@@ -1,4 +1,12 @@
 # ==============================================================================
+# ⛔ DEPRECATED — DO NOT USE
+# This PowerShell script is deprecated. Windows is not a supported platform.
+# Equivalent functionality: scripts/validate-config.sh (bash, Linux-only)
+# See: SUPPORTED-PLATFORMS.md for platform requirements
+# Archived: April 2026 — Phase 5 Windows Elimination
+# ==============================================================================
+#
+# ==============================================================================
 # Validate-ConfigSSoT.ps1 - Phase 1 Configuration Consolidation Validation
 # Validates master SSOT configurations are in place and no duplicates remain
 # Exit Code: 0 = all validation passed | 1 = validation failures found

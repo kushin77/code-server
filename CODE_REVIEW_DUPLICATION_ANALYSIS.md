@@ -22,7 +22,10 @@ The workspace contains **12+ exact duplicate service definitions**, **45+ hardco
 1. **Docker Compose Files** (6): docker-compose.yml, docker-compose.production.yml, docker-compose.tpl, docker-compose-phase-16.yml, docker-compose-phase-18.yml, docker-compose-phase-20-a1.yml
 2. **Caddyfile Variants** (4): Caddyfile, Caddyfile.production, Caddyfile.tpl, Caddyfile.new
 3. **Bash Deployment Scripts** (4+): deploy-iac.sh, deploy-security.sh, fix-onprem.sh, fix-github-auth.sh
-4. **PowerShell Scripts** (4): BRANCH_PROTECTION_SETUP.ps1, deploy-iac.ps1, ci-merge-automation.ps1, admin-merge.ps1
+4. **PowerShell Scripts** (4): BRANCH_PROTECTION_SETUP.ps1, deploy-iac.ps1, ci-merge-automation.ps1, admin-merge.ps1  
+   > **⚠️ OUTDATED NOTE**: These 4 PowerShell scripts no longer exist in the main codebase.  
+   > Windows was eliminated in Phase 5 (April 2026). Only `archived/powershell-scripts/Validate-ConfigSSoT.ps1` remains in archive (deprecated).  
+   > See [SUPPORTED-PLATFORMS.md](SUPPORTED-PLATFORMS.md) for current platform requirements.
 5. **Terraform Files** (5+): main.tf, variables.tf, phase-21-observability.tf, phase-*.tf modules
 6. **AlertManager Configs** (2): alertmanager.yml, alertmanager-production.yml
 

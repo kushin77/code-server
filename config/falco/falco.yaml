@@ -43,7 +43,8 @@ grpcOutput:
 
 # Rules Loading
 rules_file:
-  - /etc/falco/rules.local.yaml
+  - /etc/falco/falco_rules.yaml
+  - /etc/falco/falco_rules.local.yaml
   - /etc/falco/rules.custom.yaml
 
 # ─────────────────────────────────────────────────────────────

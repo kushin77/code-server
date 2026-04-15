@@ -360,8 +360,7 @@ services:
       - '--log.level=warn'
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
-      - ./alert-rules-gaps-374.yml:/etc/prometheus/alert-rules-gaps-374.yml:ro
+      - ./config/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus-data:/prometheus
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy"]
@@ -424,7 +423,7 @@ services:
       - '--storage.path=/alertmanager'
       - '--log.level=warn'
     volumes:
-      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./config/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/healthy"]

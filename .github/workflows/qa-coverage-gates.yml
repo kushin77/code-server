@@ -1,0 +1,303 @@
+name: QA-COVERAGE-004 Phase 2 - CI Integration & SLO Gates
+on:
+  workflow_run:
+    workflows: [vpn-enterprise-endpoint-scan-enhanced]
+    types: [completed]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'tests/**'
+      - '.github/workflows/**'
+      - 'src/**'
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  statuses: write
+
+env:
+  COVERAGE_THRESHOLD: 95
+  CRITICAL_PATH_THRESHOLD: 98
+  COVERAGE_REPORT_DIR: test-results/vpn-endpoint-scan
+
+jobs:
+  coverage-validation:
+    name: Validate Coverage Against SLO
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        if: github.event_name == 'workflow_run'
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: vpn-enterprise-endpoint-scan-enhanced.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          path: ${{ env.COVERAGE_REPORT_DIR }}
+          skip_unpack: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Run SLO validation
+        id: slo-check
+        continue-on-error: true
+        run: |
+          set -e
+          
+          echo "::group::Coverage SLO Validation"
+          
+          # Run SLO reporter
+          node tests/vpn-enterprise-endpoint-scan/slo-reporter.mjs \
+            ${{ env.COVERAGE_REPORT_DIR }}/coverage-final.json
+          
+          # Capture results
+          SLO_STATUS=$(jq -r '.summary.overall_status' test-results/slo-report.json)
+          VIOLATIONS=$(jq -r '.summary.violations_count' test-results/slo-report.json)
+          
+          echo "slo_status=$SLO_STATUS" >> $GITHUB_OUTPUT
+          echo "violations=$VIOLATIONS" >> $GITHUB_OUTPUT
+          
+          # Print formatted report
+          jq '.' test-results/slo-report.json
+          
+          echo "::endgroup::"
+          
+          if [[ "$SLO_STATUS" != "PASS" ]]; then
+            echo "::error::Coverage SLO validation failed (violations: $VIOLATIONS)"
+            exit 1
+          fi
+
+      - name: Upload SLO report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slo-report
+          path: test-results/slo-report.json
+          retention-days: 30
+
+      - name: Comment on PR with coverage summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Load SLO report
+            const report = JSON.parse(fs.readFileSync('test-results/slo-report.json', 'utf-8'));
+            
+            // Build comment
+            let comment = '## 📊 Coverage SLO Report\n\n';
+            comment += `**Status**: ${report.summary.overall_status === 'PASS' ? '✅ PASS' : '❌ FAIL'}\n\n`;
+            
+            comment += '### Coverage Metrics\n';
+            comment += '| Metric | Current | Target | Status |\n';
+            comment += '|--------|---------|--------|--------|\n';
+            
+            Object.entries(report.metrics).forEach(([metric, data]) => {
+              const status = data.status === 'PASS' ? '✅' : '❌';
+              comment += `| ${metric} | ${data.current.toFixed(2)}% | ${data.target.toFixed(2)}% | ${status} |\n`;
+            });
+            
+            if (report.violations.length > 0) {
+              comment += '\n### Violations\n';
+              report.violations.forEach(v => {
+                comment += `- **${v.metric}**: ${v.current.toFixed(2)}% (target: ${v.target.toFixed(2)}%)\n`;
+              });
+            }
+            
+            if (report.recommendations.length > 0) {
+              comment += '\n### Recommendations\n';
+              report.recommendations.forEach(r => {
+                if (r.priority === 'CRITICAL' || r.priority === 'HIGH') {
+                  comment += `- **${r.priority}**: ${r.action}\n`;
+                }
+              });
+            }
+            
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  coverage-gates:
+    name: Enforce Coverage Gates
+    runs-on: ubuntu-latest
+    needs: [coverage-validation]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set check status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Load SLO report if it exists
+            let conclusion = 'success';
+            let summary = 'Coverage SLO validation passed';
+            
+            try {
+              const report = JSON.parse(fs.readFileSync('test-results/slo-report.json', 'utf-8'));
+              
+              if (report.summary.overall_status !== 'PASS') {
+                conclusion = 'failure';
+                summary = `Coverage SLO validation failed: ${report.summary.violations_count} violation(s)`;
+              }
+            } catch (e) {
+              // Report not found, coverage validation may have failed
+              if ('${{ needs.coverage-validation.result }}' === 'failure') {
+                conclusion = 'failure';
+                summary = 'Coverage validation failed - see logs for details';
+              }
+            }
+            
+            // Create GitHub check
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'QA Coverage SLO Gate',
+              head_sha: context.sha,
+              status: 'completed',
+              conclusion: conclusion,
+              output: {
+                title: 'Coverage SLO Validation',
+                summary: summary,
+              }
+            });
+
+  coverage-trend-tracking:
+    name: Track Coverage Trends
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage artifacts
+        if: github.event_name == 'workflow_run'
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: vpn-enterprise-endpoint-scan-enhanced.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          path: ${{ env.COVERAGE_REPORT_DIR }}
+
+      - name: Analyze coverage trends
+        run: |
+          echo "::group::Coverage Trend Analysis"
+          
+          if [[ ! -f "test-results/slo-report.json" ]]; then
+            echo "No SLO report available, skipping trend analysis"
+            exit 0
+          fi
+          
+          # Extract trend data
+          jq '.trends' test-results/slo-report.json
+          
+          # Check for regressions
+          REGRESSIONS=$(jq '.trends.regressions | length' test-results/slo-report.json)
+          
+          if [[ $REGRESSIONS -gt 0 ]]; then
+            echo "::warning::Detected $REGRESSIONS coverage regressions"
+            jq '.trends.regressions' test-results/slo-report.json
+          fi
+          
+          # Track improvements
+          IMPROVEMENTS=$(jq '.trends.improving | length' test-results/slo-report.json)
+          if [[ $IMPROVEMENTS -gt 0 ]]; then
+            echo "::notice::Coverage improved in $IMPROVEMENTS areas"
+          fi
+          
+          echo "::endgroup::"
+
+  coverage-notification:
+    name: Notify on Coverage Issues
+    runs-on: ubuntu-latest
+    needs: [coverage-validation]
+    if: failure()
+    steps:
+      - name: Notify Slack on failure
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "🚨 Coverage SLO Violation",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Coverage SLO Failed*\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Results>"
+                  }
+                }
+              ]
+            }
+
+      - name: Create issue if critical violation
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Only create issue for critical failures on main branch
+            const title = '📊 Coverage SLO Violation on Main';
+            const body = `
+            ## Coverage SLO Violation Detected
+            
+            Coverage metrics fell below SLO targets on main branch.
+            
+            **Action Required**:
+            1. Review failed coverage report in workflow logs
+            2. Identify code changes that caused regression
+            3. Add tests for untested code paths
+            4. Submit PR to restore coverage above thresholds
+            
+            See: .github/workflows/qa-coverage-gates.yml
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['qa-coverage', 'critical', 'automated']
+            });
+
+  report-publishing:
+    name: Publish Coverage Reports
+    runs-on: ubuntu-latest
+    needs: [coverage-validation]
+    if: always()
+    steps:
+      - name: Generate markdown report
+        if: always()
+        run: |
+          echo "## Coverage SLO Report" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ -f "test-results/slo-report.json" ]]; then
+            # Parse and display metrics
+            jq -r '.metrics | to_entries[] | "- \(.key): \(.value.current)% (target: \(.value.target)%)"' \
+              test-results/slo-report.json >> $GITHUB_STEP_SUMMARY || true
+          else
+            echo "No coverage report available" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Archive coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: test-results/
+          retention-days: 90

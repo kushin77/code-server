@@ -8,14 +8,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 variable "code_server_password" {
-  description = "Code-Server authentication password (immutable after deployment; change via docker exec)"
+  description = "Code-Server authentication password (minimum 12 characters, must contain uppercase, lowercase, numbers, symbols)"
   type        = string
   sensitive   = true
-  default     = "change-me-in-production"
+  nullable    = false
 
   validation {
-    condition     = length(var.code_server_password) >= 8
-    error_message = "code_server_password must be at least 8 characters."
+    condition     = length(var.code_server_password) >= 12 && can(regex("[A-Z]", var.code_server_password)) && can(regex("[a-z]", var.code_server_password)) && can(regex("[0-9]", var.code_server_password))
+    error_message = "code_server_password must be at least 12 characters with uppercase, lowercase, and numbers (no default for security)."
   }
 }
 
@@ -37,28 +37,33 @@ variable "config_dir" {
 // ─────────────────────────────────────────────────────────────────────────────
 
 variable "google_client_id" {
-  description = "Google OAuth2 Client ID (from GCP Console OAuth2.0 credentials)"
+  description = "Google OAuth2 Client ID (from GCP Console OAuth2.0 credentials - required for production)"
   type        = string
   sensitive   = true
-  default     = ""
+  nullable    = false
 }
 
 variable "google_client_secret" {
-  description = "Google OAuth2 Client Secret (from GCP Console OAuth2.0 credentials)"
+  description = "Google OAuth2 Client Secret (from GCP Console OAuth2.0 credentials - required for production)"
   type        = string
   sensitive   = true
-  default     = ""
+  nullable    = false
+
+  validation {
+    condition     = length(var.google_client_secret) >= 20
+    error_message = "google_client_secret appears invalid (too short for Google OAuth2 secret)."
+  }
 }
 
 variable "oauth2_proxy_cookie_secret" {
-  description = "Random cookie encryption secret for oauth2-proxy (generate: openssl rand -base64 32)"
+  description = "OAuth2-Proxy cookie encryption secret (must be exactly 16, 24, or 32 bytes when decoded from base64; generate: openssl rand -base64 32)"
   type        = string
   sensitive   = true
-  default     = "KPm7K8L9vN6q3W2zM5xJ4pL6K9mN8qW3zR5xY7tJ9pM2vO4wQ6sT8uV0xW2zY4aB"
+  nullable    = false
 
   validation {
-    condition     = length(var.oauth2_proxy_cookie_secret) > 0
-    error_message = "oauth2_proxy_cookie_secret is required; generate: openssl rand -base64 32"
+    condition     = length(base64decode(var.oauth2_proxy_cookie_secret)) == 16 || length(base64decode(var.oauth2_proxy_cookie_secret)) == 24 || length(base64decode(var.oauth2_proxy_cookie_secret)) == 32
+    error_message = "oauth2_proxy_cookie_secret must be base64 string that decodes to exactly 16, 24, or 32 bytes (no default for security)."
   }
 }
 

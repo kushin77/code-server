@@ -3,8 +3,6 @@
 # Blocks database (postgres/redis) from outbound internet access
 # Protects internal services (prometheus, grafana) from external access
 
-provider "null" {}
-
 # ============================================================================
 # Docker iptables Egress Filtering
 # ============================================================================
@@ -72,11 +70,6 @@ resource "null_resource" "egress_verification" {
 # ============================================================================
 # Output: Egress Filtering Status
 # ============================================================================
-
-output "egress_filtering_status" {
-  value       = "Container egress filtering applied to ${var.deploy_host}"
-  description = "Status of egress filtering deployment"
-}
 
 output "protected_services" {
   value = {

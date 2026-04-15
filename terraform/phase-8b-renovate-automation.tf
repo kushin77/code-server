@@ -2,8 +2,6 @@
 # Renovate Bot — automated dependency updates and vulnerability scanning
 # Weekly dependency scanning with digest pinning and auto-merge for security updates
 
-provider "null" {}
-
 # ============================================================================
 # Renovate Configuration Deployment
 # ============================================================================
@@ -85,9 +83,4 @@ output "renovate_schedule" {
     major_versions   = "Create PR, detailed review required"
   }
   description = "Renovate update schedule and automation rules"
-}
-
-output "next_steps" {
-  value = "1. Install Renovate GitHub App | 2. Authorize app on kushin77/code-server | 3. Renovate will auto-create renovate.json and scan dependencies"
-  description = "Post-deployment steps for Renovate activation"
 }

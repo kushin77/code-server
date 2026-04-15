@@ -2,7 +2,6 @@
 # Falco Runtime Security — eBPF syscall monitoring for container anomaly detection
 # Detects: shell spawning, privilege escalation, crypto mining, unauthorized file access, C2 connections
 
-provider "null" {}
 
 # ============================================================================
 # Falco Deployment

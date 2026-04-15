@@ -2,7 +2,6 @@
 # Supply Chain Security — cosign image signing, SBOM generation, vulnerability scanning
 # SLSA L2 compliance
 
-provider "null" {}
 
 # ============================================================================
 # Supply Chain Security Setup
@@ -88,9 +87,4 @@ output "supply_chain_components" {
     trivy  = "v0.48.0 (image scanning)"
   }
   description = "Supply chain tools installed"
-}
-
-output "next_steps" {
-  value = "1. Store cosign keys in GitHub secrets | 2. Update CI/CD pipeline with signing steps | 3. Configure Trivy in build pipeline"
-  description = "Post-deployment configuration steps"
 }

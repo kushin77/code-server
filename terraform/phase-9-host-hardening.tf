@@ -3,8 +3,6 @@
 # Applies fail2ban, auditd, AIDE, kernel hardening, SSH hardening
 # Runs on production host (192.168.168.31) via remote-exec provisioner
 
-provider "null" {}
-
 # ============================================================================
 # CIS Hardening Script Execution
 # ============================================================================

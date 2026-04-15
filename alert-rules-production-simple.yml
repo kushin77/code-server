@@ -1,0 +1,105 @@
+---
+# Production Alert Rules - Simplified Deployment
+# Issue #374: Operational Coverage Gaps
+# Date: April 15, 2026
+
+groups:
+  - name: operational_coverage_374
+    interval: 30s
+    rules:
+      - alert: BackupFailed
+        expr: 'increase(backup_failures_total[1h]) > 0'
+        for: 5m
+        labels:
+          severity: high
+          page: "true"
+        annotations:
+          summary: "Backup process failed"
+          description: "Backup job failed. Check logs."
+
+      - alert: SSLCertExpiryWarning
+        expr: 'ssl_cert_days_until_expiry < 7'
+        for: 1m
+        labels:
+          severity: medium
+        annotations:
+          summary: "SSL certificate expires in {{ $value }} days"
+          description: "Certificate expiration imminent."
+
+      - alert: SSLCertExpiryCritical
+        expr: 'ssl_cert_days_until_expiry < 1'
+        for: 1m
+        labels:
+          severity: critical
+          page: "true"
+        annotations:
+          summary: "SSL certificate expires in < 1 day"
+          description: "URGENT: Renew certificate immediately."
+
+      - alert: ContainerRestartLoop
+        expr: 'increase(container_restarts_total[1h]) > 3'
+        for: 5m
+        labels:
+          severity: high
+          page: "true"
+        annotations:
+          summary: "Container restart loop"
+          description: "Container restarting repeatedly."
+
+      - alert: ContainerCrashLoop
+        expr: 'increase(container_crashes_total[30m]) > 5'
+        for: 5m
+        labels:
+          severity: critical
+          page: "true"
+        annotations:
+          summary: "Container crash loop"
+          description: "Container crashing repeatedly."
+
+      - alert: PostgreSQLReplicationLagWarning
+        expr: 'pg_replication_lag_seconds > 30'
+        for: 5m
+        labels:
+          severity: medium
+        annotations:
+          summary: "PostgreSQL replication lag: {{ $value }}s"
+          description: "Replication lag is {{ $value }} seconds."
+
+      - alert: PostgreSQLReplicationLagCritical
+        expr: 'pg_replication_lag_seconds > 300'
+        for: 2m
+        labels:
+          severity: critical
+          page: "true"
+        annotations:
+          summary: "PostgreSQL replication lag CRITICAL: {{ $value }}s"
+          description: "Replication lag exceeds 5 minutes."
+
+      - alert: PostgreSQLReplicationBroken
+        expr: 'pg_replication_status == 0'
+        for: 1m
+        labels:
+          severity: critical
+          page: "true"
+        annotations:
+          summary: "PostgreSQL replication is broken"
+          description: "Replication not active."
+
+      - alert: DiskSpaceWarning
+        expr: 'node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.20'
+        for: 30m
+        labels:
+          severity: medium
+        annotations:
+          summary: "Disk space warning - {{ $value | humanizePercentage }} free"
+          description: "Disk is {{ $value | humanizePercentage }} full."
+
+      - alert: DiskSpaceCritical
+        expr: 'node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.10'
+        for: 10m
+        labels:
+          severity: critical
+          page: "true"
+        annotations:
+          summary: "Disk space CRITICAL - {{ $value | humanizePercentage }} free"
+          description: "URGENT: Free space immediately."

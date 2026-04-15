@@ -16,6 +16,7 @@ alerting:
 # Alert rules
 rule_files:
   - "alert-rules.yml"
+  - "alert-rules-gaps-374.yml"
 
 scrape_configs:
   # Self-scrape Prometheus metrics

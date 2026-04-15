@@ -39,6 +39,16 @@ readonly DEPLOY_DIR="${DEPLOY_DIR:-/home/akushnir/code-server-enterprise}"
 readonly STANDBY_HOST="${STANDBY_HOST:-192.168.168.30}"
 readonly STANDBY_USER="${STANDBY_USER:-akushnir}"
 
+# Infrastructure services (NAS, backup destinations, observability)
+readonly NAS_HOST="${NAS_HOST:-192.168.168.56}"
+readonly NAS_EXPORT_PATH="${NAS_EXPORT_PATH:-/export}"
+readonly NAS_MOUNT_POINT="${NAS_MOUNT_POINT:-/mnt/nas}"
+
+readonly BACKUP_DEST_PRIMARY="${BACKUP_DEST_PRIMARY:-192.168.168.11:/export/backups/models}"
+readonly BACKUP_DEST_SECONDARY="${BACKUP_DEST_SECONDARY:-192.168.168.12:/export/backups/models}"
+
+readonly OBSERVABILITY_HOST="${OBSERVABILITY_HOST:-192.168.168.31}"
+
 # SSH options (no interactive prompts in CI)
 readonly SSH_OPTS="${SSH_OPTS:--o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=10}"
 

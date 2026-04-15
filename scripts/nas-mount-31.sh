@@ -6,7 +6,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-NAS_HOST="192.168.168.56"
+NAS_HOST="${NAS_HOST:-192.168.168.56}"
 NAS_EXPORT="/export"
 MOUNT_POINT="/mnt/nas-56"
 NFS_OPTS="vers=4.1,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
@@ -306,7 +306,7 @@ setup_backup_automation() {
 
 BACKUP_LOG="/var/log/nas-backup.log"
 MODELS_SOURCE="/mnt/models"
-BACKUP_DEST="192.168.168.11:/export/backups/models"
+BACKUP_DEST="${BACKUP_DEST_PRIMARY}"
 
 log() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] $@" | tee -a "$BACKUP_LOG"
@@ -337,7 +337,7 @@ BACKUP_SCRIPT
 
 BACKUP_LOG="/var/log/nas-backup.log"
 MODELS_SOURCE="/mnt/models"
-BACKUP_DEST="192.168.168.11:/export/backups/models"
+BACKUP_DEST="${BACKUP_DEST_PRIMARY}"
 
 log() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] $@" | tee -a "$BACKUP_LOG"

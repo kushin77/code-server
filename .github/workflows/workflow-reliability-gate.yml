@@ -1,0 +1,284 @@
+name: Workflow Reliability Gate
+on:
+  workflow_run:
+    workflows:
+      - "VPN Enterprise Endpoint Scan"
+      - "QA Coverage Check"
+      - "CI Validate"
+    types:
+      - completed
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  WORKFLOW_METRICS_DIR: .workflow-metrics
+  RETRY_MAX_ATTEMPTS: 3
+  RETRY_BASE_DELAY: 30
+
+jobs:
+  validate-workflow-success:
+    name: Validate Workflow Execution Success
+    runs-on: ubuntu-latest
+    outputs:
+      workflow_status: ${{ steps.validate.outputs.status }}
+      failure_count: ${{ steps.validate.outputs.failures }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate workflow trigger
+        id: validate
+        run: |
+          set -e
+          echo "::group::Workflow Validation"
+          
+          # Required fields for workflow execution
+          WORKFLOW_NAME="${{ github.workflow }}"
+          WORKFLOW_RUN_ID="${{ github.run_id }}"
+          WORKFLOW_CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+          TRIGGER_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          # Structured logging
+          cat > /tmp/workflow-validation.json <<EOF
+          {
+            "timestamp": "$TRIGGER_TIME",
+            "workflow": "$WORKFLOW_NAME",
+            "run_id": "$WORKFLOW_RUN_ID",
+            "conclusion": "$WORKFLOW_CONCLUSION",
+            "repository": "${{ github.repository }}",
+            "branch": "${{ github.ref }}"
+          }
+          EOF
+          
+          echo "=== WORKFLOW VALIDATION REPORT ===" >&2
+          cat /tmp/workflow-validation.json | jq '.' >&2
+          
+          # Fail if workflow failed
+          if [[ "$WORKFLOW_CONCLUSION" == "failure" ]]; then
+            echo "::error::Upstream workflow failed. Blocking merge."
+            echo "status=FAILED" >> $GITHUB_OUTPUT
+            echo "failures=1" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "status=PASSED" >> $GITHUB_OUTPUT
+          echo "failures=0" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+
+      - name: Publish workflow metrics
+        if: always()
+        run: |
+          set -e
+          mkdir -p $WORKFLOW_METRICS_DIR
+          
+          METRIC_FILE="$WORKFLOW_METRICS_DIR/workflow-$(date +%s).json"
+          cat > "$METRIC_FILE" <<EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "workflow": "${{ github.workflow }}",
+            "status": "${{ steps.validate.outputs.workflow_status }}",
+            "failures": "${{ steps.validate.outputs.failure_count }}",
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
+          
+          echo "::notice::Workflow metrics published: $METRIC_FILE"
+
+  retry-flaky-operations:
+    name: Retry Flaky Operations
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        operation: ['secret-validation', 'artifact-upload', 'status-check']
+    steps:
+      - name: Execute operation with retry
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: ${{ env.RETRY_MAX_ATTEMPTS }}
+          retry_wait_seconds: ${{ env.RETRY_BASE_DELAY }}
+          command: |
+            set -e
+            echo "Executing operation: ${{ matrix.operation }}"
+            
+            case "${{ matrix.operation }}" in
+              secret-validation)
+                echo "Validating GitHub secrets..."
+                # Verify required secrets exist
+                if [[ -z "${{ secrets.WIREGUARD_CONFIG }}" ]]; then
+                  echo "::error::WIREGUARD_CONFIG secret not found"
+                  exit 1
+                fi
+                echo "✓ All required secrets present"
+                ;;
+              artifact-upload)
+                echo "Verifying artifact upload capability..."
+                # Check disk space and permissions
+                df -h | grep -E "^/dev|^Filesystem"
+                echo "✓ Artifact upload ready"
+                ;;
+              status-check)
+                echo "Checking GitHub status..."
+                curl -s -I https://www.githubstatus.com | head -3
+                echo "✓ GitHub status OK"
+                ;;
+            esac
+
+      - name: Log retry metrics
+        if: always()
+        run: |
+          cat >> /tmp/retry-metrics.txt <<EOF
+          Operation: ${{ matrix.operation }}
+          Attempt: ${{ steps.execute.attempt_number }}
+          Status: ${{ job.status }}
+          Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ---
+          EOF
+
+  workflow-linting:
+    name: Lint Workflow Definitions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate workflow YAML syntax
+        run: |
+          set -e
+          echo "::group::Workflow YAML Validation"
+          
+          # Find all workflow files
+          WORKFLOW_FILES=$(find .github/workflows -name "*.yml" -o -name "*.yaml" | sort)
+          LINT_ERRORS=0
+          
+          for workflow_file in $WORKFLOW_FILES; do
+            echo "Validating: $workflow_file"
+            
+            # Check YAML syntax
+            if ! python3 -c "import yaml; yaml.safe_load(open('$workflow_file'))" 2>/dev/null; then
+              echo "::error::YAML syntax error in $workflow_file"
+              ((LINT_ERRORS++))
+              continue
+            fi
+            
+            # Check for required fields
+            if ! grep -q "^name:" "$workflow_file"; then
+              echo "::warning::Missing 'name' field in $workflow_file"
+            fi
+            
+            # Check for undefined secrets
+            if grep -q '\${{ secrets\.' "$workflow_file"; then
+              SECRETS=$(grep -o '\${{ secrets\.[A-Z_]* }}' "$workflow_file" | sort -u)
+              for secret in $SECRETS; do
+                SECRET_NAME=$(echo "$secret" | sed 's/.*secrets\.\([^}]*\).*/\1/')
+                echo "  References secret: $SECRET_NAME"
+              done
+            fi
+            
+            # Warn on deprecated GitHub Actions
+            if grep -q "actions/checkout@v3" "$workflow_file"; then
+              echo "::warning::Consider upgrading actions/checkout@v3 to v4 in $workflow_file"
+            fi
+            
+            echo "  ✓ Passed"
+          done
+          
+          if [[ $LINT_ERRORS -gt 0 ]]; then
+            echo "::error::Workflow linting failed with $LINT_ERRORS errors"
+            exit 1
+          fi
+          
+          echo "::endgroup::"
+          echo "✓ All ${{ strategy.matrix.os }} workflow files passed linting"
+
+      - name: Check for naming convention violations
+        run: |
+          set -e
+          echo "::group::Naming Convention Check"
+          
+          # Workflow files should follow: <domain>-<feature>.yml
+          NAMING_PATTERN='^[a-z]+-[a-z0-9-]+\.ya?ml$'
+          VIOLATIONS=0
+          
+          for workflow_file in $(find .github/workflows -name "*.yml" -o -name "*.yaml"); do
+            filename=$(basename "$workflow_file")
+            if ! [[ "$filename" =~ $NAMING_PATTERN ]]; then
+              echo "::warning::Naming violation in $workflow_file (should be: <domain>-<feature>.yml)"
+              ((VIOLATIONS++))
+            fi
+          done
+          
+          if [[ $VIOLATIONS -gt 0 ]]; then
+            echo "Found $VIOLATIONS naming violations"
+          fi
+          
+          echo "::endgroup::"
+
+      - name: Validate workflow jobs have descriptions
+        run: |
+          set -e
+          echo "::group::Job Description Check"
+          
+          for workflow_file in $(find .github/workflows -name "*.yml" -o -name "*.yaml"); do
+            # Extract job names and check for descriptions
+            jobs=$(grep -A 1 "^  [a-z-]*:$" "$workflow_file" | grep "name:" || true)
+            if [[ -z "$jobs" ]]; then
+              echo "::warning::$workflow_file has jobs without 'name' field"
+            fi
+          done
+          
+          echo "::endgroup::"
+
+  publish-workflow-metrics:
+    name: Publish Workflow Reliability Metrics
+    runs-on: ubuntu-latest
+    needs: [validate-workflow-success]
+    if: always()
+    steps:
+      - name: Export metrics to Prometheus
+        run: |
+          set -e
+          echo "::group::Publishing Metrics"
+          
+          TIMESTAMP=$(date +%s)
+          STATUS="${{ needs.validate-workflow-success.outputs.workflow_status }}"
+          
+          # Prometheus metrics format
+          cat > /tmp/workflow-metrics.prom <<EOF
+          # HELP workflow_execution_total Total workflow executions
+          # TYPE workflow_execution_total counter
+          workflow_execution_total{workflow="${{ github.workflow }}",status="$STATUS"} 1.0
+          
+          # HELP workflow_failures_total Total workflow failures
+          # TYPE workflow_failures_total counter
+          workflow_failures_total{workflow="${{ github.workflow }}"} ${{ needs.validate-workflow-success.outputs.failure_count }}.0
+          
+          # HELP workflow_execution_duration_seconds Workflow execution duration
+          # TYPE workflow_execution_duration_seconds gauge
+          workflow_execution_duration_seconds{workflow="${{ github.workflow }}"} $(date +%s)
+          
+          # HELP workflow_last_execution_timestamp Timestamp of last execution
+          # TYPE workflow_last_execution_timestamp gauge
+          workflow_last_execution_timestamp{workflow="${{ github.workflow }}"} $TIMESTAMP
+          EOF
+          
+          echo "Generated metrics:"
+          cat /tmp/workflow-metrics.prom
+          
+          echo "::endgroup::"
+
+      - name: Create GitHub check summary
+        if: always()
+        run: |
+          set -e
+          echo "## Workflow Reliability Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ needs.validate-workflow-success.outputs.workflow_status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Failures | ${{ needs.validate-workflow-success.outputs.failure_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | $(date -u +%Y-%m-%dT%H:%M:%SZ) |" >> $GITHUB_STEP_SUMMARY

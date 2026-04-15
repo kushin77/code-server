@@ -40,10 +40,10 @@ TESTS_SKIPPED=0
 test_pre_failover_health() {
     log_info "=== Phase 7c-1: Pre-Failover Health Checks ==="
     
-    # Check primary is healthy
+    # Check primary is healthy (full stack: db + observability)
     log_info "Checking PRIMARY (192.168.168.31) health..."
     if ssh -o ConnectTimeout=5 akushnir@"$PRIMARY_HOST" "docker-compose ps postgres redis prometheus grafana alertmanager jaeger 2>&1 | grep -c 'Up.*healthy' | grep -q '[6-9]'" 2>/dev/null; then
-        log_success "PRIMARY: 6+ services healthy"
+        log_success "PRIMARY: 6+ services healthy (full stack)"
         ((TESTS_PASSED++))
     else
         log_error "PRIMARY: Services not healthy"
@@ -51,10 +51,10 @@ test_pre_failover_health() {
         return 1
     fi
     
-    # Check replica is healthy
-    log_info "Checking REPLICA (192.168.168.42) health..."
-    if ssh -o ConnectTimeout=5 akushnir@"$REPLICA_HOST" "docker-compose ps postgres redis prometheus grafana alertmanager jaeger 2>&1 | grep -c 'Up.*healthy' | grep -q '[6-9]'" 2>/dev/null; then
-        log_success "REPLICA: 6+ services healthy"
+    # Check replica is healthy (standby: db only - on-prem architecture)
+    log_info "Checking REPLICA (192.168.168.42) health (standby database)..."
+    if ssh -o ConnectTimeout=5 akushnir@"$REPLICA_HOST" "docker-compose ps postgres redis 2>&1 | grep -c 'Up.*healthy' | grep -q '[2-9]'" 2>/dev/null; then
+        log_success "REPLICA: 2+ services healthy (standby - postgres + redis)"
         ((TESTS_PASSED++))
     else
         log_error "REPLICA: Services not healthy"

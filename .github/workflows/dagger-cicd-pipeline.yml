@@ -57,19 +57,63 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/code-server/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ env.REGISTRY }}/code-server/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
 
       - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4
+        with:
+          cosign-release: 'v2.2.3'
 
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0.15.11
+
+      - name: Generate SBOM with syft
+        uses: anchore/sbom-action@v0.15.11
+        with:
+          image: ${{ env.REGISTRY }}/code-server/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Attest SBOM to Harbor with cosign
+        if: github.event_name == 'push'
+        run: |
+          cosign attest \
+            --predicate sbom.spdx.json \
+            --type spdxjson \
+            --key env://COSIGN_KEY \
+            ${{ env.REGISTRY }}/code-server/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+        env:
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+
+      - name: Sign image with cosign
+        if: github.event_name == 'push'
+        run: |
+          cosign sign \
+            --key env://COSIGN_KEY \
+            --yes \
+            ${{ env.REGISTRY }}/code-server/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+        env:
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ env.VERSION }}
+          path: sbom.spdx.json
       - name: Run unit tests
         run: |
           docker run --rm ${{ env.REGISTRY }}/code-server/${{ env.IMAGE_NAME }}:${{ env.VERSION }} npm test -- --coverage --passWithNoTests
@@ -137,6 +181,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4
+
+      - name: Verify image signature before deploy
+        run: |
+          cosign verify \
+            --key ${{ secrets.COSIGN_PUBLIC_KEY }} \
+            ${{ env.REGISTRY }}/code-server/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          echo "✅ Image signature verified — safe to deploy"
 
       - name: Configure kubeconfig
         run: |

@@ -1,0 +1,67 @@
+name: Phase 5 - Bash Script Validation
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**/*.sh'
+      - '.github/workflows/bash-validation.yml'
+  push:
+    branches: [main, feat/elite-*]
+    paths:
+      - 'scripts/**/*.sh'
+
+jobs:
+  bash-validation:
+    name: Validate Bash Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Validate bash syntax (bash -n)
+        run: |
+          echo "Validating bash syntax for all scripts..."
+          find scripts -name "*.sh" -type f | while read -r script; do
+            bash -n "$script" || exit 1
+            echo "✅ Valid: $script"
+          done
+
+      - name: Run shellcheck on all scripts
+        run: |
+          echo "Running shellcheck for bash best practices..."
+          find scripts -name "*.sh" -type f -exec shellcheck -x {} +
+          echo "✅ All scripts passed shellcheck"
+
+      - name: Verify Unix line endings (no CRLF)
+        run: |
+          echo "Checking for Windows line endings (CRLF)..."
+          if find scripts -name "*.sh" -type f -exec grep -l $'\r' {} \; | grep -q .; then
+            echo "❌ Found CRLF line endings in bash scripts"
+            find scripts -name "*.sh" -type f -exec grep -l $'\r' {} \;
+            exit 1
+          fi
+          echo "✅ All scripts have Unix line endings (LF)"
+
+      - name: Verify no Windows PowerShell files
+        run: |
+          echo "Checking for PowerShell artifacts..."
+          if find . -name "*.ps1" -o -name "*.bat" -o -name "*.cmd" | grep -v '.git' | grep -q .; then
+            echo "❌ Found Windows script files:"
+            find . -name "*.ps1" -o -name "*.bat" -o -name "*.cmd" | grep -v '.git'
+            exit 1
+          fi
+          echo "✅ No PowerShell or batch files found"
+
+      - name: Report
+        if: success()
+        run: |
+          echo "Phase 5 Bash Validation Summary:"
+          echo "================================"
+          echo "✅ Bash syntax validation: PASSED"
+          echo "✅ Shellcheck validation: PASSED"
+          echo "✅ Line ending validation: PASSED (Unix/LF only)"
+          echo "✅ Windows artifacts check: PASSED (None found)"
+          echo ""
+          echo "All scripts are production-ready for Linux deployment"

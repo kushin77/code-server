@@ -289,7 +289,6 @@ services:
       OAUTH2_PROXY_COOKIE_SECURE:             "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY:           "true"
       OAUTH2_PROXY_COOKIE_SAMESITE:           lax
-      OAUTH2_PROXY_COOKIE_EXPIRE:             24h
       OAUTH2_PROXY_COOKIE_REFRESH:            15m
       OAUTH2_PROXY_HTTP_ADDRESS:              0.0.0.0:4180
       OAUTH2_PROXY_PROXY_WEBSOCKETS:          "true"
@@ -304,7 +303,7 @@ services:
       OAUTH2_PROXY_COOKIE_DOMAIN:             .${APEX_DOMAIN}
       # PKCE for authorization code flow security
       OAUTH2_PROXY_CODE_CHALLENGE_METHOD:     S256
-      # Cookie hardening
+      # Cookie hardening: reduced expiry from 24h to 8h for security
       OAUTH2_PROXY_COOKIE_EXPIRE:             8h
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro

@@ -2,12 +2,6 @@
 # SOPS + age encryption, Vault integration, dynamic secrets, rotation
 # Immutable, idempotent, on-prem focused
 
-variable "primary_host_ip" {
-  description = "Primary production host"
-  type        = string
-  default     = "192.168.168.31"
-}
-
 variable "vault_version" {
   description = "Vault version (immutable)"
   type        = string

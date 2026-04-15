@@ -213,14 +213,6 @@ resource "local_file" "kong_plugins_config" {
       "tags": ["tracing"]
     },
     {
-      "name": "datadog",
-      "enabled": false,
-      "config": {
-        "http_endpoint": "http://localhost:8126"
-      },
-      "tags": ["monitoring"]
-    },
-    {
       "name": "prometheus",
       "enabled": true,
       "config": {

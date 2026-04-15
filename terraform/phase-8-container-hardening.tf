@@ -2,12 +2,6 @@
 # Drop capabilities, read-only filesystems, security options, apparmor
 # Immutable, idempotent, on-prem focused
 
-variable "primary_host_ip" {
-  description = "Primary production host"
-  type        = string
-  default     = "192.168.168.31"
-}
-
 # ============================================================================
 # Container Hardening Configuration
 # ============================================================================

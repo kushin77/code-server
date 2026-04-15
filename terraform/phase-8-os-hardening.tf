@@ -3,12 +3,6 @@
 # Immutable (pinned versions), Idempotent (safe to apply multiple times)
 # On-prem deployment to 192.168.168.31
 
-variable "primary_host_ip" {
-  description = "Primary production host IP (on-prem)"
-  type        = string
-  default     = "192.168.168.31"
-}
-
 variable "enable_cis_hardening" {
   description = "Enable CIS Linux hardening"
   type        = bool

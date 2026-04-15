@@ -221,25 +221,6 @@ variable "postgres_admin_password_b64" {
   sensitive   = true
 }
 
-variable "primary_host" {
-  description = "Primary production host"
-  type        = string
-  default     = "primary.prod.internal"
-}
-
-variable "ssh_user" {
-  description = "SSH user for remote execution"
-  type        = string
-  default     = "akushnir"
-}
-
-variable "ssh_key_path" {
-  description = "Path to SSH private key"
-  type        = string
-  default     = "~/.ssh/id_rsa"
-  sensitive   = true
-}
-
 # ─── Outputs ──────────────────────────────────────────────────────────────
 
 output "vault_secrets_rotation_status" {

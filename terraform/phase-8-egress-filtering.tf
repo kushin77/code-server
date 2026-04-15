@@ -97,25 +97,6 @@ variable "allow_http_mirrors" {
   default     = true
 }
 
-variable "primary_host" {
-  description = "Primary host IP or FQDN"
-  type        = string
-  default     = "primary.prod.internal"
-}
-
-variable "ssh_user" {
-  description = "SSH user for deployment"
-  type        = string
-  default     = "akushnir"
-}
-
-variable "ssh_key_path" {
-  description = "Path to SSH private key"
-  type        = string
-  default     = "~/.ssh/id_rsa"
-  sensitive   = true
-}
-
 # ─── Outputs ──────────────────────────────────────────────────────────────
 
 output "egress_filtering_status" {

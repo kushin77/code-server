@@ -2,72 +2,236 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base",
+    "security:openssf-scorecard",
     ":semanticCommits",
-    ":separateMajorReleases",
-    "group:monorepos"
+    ":separateMultipleMajor",
+    "group:allNonMajor",
+    "schedule:weekly"
   ],
   "timezone": "America/New_York",
-  "schedule": ["every weekend"],
-  "prCreationHours": [9, 17],
-  "labels": ["dependencies", "automated"],
-  "reviewers": ["kushin77"],
-  "enabledManagers": [
-    "docker-compose",
-    "dockerfile",
-    "github-actions",
-    "terraform"
-  ],
-  "packageRules": [
-    {
-      "description": "Group all Docker image minor/patch updates",
-      "matchManagers": ["docker-compose", "dockerfile"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "Docker image updates",
-      "automerge": false
-    },
-    {
-      "description": "Group all GitHub Actions minor/patch updates",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "GitHub Actions updates",
-      "automerge": false
-    },
-    {
-      "description": "Never automerge major version bumps",
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "labels": ["dependencies", "major-update", "needs-review"]
-    },
-    {
-      "description": "Pin digest for all Docker images (security best practice)",
-      "matchManagers": ["docker-compose", "dockerfile"],
-      "pinDigests": true
-    },
-    {
-      "description": "Postgres — only patch updates auto-proposed",
-      "matchPackageNames": ["postgres"],
-      "matchUpdateTypes": ["patch"],
-      "groupName": "postgres patch"
-    },
-    {
-      "description": "Security tool updates — prioritize",
-      "matchPackageNames": [
-        "aquasecurity/trivy-action",
-        "gitleaks/gitleaks-action",
-        "sigstore/cosign-installer",
-        "anchore/sbom-action"
-      ],
-      "labels": ["dependencies", "security-tooling"],
-      "prioritizeExistingBranches": true
-    }
-  ],
-  "docker-compose": {
-    "fileMatch": ["^docker-compose.*\\.yml$"]
+  "semanticCommits": "enabled",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "pre-commit": {
+    "enabled": true
   },
   "dockerfile": {
-    "fileMatch": ["^Dockerfile.*$"]
+    "enabled": true
   },
-  "terraform": {
-    "fileMatch": ["^terraform/.*\\.tf$"]
-  }
+  "docker": {
+    "pinDigests": true,
+    "enabled": true,
+    "automerge": false
+  },
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "assignees": [
+    "kushin77"
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "P0",
+      "security",
+      "critical"
+    ],
+    "assignees": [
+      "kushin77"
+    ]
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "description": "Disable Python updates - handle separately",
+      "matchManagers": [
+        "pip",
+        "poetry",
+        "pipenv"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Group Docker image updates by type",
+      "matchManagers": [
+        "docker-compose",
+        "dockerfile"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "groupName": "Docker image patches and minor updates",
+      "automerge": false,
+      "reviewers": [
+        "kushin77"
+      ]
+    },
+    {
+      "description": "Observability stack updates (careful)",
+      "matchManagers": [
+        "docker-compose"
+      ],
+      "matchPackageNames": [
+        "prom/prometheus",
+        "grafana/grafana",
+        "grafana/loki",
+        "jaegertracing/all-in-one",
+        "prom/alertmanager",
+        "prom/node-exporter"
+      ],
+      "groupName": "Observability stack updates",
+      "automerge": false,
+      "schedule": [
+        "after 6pm on sunday"
+      ]
+    },
+    {
+      "description": "Core data services (strict versioning)",
+      "matchManagers": [
+        "docker-compose"
+      ],
+      "matchPackageNames": [
+        "postgres",
+        "redis"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false,
+      "description": "Major database updates require manual migration planning"
+    },
+    {
+      "description": "Minor/patch updates for databases (auto-test)",
+      "matchManagers": [
+        "docker-compose"
+      ],
+      "matchPackageNames": [
+        "postgres",
+        "redis"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "Database patches and minor updates",
+      "automerge": false
+    },
+    {
+      "description": "Terraform provider updates (careful)",
+      "matchManagers": [
+        "terraform"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "Terraform provider patches and minor updates",
+      "automerge": false,
+      "schedule": [
+        "after 6pm on sunday"
+      ]
+    },
+    {
+      "description": "Block Terraform major updates (manual only)",
+      "matchManagers": [
+        "terraform"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "GitHub Actions - low risk, safe to automerge",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions updates",
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "platformAutomerge": true,
+      "schedule": [
+        "after 6pm on sunday"
+      ]
+    },
+    {
+      "description": "Major version updates (block automerge)",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "reviewers": [
+        "kushin77"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "breaking-change",
+        "requires-review"
+      ]
+    },
+    {
+      "description": "Security vulnerability fixes (P0)",
+      "matchDatasources": [
+        "docker",
+        "npm",
+        "pypi"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "groupName": null,
+      "schedule": [
+        "at any time"
+      ],
+      "labels": [
+        "P0",
+        "security"
+      ],
+      "prPriority": 10,
+      "automerge": false
+    },
+    {
+      "description": "Digest pinning for container images",
+      "matchDatasources": [
+        "docker"
+      ],
+      "groupName": "Digest pin updates",
+      "automerge": false
+    }
+  ],
+  "postUpdateOptions": [
+    "gomodTidy",
+    "npmDedupe"
+  ],
+  "commitMessagePrefix": "chore(deps):",
+  "commitMessageAction": "update",
+  "commitMessageTopic": "{{depName}}",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 6am on monday"
+    ]
+  },
+  "pin": {
+    "enabled": true
+  },
+  "branches": [
+    {
+      "name": "main",
+      "baseBranches": [
+        "main"
+      ]
+    },
+    {
+      "name": "phase-7-deployment",
+      "baseBranches": [
+        "phase-7-deployment"
+      ]
+    }
+  ],
+  "allowPostDownloadCommand": false,
+  "allowScripts": false
 }

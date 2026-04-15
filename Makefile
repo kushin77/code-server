@@ -13,6 +13,7 @@
         ollama-health ollama-pull-models ollama-list ollama-logs ollama-index ollama-init ollama-status ollama-shell \
         logs-code-server logs-oauth2 logs-caddy \
         latency-optimizer-install latency-monitor-install latency-services-start latency-services-stop latency-dashboard latency-report latency-test \
+        wireguard-install wireguard-status wireguard-genkeys nas-mount nas-mount-status \
         pre-commit ci-validate cd-deploy d p s l v
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1092,3 +1093,49 @@ governance:
 	@echo ""
 	@echo "Pre-commit hooks: $$([ -f .pre-commit-config.yaml ] && echo '✅ configured' || echo '❌ missing')"
 	@echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WIREGUARD VPN (run as root: sudo make wireguard-install)
+# ─────────────────────────────────────────────────────────────────────────────
+wireguard-install:
+	@echo "==> Installing WireGuard..."
+	apt-get update -qq && apt-get install -y wireguard wireguard-tools
+	@echo "==> Enabling ip forwarding..."
+	sysctl -w net.ipv4.ip_forward=1
+	grep -q 'net.ipv4.ip_forward=1' /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
+	@echo "✅ WireGuard installed: $$(wg --version)"
+
+wireguard-genkeys:
+	@echo "==> Generating WireGuard server keypair..."
+	@mkdir -p /etc/wireguard
+	@wg genkey | tee /etc/wireguard/server_private.key | wg pubkey > /etc/wireguard/server_public.key
+	@chmod 600 /etc/wireguard/server_private.key
+	@echo "Server public key: $$(cat /etc/wireguard/server_public.key)"
+	@echo "✅ WireGuard keys generated in /etc/wireguard/"
+
+wireguard-status:
+	@wg show 2>/dev/null || echo "WireGuard interface not active (wg0 not up)"
+	@ip addr show wg0 2>/dev/null || true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NAS MOUNT (run as root: sudo make nas-mount)
+# NAS: 192.168.168.56:/export → /mnt/nas-56
+# ─────────────────────────────────────────────────────────────────────────────
+nas-mount:
+	@echo "==> Mounting NAS 192.168.168.56:/export → /mnt/nas-56..."
+	mkdir -p /mnt/nas-56
+	@if mountpoint -q /mnt/nas-56; then \
+		echo "  Already mounted at /mnt/nas-56"; \
+	else \
+		mount -t nfs4 -o vers=4.1,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576 \
+			192.168.168.56:/export /mnt/nas-56; \
+		echo "  ✅ Mounted successfully"; \
+	fi
+	@grep -q '192.168.168.56:/export' /etc/fstab || \
+		echo '192.168.168.56:/export /mnt/nas-56 nfs4 vers=4.1,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576,_netdev 0 0' >> /etc/fstab && \
+		echo "  ✅ Added to /etc/fstab for persistent mount"
+	@df -h /mnt/nas-56
+
+nas-mount-status:
+	@mountpoint -q /mnt/nas-56 && echo "✅ /mnt/nas-56 is mounted" || echo "❌ /mnt/nas-56 is NOT mounted"
+	@grep '192.168.168.56:/export' /etc/fstab && echo "✅ fstab entry exists" || echo "❌ fstab entry missing"

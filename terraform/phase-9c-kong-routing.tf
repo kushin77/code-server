@@ -1,32 +1,12 @@
 # Phase 9-C: Kong API Gateway - Plugins, Routing, and Policies
 # Issue #366: API Gateway Routing, Authentication, Rate Limiting
 # Configures services, routes, and plugins for production
-
-terraform {
-  required_providers {
-    http = {
-      source  = "hashicorp/http"
-      version = "~> 3.0"
-    }
-  }
-}
+# NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
 
 variable "kong_admin_url" {
   description = "Kong Admin API URL"
   type        = string
   default     = "http://localhost:8001"
-}
-
-variable "primary_host_ip" {
-  description = "Primary host IP"
-  type        = string
-  default     = "192.168.168.31"
-}
-
-variable "replica_host_ip" {
-  description = "Replica host IP"
-  type        = string
-  default     = "192.168.168.42"
 }
 
 # Kong Routes and Services Configuration

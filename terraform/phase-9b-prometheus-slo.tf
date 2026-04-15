@@ -1,26 +1,12 @@
 # Phase 9-B: Prometheus SLO Metrics & Analytics
 # Issue #365: Metrics Analytics & SLO Reporting
 # Immutable version: Prometheus 2.48.0
-
-terraform {
-  required_providers {
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-  }
-}
+# NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
 
 variable "prometheus_version" {
   description = "Prometheus version (immutable)"
   type        = string
   default     = "2.48.0"
-}
-
-variable "primary_host_ip" {
-  description = "Primary host IP"
-  type        = string
-  default     = "192.168.168.31"
 }
 
 # SLO Rules Configuration

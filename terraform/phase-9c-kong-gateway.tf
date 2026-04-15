@@ -1,15 +1,7 @@
 # Phase 9-C: Kong API Gateway - Core Configuration
 # Issue #366: API Gateway, Rate Limiting & Request Management
 # Immutable version: Kong 3.4.1
-
-terraform {
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-  }
-}
+# NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
 
 variable "kong_version" {
   description = "Kong version (immutable)"
@@ -21,18 +13,6 @@ variable "kong_postgres_version" {
   description = "Kong database version"
   type        = string
   default     = "15"
-}
-
-variable "primary_host_ip" {
-  description = "Primary host IP"
-  type        = string
-  default     = "192.168.168.31"
-}
-
-variable "replica_host_ip" {
-  description = "Replica host IP"
-  type        = string
-  default     = "192.168.168.42"
 }
 
 # Kong Configuration

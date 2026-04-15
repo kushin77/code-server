@@ -1,32 +1,12 @@
 # Phase 9-B: Distributed Tracing with Jaeger
 # Issue #363: Distributed Tracing & OpenTelemetry Integration
 # Immutable version: Jaeger 1.50
-
-terraform {
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-  }
-}
+# NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
 
 variable "jaeger_version" {
   description = "Jaeger version (immutable)"
   type        = string
   default     = "1.50"
-}
-
-variable "primary_host_ip" {
-  description = "Primary host IP"
-  type        = string
-  default     = "192.168.168.31"
-}
-
-variable "replica_host_ip" {
-  description = "Replica host IP"
-  type        = string
-  default     = "192.168.168.42"
 }
 
 # Jaeger All-in-One Configuration

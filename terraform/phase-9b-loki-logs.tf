@@ -1,15 +1,7 @@
 # Phase 9-B: Log Aggregation with Loki
 # Issue #364: Log Aggregation & Centralized Log Storage
 # Immutable version: Loki 2.9.4, Promtail 2.9.4
-
-terraform {
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-  }
-}
+# NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
 
 variable "loki_version" {
   description = "Loki version (immutable)"
@@ -21,12 +13,6 @@ variable "promtail_version" {
   description = "Promtail version (immutable)"
   type        = string
   default     = "2.9.4"
-}
-
-variable "primary_host_ip" {
-  description = "Primary host IP"
-  type        = string
-  default     = "192.168.168.31"
 }
 
 # Loki Configuration (Log Storage & Query Engine)

@@ -44,8 +44,23 @@
 	}
 }
 
-# ─── Main Domain ─────────────────────────────────────────────────────────────
-${CADDY_DOMAIN:-ide.kushnir.cloud} {
+# ─── Apex Domain (Portal Dashboard) ─────────────────────────────────────────
+${APEX_DOMAIN:-kushnir.cloud} {
+	${CADDY_TLS_BLOCK:-tls internal}
+	encode gzip
+	import security_headers
+	
+	handle {
+		reverse_proxy portal:80 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+}
+
+# ─── Main Domain (code-server IDE) ──────────────────────────────────────────
+${DOMAIN:-ide.kushnir.cloud} {
 	${CADDY_TLS_BLOCK:-tls internal}
 
 	encode gzip
@@ -74,7 +89,7 @@ ${CADDY_DOMAIN:-ide.kushnir.cloud} {
 
 	# Default: all requests route through oauth2-proxy (enforces SSO)
 	handle {
-		reverse_proxy ${CODE_SERVER_UPSTREAM:-oauth2-proxy:4180} {
+		reverse_proxy oauth2-proxy:4180 {
 			header_up Host             {upstream_hostport}
 			header_up X-Real-IP        {remote_host}
 			header_up X-Forwarded-Proto {scheme}
@@ -85,38 +100,104 @@ ${CADDY_DOMAIN:-ide.kushnir.cloud} {
 	}
 }
 
-# ─── Monitoring Ports (direct access, no oauth on internal network) ──────────
-:${GRAFANA_PORT:-3001} {
-	reverse_proxy grafana:3000 {
-		header_up Host     {upstream_hostport}
-		header_up X-Real-IP {remote_host}
+# ─── Grafana Subdomain ──────────────────────────────────────────────────────
+grafana.${APEX_DOMAIN:-kushnir.cloud} {
+	${CADDY_TLS_BLOCK:-tls internal}
+	encode gzip
+	import security_headers
+	
+	# Health check — bypass oauth2-proxy for readiness probes
+	@health path /api/health
+	handle @health {
+		reverse_proxy grafana:3000 {
+			header_up Host {upstream_hostport}
+		}
+	}
+	
+	# All other requests via oauth2-proxy for SSO
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
 	}
 }
 
-:${PROMETHEUS_PORT:-9090} {
-	reverse_proxy prometheus:9090 {
-		header_up Host     {upstream_hostport}
-		header_up X-Real-IP {remote_host}
+# ─── Prometheus Subdomain ───────────────────────────────────────────────────
+metrics.${APEX_DOMAIN:-kushnir.cloud} {
+	${CADDY_TLS_BLOCK:-tls internal}
+	encode gzip
+	import security_headers
+	
+	# Prometheus scrape endpoints bypass oauth2-proxy for internal jobs
+	@scrape path /metrics /api/v1/*
+	handle @scrape {
+		reverse_proxy prometheus:9090 {
+			header_up Host {upstream_hostport}
+		}
+	}
+	
+	# All other requests via oauth2-proxy for SSO
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
 	}
 }
 
-:${ALERTMANAGER_PORT:-9093} {
-	reverse_proxy alertmanager:9093 {
-		header_up Host     {upstream_hostport}
-		header_up X-Real-IP {remote_host}
+# ─── AlertManager Subdomain ─────────────────────────────────────────────────
+alerts.${APEX_DOMAIN:-kushnir.cloud} {
+	${CADDY_TLS_BLOCK:-tls internal}
+	encode gzip
+	import security_headers
+	
+	# AlertManager API endpoints
+	@api path /api* /-/healthy
+	handle @api {
+		reverse_proxy alertmanager:9093 {
+			header_up Host {upstream_hostport}
+		}
+	}
+	
+	# All other requests via oauth2-proxy for SSO
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
 	}
 }
 
-:${JAEGER_PORT:-16686} {
-	reverse_proxy jaeger:16686 {
-		header_up Host     {upstream_hostport}
-		header_up X-Real-IP {remote_host}
+# ─── Jaeger Subdomain ──────────────────────────────────────────────────────
+tracing.${APEX_DOMAIN:-kushnir.cloud} {
+	${CADDY_TLS_BLOCK:-tls internal}
+	encode gzip
+	import security_headers
+	
+	# Jaeger API endpoints (for internal agents)
+	@api path /api* /search
+	handle @api {
+		reverse_proxy jaeger:16686 {
+			header_up Host {upstream_hostport}
+		}
+	}
+	
+	# All other requests via oauth2-proxy for SSO
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
 	}
 }
 
-}
-
-# HTTP to HTTPS redirect (for legacy local deployments)
-http://localhost {
-    redir https://localhost{uri} permanent
-}
+# ─── HTTP to HTTPS Redirect (for local deployments) ──────────────────────────

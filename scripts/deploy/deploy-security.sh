@@ -1,4 +1,11 @@
 #!/bin/bash
+################################################################################
+# File:          deploy-security.sh
+# Owner:         Platform Engineering
+# Purpose:       Security-focused deployment with hardening checks and compliance validation
+# Status:        ACTIVE
+# Last Updated:  April 15, 2026
+################################################################################
 # Quick deployment script to get security running immediately
 
 set -e

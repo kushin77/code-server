@@ -1,4 +1,11 @@
 #!/bin/bash
+################################################################################
+# File:          deploy-iac.sh
+# Owner:         Platform Engineering
+# Purpose:       IaC deployment orchestration for code-server production environment
+# Status:        ACTIVE
+# Last Updated:  April 15, 2026
+################################################################################
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,4 +1,11 @@
 #!/bin/bash
+################################################################################
+# File:          health-check.sh
+# Owner:         Platform Engineering
+# Purpose:       Service health monitoring and availability verification
+# Status:        ACTIVE
+# Last Updated:  April 15, 2026
+################################################################################
 # Portable health check script — works from any directory
 # Usage: ./health-check.sh [domain]
 set -euo pipefail

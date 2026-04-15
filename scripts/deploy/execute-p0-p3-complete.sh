@@ -1,5 +1,12 @@
 #!/bin/bash
 ################################################################################
+# File:          execute-p0-p3-complete.sh
+# Owner:         Platform Engineering
+# Purpose:       End-to-end Phase 0-3 deployment orchestration and validation
+# Status:        ACTIVE
+# Last Updated:  April 15, 2026
+################################################################################
+################################################################################
 # P0-P3 Complete Execution Orchestrator
 # Master script to execute all phases in sequence
 # 

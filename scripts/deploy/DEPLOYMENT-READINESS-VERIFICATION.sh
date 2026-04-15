@@ -1,5 +1,12 @@
 #!/bin/bash
 ################################################################################
+# File:          DEPLOYMENT-READINESS-VERIFICATION.sh
+# Owner:         Platform Engineering
+# Purpose:       Comprehensive pre-deployment verification and health checks
+# Status:        ACTIVE
+# Last Updated:  April 15, 2026
+################################################################################
+################################################################################
 # Phase 14-18 Deployment Readiness Verification
 # Purpose: Comprehensive pre-production validation of all infrastructure
 # IaC Status: IMMUTABLE (version-pinned) + IDEMPOTENT (safe to apply)

@@ -529,11 +529,14 @@ services:
     container_name: falco
     restart: unless-stopped
     privileged: true
+    security_opt:
+      - apparmor=unconfined
     networks: [enterprise]
     volumes:
       - /var/run/docker.sock:/host/var/run/docker.sock:ro
       - /proc:/host/proc:ro
       - /etc:/host/etc:ro
+      - /sys/kernel/debug:/sys/kernel/debug:rw
       - ./config/falco/falco.yaml:/etc/falco/falco.yaml:ro
       - ./config/falco/rules.custom.yaml:/etc/falco/rules.custom.yaml:ro
       - falco-data:/var/lib/falco

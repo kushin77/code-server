@@ -1,6 +1,6 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# scripts/nas-mount-31.sh — NAS mount for 192.168.168.31
+# scripts/nas-mount-31.sh — NAS mount for ${DEPLOY_HOST}
 # NAS: 192.168.168.56:/export  (primary storage)
 # Usage: sudo ./scripts/nas-mount-31.sh [mount|umount|status|test|dirs]
 # ═══════════════════════════════════════════════════════════════════════════════

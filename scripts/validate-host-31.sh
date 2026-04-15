@@ -1,12 +1,12 @@
-#!/bin/bash
+﻿#!/bin/bash
 ###############################################################################
-# POST-REBOOT VALIDATION SCRIPT FOR HOST 192.168.168.31
+# POST-REBOOT VALIDATION SCRIPT FOR HOST ${DEPLOY_HOST}
 #
 # Run this AFTER rebooting the host to verify all fixes are working
 #
 # Usage:
-#   scp validate-host-31.sh akushnir@192.168.168.31:/tmp/
-#   ssh akushnir@192.168.168.31 "bash /tmp/validate-host-31.sh"
+#   scp validate-host-31.sh akushnir@${DEPLOY_HOST}:/tmp/
+#   ssh akushnir@${DEPLOY_HOST} "bash /tmp/validate-host-31.sh"
 #
 ###############################################################################
 
@@ -47,7 +47,7 @@ box() {
 
 ### MAIN VALIDATION ###
 
-box "POST-REBOOT VALIDATION - HOST 192.168.168.31"
+box "POST-REBOOT VALIDATION - HOST ${DEPLOY_HOST}"
 
 PASS_COUNT=0
 FAIL_COUNT=0

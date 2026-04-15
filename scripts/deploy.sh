@@ -1,7 +1,7 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
 # scripts/deploy.sh — Production clean-rebuild deploy
-# Target: 192.168.168.31 | NAS: 192.168.168.56
+# Target: ${DEPLOY_HOST} | NAS: 192.168.168.56
 # Steps : kill orphans → mount NAS → load secrets → rebuild all → healthcheck
 # Usage : ./scripts/deploy.sh [--skip-nas] [--skip-pull]
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -27,7 +27,7 @@ ok()   { echo "[deploy] OK: $*"; }
 die()  { echo "[deploy] FATAL: $*" >&2; exit 1; }
 
 # Guard: Linux only
-[[ "$(uname)" == "Linux" ]] || die "Deploy must run on Linux at 192.168.168.31"
+[[ "$(uname)" == "Linux" ]] || die "Deploy must run on Linux at ${DEPLOY_HOST}"
 
 # ── 1. Load secrets ──────────────────────────────────────────────────────────
 log "Loading secrets..."

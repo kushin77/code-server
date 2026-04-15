@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
 # scripts/vpn-test.sh — VPN endpoint connectivity test suite
 # Tests: WireGuard status, peer reachability, latency, service access via VPN
@@ -6,7 +6,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-SERVER_IP="192.168.168.31"
+SERVER_IP="${DEPLOY_HOST}"
 NAS_IP="192.168.168.56"
 VPN_SERVER="10.8.0.1"
 WG_IFACE="wg0"

@@ -1,14 +1,14 @@
-#!/bin/bash
+﻿#!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
 # scripts/vpn-setup.sh — WireGuard VPN server setup
-# Server : 192.168.168.31 (on-prem)
+# Server : ${DEPLOY_HOST} (on-prem)
 # VPN net: 10.8.0.0/24
 # Port   : 51820/udp
 # Usage  : sudo ./scripts/vpn-setup.sh [install|genkey|addpeer|status|start|stop]
 # ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-SERVER_IP="192.168.168.31"
+SERVER_IP="${DEPLOY_HOST}"
 VPN_SUBNET="10.8.0.0/24"
 SERVER_VPN_IP="10.8.0.1"
 WG_IFACE="wg0"
@@ -76,7 +76,7 @@ write_server_config() {
     log "Writing server config (iface: $wan_iface)..."
     mkdir -p "$(dirname "$WG_CONF")"
     cat > "$WG_CONF" <<CONFEOF
-# WireGuard server — 192.168.168.31
+# WireGuard server — ${DEPLOY_HOST}
 # Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 # MANAGED BY scripts/vpn-setup.sh — do not edit manually
 

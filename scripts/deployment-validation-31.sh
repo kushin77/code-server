@@ -1,7 +1,7 @@
-#!/bin/bash
+﻿#!/bin/bash
 # File:    deployment-validation-31.sh
 # Owner:   Platform Engineering
-# Purpose: Deployment validation test suite for 192.168.168.31
+# Purpose: Deployment validation test suite for ${DEPLOY_HOST}
 # Status:  ACTIVE
 # Usage:   ./deployment-validation-31.sh [test_pattern]
 
@@ -335,7 +335,7 @@ test_memory_performance() {
 
 main() {
     echo "═══════════════════════════════════════════════════════════════"
-    echo "Deployment Validation Test Suite - 192.168.168.31"
+    echo "Deployment Validation Test Suite - ${DEPLOY_HOST}"
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
     

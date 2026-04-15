@@ -477,6 +477,54 @@ owner    = "oncall"
 purpose  = "Collects diagnostics when code-server crashes: logs, state, metrics."
 depends  = ["_common/init.sh"]
 
+[[script]]
+file     = "postgresql-replication-setup.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Setup PostgreSQL streaming replication for HA"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "test-latency-optimization.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Performance baseline and latency optimization testing"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "tier-2-master-orchestrator.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Master orchestration controller for Tier 2 deployments"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "validate-nas-mount.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Validate NAS mount points and replication status"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "vpn-setup.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "VPN tunnel configuration and initialization"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "vpn-test.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "VPN connectivity and latency testing"
+depends  = ["_common/init.sh"]
+
 # ─────────────────────────────────────────────────────────────────────────────
 # NOTE: All phase-*.sh scripts (130+) are historical deployment artifacts
 # archived to scripts/_archive/phase-history/. Historical one-off scripts

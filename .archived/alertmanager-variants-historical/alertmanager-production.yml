@@ -3,6 +3,10 @@
 # 
 # IMPORTS: Shared route structure and inhibit rules from alertmanager-base.yml
 # This file extends the base with production-specific receivers and Vault integration
+# 
+# ⚠️ DEPRECATED: Consolidated into alertmanager.tpl (Terraform template)
+# See: alertmanager.tpl for the unified SSOT version
+# Archive Date: 2026-04-18
 
 global:
   resolve_timeout: 5m
@@ -124,79 +128,3 @@ receivers:
           {{ range .Alerts }}
           <p><strong>{{ .Labels.alertname }}</strong>: {{ .Annotations.summary }}</p>
           {{ end }}
-
-# ════════════════════════════════════════════════════════════
-# ALERT RULES (referenced in prometheus config)
-# Save as /etc/prometheus/rules/alerts-production.yml
-# ════════════════════════════════════════════════════════════
-#
-# groups:
-#   - name: production-alerts
-#     interval: 30s
-#     rules:
-#       # Service availability
-#       - alert: ServiceDown
-#         expr: up{job=~"code-server|ollama|caddy|postgres|redis"} == 0
-#         for: 5m
-#         labels:
-#           severity: critical
-#           service: '{{ $labels.job }}'
-#         annotations:
-#           summary: '{{ $labels.job }} is DOWN'
-#           description: '{{ $labels.job }} has been unavailable for 5 minutes'
-#
-#       # High error rate
-#       - alert: HighErrorRate
-#         expr: rate(errors_total[5m]) > 0.05
-#         for: 5m
-#         labels:
-#           severity: high
-#         annotations:
-#           summary: 'High error rate in {{ $labels.service }}'
-#
-#       # High latency
-#       - alert: HighLatency
-#         expr: histogram_quantile(0.99, request_duration_seconds_bucket) > 1
-#         for: 10m
-#         labels:
-#           severity: medium
-#         annotations:
-#           summary: 'High latency in {{ $labels.service }}'
-#
-#       # Disk space low
-#       - alert: DiskSpaceLow
-#         expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
-#         for: 10m
-#         labels:
-#           severity: high
-#         annotations:
-#           summary: 'Low disk space on {{ $labels.instance }}'
-#
-#       # Memory high
-#       - alert: MemoryHigh
-#         expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
-#         for: 5m
-#         labels:
-#           severity: medium
-#         annotations:
-#           summary: 'High memory usage on {{ $labels.instance }}'
-#
-#       # DB connection pool exhausted
-#       - alert: DBConnectionPoolExhausted
-#         expr: pg_stat_activity_max_connections > 90
-#         for: 5m
-#         labels:
-#           severity: critical
-#         annotations:
-#           summary: 'PostgreSQL connection pool exhausted'
-#
-#       # Redis evictions
-#       - alert: RedisEvictions
-#         expr: rate(redis_evicted_keys_total[5m]) > 0
-#         for: 5m
-#         labels:
-#           severity: high
-#         annotations:
-#           summary: 'Redis keys being evicted (memory pressure)'
-#
-

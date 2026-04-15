@@ -9,8 +9,10 @@ set -euo pipefail
 #############################################################################
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly LOG_FILE="/var/log/ollama-deployment-$(date +%s).log"
-readonly METRICS_FILE="/var/metrics/ollama-deployment.json"
+readonly LOG_DIR="${LOG_DIR:-.}"
+readonly METRICS_DIR="${METRICS_DIR:-.}"
+readonly LOG_FILE="${LOG_DIR}/ollama-deployment-$(date +%s).log"
+readonly METRICS_FILE="${METRICS_DIR}/ollama-deployment.json"
 
 # Elite Best Practices - Logging & Metrics
 log() {

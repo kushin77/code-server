@@ -21,8 +21,8 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 readonly TIMESTAMP=$(date -u +%Y%m%d_%H%M%S)
-readonly LOG_DIR="${LOG_DIR:-/var/log/iac}"
-readonly METRICS_DIR="${METRICS_DIR:-/var/metrics}"
+readonly LOG_DIR="${LOG_DIR:-.}"
+readonly METRICS_DIR="${METRICS_DIR:-.}"
 readonly STATE_DIR="${STATE_DIR:-./.iac-state}"
 
 # Immutable deployment artifacts

@@ -9,7 +9,8 @@ set -euo pipefail
 #############################################################################
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly LOG_FILE="/var/log/live-share-deployment-$(date +%s).log"
+readonly LOG_DIR="${LOG_DIR:-.}"
+readonly LOG_FILE="${LOG_DIR}/live-share-deployment-$(date +%s).log"
 
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S UTC')] $*" | tee -a "$LOG_FILE"

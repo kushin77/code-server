@@ -9,7 +9,8 @@ set -euo pipefail
 #############################################################################
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly LOG_FILE="/var/log/argocd-deployment-$(date +%s).log"
+readonly LOG_DIR="${LOG_DIR:-.}"
+readonly LOG_FILE="${LOG_DIR}/argocd-deployment-$(date +%s).log"
 readonly K3S_IP="${K3S_IP:-192.168.168.31}"
 readonly ARGOCD_VERSION="${ARGOCD_VERSION:-v2.10.0}"
 

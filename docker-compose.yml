@@ -145,7 +145,6 @@ services:
     container_name: code-server
     restart: always
     networks: [enterprise]
-    security_opt: ["no-new-privileges:true"]
     ports:
       - "0.0.0.0:${CODE_SERVER_PORT}:8080"
     environment:

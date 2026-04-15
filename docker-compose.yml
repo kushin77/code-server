@@ -108,6 +108,37 @@ services:
           memory: ${REDIS_MEMORY_RESERVE}
     logging: *logging
 
+  # ─── MinIO S3-Compatible Storage (for Terraform remote state) ───────────────
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: always
+    networks: [enterprise]
+    profiles: ["storage"]  # Optional: minio is not required for basic deployment
+    ports:
+      - "0.0.0.0:9000:9000"  # MinIO API server
+      - "0.0.0.0:9001:9001"  # MinIO Web Console
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+    command: server /minio-data --console-address ":9001"
+    volumes:
+      - minio-data:/minio-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256m
+    logging: *logging
+
   # ─── code-server ─────────────────────────────────────────────────────────────
   code-server:
     image: codercom/code-server:${CODE_SERVER_VERSION}
@@ -766,6 +797,8 @@ volumes:
   postgres-data:
     driver: local
   redis-data:
+    driver: local
+  minio-data:
     driver: local
   prometheus-data:
     driver: local

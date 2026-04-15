@@ -837,6 +837,39 @@ Ask the following:
 
 To eliminate duplication and maintain single sources of truth across the codebase, follow these patterns:
 
+---
+
+## Platform Requirements — Linux Only
+
+> **Linux (Ubuntu 22.04+) is the ONLY supported deployment platform.**  
+> **Windows is NOT supported. Do not add PowerShell scripts or Windows paths.**
+
+See [SUPPORTED-PLATFORMS.md](SUPPORTED-PLATFORMS.md) for full details.
+
+### Shell Script Standards
+
+- ✅ Use `#!/bin/bash` as shebang (not `/bin/sh`, not `/usr/bin/env bash`)
+- ✅ All scripts must pass `shellcheck --severity=warning`
+- ✅ Use bash arrays, `[[ ]]` conditionals freely
+- ✅ Include `set -euo pipefail` at top of scripts
+- ❌ Do NOT add `.ps1` files to `scripts/` directory
+- ❌ Do NOT reference Windows paths (`C:\`, `APPDATA`, `Program Files`)
+- ❌ Do NOT use PowerShell commands (`Get-Command`, `Start-Process`, etc.)
+
+### Development Setup
+
+Develop from any OS using SSH to the Linux host:
+
+```bash
+# Connect to production host
+ssh akushnir@192.168.168.31
+
+# VS Code Remote SSH
+code --remote ssh-remote+akushnir@192.168.168.31 /home/akushnir/code-server-enterprise
+```
+
+All commands run **on the Linux host**. Never deploy locally from Windows.
+
 ### 1. Docker Compose Inheritance
 
 **Pattern**: Use `docker-compose.base.yml` with YAML anchors for shared service definitions.

@@ -36,6 +36,26 @@ repos:
         pass_filenames: false
         stages: [commit]
 
+      # LINUX-ONLY: Block Windows paths in source files
+      - id: no-windows-paths
+        name: No Windows paths (C:\, APPDATA, etc.) in source files
+        entry: "bash -c 'found=$(grep -rn -E \"(C:\\\\\\\\\\\\\\\\|APPDATA|Program Files|\\\\\\\\Users\\\\\\\\)\" --include=\"*.sh\" --include=\"*.tf\" --include=\"*.yml\" --include=\"*.yaml\" --exclude-dir=deprecated --exclude-dir=archived . 2>/dev/null || true); if [[ -n \"$found\" ]]; then echo \"ERROR: Windows paths found in source files:\"; echo \"$found\"; echo \"Use Linux paths only. See SUPPORTED-PLATFORMS.md\"; exit 1; fi'"
+        language: system
+        files: \.(sh|tf|yml|yaml)$
+        exclude: ^(deprecated/|archived/)
+        pass_filenames: false
+        stages: [commit]
+
+      # LINUX-ONLY: Block .ps1 file references in active code
+      - id: no-ps1-references
+        name: No PowerShell (.ps1) references in active code
+        entry: "bash -c 'found=$(grep -rn -E \"(\\.ps1\\b|redeploy\\.ps1)\" --include=\"*.sh\" --include=\"*.yml\" --include=\"*.yaml\" --include=\"*.tf\" --exclude-dir=deprecated --exclude-dir=archived . 2>/dev/null || true); if [[ -n \"$found\" ]]; then echo \"ERROR: PowerShell references found in active code:\"; echo \"$found\"; echo \"Windows not supported. See SUPPORTED-PLATFORMS.md\"; exit 1; fi'"
+        language: system
+        files: \.(sh|tf|yml|yaml)$
+        exclude: ^(deprecated/|archived/)
+        pass_filenames: false
+        stages: [commit]
+
       # CRITICAL P0: Block hardcoded credentials
       - id: no-hardcoded-credentials
         name: Block hardcoded credentials (P0)

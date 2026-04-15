@@ -6,7 +6,8 @@ PROJECT_DIR="${SCRIPT_DIR}/code-server-enterprise"
 
 # Source logging library for structured logging
 export LOG_FILE="${SCRIPT_DIR}/deployment.log"
-source "${SCRIPT_DIR}/scripts/logging.sh" || {
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || {
     echo "ERROR: Cannot source logging library at ${SCRIPT_DIR}/scripts/logging.sh"
     exit 1
 }

@@ -74,7 +74,7 @@ cmd_list_users() {
     else
       printf "%-5s | %-30s | %-12s\n" "📋" "$email" "(no profile)"
     fi
-  done < allowed-emails.tx
+  done < allowed-emails.txt
 
   echo ""
   echo -e "${BLUE}Total: $(wc -l < allowed-emails.txt) users${NC}"
@@ -94,7 +94,7 @@ cmd_add_user() {
     exit 1
   fi
 
-  # Use provisioning scrip
+  # Use provisioning script
   bash scripts/provision-new-user.sh "$email" "$role" "$display"
 }
 
@@ -122,9 +122,9 @@ cmd_remove_user() {
     exit 0
   fi
 
-  # Remove from allowlis
+  # Remove from allowlist
   grep -v "^$email$" allowed-emails.txt > allowed-emails.txt.tmp
-  mv allowed-emails.txt.tmp allowed-emails.tx
+  mv allowed-emails.txt.tmp allowed-emails.txt
 
   # Audit log
   echo "$(date -I'seconds') | USER_REVOKED | email:$email" >> audit/user-provisioning.log

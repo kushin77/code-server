@@ -129,81 +129,83 @@ services:
     logging: *logging
 
   # ─── Ollama (GPU MAX — T1000 8GB, device 1, full CUDA offload) ─────────────
-  # DISABLED FOR PHASE 7a - GPU inference, enable after core services verified
-  # ollama:
-  #   image: ollama/ollama:${OLLAMA_VERSION}
-  #   container_name: ollama
-  #   restart: unless-stopped
-  #   runtime: nvidia
-  #   networks: [enterprise]
-  #   ports:
-  #     - "0.0.0.0:${OLLAMA_PORT}:${OLLAMA_PORT}"
-  #   # Explicit device mounts are required with snap Docker nvidia runtime
-  #   # snap's nvidia-container-runtime needs /dev/nvidia<N> explicitly bound
-  #   # to enable CUDA compute (utility-only mode doesn't expose compute context)
-  #   devices:
-  #     - ${OLLAMA_DEVICE_NVIDIA1}:${OLLAMA_DEVICE_NVIDIA1}
-  #     - ${OLLAMA_DEVICE_NVIDIACTL}:${OLLAMA_DEVICE_NVIDIACTL}
-  #     - ${OLLAMA_DEVICE_UVM}:${OLLAMA_DEVICE_UVM}
-  #     - ${OLLAMA_DEVICE_UVM_TOOLS}:${OLLAMA_DEVICE_UVM_TOOLS}
-  #   environment:
-  #     OLLAMA_HOST:              ${OLLAMA_HOST_ADDR}
-  #     CUDA_VISIBLE_DEVICES:     ${OLLAMA_CUDA_VISIBLE_DEVICES}
-  #     NVIDIA_VISIBLE_DEVICES:   ${OLLAMA_NVIDIA_VISIBLE_DEVICES}
-  #     NVIDIA_DRIVER_CAPABILITIES: compute,utility
-  #     LD_LIBRARY_PATH:          /var/lib/snapd/hostfs/usr/lib/x86_64-linux-gnu
-  #     OLLAMA_NUM_GPU:           ${OLLAMA_NUM_GPU}
-  #     OLLAMA_GPU_LAYERS:        ${OLLAMA_GPU_LAYERS}
-  #     OLLAMA_KEEP_ALIVE:        ${OLLAMA_KEEP_ALIVE}
-  #     OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS}
-  #     OLLAMA_NUM_THREAD:        ${OLLAMA_NUM_THREAD}
-  #     OLLAMA_FLASH_ATTENTION:   ${OLLAMA_FLASH_ATTENTION}
-  #     OLLAMA_NUM_PARALLEL:      ${OLLAMA_NUM_PARALLEL}
-  #     OLLAMA_MAX_VRAM:          ${OLLAMA_MAX_VRAM}
-  #   volumes:
-  #     - ${NAS_PRIMARY_MOUNT}/ollama:/root/.ollama:rw
-  #   healthcheck:
-  #     test: ["CMD", "ollama", "list"]
-  #     interval: ${OLLAMA_HEALTHCHECK_INTERVAL}
-  #     timeout: ${OLLAMA_HEALTHCHECK_TIMEOUT}
-  #     retries: ${OLLAMA_HEALTHCHECK_RETRIES}
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: ${OLLAMA_MEMORY_LIMIT}
-  #       reservations:
-  #         memory: 8g
-  #         devices:
-  #           - driver: nvidia
-  #             device_ids: ["1"]
-  #             capabilities: [gpu]
-  #   logging: *logging
+  # Profile: ollama - Enable with: docker-compose --profile ollama up -d
+  ollama:
+    image: ollama/ollama:${OLLAMA_VERSION}
+    container_name: ollama
+    restart: unless-stopped
+    runtime: nvidia
+    networks: [enterprise]
+    ports:
+      - "0.0.0.0:${OLLAMA_PORT}:${OLLAMA_PORT}"
+    profiles: ["ollama"]
+    # Explicit device mounts are required with snap Docker nvidia runtime
+    # snap's nvidia-container-runtime needs /dev/nvidia<N> explicitly bound
+    # to enable CUDA compute (utility-only mode doesn't expose compute context)
+    devices:
+      - ${OLLAMA_DEVICE_NVIDIA1}:${OLLAMA_DEVICE_NVIDIA1}
+      - ${OLLAMA_DEVICE_NVIDIACTL}:${OLLAMA_DEVICE_NVIDIACTL}
+      - ${OLLAMA_DEVICE_UVM}:${OLLAMA_DEVICE_UVM}
+      - ${OLLAMA_DEVICE_UVM_TOOLS}:${OLLAMA_DEVICE_UVM_TOOLS}
+    environment:
+      OLLAMA_HOST:              ${OLLAMA_HOST_ADDR}
+      CUDA_VISIBLE_DEVICES:     ${OLLAMA_CUDA_VISIBLE_DEVICES}
+      NVIDIA_VISIBLE_DEVICES:   ${OLLAMA_NVIDIA_VISIBLE_DEVICES}
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      LD_LIBRARY_PATH:          /var/lib/snapd/hostfs/usr/lib/x86_64-linux-gnu
+      OLLAMA_NUM_GPU:           ${OLLAMA_NUM_GPU}
+      OLLAMA_GPU_LAYERS:        ${OLLAMA_GPU_LAYERS}
+      OLLAMA_KEEP_ALIVE:        ${OLLAMA_KEEP_ALIVE}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS}
+      OLLAMA_NUM_THREAD:        ${OLLAMA_NUM_THREAD}
+      OLLAMA_FLASH_ATTENTION:   ${OLLAMA_FLASH_ATTENTION}
+      OLLAMA_NUM_PARALLEL:      ${OLLAMA_NUM_PARALLEL}
+      OLLAMA_MAX_VRAM:          ${OLLAMA_MAX_VRAM}
+    volumes:
+      - ${NAS_PRIMARY_MOUNT}/ollama:/root/.ollama:rw
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: ${OLLAMA_HEALTHCHECK_INTERVAL}
+      timeout: ${OLLAMA_HEALTHCHECK_TIMEOUT}
+      retries: ${OLLAMA_HEALTHCHECK_RETRIES}
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT}
+        reservations:
+          memory: 8g
+          devices:
+            - driver: nvidia
+              device_ids: ["1"]
+              capabilities: [gpu]
+    logging: *logging
 
   # ─── Ollama model bootstrap (runs once, then exits) ───────────────────────
-  # DISABLED FOR PHASE 7a - GPU inference, enable after core services verified
-  # ollama-init:
-  #   image: ollama/ollama:${OLLAMA_VERSION}
-  #   container_name: ollama-init
-  #   restart: on-failure
-  #   networks: [enterprise]
-  #   environment:
-  #     OLLAMA_HOST: http://ollama:${OLLAMA_PORT}
-  #   volumes:
-  #     - ${NAS_PRIMARY_MOUNT}/ollama:/root/.ollama:rw
-  #   entrypoint: ["/bin/sh", "-c"]
-  #   command:
-  #     - |
-  #       set -e
-  #       echo "[ollama-init] waiting for ollama..."
-  #       until ollama list >/dev/null 2>&1; do sleep 5; done
-  #       echo "[ollama-init] pulling llama2:7b-chat (fast baseline)"
-  #       ollama pull llama2:7b-chat
-  #       echo "[ollama-init] pulling codellama:7b (code model)"
-  #       ollama pull codellama:7b
-  #       echo "[ollama-init] all models ready"
-  #   depends_on:
-  #     ollama: { condition: service_healthy }
-  #   logging: *logging
+  # Profile: ollama - Enable with: docker-compose --profile ollama up -d
+  ollama-init:
+    image: ollama/ollama:${OLLAMA_VERSION}
+    container_name: ollama-init
+    restart: on-failure
+    networks: [enterprise]
+    profiles: ["ollama"]
+    environment:
+      OLLAMA_HOST: http://ollama:${OLLAMA_PORT}
+    volumes:
+      - ${NAS_PRIMARY_MOUNT}/ollama:/root/.ollama:rw
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        echo "[ollama-init] waiting for ollama..."
+        until ollama list >/dev/null 2>&1; do sleep 5; done
+        echo "[ollama-init] pulling llama2:7b-chat (fast baseline)"
+        ollama pull llama2:7b-chat
+        echo "[ollama-init] pulling codellama:7b (code model)"
+        ollama pull codellama:7b
+        echo "[ollama-init] all models ready"
+    depends_on:
+      ollama: { condition: service_healthy }
+    logging: *logging
 
   # ─── oauth2-proxy ────────────────────────────────────────────────────────────
   # Central authentication service: Google OAuth2 for SSO across all endpoints
@@ -402,93 +404,96 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════════
 
   # ─── Phase 6a: PgBouncer (Connection Pooling) ────────────────────────────────
-  # DISABLED FOR PHASE 7a - Core services only, enable after replica is stable
-  # pgbouncer:
-  #   image: pgbouncer/pgbouncer:1.21-latest
-  #   container_name: pgbouncer
-  #   restart: always
-  #   networks: [enterprise]
-  #   ports:
-  #     - "0.0.0.0:6432:6432"
-  #   environment:
-  #     DATABASES_HOST: postgres
-  #     DATABASES_PORT: 5432
-  #     DATABASES_USER:             ${POSTGRES_USER:-postgres}
-  #     DATABASES_PASSWORD:         ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-  #     PGBOUNCER_POOL_MODE:        transaction
-  #     PGBOUNCER_MAX_CLIENT_CONN:  1000
-  #     PGBOUNCER_DEFAULT_POOL_SIZE: 100
-  #     PGBOUNCER_MIN_POOL_SIZE:    25
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "psql -h localhost -U ${POSTGRES_USER:-postgres} -c 'SELECT 1'"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 15s
-  #   deploy:
-  #     resources:
-  #       limits:   { memory: 512m, cpus: '0.25' }
-  #       reservations: { memory: 64m }
-  #   logging: *logging
+  # Profile: pgbouncer - Enable with: docker-compose --profile pgbouncer up -d
+  pgbouncer:
+    image: pgbouncer/pgbouncer:1.21-latest
+    container_name: pgbouncer
+    restart: always
+    networks: [enterprise]
+    profiles: ["pgbouncer"]
+    ports:
+      - "0.0.0.0:6432:6432"
+    environment:
+      DATABASES_HOST: postgres
+      DATABASES_PORT: 5432
+      DATABASES_USER:             ${POSTGRES_USER:-postgres}
+      DATABASES_PASSWORD:         ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      PGBOUNCER_POOL_MODE:        transaction
+      PGBOUNCER_MAX_CLIENT_CONN:  1000
+      PGBOUNCER_DEFAULT_POOL_SIZE: 100
+      PGBOUNCER_MIN_POOL_SIZE:    25
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "psql -h localhost -U ${POSTGRES_USER:-postgres} -c 'SELECT 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:   { memory: 512m, cpus: '0.25' }
+        reservations: { memory: 64m }
+    logging: *logging
 
   # ─── Phase 6b: HashiCorp Vault (Secret Management) ─────────────────────────
-  # DISABLED FOR PHASE 7a - Optional enhancement, enable after core services verified
-  # vault:
-  #   image: vault:1.15.0
-  #   container_name: vault
-  #   restart: always
-  #   networks: [enterprise]
-  #   ports:
-  #     - "0.0.0.0:8200:8200"
-  #   environment:
-  #     VAULT_DEV_ROOT_TOKEN_ID:    ${VAULT_ROOT_TOKEN:?Set VAULT_ROOT_TOKEN in .env}
-  #     VAULT_DEV_LISTEN_ADDRESS:   0.0.0.0:8200
-  #     VAULT_ADDR:                 http://localhost:8200
-  #     VAULT_UI:                   "true"
-  #   volumes:
-  #     - vault-data:/vault/data
-  #   cap_add:
-  #     - IPC_LOCK
-  #   command: server -dev -dev-root-token-id=$${VAULT_DEV_ROOT_TOKEN_ID}
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "curl -sf http://localhost:8200/v1/sys/health || exit 1"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 10s
-  #   deploy:
-  #     resources:
-  #       limits:   { memory: 1g,    cpus: '0.5' }
-  #       reservations: { memory: 128m }
-  #   logging: *logging
+  # Profile: vault - Enable with: docker-compose --profile vault up -d
+  vault:
+    image: vault:1.15.0
+    container_name: vault
+    restart: always
+    networks: [enterprise]
+    profiles: ["vault"]
+    ports:
+      - "0.0.0.0:8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID:    ${VAULT_ROOT_TOKEN:?Set VAULT_ROOT_TOKEN in .env}
+      VAULT_DEV_LISTEN_ADDRESS:   0.0.0.0:8200
+      VAULT_ADDR:                 http://localhost:8200
+      VAULT_UI:                   "true"
+    volumes:
+      - vault-data:/vault/data
+    cap_add:
+      - IPC_LOCK
+    command: server -dev -dev-root-token-id=$${VAULT_DEV_ROOT_TOKEN_ID}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8200/v1/sys/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:   { memory: 1g,    cpus: '0.5' }
+        reservations: { memory: 128m }
+    logging: *logging
 
   # ─── Phase 6c: Locust (Load Testing) ────────────────────────────────────────
-  # DISABLED FOR PHASE 7a - Load testing, enable after core services verified
-  # locust:
-  #   image: locustio/locust:latest
-  #   container_name: locust
-  #   restart: "no"
-  #   networks: [enterprise]
-  #   ports:
-  #     - "0.0.0.0:8089:8089"
-  #   environment:
-  #     TARGET_HOST:     http://caddy:80
-  #     LOCUST_USERS:    ${LOCUST_USERS:-100}
-  #     LOCUST_SPAWN_RATE: ${LOCUST_SPAWN_RATE:-10}
-  #     LOCUST_RUN_TIME: ${LOCUST_RUN_TIME:-5m}
-  #   volumes:
-  #     - ./locustfile.py:/locustfile.py:ro
-  #   command: -f /locustfile.py --web -u $${LOCUST_USERS} -r $${LOCUST_SPAWN_RATE}
-  #   depends_on:
-  #     caddy:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "curl -sf http://localhost:8089/ || exit 1"]
-  #     interval: 30s
-  #     timeout: 10s
+  # Profile: load-test - Enable with: docker-compose --profile load-test up -d
+  locust:
+    image: locustio/locust:latest
+    container_name: locust
+    restart: "no"
+    networks: [enterprise]
+    profiles: ["load-test"]
+    ports:
+      - "0.0.0.0:8089:8089"
+    environment:
+      TARGET_HOST:     http://caddy:80
+      LOCUST_USERS:    ${LOCUST_USERS:-100}
+      LOCUST_SPAWN_RATE: ${LOCUST_SPAWN_RATE:-10}
+      LOCUST_RUN_TIME: ${LOCUST_RUN_TIME:-5m}
+    volumes:
+      - ./locustfile.py:/locustfile.py:ro
+    command: -f /locustfile.py --web -u $${LOCUST_USERS} -r $${LOCUST_SPAWN_RATE}
+    depends_on:
+      caddy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8089/ || exit 1"]
+      interval: 30s
+      timeout: 10s
   #     retries: 3
   #   deploy:
   #     resources:

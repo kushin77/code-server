@@ -15,6 +15,11 @@ variable "allowed_users" {
       role     = "admin"
       disabled = false
     }
+    qa-service = {
+      email    = "qa-service@ide.kushnir.cloud"
+      role     = "developer"
+      disabled = false
+    }
   }
 
   validation {

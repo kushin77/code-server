@@ -16,7 +16,7 @@ SHELL := /bin/bash
         ollama-health ollama-pull-models ollama-list ollama-logs ollama-index ollama-init ollama-status ollama-shell \
         logs-code-server logs-oauth2 logs-caddy \
         latency-optimizer-install latency-monitor-install latency-services-start latency-services-stop latency-dashboard latency-report latency-test \
-        wireguard-install wireguard-status wireguard-genkeys nas-mount nas-mount-status \
+		wireguard-install wireguard-status wireguard-genkeys nas-mount nas-mount-status vpn-enterprise-scan \
         pre-commit ci-validate cd-deploy d p s l v
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -950,6 +950,10 @@ vpn-status:
 vpn-test:
 	$(REMOTE) "cd $(REMOTE_DIR) && bash scripts/vpn-test.sh"
 
+## vpn-enterprise-scan: deep endpoint scan over VPN using Playwright + Puppeteer
+vpn-enterprise-scan:
+	$(REMOTE) "cd $(REMOTE_DIR) && bash scripts/vpn-enterprise-endpoint-scan.sh"
+
 ## secrets-gen: generate new secrets (prints .env to stdout — pipe to .env)
 secrets-gen:
 	$(REMOTE) "cd $(REMOTE_DIR) && source scripts/lib/secrets.sh && secrets_generate"
@@ -981,7 +985,7 @@ ollama-pull:
 .PHONY: elite-deploy elite-status elite-kill elite-logs elite-rebuild elite-git-sync \
         nas-mount nas-status nas-test \
         gpu-status gpu-test \
-        vpn-install vpn-addpeer vpn-status vpn-test \
+	vpn-install vpn-addpeer vpn-status vpn-test vpn-enterprise-scan \
         secrets-gen secrets-push-gsm \
         branch-clean branch-clean-remote \
         ollama-gpu ollama-pull

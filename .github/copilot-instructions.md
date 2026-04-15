@@ -84,6 +84,32 @@ A change is complete ONLY when ALL are true:
 
 ---
 
+## Mandatory VPN Endpoint Scan Gate (Blocking Task Completion)
+
+Before Copilot declares any deployment, networking, security, observability, ingress, auth, or endpoint task complete, ALL of the following must be true:
+
+1. **VPN-only validation executed**
+	- Run: `bash scripts/vpn-enterprise-endpoint-scan.sh`
+	- Required: route verification confirms endpoint traffic uses VPN interface (`wg0`/configured interface).
+
+2. **Dual browser engines executed**
+	- **Playwright** deep navigation and diagnostics
+	- **Puppeteer** deep navigation and diagnostics
+
+3. **Debug evidence generated and reviewed**
+	- `test-results/vpn-endpoint-scan/<timestamp>/summary.json`
+	- `test-results/vpn-endpoint-scan/<timestamp>/debug-errors.log`
+	- Browser artifacts (screenshots + Playwright traces)
+
+4. **Blocking rule**
+	- If VPN route verification fails, endpoint checks fail, or required artifacts are missing:
+	  - task status is **NOT COMPLETE**
+	  - remediation and re-run are mandatory
+
+No exceptions for this gate on endpoint-facing production work.
+
+---
+
 ## Code Quality Standards
 
 ### Commit Format

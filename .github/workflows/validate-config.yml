@@ -23,6 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Create .env for validation
+        run: |
+          # Create .env from example for docker-compose validation
+          if [ -f .env.example ]; then
+            cp .env.example .env
+            echo "✓ .env created from .env.example for validation"
+          fi
+      
       - name: Install Docker
         uses: docker/setup-buildx-action@v3
       
@@ -70,6 +78,7 @@ jobs:
       
       - name: Terraform validate
         run: |
+          cd terraform
           terraform init -backend=false
           terraform validate
           echo "✓ Terraform configuration valid"

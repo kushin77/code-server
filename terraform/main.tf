@@ -184,7 +184,7 @@ resource "local_file" "docker_compose_reference" {
 resource "local_file" "caddyfile" {
   filename = "${path.module}/config/caddy/Caddyfile"
 
-  content = templatefile("${path.module}/Caddyfile.tpl", {
+  content = templatefile("${path.module}/../Caddyfile.tpl", {
     code_server_host  = "localhost"
     code_server_port  = local.network.code_server_port
     oauth2_proxy_port = local.network.oauth2_proxy_port

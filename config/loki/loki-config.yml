@@ -4,15 +4,7 @@
 # Date: April 15, 2026
 # ════════════════════════════════════════════════════════════════
 
-auth_enabled: true  # Enable authentication (X-Scope-OrgID header or basic auth required)
-
-# ════════════════════════════════════════════════════════════════
-# Authentication Configuration
-# ════════════════════════════════════════════════════════════════
-# Loki enforces X-Scope-OrgID header (tenant ID) for multi-tenancy
-# For single-tenant on-prem: all requests must include X-Scope-OrgID: default
-# Recommended: proxy through oauth2-proxy for OIDC/password auth
-auth_backend: default  # Use default backend (X-Scope-OrgID enforcement)
+auth_enabled: false  # Authentication disabled for on-prem single-tenant setup
 
 server:
   http_listen_port: 3100
@@ -46,7 +38,6 @@ limits_config:
   ingestion_rate_mb: 10
   ingestion_burst_size_mb: 15
   max_streams_per_user: 10000
-  max_entries_limit_per_second: 10000
   # Retention policy: keep logs for 30 days
   retention_period: 720h
 

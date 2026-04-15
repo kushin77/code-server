@@ -418,3 +418,281 @@ variable "vault_default_lease_ttl" {
     error_message = "vault_default_lease_ttl must be 0 < ttl <= max_lease_ttl."
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Module-Scoped Variables (for composing child modules)
+// ═══════════════════════════════════════════════════════════════════════════
+
+variable "host_ip" {
+  description = "Primary host IP address (e.g., 192.168.168.31)"
+  type        = string
+  default     = "192.168.168.31"
+  validation {
+    condition     = can(regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", var.host_ip))
+    error_message = "Must be a valid IPv4 address."
+  }
+}
+
+variable "is_primary" {
+  description = "Is this the primary host (true) or replica (false)?"
+  type        = bool
+  default     = true
+}
+
+variable "primary_host_ip" {
+  description = "Primary host IP (for replica replication source)"
+  type        = string
+  default     = "192.168.168.31"
+}
+
+variable "replica_host_ip" {
+  description = "Replica host IP (for primary failover target)"
+  type        = string
+  default     = "192.168.168.42"
+}
+
+variable "code_server_port" {
+  description = "Code-server application port"
+  type        = number
+  default     = 8080
+}
+
+variable "code_server_version" {
+  description = "Code-server Docker image version"
+  type        = string
+  default     = "4.115.0"
+}
+
+variable "code_server_memory_limit" {
+  description = "Code-server container memory limit"
+  type        = string
+  default     = "4g"
+}
+
+variable "code_server_cpu_limit" {
+  description = "Code-server container CPU limit (cores)"
+  type        = string
+  default     = "2.0"
+}
+
+variable "caddy_port_http" {
+  description = "Caddy HTTP port"
+  type        = number
+  default     = 80
+}
+
+variable "caddy_port_https" {
+  description = "Caddy HTTPS port"
+  type        = number
+  default     = 443
+}
+
+variable "caddy_admin_port" {
+  description = "Caddy admin API port (loopback only)"
+  type        = number
+  default     = 2019
+}
+
+variable "caddy_auto_https" {
+  description = "Caddy HTTPS mode (on/off/ignore_loaded_certs)"
+  type        = string
+  default     = "on"
+}
+
+variable "caddy_tls_email" {
+  description = "Email for Let's Encrypt TLS certificates"
+  type        = string
+  default     = "ops@kushnir.cloud"
+}
+
+variable "caddy_version" {
+  description = "Caddy reverse proxy version"
+  type        = string
+  default     = "2.9.1-alpine"
+}
+
+variable "oauth2_proxy_version" {
+  description = "OAuth2-proxy version"
+  type        = string
+  default     = "7.5.1"
+}
+
+variable "oauth2_proxy_port" {
+  description = "OAuth2-proxy listen port"
+  type        = number
+  default     = 4180
+}
+
+variable "oauth2_provider" {
+  description = "OAuth2 provider (google/github/okta)"
+  type        = string
+  default     = "google"
+}
+
+variable "oauth2_callback_url" {
+  description = "OAuth2 callback URL"
+  type        = string
+  default     = "https://ide.kushnir.cloud/oauth2/callback"
+}
+
+variable "oauth2_memory_limit" {
+  description = "OAuth2-proxy memory limit"
+  type        = string
+  default     = "256m"
+}
+
+variable "oauth2_cpu_limit" {
+  description = "OAuth2-proxy CPU limit"
+  type        = string
+  default     = "0.25"
+}
+
+variable "postgres_version" {
+  description = "PostgreSQL version"
+  type        = string
+  default     = "15.6-alpine"
+}
+
+variable "postgres_db" {
+  description = "PostgreSQL primary database name"
+  type        = string
+  default     = "codeserver"
+}
+
+variable "postgres_user" {
+  description = "PostgreSQL primary user"
+  type        = string
+  default     = "codeserver"
+}
+
+variable "postgres_port" {
+  description = "PostgreSQL port"
+  type        = number
+  default     = 5432
+}
+
+variable "postgres_memory_limit" {
+  description = "PostgreSQL container memory limit"
+  type        = string
+  default     = "2g"
+}
+
+variable "postgres_cpu_limit" {
+  description = "PostgreSQL container CPU limit"
+  type        = string
+  default     = "1.0"
+}
+
+variable "postgres_replication_user" {
+  description = "PostgreSQL replication user"
+  type        = string
+  default     = "replicator"
+}
+
+variable "postgres_replication_lag_limit_ms" {
+  description = "Maximum acceptable replication lag (ms)"
+  type        = number
+  default     = 5000
+}
+
+variable "redis_version" {
+  description = "Redis version"
+  type        = string
+  default     = "7.2-alpine"
+}
+
+variable "redis_port" {
+  description = "Redis port"
+  type        = number
+  default     = 6379
+}
+
+variable "redis_memory_limit" {
+  description = "Redis memory limit"
+  type        = string
+  default     = "512mb"
+}
+
+variable "redis_maxmemory" {
+  description = "Redis maxmemory setting"
+  type        = string
+  default     = "512mb"
+}
+
+variable "redis_memory_limit_container" {
+  description = "Redis container memory limit"
+  type        = string
+  default     = "768m"
+}
+
+variable "redis_cpu_limit" {
+  description = "Redis container CPU limit"
+  type        = string
+  default     = "0.5"
+}
+
+variable "redis_persistence_enabled" {
+  description = "Enable Redis persistence"
+  type        = bool
+  default     = false
+}
+
+variable "pgbouncer_version" {
+  description = "PgBouncer version"
+  type        = string
+  default     = "1.21"
+}
+
+variable "pgbouncer_port" {
+  description = "PgBouncer port"
+  type        = number
+  default     = 6432
+}
+
+variable "pgbouncer_pool_size" {
+  description = "PgBouncer pool size"
+  type        = number
+  default     = 25
+}
+
+variable "pgbouncer_pool_mode" {
+  description = "PgBouncer pool mode"
+  type        = string
+  default     = "transaction"
+}
+
+variable "pgbouncer_connect_timeout" {
+  description = "PgBouncer connect timeout (seconds)"
+  type        = number
+  default     = 15
+}
+
+variable "backup_retention_days" {
+  description = "Backup retention period (days)"
+  type        = number
+  default     = 30
+}
+
+variable "backup_schedule_cron" {
+  description = "Backup schedule (cron format)"
+  type        = string
+  default     = "0 2 * * *"
+}
+
+variable "enable_replication" {
+  description = "Enable PostgreSQL replication"
+  type        = bool
+  default     = true
+}
+
+variable "enable_hot_standby" {
+  description = "Enable hot standby on replica"
+  type        = bool
+  default     = true
+}
+
+variable "enable_synchronous_replication" {
+  description = "Enable synchronous replication (consistency > latency)"
+  type        = bool
+  default     = false
+}

@@ -6,7 +6,7 @@ repos:
         entry: bash ./scripts/mandatory-redeploy.sh
         language: system
         pass_filenames: false
-        # Only run manually or on local push — requires Docker and Linux environment
+        # Only run manually or on local push - requires Docker and Linux environment
         stages: [manual]
 
       # Phase 2.3: Custom hook - verify scripts source common libraries
@@ -27,10 +27,10 @@ repos:
         pass_filenames: false
         stages: [commit]
 
-      # Phase 3: Block hardcoded IPs — use $DEPLOY_HOST from _common/config.sh
+      # Phase 3: Block hardcoded IPs - use $DEPLOY_HOST from _common/config.sh
       - id: no-hardcoded-ips
         name: No hardcoded IP addresses in scripts
-        entry: "bash -c 'files=$(grep -rl \"192\\.168\\.168\\.\\(31\\|30\\)\" scripts/ 2>/dev/null | grep -v \"_common/\" | grep -v \"config\\.sh\" | grep \"\\.sh$\"); if [[ -n \"$files\" ]]; then echo \"GOVERNANCE: Hardcoded IP found — use \\$DEPLOY_HOST:\"; echo \"$files\" | sed \"s/^/  /\"; exit 1; fi'"
+        entry: "bash -c 'files=$(grep -rl \"192\\.168\\.168\\.\\(31\\|30\\)\" scripts/ 2>/dev/null | grep -v \"_common/\" | grep -v \"config\\.sh\" | grep \"\\.sh$\"); if [[ -n \"$files\" ]]; then echo \"GOVERNANCE: Hardcoded IP found - use \\$DEPLOY_HOST:\"; echo \"$files\" | sed \"s/^/  /\"; exit 1; fi'"
         language: system
         files: '^scripts/.*\.sh$'
         pass_filenames: false

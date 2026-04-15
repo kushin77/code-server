@@ -1,0 +1,66 @@
+groups:
+  - name: slo_alerts
+    rules:
+      - alert: SLOAvailabilityWarning
+        expr: slo:availability:ratio < 0.9990
+        for: 5m
+        annotations:
+          summary: "Availability approaching SLO threshold"
+          description: "Current {{ $value | humanizePercentage }}, target 99.95%"
+          severity: "warning"
+
+      - alert: SLOAvailabilityBreach
+        expr: slo:availability:ratio < 0.9980
+        for: 2m
+        annotations:
+          summary: "SLO BREACH: Availability below threshold"
+          description: "CRITICAL: {{ $value | humanizePercentage }}, SLO 99.95%"
+          severity: "critical"
+
+      - alert: SLOLatencyWarning
+        expr: slo:latency:p99 > 0.4
+        for: 5m
+        annotations:
+          summary: "Latency warning: p99 > 400ms"
+          description: "Current p99 {{ $value | humanizeDuration }}"
+          severity: "warning"
+
+      - alert: SLOLatencyBreach
+        expr: slo:latency:p99 > 0.75
+        for: 2m
+        annotations:
+          summary: "SLO BREACH: Latency exceeds 750ms"
+          description: "p99 {{ $value | humanizeDuration }}, SLO 500ms"
+          severity: "critical"
+
+      - alert: SLOErrorRateWarning
+        expr: slo:error_rate:ratio > 0.0005
+        for: 5m
+        annotations:
+          summary: "Error rate warning: > 0.05%"
+          description: "Current {{ $value | humanizePercentage }}"
+          severity: "warning"
+
+      - alert: SLOErrorRateBreach
+        expr: slo:error_rate:ratio > 0.002
+        for: 2m
+        annotations:
+          summary: "SLO BREACH: Error rate exceeds 0.2%"
+          description: "Error rate {{ $value | humanizePercentage }}, SLO < 0.1%"
+          severity: "critical"
+
+      - alert: SLOThroughputWarning
+        expr: slo:throughput:rps < 50
+        for: 5m
+        annotations:
+          summary: "Throughput below normal: < 50 req/s"
+          description: "Current {{ $value | humanize }} req/s"
+          severity: "warning"
+
+      - alert: SLOThroughputCritical
+        expr: slo:throughput:rps < 1
+        for: 1m
+        annotations:
+          summary: "CRITICAL: Service unavailable (< 1 req/s)"
+          description: "Throughput {{ $value | humanize }} req/s — possible outage"
+          severity: "critical"

@@ -1,0 +1,76 @@
+# CoreDNS Configuration (Corefile)
+# =================================
+# Internal DNS resolver for *.prod.internal service discovery
+# 
+# For production, this runs as a Docker service on the primary host
+# All other hosts point to this server for .prod.internal domain resolution
+#
+# Zones:
+#   prod.internal      → Forward zone (A records for hosts)
+#   168.168.192...     → Reverse DNS zone (PTR records)
+#   *                  → Upstream resolvers (1.1.1.1, 8.8.8.8)
+
+# Forward zone: prod.internal
+prod.internal {
+    # Load zone file from disk
+    file /etc/coredns/zones/prod.internal.zone {
+        # Auto-reload zone file every 30 seconds if changed
+        reload 30s
+    }
+    
+    # Log all DNS queries (useful for debugging)
+    log {
+        class all
+        format "{remote} {type} {qname} {rcode} {latency}"
+    }
+    
+    # Log errors
+    errors {
+        consolidate
+        format "{remote} {type} {qname} {rcode} {error}"
+    }
+}
+
+# Reverse zone: 168.168.192.in-addr.arpa (for 192.168.168.0/24)
+168.168.192.in-addr.arpa {
+    file /etc/coredns/zones/prod.internal.rev {
+        reload 30s
+    }
+    
+    log {
+        class all
+        format "{remote} {type} {qname} {rcode} {latency}"
+    }
+    
+    errors {
+        consolidate
+        format "{remote} {type} {qname} {rcode} {error}"
+    }
+}
+
+# Default zone: everything else
+. {
+    # Forward upstream (for external domain resolution)
+    # We use multiple upstream resolvers for redundancy
+    forward . 1.1.1.1:53 8.8.8.8:53 {
+        # Try next upstream on SERVFAIL or timeout
+        policy sequential
+        # Timeout for each upstream server
+        max_concurrent 1000
+    }
+    
+    # DNS query caching (300 seconds = 5 minutes)
+    cache 300 {
+        # Bypass cache for specific patterns (optional)
+        # denial 9830 success 32768 prefetch 10 10m
+    }
+    
+    # Prevent DNS loops
+    loop
+    
+    # Log errors on upstream resolution
+    errors {
+        consolidate
+        format "{remote} UPSTREAM {type} {qname} {rcode} {error}"
+    }
+}

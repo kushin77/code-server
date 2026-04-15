@@ -13,7 +13,7 @@ NAS_MOUNT="/mnt/nas-export"
 BACKUP_DIR="${NAS_MOUNT}/backups"
 POSTGRES_BACKUP_DIR="${BACKUP_DIR}/postgresql"
 REDIS_BACKUP_DIR="${BACKUP_DIR}/redis"
-LOG_FILE="/var/log/phase-7b-backup-sync.log"
+LOG_FILE="/tmp/phase-7b-backup-sync.log"
 
 # Colors for logging
 RED='\033[0;31m'

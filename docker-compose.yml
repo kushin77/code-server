@@ -587,6 +587,127 @@ services:
         reservations: { memory: 32m }
     logging: *logging
 
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # PHASE 9 OBSERVABILITY & API GATEWAY
+  # ═══════════════════════════════════════════════════════════════════════════════
+
+  # ─── Phase 9-B: Loki (Log Aggregation) ───────────────────────────────────────
+  loki:
+    image: grafana/loki:${LOKI_VERSION:-2.9.4}
+    container_name: loki
+    restart: unless-stopped
+    networks: [enterprise]
+    ports:
+      - "0.0.0.0:3100:3100"
+    volumes:
+      - ./config/loki/loki-config.yml:/etc/loki/local-config.yml:ro
+      - loki-chunks:/loki/chunks
+      - loki-index:/loki/index
+      - loki-cache:/loki/cache
+    environment:
+      TZ: ${TZ:-UTC}
+    command: -config.file=/etc/loki/local-config.yml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/loki/api/v1/status || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:   { memory: 512m,  cpus: '0.5' }
+        reservations: { memory: 128m }
+    logging: *logging
+
+  # ─── Phase 9-C: Kong API Gateway ────────────────────────────────────────────
+  # Kong Admin API: http://localhost:8001
+  # Kong Proxy API: http://localhost:8000
+  # Kong Status: http://localhost:8000/status
+  kong-db:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: kong-db
+    restart: unless-stopped
+    networks: [enterprise]
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: ${KONG_POSTGRES_PASSWORD:-kong_secure_password}
+    volumes:
+      - kong-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong -d kong"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:   { memory: 256m,  cpus: '0.25' }
+        reservations: { memory: 64m }
+    logging: *logging
+
+  kong-migration:
+    image: kong:${KONG_VERSION:-3.4.1-alpine}
+    container_name: kong-migration
+    restart: "no"
+    networks: [enterprise]
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: ${KONG_POSTGRES_PASSWORD:-kong_secure_password}
+      KONG_PG_DATABASE: kong
+    command: kong migrations bootstrap
+    depends_on:
+      kong-db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:   { memory: 256m,  cpus: '0.25' }
+        reservations: { memory: 128m }
+    logging: *logging
+
+  kong:
+    image: kong:${KONG_VERSION:-3.4.1-alpine}
+    container_name: kong
+    restart: unless-stopped
+    networks: [enterprise]
+    ports:
+      - "0.0.0.0:8000:8000"  # Proxy
+      - "0.0.0.0:8443:8443"  # Proxy SSL
+      - "0.0.0.0:8001:8001"  # Admin API
+      - "0.0.0.0:8444:8444"  # Admin SSL
+      - "0.0.0.0:8002:8002"  # Admin GUI
+      - "0.0.0.0:8445:8445"  # Admin GUI SSL
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: ${KONG_POSTGRES_PASSWORD:-kong_secure_password}
+      KONG_PG_DATABASE: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_LOG_LEVEL: notice
+      KONG_PLUGINS: bundled,opentelemetry,request-transformer,response-transformer,rate-limiting,authentication,correlation-id
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      kong-migration:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:   { memory: 512m,  cpus: '0.5' }
+        reservations: { memory: 256m }
+    logging: *logging
+
   # ─── Cloudflare Tunnel (Edge Security) ───────────────────────────────────────
   # Replaces direct NAT/firewall hole-punch with Cloudflare edge ingress
   # • Tunnel: secure encrypted connection from Cloudflare → 192.168.168.31:8080
@@ -649,6 +770,14 @@ volumes:
   vault-data:
     driver: local
   falco-data:
+    driver: local
+  loki-chunks:
+    driver: local
+  loki-index:
+    driver: local
+  loki-cache:
+    driver: local
+  kong-db-data:
     driver: local
 
   # ── NAS-backed volumes (192.168.168.56:/export) ───────────────────────────

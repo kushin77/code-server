@@ -10,9 +10,10 @@
 **File**: `scripts/vpc-vpn-endpoint-validation.sh`  
 **Why**: File has corrupted line endings, cannot be edited
 
-**Action**:
+**Action** (on Linux host or via SSH):
 ```bash
-# On your local machine (C:\code-server-enterprise):
+# On your Linux host:
+cd ~/code-server-enterprise  # or wherever repo is cloned
 rm scripts/vpc-vpn-endpoint-validation.sh
 
 # Create new file with correct content:

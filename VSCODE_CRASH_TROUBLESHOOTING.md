@@ -1,85 +1,110 @@
-# VS Code Crash Troubleshooting Guide
+# Code-Server Health Check & Troubleshooting
 
-## Quick Diagnosis
+> **Note**: This guide covers the **code-server container** (server-side) running on Linux.
+> This project uses **Linux-only deployment**. Windows is NOT a supported platform.
+> For development, use Linux (native) or WSL2.
 
-Your VS Code is crashing due to one of these causes:
+## Server Health Status
 
-1. **Extension conflict** (most common) — Copilot Chat or YAML parser
-2. **Language server memory leak** — LSP process consuming excessive memory
-3. **File watcher limit exceeded** — Too many files causing nodemon/inotify overflow
-4. **Workspace metadata corruption** — Stale cached state
+### Quick Health Check
 
-## Immediate Actions (Try in Order)
+```bash
+# Check code-server container status
+docker-compose ps code-server
 
-### Step 1: Launch with Extensions Disabled
-```powershell
-code --disable-extensions
+# Expected output: code-server ... Up ... (healthy)
+
+# Check container logs
+docker-compose logs code-server | tail -20
+
+# Verify web interface responds
+curl -s http://localhost:8080/healthz | jq .
 ```
 
-✅ **If this works:** An extension is crashing. Proceed to Step 2.
-❌ **If it still crashes:** Skip to Step 3.
+### Common Issues
 
-### Step 2: Find the Culprit Extension
-1. Re-enable extensions one at a time via VS Code UI
-2. Restart VS Code after each enable
-3. First one to crash is the culprit
-4. **Most likely:** `github.copilot-chat` or `redhat.vscode-yaml`
+#### 1. Code-Server Container Crashes
+```bash
+# Check logs for errors
+docker-compose logs code-server --tail 50
 
-### Step 3: Clear Workspace Cache
-```powershell
-# Close VS Code completely, then:
-$appdata = "$env:APPDATA\Code"
-Remove-Item "$appdata\User\workspaceStorage" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item "$appdata\Cache" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item "$appdata\CrashDumps" -Recurse -Force -ErrorAction SilentlyContinue
+# Restart container
+docker-compose restart code-server
 
-# Reopen VS Code
-code
+# Verify it stays running (wait 10 seconds)
+sleep 10 && docker-compose ps code-server
 ```
 
-### Step 4: Check VS Code Logs
-```powershell
-$logPath = "$env:APPDATA\Code\logs"
-Get-ChildItem $logPath -Recurse | Where-Object {$_.LastWriteTime -gt (Get-Date).AddHours(-1)} | 
-  ForEach-Object {Select-String -Path $_.FullName -Pattern "ERROR|FATAL|crash" -Context 2}
+#### 2. Workspace Connection Timeout
+```bash
+# Check network connectivity to code-server
+curl -v http://localhost:8080
+
+# Check OAuth proxy health (required for auth)
+docker-compose logs oauth2-proxy | grep -i error | tail -10
+
+# Verify code-server is accepting connections
+docker-compose exec code-server ps aux | grep coder-server
 ```
 
-### Step 5: Increase File Watcher Limit (Windows)
-```powershell
-# Add to settings.json (already done in .vscode/settings.json):
-# "files.watcherExclude": {...}
+#### 3. High Memory Usage
+```bash
+# Monitor resource usage
+docker stats code-server
+
+# Check for runaway processes
+docker-compose exec code-server top -b -n 1 | head -15
+
+# Clear extension cache (inside container)
+docker-compose exec code-server rm -rf ~/.local/share/code-server/extensions/*
+docker-compose restart code-server
 ```
 
-## Prevention: Workspace Optimization ✅
+#### 4. File Sync Issues
+```bash
+# Check workspace directory permissions
+ls -la /home/coder/workspace/
 
-I've created `.vscode/settings.json` which:
-- ✅ Excludes `node_modules`, `.terraform`, `*.tfstate` from watchers
-- ✅ Disables schema validation on large files
-- ✅ Turns off formatters that can hang
-- ✅ Reduces telemetry overhead
+# Verify NAS mount is active
+docker-compose exec code-server mount | grep /mnt
 
-**The optimization is already applied.** Next time you open VS Code, it should use these settings.
-
-## Emergency Reset (Last Resort)
-
-```powershell
-# Completely reset VS Code to factory state
-code --user-data-dir $env:TEMP\vscode-new
+# Test NAS connectivity from container
+docker-compose exec code-server nslookup nas-56.local
 ```
 
-This launches with a blank VS Code instance. If it works, your settings are corrupted.
+## Debugging
 
-## Verify the Fix
+### Enable Debug Logging
+```bash
+# Add to docker-compose.yml environment
+- CODE_SERVER_LOG_LEVEL=debug
 
-1. Close VS Code completely
-2. Open it from the workspace: `code .` from `c:\code-server-enterprise\`
-3. **Should now be stable** with the new `.vscode/settings.json` applied
-4. If it crashes, run diagnostic: `bash scripts/vscode-crash-diagnostics.sh`
+# Restart
+docker-compose restart code-server
+docker-compose logs code-server -f
+```
 
-## When to Escalate
+### Monitor Health Over Time
+```bash
+# Watch container status continuously
+watch -n 5 'docker-compose ps code-server'
 
-If crashes persist after these steps:
-- Update VS Code: `code --version` then download latest
-- Disable antivirus scanning on `%APPDATA%\Code`
-- Check system RAM (requires >2GB for large workspaces)
-- Check Event Viewer for system errors
+# Monitor resource usage
+docker stats code-server --no-stream
+```
+
+## Production Monitoring
+
+Code-server health is monitored via:
+- ✅ Prometheus health check (port 8080)
+- ✅ Alerting on down status
+- ✅ Automatic restart on failure
+- ✅ Grafana dashboard showing uptime
+
+See monitoring docs for detailed observability setup.
+
+## Related Documentation
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — System overview
+- [DEPLOYMENT-EXECUTION-PROCEDURE.md](DEPLOYMENT-EXECUTION-PROCEDURE.md) — Docker Compose management
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Development setup (Linux)

@@ -397,8 +397,7 @@ Root Terraform Files:
 | `BRANCH_PROTECTION_SETUP.ps1` | Branch protection config | PowerShell | ✅ Setup |
 | `deploy-iac.sh` / `deploy-iac.ps1` | IaC deployment | bash/PS | ⚠️ Both exist |
 | `verify_priority_labels.ps1` | Verify issue labels | PowerShell | ✅ Validation |
-| `mandatory-redeploy.ps1` | Force redeploy | PowerShell | ✅ Operations |
-| `redeploy.sh` / `redeploy.ps1` | Redeploy service | bash/PS | ⚠️ Both exist |
+| `redeploy.sh` | Redeploy service | bash (Linux only) | ✅ Operations |
 
 **Issues**:
 - Duplicate language implementations (bash + PowerShell for same function)

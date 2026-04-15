@@ -284,7 +284,7 @@ on:
 
 #### 2. Set Deployment Targets
 
-In `redeploy.sh` or `redeploy.ps1`:
+In `redeploy.sh` (Linux/bash deployment only):
 
 ```bash
 DEPLOYMENT_TARGETS=("production" "staging" "development")
@@ -513,12 +513,12 @@ gh run view <run-id>
 #### 3. Test local redeploy script:
 
 ```bash
-# Bash version
+# Linux/bash deployment (supported)
 bash scripts/redeploy.sh --target staging --dry-run
 bash scripts/redeploy.sh --target staging --verbose
 
-# PowerShell version
-.\scripts\redeploy.ps1 -Target staging -DryRun -Verbose
+# Note: Windows is NOT a supported deployment platform.
+# Deploy from Linux or use SSH to remote Linux host.
 ```
 
 ### Debugging Workflow Issues

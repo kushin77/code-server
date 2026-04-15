@@ -71,6 +71,13 @@ status   = "active"
 owner    = "platform"
 purpose  = "Centralized SSH helpers. ssh_exec(), ssh_stream(), ssh_compose(), assert_ssh_up()."
 
+[[script]]
+file     = "lib/vpn.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "Reusable VPN helpers for interface presence and route-over-VPN enforcement."
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ACTIVE DEPLOYMENT SCRIPTS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -524,6 +531,15 @@ status   = "active"
 owner    = "platform"
 purpose  = "VPN connectivity and latency testing"
 depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "vpn-enterprise-endpoint-scan.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Deep VPN-only endpoint scan using Playwright and Puppeteer with debug artifacts."
+depends  = ["_common/init.sh", "lib/vpn.sh", "tests/vpn-enterprise-endpoint-scan/run-vpn-enterprise-scan.mjs"]
+called_by = ["Makefile:vpn-enterprise-scan", ".github/workflows/vpn-enterprise-endpoint-scan.yml"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # P1 FEATURE #187: Read-Only IDE Access Control

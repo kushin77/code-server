@@ -1,0 +1,160 @@
+name: VPN Enterprise Endpoint Scan
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Base URL to test through VPN
+        required: false
+        default: https://ide.kushnir.cloud
+      vpn_interface:
+        description: WireGuard interface name used in CI
+        required: false
+        default: wgci
+
+permissions:
+  contents: read
+
+jobs:
+  vpn-endpoint-scan:
+    name: Deep VPN endpoint scan (Playwright + Puppeteer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      VPN_INTERFACE: ${{ github.event.inputs.vpn_interface || 'wgci' }}
+      VPN_SCAN_BASE_URL_DEFAULT: ${{ github.event.inputs.base_url || 'https://ide.kushnir.cloud' }}
+      VPN_SCAN_BASE_URL_SECRET: ${{ secrets.VPN_SCAN_BASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install VPN prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wireguard-tools iproute2 jq
+
+      - name: Configure WireGuard from secret
+        env:
+          WIREGUARD_CONFIG: ${{ secrets.WIREGUARD_CONFIG }}
+        run: |
+          if [[ -z "${WIREGUARD_CONFIG}" ]]; then
+            echo "::error::Missing required secret WIREGUARD_CONFIG"
+            exit 1
+          fi
+
+          sudo mkdir -p /etc/wireguard
+          printf '%s\n' "${WIREGUARD_CONFIG}" | sudo tee "/etc/wireguard/${VPN_INTERFACE}.conf" >/dev/null
+          sudo chmod 600 "/etc/wireguard/${VPN_INTERFACE}.conf"
+
+      - name: Bring up VPN interface
+        run: |
+          sudo wg-quick up "${VPN_INTERFACE}"
+          ip link show "${VPN_INTERFACE}"
+          sudo wg show "${VPN_INTERFACE}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install scanner dependencies
+        working-directory: tests/vpn-enterprise-endpoint-scan
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Run VPN-only deep endpoint scan
+        env:
+          VPN_SCAN_BASE_URL: ${{ env.VPN_SCAN_BASE_URL_SECRET }}
+          INSTALL_PLAYWRIGHT_BROWSER: '0'
+        run: |
+          if [[ -z "${VPN_SCAN_BASE_URL}" ]]; then
+            VPN_SCAN_BASE_URL="${VPN_SCAN_BASE_URL_DEFAULT}"
+          fi
+
+          export VPN_SCAN_BASE_URL
+          export VPN_INTERFACE
+          bash scripts/vpn-enterprise-endpoint-scan.sh
+
+      - name: Completion gate - verify scan evidence
+        run: |
+          latest_dir=$(ls -dt test-results/vpn-endpoint-scan/* 2>/dev/null | head -1)
+          if [[ -z "${latest_dir}" ]]; then
+            echo "::error::No VPN scan artifact directory found"
+            exit 1
+          fi
+
+          summary_file="${latest_dir}/summary.json"
+          if [[ ! -f "${summary_file}" ]]; then
+            echo "::error::Missing summary.json in ${latest_dir}"
+            exit 1
+          fi
+
+          node -e "
+            const fs = require('fs');
+            const summary = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+            if (summary.status !== 'pass') {
+              console.error('Scan summary status is not pass');
+              process.exit(1);
+            }
+            if (!summary.vpn || summary.vpn.verified !== true) {
+              console.error('VPN verification missing or false');
+              process.exit(1);
+            }
+            const engines = new Set((summary.results || []).map(r => r.engine));
+            if (!engines.has('playwright') || !engines.has('puppeteer')) {
+              console.error('Expected both Playwright and Puppeteer results');
+              process.exit(1);
+            }
+            const routeEvidence = summary.vpn.routeEvidence || [];
+            if (routeEvidence.length === 0) {
+              console.error('VPN route evidence is empty');
+              process.exit(1);
+            }
+          " "${summary_file}"
+
+      - name: Upload VPN scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpn-endpoint-scan-${{ github.run_id }}
+          path: test-results/vpn-endpoint-scan/
+          if-no-files-found: error
+
+      - name: Publish summary
+        if: always()
+        run: |
+          latest_dir=$(ls -dt test-results/vpn-endpoint-scan/* 2>/dev/null | head -1)
+          if [[ -z "${latest_dir}" ]]; then
+            echo "No scan output directory found" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          summary_file="${latest_dir}/summary.json"
+          if [[ ! -f "${summary_file}" ]]; then
+            echo "Missing summary.json at ${latest_dir}" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "## VPN Enterprise Endpoint Scan" >> "$GITHUB_STEP_SUMMARY"
+          echo "Output directory: ${latest_dir}" >> "$GITHUB_STEP_SUMMARY"
+          node -e "
+            const fs=require('fs');
+            const s=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));
+            const lines=[];
+            lines.push('Status: ' + s.status);
+            lines.push('Target: ' + (s.target?.baseUrl || 'n/a'));
+            lines.push('Playwright diagnostics: console=' + (s.diagnosticsSummary?.playwright?.consoleErrors ?? 0) + ', page=' + (s.diagnosticsSummary?.playwright?.pageErrors ?? 0) + ', failedRequests=' + (s.diagnosticsSummary?.playwright?.requestFailures ?? 0));
+            lines.push('Puppeteer diagnostics: console=' + (s.diagnosticsSummary?.puppeteer?.consoleErrors ?? 0) + ', page=' + (s.diagnosticsSummary?.puppeteer?.pageErrors ?? 0) + ', failedRequests=' + (s.diagnosticsSummary?.puppeteer?.requestFailures ?? 0));
+            lines.push('Opportunities: ' + ((s.opportunities || []).length));
+            process.stdout.write(lines.join('\n'));
+          " "${summary_file}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tear down VPN interface
+        if: always()
+        run: |
+          sudo wg-quick down "${VPN_INTERFACE}" || true

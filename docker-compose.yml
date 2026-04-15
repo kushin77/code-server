@@ -326,7 +326,7 @@ services:
       GF_LOG_LEVEL:               warn
     volumes:
       - nas-grafana:/var/lib/grafana:rw
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:rw
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep -q ok"]
       interval: 30s

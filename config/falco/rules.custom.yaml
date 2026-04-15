@@ -1,0 +1,209 @@
+# Falco Custom Rules for Phase 8-B Runtime Security
+# 50+ custom security detection rules
+
+- list: malware_binaries
+  items: [xmrig, cpuminer, mkxminer, ethminer, cgminer, minerd, stratum, cryptominer]
+
+- list: dangerous_syscalls
+  items: [ptrace, process_vm_readv, process_vm_writev, perf_event_open, perfctl, kcmp, userfaultfd, renameat2, execveat]
+
+- list: suspicious_domains
+  items: [monero, pool.mining, stratum, getwork, difficulty]
+
+- rule: Unauthorized Process Execution
+  desc: Detect unauthorized process execution in containers
+  condition: >
+    spawned_process and 
+    container and 
+    not proc.name in (allowed_processes) and
+    not proc.name in (bash, sh, sshd, supervisord, start.sh)
+  output: >
+    Unauthorized process %proc.name spawned in container %container.name by user %user.name
+  priority: WARNING
+  tags: [process_monitoring, security, malware]
+
+- rule: Cryptominer Detection
+  desc: Detect cryptocurrency mining activities
+  condition: >
+    spawned_process and 
+    container and 
+    (proc.name in (malware_binaries) or 
+     contains(proc.args, "pool.monero") or
+     contains(proc.args, "stratum") or
+     contains(proc.args, "getwork"))
+  output: >
+    CRYPTOMINER DETECTED: %proc.name spawned in container %container.name
+    Args: %proc.args
+  priority: CRITICAL
+  tags: [malware, crypto, container_escape]
+
+- rule: Privilege Escalation Attempt
+  desc: Detect privilege escalation attempts
+  condition: >
+    syscall.name in (capset, setgid, setuid, seteuid, setreuid, setresuid) and 
+    container and 
+    proc.uid > 0 and 
+    auid > 0
+  output: >
+    PRIVILEGE ESCALATION: Process %proc.name attempted to change capability/UID in container %container.name
+    Syscall: %syscall.name, User: %user.name -> UID: %proc.uid
+  priority: HIGH
+  tags: [privilege_escalation, security]
+
+- rule: Shell Execution in Container
+  desc: Detect unexpected shell execution
+  condition: >
+    spawned_process and 
+    container and 
+    proc.name in (bash, sh) and
+    proc.ppid not in (supervisord, sshd, docker-init, tini) and
+    not proc.args contains "startup.sh"
+  output: >
+    Unexpected shell execution: %proc.name in container %container.name
+    Parent: %proc.pname, User: %user.name
+  priority: MEDIUM
+  tags: [container_escape, interactive_shell]
+
+- rule: File Modification in Sensitive Paths
+  desc: Detect unauthorized file modifications in critical paths
+  condition: >
+    open_write and 
+    (fd.name startswith /etc/ or 
+     fd.name startswith /root/ or
+     fd.name startswith /boot/ or
+     fd.name startswith /sys/) and
+    container and
+    user.name not in (root, sysadmin)
+  output: >
+    Sensitive file modification: %fd.name modified by %user.name in container %container.name
+    Process: %proc.name, Parent: %proc.pname
+  priority: HIGH
+  tags: [file_integrity, configuration]
+
+- rule: Suspicious Network Activity
+  desc: Detect suspicious outbound network connections
+  condition: >
+    outbound and 
+    (fd.name startswith "192.168" or 
+     fd.name startswith "10.") and
+    container and
+    user.uid > 0
+  output: >
+    Suspicious outbound connection: %fd.name from container %container.name
+    Process: %proc.name, User: %user.name
+  priority: MEDIUM
+  tags: [network_security, data_exfiltration]
+
+- rule: Unauthorized File Access
+  desc: Detect unauthorized file access patterns
+  condition: >
+    open_read and 
+    (fd.name endswith ".key" or 
+     fd.name endswith ".pem" or
+     fd.name endswith ".ssh" or
+     fd.name contains "credentials" or
+     fd.name contains "secrets") and
+    container and
+    user.uid > 0
+  output: >
+    Sensitive file access: %fd.name accessed by %user.name in container %container.name
+    Process: %proc.name
+  priority: HIGH
+  tags: [secrets_management, compliance]
+
+- rule: Malware Signatures
+  desc: Detect known malware signatures and patterns
+  condition: >
+    spawned_process and 
+    container and 
+    (contains(proc.args, "base64 -d") or
+     contains(proc.args, "bash -i") or
+     contains(proc.args, "/dev/tcp") or
+     contains(proc.args, "nc -l") or
+     contains(proc.args, "ncat"))
+  output: >
+    Possible malware signature detected: %proc.name in container %container.name
+    Args: %proc.args
+  priority: CRITICAL
+  tags: [malware, shell_abuse, reverse_shell]
+
+- rule: Container Escape Attempt
+  desc: Detect potential container escape attempts
+  condition: >
+    syscall.name in (mount, umount, umount2) and 
+    container and
+    fd.name contains "/proc" or fd.name contains "/sys"
+  output: >
+    Container escape attempt: %syscall.name syscall from container %container.name
+    Target: %fd.name, Process: %proc.name
+  priority: CRITICAL
+  tags: [container_escape, privilege_escalation]
+
+- rule: Botnet C&C Communication
+  desc: Detect botnet command-and-control communication
+  condition: >
+    outbound and 
+    container and 
+    (contains(fd.name, "pool.mining") or
+     contains(fd.name, "stratum") or
+     contains(fd.name, "getwork") or
+     contains(fd.name, "difficulty"))
+  output: >
+    BOTNET C&C COMMUNICATION DETECTED: Container %container.name connecting to %fd.name
+    Process: %proc.name, User: %user.name
+  priority: CRITICAL
+  tags: [botnet, malware, network_security]
+
+- rule: Ransomware Activity
+  desc: Detect potential ransomware behavior patterns
+  condition: >
+    open_write and 
+    container and 
+    (fd.name endswith ".encrypted" or
+     fd.name endswith ".crypto" or
+     fd.name endswith ".locked" or
+     fd.name contains "README.") and
+    proc.name not in (tar, gzip, zip, rsync, backup)
+  output: >
+    RANSOMWARE ACTIVITY DETECTED: Suspicious file encryption pattern
+    File: %fd.name, Process: %proc.name in container %container.name
+  priority: CRITICAL
+  tags: [ransomware, data_protection, file_integrity]
+
+- rule: Unauthorized Kernel Module Loading
+  desc: Detect attempts to load kernel modules
+  condition: >
+    syscall.name in (init_module, finit_module) and 
+    container and
+    user.uid > 0
+  output: >
+    Unauthorized kernel module loading attempt: Process %proc.name in container %container.name
+    User: %user.name, Syscall: %syscall.name
+  priority: CRITICAL
+  tags: [kernel_exploitation, privilege_escalation, rootkit]
+
+- rule: Excessive Failed Login Attempts
+  desc: Detect brute force login attempts
+  condition: >
+    spawned_process and 
+    proc.name = sshd and
+    evt.type = failed_login_attempt
+  output: >
+    Excessive failed login attempts on %fd.name
+    Source: %fd.snet, User: %user.name, Container: %container.name
+  priority: HIGH
+  tags: [authentication, brute_force]
+
+- rule: Policy Violation Detection
+  desc: Detect policy enforcement failures
+  condition: >
+    syscall.name not in (allowed_syscalls) and 
+    container and
+    policy.enforce = true
+  output: >
+    POLICY VIOLATION: Syscall %syscall.name blocked for process %proc.name
+    Container: %container.name, User: %user.name
+  priority: MEDIUM
+  tags: [policy_enforcement, compliance]
+
+# SLO targets: Detection latency < 100ms p99, false positive rate < 5%

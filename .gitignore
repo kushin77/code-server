@@ -42,6 +42,16 @@ Thumbs.db
 sessions/
 .secrets/
 
+# SOPS/age secrets — plaintext variants blocked
+# Only *.enc.yaml and *.enc.env (encrypted) may be committed
+secrets/*.yaml
+secrets/*.env
+!secrets/*.enc.yaml
+!secrets/*.enc.env
+!secrets/*.yaml.template
+!secrets/*.env.template
+!secrets/README.md
+
 # Docker
 docker-compose.override.yml
 

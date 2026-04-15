@@ -1,0 +1,73 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":semanticCommits",
+    ":separateMajorReleases",
+    "group:monorepos"
+  ],
+  "timezone": "America/New_York",
+  "schedule": ["every weekend"],
+  "prCreationHours": [9, 17],
+  "labels": ["dependencies", "automated"],
+  "reviewers": ["kushin77"],
+  "enabledManagers": [
+    "docker-compose",
+    "dockerfile",
+    "github-actions",
+    "terraform"
+  ],
+  "packageRules": [
+    {
+      "description": "Group all Docker image minor/patch updates",
+      "matchManagers": ["docker-compose", "dockerfile"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Docker image updates",
+      "automerge": false
+    },
+    {
+      "description": "Group all GitHub Actions minor/patch updates",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "GitHub Actions updates",
+      "automerge": false
+    },
+    {
+      "description": "Never automerge major version bumps",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "major-update", "needs-review"]
+    },
+    {
+      "description": "Pin digest for all Docker images (security best practice)",
+      "matchManagers": ["docker-compose", "dockerfile"],
+      "pinDigests": true
+    },
+    {
+      "description": "Postgres — only patch updates auto-proposed",
+      "matchPackageNames": ["postgres"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "postgres patch"
+    },
+    {
+      "description": "Security tool updates — prioritize",
+      "matchPackageNames": [
+        "aquasecurity/trivy-action",
+        "gitleaks/gitleaks-action",
+        "sigstore/cosign-installer",
+        "anchore/sbom-action"
+      ],
+      "labels": ["dependencies", "security-tooling"],
+      "prioritizeExistingBranches": true
+    }
+  ],
+  "docker-compose": {
+    "fileMatch": ["^docker-compose.*\\.yml$"]
+  },
+  "dockerfile": {
+    "fileMatch": ["^Dockerfile.*$"]
+  },
+  "terraform": {
+    "fileMatch": ["^terraform/.*\\.tf$"]
+  }
+}

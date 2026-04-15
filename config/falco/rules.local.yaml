@@ -1,0 +1,75 @@
+# Falco Runtime Security Rules
+# Issue #359: Falco eBPF syscall monitoring — container anomaly detection
+# Deploy to: config/falco/rules.local.yaml
+
+- rule: Shell Spawned In Container
+  desc: Alert when a shell is spawned in any container  
+  condition: >
+    spawned_process and container and
+    (proc.name in (bash, sh, zsh, fish, ksh)) and
+    not proc.pname in (bash, sh) and
+    not container.name in (code-server)
+  output: >
+    Shell spawned in container (user=%user.name container=%container.name
+    parent=%proc.pname cmdline=%proc.cmdline)
+  priority: WARNING
+  tags: [shell, container]
+
+- rule: Unexpected Outbound Connection from Code-Server
+  desc: code-server container making outbound connections to non-whitelisted IPs
+  condition: >
+    outbound and container.name = "code-server" and
+    not fd.rip in (192.168.168.0/24, 8.8.8.8, 1.1.1.1) and
+    not fd.rport in (443, 80, 22, 9418)
+  output: >
+    Unexpected outbound from code-server (dest=%fd.rip:%fd.rport
+    cmdline=%proc.cmdline user=%user.name)
+  priority: WARNING
+  tags: [network, container]
+
+- rule: Read Sensitive File from Container
+  desc: Container reading /etc/shadow, /etc/passwd modifications, etc.
+  condition: >
+    open_read and container and
+    fd.name in (/etc/shadow, /etc/sudoers, /root/.ssh/id_rsa)
+  output: >
+    Sensitive file opened from container (file=%fd.name container=%container.name
+    user=%user.name cmdline=%proc.cmdline)
+  priority: CRITICAL
+  tags: [privilege_escalation, container]
+
+- rule: Unexpected Process in Database Container
+  desc: postgres or redis should never spawn non-database processes
+  condition: >
+    spawned_process and
+    container.name in (postgres, redis) and
+    not proc.name in (postgres, redis-server, pg_isready, redis-cli, bash, sh) and
+    not proc.pname in (postgres, redis-server)
+  output: >
+    Unexpected process in database container (container=%container.name
+    proc=%proc.name cmdline=%proc.cmdline)
+  priority: CRITICAL
+  tags: [privilege_escalation, container]
+
+- rule: Crypto Mining Attempt
+  desc: Detect potential crypto mining via known pool connection patterns
+  condition: >
+    outbound and container and
+    fd.rport in (3333, 4444, 5555, 7777, 14444, 14433)
+  output: >
+    Possible crypto mining connection (container=%container.name
+    dest=%fd.rip:%fd.rport cmdline=%proc.cmdline)
+  priority: CRITICAL
+  tags: [malware, container]
+
+- rule: Privilege Escalation Attempt
+  desc: Detect attempts to escalate privileges via setuid binaries
+  condition: >
+    execve and container and
+    (proc.name = "sudo" or proc.name = "su" or proc.name = "passwd") and
+    not user.name in (root, postgres, redis)
+  output: >
+    Privilege escalation attempt (user=%user.name proc=%proc.name
+    container=%container.name cmdline=%proc.cmdline)
+  priority: CRITICAL
+  tags: [privilege_escalation, container]

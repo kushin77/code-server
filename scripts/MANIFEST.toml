@@ -556,6 +556,45 @@ depends  = ["restricted-shell.sh", "code-server"]
 called_by = ["Makefile:apply-ide-restrictions", "Docker entrypoint", "K8s init container"]
 
 # ─────────────────────────────────────────────────────────────────────────────
+# P1 FEATURE #182: Latency Optimization
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "p1-latency-optimization.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Apply Cloudflare PoP routing, WebSocket compression, terminal batching, HTTP/3 QUIC"
+depends  = ["_common/init.sh", "Caddyfile"]
+called_by = ["Makefile:optimize-latency", "deployment post-hook"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P1 FEATURE #186: Developer Access Lifecycle
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "developer-lifecycle-manager.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Time-bounded developer access with auto-revocation, grace warnings, audit trails"
+depends  = ["_common/init.sh"]
+called_by = ["Makefile:provision-dev", "Makefile:revoke-dev", "Makefile:access-report"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P1 FEATURE #187: Read-Only IDE Test Suite
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "p1-read-only-ide-test.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Integration test suite for read-only IDE (validates all 4 security layers of #187)"
+depends  = ["apply-ide-restrictions.sh", "code-server"]
+called_by = ["Makefile:test-p1-access-control", "CI/CD test-p1-features"]
+
+# ─────────────────────────────────────────────────────────────────────────────
 # NOTE: All phase-*.sh scripts (130+) are historical deployment artifacts
 # archived to scripts/_archive/phase-history/. Historical one-off scripts
 # (gpu, fix-host, tier, setup, etc.) are in scripts/_archive/historical/.

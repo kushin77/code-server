@@ -702,7 +702,7 @@ services:
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ERROR_LOG: /dev/stderr
       KONG_LOG_LEVEL: notice
-      KONG_PLUGINS: bundled,opentelemetry,request-transformer,response-transformer,rate-limiting,authentication,correlation-id
+      KONG_PLUGINS: bundled,opentelemetry,request-transformer,response-transformer,rate-limiting,key-auth,correlation-id
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8001/status || exit 1"]
       interval: 30s
@@ -727,11 +727,12 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:${CLOUDFLARE_TUNNEL_VERSION:-2024.1.5}
     container_name: cloudflared
-    restart: unless-stopped
+    restart: "no"
+    profiles: ["cloudflare"]   # Only start when CLOUDFLARE_TUNNEL_TOKEN is configured
     networks: [enterprise]
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in .env}
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-placeholder-not-configured}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-placeholder-not-configured}
     expose:
       - "7878"   # Prometheus metrics for tunnel status
     healthcheck:

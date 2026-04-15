@@ -534,7 +534,8 @@ services:
       - /var/run/docker.sock:/host/var/run/docker.sock:ro
       - /proc:/host/proc:ro
       - /etc:/host/etc:ro
-      - ./config/falco:/etc/falco:ro
+      - ./config/falco/falco.yaml:/etc/falco/falco.yaml:ro
+      - ./config/falco/rules.custom.yaml:/etc/falco/rules.custom.yaml:ro
       - falco-data:/var/lib/falco
     environment:
       FALCO_GRPC_ENABLED: "true"

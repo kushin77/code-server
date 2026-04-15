@@ -43,9 +43,8 @@ grpcOutput:
 
 # Rules Loading
 rules_file:
-  - /etc/falco/rules.yaml
-  # - /etc/falco/k8s_audit_rules.yaml  # Uncomment for K8s audit support
-  # - /etc/falco/rules.local.yaml  # Uncomment when custom rules are ready
+  - /etc/falco/rules.local.yaml
+  - /etc/falco/rules.custom.yaml
 
 # ─────────────────────────────────────────────────────────────
 # Performance Tuning

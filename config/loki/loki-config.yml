@@ -13,8 +13,6 @@ server:
 ingester:
   chunk_idle_period: 3m
   max_chunk_age: 1h
-  max_streams_per_user: 0
-  max_global_streams_per_user: 0
 
 limits_config:
   enforce_metric_name: false

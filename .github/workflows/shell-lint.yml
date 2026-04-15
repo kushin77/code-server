@@ -1,0 +1,146 @@
+name: Shell Script Lint (shellcheck)
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "scripts/**/*.sh"
+      - "scripts/*.sh"
+      - "**/*.sh"
+  pull_request:
+    branches: [main, phase-7-deployment]
+    paths:
+      - "scripts/**/*.sh"
+      - "scripts/*.sh"
+      - "**/*.sh"
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: shellcheck — Bash Script Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          shellcheck --version
+
+      - name: Find all bash scripts
+        id: find-scripts
+        run: |
+          # Find all .sh files excluding node_modules and deprecated
+          SCRIPTS=$(find . \
+            -name "*.sh" \
+            -not -path "*/node_modules/*" \
+            -not -path "*/deprecated/*" \
+            -not -path "*/.git/*" \
+            | sort)
+          
+          COUNT=$(echo "$SCRIPTS" | grep -c . || true)
+          echo "Found $COUNT bash scripts"
+          echo "scripts<<EOF" >> $GITHUB_OUTPUT
+          echo "$SCRIPTS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Validate shebang (#!/bin/bash required)
+        run: |
+          echo "=== Validating bash shebang in all .sh files ==="
+          FAILURES=0
+          
+          while IFS= read -r script; do
+            [ -z "$script" ] && continue
+            [ ! -f "$script" ] && continue
+            
+            FIRST_LINE=$(head -1 "$script")
+            if [[ "$FIRST_LINE" != "#!/bin/bash" && "$FIRST_LINE" != "#!/usr/bin/env bash" ]]; then
+              echo "❌ Missing/wrong shebang: $script"
+              echo "   Found:    $FIRST_LINE"
+              echo "   Expected: #!/bin/bash"
+              FAILURES=$((FAILURES + 1))
+            fi
+          done < <(find . -name "*.sh" -not -path "*/node_modules/*" -not -path "*/deprecated/*" -not -path "*/.git/*")
+          
+          if [ "$FAILURES" -gt 0 ]; then
+            echo "❌ $FAILURES scripts have incorrect/missing shebang"
+            exit 1
+          fi
+          echo "✅ All scripts have correct #!/bin/bash shebang"
+
+      - name: Run shellcheck (warning level)
+        run: |
+          echo "=== Running shellcheck on all bash scripts ==="
+          FAILURES=0
+          WARNINGS=0
+          
+          while IFS= read -r script; do
+            [ -z "$script" ] && continue
+            [ ! -f "$script" ] && continue
+            
+            # Run shellcheck with bash dialect at warning level
+            if ! shellcheck --shell=bash --severity=warning "$script" 2>&1; then
+              FAILURES=$((FAILURES + 1))
+            fi
+          done < <(find . -name "*.sh" -not -path "*/node_modules/*" -not -path "*/deprecated/*" -not -path "*/.git/*")
+          
+          if [ "$FAILURES" -gt 0 ]; then
+            echo ""
+            echo "❌ $FAILURES scripts failed shellcheck"
+            echo "Fix warnings above. See https://www.shellcheck.net for details"
+            exit 1
+          fi
+          echo "✅ All scripts passed shellcheck"
+
+      - name: Check scripts use bash features correctly
+        run: |
+          echo "=== Checking for common bash mistakes ==="
+          
+          # Check for dangerous patterns
+          ISSUES=0
+          
+          # Check for unquoted variables in conditions (common mistake)
+          UNQUOTED=$(grep -rn \
+            --include="*.sh" \
+            -E "\[ \$[A-Za-z_]+ " \
+            --exclude-dir="node_modules" \
+            --exclude-dir="deprecated" \
+            . 2>/dev/null | grep -v "^Binary" || true)
+          
+          if [ -n "$UNQUOTED" ]; then
+            echo "⚠️  Potentially unquoted variables in conditions:"
+            echo "$UNQUOTED" | head -20
+            echo "(consider using [[ \$var ]] instead of [ \$var ])"
+          fi
+          
+          # Check for set -e usage (good practice for scripts)
+          WITHOUT_ERREXIT=$(while IFS= read -r script; do
+            [ -z "$script" ] && continue
+            [ ! -f "$script" ] && continue
+            if ! grep -q "set -e\|set -euo\|set -eo" "$script" 2>/dev/null; then
+              echo "  $script"
+            fi
+          done < <(find scripts/ -name "*.sh" -not -path "*/node_modules/*" 2>/dev/null) || true)
+          
+          if [ -n "$WITHOUT_ERREXIT" ]; then
+            echo "⚠️  Scripts without set -e (consider adding for safety):"
+            echo "$WITHOUT_ERREXIT" | head -10
+          fi
+          
+          echo "✅ Basic bash pattern check complete"
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "══════════════════════════════════════════════════"  
+          echo "  ✅ SHELL SCRIPT LINT PASSED"
+          echo "══════════════════════════════════════════════════"
+          echo ""
+          echo "Standard: #!/bin/bash shebang required"
+          echo "Dialect:  bash (not sh/posix)"
+          echo "Level:    shellcheck warning"
+          echo "See SUPPORTED-PLATFORMS.md for shell script standards"

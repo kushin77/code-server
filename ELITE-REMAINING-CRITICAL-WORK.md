@@ -165,7 +165,7 @@ locals {
   
   # IPs
   primary_host   = "192.168.168.31"
-  standby_host   = "192.168.168.30"
+  standby_host   = "192.168.168.42"
   nas_host       = "192.168.168.56"
   
   # Container paths

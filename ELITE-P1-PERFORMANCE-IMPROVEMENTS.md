@@ -375,7 +375,7 @@ with pool.get_connection() as conn:
 1. Create feature branch: `feat/elite-p1-performance`
 2. Implement all 6 improvements
 3. Run full test suite
-4. Deploy to staging (192.168.168.30)
+4. Deploy to staging (192.168.168.42)
 5. Run load tests 24 hours
 6. PR for merge review
 7. Merge to main → Deploy to production (192.168.168.31)

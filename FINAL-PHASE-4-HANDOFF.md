@@ -77,7 +77,7 @@ Success Metrics:
 ## PRODUCTION READINESS
 
 **Primary Host**: 192.168.168.31 (akushnir SSH)
-**Standby Host**: 192.168.168.30 (ready for failover)
+**Standby Host**: 192.168.168.42 (ready for failover)
 **Storage**: 192.168.168.56 (NAS)
 
 Current Services (All Healthy 16h+):

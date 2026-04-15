@@ -29,7 +29,7 @@ echo "🌐 NETWORK & FAILOVER ARCHITECTURE"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 cat <<EOF
 ✅ Primary Host:     192.168.168.31 (akushnir@, SSH key-only, 10/10 services)
-✅ Standby Host:     192.168.168.30 (manual failover, synced replica)
+✅ Standby Host:     192.168.168.42 (manual failover, synced replica)
 ✅ NAS Storage:      192.168.168.56 (NFSv4, /exports/*, soft-mount graceful fallback)
    ├─ ollama-data       (persistent LLM models)
    ├─ postgres-backup   (daily snapshots, 30-day retention)
@@ -78,7 +78,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 cat <<EOF
 Connection Pooling:    pgBouncer 3x throughput (100 req/s → 300+ req/s baseline)
 GPU Acceleration:      Framework ready (10-50x ollama inference if GPU hardware present)
-Storage Failover:      <5s RTO to 192.168.168.30 (models on NAS, graceful mount fallback)
+Storage Failover:      <5s RTO to 192.168.168.42 (models on NAS, graceful mount fallback)
 Configuration Mgmt:    Single source of truth (terraform/locals.tf, immutable references)
 Security:              TLS 1.3+, OIDC auth, passwordless GSM secrets, no hardcoded creds
 EOF

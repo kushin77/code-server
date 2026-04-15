@@ -121,7 +121,7 @@ Implement automated backups and recovery procedures
    - Test application recovery from snapshot
 
 3. **High Availability Preparation**
-   - Setup standby host (192.168.168.30)
+   - Setup standby host (192.168.168.42)
    - Configure failover procedure
    - Document switchover process
    - Test failover (non-destructive)

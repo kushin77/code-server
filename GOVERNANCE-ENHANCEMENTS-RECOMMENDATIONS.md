@@ -475,7 +475,7 @@ A: Don't use GitHub issues. Email security lead directly (akushnir@...).
 
 **Outcome**: Developer parameterized script. All hosts now configurable.
 
-**Result**: Script works for staging (192.168.168.30), prod (192.168.168.31), and future hosts.
+**Result**: Script works for staging (192.168.168.42), prod (192.168.168.31), and future hosts.
 
 ### Example 3: Pre-commit Hook Prevented Secrets Leak
 

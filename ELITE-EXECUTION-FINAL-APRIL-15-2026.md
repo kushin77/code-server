@@ -155,14 +155,14 @@ terraform/
 - **Memory:** 31GB available
 - **Storage:** NAS mount 192.168.168.56
 
-### Secondary Host: 192.168.168.30 (Standby/Replica)
+### Secondary Host: 192.168.168.42 (Standby/Replica)
 - **Status:** Ready for failover
 - **Sync:** Synced with primary
 - **Purpose:** High availability
 
 ### Network Architecture
 - **Primary:** 192.168.168.31 (main deployment)
-- **Standby:** 192.168.168.30 (HA replica)
+- **Standby:** 192.168.168.42 (HA replica)
 - **Storage:** 192.168.168.56 (NAS - 4TB+ capacity)
 - **Protocol:** NFSv4 for persistent volumes
 
@@ -314,7 +314,7 @@ e6b179d2 fix(terraform): Complete IaC validation
 | IaC Duplicate-Free | ✅ Complete | 0 duplicate declarations |
 | IaC No Overlap | ✅ Complete | Single source of truth verified |
 | Full Integration | ✅ Complete | All services integrated & healthy |
-| On-Prem Focus | ✅ Complete | 192.168.168.31 primary, 192.168.168.30 standby |
+| On-Prem Focus | ✅ Complete | 192.168.168.31 primary, 192.168.168.42 standby |
 | Elite Best Practices | ✅ Complete | All checklist items verified |
 | Production Live | ✅ Complete | 10 services, 16h+ uptime |
 | GitHub Issues Closed | ✅ Complete | 4 closed, 1 updated |

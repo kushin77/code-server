@@ -144,7 +144,7 @@ All production infrastructure operational. Risk: LOW. Blockers: NONE.
 ## PRODUCTION INFRASTRUCTURE STATUS
 
 **Primary Host**: 192.168.168.31 (Docker Swarm)
-**Standby Host**: 192.168.168.30 (HA replica, synced)
+**Standby Host**: 192.168.168.42 (HA replica, synced)
 **Storage**: 192.168.168.56 (NAS - persistent volumes)
 
 ### Services Status (All Healthy ✅)
@@ -273,7 +273,7 @@ terraform/
 **Status**: IMMUTABLE, INDEPENDENT, ELITE STANDARDS 8/8 MET
 
 ### locals.tf (SSOT - Single Source of Truth)
-- **on_prem block**: Primary (192.168.168.31), Standby (192.168.168.30), NAS (192.168.168.56)
+- **on_prem block**: Primary (192.168.168.31), Standby (192.168.168.42), NAS (192.168.168.56)
 - **network block**: Ports, DNS, routing configuration
 - **storage block**: Volumes, persistence configuration
 - **services block**: All 10 service versions and configurations

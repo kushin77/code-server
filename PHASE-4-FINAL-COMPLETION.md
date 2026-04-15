@@ -59,7 +59,7 @@
 
 **Infrastructure**:
 - Primary: 192.168.168.31 (Docker Swarm)
-- Standby: 192.168.168.30 (HA replica)
+- Standby: 192.168.168.42 (HA replica)
 - Storage: 192.168.168.56 (NAS - persistent volumes)
 
 **Services (10/10 Healthy)**:

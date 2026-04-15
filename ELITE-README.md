@@ -193,11 +193,11 @@ Impact: Immutable builds, no surprise breaking changes
 ### Decision 4: Deployment Host - 192.168.168.31?
 **RECOMMENDATION: Yes, Primary Host** ✅
 - 192.168.168.31 = production (akushnir@ with Docker)
-- 192.168.168.30 = standby/replica (can deploy after validation)
+- 192.168.168.42 = standby/replica (can deploy after validation)
 - Deployment is SSH-based (remote Docker)
 - Rollback validated (<60 seconds)
 
-**Decision Made:** Deploy to 192.168.168.31 first, then 192.168.168.30 if needed
+**Decision Made:** Deploy to 192.168.168.31 first, then 192.168.168.42 if needed
 
 ---
 

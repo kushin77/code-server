@@ -299,7 +299,7 @@ Backup Coverage:   100% (hourly, 30-day retention)
 **4 Parallel Workstreams** (40-60 hours total):
 
 1. **7a: Multi-Region Infrastructure** (40h)
-   - Standby region provisioning (192.168.168.30)
+   - Standby region provisioning (192.168.168.42)
    - PostgreSQL streaming replication
    - Redis Sentinel cluster
    - Cross-region networking

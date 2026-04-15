@@ -24,7 +24,7 @@ This guide covers the **ELITE refactoring** that eliminated 47 hardcoded values,
 |------|---------|-----------------|
 | **config/_base-config.env** | Base configuration (90+ parameters) | `POSTGRES_MEMORY_LIMIT=2g`<br>`LOAD_TEST_PEAK_RPS=1000` |
 | **config/_base-config.env.production** | Production overrides | `DEPLOY_HOST=192.168.168.31`<br>`SLO_AVAILABILITY_TARGET=99.99` |
-| **config/_base-config.env.staging** | Staging overrides | `DEPLOY_HOST=192.168.168.30`<br>`FEATURE_CHAOS_TESTING=true` |
+| **config/_base-config.env.staging** | Staging overrides | `DEPLOY_HOST=192.168.168.42`<br>`FEATURE_CHAOS_TESTING=true` |
 | **config/_base-config.env.development** | Development overrides | `DEPLOY_HOST=localhost`<br>`FEATURE_GPU_ENABLED=false` |
 | **scripts/_common/logging.sh** | Unified logging library (10 functions) | `log::info`, `log::error`, `log::success`, `log::banner` |
 | **scripts/_common/config-loader.sh** | Config management with overrides | `config::load()`, `config::get()`, `config::validate()` |

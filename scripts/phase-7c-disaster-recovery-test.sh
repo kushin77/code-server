@@ -8,7 +8,7 @@ set -euo pipefail
 
 # Configuration
 readonly PRIMARY_HOST="192.168.168.31"
-readonly REPLICA_HOST="192.168.168.30"  # On-prem standby host
+readonly REPLICA_HOST="192.168.168.42"  # On-prem standby host
 readonly NAS_HOST="192.168.168.55"
 readonly POSTGRES_PORT=5432
 readonly REDIS_PORT=6379

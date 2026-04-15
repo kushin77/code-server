@@ -77,7 +77,7 @@ War room escalation requested if:
 
 - **Network latency check:**
   ```bash
-  ping -c 3 192.168.168.30  # Should be <5ms
+  ping -c 3 192.168.168.42  # Should be <5ms
   curl -w "@curl-format.txt" http://code-server:3000/health
   ```
 
@@ -384,7 +384,7 @@ echo "=== QUICK HEALTH CHECK ==="
 echo "Docker containers:"
 docker ps --format "table {{.Names}}\t{{.Status}}"
 echo "DNS routes:"
-ssh akushnir@192.168.168.30 "docker ps --names -q" | xargs -I {} docker inspect {} --format "{{.Name}}"
+ssh akushnir@192.168.168.42 "docker ps --names -q" | xargs -I {} docker inspect {} --format "{{.Name}}"
 echo "SLO metrics:"
 curl -s 'http://localhost:9090/api/v1/query?query=histogram_quantile(0.99,http_request_duration_seconds_bucket)' | jq .
 ```
@@ -397,7 +397,7 @@ terraform apply -var=phase_14_enabled=false -auto-approve
 echo "Waiting for failover to complete..."
 sleep 5
 echo "Verifying standby is handling traffic..."
-ssh akushnir@192.168.168.30 "docker logs caddy | tail -5"
+ssh akushnir@192.168.168.42 "docker logs caddy | tail -5"
 echo "ROLLBACK COMPLETE"
 ```
 

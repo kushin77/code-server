@@ -50,7 +50,7 @@ Internet
     ↓
 Cloudflare (GeoDNS)
     ├─→ North America → 192.168.168.31 (Primary)
-    └─→ Europe → 192.168.168.30 (Standby)
+    └─→ Europe → 192.168.168.42 (Standby)
          ↓
     HAProxy (Layer 4 LB)
          ├─→ code-server:8080

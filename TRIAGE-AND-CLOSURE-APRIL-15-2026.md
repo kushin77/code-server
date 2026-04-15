@@ -95,7 +95,7 @@ alertmanager        Up 16 hours (healthy) ✅
 
 ### Infrastructure Details
 - **Primary Host**: 192.168.168.31 (akushnir user, SSH enabled)
-- **Standby Host**: 192.168.168.30 (synchronized)
+- **Standby Host**: 192.168.168.42 (synchronized)
 - **NAS Storage**: 192.168.168.56 (ollama-data, postgres-backups)
 - **Uptime**: 16+ hours sustained
 - **Health Status**: ALL GREEN ✅

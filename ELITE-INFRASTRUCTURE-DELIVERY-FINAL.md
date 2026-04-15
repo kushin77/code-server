@@ -43,7 +43,7 @@ All elite infrastructure enhancements complete, validated, and operationally run
   - ollama-data → 192.168.168.56:/exports/ollama-models
   - postgres-backup → 192.168.168.56:/exports/backups
 - **Failover strategy**: Graceful fallback to local if NAS unavailable
-- **RTO**: <5 seconds to standby (192.168.168.30) with models on NAS
+- **RTO**: <5 seconds to standby (192.168.168.42) with models on NAS
 - **Result**: High-availability persistence architecture operational
 
 ### 5️⃣ Connection Pooling - 3x Throughput
@@ -106,7 +106,7 @@ All services running with health checks passing (ollama initializing).
 ┌─────────────────────────────────────────────────────────────┐
 │ PRIMARY: 192.168.168.31 (10 services, all healthy)          │
 ├─────────────────────────────────────────────────────────────┤
-│ STANDBY: 192.168.168.30 (manual failover, synced)           │
+│ STANDBY: 192.168.168.42 (manual failover, synced)           │
 ├─────────────────────────────────────────────────────────────┤
 │ NAS:     192.168.168.56 (NFSv4, soft-mount)                 │
 │          ├─ ollama-models (persistent LLM data)             │

@@ -20,7 +20,7 @@
   - Status: DEPLOYED
 
 ### Production Infrastructure
-- **Host**: 192.168.168.31 (primary) + 192.168.168.30 (standby)
+- **Host**: 192.168.168.31 (primary) + 192.168.168.42 (standby)
 - **Services**: 10/10 healthy (caddy, code-server, postgres, redis, prometheus, grafana, alertmanager, jaeger, oauth2-proxy, ollama)
 - **Risk Level**: LOW
 - **Blockers**: NONE

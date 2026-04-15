@@ -280,7 +280,7 @@ Documentation: 4 files (279 + 372 + 651 lines)
 
 ### Infrastructure
 - **Primary**: 192.168.168.31 (akushnir, SSH enabled)
-- **Standby**: 192.168.168.30 (synchronized, ready for failover)
+- **Standby**: 192.168.168.42 (synchronized, ready for failover)
 - **NAS**: 192.168.168.56 (storage, ollama-data + backups mounted)
 - **VPN**: WireGuard ready for remote access
 

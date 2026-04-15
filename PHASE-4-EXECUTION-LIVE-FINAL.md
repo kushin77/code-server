@@ -85,7 +85,7 @@
 
 ✅ **On-prem**: Elite best practices
    - Host: 192.168.168.31 (primary)
-   - Standby: 192.168.168.30 (ready)
+   - Standby: 192.168.168.42 (ready)
    - Storage: 192.168.168.56 (NAS)
 
 ✅ **No waiting**: Proceeding immediately

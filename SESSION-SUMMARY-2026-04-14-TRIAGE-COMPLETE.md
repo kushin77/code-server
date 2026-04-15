@@ -145,7 +145,7 @@ May 5, 2026
 - ✅ Memory: 26GB available
 - ✅ Network: <10ms latency
 
-**Standby Host**: 192.168.168.30
+**Standby Host**: 192.168.168.42
 - ✅ Status: Hot failover ready
 - ✅ RTO: <5 minutes
 - ✅ RPO: <1 minute

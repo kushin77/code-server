@@ -45,7 +45,7 @@ WORKSTREAM 7a: MULTI-REGION INFRASTRUCTURE (40 hours)
 
 Tasks:
 1. Provision Secondary Region Infrastructure (8h)
-   - Deploy replica host: 192.168.168.30 (standby)
+   - Deploy replica host: 192.168.168.42 (standby)
    - Match primary configuration exactly
    - Setup cross-region networking
    - Configure VPN/tunnel connectivity
@@ -53,14 +53,14 @@ Tasks:
 2. Database Replication Setup (12h)
    - Implement PostgreSQL streaming replication
    - Primary: 192.168.168.31 (write)
-   - Standby: 192.168.168.30 (read-only)
+   - Standby: 192.168.168.42 (read-only)
    - Replication lag target: <1 second
    - Failover automation: Patroni or pg_failover
 
 3. Redis Replication (8h)
    - Redis Sentinel deployment (3-node cluster)
    - Master: 192.168.168.31
-   - Replicas: 192.168.168.30 + external
+   - Replicas: 192.168.168.42 + external
    - Automatic failover on master loss
 
 4. Application Replication (12h)
@@ -248,7 +248,7 @@ RESOURCE REQUIREMENTS
 
 Infrastructure:
 - Primary Region: 192.168.168.31 (8 vCPU, 32GB RAM, 500GB SSD)
-- Secondary Region: 192.168.168.30 (8 vCPU, 32GB RAM, 500GB SSD)
+- Secondary Region: 192.168.168.42 (8 vCPU, 32GB RAM, 500GB SSD)
 - External monitoring: Cloudflare, Datadog/Prometheus
 
 Personnel:

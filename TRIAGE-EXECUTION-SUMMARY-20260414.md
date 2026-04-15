@@ -155,7 +155,7 @@ Overall: 4/6 critical containers operational ✅
 **Network Status**
 ```
 DNS Routing: 10% → 192.168.168.31 (primary)
-Failover: 192.168.168.30 (standby, RTO <5 min)
+Failover: 192.168.168.42 (standby, RTO <5 min)
 Monitoring: Prometheus + Grafana active
 ```
 
@@ -255,7 +255,7 @@ Status: Active observation in progress
 ```bash
 terraform apply -var='phase_14_enabled=false' -auto-approve
 ```
-- Result: All traffic reverts to standby (192.168.168.30)
+- Result: All traffic reverts to standby (192.168.168.42)
 - RTO: <5 minutes
 - Automatic triggers: On SLO breach (always active)
 

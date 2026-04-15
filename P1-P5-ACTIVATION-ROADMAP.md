@@ -524,7 +524,7 @@ archived/
 3. Tag `v1.0.0-elite` on merge commit
 4. Deploy to primary (192.168.168.31) via docker-compose
 5. Verify all health checks passing
-6. Enable failover to standby (192.168.168.30) for HA
+6. Enable failover to standby (192.168.168.42) for HA
 
 **Success Criteria**:
 - [ ] All tests passing

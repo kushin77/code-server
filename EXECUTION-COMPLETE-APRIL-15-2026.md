@@ -62,7 +62,7 @@
 **4 Parallel Workstreams - 40-60 Hours Total**:
 
 1. **7a: Multi-Region Infrastructure (40 hours)**
-   - Standby region provisioning (192.168.168.30)
+   - Standby region provisioning (192.168.168.42)
    - PostgreSQL streaming replication
    - Redis Sentinel cluster
    - Cross-region networking
@@ -228,7 +228,7 @@
 3. Validate metrics post-deployment
 
 ### Phase 7 Execution (40-60 hours over 5-7 days)
-1. Provision standby region (192.168.168.30)
+1. Provision standby region (192.168.168.42)
 2. Setup database replication
 3. Configure global load balancing
 4. Deploy advanced observability

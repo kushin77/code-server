@@ -606,6 +606,8 @@ services:
       - loki-chunks:/loki/chunks
       - loki-index:/loki/index
       - loki-cache:/loki/cache
+      - loki-tsdb:/loki/tsdb
+      - loki-compaction:/loki/compaction
     environment:
       TZ: ${TZ:-UTC}
     command: -config.file=/etc/loki/local-config.yml
@@ -778,6 +780,10 @@ volumes:
   loki-index:
     driver: local
   loki-cache:
+    driver: local
+  loki-tsdb:
+    driver: local
+  loki-compaction:
     driver: local
   kong-db-data:
     driver: local

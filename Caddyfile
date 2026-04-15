@@ -5,13 +5,31 @@
 		output stdout
 		level INFO
 	}
+
+	# Let's Encrypt production certificates
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
+	email ops@elevatediq.ai
 }
 
-# HTTP only - simple port-based routing
-# Port 80 -> oauth2-proxy -> code-server
-:80 {
+# Security headers snippet
+(security_headers) {
+	header {
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "SAMEORIGIN"
+		X-XSS-Protection          "1; mode=block"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		-Server
+	}
+}
+
+# Production domain with HTTPS and OAuth2
+ide.elevatediq.ai {
+	encode gzip
+	import security_headers
+
 	reverse_proxy oauth2-proxy:4180 {
-		header_up Host {upstream_hostport}
-		header_up X-Real-IP {remote_host}
+		header_up Host       {upstream_hostport}
+		header_up X-Real-IP  {remote_host}
 	}
 }

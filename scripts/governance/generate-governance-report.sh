@@ -26,27 +26,27 @@ WEEK_ENDING="${WEEK_ENDING:-$(date +%Y-%m-%d)}"
 gather_metrics() {
   echo "📊 Gathering governance metrics..."
   
-  # Count script header violations
+  # Count script header violations (with timeout to prevent hanging in CI)
   local missing_headers=0
   if [[ -d "$REPO_ROOT/scripts" ]]; then
-    missing_headers=$(find "$REPO_ROOT/scripts" -type f -name "*.sh" \
+    missing_headers=$(timeout 10 find "$REPO_ROOT/scripts" -type f -name "*.sh" \
       ! -path "*/_common/*" ! -path "*/archive/*" ! -path "*/_templates/*" \
-      -exec grep -L "@file:" {} \; 2>/dev/null | wc -l)
+      -exec grep -L "@file:" {} \; 2>/dev/null | wc -l || echo "0")
   fi
   
-  # Check for hardcoded IPs (example pattern)
+  # Check for hardcoded IPs (with timeout)
   local hardcoded_ips=0
   if [[ -d "$REPO_ROOT/scripts" ]]; then
-    hardcoded_ips=$(grep -r "192\.168\.\|10\.\|172\.\(1[6-9]\|2[0-9]\|3[01]\)\." \
+    hardcoded_ips=$(timeout 10 grep -r "192\.168\.\|10\.\|172\.\(1[6-9]\|2[0-9]\|3[01]\)\." \
       "$REPO_ROOT/scripts" --include="*.sh" 2>/dev/null | \
-      grep -v "EXAMPLE\|TODO\|FIXME\|_common" | wc -l)
+      grep -v "EXAMPLE\|TODO\|FIXME\|_common" | wc -l || echo "0")
   fi
   
-  # Check Docker images for 'latest' tag
+  # Check Docker images for 'latest' tag (with timeout)
   local latest_images=0
   if [[ -f "$REPO_ROOT/Dockerfile" ]] || [[ -f "$REPO_ROOT/docker-compose.yml" ]]; then
-    latest_images=$(grep -r ":latest" "$REPO_ROOT" \
-      --include="Dockerfile*" --include="docker-compose*.yml" 2>/dev/null | wc -l)
+    latest_images=$(timeout 10 grep -r ":latest" "$REPO_ROOT" \
+      --include="Dockerfile*" --include="docker-compose*.yml" 2>/dev/null | wc -l || echo "0")
   fi
   
   # Count config files

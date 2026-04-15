@@ -10,6 +10,101 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 # ─────────────────────────────────────────────────────────────────────────────
+# STRICT FILE VALIDATION
+# ─────────────────────────────────────────────────────────────────────────────
+# Ensure critical paths exist before any operations
+validate_required_files() {
+  local required_files=(
+    "allowed-emails.txt"
+  )
+  
+  local required_dirs=(
+    "config/user-settings"
+    "config/role-settings"
+    "audit"
+  )
+  
+  for file in "${required_files[@]}"; do
+    if [[ ! -f "$file" ]]; then
+      echo "FATAL: Required file missing: $file" >&2
+      exit 1
+    fi
+    if [[ ! -r "$file" ]]; then
+      echo "FATAL: Cannot read required file: $file" >&2
+      exit 1
+    fi
+  done
+  
+  for dir in "${required_dirs[@]}"; do
+    if [[ ! -d "$dir" ]]; then
+      echo "FATAL: Required directory missing: $dir" >&2
+      exit 1
+    fi
+    if [[ ! -w "$dir" ]]; then
+      echo "FATAL: Cannot write to required directory: $dir" >&2
+      exit 1
+    fi
+  done
+}
+
+# Validate file paths (prevent path traversal and typos)
+validate_file_path() {
+  local path="$1"
+  
+  # Reject any path with ../ or //
+  if [[ "$path" =~ \.\. ]] || [[ "$path" =~ // ]]; then
+    echo "FATAL: Invalid path: $path" >&2
+    exit 1
+  fi
+  
+  # Only allow specific known filenames
+  case "$path" in
+    allowed-emails.txt|allowed-emails.txt.tmp|audit/user-provisioning.log)
+      return 0
+      ;;
+    *)
+      echo "FATAL: Unexpected file path: $path" >&2
+      exit 1
+      ;;
+  esac
+}
+
+# Atomic write with validation
+atomic_write() {
+  local file="$1"
+  local content="$2"
+  
+  validate_file_path "$file"
+  
+  # Write to temporary file
+  local tmpfile="${file}.tmp.$$"
+  if ! echo "$content" > "$tmpfile"; then
+    rm -f "$tmpfile"
+    echo "ERROR: Failed to write temporary file: $tmpfile" >&2
+    return 1
+  fi
+  
+  # Verify temporary file was created and is readable
+  if [[ ! -f "$tmpfile" ]] || [[ ! -r "$tmpfile" ]]; then
+    rm -f "$tmpfile"
+    echo "ERROR: Temporary file is not readable: $tmpfile" >&2
+    return 1
+  fi
+  
+  # Atomic rename
+  if ! mv "$tmpfile" "$file"; then
+    rm -f "$tmpfile"
+    echo "ERROR: Failed to rename $tmpfile to $file" >&2
+    return 1
+  fi
+  
+  return 0
+}
+
+# Call validation on script startup
+validate_required_files
+
+# ─────────────────────────────────────────────────────────────────────────────
 # COLORS & FORMATTING
 # ─────────────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -122,12 +217,29 @@ cmd_remove_user() {
     exit 0
   fi
 
-  # Remove from allowlist
-  grep -v "^$email$" allowed-emails.txt > allowed-emails.txt.tmp
-  mv allowed-emails.txt.tmp allowed-emails.txt
+  # Read current allowlist safely
+  if [[ ! -f "allowed-emails.txt" ]]; then
+    print_error "Allowlist file not found"
+    exit 1
+  fi
+  
+  # Create new allowlist without the user
+  local new_content
+  new_content=$(grep -v "^$email$" allowed-emails.txt 2>/dev/null || true)
+  
+  # Atomic write
+  if ! atomic_write "allowed-emails.txt" "$new_content"; then
+    print_error "Failed to update allowlist"
+    exit 1
+  fi
 
-  # Audit log
-  echo "$(date -I'seconds') | USER_REVOKED | email:$email" >> audit/user-provisioning.log
+  # Audit log (append safely)
+  {
+    echo "$(date -I'seconds') | USER_REVOKED | email:$email | actor:${SUDO_USER:-${USER:-system}}"
+  } >> audit/user-provisioning.log || {
+    print_error "Failed to write audit log"
+    exit 1
+  }
 
   print_success "User removed: $email"
   print_info "Restart OAuth2 to apply: docker compose restart oauth2-proxy"
@@ -158,21 +270,57 @@ cmd_change_role() {
     exit 1
   fi
 
-  # Get current role
-  old_role=$(jq -r '.role' "$config_dir/user-metadata.json" 2>/dev/null)
+  if [[ ! -f "$config_dir/user-metadata.json" ]]; then
+    print_error "User metadata not found: $config_dir/user-metadata.json"
+    exit 1
+  fi
 
-  # Update metadata
-  jq ".role = \"$new_role\"" "$config_dir/user-metadata.json" > "$config_dir/user-metadata.json.tmp"
-  mv "$config_dir/user-metadata.json.tmp" "$config_dir/user-metadata.json"
+  # Get current role
+  old_role=$(jq -r '.role' "$config_dir/user-metadata.json" 2>/dev/null || echo "unknown")
+
+  # Validate metadata file is readable
+  if [[ "$old_role" == "unknown" ]]; then
+    print_error "Could not read role from user metadata"
+    exit 1
+  fi
+
+  # Update metadata with atomic write
+  local updated_metadata
+  updated_metadata=$(jq ".role = \"$new_role\" | .lastModified = \"$(date -I'seconds')\"" "$config_dir/user-metadata.json" 2>/dev/null)
+  
+  if [[ -z "$updated_metadata" ]]; then
+    print_error "Failed to update metadata JSON"
+    exit 1
+  fi
+  
+  echo "$updated_metadata" > "$config_dir/user-metadata.json.tmp" || {
+    print_error "Failed to write metadata"
+    exit 1
+  }
+  
+  mv "$config_dir/user-metadata.json.tmp" "$config_dir/user-metadata.json" || {
+    print_error "Failed to rename metadata file"
+    exit 1
+  }
 
   # Update settings from template
   role_template="config/role-settings/${new_role}-profile.json"
   if [[ -f "$role_template" ]]; then
-    cp "$role_template" "$config_dir/settings.json"
+    cp "$role_template" "$config_dir/settings.json" || {
+      print_error "Failed to copy role template"
+      exit 1
+    }
+  else
+    print_warning "Role template not found: $role_template"
   fi
 
   # Audit log
-  echo "$(date -I'seconds') | USER_ROLE_CHANGED | email:$email | from:$old_role | to:$new_role" >> audit/user-provisioning.log
+  {
+    echo "$(date -I'seconds') | USER_ROLE_CHANGED | email:$email | from:$old_role | to:$new_role | actor:${SUDO_USER:-${USER:-system}}"
+  } >> audit/user-provisioning.log || {
+    print_error "Failed to write audit log"
+    exit 1
+  }
 
   print_success "Role changed: $email ($old_role → $new_role)"
   print_info "Settings will reload on next session"
@@ -286,7 +434,7 @@ cmd_security_status() {
     print_error "Email whitelist empty or missing!"
   fi
 
-  # Check 4: Role templates exis
+  # Check 4: Role templates exist
   if [[ -d "config/role-settings" && -n "$(ls config/role-settings/*.json 2>/dev/null)" ]]; then
     role_count=$(ls config/role-settings/*.json 2>/dev/null | wc -l)
     print_success "Role templates configured ($role_count roles)"

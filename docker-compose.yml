@@ -52,8 +52,6 @@ services:
     restart: always
     networks: [enterprise]
     security_opt: ["no-new-privileges:true"]
-    cap_drop: [ALL]
-    cap_add: [CHOWN, FOWNER, SETUID, SETGID, DAC_READ_SEARCH]  # required by PostgreSQL internals
     environment:
       POSTGRES_DB:       ${POSTGRES_DB}
       POSTGRES_USER:     ${POSTGRES_USER}
@@ -86,8 +84,6 @@ services:
     restart: always
     networks: [enterprise]
     security_opt: ["no-new-privileges:true"]
-    cap_drop: [ALL]
-    cap_add: [CHOWN, SETUID, SETGID]  # required by Redis entrypoint execution
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     command: >

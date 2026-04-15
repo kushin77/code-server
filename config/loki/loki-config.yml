@@ -1,9 +1,14 @@
 # ════════════════════════════════════════════════════════════════
 # Loki Configuration - On-Prem Production
+# Version: 2.9.4 compatible (tsdb schema v13)
 # Date: April 15, 2026
 # ════════════════════════════════════════════════════════════════
 
 auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  log_level: warn
 
 ingester:
   chunk_idle_period: 3m
@@ -21,39 +26,23 @@ limits_config:
 schema_config:
   configs:
     - from: 2020-10-24
-      store: boltdb-shipper
+      store: tsdb
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
-        prefix: index_
+        prefix: idx_
         period: 24h
 
-server:
-  http_listen_port: 3100
-  log_level: info
-
 storage_config:
-  boltdb_shipper:
-    active_index_directory: /loki/boltdb-shipper-active
-    shared_store: filesystem
   filesystem:
     directory: /loki/chunks
+  tsdb_shipper:
+    active_index_directory: /loki/tsdb
+    shared_store: filesystem
 
-chunk_store_config:
-  max_look_back_period: 0s
+compactor:
+  working_directory: /loki/compaction
+  compaction_interval: 10m
 
-table_manager:
-  retention_deletes_enabled: false
-  retention_period: 0s
-
-# Query optimization
-query_scheduler:
-  max_outstanding_requests_per_tenant: 200
-
-# Tracing (optional)
-# jaeger:
-#   sampler:
-#     type: const
-#     param: 1
-#   reporter_log_spans: true
-#   endpoint: http://jaeger:14268/api/traces
+analytics:
+  reporting_enabled: false

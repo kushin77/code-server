@@ -6,13 +6,13 @@ repos:
         entry: bash ./scripts/mandatory-redeploy.sh
         language: system
         pass_filenames: false
-        # Only run manually or on local push - requires Docker and Linux environment
+        # Only run manually or on local push — requires Docker and Linux environment
         stages: [manual]
 
       # Phase 2.3: Custom hook - verify scripts source common libraries
       - id: verify-scripts-source-common
         name: Verify scripts source _common libraries
-        entry: "bash -c 'if [[ -d scripts/_common ]]; then for f in scripts/{deploy,backup,validate,test}.sh; do if [[ -f \"$f\" ]] && ! grep -q \"source.*_common\" \"$f\"; then echo \"ERROR: $f missing _common source\"; fi; done; fi'"
+        entry: bash -c '[[ -d scripts/_common ]] && for f in scripts/{deploy,backup,validate,test}.sh; do [[ -f "$f" ]] && ! grep -q "source.*_common" "$f" && echo "ERROR: $f missing _common source"; done'
         language: system
         files: '^scripts/(deploy|backup|validate|test)\.sh$'
         pass_filenames: false
@@ -21,24 +21,40 @@ repos:
       # Phase 2.3: Custom hook - verify metadata headers
       - id: verify-metadata-headers
         name: Verify metadata headers in critical scripts
-        entry: "bash -c 'if [[ -f scripts/deploy.sh ]]; then if ! grep -q \"^#!/bin/bash\" scripts/deploy.sh; then echo \"ERROR: deploy.sh missing bash shebang\"; fi; fi'"
+        entry: bash -c '[[ -f scripts/deploy.sh ]] && ! grep -q "^# File:" scripts/deploy.sh && echo "ERROR: deploy.sh missing metadata header"'
         language: system
         files: '^scripts/deploy\.sh$'
         pass_filenames: false
         stages: [commit]
 
-      # Phase 3: Block hardcoded IPs - use $DEPLOY_HOST from _common/config.sh
+      # Phase 3: Block hardcoded IPs — use $DEPLOY_HOST from _common/config.sh
       - id: no-hardcoded-ips
         name: No hardcoded IP addresses in scripts
-        entry: "bash -c 'files=$(grep -rl \"192\\.168\\.168\\.\\(31\\|30\\)\" scripts/ 2>/dev/null | grep -v \"_common/\" | grep -v \"config\\.sh\" | grep \"\\.sh$\"); if [[ -n \"$files\" ]]; then echo \"GOVERNANCE: Hardcoded IP found - use \\$DEPLOY_HOST:\"; echo \"$files\" | sed \"s/^/  /\"; exit 1; fi'"
+        entry: bash -c '
+          files=$(grep -rl "192\.168\.168\.\(31\|30\)" scripts/ 2>/dev/null \
+            | grep -v "_common/" | grep -v "config\.sh" | grep "\.sh$")
+          if [[ -n "$files" ]]; then
+            echo "GOVERNANCE: Hardcoded IP — use \$DEPLOY_HOST from _common/config.sh:"
+            echo "$files" | sed "s/^/  /"; exit 1
+          fi
+        '
         language: system
         files: '^scripts/.*\.sh$'
         pass_filenames: false
         stages: [commit]
 
+      # GOV-001: jscpd duplicate code detection (optional - requires npm)
+      - id: jscpd-duplicates
+        name: Duplicate code detection (jscpd)
+        entry: bash -c 'command -v jscpd >/dev/null || npm install -g jscpd >/dev/null 2>&1; jscpd --config .jscpdrc.json'
+        language: system
+        files: '\.(sh|py|ts|js|tsx|jsx|yml|yaml)$'
+        pass_filenames: false
+        stages: [manual]  # Optional check - run via: pre-commit run --hook-stage manual
+
   # Phase 2.3: Bash script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+    rev: v0.9.0.7
     hooks:
       - id: shellcheck
         name: Bash script lint (shellcheck)

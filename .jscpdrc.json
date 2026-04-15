@@ -1,0 +1,12 @@
+{
+  "threshold": 3,
+  "minLines": 10,
+  "minTokens": 50,
+  "reporters": ["json", "console", "csv"],
+  "output": "/tmp/jscpd-report",
+  "format": ["javascript", "typescript", "python", "bash", "yaml", "json"],
+  "absolute": true,
+  "noCache": true,
+  "ignore": ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/__pycache__/**", "**/.venv/**", "**/archived/**", "**/*.tpl", "**/*.md"],
+  "match": ["scripts/**/*.sh", "scripts/**/*.py", "src/**/*", "backend/**/*", "config/**/*.yml"]
+}

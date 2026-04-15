@@ -72,7 +72,7 @@ resource "null_resource" "ensure_minio_bucket" {
       echo "  - Credentials: Check .env for MINIO_ROOT_USER / MINIO_ROOT_PASSWORD"
     EOF
   }
-  
+
   triggers = {
     minio_endpoint = "http://minio:9000"
   }
@@ -120,11 +120,11 @@ output "state_key" {
 }
 
 output "migration_command" {
-  value = "terraform init -migrate-state"
+  value       = "terraform init -migrate-state"
   description = "Run this command to migrate from local state to remote"
 }
 
 output "state_backup_command" {
-  value = "terraform state pull > terraform.tfstate.backup"
+  value       = "terraform state pull > terraform.tfstate.backup"
   description = "Backup current state before migration"
 }

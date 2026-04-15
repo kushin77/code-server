@@ -51,7 +51,7 @@ resource "cloudflare_tunnel_config" "code_server_primary" {
     ingress_rule {
       hostname = "ide.${var.domain}"
       service  = "http://${var.primary_host_ip}:8080"
-      
+
       origin_request {
         http_host_header = "ide.${var.domain}"
         connect_timeout  = 30
@@ -64,7 +64,7 @@ resource "cloudflare_tunnel_config" "code_server_primary" {
     ingress_rule {
       hostname = "auth.${var.domain}"
       service  = "http://${var.primary_host_ip}:4180"
-      
+
       origin_request {
         http_host_header = "auth.${var.domain}"
         connect_timeout  = 10
@@ -75,7 +75,7 @@ resource "cloudflare_tunnel_config" "code_server_primary" {
     ingress_rule {
       hostname = "prometheus.${var.domain}"
       service  = "http://${var.primary_host_ip}:9090"
-      
+
       origin_request {
         http_host_header = "prometheus.${var.domain}"
         connect_timeout  = 15
@@ -86,7 +86,7 @@ resource "cloudflare_tunnel_config" "code_server_primary" {
     ingress_rule {
       hostname = "grafana.${var.domain}"
       service  = "http://${var.primary_host_ip}:3000"
-      
+
       origin_request {
         http_host_header = "grafana.${var.domain}"
         connect_timeout  = 15
@@ -97,7 +97,7 @@ resource "cloudflare_tunnel_config" "code_server_primary" {
     ingress_rule {
       hostname = "alerts.${var.domain}"
       service  = "http://${var.primary_host_ip}:9093"
-      
+
       origin_request {
         http_host_header = "alerts.${var.domain}"
         connect_timeout  = 10
@@ -108,7 +108,7 @@ resource "cloudflare_tunnel_config" "code_server_primary" {
     ingress_rule {
       hostname = "tracing.${var.domain}"
       service  = "http://${var.primary_host_ip}:16686"
-      
+
       origin_request {
         http_host_header = "tracing.${var.domain}"
         connect_timeout  = 15
@@ -142,7 +142,7 @@ resource "cloudflare_tunnel_config" "code_server_replica" {
     ingress_rule {
       hostname = "ide-replica.${var.domain}"
       service  = "http://${var.replica_host_ip}:8080"
-      
+
       origin_request {
         http_host_header = "ide-replica.${var.domain}"
         connect_timeout  = 30
@@ -153,7 +153,7 @@ resource "cloudflare_tunnel_config" "code_server_replica" {
     ingress_rule {
       hostname = "prometheus-replica.${var.domain}"
       service  = "http://${var.replica_host_ip}:9090"
-      
+
       origin_request {
         http_host_header = "prometheus-replica.${var.domain}"
       }
@@ -277,7 +277,7 @@ resource "cloudflare_record" "caa_letsencrypt" {
   zone_id = data.cloudflare_zone.main.id
   name    = "@"
   type    = "CAA"
-  
+
   data {
     flags = 0
     tag   = "issue"
@@ -291,7 +291,7 @@ resource "cloudflare_record" "caa_cloudflare" {
   zone_id = data.cloudflare_zone.main.id
   name    = "@"
   type    = "CAA"
-  
+
   data {
     flags = 0
     tag   = "issue"
@@ -305,7 +305,7 @@ resource "cloudflare_record" "caa_iodef" {
   zone_id = data.cloudflare_zone.main.id
   name    = "@"
   type    = "CAA"
-  
+
   data {
     flags = 0
     tag   = "iodef"
@@ -356,13 +356,13 @@ resource "cloudflare_load_balancer_monitor" "health" {
 resource "cloudflare_load_balancer_pool" "primary" {
   account_id = var.cloudflare_account_id
   name       = "ide-primary"
-  
+
   origins {
     name    = "primary"
     address = "${var.primary_host_ip}:8080"
     enabled = true
   }
-  
+
   description = "Primary production pool (192.168.168.31)"
   monitor     = cloudflare_load_balancer_monitor.health.id
 }
@@ -370,13 +370,13 @@ resource "cloudflare_load_balancer_pool" "primary" {
 resource "cloudflare_load_balancer_pool" "replica" {
   account_id = var.cloudflare_account_id
   name       = "ide-replica"
-  
+
   origins {
     name    = "replica"
     address = "${var.replica_host_ip}:8080"
     enabled = true
   }
-  
+
   description = "Replica failover pool (192.168.168.42)"
   monitor     = cloudflare_load_balancer_monitor.health.id
 }
@@ -384,14 +384,14 @@ resource "cloudflare_load_balancer_pool" "replica" {
 resource "cloudflare_load_balancer" "ide_main" {
   zone_id = data.cloudflare_zone.main.id
   name    = "ide.${var.domain}"
-  
+
   default_pool_ids = [cloudflare_load_balancer_pool.primary.id]
   fallback_pool_id = cloudflare_load_balancer_pool.replica.id
-  
-  description       = "IDE load balancer with failover"
-  ttl               = 30
-  steering_policy   = "dynamic_latency"
-  session_affinity  = "ip_cookie"
+
+  description          = "IDE load balancer with failover"
+  ttl                  = 30
+  steering_policy      = "dynamic_latency"
+  session_affinity     = "ip_cookie"
   session_affinity_ttl = 1800
 
   depends_on = [
@@ -409,16 +409,16 @@ resource "cloudflare_waf_rules" "tunnel_protection" {
   zone_id = data.cloudflare_zone.main.id
 
   # Enable OWASP Core Rule Set
-  group_id = "62d9e08876a4b126530b7115"  # OWASP ModSecurity Core Rule Set
-  mode     = "block"  # Block suspicious requests
+  group_id = "62d9e08876a4b126530b7115" # OWASP ModSecurity Core Rule Set
+  mode     = "block"                    # Block suspicious requests
 }
 
 # Rate limiting
 resource "cloudflare_rate_limit" "tunnel_rate_limit" {
   zone_id    = data.cloudflare_zone.main.id
   disabled   = false
-  threshold  = 100  # 100 requests per period
-  period     = 60   # Per 60 seconds
+  threshold  = 100 # 100 requests per period
+  period     = 60  # Per 60 seconds
   match_type = "request"
 
   match {
@@ -429,7 +429,7 @@ resource "cloudflare_rate_limit" "tunnel_rate_limit" {
 
   action {
     mode    = "block"
-    timeout = 300  # Block for 5 minutes
+    timeout = 300 # Block for 5 minutes
   }
 
   description = "Rate limit tunnel to prevent abuse"

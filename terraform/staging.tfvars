@@ -5,12 +5,12 @@
 
 project_name = "kushin77-code-server-staging"
 environment  = "staging"
-region_count = 3  # Only 3 regions for staging (cost optimization)
+region_count = 3 # Only 3 regions for staging (cost optimization)
 
 regions = [
   {
     name         = "stg-region1-primary"
-    ip_primary   = "192.168.169.31"  # Different network for staging
+    ip_primary   = "192.168.169.31" # Different network for staging
     ip_secondary = "192.168.169.141"
     role         = "primary"
   },
@@ -32,12 +32,12 @@ nas_primary_ip   = "192.168.169.56"
 nas_replica_ip   = "192.168.169.57"
 load_balancer_ip = "192.168.169.100"
 
-dns_servers = ["192.168.169.10"]  # Single DNS for staging
+dns_servers = ["192.168.169.10"] # Single DNS for staging
 
 slo_targets = {
-  availability     = 99.9   # Relaxed for staging
-  p99_latency_ms   = 150
-  error_rate       = 0.5
+  availability   = 99.9 # Relaxed for staging
+  p99_latency_ms = 150
+  error_rate     = 0.5
 }
 
 # Network configuration
@@ -56,15 +56,15 @@ compute_specs = {
 
 # Database replication (staging: standard)
 postgres_replication_config = {
-  primary_ip             = "192.168.169.31"
-  replica_ips            = ["192.168.169.32", "192.168.169.33"]
-  replication_user       = "replicator"
-  replication_password   = "OVERRIDE_IN_ENV_VARS"
-  port                   = 5432
-  max_wal_senders        = 5
-  max_replication_slots  = 5
-  wal_level              = "replica"
-  synchronous_commit     = "on"  # Semi-synchronous for staging
+  primary_ip            = "192.168.169.31"
+  replica_ips           = ["192.168.169.32", "192.168.169.33"]
+  replication_user      = "replicator"
+  replication_password  = "OVERRIDE_IN_ENV_VARS"
+  port                  = 5432
+  max_wal_senders       = 5
+  max_replication_slots = 5
+  wal_level             = "replica"
+  synchronous_commit    = "on" # Semi-synchronous for staging
 }
 
 # Database backup (staging: daily)
@@ -82,5 +82,5 @@ dns_config = {
   health_check_port       = 9090
   health_check_interval_s = 30
   failover_threshold      = 5
-  ttl                     = 60  # Longer TTL for staging
+  ttl                     = 60 # Longer TTL for staging
 }

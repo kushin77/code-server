@@ -82,6 +82,6 @@ output "protected_services" {
 }
 
 output "firewall_rules_summary" {
-  value = "DOCKER-USER chain: Blocks external to internal services + container egress via iptables"
+  value       = "DOCKER-USER chain: Blocks external to internal services + container egress via iptables"
   description = "Summary of firewall rules applied"
 }

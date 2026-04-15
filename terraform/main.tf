@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.7"
-  
+
   # ═══════════════════════════════════════════════════════════════════════
   # REMOTE STATE BACKEND — MinIO S3-compatible (Issue #417)
   # ═══════════════════════════════════════════════════════════════════════
@@ -20,62 +20,62 @@ terraform {
   # - Team collaboration with state locking
   # - Disaster recovery (state is backed up with database)
   # ═══════════════════════════════════════════════════════════════════════
-  
+
   backend "s3" {
-    bucket         = "code-server-tfstate"
-    key            = "prod/terraform.tfstate"
-    region         = "us-east-1"
-    endpoint       = "http://minio:9000"
-    
+    bucket   = "code-server-tfstate"
+    key      = "prod/terraform.tfstate"
+    region   = "us-east-1"
+    endpoint = "http://minio:9000"
+
     skip_credentials_validation = true
     skip_metadata_api_check     = true
     skip_requesting_account_id  = true
     skip_region_validation      = true
   }
-  
+
   required_providers {
     # Local file operations
     local = {
       source  = "hashicorp/local"
       version = "~> 2.5"
     }
-    
+
     # Null provider (for resource-less actions)
     null = {
       source  = "hashicorp/null"
       version = "~> 3.2"
     }
-    
+
     # Docker container orchestration
     docker = {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
-    
+
     # Random resource generation (secrets, tokens)
     random = {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
-    
+
     # AWS cloud provider (optional, for hybrid deployments)
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    
+
     # Cloudflare DNS and tunneling
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 4.27"
     }
-    
+
     # GoDaddy DNS provider (on-premises domain management)
     godaddy = {
       source  = "n3integration/godaddy"
       version = "~> 1.9"
     }
-    
+
     # HashiCorp Vault (secrets management)
     vault = {
       source  = "hashicorp/vault"

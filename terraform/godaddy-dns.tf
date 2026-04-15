@@ -153,13 +153,13 @@ output "dns_records" {
   value = {
     domain = var.public_domain
     records = {
-      ide_a            = godaddy_domain_record.ide_a_record.data
-      root_a           = godaddy_domain_record.root_a_record.data
-      caa_issue        = godaddy_domain_record.caa_issue.data
-      caa_issuewild    = godaddy_domain_record.caa_issuewild.data
-      caa_iodef        = godaddy_domain_record.caa_iodef.data
-      spf_record       = godaddy_domain_record.spf_record.data
-      dmarc_record     = godaddy_domain_record.dmarc_record.data
+      ide_a         = godaddy_domain_record.ide_a_record.data
+      root_a        = godaddy_domain_record.root_a_record.data
+      caa_issue     = godaddy_domain_record.caa_issue.data
+      caa_issuewild = godaddy_domain_record.caa_issuewild.data
+      caa_iodef     = godaddy_domain_record.caa_iodef.data
+      spf_record    = godaddy_domain_record.spf_record.data
+      dmarc_record  = godaddy_domain_record.dmarc_record.data
     }
   }
 }

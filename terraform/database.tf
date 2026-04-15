@@ -8,29 +8,29 @@
 
 variable "postgres_replication_config" {
   type = object({
-    primary_ip       = string  # 192.168.168.31
-    replica_ips      = list(string)  # [192.168.168.32, 192.168.168.33, ...]
-    replication_user = string
-    replication_password = string  # From .env, never hardcoded
-    port             = number
-    max_wal_senders  = number  # Concurrent replicas
+    primary_ip            = string       # 192.168.168.31
+    replica_ips           = list(string) # [192.168.168.32, 192.168.168.33, ...]
+    replication_user      = string
+    replication_password  = string # From .env, never hardcoded
+    port                  = number
+    max_wal_senders       = number # Concurrent replicas
     max_replication_slots = number
-    wal_level        = string  # logical, replica
-    synchronous_commit = string  # remote_apply, on, off
+    wal_level             = string # logical, replica
+    synchronous_commit    = string # remote_apply, on, off
   })
-  
+
   description = "PostgreSQL replication configuration"
-  
+
   default = {
-    primary_ip           = "192.168.168.31"
-    replica_ips          = ["192.168.168.32", "192.168.168.33", "192.168.168.34"]
-    replication_user     = "replicator"
-    replication_password = "CHANGEME"  # MUST be overridden in .env
-    port                 = 5432
-    max_wal_senders      = 10
+    primary_ip            = "192.168.168.31"
+    replica_ips           = ["192.168.168.32", "192.168.168.33", "192.168.168.34"]
+    replication_user      = "replicator"
+    replication_password  = "CHANGEME" # MUST be overridden in .env
+    port                  = 5432
+    max_wal_senders       = 10
     max_replication_slots = 10
-    wal_level            = "replica"
-    synchronous_commit   = "remote_apply"  # Synchronous for zero data loss
+    wal_level             = "replica"
+    synchronous_commit    = "remote_apply" # Synchronous for zero data loss
   }
 }
 
@@ -38,12 +38,12 @@ variable "postgres_backup_config" {
   type = object({
     backup_frequency_hours = number
     retention_days         = number
-    compression            = string  # gzip, bzip2
-    backup_location        = string  # NAS path
+    compression            = string # gzip, bzip2
+    backup_location        = string # NAS path
   })
-  
+
   description = "PostgreSQL backup configuration"
-  
+
   default = {
     backup_frequency_hours = 4
     retention_days         = 30
@@ -60,18 +60,18 @@ output "replication_topology" {
   description = "PostgreSQL replication topology"
   value = {
     primary_server = {
-      ip_address = var.postgres_replication_config.primary_ip
-      role       = "primary"
+      ip_address   = var.postgres_replication_config.primary_ip
+      role         = "primary"
       write_access = true
       read_access  = true
     }
     replica_servers = [
       for ip in var.postgres_replication_config.replica_ips :
       {
-        ip_address   = ip
-        role         = "hot-standby"
-        write_access = false
-        read_access  = true
+        ip_address        = ip
+        role              = "hot-standby"
+        write_access      = false
+        read_access       = true
         promotion_capable = true
       }
     ]
@@ -81,13 +81,13 @@ output "replication_topology" {
 output "replication_parameters" {
   description = "PostgreSQL replication parameters to configure"
   value = {
-    port                    = var.postgres_replication_config.port
-    wal_level               = var.postgres_replication_config.wal_level
-    max_wal_senders         = var.postgres_replication_config.max_wal_senders
-    max_replication_slots   = var.postgres_replication_config.max_replication_slots
-    synchronous_commit      = var.postgres_replication_config.synchronous_commit
-    replication_user        = var.postgres_replication_config.replication_user
-    heartbeat_interval_s    = 10
+    port                     = var.postgres_replication_config.port
+    wal_level                = var.postgres_replication_config.wal_level
+    max_wal_senders          = var.postgres_replication_config.max_wal_senders
+    max_replication_slots    = var.postgres_replication_config.max_replication_slots
+    synchronous_commit       = var.postgres_replication_config.synchronous_commit
+    replication_user         = var.postgres_replication_config.replication_user
+    heartbeat_interval_s     = 10
     recovery_target_timeline = "latest"
   }
 }
@@ -95,14 +95,14 @@ output "replication_parameters" {
 output "backup_strategy" {
   description = "Backup and recovery strategy"
   value = {
-    frequency      = "${var.postgres_backup_config.backup_frequency_hours}h"
-    retention      = "${var.postgres_backup_config.retention_days} days"
-    compression    = var.postgres_backup_config.compression
-    location       = var.postgres_backup_config.backup_location
-    rpo_target     = "0 (zero data loss)"
-    rto_target     = "5 minutes"
-    backup_type    = "Full + WAL streaming"
-    verification   = "Quarterly restore drills"
+    frequency    = "${var.postgres_backup_config.backup_frequency_hours}h"
+    retention    = "${var.postgres_backup_config.retention_days} days"
+    compression  = var.postgres_backup_config.compression
+    location     = var.postgres_backup_config.backup_location
+    rpo_target   = "0 (zero data loss)"
+    rto_target   = "5 minutes"
+    backup_type  = "Full + WAL streaming"
+    verification = "Quarterly restore drills"
   }
 }
 

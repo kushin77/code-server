@@ -41,16 +41,16 @@ regions = [
   }
 ]
 
-nas_primary_ip  = "192.168.168.56"
-nas_replica_ip  = "192.168.168.57"
+nas_primary_ip   = "192.168.168.56"
+nas_replica_ip   = "192.168.168.57"
 load_balancer_ip = "192.168.168.100"
 
 dns_servers = ["192.168.168.10", "192.168.168.11"]
 
 slo_targets = {
-  availability     = 99.99
-  p99_latency_ms   = 100
-  error_rate       = 0.1
+  availability   = 99.99
+  p99_latency_ms = 100
+  error_rate     = 0.1
 }
 
 # Network configuration
@@ -69,15 +69,15 @@ compute_specs = {
 
 # Database replication (production: strict)
 postgres_replication_config = {
-  primary_ip             = "192.168.168.31"
-  replica_ips            = ["192.168.168.32", "192.168.168.33", "192.168.168.34"]
-  replication_user       = "replicator"
-  replication_password   = "OVERRIDE_IN_ENV_VARS"  # NEVER hardcode in tfvars
-  port                   = 5432
-  max_wal_senders        = 10
-  max_replication_slots  = 10
-  wal_level              = "replica"
-  synchronous_commit     = "remote_apply"  # Synchronous for zero data loss
+  primary_ip            = "192.168.168.31"
+  replica_ips           = ["192.168.168.32", "192.168.168.33", "192.168.168.34"]
+  replication_user      = "replicator"
+  replication_password  = "OVERRIDE_IN_ENV_VARS" # NEVER hardcode in tfvars
+  port                  = 5432
+  max_wal_senders       = 10
+  max_replication_slots = 10
+  wal_level             = "replica"
+  synchronous_commit    = "remote_apply" # Synchronous for zero data loss
 }
 
 # Database backup (production: aggressive retention)
@@ -95,5 +95,5 @@ dns_config = {
   health_check_port       = 9090
   health_check_interval_s = 10
   failover_threshold      = 3
-  ttl                     = 10  # Short TTL for quick failover
+  ttl                     = 10 # Short TTL for quick failover
 }

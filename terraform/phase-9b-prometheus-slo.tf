@@ -340,14 +340,14 @@ output "grafana_slo_dashboard_url" {
 
 output "slo_targets" {
   value = {
-    code_server_availability = "99.95%"
-    code_server_latency_p99_ms = 100
-    code_server_error_rate = "< 0.1%"
-    postgres_availability = "99.99%"
-    postgres_replication_lag_seconds = 30
-    redis_availability = "99.99%"
-    haproxy_availability = "99.99%"
-    cpu_saturation_threshold_percent = 85
+    code_server_availability            = "99.95%"
+    code_server_latency_p99_ms          = 100
+    code_server_error_rate              = "< 0.1%"
+    postgres_availability               = "99.99%"
+    postgres_replication_lag_seconds    = 30
+    redis_availability                  = "99.99%"
+    haproxy_availability                = "99.99%"
+    cpu_saturation_threshold_percent    = 85
     memory_saturation_threshold_percent = 85
   }
 }
@@ -357,6 +357,6 @@ output "prometheus_retention" {
     retention_days = 15
     chunk_encoding = "snappy"
     tsdb_directory = "/prometheus/data"
-    wal_directory = "/prometheus/wal"
+    wal_directory  = "/prometheus/wal"
   }
 }

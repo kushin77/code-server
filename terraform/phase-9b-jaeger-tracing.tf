@@ -318,8 +318,8 @@ output "jaeger_agent_endpoint" {
 
 output "jaeger_slo_targets" {
   value = {
-    trace_capture_rate = "99.9%"
+    trace_capture_rate        = "99.9%"
     span_query_latency_p99_ms = 100
-    collector_availability = "99.99%"
+    collector_availability    = "99.99%"
   }
 }

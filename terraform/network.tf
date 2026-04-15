@@ -8,13 +8,13 @@
 
 variable "network_config" {
   type = object({
-    base_cidr          = string  # 192.168.168.0/24
-    public_subnet_mask = string  # /25 for each region
+    base_cidr           = string # 192.168.168.0/24
+    public_subnet_mask  = string # /25 for each region
     private_subnet_mask = string # /26 for each region
   })
-  
+
   description = "Network configuration"
-  
+
   default = {
     base_cidr           = "192.168.168.0/24"
     public_subnet_mask  = "/25"
@@ -29,9 +29,9 @@ variable "regional_subnets" {
     private_subnet = string
     gateway_ip     = string
   }))
-  
+
   description = "Subnet allocation per region"
-  
+
   default = {
     region1 = {
       public_subnet  = "192.168.168.0/26"
@@ -65,14 +65,14 @@ variable "regional_subnets" {
 variable "firewall_rules" {
   type = list(object({
     name      = string
-    direction = string  # inbound, outbound
-    protocol  = string  # tcp, udp, all
+    direction = string # inbound, outbound
+    protocol  = string # tcp, udp, all
     port      = number
-    source    = string  # CIDR or security group
+    source    = string # CIDR or security group
   }))
-  
+
   description = "Network firewall rules"
-  
+
   default = [
     {
       name      = "allow-ssh-local"
@@ -140,183 +140,183 @@ variable "firewall_rules" {
 variable "security_group_rules" {
   type = map(object({
     description = string
-    ingress     = list(object({
-      protocol = string
-      from_port = number
-      to_port = number
+    ingress = list(object({
+      protocol    = string
+      from_port   = number
+      to_port     = number
       cidr_blocks = list(string)
       description = string
     }))
     egress = list(object({
-      protocol = string
-      from_port = number
-      to_port = number
+      protocol    = string
+      from_port   = number
+      to_port     = number
       cidr_blocks = list(string)
       description = string
     }))
   }))
-  
+
   description = "Security groups for each network zone"
-  
+
   default = {
     primary_production = {
       description = "Primary production host (192.168.168.31) - All services"
       ingress = [
         {
-          protocol = "tcp"
-          from_port = 22
-          to_port = 22
+          protocol    = "tcp"
+          from_port   = 22
+          to_port     = 22
           cidr_blocks = ["192.168.168.0/24"]
           description = "SSH management"
         },
         {
-          protocol = "tcp"
-          from_port = 8080
-          to_port = 8080
+          protocol    = "tcp"
+          from_port   = 8080
+          to_port     = 8080
           cidr_blocks = ["192.168.168.0/24"]
           description = "Code-Server IDE"
         },
         {
-          protocol = "tcp"
-          from_port = 5432
-          to_port = 5432
+          protocol    = "tcp"
+          from_port   = 5432
+          to_port     = 5432
           cidr_blocks = ["192.168.168.42/32", "192.168.168.0/24"]
           description = "PostgreSQL database"
         },
         {
-          protocol = "tcp"
-          from_port = 6379
-          to_port = 6379
+          protocol    = "tcp"
+          from_port   = 6379
+          to_port     = 6379
           cidr_blocks = ["192.168.168.0/24"]
           description = "Redis cache"
         },
         {
-          protocol = "tcp"
-          from_port = 3000
-          to_port = 3000
+          protocol    = "tcp"
+          from_port   = 3000
+          to_port     = 3000
           cidr_blocks = ["192.168.168.0/24"]
           description = "Grafana monitoring"
         },
         {
-          protocol = "tcp"
-          from_port = 9090
-          to_port = 9090
+          protocol    = "tcp"
+          from_port   = 9090
+          to_port     = 9090
           cidr_blocks = ["192.168.168.0/24"]
           description = "Prometheus metrics"
         },
         {
-          protocol = "tcp"
-          from_port = 9093
-          to_port = 9093
+          protocol    = "tcp"
+          from_port   = 9093
+          to_port     = 9093
           cidr_blocks = ["192.168.168.0/24"]
           description = "AlertManager"
         },
         {
-          protocol = "tcp"
-          from_port = 16686
-          to_port = 16686
+          protocol    = "tcp"
+          from_port   = 16686
+          to_port     = 16686
           cidr_blocks = ["192.168.168.0/24"]
           description = "Jaeger tracing"
         }
       ]
       egress = [
         {
-          protocol = "-1"
-          from_port = 0
-          to_port = 0
+          protocol    = "-1"
+          from_port   = 0
+          to_port     = 0
           cidr_blocks = ["0.0.0.0/0"]
           description = "Allow all outbound"
         }
       ]
     }
-    
+
     replica_standby = {
       description = "Replica standby host (192.168.168.42) - Replication only"
       ingress = [
         {
-          protocol = "tcp"
-          from_port = 22
-          to_port = 22
+          protocol    = "tcp"
+          from_port   = 22
+          to_port     = 22
           cidr_blocks = ["192.168.168.0/24"]
           description = "SSH management"
         },
         {
-          protocol = "tcp"
-          from_port = 5432
-          to_port = 5432
+          protocol    = "tcp"
+          from_port   = 5432
+          to_port     = 5432
           cidr_blocks = ["192.168.168.31/32"]
           description = "PostgreSQL replication from primary"
         },
         {
-          protocol = "tcp"
-          from_port = 9090
-          to_port = 9090
+          protocol    = "tcp"
+          from_port   = 9090
+          to_port     = 9090
           cidr_blocks = ["192.168.168.0/24"]
           description = "Health check"
         }
       ]
       egress = [
         {
-          protocol = "tcp"
-          from_port = 5432
-          to_port = 5432
+          protocol    = "tcp"
+          from_port   = 5432
+          to_port     = 5432
           cidr_blocks = ["192.168.168.31/32"]
           description = "PostgreSQL replication egress to primary"
         },
         {
-          protocol = "tcp"
-          from_port = 53
-          to_port = 53
+          protocol    = "tcp"
+          from_port   = 53
+          to_port     = 53
           cidr_blocks = ["192.168.168.0/24"]
           description = "DNS resolution"
         }
       ]
     }
-    
+
     storage_nas = {
       description = "NAS storage tier (192.168.168.56) - Storage only"
       ingress = [
         {
-          protocol = "tcp"
-          from_port = 22
-          to_port = 22
+          protocol    = "tcp"
+          from_port   = 22
+          to_port     = 22
           cidr_blocks = ["192.168.168.0/24"]
           description = "SSH management"
         },
         {
-          protocol = "tcp"
-          from_port = 111
-          to_port = 111
+          protocol    = "tcp"
+          from_port   = 111
+          to_port     = 111
           cidr_blocks = ["192.168.168.31/32", "192.168.168.42/32"]
           description = "NFS portmapper"
         },
         {
-          protocol = "tcp"
-          from_port = 2049
-          to_port = 2049
+          protocol    = "tcp"
+          from_port   = 2049
+          to_port     = 2049
           cidr_blocks = ["192.168.168.31/32", "192.168.168.42/32"]
           description = "NFS server"
         },
         {
-          protocol = "udp"
-          from_port = 111
-          to_port = 111
+          protocol    = "udp"
+          from_port   = 111
+          to_port     = 111
           cidr_blocks = ["192.168.168.31/32", "192.168.168.42/32"]
           description = "NFS portmapper (UDP)"
         },
         {
-          protocol = "udp"
-          from_port = 2049
-          to_port = 2049
+          protocol    = "udp"
+          from_port   = 2049
+          to_port     = 2049
           cidr_blocks = ["192.168.168.31/32", "192.168.168.42/32"]
           description = "NFS server (UDP)"
         }
       ]
       egress = [
         {
-          protocol = "-1"
-          from_port = 0
-          to_port = 0
+          protocol    = "-1"
+          from_port   = 0
+          to_port     = 0
           cidr_blocks = ["0.0.0.0/0"]
           description = "Allow all outbound"
         }
@@ -332,16 +332,16 @@ variable "security_group_rules" {
 variable "network_acl_rules" {
   type = list(object({
     rule_number = number
-    action      = string  # allow, deny
-    protocol    = string  # tcp, udp, icmp, -1 (all)
+    action      = string # allow, deny
+    protocol    = string # tcp, udp, icmp, -1 (all)
     from_port   = number
     to_port     = number
     cidr_block  = string
     egress      = bool
   }))
-  
+
   description = "Network ACL rules for on-prem segmentation"
-  
+
   default = [
     # Inbound rules (production tier)
     {
@@ -411,14 +411,14 @@ output "network_topology" {
 output "connectivity_requirements" {
   description = "Network connectivity requirements"
   value = {
-    internet_gateway    = "192.168.168.1"
-    dns_servers         = ["192.168.168.10", "192.168.168.11"]
-    load_balancer       = "192.168.168.100"
-    ntp_servers         = ["192.168.168.12"]
-    connectivity_type   = "Direct local network (on-premises)"
-    replication_port    = 5432
-    health_check_port   = 9090
-    management_port     = 22
+    internet_gateway  = "192.168.168.1"
+    dns_servers       = ["192.168.168.10", "192.168.168.11"]
+    load_balancer     = "192.168.168.100"
+    ntp_servers       = ["192.168.168.12"]
+    connectivity_type = "Direct local network (on-premises)"
+    replication_port  = 5432
+    health_check_port = 9090
+    management_port   = 22
   }
 }
 

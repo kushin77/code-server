@@ -8,36 +8,36 @@
 
 variable "dns_config" {
   type = object({
-    base_domain         = string  # code-server.internal
-    load_balancer_ip    = string  # 192.168.168.100
-    health_check_port   = number  # 9090
+    base_domain             = string # code-server.internal
+    load_balancer_ip        = string # 192.168.168.100
+    health_check_port       = number # 9090
     health_check_interval_s = number
-    failover_threshold  = number  # consecutive failures before failover
-    ttl                 = number  # seconds
+    failover_threshold      = number # consecutive failures before failover
+    ttl                     = number # seconds
   })
-  
+
   description = "DNS and failover configuration"
-  
+
   default = {
-    base_domain          = "code-server.internal"
-    load_balancer_ip     = "192.168.168.100"
-    health_check_port    = 9090
+    base_domain             = "code-server.internal"
+    load_balancer_ip        = "192.168.168.100"
+    health_check_port       = 9090
     health_check_interval_s = 10
-    failover_threshold   = 3  # 3 consecutive failures = failover
-    ttl                  = 10  # Short TTL for quick propagation
+    failover_threshold      = 3  # 3 consecutive failures = failover
+    ttl                     = 10 # Short TTL for quick propagation
   }
 }
 
 variable "dns_entries" {
   type = map(object({
-    hostname  = string
+    hostname   = string
     ip_address = string
-    ttl       = number
-    type      = string  # A, CNAME, SRV
+    ttl        = number
+    type       = string # A, CNAME, SRV
   }))
-  
+
   description = "DNS entries for all regions"
-  
+
   default = {
     primary = {
       hostname   = "code-server.internal"
@@ -92,19 +92,19 @@ variable "dns_entries" {
 
 variable "health_checks" {
   type = map(object({
-    name            = string
-    target_ip       = string
-    port            = number
-    protocol        = string  # http, tcp, udp
-    path            = string  # for HTTP
-    interval_s      = number
-    timeout_s       = number
-    healthy_threshold = number
+    name                = string
+    target_ip           = string
+    port                = number
+    protocol            = string # http, tcp, udp
+    path                = string # for HTTP
+    interval_s          = number
+    timeout_s           = number
+    healthy_threshold   = number
     unhealthy_threshold = number
   }))
-  
+
   description = "Health check configuration"
-  
+
   default = {
     region1_http = {
       name                = "region1-http-health"
@@ -172,7 +172,7 @@ output "failover_configuration" {
     detection_interval_s  = var.dns_config.health_check_interval_s
     failover_threshold    = var.dns_config.failover_threshold
     failover_time_s       = var.dns_config.health_check_interval_s * var.dns_config.failover_threshold
-    total_failover_time_s = (var.dns_config.health_check_interval_s * var.dns_config.failover_threshold) + 10  # +10s for DNS propagation
+    total_failover_time_s = (var.dns_config.health_check_interval_s * var.dns_config.failover_threshold) + 10 # +10s for DNS propagation
   }
 }
 

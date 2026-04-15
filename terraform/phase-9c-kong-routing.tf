@@ -347,10 +347,10 @@ output "kong_plugins_enabled" {
 
 output "kong_rate_limiting_tiers" {
   value = {
-    public = "100/sec, 1K/min, 10K/hour"
+    public        = "100/sec, 1K/min, 10K/hour"
     authenticated = "500/sec, 5K/min, 50K/hour"
-    internal = "10K/sec, 100K/min, 1M/hour"
-    monitoring = "50/sec, 500/min, 5K/hour"
+    internal      = "10K/sec, 100K/min, 1M/hour"
+    monitoring    = "50/sec, 500/min, 5K/hour"
   }
 }
 

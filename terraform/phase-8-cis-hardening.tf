@@ -8,19 +8,19 @@
 
 locals {
   cis_hardening_script = "${path.module}/../scripts/deploy-phase-8-cis-hardening.sh"
-  
+
   # CIS control objectives
   controls = {
-    filesystem    = "1.1"  # Mount options (nodev, nosuid, noexec)
-    services      = "2.1"  # Disable unnecessary services
-    network       = "3.1"  # Network parameter hardening
-    ssh           = "5.1"  # SSH hardening
-    auditd        = "5.2.1" # Audit daemon configuration
-    logging       = "5.2.4" # Rsyslog configuration
-    pam           = "5.3"  # PAM hardening
-    aide          = "6.1"  # File integrity monitoring
-    upgrades      = "6.2"  # Automatic security updates
-    fail2ban      = "6.3"  # Intrusion prevention
+    filesystem = "1.1"   # Mount options (nodev, nosuid, noexec)
+    services   = "2.1"   # Disable unnecessary services
+    network    = "3.1"   # Network parameter hardening
+    ssh        = "5.1"   # SSH hardening
+    auditd     = "5.2.1" # Audit daemon configuration
+    logging    = "5.2.4" # Rsyslog configuration
+    pam        = "5.3"   # PAM hardening
+    aide       = "6.1"   # File integrity monitoring
+    upgrades   = "6.2"   # Automatic security updates
+    fail2ban   = "6.3"   # Intrusion prevention
   }
 }
 
@@ -117,12 +117,12 @@ output "cis_hardening_status" {
     deployed      = true
     controls      = local.controls
     deployment_id = try(null_resource.cis_hardening_primary[0].id, "not-deployed")
-  } : {
+    } : {
     deployed = false
   }
 }
 
 output "cis_controls_matrix" {
   description = "CIS control objectives addressed by this deployment"
-  value = var.deploy_cis_hardening ? local.controls : {}
+  value       = var.deploy_cis_hardening ? local.controls : {}
 }

@@ -342,7 +342,7 @@ variable "vault_postgres_password" {
   description = "PostgreSQL password for Vault storage backend"
   type        = string
   sensitive   = true
-  default     = ""  // Will use environment variable VAULT_POSTGRES_PASSWORD if not set
+  default     = "" // Will use environment variable VAULT_POSTGRES_PASSWORD if not set
 }
 
 variable "vault_postgres_db" {
@@ -380,7 +380,7 @@ variable "vault_tls_key_pem" {
 variable "vault_auto_unseal_enabled" {
   description = "Enable auto-unseal for Vault (requires KMS or HTTPS seal for on-prem)"
   type        = bool
-  default     = false  // Set to true once KMS or HTTPS seal configured
+  default     = false // Set to true once KMS or HTTPS seal configured
 }
 
 variable "vault_ha_enabled" {
@@ -402,7 +402,7 @@ variable "vault_log_level" {
 variable "vault_max_lease_ttl" {
   description = "Maximum lease duration (in hours) for Vault tokens"
   type        = number
-  default     = 768  // 32 days
+  default     = 768 // 32 days
   validation {
     condition     = var.vault_max_lease_ttl > 0
     error_message = "vault_max_lease_ttl must be greater than 0."
@@ -412,7 +412,7 @@ variable "vault_max_lease_ttl" {
 variable "vault_default_lease_ttl" {
   description = "Default lease duration (in hours) for Vault tokens"
   type        = number
-  default     = 24  // 1 day
+  default     = 24 // 1 day
   validation {
     condition     = var.vault_default_lease_ttl > 0 && var.vault_default_lease_ttl <= var.vault_max_lease_ttl
     error_message = "vault_default_lease_ttl must be 0 < ttl <= max_lease_ttl."

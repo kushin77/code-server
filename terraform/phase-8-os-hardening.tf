@@ -41,12 +41,12 @@ resource "local_file" "cis_hardening_script" {
 resource "local_file" "fail2ban_config" {
   filename = "${path.module}/../config/fail2ban-local.conf"
   content = templatefile("${path.module}/../templates/fail2ban-local.conf.tpl", {
-    ssh_port        = 22
-    http_port       = 80
-    https_port      = 443
-    max_retry       = 5
-    find_time       = 600
-    ban_time        = 3600
+    ssh_port         = 22
+    http_port        = 80
+    https_port       = 443
+    max_retry        = 5
+    find_time        = 600
+    ban_time         = 3600
     code_server_port = 8080
   })
 }
@@ -55,7 +55,7 @@ resource "local_file" "fail2ban_config" {
 resource "local_file" "auditd_rules" {
   filename = "${path.module}/../config/audit.rules"
   content = templatefile("${path.module}/../templates/audit.rules.tpl", {
-    watch_dirs = ["/etc", "/home", "/root", "/opt/code-server"]
+    watch_dirs  = ["/etc", "/home", "/root", "/opt/code-server"]
     watch_files = ["/etc/sudoers", "/etc/shadow", "/etc/passwd"]
   })
 }
@@ -81,12 +81,12 @@ resource "local_file" "aide_config" {
 
 resource "local_file" "deploy_os_hardening" {
   filename = "${path.module}/../scripts/deploy-os-hardening.sh"
-  content  = templatefile("${path.module}/../templates/deploy-os-hardening.sh.tpl", {
-    primary_host     = var.primary_host_ip
-    enable_cis       = var.enable_cis_hardening
-    enable_fail2ban  = var.enable_fail2ban
-    enable_auditd    = var.enable_auditd
-    enable_aide      = var.enable_aide
+  content = templatefile("${path.module}/../templates/deploy-os-hardening.sh.tpl", {
+    primary_host    = var.primary_host_ip
+    enable_cis      = var.enable_cis_hardening
+    enable_fail2ban = var.enable_fail2ban
+    enable_auditd   = var.enable_auditd
+    enable_aide     = var.enable_aide
   })
 }
 

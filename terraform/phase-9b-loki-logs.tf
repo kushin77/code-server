@@ -335,9 +335,9 @@ output "promtail_metrics_endpoint" {
 
 output "loki_slo_targets" {
   value = {
-    log_ingestion_success = "99.9%"
-    query_latency_p99_ms = 500
-    data_retention_days = 7
+    log_ingestion_success  = "99.9%"
+    query_latency_p99_ms   = 500
+    data_retention_days    = 7
     ingest_rate_mb_per_sec = 512
   }
 }

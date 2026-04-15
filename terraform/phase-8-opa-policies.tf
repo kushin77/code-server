@@ -21,34 +21,34 @@ variable "conftest_version" {
 resource "local_file" "setup_opa" {
   filename = "${path.module}/../scripts/setup-opa-policies.sh"
   content = templatefile("${path.module}/../templates/setup-opa-policies.sh.tpl", {
-    opa_version     = var.opa_version
+    opa_version      = var.opa_version
     conftest_version = var.conftest_version
   })
 }
 
 resource "local_file" "security_policies" {
   filename = "${path.module}/../opa/policies/security.rego"
-  content = file("${path.module}/../templates/opa-security-policies.rego")
+  content  = file("${path.module}/../templates/opa-security-policies.rego")
 }
 
 resource "local_file" "compliance_policies" {
   filename = "${path.module}/../opa/policies/compliance.rego"
-  content = file("${path.module}/../templates/opa-compliance-policies.rego")
+  content  = file("${path.module}/../templates/opa-compliance-policies.rego")
 }
 
 resource "local_file" "performance_policies" {
   filename = "${path.module}/../opa/policies/performance.rego"
-  content = file("${path.module}/../templates/opa-performance-policies.rego")
+  content  = file("${path.module}/../templates/opa-performance-policies.rego")
 }
 
 resource "local_file" "best_practice_policies" {
   filename = "${path.module}/../opa/policies/best-practices.rego"
-  content = file("${path.module}/../templates/opa-best-practices-policies.rego")
+  content  = file("${path.module}/../templates/opa-best-practices-policies.rego")
 }
 
 resource "local_file" "policy_test_suite" {
   filename = "${path.module}/../opa/tests/policies_test.rego"
-  content = file("${path.module}/../templates/opa-policy-tests.rego")
+  content  = file("${path.module}/../templates/opa-policy-tests.rego")
 }
 
 resource "local_file" "cicd_policy_check" {
@@ -60,7 +60,7 @@ resource "local_file" "cicd_policy_check" {
 
 output "opa_policy_config" {
   value = {
-    policy_engine = "OPA ${var.opa_version}"
+    policy_engine     = "OPA ${var.opa_version}"
     testing_framework = "Conftest ${var.conftest_version}"
     policy_library = {
       security_policies = {
@@ -121,10 +121,10 @@ output "opa_policy_config" {
       }
     }
     enforcement = {
-      deny_policies    = "Block deployment (fail hard)"
-      warn_policies    = "Log warning (allow with caution)"
-      info_policies    = "Informational (for auditing)"
-      severity_levels  = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+      deny_policies   = "Block deployment (fail hard)"
+      warn_policies   = "Log warning (allow with caution)"
+      info_policies   = "Informational (for auditing)"
+      severity_levels = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
     }
     slo_targets = {
       policy_evaluation = "5s per resource"

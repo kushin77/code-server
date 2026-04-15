@@ -87,11 +87,11 @@ output "hardening_status" {
 
 output "hardening_components" {
   value = {
-    fail2ban          = "Automated IP banning for SSH and OAuth brute-force"
-    auditd            = "Privileged operation audit logging"
-    aide              = "File integrity monitoring with daily checks"
-    kernel_hardening  = "ASLR, SYN cookies, IP spoofing protection, etc."
-    ssh_hardening     = "Root login disabled, strong ciphers, key-only auth"
+    fail2ban         = "Automated IP banning for SSH and OAuth brute-force"
+    auditd           = "Privileged operation audit logging"
+    aide             = "File integrity monitoring with daily checks"
+    kernel_hardening = "ASLR, SYN cookies, IP spoofing protection, etc."
+    ssh_hardening    = "Root login disabled, strong ciphers, key-only auth"
   }
   description = "Hardening components applied"
 }

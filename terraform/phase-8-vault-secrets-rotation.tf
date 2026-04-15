@@ -11,7 +11,7 @@ locals {
   vault_postgres_role_ttl    = "1h"
   vault_postgres_max_ttl     = "24h"
   credential_rotation_script = "${path.module}/../scripts/setup-vault-secrets-rotation.sh"
-  
+
   postgres_config = {
     host     = var.postgres_host
     port     = var.postgres_port
@@ -23,19 +23,19 @@ locals {
 # ─── Data source: Vault provider setup ────────────────────────────────────
 
 provider "vault" {
-  address   = local.vault_addr
-  token     = var.vault_token
-  namespace = var.vault_namespace
+  address         = local.vault_addr
+  token           = var.vault_token
+  namespace       = var.vault_namespace
   skip_tls_verify = var.vault_skip_tls_verify
 }
 
 # ─── Configure Vault PostgreSQL database secret engine ────────────────────
 
 resource "vault_database_secret_backend_connection" "postgres" {
-  count           = var.enable_vault_secrets ? 1 : 0
-  backend         = "database"
-  name            = "postgresql"
-  plugin_name     = "postgresql-database-plugin"
+  count             = var.enable_vault_secrets ? 1 : 0
+  backend           = "database"
+  name              = "postgresql"
+  plugin_name       = "postgresql-database-plugin"
   verify_connection = true
 
   allowed_roles = ["code-server", "readonly"]
@@ -226,13 +226,13 @@ variable "postgres_admin_password_b64" {
 output "vault_secrets_rotation_status" {
   description = "Vault PostgreSQL secrets rotation status"
   value = var.enable_vault_secrets ? {
-    enabled               = true
-    postgres_role_ttl    = local.vault_postgres_role_ttl
-    postgres_max_ttl     = local.vault_postgres_max_ttl
-    rotation_interval    = "45 minutes"
-    roles_created        = ["code-server", "readonly"]
+    enabled                = true
+    postgres_role_ttl      = local.vault_postgres_role_ttl
+    postgres_max_ttl       = local.vault_postgres_max_ttl
+    rotation_interval      = "45 minutes"
+    roles_created          = ["code-server", "readonly"]
     credential_rotation_id = try(null_resource.vault_rotation_setup[0].id, "not-deployed")
-  } : {
+    } : {
     enabled = false
   }
 }

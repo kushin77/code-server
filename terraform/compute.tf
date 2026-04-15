@@ -8,13 +8,13 @@
 
 variable "compute_specs" {
   type = object({
-    vcpu   = number
-    memory_gb = number
+    vcpu       = number
+    memory_gb  = number
     storage_gb = number
   })
-  
+
   description = "Compute specifications per region"
-  
+
   default = {
     vcpu       = 4
     memory_gb  = 16
@@ -26,12 +26,12 @@ variable "region_roles" {
   type = map(object({
     name       = string
     ip_address = string
-    role       = string  # primary, failover, standby
+    role       = string # primary, failover, standby
     enabled    = bool
   }))
-  
+
   description = "Region role definitions"
-  
+
   default = {
     region1 = {
       name       = "region1-primary"
@@ -68,9 +68,9 @@ variable "region_roles" {
 
 variable "container_images" {
   type = map(string)
-  
+
   description = "Container images for services"
-  
+
   default = {
     postgres    = "postgres:15.6-alpine"
     redis       = "redis:7.0-alpine"
@@ -90,16 +90,16 @@ output "compute_instances" {
   value = {
     for region, config in var.region_roles :
     region => {
-      name          = config.name
-      ip_address    = config.ip_address
-      role          = config.role
-      enabled       = config.enabled
-      vcpu          = var.compute_specs.vcpu
-      memory_gb     = var.compute_specs.memory_gb
-      storage_gb    = var.compute_specs.storage_gb
-      api_endpoint  = "http://${config.ip_address}:8080"
-      ssh_endpoint  = "ssh://root@${config.ip_address}:22"
-      health_check  = "http://${config.ip_address}:9090/health"
+      name         = config.name
+      ip_address   = config.ip_address
+      role         = config.role
+      enabled      = config.enabled
+      vcpu         = var.compute_specs.vcpu
+      memory_gb    = var.compute_specs.memory_gb
+      storage_gb   = var.compute_specs.storage_gb
+      api_endpoint = "http://${config.ip_address}:8080"
+      ssh_endpoint = "ssh://root@${config.ip_address}:22"
+      health_check = "http://${config.ip_address}:9090/health"
     }
   }
 }

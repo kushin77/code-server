@@ -89,7 +89,7 @@ output "supply_chain_security_config" {
       ]
     }
     vulnerability_scanning = {
-      tools    = ["grype", "trivy"]
+      tools = ["grype", "trivy"]
       versions = {
         grype = var.grype_version
         trivy = var.trivy_version
@@ -105,11 +105,11 @@ output "supply_chain_security_config" {
       verify_before      = "deployment"
     }
     slo_targets = {
-      sbom_generation     = "30s per image"
-      vulnerability_scan  = "120s per image"
-      signature_creation  = "10s per image"
-      signature_verify    = "5s per image"
-      approval_deadline   = "1h from scan"
+      sbom_generation    = "30s per image"
+      vulnerability_scan = "120s per image"
+      signature_creation = "10s per image"
+      signature_verify   = "5s per image"
+      approval_deadline  = "1h from scan"
     }
   }
 }

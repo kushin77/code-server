@@ -8,13 +8,13 @@
 
 locals {
   egress_script = "${path.module}/../scripts/configure-egress-filtering.sh"
-  
+
   # Egress allow list
   allowed_services = {
-    dns    = { protocol = "UDP/TCP", port = 53, destination = "public-resolvers" }
-    https  = { protocol = "TCP", port = 443, destination = "any" }
-    ntp    = { protocol = "UDP", port = 123, destination = "time-servers" }
-    http   = { protocol = "TCP", port = 80, destination = "ubuntu-mirrors" }
+    dns      = { protocol = "UDP/TCP", port = 53, destination = "public-resolvers" }
+    https    = { protocol = "TCP", port = 443, destination = "any" }
+    ntp      = { protocol = "UDP", port = 123, destination = "time-servers" }
+    http     = { protocol = "TCP", port = 80, destination = "ubuntu-mirrors" }
     internal = { protocol = "all", destination = "192.168.168.0/24" }
   }
 }
@@ -102,11 +102,11 @@ variable "allow_http_mirrors" {
 output "egress_filtering_status" {
   description = "Egress filtering deployment status"
   value = var.enable_egress_filtering ? {
-    deployed          = true
-    allowed_services  = local.allowed_services
-    internal_subnet   = var.internal_subnet
-    default_policy    = "DENY (explicit allow required)"
-  } : {
+    deployed         = true
+    allowed_services = local.allowed_services
+    internal_subnet  = var.internal_subnet
+    default_policy   = "DENY (explicit allow required)"
+    } : {
     deployed = false
   }
 }
@@ -114,10 +114,10 @@ output "egress_filtering_status" {
 output "docker_daemon_config" {
   description = "Docker daemon iptables configuration"
   value = var.enable_egress_filtering ? {
-    iptables        = true
-    userland_proxy  = false
-    log_driver      = "json-file"
-    storage_driver  = "overlay2"
+    iptables       = true
+    userland_proxy = false
+    log_driver     = "json-file"
+    storage_driver = "overlay2"
   } : {}
 }
 

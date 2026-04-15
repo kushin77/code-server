@@ -112,8 +112,8 @@ EOFCONF
 
 # Replica PostgreSQL Setup Script
 resource "local_file" "postgres_replication_setup" {
-  filename = "${path.module}/../scripts/postgres-replication-setup.sh"
-  content  = <<-EOFSCRIPT
+  filename        = "${path.module}/../scripts/postgres-replication-setup.sh"
+  content         = <<-EOFSCRIPT
 #!/bin/bash
 # PostgreSQL Streaming Replication Setup
 # Configures primary→replica replication for HA
@@ -187,8 +187,8 @@ EOFSCRIPT
 
 # Failover automation script
 resource "local_file" "failover_automation" {
-  filename = "${path.module}/../scripts/failover-automation.sh"
-  content  = <<-EOFSCRIPT
+  filename        = "${path.module}/../scripts/failover-automation.sh"
+  content         = <<-EOFSCRIPT
 #!/bin/bash
 # Automated Failover Handler
 # Triggered by Keepalived when primary becomes unavailable
@@ -229,8 +229,8 @@ EOFSCRIPT
 
 # Health check script
 resource "local_file" "health_check_script" {
-  filename = "${path.module}/../scripts/check-health.sh"
-  content  = <<-EOFSCRIPT
+  filename        = "${path.module}/../scripts/check-health.sh"
+  content         = <<-EOFSCRIPT
 #!/bin/bash
 # Health check for Keepalived
 # Returns 0 if healthy, non-zero if unhealthy

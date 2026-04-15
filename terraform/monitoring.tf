@@ -13,14 +13,14 @@ variable "monitoring_config" {
     alertmanager_webhook      = string
     slo_alert_threshold       = number
   })
-  
+
   description = "Monitoring configuration"
-  
+
   default = {
     prometheus_retention_days = 30
-    grafana_url              = "http://192.168.168.100:3000"
-    alertmanager_webhook    = "http://ops-slack.internal/webhook"
-    slo_alert_threshold     = 99.95  # Alert if <99.95%
+    grafana_url               = "http://192.168.168.100:3000"
+    alertmanager_webhook      = "http://ops-slack.internal/webhook"
+    slo_alert_threshold       = 99.95 # Alert if <99.95%
   }
 }
 
@@ -31,9 +31,9 @@ variable "prometheus_scrape_jobs" {
     interval = string
     timeout  = string
   }))
-  
+
   description = "Prometheus scrape job configuration"
-  
+
   default = [
     {
       job_name = "region1-metrics"
@@ -82,9 +82,9 @@ variable "alert_rules" {
     duration  = string
     severity  = string
   }))
-  
+
   description = "AlertManager alert rules"
-  
+
   default = [
     {
       name      = "HighLatencyP99"
@@ -95,7 +95,7 @@ variable "alert_rules" {
     },
     {
       name      = "HighErrorRate"
-      expr      = "rate(requests_failed[5m]) > 0.001"  # >0.1%
+      expr      = "rate(requests_failed[5m]) > 0.001" # >0.1%
       threshold = 1
       duration  = "2m"
       severity  = "critical"
@@ -177,8 +177,8 @@ output "grafana_dashboards" {
 output "alertmanager_config" {
   description = "AlertManager configuration"
   value = {
-    alert_rules      = length(var.alert_rules)
-    severity_levels  = ["info", "warning", "critical"]
+    alert_rules     = length(var.alert_rules)
+    severity_levels = ["info", "warning", "critical"]
     notification_channels = [
       "Slack webhook (critical alerts)",
       "Email (warning alerts)",
@@ -195,16 +195,16 @@ output "alertmanager_config" {
 output "slo_tracking" {
   description = "SLO tracking configuration"
   value = {
-    availability_target_pct    = 99.99
-    availability_alert_pct     = 99.95
-    p99_latency_target_ms      = 100
-    p99_latency_alert_ms       = 150
-    error_rate_target_pct      = 0.1
-    error_rate_alert_pct       = 0.5
-    replication_lag_target_ms  = 100
-    replication_lag_alert_ms   = 200
-    failover_time_target_s     = 30
-    failover_time_alert_s      = 45
+    availability_target_pct   = 99.99
+    availability_alert_pct    = 99.95
+    p99_latency_target_ms     = 100
+    p99_latency_alert_ms      = 150
+    error_rate_target_pct     = 0.1
+    error_rate_alert_pct      = 0.5
+    replication_lag_target_ms = 100
+    replication_lag_alert_ms  = 200
+    failover_time_target_s    = 30
+    failover_time_alert_s     = 45
   }
 }
 

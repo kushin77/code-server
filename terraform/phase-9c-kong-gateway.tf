@@ -285,8 +285,8 @@ output "konga_dashboard_url" {
 
 output "kong_slo_targets" {
   value = {
-    availability = "99.95%"
-    latency_p99_ms = 500
+    availability    = "99.95%"
+    latency_p99_ms  = 500
     upstream_health = "100%"
     cache_hit_ratio = "> 80%"
   }

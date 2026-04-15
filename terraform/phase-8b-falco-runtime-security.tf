@@ -94,15 +94,15 @@ output "falco_detection_rules" {
 
 output "falco_outputs" {
   value = {
-    json_file      = "/var/log/falco/alerts.json (local JSON logging)"
-    syslog         = "LOG_LOCAL0 (for centralized logging)"
-    prometheus     = "http://localhost:8765/metrics (metrics export)"
-    alertmanager   = "http://alertmanager:9093/api/v1/alerts (alert routing)"
+    json_file    = "/var/log/falco/alerts.json (local JSON logging)"
+    syslog       = "LOG_LOCAL0 (for centralized logging)"
+    prometheus   = "http://localhost:8765/metrics (metrics export)"
+    alertmanager = "http://alertmanager:9093/api/v1/alerts (alert routing)"
   }
   description = "Falco output destinations and integrations"
 }
 
 output "next_steps" {
-  value = "1. Verify Falco running: sudo systemctl status falco | 2. Monitor alerts: tail -f /var/log/falco/alerts.json | 3. Configure Prometheus scrape job for :8765 | 4. Add AlertManager routing for Falco alerts"
+  value       = "1. Verify Falco running: sudo systemctl status falco | 2. Monitor alerts: tail -f /var/log/falco/alerts.json | 3. Configure Prometheus scrape job for :8765 | 4. Add AlertManager routing for Falco alerts"
   description = "Post-deployment configuration and monitoring steps"
 }

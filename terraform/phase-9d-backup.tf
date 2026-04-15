@@ -17,8 +17,8 @@ variable "backup_retention_days" {
 
 # PostgreSQL WAL Archiving Script
 resource "local_file" "postgres_wal_archiver" {
-  filename = "${path.module}/../scripts/postgres-wal-archiver.sh"
-  content  = <<-EOFSCRIPT
+  filename        = "${path.module}/../scripts/postgres-wal-archiver.sh"
+  content         = <<-EOFSCRIPT
 #!/bin/bash
 # PostgreSQL WAL Archiver
 # Automatically archives WAL files to NAS for point-in-time recovery
@@ -92,8 +92,8 @@ EOFSCRIPT
 
 # PostgreSQL PITR Configuration Script
 resource "local_file" "postgres_pitr_setup" {
-  filename = "${path.module}/../scripts/postgres-pitr-setup.sh"
-  content  = <<-EOFSCRIPT
+  filename        = "${path.module}/../scripts/postgres-pitr-setup.sh"
+  content         = <<-EOFSCRIPT
 #!/bin/bash
 # Setup PostgreSQL Point-in-Time Recovery
 # Enables WAL archiving for PITR capability
@@ -127,8 +127,8 @@ EOFSCRIPT
 
 # Redis Backup Script
 resource "local_file" "redis_backup_script" {
-  filename = "${path.module}/../scripts/redis-backup.sh"
-  content  = <<-EOFSCRIPT
+  filename        = "${path.module}/../scripts/redis-backup.sh"
+  content         = <<-EOFSCRIPT
 #!/bin/bash
 # Redis RDB Backup
 # Periodically backups Redis RDB snapshot for durability
@@ -163,8 +163,8 @@ EOFSCRIPT
 
 # Disaster Recovery Test Script
 resource "local_file" "disaster_recovery_test" {
-  filename = "${path.module}/../scripts/phase-9d-dr-test.sh"
-  content  = <<-EOFSCRIPT
+  filename        = "${path.module}/../scripts/phase-9d-dr-test.sh"
+  content         = <<-EOFSCRIPT
 #!/bin/bash
 # Phase 9-D Disaster Recovery Test
 # Validates backup integrity and recovery procedures
@@ -220,8 +220,8 @@ EOFSCRIPT
 
 # Backup Scheduler (Cron setup via Terraform)
 resource "local_file" "backup_scheduler" {
-  filename = "${path.module}/../scripts/setup-backup-cron.sh"
-  content  = <<-EOFSCRIPT
+  filename        = "${path.module}/../scripts/setup-backup-cron.sh"
+  content         = <<-EOFSCRIPT
 #!/bin/bash
 # Setup backup cron jobs
 

@@ -31,25 +31,25 @@ resource "local_file" "renovate_config" {
       "patch"
     ]
     docker = {
-      enabled = true
+      enabled   = true
       automerge = true
       major = {
         automerge = false
       }
     }
     npm = {
-      enabled = true
+      enabled   = true
       automerge = true
       major = {
         automerge = false
       }
     }
     python = {
-      enabled = true
+      enabled   = true
       automerge = true
     }
     terraform = {
-      enabled = true
+      enabled   = true
       automerge = false
     }
     vulnerabilityAlerts = {
@@ -78,7 +78,7 @@ resource "local_file" "renovate_config" {
           "vulnerability",
           "CVE"
         ]
-        automerge = true
+        automerge         = true
         minimumReleaseAge = "0 days"
       }
     ]
@@ -93,9 +93,9 @@ resource "local_file" "renovate_extended_config" {
       "schedule:weekly",
       ":dependencyDashboard"
     ]
-    semanticCommits = "enabled"
-    autoMerge = false
-    autoMergeType = "pr"
+    semanticCommits   = "enabled"
+    autoMerge         = false
+    autoMergeType     = "pr"
     autoMergeStrategy = "squash"
     updateTypes = [
       "patch",
@@ -105,27 +105,27 @@ resource "local_file" "renovate_extended_config" {
       "pin",
       "rollback"
     ]
-    semanticCommitType = "chore"
+    semanticCommitType  = "chore"
     semanticCommitScope = "dependencies"
     grouping = {
       group1 = {
-        description = "Security updates"
+        description      = "Security updates"
         matchDatasources = ["docker", "npm", "pypi"]
-        matchKeywords = ["security", "vulnerability"]
-        groupName = "Security Updates"
-        schedule = ["at 3am on Monday"]
+        matchKeywords    = ["security", "vulnerability"]
+        groupName        = "Security Updates"
+        schedule         = ["at 3am on Monday"]
       }
       group2 = {
-        description = "Docker updates"
+        description      = "Docker updates"
         matchDatasources = ["docker"]
-        groupName = "Docker Updates"
-        automerge = false
+        groupName        = "Docker Updates"
+        automerge        = false
       }
       group3 = {
-        description = "Non-major updates"
+        description      = "Non-major updates"
         matchUpdateTypes = ["patch", "minor"]
-        groupName = "Dependencies"
-        automerge = true
+        groupName        = "Dependencies"
+        automerge        = true
       }
     }
   })
@@ -161,25 +161,25 @@ output "renovate_config" {
     }
     update_policy = {
       security_patches = {
-        frequency = "Immediate"
+        frequency  = "Immediate"
         auto_merge = true
-        priority = "P0"
+        priority   = "P0"
       }
       bug_fixes = {
-        frequency = "Weekly"
+        frequency  = "Weekly"
         auto_merge = true
-        priority = "P2"
+        priority   = "P2"
       }
       minor_updates = {
-        frequency = "Bi-weekly"
-        auto_merge = false
-        priority = "P3"
+        frequency       = "Bi-weekly"
+        auto_merge      = false
+        priority        = "P3"
         requires_review = true
       }
       major_updates = {
-        frequency = "Monthly"
-        auto_merge = false
-        priority = "P4"
+        frequency                = "Monthly"
+        auto_merge               = false
+        priority                 = "P4"
         requires_detailed_review = true
       }
     }
@@ -192,17 +192,17 @@ output "renovate_config" {
       "Ansible roles"
     ]
     vulnerability_detection = {
-      tool = "Dependency-Check"
-      version = var.dependency_check_version
-      alert_on_cve = true
+      tool                = "Dependency-Check"
+      version             = var.dependency_check_version
+      alert_on_cve        = true
       block_deployment_if = "CRITICAL"
     }
     slo_targets = {
-      daily_scan = "Automated"
-      pr_creation = "< 1 minute"
-      auto_merge_security = "< 10 minutes if tests pass"
+      daily_scan           = "Automated"
+      pr_creation          = "< 1 minute"
+      auto_merge_security  = "< 10 minutes if tests pass"
       manual_review_window = "48 hours for major"
-      false_positive_rate = "< 2%"
+      false_positive_rate  = "< 2%"
     }
   }
 }

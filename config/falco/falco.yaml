@@ -41,14 +41,11 @@ grpc:
 grpcOutput:
   enabled: false  # Not used in this config
 
-# ─────────────────────────────────────────────────────────────
 # Rules Loading
-# ─────────────────────────────────────────────────────────────
-
 rules_file:
-  - /etc/falco/k8s_audit_rules.yaml
   - /etc/falco/rules.yaml
-  - /etc/falco/rules.local.yaml
+  # - /etc/falco/k8s_audit_rules.yaml  # Uncomment for K8s audit support
+  # - /etc/falco/rules.local.yaml  # Uncomment when custom rules are ready
 
 # ─────────────────────────────────────────────────────────────
 # Performance Tuning

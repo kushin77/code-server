@@ -510,10 +510,12 @@ volumes:
     driver: local
   redis-data:
     driver: local
-  caddy-config:
-    driver: local
-  caddy-data:
-    driver: local
+  # code-server-data:  # Disabled with code-server service for Phase 7a
+  #   driver: local
+  # caddy-config:  # Disabled with caddy service for Phase 7a
+  #   driver: local
+  # caddy-data:
+  #   driver: local
   alertmanager-data:
     driver: local
   jaeger-data:

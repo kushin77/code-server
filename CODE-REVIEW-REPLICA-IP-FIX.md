@@ -3,7 +3,7 @@
 
 **Date**: April 15, 2026  
 **Scope**: kushin77/code-server repository  
-**Issue**: Incorrect replica host IP address (FIXED: was 192.168.168.30, now 192.168.168.42)  
+**Issue**: Incorrect replica host IP address (FIXED: was 192.168.168.42, now 192.168.168.42)  
 **Status**: ✅ CRITICAL FILES FIXED | ⚠️ DOCUMENTATION PENDING
 
 ---
@@ -336,7 +336,7 @@ fix: correct replica host IP address from .30 to .42
 - Document and verify all operational impacts
 
 This corrects a critical infrastructure issue where the standby
-host IP was incorrectly configured as 192.168.168.30 instead of
+host IP was incorrectly configured as 192.168.168.42 instead of
 the actual production standby IP 192.168.168.42. (FIXED - all references updated) (FIXED - all references updated)
 
 Impact:

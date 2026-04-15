@@ -38,14 +38,14 @@ git add scripts/vpc-vpn-endpoint-validation.sh
 **Action** (using find-replace):
 ```bash
 # Find all .30 references
-grep -r "192.168.168.30" --include="*.md" . | wc -l
+grep -r "192.168.168.42" --include="*.md" . | wc -l
 # Should find ~43 in documentation
 
 # Replace all .30 with .42 in docs
 find . -name "*.md" -type f -exec sed -i 's/192\.168\.168\.30/192.168.168.42/g' {} \;
 
 # Verify replacements
-grep -r "192.168.168.30" --include="*.md" . | wc -l
+grep -r "192.168.168.42" --include="*.md" . | wc -l
 # Should now be 0
 
 # Stage changes
@@ -68,7 +68,7 @@ git add *.md
 ### 3. Validate All Changes
 ```bash
 # Step 1: Verify no more .30 references in operational files
-grep -r "192.168.168.30" config/ scripts/ | grep -v ".archived" | grep -v ".bak"
+grep -r "192.168.168.42" config/ scripts/ | grep -v ".archived" | grep -v ".bak"
 # Expected: Only scripts/vpc-vpn-endpoint-validation.sh (after recreation, will be gone)
 
 # Step 2: Test syntax of corrected scripts
@@ -112,7 +112,7 @@ git commit -m "fix: correct replica host IP address from .30 to .42
 - Update all documentation references (43 files)
 
 This corrects a critical infrastructure issue where the standby
-host IP was incorrectly configured as 192.168.168.30 instead of
+host IP was incorrectly configured as 192.168.168.42 instead of
 the actual production standby IP 192.168.168.42.
 
 Impact:
@@ -151,7 +151,7 @@ git push origin fix/replica-ip-correction
 **Description**:
 ```markdown
 ## Problem
-Repository contained 57 references to incorrect replica IP (192.168.168.30).
+Repository contained 57 references to incorrect replica IP (192.168.168.42).
 Correct IP is 192.168.168.42 where standby system is actually running. (FIXED - all updated)
 
 ## Solution

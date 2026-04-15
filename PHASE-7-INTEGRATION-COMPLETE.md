@@ -140,7 +140,7 @@
 ## 🐛 ISSUES RESOLVED
 
 ### IP Address Correction (CRITICAL FIX)
-- **Issue**: 57 references to 192.168.168.30 (offline host)
+- **Issue**: 57 references to 192.168.168.42 (offline host)
 - **Root Cause**: Initial infrastructure spec not updated on actual deployment
 - **Solution Applied**:
   - ✅ Fixed 14 operational files (haproxy, staging env, DR script, DNS script)

@@ -10,7 +10,7 @@ set -e
 
 # Configuration
 PRIMARY_HOST="192.168.168.31"
-REPLICA_HOST="192.168.168.30"  # On-premises standby host
+REPLICA_HOST="192.168.168.42"  # On-premises standby host
 PRIMARY_WEIGHT=70
 REPLICA_WEIGHT=30
 DNS_DOMAIN="ide.kushnir.cloud"
@@ -82,7 +82,7 @@ Steps to configure DNS weighted routing in Cloudflare:
      -d '{
        "type": "A",
        "name": "ide",
-       "content": "192.168.168.30",
+       "content": "192.168.168.42",
        "ttl": 60,
        "priority": 20,
        "tags": ["replica"]

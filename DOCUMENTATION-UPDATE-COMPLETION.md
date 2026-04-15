@@ -55,7 +55,7 @@ These files document what was fixed and intentionally reference the old .30 to s
   - Line 115, 154: Documentation explaining the issue that was fixed
 
 - **CODE-REVIEW-REPLICA-IP-FIX.md** (2 lines)
-  - Line 6: Issue title showing it was 192.168.168.30
+  - Line 6: Issue title showing it was 192.168.168.42
   - Line 339: Explanation of what was wrong
 
 - **CODE-REVIEW-DEBUGGING-COMPREHENSIVE.md** (3 lines)
@@ -95,13 +95,13 @@ These files document what was fixed and intentionally reference the old .30 to s
 
 ### Before Update
 ```
-$ grep -r "192.168.168.30" . | wc -l
+$ grep -r "192.168.168.42" . | wc -l
 57 matches
 ```
 
 ### After Update
 ```
-$ grep -r "192.168.168.30" . | wc -l
+$ grep -r "192.168.168.42" . | wc -l
 13 matches
 
 $ grep -r "192.168.168.42" . | wc -l

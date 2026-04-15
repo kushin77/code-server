@@ -21,7 +21,7 @@ echo -e "${BLUE}═════════════════════�
 # Configuration
 PRIMARY_WEIGHT=70
 REPLICA_WEIGHT=30
-REPLICA_HOST="192.168.168.30"
+REPLICA_HOST="192.168.168.42"
 
 # HAProxy configuration content
 HAPROXY_CONFIG='global

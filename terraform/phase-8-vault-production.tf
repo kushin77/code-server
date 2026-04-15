@@ -40,7 +40,7 @@ data "docker_container" "postgres" {
 # - Audit logging to file and syslog
 # ════════════════════════════════════════════════════════════════════════════
 
-resource "local_file" "vault_config" {
+resource "local_file" "vault_production_config" {
   filename = "${path.module}/../config/vault/vault-production.hcl"
 
   content = <<-EOT

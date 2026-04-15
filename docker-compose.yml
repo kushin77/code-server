@@ -115,7 +115,7 @@ services:
 
   # ─── MinIO S3-Compatible Storage (for Terraform remote state) ───────────────
   minio:
-    image: minio/minio:latest
+    image: minio/minio:${MINIO_VERSION:-RELEASE.2024-03-15T01-07-19Z}
     container_name: minio
     restart: always
     networks: [enterprise]
@@ -502,7 +502,7 @@ services:
   # ─── Phase 6a: PgBouncer (Connection Pooling) ────────────────────────────────
   # Profile: pgbouncer - Enable with: docker-compose --profile pgbouncer up -d
   pgbouncer:
-    image: pgbouncer/pgbouncer:1.21-latest
+    image: pgbouncer/pgbouncer:${PGBOUNCER_VERSION:-1.21.0}
     container_name: pgbouncer
     restart: always
     networks: [enterprise]
@@ -569,7 +569,7 @@ services:
   # ─── Phase 6c: Locust (Load Testing) ────────────────────────────────────────
   # Profile: load-test - Enable with: docker-compose --profile load-test up -d
   locust:
-    image: locustio/locust:latest
+    image: locustio/locust:${LOCUST_VERSION:-2.20.0}
     container_name: locust
     restart: "no"
     networks: [enterprise]

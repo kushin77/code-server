@@ -66,6 +66,16 @@ repos:
         pass_filenames: false
         stages: [commit]
 
+      # LINUX-ONLY: Block hardcoded production IPs (#366)
+      - id: no-hardcoded-ips
+        name: No hardcoded production IPs (use env.sh variables or FQDNs)
+        entry: bash scripts/lib/check-no-ips.sh
+        language: system
+        files: \.(sh|tf|yml|yaml)$
+        exclude: ^(environments/|config/coredns/|deprecated/|archived/|scripts/_archive/)
+        pass_filenames: false
+        stages: [commit]
+
       # GOVERNANCE: Enforce script header metadata
       - id: enforce-script-headers
         name: Enforce @file/@description headers in scripts

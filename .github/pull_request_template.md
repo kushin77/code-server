@@ -1,153 +1,192 @@
-# PR Title: [Descriptive title]
+# Production Readiness Quality Gates
 
-> **🤖 AUTO-DEPLOY MANDATE**: When this PR is merged, it automatically triggers branch cleanup and production deployment. Link issues below so they auto-close when code goes live.
+**Phase 1: Design Review** (Author + 1 Reviewer) - 🔴 MANDATORY FOR: feature, api, infra, breaking changes  
+**Phase 2: Code Review** (2 Senior Engineers) - ✅ Automated via CODEOWNERS  
+**Phase 3: Operational Readiness** (SRE) - 🟡 Required for: deployments, ops changes  
+**Phase 4: Production Acceptance** (On-call) - 🟡 Final sign-off before merge to main  
 
-## Linked Issues
+---
 
-**This PR resolves (REQUIRED - use one of: `Closes`, `Fixes`, `Resolves`):**
+## ✅ PHASE 1: DESIGN REVIEW (If Applicable)
+
+> **Skip if**: Documentation only, tests only, trivial bug fixes, refactoring with zero behavior change
+
+**This change is a:**
+- [ ] 🟢 Bug fix (no design review needed, proceed to Phase 2)
+- [ ] 🟡 Enhancement/optimization (design review recommended)
+- [ ] 🔴 New feature/API/infrastructure (design review **REQUIRED**)
+- [ ] 🔴 Breaking change/architecture change (design review **REQUIRED**)
+
+### Design Phase Checklist (If applicable)
+
+**Architecture**:
+- [ ] Horizontal scalability validated (can run 10x current load)
+- [ ] Stateless design (no shared mutable state)
+- [ ] Dependencies bounded + explicit (no implicit coupling)
+- [ ] Failure isolation (circuit breakers, bulkheads)
+- [ ] No single points of failure (redundancy documented)
+
+**Data & Persistence**:
+- [ ] Data model defined (schema or document structure)
+- [ ] No data loss on failure (persistence, replication strategy)
+- [ ] Migration path for existing data (if schema change)
+- [ ] Backup/restore procedure documented
+- [ ] GDPR/compliance considerations addressed
+
+**Deployment & Rollback**:
+- [ ] Feature flag required? `__FEATURE_FLAG__`: YES / NO / N/A
+- [ ] Rollback strategy (git revert time): **&lt; 60 seconds**
+- [ ] Canary deployment needed: YES / NO
+- [ ] Blue-green deployment procedure: YES / NO / N/A
+- [ ] Database migration is backward compatible: YES / NO / N/A
+
+**Design Documentation:**
+- [ ] Design doc linked (Confluence, GitHub issue, ADR)
+- [ ] Signed off by: @[architecture-reviewer]
+- [ ] **ADR Created**: `docs/adr/XXX-[title].md` (if architecture change)
+
+---
+
+## ✅ PHASE 2: CODE REVIEW (REQUIRED - 2 Approvals)
+
+**Linked Issues**:
 ```
 Closes #[issue-number]
 Fixes #[another-issue]
 Resolves #[third-issue]
 ```
 
-> **ℹ️ Why**: Our auto-merge pipeline closes linked issues when your code deploys. This creates a complete audit trail from issue → code → production.
+### Code Quality
+
+- [ ] Security: No secrets, no hardcoded credentials, input validation
+- [ ] Lint/format: Code formatted (prettier, gofmt, black, etc.)
+- [ ] Test coverage: ≥80% for business logic (or explain deviation)
+- [ ] No blocking I/O in critical path
+- [ ] No N+1 query patterns
+- [ ] Error handling implemented (no silent failures)
+- [ ] Logging: Structured logs with correlation IDs (if applicable)
+
+### Observability
+
+- [ ] Metrics added (Prometheus, application-level)
+- [ ] Health endpoints working (if new service)
+- [ ] Distributed tracing enabled (OpenTelemetry propagation)
+- [ ] Runbook/troubleshooting guide updated
+- [ ] Alerts configured (if operational impact)
+
+### Testing & Quality
+
+- [ ] Unit tests: ✅ PASS (XX% coverage)
+- [ ] Integration tests: ✅ PASS
+- [ ] Lint/static analysis: ✅ PASS
+- [ ] SAST scan: ✅ PASS
+- [ ] Container scan: ✅ PASS (if Docker image change)
+- [ ] Dependency scan: ✅ PASS (no high/critical CVEs)
+- [ ] Manual testing: ✅ COMPLETE
+
+### Documentation
+
+- [ ] Code comments: Clear (complex logic explained)
+- [ ] README updated: YES / NO / N/A
+- [ ] API documentation: Updated (if API change)
+- [ ] Deployment guide: Updated (if deployment process changed)
+
+---
+
+## ✅ PHASE 3: OPERATIONAL READINESS (SRE Sign-Off)
+
+> **Required for**: Infrastructure changes, deployment procedure changes, monitoring/alerting changes
+
+**Deployment & Monitoring**:
+- [ ] Terraform plan reviewed (if IaC change)
+- [ ] No hardcoded values (all config externalized)
+- [ ] Immutable versions pinned (no `latest` tags in prod)
+- [ ] Health checks configured (readiness + liveness)
+- [ ] Monitoring/alerts configured
+- [ ] Runbook for incident response attached
+- [ ] MTTR SLA defined (target resolution time)
+
+**Load Testing** (if applicable):
+- [ ] Load test executed: 1x current production load
+- [ ] p99 latency stable (≤ 2x baseline)
+- [ ] Error rate: &lt; 0.1%
+- [ ] Resource usage normal (CPU &lt; 70%, memory &lt; 80%)
+- [ ] Database connection pool: No exhaustion
+- [ ] Network: No packet loss
+
+**Chaos Testing** (if applicable):
+- [ ] Failure injection scenarios tested (service down, network delay)
+- [ ] Graceful degradation working
+- [ ] Automatic recovery validated
+- [ ] User impact documented
+
+**Rollback Validation**:
+- [ ] Rollback command: `[command]`
+- [ ] Rollback time: **&lt; 60 seconds** ✅
+- [ ] RTO SLA: [X minutes]
+- [ ] RPO SLA: [Y minutes]
+- [ ] Data consistency validated after rollback
+
+---
+
+## ✅ PHASE 4: PRODUCTION ACCEPTANCE (Final Gate)
+
+> **On-call engineer**: Sign off that change is production-ready
+
+**Final Verification**:
+- [ ] All phases complete (phases 1-3 checked)
+- [ ] All automated checks passing
+- [ ] No blocking issues or TODOs
+- [ ] Team trained on rollback procedure
+- [ ] On-call acknowledgment: @[oncall-engineer]
+
+**Post-Deployment Monitoring**:
+- [ ] Deploy to canary first (1% traffic) — 5 min monitoring
+- [ ] Automatic rollback on error rate spike (&gt;1%)
+- [ ] Manual promotion to 10% → 50% → 100%
+- [ ] 1-hour post-deploy monitoring by author
+- [ ] Mark issue complete only after 24-hour stability
 
 ---
 
 ## Summary
 
-**What problem does this solve?** Replace this with a clear, 2-3 sentence explanation of the problem statement.
+**What problem does this solve?**
+[Clear, 2-3 sentence description of the problem]
 
-**Why is this change necessary?** Explain the business or technical drivers.
+**Why is this change necessary?**
+[Business or technical drivers]
 
----
-
-## Architecture Impac
-
-- [ ] No architectural impact (minor fix/optimization)
-- [ ] ADR exists and is linked
-- [ ] NEW ADR required — see [docs/adr/TEMPLATE.md](../../docs/adr/TEMPLATE.md)
-
-**If architectural change:**
-- ADR Path: `docs/adr/XXX-[description].md
-- Horizontal scaling considered: YES / NO / N/A
-- Failure isolation: [Brief description]
-- Dependency changes: [List any new external dependencies]
+**Metrics after deployment:**
+- Latency p99: [before] → [after] (target: &lt;2% regression)
+- Throughput: [before] → [after]
+- Error rate: [before] → [after]
+- Resource usage: [before] → [after]
 
 ---
 
-## Security Review
+## Checklist Summary
 
-- [ ] No secrets, credentials, or sensitive data in code
-- [ ] Input validation implemented (if applicable)
-- [ ] IAM/authorization reviewed (if applicable)
-- [ ] No public endpoints without authentication (if applicable)
-- [ ] Encryption at rest and in transit (if handling sensitive data)
-- [ ] Least privilege principle applied
-
-**If new service or auth change:**
-- [ ] Threat model documented
-- [ ] Trust boundaries defined
-- [ ] STRIDE/threat analysis attached (link or description)
-
-**Secrets scanning result**: ✅ PASS / ⚠️ REVIEW / ❌ FAIL
+```
+PHASE 1 (Design):     [✅ / ⏭️ skipped]
+PHASE 2 (Code):       [✅ required - 2 approvals]
+PHASE 3 (Operations): [✅ required if deployment]
+PHASE 4 (Production): [⏳ final sign-off before merge]
+```
 
 ---
 
-## Performance & Scalability
+**By merging this PR, you acknowledge that this change meets production-first standards and is safe to deploy to 192.168.168.31 immediately.**
 
-- [ ] No blocking operations in critical path
-- [ ] No N+1 query patterns (database or API)
-- [ ] Resource limits defined (CPU, memory, connections)
-- [ ] Benchmarked or profiled: YES / NO / N/A
-- [ ] Horizontal scaling validated: YES / NO / N/A
-
-**Performance impact** (if applicable):
-- Latency: [p50/p99 if measured]
-- Throughput: [requests/sec or ops/sec if measured]
-- Resource usage: [CPU/memory/connections]
+For exceptions or waivers, contact: @[engineering-lead]
 
 ---
 
-## Observability
-
-- [ ] Structured logging implemented (correlation IDs where needed)
-- [ ] Metrics added (Prometheus format if applicable)
-- [ ] Health endpoints implemented (if new service)
-- [ ] Distributed tracing enabled (OpenTelemetry ready if applicable)
-- [ ] Runbook/troubleshooting guide updated
-
-**Logs/Metrics**:
-
-[Example log output or metric name]
-
-
----
-
-## Testing & Quality
-
-- [ ] Unit tests added/updated
-- [ ] Integration tests added/updated
-- [ ] Coverage maintained or improved (target: 80%+)
-- [ ] Manual testing completed
-- [ ] Lint/static analysis passing
-- [ ] No test skips (`@skip`, `.skip()`, etc.)
-
-**Test results**:
-
-Coverage: XX%
-Tests passing: YY/YY
-
-
----
-
-## Deployment & Rollback
-
-**How does this deploy?**
-- [ ] Backward compatible (safe to deploy independently)
-- [ ] Requires database migration (if yes, migration script attached)
-- [ ] Requires configuration change (list below)
-- [ ] Blue-green / canary required (explain)
-
-**Rollback plan:**
-- Time to rollback: [X minutes]
-- Rollback command:
-
-  [git revert / terraform destroy / helm rollback / etc.]
-
-- Data considerations: [What happens if we revert?]
-- Dependent services affected: [List any services that depend on this]
-
----
-
-## Documentation Updates
-
-- [ ] Code comments added (complex logic)
-- [ ] README updated (if user-facing change)
-- [ ] ADR/Architecture docs updated
-- [ ] Runbook/operations guide updated (if operational impact)
-- [ ] Deployment guide updated (if deployment process changed)
-
----
-
-## Risk Assessmen
-
-**What breaks if this fails?**
-[Describe failure scenarios and their impact]
-
-**How do we detect failure?**
-[Alerts, logs, metrics, or manual checks]
-
-**Blast radius**: [ONE service / Multiple services / Critical path / Non-critical]
-
----
-
-## CI/CD Status
-
-- [ ] All automated checks passing
-- [ ] SAST scan passing
-- [ ] Dependency scan passing
+**Related Documentation**:
+- [Production Readiness Framework](../../docs/PRODUCTION-READINESS-FRAMEWORK.md)
+- [Code Review Standards](../../CONTRIBUTING.md#code-review-standards)
+- [Deployment Procedure](../../DEPLOYMENT-EXECUTION-PROCEDURE.md)
+- [SLO & Monitoring](../../monitoring/README.md)
 - [ ] Secrets scan passing
 - [ ] Container scan passing (if Docker image)
 - [ ] IaC policy passing (if Terraform/Helm)

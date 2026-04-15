@@ -704,6 +704,36 @@ groups:
           runbook: "docs/runbooks/disk-space-critical.md"
 
       # ===== Gap 6: Ollama GPU Model Server =====
+
+  # ========== VRRP / Keepalived Alerts ==========
+  - name: vrrp_ha_alerts
+    interval: 15s
+    rules:
+      # P1: VIP not reachable — indicates both nodes down or VRRP misconfigured
+      - alert: VIPNotReachable
+        expr: probe_success{instance="192.168.168.30"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: vrrp
+          page: "true"
+        annotations:
+          summary: "Production VIP 192.168.168.30 is not responding"
+          description: "The VRRP virtual IP has been unreachable for >30s. Both hosts may be down or VRRP is misconfigured."
+          runbook: "docs/runbooks/vrrp-failover.md"
+
+      # P2: VRRP state changed — informational, logged for audit
+      - alert: VRRPStateChange
+        expr: changes(keepalived_vrrp_state[5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          component: vrrp
+          page: "false"
+        annotations:
+          summary: "VRRP state changed on {{ $labels.instance }}"
+          description: "The VRRP instance {{ $labels.vrrp_instance }} on {{ $labels.instance }} changed state. Check failover logs."
+          runbook: "docs/runbooks/vrrp-failover.md"
       - alert: OllamaDown
         expr: up{job="ollama"} == 0
         for: 2m

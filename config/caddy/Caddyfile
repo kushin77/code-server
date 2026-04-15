@@ -1,125 +1,234 @@
+# Caddyfile - CANONICAL SOURCE OF TRUTH
+# ========================================
+# Single configuration file supporting all environments:
+# - Production (HTTPS)
+# - On-premises (self-signed TLS)
+# - Development (HTTP only)
+#
+# Environment variables for control:
+#   CADDY_MODE              "production" | "onprem" | "development" (default: onprem)
+#   CADDY_DOMAIN            Base domain (default: code-server.local)
+#   CADDY_PORT              Port to listen on (default: 443 for TLS, 80 for HTTP-only)
+#   CADDY_TLS_MODE          "acme" | "selfsigned" | "none" (default: selfsigned)
+#   CADDY_LOG_LEVEL         "debug" | "info" | "warn" | "error" (default: info)
+#   ENABLE_TELEMETRY        "true" | "false" (default: false)
+#   ENABLE_TRACING          "true" | "false" (default: false)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Global Settings
+# ─────────────────────────────────────────────────────────────────────────────
 {
 	admin off
+	
 	log {
 		format json
 		output stdout
-		level info
+		level {env.CADDY_LOG_LEVEL|info}
 	}
-
-	# On-premises TLS: Use self-signed certificates (no public DNS for Let's Encrypt ACME)
-	# For production with public DNS, uncomment the ACME lines below:
-	# acme_ca https://acme-v02.api.letsencrypt.org/directory
-	# email ops@kushnir.cloud
 }
 
-# Security headers snippet
+# ─────────────────────────────────────────────────────────────────────────────
+# Security Headers - Applied to all routes
+# ─────────────────────────────────────────────────────────────────────────────
 (security_headers) {
 	header {
-		X-Content-Type-Options    "nosniff"
-		X-Frame-Options           "SAMEORIGIN"
-		X-XSS-Protection          "1; mode=block"
-		Referrer-Policy           "strict-origin-when-cross-origin"
+		# Prevent MIME type detection (prevents security bypasses)
+		X-Content-Type-Options "nosniff"
+		
+		# Prevent clickjacking
+		X-Frame-Options "SAMEORIGIN"
+		
+		# Legacy XSS protection for old browsers
+		X-XSS-Protection "1; mode=block"
+		
+		# Referrer policy
+		Referrer-Policy "strict-origin-when-cross-origin"
+		
+		# HSTS (only for HTTPS)
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		
+		# Permissions policy (camera/microphone/geolocation disabled)
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		
+		# Content Security Policy (allows code-server WebSocket + dynamic content)
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
+		
+		# Remove server identification
 		-Server
 	}
 }
 
-# Production domain with HTTPS/TLS and OAuth2 SSO
-# On-prem deployment: Self-signed certificates (no public DNS for ACME)
-ide.kushnir.cloud {
-	# TLS: Internal self-signed certificates (on-premises)
-	tls internal
-
-	encode gzip
-	import security_headers
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Telemetry Snippet (Optional - only loaded if ENABLE_TELEMETRY=true)
+# ─────────────────────────────────────────────────────────────────────────────
+(telemetry) {
+	# Log all requests with extended metadata
 	log {
 		format json
 		output stdout
 		level info
 	}
+	
+	# Add metrics placeholder for Prometheus scraping
+	handle /metrics {
+		header Content-Type "text/plain"
+		respond `# Caddy metrics`
+	}
+}
 
-	# Health check endpoints (no auth required)
+# ─────────────────────────────────────────────────────────────────────────────
+# Trace ID Propagation (Optional - only loaded if ENABLE_TRACING=true)
+# ─────────────────────────────────────────────────────────────────────────────
+(tracing) {
+	# Add/propagate trace ID headers for distributed tracing
+	@no_trace_id header_regexp X-Trace-ID ^$
+	handle @no_trace_id {
+		# Generate trace ID if not present
+		header X-Trace-ID "{http.request.id}"
+	}
+	
+	# Forward trace ID to upstream services
+	header_up X-Trace-ID "{http.request.header.X-Trace-ID}"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main Site Configuration - Environment-Aware
+# ─────────────────────────────────────────────────────────────────────────────
+{env.CADDY_DOMAIN|code-server.local}:{env.CADDY_PORT|443} {
+	# TLS Configuration based on CADDY_TLS_MODE
+	@tls_acme expression `{env.CADDY_TLS_MODE} == "acme"`
+	handle @tls_acme {
+		# Public TLS with Let's Encrypt ACME
+		tls {
+			dns cloudflare
+		}
+	}
+
+	@tls_selfsigned expression `{env.CADDY_TLS_MODE} == "selfsigned"`
+	handle @tls_selfsigned {
+		# Self-signed for on-premises use
+		tls internal
+	}
+
+	# Enable compression for all responses
+	encode gzip
+
+	# Apply security headers
+	import security_headers
+
+	# Optionally import telemetry logging
+	@enable_telemetry expression `{env.ENABLE_TELEMETRY} == "true"`
+	handle @enable_telemetry {
+		import telemetry
+	}
+
+	# Optionally import trace ID propagation
+	@enable_tracing expression `{env.ENABLE_TRACING} == "true"`
+	handle @enable_tracing {
+		import tracing
+	}
+
+	# ─────────────────────────────────────────────────────────────────────────
+	# Health Check Endpoints (No Authentication)
+	# ─────────────────────────────────────────────────────────────────────────
 	@health path /healthz /ping /health
 	handle @health {
 		respond "OK" 200
 	}
 
-	# OAuth2 callback endpoint (no auth required)
+	# ─────────────────────────────────────────────────────────────────────────
+	# OAuth2 Authentication Proxy
+	# ─────────────────────────────────────────────────────────────────────────
 	@oauth path /oauth2*
 	handle @oauth {
 		reverse_proxy oauth2-proxy:4180 {
-			header_up Host       {upstream_hostport}
-			header_up X-Real-IP  {remote_host}
-		}
-	}
-
-	# All other routes: authenticate via oauth2-proxy, then forward
-	# Default route
-	handle / {
-		reverse_proxy oauth2-proxy:4180 {
-			header_up Host       {upstream_hostport}
-			header_up X-Real-IP  {remote_host}
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-Proto {scheme}
-			header_up X-Forwarded-For  {remote_host}
-			header_up X-Original-URI  {uri}
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 
-	# IDE (Code Server)
+	# ─────────────────────────────────────────────────────────────────────────
+	# Protected Routes (go through oauth2-proxy for authentication)
+	# ─────────────────────────────────────────────────────────────────────────
+
+	# Code Server IDE
 	handle /console* {
 		reverse_proxy oauth2-proxy:4180 {
-			header_up Host       {upstream_hostport}
-			header_up X-Real-IP  {remote_host}
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-Proto {scheme}
-			header_up X-Forwarded-For  {remote_host}
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 
 	# Grafana (Observability Dashboards)
 	handle /grafana* {
 		reverse_proxy oauth2-proxy:4180 {
-			header_up Host       {upstream_hostport}
-			header_up X-Real-IP  {remote_host}
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-Proto {scheme}
-			header_up X-Forwarded-For  {remote_host}
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 
 	# Prometheus (Metrics)
 	handle /prometheus* {
 		reverse_proxy oauth2-proxy:4180 {
-			header_up Host       {upstream_hostport}
-			header_up X-Real-IP  {remote_host}
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-Proto {scheme}
-			header_up X-Forwarded-For  {remote_host}
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 
 	# Jaeger (Distributed Tracing)
 	handle /jaeger* {
 		reverse_proxy oauth2-proxy:4180 {
-			header_up Host       {upstream_hostport}
-			header_up X-Real-IP  {remote_host}
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-Proto {scheme}
-			header_up X-Forwarded-For  {remote_host}
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 
 	# AlertManager (Alert Management)
 	handle /alertmanager* {
 		reverse_proxy oauth2-proxy:4180 {
-			header_up Host       {upstream_hostport}
-			header_up X-Real-IP  {remote_host}
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-Proto {scheme}
-			header_up X-Forwarded-For  {remote_host}
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 
+	# Portal/Dashboard
+	handle /portal* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	# Root path - default to code-server
+	handle / {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	# ─────────────────────────────────────────────────────────────────────────
 	# Logging
+	# ─────────────────────────────────────────────────────────────────────────
 	log {
 		output stdout
 		format json
-		level info
+		level {env.CADDY_LOG_LEVEL|info}
 	}
 }

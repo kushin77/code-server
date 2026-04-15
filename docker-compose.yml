@@ -126,7 +126,7 @@ services:
     volumes:
       - nas-ollama:/root/.ollama:rw  # models on NAS (large files)
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:11434/api/tags"]
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -202,7 +202,7 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:4180/ping"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4180/ping"]
       interval: 30s
       timeout: 5s
       retries: 3

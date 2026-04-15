@@ -32,7 +32,7 @@ permissions:
 jobs:
   preflight:
     name: Preflight Checks - Secrets & Configuration Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, on-prem]
     outputs:
       secrets_valid: ${{ steps.validate.outputs.secrets_valid }}
       wireguard_config_hash: ${{ steps.validate.outputs.config_hash }}
@@ -92,7 +92,7 @@ jobs:
   vpn-endpoint-scan:
     name: Deep VPN endpoint scan (Playwright + Puppeteer)
     needs: preflight
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, on-prem]
     timeout-minutes: 60
 
     env:

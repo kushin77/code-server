@@ -132,7 +132,7 @@ echo ""
 # Database connectivity checks
 echo -e "${YELLOW}→ Database Connectivity:${NC}"
 check_database "PostgreSQL" "docker-compose exec -T postgres psql -U codeserver -d codeserver -c 'SELECT 1;' 2>/dev/null"
-check_database "Redis" "docker-compose exec -T redis redis-cli -a 'redis-secure-default' ping | grep -q PONG"
+check_database "Redis" "docker-compose exec -T redis redis-cli -a \"${REDIS_PASSWORD}\" ping | grep -q PONG"
 echo ""
 
 # HTTP endpoint checks

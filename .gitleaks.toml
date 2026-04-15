@@ -12,7 +12,17 @@
     '''RUNBOOKS\.md''',
     '''kubernetes/ha-config/.*secret.*\.ya?ml''',
     '''extensions/agent-farm/package-lock\.json''',
+    '''\.env\.example''',
+    '''CONTRIBUTING\.md''',
+    '''archived/''',
+    '''\.archived/''',
   ]
   regexes = [
     '''CHANGEME''',
+    '''changeme''',
+    '''replace-me''',
+    '''replace-me-in-production''',
+    '''example\.com''',
+    '''test-password''',
+    '''placeholder.*password''',
   ]

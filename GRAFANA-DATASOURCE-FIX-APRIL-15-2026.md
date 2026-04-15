@@ -40,11 +40,14 @@ The Grafana API was rejecting all datasource creation attempts with "bad request
 Updated [docker-compose.yml](docker-compose.yml#L328) to enable write access to provisioning directory.
 
 ### 3. Created Prometheus Datasource
-Used Python `requests` library to bypass shell escaping issues:
+Use Python `requests` library to bypass shell escaping issues:
 ```python
 import requests
+import os
 url = 'http://localhost:3000/api/datasources'
-auth = ('admin', 'TestPassword123')
+# Use environment variable - never hardcode credentials
+admin_pass = os.environ.get('GRAFANA_ADMIN_PASSWORD', 'changeme')
+auth = ('admin', admin_pass)
 data = {
     'name': 'Prometheus',
     'type': 'prometheus',

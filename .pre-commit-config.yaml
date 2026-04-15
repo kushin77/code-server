@@ -30,9 +30,19 @@ repos:
       # Phase 3: Block hardcoded IPs - use $DEPLOY_HOST from _common/config.sh
       - id: no-hardcoded-ips
         name: No hardcoded IP addresses in scripts
-        entry: "bash -c 'files=$(grep -rl \"192\\.168\\.168\\.\\(31\\|30\\)\" scripts/ 2>/dev/null | grep -v \"_common/\" | grep -v \"config\\.sh\" | grep \"\\.sh$\"); if [[ -n \"$files\" ]]; then echo \"GOVERNANCE: Hardcoded IP found - use \\$DEPLOY_HOST:\"; echo \"$files\" | sed \"s/^/  /\"; exit 1; fi'"
+        entry: "bash -c 'files=$(grep -rl \"192\\.168\\.168\\.\\(31\\|30\\|42\\)\" scripts/ 2>/dev/null | grep -v \"_common/\" | grep -v \"config\\.sh\" | grep \"\\.sh$\"); if [[ -n \"$files\" ]]; then echo \"GOVERNANCE: Hardcoded IP found - use \\$DEPLOY_HOST:\"; echo \"$files\" | sed \"s/^/  /\"; exit 1; fi'"
         language: system
         files: '^scripts/.*\.sh$'
+        pass_filenames: false
+        stages: [commit]
+
+      # CRITICAL P0: Block hardcoded credentials
+      - id: no-hardcoded-credentials
+        name: Block hardcoded credentials (P0)
+        entry: "bash -c 'if grep -rE \"(redis-secure-default|postgres-secure-default|TestPassword123|admin123|password=secret)\" --include=\"*.sh\" --include=\"*.tf\" --include=\"*.yml\" --include=\"*.yaml\" --include=\"*.py\" --exclude-dir=.archived --exclude-dir=archived . 2>/dev/null; then echo \"ERROR: Hardcoded credentials found - use environment variables \\${REDIS_PASSWORD}, \\${POSTGRES_PASSWORD}, etc.\"; exit 1; fi'"
+        language: system
+        files: \.(sh|tf|yml|yaml|py)$
+        exclude: ^(\.env\.example|CONTRIBUTING\.md|\.archived/|archived/)
         pass_filenames: false
         stages: [commit]
 

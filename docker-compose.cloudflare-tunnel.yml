@@ -23,7 +23,7 @@ services:
       TZ: UTC
     
     volumes:
-      - ./config/cloudflare-tunnel-config.yml:/etc/cloudflared/config.yml:ro
+      - ${PWD}/config/cloudflare-tunnel-config.yml:/etc/cloudflared/config.yml:ro
       - cloudflare-logs:/var/log/cloudflared
       - cloudflare-certs:/etc/cloudflared/certs:ro
     

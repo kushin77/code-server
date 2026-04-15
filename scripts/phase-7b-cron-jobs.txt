@@ -1,0 +1,12 @@
+# Phase 7b: NAS Backup Synchronization Cron Job
+# Add to crontab: crontab -e
+# Run backup sync every hour at :00
+
+# Hourly backup synchronization (full backup daily, incremental hourly)
+0 * * * * /home/akushnir/code-server-enterprise/scripts/phase-7b-backup-sync.sh >> /var/log/phase-7b-backup-sync.log 2>&1
+
+# Daily verification check at 2 AM UTC
+0 2 * * * ssh akushnir@192.168.168.42 "df -h /nas && du -sh /nas/backups" >> /var/log/phase-7b-backup-sync.log 2>&1
+
+# Weekly cleanup (Saturday 3 AM UTC) - keep last 30 days only
+0 3 * * 6 find /mnt/nas-export/backups -mtime +30 -delete >> /var/log/phase-7b-backup-sync.log 2>&1

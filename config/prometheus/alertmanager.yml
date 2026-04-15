@@ -91,7 +91,7 @@ receivers:
   # Default receiver (catch-all for unmatched alerts)
   - name: 'default'
     slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL:-}'
+      - api_url: 'http://localhost:9999/slack-disabled'
         channel: '#alerts'
         title: 'Alert: {{ .GroupLabels.alertname }}'
         text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
@@ -100,7 +100,7 @@ receivers:
   # Critical handler (PagerDuty + Slack)
   - name: 'critical-handler'
     slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL:-}'
+      - api_url: 'http://localhost:9999/slack-disabled'
         channel: '#critical-alerts'
         title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
         text: '{{ .Alerts | len }} alert(s): {{ range .Alerts }}• {{ .Annotations.summary }}{{ end }}'
@@ -123,7 +123,7 @@ receivers:
   # High severity handler (Slack + email)
   - name: 'high-handler'
     slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL:-}'
+      - api_url: 'http://localhost:9999/slack-disabled'
         channel: '#alerts-high'
         title: '⚠️ HIGH: {{ .GroupLabels.alertname }}'
         text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
@@ -133,7 +133,74 @@ receivers:
   # Medium severity handler (Slack only)
   - name: 'medium-handler'
     slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL:-}'
+      - api_url: 'http://localhost:9999/slack-disabled'
+        channel: '#alerts'
+        title: 'ℹ️ MEDIUM: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # Low severity handler (daily digest)
+  - name: 'low-handler'
+    email_configs:
+      - to: '${ALERT_EMAIL:-}'
+        from: 'alertmanager@kushnir.cloud'
+        smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+        auth_username: '${SMTP_USER}'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          Subject: 'Alert Digest: {{ .GroupLabels.alertname }}'
+        html: |
+          <h2>Alert Digest</h2>
+          <p>{{ range .Alerts }}{{ .Annotations.description }}<br/>{{ end }}</p>
+
+# Receivers configuration (alert destinations)
+receivers:
+  # Default receiver (catch-all for unmatched alerts)
+  - name: 'default'
+    slack_configs:
+      - api_url: 'http://localhost:9999/slack-disabled'
+        channel: '#alerts'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # Critical handler (PagerDuty + Slack)
+  - name: 'critical-handler'
+    slack_configs:
+      - api_url: 'http://localhost:9999/slack-disabled'
+        channel: '#critical-alerts'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ .Alerts | len }} alert(s): {{ range .Alerts }}• {{ .Annotations.summary }}{{ end }}'
+        actions:
+          - type: button
+            text: 'Runbook'
+            url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+          - type: button
+            text: 'Dashboard'
+            url: '{{ (index .Alerts 0).Annotations.dashboard_url }}'
+        send_resolved: true
+        color: 'danger'
+    pagerduty_configs:
+      - routing_key: '${PAGERDUTY_ROUTING_KEY:-}'
+        description: '{{ .GroupLabels.alertname }}: {{ (index .Alerts 0).Annotations.summary }}'
+        client: 'Prometheus AlertManager'
+        client_url: '{{ .ExternalURL }}'
+        severity: 'critical'
+
+  # High severity handler (Slack + email)
+  - name: 'high-handler'
+    slack_configs:
+      - api_url: 'http://localhost:9999/slack-disabled'
+        channel: '#alerts-high'
+        title: '⚠️ HIGH: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+        color: 'warning'
+
+  # Medium severity handler (Slack only)
+  - name: 'medium-handler'
+    slack_configs:
+      - api_url: 'http://localhost:9999/slack-disabled'
         channel: '#alerts'
         title: 'ℹ️ MEDIUM: {{ .GroupLabels.alertname }}'
         text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'

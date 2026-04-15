@@ -165,9 +165,9 @@ services:
       - ${NAS_PRIMARY_MOUNT}/ollama:/root/.ollama:rw
     healthcheck:
       test: ["CMD", "ollama", "list"]
-      interval: ${OLLAMA_HEALTHCHECK_INTERVAL}
-      timeout: ${OLLAMA_HEALTHCHECK_TIMEOUT}
-      retries: ${OLLAMA_HEALTHCHECK_RETRIES}
+      interval: ${OLLAMA_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${OLLAMA_HEALTHCHECK_TIMEOUT:-10s}
+      retries: 3
     deploy:
       resources:
         limits:

@@ -2,6 +2,9 @@
 # Uses docker-compose for container orchestration (declarative)
 # Terraform for infrastructure provisioning (optional future use)
 
+# Force bash shell (required for process substitution in index target)
+SHELL := /bin/bash
+
 .PHONY: help init validate plan apply deploy destroy destroy-full clean logs status dashboard \
         shell refresh output fmt taint untaint state-list console audit idempotency-check \
         compose-up compose-down compose-restart \
@@ -1019,10 +1022,12 @@ index:
 	 echo "  Total .sh files:        $$TOTAL"; \
 	 echo ""
 	@echo "  Unregistered scripts (must be added to MANIFEST.toml or archived):"
-	@while IFS= read -r f; do \
+	@for f in $$(find scripts -maxdepth 1 -name "*.sh" -type f | sort); do \
 		name=$$(basename "$$f"); \
-		grep -q "file.*=.*\"$$name\"" scripts/MANIFEST.toml 2>/dev/null || echo "  ✗ $$name"; \
-	done < <(find scripts -maxdepth 1 -name "*.sh" | sort)
+		if ! grep -q "file.*=.*\"$$name\"" scripts/MANIFEST.toml 2>/dev/null; then \
+			echo "  ✗ $$name"; \
+		fi; \
+	done
 
 # Generate initial MANIFEST.toml from existing scripts (run once)
 manifest-init:

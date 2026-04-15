@@ -1,0 +1,278 @@
+name: VPN Enterprise Endpoint Scan - Enhanced
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Hourly
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Scan action'
+        required: true
+        default: 'scan'
+        type: choice
+        options:
+          - scan
+          - scan-verbose
+          - manual-verify
+      base_url:
+        description: 'Base URL override (optional)'
+        required: false
+        type: string
+      vpn_interface:
+        description: 'WireGuard interface (default: wgci)'
+        required: false
+        default: 'wgci'
+        type: string
+      retention_days:
+        description: 'Artifact retention days (default: 30)'
+        required: false
+        default: '30'
+        type: string
+
+permissions:
+  contents: read
+  checks: write
+  statuses: write
+
+env:
+  VPN_INTERFACE: 'wgci'
+  ARTIFACT_RETENTION_DAYS: 30
+  SCAN_TIMEOUT_MINUTES: 60
+  SLACK_WEBHOOK: ${{ secrets.SLACK_NOTIFICATIONS_WEBHOOK }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Preflight Checks - Validate secrets and inputs
+  # ─────────────────────────────────────────────────────────────────────────
+  preflight:
+    name: Preflight Validation
+    runs-on: ubuntu-latest
+    outputs:
+      base_url: ${{ steps.config.outputs.base_url }}
+      action: ${{ steps.config.outputs.action }}
+      skip: ${{ steps.config.outputs.skip }}
+    steps:
+      - name: Validate required secrets
+        run: |
+          if [[ -z "${{ secrets.WIREGUARD_CONFIG }}" ]]; then
+            echo "::error::Missing required secret: WIREGUARD_CONFIG"
+            echo "Please add your WireGuard configuration to GitHub secrets"
+            exit 1
+          fi
+          echo "✅ WIREGUARD_CONFIG present"
+
+      - name: Parse and validate inputs
+        id: config
+        run: |
+          ACTION="${{ github.event.inputs.action || 'scan' }}"
+          BASE_URL="${{ github.event.inputs.base_url }}"
+          INTERFACE="${{ github.event.inputs.vpn_interface || 'wgci' }}"
+          
+          # Use provided base_url or fallback to default
+          if [[ -z "$BASE_URL" ]]; then
+            BASE_URL="https://ide.kushnir.cloud"
+          fi
+          
+          # Validate base_url format
+          if ! [[ "$BASE_URL" =~ ^https?:// ]]; then
+            echo "::error::Invalid base_url format. Must start with http:// or https://"
+            exit 1
+          fi
+          
+          echo "action=$ACTION" >> $GITHUB_OUTPUT
+          echo "base_url=$BASE_URL" >> $GITHUB_OUTPUT
+          echo "interface=$INTERFACE" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+          
+          echo "✅ Configuration validated"
+          echo "  Action: $ACTION"
+          echo "  Base URL: $BASE_URL"
+          echo "  Interface: $INTERFACE"
+
+      - name: Operator acknowledgement
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "🔒 Manual VPN scan triggered"
+          echo "Action: ${{ steps.config.outputs.action }}"
+          echo "Base URL: ${{ steps.config.outputs.base_url }}"
+          echo "Timestamp: $(date -I'seconds')"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # VPN Endpoint Scan - Main execution
+  # ─────────────────────────────────────────────────────────────────────────
+  vpn-scan:
+    name: Deep VPN Endpoint Scan
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: needs.preflight.outputs.skip == 'false'
+    
+    env:
+      VPN_INTERFACE: ${{ needs.preflight.outputs.interface || 'wgci' }}
+      VPN_SCAN_BASE_URL: ${{ needs.preflight.outputs.base_url || 'https://ide.kushnir.cloud' }}
+      SCAN_ACTION: ${{ needs.preflight.outputs.action || 'scan' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install VPN prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools iproute2 jq curl dnsutils
+          echo "✅ VPN prerequisites installed"
+
+      - name: Configure WireGuard
+        env:
+          WIREGUARD_CONFIG: ${{ secrets.WIREGUARD_CONFIG }}
+        run: |
+          sudo mkdir -p /etc/wireguard
+          printf '%s\n' "${WIREGUARD_CONFIG}" | sudo tee "/etc/wireguard/${VPN_INTERFACE}.conf" >/dev/null
+          sudo chmod 600 "/etc/wireguard/${VPN_INTERFACE}.conf"
+          
+          # Validate config syntax
+          if ! sudo wg-quick strip "/etc/wireguard/${VPN_INTERFACE}.conf" > /dev/null; then
+            echo "::error::Invalid WireGuard configuration"
+            exit 1
+          fi
+          echo "✅ WireGuard configuration validated"
+
+      - name: Bring up VPN interface
+        run: |
+          sudo wg-quick up "${VPN_INTERFACE}" || {
+            echo "::error::Failed to bring up VPN interface"
+            exit 1
+          }
+          
+          # Verify interface is up
+          if ! ip link show "${VPN_INTERFACE}" | grep -q "UP"; then
+            echo "::error::VPN interface did not come up"
+            exit 1
+          fi
+          
+          # Show interface status
+          echo "✅ VPN interface is UP"
+          ip link show "${VPN_INTERFACE}"
+
+      - name: Verify VPN routing
+        run: |
+          # Test DNS resolution through VPN
+          if ! nslookup ide.kushnir.cloud > /dev/null 2>&1; then
+            echo "::warning::DNS resolution failed, continuing..."
+          fi
+          
+          # Get route to target
+          TARGET_HOST="${VPN_SCAN_BASE_URL#*://}" # Remove protocol
+          TARGET_HOST="${TARGET_HOST%%/*}"         # Remove path
+          
+          ROUTE=$(ip route get "$TARGET_HOST" 2>/dev/null || echo "")
+          if [[ $ROUTE == *"${VPN_INTERFACE}"* ]]; then
+            echo "✅ Target routed through VPN interface: $TARGET_HOST"
+          else
+            echo "::warning::Target may not be routed through VPN: $TARGET_HOST"
+            echo "Route: $ROUTE"
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'tests/vpn-enterprise-endpoint-scan/package.json'
+
+      - name: Install scanner dependencies
+        working-directory: tests/vpn-enterprise-endpoint-scan
+        run: |
+          npm install --no-audit --no-fund --prefer-offline
+          npx playwright install --with-deps chromium
+          echo "✅ Scanner dependencies installed"
+
+      - name: Run VPN endpoint scan
+        working-directory: tests/vpn-enterprise-endpoint-scan
+        env:
+          VPN_SCAN_OUTPUT_DIR: ${{ runner.temp }}/vpn-scan-results
+          VERBOSE: ${{ contains(env.SCAN_ACTION, 'verbose') && '1' || '0' }}
+        run: |
+          mkdir -p "$VPN_SCAN_OUTPUT_DIR"
+          
+          if [[ "$VERBOSE" == "1" ]]; then
+            echo "Running scan in VERBOSE mode..."
+            node run-vpn-enterprise-scan.mjs 2>&1 | tee scan.log
+          else
+            node run-vpn-enterprise-scan.mjs
+          fi
+          
+          SCAN_EXIT=$?
+          if [[ $SCAN_EXIT -ne 0 ]]; then
+            echo "::error::VPN scan failed with exit code $SCAN_EXIT"
+            exit $SCAN_EXIT
+          fi
+          
+          echo "✅ VPN scan completed successfully"
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## VPN Endpoint Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base URL**: ${{ env.VPN_SCAN_BASE_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Interface**: ${{ env.VPN_INTERFACE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Action**: ${{ env.SCAN_ACTION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -I'seconds')" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpn-endpoint-scan-results
+          path: ${{ runner.temp }}/vpn-scan-results/
+          retention-days: ${{ github.event.inputs.retention_days || 30 }}
+          if-no-files-found: warn
+
+      - name: Cleanup VPN
+        if: always()
+        run: |
+          sudo wg-quick down "${VPN_INTERFACE}" || true
+          echo "✅ VPN interface cleaned up"
+
+      - name: Notify on failure
+        if: failure() && env.SLACK_WEBHOOK != ''
+        run: |
+          PAYLOAD='{
+            "text": "❌ VPN Endpoint Scan Failed",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*VPN Endpoint Scan Failed*\n*Action*: ${{ env.SCAN_ACTION }}\n*URL*: ${{ env.VPN_SCAN_BASE_URL }}\n*Run*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              }
+            ]
+          }'
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$PAYLOAD" \
+            "${SLACK_WEBHOOK}" || true
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Quality Gates
+  # ─────────────────────────────────────────────────────────────────────────
+  quality-gates:
+    name: Quality Gates
+    needs: [preflight, vpn-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check scan status
+        run: |
+          if [[ "${{ needs.vpn-scan.result }}" == "failure" ]]; then
+            echo "::error::VPN endpoint scan failed - deployment blocked"
+            exit 1
+          fi
+          echo "✅ VPN endpoint scan passed - deployment eligible"
+
+      - name: Summary
+        run: |
+          echo "## Quality Gate Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Preflight**: ✅ PASS" >> $GITHUB_STEP_SUMMARY
+          echo "- **VPN Scan**: ${{ needs.vpn-scan.result == 'success' && '✅ PASS' || '❌ FAIL' }}" >> $GITHUB_STEP_SUMMARY

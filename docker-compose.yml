@@ -1,10 +1,13 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # PRODUCTION docker-compose.yml — kushin77/code-server
-# Deploy host : 192.168.168.31
-# NAS         : 192.168.168.56:/export  →  /mnt/nas-56  (host-mounted)
-# GPU         : NVIDIA T1000 8GB  (device 1, CUDA_VISIBLE_DEVICES=1)
+# Deploy host : 192.168.168.31  (ssh akushnir@192.168.168.31)
+# NAS primary : 192.168.168.56:/export  →  /mnt/nas-56  (host fstab-mounted)
+# NAS replica : 192.168.168.55:/export  →  /mnt/nas-export  (logs/backup)
+# GPU         : NVIDIA T1000 8GB  (device index 1, cuda:1, VRAM 8GB)
+#               NVIDIA NVS 510     (device index 0, cuda:0, 2GB — monitoring)
+# Caddy       : v2.9.1-alpine   (TLS internal, all *.kushnir.cloud subdomains)
 # Secrets     : all via .env — NEVER hardcoded — see .env.example
-# Rollback    : git revert + make deploy  (<60 seconds)
+# Rollback    : git revert <sha> && git push && ssh to .31 && make deploy (<60s)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── Reusable anchors ──────────────────────────────────────────────────────────
@@ -27,7 +30,7 @@ services:
       PGDATA:            /var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - /mnt/nas-56/backups/postgres:/backups:rw
+      - nas-postgres-backups:/backups:rw
       - ./db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codeserver} -d ${POSTGRES_DB:-codeserver}"]
@@ -106,9 +109,9 @@ services:
         reservations: { memory: 512m, cpus: '0.25' }
     logging: *logging
 
-  # ─── Ollama (GPU MAX — T1000 8GB, device 1) ───────────────────────────────
+  # ─── Ollama (GPU MAX — T1000 8GB, device 1, full CUDA offload) ─────────────
   ollama:
-    image: ollama/ollama:0.1.27
+    image: ollama/ollama:0.6.1
     container_name: ollama
     restart: unless-stopped
     runtime: nvidia
@@ -116,17 +119,20 @@ services:
     ports:
       - "0.0.0.0:11434:11434"
     environment:
-      OLLAMA_HOST:             0.0.0.0:11434
-      CUDA_VISIBLE_DEVICES:    "1"          # T1000 8GB only
-      NVIDIA_VISIBLE_DEVICES:  "1"          # Required for container toolkit
-      NVIDIA_DRIVER_CAPABILITIES: all        # Full CUDA stack
-      # snap Docker injects NVIDIA libs via hostfs — must add to LD path
-      LD_LIBRARY_PATH:         /var/lib/snapd/hostfs/usr/lib/x86_64-linux-gnu
-      OLLAMA_NUM_GPU:          "1"
-      OLLAMA_GPU_LAYERS:       "99"         # full GPU offload
-      OLLAMA_KEEP_ALIVE:       "24h"
-      OLLAMA_MAX_LOADED_MODELS: "2"
-      OLLAMA_NUM_THREAD:       ${OLLAMA_NUM_THREAD:-8}
+      OLLAMA_HOST:              0.0.0.0:11434
+      CUDA_VISIBLE_DEVICES:     "1"           # T1000 8GB only — NVS 510 excluded
+      NVIDIA_VISIBLE_DEVICES:   "1"           # Required for NVIDIA container toolkit
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      # snap Docker injects NVIDIA libs via hostfs — required for CUDA
+      LD_LIBRARY_PATH:          /var/lib/snapd/hostfs/usr/lib/x86_64-linux-gnu
+      OLLAMA_NUM_GPU:           "1"
+      OLLAMA_GPU_LAYERS:        "99"          # full GPU offload (all layers)
+      OLLAMA_KEEP_ALIVE:        "24h"
+      OLLAMA_MAX_LOADED_MODELS: "3"
+      OLLAMA_NUM_THREAD:        ${OLLAMA_NUM_THREAD:-8}
+      OLLAMA_FLASH_ATTENTION:   "1"           # flash attention — max throughput
+      OLLAMA_NUM_PARALLEL:      "4"           # concurrent requests
+      OLLAMA_MAX_VRAM:          "7168"        # 7GB of T1000's 8GB (reserve 1GB)
     volumes:
       - nas-ollama:/root/.ollama:rw  # models on NAS (large files)
     healthcheck:
@@ -148,12 +154,12 @@ services:
 
   # ─── Ollama model bootstrap (runs once, then exits) ───────────────────────
   ollama-init:
-    image: ollama/ollama:0.1.27
+    image: ollama/ollama:0.6.1
     container_name: ollama-init
     restart: on-failure
     networks: [enterprise]
     environment:
-      OLLAMA_HOST: ollama:11434
+      OLLAMA_HOST: http://ollama:11434
     volumes:
       - nas-ollama:/root/.ollama:rw
     entrypoint: ["/bin/sh", "-c"]
@@ -161,7 +167,7 @@ services:
       - |
         set -e
         echo "[ollama-init] waiting for ollama..."
-        until wget -qO- http://ollama:11434/api/tags >/dev/null 2>&1; do sleep 3; done
+        until ollama list >/dev/null 2>&1; do sleep 5; done
         echo "[ollama-init] pulling llama2:7b-chat (fast baseline)"
         ollama pull llama2:7b-chat
         echo "[ollama-init] pulling codellama:7b (code model)"
@@ -215,9 +221,9 @@ services:
       code-server: { condition: service_healthy }
     logging: *logging
 
-  # ─── Caddy (TLS termination + reverse proxy) ─────────────────────────────
+  # ─── Caddy (TLS termination + reverse proxy) — v2.9.1 ───────────────────────
   caddy:
-    image: caddy:2.7.6-alpine
+    image: caddy:2.9.1-alpine
     container_name: caddy
     restart: always
     networks: [enterprise]
@@ -409,3 +415,9 @@ volumes:
       type: nfs4
       o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/grafana"
+  nas-postgres-backups:
+    driver: local
+    driver_opts:
+      type: nfs4
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
+      device: ":/export/backups/postgres"

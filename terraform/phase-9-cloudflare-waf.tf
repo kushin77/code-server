@@ -1,15 +1,6 @@
 # terraform/phase-9-cloudflare-waf.tf
 # Phase 9: WAF Rules + Rate Limiting + DDoS Protection
 
-terraform {
-  required_providers {
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 4.27"
-    }
-  }
-}
-
 # ============================================================================
 # WAF RULES
 # ============================================================================

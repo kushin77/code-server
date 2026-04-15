@@ -124,8 +124,8 @@ services:
       - "0.0.0.0:9000:9000"  # MinIO API server
       - "0.0.0.0:9001:9001"  # MinIO Web Console
     environment:
-      MINIO_ROOT_USER:     ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_password_change_me}
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER:?MINIO_ROOT_USER required - see .env.example}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD required - see .env.example}
     command: server /minio-data --console-address ":9001"
     volumes:
       - minio-data:/minio-data
@@ -382,8 +382,7 @@ services:
     networks: [enterprise]
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
-    ports:
-      - "0.0.0.0:3000:3000"
+    expose: ["3000"]  # Internal network only (routed through oauth2-proxy)
     environment:
       GF_SECURITY_ADMIN_USER:     ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
@@ -654,8 +653,7 @@ services:
     container_name: loki
     restart: unless-stopped
     networks: [enterprise]
-    ports:
-      - "0.0.0.0:3100:3100"
+    expose: ["3100"]  # Internal network only; no host port binding
     volumes:
       - ./config/loki/loki-config.yml:/etc/loki/local-config.yml:ro
       - loki-chunks:/loki/chunks

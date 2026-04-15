@@ -209,3 +209,120 @@ variable "log_level" {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Cloudflare Configuration (Tunnels, DNS, WAF, Security)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token for zone management"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID (numeric)"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID for kushnir.cloud"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_tunnel_token" {
+  description = "Cloudflare Tunnel authentication token (injected from Vault at deploy time)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "replica_host_ip" {
+  description = "Replica standby host IP (on-prem)"
+  type        = string
+  default     = "192.168.168.42"
+}
+
+variable "cloudflare_tunnel_cname" {
+  description = "Cloudflare tunnel CNAME endpoint (e.g., {uuid}.cfargotunnel.com)"
+  type        = string
+  default     = ""
+}
+
+variable "tunnel_name_prefix" {
+  description = "Tunnel name prefix for Cloudflare tunnel"
+  type        = string
+  default     = "code-server"
+}
+
+variable "waf_enabled" {
+  description = "Enable Cloudflare WAF custom rules"
+  type        = bool
+  default     = true
+}
+
+variable "dnssec_enabled" {
+  description = "Enable DNSSEC for domain"
+  type        = bool
+  default     = true
+}
+
+variable "http3_enabled" {
+  description = "Enable HTTP/3 (QUIC) protocol"
+  type        = bool
+  default     = true
+}
+
+variable "brotli_compression" {
+  description = "Enable Brotli compression"
+  type        = bool
+  default     = true
+}
+
+variable "tls_version_minimum" {
+  description = "Minimum TLS version (1.2 or 1.3)"
+  type        = string
+  default     = "1.3"
+  validation {
+    condition     = contains(["1.2", "1.3"], var.tls_version_minimum)
+    error_message = "Must be 1.2 or 1.3."
+  }
+}
+
+variable "ssl_mode" {
+  description = "SSL/TLS encryption mode (off, flexible, full, strict)"
+  type        = string
+  default     = "strict"
+  validation {
+    condition     = contains(["off", "flexible", "full", "strict"], var.ssl_mode)
+    error_message = "Must be off, flexible, full, or strict."
+  }
+}
+
+variable "cache_level" {
+  description = "Cloudflare cache level"
+  type        = string
+  default     = "cache_everything"
+}
+
+variable "allowed_email_addresses" {
+  description = "Email addresses allowed to access via Cloudflare Access"
+  type        = list(string)
+  default     = ["alex@kushnir.cloud"]
+}
+
+variable "security_email" {
+  description = "Email for security notifications (CAA, DMARC records)"
+  type        = string
+  default     = "security@kushnir.cloud"
+}
+
+variable "environment" {
+  description = "Environment name (production, staging, development)"
+  type        = string
+  default     = "production"
+  validation {
+    condition     = contains(["production", "staging", "development"], var.environment)
+    error_message = "Must be production, staging, or development."
+  }
+}

@@ -3,19 +3,6 @@
 # Immutable (pinned versions), Idempotent (safe to apply multiple times)
 # On-prem deployment to 192.168.168.31
 
-terraform {
-  required_providers {
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.2"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-  }
-}
-
 variable "primary_host_ip" {
   description = "Primary production host IP (on-prem)"
   type        = string

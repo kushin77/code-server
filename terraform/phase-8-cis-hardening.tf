@@ -4,12 +4,6 @@
 # Level 2 controls: auditd, fail2ban, unattended-upgrades, SSH hardening,
 # PAM hardening, sysctl kernel parameters, AIDE file integrity monitoring
 
-terraform {
-  required_providers {
-    null = { source = "hashicorp/null", version = "~> 3.2" }
-  }
-}
-
 # ─── Local variables ──────────────────────────────────────────────────────
 
 locals {

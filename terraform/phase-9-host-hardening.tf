@@ -3,15 +3,6 @@
 # Applies fail2ban, auditd, AIDE, kernel hardening, SSH hardening
 # Runs on production host (192.168.168.31) via remote-exec provisioner
 
-terraform {
-  required_providers {
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.2"
-    }
-  }
-}
-
 provider "null" {}
 
 # ============================================================================

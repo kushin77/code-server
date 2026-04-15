@@ -2,15 +2,6 @@
 # cosign artifact signing, SBOM generation, image verification
 # Immutable versions: cosign 2.0.0, syft 0.85.0, grype 0.74.0, trivy 0.48.0
 
-terraform {
-  required_providers {
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-  }
-}
-
 variable "cosign_version" {
   description = "cosign binary version (immutable)"
   type        = string

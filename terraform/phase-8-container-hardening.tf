@@ -2,15 +2,6 @@
 # Drop capabilities, read-only filesystems, security options, apparmor
 # Immutable, idempotent, on-prem focused
 
-terraform {
-  required_providers {
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-  }
-}
-
 variable "primary_host_ip" {
   description = "Primary production host"
   type        = string

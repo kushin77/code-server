@@ -3,15 +3,6 @@
 # Blocks database (postgres/redis) from outbound internet access
 # Protects internal services (prometheus, grafana) from external access
 
-terraform {
-  required_providers {
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.2"
-    }
-  }
-}
-
 provider "null" {}
 
 # ============================================================================

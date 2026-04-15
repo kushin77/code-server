@@ -2,15 +2,6 @@
 # Runtime threat detection, behavioral monitoring, security anomaly detection
 # Immutable versions: Falco 0.36.0, Falco Rules 0.36.0, Falco Sidekick 0.30.0
 
-terraform {
-  required_providers {
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-  }
-}
-
 variable "falco_version" {
   description = "Falco runtime security version (immutable)"
   type        = string

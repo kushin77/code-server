@@ -4,12 +4,6 @@
 # DOCKER-USER iptables chain: allow internal/DNS/HTTPS, block all else
 # Configuration: iptables: true, userland-proxy: false
 
-terraform {
-  required_providers {
-    null = { source = "hashicorp/null", version = "~> 3.2" }
-  }
-}
-
 # ─── Local variables ──────────────────────────────────────────────────────
 
 locals {

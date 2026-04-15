@@ -2,15 +2,6 @@
 # Supply Chain Security — cosign image signing, SBOM generation, vulnerability scanning
 # SLSA L2 compliance
 
-terraform {
-  required_providers {
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.2"
-    }
-  }
-}
-
 provider "null" {}
 
 # ============================================================================

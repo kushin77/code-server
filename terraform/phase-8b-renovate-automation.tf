@@ -2,15 +2,6 @@
 # Renovate Bot — automated dependency updates and vulnerability scanning
 # Weekly dependency scanning with digest pinning and auto-merge for security updates
 
-terraform {
-  required_providers {
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.2"
-    }
-  }
-}
-
 provider "null" {}
 
 # ============================================================================

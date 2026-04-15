@@ -2,15 +2,6 @@
 # Open Policy Agent with Conftest for declarative policy enforcement
 # Immutable versions: OPA 0.61.0, Conftest 0.50.0
 
-terraform {
-  required_providers {
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-  }
-}
-
 variable "opa_version" {
   description = "OPA (Open Policy Agent) version (immutable)"
   type        = string

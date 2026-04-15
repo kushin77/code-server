@@ -2,15 +2,6 @@
 # Automated dependency scanning, updates, and security patches
 # Immutable: Renovate auto-updates safely, Dependency-check 8.x
 
-terraform {
-  required_providers {
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-  }
-}
-
 variable "renovate_version" {
   description = "Renovate bot version (auto-updated safely)"
   type        = string

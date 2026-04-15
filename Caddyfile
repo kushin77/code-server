@@ -8,7 +8,7 @@
 
 	# Let's Encrypt production certificates
 	acme_ca https://acme-v02.api.letsencrypt.org/directory
-	email ops@elevatediq.ai
+	email ops@kushnir.cloud
 }
 
 # Security headers snippet
@@ -24,7 +24,7 @@
 }
 
 # Production domain with HTTPS and OAuth2
-ide.elevatediq.ai {
+ide.kushnir.cloud {
 	encode gzip
 	import security_headers
 

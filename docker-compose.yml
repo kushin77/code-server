@@ -118,12 +118,20 @@ services:
     networks: [enterprise]
     ports:
       - "0.0.0.0:11434:11434"
+    # Explicit device mounts are required with snap Docker nvidia runtime
+    # snap's nvidia-container-runtime needs /dev/nvidia<N> explicitly bound
+    # to enable CUDA compute (utility-only mode doesn't expose compute context)
+    devices:
+      - /dev/nvidia1:/dev/nvidia1          # T1000 8GB (GPU index 1)
+      - /dev/nvidiactl:/dev/nvidiactl      # nvidia control device
+      - /dev/nvidia-uvm:/dev/nvidia-uvm    # unified memory device
+      - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
     environment:
       OLLAMA_HOST:              0.0.0.0:11434
-      CUDA_VISIBLE_DEVICES:     "1"           # T1000 8GB only — NVS 510 excluded
-      NVIDIA_VISIBLE_DEVICES:   "1"           # Required for NVIDIA container toolkit
+      CUDA_VISIBLE_DEVICES:     "0"           # maps to /dev/nvidia1 (only device mounted)
+      NVIDIA_VISIBLE_DEVICES:   "1"           # for nvidia-container-runtime metadata
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
-      # snap Docker injects NVIDIA libs via hostfs — required for CUDA
+      # snap Docker: runtime injects libcuda.so via hostfs; explicit mounts handle compute
       LD_LIBRARY_PATH:          /var/lib/snapd/hostfs/usr/lib/x86_64-linux-gnu
       OLLAMA_NUM_GPU:           "1"
       OLLAMA_GPU_LAYERS:        "99"          # full GPU offload (all layers)

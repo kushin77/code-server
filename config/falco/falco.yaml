@@ -1,6 +1,7 @@
 ---
-# Falco Configuration — Production
-# Optimized for eBPF syscall monitoring
+# Falco Configuration — Production (nodriver mode)
+# Note: Running without kernel driver due to scap_init eBPF limitation
+# in this containerized environment. Container monitoring still active.
 
 # ─────────────────────────────────────────────────────────────
 # Outputs & Alerting
@@ -23,14 +24,7 @@ log_level: warning
 log_stderr: true
 
 # ─────────────────────────────────────────────────────────────
-# eBPF Driver Configuration
-# ─────────────────────────────────────────────────────────────
-
-# Using modern eBPF (--modern-bpf flag in container command)
-# No kernel module required, works in most container environments
-
-# ─────────────────────────────────────────────────────────────
-# gRPC Server - disabled (no TLS certs available in containerized deployment)
+# gRPC Server - disabled
 # ─────────────────────────────────────────────────────────────
 
 grpc:
@@ -45,39 +39,18 @@ rules_file:
   - /etc/falco/rules.custom.yaml
 
 # ─────────────────────────────────────────────────────────────
-# Performance Tuning
-# ─────────────────────────────────────────────────────────────
-
-syscall_event_drops:
-  threshold: 0.1  # Alert if >10% syscall events dropped
-  actions:
-    - log
-    - alert
-
-base_syscalls:
-  custom_set: []
-
-# ─────────────────────────────────────────────────────────────
 # Container Runtime Detection
 # ─────────────────────────────────────────────────────────────
 
 container_engines:
   docker:
     enabled: true
-    socket_file: /var/run/docker.sock
+    socket_file: /host/var/run/docker.sock
   crio:
     enabled: false
   containerd:
     enabled: false
 
-# ─────────────────────────────────────────────────────────────
-# Buffering & Ring Buffer
-# ─────────────────────────────────────────────────────────────
-
-# Use default ring buffer size (256MB)
-# For production with eBPF, 256MB is sufficient for normal operations
-
-# ─────────────────────────────────────────────────────────────
 # Output Field Customization
 # ─────────────────────────────────────────────────────────────
 

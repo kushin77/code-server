@@ -174,11 +174,11 @@ cat > "$KEYCLOAK_CONFIG" << 'EOF'
       "consentRequired": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://code-server.192.168.168.31.nip.io:8080/oauth2/callback",
+        "http://code-server.${DEPLOY_HOST}.nip.io:8080/oauth2/callback",
         "https://code-server.kushnir.cloud/oauth2/callback"
       ],
       "webOrigins": [
-        "http://code-server.192.168.168.31.nip.io:8080",
+        "http://code-server.${DEPLOY_HOST}.nip.io:8080",
         "https://code-server.kushnir.cloud"
       ],
       "defaultClientScopes": [
@@ -397,7 +397,7 @@ GITHUB_OAUTH_REDIRECT_URL=http://localhost:4180/oauth2/callback
 
 # Cookie Security
 COOKIE_SECRET=$(openssl rand -hex 16)  # Must be 16, 24, or 32 bytes hex
-COOKIE_DOMAIN=.192.168.168.31.nip.io
+COOKIE_DOMAIN=.${DEPLOY_HOST}.nip.io
 COOKIE_SECURE=false  # Set to true in production (HTTPS only)
 
 # OIDC Configuration
@@ -415,7 +415,7 @@ SESSION_MAX_LIFETIME=86400
 KEYCLOAK_REALM=code-server
 KEYCLOAK_CLIENT_ID=code-server
 KEYCLOAK_CLIENT_SECRET=<generate-via-keycloak>
-KEYCLOAK_URL=http://keycloak.192.168.168.31.nip.io:8080
+KEYCLOAK_URL=http://keycloak.${DEPLOY_HOST}.nip.io:8080
 EOF
 echo -e "${GREEN}✓ Created config/iam/oidc/.env.template${NC}"
 

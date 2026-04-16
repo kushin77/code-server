@@ -3,7 +3,7 @@
 # P1 #388 - OAuth2 Provider Configuration (Phase 1)
 # Sets up OIDC federation with Google, GitHub, and local Keycloak
 # Immutable versions: google-oauth2 v1.0.0, keycloak 20.0.0
-# On-prem focus: All identity providers configured for 192.168.168.31/42
+# On-prem focus: All identity providers configured for ${DEPLOY_HOST}/42
 #
 
 set -euo pipefail
@@ -61,7 +61,7 @@ GOOGLE_OAUTH2_REFRESH_TOKEN_EXPIRY_SECONDS="604800"
 
 # Callback URLs for dev/staging/prod (must match GCP Console)
 GOOGLE_OAUTH2_CALLBACK_URL_DEV="http://localhost:8080/auth/google/callback"
-GOOGLE_OAUTH2_CALLBACK_URL_PROD="https://code-server.192.168.168.31.nip.io:8080/auth/google/callback"
+GOOGLE_OAUTH2_CALLBACK_URL_PROD="https://code-server.${DEPLOY_HOST}.nip.io:8080/auth/google/callback"
 GOOGLE_OAUTH2_CALLBACK_URL_BACKSTAGE="https://backstage.kushin.cloud/auth/google/callback"
 GOOGLE_OAUTH2_CALLBACK_URL_APPSMITH="https://appsmith.kushin.cloud/auth/google/callback"
 EOF
@@ -95,7 +95,7 @@ GITHUB_OIDC_SUBJECT_FILTER="repo:kushin77/code-server:ref:refs/heads/main,repo:k
 GITHUB_OIDC_TOKEN_EXPIRY_SECONDS="300"
 
 # Audience (must match what CI/CD workflow requests)
-GITHUB_OIDC_AUDIENCES="https://192.168.168.31"
+GITHUB_OIDC_AUDIENCES="https://${DEPLOY_HOST}"
 
 # MFA enforcement: Not applicable for workload identity
 GITHUB_OIDC_MFA_REQUIRED="false"
@@ -113,16 +113,16 @@ cat > "${CONFIG_DIR}/keycloak-oidc.env" <<'EOF'
 # Used as fallback when Google/GitHub OIDC unavailable
 
 # Keycloak instance settings
-KEYCLOAK_HOST="keycloak.192.168.168.31.nip.io"
+KEYCLOAK_HOST="keycloak.${DEPLOY_HOST}.nip.io"
 KEYCLOAK_PORT="8443"
 KEYCLOAK_REALM="kushin"
 
 # Keycloak OIDC endpoints
-KEYCLOAK_ISSUER="https://keycloak.192.168.168.31.nip.io:8443/realms/kushin"
-KEYCLOAK_AUTH_URI="https://keycloak.192.168.168.31.nip.io:8443/realms/kushin/protocol/openid-connect/auth"
-KEYCLOAK_TOKEN_URI="https://keycloak.192.168.168.31.nip.io:8443/realms/kushin/protocol/openid-connect/token"
-KEYCLOAK_USERINFO_URI="https://keycloak.192.168.168.31.nip.io:8443/realms/kushin/protocol/openid-connect/userinfo"
-KEYCLOAK_CERTS_URI="https://keycloak.192.168.168.31.nip.io:8443/realms/kushin/protocol/openid-connect/certs"
+KEYCLOAK_ISSUER="https://keycloak.${DEPLOY_HOST}.nip.io:8443/realms/kushin"
+KEYCLOAK_AUTH_URI="https://keycloak.${DEPLOY_HOST}.nip.io:8443/realms/kushin/protocol/openid-connect/auth"
+KEYCLOAK_TOKEN_URI="https://keycloak.${DEPLOY_HOST}.nip.io:8443/realms/kushin/protocol/openid-connect/token"
+KEYCLOAK_USERINFO_URI="https://keycloak.${DEPLOY_HOST}.nip.io:8443/realms/kushin/protocol/openid-connect/userinfo"
+KEYCLOAK_CERTS_URI="https://keycloak.${DEPLOY_HOST}.nip.io:8443/realms/kushin/protocol/openid-connect/certs"
 
 # Keycloak client settings
 KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID:-code-server}"
@@ -135,7 +135,7 @@ KEYCLOAK_SCOPES="openid email profile roles"
 KEYCLOAK_TOKEN_EXPIRY_SECONDS="3600"
 
 # Callback URLs
-KEYCLOAK_CALLBACK_URL="https://code-server.192.168.168.31.nip.io:8080/auth/keycloak/callback"
+KEYCLOAK_CALLBACK_URL="https://code-server.${DEPLOY_HOST}.nip.io:8080/auth/keycloak/callback"
 
 # User federation: sync users from LDAP/AD
 KEYCLOAK_USER_FEDERATION_ENABLED="false"
@@ -198,7 +198,7 @@ providers:
     priority: 3
     config: "./keycloak-oidc.env"
     type: oidc
-    issuer: "https://keycloak.192.168.168.31.nip.io:8443/realms/kushin"
+    issuer: "https://keycloak.${DEPLOY_HOST}.nip.io:8443/realms/kushin"
     required_claims:
       - sub
       - email

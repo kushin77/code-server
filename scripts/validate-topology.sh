@@ -240,7 +240,7 @@ main() {
         echo "To fix:"
         echo "  1. Update environments/production/hosts.yml with correct IPs"
         echo "  2. Replace hardcoded IPs in scripts with calls to inventory-loader:"
-        echo "     OLD: ssh akushnir@192.168.168.31"
+        echo "     OLD: ssh akushnir@${DEPLOY_HOST}"
         echo "     NEW: ssh \$(get_ssh_user primary)@\$(get_host_ip primary)"
         echo "  3. Rerun: scripts/validate-topology.sh"
     fi

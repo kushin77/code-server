@@ -17,7 +17,7 @@ source "$SCRIPT_DIR/_common/init.sh"
 
 # SSH Configuration
 SSH_USER="akushnir"
-SSH_HOST="192.168.168.31"
+SSH_HOST="${DEPLOY_HOST}"
 SSH_KEY="${HOME}/.ssh/akushnir-31"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ check_remote_endpoints() {
     echo ""
     
     local remote_command="
-    echo '=== PRIMARY SITE - 192.168.168.31 ===' && echo ''
+    echo '=== PRIMARY SITE - ${DEPLOY_HOST} ===' && echo ''
     
     echo 'Code-Server (8080):' && \
     timeout 2 bash -c 'echo >/dev/tcp/127.0.0.1/8080' 2>/dev/null && \
@@ -177,8 +177,8 @@ main() {
         echo ""
         echo "Setup SSH Key:"
         echo "  1. Generate key: ssh-keygen -t ed25519 -f ~/.ssh/akushnir-31 -N ''"
-        echo "  2. Copy to host: ssh-copy-id -i ~/.ssh/akushnir-31 akushnir@192.168.168.31"
-        echo "  3. Test: ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 'echo works'"
+        echo "  2. Copy to host: ssh-copy-id -i ~/.ssh/akushnir-31 akushnir@${DEPLOY_HOST}"
+        echo "  3. Test: ssh -i ~/.ssh/akushnir-31 akushnir@${DEPLOY_HOST} 'echo works'"
         echo ""
         echo "Or edit this script to use password authentication or different credentials."
         return 1

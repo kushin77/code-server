@@ -174,7 +174,7 @@ fi
 if [ ! -z "$DEPLOY_HOST" ]; then
     pass "DEPLOY_HOST set: $DEPLOY_HOST"
 else
-    warn "DEPLOY_HOST not set (default: 192.168.168.31)"
+    warn "DEPLOY_HOST not set (default: ${DEPLOY_HOST})"
 fi
 
 if [ ! -z "$DEPLOY_USER" ]; then
@@ -190,7 +190,7 @@ echo "📋 PHASE 7: NETWORK & SSH CONNECTIVITY"
 echo "═════════════════════════════════════════════════════════════"
 echo ""
 
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
+DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST}}"
 DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 
 # Test SSH connectivity

@@ -2,7 +2,20 @@
  * session-keepalive.ts
  * Proactive client-side session refresh via expiry-hint companion cookie
  * Part of Phase 2 Session Self-Healing (#333)
+ * 
+ * Integrated with session-sync (#334) for multi-tab coordination:
+ * - Uses distributed lock to prevent thundering herd
+ * - Broadcasts successful refresh to other tabs
+ * - Coordinates re-authentication via leader election
  */
+
+import {
+  acquireRefreshLock,
+  releaseRefreshLock,
+  broadcastSessionRefresh,
+  broadcastSessionExpiry,
+  isLeader,
+} from './session-sync';
 
 const EXPIRE_COOKIE_NAME = '_session_expires';
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes before expiry
@@ -28,6 +41,11 @@ export function getSessionExpiry(): number | null {
 /**
  * Triggers a silent refresh by hitting an authenticated endpoint.
  * oauth2-proxy will rotate the session cookie and the companion expiry cookie.
+ * 
+ * Coordinates with other tabs via session-sync:
+ * 1. Attempts to acquire distributed refresh lock (prevents thundering herd)
+ * 2. If lock acquired, performs refresh and broadcasts success
+ * 3. If lock not acquired, waits for broadcast from lock holder
  */
 export async function doSilentRefresh(): Promise<boolean> {
   const now = Date.now();
@@ -36,8 +54,17 @@ export async function doSilentRefresh(): Promise<boolean> {
     return true;
   }
 
+  // Attempt to acquire refresh lock (prevents multiple tabs refreshing simultaneously)
+  const lockAcquired = acquireRefreshLock();
+  
+  if (!lockAcquired) {
+    console.debug('[Session] Another tab is refreshing; waiting for broadcast');
+    // Let the other tab refresh and broadcast the new expiry
+    return true;
+  }
+
   try {
-    console.debug('[Session] Initiating proactive refresh...');
+    console.debug('[Session] Lock acquired; initiating proactive refresh...');
     const response = await fetch(REFRESH_ENDPOINT, { 
       credentials: 'same-origin', 
       cache: 'no-store' 
@@ -45,19 +72,42 @@ export async function doSilentRefresh(): Promise<boolean> {
     
     if (response.ok) {
       lastRefreshTime = Date.now();
+      const newExpiry = getSessionExpiry();
+      
       console.debug('[Session] Proactive refresh successful');
+      
+      // Broadcast success to other tabs so they don't refresh again
+      if (newExpiry) {
+        broadcastSessionRefresh(newExpiry);
+      }
+      
       scheduleRefresh(); // Re-arm timer with new expiry
       return true;
     } else if (response.status === 401) {
-      console.warn('[Session] Proactive refresh failed: Unauthenticated');
-      // Do NOT redirect, let the next interaction handle it or 
-      // trigger an event for the UI to show a "Session Expired" banner
+      console.warn('[Session] Proactive refresh failed: Unauthenticated (401)');
+      
+      // Broadcast session expiry to coordinate re-authentication
+      broadcastSessionExpiry();
+      
+      // Only leader tab redirects to login (prevent multiple redirects)
+      if (isLeader()) {
+        console.warn('[Session] Leader tab: redirecting to login...');
+        setTimeout(() => {
+          window.location.href = '/login?reason=session-expired';
+        }, 100);
+      } else {
+        console.debug('[Session] Follower tab: leader will handle redirect');
+      }
+      
       return false;
     }
   } catch (error) {
     console.error('[Session] Error during proactive refresh:', error);
+    releaseRefreshLock(); // Release lock on error so other tabs can retry
+    return false;
+  } finally {
+    releaseRefreshLock();
   }
-  return false;
 }
 
 /**
@@ -106,4 +156,30 @@ export function initSessionKeepalive(): void {
 
   // 3. Periodic sanity check every 1 minute
   setInterval(scheduleRefresh, 60 * 1000);
+
+  // 4. Listen for broadcasts from other tabs (session-sync integration)
+  if (typeof BroadcastChannel !== 'undefined') {
+    try {
+      const syncChannel = new BroadcastChannel('code-server-session');
+      
+      syncChannel.addEventListener('message', (event) => {
+        const msg = event.data;
+        
+        if (msg.type === 'SESSION_REFRESHED') {
+          console.debug('[Session] Broadcast: Another tab refreshed; rescheduling timer');
+          scheduleRefresh();
+        } else if (msg.type === 'SESSION_EXPIRED') {
+          console.debug('[Session] Broadcast: Session expired on another tab');
+          // No action needed; doSilentRefresh will see 401 on next attempt
+          // or this tab will detect expiry and call doSilentRefresh
+        }
+      });
+      
+      console.debug('[Session] Listening for multi-tab sync broadcasts');
+    } catch (error) {
+      console.debug('[Session] Failed to set up broadcast listener:', error);
+      // Fall back to independent refresh
+    }
+  }
 }
+

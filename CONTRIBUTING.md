@@ -473,6 +473,148 @@ Reviewers must validate:
 
 ---
 
+## Phase 1-4 Production Readiness Framework (Automated)
+
+All PRs undergo a **4-phase automated quality gate system** (#404) to ensure production readiness:
+
+### Phase 1: Design Certification 🏗️
+
+**Gate Owner**: @architecture-team (automated via GitHub Actions)  
+**Duration**: 1-3 hours  
+**Status**: Blocks Phase 2 until approved  
+
+**Requirements**:
+- [ ] ADR requirement satisfied (or exemption documented)
+- [ ] Horizontal scaling analysis completed
+- [ ] Failure isolation strategy defined
+- [ ] Threat modeling (STRIDE) documented
+- [ ] No architectural concerns identified
+
+**Exemptions**: Minor fixes, optimizations, documentation-only changes  
+**Approval**: @kushin77 or @PureBlissAK required for Phase 1 sign-off  
+
+**What happens**:
+1. PR opened → `.github/workflows/validate-quality-gates.yml` runs automatically
+2. Verifies PR template includes Phase 1 section with checklist
+3. Posts compliance report as PR comment
+4. Awaits reviewer approval (opens Phase 2)
+
+### Phase 2: Code & Quality Review 💻
+
+**Gate Owner**: @code-review-team  
+**Duration**: 2-4 hours (depends on complexity)  
+**Status**: Can begin after Phase 1 approved  
+
+**Security Requirements**:
+- [ ] SAST scan (static application security testing) PASSED
+- [ ] Secrets scan (TruffleHog) PASSED — zero hardcoded secrets
+- [ ] Dependency scan (npm audit / pip audit) PASSED — no critical CVEs
+- [ ] Container scan (Trivy/Snyk) PASSED — no image vulnerabilities
+
+**Code Quality Requirements**:
+- [ ] Lint/style checks passing (ESLint, Pylint, Shellcheck)
+- [ ] No skipped/pending tests (test count must stay same or increase)
+- [ ] Cyclomatic complexity < 10 (avoid deeply nested logic)
+- [ ] No security anti-patterns (hardcoded secrets, unvalidated input, weak crypto)
+
+**Testing Requirements**:
+- [ ] Unit test coverage ≥ 80% on modified code
+- [ ] Integration tests if cross-service changes
+- [ ] E2E tests if UI/frontend changes
+- [ ] No test skips or TODO markers left
+
+**Observability Requirements**:
+- [ ] Structured logging with correlation IDs (JSON format)
+- [ ] Prometheus metrics exported for critical paths
+- [ ] Health endpoints implemented (if new service)
+- [ ] OpenTelemetry spans/tracing headers added (X-Trace-ID, X-Span-ID)
+- [ ] Error messages include context (what failed, why, how to fix)
+
+**Approval**: Any code owner (CODEOWNERS file) required  
+
+### Phase 3: Performance & Load Testing ⚡
+
+**Gate Owner**: @performance-team  
+**Duration**: 1-2 hours  
+**Status**: Can begin after Phase 2 approved  
+
+**Requirements** (Exemptions: docs-only, test code, non-critical utilities):
+- [ ] Baseline benchmark established (p50, p99 latency, requests/sec)
+- [ ] Load test scenarios: 1x, 2x, 5x, 10x current traffic levels
+- [ ] Results show ≤5% regression in p99 latency
+- [ ] Memory usage remains stable under load
+- [ ] No connection leaks or unbounded concurrency
+
+**Test Results Format**:
+```
+Before: p50=42ms, p99=156ms, RPS=4200, Memory=512MB
+After:  p50=43ms, p99=158ms, RPS=4198, Memory=513MB
+Change: p50: +2.4%, p99: +1.3%, RPS: -0.05%, Memory: +0.2%
+Status: ✅ PASS (all within 5% threshold)
+```
+
+**Exemptions**: Documentation, tests, non-critical utility changes  
+**Approval**: Team lead or automated if CI baseline gates pass  
+
+### Phase 4: Operational Readiness 📊
+
+**Gate Owner**: @operations-team  
+**Duration**: 1-2 hours  
+**Status**: Final gate before production merge  
+
+**Deployment Requirements**:
+- [ ] Backward compatibility verified (old clients can still use service)
+- [ ] Database migrations are reversible (with `DOWN` migration)
+- [ ] Configuration changes documented (.env, ConfigMap, secrets)
+- [ ] Deployment strategy defined: rolling / blue-green / canary / feature-flag
+
+**Rollback Requirements**:
+- [ ] Rollback time SLA documented (goal: <5 minutes)
+- [ ] Rollback command provided: `git revert -m 1 <commit>`
+- [ ] Data considerations explicit (irreversible migrations flagged)
+- [ ] Dependent services notified and verified
+
+**Monitoring & Alerts**:
+- [ ] Prometheus metrics and Grafana dashboard updated
+- [ ] Alert rules added to AlertManager (for new error conditions)
+- [ ] Runbooks created for operator response
+- [ ] Team training completed (all OpsEngineers briefed)
+
+**Documentation Requirements**:
+- [ ] RUNBOOKS.md updated with new operational procedures
+- [ ] DEPLOYMENT.md updated if deployment process changed
+- [ ] README.md updated if user-facing features added
+- [ ] ADR linked if architectural impact
+
+**Approval**: Operations lead (@kushin77) required  
+
+---
+
+## Automated Reviewer Assignment
+
+GitHub Actions **automatically assigns reviewers** based on changed files:
+
+| Change Type | Assigned Reviewer | Automatic? |
+|-------------|------------------|-----------|
+| Infrastructure (TF, Caddy, Docker) | @kushin77 | ✅ Yes |
+| Application Code (TS/JS) | @kushin77 | ✅ Yes |
+| GitHub Actions workflows | @kushin77 | ✅ Yes |
+| Architecture/ADR changes | @kushin77 | ✅ Yes |
+
+**How it works**:
+1. PR opened → `.github/workflows/assign-pr-reviewers.yml` runs
+2. Detects file types (TF, Docker, TS/JS, YAML, etc.)
+3. Posts comment: "Phase 1: Automated Reviewer Assignment"
+4. Automatically requests reviews from appropriate team
+5. You'll see review request notification in GitHub
+
+**Manual override**:
+```
+@kushin77 please review /specific-concern
+```
+
+---
+
 ## Rollback Strategy (Mandatory)
 
 Every production change must answer:

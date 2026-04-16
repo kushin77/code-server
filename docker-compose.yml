@@ -31,8 +31,8 @@ services:
     restart: always
     networks: [enterprise]
     ports:
-      - "192.168.168.31:53:53/udp"
-      - "192.168.168.31:53:53/tcp"
+      - "${DEPLOY_HOST:-192.168.168.31}:53:53/udp"
+      - "${DEPLOY_HOST:-192.168.168.31}:53:53/tcp"
     volumes:
       - ./config/coredns/Corefile:/etc/coredns/Corefile:ro
       - ./config/coredns/zones:/etc/coredns/zones:ro
@@ -882,34 +882,34 @@ volumes:
   loki-compaction:
     driver: local
 
-  # ── NAS-backed volumes (192.168.168.56:/export) ───────────────────────────
+  # ── NAS-backed volumes (${STORAGE_IP:-192.168.168.55}:/export) ───────────────────────────
   nas-ollama:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
+      o: "addr=${STORAGE_IP:-192.168.168.55},rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
       device: ":/export/ollama"
   nas-code-server:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=${STORAGE_IP:-192.168.168.55},rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/code-server"
   nas-prometheus:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=${STORAGE_IP:-192.168.168.55},rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/prometheus"
   nas-grafana:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=${STORAGE_IP:-192.168.168.55},rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/grafana"
   nas-postgres-backups:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
+      o: "addr=${STORAGE_IP:-192.168.168.55},rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
       device: ":/export/backups/postgres"

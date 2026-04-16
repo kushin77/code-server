@@ -5,10 +5,10 @@
 
 FROM python:3.11-slim
 
-LABEL maintainer="Code-Server Enterprise <ops@code-server.local>"
-LABEL description="SSH Proxy with Comprehensive Audit Logging"
-LABEL version="1.0.0"
-LABEL iac.version.python="3.11-slim"
+LABEL org.opencontainers.image.title="code-server-enterprise-ssh-proxy"
+LABEL org.opencontainers.image.description="SSH Proxy with comprehensive audit logging for on-prem code-server"
+LABEL org.opencontainers.image.source="https://github.com/kushin77/code-server"
+LABEL org.opencontainers.image.licenses="MIT"
 LABEL iac.immutable="true"
 LABEL iac.idempotent="true"
 

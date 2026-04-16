@@ -458,3 +458,42 @@ category = "operations"
 status   = "active"
 purpose  = "Test VPN endpoint connectivity and service health"
 
+# ════════════════════════════════════════════════════════════════════════════
+# Dockerfile Registry — OCI image build targets
+# ════════════════════════════════════════════════════════════════════════════
+
+[[dockerfile]]
+file        = "Dockerfile"
+category    = "ci-runner"
+status      = "active"
+base        = "ubuntu:22.04"
+purpose     = "CI pre-commit runner for linting, shellcheck, and governance hooks"
+
+[[dockerfile]]
+file        = "Dockerfile.caddy"
+category    = "proxy"
+status      = "active"
+base        = "caddy:2.9.1"
+purpose     = "Caddy v2 reverse proxy and TLS termination for on-prem stack"
+
+[[dockerfile]]
+file        = "Dockerfile.code-server"
+category    = "ide"
+status      = "active"
+base        = "codercom/code-server:${CODE_SERVER_VERSION}"
+purpose     = "Production VS Code server with Copilot extensions and enterprise auth patches"
+
+[[dockerfile]]
+file        = "Dockerfile.ssh-proxy"
+category    = "proxy"
+status      = "active"
+base        = "python:3.11-slim"
+purpose     = "SSH proxy service with comprehensive audit logging"
+
+[[dockerfile]]
+file        = "Dockerfile.token-microservice"
+category    = "auth"
+status      = "active"
+base        = "python:3.11-slim"
+purpose     = "JWT token microservice for service-to-service authentication (P1 #388 Phase 2)"
+

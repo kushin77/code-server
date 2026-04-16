@@ -1,5 +1,14 @@
+# @file        Dockerfile.caddy
+# @description Caddy v2 reverse proxy and TLS termination for on-prem code-server
+# @module      proxy
+
 # Official Caddy v2.9.1 reverse proxy and TLS termination
 # Simplified from xcaddy build (custom plugin compatibility issues)
 # Pinned to v2.9.1 for immutability and reproducible builds
 # Uses standard HTTP-01 Let's Encrypt challenge
 FROM caddy:2.9.1
+
+LABEL org.opencontainers.image.title="code-server-enterprise-caddy"
+LABEL org.opencontainers.image.description="Caddy v2 reverse proxy and TLS termination for on-prem code-server stack"
+LABEL org.opencontainers.image.source="https://github.com/kushin77/code-server"
+LABEL org.opencontainers.image.licenses="MIT"

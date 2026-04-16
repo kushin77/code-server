@@ -2,10 +2,19 @@
 # code-server enterprise build — IaC, immutable, idempotent
 # Pin all versions for reproducible builds and true immutability
 # ════════════════════════════════════════════════════════════════════════════
+# @file        Dockerfile.code-server
+# @description Production VS Code server (code-server) with Copilot extensions and auth patches
+# @module      ide
 
 ARG CODE_SERVER_VERSION=4.115.0
 
 FROM codercom/code-server:${CODE_SERVER_VERSION}
+
+# OCI image metadata (org.opencontainers.image spec)
+LABEL org.opencontainers.image.title="code-server-enterprise"
+LABEL org.opencontainers.image.description="Production VS Code server with Copilot extensions, oauth2 session patches, and enterprise auth"
+LABEL org.opencontainers.image.source="https://github.com/kushin77/code-server"
+LABEL org.opencontainers.image.licenses="MIT"
 
 # Version pinning for all extensions — set at build time, baked into image
 ARG COPILOT_VERSION=1.299.0

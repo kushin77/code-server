@@ -1,14 +1,21 @@
 # Infrastructure Inventory Management - Terraform Integration
 
 locals {
-  inventory = yamldecode(file("${path.module}/../inventory/infrastructure.yaml"))
-  hosts = local.inventory.hosts
-  network = local.inventory.network
+  # Safely decode infrastructure inventory (optional during validation)
+  inventory_raw = try(file("${path.module}/../inventory/infrastructure.yaml"), "")
   
-  primary_host = local.hosts.primary.ip_address
-  primary_ssh_user = local.hosts.primary.ssh_user
-  replica_host = local.hosts.replica.ip_address
-  virtual_ip = local.network.virtual_ip
+  # Parse YAML if available (use safe defaults if missing)
+  inventory = local.inventory_raw != "" ? try(
+    yamldecode(local.inventory_raw),
+    { hosts = {}, network = {} }
+  ) : { hosts = {}, network = {} }
+  
+  hosts              = try(local.inventory.hosts, {})
+  network            = try(local.inventory.network, {})
+  primary_host       = try(local.hosts.primary.ip_address, var.deployment_host)
+  primary_ssh_user   = try(local.hosts.primary.ssh_user, var.deployment_user)
+  replica_host       = try(local.hosts.replica.ip_address, "192.168.168.42")
+  virtual_ip         = try(local.network.virtual_ip, "")
 }
 
 output "primary_host" {

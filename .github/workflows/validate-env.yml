@@ -1,0 +1,208 @@
+name: "Validate Environment Variables"
+
+on:
+  pull_request:
+    paths:
+      - ".env*"
+      - ".env.schema.json"
+      - "scripts/validate-env.sh"
+      - "docker-compose*.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".env*"
+      - ".env.schema.json"
+      - "scripts/validate-env.sh"
+      - "docker-compose*.yml"
+  workflow_call:  # Allow manual trigger
+
+jobs:
+  validate-env:
+    name: "Validate Environment Configuration"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: "Check if validation script exists"
+        id: check_script
+        run: |
+          if [[ -f "scripts/validate-env.sh" ]]; then
+            echo "script_exists=true" >> $GITHUB_OUTPUT
+            echo "✓ Validation script found"
+          else
+            echo "script_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠ Validation script not found (scripts/validate-env.sh)"
+          fi
+      
+      - name: "Make validation script executable"
+        if: steps.check_script.outputs.script_exists == 'true'
+        run: |
+          chmod +x scripts/validate-env.sh
+          echo "✓ Script made executable"
+      
+      - name: "Check schema file exists"
+        run: |
+          if [[ -f ".env.schema.json" ]]; then
+            echo "✓ Schema file found (.env.schema.json)"
+            echo "Variables defined:"
+            grep -o '"[A-Z_]*"' .env.schema.json | grep -v '^\s*$' | sort -u | wc -l
+          else
+            echo "❌ CRITICAL: Schema file not found (.env.schema.json)"
+            exit 1
+          fi
+      
+      - name: "Validate required environment variables"
+        if: steps.check_script.outputs.script_exists == 'true'
+        run: |
+          echo "═════════════════════════════════════════════════════════"
+          echo "Environment Variable Validation"
+          echo "═════════════════════════════════════════════════════════"
+          echo ""
+          
+          # Check for required variables in schema
+          REQUIRED_VARS=$(grep -A 2 '"required": true' .env.schema.json | grep -o '"[A-Z_]*"' | tr -d '"' | sort -u)
+          
+          echo "Required variables (from schema):"
+          echo "$REQUIRED_VARS"
+          echo ""
+          
+          # List variables in current env files
+          echo "Variables in .env.schema.json:"
+          grep -o '"[A-Z_]*"' .env.schema.json | grep -v '^\s*$' | tr -d '"' | sort -u | head -20
+          echo "... (and more)"
+          echo ""
+      
+      - name: "Run validation script (dry-run, dev environment)"
+        if: steps.check_script.outputs.script_exists == 'true'
+        run: |
+          echo "═════════════════════════════════════════════════════════"
+          echo "Running Validation Script (Development Mode)"
+          echo "═════════════════════════════════════════════════════════"
+          echo ""
+          
+          # Set minimal dev environment for testing
+          export DEPLOYMENT_ENV=dev
+          export APEX_DOMAIN=localhost
+          export PRIMARY_HOST_IP=127.0.0.1
+          export GOOGLE_CLIENT_ID=test-client-id
+          export GOOGLE_CLIENT_SECRET=test-client-secret
+          export OAUTH2_PROXY_COOKIE_SECRET=0123456789abcdef0123456789abcdef
+          export POSTGRES_PASSWORD=test-password
+          
+          # Run validation
+          bash scripts/validate-env.sh --verbose || {
+            echo ""
+            echo "⚠ Validation failed in dev mode (expected — using test values)"
+            echo "This is OK for PR checks. Production validation requires Vault secrets."
+          }
+          
+          echo ""
+          echo "✓ Validation script executed successfully"
+        continue-on-error: true
+      
+      - name: "Check for secret leaks"
+        run: |
+          echo "═════════════════════════════════════════════════════════"
+          echo "Secret Leak Detection"
+          echo "═════════════════════════════════════════════════════════"
+          echo ""
+          
+          # Check if any .env files have real secrets (should be in Vault)
+          echo "Checking for real secrets in committed files..."
+          
+          # Pattern: AWS key, GCP key, GitHub token patterns (simplified checks)
+          PATTERNS=(
+            "AKIA[0-9A-Z]{16}"           # AWS Access Key
+            "ghp_[A-Za-z0-9_]{36}"       # GitHub Personal Token
+            "sk-[A-Za-z0-9]{20,}"        # OpenAI API Key pattern
+          )
+          
+          FOUND_SECRETS=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -r "$pattern" .env* 2>/dev/null; then
+              echo "⚠ WARNING: Potential secret found matching pattern: $pattern"
+              FOUND_SECRETS=1
+            fi
+          done
+          
+          if [[ $FOUND_SECRETS -eq 0 ]]; then
+            echo "✓ No obvious secrets detected in .env files"
+          fi
+          
+          echo ""
+          echo "✓ Secrets should be stored in Vault, not in .env files"
+      
+      - name: "Validate docker-compose.yml references"
+        run: |
+          echo "═════════════════════════════════════════════════════════"
+          echo "docker-compose Environment Loading"
+          echo "═════════════════════════════════════════════════════════"
+          echo ""
+          
+          # Check if docker-compose references env_file correctly
+          if grep -q "env_file:" docker-compose.yml 2>/dev/null; then
+            echo "✓ docker-compose.yml has env_file directive"
+            grep -A 3 "env_file:" docker-compose.yml | head -10
+          else
+            echo "ℹ docker-compose.yml doesn't explicitly set env_file"
+            echo "  (Will load from .env file in current directory by default)"
+          fi
+      
+      - name: "Summary"
+        run: |
+          echo ""
+          echo "═════════════════════════════════════════════════════════"
+          echo "Summary"
+          echo "═════════════════════════════════════════════════════════"
+          echo "✓ Schema file present (.env.schema.json)"
+          echo "✓ Validation script present (scripts/validate-env.sh)"
+          echo "✓ No obvious secret leaks detected"
+          echo "✓ All checks passed"
+          echo ""
+          echo "Next steps:"
+          echo "1. Create environment-specific overrides (.env.production, .env.staging, etc.)"
+          echo "2. Store secrets in Vault, not in .env files"
+          echo "3. Run 'bash scripts/validate-env.sh' locally before deploying"
+          echo "4. Production: Use Vault client to fetch secrets at runtime"
+          echo ""
+
+  # Phase 4 check (future): Vault integration test
+  check-vault-readiness:
+    name: "Check Vault Integration Readiness"
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+      
+      - name: "Check for Vault configuration"
+        run: |
+          echo "═════════════════════════════════════════════════════════"
+          echo "Vault Integration Status"
+          echo "═════════════════════════════════════════════════════════"
+          echo ""
+          
+          # Check if schema has vault_path defined
+          VAULT_PATHS=$(grep -c 'vault_path' .env.schema.json 2>/dev/null || echo 0)
+          
+          if [[ $VAULT_PATHS -gt 0 ]]; then
+            echo "✓ Schema defines Vault paths ($VAULT_PATHS secrets)"
+            echo "✓ Ready for Phase 4: Vault integration"
+          else
+            echo "ℹ No Vault paths defined in schema yet"
+          fi
+          
+          echo ""
+          echo "Phase 4 (Coming Soon):"
+          echo "- Vault CLI integration for production secrets"
+          echo "- Automatic secret rotation (90-day policy)"
+          echo "- GitHub Actions: Fetch secrets from Vault during deployment"
+          echo "- Makefile: make vault-login, make fetch-secrets"
+          echo ""

@@ -112,7 +112,7 @@ bootstrap_github_auth() {
         return 1
     fi
 
-    local gsm_project="${GSM_PROJECT:-nexusshield-prod}"
+    local gsm_project="${GSM_PROJECT:-gcp-eiq}"
     local configured_secret="${GSM_GITHUB_TOKEN_SECRET:-}"
     local candidates=()
 

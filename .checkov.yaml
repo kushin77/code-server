@@ -1,0 +1,114 @@
+# Checkov Configuration for kushin77/code-server
+# Repository: Infrastructure-as-Code Security Scanning
+# Purpose: Define acceptable security findings and suppressions
+# Last Updated: April 16, 2026
+
+framework:
+  - terraform
+
+# Suppress checks with documented justifications
+# Each suppression MUST have:
+#   - check_id: Checkov check code (e.g., CKV2_TERRAFORM_6)
+#   - file: Pattern matching files to suppress
+#   - comment: Business justification
+#   - until: Remediation deadline (YYYY-MM-DD format)
+
+suppressions:
+  # ════════════════════════════════════════════════════════════════════════════════════
+  # IAM & RBAC - Intentional Design Decisions
+  # ════════════════════════════════════════════════════════════════════════════════════
+  
+  - check_id: CKV_AWS_1
+    file: terraform/iam.tf
+    comment: |
+      Intentional: Root credentials policy documents IAM best practices.
+      No root credentials are actually used in deployment.
+      Action: Separate documentation to non-IaC files (Phase 2)
+    until: "2026-06-01"
+  
+  - check_id: CKV2_TERRAFORM_6
+    file: terraform/rbac.tf
+    comment: |
+      Intentional: RBAC allows admin role full permissions by design.
+      Mitigated by: MFA requirement, 4-hour session limit, audit logging.
+      Action: Implement fine-grained service account tokens (Phase 2)
+    until: "2026-06-01"
+  
+  # ════════════════════════════════════════════════════════════════════════════════════
+  # AUDIT LOGGING - Intentional Configuration
+  # ════════════════════════════════════════════════════════════════════════════════════
+  
+  - check_id: CKV_TERRAFORM_1
+    file: terraform/audit.tf
+    comment: |
+      Intentional: Audit logging configuration is documentation of log streams.
+      No actual resources created that would trigger this check.
+      Action: Verify no CKV failures in actual Terraform validate run
+    until: "2026-06-01"
+  
+  # ════════════════════════════════════════════════════════════════════════════════════
+  # GCP/CLOUD SPECIFIC - On-Premises Deployment
+  # ════════════════════════════════════════════════════════════════════════════════════
+  
+  - check_id: CKV_GCP_1
+    file: "terraform/phase-*.tf"
+    comment: |
+      Intentional: On-premises deployment (192.168.168.31), no GCP resources.
+      These files contain GCP OIDC federation configuration for CI/CD only.
+      Action: No remediation needed for on-prem deployment
+    until: "2026-12-01"
+  
+  # ════════════════════════════════════════════════════════════════════════════════════
+  # KUBERNETES/CLOUD VENDOR SPECIFIC - Not Applicable
+  # ════════════════════════════════════════════════════════════════════════════════════
+  
+  - check_id: CKV_K8S_1
+    file: "terraform/**/*.tf"
+    comment: |
+      Not applicable: Docker Compose on-premises deployment, no Kubernetes.
+      Phase 3 will implement K8s federation for workload identities.
+    until: "2026-09-01"
+
+# Enable/disable specific frameworks
+skip-framework:
+  - dockerfile  # No Dockerfiles in terraform/ directory
+  - helm        # No Helm charts
+  - kustomize   # No Kustomize
+  - openapi     # No OpenAPI specs
+
+# Scan configuration
+scan:
+  # Include all Terraform files in terraform/ directory
+  framework:
+    - terraform
+  
+  # Skip specific directories (non-IaC)
+  skip-directories:
+    - terraform/.terraform
+    - terraform/.terraform/**
+    - terraform/test
+    - terraform/docs
+  
+  # Hard fail on these severities
+  hard-fail-checks:
+    - CKV_TERRAFORM_5     # Example: AWS S3 encryption
+    - CKV2_TERRAFORM_12   # Example: KMS key rotation
+  
+  # Soft fail (warn only) on these
+  soft-fail-checks:
+    - CKV_TERRAFORM_1
+    - CKV2_TERRAFORM_6
+
+# Reporting
+report:
+  # Output format
+  format: sarif
+  
+  # Include all results (not just failures)
+  include-passed-checks: false
+  
+  # Compress output
+  compact: true
+
+# Logging
+log-level: warning

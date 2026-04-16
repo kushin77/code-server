@@ -38,9 +38,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+source "$SCRIPT_DIR/_common/init.sh"
 INVENTORY_FILE="$PROJECT_ROOT/inventory/infrastructure.yaml"
 AUDIT_LOG="$PROJECT_ROOT/logs/deployments.log"
 DEPLOYMENT_STATE="$PROJECT_ROOT/.deployment-state"
+GLOBAL_GATE_SCRIPT="$PROJECT_ROOT/scripts/lib/global-quality-gate.sh"
 
 # Color output
 RED='\033[0;31m'
@@ -81,6 +83,12 @@ log() {
 
 check_prerequisites() {
   log INFO "Checking prerequisites..."
+
+  # Run repo-wide quality invariants before deploy orchestration.
+  if [ -f "$GLOBAL_GATE_SCRIPT" ]; then
+    log INFO "Running global quality gate..."
+    GATE_MODE=incremental bash "$GLOBAL_GATE_SCRIPT"
+  fi
   
   local missing_tools=()
   for tool in ansible jq yq ssh; do

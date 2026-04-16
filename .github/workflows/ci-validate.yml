@@ -15,6 +15,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Run Global Quality Gate
+        run: |
+          chmod +x scripts/lib/global-quality-gate.sh
+          GATE_MODE=incremental bash scripts/lib/global-quality-gate.sh
+
       - name: Lint Shell Scripts
         uses: ludeeus/action-shellcheck@master
         with:

@@ -75,6 +75,7 @@ Waivers approved if:
 ### 1. Request Phase
 
 **Location**: GitHub PR comments  
+**Preferred Path**: Open the `Governance waiver request` issue template in `.github/ISSUE_TEMPLATE/governance-waiver.md` and link the affected PR or issue.  
 **Format**: Use template above  
 **Timing**: Before pushing code requiring waiver
 
@@ -87,6 +88,7 @@ Waivers approved if:
 ### 3. Approval Phase
 
 **Action**: Infrastructure lead adds waiver to `docs/governance/WAIVERS.md`  
+**Automation**: `.github/workflows/governance-waiver-audit.yml` validates request completeness on issue updates and publishes recurring waiver audit metrics.  
 **Notification**: Automated comment on PR with approval
 
 ### 4. Post-Expiration

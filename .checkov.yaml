@@ -38,38 +38,13 @@ skip-framework:
   - openapi
 
 # Scan configuration
-scan:
-  # Include all Terraform files in terraform/ directory
-  framework:
-    - terraform
-  
-  # Skip specific directories (non-IaC)
-  skip-directories:
-    - terraform/.terraform
-    - terraform/.terraform/**
-    - terraform/test
-    - terraform/docs
-  
-  # Hard fail on these severities
-  hard-fail-checks:
-    - CKV_TERRAFORM_5     # Example: AWS S3 encryption
-    - CKV2_TERRAFORM_12   # Example: KMS key rotation
-  
-  # Soft fail (warn only) on these
-  soft-fail-checks:
-    - CKV_TERRAFORM_1
-    - CKV2_TERRAFORM_6
+# Scan configuration (flat structure for checkov v3+)
+skip-directory:
+  - .terraform
+  - terraform/.terraform
+  - terraform/test
+  - terraform/docs
+  - node_modules
 
-# Reporting
-report:
-  # Output format
-  format: sarif
-  
-  # Include all results (not just failures)
-  include-passed-checks: false
-  
-  # Compress output
-  compact: true
-
-# Logging
-log-level: warning
+compact: true
+quiet: true

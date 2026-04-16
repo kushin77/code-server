@@ -120,7 +120,7 @@ jobs:
           fetch-depth: 0
       
       - name: TruffleHog Secret Scanning
-        uses: trufflesecurity/trufflehog@ec6ed3e0ede5b8ddbaf27ebf10bca729e4b2d4e6  # main (SHA based)
+        uses: trufflesecurity/trufflehog@47e7b7cd74f578e1e3145d48f669f22fd1330ca6  # v3.94.3
         with:
           path: ./
           base: ${{ github.event.pull_request.base.sha }}

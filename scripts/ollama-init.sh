@@ -67,7 +67,11 @@ pull_model() {
 
 # List available models
 list_models() {
-  local endpoint=$1 (IDEMPOTENT — checks hash to skip rebuild)
+  local endpoint=$1
+  curl -sf "${endpoint}/api/tags" 2>/dev/null | grep -o '"name":"[^"]*"' | sed 's/"name":"//;s/"//'
+}
+
+# Build repository index (IDEMPOTENT — checks hash to skip rebuild)
 build_repo_index() {
   local workspace=$1
   local index_file="$workspace/.ollama-index.json"

@@ -102,8 +102,7 @@ GitHub detects merge
 - `.github/workflows/ci-validate.yml` - PR validation
 
 ### Scripts
-- `scripts/redeploy.sh` - Bash deployment orchestrator
-- `scripts/redeploy.ps1` - PowerShell deployment orchestrator
+- `scripts/redeploy.sh` - Bash deployment orchestrator (Linux-only)
 
 ### Documentation (This Directory)
 - `AUTO-MERGE-CLEANUP-DEPLOY-MANDATE.md` - The policy
@@ -310,7 +309,7 @@ Your team is now deploying automatically!
 | Component | Status | Details |
 |-----------|--------|---------|
 | Workflow | ✅ Implemented | `post-merge-cleanup-deploy.yml` |
-| Scripts | ✅ Implemented | `redeploy.sh` and `redeploy.ps1` |
+| Scripts | ✅ Implemented | `redeploy.sh` (Linux/Bash only) |
 | Documentation | ✅ Complete | 4 comprehensive guides |
 | Testing | ✅ Verified | Checklist available |
 | Production Ready | ✅ Yes | Ready to activate |
@@ -333,8 +332,7 @@ Your team is now deploying automatically!
 └── pull_request_template.md              ← Links issues
 
 scripts/
-├── redeploy.sh                           ← Bash script
-├── redeploy.ps1                          ← PowerShell script
+├── redeploy.sh                           ← Bash script (Linux-only)
 └── deploy-phase-12-all.sh                ← Actual deployment
 ```
 

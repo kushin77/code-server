@@ -14,7 +14,7 @@ proxy-domain:
   - localhost
   - 127.0.0.1
   - 192.168.168.32
-  - 192.168.168.31
+  - primary.prod.internal
   - ide.kushnir.cloud
   - "${DEPLOY_HOST:localhost}"
 

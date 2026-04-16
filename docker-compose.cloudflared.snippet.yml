@@ -1,0 +1,38 @@
+# docker-compose.yml - Add cloudflared service for Tunnel
+# This is the service definition to add to the existing docker-compose.yml
+
+cloudflared:
+  image: cloudflare/cloudflared:2024.1.5
+  container_name: cloudflared
+  restart: unless-stopped
+  command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+  environment:
+    TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN}"
+  networks:
+    - enterprise
+  depends_on:
+    caddy:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "cloudflared", "tunnel", "info"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 5s
+  deploy:
+    resources:
+      limits:
+        memory: 128m
+        cpus: '0.25'
+      reservations:
+        memory: 64m
+        cpus: '0.1'
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+      labels: "service=cloudflared"
+  labels:
+    - "com.example.description=Cloudflare Tunnel for edge security"
+    - "com.example.version=2024.1.5"

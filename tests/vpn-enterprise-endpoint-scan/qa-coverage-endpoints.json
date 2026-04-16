@@ -1,0 +1,327 @@
+{
+  "baseUrl": "https://ide.kushnir.cloud",
+  "navigationTimeoutMs": 45000,
+  "slowThresholdMs": 2000,
+  "coverageMode": "exhaustive",
+  "description": "QA-COVERAGE-004: Exhaustive endpoint and interaction coverage for all IDE services",
+  "lastUpdated": "2026-04-15T20:30:00Z",
+  "endpoints": [
+    {
+      "id": "ide-root",
+      "name": "IDE Root",
+      "path": "/",
+      "method": "GET",
+      "description": "IDE landing page / home",
+      "allowedStatus": [200, 302, 401, 403],
+      "requiresAuth": true,
+      "interactionTests": [
+        {
+          "type": "click",
+          "selector": "a[href*='/workspace']",
+          "description": "Navigate to workspace"
+        },
+        {
+          "type": "click",
+          "selector": "a[href*='/settings']",
+          "description": "Open settings"
+        }
+      ],
+      "assertions": {
+        "contentType": "text/html",
+        "responseTime": { "p95": 1000, "p99": 2000 },
+        "noConsoleErrors": true
+      }
+    },
+    {
+      "id": "healthz",
+      "name": "Health Check",
+      "path": "/healthz",
+      "method": "GET",
+      "description": "Service health endpoint (unauthenticated)",
+      "allowedStatus": [200, 503],
+      "requiresAuth": false,
+      "assertions": {
+        "contentType": "application/json",
+        "responseTime": { "p95": 100, "p99": 200 },
+        "schemaContract": {
+          "status": "string",
+          "timestamp": "string"
+        }
+      }
+    },
+    {
+      "id": "oauth-callback",
+      "name": "OAuth2 Callback",
+      "path": "/oauth2/callback",
+      "method": "GET",
+      "description": "OAuth2 provider callback handler",
+      "allowedStatus": [302, 400],
+      "requiresAuth": false,
+      "queryParams": {
+        "code": "test-code",
+        "state": "test-state"
+      }
+    },
+    {
+      "id": "oauth-userinfo",
+      "name": "OAuth2 User Info",
+      "path": "/oauth2/userinfo",
+      "method": "GET",
+      "description": "Get authenticated user info",
+      "allowedStatus": [200, 401],
+      "requiresAuth": true,
+      "assertions": {
+        "contentType": "application/json",
+        "schemaContract": {
+          "email": "string",
+          "name": "string",
+          "roles": "array"
+        }
+      }
+    },
+    {
+      "id": "grafana-home",
+      "name": "Grafana Dashboard",
+      "path": "/grafana/",
+      "method": "GET",
+      "description": "Grafana monitoring dashboard",
+      "allowedStatus": [200, 302, 401, 403],
+      "requiresAuth": true,
+      "interactionTests": [
+        {
+          "type": "click",
+          "selector": "a[href*='/d/']",
+          "description": "Open dashboard"
+        },
+        {
+          "type": "click",
+          "selector": "[data-testid='navbar-alerts-button']",
+          "description": "View alerts"
+        }
+      ]
+    },
+    {
+      "id": "grafana-api-datasources",
+      "name": "Grafana API: Datasources",
+      "path": "/grafana/api/datasources",
+      "method": "GET",
+      "description": "List configured datasources",
+      "allowedStatus": [200, 401, 403],
+      "requiresAuth": true,
+      "assertions": {
+        "contentType": "application/json",
+        "responseTime": { "p95": 500, "p99": 1000 }
+      }
+    },
+    {
+      "id": "prometheus-home",
+      "name": "Prometheus UI",
+      "path": "/prometheus/",
+      "method": "GET",
+      "description": "Prometheus metrics explorer",
+      "allowedStatus": [200, 302, 401, 403],
+      "requiresAuth": true
+    },
+    {
+      "id": "prometheus-api-query",
+      "name": "Prometheus API: Query",
+      "path": "/prometheus/api/v1/query",
+      "method": "GET",
+      "description": "Execute Prometheus metric query",
+      "allowedStatus": [200, 400, 401, 403],
+      "requiresAuth": true,
+      "queryParams": {
+        "query": "up"
+      },
+      "assertions": {
+        "contentType": "application/json",
+        "responseTime": { "p95": 1000, "p99": 2000 }
+      }
+    },
+    {
+      "id": "prometheus-api-targets",
+      "name": "Prometheus API: Targets",
+      "path": "/prometheus/api/v1/targets",
+      "method": "GET",
+      "description": "List scrape targets",
+      "allowedStatus": [200, 401, 403],
+      "requiresAuth": true
+    },
+    {
+      "id": "jaeger-home",
+      "name": "Jaeger Tracing UI",
+      "path": "/jaeger/",
+      "method": "GET",
+      "description": "Jaeger distributed tracing interface",
+      "allowedStatus": [200, 302, 401, 403],
+      "requiresAuth": true
+    },
+    {
+      "id": "jaeger-api-services",
+      "name": "Jaeger API: Services",
+      "path": "/jaeger/api/services",
+      "method": "GET",
+      "description": "List traced services",
+      "allowedStatus": [200, 401, 403],
+      "requiresAuth": true,
+      "assertions": {
+        "contentType": "application/json"
+      }
+    },
+    {
+      "id": "alertmanager-home",
+      "name": "AlertManager UI",
+      "path": "/alertmanager/",
+      "method": "GET",
+      "description": "AlertManager dashboard",
+      "allowedStatus": [200, 302, 401, 403],
+      "requiresAuth": true
+    },
+    {
+      "id": "alertmanager-api-alerts",
+      "name": "AlertManager API: Alerts",
+      "path": "/alertmanager/api/v2/alerts",
+      "method": "GET",
+      "description": "List active alerts",
+      "allowedStatus": [200, 401, 403],
+      "requiresAuth": true,
+      "assertions": {
+        "contentType": "application/json",
+        "responseTime": { "p95": 500, "p99": 1000 }
+      }
+    },
+    {
+      "id": "code-server-api-extensions",
+      "name": "Code-Server API: Extensions",
+      "path": "/api/v1/extensions",
+      "method": "GET",
+      "description": "List installed extensions",
+      "allowedStatus": [200, 401, 403],
+      "requiresAuth": true,
+      "assertions": {
+        "contentType": "application/json"
+      }
+    },
+    {
+      "id": "code-server-ws",
+      "name": "Code-Server WebSocket",
+      "path": "/ws",
+      "method": "GET",
+      "description": "Code-Server WebSocket connection",
+      "allowedStatus": [101, 400, 401, 403],
+      "requiresAuth": true,
+      "protocol": "websocket"
+    },
+    {
+      "id": "api-workspace-list",
+      "name": "API: List Workspaces",
+      "path": "/api/v1/workspaces",
+      "method": "GET",
+      "description": "List user workspaces",
+      "allowedStatus": [200, 401, 403],
+      "requiresAuth": true,
+      "assertions": {
+        "contentType": "application/json",
+        "schemaContract": {
+          "workspaces": "array"
+        }
+      }
+    },
+    {
+      "id": "api-users-me",
+      "name": "API: Get Current User",
+      "path": "/api/v1/users/me",
+      "method": "GET",
+      "description": "Get authenticated user details",
+      "allowedStatus": [200, 401],
+      "requiresAuth": true,
+      "assertions": {
+        "contentType": "application/json"
+      }
+    },
+    {
+      "id": "api-settings",
+      "name": "API: User Settings",
+      "path": "/api/v1/settings",
+      "method": "GET",
+      "description": "Get user settings",
+      "allowedStatus": [200, 401, 403],
+      "requiresAuth": true
+    },
+    {
+      "id": "static-favicon",
+      "name": "Static: Favicon",
+      "path": "/favicon.ico",
+      "method": "GET",
+      "description": "Site favicon",
+      "allowedStatus": [200, 404],
+      "requiresAuth": false,
+      "assertions": {
+        "responseTime": { "p95": 100, "p99": 200 }
+      }
+    },
+    {
+      "id": "redirect-help",
+      "name": "Redirect: Help",
+      "path": "/help",
+      "method": "GET",
+      "description": "Help documentation redirect",
+      "allowedStatus": [301, 302, 307],
+      "requiresAuth": false
+    },
+    {
+      "id": "redirect-docs",
+      "name": "Redirect: Documentation",
+      "path": "/docs",
+      "method": "GET",
+      "description": "Documentation portal redirect",
+      "allowedStatus": [301, 302, 307],
+      "requiresAuth": false
+    }
+  ],
+  "interactionScenarios": [
+    {
+      "id": "auth-flow",
+      "name": "Authentication Flow",
+      "description": "Verify OAuth2 login flow works",
+      "steps": [
+        { "action": "navigate", "url": "/" },
+        { "action": "wait", "selector": "a[href*='oauth2']" },
+        { "action": "click", "selector": "a[href*='oauth2']" }
+      ]
+    },
+    {
+      "id": "workspace-navigation",
+      "name": "Workspace Navigation",
+      "description": "Navigate between workspaces",
+      "steps": [
+        { "action": "navigate", "url": "/" },
+        { "action": "wait", "selector": "[data-testid='workspace-list']" },
+        { "action": "click", "selector": "[data-testid='workspace-list'] > *:first-child" }
+      ]
+    },
+    {
+      "id": "monitoring-access",
+      "name": "Monitoring Access",
+      "description": "Verify monitoring dashboards accessible",
+      "steps": [
+        { "action": "navigate", "url": "/" },
+        { "action": "click", "selector": "a[href*='grafana']" },
+        { "action": "wait", "selector": "[data-testid='grafana-dashboard']" }
+      ]
+    }
+  ],
+  "excludePaths": [
+    "/debug",
+    "/internal",
+    "*.js.map",
+    "/test",
+    "/mock"
+  ],
+  "coverage": {
+    "minEndpointCoverage": 95,
+    "minInteractionCoverage": 80,
+    "minAPIContractCoverage": 90,
+    "reportFormat": "json"
+  }
+}

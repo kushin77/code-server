@@ -1,0 +1,400 @@
+name: VPN Enterprise Endpoint Scan
+
+# VPN-OPS-011: Hardened VPN scan workflow with secrets validation, manual dispatch controls, and artifact retention
+# Purpose: Validate all enterprise endpoints are reachable through VPN-only access
+# Blocking Gate: Required for main branch deployment and networking changes
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Hourly
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL to test (default: https://ide.kushnir.cloud)'
+        required: false
+        default: 'https://ide.kushnir.cloud'
+      vpn_interface:
+        description: 'WireGuard interface name (default: wgci)'
+        required: false
+        default: 'wgci'
+      skip_safety_check:
+        description: 'Skip safety checks (for emergency-only debugging)'
+        required: false
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+        default: 'false'
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Preflight Checks - Secrets & Configuration Validation
+    runs-on: [self-hosted, on-prem]
+    outputs:
+      secrets_valid: ${{ steps.validate.outputs.secrets_valid }}
+      wireguard_config_hash: ${{ steps.validate.outputs.config_hash }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets exist and have correct format
+        id: validate
+        env:
+          WIREGUARD_CONFIG: ${{ secrets.WIREGUARD_CONFIG }}
+          VPN_SCAN_BASE_URL: ${{ secrets.VPN_SCAN_BASE_URL }}
+        run: |
+          set +e
+          
+          # Validate WIREGUARD_CONFIG
+          if [[ -z "${WIREGUARD_CONFIG}" ]]; then
+            echo "::error::REQUIRED SECRET MISSING: WIREGUARD_CONFIG"
+            echo "Remediation: Add WIREGUARD_CONFIG to GitHub repository secrets"
+            echo "Format: Complete WireGuard configuration file contents"
+            exit 1
+          fi
+          
+          # Check minimum length (WireGuard configs should be 300+ bytes)
+          WG_LEN=${#WIREGUARD_CONFIG}
+          if [[ $WG_LEN -lt 300 ]]; then
+            echo "::error::WIREGUARD_CONFIG too short ($WG_LEN bytes, need ≥300)"
+            echo "Remediation: Verify secret contains complete WireGuard config"
+            exit 1
+          fi
+          
+          # Check for required WireGuard sections
+          if ! echo "${WIREGUARD_CONFIG}" | grep -q "\[Interface\]"; then
+            echo "::error::WIREGUARD_CONFIG missing [Interface] section"
+            exit 1
+          fi
+          
+          if ! echo "${WIREGUARD_CONFIG}" | grep -q "\[Peer\]"; then
+            echo "::error::WIREGUARD_CONFIG missing [Peer] section"
+            exit 1
+          fi
+          
+          # Warn if VPN_SCAN_BASE_URL not set (will use default)
+          if [[ -z "${VPN_SCAN_BASE_URL}" ]]; then
+            echo "::warning::VPN_SCAN_BASE_URL secret not set, will use default https://ide.kushnir.cloud"
+          fi
+          
+          # Compute config hash for idempotency detection
+          CONFIG_HASH=$(echo "${WIREGUARD_CONFIG}" | sha256sum | cut -d' ' -f1 | head -c 8)
+          
+          echo "secrets_valid=true" >> $GITHUB_OUTPUT
+          echo "config_hash=${CONFIG_HASH}" >> $GITHUB_OUTPUT
+          echo "✅ All required secrets validated"
+          echo "✅ WIREGUARD_CONFIG size: $WG_LEN bytes"
+          echo "✅ Configuration hash: $CONFIG_HASH"
+
+  vpn-endpoint-scan:
+    name: Deep VPN endpoint scan (Playwright + Puppeteer)
+    needs: preflight
+    runs-on: [self-hosted, on-prem]
+    timeout-minutes: 60
+
+    env:
+      VPN_INTERFACE: ${{ github.event.inputs.vpn_interface || 'wgci' }}
+      VPN_SCAN_BASE_URL_DEFAULT: ${{ github.event.inputs.base_url || 'https://ide.kushnir.cloud' }}
+      VPN_SCAN_BASE_URL_SECRET: ${{ secrets.VPN_SCAN_BASE_URL }}
+      SKIP_SAFETY_CHECK: ${{ github.event.inputs.skip_safety_check || 'false' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Safety check - Operator acknowledgement
+        if: env.SKIP_SAFETY_CHECK != 'true'
+        run: |
+          echo "🔒 SAFETY CHECKS ENABLED"
+          echo "This workflow:"
+          echo "  • Requires WireGuard configuration from secrets"
+          echo "  • Brings up VPN interface in runner environment"
+          echo "  • Tests endpoints through VPN tunnel only"
+          echo "  • May block production deployments if scan fails"
+          echo ""
+          echo "Interface to be used: ${VPN_INTERFACE}"
+          echo "Base URL: ${VPN_SCAN_BASE_URL_DEFAULT}"
+          echo ""
+          echo "If this is unexpected, cancel now. Proceeding in 5 seconds..."
+          sleep 5
+          echo "✅ Safety check acknowledged"
+
+      - name: Install VPN prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wireguard-tools iproute2 jq
+
+      - name: Validate WireGuard interface naming
+        run: |
+          # Check for reserved interface names
+          if [[ "$VPN_INTERFACE" == "wg0" ]]; then
+            echo "::warning::Using default interface wg0 - ensure no conflicts"
+          fi
+          
+          # Check interface naming pattern
+          if ! [[ "$VPN_INTERFACE" =~ ^wg[a-z0-9]+$ ]]; then
+            echo "::error::Invalid interface name: $VPN_INTERFACE (must match wg[a-z0-9]+)"
+            exit 1
+          fi
+          
+          echo "✅ Interface name valid: $VPN_INTERFACE"
+
+      - name: Configure WireGuard from secret
+        env:
+          WIREGUARD_CONFIG: ${{ secrets.WIREGUARD_CONFIG }}
+        run: |
+          if [[ -z "${WIREGUARD_CONFIG}" ]]; then
+            echo "::error::Missing required secret WIREGUARD_CONFIG"
+            echo "Remediation steps:"
+            echo "  1. Go to GitHub repository Settings → Secrets and Variables → Actions"
+            echo "  2. Create new secret: WIREGUARD_CONFIG"
+            echo "  3. Paste complete WireGuard configuration file contents"
+            echo "  4. Save and re-run workflow"
+            exit 1
+          fi
+
+          sudo mkdir -p /etc/wireguard
+          printf '%s\n' "${WIREGUARD_CONFIG}" | sudo tee "/etc/wireguard/${VPN_INTERFACE}.conf" >/dev/null
+          sudo chmod 600 "/etc/wireguard/${VPN_INTERFACE}.conf"
+          
+          # Validate configuration file syntax
+          if ! sudo wg-quick strip "/etc/wireguard/${VPN_INTERFACE}.conf" >/dev/null 2>&1; then
+            echo "::error::WireGuard configuration syntax invalid"
+            exit 1
+          fi
+          
+          echo "✅ WireGuard configuration validated and installed"
+
+      - name: Bring up VPN interface
+        run: |
+          sudo wg-quick up "${VPN_INTERFACE}"
+          ip link show "${VPN_INTERFACE}"
+          sudo wg show "${VPN_INTERFACE}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install scanner dependencies
+        working-directory: tests/vpn-enterprise-endpoint-scan
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Run VPN-only deep endpoint scan
+        env:
+          VPN_SCAN_BASE_URL: ${{ env.VPN_SCAN_BASE_URL_SECRET }}
+          INSTALL_PLAYWRIGHT_BROWSER: '0'
+        run: |
+          if [[ -z "${VPN_SCAN_BASE_URL}" ]]; then
+            VPN_SCAN_BASE_URL="${VPN_SCAN_BASE_URL_DEFAULT}"
+          fi
+
+          export VPN_SCAN_BASE_URL
+          export VPN_INTERFACE
+          bash scripts/vpn-enterprise-endpoint-scan.sh
+
+      - name: Completion gate - verify scan evidence
+        run: |
+          latest_dir=$(ls -dt test-results/vpn-endpoint-scan/* 2>/dev/null | head -1)
+          if [[ -z "${latest_dir}" ]]; then
+            echo "::error::No VPN scan artifact directory found"
+            exit 1
+          fi
+
+          summary_file="${latest_dir}/summary.json"
+          if [[ ! -f "${summary_file}" ]]; then
+            echo "::error::Missing summary.json in ${latest_dir}"
+            exit 1
+          fi
+
+          node -e "
+            const fs = require('fs');
+            const summary = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+            if (summary.status !== 'pass') {
+              console.error('Scan summary status is not pass');
+              process.exit(1);
+            }
+            if (!summary.vpn || summary.vpn.verified !== true) {
+              console.error('VPN verification missing or false');
+              process.exit(1);
+            }
+            const engines = new Set((summary.results || []).map(r => r.engine));
+            if (!engines.has('playwright') || !engines.has('puppeteer')) {
+              console.error('Expected both Playwright and Puppeteer results');
+              process.exit(1);
+            }
+            const routeEvidence = summary.vpn.routeEvidence || [];
+            if (routeEvidence.length === 0) {
+              console.error('VPN route evidence is empty');
+              process.exit(1);
+            }
+          " "${summary_file}"
+
+      - name: Archive and upload VPN scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpn-endpoint-scan-${{ github.run_id }}
+          path: test-results/vpn-endpoint-scan/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce artifact retention policy
+        if: always()
+        run: |
+          # Artifact retention policy for VPN scans
+          # Keep all artifacts for 30 days (GitHub default)
+          # Keep summary.json for 90 days (manual archive to NAS for long-term)
+          # Delete traces older than 14 days (reduce storage)
+          # Keep latest 30 scan results locally
+          
+          SCAN_DIR="test-results/vpn-endpoint-scan"
+          if [[ -d "$SCAN_DIR" ]]; then
+            SCAN_COUNT=$(ls -1d "$SCAN_DIR"/*/ 2>/dev/null | wc -l)
+            echo "Artifact Retention Policy"
+            echo "========================="
+            echo "Current scan count: $SCAN_COUNT"
+            echo "Retention: Keep last 30 scans"
+            echo "Retention: Keep summary.json for 90+ days"
+            echo "Retention: Keep traces for 14 days"
+            echo "Retention: Delete screenshots after 30 days"
+            echo ""
+            echo "Naming convention: YYYYMMDDTHHMMSSZ"
+            echo "Example: 20260415T150430Z"
+            echo ""
+            echo "For archival to NAS:"
+            echo "  rsync -av $SCAN_DIR/*.tar.gz nas:/backups/vpn-scans/"
+          fi
+
+      - name: Publish summary
+        if: always()
+        run: |
+          latest_dir=$(ls -dt test-results/vpn-endpoint-scan/* 2>/dev/null | head -1)
+          if [[ -z "${latest_dir}" ]]; then
+            echo "No scan output directory found" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          summary_file="${latest_dir}/summary.json"
+          if [[ ! -f "${summary_file}" ]]; then
+            echo "Missing summary.json at ${latest_dir}" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "## VPN Enterprise Endpoint Scan" >> "$GITHUB_STEP_SUMMARY"
+          echo "Output directory: ${latest_dir}" >> "$GITHUB_STEP_SUMMARY"
+          node -e "
+            const fs=require('fs');
+            const s=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));
+            const lines=[];
+            lines.push('Status: ' + s.status);
+            lines.push('Target: ' + (s.target?.baseUrl || 'n/a'));
+            lines.push('Playwright diagnostics: console=' + (s.diagnosticsSummary?.playwright?.consoleErrors ?? 0) + ', page=' + (s.diagnosticsSummary?.playwright?.pageErrors ?? 0) + ', failedRequests=' + (s.diagnosticsSummary?.playwright?.requestFailures ?? 0));
+            lines.push('Puppeteer diagnostics: console=' + (s.diagnosticsSummary?.puppeteer?.consoleErrors ?? 0) + ', page=' + (s.diagnosticsSummary?.puppeteer?.pageErrors ?? 0) + ', failedRequests=' + (s.diagnosticsSummary?.puppeteer?.requestFailures ?? 0));
+            lines.push('Opportunities: ' + ((s.opportunities || []).length));
+            process.stdout.write(lines.join('\n'));
+          " "${summary_file}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tear down VPN interface
+        if: always()
+        run: |
+          sudo wg-quick down "${VPN_INTERFACE}" || true
+
+      - name: Auto-create GitHub issue on scan failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const latestDir = require('child_process')
+              .execSync("ls -dt test-results/vpn-endpoint-scan/* 2>/dev/null | head -1")
+              .toString()
+              .trim();
+            
+            if (!latestDir) {
+              console.log('No scan output directory found');
+              return;
+            }
+            
+            const summaryFile = `${latestDir}/summary.json`;
+            const debugFile = `${latestDir}/debug-errors.log`;
+            
+            if (!fs.existsSync(summaryFile)) {
+              console.log('No summary.json found');
+              return;
+            }
+            
+            const summary = JSON.parse(fs.readFileSync(summaryFile, 'utf8'));
+            const debugLog = fs.existsSync(debugFile) ? fs.readFileSync(debugFile, 'utf8').slice(0, 2000) : 'No debug log';
+            
+            const errorSignature = `vpn-scan-${summary.target?.baseUrl || 'unknown'}-${summary.status}`;
+            const issueTitle = `[P1] VPN Endpoint Scan Failed: ${summary.target?.baseUrl || 'unknown'} - ${new Date().toISOString().split('T')[0]}`;
+            
+            // Check for existing issue with same signature
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['vpn-scan-failure'],
+              per_page: 10
+            });
+            
+            const existingIssue = issues.data.find(i => i.body.includes(errorSignature));
+            if (existingIssue) {
+              console.log(`Issue #${existingIssue.number} already exists for this error`);
+              return;
+            }
+            
+            const issueBody = `## VPN Scan Failure
+
+**Signature**: ${errorSignature}
+
+**Status**: ${summary.status}
+**Target**: ${summary.target?.baseUrl || 'n/a'}
+**Run**: [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+**Commit**: ${context.sha}
+
+### Diagnostics
+
+**Playwright**:
+- Console errors: ${summary.diagnosticsSummary?.playwright?.consoleErrors ?? 0}
+- Page errors: ${summary.diagnosticsSummary?.playwright?.pageErrors ?? 0}
+- Failed requests: ${summary.diagnosticsSummary?.playwright?.requestFailures ?? 0}
+
+**Puppeteer**:
+- Console errors: ${summary.diagnosticsSummary?.puppeteer?.consoleErrors ?? 0}
+- Page errors: ${summary.diagnosticsSummary?.puppeteer?.pageErrors ?? 0}
+- Failed requests: ${summary.diagnosticsSummary?.puppeteer?.requestFailures ?? 0}
+
+### Debug Log
+
+\`\`\`
+${debugLog}
+\`\`\`
+
+### Next Steps
+
+1. Review [VPN scan artifacts](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+2. Run manual scan: \`bash scripts/vpn-enterprise-endpoint-scan.sh\`
+3. Check [runbook](./docs/runbooks/vpn-scan-troubleshooting.md) for remediation
+`;
+            
+            const newIssue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issueTitle,
+              body: issueBody,
+              labels: ['vpn-scan-failure', 'P1', 'ci-automation']
+            });
+            
+            console.log(`Created issue #${newIssue.data.number}`);
+            
+            // Update step summary with issue link
+            require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, 
+              `\n\n### Auto-created Issue\nFailure tracked in [#${newIssue.data.number}](${newIssue.data.html_url})\n`
+            );

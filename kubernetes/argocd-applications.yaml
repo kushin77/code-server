@@ -1,0 +1,374 @@
+---
+# Phase 3 Issue #168: ArgoCD Application Manifests
+# Applications for multi-environment GitOps deployments
+
+# ============================================================================
+# Application: code-server-dev (Development)
+# ============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: code-server-dev
+  namespace: argocd
+spec:
+  project: development
+  source:
+    repoURL: https://github.com/kushin77/code-server
+    targetRevision: develop
+    path: k8s/overlays/development
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: development
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+
+---
+# ============================================================================
+# Application: code-server-staging (Staging)
+# ============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: code-server-staging
+  namespace: argocd
+spec:
+  project: development
+  source:
+    repoURL: https://github.com/kushin77/code-server
+    targetRevision: staging
+    path: k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: staging
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+
+---
+# ============================================================================
+# Application: code-server-production (Production)
+# ============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: code-server-production
+  namespace: argocd
+spec:
+  project: development
+  source:
+    repoURL: https://github.com/kushin77/code-server
+    targetRevision: main
+    path: k8s/overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+
+---
+# ============================================================================
+# ApplicationSet: Multi-Environment Deployment Template
+# ============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: code-server-environments
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - name: development
+        namespace: development
+        targetRevision: develop
+        syncPolicy: automated
+      - name: staging
+        namespace: staging
+        targetRevision: staging
+        syncPolicy: manual
+      - name: production
+        namespace: production
+        targetRevision: main
+        syncPolicy: manual
+  template:
+    metadata:
+      name: code-server-{{ name }}
+    spec:
+      project: development
+      source:
+        repoURL: https://github.com/kushin77/code-server
+        targetRevision: {{ targetRevision }}
+        path: k8s/overlays/{{ name }}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: {{ namespace }}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+        {{ #if eq syncPolicy "automated" }}
+        automated:
+          prune: true
+          selfHeal: true
+        {{ /if }}
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+
+---
+# ============================================================================
+# Rollout: code-server-canary (Canary Deployment Strategy)
+# ============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: code-server
+  namespace: production
+spec:
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: code-server
+  template:
+    metadata:
+      labels:
+        app: code-server
+    spec:
+      containers:
+      - name: code-server
+        image: harbor.local/code-server/main:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8443
+          protocol: TCP
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20      # 20% traffic to new version
+      - pause:
+          duration: 5m     # Monitor for 5 minutes
+      - setWeight: 50      # 50% traffic
+      - pause:
+          duration: 5m     # Monitor for 5 minutes
+      - setWeight: 100     # 100% traffic (complete rollout)
+      scaleDownDelaySeconds: 300  # Keep old version for 5 minutes
+      maxSurge: "25%"      # Max 25% more pods during rollout
+      maxUnavailable: 0    # No pods unavailable during rollout
+
+---
+# ============================================================================
+# Service: code-server (LoadBalancer)
+# ============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-server
+  namespace: production
+  labels:
+    app: code-server
+spec:
+  type: LoadBalancer
+  selector:
+    app: code-server
+  ports:
+  - name: https
+    port: 443
+    targetPort: http
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
+
+---
+# ============================================================================
+# Ingress: code-server (Optional - for DNS-based access)
+# ============================================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: code-server
+  namespace: production
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - code-server.local
+    secretName: code-server-tls
+  rules:
+  - host: code-server.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: code-server
+            port:
+              number: 443
+
+---
+# ============================================================================
+# NetworkPolicy: code-server (Zero-Trust Networking)
+# ============================================================================
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: code-server
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: code-server
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: nginx-ingress
+    ports:
+    - protocol: TCP
+      port: 8443
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 53  # DNS
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS
+    - protocol: TCP
+      port: 80   # HTTP
+
+---
+# ============================================================================
+# ConfigMap: ArgoCD Notifications (Slack)
+# ============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  service.slack: |
+    token: $slack-token
+  trigger.on-sync-succeeded: |
+    - when: app.status.operationState.phase in ['Succeeded']
+      oncePer: app.status.operationState.finishedAt
+      send: [app-sync-succeeded]
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Failed']
+      send: [app-sync-failed]
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+  template.app-sync-succeeded: |
+    message: |
+      ✅ Application {{.app.metadata.name}} synced successfully
+      Revision: {{.app.status.syncResult.revision}}
+      Author: {{(call .repo.GetCommitMetadata .app.status.syncResult.revision).Author}}
+    slack:
+      attachments: |
+        [{
+          "color": "#18be52",
+          "fields": [
+            {"title": "Sync Status", "value": "{{.app.status.syncResult.status}}", "short": true},
+            {"title": "Repository", "value": "{{.app.spec.source.repoURL}}", "short": true},
+            {"title": "Revision", "value": "{{.app.status.syncResult.revision}}", "short": true},
+            {"title": "Author", "value": "{{(call .repo.GetCommitMetadata .app.status.syncResult.revision).Author}}", "short": true}
+          ]
+        }]
+  template.app-sync-failed: |
+    message: |
+      ❌ Application {{.app.metadata.name}} sync failed
+      Error: {{.app.status.operationState.message}}
+    slack:
+      attachments: |
+        [{
+          "color": "#E96D76",
+          "fields": [
+            {"title": "Sync Status", "value": "{{.app.status.syncResult.status}}", "short": true},
+            {"title": "Repository", "value": "{{.app.spec.source.repoURL}}", "short": true},
+            {"title": "Error", "value": "{{.app.status.operationState.message}}", "short": false}
+          ]
+        }]
+  template.app-health-degraded: |
+    message: |
+      ⚠️ Application {{.app.metadata.name}} health degraded
+      Health Status: {{.app.status.health.status}}
+    slack:
+      attachments: |
+        [{
+          "color": "#f4d03f",
+          "fields": [
+            {"title": "Health Status", "value": "{{.app.status.health.status}}", "short": true},
+            {"title": "Namespace", "value": "{{.app.spec.destination.namespace}}", "short": true}
+          ]
+        }]

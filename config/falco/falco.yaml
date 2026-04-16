@@ -1,0 +1,67 @@
+---
+# Falco Configuration — Production (nodriver mode)
+# Note: Running without kernel driver due to scap_init eBPF limitation
+# in this containerized environment. Container monitoring still active.
+
+# ─────────────────────────────────────────────────────────────
+# Outputs & Alerting
+# ─────────────────────────────────────────────────────────────
+
+json_output: true
+json_include_output_property: true
+
+# HTTP output for falcosidekick integration
+http_output:
+  enabled: true
+  url: "http://falcosidekick:2801/"
+  user_agent: "falcosecurity/falco"
+
+# ─────────────────────────────────────────────────────────────
+# Logging
+# ─────────────────────────────────────────────────────────────
+
+log_level: warning
+log_stderr: true
+
+# ─────────────────────────────────────────────────────────────
+# gRPC Server - disabled
+# ─────────────────────────────────────────────────────────────
+
+grpc:
+  enabled: false
+
+grpcOutput:
+  enabled: false
+
+# Rules Loading
+rules_file:
+  - /etc/falco/falco_rules.yaml
+  - /etc/falco/rules.custom.yaml
+
+# ─────────────────────────────────────────────────────────────
+# Container Runtime Detection
+# ─────────────────────────────────────────────────────────────
+
+container_engines:
+  docker:
+    enabled: true
+    socket_file: /host/var/run/docker.sock
+  crio:
+    enabled: false
+  containerd:
+    enabled: false
+
+# Output Field Customization
+# ─────────────────────────────────────────────────────────────
+
+output_format: |
+  time=%evt.time
+  evttype=%evt.type
+  severity=%evt.severity
+  priority=%evt.priority
+  rule=%rule.name
+  container=%container.name
+  user=%user.name
+  process=%proc.name
+  cwd=%proc.cwd
+  action=%evt.args

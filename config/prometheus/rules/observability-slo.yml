@@ -1,0 +1,142 @@
+groups:
+  - name: blackbox_synthetic_monitoring
+    interval: 30s
+    rules:
+      - alert: EndpointDown
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: observability
+        annotations:
+          summary: "Endpoint {{ $labels.instance }} is down"
+          description: "Endpoint {{ $labels.instance }} failed health check for 1+ minute. HTTP status: {{ $value }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/endpoint-down.md"
+          dashboard_url: "http://192.168.168.31:3000/d/blackbox-endpoints"
+
+      - alert: HighLatency
+        expr: probe_duration_seconds > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Endpoint {{ $labels.instance }} has high latency"
+          description: "Latency: {{ $value }}s (threshold: 1s)"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/high-latency.md"
+
+      - alert: SSLCertificateExpiring
+        expr: probe_ssl_earliest_cert_expiry - time() < 7 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon for {{ $labels.instance }}"
+          description: "Certificate expires in {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/ssl-certificate-expiring.md"
+
+      - alert: DNSResolutionFailure
+        expr: probe_dns_lookup_time_seconds == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNS resolution failed for {{ $labels.instance }}"
+          description: "Cannot resolve DNS for {{ $labels.instance }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/dns-resolution-failure.md"
+
+  - name: slo_tracking
+    interval: 1m
+    rules:
+      - record: slo:http_availability:30d
+        expr: |-
+          (
+            sum(rate(http_requests_total{status=~"2.."}[30d]))
+            /
+            sum(rate(http_requests_total[30d]))
+          ) * 100
+
+      - record: slo:error_budget:remaining
+        expr: |-
+          (
+            (1 - (
+              sum(rate(http_requests_total{status=~"5.."}[30d]))
+              /
+              sum(rate(http_requests_total[30d]))
+            ))
+            /
+            (1 - 0.999)  # 99.9% SLO
+          ) * 100
+
+      - alert: ErrorBudgetExhausted
+        expr: slo:error_budget:remaining < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error budget exhausted - only {{ $value }}% remaining"
+          description: "At current error rate, error budget will be depleted in {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/error-budget-exhausted.md"
+          dashboard_url: "http://192.168.168.31:3000/d/slo-error-budget"
+
+      - alert: SLOViolation
+        expr: slo:http_availability:30d < 99.9
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SLO violation: 30-day availability at {{ $value }}% (target: 99.9%)"
+          description: "Availability breach detected"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-violation.md"
+
+  - name: observability_stack_health
+    interval: 1m
+    rules:
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus is down"
+          description: "Prometheus instance {{ $labels.instance }} is not responding"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/prometheus-down.md"
+
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Grafana is down"
+          description: "Grafana instance {{ $labels.instance }} is not responding"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/grafana-down.md"
+
+      - alert: LokiDown
+        expr: up{job="loki"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki is down"
+          description: "Loki instance {{ $labels.instance }} is not responding"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/loki-down.md"
+
+      - alert: JaegerDown
+        expr: up{job="jaeger"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Jaeger is down"
+          description: "Jaeger instance {{ $labels.instance }} is not responding"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/jaeger-down.md"
+
+      - alert: PrometheusHighCardinality
+        expr: prometheus_tsdb_metric_chunks_created_total > 1000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus high cardinality alert"
+          description: "Metric cardinality at {{ $value }} (watch for memory issues)"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/prometheus-high-cardinality.md"

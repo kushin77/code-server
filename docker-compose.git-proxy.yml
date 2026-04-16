@@ -1,0 +1,141 @@
+version: '3.9'
+
+# Git Credential Proxy Service - Phase 2 Issue #184
+# Lean Remote Developer Access System - Part 2
+# Enables developers to push/pull Git commits without accessing SSH keys
+# 
+# Architecture:
+#   Developer → git push/pull → git-credential-proxy helper →
+#   → GIT_PROXY_SERVER (on-prem, port 8765) →
+#   → Uses home server SSH key (stored securely) →
+#   → Pushes to GitHub/GitLab on behalf of developer
+# 
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.git-proxy.yml up -d git-proxy-server
+# 
+# Prerequisites:
+#   1. GitHub/GitLab SSH key at /home/akushnir/.ssh/id_rsa
+#   2. GIT_PROXY_SECRET env var set (for authentication)
+#   3. git-credential-proxy.sh installed on developer machines
+
+services:
+  git-proxy-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.git-proxy
+      args:
+        PYTHON_VERSION: "3.11"
+    
+    image: code-server-enterprise/git-proxy-server:latest
+    container_name: git-proxy-server
+    
+    # Listen on localhost only (access via tunnel or VPN)
+    ports:
+      - "127.0.0.1:8765:8765"
+    
+    environment:
+      # FastAPI configuration
+      HOST: "0.0.0.0"
+      PORT: 8765
+      LOG_LEVEL: "info"
+      
+      # Git proxy configuration
+      GIT_PROXY_SECRET: ${GIT_PROXY_SECRET:-changeme-in-production}
+      SSH_KEY_PATH: "/home/developer/.ssh/id_rsa"
+      GIT_USER_NAME: "code-server-bot"
+      GIT_USER_EMAIL: "bot@code-server.local"
+      
+      # Allowed git hosts (comma-separated)
+      GIT_PROXY_HOSTS: "github.com,gitlab.com,gitea.local"
+      
+      # Audit logging
+      AUDIT_LOG_PATH: "/var/log/git-proxy/audit.log"
+      
+      # Cloudflare tunnel integration
+      CLOUDFLARE_PROXY: "https://code-server.example.com"
+    
+    volumes:
+      # SSH key for git operations (read-only)
+      - /home/akushnir/.ssh:/home/developer/.ssh:ro
+      
+      # Audit logs
+      - git-proxy-logs:/var/log/git-proxy
+      
+      # Git credentials cache (temporary)
+      - git-proxy-cache:/tmp/git-proxy-cache
+    
+    networks:
+      - code-server-network
+    
+    restart: unless-stopped
+    
+    # Always start after code-server (dependent service)
+    depends_on:
+      - code-server
+    
+    healthcheck:
+      # Check proxy health
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:8765/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    
+    labels:
+      com.example.project: "code-server-enterprise"
+      com.example.phase: "2"
+      com.example.issue: "#184"
+      com.example.feature: "git-credential-proxy"
+      com.example.security: "no-ssh-keys-to-developers"
+    
+    # Resource limits (proxy is lightweight)
+    resources:
+      limits:
+        cpus: '0.5'
+        memory: 512M
+      reservations:
+        cpus: '0.25'
+        memory: 256M
+    
+    # Security: read-only root filesystem
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+      - /var/log/git-proxy
+
+  git-proxy-monitor:
+    # Optional: Monitoring sidecar for audit logs
+    image: alpine:latest
+    container_name: git-proxy-monitor
+    
+    command: >
+      sh -c 'while true; do
+        if [ -f /var/log/git-proxy/audit.log ]; then
+          wc -l /var/log/git-proxy/audit.log;
+        fi;
+        sleep 300;
+      done'
+    
+    volumes:
+      - git-proxy-logs:/var/log/git-proxy:ro
+    
+    networks:
+      - code-server-network
+    
+    restart: unless-stopped
+    depends_on:
+      - git-proxy-server
+
+volumes:
+  git-proxy-logs:
+    driver: local
+  git-proxy-cache:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+networks:
+  code-server-network:
+    driver: bridge

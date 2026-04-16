@@ -1,0 +1,30 @@
+# SSH Client Configuration for Code-Server Elite Deployment
+# File: ~/.ssh/config
+# This configuration enables password-less, key-based SSH to 192.168.168.31
+#
+# Usage:
+#   ssh 192.168.168.31          # Connects using this config
+#   scp file.txt 192.168.168.31:~/  # Uses SSH config automatically
+
+Host 192.168.168.31
+  HostName 192.168.168.31
+  User akushnir
+  IdentityFile ~/.ssh/akushnir-31-elite
+  IdentitiesOnly yes
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile ~/.ssh/known_hosts
+  ServerAliveInterval 300
+  ServerAliveCountMax 2
+  ControlMaster auto
+  ControlPath /tmp/ssh-%r@%h:%p
+  ControlPersist 600
+
+# Fallback for NAS host (192.168.168.56)
+Host 192.168.168.56
+  HostName 192.168.168.56
+  User akushnir
+  IdentityFile ~/.ssh/akushnir-31-elite
+  IdentitiesOnly yes
+  StrictHostKeyChecking accept-new
+  ServerAliveInterval 300
+  ServerAliveCountMax 2

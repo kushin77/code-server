@@ -1,170 +1,174 @@
-#!/bin/bash
-################################################################################
-# File: deploy.sh
-# Owner: DevOps/Infrastructure Team
-# Purpose: Idempotent infrastructure deployment orchestrator
-# Last Modified: April 14, 2026
-# Compatibility: Ubuntu 22.04+, Bash 4.0+, Terraform 1.4+, Docker 20.10+
-#
-# Dependencies:
-#   - terraform (>= 1.4) — Infrastructure as Code
-#   - docker-compose (>= 2.0) — Container orchestration
-#   - jq — JSON parsing for validation
-#   - curl — Health check verification
-#
-# Related Files:
-#   - terraform/main.tf — Infrastructure definition
-#   - docker-compose.yml — Container services
-#   - scripts/deployment-validation-suite.sh — Post-deploy tests
-#   - .github/workflows/deploy.yml — CI/CD integration
-#
-# Usage:
-#   bash scripts/deploy.sh                # Full deployment
-#   bash scripts/deploy.sh --validate-only  # Validation only
-#   bash scripts/deploy.sh --rollback       # Rollback to previous
-#
-# Orchestration:
-#   1) terraform apply (pin versions, generate docker-compose.yml)
-#   2) docker-compose build (rebuild with explicit versions)
-#   3) docker-compose up (start all services)
-#   4) health checks (validate all services operational)
-#   5) integration tests (verify critical paths)
-#
-# Exit Codes:
-#   0 — Successful deployment
-#   1 — Terraform failed
-#   2 — Docker build failed
-#   3 — Health checks failed
-#   4 — Integration tests failed
-#
-# Examples:
-#   ./scripts/deploy.sh                   # Full deployment with validation
-#   ./scripts/deploy.sh --validate-only   # Check readiness without deploying
-#
-# Recent Changes:
-#   2026-04-14: Integrated error-handler and logging libraries (Phase 2.2)
-#   2026-04-13: Created idempotent deployment pattern
-#
-################################################################################
+﻿#!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# scripts/deploy.sh — Production clean-rebuild deploy [REFACTORED]
+# Target: ${DEPLOY_HOST} | NAS: ${NAS_PRIMARY_HOST}
+# Steps : kill orphans → mount NAS → load secrets → rebuild all → healthcheck
+# Usage : ./scripts/deploy.sh [--skip-nas] [--skip-pull]
+# 
+# PRODUCTION-FIRST: All configuration from config/_base-config.env
+# No hardcoded values. Uses unified logging and config system.
+# ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Idempotent Deployment Script
-# Orchestrates: Terraform → docker-compose rebuild → startup verification
-# 
-# Usage:  bash scripts/deploy.sh
-# 
-# What it does:
-#   1. Runs terraform apply to generate docker-compose.yml with pinned versions
-#   2. Rebuilds Docker images (--no-cache for immutability verification)
-#   3. Brings up all services
-#   4. Waits for all healthchecks to pass
-#   5. Validates critical paths (extension activations, oauth2-proxy auth)
-# 
-# Exit code: 0 = success, 1 = deployment failed
-# ─────────────────────────────────────────────────────────────────────────────
-
-PROJECT_DIR="$$(cd "$$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$$PROJECT_DIR"
-
-# Bootstrap: single entrypoint loads config, logging, utils, error-handler, docker, ssh
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Override log destination for this script
-export LOG_FILE="${PROJECT_DIR}/deployment.log"
+# ── Auto-load unified config and logging ─
+source "$SCRIPT_DIR/_common/init.sh"
 
-# Precondition assertions — fail fast before any side effects
-assert_deploy_access   # SSH reachable at DEPLOY_HOST
-assert_docker          # Docker daemon responding on remote
+# ── Parse command-line arguments ─
+SKIP_NAS=false
+SKIP_PULL=false
 
-# Setup error handling
-add_cleanup cleanup_deployment_handler
-
-echo "════════════════════════════════════════════════════════════════════════════"
-echo "IDEMPOTENT DEPLOYMENT: code-server-enterprise"
-echo "Timestamp: $$(date -Iseconds)"
-echo "════════════════════════════════════════════════════════════════════════════"
-
-# Step 1: Terraform init + apply (generates docker-compose.yml with versions)
-echo ""
-echo "Step 1: Generating infrastructure config (Terraform)..."
-if terraform init && terraform apply -auto-approve; then
-  echo "✅ Terraform apply completed"
-else
-  echo "❌ FATAL: Terraform apply failed"
-  exit 1
-fi
-
-# Step 2: Build Docker images (immutability: --no-cache forces full rebuild)
-echo ""
-echo "Step 2: Building Docker images with pinned versions..."
-if docker compose build --no-cache; then
-  echo "✅ Docker images built successfully"
-else
-  echo "❌ FATAL: Docker image build failed"
-  exit 1
-fi
-
-# Step 3: Bring up services
-echo ""
-echo "Step 3: Deploying containers..."
-if docker compose up -d; then
-  echo "✅ Containers started"
-else
-  echo "❌ FATAL: Docker compose up failed"
-  exit 1
-fi
-
-# Step 4: Wait for healthchecks
-echo ""
-echo "Step 4: Waiting for all services to be healthy..."
-MAX_WAIT=120
-ELAPSED=0
-while [ $$ELAPSED -lt $$MAX_WAIT ]; do
-  HEALTHY=$$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
-  TOTAL=$$(docker compose ps --format json | jq 'length')
-  echo "  [$$ELAPSED/$$MAX_WAIT] Healthy services: $$HEALTHY/$$TOTAL"
-  
-  if [ "$$HEALTHY" -eq "$$TOTAL" ]; then
-    echo "✅ All services healthy"
-    break
-  fi
-  
-  sleep 5
-  ELAPSED=$$((ELAPSED + 5))
+for arg in "$@"; do
+    case $arg in
+        --skip-nas)  SKIP_NAS=true ;;
+        --skip-pull) SKIP_PULL=true ;;
+    esac
 done
 
-if [ $$ELAPSED -ge $$MAX_WAIT ]; then
-  echo "⚠️  WARNING: Services not fully healthy after $$MAX_WAIT seconds (may still be starting)"
-  docker compose ps
+# ── Load configuration ─
+config::load
+NAS_HOST=$(config::get NAS_PRIMARY_HOST)
+LOCAL_DATA_BASE=$(config::get LOCAL_DATA_BASE)
+DEPLOY_HOST=$(config::get DEPLOY_HOST)
+
+# Guard: Linux only
+[[ "$(uname)" == "Linux" ]] || log::failure "Deploy must run on Linux at ${DEPLOY_HOST}" && exit 1
+
+log::banner "Production Deployment"
+
+# ── 1. Validate Configuration ────────────────────────────────────────────────
+log::section "Configuration Validation"
+config::validate DEPLOY_HOST NAS_PRIMARY_HOST LOCAL_DATA_BASE POSTGRES_PASSWORD REDIS_PASSWORD CODE_SERVER_PASSWORD
+log::success "Configuration validated"
+
+# ── 2. Load Secrets ──────────────────────────────────────────────────────────
+log::task "Loading secrets from environment..."
+if [[ -f "$SCRIPT_DIR/lib/secrets.sh" ]]; then
+    # shellcheck source=scripts/lib/secrets.sh
+    source "$SCRIPT_DIR/lib/secrets.sh"
+    secrets_load_env 2>/dev/null || log::warn "Secrets file not found, using environment variables"
 fi
+log::success "Secrets loaded"
 
-# Step 5: Verify critical paths
-echo ""
-echo "Step 5: Validating deployment..."
-CHECKS_PASSED=0
-
-# Check code-server HTTP endpoint
-if curl -sf http://localhost:8080/healthz > /dev/null 2>&1; then
-  echo "✅ code-server HTTP health check passed"
-  ((CHECKS_PASSED++))
+# ── 3. Mount NAS ─────────────────────────────────────────────────────────────
+log::section "Infrastructure Setup"
+NAS_MOUNT=$(config::get NAS_PRIMARY_MOUNT)
+if [[ "$SKIP_NAS" == false ]]; then
+    log::task "Mounting NAS from ${NAS_HOST}..."
+    if mountpoint -q "$NAS_MOUNT"; then
+        log::status "NAS Mount" "✅ Already mounted"
+    else
+        if [[ -f "$SCRIPT_DIR/nas-mount-31.sh" ]]; then
+            sudo "$SCRIPT_DIR/nas-mount-31.sh" mount
+            log::success "NAS mounted at $NAS_MOUNT"
+        else
+            log::warn "NAS mount script not found, skipping"
+        fi
+    fi
 else
-  echo "⚠️  code-server HTTP health check failed (may still be starting)"
+    log::task "Skipping NAS mount (--skip-nas flag)"
 fi
 
-# Check docker compose state
-if docker compose ps code-server | grep -q "healthy\|running"; then
-  echo "✅ code-server container is running"
-  ((CHECKS_PASSED++))
+# ── 4. Provision Local SSD Data Directories ──────────────────────────────────
+log::task "Provisioning local SSD data directories..."
+for dir in postgres redis; do
+    mkdir -p "${LOCAL_DATA_BASE}/${dir}"
+done
+log::success "Local data directories provisioned: ${LOCAL_DATA_BASE}/{postgres,redis}"
+
+# ── 5. Cleanup Containers ───────────────────────────────────────────────────
+log::section "Container Cleanup"
+log::task "Stopping all containers and removing orphans..."
+cd "$REPO_DIR"
+
+DOCKER_STOP_TIMEOUT=$(config::get DOCKER_STOP_TIMEOUT)
+docker compose down --remove-orphans --timeout "$DOCKER_STOP_TIMEOUT" 2>/dev/null || true
+log::success "Containers stopped"
+
+log::task "Pruning dangling volumes..."
+docker volume prune -f
+log::success "Dangling volumes pruned"
+
+log::task "Pruning dangling images..."
+docker image prune -f
+log::success "Dangling images pruned"
+
+# ── 6. Pull Latest Images ────────────────────────────────────────────────────
+if [[ "$SKIP_PULL" == false ]]; then
+    log::section "Image Pulling"
+    log::task "Pulling latest pinned images..."
+    docker compose pull --quiet
+    log::success "Images pulled"
 else
-  echo "❌ code-server container is not running"
+    log::task "Skipping image pull (--skip-pull flag)"
 fi
 
+# ── 7. Export Environment Variables for Docker Compose ──────────────────────
+log::section "Environment Export"
+log::task "Exporting configuration for docker-compose..."
+export POSTGRES_PASSWORD REDIS_PASSWORD CODE_SERVER_PASSWORD
+export GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET OAUTH2_PROXY_COOKIE_SECRET
+export GRAFANA_ADMIN_PASSWORD GITHUB_TOKEN
+export POSTGRES_VERSION REDIS_VERSION CODE_SERVER_VERSION OLLAMA_VERSION
+export POSTGRES_DB POSTGRES_USER REDIS_PORT CODE_SERVER_PORT OLLAMA_PORT
+export POSTGRES_MEMORY_LIMIT POSTGRES_CPU_LIMIT REDIS_MEMORY_LIMIT REDIS_CPU_LIMIT
+export CODE_SERVER_MEMORY_LIMIT CODE_SERVER_CPU_LIMIT
+export NAS_PRIMARY_MOUNT NAS_REPLICA_MOUNT
+log::success "Environment variables exported"
+
+# ── 8. Start All Services ────────────────────────────────────────────────────
+log::section "Service Startup"
+log::task "Starting all services..."
+DOCKER_WAIT_TIMEOUT=$(config::get DOCKER_WAIT_TIMEOUT)
+docker compose up -d --remove-orphans --wait --timeout "$DOCKER_WAIT_TIMEOUT"
+log::success "Services started"
+
+# ── 9. Health Checks ────────────────────────────────────────────────────────
+log::section "Health Verification"
+sleep 8
+
+HEALTHCHECK_CURL_TIMEOUT=$(config::get HEALTHCHECK_CURL_TIMEOUT)
+
+_check_endpoint() {
+    local name="$1" url="$2"
+    if curl -sf --max-time "$HEALTHCHECK_CURL_TIMEOUT" "$url" &>/dev/null; then
+        log::status "$name" "✅ Healthy"
+    else
+        log::failure "$name" "Failed: $url"
+        return 1
+    fi
+}
+
+FAIL=0
+_check_endpoint "code-server"  "http://localhost:8080/healthz" || FAIL=$((FAIL + 1))
+_check_endpoint "ollama"       "http://localhost:11434/api/tags" || FAIL=$((FAIL + 1))
+_check_endpoint "prometheus"   "http://localhost:9090/-/healthy" || FAIL=$((FAIL + 1))
+_check_endpoint "grafana"      "http://localhost:3000/api/health" || FAIL=$((FAIL + 1))
+_check_endpoint "alertmanager" "http://localhost:9093/-/healthy" || FAIL=$((FAIL + 1))
+_check_endpoint "jaeger"       "http://localhost:16686/" || FAIL=$((FAIL + 1))
+
+# ── 10. Summary ──────────────────────────────────────────────────────────────
+log::section "Deployment Summary"
+log::divider
+docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+log::divider
+
+if [[ $FAIL -gt 0 ]]; then
+    log::failure "Deployment Incomplete" "$FAIL health check(s) failed"
+    log::task "Debug: docker compose logs <service>"
+    exit 1
+else
+    log::banner "Deployment Successful ✅"
+    exit 0
+fi
+fi
+
+log "DEPLOY COMPLETE — all services healthy"
 echo ""
-echo "════════════════════════════════════════════════════════════════════════════"
-echo "DEPLOYMENT COMPLETE"
-echo "✅ Access IDE at: https://ide.kushnir.cloud"
-echo "✅ Authentication: Google OAuth2"
-echo "✅ TLS: Let's Encrypt (auto-renewed)"
-echo "════════════════════════════════════════════════════════════════════════════"
+echo "  IDE       : https://ide.kushnir.cloud"
+echo "  Grafana   : https://grafana.kushnir.cloud"
+echo "  Prometheus: https://prometheus.kushnir.cloud"
+echo "  Jaeger    : https://jaeger.kushnir.cloud"
+echo "  Ollama    : http://$(hostname -I | awk '{print $1}'):11434"

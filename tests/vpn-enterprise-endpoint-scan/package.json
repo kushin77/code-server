@@ -1,0 +1,14 @@
+{
+  "name": "vpn-enterprise-endpoint-scan",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "VPN-only deep endpoint scan using Playwright and Puppeteer",
+  "scripts": {
+    "scan": "node run-vpn-enterprise-scan.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.53.0",
+    "puppeteer-core": "^24.11.1"
+  }
+}

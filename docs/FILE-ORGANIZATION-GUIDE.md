@@ -258,7 +258,7 @@ terraform/
 │   └── production.tfvars
 ├── hosts/                       # Host-specific values
 │   ├── 192.168.168.31.tfvars
-│   └── 192.168.168.30.tfvars
+│   └── 192.168.168.42.tfvars
 └── state/                       # State files (gitignored)
     └── .gitkeep
 ```

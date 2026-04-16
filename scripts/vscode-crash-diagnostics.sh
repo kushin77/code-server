@@ -1,53 +1,66 @@
 #!/bin/bash
-# VS Code Crash Diagnostics for code-server-enterprise
-# Run this script to identify the cause of VS Code crashes
+# Code-Server Container Diagnostics
+# Run this to diagnose code-server container issues
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-echo "=== VS Code Crash Diagnostics ==="
+echo "=== Code-Server Container Diagnostics ==="
 echo "Time: $(date -u)"
 echo ""
 
-# 1. Check extension host logs
-echo "[1] Checking Extension Host Logs..."
-LOG_DIR="$APPDATA/Code/logs"
-if [ -d "$LOG_DIR" ]; then
-    echo "Recent logs found:"
-    ls -lt "$LOG_DIR" | head -5
-    
-    if grep -r "ERROR\|FATAL\|crash" "$LOG_DIR" 2>/dev/null | head -3; then
-        echo "⚠️  Errors detected in logs"
-    else
-        echo "✓ No errors in recent logs"
-    fi
+# 1. Check container status
+echo "[1] Container Status..."
+if docker-compose ps code-server | grep -q "Up"; then
+    echo "✓ code-server container is running"
+    docker-compose ps code-server
 else
-    echo "⚠️  No logs directory found"
+    echo "⚠️  code-server container is NOT running"
+    echo "Last exit code:"
+    docker-compose ps code-server
 fi
 echo ""
 
-# 2. Check VS Code process crash dumps
-echo "[2] Checking for Crash Dumps..."
-CRASH_DIR="$APPDATA/Code/CrashDumps"
-if [ -d "$CRASH_DIR" ]; then
-    DUMP_COUNT=$(find "$CRASH_DIR" -type f | wc -l)
-    echo "Found $DUMP_COUNT crash dump files:"
-    ls -lt "$CRASH_DIR" | head -3
+# 2. Check recent logs
+echo "[2] Recent Container Logs..."
+echo "Last 20 log lines:"
+docker-compose logs code-server --tail 20 2>/dev/null || echo "⚠️  Cannot read logs (container may not be running)"
+echo ""
+
+# 3. Check resource usage
+echo "[3] Resource Usage..."
+if docker ps --format '{{.Names}}' | grep -q code-server; then
+    docker stats code-server --no-stream 2>/dev/null || echo "⚠️  Cannot read stats"
 else
-    echo "✓ No crash dumps found"
+    echo "⚠️  code-server container not found in running containers"
 fi
 echo ""
 
-# 3. Check VS Code processes
-echo "[3] Checking VS Code Processes..."
-if pgrep -f "Code.exe|code" > /dev/null; then
-    ps aux | grep -i code | grep -v grep
+# 4. Check workspace directory
+echo "[4] Workspace Directory..."
+if [ -d "/home/coder/workspace" ]; then
+    echo "✓ Workspace directory exists"
+    du -sh /home/coder/workspace 2>/dev/null || echo "(no size info)"
 else
-    echo "✓ No VS Code processes running"
+    echo "⚠️  Workspace directory not found"
 fi
 echo ""
+
+# 5. Check NAS mount (if applicable)
+echo "[5] NAS Mount Status..."
+if docker-compose exec code-server mount 2>/dev/null | grep -q "/mnt"; then
+    echo "✓ NAS mount is active"
+    docker-compose exec code-server mount | grep "/mnt"
+else
+    echo "⚠️  NAS mount may not be active"
+fi
+echo ""
+
+# 6. Check internal processes
+echo "[6] Running Processes (inside container)..."
+docker-compose exec code-server ps aux 2>/dev/null | head -10 || echo "⚠️  Cannot read processes"
 
 # 4. Check disk space
 echo "[4] Checking Disk Space..."

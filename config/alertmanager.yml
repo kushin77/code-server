@@ -8,6 +8,38 @@ route:
   group_wait: 10s
   group_interval: 10s
   repeat_interval: 12h
+  routes:
+    # Route Falco critical alerts with higher priority
+    - match:
+        alertname: 'FalcoCriticalEvent'
+      receiver: 'security-team'
+      group_wait: 5s
+      group_interval: 5s
+      repeat_interval: 1h
+    
+    # Route Falco privilege escalation alerts
+    - match:
+        alertname: 'FalcoContainerPrivilegeEscalation'
+      receiver: 'security-team'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 1h
+    
+    # Route Falco crypto mining alerts
+    - match:
+        alertname: 'FalcoCryptoMiningDetected'
+      receiver: 'security-team'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 1h
+    
+    # Route general Falco alerts
+    - match:
+        alertname: 'FalcoHighEventRate'
+      receiver: 'security-team'
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 4h
 
 # Inhibition rules prevent certain alerts from being sent out when other alerts are firing
 inhibit_rules:
@@ -29,3 +61,8 @@ receivers:
   - name: 'default'
     # Null receiver - alerts stored but not forwarded
     # Configure Slack/PagerDuty via environment variables post-deployment
+
+  - name: 'security-team'
+    # Security team receiver for Falco and other security alerts
+    # Post-deployment: configure via environment variables (Slack webhook, email, etc.)
+    # For now, alerts are stored and visible in AlertManager UI

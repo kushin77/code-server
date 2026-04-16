@@ -36,7 +36,7 @@ readonly DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 readonly DEPLOY_DIR="${DEPLOY_DIR:-/home/akushnir/code-server-enterprise}"
 
 # Standby / replica host
-readonly STANDBY_HOST="${STANDBY_HOST:-192.168.168.30}"
+readonly STANDBY_HOST="${STANDBY_HOST:-192.168.168.42}"
 readonly STANDBY_USER="${STANDBY_USER:-akushnir}"
 
 # SSH options (no interactive prompts in CI)

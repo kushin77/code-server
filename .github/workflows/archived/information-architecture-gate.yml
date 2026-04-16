@@ -1,0 +1,201 @@
+name: Information Architecture Enforcement Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**.md'
+      - '**.sh'
+      - '**.tf'
+      - 'Caddyfile*'
+      - 'docker-compose*'
+      - '.env*'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  architecture-check:
+    name: Enforce 5-Level Information Architecture Policy
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check file placement policy
+        id: arch-check
+        run: |
+          set +e  # Don't exit on errors, we want to collect all violations
+          
+          violations=""
+          violation_count=0
+          
+          # Get all added/modified files in this PR
+          changed_files=$(git diff --name-only --diff-filter=ACM origin/${{ github.base_ref }}...HEAD)
+          
+          echo "=== FILES CHANGED IN THIS PR ==="
+          echo "$changed_files"
+          echo ""
+          
+          # Define root allowlist
+          allowlist=(
+            "README.md"
+            "CONTRIBUTING.md"
+            "LICENSE"
+            "SECURITY.md"
+            "GOVERNANCE.md"
+            "docker-compose.yml"
+            "docker-compose.tpl"
+            "Caddyfile"
+            "Caddyfile.tpl"
+            "terraform.tf"
+            ".env.example"
+            ".github"
+            "Dockerfile"
+            "Dockerfile*"
+            "Makefile"
+            ".gitignore"
+            ".gitattributes"
+          )
+          
+          echo "=== CHECKING FILE PLACEMENT ==="
+          
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            
+            # Skip files that don't exist (deleted files)
+            [[ ! -f "$file" ]] && continue
+            
+            # Check markdown files
+            if [[ "$file" == *.md ]]; then
+              # Check if file is in root
+              if [[ "$file" != */ ]]; then
+                # Check if it's in allowlist
+                in_allowlist=false
+                for allowed in "${allowlist[@]}"; do
+                  if [[ "$file" == "$allowed" ]]; then
+                    in_allowlist=true
+                    break
+                  fi
+                done
+                
+                if [[ "$in_allowlist" == false ]]; then
+                  violations="${violations}❌ ROOT MARKDOWN: $file (must go in /docs or subdir)\n"
+                  ((violation_count++))
+                fi
+              fi
+            fi
+            
+            # Check shell scripts
+            if [[ "$file" == *.sh ]]; then
+              # Get directory
+              dir=$(dirname "$file")
+              
+              # Skip if in allowed directories
+              if [[ "$dir" == "scripts"* ]] || [[ "$dir" == ".github"* ]] || [[ "$dir" == "tests"* ]]; then
+                # Check if directly under scripts/ root
+                if [[ "$dir" == "scripts" ]]; then
+                  violations="${violations}❌ ROOT SCRIPT: $file (must go in /scripts/deploy, /scripts/ops, etc)\n"
+                  ((violation_count++))
+                fi
+              fi
+            fi
+            
+            # Check terraform files (except in allowed directories)
+            if [[ "$file" == *.tf ]]; then
+              dir=$(dirname "$file")
+              
+              # Skip if already in terraform/ directory
+              if [[ "$dir" != "terraform"* ]]; then
+                # Check if it's in root
+                if [[ "$dir" != */* ]]; then
+                  violations="${violations}❌ ROOT TERRAFORM: $file (must go in /terraform/modules, /terraform/environments, etc)\n"
+                  ((violation_count++))
+                fi
+              fi
+            fi
+            
+          done <<< "$changed_files"
+          
+          echo ""
+          if [[ $violation_count -gt 0 ]]; then
+            echo "=== ARCHITECTURE VIOLATIONS FOUND ==="
+            echo -e "$violations"
+            echo ""
+            echo "PHASE 1 STATUS: ADVISORY (warnings only)"
+            echo "These violations are logged but will NOT block merge until Phase 2 (April 23+)"
+            echo ""
+            echo "To fix:"
+            echo "1. Move files to correct directories per ADR-003"
+            echo "2. Reference: /ADR-003-INFORMATION-ARCHITECTURE.md"
+            echo "3. Questions? Comment on issue #376"
+            echo ""
+            
+            # Store for PR comment
+            echo "violations_found=true" >> $GITHUB_OUTPUT
+            echo "violation_count=$violation_count" >> $GITHUB_OUTPUT
+            echo "violations=$(echo -e "$violations")" >> $GITHUB_OUTPUT
+          else
+            echo "✅ All files follow information architecture policy"
+            echo "violations_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post PR comment (if violations)
+        if: steps.arch-check.outputs.violations_found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const violations = `${{ steps.arch-check.outputs.violations }}`;
+            const violationCount = `${{ steps.arch-check.outputs.violation_count }}`;
+            
+            const comment = `## ⚠️ Information Architecture Advisory (Phase 1)
+
+            **Violations Found**: ${violationCount}
+            
+            ${violations}
+            
+            ### Phase 1: Advisory Only (April 16-22)
+            These violations are logged but **will NOT block merge** during Phase 1 grace period.
+            
+            ### What's Required
+            Reference the 5-level information architecture policy:
+            📖 **[ADR-003: Information Architecture](https://github.com/kushin77/code-server/blob/phase-7-deployment/ADR-003-INFORMATION-ARCHITECTURE.md)**
+            
+            ### Root File Allowlist
+            Files allowed at repository root:
+            - README.md, CONTRIBUTING.md, LICENSE, SECURITY.md, GOVERNANCE.md
+            - docker-compose.tpl, Caddyfile.tpl, terraform.tf, .env.example
+            
+            ### Correct Placement
+            - **Markdown docs** → \`/docs/\` (architecture/, guides/, runbooks/)
+            - **Shell scripts** → \`/scripts/\` (deploy/, operations/, testing/)
+            - **Terraform IaC** → \`/terraform/\` (modules/, environments/, phases/)
+            - **Config files** → \`/config/\` (caddy/, docker-compose/, environment/)
+            
+            ### Questions?
+            💬 See issue #376 for architecture decisions and placement guidance
+            
+            ---
+            *This is Phase 1 (advisory mode). Phase 2 enforcement (hard blocks) begins April 23.*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Information Architecture Gate Summary"
+          echo ""
+          echo "**Status**: Phase 1 (Advisory Mode)"
+          echo "**Violations**: ${{ steps.arch-check.outputs.violation_count }}"
+          echo "**Merge Blocked**: No (Phase 1 grace period)"
+          echo ""
+          echo "Reference: ADR-003-INFORMATION-ARCHITECTURE.md"

@@ -1,0 +1,193 @@
+name: Terraform Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'primary'
+        type: choice
+        options:
+          - primary
+          - replica
+          - both
+      approval_comment:
+        description: 'Approval comment for audit trail'
+        required: false
+        type: string
+
+jobs:
+  pre-apply-checks:
+    name: Pre-Apply Verification
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./terraform
+    
+    outputs:
+      plan-exists: ${{ steps.check-plan.outputs.exists }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Check Plan Artifacts
+        id: check-plan
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "primary" ] || [ "${{ github.event.inputs.environment }}" = "both" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+      
+      - name: Verify Terraform Syntax
+        run: |
+          terraform init -backend=false -upgrade
+          terraform validate
+        env:
+          TF_LOG: WARN
+
+  apply-primary:
+    name: Terraform Apply (Primary - 192.168.168.31)
+    runs-on: ubuntu-latest
+    needs: pre-apply-checks
+    if: github.event.inputs.environment == 'primary' || github.event.inputs.environment == 'both'
+    environment:
+      name: production-primary
+    
+    defaults:
+      run:
+        working-directory: ./terraform
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Initialize Terraform
+        run: terraform init -backend=false -upgrade
+        env:
+          TF_LOG: WARN
+      
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: terraform-plan-primary
+          path: terraform/
+        continue-on-error: true
+      
+      - name: Create Plan (if artifact missing)
+        run: |
+          terraform plan \
+            -var-file=production.tfvars \
+            -out=tfplan-primary
+        if: '!steps.download-plan.outputs.found'
+        env:
+          TF_LOG: INFO
+        continue-on-error: true
+      
+      - name: Apply Terraform Plan
+        run: |
+          if [ -f tfplan-primary ]; then
+            echo "Applying plan from artifact..."
+            terraform apply -auto-approve tfplan-primary
+          else
+            echo "No plan found. Skipping apply."
+            exit 1
+          fi
+        env:
+          TF_LOG: INFO
+      
+      - name: Post Apply Summary
+        if: always()
+        run: |
+          echo "## Terraform Apply Summary (Primary)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Primary (192.168.168.31)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: $(if [ $? -eq 0 ]; then echo '✅ SUCCESS'; else echo '❌ FAILED'; fi)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Approval Comment**: ${{ github.event.inputs.approval_comment }}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload State Backup
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: terraform-state-backup-primary
+          path: |
+            terraform/terraform.tfstate
+            terraform/terraform.tfstate.backup
+          retention-days: 90
+        continue-on-error: true
+
+  apply-replica:
+    name: Terraform Apply (Replica - 192.168.168.42)
+    runs-on: ubuntu-latest
+    needs: apply-primary
+    if: github.event.inputs.environment == 'replica' || github.event.inputs.environment == 'both'
+    environment:
+      name: production-replica
+    
+    defaults:
+      run:
+        working-directory: ./terraform
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Initialize Terraform
+        run: terraform init -backend=false -upgrade
+        env:
+          TF_LOG: WARN
+      
+      - name: Create Plan (Replica)
+        run: |
+          terraform plan \
+            -var-file=staging.tfvars \
+            -var="is_primary=false" \
+            -out=tfplan-replica
+        env:
+          TF_LOG: INFO
+        continue-on-error: true
+      
+      - name: Apply Terraform Plan (Replica)
+        run: |
+          terraform apply -auto-approve tfplan-replica
+        env:
+          TF_LOG: INFO
+      
+      - name: Post Apply Summary
+        if: always()
+        run: |
+          echo "## Terraform Apply Summary (Replica)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Replica (192.168.168.42)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: $(if [ $? -eq 0 ]; then echo '✅ SUCCESS'; else echo '❌ FAILED'; fi)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
+
+  post-apply-validation:
+    name: Post-Apply Validation
+    runs-on: ubuntu-latest
+    needs: [apply-primary]
+    if: always()
+    
+    steps:
+      - name: Validate Deployment
+        run: |
+          echo "## Post-Apply Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Deployment Status: ${{ needs.apply-primary.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Replica Status: ${{ needs.apply-replica.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Verify services on 192.168.168.31 (docker-compose ps)" >> $GITHUB_STEP_SUMMARY
+          echo "2. Run health checks" >> $GITHUB_STEP_SUMMARY
+          echo "3. Verify monitoring and logging" >> $GITHUB_STEP_SUMMARY
+          echo "4. Document any manual post-deploy actions" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,606 @@
+apiVersion: alerts.prometheus.io/v1
+kind: AlertRuleSet
+metadata:
+  name: code-server-enterprise-alerts
+  namespace: production
+  version: "1.0"
+  description: "Central SSOT for all alert rules"
+
+# Severity Definitions
+severities:
+  critical:
+    level: 0
+    slo_breach: true
+    pagerduty: true
+    slack_channel: "#critical-alerts"
+    notify_after: 1m
+  high:
+    level: 1
+    slo_breach: true
+    pagerduty: true
+    slack_channel: "#high-alerts"
+    notify_after: 5m
+  medium:
+    level: 2
+    slo_breach: false
+    pagerduty: false
+    slack_channel: "#medium-alerts"
+    notify_after: 15m
+  low:
+    level: 3
+    slo_breach: false
+    pagerduty: false
+    slack_channel: "#low-alerts"
+    notify_after: 1h
+
+# CODE-SERVER SERVICE ALERTS
+alerts:
+  code_server:
+    - name: CodeServerDown
+      severity: critical
+      service: code-server
+      description: "Code-server endpoint is down"
+      condition: 'up{job="code-server"} == 0'
+      duration: 1m
+      slo: availability
+      sli_threshold: 100%
+      runbook: "runbooks/code-server-down.md"
+      dashboard: "code-server"
+      annotations:
+        summary: "🔴 Code-server is DOWN"
+        description: "Code-server endpoint unreachable for > {{ $value }}m"
+        action: "Check docker-compose ps, verify service is running. Restart if needed."
+
+    - name: CodeServerLatencyHigh
+      severity: high
+      service: code-server
+      description: "Code-server p99 latency exceeds threshold"
+      condition: 'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job="code-server"}[5m])) > 0.1'
+      duration: 5m
+      sli: latency_p99
+      sli_threshold: 100ms
+      runbook: "runbooks/code-server-slow.md"
+      dashboard: "code-server"
+      annotations:
+        summary: "🟠 Code-server latency high ({{ $value }}s)"
+        description: "p99 latency exceeding 100ms for 5 minutes"
+        action: "Check resource usage, review recent changes, consider scaling"
+
+    - name: CodeServerErrorRateHigh
+      severity: high
+      service: code-server
+      description: "Code-server error rate exceeds threshold"
+      condition: 'rate(http_requests_total{job="code-server",status=~"5.."}[5m]) > 0.001'
+      duration: 5m
+      sli: error_rate
+      sli_threshold: 0.1%
+      runbook: "runbooks/code-server-errors.md"
+      dashboard: "code-server"
+      annotations:
+        summary: "🟠 Code-server error rate high ({{ $value }}%)"
+        description: "{{ $value }}% of requests returning 5xx errors"
+        action: "Check logs, review recent deployments, check dependencies"
+
+  # POSTGRESQL ALERTS
+  postgres:
+    - name: PostgreSQLDown
+      severity: critical
+      service: postgres
+      description: "PostgreSQL is down"
+      condition: 'up{job="postgres"} == 0'
+      duration: 1m
+      slo: availability
+      sli_threshold: 100%
+      runbook: "runbooks/postgres-down.md"
+      dashboard: "postgres"
+      annotations:
+        summary: "🔴 PostgreSQL is DOWN"
+        description: "PostgreSQL endpoint unreachable"
+        action: "Verify docker container running, check logs, restart if needed"
+
+    - name: PostgreSQLConnectionsExceeding90Percent
+      severity: high
+      service: postgres
+      description: "PostgreSQL connections exceeding 90% of max"
+      condition: 'sum(pg_stat_activity_count) / max(pg_settings_max_connections) > 0.9'
+      duration: 5m
+      sli: connection_pool
+      sli_threshold: 90%
+      runbook: "runbooks/postgres-connections.md"
+      dashboard: "postgres"
+      annotations:
+        summary: "🟠 PostgreSQL connections at {{ $value }}%"
+        description: "Connection pool nearly exhausted, risk of connection limit errors"
+        action: "Check active sessions, terminate idle connections, consider pooling"
+
+    - name: PostgreSQLSlowQueries
+      severity: high
+      service: postgres
+      description: "PostgreSQL p99 query latency exceeds threshold"
+      condition: 'histogram_quantile(0.99, rate(pg_slow_queries_seconds[5m])) > 0.05'
+      duration: 5m
+      sli: query_latency_p99
+      sli_threshold: 50ms
+      runbook: "runbooks/postgres-slow.md"
+      dashboard: "postgres"
+      annotations:
+        summary: "🟠 PostgreSQL slow queries ({{ $value }}s p99)"
+        description: "Query latency p99 exceeding 50ms threshold"
+        action: "Check query logs, review slow query log, analyze execution plans"
+
+    - name: PostgreSQLReplicationLag
+      severity: high
+      service: postgres
+      description: "PostgreSQL replication lag exceeds threshold"
+      condition: 'pg_replication_lag > 1'
+      duration: 2m
+      sli: replication_lag
+      sli_threshold: 1s
+      runbook: "runbooks/postgres-replication.md"
+      dashboard: "postgres"
+      annotations:
+        summary: "🟠 PostgreSQL replication lag {{ $value }}s"
+        description: "Replica is {{ $value }}s behind primary"
+        action: "Check network, review WAL throughput, verify replica resources"
+
+    - name: PostgreSQLDiskFull
+      severity: critical
+      service: postgres
+      description: "PostgreSQL disk space critically low"
+      condition: '(pg_settings_max_wal_size - pg_current_wal_lsn) / pg_settings_max_wal_size < 0.1'
+      duration: 1m
+      runbook: "runbooks/postgres-disk-full.md"
+      dashboard: "postgres"
+      annotations:
+        summary: "🔴 PostgreSQL disk CRITICAL ({{ $value }}% free)"
+        description: "WAL disk space < 10% remaining, risk of crash"
+        action: "Immediately clear old WAL files or expand disk"
+
+  # REDIS ALERTS
+  redis:
+    - name: RedisDown
+      severity: critical
+      service: redis
+      description: "Redis is down"
+      condition: 'up{job="redis"} == 0'
+      duration: 1m
+      slo: availability
+      sli_threshold: 100%
+      runbook: "runbooks/redis-down.md"
+      dashboard: "redis"
+      annotations:
+        summary: "🔴 Redis is DOWN"
+        description: "Redis endpoint unreachable"
+        action: "Check docker container, verify port 6379, restart if needed"
+
+    - name: RedisCacheHitRateLow
+      severity: medium
+      service: redis
+      description: "Redis cache hit rate below threshold"
+      condition: 'rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) < 0.95'
+      duration: 10m
+      sli: hit_rate
+      sli_threshold: 95%
+      runbook: "runbooks/redis-hit-rate.md"
+      dashboard: "redis"
+      annotations:
+        summary: "🟡 Redis hit rate low ({{ $value }}%)"
+        description: "Cache hit rate below 95% threshold"
+        action: "Review cache policy, check for key eviction, optimize cache keys"
+
+    - name: RedisMemoryExceeding80Percent
+      severity: high
+      service: redis
+      description: "Redis memory usage exceeding 80%"
+      condition: 'redis_memory_used_bytes / redis_memory_max_bytes > 0.8'
+      duration: 5m
+      sli: memory_usage
+      sli_threshold: 80%
+      runbook: "runbooks/redis-memory.md"
+      dashboard: "redis"
+      annotations:
+        summary: "🟠 Redis memory at {{ $value }}%"
+        description: "Memory usage exceeding 80% of max"
+        action: "Check eviction policy, clear unused keys, consider memory expansion"
+
+    - name: RedisEvictionRateHigh
+      severity: high
+      service: redis
+      description: "Redis eviction rate exceeds threshold"
+      condition: 'rate(redis_evicted_keys_total[5m]) > 0.01'
+      duration: 5m
+      sli: eviction_rate
+      sli_threshold: 1%
+      runbook: "runbooks/redis-eviction.md"
+      dashboard: "redis"
+      annotations:
+        summary: "🟠 Redis high eviction rate ({{ $value }}/s)"
+        description: "Keys being evicted faster than normal"
+        action: "Check memory, review cache retention policy"
+
+  # PROMETHEUS ALERTS
+  prometheus:
+    - name: PrometheusDown
+      severity: high
+      service: prometheus
+      description: "Prometheus is down"
+      condition: 'up{job="prometheus"} == 0'
+      duration: 1m
+      runbook: "runbooks/prometheus-down.md"
+      annotations:
+        summary: "🟠 Prometheus is DOWN"
+        description: "Prometheus endpoint unreachable"
+        action: "Check docker container, verify port 9090, restart if needed"
+
+    - name: PrometheusHighMemory
+      severity: high
+      service: prometheus
+      description: "Prometheus memory usage critically high"
+      condition: 'process_resident_memory_bytes{job="prometheus"} > 1e9'
+      duration: 10m
+      runbook: "runbooks/prometheus-memory.md"
+      annotations:
+        summary: "🟠 Prometheus memory high ({{ $value }}MB)"
+        description: "Prometheus using > 1GB RAM"
+        action: "Check retention settings, reduce scrape frequency, restart"
+
+  # GRAFANA ALERTS
+  grafana:
+    - name: GrafanaDown
+      severity: medium
+      service: grafana
+      description: "Grafana is down"
+      condition: 'up{job="grafana"} == 0'
+      duration: 5m
+      runbook: "runbooks/grafana-down.md"
+      annotations:
+        summary: "🟡 Grafana is DOWN"
+        description: "Grafana endpoint unreachable"
+        action: "Check docker container, verify port 3000, restart"
+
+  # ALERTMANAGER ALERTS
+  alertmanager:
+    - name: AlertManagerDown
+      severity: high
+      service: alertmanager
+      description: "AlertManager is down"
+      condition: 'up{job="alertmanager"} == 0'
+      duration: 1m
+      runbook: "runbooks/alertmanager-down.md"
+      annotations:
+        summary: "🟠 AlertManager is DOWN"
+        description: "AlertManager endpoint unreachable"
+        action: "Check docker container, verify port 9093, restart"
+
+  # JAEGER ALERTS
+  jaeger:
+    - name: JaegerDown
+      severity: medium
+      service: jaeger
+      description: "Jaeger is down"
+      condition: 'up{job="jaeger"} == 0'
+      duration: 5m
+      runbook: "runbooks/jaeger-down.md"
+      annotations:
+        summary: "🟡 Jaeger is DOWN"
+        description: "Jaeger endpoint unreachable"
+        action: "Check docker container, verify port 16686"
+
+  # LOKI ALERTS
+  loki:
+    - name: LokiDown
+      severity: high
+      service: loki
+      description: "Loki is down"
+      condition: 'up{job="loki"} == 0'
+      duration: 2m
+      runbook: "runbooks/loki-down.md"
+      annotations:
+        summary: "🟠 Loki is DOWN"
+        description: "Loki endpoint unreachable"
+        action: "Check docker container, verify port 3100"
+
+  # CADDY ALERTS
+  caddy:
+    - name: CaddyDown
+      severity: high
+      service: caddy
+      description: "Caddy TLS terminator is down"
+      condition: 'up{job="caddy"} == 0'
+      duration: 1m
+      runbook: "runbooks/caddy-down.md"
+      annotations:
+        summary: "🟠 Caddy is DOWN"
+        description: "Caddy TLS endpoint unreachable"
+        action: "Check docker container, verify ports 80/443"
+
+  # KONG ALERTS
+  kong:
+    - name: KongDown
+      severity: high
+      service: kong
+      description: "Kong API Gateway is down"
+      condition: 'up{job="kong"} == 0'
+      duration: 2m
+      runbook: "runbooks/kong-down.md"
+      annotations:
+        summary: "🟠 Kong is DOWN"
+        description: "Kong endpoint unreachable"
+        action: "Check docker container, verify port 8000"
+
+  # OAUTH2-PROXY ALERTS
+  oauth2_proxy:
+    - name: OAuth2ProxyDown
+      severity: critical
+      service: oauth2-proxy
+      description: "OAuth2-proxy authentication service is down"
+      condition: 'up{job="oauth2-proxy"} == 0'
+      duration: 1m
+      runbook: "runbooks/oauth-down.md"
+      annotations:
+        summary: "🔴 OAuth2-proxy is DOWN"
+        description: "Authentication service unreachable"
+        action: "Check docker container, verify port 4180, restart"
+
+  # VAULT ALERTS
+  vault:
+    - name: VaultDown
+      severity: critical
+      service: vault
+      description: "Vault secrets service is down"
+      condition: 'up{job="vault"} == 0'
+      duration: 1m
+      runbook: "runbooks/vault-down.md"
+      annotations:
+        summary: "🔴 Vault is DOWN"
+        description: "Secrets management service unreachable"
+        action: "Check docker container, verify port 8200, check logs"
+
+  # BACKUP ALERTS (P2 #374 Gap 1)
+  backup:
+    - name: BackupFailed
+      severity: critical
+      service: backup
+      description: "Backup has not completed successfully in 25+ hours"
+      condition: 'time() - backup_last_success_timestamp_seconds > 90000'
+      duration: 0m
+      slo: availability
+      sli_threshold: 100%
+      runbook: "runbooks/backup-failure.md"
+      annotations:
+        summary: "🔴 CRITICAL: Backup has FAILED"
+        description: "Last successful backup was {{ $value | humanizeDuration }} ago. Data loss risk is increasing."
+        action: "Check backup logs: docker logs backup. Verify disk space, restore service, run manual backup if needed"
+
+    - name: BackupStorageLow
+      severity: warning
+      service: backup
+      description: "Backup storage exceeding 85% capacity"
+      condition: 'backup_storage_used_bytes / backup_storage_total_bytes > 0.85'
+      duration: 5m
+      slo: availability
+      sli_threshold: 95%
+      runbook: "runbooks/backup-storage.md"
+      annotations:
+        summary: "🟡 Backup storage {{ $value | humanizePercentage }} full"
+        description: "Backup destination storage exceeding 85% capacity"
+        action: "Rotate old backups, expand storage, verify retention policy"
+
+  # SSL/TLS CERTIFICATE ALERTS (P2 #374 Gap 2)
+  certificates:
+    - name: SSLCertExpiryWarning
+      severity: medium
+      service: caddy
+      description: "TLS certificate expires in < 30 days"
+      condition: '(probe_ssl_earliest_cert_expiry{job="ssl-check"} - time()) / 86400 < 30'
+      duration: 1h
+      runbook: "runbooks/cert-expiry.md"
+      annotations:
+        summary: "🟡 SSL certificate expires in {{ $value | humanize }} days"
+        description: "Certificate for {{ $labels.instance }} expires soon. Check Caddy renewal logs."
+        action: "Verify ACME renewal is running, check DNS challenges, restart Caddy if renewal fails"
+
+    - name: SSLCertExpiryCritical
+      severity: critical
+      service: caddy
+      description: "TLS certificate expires in < 7 days"
+      condition: '(probe_ssl_earliest_cert_expiry{job="ssl-check"} - time()) / 86400 < 7'
+      duration: 0m
+      slo: availability
+      sli_threshold: 100%
+      runbook: "runbooks/cert-expiry-critical.md"
+      annotations:
+        summary: "🔴 CRITICAL: SSL certificate expires in {{ $value | humanize }} days"
+        description: "Certificate for {{ $labels.instance }} will expire VERY SOON"
+        action: "Force ACME renewal: docker-compose exec caddy caddy reload. Monitor renewal logs closely."
+
+  # CONTAINER HEALTH ALERTS (P2 #374 Gap 3)
+  container_health:
+    - name: ContainerRestartLoop
+      severity: warning
+      service: infrastructure
+      description: "Container has restarted 2+ times in 10 minutes"
+      condition: 'increase(container_start_time_seconds{name!=""}[10m]) > 2'
+      duration: 5m
+      runbook: "runbooks/container-restart.md"
+      annotations:
+        summary: "🟡 Container {{ $labels.name }} restarting ({{ $value }} times in 10m)"
+        description: "Container crash loop detected. Possible configuration or dependency issue."
+        action: "Check docker logs: docker logs {{ $labels.name }}. Verify health, restart service."
+
+    - name: ContainerCrashLoop
+      severity: critical
+      service: infrastructure
+      description: "Container is crash-looping (5+ restarts in 10 minutes)"
+      condition: 'increase(container_start_time_seconds{name!=""}[10m]) > 5'
+      duration: 2m
+      slo: availability
+      sli_threshold: 100%
+      runbook: "runbooks/container-crash.md"
+      annotations:
+        summary: "🔴 CRITICAL: Container {{ $labels.name }} CRASH-LOOPING ({{ $value }} restarts)"
+        description: "Container restarting excessively. Service will be unavailable soon."
+        action: "URGENT: Check logs immediately: docker logs {{ $labels.name }} --tail 100. Force stop if needed."
+
+  # POSTGRESQL REPLICATION ALERTS (P2 #374 Gap 4)
+  postgres_replication:
+    - name: PostgreSQLReplicationLagWarning
+      severity: medium
+      service: postgres
+      description: "PostgreSQL replication lag exceeds 30 seconds"
+      condition: 'pg_replication_lag_seconds > 30'
+      duration: 5m
+      sli: replication_lag
+      sli_threshold: 30s
+      runbook: "runbooks/postgres-replication-lag.md"
+      annotations:
+        summary: "🟡 PostgreSQL replication lag: {{ $value }}s (threshold: 30s)"
+        description: "Primary→Replica replication is falling behind. Data loss risk if primary fails now."
+        action: "Check replica load: ssh replica docker stats postgres. Check network bandwidth."
+
+    - name: PostgreSQLReplicationLagCritical
+      severity: high
+      service: postgres
+      description: "PostgreSQL replication lag exceeds 120 seconds"
+      condition: 'pg_replication_lag_seconds > 120'
+      duration: 2m
+      sli: replication_lag
+      sli_threshold: 1s
+      runbook: "runbooks/postgres-replication-critical.md"
+      annotations:
+        summary: "🟠 CRITICAL: PostgreSQL replication lag {{ $value }}s — data loss risk!"
+        description: "Replication severely lagging. If primary fails, loss of 2+ minutes of commits."
+        action: "Emergency action: Check replica connection, verify network, restart replication if needed."
+
+    - name: PostgreSQLReplicationBroken
+      severity: critical
+      service: postgres
+      description: "PostgreSQL replication is completely broken"
+      condition: 'pg_replication_is_replica == 0 and on() pg_up{instance="replica.prod.internal:9187"} == 1'
+      duration: 2m
+      slo: availability
+      sli_threshold: 100%
+      runbook: "runbooks/postgres-replication-broken.md"
+      annotations:
+        summary: "🔴 CRITICAL: PostgreSQL replication is BROKEN on replica"
+        description: "Replica is reporting replication=false. WAL streaming has stopped."
+        action: "Immediate action required: SSH to replica, check pg_stat_replication, restart replica PostgreSQL."
+
+  # DISK SPACE ALERTS (P2 #374 Gap 5 - enhanced)
+  disk_space:
+    - name: DiskSpaceWarning
+      severity: medium
+      service: infrastructure
+      description: "Host disk usage exceeding 80%"
+      condition: '(node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.80'
+      duration: 5m
+      runbook: "runbooks/disk-warning.md"
+      annotations:
+        summary: "🟡 Disk usage {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+        description: "Disk utilization exceeding 80%. Data loss risk if fills completely."
+        action: "Check sizes: du -sh /var/lib/docker /opt/prometheus-data /backups. Clean old files."
+
+    - name: DiskSpaceCritical
+      severity: critical
+      service: infrastructure
+      description: "Host disk usage exceeding 93%"
+      condition: '(node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.93'
+      duration: 2m
+      slo: availability
+      sli_threshold: 100%
+      runbook: "runbooks/disk-critical.md"
+      annotations:
+        summary: "🔴 CRITICAL: Disk {{ $value | humanizePercentage }} FULL on {{ $labels.instance }}"
+        description: "Disk utilization > 93%. System will fail when full."
+        action: "EMERGENCY: Delete logs/containers immediately. Check: df -h / && du -sh /var/lib/docker/* /opt/*"
+
+  # OLLAMA GPU MODEL SERVER ALERTS (P2 #374 Gap 6)
+  ollama:
+    - name: OllamaDown
+      severity: medium
+      service: ollama
+      description: "Ollama GPU model server is down"
+      condition: 'up{job="ollama"} == 0'
+      duration: 2m
+      runbook: "runbooks/ollama-down.md"
+      annotations:
+        summary: "🟡 Ollama model server is DOWN"
+        description: "Ollama endpoint unreachable. AI code-server features degraded."
+        action: "Check docker container: docker ps | grep ollama. Verify port 11434. Check logs: docker logs ollama"
+
+    - name: OllamaGPUMemoryHigh
+      severity: high
+      service: ollama
+      description: "GPU memory usage exceeding 95%"
+      condition: 'nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes > 0.95'
+      duration: 5m
+      runbook: "runbooks/ollama-gpu-memory.md"
+      annotations:
+        summary: "🟠 GPU memory {{ $value | humanizePercentage }} used — Ollama may OOM soon"
+        description: "GPU memory nearly exhausted. Ollama model operations may fail."
+        action: "Check active models: curl http://localhost:11434/api/tags. Unload unused models to free memory."
+
+  # INFRASTRUCTURE ALERTS
+  infrastructure:
+    - name: HostCPUUsageHigh
+      severity: high
+      service: infrastructure
+      description: "Host CPU usage exceeding 85%"
+      condition: '(1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.85'
+      duration: 10m
+      runbook: "runbooks/high-cpu.md"
+      annotations:
+        summary: "🟠 High CPU usage ({{ $value }}%)"
+        description: "CPU utilization exceeding 85% threshold"
+        action: "Check process list, review resource-heavy services"
+
+    - name: HostMemoryUsageHigh
+      severity: high
+      service: infrastructure
+      description: "Host memory usage exceeding 90%"
+      condition: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9'
+      duration: 10m
+      runbook: "runbooks/high-memory.md"
+      annotations:
+        summary: "🟠 High memory usage ({{ $value }}%)"
+        description: "Memory utilization exceeding 90% threshold"
+        action: "Check processes, reduce container limits, add memory"
+
+    - name: DiskSpaceRunningOut
+      severity: high
+      service: infrastructure
+      description: "Host disk space running critically low"
+      condition: '(node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1'
+      duration: 5m
+      runbook: "runbooks/disk-full.md"
+      annotations:
+        summary: "🟠 Disk space critical ({{ $value }}% free)"
+        description: "Disk space < 10% remaining"
+        action: "Clean up old logs, remove containers, expand disk"
+
+# SLO/SLI Definitions (referenced by alerts)
+slo_definitions:
+  code_server:
+    availability: 99.9%        # 99.9% uptime target
+    latency_p99: 100ms         # p99 latency < 100ms
+    error_rate: 0.1%           # error rate < 0.1%
+    error_budget_per_month: 43m  # ~2.6 hours per month
+
+  postgres:
+    availability: 99.99%       # 99.99% uptime target
+    query_latency_p99: 50ms    # p99 query latency < 50ms
+    replication_lag: 1s        # replication lag < 1s
+    connection_pool: 90%       # max connection usage threshold
+    error_budget_per_month: 4m20s  # ~26 seconds per month
+
+  redis:
+    availability: 99.9%        # 99.9% uptime target
+    hit_rate: 95%              # cache hit rate > 95%
+    memory_usage: 80%          # max memory usage threshold
+    eviction_rate: 1%          # max eviction rate threshold
+    error_budget_per_month: 43m  # ~2.6 hours per month
+
+  system:
+    cpu_usage: 85%             # max CPU usage threshold
+    memory_usage: 90%          # max memory usage threshold
+    disk_free: 10%             # min disk space threshold

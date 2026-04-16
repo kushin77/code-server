@@ -46,8 +46,7 @@ GitHub Repository
 │   ├── deploy.yml                       ← Deployment execution (called by orchestration)
 │   └── ci-validate.yml                  ← Pre-merge validation
 ├── scripts/
-│   ├── redeploy.sh                      ← Bash deployment orchestrator
-│   ├── redeploy.ps1                     ← PowerShell deployment orchestrator
+│   ├── redeploy.sh                      ← Bash deployment orchestrator (Linux-only)
 │   └── deploy-phase-12-all.sh           ← Actual deployment logic
 └── .github/
     └── AUTO-MERGE-CLEANUP-DEPLOY-MANDATE.md  ← This policy
@@ -72,7 +71,7 @@ GitHub Repository
   - Apply Terraform configurations
   - Report deployment results
 
-#### 3. **redeploy.sh / redeploy.ps1** (Local Scripts)
+#### 3. **redeploy.sh** (Local Script)
 - **Trigger**: Manual execution or CI/CD pipeline
 - **Responsibilities**:
   - Git state validation
@@ -285,7 +284,7 @@ on:
 
 #### 2. Set Deployment Targets
 
-In `redeploy.sh` or `redeploy.ps1`:
+In `redeploy.sh` (Linux/bash deployment only):
 
 ```bash
 DEPLOYMENT_TARGETS=("production" "staging" "development")
@@ -514,12 +513,12 @@ gh run view <run-id>
 #### 3. Test local redeploy script:
 
 ```bash
-# Bash version
+# Linux/bash deployment (supported)
 bash scripts/redeploy.sh --target staging --dry-run
 bash scripts/redeploy.sh --target staging --verbose
 
-# PowerShell version
-.\scripts\redeploy.ps1 -Target staging -DryRun -Verbose
+# Note: Windows is NOT a supported deployment platform.
+# Deploy from Linux or use SSH to remote Linux host.
 ```
 
 ### Debugging Workflow Issues

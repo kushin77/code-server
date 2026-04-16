@@ -1,0 +1,218 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Structured Log Entry Schema",
+  "description": "W3C-compliant structured logging schema for production systems. Every log entry must conform to this schema for CI/CD gate validation.",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "service",
+    "environment",
+    "level",
+    "message"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "timestamp": {
+      "title": "Timestamp",
+      "description": "ISO 8601 timestamp when the log entry was created",
+      "type": "string",
+      "format": "date-time",
+      "examples": [
+        "2026-04-16T10:30:45.123Z",
+        "2026-04-16T10:30:45+00:00"
+      ]
+    },
+    "service": {
+      "title": "Service Name",
+      "description": "The service/component that generated this log entry",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[a-z0-9\\-._]+$",
+      "examples": [
+        "code-server",
+        "api-gateway",
+        "worker-queue",
+        "auth-service"
+      ]
+    },
+    "environment": {
+      "title": "Environment",
+      "description": "The environment where the service is running",
+      "type": "string",
+      "enum": [
+        "production",
+        "staging",
+        "development",
+        "test"
+      ]
+    },
+    "level": {
+      "title": "Log Level",
+      "description": "Severity level of the log entry (RFC 5424)",
+      "type": "string",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error",
+        "critical"
+      ]
+    },
+    "message": {
+      "title": "Message",
+      "description": "Human-readable log message (no secrets or PII)",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "not": {
+        "pattern": "(password|secret|token|key|apikey|aws_secret|private_key|[0-9]{3}-[0-9]{2}-[0-9]{4})"
+      }
+    },
+    "trace_id": {
+      "title": "Trace ID",
+      "description": "W3C Trace Context trace ID for distributed tracing (optional but recommended)",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{32}$",
+      "examples": [
+        "4bf92f3577b34da6a3ce929d0e0e4736"
+      ]
+    },
+    "span_id": {
+      "title": "Span ID",
+      "description": "W3C Trace Context span ID for distributed tracing (optional but recommended)",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{16}$",
+      "examples": [
+        "00f067aa0ba902b7"
+      ]
+    },
+    "user_id": {
+      "title": "User ID",
+      "description": "Pseudonymized user identifier (must be hashed, NOT raw email or username)",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[a-z0-9]{32,}$",
+      "not": {
+        "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+      }
+    },
+    "request_id": {
+      "title": "Request ID",
+      "description": "Unique identifier for correlating logs across a single request",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "duration_ms": {
+      "title": "Duration (milliseconds)",
+      "description": "Operation duration in milliseconds",
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 3600000
+    },
+    "status_code": {
+      "title": "HTTP Status Code",
+      "description": "HTTP response status code (for HTTP operations)",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 100,
+      "maximum": 599
+    },
+    "error": {
+      "title": "Error",
+      "description": "Error message (if applicable)",
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 2000
+    },
+    "stack_trace": {
+      "title": "Stack Trace",
+      "description": "Stack trace for errors (production deployments should minimize this)",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "context": {
+      "title": "Context",
+      "description": "Additional structured context (any valid JSON)",
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "timestamp": "2026-04-16T10:30:45.123Z",
+      "service": "code-server",
+      "environment": "production",
+      "level": "info",
+      "message": "User authenticated successfully",
+      "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+      "span_id": "00f067aa0ba902b7",
+      "user_id": "u_7d8c5f4e9a2b3c1d",
+      "request_id": "req_abc123def456",
+      "duration_ms": 45,
+      "status_code": 200,
+      "context": {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "ip": "203.0.113.42"
+      }
+    },
+    {
+      "timestamp": "2026-04-16T10:30:50.456Z",
+      "service": "api-gateway",
+      "environment": "production",
+      "level": "error",
+      "message": "Database connection failed",
+      "trace_id": "4bf92f3577b34da6a3ce929d0e0e4737",
+      "span_id": "00f067aa0ba902b8",
+      "request_id": "req_abc123def457",
+      "duration_ms": 5000,
+      "status_code": 503,
+      "error": "Connection timeout after 5000ms",
+      "context": {
+        "service": "postgresql",
+        "pool_size": 20,
+        "available_connections": 0
+      }
+    },
+    {
+      "timestamp": "2026-04-16T10:30:55.789Z",
+      "service": "worker-queue",
+      "environment": "production",
+      "level": "warn",
+      "message": "High queue depth detected",
+      "trace_id": "4bf92f3577b34da6a3ce929d0e0e4738",
+      "context": {
+        "queue_name": "email-notifications",
+        "depth": 5000,
+        "max_depth": 1000,
+        "processing_rate": 100
+      }
+    }
+  ]
+}

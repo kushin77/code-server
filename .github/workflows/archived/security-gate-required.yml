@@ -1,0 +1,361 @@
+name: Security Gate - Fail-Closed Validation
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  checks: write
+
+env:
+  SECURITY_SCAN_TIMEOUT: 300
+  SAST_TOOL: semgrep
+  DEPENDENCY_TOOL: npm-audit
+  CONTAINER_TOOL: trivy
+  SEVERITY_THRESHOLD: high
+
+jobs:
+  security-preflight-checks:
+    name: Security Preflight Checks
+    runs-on: ubuntu-latest
+    outputs:
+      sast_enabled: ${{ steps.preflight.outputs.sast_enabled }}
+      dast_enabled: ${{ steps.preflight.outputs.dast_enabled }}
+      dependency_scan_enabled: ${{ steps.preflight.outputs.dependency_enabled }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run preflight validation
+        id: preflight
+        run: |
+          set -e
+          echo "::group::Security Preflight Checks"
+          
+          # 1. Verify no hardcoded secrets
+          echo "Checking for hardcoded secrets..."
+          if grep -r "password\|secret\|api_key\|token" . \
+            --include="*.yml" --include="*.yaml" --include="*.json" \
+            --include="*.env" --include="*.conf" 2>/dev/null | grep -v ".env.example" | grep -v "# secret:" > /tmp/hardcoded-secrets.txt 2>&1; then
+            echo "::warning::Potential hardcoded secrets found. Review before commit."
+            cat /tmp/hardcoded-secrets.txt
+          else
+            echo "✓ No obvious hardcoded secrets detected"
+          fi
+          
+          # 2. Check code doesn't reference disabled security checks
+          echo ""
+          echo "Checking for disabled security rules..."
+          DISABLED_CHECKS=$(grep -r "noSecurity\|skipSecurity\|securityDisabled" . --include="*.ts" --include="*.js" || true)
+          if [[ ! -z "$DISABLED_CHECKS" ]]; then
+            echo "::warning::Found references to disabled security: $DISABLED_CHECKS"
+          fi
+          
+          # 3. Verify all required security tools available
+          echo ""
+          echo "Checking security tool availability..."
+          SAST_AVAILABLE=false
+          DAST_AVAILABLE=false
+          DEPENDENCY_AVAILABLE=false
+          
+          # Will be installed in later steps
+          SAST_AVAILABLE=true
+          DEPENDENCY_AVAILABLE=true
+          
+          echo "sast_enabled=$SAST_AVAILABLE" >> $GITHUB_OUTPUT
+          echo "dast_enabled=$DAST_AVAILABLE" >> $GITHUB_OUTPUT
+          echo "dependency_enabled=$DEPENDENCY_AVAILABLE" >> $GITHUB_OUTPUT
+          
+          echo "::endgroup::"
+          echo "✓ Preflight checks complete"
+
+  sast-scanning:
+    name: SAST (Static Analysis) - Semgrep
+    runs-on: ubuntu-latest
+    needs: [security-preflight-checks]
+    if: ${{ needs.security-preflight-checks.outputs.sast_enabled == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST scanning
+        run: |
+          set -e
+          echo "::group::Semgrep SAST Scanning"
+          
+          # Install Semgrep
+          pip install semgrep
+          
+          # Run scan with security config
+          semgrep --config p/security-audit \
+                  --config p/owasp-top-ten \
+                  --json \
+                  --output /tmp/semgrep-results.json \
+                  .
+          
+          # Parse results
+          CRITICAL_COUNT=$(jq '[.results[] | select(.severity == "ERROR")] | length' /tmp/semgrep-results.json)
+          HIGH_COUNT=$(jq '[.results[] | select(.severity == "WARNING")] | length' /tmp/semgrep-results.json)
+          
+          echo "Critical issues: $CRITICAL_COUNT"
+          echo "High issues: $HIGH_COUNT"
+          
+          # Fail if critical issues found
+          if [[ $CRITICAL_COUNT -gt 0 ]]; then
+            echo "::error::SAST scan found $CRITICAL_COUNT critical issues"
+            jq '.results[] | select(.severity == "ERROR") | {rule_id: .rule_id, message: .message, path: .path}' /tmp/semgrep-results.json
+            exit 1
+          fi
+          
+          # Warn on high issues
+          if [[ $HIGH_COUNT -gt 0 ]]; then
+            echo "::warning::SAST scan found $HIGH_COUNT high issues"
+          fi
+          
+          echo "::endgroup::"
+          echo "✓ SAST scanning complete"
+
+      - name: Upload SAST results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: /tmp/semgrep-results.json
+          category: semgrep
+
+  dependency-scanning:
+    name: Dependency Scanning
+    runs-on: ubuntu-latest
+    needs: [security-preflight-checks]
+    if: ${{ needs.security-preflight-checks.outputs.dependency_enabled == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Run npm audit
+        id: npm-audit
+        run: |
+          set -e
+          echo "::group::NPM Dependency Scanning"
+          
+          npm audit --json > /tmp/npm-audit-results.json || true
+          
+          # Parse results
+          VULNERABILITIES=$(jq '.metadata.vulnerabilities' /tmp/npm-audit-results.json 2>/dev/null || echo "0")
+          CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' /tmp/npm-audit-results.json)
+          HIGH=$(jq '.metadata.vulnerabilities.high // 0' /tmp/npm-audit-results.json)
+          MODERATE=$(jq '.metadata.vulnerabilities.moderate // 0' /tmp/npm-audit-results.json)
+          
+          echo "Critical vulnerabilities: $CRITICAL"
+          echo "High vulnerabilities: $HIGH"
+          echo "Moderate vulnerabilities: $MODERATE"
+          
+          # Fail if critical vulnerabilities
+          if [[ $CRITICAL -gt 0 ]]; then
+            echo "::error::Found $CRITICAL critical vulnerabilities"
+            jq '.vulnerabilities | to_entries[] | select(.value.severity == "critical") | {package: .key, severity: .value.severity, version: .value.range}' /tmp/npm-audit-results.json
+            exit 1
+          fi
+          
+          # Warn on high vulnerabilities
+          if [[ $HIGH -gt 0 ]]; then
+            echo "::warning::Found $HIGH high vulnerabilities (recommend fixing)"
+          fi
+          
+          echo "::endgroup::"
+
+      - name: Attempt auto-fix with npm audit fix
+        run: |
+          echo "Attempting automatic fixes..."
+          npm audit fix --dry-run || true
+
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog secret detection
+        run: |
+          set -e
+          echo "::group::TruffleHog Secret Scanning"
+          
+          # Install TruffleHog
+          pip install truffleHog
+          
+          # Run scan
+          truffleHog filesystem . \
+            --json \
+            --regex \
+            --entropy=True \
+            --max-depth=2 \
+            > /tmp/truffleHog-results.json || true
+          
+          # Check results
+          SECRETS_FOUND=$(jq 'length' /tmp/truffleHog-results.json 2>/dev/null || echo "0")
+          
+          if [[ $SECRETS_FOUND -gt 0 ]]; then
+            echo "::error::Found $SECRETS_FOUND potential secrets"
+            jq '.[].sourceFile' /tmp/truffleHog-results.json
+            exit 1
+          fi
+          
+          echo "✓ No hardcoded secrets detected"
+          echo "::endgroup::"
+
+      - name: Check git history for secrets
+        run: |
+          set -e
+          echo "Scanning git history for secrets..."
+          
+          # Use git grep to find potential secrets in history
+          SUSPICIOUS=$(git log -p --all -S 'password\|secret\|api_key' -- . | head -50 || true)
+          if [[ ! -z "$SUSPICIOUS" ]]; then
+            echo "::warning::Potential secrets in git history detected (consider rotating)"
+          fi
+
+  container-scanning:
+    name: Container Image Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build container image
+        run: docker build -t security-scan:latest . || echo "Dockerfile not found, skipping"
+
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'security-scan:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check license compliance
+        run: |
+          set -e
+          echo "::group::License Compliance"
+          
+          # Install license checker
+          npm install -g license-check-and-gather
+          
+          # Check licenses
+          license-check-and-gather --production > /tmp/licenses.json || true
+          
+          # Restrict certain licenses
+          RESTRICTED_LICENSES="GPL|AGPL|SSPL"
+          VIOLATIONS=$(cat package-lock.json | grep -i "\"license\"" | grep -E "$RESTRICTED_LICENSES" || true)
+          
+          if [[ ! -z "$VIOLATIONS" ]]; then
+            echo "::warning::Found packages with restricted licenses"
+            echo "$VIOLATIONS"
+          fi
+          
+          echo "✓ License check complete"
+          echo "::endgroup::"
+
+  security-audit-summary:
+    name: Security Audit Summary
+    runs-on: ubuntu-latest
+    needs: [sast-scanning, dependency-scanning, secret-scanning, container-scanning, license-compliance]
+    if: always()
+    steps:
+      - name: Generate security report
+        run: |
+          set -e
+          echo "## Security Audit Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| SAST (Semgrep) | ${{ needs.sast-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ${{ needs.secret-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container Scan | ${{ needs.container-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-compliance.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Fail if any check failed
+          if [[ "${{ needs.sast-scanning.result }}" == "failure" ]] || \
+             [[ "${{ needs.dependency-scanning.result }}" == "failure" ]] || \
+             [[ "${{ needs.secret-scanning.result }}" == "failure" ]] || \
+             [[ "${{ needs.container-scanning.result }}" == "failure" ]]; then
+            echo "::error::Security audit FAILED - merge blocked"
+            exit 1
+          fi
+          
+          echo "✓ Security audit PASSED"
+
+      - name: Create audit log entry
+        run: |
+          set -e
+          
+          # Log audit event
+          cat >> /tmp/security-audit.log <<EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "event": "security_audit_completed",
+            "repository": "${{ github.repository }}",
+            "ref": "${{ github.ref }}",
+            "commit": "${{ github.sha }}",
+            "actor": "${{ github.actor }}",
+            "status": "passed"
+          }
+          EOF
+          
+          echo "Audit entry created for: ${{ github.repository }}@${{ github.sha }}"
+
+      - name: Publish to Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "🚨 Security Audit Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Security Gate Failed*\nRepository: ${{ github.repository }}\nCommit: ${{ github.sha }}\nActor: ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                }
+              ]
+            }

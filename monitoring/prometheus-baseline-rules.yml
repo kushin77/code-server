@@ -1,0 +1,328 @@
+# monitoring/prometheus-baseline-rules.yml
+# Prometheus recording rules for baseline metrics collection
+# These rules aggregate baseline test results into recordable metrics
+# Usage: Include in prometheus.yml as an external_labels source or via rule_files
+# Generated: April 21, 2026 - P3 #410 Performance Baseline Initiative
+
+groups:
+  - name: baseline_metrics
+    interval: 1m
+    rules:
+      # =============================================
+      # NETWORK LAYER RECORDING RULES
+      # =============================================
+      
+      - record: baseline:network:iperf3:throughput:mbps
+        expr: |
+          label_replace(
+            label_replace(
+              iperf3_throughput_bits_per_sec / 1e6,
+              "test_date", "april_2026", "", ""
+            ),
+            "direction", "received", "", ""
+          )
+        labels:
+          layer: network
+          test: iperf3_throughput
+      
+      - record: baseline:network:nas:write:throughput:mbps
+        expr: |
+          label_replace(
+            node_filesystem_write_bytes_total{mountpoint="/mnt/nas-56"} / 1e6,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: network
+          test: nas_write_throughput
+      
+      - record: baseline:network:nas:read:throughput:mbps
+        expr: |
+          label_replace(
+            node_filesystem_read_bytes_total{mountpoint="/mnt/nas-56"} / 1e6,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: network
+          test: nas_read_throughput
+      
+      - record: baseline:network:ping:latency:ms:p50
+        expr: |
+          label_replace(
+            ping_latency_ms{quantile="0.5", target="192.168.168.42"},
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: network
+          test: ping_latency
+          percentile: p50
+      
+      - record: baseline:network:ping:latency:ms:p95
+        expr: |
+          label_replace(
+            ping_latency_ms{quantile="0.95", target="192.168.168.42"},
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: network
+          test: ping_latency
+          percentile: p95
+      
+      - record: baseline:network:ping:latency:ms:p99
+        expr: |
+          label_replace(
+            ping_latency_ms{quantile="0.99", target="192.168.168.42"},
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: network
+          test: ping_latency
+          percentile: p99
+      
+      - record: baseline:network:dns:resolution:ms:avg
+        expr: |
+          label_replace(
+            dns_resolution_ms{target="code-server.kushnir.cloud"},
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: network
+          test: dns_resolution
+      
+      # =============================================
+      # STORAGE LAYER RECORDING RULES
+      # =============================================
+      
+      - record: baseline:storage:docker:volume:write:throughput:mbps
+        expr: |
+          label_replace(
+            container_fs_write_bytes_total{volume="testvolume-baseline"} / 1e6,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: storage
+          test: docker_volume_write
+      
+      - record: baseline:storage:disk:usage:bytes
+        expr: |
+          label_replace(
+            node_filesystem_avail_bytes{mountpoint="/"},
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: storage
+          test: disk_usage
+      
+      - record: baseline:storage:disk:usage:percent
+        expr: |
+          label_replace(
+            100 * (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})),
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: storage
+          test: disk_usage
+      
+      # =============================================
+      # CONTAINER LAYER RECORDING RULES
+      # =============================================
+      
+      - record: baseline:container:cpu:usage:percent
+        expr: |
+          label_replace(
+            100 * sum(rate(container_cpu_usage_seconds_total[5m])) by (container_name),
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: container
+          test: docker_stats
+      
+      - record: baseline:container:memory:usage:bytes
+        expr: |
+          label_replace(
+            container_memory_usage_bytes,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: container
+          test: docker_stats
+      
+      - record: baseline:container:memory:usage:percent
+        expr: |
+          label_replace(
+            100 * (container_memory_usage_bytes / container_spec_memory_limit_bytes),
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: container
+          test: docker_stats
+      
+      - record: baseline:container:code_server:status
+        expr: |
+          label_replace(
+            up{job="code-server"},
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: container
+          test: container_health
+          container: code-server
+      
+      - record: baseline:container:redis:stats:connected_clients
+        expr: |
+          label_replace(
+            redis_connected_clients,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: container
+          test: redis_info
+      
+      - record: baseline:container:redis:stats:used_memory:bytes
+        expr: |
+          label_replace(
+            redis_memory_used_bytes,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: container
+          test: redis_info
+      
+      - record: baseline:container:postgres:status
+        expr: |
+          label_replace(
+            up{job="postgres"},
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: container
+          test: container_health
+          container: postgres
+      
+      # =============================================
+      # SYSTEM LAYER RECORDING RULES
+      # =============================================
+      
+      - record: baseline:system:cpu:cores:available
+        expr: |
+          label_replace(
+            count(node_cpu_seconds_total{mode="system"}),
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: cpu_info
+      
+      - record: baseline:system:memory:available:bytes
+        expr: |
+          label_replace(
+            node_memory_MemAvailable_bytes,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: memory_info
+      
+      - record: baseline:system:memory:total:bytes
+        expr: |
+          label_replace(
+            node_memory_MemTotal_bytes,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: memory_info
+      
+      - record: baseline:system:load:average:1m
+        expr: |
+          label_replace(
+            node_load1,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: load_average
+          interval: "1m"
+      
+      - record: baseline:system:load:average:5m
+        expr: |
+          label_replace(
+            node_load5,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: load_average
+          interval: "5m"
+      
+      - record: baseline:system:load:average:15m
+        expr: |
+          label_replace(
+            node_load15,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: load_average
+          interval: "15m"
+      
+      - record: baseline:system:network:bytes:in
+        expr: |
+          label_replace(
+            node_network_receive_bytes_total,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: network_interfaces
+      
+      - record: baseline:system:network:bytes:out
+        expr: |
+          label_replace(
+            node_network_transmit_bytes_total,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: network_interfaces
+      
+      - record: baseline:system:network:errors:in
+        expr: |
+          label_replace(
+            node_network_receive_errs_total,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: network_interfaces
+      
+      - record: baseline:system:network:errors:out
+        expr: |
+          label_replace(
+            node_network_transmit_errs_total,
+            "test_date", "april_2026", "", ""
+          )
+        labels:
+          layer: system
+          test: network_interfaces
+      
+      # =============================================
+      # SYNTHETIC AGGREGATES (for Grafana)
+      # =============================================
+      
+      - record: baseline:all:tests:collected
+        expr: |
+          count(
+            baseline:network:iperf3:throughput:mbps
+            or baseline:network:nas:write:throughput:mbps
+            or baseline:storage:docker:volume:write:throughput:mbps
+            or baseline:container:cpu:usage:percent
+            or baseline:system:cpu:cores:available
+          )
+        labels:
+          test_date: "april_2026"
+      
+      - record: baseline:health:aggregated
+        expr: |
+          (baseline:container:code_server:status + baseline:container:postgres:status) / 2
+        labels:
+          test_date: "april_2026"

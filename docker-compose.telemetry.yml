@@ -1,0 +1,194 @@
+# docker-compose.telemetry.yml
+#
+# Docker Compose additions for Phase 3 telemetry stack
+# Defines OpenTelemetry Collector and Jaeger services
+#
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.telemetry.yml up -d
+# Or: Update docker-compose.yml to include these services
+
+version: '3.8'
+
+services:
+  # OpenTelemetry Collector
+  # Receives traces from all services and forwards to Jaeger
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.88.0
+    container_name: otel-collector
+    hostname: otel-collector
+    
+    # Ports
+    ports:
+      - "4317:4317"    # OTLP/gRPC receiver (default)
+      - "4318:4318"    # OTLP/HTTP receiver
+      - "8888:8888"    # Prometheus metrics (collector internals)
+      - "13133:13133"  # Health check
+      - "1777:1777"    # pprof profiling
+    
+    # Configuration
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - otel-collector-logs:/var/log/otel-collector
+    
+    # Environment variables
+    environment:
+      JAEGER_ENDPOINT: jaeger:14250
+      ENVIRONMENT: development
+      DEPLOYMENT_ID: local-dev
+      SERVICE_VERSION: 0.1.0
+      NAMESPACE: default
+    
+    # Command
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:13133"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Networks
+    networks:
+      - observability
+      - default
+
+  # Jaeger Backend (All-in-One)
+  # Stores traces and provides query/visualization interface
+  jaeger:
+    image: jaegertracing/all-in-one:1.50.0
+    container_name: jaeger
+    hostname: jaeger
+    
+    # Ports
+    ports:
+      # Frontend UI
+      - "16686:16686"  # Jaeger UI (web interface)
+      
+      # Backend receivers
+      - "14250:14250"  # gRPC receiver (OTLP)
+      - "14268:14268"  # HTTP receiver (Thrift)
+      
+      # Jaeger Agent (legacy, optional)
+      - "6831:6831/udp"  # Thrift compact protocol
+      - "6832:6832/udp"  # Thrift binary protocol
+    
+    # Configuration
+    environment:
+      # Enable OTLP receiver
+      COLLECTOR_OTLP_ENABLED: "true"
+      COLLECTOR_OTLP_ENABLED_HTTP: "true"
+      
+      # Storage configuration
+      SPAN_STORAGE_TYPE: "badger"  # Use badger for production, memory for dev
+      BADGER_EPHEMERAL: "false"
+      BADGER_DIRECTORY_VALUE: "/badger/data"
+      BADGER_DIRECTORY_KEY: "/badger/key"
+      
+      # Trace configuration
+      MEMORY_MAX_TRACES: "10000"
+      
+      # Sampling configuration
+      SAMPLER_TYPE: "const"  # Constant sampling rate
+      SAMPLER_PARAM: "1"     # 1 = 100% sampling (0-1 range)
+      
+      # Logging
+      LOG_LEVEL: "info"
+    
+    # Volumes for persistent storage
+    volumes:
+      - jaeger-badger-data:/badger/data
+      - jaeger-badger-key:/badger/key
+      - ./jaeger-ui-config.json:/etc/jaeger/ui-config.json
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16686"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "1"
+          memory: 1G
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Networks
+    networks:
+      - observability
+      - default
+
+  # Prometheus (optional, for monitoring collector metrics)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-telemetry
+    
+    ports:
+      - "9090:9090"
+    
+    volumes:
+      - ./prometheus-telemetry.yml:/etc/prometheus/prometheus.yml
+      - prometheus-telemetry-data:/prometheus
+    
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    
+    restart: unless-stopped
+    
+    networks:
+      - observability
+      - default
+
+volumes:
+  otel-collector-logs:
+  jaeger-badger-data:
+  jaeger-badger-key:
+  prometheus-telemetry-data:
+
+networks:
+  observability:
+    driver: bridge
+    name: observability

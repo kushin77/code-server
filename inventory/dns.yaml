@@ -1,0 +1,439 @@
+# DNS Inventory & Configuration - Central DNS Management
+# Source of truth for all DNS entries, nameservers, zones, and records
+# Version: 1.0 (April 18, 2026)
+# Integrates with: Cloudflare, Route53, GoDaddy, ACME (Let's Encrypt)
+
+---
+
+## DOMAINS - Primary Domains
+domains:
+  primary:
+    name: "example.com"
+    registrar: "Cloudflare"
+    tld: ".com"
+    dnssec_enabled: true
+    auto_renewal: true
+    renewal_days_before: 30
+    nameservers:
+      - "ns1.example.com"
+      - "ns2.example.com"
+    dns_provider: "cloudflare"
+    
+  secondary:
+    name: "code-server.lab"
+    registrar: "GoDaddy"
+    tld: ".lab"
+    dnssec_enabled: false
+    auto_renewal: true
+    nameservers:
+      - "ns1.lab"
+      - "ns2.lab"
+    dns_provider: "godaddy"
+
+---
+
+## DNS PROVIDERS - Multi-provider Setup
+providers:
+  cloudflare:
+    name: "Cloudflare"
+    api_endpoint: "https://api.cloudflare.com/client/v4"
+    type: "managed"
+    features: [dns, ddos, waf, rate-limiting, dnssec]
+    api_token: "vault:secret/cloudflare/api_token"
+    account_id: "vault:secret/cloudflare/account_id"
+    zone_id: "vault:secret/cloudflare/zone_id"
+    tunnel_enabled: true
+    tunnel_token: "vault:secret/cloudflare/tunnel_token"
+    
+  route53:
+    name: "AWS Route 53"
+    api_endpoint: "https://route53.amazonaws.com"
+    type: "backup"
+    features: [dns, health-checks, failover]
+    aws_access_key: "vault:secret/aws/route53/access_key"
+    aws_secret_key: "vault:secret/aws/route53/secret_key"
+    
+  godaddy:
+    name: "GoDaddy DNS"
+    api_endpoint: "https://api.godaddy.com"
+    type: "secondary"
+    features: [dns]
+    api_key: "vault:secret/godaddy/api_key"
+    api_secret: "vault:secret/godaddy/api_secret"
+
+---
+
+## DNS ZONES - Zones and Records
+zones:
+  
+  ## Primary Zone - example.com
+  example_com:
+    zone_name: "example.com"
+    zone_id: "vault:secret/cloudflare/zone_id"
+    provider: "cloudflare"
+    dnssec_enabled: true
+    
+    records:
+      
+      ## Host A Records
+      - name: "@"
+        type: "A"
+        value: "192.168.168.31"  # Primary (via VIP in production)
+        ttl: 300
+        priority: 10
+        description: "Root domain - points to primary"
+        
+      - name: "www"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "www subdomain"
+        
+      - name: "code-server"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "Code-server IDE"
+        
+      - name: "code-server-primary"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "Primary host direct"
+        
+      - name: "code-server-replica"
+        type: "A"
+        value: "192.168.168.42"
+        ttl: 300
+        description: "Replica host direct"
+        
+      - name: "code-server-vip"
+        type: "A"
+        value: "192.168.168.30"
+        ttl: 60
+        description: "Virtual IP for transparent failover (short TTL)"
+        
+      ## Service A Records
+      - name: "prometheus"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "Prometheus metrics"
+        
+      - name: "grafana"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "Grafana dashboards"
+        
+      - name: "jaeger"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "Distributed tracing"
+        
+      - name: "loki"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "Log aggregation"
+        
+      - name: "alertmanager"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "Alert management"
+        
+      - name: "api"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "API gateway (Kong)"
+        
+      - name: "oauth"
+        type: "A"
+        value: "192.168.168.31"
+        ttl: 300
+        description: "OAuth2 proxy"
+        
+      - name: "storage"
+        type: "A"
+        value: "192.168.168.55"
+        ttl: 300
+        description: "NAS storage"
+        
+      ## MX Records - Email
+      - name: "@"
+        type: "MX"
+        value: "mail.example.com"
+        priority: 10
+        ttl: 3600
+        description: "Mail exchange"
+        
+      ## TXT Records - Verification
+      - name: "@"
+        type: "TXT"
+        value: "v=spf1 include:_spf.google.com ~all"
+        ttl: 3600
+        description: "SPF record"
+        
+      - name: "@"
+        type: "TXT"
+        value: "v=DKIM1; k=rsa; p=YOUR_DKIM_KEY"
+        ttl: 3600
+        description: "DKIM record"
+        
+      ## NS Records - Nameservers
+      - name: "@"
+        type: "NS"
+        value: "ns1.cloudflare.com"
+        ttl: 3600
+        description: "Cloudflare nameserver 1"
+        
+      - name: "@"
+        type: "NS"
+        value: "ns2.cloudflare.com"
+        ttl: 3600
+        description: "Cloudflare nameserver 2"
+        
+      ## SOA Record - Start of Authority
+      - name: "@"
+        type: "SOA"
+        value: "ns1.cloudflare.com. admin.example.com. 2026041800 10800 3600 604800 3600"
+        ttl: 3600
+        description: "Start of authority"
+
+---
+
+## DNS HEALTH CHECKS - Monitoring DNS Resolution
+health_checks:
+  
+  primary_host:
+    name: "Primary Host DNS"
+    hostname: "code-server.example.com"
+    expected_ip: "192.168.168.31"
+    check_interval: 30  # seconds
+    failure_threshold: 2
+    enabled: true
+    
+  vip_host:
+    name: "VIP Host DNS"
+    hostname: "code-server-vip.example.com"
+    expected_ip: "192.168.168.30"
+    check_interval: 30
+    failure_threshold: 2
+    enabled: true
+    
+  services:
+    - hostname: "prometheus.example.com"
+      expected_ip: "192.168.168.31"
+      enabled: true
+      
+    - hostname: "grafana.example.com"
+      expected_ip: "192.168.168.31"
+      enabled: true
+
+---
+
+## DNSSEC - DNSSEC Configuration
+dnssec:
+  enabled: true
+  provider: "cloudflare"
+  
+  ksk:  # Key Signing Key
+    algorithm: "ECDSAP256SHA256"
+    key_id: "vault:secret/dnssec/ksk_id"
+    enabled: true
+    
+  zsk:  # Zone Signing Key
+    algorithm: "ECDSAP256SHA256"
+    key_id: "vault:secret/dnssec/zsk_id"
+    enabled: true
+    
+  validation:
+    check_enabled: true
+    validation_tools: [dns-vali, dnsviz]
+
+---
+
+## ACME - Certificate Management (Let's Encrypt)
+acme:
+  enabled: true
+  provider: "let's_encrypt"
+  
+  certificates:
+    primary:
+      domain: "example.com"
+      subdomains:
+        - "www"
+        - "code-server"
+        - "prometheus"
+        - "grafana"
+        - "jaeger"
+        - "loki"
+        - "api"
+      wildcard: false
+      auto_renewal: true
+      renewal_days_before: 30
+      
+    wildcard:
+      domain: "*.example.com"
+      auto_renewal: true
+      renewal_days_before: 30
+      enabled: false  # Consider enabling for service subdomains
+
+---
+
+## TTL POLICIES - Time-to-Live Configuration
+ttl_policies:
+  
+  ## Long TTL - Rarely changes
+  long_ttl:
+    duration: 3600  # 1 hour
+    applies_to:
+      - "MX records"
+      - "NS records"
+      - "TXT records (SPF, DKIM)"
+      
+  ## Medium TTL - Occasionally changes
+  medium_ttl:
+    duration: 600  # 10 minutes
+    applies_to:
+      - "Service A records (prometheus, grafana, etc)"
+      - "Direct host A records (primary, replica)"
+      
+  ## Short TTL - Frequently changes or failover
+  short_ttl:
+    duration: 60  # 1 minute
+    applies_to:
+      - "VIP address (code-server-vip)"
+      - "Primary/replica pointers during failover"
+
+---
+
+## FAILOVER - DNS-Level Failover
+failover:
+  enabled: true
+  method: "cloudflare_failover"
+  
+  primary_to_replica:
+    trigger: "primary_host_down"
+    detection_method: "health_check"
+    detection_timeout: 30  # seconds
+    dns_update_delay: 5  # seconds for TTL propagation
+    
+    action:
+      - "Update code-server.example.com A record to 192.168.168.42"
+      - "AlertManager notification"
+      - "Pagerduty alert (if configured)"
+    
+  replica_to_primary:
+    trigger: "primary_host_recovered"
+    detection_method: "health_check"
+    detection_timeout: 60  # longer timeout to avoid flip-flopping
+    manual_confirmation_required: false
+    
+    action:
+      - "Update code-server.example.com A record to 192.168.168.31"
+      - "AlertManager notification"
+
+---
+
+## RATE LIMITING - DNS Rate Limiting
+rate_limiting:
+  enabled: true
+  
+  cloudflare_rules:
+    - rule_name: "Query Rate Limit"
+      query_limit: 100
+      time_window: 60  # seconds
+      action: "block"
+      description: "Prevent DNS amplification attacks"
+      
+    - rule_name: "Zone Transfer Limit"
+      allowed_ips: ["vault:secret/dns/zone_transfer_ips"]
+      action: "allow"
+      description: "Restrict zone transfers to authorized servers"
+
+---
+
+## DNS RESOLVER CONFIGURATION
+resolvers:
+  
+  primary:
+    type: "authoritative"
+    ip_address: "192.168.168.1"  # Local gateway (optional)
+    fallback_servers: ["8.8.8.8", "8.8.4.4"]
+    
+  secondary:
+    type: "recursive"
+    ip_address: "8.8.8.8"
+    cache_ttl: 300
+    
+  internal:
+    type: "split-dns"
+    internal_domain: "internal.example.com"
+    resolves_to: "192.168.168.31"
+
+---
+
+## MONITORING & ALERTING
+monitoring:
+  prometheus_metrics:
+    - metric: "dns_query_count"
+      description: "DNS queries per second"
+      threshold_alert: 10000  # qps
+      
+    - metric: "dns_resolution_latency"
+      description: "DNS query response time"
+      threshold_alert: 100  # ms
+      
+    - metric: "dns_nxdomain_rate"
+      description: "Rate of non-existent domain errors"
+      threshold_alert: 5  # percent
+      
+    - metric: "dnssec_validation_failures"
+      description: "DNSSEC validation errors"
+      threshold_alert: 0.1  # percent
+      
+  alerts:
+    - name: "DNS Resolution Failure"
+      condition: "health_check_failed"
+      duration: 2
+      severity: "critical"
+      
+    - name: "High DNS Query Latency"
+      condition: "latency > 100ms"
+      duration: 5
+      severity: "warning"
+      
+    - name: "DNSSEC Validation Failed"
+      condition: "dnssec_failures > 0"
+      duration: 1
+      severity: "critical"
+      
+    - name: "Certificate Renewal Failing"
+      condition: "acme_renewal_failed"
+      duration: 1
+      severity: "high"
+
+---
+
+## METADATA
+metadata:
+  version: "1.0"
+  last_updated: "2026-04-18T00:00:00Z"
+  updated_by: "copilot-agent"
+  schema_version: "dns-v1"
+  
+  notes: |
+    - All credentials stored in Vault
+    - DNS changes immediately visible via Cloudflare API
+    - VIP has short TTL (60s) for faster failover
+    - Service subdomains point to primary host
+    - DNSSEC enabled for security
+    - Let's Encrypt ACME integration for TLS certificates
+    - Health checks ensure DNS records point to healthy hosts
+    - Failover from primary to replica handled by Cloudflare
+    - Rate limiting prevents DNS amplification attacks
+    - All TTL values optimized for production failover

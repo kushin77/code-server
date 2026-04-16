@@ -1,0 +1,324 @@
+apiVersion: monitoring.coreos.com/v1
+kind: SLODefinitions
+metadata:
+  name: code-server-enterprise-slo
+  namespace: production
+  version: "1.0"
+  description: "Central SLO/SLI targets for all services"
+
+# Service Level Objectives (SLO)
+slos:
+  code_server:
+    name: "Code-Server IDE Service"
+    availability_slo: 99.9%
+    description: "Primary IDE service for code editing"
+    criticality: critical
+    customers: "all developers"
+    measurement_window: monthly
+    error_budget_minutes_per_month: 43.2  # 99.9% SLO = 43.2 minutes per month
+    
+    slis:
+      availability:
+        name: "Availability"
+        target: 99.9%
+        measurement: 'up{job="code-server"}'
+        description: "Percentage of time service is accessible"
+      
+      latency:
+        name: "Latency P99"
+        target: 100ms
+        measurement: 'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))'
+        description: "99th percentile request latency"
+        sli_alert_threshold: 100ms
+        warning_threshold: 80ms
+      
+      error_rate:
+        name: "Error Rate"
+        target: 0.1%
+        measurement: 'rate(http_requests_total{status=~"5.."}[5m])'
+        description: "Percentage of failed requests"
+        sli_alert_threshold: 0.1%
+        warning_threshold: 0.05%
+
+  postgres:
+    name: "PostgreSQL Database"
+    availability_slo: 99.99%
+    description: "Primary relational database for application data"
+    criticality: critical
+    customers: "all services"
+    measurement_window: monthly
+    error_budget_minutes_per_month: 4.32  # 99.99% SLO = 4.32 minutes per month
+    
+    slis:
+      availability:
+        name: "Availability"
+        target: 99.99%
+        measurement: 'up{job="postgres"}'
+        description: "Percentage of time database is accessible"
+      
+      query_latency:
+        name: "Query Latency P99"
+        target: 50ms
+        measurement: 'histogram_quantile(0.99, rate(pg_slow_queries_seconds[5m]))'
+        description: "99th percentile query execution time"
+        sli_alert_threshold: 50ms
+        warning_threshold: 40ms
+      
+      replication_lag:
+        name: "Replication Lag"
+        target: 1s
+        measurement: 'pg_replication_lag'
+        description: "Maximum lag between primary and replica"
+        sli_alert_threshold: 1s
+        warning_threshold: 500ms
+      
+      connections:
+        name: "Connection Pool Health"
+        target: 90%
+        measurement: 'sum(pg_stat_activity_count) / max(pg_settings_max_connections)'
+        description: "Maximum connection pool utilization"
+        sli_alert_threshold: 90%
+        warning_threshold: 80%
+
+  redis:
+    name: "Redis Cache"
+    availability_slo: 99.9%
+    description: "High-speed cache for sessions and frequently accessed data"
+    criticality: high
+    customers: "code-server, postgres"
+    measurement_window: monthly
+    error_budget_minutes_per_month: 43.2
+    
+    slis:
+      availability:
+        name: "Availability"
+        target: 99.9%
+        measurement: 'up{job="redis"}'
+        description: "Percentage of time cache is accessible"
+      
+      hit_rate:
+        name: "Cache Hit Rate"
+        target: 95%
+        measurement: 'rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))'
+        description: "Percentage of cache requests that hit"
+        sli_alert_threshold: 95%
+        warning_threshold: 97%
+      
+      memory_health:
+        name: "Memory Usage"
+        target: 80%
+        measurement: 'redis_memory_used_bytes / redis_memory_max_bytes'
+        description: "Maximum memory utilization"
+        sli_alert_threshold: 80%
+        warning_threshold: 70%
+      
+      eviction_rate:
+        name: "Eviction Rate"
+        target: 1%
+        measurement: 'rate(redis_evicted_keys_total[5m])'
+        description: "Keys evicted per second"
+        sli_alert_threshold: 1%
+        warning_threshold: 0.5%
+
+  observability:
+    name: "Monitoring & Observability Stack"
+    availability_slo: 99.9%
+    description: "Prometheus, Grafana, AlertManager, Jaeger, Loki"
+    criticality: high
+    customers: "operations, development"
+    measurement_window: monthly
+    error_budget_minutes_per_month: 43.2
+    
+    slis:
+      prometheus_availability:
+        name: "Prometheus Availability"
+        target: 99.9%
+        measurement: 'up{job="prometheus"}'
+        description: "Time metrics collection service is up"
+      
+      prometheus_memory:
+        name: "Prometheus Memory"
+        target: 1GB
+        measurement: 'process_resident_memory_bytes{job="prometheus"}'
+        description: "Prometheus RAM usage"
+        sli_alert_threshold: 1e9
+      
+      grafana_availability:
+        name: "Grafana Availability"
+        target: 99.5%
+        measurement: 'up{job="grafana"}'
+        description: "Time dashboard UI is available"
+      
+      loki_availability:
+        name: "Loki Availability"
+        target: 99.0%
+        measurement: 'up{job="loki"}'
+        description: "Time log aggregation is available (best effort)"
+
+  security:
+    name: "Security Services"
+    availability_slo: 99.99%
+    description: "OAuth2-proxy, Vault, Caddy TLS"
+    criticality: critical
+    customers: "all services"
+    measurement_window: monthly
+    error_budget_minutes_per_month: 4.32
+    
+    slis:
+      oauth_availability:
+        name: "Authentication Service"
+        target: 99.99%
+        measurement: 'up{job="oauth2-proxy"}'
+        description: "OAuth2-proxy uptime for user authentication"
+      
+      vault_availability:
+        name: "Secrets Management"
+        target: 99.99%
+        measurement: 'up{job="vault"}'
+        description: "Vault uptime for credential/secret access"
+      
+      tls_certificate_validity:
+        name: "TLS Certificate Validity"
+        target: 30d
+        measurement: 'certmetrics_certificate_expiry_seconds{job="caddy"}'
+        description: "Minimum days until certificate expiry"
+
+  infrastructure:
+    name: "Infrastructure Health"
+    availability_slo: 99.0%
+    description: "Host CPU, memory, disk resources"
+    criticality: high
+    customers: "all services"
+    measurement_window: monthly
+    error_budget_minutes_per_month: 432  # 99.0% SLO = 432 minutes per month
+    
+    slis:
+      cpu_utilization:
+        name: "CPU Utilization"
+        target: 85%
+        measurement: '(1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])))'
+        description: "Maximum CPU usage threshold"
+        sli_alert_threshold: 85%
+        warning_threshold: 75%
+      
+      memory_utilization:
+        name: "Memory Utilization"
+        target: 90%
+        measurement: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))'
+        description: "Maximum memory usage threshold"
+        sli_alert_threshold: 90%
+        warning_threshold: 80%
+      
+      disk_available:
+        name: "Disk Space Available"
+        target: 10%
+        measurement: '(node_filesystem_avail_bytes / node_filesystem_size_bytes)'
+        description: "Minimum disk free percentage"
+        sli_alert_threshold: 10%
+        warning_threshold: 20%
+
+# Error Budget Calculations
+error_budgets:
+  monthly_windows:
+    # 99.9% SLO allows:
+    # - 99.9% of 30 days = 720 * 0.001 = 0.72 hours = 43.2 minutes per month
+    # - 99.9% of 24 hours = 24 * 0.001 = 0.024 hours = 1.44 minutes per day
+    # - 99.9% of 1 hour = 1 * 0.001 = 0.001 hours = 3.6 seconds per hour
+    
+    "99.9":
+      error_budget_minutes: 43.2
+      error_budget_seconds: 2592
+      description: "Allows ~43 minutes downtime per month"
+    
+    "99.99":
+      error_budget_minutes: 4.32
+      error_budget_seconds: 259.2
+      description: "Allows ~4 minutes downtime per month"
+    
+    "99.0":
+      error_budget_minutes: 432
+      error_budget_seconds: 25920
+      description: "Allows ~7 hours downtime per month"
+
+  daily_windows:
+    "99.9":
+      error_budget_seconds: 86.4
+      error_budget_ms: 86400
+      description: "Allows ~86 seconds downtime per day"
+    
+    "99.99":
+      error_budget_seconds: 8.64
+      error_budget_ms: 8640
+      description: "Allows ~8 seconds downtime per day"
+
+# SLO Thresholds for Alerting
+alerting_thresholds:
+  # Burn rate indicates how fast error budget is being consumed
+  # High burn rate = immediate alert (within 1-2 minutes)
+  # Low burn rate = escalating alerts (5-30 minutes)
+  
+  fast_burn_rate: 10
+  # 10x error budget burn rate = use entire monthly budget in 3 days
+  # Alert within: 1-5 minutes
+  
+  medium_burn_rate: 5
+  # 5x error budget burn rate = use entire monthly budget in 6 days
+  # Alert within: 5-15 minutes
+  
+  slow_burn_rate: 1
+  # 1x error budget burn rate = normal monthly burn
+  # Alert within: 15-30 minutes
+
+# Service Tier Definitions
+service_tiers:
+  tier_1_critical:
+    services: [code-server, oauth2-proxy, vault]
+    availability_slo: 99.99%
+    response_time_slo: 50ms
+    error_budget_minutes: 4.32
+    incident_response_sla: 5 minutes
+  
+  tier_2_high:
+    services: [postgres, caddy, kong]
+    availability_slo: 99.99%
+    response_time_slo: 100ms
+    error_budget_minutes: 4.32
+    incident_response_sla: 15 minutes
+  
+  tier_3_standard:
+    services: [redis, prometheus, grafana]
+    availability_slo: 99.9%
+    response_time_slo: 200ms
+    error_budget_minutes: 43.2
+    incident_response_sla: 30 minutes
+  
+  tier_4_observability:
+    services: [jaeger, loki, alertmanager]
+    availability_slo: 99.0%
+    response_time_slo: 500ms
+    error_budget_minutes: 432
+    incident_response_sla: 1 hour
+
+# Runbook Mappings
+runbooks:
+  code_server:
+    down: "runbooks/code-server-down.md"
+    slow: "runbooks/code-server-slow.md"
+    errors: "runbooks/code-server-errors.md"
+  
+  postgres:
+    down: "runbooks/postgres-down.md"
+    slow: "runbooks/postgres-slow.md"
+    replication: "runbooks/postgres-replication.md"
+    disk: "runbooks/postgres-disk-full.md"
+  
+  redis:
+    down: "runbooks/redis-down.md"
+    hit_rate: "runbooks/redis-hit-rate.md"
+    memory: "runbooks/redis-memory.md"
+    eviction: "runbooks/redis-eviction.md"
+  
+  infrastructure:
+    cpu: "runbooks/high-cpu.md"
+    memory: "runbooks/high-memory.md"
+    disk: "runbooks/disk-full.md"

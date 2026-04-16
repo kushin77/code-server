@@ -33,6 +33,10 @@ ALLOWED_PATTERNS=(
     "deprecated/"
     "archived/"
     "scripts/_archive/"
+    "tests/"                      # Test scripts use default IPs for CI/CD
+    "terraform/p2-366-hardcoded-ip-removal.tf"  # Refactoring document with examples
+    "terraform/setup-minio-state-backend.sh"    # Backend setup script
+    "terraform/locals-conversion.tf"            # Reference/refactoring document
     "SUPPORTED-PLATFORMS.md"
     "scripts/lib/env.sh"         # The env.sh that exports these as variables
     "check-no-ips.sh"            # This script itself

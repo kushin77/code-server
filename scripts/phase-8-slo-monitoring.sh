@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 # PHASE 8: SLO MONITORING & DASHBOARDS
 # On-premises production SLO validation, alerting, and runbooks
 # Date: April 15, 2026

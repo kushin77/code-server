@@ -1,11 +1,21 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 
 # Phase 3 Production Deployment Guide - Quick Start
 # Issue: kushin77/code-server#164 - k3s Kubernetes Deployment
-# Target: 192.168.168.31
 # Purpose: Deploy k3s cluster with GPU, storage, and networking ready
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source production topology from inventory
+source "$(cd "${REPO_DIR}" && git rev-parse --show-toplevel)/scripts/lib/env.sh" || {
+    echo "ERROR: Could not source scripts/lib/env.sh" >&2
+    exit 1
+}
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

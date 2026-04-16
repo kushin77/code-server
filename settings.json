@@ -1,4 +1,13 @@
 {
+  "// DEPRECATED": "This file is SUPERSEDED by .vscode/settings.json (local VSCode) and config/settings.json (Docker)",
+  "// SEE": ".vscode/SETTINGS-GUIDE.md for settings hierarchy documentation",
+  "// ISSUE": "#449 — Settings Layering & Consolidation",
+  "// DELETE": "This file should be deleted after verifying no consumer reads from root",
+  "// MAPPING": {
+    "// config/settings.json": "Used by Docker code-server container",
+    "// .vscode/settings.json": "Used by Windows VSCode workspace (THIS IS THE ACTIVE ONE)"
+  },
+  "// NOTE": "All settings have been consolidated into .vscode/settings.json. This file is kept for backward compatibility only.",
   "extensions.enabled": true,
   "extensions.autoCheckUpdates": false,
   "extensions.autoUpdate": false,

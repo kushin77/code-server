@@ -1,103 +1,173 @@
-# Scripts Directory - Complete Index
+# Scripts Directory — Canonical Operational Entrypoints
 
-**Last Updated**: April 14, 2026  
-**Status**: Organized & Indexed (Phase 1 Task 1.1)  
-**Total Scripts**: 250+  
+**Last Updated**: April 2026  
+**Issue**: [#382 — Canonical Operational Entrypoints](https://github.com/kushin77/code-server/issues/382)  
+**Status**: Reorganized — phase-based scripts deprecated (EOL: 2026-07-14)
 
-> 💡 **TIP**: Use Ctrl+F (or Cmd+F) to search this page for any script name.
-
----
-
-## 🎯 QUICK START - FIND WHAT YOU NEED
-
-| Need To... | Script | Time | Status |
-|-----------|--------|------|--------|
-| Deploy to production | `./deploy.sh` | 5 min | ✅ ACTIVE |
-| Check if healthy | `./health-check.sh` | 2 min | ✅ ACTIVE |
-| Backup all data | `./backup.sh` | 15 min | ✅ ACTIVE |
-| Run load tests | `./load-test.sh` | 30 min | ✅ ACTIVE |
-| Manage a user | `./manage-users.sh` | 10 min | ✅ ACTIVE |
-| Setup Cloudflare tunnel | `./setup-cloudflare-tunnel.sh` | 15 min | ✅ ACTIVE |
-| Validate configs | `./validate.sh` | 5 min | ✅ ACTIVE |
+> 💡 **TIP**: Use Ctrl+F to search for the operation you need.
 
 ---
 
-## 📚 SCRIPTS BY CATEGORY
+## 🎯 QUICK START — CANONICAL TASK MAP
 
-### 🚀 CORE OPERATIONAL (Active - Use These)
+| Task | Canonical Script | Production-Safe? | Notes |
+|------|-----------------|-----------------|-------|
+| Deploy to production | `scripts/deploy.sh` | ✅ Yes | Requires SSH to 192.168.168.31 |
+| Health check all services | `scripts/health/health-check.sh` | ✅ Yes | Non-destructive |
+| Backup all data | `scripts/backup.sh` | ✅ Yes | Creates timestamped archive |
+| Disaster recovery test | `scripts/disaster-recovery-procedures.sh` | ⚠️ Coordinated | Maintenance window required |
+| Chaos testing | Deprecated — use `scripts/phase-7e-chaos-testing.sh` redirect | ⚠️ Coordinated | Staging only |
+| Rollback from incident | `git revert <sha> && git push origin main` | ✅ Yes | CI/CD deploys automatically |
+| Credential rotation | `scripts/rotate-godaddy-api-key.sh` | ⚠️ Coordinated | Requires maintenance window |
+| Validate configs | `scripts/automated-iac-validation.sh` | ✅ Yes | CI-safe |
+| Check VPN connectivity | `scripts/lib/vpn.sh` | ✅ Yes | Read-only |
+| Global quality gate | `scripts/lib/global-quality-gate.sh` | ✅ Yes | CI gate |
+| Security hardening | `scripts/audit-logging.sh` | ⚠️ Coordinated | Affects running containers |
+| User management | `scripts/admin-sessions-invalidate.sh` | ⚠️ Coordinated | Invalidates active sessions |
+| VSCode process monitor | `scripts/vscode-handle-monitor.sh` | ✅ Yes | Read-only diagnostic |
+| VSCode memory dashboard | `scripts/vscode-memory-dashboard.sh` | ✅ Yes | Read-only diagnostic |
+| Ollama initialize | `scripts/ollama-init.sh health` | ✅ Yes | Idempotent |
 
-### Using Scripts
+---
 
-All scripts have built-in help:
+## 📋 Script Capability Matrix
 
-```bash
-./scripts/category/script-name.sh --help
-```
+| Script | Run Anytime? | Maintenance Window? | One-Time Setup? |
+|--------|-------------|--------------------|-----------------| 
+| `health/health-check.sh` | ✅ | — | — |
+| `backup.sh` | ✅ | — | — |
+| `deploy.sh` | ✅ | — | — |
+| `ollama-init.sh` | ✅ | — | — |
+| `automated-iac-validation.sh` | ✅ | — | — |
+| `lib/vpn.sh` | ✅ | — | — |
+| `lib/global-quality-gate.sh` | ✅ | — | — |
+| `disaster-recovery-procedures.sh` | — | ✅ | — |
+| `rotate-godaddy-api-key.sh` | — | ✅ | — |
+| `audit-logging.sh` | — | ✅ | — |
+| `bootstrap-node.sh` | — | — | ✅ |
+| `automated-oauth-configuration.sh` | — | — | ✅ |
 
-### Common Operations
+---
 
-```bash
-# Setup environment
-make install
-./scripts/install/setup.sh
+## 📂 Scripts by Category
 
-# Check health
-make health-check
-./scripts/health/health-check.sh --verbose
-
-# Deploy infrastructure
-make deploy-iac-prod
-./scripts/deploy/deploy-iac.sh production
-
-# View all targets
-make --help
-```
-
-## Script Categories
-
-### Install Scripts
-
-First-time setup and dependency installation.
-
-```bash
-./scripts/install/setup.sh          # Full setup
-./scripts/install/setup-deps.sh     # Just dependencies
-./scripts/install/setup-db.sh       # Just database
-```
-
-### Deploy Scripts
-
-Deployment automation for infrastructure and containers.
+### 🚀 Deploy
 
 ```bash
-./scripts/deploy/deploy-iac.sh production     # Terraform
-./scripts/deploy/deploy-containers.sh         # Docker
-./scripts/deploy/deploy-all.sh                # Both
+scripts/deploy.sh                          # Main production orchestrator
+scripts/deploy-ha-primary-production.sh   # HA primary deployment
+scripts/deploy-keepalived.sh              # VRRP/keepalived
+scripts/deploy-cloudflare-tunnel.sh       # Cloudflare tunnel
+scripts/deploy-falco.sh                   # Falco security
+scripts/deploy-github-runners.sh          # GitHub Actions runners
+scripts/automated-deployment-orchestration.sh  # Full orchestration
 ```
 
-### Health Scripts
-
-Health checks, monitoring, validation.
+### 🏥 Health & Validation
 
 ```bash
-./scripts/health/health-check.sh --verbose    # Full report
-./scripts/health/validate-config.sh           # Validation
+scripts/health/health-check.sh            # Canonical health check
+scripts/health/verify-all-phases-ready.sh # Phase readiness
+scripts/automated-iac-validation.sh       # IaC validation
+scripts/backup-validator.sh               # Backup integrity
+scripts/backup-verify-production.sh       # Production backup verify
 ```
 
-### Maintenance Scripts
-
-Backup, restore, cleanup, maintenance tasks.
+### 🔒 Security
 
 ```bash
-./scripts/maintenance/backup.sh               # Create backup
-./scripts/maintenance/restore.sh              # Restore backup
-./scripts/maintenance/cleanup.sh              # Clean up
+scripts/audit-logging.sh                  # Audit log setup
+scripts/configure-egress-filtering.sh     # Egress rules
+scripts/lib/secrets.sh                    # Secrets management
+scripts/rotate-godaddy-api-key.sh         # Credential rotation
+scripts/automated-oauth-configuration.sh  # OAuth setup
 ```
 
-**Core operational scripts** for production use:
+### 💾 Backup & Recovery
 
-- `deploy.sh` - Main deployment orchestration ✅ ACTIVE
-- `backup.sh` - Automated backup creation ✅ ACTIVE
+```bash
+scripts/backup.sh                         # Create backup
+scripts/disaster-recovery-procedures.sh  # DR runbook
+```
+
+### 🔧 Maintenance & Ops
+
+```bash
+scripts/admin-sessions-invalidate.sh      # Invalidate sessions
+scripts/cleanup-container-overlap.sh      # Container cleanup
+scripts/deduplicate-env.sh               # Dedup env vars
+scripts/collect-baselines.sh             # Perf baseline collection
+```
+
+### 🖥️ VSCode Process Management (Manual Only)
+
+```bash
+scripts/launch-vscode-budgeted.bat        # Launch with 1GB heap cap (Windows)
+scripts/vscode-handle-monitor.sh          # Process health monitor
+scripts/vscode-memory-dashboard.sh        # Memory dashboard
+scripts/vscode-terminal-reaper.ps1        # Idle terminal cleanup (prompts before kill)
+```
+
+### 🧰 Lib / Shared
+
+```bash
+scripts/lib/global-quality-gate.sh        # CI quality gate
+scripts/lib/vpn.sh                        # VPN connectivity check
+scripts/lib/secrets.sh                    # Secrets loading
+scripts/lib/env.sh                        # Environment setup
+scripts/lib/check-no-ips.sh              # IP leakage check
+```
+
+### 🤖 AI / Ollama
+
+```bash
+scripts/ollama-init.sh health             # Health check
+scripts/ollama-init.sh pull-models        # Pull all models
+scripts/ollama-init.sh list               # List models
+scripts/ollama-init.sh index              # Build repo index
+scripts/ollama-init.sh status             # Full status
+```
+
+---
+
+## ⚠️ Deprecated Scripts
+
+23 phase-based scripts are **deprecated** with 90-day EOL (2026-07-14).  
+See [`DEPRECATED-SCRIPTS.md`](../DEPRECATED-SCRIPTS.md) for the full replacement mapping.
+
+**Examples:**
+- `scripts/deploy-phase-7-complete.sh` → `scripts/deploy.sh`
+- `scripts/phase-7e-chaos-testing.sh` → coordinate via maintenance window
+- `scripts/deploy-phase-8-secrets-management.sh` → `scripts/lib/secrets.sh`
+
+---
+
+## 🛡️ CI Enforcement
+
+The global quality gate (`scripts/lib/global-quality-gate.sh`) warns when new commits introduce phase-based script naming patterns. New scripts **must** use the capability-based naming convention:
+
+```
+✅ Good: scripts/deploy/rollback.sh
+✅ Good: scripts/security/rotate-credentials.sh
+❌ Reject: scripts/deploy-phase-27-new-thing.sh
+❌ Reject: scripts/phase-27-setup.sh
+```
+
+---
+
+## 📋 Adding New Scripts
+
+1. Choose the correct category directory
+2. Use descriptive verb-noun naming: `verb-noun.sh` (e.g., `rotate-credentials.sh`)
+3. Add `set -euo pipefail` at top
+4. Add `--help` flag
+5. Mark as Production-Safe or Coordinated in this README
+6. Add entry to the QUICK START table above
+
+---
+
+*Last updated: April 2026 | Issue: #382*
+
 - `health-check.sh` - Comprehensive health verification ✅ ACTIVE
 - `docker-health-monitor.sh` - Real-time Docker container health ✅ ACTIVE
 - `restore.sh` - Backup restoration ✅ ACTIVE

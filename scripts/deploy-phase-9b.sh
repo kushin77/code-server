@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 # Phase 9-B: Deploy Observability Stack (Jaeger, Loki, Prometheus SLOs)
 # Issues #363, #364, #365
 # Status: Production-Ready Deployment
@@ -6,9 +8,16 @@
 set -o errexit
 set -o pipefail
 
-# Configuration
-PRIMARY_HOST="192.168.168.31"
-REPLICA_HOST="192.168.168.42"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source production topology from inventory
+source "$(cd "${REPO_DIR}" && git rev-parse --show-toplevel)/scripts/lib/env.sh" || {
+    echo "ERROR: Could not source scripts/lib/env.sh" >&2
+    exit 1
+}
+
+# Configuration (PRIMARY_HOST, REPLICA_HOST sourced from env.sh)
 
 log_info() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $1"

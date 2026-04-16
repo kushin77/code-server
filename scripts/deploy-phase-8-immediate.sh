@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 # Phase 8: Immediate deployment (direct execution, no nested SSH)
 set -euo pipefail
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 ################################################################################
 # scripts/deploy-phase-7c-failover.sh — DNS and Automatic Failover Setup
 #
@@ -10,9 +12,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
 ENVIRONMENT="${1:-production}"
 
-source "$SCRIPT_DIR/_common/init.sh"
+# Source production topology from inventory
+source "$(cd "${REPO_DIR}" && git rev-parse --show-toplevel)/scripts/lib/env.sh" || {
+    echo "ERROR: Could not source scripts/lib/env.sh" >&2
+    exit 1
+}
 
 log::banner "Phase 7C: DNS and Automatic Failover"
 

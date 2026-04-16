@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 # scripts/deploy-phase-ha-patroni.sh
 # P2 #422: Primary/Replica HA - Patroni Cluster Setup
 # Purpose: Deploy PostgreSQL HA orchestration with automatic failover
@@ -7,11 +9,17 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Source production topology from inventory
+source "$(cd "${PROJECT_ROOT}" && git rev-parse --show-toplevel)/scripts/lib/env.sh" || {
+    echo "ERROR: Could not source scripts/lib/env.sh" >&2
+    exit 1
+}
+
 TERRAFORM_DIR="${PROJECT_ROOT}/terraform"
 
-# Configuration
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+# Configuration (sourced from env.sh, fallback to localhost if not available)
+# PRIMARY_HOST and REPLICA_HOST are already exported by env.sh
 PATRONI_VERSION="${PATRONI_VERSION:-3.0.1}"
 ETCD_VERSION="${ETCD_VERSION:-3.5.10}"
 

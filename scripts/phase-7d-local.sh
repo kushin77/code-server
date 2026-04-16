@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 
 ################################################################################
 # Phase 7d-Local: DNS & Load Balancing Setup (Optimized for On-Premises)
@@ -8,9 +10,16 @@
 
 set -e
 
-# Configuration
-PRIMARY_HOST="192.168.168.31"
-REPLICA_HOST="192.168.168.42"  # On-premises standby host
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source production topology from inventory
+source "$(cd "${REPO_DIR}" && git rev-parse --show-toplevel)/scripts/lib/env.sh" || {
+    echo "ERROR: Could not source scripts/lib/env.sh" >&2
+    exit 1
+}
+
+# Configuration (PRIMARY_HOST, REPLICA_HOST sourced from env.sh)
 PRIMARY_WEIGHT=70
 REPLICA_WEIGHT=30
 DNS_DOMAIN="ide.kushnir.cloud"

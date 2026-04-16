@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 
 ################################################################################
 # Phase 7e: Chaos Testing & Production Validation
@@ -7,9 +9,16 @@
 
 set -e
 
-# Configuration
-PRIMARY_HOST="192.168.168.31"
-REPLICA_HOST="192.168.168.42"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source production topology from inventory
+source "$(cd "${REPO_DIR}" && git rev-parse --show-toplevel)/scripts/lib/env.sh" || {
+    echo "ERROR: Could not source scripts/lib/env.sh" >&2
+    exit 1
+}
+
+# Configuration (PRIMARY_HOST, REPLICA_HOST sourced from env.sh)
 TEST_DURATION_HOURS=24  # Full day validation
 CHAOS_SCENARIOS=12  # Number of scenarios to test
 LOG_FILE="/tmp/phase-7e-chaos-testing-$(date +%Y%m%d-%H%M%S).log"

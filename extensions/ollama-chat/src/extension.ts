@@ -94,9 +94,10 @@ async function handleChatRequest(
 
     stream.progress('💭 Thinking with ' + ollamaClient.getCurrentModel() + '...');
 
-    // Stream response from Ollama
-    const responseStream = await ollamaClient.generateWithStream(augmentedPrompt);
+    // Stream response from Ollama — pass cancellation token so user can cancel mid-stream
+    const responseStream = ollamaClient.generateWithStream(augmentedPrompt, token);
     for await (const chunk of responseStream) {
+      if (token.isCancellationRequested) break;
       stream.markdown(chunk);
     }
 

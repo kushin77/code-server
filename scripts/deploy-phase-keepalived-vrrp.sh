@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 # scripts/deploy-phase-keepalived-vrrp.sh
 # P2 #365: Deploy VRRP/Keepalived for automatic failover
 # 
@@ -12,11 +14,14 @@
 
 set -euo pipefail
 
-# Source inventory variables
-source .env.inventory
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source production topology from inventory
+source "$(cd "${REPO_DIR}" && git rev-parse --show-toplevel)/scripts/lib/env.sh" || {
+    echo "ERROR: Could not source scripts/lib/env.sh" >&2
+    exit 1
+}
 
 # Load colors
 source "$SCRIPT_DIR/_colors.sh" 2>/dev/null || {

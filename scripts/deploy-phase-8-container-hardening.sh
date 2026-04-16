@@ -1,12 +1,23 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 # Phase 8: Container Hardening - Deploy Script
 # Applies AppArmor, seccomp, capability dropping, read-only filesystems
 # Idempotent: safe to run multiple times
 
 set -euo pipefail
 
-PRIMARY_HOST="${1:-192.168.168.31}"
-SSH_USER="akushnir"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source production topology from inventory
+source "$(cd "${REPO_DIR}" && git rev-parse --show-toplevel)/scripts/lib/env.sh" || {
+    echo "ERROR: Could not source scripts/lib/env.sh" >&2
+    exit 1
+}
+
+PRIMARY_HOST="${1:-$PRIMARY_HOST}"  # Use provided arg or fall back to env.sh value
+SSH_USER="${SSH_USER:-akushnir}"
 
 log_info() { echo -e "\033[0;34m[INFO]\033[0m $*"; }
 log_success() { echo -e "\033[0;32m[✓]\033[0m $*"; }

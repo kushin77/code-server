@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Use canonical entrypoint from scripts/README.md instead (EOL: 2026-07-14)
+# See: DEPRECATED-SCRIPTS.md
 # scripts/deploy-phase-8-cis-hardening.sh
 # =========================================
 # CIS Ubuntu 22.04 LTS Security Hardening

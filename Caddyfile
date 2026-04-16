@@ -77,6 +77,10 @@
         header_up X-Forwarded-Proto https
         header_up X-Forwarded-Host  {host}
         header_up X-Original-URI    {uri}
+        # W3C Trace Context propagation (#377 Telemetry spine)
+        header_up X-Request-ID      {http.request.uuid}
+        header_up Traceparent       {http.request.header.Traceparent}
+        header_up Tracestate        {http.request.header.Tracestate}
         transport http {
             dial_timeout  10s
             read_timeout  30s
@@ -92,6 +96,9 @@
         header_up X-Forwarded-Proto https
         header_up X-Forwarded-Host  {host}
         header_up X-Request-ID      {http.request.uuid}
+        # W3C Trace Context propagation (#377 Telemetry spine)
+        header_up Traceparent       {http.request.header.Traceparent}
+        header_up Tracestate        {http.request.header.Tracestate}
         transport http {
             # WebSocket passthrough for code-server terminal / extensions
             dial_timeout      10s
@@ -109,7 +116,10 @@
             roll_keep 14
             roll_keep_for 336h
         }
-        format json
+        format json {
+            request_id  "request_id"
+            time_format "iso8601"
+        }
         level  info
     }
 

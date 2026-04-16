@@ -1,0 +1,292 @@
+# P2 #432: Docker Compose Profiles Implementation
+# Enable selective service startup: core | monitoring | tracing | ai | all
+
+version: "3.9"
+
+services:
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # CORE SERVICES (no profile = always start)
+  # Essential services: IDE, database, cache, reverse proxy
+  # ═════════════════════════════════════════════════════════════════════════
+
+  code-server:
+    image: codercom/code-server:4.115.0
+    container_name: code-server
+    restart: always
+    # No profile = core service (always starts)
+    networks:
+      - enterprise
+    ports:
+      - "0.0.0.0:8080:8080"
+    environment:
+      - PASSWORD=${CODE_SERVER_PASSWORD:-}
+      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:15.3-alpine
+    container_name: postgres
+    restart: always
+    # No profile = core service
+    networks:
+      - enterprise
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: redis
+    restart: always
+    # No profile = core service
+    networks:
+      - enterprise
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  caddy:
+    image: caddy:2.7.6-alpine
+    container_name: caddy
+    restart: always
+    # No profile = core service (reverse proxy for all)
+    networks:
+      - enterprise
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+    depends_on:
+      - code-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # MONITORING PROFILE (profile: monitoring)
+  # Services: prometheus, grafana, alertmanager
+  # Launch: docker-compose --profile monitoring up -d
+  # ═════════════════════════════════════════════════════════════════════════
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus
+    restart: always
+    profiles: ["monitoring"]
+    networks:
+      - enterprise
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    depends_on:
+      - caddy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    restart: always
+    profiles: ["monitoring"]
+    networks:
+      - enterprise
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    restart: always
+    profiles: ["monitoring"]
+    networks:
+      - enterprise
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # TRACING PROFILE (profile: tracing)
+  # Services: jaeger (distributed tracing)
+  # Launch: docker-compose --profile tracing up -d
+  # ═════════════════════════════════════════════════════════════════════════
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.50.0
+    container_name: jaeger
+    restart: always
+    profiles: ["tracing"]
+    networks:
+      - enterprise
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: :9411
+    volumes:
+      - jaeger-data:/var/lib/jaeger
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16686"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # AI PROFILE (profile: ai)
+  # Services: ollama (LLM inference engine)
+  # Launch: docker-compose --profile ai up -d
+  # Note: Requires significant GPU memory (12+ GB VRAM) for production
+  # ═════════════════════════════════════════════════════════════════════════
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: always
+    profiles: ["ai"]
+    networks:
+      - enterprise
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    depends_on:
+      - code-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # GPU support (if available)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #       - driver: nvidia
+    #         count: 1
+    #         capabilities: [gpu]
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # LOGGING PROFILE (profile: logging)
+  # Services: loki (log aggregation), promtail (log shipper)
+  # Launch: docker-compose --profile logging up -d
+  # ═════════════════════════════════════════════════════════════════════════
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: loki
+    restart: always
+    profiles: ["logging"]
+    networks:
+      - enterprise
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./config/loki/loki-config.yml:/etc/loki/local-config.yml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: promtail
+    restart: always
+    profiles: ["logging"]
+    networks:
+      - enterprise
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./config/promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+# ════════════════════════════════════════════════════════════════════════════
+# NETWORKS
+# ════════════════════════════════════════════════════════════════════════════
+
+networks:
+  enterprise:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ════════════════════════════════════════════════════════════════════════════
+# VOLUMES
+# ════════════════════════════════════════════════════════════════════════════
+
+volumes:
+  code-server-enterprise-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+  jaeger-data:
+  ollama-models:
+  loki-data:
+  caddy-data:

@@ -769,7 +769,7 @@ services:
 
   # ─── Cloudflare Tunnel (Edge Security) ───────────────────────────────────────
   # Replaces direct NAT/firewall hole-punch with Cloudflare edge ingress
-  # • Tunnel: secure encrypted connection from Cloudflare → 192.168.168.31:8080
+  # • Tunnel: secure encrypted connection from Cloudflare → $PRIMARY_HOST_IP:8080
   # • WAF: blocks SQL injection, path traversal, scanners at edge
   # • DNS: CNAME ide.kushnir.cloud → tunnel.cfargotunnel.com
   # • Health: Cloudflare monitors tunnel availability + reachability
@@ -882,34 +882,34 @@ volumes:
   loki-compaction:
     driver: local
 
-  # ── NAS-backed volumes (192.168.168.56:/export) ───────────────────────────
+  # ── NAS-backed volumes ($STORAGE_IP:$STORAGE_NAS_EXPORT) ───────────────────────────
   nas-ollama:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
+      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
       device: ":/export/ollama"
   nas-code-server:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/code-server"
   nas-prometheus:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/prometheus"
   nas-grafana:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/grafana"
   nas-postgres-backups:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
+      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
       device: ":/export/backups/postgres"

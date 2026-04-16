@@ -421,8 +421,6 @@ variable "vault_default_lease_ttl" {
 
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════════════════════════════
-// END OF CANONICAL VARIABLE DEFINITIONS (47 DUPLICATES REMOVED)
-// ═══════════════════════════════════════════════════════════════════════════
-// All variables above are the single source of truth for infrastructure.
-// See docs/P1-415-TERRAFORM-DEDUPLICATION.md for consolidation details.
+// ════════════════════════════════════════════════════════════════════════════
+// CONSOLIDATED VARIABLES - 47 duplicates removed
+// ════════════════════════════════════════════════════════════════════════════

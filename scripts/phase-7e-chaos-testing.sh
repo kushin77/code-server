@@ -392,9 +392,19 @@ if [[ "$DRY_RUN" == "true" ]]; then
 else
   TMPFILE="/tmp/chaos-diskfill-$$.dat"
   TMP_FREE_KB=$(df /tmp --output=avail | tail -1 | tr -d ' ')
-  FILL_KB=$(( TMP_FREE_KB * 90 / 100 ))
+  TARGET_KB=$(( TMP_FREE_KB * 90 / 100 ))
+  MAX_FILL_KB=$(( 512 * 1024 ))
+  if [[ "$TARGET_KB" -gt "$MAX_FILL_KB" ]]; then
+    FILL_KB="$MAX_FILL_KB"
+  else
+    FILL_KB="$TARGET_KB"
+  fi
   if [[ "$FILL_KB" -gt 0 ]]; then
-    dd if=/dev/zero of="$TMPFILE" bs=1024 count="$FILL_KB" 2>/dev/null || true
+    if command -v fallocate >/dev/null 2>&1; then
+      fallocate -l "$((FILL_KB * 1024))" "$TMPFILE" 2>/dev/null || dd if=/dev/zero of="$TMPFILE" bs=1024 count="$FILL_KB" status=none 2>/dev/null || true
+    else
+      dd if=/dev/zero of="$TMPFILE" bs=1024 count="$FILL_KB" status=none 2>/dev/null || true
+    fi
   fi
   # Verify key services still healthy
   SERVICES_OK=true

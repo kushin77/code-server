@@ -279,8 +279,8 @@ failover_stage4_cleanup() {
     # Wait for startup
     sleep 30
     
-    # Set up replication
-    docker exec primary-db psql -c "ALTER SYSTEM SET primary_conninfo = 'hostaddr=172.17.0.1 user=replicator password=secret'"
+    # Set up replication using environment variable
+    docker exec primary-db psql -c "ALTER SYSTEM SET primary_conninfo = 'hostaddr=172.17.0.1 user=replicator password=${POSTGRES_PASSWORD}'"
     docker exec primary-db psql -c "SELECT * FROM pg_basebackup(DIRECTORY '/backup', PROGRESS);"
     
     echo "✅ Failed primary rebuilt as replica" >> "$LOG_FILE"

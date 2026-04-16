@@ -71,6 +71,13 @@ status   = "active"
 owner    = "platform"
 purpose  = "Centralized SSH helpers. ssh_exec(), ssh_stream(), ssh_compose(), assert_ssh_up()."
 
+[[script]]
+file     = "lib/vpn.sh"
+category = "library"
+status   = "active"
+owner    = "platform"
+purpose  = "Reusable VPN helpers for interface presence and route-over-VPN enforcement."
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ACTIVE DEPLOYMENT SCRIPTS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -476,6 +483,132 @@ status   = "active"
 owner    = "oncall"
 purpose  = "Collects diagnostics when code-server crashes: logs, state, metrics."
 depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "postgresql-replication-setup.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Setup PostgreSQL streaming replication for HA"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "test-latency-optimization.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Performance baseline and latency optimization testing"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "tier-2-master-orchestrator.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Master orchestration controller for Tier 2 deployments"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "validate-nas-mount.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Validate NAS mount points and replication status"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "vpn-setup.sh"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "VPN tunnel configuration and initialization"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "vpn-test.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "VPN connectivity and latency testing"
+depends  = ["_common/init.sh"]
+
+[[script]]
+file     = "vpn-enterprise-endpoint-scan.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Deep VPN-only endpoint scan using Playwright and Puppeteer with debug artifacts."
+depends  = ["_common/init.sh", "lib/vpn.sh", "tests/vpn-enterprise-endpoint-scan/run-vpn-enterprise-scan.mjs"]
+called_by = ["Makefile:vpn-enterprise-scan", ".github/workflows/vpn-enterprise-endpoint-scan.yml"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P1 FEATURE #187: Read-Only IDE Access Control
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "restricted-shell.sh"
+category = "security"
+status   = "active"
+owner    = "security"
+purpose  = "Terminal command interceptor for read-only IDE (Layer 3 of #187)"
+depends  = ["_common/init.sh"]
+called_by = ["applies-ide-restrictions.sh", "code-server shell configuration"]
+
+[[script]]
+file     = "git-credential-proxy.py"
+category = "security"
+status   = "active"
+owner    = "security"
+purpose  = "Git credential helper that proxies SSH keys (Layer 4 of #187)"
+called_by = ["git credential.helper configuration"]
+
+[[script]]
+file     = "apply-ide-restrictions.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Configure code-server for read-only IDE access (orchestrates all layers of #187)"
+depends  = ["restricted-shell.sh", "code-server"]
+called_by = ["Makefile:apply-ide-restrictions", "Docker entrypoint", "K8s init container"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P1 FEATURE #182: Latency Optimization
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "p1-latency-optimization.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Apply Cloudflare PoP routing, WebSocket compression, terminal batching, HTTP/3 QUIC"
+depends  = ["_common/init.sh", "Caddyfile"]
+called_by = ["Makefile:optimize-latency", "deployment post-hook"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P1 FEATURE #186: Developer Access Lifecycle
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "developer-lifecycle-manager.sh"
+category = "operations"
+status   = "active"
+owner    = "platform"
+purpose  = "Time-bounded developer access with auto-revocation, grace warnings, audit trails"
+depends  = ["_common/init.sh"]
+called_by = ["Makefile:provision-dev", "Makefile:revoke-dev", "Makefile:access-report"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P1 FEATURE #187: Read-Only IDE Test Suite
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[script]]
+file     = "p1-read-only-ide-test.sh"
+category = "validation"
+status   = "active"
+owner    = "platform"
+purpose  = "Integration test suite for read-only IDE (validates all 4 security layers of #187)"
+depends  = ["apply-ide-restrictions.sh", "code-server"]
+called_by = ["Makefile:test-p1-access-control", "CI/CD test-p1-features"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # NOTE: All phase-*.sh scripts (130+) are historical deployment artifacts

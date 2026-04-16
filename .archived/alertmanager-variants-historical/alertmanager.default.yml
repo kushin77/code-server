@@ -1,0 +1,73 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+# SHARED ROUTING from alertmanager-base.yml
+# This file uses the base route structure with simplified receivers
+# @see alertmanager-base.yml for shared grouping and inhibit rules
+#
+# ⚠️ DEPRECATED: Consolidated into alertmanager.tpl (Terraform template)
+# See: alertmanager.tpl for the unified SSOT version
+# Archive Date: 2026-04-18
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'default'
+  routes:
+    # P1 Critical alerts -> Page on-call immediately
+    - match:
+        severity: critical
+      receiver: 'pagerduty'
+      group_wait: 10s
+      continue: true
+
+    # P2 High priority -> Slack incidents channel
+    - match:
+        severity: high
+      receiver: 'slack-incidents'
+      group_wait: 30s
+      continue: true
+
+    # P3 Medium/Low -> Slack monitoring
+    - match:
+        severity: medium
+      receiver: 'slack-monitoring'
+      group_wait: 5m
+
+receivers:
+  # Default: Slack #incidents channel
+  - name: 'default'
+    slack_configs:
+      - channel: '#incidents'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+  # Slack incidents (high priority)
+  - name: 'slack-incidents'
+    slack_configs:
+      - channel: '#incidents'
+        title: 'ALERT: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+        send_resolved: true
+
+  # Slack monitoring (low priority)
+  - name: 'slack-monitoring'
+    slack_configs:
+      - channel: '#monitoring'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+        send_resolved: true
+
+  # PagerDuty (on-call)
+  - name: 'pagerduty'
+    pagerduty_configs:
+      - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
+        description: '{{ .GroupLabels.alertname }}'
+        details:
+          firing: '{{ range .Alerts.Firing }}{{ .Labels.instance }} {{ end }}'
+          resolved: '{{ range .Alerts.Resolved }}{{ .Labels.instance }} {{ end }}'

@@ -1,0 +1,242 @@
+# Phase 6e: Advanced Monitoring - SLO/SLI Alert Rules
+# Prometheus alerting rules for production SLO/SLI tracking
+
+groups:
+  - name: slo_sli_alerts
+    interval: 30s
+    rules:
+      # Availability SLO: 99.9% (4 9's)
+      - alert: AvailabilitySLOViolation
+        expr: |
+          (rate(http_requests_total{status=~"5.."}[5m]) / 
+           rate(http_requests_total[5m])) > 0.001
+        for: 5m
+        labels:
+          severity: critical
+          slo: availability
+        annotations:
+          summary: "Availability SLO violated (>0.1% error rate)"
+          description: "Error rate {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+          action: "Trigger incident response, check error logs"
+
+      # Latency SLI: p99 < 100ms
+      - alert: LatencySLIViolation
+        expr: |
+          histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          slo: latency
+        annotations:
+          summary: "Latency SLI violated (p99 > 100ms)"
+          description: "p99 latency {{ $value | humanizeDuration }} for {{ $labels.instance }}"
+          action: "Check database performance, cache hit rates"
+
+      # Error Rate SLI: <0.1%
+      - alert: ErrorRateSLIViolation
+        expr: |
+          (rate(http_requests_total{status=~"4..|5.."}[5m]) / 
+           rate(http_requests_total[5m])) > 0.001
+        for: 3m
+        labels:
+          severity: critical
+          slo: error_rate
+        annotations:
+          summary: "Error rate SLI violated (>0.1%)"
+          description: "Error rate {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+          action: "Review application logs, check service health"
+
+      # Database Connection Pool Exhaustion
+      - alert: DBConnectionPoolExhausted
+        expr: |
+          pg_stat_activity_count / 100 > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "{{ $value | humanizePercentage }} of connections used"
+          action: "Restart pgbouncer, review connection leaks"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          resource: memory
+        annotations:
+          summary: "Memory usage >80%"
+          description: "Current memory: {{ $value | humanizePercentage }}"
+          action: "Check for memory leaks, review long-running processes"
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: |
+          rate(node_cpu_seconds_total[5m]) > 0.7
+        for: 5m
+        labels:
+          severity: warning
+          resource: cpu
+        annotations:
+          summary: "CPU usage >70%"
+          description: "Current CPU: {{ $value | humanizePercentage }}"
+          action: "Check for CPU-intensive processes, scale if needed"
+
+      # Disk Space Critical
+      - alert: DiskSpaceCritical
+        expr: |
+          (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          resource: disk
+        annotations:
+          summary: "Disk space critical (<10% available)"
+          description: "Usage: {{ $value | humanizePercentage }}"
+          action: "Cleanup old backups, expand disk, archive logs"
+
+      # Certificate Expiration Warning
+      - alert: CertificateExpirationWarning
+        expr: |
+          certbot_cert_not_before - time() < 30 * 24 * 60 * 60
+        for: 1h
+        labels:
+          severity: warning
+          service: tls
+        annotations:
+          summary: "TLS certificate expires in <30 days"
+          description: "Certificate expires in {{ $value | humanizeDuration }}"
+          action: "Renew certificate, verify Let's Encrypt renewal automation"
+
+      # Service Down
+      - alert: ServiceDown
+        expr: |
+          up{job=~"code-server|caddy|oauth2-proxy|postgres|redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          type: service
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.instance }} has been unavailable for 2 minutes"
+          action: "Check service logs, restart if needed"
+
+      # Request Spike Detection
+      - alert: RequestSpike
+        expr: |
+          (rate(http_requests_total[5m]) / 
+           rate(http_requests_total[5m] offset 1h)) > 2.0
+        for: 2m
+        labels:
+          severity: warning
+          anomaly: traffic
+        annotations:
+          summary: "Unexpected request spike (2x baseline)"
+          description: "Current rate: {{ $value }}x baseline"
+          action: "Check for DDoS, review traffic patterns"
+
+      # Database Slow Queries
+      - alert: DatabaseSlowQueries
+        expr: |
+          pg_stat_statements_calls{query=~".*SELECT.*"} and
+          pg_stat_statements_mean_time > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database query detected (>100ms avg)"
+          description: "Query: {{ $labels.query }}, Avg time: {{ $value }}ms"
+          action: "Analyze query plan, add indexes if needed"
+
+      # Rollback Trigger
+      - alert: ErrorRateSpike
+        expr: |
+          increase(http_requests_total{status=~"5.."}[1m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+          trigger: auto_rollback
+        annotations:
+          summary: "Error rate spike - potential automatic rollback"
+          description: "{{ $value }} errors in last minute"
+          action: "Check deployment status, manual rollback if auto-rollback fails"
+
+---
+
+# Notification Routing Rules (Alertmanager)
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+route:
+  # Root route
+  receiver: 'default'
+  group_by: ['alertname', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  
+  # Critical alerts -> PagerDuty + Slack
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical'
+      group_wait: 0s
+      repeat_interval: 5m
+    
+    # Warning -> Slack only
+    - match:
+        severity: warning
+      receiver: 'warnings'
+      group_wait: 30s
+    
+    # Info -> Muted (on-demand review)
+    - match:
+        severity: info
+      receiver: 'null'
+
+receivers:
+  # Critical alerts (PagerDuty + Slack)
+  - name: 'critical'
+    slack_configs:
+      - channel: '#alerts-critical'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: 'danger'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .GroupLabels.alertname }}'
+        details:
+          firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+  
+  # Warning alerts (Slack)
+  - name: 'warnings'
+    slack_configs:
+      - channel: '#alerts-warning'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: 'warning'
+  
+  # Null receiver (mute)
+  - name: 'null'
+  
+  # Default receiver (Slack)
+  - name: 'default'
+    slack_configs:
+      - channel: '#alerts-info'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: 'good'
+
+inhibit_rules:
+  # Suppress warning if critical already firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']

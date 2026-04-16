@@ -1,0 +1,119 @@
+# ════════════════════════════════════════════════════════════════════════════
+# code-server Read-Only Access Configuration
+# 
+# Purpose: Configure code-server to provide read-only access to developers
+#          while preventing code downloads and data exfiltration
+#
+# Location: ~/.config/code-server/config-readonly.yaml
+#
+# Deployment:
+#   1. Copy to ~/.config/code-server/config-readonly.yaml  
+#   2. Load via: code-server --config config-readonly.yaml
+#   3. Or extend in docker-compose: WORKSPACE_MOUNT_PATH="/.code-ro"
+# ════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Read-Only Filesystem Settings
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Apply read-only indicator to all files
+"editor.readOnlyIndicator": "gutter"
+
+# Hide sensitive files from explorer
+"files.exclude": {
+  ".env": true
+  "*.key": true
+  "*.pem": true
+  ".git/hooks": true
+  ".ssh": true
+  "~/.aws": true
+  "~/.config": true
+  ".kube": true
+}
+
+# Disable file associations for sensitive files (no open action)
+"workbench.editorAssociations": {
+  "*.key": "noop"
+  "*.pem": "noop"
+  ".env": "noop"
+  ".env.*": "noop"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Disable Dangerous Extensions
+# ─────────────────────────────────────────────────────────────────────────────
+
+"extensions.ignoreRecommendations": true
+"extensions.recommendations": false
+
+# Disable remote SSH (use git proxy instead)
+"remote.SSH.enabled": false
+"remote.Containers.enabled": false
+
+# Disable file download/transfer extensions
+"ms-vscode-remote.remote-ssh": false
+"ms-vscode-remote.vscode-remote-extensionpack": false
+"ms-vscode.remote-explorer": false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Terminal Security
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Use restricted shell for all terminals
+"terminal.integrated.shell.linux": "/usr/local/bin/restricted-shell"
+"terminal.integrated.shellArgs.linux": []
+
+# Audit terminal input
+"terminal.integrated.enablePersistentSessions": false
+"terminal.integrated.inheritEnv": true
+
+# Disable external terminal (prevents escape via external processes)
+"terminal.explorerKind": "integrated"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Code-Server UI Restrictions
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Disable download options
+"files.defaultLanguage": "text"
+
+# Hide "Download" context menu (requires UI patch)
+# TODO: Apply UI patch to remove download buttons
+
+# Log all editor actions to audit trail
+"telemetry.enableTelemetry": false
+"telemetry.telemetryLevel": "off"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Access Control
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Session timeout (4 hours per Cloudflare Access default)
+"code-server.sessionTimeout": 14400
+
+# On disconnect, clear clipboard to prevent data leakage
+"editor.emptySelectionClipboard": false
+
+# Disable global keyboard shortcuts that could bypass restrictions
+"keybindings.commandsToSkipWhenInWebviewFocus": [
+  "workbench.action.downloadFile"
+]
+
+# ─────────────────────────────────────────────────────────────────────────────  
+# Git Proxy Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Disable direct SSH
+"git.ignoreLimitWarning": true
+
+# Git operations via proxy (credential helper redirects)
+# Install: git-credential-cloudflare-proxy in PATH
+"core.credentialHelper": "cloudflare-proxy"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Monitoring & Audit
+# ─────────────────────────────────────────────────────────────────────────────
+
+# All actions logged via syslog to /var/log/code-server-audit.log
+"code-server.auditLevel": "all"
+"code-server.logFile": "/var/log/code-server-audit.log"

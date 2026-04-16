@@ -1,0 +1,50 @@
+FROM python:3.11-slim
+
+# Git Proxy Server Dockerfile - Phase 2 Issue #184
+# Builds production-ready Git credential proxy for SSH key protection
+
+ARG PYTHON_VERSION=3.11
+
+LABEL maintainer="code-server-enterprise"
+LABEL description="Git Credential Proxy - Enable git operations without SSH key exposure"
+LABEL version="1.0.0"
+LABEL phase="2"
+LABEL issue="#184"
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    openssh-client \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python requirements
+COPY requirements-git-proxy.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    -r requirements-git-proxy.txt
+
+# Copy application code
+COPY scripts/git-proxy-server.py /app/server.py
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /var/log/git-proxy && \
+    chown -R appuser:appuser /var/log/git-proxy /app
+
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://127.0.0.1:8765/health || exit 1
+
+# Expose port
+EXPOSE 8765
+
+# Run application
+CMD ["python", "-m", "uvicorn", "server:app", "--host", "127.0.0.1", "--port", "8765"]

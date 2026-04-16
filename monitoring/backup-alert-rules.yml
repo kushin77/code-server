@@ -1,0 +1,43 @@
+groups:
+  - name: backup_monitoring
+    interval: 1m
+    rules:
+      - alert: PostgreSQLBackupMissing
+        expr: backup_age_hours{backup="postgres"} == -1
+        for: 1h
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL backup missing"
+          description: "No recent backup found for {{ $labels.backup_type }}"
+
+      - alert: PostgreSQLBackupTooOld
+        expr: backup_age_hours{backup="postgres"} > 24
+        for: 1h
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL backup > 24 hours old"
+          description: "Last backup was {{ $value }} hours ago (RTO SLA: 1 day)"
+
+      - alert: PostgreSQLBackupStale
+        expr: backup_age_hours{backup="postgres"} > 12
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL backup approaching SLA"
+          description: "Last backup was {{ $value }} hours ago (RTO SLA: 1 day)"
+
+      - alert: BackupStorageLow
+        expr: node_filesystem_avail_bytes{mountpoint="/mnt/nas-56"} / node_filesystem_size_bytes{mountpoint="/mnt/nas-56"} < 0.2
+        for: 5m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "NAS backup storage < 20% available"
+          description: "Backup directory running low on space - increase retention or add storage"

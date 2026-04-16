@@ -1,0 +1,156 @@
+# Appsmith Portal Configuration - Phase 1 Implementation
+# Implements: docs/ADR-PORTAL-ARCHITECTURE.md
+# Status: PRODUCTION - Ready for deployment to 192.168.168.31
+# Date: April 16, 2026
+
+version: '3.8'
+
+services:
+  appsmith:
+    image: appsmith/appsmith:v1.1.54
+    container_name: appsmith
+    restart: always
+    ports:
+      - "8443:80"
+      - "8444:443"
+    environment:
+      # Database Configuration
+      - APPSMITH_DB_URL=postgresql://appsmith:${APPSMITH_DB_PASSWORD}@postgres:5432/appsmith
+      
+      # Encryption
+      - APPSMITH_ENCRYPTION_SALT=${APPSMITH_ENCRYPTION_SALT}
+      - APPSMITH_ENCRYPTION_PASSWORD=${APPSMITH_ENCRYPTION_PASSWORD}
+      
+      # SMTP for Email Notifications
+      - APPSMITH_MAIL_ENABLED=true
+      - APPSMITH_MAIL_HOST=${APPSMITH_MAIL_HOST}
+      - APPSMITH_MAIL_PORT=${APPSMITH_MAIL_PORT}
+      - APPSMITH_MAIL_FROM=${APPSMITH_MAIL_FROM}
+      - APPSMITH_MAIL_USERNAME=${APPSMITH_MAIL_USERNAME}
+      - APPSMITH_MAIL_PASSWORD=${APPSMITH_MAIL_PASSWORD}
+      
+      # OAuth2 Integration with oauth2-proxy
+      - APPSMITH_OAUTH2_ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - APPSMITH_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - APPSMITH_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      
+      # Telemetry
+      - APPSMITH_DISABLE_TELEMETRY=true
+      
+      # Instance Configuration
+      - APPSMITH_INSTANCE_NAME=code-server-portal
+      - APPSMITH_LOG_LEVEL=info
+      - APPSMITH_REDIS_URL=redis://redis:6379/0
+      
+      # Performance Tuning
+      - APPSMITH_MAX_MEMORY_MB=256
+      - APPSMITH_JAVA_OPTS=-Xms128m -Xmx256m
+      
+      # Database Pooling
+      - APPSMITH_DB_MIN_POOL_SIZE=5
+      - APPSMITH_DB_MAX_POOL_SIZE=20
+      
+      # SSL/TLS Configuration
+      - APPSMITH_SSL_ENABLED=false  # Behind oauth2-proxy with TLS termination
+      
+      # API Rate Limiting
+      - APPSMITH_API_RATE_LIMIT_ENABLED=true
+      - APPSMITH_API_RATE_LIMIT_PER_MINUTE=1000
+    
+    volumes:
+      # Persistent storage for Appsmith data, backups, plugins
+      - appsmith-data:/appsmith-stacks
+      - appsmith-backups:/appsmith-stacks/data/backups
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    networks:
+      - internal
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+        labels: "service=appsmith,environment=production"
+    
+    labels:
+      - "com.example.description=Appsmith Developer Portal"
+      - "com.example.version=1.1.54"
+      - "com.example.component=portal"
+
+  appsmith-init:
+    image: postgres:15-alpine
+    container_name: appsmith-init
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./scripts/appsmith-init-db.sql:/docker-entrypoint-initdb.d/01-appsmith.sql
+    entrypoint: |
+      sh -c 'until psql -h postgres -U postgres -d postgres -c "SELECT 1" 2>/dev/null; do
+        echo "Waiting for PostgreSQL..."
+        sleep 5
+      done
+      
+      echo "Creating appsmith database and user..."
+      psql -h postgres -U postgres -d postgres -f /docker-entrypoint-initdb.d/01-appsmith.sql
+      
+      echo "Appsmith database initialized."'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    profiles:
+      - init
+
+volumes:
+  appsmith-data:
+    driver: local
+  appsmith-backups:
+    driver: local
+
+networks:
+  internal:
+    driver: bridge
+
+# Integration with existing services:
+# - PostgreSQL (5432): Appsmith metadata + workspace data
+# - Redis (6379): Session management + caching
+# - oauth2-proxy (4180): Authentication gateway
+# - Prometheus (9090): Metrics export
+# - Grafana (3000): Dashboard visualization
+#
+# Access:
+# - http://appsmith.192.168.168.31.nip.io/ (behind oauth2-proxy on :4180)
+# - Internal: http://appsmith:80 (port 8443:80 binding)
+#
+# Features:
+# - Service catalog (PostgreSQL queries)
+# - Infrastructure dashboard (Prometheus metrics)
+# - Documentation (embedded wiki)
+# - Team directory (LDAP/OAuth2 integration)
+# - Runbooks (markdown with action buttons)
+# - Status pages (real-time data)
+# - Custom workflows (automation)
+#
+# Backup Strategy:
+# - Daily snapshots: appsmith-backups:/backups
+# - PostgreSQL dumps: docker exec postgres pg_dump appsmith -U appsmith | gzip > backup.sql.gz
+# - Volume snapshots: Use host LVM/ZFS snapshots on /var/lib/docker/volumes/
+#
+# HA/Failover:
+# - Primary: 192.168.168.31
+# - Replica: 192.168.168.42 (PostgreSQL replication + Redis sentinel)
+# - DNS: appsmith.192.168.168.31.nip.io (round-robin via load balancer)

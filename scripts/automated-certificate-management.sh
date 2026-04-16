@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # Automated SSL/TLS Certificate Management - IaC
 # Manages Let's Encrypt certificates with automatic renewal
 # Integrates with Caddy for zero-downtime ACME
@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CERT_DIR="${SCRIPT_DIR}/certs"
 ACME_EMAIL="${ACME_EMAIL:-admin@kushnir.cloud}"
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
+DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST}}"
 
 echo "====== AUTOMATED SSL/TLS CERTIFICATE MANAGEMENT ======"
 echo ""

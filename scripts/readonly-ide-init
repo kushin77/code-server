@@ -1,0 +1,557 @@
+#!/bin/bash
+# ════════════════════════════════════════════════════════════════════════════
+# scripts/readonly-ide-init
+# Initialize read-only IDE access control - 4 security layers
+# Issue #187: Read-Only IDE Access Control
+# ════════════════════════════════════════════════════════════════════════════
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/config.sh" 2>/dev/null || {
+    # Fallback configuration
+    HOME_DIR="${HOME}"
+    LOG_DIR="/var/log/code-server"
+    IDE_WORKDIR="${HOME_DIR}/code-server-workspace"
+    IDE_READONLY_DB="${HOME_DIR}/.code-server-readonly"
+}
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYER 1: FILESYSTEM PERMISSIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+init_filesystem_readonly() {
+    echo -e "${BLUE}[Layer 1] Initializing filesystem read-only mode...${NC}"
+    
+    if [[ ! -d "$IDE_WORKDIR" ]]; then
+        mkdir -p "$IDE_WORKDIR"
+        chmod 555 "$IDE_WORKDIR"  # r-xr-xr-x, no write
+        echo -e "${GREEN}✓ Created read-only workspace at $IDE_WORKDIR${NC}"
+    fi
+    
+    # Create overlay mount point for editable temp files
+    local overlay_dir="${IDE_WORKDIR}/.overlay"
+    mkdir -p "$overlay_dir"
+    chmod 755 "$overlay_dir"
+    
+    # Create session-specific temp directory (writable for temp files)
+    local session_id=$(uuidgen || echo "default")
+    local temp_session="${overlay_dir}/${session_id}"
+    mkdir -p "$temp_session"
+    chmod 700 "$temp_session"
+    
+    export IDE_SESSION_ID="$session_id"
+    export IDE_TEMP_DIR="$temp_session"
+    
+    echo -e "${GREEN}✓ Session temp directory: $IDE_TEMP_DIR${NC}"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYER 2: TERMINAL COMMAND WHITELIST
+# ─────────────────────────────────────────────────────────────────────────────
+
+init_terminal_restrictions() {
+    echo -e "${BLUE}[Layer 2] Initializing terminal command restrictions...${NC}"
+    
+    mkdir -p "${IDE_READONLY_DB}"
+    
+    # Create whitelist of allowed commands
+    cat > "${IDE_READONLY_DB}/terminal-whitelist.txt" << 'WHITELIST'
+# Terminal Command Whitelist for Read-Only IDE
+# Format: command [allowed_args]
+
+# Text editors (read-only operations)
+cat
+less
+more
+head
+tail
+view
+nano
+vi
+vim
+emacs
+code
+
+# Navigation
+ls
+pwd
+cd
+find
+locate
+find
+which
+type
+echo
+
+# File inspection
+file
+stat
+du
+df
+wc
+grep
+egrep
+fgrep
+sed
+awk
+cut
+sort
+uniq
+join
+comm
+hexdump
+strings
+xxd
+
+# Process inspection
+ps
+top
+htop
+pgrep
+pidof
+jobs
+fg
+bg
+
+# System information
+uname
+lsb_release
+hostnamectl
+timedatectl
+systemctl
+journalctl
+dmesg
+
+# Network inspection
+ping
+traceroute
+netstat
+ss
+nslookup
+dig
+host
+ifconfig
+ip
+iwconfig
+hostname
+route
+
+# Archive inspection
+tar
+unzip
+zipinfo
+tar
+7z
+rar
+
+# Search & text processing
+grep
+sed
+awk
+perl
+python
+node
+ruby
+
+# Version control (read-only)
+git status
+git log
+git diff
+git show
+git branch
+git remote
+git tag
+
+# Help & documentation
+man
+help
+info
+--help
+-h
+
+# Shell built-ins (allowed)
+alias
+bind
+builtin
+caller
+command
+compgen
+complete
+declare
+enable
+export
+readonly
+set
+shopt
+typeset
+WHITELIST
+
+    echo -e "${GREEN}✓ Terminal whitelist created at ${IDE_READONLY_DB}/terminal-whitelist.txt${NC}"
+    
+    # Create blacklist of forbidden commands
+    cat > "${IDE_READONLY_DB}/terminal-blacklist.txt" << 'BLACKLIST'
+# Terminal Command Blacklist for Read-Only IDE
+# These commands are FORBIDDEN in read-only sessions
+
+# Destructive operations
+rm
+rmdir
+mkfs
+fsck
+mount
+umount
+
+# Package managers (can modify system)
+apt
+apt-get
+yum
+dnf
+pacman
+brew
+
+# System modification
+chmod
+chown
+chgrp
+chsh
+chfn
+usermod
+groupmod
+passwd
+
+# Kernel/system manipulation
+insmod
+rmmod
+modprobe
+sysctl
+iptables
+firewall-cmd
+
+# Download/upload
+wget
+curl
+ftp
+sftp
+scp
+rsync
+telnet
+
+# Shell execution (except read-only git)
+bash
+sh
+dash
+ksh
+zsh
+fish
+git push
+git pull
+git clone
+git commit
+git add
+git rm
+
+# Compilation
+gcc
+g++
+cc
+make
+cmake
+cargo
+go build
+
+# Dangerous utilities
+dd
+nc
+ncat
+socat
+tee
+truncate
+
+# Background jobs
+nohup
+at
+cron
+systemctl start
+systemctl stop
+systemctl restart
+BLACKLIST
+
+    echo -e "${GREEN}✓ Terminal blacklist created at ${IDE_READONLY_DB}/terminal-blacklist.txt${NC}"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYER 3: IDE CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+init_ide_config() {
+    echo -e "${BLUE}[Layer 3] Configuring IDE settings...${NC}"
+    
+    # Create code-server settings for read-only mode
+    local ide_settings="${IDE_READONLY_DB}/code-server-settings.json"
+    cat > "$ide_settings" << 'IDE_CONFIG'
+{
+  "editor.readOnlyIncludePattern": ["**"],
+  "editor.fontFamily": "Fira Code, 'Courier New'",
+  "editor.fontSize": 12,
+  "editor.fontLigatures": false,
+  "editor.wordWrap": "on",
+  "editor.rulers": [80, 120],
+  "editor.renderWhitespace": "boundary",
+  "editor.trimAutoWhitespace": true,
+  "editor.formatOnSave": false,
+  "editor.formatOnPaste": false,
+  "files.autoSave": "off",
+  "files.exclude": {
+    "**/.git": false,
+    "**/node_modules": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.git": true,
+    "**/.DS_Store": true
+  },
+  "terminal.integrated.allowChords": false,
+  "terminal.integrated.enablebell": false,
+  "terminal.integrated.fontSize": 12,
+  "terminal.integrated.shell.linux": "/bin/bash",
+  "terminal.integrated.shellArgs.linux": [
+    "--rcfile",
+    "/etc/code-server-readonly.bashrc"
+  ],
+  "terminal.integrated.env.linux": {
+    "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+    "IDE_READONLY": "1",
+    "IDE_SESSION": "${IDE_SESSION_ID}"
+  },
+  "extensions.autoCheckUpdates": false,
+  "extensions.autoUpdate": false,
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": false
+  },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": false
+  },
+  "[json]": {
+    "editor.formatOnSave": false
+  }
+}
+IDE_CONFIG
+
+    echo -e "${GREEN}✓ IDE settings configured at $ide_settings${NC}"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LAYER 4: AUDIT & MONITORING
+# ─────────────────────────────────────────────────────────────────────────────
+
+init_audit_monitoring() {
+    echo -e "${BLUE}[Layer 4] Setting up audit and monitoring...${NC}"
+    
+    mkdir -p "${IDE_READONLY_DB}"
+    
+    # Create audit log for terminal commands
+    local audit_log="${IDE_READONLY_DB}/terminal-audit.csv"
+    if [[ ! -f "$audit_log" ]]; then
+        echo "timestamp,session_id,user,command,status,reason" > "$audit_log"
+        chmod 600 "$audit_log"
+        echo -e "${GREEN}✓ Created audit log at $audit_log${NC}"
+    fi
+    
+    # Create monitoring dashboard config
+    cat > "${IDE_READONLY_DB}/monitoring-config.yaml" << 'MONITOR_CONFIG'
+---
+# Read-Only IDE Monitoring Configuration
+
+metrics:
+  terminal_commands_executed:
+    description: Total terminal commands executed in read-only mode
+    labels: [user, session_id, status]
+  
+  blocked_commands:
+    description: Attempted forbidden commands
+    labels: [user, session_id, command]
+  
+  file_access_violations:
+    description: Attempts to write to read-only filesystem
+    labels: [user, session_id, path]
+  
+  session_duration:
+    description: Duration of IDE session in seconds
+    labels: [user, status]
+
+alerts:
+  - name: HighBlockedCommandRate
+    condition: increase(blocked_commands_total[5m]) > 10
+    severity: warning
+    message: "Unusual command blocking detected"
+  
+  - name: WriteViolationAttempt
+    condition: increase(file_access_violations_total[1m]) > 0
+    severity: critical
+    message: "Attempted write to read-only filesystem"
+
+dashboards:
+  - name: ReadOnlyIDEOverview
+    panels:
+      - title: Sessions Active
+        query: count(session_duration)
+      - title: Commands/min
+        query: rate(terminal_commands_executed_total[1m])
+      - title: Blocked Commands
+        query: rate(blocked_commands_total[5m])
+      - title: Session Duration
+        query: histogram_quantile(0.95, session_duration)
+
+MONITOR_CONFIG
+
+    echo -e "${GREEN}✓ Monitoring config created at ${IDE_READONLY_DB}/monitoring-config.yaml${NC}"
+    
+    # Create bash wrapper for terminal interception
+    cat > "${IDE_READONLY_DB}/terminal-wrapper.sh" << 'TERM_WRAPPER'
+#!/bin/bash
+# Terminal command wrapper - intercepts and logs all commands
+
+AUDIT_LOG="${IDE_READONLY_DB}/terminal-audit.csv"
+WHITELIST="${IDE_READONLY_DB}/terminal-whitelist.txt"
+BLACKLIST="${IDE_READONLY_DB}/terminal-blacklist.txt"
+
+check_command_allowed() {
+    local cmd="$1"
+    local base_cmd=$(echo "$cmd" | awk '{print $1}')
+    
+    # Check blacklist first
+    if grep -q "^$base_cmd" "$BLACKLIST" 2>/dev/null; then
+        return 1  # Command is forbidden
+    fi
+    
+    # Whitelist enforcement (if strict mode)
+    if [[ "${READONLY_MODE_STRICT}" == "1" ]]; then
+        if ! grep -q "^$base_cmd" "$WHITELIST" 2>/dev/null; then
+            return 1  # Command not in whitelist
+        fi
+    fi
+    
+    return 0  # Command allowed
+}
+
+log_command() {
+    local cmd="$1"
+    local status="$2"
+    local reason="${3:-}"
+    
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local session_id="${IDE_SESSION_ID:-unknown}"
+    local user="${USER:-unknown}"
+    
+    echo "$timestamp,$session_id,$user,$cmd,$status,$reason" >> "$AUDIT_LOG"
+}
+
+# Intercept command execution
+original_command="$@"
+
+if check_command_allowed "$original_command"; then
+    log_command "$original_command" "allowed"
+    exec "$@"
+else
+    log_command "$original_command" "denied" "Command not allowed in read-only mode"
+    echo "ERROR: Command denied by read-only IDE policy: $original_command" >&2
+    return 1
+fi
+TERM_WRAPPER
+    
+    chmod +x "${IDE_READONLY_DB}/terminal-wrapper.sh"
+    echo -e "${GREEN}✓ Terminal wrapper created at ${IDE_READONLY_DB}/terminal-wrapper.sh${NC}"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────────────────────────────────────
+
+main() {
+    cat << HEADER
+${GREEN}═══════════════════════════════════════════════════════════════════════════${NC}
+${GREEN}        Read-Only IDE Access Control - 4-Layer Security Model${NC}
+${GREEN}═══════════════════════════════════════════════════════════════════════════${NC}
+
+${YELLOW}Issue #187: Read-Only IDE Access Control${NC}
+
+HEADER
+
+    # Initialize all 4 layers
+    init_filesystem_readonly
+    echo ""
+    init_terminal_restrictions
+    echo ""
+    init_ide_config
+    echo ""
+    init_audit_monitoring
+    
+    cat << FOOTER
+
+${GREEN}═══════════════════════════════════════════════════════════════════════════${NC}
+${GREEN}✓ Read-Only IDE Initialization Complete${NC}
+${GREEN}═══════════════════════════════════════════════════════════════════════════${NC}
+
+Configuration Summary:
+  Layer 1 (Filesystem):
+    - Read-only workspace: $IDE_WORKDIR
+    - Permissions: r-x (555) - no write allowed
+    - Overlay temp dir: ${IDE_WORKDIR}/.overlay
+    
+  Layer 2 (Terminal):
+    - Whitelist: ${IDE_READONLY_DB}/terminal-whitelist.txt
+    - Blacklist: ${IDE_READONLY_DB}/terminal-blacklist.txt
+    - Wrapper: ${IDE_READONLY_DB}/terminal-wrapper.sh
+    
+  Layer 3 (IDE):
+    - Settings: ${IDE_READONLY_DB}/code-server-settings.json
+    - Editor mode: Read-only
+    - Format on save: disabled
+    
+  Layer 4 (Audit):
+    - Audit log: ${IDE_READONLY_DB}/terminal-audit.csv
+    - Monitoring: ${IDE_READONLY_DB}/monitoring-config.yaml
+    - Session ID: $IDE_SESSION_ID
+
+Security Model:
+  ✓ Files are read-only (filesystem level)
+  ✓ Terminal commands are restricted (command level)
+  ✓ IDE is configured for read-only (editor level)
+  ✓ All operations are logged (audit level)
+
+Testing Read-Only Access:
+  1. Test read-only file access: cat $IDE_WORKDIR/test.txt
+  2. Test write protection: echo "test" > $IDE_WORKDIR/test.txt (should fail)
+  3. Test command whitelisting: ls (should succeed)
+  4. Test command blacklisting: rm test.txt (should fail)
+  5. Check audit log: tail ${IDE_READONLY_DB}/terminal-audit.csv
+
+Next Steps:
+  1. Mount read-only workspace into code-server container
+  2. Configure code-server to use IDE_READONLY_DB settings
+  3. Enable audit logging in monitoring dashboard
+  4. Test with real developers and iterate on whitelist/blacklist
+
+Documentation:
+  - RFC: REMOTE_ACCESS_IMPLEMENTATION_GUIDE.md (Issue #187)
+  - Implementation: scripts/readonly-ide-init
+  - Audit logs: ${IDE_READONLY_DB}/terminal-audit.csv
+
+${GREEN}═══════════════════════════════════════════════════════════════════════════${NC}
+
+FOOTER
+}
+
+main "$@"

@@ -1,0 +1,183 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Kong Declarative Configuration (db.yml)
+# Configures all services, upstreams, routes, and plugins
+# Generated from variables, applied via Kong Admin API or declarative mode
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Global configuration
+_format_version: "3.0"
+_transform: true
+
+# ─── Upstreams (Load Balancing Targets) ────────────────────────────────────────
+upstreams:
+  # Code-server upstream with health checks
+  - name: code-server-upstream
+    algorithm: round_robin
+    host_header: code-server
+    healthchecks:
+      # Active health checks: periodically probe endpoints
+      active:
+        type: http
+        http_path: /api/status
+        healthy:
+          interval: 10        # Check every 10s if healthy
+          successes: 2        # Need 2 consecutive successes to mark as healthy
+          http_statuses: [200, 204, 301, 302, 304, 307, 308]
+        unhealthy:
+          interval: 5         # Check every 5s if unhealthy
+          http_failures: 3    # Mark unhealthy after 3 failures
+          http_statuses: [429, 500, 503]
+        timeout: 1
+        concurrency: 10
+      # Passive health checks: detect failures in real traffic
+      passive:
+        type: http
+        healthy:
+          http_statuses: [200, 201, 202, 203, 204, 205, 206, 300, 301, 302, 303, 304, 305, 306, 307, 308, 400, 401, 403, 404, 405, 406, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 421, 425, 426, 428, 429]
+          successes: 0        # Never mark healthy from passive (only active does)
+        unhealthy:
+          http_failures: 0    # Never mark unhealthy from passive HTTP
+          tcp_failures: 0     # Never mark unhealthy from passive TCP
+          timeouts: 0         # Never mark unhealthy from timeouts
+    targets:
+      - target: code-server:8080
+        weight: 100
+
+  # OAuth2-proxy upstream for SSO
+  - name: oauth2-proxy-upstream
+    algorithm: round_robin
+    healthchecks:
+      active:
+        type: http
+        http_path: /ping
+        healthy:
+          interval: 30
+          successes: 2
+        unhealthy:
+          interval: 10
+          http_failures: 3
+    targets:
+      - target: oauth2-proxy:4180
+        weight: 100
+
+# ─── Services (API Endpoints) ───────────────────────────────────────────────────
+services:
+  # Main code-server service (proxied from Kong)
+  - name: code-server-service
+    url: http://code-server-upstream
+    protocol: http
+    host: code-server
+    port: 8080
+    retries: 5
+    connect_timeout: 60000  # 60s
+    send_timeout: 60000
+    read_timeout: 60000
+    routes:
+      - name: code-server-root
+        protocols: [http, https]
+        paths: [/]
+        strip_path: false
+        https_redirect_status_code: 301
+        request_buffering: true
+        response_buffering: true
+
+  # OAuth2-proxy service for authentication
+  - name: oauth2-service
+    url: http://oauth2-proxy-upstream
+    protocol: http
+    host: oauth2-proxy
+    port: 4180
+    routes:
+      - name: oauth2-callback
+        protocols: [http, https]
+        paths: [/oauth2/callback]
+        strip_path: false
+      - name: oauth2-auth
+        protocols: [http, https]
+        paths: [/oauth2/auth]
+        strip_path: false
+
+# ─── Plugins (Rate Limiting, Auth, Logging, Transforms) ────────────────────────
+plugins:
+  # Global rate-limiting (all routes): 60 requests per minute
+  - name: rate-limiting
+    config:
+      minute: 60            # 60 req/minute per consumer/IP
+      hour: 1000            # 1000 req/hour
+      policy: local         # Use Kong's in-memory policy for simplicity
+      hide_client_headers: false
+      enable_header_names: true
+      fault_tolerant: true  # Continue even if Redis unavailable
+    protocols: [http, https]
+    enabled: true
+
+  # Stricter rate-limiting on auth endpoint: 10 requests per minute
+  - name: rate-limiting
+    service: oauth2-service
+    config:
+      minute: 10            # 10 req/minute (stricter for auth)
+      hour: 100
+      policy: local
+      hide_client_headers: false
+    enabled: true
+
+  # Request ID correlation for tracing
+  - name: correlation-id
+    config:
+      header_name: X-Correlation-ID
+      generator: uuid
+      echo_downstream: true
+    protocols: [http, https]
+    enabled: true
+
+  # Transform responses: add security headers
+  - name: response-transformer
+    config:
+      add:
+        headers:
+          - "X-Kong-Upstream-Status:$(upstream_status)"
+          - "Strict-Transport-Security:max-age=31536000; includeSubDomains"
+          - "X-Content-Type-Options:nosniff"
+          - "X-Frame-Options:DENY"
+          - "X-XSS-Protection:1; mode=block"
+          - "Referrer-Policy:strict-origin-when-cross-origin"
+    protocols: [http, https]
+    enabled: true
+
+  # HTTP-log to Loki for log aggregation
+  - name: http-log
+    config:
+      http_endpoint: http://loki:3100/loki/api/v1/push
+      method: POST
+      timeout: 1000
+      keepalive: 1000
+      content_type: application/json
+      queue:
+        max_batch_size: 1
+    protocols: [http, https]
+    enabled: true
+
+  # OpenTelemetry tracing to Jaeger
+  - name: opentelemetry
+    config:
+      endpoint: http://jaeger:4317
+      sampling_rate: 0.1   # Sample 10% of requests
+      enabled: true
+    protocols: [http, https]
+    enabled: true
+
+  # API key authentication (optional, for service-to-service)
+  - name: key-auth
+    config:
+      key_names: [apikey, X-API-Key]
+      hide_credentials: true
+      key_in_body: false
+    protocols: [http, https]
+    enabled: false  # Disabled by default, enable per-route as needed
+
+# ─── Consumers (Optional API Key Holders) ───────────────────────────────────────
+# consumers:
+#   - username: internal-service
+#     custom_id: internal-api-client
+#     keyauth_credentials:
+#       - key: ${INTERNAL_SERVICE_API_KEY}

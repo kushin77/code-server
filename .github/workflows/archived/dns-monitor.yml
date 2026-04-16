@@ -1,0 +1,209 @@
+################################################################################
+# GitHub Actions Workflow: DNS Record Monitoring
+# File: .github/workflows/dns-monitor.yml
+# Purpose: Continuous monitoring for unauthorized DNS changes
+# Owner: Platform Engineering
+# References: Issue #347 - DNS hardening
+# Last Updated: April 15, 2026
+################################################################################
+
+name: DNS Record Monitor
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:
+    inputs:
+      alert_on_change:
+        description: 'Alert to PagerDuty on any change'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+
+env:
+  # Cloudflare Tunnel CNAME endpoint (e.g., home-dev.cfargotunnel.com)
+  EXPECTED_TUNNEL_URL: "cfargotunnel.com"
+
+jobs:
+  dns-monitor:
+    name: Check DNS Records
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install DNS tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils dig
+
+      - name: Check DNS Records (Cloudflare Tunnel CNAME)
+        id: check_a
+        run: |
+          # Get DNS records (will be CNAME, not A record, since we use Cloudflare Tunnel)
+          ACTUAL_IDE=$(dig +short ide.kushnir.cloud @8.8.8.8)
+          ACTUAL_ROOT=$(dig +short kushnir.cloud @8.8.8.8)
+          
+          echo "actual_ide=${ACTUAL_IDE}" >> $GITHUB_OUTPUT
+          echo "actual_root=${ACTUAL_ROOT}" >> $GITHUB_OUTPUT
+          
+          # Verify records point to Cloudflare Tunnel, NOT direct IP
+          echo "Verifying DNS points to Cloudflare Tunnel (CNAME), not direct IP..."
+          
+          if echo "${ACTUAL_IDE}" | grep -qE "(cfargotunnel|cloudflare)"; then
+            echo "✅ ide.kushnir.cloud correctly points to Cloudflare Tunnel"
+          elif echo "${ACTUAL_IDE}" | grep -qE "^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$"; then
+            echo "::error::❌ ide.kushnir.cloud points to raw IP (${ACTUAL_IDE}) - must use Cloudflare Tunnel CNAME"
+            echo "dns_broken=true" >> $GITHUB_OUTPUT
+          else
+            echo "::warning::ide.kushnir.cloud has unexpected record: ${ACTUAL_IDE}"
+            echo "dns_warning=true" >> $GITHUB_OUTPUT
+          fi
+          
+          if echo "${ACTUAL_ROOT}" | grep -qE "(cfargotunnel|cloudflare)"; then
+            echo "✅ kushnir.cloud correctly points to Cloudflare Tunnel"
+          elif echo "${ACTUAL_ROOT}" | grep -qE "^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$"; then
+            echo "::error::❌ kushnir.cloud points to raw IP (${ACTUAL_ROOT}) - must use Cloudflare Tunnel CNAME"
+            echo "dns_broken=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check CAA Records
+        id: check_caa
+        run: |
+          CAA_RECORDS=$(dig +short CAA kushnir.cloud @8.8.8.8)
+          echo "caa_records=${CAA_RECORDS}" >> $GITHUB_OUTPUT
+          
+          if ! echo "${CAA_RECORDS}" | grep -q "letsencrypt.org"; then
+            echo "::warning::CAA records missing Let's Encrypt authorization"
+            echo "missing_letsencrypt=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check SPF Record
+        id: check_spf
+        run: |
+          SPF_RECORD=$(dig +short TXT kushnir.cloud @8.8.8.8 | grep -o 'v=spf1.*' | head -1)
+          echo "spf_record=${SPF_RECORD}" >> $GITHUB_OUTPUT
+          
+          if [[ "${SPF_RECORD}" != "v=spf1 -all" ]]; then
+            echo "::warning::SPF record is not correctly hardened: ${SPF_RECORD}"
+            echo "incorrect_spf=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check DMARC Record
+        id: check_dmarc
+        run: |
+          DMARC_RECORD=$(dig +short TXT _dmarc.kushnir.cloud @8.8.8.8)
+          echo "dmarc_record=${DMARC_RECORD}" >> $GITHUB_OUTPUT
+          
+          if ! echo "${DMARC_RECORD}" | grep -q "v=DMARC1"; then
+            echo "::warning::DMARC record missing or malformed"
+            echo "missing_dmarc=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check DNSSEC Status
+        id: check_dnssec
+        run: |
+          DNSSEC_STATUS=$(dig +dnssec kushnir.cloud @8.8.8.8 | grep -i "ad;")
+          
+          if [[ -z "${DNSSEC_STATUS}" ]]; then
+            echo "::warning::DNSSEC validation failed or not enabled"
+            echo "dnssec_problem=true" >> $GITHUB_OUTPUT
+          fi
+          
+          DS_RECORDS=$(dig +short DS kushnir.cloud @8.8.8.8)
+          if [[ -z "${DS_RECORDS}" ]]; then
+            echo "::warning::No DS records found - DNSSEC may not be enabled"
+            echo "no_ds_records=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Detect Unauthorized Changes
+        id: detect_changes
+        run: |
+          # Check if any unexpected records were added
+          ALL_RECORDS=$(dig kushnir.cloud ANY @8.8.8.8 | grep -E "^kushnir.cloud" | grep -v "^;;")
+          
+          # Flag any records that shouldn't exist
+          if echo "${ALL_RECORDS}" | grep -qE "^\s*(MX|NS)\s+"; then
+            echo "::error::Unexpected MX or NS records detected - possible DNS hijack"
+            echo "hijack_detected=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Alert on DNS Misconfiguration
+        if: steps.check_a.outputs.dns_broken == 'true'
+        run: |
+          echo "::error::CRITICAL: DNS points to raw IP instead of Cloudflare Tunnel"
+          echo "This breaks resilience (IP changes = downtime)"
+
+      - name: Trigger PagerDuty P0 Alert (DNS Misconfigured)
+        if: steps.check_a.outputs.dns_broken == 'true'
+        run: |
+          curl -X POST "${{ secrets.PAGERDUTY_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d @- <<'EOF'
+          {
+            "event_action": "trigger",
+            "dedup_key": "dns-misconfigured-kushnir-cloud",
+            "payload": {
+              "summary": "🔴 CRITICAL: DNS misconfigured - points to raw IP instead of Cloudflare Tunnel",
+              "severity": "critical",
+              "source": "DNS Monitor",
+              "component": "DNS",
+              "details": {
+                "domain": "kushnir.cloud",
+                "issue": "DNS A records point to 192.168.168.31 instead of Cloudflare Tunnel CNAME",
+                "impact": "Server IP changes will cause downtime (not resilient)",
+                "action": "Update DNS to point to Cloudflare Tunnel: terraform apply -target='godaddy_domain_record.*' with proper tunnel URL"
+              }
+            }
+          }
+          EOF
+
+      - name: Generate DNS Report
+        if: always()
+        run: |
+          cat > dns-report.json <<'EOF'
+          {
+            "timestamp": "$(date -Iseconds)",
+            "domain": "kushnir.cloud",
+            "architecture": "Cloudflare Tunnel (CNAME-based, IP-independent)",
+            "checks": {
+              "dns_ide": "${{ steps.check_a.outputs.actual_ide }}",
+              "dns_root": "${{ steps.check_a.outputs.actual_root }}",
+              "caa_records": "${{ steps.check_caa.outputs.caa_records }}",
+              "spf_record": "${{ steps.check_spf.outputs.spf_record }}",
+              "dmarc_record": "${{ steps.check_dmarc.outputs.dmarc_record }}"
+            },
+            "anomalies": {
+              "dns_misconfigured_raw_ip": ${{ steps.check_a.outputs.dns_broken == 'true' && 'true' || 'false' }},
+              "dns_warning": ${{ steps.check_a.outputs.dns_warning == 'true' && 'true' || 'false' }},
+              "missing_letsencrypt": ${{ steps.check_caa.outputs.missing_letsencrypt == 'true' && 'true' || 'false' }},
+              "incorrect_spf": ${{ steps.check_spf.outputs.incorrect_spf == 'true' && 'true' || 'false' }},
+              "missing_dmarc": ${{ steps.check_dmarc.outputs.missing_dmarc == 'true' && 'true' || 'false' }},
+              "dnssec_problem": ${{ steps.check_dnssec.outputs.dnssec_problem == 'true' && 'true' || 'false' }},
+              "hijack_detected": ${{ steps.detect_changes.outputs.hijack_detected == 'true' && 'true' || 'false' }}
+            }
+          }
+          EOF
+          cat dns-report.json
+
+      - name: Upload DNS Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dns-monitor-report
+          path: dns-report.json
+          retention-days: 30
+
+      - name: Comment on Findings
+        if: |
+          steps.check_caa.outputs.missing_letsencrypt == 'true' ||
+          steps.check_spf.outputs.incorrect_spf == 'true' ||
+          steps.check_dmarc.outputs.missing_dmarc == 'true'
+        run: |
+          echo "::notice::DNS hardening issues detected. Apply terraform/godaddy-dns.tf to fix."

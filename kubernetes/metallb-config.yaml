@@ -1,0 +1,59 @@
+# MetalLB Configuration for k3s Load Balancing
+# Phase 3 Issue #164: k3s Kubernetes Cluster
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metallb-system
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: metallb
+  namespace: kube-system
+spec:
+  chart: metallb
+  repo: https://metallb.universe.tf
+  targetNamespace: metallb-system
+  set:
+    installCRDs: "true"
+    controller:
+      enabled: "true"
+    speaker:
+      enabled: "true"
+---
+# MetalLB Configuration
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default
+  namespace: metallb-system
+spec:
+  addresses:
+  - 192.168.168.200-192.168.168.210  # 11 IPs for load balancer services
+  autoAssign: true
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - default
+  interfaces:
+  - eth0
+---
+# Example: Service with MetalLB LoadBalancer
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: metallb-monitor
+  namespace: metallb-system
+spec:
+  selector:
+    matchLabels:
+      component: controller
+  endpoints:
+  - port: metrics
+    interval: 30s

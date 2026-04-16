@@ -1,0 +1,37 @@
+{
+  "baseUrl": "https://ide.kushnir.cloud",
+  "navigationTimeoutMs": 45000,
+  "slowThresholdMs": 2000,
+  "endpoints": [
+    {
+      "name": "ide-root",
+      "path": "/",
+      "allowedStatus": [200, 302, 401, 403]
+    },
+    {
+      "name": "healthz",
+      "path": "/healthz",
+      "allowedStatus": [200, 302, 401, 403]
+    },
+    {
+      "name": "grafana",
+      "path": "/grafana",
+      "allowedStatus": [200, 302, 401, 403]
+    },
+    {
+      "name": "prometheus",
+      "path": "/prometheus",
+      "allowedStatus": [200, 302, 401, 403]
+    },
+    {
+      "name": "jaeger",
+      "path": "/jaeger",
+      "allowedStatus": [200, 302, 401, 403]
+    },
+    {
+      "name": "alertmanager",
+      "path": "/alertmanager",
+      "allowedStatus": [200, 302, 401, 403]
+    }
+  ]
+}

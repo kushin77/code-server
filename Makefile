@@ -2,6 +2,9 @@
 # Uses docker-compose for container orchestration (declarative)
 # Terraform for infrastructure provisioning (optional future use)
 
+# Force bash shell (required for process substitution in index target)
+SHELL := /bin/bash
+
 .PHONY: help init validate plan apply deploy destroy destroy-full clean logs status dashboard \
         shell refresh output fmt taint untaint state-list console audit idempotency-check \
         compose-up compose-down compose-restart \
@@ -13,7 +16,10 @@
         ollama-health ollama-pull-models ollama-list ollama-logs ollama-index ollama-init ollama-status ollama-shell \
         logs-code-server logs-oauth2 logs-caddy \
         latency-optimizer-install latency-monitor-install latency-services-start latency-services-stop latency-dashboard latency-report latency-test \
-        pre-commit ci-validate cd-deploy d p s l v
+		wireguard-install wireguard-status wireguard-genkeys nas-mount nas-mount-status vpn-enterprise-scan \
+        pre-commit ci-validate cd-deploy d p s l v \
+        render-caddy-prod render-caddy-onprem render-caddy-simple render-caddy-all caddy-validate \
+        inventory-validate generate-tfvars deploy-keepalived
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PRIMARY TARGETS (use these)
@@ -840,11 +846,11 @@ readonly-cleanup:
 
 # CI: Validate without applying
 ci-validate: validate
-	@echo "✅ CI validation passed"
+	@echo "CI validation passed"
 
 # CD: Deploy after approval
 cd-deploy: validate deploy
-	@echo "✅ CD deployment complete"
+	@echo "CD deployment complete"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ALIASES & SHORTCUTS
@@ -859,8 +865,206 @@ om: ollama-status  # Ollama status
 oi: ollama-init    # Ollama init
 op: ollama-pull-models  # Ollama pull
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# ELITE OPERATIONS — production targets for 192.168.168.31
+# All targets remote-only (Linux). Run: make <target>
+# ═══════════════════════════════════════════════════════════════════════════════
+
+REMOTE := ssh akushnir@192.168.168.31
+REMOTE_DIR := /home/akushnir/code-server-enterprise
+
+## elite-deploy: clean kill → NAS mount → secrets → pull → up → healthcheck
+elite-deploy:
+	$(REMOTE) "cd $(REMOTE_DIR) && bash scripts/deploy.sh"
+
+## elite-status: full production status (GPU, NAS, containers, VPN)
+elite-status:
+	$(REMOTE) " \
+	  echo '=== CONTAINERS ===' && docker ps --format 'table {{.Names}}\t{{.Status}}' && \
+	  echo '' && echo '=== GPU ===' && nvidia-smi --query-gpu=name,memory.used,utilization.gpu --format=csv,noheader && \
+	  echo '' && echo '=== NAS ===' && (mountpoint -q /mnt/nas-56 && df -h /mnt/nas-56 || echo 'NAS NOT MOUNTED') && \
+	  echo '' && echo '=== VPN ===' && (ip link show wg0 &>/dev/null && wg show wg0 || echo 'VPN NOT RUNNING') && \
+	  echo '' && echo '=== DISK ===' && df -h / "
+
+## elite-kill: stop all, purge orphan volumes (data safe — named volumes kept)
+elite-kill:
+	$(REMOTE) "cd $(REMOTE_DIR) && \
+	  docker compose down --remove-orphans --timeout 30 2>/dev/null || true && \
+	  docker volume prune -f && \
+	  docker image prune -f && \
+	  echo 'Cleanup done'"
+
+## elite-logs: stream all service logs
+elite-logs:
+	$(REMOTE) "cd $(REMOTE_DIR) && docker compose logs -f --tail=100"
+
+## elite-rebuild: hard rebuild (no cache)
+elite-rebuild:
+	$(REMOTE) "cd $(REMOTE_DIR) && \
+	  docker compose down --remove-orphans -v --timeout 30 2>/dev/null || true && \
+	  docker compose pull && \
+	  bash scripts/deploy.sh --skip-nas"
+
+## elite-git-sync: pull latest from GitHub and redeploy
+elite-git-sync:
+	$(REMOTE) "cd $(REMOTE_DIR) && \
+	  git fetch origin && \
+	  git reset --hard origin/main && \
+	  git clean -fd && \
+	  bash scripts/deploy.sh"
+
+## nas-mount: mount NAS 192.168.168.56 on 192.168.168.31
+nas-mount:
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/nas-mount-31.sh mount"
+
+## nas-status: NAS mount status and capacity
+nas-status:
+	$(REMOTE) "$(REMOTE_DIR)/scripts/nas-mount-31.sh status || sudo $(REMOTE_DIR)/scripts/nas-mount-31.sh status"
+
+## nas-test: NAS throughput benchmark
+nas-test:
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/nas-mount-31.sh test"
+
+## gpu-status: full GPU info (both cards)
+gpu-status:
+	$(REMOTE) "nvidia-smi"
+
+## gpu-test: run llama2:7b-chat inference on T1000
+gpu-test:
+	$(REMOTE) "docker exec ollama ollama run llama2:7b-chat 'What is 2+2? Reply in one word.' --verbose"
+
+## vpn-install: install and configure WireGuard on .31
+vpn-install:
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/vpn-setup.sh install && \
+	  sudo $(REMOTE_DIR)/scripts/vpn-setup.sh config && \
+	  sudo $(REMOTE_DIR)/scripts/vpn-setup.sh start"
+
+## vpn-addpeer: add a VPN peer (usage: make vpn-addpeer PEER=laptop)
+vpn-addpeer:
+	@[ -n "$(PEER)" ] || { echo "Usage: make vpn-addpeer PEER=<name>"; exit 1; }
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/vpn-setup.sh addpeer $(PEER)"
+
+## vpn-status: WireGuard interface and peer status
+vpn-status:
+	$(REMOTE) "sudo $(REMOTE_DIR)/scripts/vpn-setup.sh status 2>/dev/null || echo 'VPN not running'"
+
+## vpn-test: run full VPN test suite
+vpn-test:
+	$(REMOTE) "cd $(REMOTE_DIR) && bash scripts/vpn-test.sh"
+
+## vpn-enterprise-scan: deep endpoint scan over VPN using Playwright + Puppeteer
+vpn-enterprise-scan:
+	$(REMOTE) "cd $(REMOTE_DIR) && bash scripts/vpn-enterprise-endpoint-scan.sh"
+
+## secrets-gen: generate new secrets (prints .env to stdout — pipe to .env)
+secrets-gen:
+	$(REMOTE) "cd $(REMOTE_DIR) && source scripts/lib/secrets.sh && secrets_generate"
+
+## secrets-push-gsm: push local .env secrets to Google Secret Manager
+secrets-push-gsm:
+	$(REMOTE) "cd $(REMOTE_DIR) && source scripts/lib/secrets.sh && secrets_push_to_gsm"
+
+## branch-clean: delete all local merged implementation branches
+branch-clean:
+	@git branch | grep -E 'implementation/|feat/elite' | xargs -r git branch -d
+	@echo "Local merged branches cleaned"
+
+## branch-clean-remote: delete all remote implementation branches
+branch-clean-remote:
+	@git branch -r | grep -E 'origin/implementation/' | sed 's|origin/||' | \
+	  xargs -r -I{} git push origin --delete {}
+	@echo "Remote implementation branches cleaned"
+
+## ollama-gpu: verify ollama is using GPU (T1000, device 1)
+ollama-gpu:
+	$(REMOTE) "nvidia-smi -i 1 --query-gpu=name,memory.used,utilization.gpu --format=csv,noheader && \
+	  docker exec ollama ollama list"
+
+## ollama-pull: pull baseline models onto NAS
+ollama-pull:
+	$(REMOTE) "docker exec ollama ollama pull llama2:7b-chat && docker exec ollama ollama pull codellama:7b"
+
+.PHONY: elite-deploy elite-status elite-kill elite-logs elite-rebuild elite-git-sync \
+        nas-mount nas-status nas-test \
+        gpu-status gpu-test \
+	vpn-install vpn-addpeer vpn-status vpn-test vpn-enterprise-scan \
+        secrets-gen secrets-push-gsm \
+        branch-clean branch-clean-remote \
+        ollama-gpu ollama-pull
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CODE QUALITY & LIBRARY GOVERNANCE
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Caddyfile render targets (#373) ─────────────────────────────────────────
+# Render Caddyfile variants from the single template source (Caddyfile.tpl)
+# Template: config/caddy/Caddyfile.tpl (single source of truth)
+# Output: config/caddy/Caddyfile*, config/caddy/Caddyfile.onprem, config/caddy/Caddyfile.simple
+
+.PHONY: render-caddy-prod render-caddy-onprem render-caddy-simple render-caddy-all caddy-validate
+
+render-caddy-prod:
+	@echo "Rendering config/caddy/Caddyfile (production) from template..."
+	@set -a && . ./.env 2>/dev/null || true && set +a && \
+	  CADDY_DOMAIN=$${CADDY_DOMAIN:-ide.kushnir.cloud} \
+	  CADDY_TLS_BLOCK=$${CADDY_TLS_BLOCK:-tls internal} \
+	  CADDY_LOG_LEVEL=$${CADDY_LOG_LEVEL:-info} \
+	  CODE_SERVER_UPSTREAM=$${CODE_SERVER_UPSTREAM:-oauth2-proxy:4180} \
+	  GRAFANA_PORT=$${GRAFANA_PORT:-3000} \
+	  PROMETHEUS_PORT=$${PROMETHEUS_PORT:-9090} \
+	  ALERTMANAGER_PORT=$${ALERTMANAGER_PORT:-9093} \
+	  JAEGER_PORT=$${JAEGER_PORT:-16686} \
+	  APEX_DOMAIN=$${APEX_DOMAIN:-kushnir.cloud} \
+	  ENABLE_TELEMETRY=$${ENABLE_TELEMETRY:-false} \
+	  ENABLE_TRACING=$${ENABLE_TRACING:-false} \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT $$APEX_DOMAIN $$ENABLE_TELEMETRY $$ENABLE_TRACING' \
+	  < config/caddy/Caddyfile.tpl > config/caddy/Caddyfile
+	@echo "✅ config/caddy/Caddyfile rendered (production)"
+
+render-caddy-onprem:
+	@echo "Rendering config/caddy/Caddyfile.onprem from template..."
+	@CADDY_DOMAIN=":80" \
+	  CADDY_TLS_BLOCK="" \
+	  CADDY_LOG_LEVEL=info \
+	  CODE_SERVER_UPSTREAM=oauth2-proxy:4180 \
+	  GRAFANA_PORT=3001 \
+	  PROMETHEUS_PORT=9090 \
+	  ALERTMANAGER_PORT=9093 \
+	  JAEGER_PORT=16686 \
+	  APEX_DOMAIN=:8080 \
+	  ENABLE_TELEMETRY=false \
+	  ENABLE_TRACING=false \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT $$APEX_DOMAIN $$ENABLE_TELEMETRY $$ENABLE_TRACING' \
+	  < config/caddy/Caddyfile.tpl > config/caddy/Caddyfile.onprem
+	@echo "✅ config/caddy/Caddyfile.onprem rendered (on-premises HTTP)"
+
+render-caddy-simple:
+	@echo "Rendering config/caddy/Caddyfile.simple from template..."
+	@CADDY_DOMAIN=":80" \
+	  CADDY_TLS_BLOCK="" \
+	  CADDY_LOG_LEVEL=debug \
+	  CODE_SERVER_UPSTREAM=code-server:8080 \
+	  GRAFANA_PORT=3001 \
+	  PROMETHEUS_PORT=9090 \
+	  ALERTMANAGER_PORT=9093 \
+	  JAEGER_PORT=16686 \
+	  APEX_DOMAIN=:8080 \
+	  ENABLE_TELEMETRY=false \
+	  ENABLE_TRACING=false \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT $$APEX_DOMAIN $$ENABLE_TELEMETRY $$ENABLE_TRACING' \
+	  < config/caddy/Caddyfile.tpl > config/caddy/Caddyfile.simple
+	@echo "✅ config/caddy/Caddyfile.simple rendered (simple dev mode)"
+
+render-caddy-all: render-caddy-prod render-caddy-onprem render-caddy-simple
+	@echo "✅ All Caddyfile variants rendered from template"
+
+caddy-validate:
+	@echo "Validating rendered config/caddy/Caddyfile syntax..."
+	@docker run --rm -v "$$(pwd)/config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+	  caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile && \
+	  echo "✅ config/caddy/Caddyfile is valid" || echo "❌ config/caddy/Caddyfile has syntax errors"
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Verify all active scripts source _common/init.sh (not inline log_info definitions)
@@ -889,15 +1093,17 @@ index:
 		exit 1; \
 	fi
 	@REGISTERED=$$(grep -c '^file' scripts/MANIFEST.toml 2>/dev/null || echo 0); \
-	 TOTAL=$$(find scripts -maxdepth 1 -name "*.sh" | wc -l); \
+	 TOTAL=$$(find scripts -maxdepth 1 -name "*.sh" -type f | wc -l); \
 	 echo "  Registered in manifest: $$REGISTERED"; \
 	 echo "  Total .sh files:        $$TOTAL"; \
 	 echo ""
 	@echo "  Unregistered scripts (must be added to MANIFEST.toml or archived):"
-	@while IFS= read -r f; do \
+	@for f in $$(find scripts -maxdepth 1 -name "*.sh" -type f | sort); do \
 		name=$$(basename "$$f"); \
-		grep -q "file.*=.*\"$$name\"" scripts/MANIFEST.toml 2>/dev/null || echo "  ✗ $$name"; \
-	done < <(find scripts -maxdepth 1 -name "*.sh" | sort)
+		if ! grep -q "file.*=.*\"$$name\"" scripts/MANIFEST.toml 2>/dev/null; then \
+			echo "  ✗ $$name"; \
+		fi; \
+	done
 
 # Generate initial MANIFEST.toml from existing scripts (run once)
 manifest-init:
@@ -968,3 +1174,86 @@ governance:
 	@echo ""
 	@echo "Pre-commit hooks: $$([ -f .pre-commit-config.yaml ] && echo '✅ configured' || echo '❌ missing')"
 	@echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WIREGUARD VPN (run as root: sudo make wireguard-install)
+# ─────────────────────────────────────────────────────────────────────────────
+wireguard-install:
+	@echo "==> Fixing interrupted dpkg state..."
+	dpkg --configure -a 2>/dev/null || true
+	@echo "==> Installing WireGuard..."
+	apt-get update -qq && apt-get install -y wireguard wireguard-tools
+	@echo "==> Enabling ip forwarding..."
+	sysctl -w net.ipv4.ip_forward=1
+	grep -q 'net.ipv4.ip_forward=1' /etc/sysctl.conf || echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf
+	@echo "✅ WireGuard installed: $$(wg --version)"
+
+wireguard-genkeys:
+	@echo "==> Generating WireGuard server keypair..."
+	@mkdir -p /etc/wireguard
+	@wg genkey | tee /etc/wireguard/server_private.key | wg pubkey > /etc/wireguard/server_public.key
+	@chmod 600 /etc/wireguard/server_private.key
+	@echo "Server public key: $$(cat /etc/wireguard/server_public.key)"
+	@echo "✅ WireGuard keys generated in /etc/wireguard/"
+
+wireguard-status:
+	@wg show 2>/dev/null || echo "WireGuard interface not active (wg0 not up)"
+	@ip addr show wg0 2>/dev/null || true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NAS MOUNT (run as root: sudo make nas-mount)
+# NAS: 192.168.168.56:/export → /mnt/nas-56
+# ─────────────────────────────────────────────────────────────────────────────
+nas-mount:
+	@echo "==> Mounting NAS 192.168.168.56:/export → /mnt/nas-56..."
+	mkdir -p /mnt/nas-56
+	@if mountpoint -q /mnt/nas-56; then \
+		echo "  Already mounted at /mnt/nas-56"; \
+	else \
+		mount -t nfs4 -o vers=4.1,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576 \
+			192.168.168.56:/export /mnt/nas-56; \
+		echo "  ✅ Mounted successfully"; \
+	fi
+	@grep -q '192.168.168.56:/export' /etc/fstab || \
+		echo '192.168.168.56:/export /mnt/nas-56 nfs4 vers=4.1,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576,_netdev 0 0' >> /etc/fstab && \
+		echo "  ✅ Added to /etc/fstab for persistent mount"
+	@df -h /mnt/nas-56
+
+nas-mount-status:
+	@mountpoint -q /mnt/nas-56 && echo "✅ /mnt/nas-56 is mounted" || echo "❌ /mnt/nas-56 is NOT mounted"
+	@grep '192.168.168.56:/export' /etc/fstab && echo "✅ fstab entry exists" || echo "❌ fstab entry missing"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CANONICAL INVENTORY & TOPOLOGY (#364)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ✅ Validate topology inventory (environments/production/hosts.yml)
+inventory-validate:
+	@echo "🔍 Validating canonical inventory (environments/production/hosts.yml)..."
+	@test -f environments/production/hosts.yml || { echo "❌ environments/production/hosts.yml not found"; exit 1; }
+	@echo "  ✓ hosts.yml exists"
+	@command -v yq >/dev/null 2>&1 || { echo "⚠️  yq not found — installing check skipped; install via: snap install yq"; exit 0; }
+	@yq '.topology | keys | .[]' environments/production/hosts.yml 2>/dev/null | grep -q primary && echo "  ✓ topology.primary defined" || { echo "❌ topology.primary missing"; exit 1; }
+	@yq '.topology | keys | .[]' environments/production/hosts.yml 2>/dev/null | grep -q replica && echo "  ✓ topology.replica defined" || { echo "❌ topology.replica missing"; exit 1; }
+	@yq '.topology | keys | .[]' environments/production/hosts.yml 2>/dev/null | grep -q vip && echo "  ✓ topology.vip defined" || { echo "❌ topology.vip missing"; exit 1; }
+	@echo "  ✓ env.sh sources topology:"
+	@bash -c 'source scripts/lib/env.sh 2>/dev/null && echo "    PRIMARY_HOST=$$PRIMARY_HOST REPLICA_HOST=$$REPLICA_HOST VIP=$$VIP"' || echo "    (yq required)"
+	@echo "✅ Inventory validation passed"
+
+# ✅ Generate terraform.tfvars from canonical inventory
+generate-tfvars:
+	@echo "⚙️  Generating terraform.tfvars from environments/production/hosts.yml..."
+	@test -f environments/production/hosts.yml || { echo "❌ hosts.yml not found"; exit 1; }
+	@command -v yq >/dev/null 2>&1 || { echo "❌ yq is required: snap install yq"; exit 1; }
+	@PRIMARY=$$(yq '.topology.primary.ip' environments/production/hosts.yml); \
+	 REPLICA=$$(yq '.topology.replica.ip' environments/production/hosts.yml); \
+	 VIP=$$(yq '.topology.vip.ip' environments/production/hosts.yml); \
+	 printf 'primary_host = "%s"\nreplica_host = "%s"\nvip_host     = "%s"\n' "$$PRIMARY" "$$REPLICA" "$$VIP" > terraform.tfvars.generated
+	@echo "✅ Generated terraform.tfvars.generated:"
+	@cat terraform.tfvars.generated
+	@echo "   Copy to terraform.tfvars and add remaining secrets before running terraform"
+
+# ✅ Deploy Keepalived VRRP to primary + replica (requires SSH key access & VRRP_AUTH_PASS)
+deploy-keepalived:
+	@test -n "$$VRRP_AUTH_PASS" || { echo "❌ Set VRRP_AUTH_PASS: export VRRP_AUTH_PASS=<secret>"; exit 1; }
+	@bash scripts/deploy-keepalived.sh

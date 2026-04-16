@@ -37,10 +37,9 @@ Merge PR → 10s (verify) → 15s (cleanup) → 10s (deploy trigger)
 ### 2. ✅ Deployment Orchestration Scripts
 
 **Files**:
-- `scripts/redeploy.sh` (Bash/Linux version)
-- `scripts/redeploy.ps1` (PowerShell/Windows version)
+- `scripts/redeploy.sh` (Bash/Linux deployment script)
 
-**What they do**:
+**What it does**:
 - Pre-deployment validation (Git state, Docker, resources)
 - Health checks before deployment
 - Execute actual deployment logic
@@ -52,9 +51,6 @@ Merge PR → 10s (verify) → 15s (cleanup) → 10s (deploy trigger)
 ```bash
 # Bash
 bash scripts/redeploy.sh --target production --verbose
-
-# PowerShell
-.\scripts\redeploy.ps1 -Target production -Verbose
 ```
 
 ---

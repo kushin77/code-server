@@ -1,0 +1,188 @@
+name: Action Pin Enforcement
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-action-pins:
+    name: Enforce SHA-Pinned Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # SHA: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Check for mutable action tags
+        id: pin_check
+        run: |
+          set -euo pipefail
+
+          VIOLATIONS=()
+          WARNINGS=()
+          PASS=()
+
+          # Patterns considered unsafe (mutable tags)
+          # @v1, @v2, @v3, @v4, @main, @master, @latest are mutable
+          MUTABLE_TAG_PATTERN='uses:[[:space:]].*@(v[0-9]+|main|master|latest)[[:space:]]*$'
+          # SHA looks like 40 hex chars, commit SHAs are considered safe
+          SHA_PATTERN='uses:[[:space:]].*@[0-9a-f]{40}'
+
+          echo "=== Action Pin Security Audit ===" >&2
+          echo "Scanning .github/workflows/*.yml..." >&2
+          echo "" >&2
+
+          TOTAL_ACTIONS=0
+          MUTABLE_COUNT=0
+
+          while IFS= read -r file; do
+            echo "--- $file ---" >&2
+            while IFS= read -r line; do
+              # Trim leading whitespace
+              trimmed="${line#"${line%%[![:space:]]*}"}"
+              if [[ "$trimmed" =~ ^uses:[[:space:]] ]]; then
+                TOTAL_ACTIONS=$((TOTAL_ACTIONS + 1))
+                action_ref=$(echo "$trimmed" | sed 's/uses:[[:space:]]*//')
+                
+                if echo "$trimmed" | grep -qE 'uses:[[:space:]].*@[0-9a-f]{40}'; then
+                  # Has a 40-char hex SHA - safe
+                  PASS+=("  ✅ $action_ref (SHA-pinned)")
+                  echo "  ✅ PINNED: $action_ref" >&2
+                elif echo "$trimmed" | grep -qE 'uses:[[:space:]].*@(v[0-9]+\.[0-9]+\.[0-9]+)'; then
+                  # Has semver @v1.2.3 - warning (mutable but versioned)
+                  WARNINGS+=("  ⚠️  $action_ref (in: $file) — semver tag is mutable, prefer SHA")
+                  echo "  ⚠️  SEMVER TAG: $action_ref" >&2
+                elif echo "$trimmed" | grep -qE 'uses:[[:space:]].*@(v[0-9]+|main|master|latest)'; then
+                  # Major version tag or branch ref - violation
+                  VIOLATIONS+=("  ❌ $action_ref (in: $file) — mutable tag blocks merge")
+                  MUTABLE_COUNT=$((MUTABLE_COUNT + 1))
+                  echo "  ❌ MUTABLE: $action_ref" >&2
+                fi
+              fi
+            done < "$file"
+          done < <(find .github/workflows -name "*.yml" -type f | sort)
+
+          echo "" >&2
+          echo "=== Summary ===" >&2
+          echo "Total action references: $TOTAL_ACTIONS" >&2
+          echo "Mutable (blocking) violations: $MUTABLE_COUNT" >&2
+          echo "SHA-pinned: ${#PASS[@]}" >&2
+
+          # Set outputs
+          echo "total=$TOTAL_ACTIONS" >> "$GITHUB_OUTPUT"
+          echo "violations=$MUTABLE_COUNT" >> "$GITHUB_OUTPUT"
+
+          # Build PR comment body
+          {
+            echo "## 🔒 Action Pin Security Audit"
+            echo ""
+            echo "| Metric | Count |"
+            echo "|--------|-------|"
+            echo "| Total action refs | $TOTAL_ACTIONS |"
+            echo "| SHA-pinned ✅ | ${#PASS[@]} |"
+            echo "| Semver warnings ⚠️ | ${#WARNINGS[@]} |"
+            echo "| Mutable violations ❌ | $MUTABLE_COUNT |"
+            echo ""
+
+            if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+              echo "### ❌ Blocking Violations (must pin to SHA)"
+              echo ""
+              printf '%s\n' "${VIOLATIONS[@]}"
+              echo ""
+              echo "**Fix**: Replace \`@v3\` tags with SHA-pinned refs:"
+              echo "\`\`\`yaml"
+              echo "# Before:"
+              echo "uses: actions/checkout@v4"
+              echo "# After:"
+              echo "uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2"
+              echo "\`\`\`"
+            fi
+
+            if [ ${#WARNINGS[@]} -gt 0 ]; then
+              echo "### ⚠️ Semver Warnings (prefer SHA pins)"
+              echo ""
+              printf '%s\n' "${WARNINGS[@]}"
+            fi
+
+            if [ ${#PASS[@]} -gt 0 ]; then
+              echo "### ✅ SHA-Pinned Actions"
+              echo ""
+              printf '%s\n' "${PASS[@]}"
+            fi
+          } > /tmp/pin-check-report.md
+
+          cat /tmp/pin-check-report.md
+
+          # Fail if any mutable tags found
+          if [ "$MUTABLE_COUNT" -gt 0 ]; then
+            echo ""
+            echo "❌ FAILED: $MUTABLE_COUNT mutable action tag(s) detected." >&2
+            echo "Pin all actions to commit SHAs to prevent supply-chain attacks." >&2
+            echo "See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-third-party-actions" >&2
+            exit 1
+          fi
+
+          echo "✅ PASSED: All action references are pinned or versioned." >&2
+
+      - name: Post PR comment on violations
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('/tmp/pin-check-report.md')
+              ? fs.readFileSync('/tmp/pin-check-report.md', 'utf8')
+              : '❌ Action pin check failed — see workflow logs for details.';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: report,
+            });
+
+  check-workflow-permissions:
+    name: Validate Minimal Permissions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # SHA: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Check for overly broad permissions
+        run: |
+          set -euo pipefail
+          VIOLATIONS=()
+
+          echo "=== Workflow Permissions Audit ===" >&2
+
+          while IFS= read -r file; do
+            # Check for write-all or missing permissions declaration
+            if grep -qE '^permissions:[[:space:]]*write-all' "$file"; then
+              VIOLATIONS+=("❌ $file: permissions: write-all (overly broad)")
+              echo "❌ VIOLATION: $file uses permissions: write-all" >&2
+            fi
+
+            # Check for id-token: write without justification comment
+            if grep -qE 'id-token:[[:space:]]*write' "$file"; then
+              if ! grep -B2 'id-token:' "$file" | grep -q '#'; then
+                echo "⚠️  $file: id-token: write (ensure this is needed for OIDC)" >&2
+              fi
+            fi
+          done < <(find .github/workflows -name "*.yml" -type f | sort)
+
+          if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+            echo "" >&2
+            echo "Violations found:" >&2
+            printf '%s\n' "${VIOLATIONS[@]}" >&2
+            exit 1
+          fi
+
+          echo "✅ No overly broad permissions found." >&2

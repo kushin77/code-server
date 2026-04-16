@@ -120,5 +120,8 @@
     "webpack": "^5.94.0",
     "webpack-cli": "^5.1.0"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "overrides": {
+    "minimatch": ">=9.0.7"
+  }
 }

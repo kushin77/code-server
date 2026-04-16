@@ -1,0 +1,103 @@
+---
+# Availability & SLA Alerts
+# P0/P1: Critical service uptime and health checks
+# Load order: 1 (highest priority)
+
+groups:
+  - name: availability_slas
+    interval: 30s
+    rules:
+      # P0: code-server down
+      - alert: CodeServerDown
+        expr: up{job="code-server"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: platform
+          slo: availability
+        annotations:
+          summary: "code-server service is down"
+          description: "code-server {{ $labels.instance }} has been unreachable for >30s"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/code-server-down.md"
+
+      # P0: Prometheus down
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Prometheus monitoring is down"
+          description: "Prometheus has stopped scraping metrics"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/prometheus-down.md"
+
+      # P1: Multiple services down
+      - alert: MultipleServicesDown
+        expr: count(up{job!="prometheus",job!="alertmanager"} == 0) >= 3
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Multiple services are down ({{ $value }} services)"
+          description: "{{ $value }} services reporting down - check orchestration platform"
+
+      # P1: Database primary down
+      - alert: DatabasePrimaryDown
+        expr: up{job="postgres",replica="false"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: data
+          page: "true"
+        annotations:
+          summary: "PostgreSQL primary database is down"
+          description: "Primary database unreachable - failover may be triggered"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/db-failover.md"
+
+      # P1: Redis down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis unreachable - cache operations failing"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/redis-restart.md"
+
+      # P2: Service latency (health check slowdown)
+      - alert: ServiceHealthCheckSlow
+        expr: probe_duration_seconds > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Health check probe is slow ({{ $value }}s)"
+          description: "{{ $labels.instance }} health check taking > 5 seconds"
+
+      # P2: Service error rate (application errors)
+      - alert: ApplicationErrorRateHigh
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Application error rate is high ({{ humanizePercentage $value }})"
+          description: "code-server is returning 5xx errors at {{ humanizePercentage $value }} rate"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/high-error-rate.md"
+
+      # P3: Service degradation (latency threshold)
+      - alert: ServiceDegraded
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Service response time is degraded (p99: {{ printf \"%.2f\" $value }}s)"
+          description: "code-server p99 latency above 1s - performance degradation"

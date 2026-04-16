@@ -1,0 +1,93 @@
+name: Terraform Validate
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-validate.yml'
+  push:
+    branches:
+      - phase-7-deployment
+    paths:
+      - 'terraform/**'
+
+jobs:
+  validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./terraform
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+      
+      - name: Initialize Terraform
+        run: |
+          terraform init -backend=false -upgrade
+        env:
+          TF_LOG: WARN
+      
+      - name: Validate Terraform
+        run: terraform validate
+      
+      - name: Check for Duplicate Variables
+        run: |
+          echo "Checking for duplicate variable declarations..."
+          DUPLICATES=$(grep -c "^variable " variables.tf || true)
+          echo "Total variable declarations: $DUPLICATES"
+          if [ $DUPLICATES -gt 200 ]; then
+            echo "⚠️ Warning: More than 200 variables. Review for consolidation."
+          fi
+          echo "✓ Variable validation complete"
+      
+      - name: Terraform Lint (tflint)
+        uses: terraform-linters/setup-tflint@v4
+        continue-on-error: true
+      
+      - name: Run tflint
+        run: |
+          tflint --init
+          tflint --format compact
+        continue-on-error: true
+
+  security-scan:
+    name: Terraform Security Scan
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./terraform
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          quiet: false
+          soft_fail: true
+      
+      - name: Secret Scanning
+        run: |
+          echo "Checking for hardcoded secrets..."
+          if grep -r "password\|secret\|token\|api_key" *.tf --include="*.tf" | grep -v "description\|variable\|default"; then
+            echo "⚠️ Potential secrets found in terraform files"
+            exit 1
+          fi
+          echo "✓ No hardcoded secrets detected"
+        continue-on-error: true

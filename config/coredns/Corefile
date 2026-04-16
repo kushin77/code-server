@@ -1,0 +1,31 @@
+# CoreDNS Configuration (Corefile)
+# =================================
+# Internal DNS resolver for *.prod.internal service discovery
+
+# Health check endpoint (for Docker healthcheck)
+.:8080 {
+    health
+}
+
+# Forward zone: prod.internal
+prod.internal {
+    file /etc/coredns/zones/prod.internal.zone
+    reload 30s
+    log
+    errors
+}
+
+# Reverse zone: 168.168.192.in-addr.arpa (for 192.168.168.0/24)
+168.168.192.in-addr.arpa {
+    file /etc/coredns/zones/prod.internal.rev
+    reload 30s
+    errors
+}
+
+# Default zone: upstream forwarding for external domains
+. {
+    forward . 1.1.1.1:53 8.8.8.8:53
+    cache 300
+    loop
+    errors
+}

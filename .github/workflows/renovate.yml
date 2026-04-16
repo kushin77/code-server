@@ -1,0 +1,41 @@
+name: Renovate Dependencies
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Every Monday 6am UTC
+  workflow_dispatch:       # Manual trigger
+  push:
+    branches: [main]
+    paths:
+      - 'renovate.json'
+      - '.github/workflows/renovate.yml'
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Renovate
+        run: npm install -g renovate
+
+      - name: Run Renovate
+        env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          RENOVATE_CONFIG_FILE: renovate.json
+        run: |
+          renovate \
+            --platform github \
+            --token "$RENOVATE_TOKEN" \
+            kushin77/code-server
+        continue-on-error: true
+
+      - name: Post Summary
+        if: always()
+        run: |
+          echo "## Renovate Dependency Scan"
+          echo "- Platform: GitHub"
+          echo "- Repository: kushin77/code-server"
+          echo "- Config: renovate.json"
+          echo "- Status: Check GitHub Actions for details"
+        continue-on-error: true

@@ -1,0 +1,65 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'code-server-enterprise-prod'
+    environment: 'production'
+    region: 'on-prem-192.168.168.31'
+
+# Alertmanager integration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Alert rules
+rule_files:
+  - "alert-rules.yml"
+
+scrape_configs:
+  # Self-scrape Prometheus metrics
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Docker engine metrics (requires dockerd --metrics-addr)
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323']
+    scrape_interval: 30s
+
+  # Code Server metrics
+  - job_name: 'code-server'
+    scheme: http
+    static_configs:
+      - targets: ['code-server:8080']
+    metrics_path: '/healthz'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Ollama — exposes /metrics on its port
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['ollama:11434']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # OAuth2-Proxy — exposes /metrics
+  - job_name: 'oauth2-proxy'
+    static_configs:
+      - targets: ['oauth2-proxy:4180']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Caddy — exposes /metrics on admin port (disabled — admin off)
+  # Re-enable by adding admin 0.0.0.0:2019 to Caddyfile global block
+  # - job_name: 'caddy'
+  #   static_configs:
+  #     - targets: ['caddy:2019']
+  #   metrics_path: '/metrics'
+
+  # Node exporter (optional — install on host: apt install prometheus-node-exporter)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['localhost:9100']

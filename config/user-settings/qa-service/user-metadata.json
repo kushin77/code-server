@@ -1,0 +1,37 @@
+{
+  "role": "developer",
+  "displayName": "QA Service Account",
+  "description": "Automated testing identity with full developer capabilities for E2E testing",
+  "dateProvisioned": "2026-04-15T00:00:00Z",
+  "lastModified": "2026-04-15T00:00:00Z",
+  "managed_by": "terraform",
+  "restrictions": [],
+  "features": {
+    "codeEditing": true,
+    "terminal": false,
+    "fileDownload": false,
+    "extensionInstall": false
+  },
+  "settings": {
+    "editor.autoSave": "onFocusChange",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "terminal.integrated.enabled": false,
+    "workbench.startupEditor": "none"
+  },
+  "auditLogging": {
+    "enabled": true,
+    "captureAllActions": true,
+    "level": "debug"
+  },
+  "permissions": {
+    "read": ["**"],
+    "write": [
+      "**",
+      "!/.git/**",
+      "!/.env",
+      "!secrets/**"
+    ],
+    "delete": []
+  }
+}

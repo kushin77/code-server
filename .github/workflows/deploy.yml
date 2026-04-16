@@ -26,7 +26,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@f43a0e5ff2bd3817752ebde0a1148ad556a47da8  # v3.6.0
 
       - uses: hashicorp/setup-terraform@v3
         with:

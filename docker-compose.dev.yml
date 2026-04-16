@@ -1,0 +1,172 @@
+# docker-compose.dev.yml — Local Development Override
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Features in dev mode:
+#   - oauth2-proxy auth bypassed (direct access without OIDC)
+#   - Ports exposed directly for local tooling (DB, Redis, Prometheus)
+#   - Relaxed resource limits for development machines
+#   - Hot-reload volumes for code editing
+#   - Reduced healthcheck intervals for faster startup
+#   - No NAS volume requirements (uses local paths)
+#
+# ⚠️  NEVER use this file in production. Production is docker-compose.yml only.
+# ⚠️  This file assumes you have SSH access to 192.168.168.31 OR are running
+#      locally in WSL2 with Docker installed.
+#
+# For production deployment, see DEVELOPMENT-GUIDE.md and SUPPORTED-PLATFORMS.md
+
+services:
+
+  # ─── code-server (dev: bind-addr relaxed, no auth requirement) ───────────────
+  code-server:
+    # Expose port directly in dev (no oauth2-proxy required)
+    ports:
+      - "0.0.0.0:8080:8080"
+    environment:
+      CODE_SERVER_ENV: development
+      # Allow direct access without oauth2-proxy in dev
+      PASSWORD: "${CODE_SERVER_PASSWORD:-devpassword}"
+    command:
+      - "--bind-addr=0.0.0.0:8080"   # Listen on all interfaces in dev
+      - "--disable-telemetry"
+      - "--cert=false"
+      - "--auth=password"
+    # Mount local workspace for hot-reload development
+    volumes:
+      - code-server-data:/home/coder:rw
+      - "${LOCAL_WORKSPACE:-${HOME}/workspace}:/home/coder/workspace:rw"
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2G    # Relaxed for dev machine
+          cpus: '2.0'
+
+  # ─── PostgreSQL (dev: expose port for local DB tools) ────────────────────────
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"   # Expose for local DB tools (TablePlus, DBeaver, etc.)
+    volumes:
+      - postgres-data:/var/lib/postgresql/data  # Use named volume, not NAS in dev
+    environment:
+      POSTGRES_DB:       "${POSTGRES_DB:-codeserver}"
+      POSTGRES_USER:     "${POSTGRES_USER:-codeserver}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-devpassword123}"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-codeserver}"]
+      interval: 5s      # Faster in dev
+      timeout: 3s
+      retries: 5
+
+  # ─── Redis (dev: expose port for local Redis tools) ──────────────────────────
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"   # Expose for local Redis clients (redis-cli, RedisInsight)
+    command: >
+      redis-server
+      --requirepass "${REDIS_PASSWORD:-devpassword}"
+      --maxmemory 256m
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-devpassword}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # ─── Caddy (dev: HTTP only, no TLS required) ──────────────────────────────────
+  caddy:
+    # Override to use a dev-specific Caddyfile with HTTP-only
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      DOMAIN: "${DOMAIN:-localhost}"
+      CODE_SERVER_UPSTREAM: "http://code-server:8080"
+    # Override ports for dev (no port conflicts)
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+
+  # ─── oauth2-proxy (dev: skip authentication) ─────────────────────────────────
+  oauth2-proxy:
+    command:
+      # Allow all requests through without authentication in dev
+      - "--skip-auth-regex=.*"
+      - "--upstream=http://code-server:8080"
+      - "--http-address=0.0.0.0:4180"
+      - "--cookie-secret=devdevdevdevdevd"  # 16 bytes for dev only
+      - "--email-domain=*"
+      - "--skip-provider-button=true"
+      - "--provider=google"
+      - "--client-id=dev-client-id"
+      - "--client-secret=dev-client-secret"
+
+  # ─── Prometheus (dev: expose port directly) ──────────────────────────────────
+  prometheus:
+    ports:
+      - "0.0.0.0:9090:9090"   # Direct access for development/testing
+    deploy:
+      resources:
+        limits:
+          memory: 512m   # Reduced for dev
+    profiles: []           # Remove profile restriction in dev (always start)
+
+  # ─── Grafana (dev: expose port directly, default credentials) ────────────────
+  grafana:
+    ports:
+      - "0.0.0.0:3000:3000"   # Direct access for development
+    environment:
+      GF_SECURITY_ADMIN_USER:     admin
+      GF_SECURITY_ADMIN_PASSWORD: admin   # Dev credentials only
+      GF_AUTH_ANONYMOUS_ENABLED:  "true"  # Allow anonymous access in dev
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    deploy:
+      resources:
+        limits:
+          memory: 256m   # Reduced for dev
+    profiles: []           # Remove profile restriction in dev
+
+  # ─── AlertManager (dev: expose port directly) ────────────────────────────────
+  alertmanager:
+    ports:
+      - "0.0.0.0:9093:9093"
+    profiles: []
+
+  # ─── Jaeger (dev: expose ports directly) ─────────────────────────────────────
+  jaeger:
+    ports:
+      - "0.0.0.0:16686:16686"   # Jaeger UI
+      - "0.0.0.0:4317:4317"     # OTLP gRPC
+      - "0.0.0.0:4318:4318"     # OTLP HTTP
+    profiles: []
+
+  # ─── Loki (dev: expose port directly) ────────────────────────────────────────
+  loki:
+    ports:
+      - "0.0.0.0:3100:3100"
+    profiles: []
+
+# Dev-only networks (simpler, no segmentation needed locally)
+networks:
+  enterprise:
+    driver: bridge
+    # No IPAM restrictions in dev
+
+# Dev-only volumes (local, not NAS)
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  code-server-data:
+    driver: local
+  minio-data:
+    driver: local

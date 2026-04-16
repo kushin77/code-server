@@ -918,6 +918,29 @@ variable "enable_dns_rate_limiting" {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// REFERENCED BY PHASE FILES - MUST BE DECLARED
+// ═══════════════════════════════════════════════════════════════════════════
+
+variable "primary_host_ip" {
+  description = "Primary host IP address for service discovery"
+  type        = string
+  default     = "192.168.168.31"
+}
+
+variable "postgres_user" {
+  description = "PostgreSQL username"
+  type        = string
+  default     = "postgres"
+}
+
+variable "postgres_password" {
+  description = "PostgreSQL password"
+  type        = string
+  sensitive   = true
+  default     = "changeme"
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // NEW FAILOVER MODULE VARIABLES (Patroni, Replication, Backup, DR)
 // ═══════════════════════════════════════════════════════════════════════════
 

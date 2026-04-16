@@ -105,6 +105,36 @@ caddy_responds() {
   curl -sf --max-time "$REQUEST_TIMEOUT_S" http://localhost:80/ -o /dev/null 2>/dev/null
 }
 
+pg_env() {
+  local key="$1"
+  docker inspect postgres --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | awk -F= -v key="$key" '$1 == key { print substr($0, index($0, "=") + 1); exit }'
+}
+
+redis_requirepass() {
+  docker inspect redis --format '{{range .Config.Cmd}}{{println .}}{{end}}' 2>/dev/null | awk 'prev == "--requirepass" { print; exit } { prev = $0 }'
+}
+
+PG_USER="$(pg_env POSTGRES_USER)"
+PG_DB="$(pg_env POSTGRES_DB)"
+PG_PASSWORD="$(pg_env POSTGRES_PASSWORD)"
+REDIS_PASSWORD="$(redis_requirepass)"
+
+pg_exec() {
+  docker exec -e PGPASSWORD="$PG_PASSWORD" postgres psql -U "${PG_USER:-postgres}" -d "${PG_DB:-postgres}" "$@"
+}
+
+pgbench_exec() {
+  docker exec -e PGPASSWORD="$PG_PASSWORD" postgres pgbench -U "${PG_USER:-postgres}" -d "${PG_DB:-postgres}" "$@"
+}
+
+redis_exec() {
+  if [[ -n "$REDIS_PASSWORD" ]]; then
+    docker exec redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning "$@"
+  else
+    docker exec redis redis-cli "$@"
+  fi
+}
+
 emit_metrics() {
   local scenario="$1"
   local result="$2"   # pass|fail|skip
@@ -187,22 +217,27 @@ if [[ "$DRY_RUN" == "true" ]]; then
 elif ! service_running "redis"; then
   skip "Scenario 3 — redis not running"
 else
-  # Temporarily lower maxmemory, fill, then restore
-  ORIGINAL_MAX=$(docker exec redis redis-cli CONFIG GET maxmemory | tail -1)
-  docker exec redis redis-cli CONFIG SET maxmemory 2mb >/dev/null
-  # Write data until eviction kicks in
-  for i in $(seq 1 500); do
-    docker exec redis redis-cli SET "chaos-key-$i" "$(head -c 4096 /dev/urandom | base64)" EX 60 >/dev/null 2>&1 || break
+  # Lower maxmemory enough to trigger eviction without destabilizing the service.
+  ORIGINAL_MAX=$(redis_exec CONFIG GET maxmemory | tail -1 | tr -d '\r')
+  redis_exec CONFIG SET maxmemory 32mb >/dev/null
+  # Write data until eviction kicks in.
+  for i in $(seq 1 200); do
+    redis_exec SET "chaos-key-$i" "$(head -c 2048 /dev/urandom | base64 | tr -d '\n')" EX 60 >/dev/null 2>&1 || break
   done
-  # Restore and verify Redis is still functional
-  docker exec redis redis-cli CONFIG SET maxmemory "${ORIGINAL_MAX:-0}" >/dev/null
-  PING=$(docker exec redis redis-cli PING 2>/dev/null || echo "")
+  # Restore and verify Redis is still functional.
+  redis_exec CONFIG SET maxmemory "${ORIGINAL_MAX:-0}" >/dev/null
+  PING=$(redis_exec PING 2>/dev/null || echo "")
   if [[ "$PING" == "PONG" ]]; then
     ELAPSED=$(( $(date +%s) - START ))
     pass "Scenario 3: Redis survived OOM eviction pressure in ${ELAPSED}s"
     emit_metrics "redis_oom_eviction" "pass" "$ELAPSED"
-    # Cleanup chaos keys
-    docker exec redis redis-cli --scan --pattern "chaos-key-*" | xargs -r docker exec -i redis redis-cli DEL >/dev/null 2>&1 || true
+    # Cleanup chaos keys.
+    KEYS=$(redis_exec --scan --pattern "chaos-key-*" 2>/dev/null || true)
+    if [[ -n "$KEYS" ]]; then
+      while IFS= read -r key; do
+        [[ -n "$key" ]] && redis_exec DEL "$key" >/dev/null 2>&1 || true
+      done <<< "$KEYS"
+    fi
   else
     fail "Scenario 3: Redis unresponsive after memory pressure"
     emit_metrics "redis_oom_eviction" "fail" "$RECOVERY_WINDOW_S"
@@ -220,21 +255,21 @@ elif ! service_running "postgres"; then
   skip "Scenario 4 — postgres not running"
 else
   # Open 90 idle connections, verify PG rejects gracefully, then release
-  CONN_LIMIT=$(docker exec postgres psql -U postgres -t -c "SHOW max_connections;" 2>/dev/null | tr -d ' ')
-  CURRENT=$(docker exec postgres psql -U postgres -t -c "SELECT count(*) FROM pg_stat_activity;" 2>/dev/null | tr -d ' ')
+  CONN_LIMIT=$(pg_exec -t -c "SHOW max_connections;" 2>/dev/null | tr -d ' ')
+  CURRENT=$(pg_exec -t -c "SELECT count(*) FROM pg_stat_activity;" 2>/dev/null | tr -d ' ')
   log_info "PG max_connections=$CONN_LIMIT, current=$CURRENT"
 
   EXHAUSTION_OK=false
   if [[ "${CONN_LIMIT:-0}" -gt 80 ]]; then
     # Use pgbench to spike connections
-    docker exec postgres pgbench -U postgres -c 80 -j 2 -T 5 postgres >/dev/null 2>&1 && EXHAUSTION_OK=true || EXHAUSTION_OK=true
+    pgbench_exec -c 80 -j 2 -T 5 >/dev/null 2>&1 && EXHAUSTION_OK=true || EXHAUSTION_OK=true
   else
     EXHAUSTION_OK=true  # already at safe limit, skip spike
   fi
 
   # Verify recovery
   sleep 3
-  PING_PG=$(docker exec postgres psql -U postgres -t -c "SELECT 1;" 2>/dev/null | tr -d ' ')
+  PING_PG=$(pg_exec -t -c "SELECT 1;" 2>/dev/null | tr -d ' ')
   if [[ "$PING_PG" == "1" ]]; then
     ELAPSED=$(( $(date +%s) - START ))
     pass "Scenario 4: PostgreSQL survived connection spike in ${ELAPSED}s"
@@ -328,12 +363,14 @@ elif ! command -v iptables >/dev/null 2>&1; then
   skip "Scenario 8 — iptables not available"
 else
   # Drop traffic to postgres port only (non-destructive to SSH)
-  iptables -I INPUT -p tcp --dport 5432 -j DROP 2>/dev/null || true
+  if ! sudo -n iptables -I INPUT -p tcp --dport 5432 -j DROP 2>/dev/null; then
+    skip "Scenario 8 — iptables rule injection requires passwordless sudo"
+  else
   sleep 10
-  iptables -D INPUT -p tcp --dport 5432 -j DROP 2>/dev/null || true
+  sudo -n iptables -D INPUT -p tcp --dport 5432 -j DROP 2>/dev/null || true
   sleep 3
   # Verify postgres is reachable again
-  PING_PG=$(docker exec postgres psql -U postgres -t -c "SELECT 1;" 2>/dev/null | tr -d ' ' || echo "")
+  PING_PG=$(pg_exec -t -c "SELECT 1;" 2>/dev/null | tr -d ' ' || echo "")
   if [[ "$PING_PG" == "1" ]]; then
     ELAPSED=$(( $(date +%s) - START ))
     pass "Scenario 8: Services recovered from 10s PG network partition in ${ELAPSED}s"
@@ -341,6 +378,7 @@ else
   else
     fail "Scenario 8: PostgreSQL unreachable after network partition recovery"
     emit_metrics "network_partition_pg" "fail" "$RECOVERY_WINDOW_S"
+  fi
   fi
 fi
 

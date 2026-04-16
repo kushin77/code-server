@@ -92,6 +92,14 @@ processors:
     actions:
       - key: http.client_ip
         action: delete  # Remove PII from traces
+      # Cloudflare-to-container trace correlation: promote CF-Ray header to span attribute
+      # Allows querying Jaeger by cf.ray.id to correlate edge request → container span
+      - key: cf.ray.id
+        from_attribute: http.request.header.x-cf-ray-id
+        action: insert
+      - key: cf.ray.id
+        from_attribute: http.request.header.x-edge-trace-id
+        action: insert
 
 exporters:
   # OTLP/gRPC exporter — native OTLP to Jaeger (COLLECTOR_OTLP_ENABLED=true in docker-compose)

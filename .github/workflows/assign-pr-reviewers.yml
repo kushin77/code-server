@@ -44,6 +44,20 @@ jobs:
             echo "has_architecture=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Select non-author reviewer
+        id: reviewer
+        run: |
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+          PRIMARY="kushin77"
+
+          # Prefer independent review: do not request the PR author.
+          if [[ "$AUTHOR" == "kushin77" ]]; then
+            PRIMARY="PureBlissAK"
+          fi
+
+          echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+          echo "primary=$PRIMARY" >> $GITHUB_OUTPUT
+
       - name: Request Infrastructure Reviews (Terraform, Caddy, Docker)
         if: steps.files.outputs.has_terraform == 'true' || steps.files.outputs.has_docker == 'true'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
@@ -54,14 +68,12 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
-              reviewers: ['kushin77'],
-              team_reviewers: ['infrastructure-team']
+              reviewers: ['${{ steps.reviewer.outputs.primary }}']
             }).catch(err => {
-              if (!err.message.includes('No team named')) {
+              if (!err.message.includes('Review cannot be requested from pull request author')) {
                 throw err;
               }
-              // Team doesn't exist, just use individual reviewers
-              console.log('Team assignment skipped (team does not exist)');
+              console.log('Reviewer assignment skipped (author cannot self-review).');
             });
 
       - name: Request Architecture Reviews (ADR/Design changes)
@@ -74,7 +86,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
-              reviewers: ['kushin77']
+              reviewers: ['${{ steps.reviewer.outputs.primary }}']
             });
 
       - name: Request Code Reviews (Application code)
@@ -87,7 +99,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
-              reviewers: ['kushin77']
+              reviewers: ['${{ steps.reviewer.outputs.primary }}']
             });
 
       - name: Request CI Reviews (GitHub Actions workflows)
@@ -100,7 +112,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
-              reviewers: ['kushin77']
+              reviewers: ['${{ steps.reviewer.outputs.primary }}']
             });
 
       - name: Post Assignment Summary
@@ -109,6 +121,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const summaryHeader = '## Phase 2: Automated Reviewer Assignment';
             const files = `${{ steps.files.outputs.changed_files }}`;
             const hasTerraform = `${{ steps.files.outputs.has_terraform }}` === 'true';
             const hasDocker = `${{ steps.files.outputs.has_docker }}` === 'true';
@@ -125,15 +138,17 @@ jobs:
 
             const changeTypes = reviewTypes.length > 0 ? reviewTypes.join(', ') : 'Unknown';
             const body = [
-              '## Phase 2: Automated Reviewer Assignment',
+              summaryHeader,
               '',
               `Detected change types: ${changeTypes}`,
+              `PR author: @${{ steps.reviewer.outputs.author }}`,
+              `Assigned reviewer: @${{ steps.reviewer.outputs.primary }}`,
               '',
               '### Assignment Rules Applied',
-              '- **Infrastructure changes**: @kushin77 (Terraform, Caddy, Docker)',
-              '- **Architecture changes**: @kushin77 (ADRs, design decisions)',
-              '- **Code changes**: @kushin77 (application logic)',
-              '- **CI/CD changes**: @kushin77 (GitHub Actions workflows)',
+              '- **Infrastructure changes**: non-author reviewer (Terraform, Caddy, Docker)',
+              '- **Architecture changes**: non-author reviewer (ADRs, design decisions)',
+              '- **Code changes**: non-author reviewer (application logic)',
+              '- **CI/CD changes**: non-author reviewer (GitHub Actions workflows)',
               '',
               '### Review Checklist',
               'See the PR template for complete Phase 1-4 checklist.',
@@ -143,10 +158,33 @@ jobs:
               '**Phase 3**: Performance & Load Testing',
               '**Phase 4**: Operational Readiness'
             ].join('\n');
-            
-            github.rest.issues.createComment({
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) =>
+              comment.user?.type === 'Bot' &&
+              typeof comment.body === 'string' &&
+              comment.body.startsWith(summaryHeader)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              return;
+            }
+
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body
+              body,
             });

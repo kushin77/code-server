@@ -58,7 +58,6 @@ PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Configuration from environment
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 DEPLOY_ENV="${DEPLOY_ENV:-production}"
 DEPLOYMENT_DIR="/home/${DEPLOY_USER}/code-server-immutable-$(date +%Y%m%d-%H%M%S)"

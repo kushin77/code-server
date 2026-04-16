@@ -39,6 +39,13 @@ readonly DEPLOY_DIR="${DEPLOY_DIR:-/home/akushnir/code-server-enterprise}"
 readonly STANDBY_HOST="${STANDBY_HOST:-192.168.168.30}"
 readonly STANDBY_USER="${STANDBY_USER:-akushnir}"
 
+# Region host list (optional overrides for additional regions)
+readonly REGION_HOST_3="${REGION_HOST_3:-}"
+readonly REGION_HOST_4="${REGION_HOST_4:-}"
+REGION_HOSTS=("${DEPLOY_HOST}" "${STANDBY_HOST}")
+[[ -n "${REGION_HOST_3}" ]] && REGION_HOSTS+=("${REGION_HOST_3}")
+[[ -n "${REGION_HOST_4}" ]] && REGION_HOSTS+=("${REGION_HOST_4}")
+
 # SSH options (no interactive prompts in CI)
 readonly SSH_OPTS="${SSH_OPTS:--o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=10}"
 

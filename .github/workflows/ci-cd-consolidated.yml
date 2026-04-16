@@ -1,8 +1,9 @@
+---
 name: Production CI/CD Consolidated
 # ═════════════════════════════════════════════════════════════════════════════
 # P2 #423: Unified CI/CD workflow - consolidates all scattered workflows
 # Single source of truth for build, test, deploy, and quality gates
-# 
+#
 # COVERAGE:
 # - Lint checks (shell, yaml, dockerfile)
 # - Security scanning (SAST, container images, dependencies)
@@ -26,7 +27,7 @@ on:
       - "CHANGELOG.md"
       - "docs/**"
       - ".github/workflows/docs.yml"
-  
+
   pull_request:
     branches:
       - main
@@ -34,7 +35,7 @@ on:
       - opened
       - synchronize
       - reopened
-  
+
   workflow_dispatch:
     inputs:
       environment:
@@ -78,35 +79,35 @@ jobs:
       contents: read
       packages: read
       security-events: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for analysis
-      
+
       - name: Run ShellCheck (bash scripts)
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: "./scripts"
           severity: warning
-      
+
       - name: Validate YAML files
         run: |
           sudo apt-get update && sudo apt-get install -y yamllint
           find . -name "*.yml" -o -name "*.yaml" | grep -v node_modules | xargs yamllint -c .yamllint
-      
+
       - name: Lint Dockerfiles
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
           ignore: DL3008,DL3009,SC2086
-      
+
       - name: Check formatting (Terraform)
         run: |
           cd terraform
           terraform fmt -check -recursive
-      
+
       - name: Security: Check for hardcoded secrets
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -122,23 +123,23 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: SAST: CodeQL Analysis
         uses: github/codeql-action/init@v2
         with:
           languages: python,javascript,cpp
           queries: security-and-quality
-      
+
       - name: CodeQL: Autobuild
         uses: github/codeql-action/autobuild@v2
-      
+
       - name: CodeQL: Analyze
         uses: github/codeql-action/analyze@v2
-      
+
       - name: Dependency Check (OWASP)
         uses: dependency-check/Dependency-Check_Action@main
         with:
@@ -147,12 +148,12 @@ jobs:
           format: "SARIF"
           args: >
             -l FATAL
-      
+
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: "dependency-check-report.sarif"
-      
+
       - name: Trivy: Scan filesystem for vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
@@ -160,7 +161,7 @@ jobs:
           scan-ref: "."
           format: "sarif"
           output: "trivy-results.sarif"
-      
+
       - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v2
         with:
@@ -178,7 +179,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    
+
     strategy:
       matrix:
         service:
@@ -187,25 +188,25 @@ jobs:
           - oauth2-proxy
           - prometheus
           - grafana
-    
+
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
       image-digest: ${{ steps.build.outputs.digest }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v2
-      
+
       - name: Log in to Container Registry
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v4
@@ -217,7 +218,7 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
-      
+
       - name: Build and push image
         id: build
         uses: docker/build-push-action@v4
@@ -233,7 +234,7 @@ jobs:
             BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
             VCS_REF=${{ github.sha }}
             VERSION=${{ github.ref_name }}
-      
+
       - name: Scan image for vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
@@ -241,7 +242,7 @@ jobs:
           format: "sarif"
           output: "trivy-${{ matrix.service }}-results.sarif"
           severity: "HIGH,CRITICAL"
-      
+
       - name: Upload image scan results
         uses: github/codeql-action/upload-sarif@v2
         if: always()
@@ -257,7 +258,7 @@ jobs:
     needs: code-quality
     runs-on: ubuntu-22.04
     timeout-minutes: 30
-    
+
     services:
       postgres:
         image: postgres:15-alpine
@@ -268,7 +269,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
+
       redis:
         image: redis:7-alpine
         options: >-
@@ -276,28 +277,28 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
           cache: "pip"
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
           cache: "npm"
-      
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt pytest pytest-cov pytest-xdist
           npm install
-      
+
       - name: Run unit tests
         run: |
           pytest tests/unit/ \
@@ -306,7 +307,7 @@ jobs:
             --cov-report=html \
             --junitxml=junit.xml \
             -v
-      
+
       - name: Run integration tests
         env:
           DATABASE_URL: "postgresql://postgres:testpass@localhost:5432/test"
@@ -315,7 +316,7 @@ jobs:
           pytest tests/integration/ \
             --junitxml=junit-integration.xml \
             -v
-      
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v3
@@ -325,7 +326,7 @@ jobs:
             junit.xml
             junit-integration.xml
             htmlcov/
-      
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
@@ -341,27 +342,27 @@ jobs:
     name: Terraform Validation
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.7"
-      
+
       - name: Terraform fmt check
         run: terraform fmt -check -recursive terraform/
-      
+
       - name: Terraform init
         working-directory: terraform
         run: terraform init -backend=false
-      
+
       - name: Terraform validate
         working-directory: terraform
         run: terraform validate
-      
+
       - name: Terraform plan (validate syntax only)
         working-directory: terraform
         run: terraform plan -var-file=production.tfvars -out=/tmp/plan
@@ -374,35 +375,35 @@ jobs:
     needs: build
     runs-on: ubuntu-22.04
     timeout-minutes: 20
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up k6
         run: |
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3B052BA3434A3F4EF8F3CAF5F8D8E
           echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6-stable.list
           sudo apt-get update && sudo apt-get install k6
-      
+
       - name: Start test environment (docker-compose)
         run: |
           docker-compose -f docker-compose.test.yml up -d
           sleep 10
-      
+
       - name: Run load test (1x baseline)
         run: k6 run tests/load/baseline.js --vus 10 --duration 1m
-      
+
       - name: Run load test (2x spike)
         run: k6 run tests/load/spike.js --vus 50 --duration 2m
-      
+
       - name: Run load test (5x stress)
         run: k6 run tests/load/stress.js --vus 100 --duration 2m
-      
+
       - name: Cleanup test environment
         if: always()
         run: docker-compose -f docker-compose.test.yml down
-      
+
       - name: Check performance metrics
         run: |
           if grep -q "failed requests" /tmp/load-test-results.txt; then
@@ -422,18 +423,18 @@ jobs:
     environment:
       name: staging
       url: https://staging-code-server.kushnir.cloud
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Configure SSH access
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_KEY_STAGING }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H staging-01.internal >> ~/.ssh/known_hosts 2>/dev/null
-      
+
       - name: Deploy via SSH
         run: |
           ssh deploy@staging-01.internal \
@@ -442,7 +443,7 @@ jobs:
              git checkout ${{ github.sha }} && \
              docker-compose -f docker-compose.yml pull && \
              docker-compose -f docker-compose.yml up -d"
-      
+
       - name: Health check
         run: |
           for i in {1..30}; do
@@ -453,11 +454,11 @@ jobs:
             sleep 10
           done
           exit 1
-      
+
       - name: Smoke tests on staging
         run: |
           npm run test:smoke -- --baseUrl https://staging-code-server.kushnir.cloud
-      
+
       - name: Cleanup SSH
         if: always()
         run: rm -f ~/.ssh/id_rsa
@@ -474,11 +475,11 @@ jobs:
     environment:
       name: production
       url: https://code-server.kushnir.cloud
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Configure SSH access
         run: |
           mkdir -p ~/.ssh
@@ -486,12 +487,12 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H prod-01.internal >> ~/.ssh/known_hosts 2>/dev/null
           ssh-keyscan -H prod-02.internal >> ~/.ssh/known_hosts 2>/dev/null
-      
+
       - name: Create backup snapshot
         run: |
           ssh deploy@prod-01.internal \
             "docker-compose exec -T postgres pg_dump -U postgres > /backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql"
-      
+
       - name: Canary deployment (1% traffic)
         run: |
           ssh deploy@prod-01.internal \
@@ -499,7 +500,7 @@ jobs:
              docker-compose -f docker-compose.yml pull && \
              docker-compose -f docker-compose.yml up -d && \
              sleep 30"
-      
+
       - name: Canary health check
         run: |
           for i in {1..10}; do
@@ -510,7 +511,7 @@ jobs:
             sleep 5
           done
           exit 1
-      
+
       - name: Monitor canary (5 min)
         run: |
           sleep 300
@@ -520,7 +521,7 @@ jobs:
             echo "High error rate on canary: $ERRORS"
             exit 1
           fi
-      
+
       - name: Roll out to 100% (gradual)
         run: |
           ssh deploy@prod-02.internal \
@@ -528,7 +529,7 @@ jobs:
              docker-compose -f docker-compose.yml pull && \
              docker-compose -f docker-compose.yml up -d && \
              sleep 30"
-      
+
       - name: Production health check
         run: |
           for i in {1..30}; do
@@ -539,11 +540,11 @@ jobs:
             sleep 10
           done
           exit 1
-      
+
       - name: Smoke tests on production
         run: |
           npm run test:smoke -- --baseUrl https://code-server.kushnir.cloud
-      
+
       - name: Verify SLO compliance (1 hour post-deploy)
         run: |
           sleep 3600
@@ -552,7 +553,7 @@ jobs:
             echo "SLO violated: $AVAILABILITY < 99.99%"
             exit 1
           fi
-      
+
       - name: Auto-rollback on failure
         if: failure()
         run: |
@@ -561,7 +562,7 @@ jobs:
              git revert HEAD --no-edit && \
              docker-compose -f docker-compose.yml pull && \
              docker-compose -f docker-compose.yml up -d"
-      
+
       - name: Cleanup SSH
         if: always()
         run: rm -f ~/.ssh/id_rsa
@@ -574,7 +575,7 @@ jobs:
     needs: [deploy-production]
     runs-on: ubuntu-22.04
     if: always()
-    
+
     steps:
       - name: Slack notification
         uses: slackapi/slack-github-action@v1.24.0

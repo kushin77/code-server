@@ -5,6 +5,10 @@ on:
   push:
     branches: [ main ]
 
+# Ref: #390 — least-privilege permissions
+permissions:
+  contents: read
+
 jobs:
   pre-commit:
     name: Pre-commit hooks (shellcheck, yamllint, governance)

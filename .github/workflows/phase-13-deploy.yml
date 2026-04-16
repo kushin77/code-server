@@ -15,6 +15,9 @@ on:
     # Scheduled to run April 14, 2026 at 09:00 UTC
     - cron: '0 9 14 4 *'
 
+permissions:
+  contents: read
+
 env:
   DOMAIN: ${{ github.event.inputs.domain || 'ide.kushnir.cloud' }}
   TUNNEL_NAME: ${{ github.event.inputs.tunnel_name || 'home-dev' }}

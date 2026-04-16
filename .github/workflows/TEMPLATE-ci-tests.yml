@@ -15,6 +15,9 @@ on:
       - 'tests/**'
       - 'package.json'
 
+permissions:
+  contents: read
+
 env:
   COST_CATEGORY: "ci-tests"
 

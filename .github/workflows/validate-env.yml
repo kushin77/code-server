@@ -17,6 +17,9 @@ on:
       - "docker-compose*.yml"
   workflow_call:  # Allow manual trigger
 
+permissions:
+  contents: read
+
 jobs:
   validate-env:
     name: "Validate Environment Configuration"

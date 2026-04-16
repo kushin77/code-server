@@ -13,6 +13,9 @@ on:
       - 'src/**'
       - 'package.json'
 
+permissions:
+  contents: read
+
 env:
   COST_CATEGORY: "ci-lint"
 

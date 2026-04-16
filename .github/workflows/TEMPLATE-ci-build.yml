@@ -12,6 +12,9 @@ on:
     types: [completed]
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
   COST_CATEGORY: "ci-build"
   REGISTRY: ghcr.io

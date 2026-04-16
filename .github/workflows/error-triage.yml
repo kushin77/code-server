@@ -13,6 +13,9 @@ on:
         required: false
         default: 'true'
 
+permissions:
+  contents: read
+
 jobs:
   triage-errors:
     name: Error Pattern Detection & Issue Triage

@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+################################################################################
+# Pre-commit hook for #362: Block hardcoded IPs
+# 
+# Automatically run by git before each commit.
+# Prevents accidental introduction of hardcoded IPs outside inventory.
+#
+# Install: scripts/install-hooks.sh
+# Manual:  cp scripts/hooks/pre-commit .git/hooks/pre-commit
+#
+################################################################################
+
+set -euo pipefail
+
+# Get the project directory
+PROJECT_DIR="$(git rev-parse --show-toplevel)"
+cd "$PROJECT_DIR"
+
+# Source the validation function
+if [[ ! -f "scripts/validate-topology.sh" ]]; then
+    echo "⚠️  validate-topology.sh not found, skipping hardcoded IP check"
+    exit 0
+fi
+
+# Run validation on staged files only
+echo "🔍 Pre-commit: Checking for hardcoded IPs..."
+
+# Patterns that are always forbidden
+CRITICAL_PATTERNS=(
+    "192\.168\.168\.31"
+    "192\.168\.168\.42"
+)
+
+# Check staged files
+VIOLATIONS=0
+while IFS= read -r -d '' file; do
+    # Skip binary files
+    if file "$file" | grep -q "binary"; then
+        continue
+    fi
+    
+    # Skip files outside our scan scope
+    if [[ "$file" == .archived/* ]] || [[ "$file" == .git/* ]]; then
+        continue
+    fi
+    
+    for pattern in "${CRITICAL_PATTERNS[@]}"; do
+        # Get the staged version
+        if git diff --cached "$file" 2>/dev/null | grep -E "^\+" | grep "$pattern" | grep -v "^+++" >/dev/null; then
+            echo "❌ ERROR: Hardcoded IP ($pattern) in staged file: $file"
+            git diff --cached "$file" | grep -n "$pattern" | head -3
+            ((VIOLATIONS++))
+        fi
+    done
+done < <(git diff --cached --name-only -z 2>/dev/null || true)
+
+if [[ $VIOLATIONS -gt 0 ]]; then
+    echo ""
+    echo "❌ COMMIT BLOCKED: Found hardcoded IPs in staged changes"
+    echo ""
+    echo "To fix:"
+    echo "  1. Edit the file(s) above"
+    echo "  2. Replace hardcoded IPs with inventory variable lookups"
+    echo "  3. Source: source scripts/lib/inventory-loader.sh"
+    echo "  4. Example: ssh \\\$(get_ssh_user primary)@\\\$(get_host_ip primary)"
+    echo ""
+    echo "To bypass (NOT RECOMMENDED): git commit --no-verify"
+    exit 1
+fi
+
+echo "✅ No hardcoded IPs found in staged changes"
+exit 0

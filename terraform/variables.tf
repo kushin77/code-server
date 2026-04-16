@@ -168,3 +168,56 @@ variable "log_level" {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Deployment Host & Inventory (Inventory-Driven Architecture)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "deployment_host" {
+  description = "Primary SSH host for Terraform deployment (IP or FQDN from inventory)"
+  type        = string
+  default     = "192.168.168.31"
+
+  validation {
+    condition     = length(var.deployment_host) > 0
+    error_message = "deployment_host must not be empty (derive from environments/production/hosts.yml)"
+  }
+}
+
+variable "inventory" {
+  description = "Production topology (source of truth for all infrastructure). Load from environments/production/hosts.yml and pass via terraform.tfvars"
+  type = object({
+    vip = object({
+      ip   = string
+      fqdn = string
+    })
+    hosts = object({
+      primary = object({
+        ip        = string
+        fqdn      = string
+        ssh_user  = string
+        ssh_port  = number
+        roles     = list(string)
+      })
+      replica = object({
+        ip        = string
+        fqdn      = string
+        ssh_user  = string
+        ssh_port  = number
+        roles     = list(string)
+      })
+    })
+  })
+  nullable = false
+
+  validation {
+    condition     = length(var.inventory.vip.ip) > 0 && length(var.inventory.hosts.primary.ip) > 0 && length(var.inventory.hosts.replica.ip) > 0
+    error_message = "inventory must contain valid VIP and host IP addresses"
+  }
+}
+
+variable "enable_keepalived" {
+  description = "Enable VRRP/Keepalived for virtual IP failover (set to false for single-host on-prem)"
+  type        = bool
+  default     = true
+}
+
+// ─────────────────────────────────────────────────────────────────────────────

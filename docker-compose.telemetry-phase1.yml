@@ -13,12 +13,14 @@ services:
     restart: always
     networks: [enterprise]
     expose: ["3100"]
+    user: "0:0"
     command:
       - -config.file=/etc/loki/loki-config.yml
       - -print-config-stderr=false
     volumes:
       - ./config/loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki-data:/loki
+      - loki-wal:/wal
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready"]
       interval: 30s
@@ -126,4 +128,7 @@ networks:
 
 volumes:
   loki-data:
+    driver: local
+
+  loki-wal:
     driver: local

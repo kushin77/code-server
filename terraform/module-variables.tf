@@ -127,7 +127,7 @@ variable "grafana_admin_password" {
   description = "Grafana admin password"
   type        = string
   sensitive   = true
-  default     = "admin123"  # CHANGE IN PRODUCTION
+  default     = "admin123" # CHANGE IN PRODUCTION
 }
 
 variable "grafana_storage_size" {
@@ -182,7 +182,7 @@ variable "kong_database_password" {
   description = "Kong PostgreSQL database password"
   type        = string
   sensitive   = true
-  default     = "change-me"  # CHANGE IN PRODUCTION
+  default     = "change-me" # CHANGE IN PRODUCTION
 }
 
 variable "kong_storage_size" {
@@ -357,13 +357,13 @@ variable "backup_schedule" {
 variable "rpo_seconds" {
   description = "Recovery Point Objective in seconds (max data loss tolerance)"
   type        = number
-  default     = 300  # 5 minutes
+  default     = 300 # 5 minutes
 }
 
 variable "rto_seconds" {
   description = "Recovery Time Objective in seconds (max downtime tolerance)"
   type        = number
-  default     = 60   # 1 minute
+  default     = 60 # 1 minute
 }
 
 variable "replication_slots" {

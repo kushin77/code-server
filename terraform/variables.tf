@@ -189,18 +189,18 @@ variable "inventory" {
     })
     hosts = object({
       primary = object({
-        ip        = string
-        fqdn      = string
-        ssh_user  = string
-        ssh_port  = number
-        roles     = list(string)
+        ip       = string
+        fqdn     = string
+        ssh_user = string
+        ssh_port = number
+        roles    = list(string)
       })
       replica = object({
-        ip        = string
-        fqdn      = string
-        ssh_user  = string
-        ssh_port  = number
-        roles     = list(string)
+        ip       = string
+        fqdn     = string
+        ssh_user = string
+        ssh_port = number
+        roles    = list(string)
       })
     })
   })

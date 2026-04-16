@@ -20,43 +20,43 @@ locals {
   #   - replica_host (192.168.168.42)
   #   - virtual_ip (from network config)
   #   - primary_ssh_user, replica_ssh_user
-  
+
   # Derived service endpoints (these are P2 #366 specific, not duplicates)
-  primary_host_ip      = local.primary_host        # "192.168.168.31" from inventory
-  replica_host_ip      = local.replica_host        # "192.168.168.42" from inventory
-  storage_ip           = try(local.network.storage_ip, "192.168.168.55")
-  gateway_ip           = try(local.network.gateway, "192.168.168.1")
-  
+  primary_host_ip = local.primary_host # "192.168.168.31" from inventory
+  replica_host_ip = local.replica_host # "192.168.168.42" from inventory
+  storage_ip      = try(local.network.storage_ip, "192.168.168.55")
+  gateway_ip      = try(local.network.gateway, "192.168.168.1")
+
   # Additional SSH connection info from inventory (replica user)
-  replica_ssh_user     = try(local.hosts.replica.ssh_user, "akushnir")
-  ssh_port             = try(local.hosts.primary.ssh_port, 22)
-  
+  replica_ssh_user = try(local.hosts.replica.ssh_user, "akushnir")
+  ssh_port         = try(local.hosts.primary.ssh_port, 22)
+
   # Service endpoints (computed from host IPs - P2 #366 specific)
   vault_url            = "https://${local.primary_host_ip}:8201"
   postgres_primary_url = "postgresql://${local.primary_host_ip}:5432"
   postgres_replica_url = "postgresql://${local.replica_host_ip}:5432"
   redis_primary_url    = "redis://${local.primary_host_ip}:6379"
   redis_replica_url    = "redis://${local.replica_host_ip}:6379"
-  
+
   # Monitoring/Observability endpoints (P2 #366 derived)
-  prometheus_url       = "http://${local.primary_host_ip}:9090"
-  grafana_url          = "http://${local.primary_host_ip}:3000"
-  alertmanager_url     = "http://${local.primary_host_ip}:9093"
-  jaeger_url           = "http://${local.primary_host_ip}:16686"
-  loki_url             = "http://${local.primary_host_ip}:3100"
-  
+  prometheus_url   = "http://${local.primary_host_ip}:9090"
+  grafana_url      = "http://${local.primary_host_ip}:3000"
+  alertmanager_url = "http://${local.primary_host_ip}:9093"
+  jaeger_url       = "http://${local.primary_host_ip}:16686"
+  loki_url         = "http://${local.primary_host_ip}:3100"
+
   # Network/Gateway endpoints
-  caddy_url            = "https://${local.primary_host_ip}:443"
-  oauth2_proxy_url     = "http://${local.primary_host_ip}:4180"
-  kong_url             = "http://${local.primary_host_ip}:8000"
-  
+  caddy_url        = "https://${local.primary_host_ip}:443"
+  oauth2_proxy_url = "http://${local.primary_host_ip}:4180"
+  kong_url         = "http://${local.primary_host_ip}:8000"
+
   # Virtual IP endpoints (used for failover)
   virtual_postgres_url = "postgresql://${local.virtual_ip}:5432"
   virtual_redis_url    = "redis://${local.virtual_ip}:6379"
-  
+
   # SSH connection strings (for remote operations)
-  primary_ssh_string   = "${local.primary_ssh_user}@${local.primary_host_ip}"
-  replica_ssh_string   = "${local.replica_ssh_user}@${local.replica_host_ip}"
+  primary_ssh_string = "${local.primary_ssh_user}@${local.primary_host_ip}"
+  replica_ssh_string = "${local.replica_ssh_user}@${local.replica_host_ip}"
 }
 
 # =============================================================================

@@ -1189,7 +1189,7 @@ variable "backup_retention_days" {
 variable "backup_schedule_cron" {
   description = "Backup schedule in cron format"
   type        = string
-  default     = "0 2 * * *"  // Daily at 2 AM
+  default     = "0 2 * * *" // Daily at 2 AM
 }
 
 variable "enable_replication" {

@@ -1,4 +1,5 @@
 # Terraform Module: Networking Stack (Kong API Gateway, CoreDNS, Load Balancing, Service Discovery)
+# Module Version: 1.0.0 | Last Updated: 2026-04-22
 
 module "networking" {
   source = "./modules/networking"

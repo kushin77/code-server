@@ -1,4 +1,5 @@
 # Terraform Module: DNS & Tunneling Stack (Cloudflare Tunnel, GoDaddy Failover, External DNS)
+# Module Version: 1.0.0 | Last Updated: 2026-04-22
 
 module "dns" {
   source = "./modules/dns"

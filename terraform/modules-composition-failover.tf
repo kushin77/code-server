@@ -1,4 +1,5 @@
 # Terraform Module: Disaster Recovery & High Availability Stack (Patroni Replication, Backup, Failover)
+# Module Version: 1.0.0 | Last Updated: 2026-04-22
 
 module "failover" {
   source = "./modules/failover"

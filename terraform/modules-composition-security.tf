@@ -1,4 +1,5 @@
 # Terraform Module: Security Stack (Falco Runtime Security, OPA Policy Engine, Vault Secrets, OS Hardening)
+# Module Version: 1.0.0 | Last Updated: 2026-04-22
 
 module "security" {
   source = "./modules/security"

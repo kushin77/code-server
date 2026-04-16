@@ -1,4 +1,5 @@
 # Terraform Module: Monitoring Stack (Prometheus, Grafana, AlertManager, Loki, Jaeger)
+# Module Version: 1.0.0 | Last Updated: 2026-04-22
 
 module "monitoring" {
   source = "./modules/monitoring"

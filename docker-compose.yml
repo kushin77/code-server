@@ -64,7 +64,7 @@ services:
   # Local LLM server (pinned to 0.1.27)
   # Usage: COMPOSE_PROFILES=ai docker compose up -d
   ollama:
-    image: ollama/ollama:0.1.27
+    image: ollama/ollama:0.1.45
     container_name: ollama
     profiles: [ai]
     restart: unless-stopped
@@ -74,11 +74,16 @@ services:
       - "0.0.0.0:11434:11434"
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_KEEP_ALIVE=5m
-      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
-      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
+      - OLLAMA_KEEP_ALIVE=10m
+      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-16}
+      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-1}
+      - OLLAMA_GPU_LAYERS=${OLLAMA_GPU_LAYERS:-99}
+      - OLLAMA_FLASH_ATTENTION=1
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-4}
+      - CUDA_VISIBLE_DEVICES=1
     volumes:
       - ollama-data:/root/.ollama
+      - /mnt/nas-56/ollama:/root/.ollama/models
     healthcheck:
       # ollama container healthcheck using wget
       test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null || exit 1"]
@@ -90,8 +95,11 @@ services:
       resources:
         limits:
           memory: 32g
+          cpus: '8.0'
         reservations:
-          memory: 8g
+          memory: 16g
+          cpus: '4.0'
+    runtime: nvidia
     logging:
       driver: json-file
       options:
@@ -103,7 +111,7 @@ services:
   # ─── ollama-init ────────────────────────────────────────────────────────────
   # One-time service that pulls models on startup
   ollama-init:
-    image: ollama/ollama:0.1.27
+    image: ollama/ollama:0.1.45
     container_name: ollama-init
     profiles: [ai]
     networks:

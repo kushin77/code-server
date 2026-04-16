@@ -170,8 +170,13 @@ else
   docker start code-server 2>/dev/null || true
   if wait_for_running "code-server" "$RECOVERY_WINDOW_S"; then
     ELAPSED=$(( $(date +%s) - START ))
-    pass "Scenario 1: code-server restarted in ${ELAPSED}s (target: <${RECOVERY_WINDOW_S}s)"
-    emit_metrics "code_server_kill_restart" "pass" "$ELAPSED"
+    if [[ "$ELAPSED" -le "$RECOVERY_WINDOW_S" ]]; then
+      pass "Scenario 1: code-server restarted in ${ELAPSED}s (target: <${RECOVERY_WINDOW_S}s)"
+      emit_metrics "code_server_kill_restart" "pass" "$ELAPSED"
+    else
+      fail "Scenario 1: code-server restart took ${ELAPSED}s (target: <${RECOVERY_WINDOW_S}s)"
+      emit_metrics "code_server_kill_restart" "fail" "$ELAPSED"
+    fi
   else
     fail "Scenario 1: code-server did not restart within ${RECOVERY_WINDOW_S}s"
     emit_metrics "code_server_kill_restart" "fail" "$RECOVERY_WINDOW_S"
@@ -217,30 +222,38 @@ if [[ "$DRY_RUN" == "true" ]]; then
 elif ! service_running "redis"; then
   skip "Scenario 3 — redis not running"
 else
-  # Lower maxmemory enough to trigger eviction without destabilizing the service.
-  ORIGINAL_MAX=$(redis_exec CONFIG GET maxmemory | tail -1 | tr -d '\r')
-  redis_exec CONFIG SET maxmemory 32mb >/dev/null
-  # Write data until eviction kicks in.
-  for i in $(seq 1 200); do
-    redis_exec SET "chaos-key-$i" "$(head -c 2048 /dev/urandom | base64 | tr -d '\n')" EX 60 >/dev/null 2>&1 || break
-  done
-  # Restore and verify Redis is still functional.
-  redis_exec CONFIG SET maxmemory "${ORIGINAL_MAX:-0}" >/dev/null
-  PING=$(redis_exec PING 2>/dev/null || echo "")
-  if [[ "$PING" == "PONG" ]]; then
-    ELAPSED=$(( $(date +%s) - START ))
-    pass "Scenario 3: Redis survived OOM eviction pressure in ${ELAPSED}s"
-    emit_metrics "redis_oom_eviction" "pass" "$ELAPSED"
-    # Cleanup chaos keys.
-    KEYS=$(redis_exec --scan --pattern "chaos-key-*" 2>/dev/null || true)
-    if [[ -n "$KEYS" ]]; then
-      while IFS= read -r key; do
-        [[ -n "$key" ]] && redis_exec DEL "$key" >/dev/null 2>&1 || true
-      done <<< "$KEYS"
-    fi
+  if ! redis_exec PING >/dev/null 2>&1; then
+    fail "Scenario 3: Redis was not reachable before pressure test"
+    emit_metrics "redis_oom_eviction" "fail" "0"
   else
-    fail "Scenario 3: Redis unresponsive after memory pressure"
-    emit_metrics "redis_oom_eviction" "fail" "$RECOVERY_WINDOW_S"
+    # Lower maxmemory enough to trigger eviction without destabilizing the service.
+    ORIGINAL_MAX=$(redis_exec CONFIG GET maxmemory 2>/dev/null | tail -1 | tr -d '\r' || echo "0")
+    if ! redis_exec CONFIG SET maxmemory 32mb >/dev/null 2>&1; then
+      fail "Scenario 3: Failed to lower Redis maxmemory for pressure test"
+      emit_metrics "redis_oom_eviction" "fail" "$RECOVERY_WINDOW_S"
+    else
+      for i in $(seq 1 200); do
+        redis_exec SET "chaos-key-$i" "$(head -c 2048 /dev/urandom | base64 | tr -d '\n')" EX 60 >/dev/null 2>&1 || break
+      done
+
+      redis_exec CONFIG SET maxmemory "${ORIGINAL_MAX:-0}" >/dev/null 2>&1 || true
+      PING=$(redis_exec PING 2>/dev/null || echo "")
+      if [[ "$PING" == "PONG" ]]; then
+        ELAPSED=$(( $(date +%s) - START ))
+        pass "Scenario 3: Redis survived OOM eviction pressure in ${ELAPSED}s"
+        emit_metrics "redis_oom_eviction" "pass" "$ELAPSED"
+        # Cleanup chaos keys.
+        KEYS=$(redis_exec --scan --pattern "chaos-key-*" 2>/dev/null || true)
+        if [[ -n "$KEYS" ]]; then
+          while IFS= read -r key; do
+            [[ -n "$key" ]] && redis_exec DEL "$key" >/dev/null 2>&1 || true
+          done <<< "$KEYS"
+        fi
+      else
+        fail "Scenario 3: Redis unresponsive after memory pressure"
+        emit_metrics "redis_oom_eviction" "fail" "$RECOVERY_WINDOW_S"
+      fi
+    fi
   fi
 fi
 

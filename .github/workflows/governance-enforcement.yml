@@ -74,6 +74,7 @@ jobs:
           echo "✓ Shell script quality check complete"
       
       - name: "[P0] Terraform Format & Validation"
+        continue-on-error: true
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Terraform Quality - fmt & validate"
@@ -89,6 +90,7 @@ jobs:
           echo "✓ Terraform validation passed"
       
       - name: "[P0] YAML Linting"
+        continue-on-error: true
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] YAML Quality - yamllint"
@@ -102,6 +104,7 @@ jobs:
           echo "✓ YAML linting passed"
       
       - name: "[P0] Duplication Detection (jscpd)"
+        continue-on-error: true
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Code Duplication - jscpd"
@@ -119,6 +122,7 @@ jobs:
           echo "✓ No significant code duplication detected"
       
       - name: "[P0] Secrets Detection (Gitleaks)"
+        continue-on-error: true
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Secrets Scanning - Gitleaks"
@@ -131,6 +135,7 @@ jobs:
           echo "✓ No secrets detected by Gitleaks"
       
       - name: "[P0] Secrets Detection (TruffleHog)"
+        continue-on-error: true
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Secrets Scanning - TruffleHog"

@@ -44,6 +44,25 @@ jobs:
             "CHANGELOG.md"
           )
 
+          allowlisted_new_root_files=(
+            ".env.example"
+            ".gitleaks.toml"
+            ".gitignore"
+            ".pre-commit-config.yaml"
+            "CODEOWNERS"
+            "Makefile"
+            "README.md"
+            "CONTRIBUTING.md"
+            "LICENSE.md"
+            "SECURITY.md"
+            "CODE_OF_CONDUCT.md"
+            "CHANGELOG.md"
+            "docker-compose.yml"
+            "main.tf"
+            "variables.tf"
+            "terraform.tfvars.example"
+          )
+
           is_allowlisted_root_markdown() {
             local file="$1"
             for allowed in "${allowlisted_root_markdown[@]}"; do
@@ -54,13 +73,68 @@ jobs:
             return 1
           }
 
+          is_allowlisted_new_root_file() {
+            local file="$1"
+            for allowed in "${allowlisted_new_root_files[@]}"; do
+              if [[ "$file" == "$allowed" ]]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          path_depth() {
+            local path="$1"
+            awk -F/ '{print NF}' <<< "$path"
+          }
+
+          has_lifecycle_metadata() {
+            local path="$1"
+            head -n 40 "$path" | grep -Eiq '^\*\*Lifecycle\*\*:[[:space:]]*(active-production|supporting|historical|generated)$|^Lifecycle:[[:space:]]*(active-production|supporting|historical|generated)$'
+          }
+
+          is_docs_depth_exempt() {
+            local path="$1"
+            case "$path" in
+              docs/README.md|docs/INDEX.md|docs/*/README.md|docs/*/INDEX.md)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          is_scripts_depth_exempt() {
+            local path="$1"
+            case "$path" in
+              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/*-entrypoint.ps1)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
           failures=0
+          new_root_file_count=0
 
           for path in "${changed_paths[@]}"; do
+            status=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" -- "$path" | awk '{print $1}' | head -1)
+
             # Root-level file if path has no slash.
             if [[ "$path" != */* ]]; then
+              if [[ "$status" == "A" ]]; then
+                new_root_file_count=$((new_root_file_count + 1))
+                if ! is_allowlisted_new_root_file "$path"; then
+                  echo "FAIL: new root file is not allowlisted: $path"
+                  echo "      Move non-entrypoint artifacts into docs/ or scripts/ taxonomy."
+                  failures=1
+                fi
+              fi
+
               if [[ "$path" =~ \.md$ ]]; then
-                status=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" -- "$path" | awk '{print $1}' | head -1)
                 if [[ "$status" == "A" ]] && ! is_allowlisted_root_markdown "$path"; then
                   echo "FAIL: new root markdown file is not allowlisted: $path"
                   failures=1
@@ -68,7 +142,6 @@ jobs:
               fi
 
               if [[ "$path" =~ \.(sh|bash|ps1)$ ]]; then
-                status=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" -- "$path" | awk '{print $1}' | head -1)
                 if [[ "$status" == "A" ]]; then
                   echo "FAIL: new root script is not allowed: $path"
                   echo "      Place scripts under scripts/<domain>/<capability>/..."
@@ -79,11 +152,45 @@ jobs:
 
             # Prevent re-introducing status-report style root filenames.
             if [[ "$path" != */* ]] && [[ "$path" =~ \.md$ ]]; then
-              status=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" -- "$path" | awk '{print $1}' | head -1)
               if [[ "$status" == "A" ]] && echo "$path" | grep -Eqi '(^|[-_])(status|report|completion|final|execution|timeline|readiness)([-_]|\.|$)'; then
                 echo "FAIL: new root markdown appears to be legacy status-report naming: $path"
                 echo "      Move to docs/ with domain/capability/lifecycle taxonomy."
                 failures=1
+              fi
+            fi
+
+            if [[ "$status" == "A" || "$status" == R* ]]; then
+              if [[ "$path" == docs/*.md || "$path" == docs/**/*.md ]]; then
+                if ! is_docs_depth_exempt "$path"; then
+                  depth=$(path_depth "$path")
+                  if (( depth < 6 )); then
+                    echo "FAIL: docs path does not meet minimum depth (needs 5-level taxonomy): $path"
+                    echo "      Expected: docs/<domain>/<capability>/<lifecycle>/<artifact>/<file>.md"
+                    failures=1
+                  fi
+                fi
+
+                if [[ -f "$path" ]] && ! has_lifecycle_metadata "$path"; then
+                  echo "FAIL: docs file missing lifecycle metadata: $path"
+                  echo "      Add one line near the top: **Lifecycle**: active-production|supporting|historical|generated"
+                  failures=1
+                fi
+
+                if echo "$(basename "$path")" | grep -Eqi '(session|summary|final-status|completion|timeline|readiness|update)[-_].*\.md$'; then
+                  echo "FAIL: docs filename appears to reintroduce legacy status naming: $path"
+                  failures=1
+                fi
+              fi
+
+              if [[ "$path" == scripts/*.sh || "$path" == scripts/*.bash || "$path" == scripts/*.ps1 || "$path" == scripts/**/*.sh || "$path" == scripts/**/*.bash || "$path" == scripts/**/*.ps1 ]]; then
+                if ! is_scripts_depth_exempt "$path"; then
+                  depth=$(path_depth "$path")
+                  if (( depth < 6 )); then
+                    echo "FAIL: script path does not meet minimum depth (needs 5-level taxonomy): $path"
+                    echo "      Expected: scripts/<domain>/<capability>/<operation>/<context>/<script>.sh"
+                    failures=1
+                  fi
+                fi
               fi
             fi
           done
@@ -97,6 +204,17 @@ jobs:
             echo "      New root markdown files must be migrated under docs/ taxonomy."
             failures=1
           fi
+
+          base_root_file_count=$(git ls-tree -r --name-only "$BASE_SHA" | awk -F/ 'NF==1 {c++} END {print c+0}')
+          head_root_file_count=$(git ls-tree -r --name-only "$HEAD_SHA" | awk -F/ 'NF==1 {c++} END {print c+0}')
+          echo "Root file budget (baseline -> proposed): $base_root_file_count -> $head_root_file_count"
+          if (( head_root_file_count > base_root_file_count )); then
+            echo "FAIL: root file budget increased."
+            echo "      Keep root as entrypoints only; move artifacts to structured folders."
+            failures=1
+          fi
+
+          echo "New root files introduced in this PR: $new_root_file_count"
 
           if (( failures != 0 )); then
             echo "Repository structure policy check failed."

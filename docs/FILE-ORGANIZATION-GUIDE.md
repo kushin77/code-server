@@ -27,6 +27,15 @@ Use this guide to determine the correct location for files when adding new code/
 ### Location Rule
 All documentation goes in `docs/` directory. **NEVER** in root.
 
+### Minimum Depth Rule (5-Level Taxonomy)
+New docs should follow a minimum five-level taxonomy under `docs/`:
+
+`docs/<domain>/<capability>/<lifecycle>/<artifact>/<file>.md`
+
+Examples:
+- `docs/governance/quality-gates/active-production/policies/quality-gate-policy.md`
+- `docs/operations/triage/supporting/runbooks/weekly-triage-reporting.md`
+
 | Content Type | Location | Example |
 |---|---|---|
 | **Guides & Tutorials** | `docs/guides/` | `docs/guides/DEPLOYMENT.md` |
@@ -45,6 +54,7 @@ All documentation goes in `docs/` directory. **NEVER** in root.
 
 **Purpose**: One-sentence description  
 **Audience**: Who is this for? (developers, ops, everyone)  
+**Lifecycle**: active-production | supporting | historical | generated  
 **Last Updated**: YYYY-MM-DD  
 **Author**: @username  
 **Status**: ACTIVE | DRAFT | DEPRECATED  
@@ -68,9 +78,13 @@ All documentation goes in `docs/` directory. **NEVER** in root.
 The repository now enforces root-level structure rules in pull requests:
 
 - New root markdown files are blocked unless allowlisted (`README.md`, `CONTRIBUTING.md`, `LICENSE.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`)
+- New root files are blocked unless they are explicit entrypoints/allowlisted governance files
 - New root scripts (`*.sh`, `*.bash`, `*.ps1`) are blocked
 - Root markdown budget must not increase versus base branch
+- Root file budget must not increase versus base branch
 - New root markdown files with status-report naming patterns are blocked (`status`, `report`, `completion`, `final`, `execution`, `timeline`, `readiness`)
+- New docs under `docs/` must include lifecycle metadata (`active-production`, `supporting`, `historical`, `generated`)
+- New docs and scripts must follow minimum taxonomy depth unless explicitly exempted (`README.md`/`INDEX.md` style entry docs)
 
 If you need to add operational documentation, place it under `docs/<domain>/<capability>/<lifecycle>/...`.
 

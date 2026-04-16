@@ -52,6 +52,11 @@ config/caddy/Caddyfile.onprem
 config/caddy/Caddyfile.simple
 # Only config/caddy/Caddyfile.tpl is committed (single source of truth)
 
+# Docker Compose dev overrides (local development only, contains local IPs)
+docker-compose.dev.yml
+docker-compose.*.yml  # override files
+# Only docker-compose.yml is committed to production
+
 # ─────────────────────────────────────────────────────────────────────────────
 # IDEs & Editor Artifacts
 # ─────────────────────────────────────────────────────────────────────────────

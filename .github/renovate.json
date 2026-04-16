@@ -1,0 +1,116 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":separateMajorReleases",
+    ":combinePatchMinorReleases",
+    "group:recommended"
+  ],
+
+  "description": "Automated dependency updates — Ref: #358",
+
+  "timezone": "America/New_York",
+  "schedule": ["before 6am on Monday"],
+
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 3,
+  "rebaseWhen": "conflicted",
+
+  "labels": ["dependencies", "automated"],
+  "assignees": ["kushin77"],
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "P0"],
+    "automerge": false,
+    "schedule": ["at any time"]
+  },
+
+  "packageRules": [
+    {
+      "description": "GitHub Actions — pin to commit SHA on update (supply-chain security)",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "ci",
+      "automerge": false,
+      "labels": ["dependencies", "ci", "supply-chain"]
+    },
+
+    {
+      "description": "Docker base images — digest pinning, no auto-merge for majors",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "pinDigests": true,
+      "automerge": false,
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "docker",
+      "labels": ["dependencies", "docker"]
+    },
+
+    {
+      "description": "Docker patch/minor updates auto-merge if CI passes",
+      "matchManagers": ["dockerfile", "docker-compose"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+
+    {
+      "description": "Terraform providers — no auto-merge, require review",
+      "matchManagers": ["terraform"],
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "terraform",
+      "automerge": false,
+      "labels": ["dependencies", "terraform"]
+    },
+
+    {
+      "description": "pre-commit hook versions",
+      "matchManagers": ["pre-commit"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "ci"
+    },
+
+    {
+      "description": "Node.js / npm patch and minor — auto-merge",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "deps"
+    },
+
+    {
+      "description": "Node.js / npm major — manual review required",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "breaking-change"]
+    },
+
+    {
+      "description": "Python pip patch/minor — auto-merge",
+      "matchManagers": ["pip_requirements", "pip-compile", "pipenv", "setup-cfg", "pyproject"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr"
+    }
+  ],
+
+  "ignorePaths": [
+    "extensions/agent-farm/node_modules/**",
+    "archived/**",
+    "terraform/archived-phase-files/**"
+  ],
+
+  "postUpdateOptions": [
+    "npmDedupe"
+  ]
+}

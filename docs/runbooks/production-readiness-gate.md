@@ -34,6 +34,16 @@ Applies to all non-trivial pull requests that modify runtime behavior, infrastru
 4. Verify deployment strategy and rollback command are documented.
 5. Ensure readiness-gate CI check passes before merge.
 
+## Rollout Verification
+
+For non-trivial changes, capture rollout evidence directly in the PR body.
+
+1. Select one deployment strategy: rolling, blue-green, canary, or feature-flag.
+2. If using canary or feature-flag, document explicit rollout increments (for example: 1% -> 10% -> 50% -> 100%).
+3. Record the kill switch or rollback command that can be executed in under 60 seconds.
+4. Link any waiver issue if a gate is overridden; otherwise record `none`.
+5. Attach training evidence showing the on-call/operator walkthrough was completed.
+
 ## Incident Drill Procedure
 
 1. Simulate a controlled failure in staging.
@@ -47,6 +57,15 @@ Applies to all non-trivial pull requests that modify runtime behavior, infrastru
 2. Include reason, compensating controls, and expiration date.
 3. Add link to waiver issue in PR body.
 4. Post-merge, close waiver issue only after corrective action is delivered.
+
+## Training Evidence
+
+Training evidence must exist before merge for non-trivial changes.
+
+1. Review this runbook with the assigned non-author reviewer or on-call owner.
+2. Capture the reviewer, date, and link to the approval comment or note.
+3. Add that link to the `Training evidence` field in the PR template.
+4. If training is deferred, open a waiver issue with expiration and compensating controls.
 
 ## Evidence Requirements
 

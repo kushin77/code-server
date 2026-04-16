@@ -126,6 +126,20 @@ Test duration:     [Minutes]
 - [ ] Rollout strategy documented (1% → 10% → 50% → 100%)
 - [ ] Kill switch procedure documented (how to disable if issues found)
 
+### Rollout Enforcement
+- [ ] Deployment strategy selected and justified for this PR
+- [ ] Gradual rollout increments documented or marked not applicable
+- [ ] Kill switch or immediate rollback command documented
+- [ ] Feature flag reference documented or marked not applicable
+- [ ] Waiver issue linked or marked not needed
+- [ ] Training evidence linked (runbook walkthrough, owner, and date)
+
+**Waiver issue**:
+`none` or `#<issue-number>`
+
+**Training evidence**:
+`[Link to runbook review, training note, or approval comment]`
+
 **Rollback Plan**:
 - [ ] Time to rollback: [X minutes]
 - [ ] Rollback command: `[git revert / terraform destroy / helm rollback / etc.]`

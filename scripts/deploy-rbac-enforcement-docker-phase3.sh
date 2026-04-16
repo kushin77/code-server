@@ -5,15 +5,35 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-DOCKER_HOST="${DOCKER_HOST:-$DEPLOY_HOST}"
+DOCKER_HOST="${DOCKER_HOST:-192.168.168.31}"
 APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 
-log_warning() { log_warn "$@"; }
-log_error() { log_fatal "$@"; }
+# Color output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log_info() {
+  echo -e "${BLUE}[INFO]${NC} $*"
+}
+
+log_success() {
+  echo -e "${GREEN}[✓]${NC} $*"
+}
+
+log_warning() {
+  echo -e "${YELLOW}[WARN]${NC} $*"
+}
+
+log_error() {
+  echo -e "${RED}[ERROR]${NC} $*"
+  exit 1
+}
 
 # ============================================================================
 # Phase 3a: Configure Service Environment Variables for RBAC

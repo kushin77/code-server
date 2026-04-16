@@ -189,6 +189,9 @@ echo "📋 PHASE 7: NETWORK & SSH CONNECTIVITY"
 echo "═════════════════════════════════════════════════════════════"
 echo ""
 
+DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
+DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+
 # Test SSH connectivity
 if timeout 5 ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no \
     "$DEPLOY_USER@$DEPLOY_HOST" 'echo' &>/dev/null; then
@@ -247,7 +250,7 @@ echo ""
 # Check for hardcoded secrets
 if [ -f "$PARENT_DIR/docker-compose.yml" ]; then
     if grep -q "password\|secret\|token" "$PARENT_DIR/docker-compose.yml" | \
-       grep -qv "\\${" | grep -qv "#"; then
+       grep -qv '\${' | grep -qv "#"; then
         fail "Possible hardcoded secrets in docker-compose.yml"
     else
         pass "No hardcoded secrets in docker-compose.yml"

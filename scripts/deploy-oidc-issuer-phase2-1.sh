@@ -9,18 +9,42 @@ set -euo pipefail
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 OIDC_NAMESPACE="oidc-issuer"
 OIDC_ISSUER_URL="https://oidc.kushnir.cloud"
 OIDC_ISSUER_SERVICE="oidc-issuer.oidc-issuer.svc.cluster.local:8888"
 APEX_DOMAIN="kushnir.cloud"
-PRIMARY_HOST="${PRIMARY_HOST:-$DEPLOY_HOST}"
-REPLICA_HOST="${REPLICA_HOST:-$STANDBY_HOST}"
+PRIMARY_HOST="192.168.168.31"
+REPLICA_HOST="192.168.168.42"
 
-log_warning() { log_warn "$@"; }
-log_error() { log_fatal "$@"; }
+# Color output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+log_info() {
+  echo -e "${BLUE}[INFO]${NC} $*"
+}
+
+log_success() {
+  echo -e "${GREEN}[✓]${NC} $*"
+}
+
+log_warning() {
+  echo -e "${YELLOW}[WARN]${NC} $*"
+}
+
+log_error() {
+  echo -e "${RED}[ERROR]${NC} $*"
+  exit 1
+}
 
 # ============================================================================
 # Pre-deployment Validation

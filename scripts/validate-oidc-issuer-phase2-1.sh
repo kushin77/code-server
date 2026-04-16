@@ -5,8 +5,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 OIDC_NAMESPACE="oidc-issuer"
 OIDC_ISSUER_URL="https://oidc.kushnir.cloud"
@@ -16,11 +15,17 @@ APEX_DOMAIN="kushnir.cloud"
 # Color output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
 
 TEST_RESULTS=0
 TEST_PASSED=0
 TEST_FAILED=0
+
+log_info() {
+  echo -e "${BLUE}[INFO]${NC} $*"
+}
 
 log_success() {
   echo -e "${GREEN}[✓]${NC} $*"
@@ -32,7 +37,9 @@ log_fail() {
   ((TEST_FAILED++))
 }
 
-log_warning() { log_warn "$@"; }
+log_warning() {
+  echo -e "${YELLOW}[WARN]${NC} $*"
+}
 
 # ============================================================================
 # Test 1: Kubernetes Deployment Health

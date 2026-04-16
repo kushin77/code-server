@@ -1,0 +1,106 @@
+name: Enforce Repository Structure
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  root-zero-sprawl:
+    name: Root zero-sprawl and budget checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Enforce root allowlist and markdown budget
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+
+          mapfile -t changed_paths < <(git diff --name-status "$BASE_SHA" "$HEAD_SHA" | awk '$1 ~ /^(A|M|R)/ {print $NF}')
+
+          if [[ ${#changed_paths[@]} -eq 0 ]]; then
+            echo "No added/modified/renamed files detected; passing."
+            exit 0
+          fi
+
+          allowlisted_root_markdown=(
+            "README.md"
+            "CONTRIBUTING.md"
+            "LICENSE.md"
+            "SECURITY.md"
+            "CODE_OF_CONDUCT.md"
+            "CHANGELOG.md"
+          )
+
+          is_allowlisted_root_markdown() {
+            local file="$1"
+            for allowed in "${allowlisted_root_markdown[@]}"; do
+              if [[ "$file" == "$allowed" ]]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          failures=0
+
+          for path in "${changed_paths[@]}"; do
+            # Root-level file if path has no slash.
+            if [[ "$path" != */* ]]; then
+              if [[ "$path" =~ \.md$ ]]; then
+                status=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" -- "$path" | awk '{print $1}' | head -1)
+                if [[ "$status" == "A" ]] && ! is_allowlisted_root_markdown "$path"; then
+                  echo "FAIL: new root markdown file is not allowlisted: $path"
+                  failures=1
+                fi
+              fi
+
+              if [[ "$path" =~ \.(sh|bash|ps1)$ ]]; then
+                status=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" -- "$path" | awk '{print $1}' | head -1)
+                if [[ "$status" == "A" ]]; then
+                  echo "FAIL: new root script is not allowed: $path"
+                  echo "      Place scripts under scripts/<domain>/<capability>/..."
+                  failures=1
+                fi
+              fi
+            fi
+
+            # Prevent re-introducing status-report style root filenames.
+            if [[ "$path" != */* ]] && [[ "$path" =~ \.md$ ]]; then
+              status=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" -- "$path" | awk '{print $1}' | head -1)
+              if [[ "$status" == "A" ]] && echo "$path" | grep -Eqi '(^|[-_])(status|report|completion|final|execution|timeline|readiness)([-_]|\.|$)'; then
+                echo "FAIL: new root markdown appears to be legacy status-report naming: $path"
+                echo "      Move to docs/ with domain/capability/lifecycle taxonomy."
+                failures=1
+              fi
+            fi
+          done
+
+          base_root_md_count=$(git ls-tree -r --name-only "$BASE_SHA" | awk -F/ 'NF==1 && $0 ~ /\.md$/ {c++} END {print c+0}')
+          head_root_md_count=$(git ls-tree -r --name-only "$HEAD_SHA" | awk -F/ 'NF==1 && $0 ~ /\.md$/ {c++} END {print c+0}')
+
+          echo "Root markdown budget (baseline -> proposed): $base_root_md_count -> $head_root_md_count"
+          if (( head_root_md_count > base_root_md_count )); then
+            echo "FAIL: root markdown budget increased."
+            echo "      New root markdown files must be migrated under docs/ taxonomy."
+            failures=1
+          fi
+
+          if (( failures != 0 )); then
+            echo "Repository structure policy check failed."
+            exit 1
+          fi
+
+          echo "All repository structure checks passed."

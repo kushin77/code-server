@@ -63,6 +63,17 @@ All documentation goes in `docs/` directory. **NEVER** in root.
 - ❌ **Don't** create status update documents (these go to archived/ after useful life)
 - ❌ **Don't** keep variant versions (DEPLOYMENT-V1.md, DEPLOYMENT-V2.md)
 
+### CI Guardrails (Root Zero-Sprawl)
+
+The repository now enforces root-level structure rules in pull requests:
+
+- New root markdown files are blocked unless allowlisted (`README.md`, `CONTRIBUTING.md`, `LICENSE.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`)
+- New root scripts (`*.sh`, `*.bash`, `*.ps1`) are blocked
+- Root markdown budget must not increase versus base branch
+- New root markdown files with status-report naming patterns are blocked (`status`, `report`, `completion`, `final`, `execution`, `timeline`, `readiness`)
+
+If you need to add operational documentation, place it under `docs/<domain>/<capability>/<lifecycle>/...`.
+
 ---
 
 ## Architecture Decision Records

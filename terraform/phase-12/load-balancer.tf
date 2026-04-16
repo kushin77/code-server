@@ -9,7 +9,7 @@ resource "aws_lb" "nlb_us_west" {
   load_balancer_type = "network"
   subnets            = [for subnet in aws_subnet.us_west_public : subnet.id]
 
-  enable_deletion_protection = true
+  enable_deletion_protection       = true
   enable_cross_zone_load_balancing = true
 
   tags = {
@@ -24,7 +24,7 @@ resource "aws_lb" "nlb_eu_west" {
   load_balancer_type = "network"
   subnets            = [for subnet in aws_subnet.eu_west_public : subnet.id]
 
-  enable_deletion_protection = true
+  enable_deletion_protection       = true
   enable_cross_zone_load_balancing = true
 
   tags = {
@@ -39,7 +39,7 @@ resource "aws_lb" "nlb_ap_south" {
   load_balancer_type = "network"
   subnets            = [for subnet in aws_subnet.ap_south_public : subnet.id]
 
-  enable_deletion_protection = true
+  enable_deletion_protection       = true
   enable_cross_zone_load_balancing = true
 
   tags = {

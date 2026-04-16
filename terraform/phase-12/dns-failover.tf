@@ -104,7 +104,7 @@ resource "aws_route53_record" "eu_west_geo" {
 
   set_identifier = "eu-west-1"
   geolocation_location {
-    country = "GB"  # UK as proxy for EU
+    country = "GB" # UK as proxy for EU
   }
 
   health_check_id = aws_route53_health_check.eu_west.id
@@ -124,7 +124,7 @@ resource "aws_route53_record" "ap_south_geo" {
 
   set_identifier = "ap-south-1"
   geolocation_location {
-    country = "IN"  # India as proxy for AP South
+    country = "IN" # India as proxy for AP South
   }
 
   health_check_id = aws_route53_health_check.ap_south.id
@@ -144,7 +144,7 @@ resource "aws_route53_record" "default_geo" {
 
   set_identifier = "default"
   geolocation_location {
-    country = "*"  # Default for all other locations
+    country = "*" # Default for all other locations
   }
 
   health_check_id = aws_route53_health_check.us_west.id
@@ -361,8 +361,8 @@ output "primary_domain_name" {
 
 output "postgres_endpoints" {
   value = {
-    us_west = aws_route53_record.postgres_us_west.fqdn
-    eu_west = aws_route53_record.postgres_eu_west.fqdn
+    us_west  = aws_route53_record.postgres_us_west.fqdn
+    eu_west  = aws_route53_record.postgres_eu_west.fqdn
     ap_south = aws_route53_record.postgres_ap_south.fqdn
   }
   description = "PostgreSQL endpoints per region"

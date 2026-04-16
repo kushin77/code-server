@@ -34,19 +34,19 @@ variable "backup_retention_days" {
 variable "backup_schedule" {
   description = "Backup schedule (cron format)"
   type        = string
-  default     = "0 2 * * *"  # Daily at 2 AM
+  default     = "0 2 * * *" # Daily at 2 AM
 }
 
 variable "rpo_seconds" {
   description = "Recovery Point Objective (seconds)"
   type        = number
-  default     = 300  # 5 minutes
+  default     = 300 # 5 minutes
 }
 
 variable "rto_seconds" {
   description = "Recovery Time Objective (seconds)"
   type        = number
-  default     = 60   # 1 minute
+  default     = 60 # 1 minute
 }
 
 variable "replication_slots" {
@@ -83,8 +83,8 @@ variable "labels" {
   description = "Common labels for all failover resources"
   type        = map(string)
   default = {
-    module      = "failover"
-    managed_by  = "terraform"
+    module     = "failover"
+    managed_by = "terraform"
   }
 }
 

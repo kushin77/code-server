@@ -64,15 +64,15 @@ variable "file_integrity_scan_interval" {
 variable "vulnerability_scan_schedule" {
   description = "Vulnerability scan schedule (cron format)"
   type        = string
-  default     = "0 2 * * *"  # Daily at 2 AM
+  default     = "0 2 * * *" # Daily at 2 AM
 }
 
 variable "labels" {
   description = "Common labels for all security resources"
   type        = map(string)
   default = {
-    module      = "security"
-    managed_by  = "terraform"
+    module     = "security"
+    managed_by = "terraform"
   }
 }
 

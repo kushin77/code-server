@@ -87,10 +87,10 @@ resource "docker_image" "consul" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "consul_server" {
-  count         = var.phase_18_enabled ? var.vault_node_count : 0
-  name          = "consul-server-${count.index + 1}"
-  image         = docker_image.consul[0].image_id
-  network_mode  = "host"
+  count        = var.phase_18_enabled ? var.vault_node_count : 0
+  name         = "consul-server-${count.index + 1}"
+  image        = docker_image.consul[0].image_id
+  network_mode = "host"
 
   command = [
     "agent",
@@ -161,11 +161,11 @@ resource "docker_container" "consul_server" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "vault_ha" {
-  count         = var.phase_18_enabled ? var.vault_node_count : 0
-  name          = "vault-ha-node-${count.index + 1}"
-  image         = docker_image.vault[0].image_id
-  network_mode  = "host"
-  privileged    = true
+  count        = var.phase_18_enabled ? var.vault_node_count : 0
+  name         = "vault-ha-node-${count.index + 1}"
+  image        = docker_image.vault[0].image_id
+  network_mode = "host"
+  privileged   = true
 
   env = [
     "VAULT_ADDR=https://vault.ide.kushnir.cloud",
@@ -221,10 +221,10 @@ variable "vault_secrets_engines" {
   description = "Vault secrets engines to enable"
   type        = list(string)
   default = [
-    "database",       # PostgreSQL credentials
-    "kv",            # Generic key-value storage
-    "pki",           # Certificate management
-    "transit",       # Encryption as a service
+    "database", # PostgreSQL credentials
+    "kv",       # Generic key-value storage
+    "pki",      # Certificate management
+    "transit",  # Encryption as a service
   ]
 }
 
@@ -235,18 +235,18 @@ variable "vault_secrets_engines" {
 variable "service_tls_config" {
   description = "TLS configuration for all services"
   type = object({
-    enabled                = bool
-    require_client_cert    = bool
-    verify_hostname        = bool
-    min_tls_version        = string
-    cipher_suites          = list(string)
+    enabled             = bool
+    require_client_cert = bool
+    verify_hostname     = bool
+    min_tls_version     = string
+    cipher_suites       = list(string)
   })
   default = {
-    enabled                = true
-    require_client_cert    = true
-    verify_hostname        = true
-    min_tls_version        = "1.2"
-    cipher_suites          = [
+    enabled             = true
+    require_client_cert = true
+    verify_hostname     = true
+    min_tls_version     = "1.2"
+    cipher_suites = [
       "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
       "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
       "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
@@ -262,18 +262,18 @@ variable "service_tls_config" {
 variable "dlp_config" {
   description = "Data Loss Prevention policy configuration"
   type = object({
-    enabled                = bool
-    policies               = list(string)
-    audit_enabled          = bool
-    block_cross_border     = bool
-    require_encryption     = bool
+    enabled            = bool
+    policies           = list(string)
+    audit_enabled      = bool
+    block_cross_border = bool
+    require_encryption = bool
   })
   default = {
-    enabled                = true
-    policies               = ["cross-border-data", "pii", "payment-card-data"]
-    audit_enabled          = true
-    block_cross_border     = true
-    require_encryption     = true
+    enabled            = true
+    policies           = ["cross-border-data", "pii", "payment-card-data"]
+    audit_enabled      = true
+    block_cross_border = true
+    require_encryption = true
   }
 }
 
@@ -282,10 +282,10 @@ variable "dlp_config" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "compliance_dashboard" {
-  count         = var.phase_18_enabled && var.soc2_automated_controls_enabled ? 1 : 0
-  name          = "compliance-soc2-dashboard"
-  image         = "prom/prometheus:v2.48.0"
-  network_mode  = "host"
+  count        = var.phase_18_enabled && var.soc2_automated_controls_enabled ? 1 : 0
+  name         = "compliance-soc2-dashboard"
+  image        = "prom/prometheus:v2.48.0"
+  network_mode = "host"
 
   ports {
     internal = 9090
@@ -329,18 +329,18 @@ resource "docker_container" "compliance_dashboard" {
 variable "audit_log_config" {
   description = "Audit logging configuration"
   type = object({
-    enabled                = bool
-    retention_years        = number
-    syslog_enabled         = bool
-    file_enabled           = bool
-    cloudwatch_enabled     = bool
+    enabled            = bool
+    retention_years    = number
+    syslog_enabled     = bool
+    file_enabled       = bool
+    cloudwatch_enabled = bool
   })
   default = {
-    enabled                = true
-    retention_years        = 7
-    syslog_enabled         = true
-    file_enabled           = true
-    cloudwatch_enabled     = true
+    enabled            = true
+    retention_years    = 7
+    syslog_enabled     = true
+    file_enabled       = true
+    cloudwatch_enabled = true
   }
 }
 
@@ -363,12 +363,12 @@ output "consul_ui_endpoint" {
 output "security_status" {
   description = "Security hardening deployment status"
   value = var.phase_18_enabled ? {
-    vault_nodes_up           = length([for c in docker_container.vault_ha : c if try(c.state[0].running, false)])
-    consul_nodes_up          = length([for c in docker_container.consul_server : c if try(c.state[0].running, false)])
-    mtls_enabled             = var.mtls_enabled
-    dlp_policies             = var.dlp_config.policies
+    vault_nodes_up            = length([for c in docker_container.vault_ha : c if try(c.state[0].running, false)])
+    consul_nodes_up           = length([for c in docker_container.consul_server : c if try(c.state[0].running, false)])
+    mtls_enabled              = var.mtls_enabled
+    dlp_policies              = var.dlp_config.policies
     soc2_compliance_automated = var.soc2_automated_controls_enabled
-    audit_retention_years    = var.audit_log_config.retention_years
+    audit_retention_years     = var.audit_log_config.retention_years
   } : null
 }
 

@@ -4,9 +4,9 @@
 resource "google_sql_database_instance" "federation_databases" {
   for_each = { for r in local.regions : r.region_id => r }
 
-  name               = "${var.federation_name}-db-${each.value.region_id}"
-  database_version   = "POSTGRES_15"
-  region             = each.value.location
+  name                = "${var.federation_name}-db-${each.value.region_id}"
+  database_version    = "POSTGRES_15"
+  region              = each.value.location
   deletion_protection = true
 
   instance_type = "CLOUD_SQL_INSTANCE"
@@ -31,7 +31,7 @@ resource "google_sql_database_instance" "federation_databases" {
     # Network configuration
     ip_configuration {
       require_ssl = true
-      
+
       # Allow all regional access (restrict further per use case)
       authorized_networks {
         name  = "office-network"
@@ -78,8 +78,8 @@ resource "google_sql_database_instance" "federation_databases" {
     }
 
     maintenance_window {
-      day          = 0  # Sunday
-      hour         = 3  # 3 AM UTC
+      day          = 0 # Sunday
+      hour         = 3 # 3 AM UTC
       update_track = "stable"
     }
 
@@ -168,7 +168,7 @@ resource "google_secret_manager_secret" "replication_credentials" {
 resource "google_secret_manager_secret_version" "replication_credentials" {
   for_each = { for r in local.regions : r.region_id => r }
 
-  secret      = google_secret_manager_secret.replication_credentials[each.key].id
+  secret = google_secret_manager_secret.replication_credentials[each.key].id
   secret_data = jsonencode({
     username = google_sql_user.replication_user[each.key].name
     password = random_password.replication_password.result
@@ -195,7 +195,7 @@ resource "google_secret_manager_secret" "app_credentials" {
 resource "google_secret_manager_secret_version" "app_credentials" {
   for_each = { for r in local.regions : r.region_id => r }
 
-  secret      = google_secret_manager_secret.app_credentials[each.key].id
+  secret = google_secret_manager_secret.app_credentials[each.key].id
   secret_data = jsonencode({
     username = google_sql_user.app_user[each.key].name
     password = random_password.app_password.result
@@ -216,11 +216,11 @@ output "database_instances" {
   value = {
     for region, instance in google_sql_database_instance.federation_databases :
     region => {
-      name              = instance.name
-      connection_name   = instance.connection_name
-      private_ip        = instance.private_ip_address
-      public_ip         = instance.public_ip_address
-      database_version  = instance.database_version
+      name             = instance.name
+      connection_name  = instance.connection_name
+      private_ip       = instance.private_ip_address
+      public_ip        = instance.public_ip_address
+      database_version = instance.database_version
     }
   }
 

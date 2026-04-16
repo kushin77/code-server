@@ -105,10 +105,10 @@ resource "docker_image" "pglogical_replicator" {
 }
 
 resource "docker_container" "pglogical_primary" {
-  count         = var.phase_17_enabled && var.pglogical_enabled ? 1 : 0
-  name          = "pglogical-replicator-primary"
-  image         = docker_image.pglogical_replicator[0].image_id
-  network_mode  = "host"
+  count        = var.phase_17_enabled && var.pglogical_enabled ? 1 : 0
+  name         = "pglogical-replicator-primary"
+  image        = docker_image.pglogical_replicator[0].image_id
+  network_mode = "host"
 
   env = [
     "POSTGRES_DB=code_server_db",
@@ -153,10 +153,10 @@ resource "docker_container" "pglogical_primary" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "pglogical_replica" {
-  count         = var.phase_17_enabled && var.pglogical_enabled ? length(var.replica_regions) : 0
-  name          = "pglogical-replica-${var.replica_regions[count.index]}"
-  image         = docker_image.pglogical_replicator[0].image_id
-  network_mode  = "host"
+  count        = var.phase_17_enabled && var.pglogical_enabled ? length(var.replica_regions) : 0
+  name         = "pglogical-replica-${var.replica_regions[count.index]}"
+  image        = docker_image.pglogical_replicator[0].image_id
+  network_mode = "host"
 
   env = [
     "POSTGRES_DB=code_server_db_replica",
@@ -201,10 +201,10 @@ resource "docker_container" "pglogical_replica" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "route53_agent" {
-  count         = var.phase_17_enabled && var.global_load_balancer_enabled ? 1 : 0
-  name          = "route53-health-monitor"
-  image         = "python:3.11-slim"
-  network_mode  = "host"
+  count        = var.phase_17_enabled && var.global_load_balancer_enabled ? 1 : 0
+  name         = "route53-health-monitor"
+  image        = "python:3.11-slim"
+  network_mode = "host"
 
   command = [
     "python", "-c",
@@ -236,10 +236,10 @@ resource "docker_container" "route53_agent" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "dr_failover_controller" {
-  count         = var.phase_17_enabled ? 1 : 0
-  name          = "dr-failover-controller"
-  image         = "golang:1.21-alpine"
-  network_mode  = "host"
+  count        = var.phase_17_enabled ? 1 : 0
+  name         = "dr-failover-controller"
+  image        = "golang:1.21-alpine"
+  network_mode = "host"
 
   command = [
     "sh", "-c",
@@ -275,14 +275,14 @@ resource "docker_container" "dr_failover_controller" {
 variable "replication_alerting_config" {
   description = "Replication alerting thresholds"
   type = object({
-    lag_alert_ms          = number
+    lag_alert_ms                 = number
     slot_retention_alert_percent = number
-    failover_alert_enabled = bool
+    failover_alert_enabled       = bool
   })
   default = {
-    lag_alert_ms          = 5000
+    lag_alert_ms                 = 5000
     slot_retention_alert_percent = 80
-    failover_alert_enabled = true
+    failover_alert_enabled       = true
   }
 }
 

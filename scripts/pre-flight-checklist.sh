@@ -189,7 +189,7 @@ echo "📋 PHASE 7: NETWORK & SSH CONNECTIVITY"
 echo "═════════════════════════════════════════════════════════════"
 echo ""
 
-DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST}}"
+DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 
 # Test SSH connectivity

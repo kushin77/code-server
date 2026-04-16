@@ -372,7 +372,7 @@ services:
       - '--log.level=warn'
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./config/prometheus/rules:/etc/prometheus/prometheus/rules:ro
+      - ./config/prometheus/rules:/etc/prometheus/rules:ro
       - ./config/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus-data:/prometheus
     healthcheck:

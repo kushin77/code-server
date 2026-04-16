@@ -11,7 +11,7 @@
 #   make render-caddy ENV=onprem    → Caddyfile.onprem  (on-prem: HTTP only)
 #   make render-caddy ENV=simple    → Caddyfile.simple  (simple: minimal dev)
 #
-# Environment variables (set in .env. or via make):
+# Environment variables (set in .env.${ENV} or via make):
 #   CADDY_MODE            "production" | "onprem" | "simple" (controls TLS & routes)
 #   CADDY_DOMAIN          e.g. "ide.kushnir.cloud" or ":80"  (domain or port)
 #   CADDY_TLS_MODE        "acme" | "internal" | "none"      (TLS strategy)
@@ -69,7 +69,7 @@
 }
 
 # ─── Main Domain (code-server IDE) ──────────────────────────────────────────
-:80 {
+${DOMAIN} {
 	
 
 	encode gzip

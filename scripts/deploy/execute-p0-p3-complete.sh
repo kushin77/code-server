@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ################################################################################
 # P0-P3 Complete Execution Orchestrator
 # Master script to execute all phases in sequence
@@ -59,7 +59,7 @@ log "Validating prerequisites..."
 
 # Check if running from correct directory
 if [ ! -f "docker-compose.yml" ]; then
-    error "docker-compose.yml not found. Run from c:\\code-server-enterprise directory"
+    error "docker-compose.yml not found. Run from the repository root directory"
 fi
 log "✓ docker-compose.yml found"
 

@@ -151,7 +151,7 @@ EOF
 )
     
     if [[ "$DRY_RUN" == "true" ]]; then
-        log "[DRY RUN] Would apply: $(echo $payload | jq -c .)"
+        log "[DRY RUN] Would apply: $(echo "$payload" | jq -c .)"
         return 0
     fi
     

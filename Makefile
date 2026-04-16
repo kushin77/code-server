@@ -924,12 +924,15 @@ index:
 	 TOTAL=$$(find scripts -maxdepth 1 -name "*.sh" | wc -l); \
 	 echo "  Registered in manifest: $$REGISTERED"; \
 	 echo "  Total .sh files:        $$TOTAL"; \
+	 if [ "$$REGISTERED" -eq "$$TOTAL" ]; then \
+	   echo "  ✅ All scripts registered!"; \
+	 else \
+	   echo "  ⚠️  Missing: $$(($$TOTAL - $$REGISTERED)) scripts"; \
+	 fi; \
 	 echo ""
 	@echo "  Unregistered scripts (must be added to MANIFEST.toml or archived):"
-	@while IFS= read -r f; do \
-		name=$$(basename "$$f"); \
-		grep -q "file.*=.*\"$$name\"" scripts/MANIFEST.toml 2>/dev/null || echo "  ✗ $$name"; \
-	done < <(find scripts -maxdepth 1 -name "*.sh" | sort)
+	@find scripts -maxdepth 1 -name "*.sh" -print0 | \
+	 xargs -0 -I {} bash -c 'name=$$(basename "{}"); grep -q "file.*=.*\"$$name\"" scripts/MANIFEST.toml 2>/dev/null || echo "    ✗ $$name"'
 
 # Generate initial MANIFEST.toml from existing scripts (run once)
 manifest-init:

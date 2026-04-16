@@ -378,63 +378,10 @@ resource "null_resource" "make_deploy_executable" {
 output "deployment_summary" {
   description = "Summary of IaC deployment configuration"
   value = {
-    service_name          = local.service_name
-    environment           = local.environment
-    pinned_versions       = local.versions
-    network               = local.network
-    storage_volumes       = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
-  }
-}
-
-# ════════════════════════════════════════════════════════════════════════════
-# MODULE 8: VRRP/Keepalived Virtual IP Failover (#362 Phase 2)
-# 
-# Manages automatic VIP failover between primary (192.168.168.31) and
-# replica (192.168.168.42) using Keepalived/VRRP. When primary becomes
-# unhealthy (code-server, PostgreSQL, or Redis down), replica automatically
-# claims the VIP in <2 seconds with zero downtime.
-#
-# Enable/Disable: Set var.enable_keepalived in terraform.tfvars
-# ════════════════════════════════════════════════════════════════════════════
-
-module "keepalived" {
-  count  = var.enable_keepalived ? 1 : 0
-  source = "./modules/keepalived"
-
-  # Production topology (single source of truth)
-  inventory = var.inventory
-
-  # Deployment configuration
-  enable_on_primary    = var.deployment_host == var.inventory.hosts.primary.ip
-  enable_on_replica    = var.deployment_host == var.inventory.hosts.primary.ip  # Deploy both from primary
-  keepalived_version   = "2.2.8"
-
-  # Health check tuning
-  health_check_interval = 5
-  health_check_retries  = 2
-  health_check_timeout  = 2
-
-  # VRRP tuning
-  vrrp_interval        = 1
-  vrrp_router_id       = 51
-  failover_sla_seconds = 2
-}
-
-output "keepalived_status" {
-  description = "Keepalived VRRP failover configuration and status"
-  value = var.enable_keepalived ? {
-    enabled             = true
-    vip                 = var.inventory.vip.ip
-    vip_fqdn            = var.inventory.vip.fqdn
-    primary_host        = var.inventory.hosts.primary.ip
-    replica_host        = var.inventory.hosts.replica.ip
-    failover_sla_seconds = 2
-    health_checks       = ["Prometheus:9090", "PostgreSQL:5432", "Code-server:8080"]
-    vrrp_router_id      = 51
-    primary_container   = try(module.keepalived[0].keepalived_primary_container_id, "")
-    replica_container   = try(module.keepalived[0].keepalived_replica_container_id, "")
-  } : {
-    enabled = false
-    reason  = "Disabled in terraform.tfvars (single-host on-prem mode)"
+    service_name    = local.service_name
+    environment     = local.environment
+    pinned_versions = local.versions
+    network         = local.network
+    storage_volumes = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
   }
 }

@@ -57,7 +57,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@5ecb98a3c6b747a43f2a6a6e4b37d24b3718c495  # v3.1.4
         with:
           files: ./coverage/coverage-final.json
           flags: unittests
@@ -66,7 +66,7 @@ jobs:
 
       - name: Publish test results
         if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@ec810a7d82f5e73415bf2d3b3cff7b9672e1fa0d  # v2.16.0
         with:
           files: test-results.xml
           check_name: Test Results (${{ matrix.node-version }})

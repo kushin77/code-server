@@ -26,9 +26,8 @@ output "vrrp_router_id" {
 }
 
 output "failover_sla_seconds" {
-  description = "Expected VIP failover time (from primary to replica)"
-  value       = var.failover_sla_seconds
   description = "SLA: <2 seconds for transparent failover"
+  value       = var.failover_sla_seconds
 }
 
 output "primary_config_file" {

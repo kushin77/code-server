@@ -81,14 +81,14 @@ print_debug() {
 # Assert that command succeeds
 assert_success() {
     if ! "$@"; then
-        log_fatal "Assertion failed: expected command to succeed: $@"
+        log_fatal "Assertion failed: expected command to succeed: $*"
     fi
 }
 
 # Assert that command fails
 assert_failure() {
     if "$@"; then
-        log_fatal "Assertion failed: expected command to fail: $@"
+        log_fatal "Assertion failed: expected command to fail: $*"
     fi
 }
 

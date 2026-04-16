@@ -1,86 +1,66 @@
-# Caddyfile — canonical config, env-var driven
-# Ref: #373 — consolidated from Caddyfile.{base,new,production,tpl} variants
-#
-# Required environment variables (set in .env or docker-compose.yml):
-#   DOMAIN        — public domain, e.g. ide.kushnir.cloud
-#   ACME_EMAIL    — Let's Encrypt notification address
-#   CLOUDFLARE_API_TOKEN — DNS-01 challenge token
-#
-# Validation: caddy validate --config Caddyfile
+# Caddyfile — production reverse proxy & TLS termination
+# On-prem VSCode server at 192.168.168.31 behind Cloudflare Tunnel or local network
+# Ref: ADR-001 Cloudflare Tunnel Architecture
+# Validation: caddy validate --config Caddyfile --adapter caddyfile
 
 {
-    # TLS: opt-in per-site below
+    # Disable auto-HTTPS for on-prem (no external ACME needed)
     auto_https off
 
-    # ACME
-    email {$ACME_EMAIL:security@example.com}
-
-    # Global logging
-    log default {
-        format json
-        output file /var/log/caddy/caddy.log {
+    # Global logging (JSON format for log aggregation)
+    log {
+        output file /var/log/caddy/access.log {
             roll_size  100mb
-            roll_keep  10
-            roll_keep_for 720h
+            roll_keep  14
+            roll_keep_for 336h
         }
+        format json
         level info
     }
 
-    # Prometheus admin API
-    servers {
-        metrics
-    }
+    # Prometheus metrics exposed on admin API
+    metrics
 }
 
-# ─────────────────────────────────────────────
-# Production site ({$DOMAIN})
-# ─────────────────────────────────────────────
-{$DOMAIN:ide.kushnir.cloud} {
+# ═════════════════════════════════════════════════════════════════════════════
+# Production Site: localhost (on-prem) or domain via Cloudflare Tunnel
+# ═════════════════════════════════════════════════════════════════════════════
+:80 {
 
-    # TLS via Cloudflare DNS-01 challenge (works behind NAT / no port-80 needed)
-    tls {
-        issuer acme {
-            email {$ACME_EMAIL:security@example.com}
-            challenges dns cloudflare
-            dns cloudflare {$CLOUDFLARE_API_TOKEN}
-        }
-    }
-
-    # ── Security headers ──────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # Security Headers (no TLS needed on-prem behind Cloudflare Tunnel)
+    # ─────────────────────────────────────────────────────────────────────────
     header {
-        Strict-Transport-Security        "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options           "nosniff"
         X-Frame-Options                  "SAMEORIGIN"
         X-XSS-Protection                 "1; mode=block"
         Referrer-Policy                  "strict-origin-when-cross-origin"
         Permissions-Policy               "camera=(), microphone=(), geolocation=()"
-        # CSP: allow inline scripts/styles required by code-server, plus WebSocket
+        # CSP for code-server + WebSocket + inline scripts (required by IDE)
         Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
-        # Never expose Caddy version
+        # Remove server version headers
         -Server
         -X-Powered-By
     }
 
-    # ── Compression ────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # Compression (gzip for JSON/text, skip images/video)
+    # ─────────────────────────────────────────────────────────────────────────
     encode gzip
 
-    # ── Health check (unauthenticated) ─────────────────────────────────
-    @health path /health
-    respond @health "OK\n" 200
+    # ─────────────────────────────────────────────────────────────────────────
+    # Health check endpoint (unauthenticated for k8s/container probes)
+    # ─────────────────────────────────────────────────────────────────────────
+    @health {
+        path /health /healthz /ping
+    }
+    respond @health "OK" 200
 
-    # ── OAuth2 callback passthrough ────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # OAuth2 Proxy: auth redirects + callback handling
+    # ─────────────────────────────────────────────────────────────────────────
     @oauth2 path /oauth2/*
     reverse_proxy @oauth2 oauth2-proxy:4180 {
-        header_up Host              {upstream_hostport}
-        header_up X-Real-IP         {remote_host}
-        header_up X-Forwarded-For   {remote_host}
-        header_up X-Forwarded-Proto https
-        header_up X-Forwarded-Host  {host}
-        header_up X-Original-URI    {uri}
-        # W3C Trace Context propagation (#377 Telemetry spine)
-        header_up X-Request-ID      {http.request.uuid}
-        header_up Traceparent       {http.request.header.Traceparent}
-        header_up Tracestate        {http.request.header.Tracestate}
         transport http {
             dial_timeout  10s
             read_timeout  30s
@@ -88,51 +68,25 @@
         }
     }
 
-    # ── Main app: all traffic → oauth2-proxy → code-server ────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # Main Upstream: code-server via oauth2-proxy (authenticated)
+    # WebSocket for terminal/extensions
+    # ─────────────────────────────────────────────────────────────────────────
     reverse_proxy oauth2-proxy:4180 {
-        header_up Host              {upstream_hostport}
-        header_up X-Real-IP         {remote_host}
-        header_up X-Forwarded-For   {remote_host}
-        header_up X-Forwarded-Proto https
-        header_up X-Forwarded-Host  {host}
-        header_up X-Request-ID      {http.request.uuid}
-        # W3C Trace Context propagation (#377 Telemetry spine)
-        header_up Traceparent       {http.request.header.Traceparent}
-        header_up Tracestate        {http.request.header.Tracestate}
         transport http {
-            # WebSocket passthrough for code-server terminal / extensions
-            dial_timeout      10s
-            read_timeout      0   # unlimited for long-running WS connections
-            write_timeout     0
-            keep_alive_timeout 90s
-            max_conns_per_host 100
+            # WebSocket passthrough for code-server terminal + extensions
+            dial_timeout  10s
+            read_timeout  0
+            write_timeout 0
         }
     }
 
-    # ── Structured access log ──────────────────────────────────────────
-    log {
-        output file /var/log/caddy/{$DOMAIN:ide.kushnir.cloud}.log {
-            roll_size 100mb
-            roll_keep 14
-            roll_keep_for 336h
-        }
-        format json {
-            request_id  "request_id"
-            time_format "iso8601"
-        }
-        level  info
-    }
-
-    # ── Error handling (no internal details exposed) ───────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # Error Handling (don't expose internal details)
+    # ─────────────────────────────────────────────────────────────────────────
     handle_errors {
         header Content-Type "application/json"
-        respond `{"error":"request failed","code":{http.error.status_code}}` {http.error.status_code}
+        respond `{"error":"request failed","status":{http.error.status_code}}` {http.error.status_code}
     }
 }
 
-# ─────────────────────────────────────────────
-# Redirect bare HTTP → HTTPS
-# ─────────────────────────────────────────────
-http://{$DOMAIN:ide.kushnir.cloud} {
-    redir https://{$DOMAIN:ide.kushnir.cloud}{uri} permanent
-}

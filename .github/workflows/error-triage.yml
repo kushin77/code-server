@@ -1,0 +1,286 @@
+name: Error Triage — Automated Issue Creation & Root Cause Analysis
+
+on:
+  # Run every 5 minutes
+  schedule:
+    - cron: '*/5 * * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no issues created)'
+        required: false
+        default: 'true'
+
+jobs:
+  triage-errors:
+    name: Error Pattern Detection & Issue Triage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    permissions:
+      issues: write
+      contents: read
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 1
+      
+      - name: Set up environment
+        run: |
+          echo "::group::Environment Setup"
+          
+          # Verify required tools
+          for tool in curl jq sqlite3; do
+            if ! command -v "${tool}" &> /dev/null; then
+              echo "ERROR: ${tool} not found"
+              exit 1
+            fi
+          done
+          
+          # Load configuration
+          export TRIAGE_CONFIG="${GITHUB_WORKSPACE}/config/error-triage-config.yml"
+          export LOKI_ENDPOINT="${{ secrets.LOKI_ENDPOINT || 'http://loki:3100' }}"
+          export PROMETHEUS_ENDPOINT="${{ secrets.PROMETHEUS_ENDPOINT || 'http://prometheus:9090' }}"
+          export GITHUB_DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+          export GITHUB_REPO="${{ github.repository }}"
+          export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          
+          echo "DRY_RUN: ${GITHUB_DRY_RUN}"
+          echo "REPO: ${GITHUB_REPO}"
+          echo "::endgroup::"
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+      
+      - name: Initialize triage database
+        run: |
+          echo "::group::Database Initialization"
+          
+          # Create var directory
+          mkdir -p var logs
+          
+          # Initialize SQLite database
+          sqlite3 var/error-triage.db <<'EOF'
+          CREATE TABLE IF NOT EXISTS error_patterns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pattern_hash TEXT UNIQUE NOT NULL,
+            error_message TEXT NOT NULL,
+            first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            occurrence_count INTEGER DEFAULT 1,
+            github_issue_number INTEGER,
+            status TEXT DEFAULT 'new',
+            severity TEXT DEFAULT 'UNKNOWN'
+          );
+          
+          CREATE TABLE IF NOT EXISTS error_occurrences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pattern_id INTEGER NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source_job TEXT,
+            source_pod TEXT,
+            log_level TEXT,
+            trace_context TEXT,
+            FOREIGN KEY (pattern_id) REFERENCES error_patterns(id)
+          );
+          
+          CREATE INDEX IF NOT EXISTS idx_pattern_hash ON error_patterns(pattern_hash);
+          CREATE INDEX IF NOT EXISTS idx_last_seen ON error_patterns(last_seen DESC);
+          CREATE INDEX IF NOT EXISTS idx_status ON error_patterns(status);
+          CREATE INDEX IF NOT EXISTS idx_occurrences_pattern ON error_occurrences(pattern_id);
+          EOF
+          
+          echo "Database initialized: $(stat -c%s var/error-triage.db 2>/dev/null || echo '~') bytes"
+          echo "::endgroup::"
+      
+      - name: Query Loki for error patterns
+        id: loki-query
+        run: |
+          echo "::group::Loki Error Pattern Detection"
+          
+          LOKI_ENDPOINT="${{ secrets.LOKI_ENDPOINT || 'http://localhost:3100' }}"
+          
+          # Query error-level logs from all jobs
+          ERROR_QUERY='{level=~"ERROR|FATAL"}'
+          
+          # Make request (with error handling for unreachable service)
+          RESPONSE=$(curl -s -m 10 \
+            "${LOKI_ENDPOINT}/loki/api/v1/query_range" \
+            --data-urlencode "query=${ERROR_QUERY}" \
+            --data-urlencode "start=$(($(date +%s) - 300))000000000" \
+            --data-urlencode "end=$(date +%s)000000000" \
+            --data-urlencode "limit=1000" \
+            2>/dev/null || echo '{"status":"error","data":{"result":[]}}')
+          
+          # Extract patterns and counts
+          PATTERNS=$(echo "${RESPONSE}" | jq -r '.data.result[] | .values[] | .[1]' 2>/dev/null | \
+            grep -oE '(ERROR|FATAL).*$' | sort | uniq -c | sort -rn | head -20 || echo "")
+          
+          if [[ -n "${PATTERNS}" ]]; then
+            echo "patterns<<EOF" >> $GITHUB_OUTPUT
+            echo "${PATTERNS}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "Found $(echo "${PATTERNS}" | wc -l) error patterns"
+          else
+            echo "No significant error patterns detected"
+            echo "patterns=" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "::endgroup::"
+      
+      - name: Query Prometheus for metrics
+        id: prometheus-query
+        run: |
+          echo "::group::Prometheus Metrics Correlation"
+          
+          PROMETHEUS_ENDPOINT="${{ secrets.PROMETHEUS_ENDPOINT || 'http://localhost:9090' }}"
+          
+          # Query service availability
+          RESPONSE=$(curl -s -m 10 \
+            "${PROMETHEUS_ENDPOINT}/api/v1/query" \
+            --data-urlencode 'query=up{job!="pushgateway"}' \
+            2>/dev/null || echo '{}')
+          
+          # Check for down services
+          DOWN_SERVICES=$(echo "${RESPONSE}" | jq -r '.data.result[] | select(.value[1]=="0") | .metric.job' 2>/dev/null || echo "")
+          
+          if [[ -n "${DOWN_SERVICES}" ]]; then
+            echo "down_services<<EOF" >> $GITHUB_OUTPUT
+            echo "${DOWN_SERVICES}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "down_services=" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "::endgroup::"
+      
+      - name: Detect root cause patterns
+        id: rca
+        run: |
+          echo "::group::Root Cause Analysis"
+          
+          # Correlate errors with metrics
+          PATTERNS="${{ steps.loki-query.outputs.patterns }}"
+          DOWN_SERVICES="${{ steps.prometheus-query.outputs.down_services }}"
+          
+          if [[ -n "${PATTERNS}" ]] && [[ -n "${DOWN_SERVICES}" ]]; then
+            echo "Found correlation: Service downtime coincides with error patterns"
+            echo "has_rca=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_rca=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "::endgroup::"
+      
+      - name: Create GitHub issues for critical errors
+        id: issue-creation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          echo "::group::GitHub Issue Creation"
+          
+          PATTERNS="${{ steps.loki-query.outputs.patterns }}"
+          ISSUES_CREATED=0
+          
+          # Process each error pattern
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            
+            COUNT=$(echo "$line" | awk '{print $1}')
+            ERROR_MSG=$(echo "$line" | awk '{$1=""; print substr($0,2)}')
+            
+            # Only create issue if error occurs 3+ times
+            if [[ ${COUNT:-0} -ge 3 ]]; then
+              TITLE="[AUTO-TRIAGE] ${ERROR_MSG:0:100}"
+              BODY=$(cat <<EOF
+          ## Automated Error Triage Report
+          
+          **Severity**: P1 (Automated Detection)
+          **Detected**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          **Occurrence Count**: ${COUNT}
+          
+          ### Error Pattern
+          \`\`\`
+          ${ERROR_MSG}
+          \`\`\`
+          
+          ### Detection Metadata
+          - **System**: Automated Error Triage Engine (GitHub Actions)
+          - **Source**: Loki Log Aggregation
+          - **Threshold**: Triggered at ${COUNT}+ occurrences
+          - **Time Range**: Last 5 minutes
+          
+          ### Next Steps
+          1. Investigate error pattern and identify root cause
+          2. Implement fix in appropriate component
+          3. Add regression test to prevent recurrence
+          4. Link PR to this issue and mark as resolved
+          
+          ---
+          **Auto-generated by Error Triage Engine** | [Configuration](./config/error-triage-config.yml)
+          EOF
+              )
+              
+              if [[ "${DRY_RUN}" == "true" ]]; then
+                echo "[DRY-RUN] Would create issue: ${TITLE}"
+                ((ISSUES_CREATED++))
+              else
+                # Check if similar issue already exists
+                EXISTING=$(gh issue list --label error-triage --state open --search "${ERROR_MSG:0:50}" --json title 2>/dev/null || echo "[]")
+                
+                if [[ $(echo "$EXISTING" | jq 'length') -eq 0 ]]; then
+                  gh issue create \
+                    --title "${TITLE}" \
+                    --body "${BODY}" \
+                    --label "error-triage,P1,automated" \
+                    --assignee "kushin77" \
+                    >/dev/null 2>&1 && ((ISSUES_CREATED++))
+                  echo "Created issue for: ${ERROR_MSG:0:50}"
+                else
+                  echo "Issue already exists for: ${ERROR_MSG:0:50}"
+                fi
+              fi
+            fi
+          done <<< "${PATTERNS}"
+          
+          echo "issues_created=${ISSUES_CREATED}" >> $GITHUB_OUTPUT
+          echo "Created ${ISSUES_CREATED} triage issues"
+          echo "::endgroup::"
+      
+      - name: Update issue metrics
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "::group::Metrics Update"
+          
+          # Log triage results
+          echo "Triage Results:"
+          echo "  - Issues Created: ${{ steps.issue-creation.outputs.issues_created || 0 }}"
+          echo "  - RCA Performed: ${{ steps.rca.outputs.has_rca }}"
+          echo "  - Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          
+          echo "::endgroup::"
+      
+      - name: Post summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          ## Error Triage Results
+          
+          | Metric | Value |
+          |--------|-------|
+          | Pattern Detection | ${{ steps.loki-query.outputs.patterns != '' && 'Patterns found' || 'No patterns' }} |
+          | Service Status | ${{ steps.prometheus-query.outputs.down_services != '' && 'Services down' || 'All healthy' }} |
+          | Root Cause Analysis | ${{ steps.rca.outputs.has_rca || 'No correlation' }} |
+          | Issues Created | ${{ steps.issue-creation.outputs.issues_created || 0 }} |
+          | Dry Run Mode | ${{ github.event.inputs.dry_run || 'false' }} |
+          
+          **Execution Time**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          
+          [View Error Triage Configuration](./config/error-triage-config.yml)
+          EOF

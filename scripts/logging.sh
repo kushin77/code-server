@@ -53,10 +53,9 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 
 log() {
-    <# Log message with timestamp and level
-    Usage: log "INFO" "Message text"
-           log "ERROR" "Error message"
-    #>
+    # Log message with timestamp and level
+    # Usage: log "INFO" "Message text"
+    #        log "ERROR" "Error message"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     local level="${1:-INFO}"

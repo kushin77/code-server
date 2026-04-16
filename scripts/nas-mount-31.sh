@@ -1,7 +1,7 @@
 #!/bin/bash
 # File:    nas-mount-31.sh
 # Owner:   Platform Engineering
-# Purpose: NAS mount automation and validation for 192.168.168.31
+# Purpose: NAS mount automation and validation for ${DEPLOY_HOST}
 # Status:  ACTIVE
 # Usage:   ./nas-mount-31.sh [mount|validate|backup|troubleshoot|all] [--dry-run]
 

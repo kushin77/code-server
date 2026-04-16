@@ -11,7 +11,6 @@ variable "code_server_password" {
   description = "Code-Server authentication password (immutable after deployment; change via docker exec)"
   type        = string
   sensitive   = true
-  default     = "change-me-in-production"
 
   validation {
     condition     = length(var.code_server_password) >= 8
@@ -54,7 +53,6 @@ variable "oauth2_proxy_cookie_secret" {
   description = "Random cookie encryption secret for oauth2-proxy (generate: openssl rand -base64 32)"
   type        = string
   sensitive   = true
-  default     = "KPm7K8L9vN6q3W2zM5xJ4pL6K9mN8qW3zR5xY7tJ9pM2vO4wQ6sT8uV0xW2zY4aB"
 
   validation {
     condition     = length(var.oauth2_proxy_cookie_secret) > 0
@@ -191,18 +189,18 @@ variable "inventory" {
     })
     hosts = object({
       primary = object({
-        ip        = string
-        fqdn      = string
-        ssh_user  = string
-        ssh_port  = number
-        roles     = list(string)
+        ip       = string
+        fqdn     = string
+        ssh_user = string
+        ssh_port = number
+        roles    = list(string)
       })
       replica = object({
-        ip        = string
-        fqdn      = string
-        ssh_user  = string
-        ssh_port  = number
-        roles     = list(string)
+        ip       = string
+        fqdn     = string
+        ssh_user = string
+        ssh_port = number
+        roles    = list(string)
       })
     })
   })

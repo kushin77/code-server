@@ -1,0 +1,48 @@
+# Dockerfile.token-microservice
+# P1 #388 Phase 2: Token Microservice Container Image
+
+FROM python:3.11-slim
+
+# Labels
+LABEL maintainer="kushnir77"
+LABEL description="JWT Token Microservice for service-to-service authentication"
+LABEL version="1.0.0"
+
+# Security: run as non-root
+RUN useradd -m -u 1000 tokenservice
+
+# Working directory
+WORKDIR /app
+
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY services/token-microservice/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application
+COPY services/token-microservice/app.py .
+
+# Create directory for keys (must be writable by tokenservice user)
+RUN mkdir -p /etc/token-microservice && \
+    chown -R tokenservice:tokenservice /etc/token-microservice /app
+
+# Switch to non-root user
+USER tokenservice
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=10s \
+    CMD curl -f http://localhost:8888/health || exit 1
+
+# Expose ports
+EXPOSE 8888 9090
+
+# Start application
+CMD ["python", "app.py"]

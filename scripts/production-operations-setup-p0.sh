@@ -16,11 +16,11 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 
 ENVIRONMENT="production"
 MONITORING_NAMESPACE="monitoring"
-PROMETHEUS_HOST="192.168.168.31"
+PROMETHEUS_HOST="${DEPLOY_HOST}"
 PROMETHEUS_PORT="9090"
-GRAFANA_HOST="192.168.168.31"
+GRAFANA_HOST="${DEPLOY_HOST}"
 GRAFANA_PORT="3000"
-LOKI_HOST="192.168.168.31"
+LOKI_HOST="${DEPLOY_HOST}"
 LOKI_PORT="3100"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -221,17 +221,17 @@ create_incident_runbooks() {
 ### 1. Verify the Alert
 ```bash
 # Check Prometheus query
-http://192.168.168.31:9090/graph
+http://${DEPLOY_HOST}:9090/graph
 Query: histogram_quantile(0.99, rate(http_request_duration_seconds[5m]))
 
 # Check Grafana dashboard
-http://192.168.168.31:3000/SLO-Dashboard
+http://${DEPLOY_HOST}:3000/SLO-Dashboard
 ```
 
 ### 2. Check Infrastructure Health
 ```bash
 # SSH to prod host
-ssh akushnir@192.168.168.31
+ssh akushnir@${DEPLOY_HOST}
 
 # Container status
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
@@ -363,7 +363,7 @@ EOF
 capture_baseline_metrics() {
     echo "Capturing baseline metrics..."
     
-    ssh -o StrictHostKeyChecking=no akushnir@192.168.168.31 << 'SSHEOF'
+    ssh -o StrictHostKeyChecking=no akushnir@${DEPLOY_HOST} << 'SSHEOF'
     
     echo "=== BASELINE METRICS CAPTURE ===" > /tmp/baseline-metrics.txt
     echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S UTC')" >> /tmp/baseline-metrics.txt

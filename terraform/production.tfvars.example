@@ -1,0 +1,111 @@
+# Production Terraform Variables
+# P2 #418 Phase 3: Production deployment configuration
+# Copy to terraform/on-prem.tfvars and customize for your environment
+
+################################
+# CLOUDFLARE & DNS
+################################
+cloudflare_api_token    = "YOUR_CLOUDFLARE_API_TOKEN"
+cloudflare_account_id   = "YOUR_CLOUDFLARE_ACCOUNT_ID"
+cloudflare_zone_id      = "YOUR_CLOUDFLARE_ZONE_ID"
+godaddy_api_key         = "YOUR_GODADDY_API_KEY"
+godaddy_api_secret      = "YOUR_GODADDY_API_SECRET"
+
+apex_domain             = "kushnir.cloud"
+tunnel_name             = "code-server-on-prem"
+primary_ip              = "192.168.168.31"
+secondary_ip            = "192.168.168.42"
+dns_ttl                 = 300
+dns_health_check_interval = 30
+dns_failover_threshold  = 3
+
+################################
+# MONITORING
+################################
+monitoring_namespace         = "monitoring"
+prometheus_version           = "v2.48.0"
+prometheus_storage_size      = "50Gi"
+prometheus_retention_days    = 30
+prometheus_scrape_interval   = 15
+
+grafana_version              = "10.2.3"
+grafana_admin_password       = "CHANGE_ME_SECURE_PASSWORD"
+grafana_storage_size         = "10Gi"
+
+alertmanager_version         = "v0.26.0"
+alertmanager_slack_webhook   = ""  # Optional: https://hooks.slack.com/services/YOUR/WEBHOOK
+alertmanager_pagerduty_key   = ""  # Optional
+
+slo_error_budget_percentage  = 0.1
+
+################################
+# NETWORKING
+################################
+networking_namespace                  = "networking"
+kong_version                          = "3.4.0"
+kong_database_password                = "CHANGE_ME_SECURE_PASSWORD"
+kong_storage_size                     = "20Gi"
+
+coredns_version                       = "1.10.1"
+coredns_config                        = "."
+
+load_balancer_algorithm               = "round_robin"
+load_balancer_health_check_interval   = 10
+service_upstream_timeout              = 60
+rate_limiting_requests_per_second     = 1000
+
+################################
+# SECURITY
+################################
+security_namespace                    = "security"
+falco_version                         = "0.36.0"
+opa_version                           = "0.55.0"
+vault_version                         = "1.15.0"
+vault_storage_size                    = "10Gi"
+vault_unseal_keys                     = 5
+vault_key_threshold                   = 3
+
+os_hardening_level                    = "standard"
+selinux_enabled                       = true
+auditd_enabled                        = true
+file_integrity_scan_interval          = 24
+vulnerability_scan_schedule           = "0 2 * * *"
+
+################################
+# FAILOVER / HA
+################################
+failover_namespace                    = "failover"
+patroni_version                       = "3.0.0"
+postgres_version                      = "15.3"
+postgres_storage_size                 = "100Gi"
+etcd_version                          = "3.5.9"
+
+backup_retention_days                 = 30
+backup_schedule                       = "0 2 * * *"
+rpo_seconds                           = 300
+rto_seconds                           = 60
+replication_slots                     = 3
+wal_level                             = "replica"
+max_wal_senders                       = 10
+
+s3_backup_bucket                      = ""  # Optional: s3-bucket-name
+s3_backup_region                      = "us-east-1"
+
+################################
+# KUBERNETES / DOCKER
+################################
+# For local kubeconfig-based deployment:
+kubernetes_host                       = ""  # Leave empty to use kubeconfig
+kubernetes_config_path                = "~/.kube/config"
+kubernetes_client_certificate         = ""  # Leave empty for kubeconfig
+kubernetes_client_key                 = ""  # Leave empty for kubeconfig
+kubernetes_cluster_ca_certificate     = ""  # Leave empty for kubeconfig
+
+# For remote SSH-based Docker deployment:
+docker_host                           = ""  # Leave empty for local socket
+# docker_host = "ssh://akushnir@192.168.168.31"
+
+################################
+# DEPLOYMENT
+################################
+deployment_environment                = "production"

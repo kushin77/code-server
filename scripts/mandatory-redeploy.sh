@@ -6,10 +6,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 # Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 cd "$REPO_ROOT"
@@ -45,29 +45,33 @@ write_success "Stack recreated"
 
 # Step 3: Wait for services to be healthy
 write_info "Waiting for services to become healthy..."
-local elapsed=0
-while (( elapsed < HEALTH_CHECK_TIMEOUT )); do
-    local all_healthy=true
-    
-    for service in "${SERVICES[@]}"; do
-        local health
-        health=$(docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}" "$service" 2>/dev/null || echo "error")
+wait_for_health() {
+    local elapsed=0
+    while (( elapsed < HEALTH_CHECK_TIMEOUT )); do
+        local all_healthy=true
         
-        if [[ "$health" != "healthy" && "$health" != "none" ]]; then
-            all_healthy=false
-            break
+        for service in "${SERVICES[@]}"; do
+            local health
+            health=$(docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}" "$service" 2>/dev/null || echo "error")
+            
+            if [[ "$health" != "healthy" && "$health" != "none" ]]; then
+                all_healthy=false
+                break
+            fi
+        done
+        
+        if $all_healthy; then
+            write_success "All services are healthy"
+            docker compose ps
+            return 0
         fi
+        
+        sleep 5
+        elapsed=$((elapsed + 5))
     done
-    
-    if $all_healthy; then
-        write_success "All services are healthy"
-        docker compose ps
-        exit 0
-    fi
-    
-    sleep 5
-    elapsed=$((elapsed + 5))
-done
 
-write_error "Timeout waiting for services to become healthy"
-exit 1
+    write_error "Timeout waiting for services to become healthy"
+    return 1
+}
+
+wait_for_health

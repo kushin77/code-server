@@ -4,9 +4,8 @@
 
 set -e
 
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║  PRE-FLIGHT DEPLOYMENT CHECKLIST                          ║"
@@ -174,7 +173,7 @@ fi
 if [ ! -z "$DEPLOY_HOST" ]; then
     pass "DEPLOY_HOST set: $DEPLOY_HOST"
 else
-    warn "DEPLOY_HOST not set (default: 192.168.168.31)"
+    warn "DEPLOY_HOST not set (default: ${DEPLOY_HOST})"
 fi
 
 if [ ! -z "$DEPLOY_USER" ]; then
@@ -251,7 +250,7 @@ echo ""
 # Check for hardcoded secrets
 if [ -f "$PARENT_DIR/docker-compose.yml" ]; then
     if grep -q "password\|secret\|token" "$PARENT_DIR/docker-compose.yml" | \
-       grep -qv "\\${" | grep -qv "#"; then
+       grep -qv '\${' | grep -qv "#"; then
         fail "Possible hardcoded secrets in docker-compose.yml"
     else
         pass "No hardcoded secrets in docker-compose.yml"

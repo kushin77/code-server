@@ -12,7 +12,11 @@ repos:
       # Phase 2.3: Custom hook - verify scripts source common libraries
       - id: verify-scripts-source-common
         name: Verify scripts source _common libraries
-        entry: bash -c '[[ -d scripts/_common ]] && for f in scripts/{deploy,backup,validate,test}.sh; do [[ -f "$f" ]] && ! grep -q "source.*_common" "$f" && echo "ERROR: $f missing _common source"; done'
+        entry: >-
+          bash -c '[[ -d scripts/_common ]] &&
+          for f in scripts/{deploy,backup,validate,test}.sh; do
+          [[ -f "$f" ]] && ! grep -q "source.*_common" "$f" &&
+          echo "ERROR: $f missing _common source"; done'
         language: system
         files: '^scripts/(deploy|backup|validate|test)\.sh$'
         pass_filenames: false
@@ -21,7 +25,10 @@ repos:
       # Phase 2.3: Custom hook - verify metadata headers
       - id: verify-metadata-headers
         name: Verify metadata headers in critical scripts
-        entry: bash -c '[[ -f scripts/deploy.sh ]] && ! grep -q "^# File:" scripts/deploy.sh && echo "ERROR: deploy.sh missing metadata header"'
+        entry: >-
+          bash -c '[[ -f scripts/deploy.sh ]] &&
+          ! grep -q "^# File:" scripts/deploy.sh &&
+          echo "ERROR: deploy.sh missing metadata header"'
         language: system
         files: '^scripts/deploy\.sh$'
         pass_filenames: false

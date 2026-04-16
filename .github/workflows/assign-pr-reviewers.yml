@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
 
@@ -122,24 +122,27 @@ jobs:
             if (hasCode) reviewTypes.push('Application Code (TypeScript/JavaScript)');
             if (hasCi) reviewTypes.push('CI/CD (GitHub Actions)');
             if (hasArch) reviewTypes.push('Architecture (ADR/Design)');
-            
-            const body = `## Phase 2: Automated Reviewer Assignment
-            
-Detected change types: ${reviewTypes.length > 0 ? reviewTypes.join(', ') : 'Unknown'}
 
-### Assignment Rules Applied
-- **Infrastructure changes**: @kushin77 (Terraform, Caddy, Docker)
-- **Architecture changes**: @kushin77 (ADRs, design decisions)
-- **Code changes**: @kushin77 (application logic)
-- **CI/CD changes**: @kushin77 (GitHub Actions workflows)
-
-### Review Checklist
-See the PR template for complete Phase 1-4 checklist.
-
-**Phase 1**: Design Certification ← You are here (architecture review in progress)
-**Phase 2**: Code & Quality Review (awaits Phase 1 approval)
-**Phase 3**: Performance & Load Testing
-**Phase 4**: Operational Readiness`;
+            const changeTypes = reviewTypes.length > 0 ? reviewTypes.join(', ') : 'Unknown';
+            const body = [
+              '## Phase 2: Automated Reviewer Assignment',
+              '',
+              `Detected change types: ${changeTypes}`,
+              '',
+              '### Assignment Rules Applied',
+              '- **Infrastructure changes**: @kushin77 (Terraform, Caddy, Docker)',
+              '- **Architecture changes**: @kushin77 (ADRs, design decisions)',
+              '- **Code changes**: @kushin77 (application logic)',
+              '- **CI/CD changes**: @kushin77 (GitHub Actions workflows)',
+              '',
+              '### Review Checklist',
+              'See the PR template for complete Phase 1-4 checklist.',
+              '',
+              '**Phase 1**: Design Certification (architecture review in progress)',
+              '**Phase 2**: Code & Quality Review (awaits Phase 1 approval)',
+              '**Phase 3**: Performance & Load Testing',
+              '**Phase 4**: Operational Readiness'
+            ].join('\n');
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,

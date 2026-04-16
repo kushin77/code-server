@@ -1,7 +1,7 @@
 #!/bin/bash
 # File:    gpu-deploy-31.sh
 # Owner:   Platform Engineering
-# Purpose: GPU deployment and validation for 192.168.168.31
+# Purpose: GPU deployment and validation for ${DEPLOY_HOST}
 # Status:  ACTIVE
 # Usage:   ./gpu-deploy-31.sh [validate|deploy|troubleshoot|all] [--dry-run]
 
@@ -111,7 +111,7 @@ deploy_gpu_infrastructure() {
   log_info "=== GPU Infrastructure Deployment ==="
   
   # Check Terraform configuration
-  TF_DIR="${SCRIPT_DIR}/../terraform/192.168.168.31"
+  TF_DIR="${SCRIPT_DIR}/../terraform/${DEPLOY_HOST}"
   if [[ ! -d $TF_DIR ]]; then
     log_error "Terraform directory not found: $TF_DIR"
     return 1
@@ -211,7 +211,7 @@ setup_monitoring() {
   MONITOR_SCRIPT="${SCRIPT_DIR}/gpu-monitor-31.sh"
   cat > "$MONITOR_SCRIPT" << 'MONITOR_EOF'
 #!/bin/bash
-# Real-time GPU monitoring for 192.168.168.31
+# Real-time GPU monitoring for ${DEPLOY_HOST}
 
 INTERVAL=${1:-1}  # Default 1 second
 

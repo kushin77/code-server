@@ -1,0 +1,149 @@
+name: Assign PR Reviewers (Phase 2 - #404)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  assign-reviewers:
+    name: Assign reviewers based on CODEOWNERS and change type
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Identify changed files
+        id: files
+        run: |
+          # Get list of changed files from PR
+          FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files -q '.files[].path' 2>/dev/null || echo "")
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          # Detect change type
+          if echo "$FILES" | grep -qE '\.(tf|tfvars)$'; then
+            echo "has_terraform=true" >> $GITHUB_OUTPUT
+          fi
+          if echo "$FILES" | grep -qE 'Dockerfile|docker-compose|\.sh$'; then
+            echo "has_docker=true" >> $GITHUB_OUTPUT
+          fi
+          if echo "$FILES" | grep -qE '\.(ts|js|tsx|jsx)$'; then
+            echo "has_code=true" >> $GITHUB_OUTPUT
+          fi
+          if echo "$FILES" | grep -qE '^\.github/workflows'; then
+            echo "has_ci=true" >> $GITHUB_OUTPUT
+          fi
+          if echo "$FILES" | grep -qE 'ARCHITECTURE|ADR'; then
+            echo "has_architecture=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Request Infrastructure Reviews (Terraform, Caddy, Docker)
+        if: steps.files.outputs.has_terraform == 'true' || steps.files.outputs.has_docker == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              reviewers: ['kushin77'],
+              team_reviewers: ['infrastructure-team']
+            }).catch(err => {
+              if (!err.message.includes('No team named')) {
+                throw err;
+              }
+              // Team doesn't exist, just use individual reviewers
+              console.log('Team assignment skipped (team does not exist)');
+            });
+
+      - name: Request Architecture Reviews (ADR/Design changes)
+        if: steps.files.outputs.has_architecture == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              reviewers: ['kushin77']
+            });
+
+      - name: Request Code Reviews (Application code)
+        if: steps.files.outputs.has_code == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              reviewers: ['kushin77']
+            });
+
+      - name: Request CI Reviews (GitHub Actions workflows)
+        if: steps.files.outputs.has_ci == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              reviewers: ['kushin77']
+            });
+
+      - name: Post Assignment Summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const files = `${{ steps.files.outputs.changed_files }}`;
+            const hasTerraform = `${{ steps.files.outputs.has_terraform }}` === 'true';
+            const hasDocker = `${{ steps.files.outputs.has_docker }}` === 'true';
+            const hasCode = `${{ steps.files.outputs.has_code }}` === 'true';
+            const hasCi = `${{ steps.files.outputs.has_ci }}` === 'true';
+            const hasArch = `${{ steps.files.outputs.has_architecture }}` === 'true';
+            
+            let reviewTypes = [];
+            if (hasTerraform) reviewTypes.push('Infrastructure (Terraform)');
+            if (hasDocker) reviewTypes.push('Container/Deployment (Docker)');
+            if (hasCode) reviewTypes.push('Application Code (TypeScript/JavaScript)');
+            if (hasCi) reviewTypes.push('CI/CD (GitHub Actions)');
+            if (hasArch) reviewTypes.push('Architecture (ADR/Design)');
+            
+            const body = `## Phase 2: Automated Reviewer Assignment
+            
+Detected change types: ${reviewTypes.length > 0 ? reviewTypes.join(', ') : 'Unknown'}
+
+### Assignment Rules Applied
+- **Infrastructure changes**: @kushin77 (Terraform, Caddy, Docker)
+- **Architecture changes**: @kushin77 (ADRs, design decisions)
+- **Code changes**: @kushin77 (application logic)
+- **CI/CD changes**: @kushin77 (GitHub Actions workflows)
+
+### Review Checklist
+See the PR template for complete Phase 1-4 checklist.
+
+**Phase 1**: Design Certification ← You are here (architecture review in progress)
+**Phase 2**: Code & Quality Review (awaits Phase 1 approval)
+**Phase 3**: Performance & Load Testing
+**Phase 4**: Operational Readiness`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

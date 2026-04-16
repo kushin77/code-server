@@ -1,0 +1,85 @@
+name: Phase 1 Certification Gate (Design Review)
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  check-phase-1-approval:
+    name: Verify Phase 1 Design Certification
+    if: github.event.review.state == 'APPROVED'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if reviewer is authorized for Phase 1
+        id: auth
+        run: |
+          # @kushin77 is authorized for all phases
+          # @PureBlissAK is authorized for all phases
+          REVIEWER="${{ github.event.review.user.login }}"
+          
+          if [[ "$REVIEWER" == "kushin77" || "$REVIEWER" == "PureBlissAK" ]]; then
+            echo "authorized=true" >> $GITHUB_OUTPUT
+            echo "reviewer=$REVIEWER" >> $GITHUB_OUTPUT
+          else
+            echo "authorized=false" >> $GITHUB_OUTPUT
+            echo "reviewer=$REVIEWER" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Phase 1 Approval
+        if: steps.auth.outputs.authorized == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ✅ Phase 1: Design Certification — APPROVED
+              
+Approved by: @${{ steps.auth.outputs.reviewer }}
+
+### Phase 1 Requirements Met ✓
+- [x] ADR requirement satisfied
+- [x] Architecture review completed
+- [x] Failure isolation verified
+- [x] Threat modeling (STRIDE) completed
+
+### Next: Phase 2 Code Review
+This PR is now ready for **Phase 2: Code & Quality Review**
+
+Code reviewers (@code-review-team) can now proceed with:
+- [ ] Security scan validation (SAST, secrets, dependencies)
+- [ ] Code quality checks (lint, tests, coverage >80%)
+- [ ] Integration testing if cross-service changes
+- [ ] E2E testing if UI changes
+- [ ] Observability validation (logging, metrics, tracing)
+
+See the PR template for Phase 2 complete checklist.`
+            });
+
+      - name: Post Unauthorized Reviewer Warning
+        if: steps.auth.outputs.authorized == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `⚠️ **Phase 1 Approval Not Recognized**
+
+Review approved by: @${{ steps.auth.outputs.reviewer }}
+
+**Note**: Only the following reviewers are authorized to approve **Phase 1: Design Certification**:
+- @kushin77
+- @PureBlissAK
+
+If you're authorized to approve Phase 1, please ensure you're using one of the authorized accounts.
+
+Alternatively, any CODEOWNER can approve Phase 2 (Code & Quality Review) once Phase 1 is certified.`
+            });

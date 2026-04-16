@@ -12,9 +12,8 @@
 
 set -eu
 
-
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 readonly DB_FILE="${DB_FILE:-/etc/developer-access/developers.db}"
 readonly AUDIT_LOG="${AUDIT_LOG:-/var/log/developer-access-audit.log}"
 readonly SSL_CERT_DIR="${SSL_CERT_DIR:-/etc/developer-access/certs}"
@@ -241,14 +240,16 @@ revoke_access() {
     
     # Update database status
     init_db
-    sqlite3 "$DB_FILE" <<SQL || {
-        echo -e "${RED}✗ Failed to update database${NC}" >&2
-        return 1
-    }
+    sqlite3 "$DB_FILE" <<SQL
 UPDATE developers
 SET status = 'revoked', updated_at = CURRENT_TIMESTAMP
 WHERE username = '$username' AND status = 'active';
 SQL
+    
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}✗ Failed to update database${NC}" >&2
+        return 1
+    fi
     
     # Revoke Cloudflare Access
     revoke_cloudflare_token "$username" "$email"

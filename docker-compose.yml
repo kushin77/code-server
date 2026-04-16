@@ -85,8 +85,8 @@ services:
       - ollama-data:/root/.ollama
       - /mnt/nas-56/ollama:/root/.ollama/models
     healthcheck:
-      # ollama container healthcheck using wget
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null || exit 1"]
+      # use native CLI to avoid external tool dependencies (curl/wget)
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
       retries: 3

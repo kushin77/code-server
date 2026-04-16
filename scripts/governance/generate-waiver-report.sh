@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../_common/init.sh
+source "$SCRIPT_DIR/../_common/init.sh"
+
 if [[ $# -ne 2 ]]; then
   echo "Usage: $0 <owner/repo> <canonical-issue-number>" >&2
   exit 1
@@ -8,22 +12,14 @@ fi
 
 GH_BIN="gh"
 if ! command -v "$GH_BIN" >/dev/null 2>&1; then
-  if command -v gh.exe >/dev/null 2>&1; then
-    GH_BIN="gh.exe"
-  else
-    echo "gh CLI is required" >&2
-    exit 1
-  fi
+  echo "gh CLI is required and must be available on PATH" >&2
+  exit 1
 fi
 
 JQ_BIN="jq"
 if ! command -v "$JQ_BIN" >/dev/null 2>&1; then
-  if command -v jq.exe >/dev/null 2>&1; then
-    JQ_BIN="jq.exe"
-  else
-    echo "jq is required" >&2
-    exit 1
-  fi
+  echo "jq is required and must be available on PATH" >&2
+  exit 1
 fi
 
 REPO="$1"
@@ -40,10 +36,11 @@ mkdir -p "$OUT_DIR"
 
 query_items() {
   "$GH_BIN" api \
+    --paginate \
     -X GET search/issues \
     -f q="repo:${REPO} is:issue is:open label:waiver" \
     -f per_page=100 \
-    --jq '.items'
+  | "$JQ_BIN" -s '[.[].items[]]'
 }
 
 extract_field() {
@@ -55,7 +52,17 @@ extract_field() {
 is_blank() {
   local value="$1"
   local compact="${value//[[:space:]]/}"
-  [[ -z "$compact" || "$value" == \<*\> || "$value" =~ ^[Tt][Bb][Dd]$ || "$value" =~ ^[Pp]ending$ ]]
+  local trimmed="$value"
+  trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
+  trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+  [[ -z "$compact" || "$trimmed" == \<*\> || "$trimmed" =~ ^[Tt][Bb][Dd]$ || "$trimmed" =~ ^[Pp]ending$ ]]
+}
+
+escape_md_cell() {
+  local value="$1"
+  value="${value//$'\n'/ }"
+  value="${value//|/\\|}"
+  printf '%s' "$value"
 }
 
 ISSUES_JSON="$(query_items)"
@@ -63,7 +70,7 @@ TOTAL_OPEN="$($JQ_BIN 'length' <<<"$ISSUES_JSON")"
 REGISTRY_COUNT=0
 
 if [[ -f "$REGISTRY_FILE" ]]; then
-  REGISTRY_COUNT="$(grep -c '^### Waiver #' "$REGISTRY_FILE" || true)"
+  REGISTRY_COUNT="$(grep -Ec '^### Waiver #[0-9]+$' "$REGISTRY_FILE" || true)"
 fi
 
 ACTIVE=0
@@ -122,7 +129,10 @@ while IFS= read -r issue_json; do
     fi
   fi
 
-  ROWS+="| #${number} | ${status} | ${expiration:-missing} | ${approved_by:-pending} | [link](${url}) | ${title//$'\n'/ } |"$'\n'
+  safe_title="$(escape_md_cell "$title")"
+  safe_expiration="$(escape_md_cell "${expiration:-missing}")"
+  safe_approver="$(escape_md_cell "${approved_by:-pending}")"
+  ROWS+="| #${number} | ${status} | ${safe_expiration} | ${safe_approver} | [link](${url}) | ${safe_title} |"$'\n'
 done < <($JQ_BIN -c '.[]' <<<"$ISSUES_JSON")
 
 cat > "$METRICS_FILE" <<EOF

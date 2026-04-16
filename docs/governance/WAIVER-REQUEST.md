@@ -74,7 +74,7 @@ Waivers approved if:
 
 ### 1. Request Phase
 
-**Location**: GitHub PR comments  
+**Location**: GitHub Issues via the `Governance waiver request` issue template in `.github/ISSUE_TEMPLATE/governance-waiver.md`  
 **Preferred Path**: Open the `Governance waiver request` issue template in `.github/ISSUE_TEMPLATE/governance-waiver.md` and link the affected PR or issue.  
 **Format**: Use template above  
 **Timing**: Before pushing code requiring waiver

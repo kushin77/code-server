@@ -91,13 +91,19 @@ check_env_schema() {
 check_docker_services() {
     log_header "Phase 2: Docker Service Health"
     
-    if ! command -v docker-compose &>/dev/null; then
+    if ! command -v docker-compose &>/dev/null && ! docker compose version &>/dev/null 2>&1; then
         log_skip "docker-compose not available (may be on remote)"
         return 0
     fi
     
+    # Skip if Docker daemon is not reachable (e.g., running quality gate locally on Windows/WSL)
+    if ! docker info &>/dev/null 2>&1; then
+        log_skip "Docker daemon not reachable — skipping service checks (run on 192.168.168.31 for full validation)"
+        return 0
+    fi
+    
     log_check "Checking docker-compose configuration..."
-    if docker-compose config > /dev/null 2>&1; then
+    if docker compose config > /dev/null 2>&1 || docker-compose config > /dev/null 2>&1; then
         log_pass "docker-compose configuration is valid"
     else
         log_fail "Invalid docker-compose configuration"
@@ -105,9 +111,9 @@ check_docker_services() {
     fi
     
     # Check if services are running
-    if docker-compose ps > /dev/null 2>&1; then
+    if docker compose ps > /dev/null 2>&1; then
         local running_count
-        running_count=$(docker-compose ps --services | wc -l)
+        running_count=$(docker compose ps --services 2>/dev/null | wc -l)
         if [[ $running_count -gt 0 ]]; then
             log_pass "Docker services configured ($running_count services)"
         else

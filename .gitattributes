@@ -2,6 +2,9 @@
 # All scripts must be LF on all platforms to run correctly on Linux production systems
 # LINUX MANDATORY: No Windows-only development allowed
 
+# Catch-all: normalize all text files to LF (prevents CRLF artifacts in WSL/Windows)
+*           text=auto eol=lf
+
 *.sh        text eol=lf
 *.bash      text eol=lf
 Dockerfile* text eol=lf

@@ -11,6 +11,8 @@ extensions:
     endpoint: "0.0.0.0:13133"
   pprof:
     endpoint: "0.0.0.0:1888"
+  zpages:
+    endpoint: "0.0.0.0:55679"
 
 receivers:
   # OTLP receiver — accepts traces/metrics/logs from instrumented apps
@@ -46,6 +48,23 @@ receivers:
             - targets: ["localhost:8888"]
 
 processors:
+  # Tail-based sampling — keep 100% of error traces, slow traces > 1s, 5% of everything else
+  # Must come before batch processor so only sampled spans are batched
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 50000
+    expected_new_traces_per_sec: 100
+    policies:
+      - name: error-traces
+        type: status_code
+        status_code: { status_codes: [ERROR] }
+      - name: slow-traces
+        type: latency
+        latency: { threshold_ms: 1000 }
+      - name: probabilistic-5pct
+        type: probabilistic
+        probabilistic: { sampling_percentage: 5 }
+
   # Memory limiter — prevent OOM kills under load
   memory_limiter:
     check_interval: 5s
@@ -75,11 +94,9 @@ processors:
         action: delete  # Remove PII from traces
 
 exporters:
-  # Zipkin exporter — send traces to Jaeger via Zipkin-compatible protocol
-  zipkin:
-    endpoint: "http://jaeger:9411/api/v2/spans"
-    format: "json"
-
+  # OTLP/gRPC exporter — native OTLP to Jaeger (COLLECTOR_OTLP_ENABLED=true in docker-compose)
+  otlp/jaeger:
+    endpoint: "jaeger:4317"
     tls:
       insecure: true
     retry_on_failure:
@@ -107,12 +124,12 @@ exporters:
     sampling_thereafter: 100
 
 service:
-  extensions: [health_check, pprof]
+  extensions: [health_check, pprof, zpages]
   pipelines:
     traces:
       receivers:  [otlp, jaeger]
-      processors: [memory_limiter, resource, attributes, batch]
-      exporters:  [zipkin]
+      processors: [memory_limiter, tail_sampling, resource, attributes, batch]
+      exporters:  [otlp/jaeger]
     metrics:
       receivers:  [otlp, prometheus]
       processors: [memory_limiter, batch]

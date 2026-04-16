@@ -5,13 +5,12 @@
 
 set -e
 
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 CERT_DIR="${SCRIPT_DIR}/certs"
 ACME_EMAIL="${ACME_EMAIL:-admin@kushnir.cloud}"
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
-DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST}}"
+DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 
 echo "====== AUTOMATED SSL/TLS CERTIFICATE MANAGEMENT ======"
 echo ""

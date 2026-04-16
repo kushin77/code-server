@@ -56,6 +56,11 @@ elapsed_since() {
   echo $(( $(date +%s) - $1 ))
 }
 
+service_running() {
+  local svc="$1"
+  docker inspect --format '{{.State.Status}}' "$svc" 2>/dev/null | grep -q "running"
+}
+
 pg_env() {
   local key="$1"
   docker inspect postgres --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | awk -F= -v key="$key" '$1 == key { print substr($0, index($0, "=") + 1); exit }'
@@ -257,7 +262,12 @@ section "Phase 7c-4: Full Stack Recovery"
 # T12: All services recover after simultaneous restart
 log_info "T12: Full stack restart recovery..."
 T_START=$(date +%s)
-docker compose restart >/dev/null 2>&1 || docker-compose restart >/dev/null 2>&1
+SERVICES_ORDER=(redis postgres alertmanager jaeger prometheus grafana oauth2-proxy code-server caddy)
+for svc in "${SERVICES_ORDER[@]}"; do
+  if service_running "$svc"; then
+    docker restart "$svc" >/dev/null 2>&1 || true
+  fi
+done
 HEALTHY=0
 for i in $(seq 1 60); do
   sleep 2

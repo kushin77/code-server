@@ -16,6 +16,9 @@ on:
         required: false
         default: weekly
 
+permissions:
+  contents: read
+
 jobs:
   cost-analysis:
     runs-on: ubuntu-latest

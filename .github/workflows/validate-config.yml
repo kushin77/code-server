@@ -21,7 +21,7 @@ jobs:
     name: Validate docker-compose Configuration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       
       - name: Install Docker
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
@@ -31,13 +31,14 @@ jobs:
           if [ -f docker-compose.base.yml ] && [ -f docker-compose.yml ]; then
             docker compose -f docker-compose.base.yml config > /dev/null 2>&1 \
               && echo "✓ docker-compose.base.yml + docker-compose.yml composition valid" \
-              || echo "⚠ docker-compose composition validation failed (non-blocking)"
+              || (echo "❌ docker-compose composition validation failed"; exit 1)
           elif [ -f docker-compose.yml ]; then
             docker compose config > /dev/null 2>&1 \
               && echo "✓ docker-compose.yml syntax valid" \
-              || echo "⚠ docker-compose syntax validation failed (non-blocking)"
+              || (echo "❌ docker-compose syntax validation failed"; exit 1)
           else
-            echo "⚠ No docker-compose.yml found"
+            echo "❌ No docker-compose.yml found"
+            exit 1
           fi
 
   caddyfile-validate:
@@ -45,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     container: caddy:2-alpine
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       
       - name: Validate Caddyfile syntax
         run: |
@@ -54,16 +55,17 @@ jobs:
             sed '/^\s*dns cloudflare /d' Caddyfile > /tmp/Caddyfile.ci
             caddy validate --config /tmp/Caddyfile.ci \
               && echo "✓ Caddyfile syntax valid" \
-              || echo "⚠ Caddyfile validation failed in CI image (non-blocking)"
+              || (echo "❌ Caddyfile validation failed in CI image"; exit 1)
           else
-            echo "⚠ No Caddyfile found"
+            echo "❌ No Caddyfile found"
+            exit 1
           fi
 
   terraform-validate:
     name: Validate Terraform Configuration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -71,7 +73,7 @@ jobs:
           terraform_version: 1.7.0
       
       - name: Terraform format check
-        run: terraform fmt -check -recursive . || echo "⚠ Some files need formatting (non-blocking)"
+        run: terraform fmt -check -recursive .
       
       - name: Terraform validate
         run: |
@@ -83,7 +85,7 @@ jobs:
     name: Validate Shell Scripts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
@@ -105,17 +107,16 @@ jobs:
           done
       
       - name: Run ShellCheck
-        continue-on-error: true
         run: |
           if find scripts/ -name "*.sh" 2>/dev/null | head -1 | grep -q .; then
-            shellcheck scripts/*.sh || echo "⚠ ShellCheck warnings (non-blocking)"
+            shellcheck scripts/*.sh
           fi
 
   secrets-scan:
     name: Scan for Secrets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
       
@@ -126,7 +127,6 @@ jobs:
           base: ${{ github.event.pull_request.base.sha }}
           head: HEAD
           extra_args: --only-verified --allow-unverified=false 2>/dev/null
-        continue-on-error: true
       
       - name: Manual secret pattern check
         run: |
@@ -142,7 +142,7 @@ jobs:
     name: Check for Obsolete Files
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       
       - name: Check for phase-specific files at root
         run: |
@@ -186,8 +186,8 @@ jobs:
              [ "${{ needs.terraform-validate.result }}" == "failure" ] || \
              [ "${{ needs.shell-script-validate.result }}" == "failure" ]; then
             echo ""
-            echo "⚠ Some validation failures detected - review above"
-            exit 0
+            echo "❌ Validation failures detected - blocking"
+            exit 1
           else
             echo ""
             echo "✓ All validations passed"

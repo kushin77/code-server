@@ -940,6 +940,24 @@ variable "postgres_password" {
   default     = "changeme"
 }
 
+variable "ssh_private_key" {
+  description = "SSH private key path for deployment"
+  type        = string
+  default     = "~/.ssh/id_rsa"
+}
+
+variable "deploy_host" {
+  description = "Deployment host (same as deployment_host)"
+  type        = string
+  default     = "192.168.168.31"
+}
+
+variable "deploy_user" {
+  description = "Deployment user (same as deployment_user)"
+  type        = string
+  default     = "akushnir"
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // NEW FAILOVER MODULE VARIABLES (Patroni, Replication, Backup, DR)
 // ═══════════════════════════════════════════════════════════════════════════

@@ -55,7 +55,7 @@ configure_kubernetes_oidc() {
 
     write_file "$PHASE2_DIR/k8s-oidc.env.template" <<'EOF'
 # Kubernetes OIDC Configuration (on-prem)
-K8S_OIDC_ISSUER="https://oidc.192.168.168.31.nip.io"
+K8S_OIDC_ISSUER="https://oidc.${DEPLOY_HOST}.nip.io"
 K8S_OIDC_DISCOVERY_ENDPOINT="${K8S_OIDC_ISSUER}/.well-known/openid-configuration"
 K8S_OIDC_JWKS_ENDPOINT="${K8S_OIDC_ISSUER}/.well-known/jwks.json"
 
@@ -407,12 +407,12 @@ configure_kubernetes_oidc() {
     log_info "Configuring Kubernetes OIDC Issuer..."
     
     # K8s OIDC issuer URL (on-prem or cloud provider)
-    # For on-prem with nip.io DNS: https://oidc.192.168.168.31.nip.io
+    # For on-prem with nip.io DNS: https://oidc.${DEPLOY_HOST}.nip.io
     # For GKE: https://container.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/clusters/{CLUSTER_NAME}
     
     cat > "$PROJECT_ROOT/.env.k8s-oidc" <<'EOF'
 # Kubernetes OIDC Configuration (on-prem example)
-K8S_OIDC_ISSUER="https://oidc.192.168.168.31.nip.io"
+K8S_OIDC_ISSUER="https://oidc.${DEPLOY_HOST}.nip.io"
 K8S_OIDC_DISCOVERY_ENDPOINT="${K8S_OIDC_ISSUER}/.well-known/openid-configuration"
 K8S_OIDC_JWKS_ENDPOINT="${K8S_OIDC_ISSUER}/.well-known/jwks.json"
 

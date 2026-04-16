@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 CERT_DIR="${SCRIPT_DIR}/certs"
 ACME_EMAIL="${ACME_EMAIL:-admin@kushnir.cloud}"
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
+DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST}}"
 
 echo "====== AUTOMATED SSL/TLS CERTIFICATE MANAGEMENT ======"
 echo ""

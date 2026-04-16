@@ -15,17 +15,17 @@ NC='\033[0m' # No Color
 
 # Target endpoints
 declare -a ENDPOINTS=(
-    "192.168.168.31:8080:code-server-http"
-    "192.168.168.31:80:caddy-http"
-    "192.168.168.31:443:caddy-https"
-    "192.168.168.31:11434:ollama"
-    "192.168.168.31:9090:prometheus"
-    "192.168.168.31:3000:grafana"
-    "192.168.168.31:16686:jaeger"
-    "192.168.168.31:9093:alertmanager"
-    "192.168.168.31:4180:oauth2-proxy"
-    "192.168.168.31:5432:postgres"
-    "192.168.168.31:6379:redis"
+    "${DEPLOY_HOST}:8080:code-server-http"
+    "${DEPLOY_HOST}:80:caddy-http"
+    "${DEPLOY_HOST}:443:caddy-https"
+    "${DEPLOY_HOST}:11434:ollama"
+    "${DEPLOY_HOST}:9090:prometheus"
+    "${DEPLOY_HOST}:3000:grafana"
+    "${DEPLOY_HOST}:16686:jaeger"
+    "${DEPLOY_HOST}:9093:alertmanager"
+    "${DEPLOY_HOST}:4180:oauth2-proxy"
+    "${DEPLOY_HOST}:5432:postgres"
+    "${DEPLOY_HOST}:6379:redis"
     "192.168.168.56:111:nfs-portmapper"
     "192.168.168.56:2049:nfs-nfs"
     "192.168.168.55:111:nfs-portmapper-55"
@@ -34,7 +34,7 @@ declare -a ENDPOINTS=(
 
 # DNS resolution test
 echo -e "${YELLOW}═══ DNS Resolution Testing ═══${NC}"
-for host in "192.168.168.31" "192.168.168.56" "192.168.168.55" "8.8.8.8"; do
+for host in "${DEPLOY_HOST}" "192.168.168.56" "192.168.168.55" "8.8.8.8"; do
     if ping -c 1 -W 2 "$host" &> /dev/null; then
         echo -e "${GREEN}✓${NC} $host reachable"
     else
@@ -63,13 +63,13 @@ done
 echo -e "\n${YELLOW}═══ HTTP Health Checks ═══${NC}"
 
 declare -a HTTP_ENDPOINTS=(
-    "http://192.168.168.31:8080/healthz:code-server"
-    "http://192.168.168.31:80/health:caddy"
-    "http://192.168.168.31:11434/api/tags:ollama"
-    "http://192.168.168.31:9090/-/healthy:prometheus"
-    "http://192.168.168.31:3000/api/health:grafana"
-    "http://192.168.168.31:16686/:jaeger"
-    "http://192.168.168.31:9093/-/healthy:alertmanager"
+    "http://${DEPLOY_HOST}:8080/healthz:code-server"
+    "http://${DEPLOY_HOST}:80/health:caddy"
+    "http://${DEPLOY_HOST}:11434/api/tags:ollama"
+    "http://${DEPLOY_HOST}:9090/-/healthy:prometheus"
+    "http://${DEPLOY_HOST}:3000/api/health:grafana"
+    "http://${DEPLOY_HOST}:16686/:jaeger"
+    "http://${DEPLOY_HOST}:9093/-/healthy:alertmanager"
 )
 
 for http_endpoint in "${HTTP_ENDPOINTS[@]}"; do

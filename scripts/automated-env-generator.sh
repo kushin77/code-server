@@ -81,6 +81,7 @@ GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 
 # Domain Configuration
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
+DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST}}"
 DEPLOY_ENV="${DEPLOY_ENV:-production}"
 
 # Generate credentials

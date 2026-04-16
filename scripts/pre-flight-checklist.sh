@@ -189,6 +189,9 @@ echo "📋 PHASE 7: NETWORK & SSH CONNECTIVITY"
 echo "═════════════════════════════════════════════════════════════"
 echo ""
 
+DEPLOY_HOST="${DEPLOY_HOST:-${DEPLOY_HOST}}"
+DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+
 # Test SSH connectivity
 if timeout 5 ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no \
     "$DEPLOY_USER@$DEPLOY_HOST" 'echo' &>/dev/null; then

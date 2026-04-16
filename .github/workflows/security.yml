@@ -74,7 +74,9 @@ jobs:
         run: |
           # Fail on HIGH and CRITICAL severity IaC misconfigurations.
           # MEDIUM and lower are advisory.
+          # Use --config to load .checkov.yaml suppressions.
           checkov -d . \
+            --config .checkov.yaml \
             --framework dockerfile terraform \
             --hard-fail-on HIGH \
             --soft-fail-on MEDIUM \

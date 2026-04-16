@@ -1116,3 +1116,134 @@ variable "failover_timeout_seconds" {
   type        = number
   default     = 300
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MISSING VARIABLES (P0 BLOCKER FIX) - Added for modules-composition.tf
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Redis data tier variables
+variable "redis_memory_limit_container" {
+  description = "Redis container memory limit"
+  type        = string
+  default     = "512m"
+}
+
+variable "redis_cpu_limit" {
+  description = "Redis container CPU limit"
+  type        = string
+  default     = "0.5"
+}
+
+variable "redis_persistence_enabled" {
+  description = "Enable Redis persistence (AOF/RDB)"
+  type        = bool
+  default     = true
+}
+
+// PgBouncer connection pooler variables
+variable "pgbouncer_version" {
+  description = "PgBouncer version"
+  type        = string
+  default     = "1.20"
+}
+
+variable "pgbouncer_port" {
+  description = "PgBouncer port"
+  type        = number
+  default     = 6432
+}
+
+variable "pgbouncer_pool_size" {
+  description = "PgBouncer connection pool size"
+  type        = number
+  default     = 25
+}
+
+variable "pgbouncer_pool_mode" {
+  description = "PgBouncer pool mode (session/transaction/statement)"
+  type        = string
+  default     = "transaction"
+  validation {
+    condition     = contains(["session", "transaction", "statement"], var.pgbouncer_pool_mode)
+    error_message = "pgbouncer_pool_mode must be session, transaction, or statement."
+  }
+}
+
+variable "pgbouncer_connect_timeout" {
+  description = "PgBouncer connection timeout (seconds)"
+  type        = number
+  default     = 15
+}
+
+// Backup and replication variables
+variable "backup_retention_days" {
+  description = "Backup retention period (days)"
+  type        = number
+  default     = 30
+  validation {
+    condition     = var.backup_retention_days > 0
+    error_message = "backup_retention_days must be greater than 0."
+  }
+}
+
+variable "backup_schedule_cron" {
+  description = "Backup schedule in cron format"
+  type        = string
+  default     = "0 2 * * *"  // Daily at 2 AM
+}
+
+variable "enable_replication" {
+  description = "Enable PostgreSQL replication"
+  type        = bool
+  default     = true
+}
+
+variable "enable_hot_standby" {
+  description = "Enable hot standby mode (read replica)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_synchronous_replication" {
+  description = "Enable synchronous replication (waits for replica ACK)"
+  type        = bool
+  default     = false
+}
+
+// Networking variables
+variable "caddy_http_port" {
+  description = "Caddy HTTP port"
+  type        = number
+  default     = 80
+}
+
+variable "caddy_https_port" {
+  description = "Caddy HTTPS port"
+  type        = number
+  default     = 443
+}
+
+variable "caddy_memory_limit" {
+  description = "Caddy container memory limit"
+  type        = string
+  default     = "256m"
+}
+
+variable "caddy_cpu_limit" {
+  description = "Caddy container CPU limit"
+  type        = string
+  default     = "0.25"
+}
+
+// DNS failover and ACME variables
+variable "acme_email" {
+  description = "Email for ACME certificate registration"
+  type        = string
+  default     = "admin@kushnir.cloud"
+}
+
+variable "acme_renewal_days_before_expiry" {
+  description = "Days before expiry to renew ACME certificate"
+  type        = number
+  default     = 30
+}

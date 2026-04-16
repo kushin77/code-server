@@ -1,0 +1,68 @@
+{
+  "federationId": "global-federation-2026",
+  "federationName": "Global Code Server Federation",
+  "createdAt": "2026-04-13T00:00:00Z",
+  "regions": [
+    {
+      "regionId": "us-west",
+      "regionName": "US West - California",
+      "cloudProvider": "gcp",
+      "projectId": "code-server-us-west-prod",
+      "location": "us-west1",
+      "kubernetesVersion": "1.28",
+      "nodeCount": 5,
+      "machineType": "n2-standard-4",
+      "diskSizeGb": 200,
+      "network": {
+        "cidr": "10.0.0.0/20",
+        "pods": "10.4.0.0/14",
+        "services": "10.0.16.0/20"
+      },
+      "database": {
+        "version": "15.1",
+        "backupRetentionDays": 30,
+        "computeNodes": 3
+      },
+      "tags": {
+        "environment": "production",
+        "region": "us-west",
+        "tier": "primary"
+      }
+    },
+    {
+      "regionId": "eu-west",
+      "regionName": "EU West - Ireland",
+      "cloudProvider": "gcp",
+      "projectId": "code-server-eu-west-prod",
+      "location": "eu-west1",
+      "kubernetesVersion": "1.28",
+      "nodeCount": 4,
+      "machineType": "n2-standard-4",
+      "diskSizeGb": 200,
+      "network": {
+        "cidr": "10.16.0.0/20",
+        "pods": "10.20.0.0/14",
+        "services": "10.36.0.0/20"
+      },
+      "database": {
+        "version": "15.1",
+        "backupRetentionDays": 30,
+        "computeNodes": 3
+      },
+      "tags": {
+        "environment": "production",
+        "region": "eu-west",
+        "tier": "secondary"
+      }
+    }
+  ],
+  "globalConfig": {
+    "replicationMode": "multi-primary",
+    "conflictResolution": "lww",
+    "syncIntervalMs": 5000,
+    "maxClockSkewMs": 1000,
+    "backupStrategy": "continuous",
+    "disasterRecoveryRTO": 30,
+    "disasterRecoveryRPO": 5
+  }
+}

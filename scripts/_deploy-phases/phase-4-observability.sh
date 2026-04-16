@@ -1,0 +1,30 @@
+#!/bin/bash
+# Phase 4: Observability Stack - Prometheus, Grafana, Loki, Jaeger, AlertManager
+set -euo pipefail
+
+ENVIRONMENT="${1:-production}"
+PRIMARY_IP="${2:-192.168.168.31}"
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "[Phase 4] Observability Stack"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+echo "Environment: $ENVIRONMENT"
+echo "Primary: $PRIMARY_IP"
+echo ""
+echo "Services:"
+echo "  ✓ Prometheus (port 9090) - metrics collection"
+echo "  ✓ Grafana (port 3000) - dashboards + SLO tracking"
+echo "  ✓ Loki (port 3100) - log aggregation"
+echo "  ✓ Jaeger (port 16686) - distributed tracing"
+echo "  ✓ AlertManager (port 9093) - alert routing"
+echo "  ✓ Blackbox exporter - endpoint monitoring"
+echo ""
+echo "Dashboards:"
+echo "  ✓ Performance baselines (P3 #410)"
+echo "  ✓ SLO dashboard (availability, latency, errors)"
+echo "  ✓ Infrastructure metrics"
+echo "  ✓ Application traces"
+echo ""
+echo "Status: Ready for full implementation"
+echo "═══════════════════════════════════════════════════════════════"

@@ -15,6 +15,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Run Global Quality Gate
+        run: |
+          chmod +x scripts/lib/global-quality-gate.sh
+          GATE_MODE=incremental bash scripts/lib/global-quality-gate.sh
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -38,4 +43,55 @@ jobs:
       - name: Run repository validation
         run: |
           . .venv/bin/activate
-          echo "Skipping full validation - critical security checks passing (gitleaks, checkov, tfsec)"
+          echo "=== Running critical security validation ==="
+          exit_code=0
+
+      - name: Gitleaks - Secret scanning
+        uses: gitleaks/gitleaks-action@v2.3.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: .gitleaks.toml
+          fail: true
+
+      - name: Checkov - IaC security scanning
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform,dockerfile,docker_compose,kubernetes
+          soft_fail: false
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+        continue-on-error: false
+
+      - name: Upload Checkov SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+
+      - name: TFSec - Terraform security scanning
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform/
+          soft_fail: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
+
+      - name: Shellcheck - Shell script linting
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: ./scripts
+          severity: error
+          ignore_paths: .archived
+        continue-on-error: false
+
+      - name: Docker Compose validation
+        run: |
+          for file in docker-compose*.yml docker-compose*.yaml; do
+            if [[ -f "$file" ]]; then
+              echo "Validating $file..."
+              docker-compose -f "$file" config --quiet || exit 1
+            fi
+          done
+        continue-on-error: false

@@ -1,0 +1,197 @@
+name: Quality Gates — Production-First Mandate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**.sh'
+      - '**.yml'
+      - '**.yaml'
+      - '**.tf'
+      - '**.py'
+      - '**.ts'
+      - '**.js'
+      - 'Dockerfile*'
+      - '.github/workflows/**'
+  push:
+    branches:
+      - main
+      - phase-7-deployment
+    paths:
+      - '**.sh'
+      - '**.yml'
+      - '**.yaml'
+      - '**.tf'
+      - '**.py'
+      - '**.ts'
+      - '**.js'
+      - 'Dockerfile*'
+
+jobs:
+  quality-gates:
+    name: Quality Gates (IaC, Security, Style)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      checks: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Shell Script Validation
+        id: shellcheck
+        run: |
+          echo "Validating shell scripts..."
+          if ! command -v shellcheck &> /dev/null; then
+            apt-get update && apt-get install -y shellcheck
+          fi
+          
+          VIOLATIONS=0
+          for script in $(find . -name "*.sh" -type f ! -path "./.git/*" ! -path "./.terraform/*"); do
+            if ! shellcheck -x "$script" 2>&1; then
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+          
+          if [ "$VIOLATIONS" -gt 0 ]; then
+            echo "❌ Shell script validation failed ($VIOLATIONS violations)"
+            exit 1
+          fi
+          echo "✅ All shell scripts valid"
+
+      - name: 🔍 YAML Validation
+        id: yaml
+        run: |
+          echo "Validating YAML files..."
+          if ! command -v yamllint &> /dev/null; then
+            pip install yamllint
+          fi
+          
+          yamllint -c '{extends: default, rules: {line-length: {max: 200}, indentation: {spaces: 2}}}' \
+            $(find . -name "*.yml" -o -name "*.yaml" | grep -v node_modules | head -50) || exit 1
+          echo "✅ All YAML files valid"
+
+      - name: 🔍 Dockerfile Validation
+        id: docker
+        run: |
+          echo "Validating Dockerfiles..."
+          if ! command -v hadolint &> /dev/null; then
+            apt-get update && apt-get install -y hadolint
+          fi
+          
+          for dockerfile in $(find . -name "Dockerfile*" -type f); do
+            if ! hadolint "$dockerfile" 2>&1; then
+              echo "❌ Dockerfile validation failed: $dockerfile"
+              exit 1
+            fi
+          done
+          echo "✅ All Dockerfiles valid"
+
+      - name: 🔍 Duplicate Code Detection (jscpd)
+        id: duplication
+        run: |
+          echo "Checking for code duplication..."
+          if ! command -v jscpd &> /dev/null; then
+            npm install -g jscpd
+          fi
+          
+          # Skip archived files and vendored code
+          jscpd --exclude "node_modules/**,archived/**,.terraform/**" \
+                --threshold 10 \
+                --reporters=console \
+                . || {
+            echo "⚠️  Code duplication detected (threshold: >10% duplicates)"
+            exit 1
+          }
+          echo "✅ Code duplication within acceptable limits"
+
+      - name: 🔐 Secret Scanning
+        id: secrets
+        run: |
+          echo "Scanning for hardcoded secrets..."
+          if ! command -v truffleHog &> /dev/null; then
+            pip install truffleHog
+          fi
+          
+          SECRETS=0
+          if git log --oneline -1 &> /dev/null; then
+            # Check for common secret patterns
+            if grep -r "password\|secret\|token\|api_key\|private_key" \
+                    --include="*.sh" --include="*.tf" --include="*.yml" \
+                    --exclude-dir=".git" --exclude-dir=".terraform" \
+                    . | grep -v "PLACEHOLDER\|REDACTED\|changeme"; then
+              echo "❌ Potential secrets found in code!"
+              exit 1
+            fi
+          fi
+          echo "✅ No hardcoded secrets detected"
+
+      - name: 🏗️ Terraform Validation
+        id: terraform
+        run: |
+          echo "Validating Terraform configuration..."
+          if [ -d "terraform" ]; then
+            cd terraform
+            terraform init -backend=false
+            if ! terraform validate; then
+              echo "❌ Terraform validation failed"
+              exit 1
+            fi
+            echo "✅ Terraform configuration valid"
+          else
+            echo "⏭️  No Terraform directory found"
+          fi
+
+      - name: 📋 Dependency Audit
+        id: dependencies
+        continue-on-error: true
+        run: |
+          echo "Auditing dependencies..."
+          
+          # Check npm if package.json exists
+          if [ -f "package.json" ]; then
+            npm audit --audit-level=moderate || true
+          fi
+          
+          # Check pip if requirements.txt exists
+          if [ -f "requirements.txt" ]; then
+            pip install safety
+            safety check --file requirements.txt || true
+          fi
+          
+          echo "✅ Dependency audit complete"
+
+      - name: 📊 Quality Gates Summary
+        id: summary
+        run: |
+          echo "## ✅ Quality Gates Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Shell Scripts | ${{ steps.shellcheck.outcome == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML Validation | ${{ steps.yaml.outcome == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dockerfiles | ${{ steps.docker.outcome == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Duplication | ${{ steps.duplication.outcome == 'success' && '✅ Pass' || '⚠️ Warning' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ steps.secrets.outcome == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Terraform | ${{ steps.terraform.outcome == 'success' && '✅ Pass' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Production-First Mandate**: All checks required for merge" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🚨 Fail if any critical check failed
+        if: |
+          steps.shellcheck.outcome == 'failure' ||
+          steps.yaml.outcome == 'failure' ||
+          steps.docker.outcome == 'failure' ||
+          steps.secrets.outcome == 'failure' ||
+          steps.terraform.outcome == 'failure'
+        run: |
+          echo "❌ Quality gates failed — commit cannot merge"
+          exit 1
+
+permissions:
+  contents: read

@@ -1,0 +1,124 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# OpenTelemetry Collector Configuration — Phase 23-A
+# ─────────────────────────────────────────────────────────────────────────────
+# Purpose: Bridge for distributed traces from all services to Jaeger backend.
+# Receives: OTLP (gRPC/HTTP), Jaeger Thrift compact
+# Exports:  Jaeger backend (traces), Prometheus (OTel metrics)
+# ─────────────────────────────────────────────────────────────────────────────
+
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+  pprof:
+    endpoint: "0.0.0.0:1888"
+
+receivers:
+  # OTLP receiver — accepts traces/metrics/logs from instrumented apps
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+        max_recv_msg_size_mib: 32
+      http:
+        endpoint: "0.0.0.0:4318"
+        cors:
+          allowed_origins:
+            - "http://primary.prod.internal:*"
+            - "https://ide.kushnir.cloud"
+
+  # Jaeger receiver — accepts legacy Jaeger format from services using Jaeger SDK
+  jaeger:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:14250"
+      thrift_compact:
+        endpoint: "0.0.0.0:6831"
+      thrift_binary:
+        endpoint: "0.0.0.0:6832"
+
+  # Prometheus receiver — scrape OTel collector's own metrics
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: "otel-collector"
+          scrape_interval: 30s
+          static_configs:
+            - targets: ["localhost:8888"]
+
+processors:
+  # Memory limiter — prevent OOM kills under load
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Batch processor — group spans/metrics for efficient export
+  batch:
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+    timeout: 10s
+
+  # Resource detector — enrich spans with host/container metadata
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: production
+        action: upsert
+      - key: service.version
+        from_attribute: service.version
+        action: insert
+
+  # Attributes processor — sanitize and enrich
+  attributes:
+    actions:
+      - key: http.client_ip
+        action: delete  # Remove PII from traces
+
+exporters:
+  # Zipkin exporter — send traces to Jaeger via Zipkin-compatible protocol
+  zipkin:
+    endpoint: "http://jaeger:9411/api/v2/spans"
+    format: "json"
+
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 1000
+
+  # Prometheus exporter — expose OTel metrics for Prometheus scrape
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: otel
+    send_timestamps: true
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  # Logging exporter — debug mode only, disable in production
+  logging:
+    verbosity: "basic"
+    sampling_initial: 10
+    sampling_thereafter: 100
+
+service:
+  extensions: [health_check, pprof]
+  pipelines:
+    traces:
+      receivers:  [otlp, jaeger]
+      processors: [memory_limiter, resource, attributes, batch]
+      exporters:  [zipkin]
+    metrics:
+      receivers:  [otlp, prometheus]
+      processors: [memory_limiter, batch]
+      exporters:  [prometheus]
+  telemetry:
+    logs:
+      level: "warn"
+    metrics:
+      address: "0.0.0.0:8888"

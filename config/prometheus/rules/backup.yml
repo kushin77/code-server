@@ -1,0 +1,95 @@
+---
+# Backup & Disaster Recovery Alerts
+# Backup age, restore testing, WAL archival
+# Load order: 6
+
+groups:
+  - name: backup_alerts
+    interval: 30s
+    rules:
+      # P0: Backup failed
+      - alert: BackupFailure
+        expr: increase(backup_failures_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: data
+          page: "true"
+        annotations:
+          summary: "Database backup failed"
+          description: "Backup job failed - data recovery capability compromised"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-failure.md"
+
+      # P1: Backup stale (no backup in > 24 hours)
+      - alert: BackupStale
+        expr: |
+          (time() - backup_last_completion_time_seconds) > 86400
+        for: 10m
+        labels:
+          severity: critical
+          team: data
+        annotations:
+          summary: "No successful backup in > 24 hours"
+          description: "Last backup: {{ $value }}s ago - RPO violated"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-stale.md"
+
+      # P1: Backup taking too long (> 1 hour)
+      - alert: BackupDurationHigh
+        expr: |
+          rate(backup_duration_seconds[5m]) > 3600
+        for: 10m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Backup is taking longer than expected ({{ printf \"%.0f\" $value }}s)"
+          description: "Backup duration > 1 hour - may impact RTO"
+
+      # P1: WAL segment archival failing
+      - alert: WALArchivalFailure
+        expr: rate(pg_wal_archival_failures_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: data
+        annotations:
+          summary: "PostgreSQL WAL archival is failing"
+          description: "WAL segments are not being archived - point-in-time recovery at risk"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/wal-archival-failure.md"
+
+      # P2: Backup window too long (approaching RTO)
+      - alert: BackupWindowTooLong
+        expr: |
+          (
+            (time() - backup_last_completion_time_seconds) / 3600
+          ) > 20  # 20 hours, RTO is 24 hours
+        for: 30m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Time since last backup exceeds 20 hours (RTO = 24h)"
+          description: "If service fails now, RTO window is {{ printf \"%.0f\" (sub 24 (div $value 3600)) }}h"
+
+      # P2: Restore test failure
+      - alert: RestoreTestFailure
+        expr: restore_test_failures_total > 0
+        for: 1h
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Backup restore test failed"
+          description: "Latest restore test did not succeed - backup integrity may be compromised"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/restore-test-failure.md"
+
+      # P3: Backup retention policy approaching limit
+      - alert: BackupRetentionApproachingLimit
+        expr: backup_count > 85  # Assuming retention limit is ~100
+        for: 1h
+        labels:
+          severity: info
+          team: data
+        annotations:
+          summary: "Backup retention approaching configured limit"
+          description: "{{ $value }} backups retained - may need to adjust retention policy"

@@ -1,0 +1,71 @@
+---
+# Security Alerts
+# Falco events, authentication failures, anomaly detection
+# Load order: 4
+
+groups:
+  - name: security_events
+    interval: 30s
+    rules:
+      # P0: Falco critical security event
+      - alert: FalcoCriticalSecurityEvent
+        expr: rate(falco_alerts_total{severity="critical"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+          page: "true"
+        annotations:
+          summary: "Critical security event detected by Falco"
+          description: "Falco detected a critical security event - {{ $labels.rule }}"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/falco-critical.md"
+
+      # P0: Suspicious process execution
+      - alert: SuspiciousProcessExecution
+        expr: |
+          rate(falco_alerts_total{rule=~".*shell.*|.*exec.*",severity=~"warning|critical"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Suspicious process execution detected"
+          description: "Falco detected suspicious shell/exec activity on {{ $labels.host }}"
+
+      # P1: Repeated authentication failures
+      - alert: AuthenticationFailureSpike
+        expr: rate(auth_failures_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Authentication failures spiking ({{ printf \"%.1f\" $value }} failures/sec)"
+          description: "Multiple failed authentication attempts - possible brute force attack"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/auth-failure.md"
+
+      # P1: Unauthorized access attempt
+      - alert: UnauthorizedAccessAttempt
+        expr: rate(http_requests_total{status="401"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Unauthorized access attempts detected"
+          description: "Multiple 401 Unauthorized responses - may indicate reconnaissance"
+
+      # P2: Certificate about to expire
+      - alert: CertificateNearExpiry
+        expr: |
+          (
+            ssl_certificate_not_after_seconds - time()
+          ) / 86400 < 14
+        for: 1h
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "SSL certificate expires in {{ printf \"%.0f\" (div (sub $value 0) 86400) }} days"
+          description: "Certificate {{ $labels.certificate }} needs renewal"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/cert-renewal.md"

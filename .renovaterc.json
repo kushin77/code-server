@@ -1,0 +1,214 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    "schedule:weekly",
+    ":semanticCommits",
+    ":docker",
+    ":npm",
+    "group:allNonMajor"
+  ],
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "schedule": [
+    "every monday at 03:00"
+  ],
+  "timezone": "UTC",
+  "labels": [
+    "dependencies",
+    "automated"
+  ],
+  "assignees": [
+    "@kushin77"
+  ],
+  "reviewers": [],
+  "packageRules": [
+    {
+      "description": "Security patches - auto-merge immediately",
+      "matchDatasources": [
+        "docker",
+        "npm",
+        "pypi"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "matchKeywords": [
+        "security",
+        "vulnerability",
+        "CVE"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "Docker images - digest pinning + auto-merge patch versions",
+      "matchDatasources": [
+        "docker"
+      ],
+      "pinDigests": true,
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "groupName": "docker updates"
+    },
+    {
+      "description": "Docker base images (FROM statements) - separate PRs, no auto-merge",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchDepPatterns": [
+        "^(FROM|ARG BASE_IMAGE)",
+        "^(ubuntu|debian|alpine|golang|node|python):"
+      ],
+      "automerge": false,
+      "groupName": "docker base images"
+    },
+    {
+      "description": "GitHub Actions - auto-merge patch versions",
+      "matchDatasources": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "groupName": "github actions"
+    },
+    {
+      "description": "Terraform providers - pin exact versions, no auto-merge major",
+      "matchDatasources": [
+        "terraform"
+      ],
+      "matchDepPatterns": [
+        "^(terraform|provider).*"
+      ],
+      "versioning": "hashicorp",
+      "rangeStrategy": "bump",
+      "automerge": false,
+      "groupName": "terraform providers"
+    },
+    {
+      "description": "npm/Node.js packages - auto-merge if tests pass",
+      "matchDatasources": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "groupName": "npm updates"
+    },
+    {
+      "description": "npm major versions - create PR, require manual review",
+      "matchDatasources": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "assignees": [
+        "@kushin77"
+      ],
+      "groupName": "npm major updates"
+    },
+    {
+      "description": "Python packages - auto-merge patch versions",
+      "matchDatasources": [
+        "pypi",
+        "pip-compile"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "groupName": "python updates"
+    },
+    {
+      "description": "Python major versions - manual review required",
+      "matchDatasources": [
+        "pypi"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "assignees": [
+        "@kushin77"
+      ],
+      "groupName": "python major updates"
+    },
+    {
+      "description": "Critical vulnerability alerts - immediate action required",
+      "matchKeywords": [
+        "severity: critical",
+        "CVSS >= 9.0"
+      ],
+      "automerge": false,
+      "labels": [
+        "security",
+        "critical"
+      ],
+      "assignees": [
+        "@kushin77"
+      ]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security",
+      "vulnerability"
+    ]
+  },
+  "vulnerabilityAlerts": true,
+  "postUpdateOptions": [
+    "gomodTidy",
+    "npmDedupe",
+    "yarnDedupeHighest"
+  ],
+  "extends": [
+    "config:base",
+    "schedule:weekly",
+    ":semanticCommits",
+    ":docker",
+    ":npm",
+    ":enableVulnerabilityAlerts"
+  ],
+  "prConcurrentLimit": 5,
+  "prCreationLimit": 10,
+  "extends": [
+    "config:base",
+    "schedule:weekly",
+    ":semanticCommits",
+    ":docker",
+    ":npm",
+    ":enableVulnerabilityAlerts",
+    "group:allNonMajor"
+  ],
+  "schedule": [
+    "every monday at 03:00"
+  ],
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "automergeType": "pr",
+  "automergeStrategy": "squash"
+}

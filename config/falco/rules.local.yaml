@@ -1,0 +1,31 @@
+# Falco Runtime Security Rules — Production
+# Issue #359: Falco eBPF syscall monitoring
+# Note: Requires Falco default rules to be loaded first for macro compatibility
+
+# Shell process detection (simplified - just log for now)
+- rule: Test Rule Loaded
+  desc: Verify Falco is loading rules correctly
+  condition: spawned_process and proc.name in (test)
+  output: Test rule is loaded
+  priority: NOTICE
+  desc: Detect potential crypto mining via known pool connection patterns
+  condition: >
+    outbound and container and
+    fd.rport in (3333, 4444, 5555, 7777, 14444, 14433)
+  output: >
+    Possible crypto mining connection (container=%container.name
+    dest=%fd.rip:%fd.rport cmdline=%proc.cmdline)
+  priority: CRITICAL
+  tags: [malware, container]
+
+- rule: Privilege Escalation Attempt
+  desc: Detect attempts to escalate privileges via setuid binaries
+  condition: >
+    execve and container and
+    (proc.name = "sudo" or proc.name = "su" or proc.name = "passwd") and
+    not user.name in (root, postgres, redis)
+  output: >
+    Privilege escalation attempt (user=%user.name proc=%proc.name
+    container=%container.name cmdline=%proc.cmdline)
+  priority: CRITICAL
+  tags: [privilege_escalation, container]

@@ -1,0 +1,135 @@
+#!/bin/bash
+################################################################################
+# /usr/local/bin/restricted-shell
+# 
+# Restricted shell wrapper for read-only IDE access control
+# Intercepts terminal commands and blocks exfiltration vectors
+#
+# Deployment:
+#   sudo cp restricted-shell /usr/local/bin/
+#   sudo chown root:root /usr/local/bin/restricted-shell
+#   sudo chmod 755 /usr/local/bin/restricted-shell
+#   # Add to code-server shell config
+#
+# Usage: Set SHELL=/usr/local/bin/restricted-shell in code-server
+################################################################################ 
+
+set -euo pipefail
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Audit log
+AUDIT_LOG="/var/log/code-server-audit.log"
+DEVELOPER_ID="${USER:-unknown}"
+SESSION_ID="${SESSION_ID:-$$_$(date +%s)}"
+
+# Blocked commands (regex patterns)
+BLOCKED_COMMANDS=(
+  "^wget"                      # wget downloads
+  "^curl.*-O"                  # curl with -O (download)
+  "^curl.*-o"                  # curl with -o (output to file)
+  "^scp"                       # scp remote copy
+  "^sftp"                      # sftp file transfer
+  "^rsync"                     # rsync sync
+  "^nc"                        # netcat
+  "^ncat"                      # ncat
+  "^socat"                     # socat
+  "^ftp"                       # ftp
+  "^ssh-keygen"                # SSH key generation
+  "^ssh-copy-id"               # SSH key distribution
+  "^base64.*>.*.key"           # Base64 key exfiltration
+  "^cat.*/.ssh"                # Read SSH directory
+  "^cat.*/.env"                # Read .env file
+  "^cat.*.key$"                # Read certificate/key files
+  "^openssl.*-out"             # OpenSSL key export
+  "^gpg.*--export-secret"      # GPG secret export
+  "^git.*ssh"                  # Git SSH clone/push (use proxy)
+)
+
+# Allowed safe directories
+SAFE_DIRS=(
+  "/home/developer"
+  "/home/coder"
+  "/tmp"
+  "/var/tmp"
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+log_command() {
+  local cmd="$1"
+  local status="$2"
+  local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  
+  {
+    echo "timestamp=$timestamp"
+    echo "session_id=$SESSION_ID"
+    echo "developer=$DEVELOPER_ID"
+    echo "command=$cmd"
+    echo "status=$status"
+    echo "pwd=$(pwd)"
+    echo "---"
+  } >> "$AUDIT_LOG"
+}
+
+check_blocked_command() {
+  local cmd="$1"
+  
+  for pattern in "${BLOCKED_COMMANDS[@]}"; do
+    if [[ "$cmd" =~ $pattern ]]; then
+      return 0  # Blocked
+    fi
+  done
+  
+  return 1  # Not blocked
+}
+
+reject_command() {
+  local cmd="$1"
+  local reason="$2"
+  
+  echo "❌ ERROR: Command blocked by read-only access policy" >&2
+  echo "   Command: $cmd" >&2
+  echo "   Reason: $reason" >&2
+  echo "📋 Contact your administrator for access review" >&2
+  echo "   Session ID: $SESSION_ID" >&2
+  
+  log_command "$cmd" "BLOCKED:$reason"
+  
+  exit 1
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Initialize audit log
+[[ ! -f "$AUDIT_LOG" ]] && sudo touch "$AUDIT_LOG" && sudo chmod 644 "$AUDIT_LOG" 2>/dev/null || true
+mkdir -p "$(dirname "$AUDIT_LOG")"
+
+# If interactive shell
+if [[ $# -eq 0 ]]; then
+  # Start interactive bash with restrictions
+  exec bash --init-file <(
+    echo "PS1='[readonly] \\u@\\h:\\w\\$ '"
+    echo "alias wget='echo ERROR: wget disabled by read-only access policy'"
+    echo "alias scp='echo ERROR: scp disabled by read-only access policy'"
+    echo "alias ssh-keygen='echo ERROR: ssh-keygen disabled'"
+  )
+fi
+
+# Command mode: check for blocked patterns
+cmd_args="${@:-}"
+if check_blocked_command "$cmd_args"; then
+  reject_command "$cmd_args" "Data exfiltration vector detected"
+fi
+
+# Log all commands
+log_command "$cmd_args" "ALLOWED"
+
+# Execute command
+exec bash -c "$@"

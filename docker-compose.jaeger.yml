@@ -1,0 +1,90 @@
+# Jaeger Configuration for End-to-End Trace Collection
+# Deployment: docker-compose.yml
+# Reference: https://www.jaegertracing.io/docs/latest/
+
+---
+version: '3.8'
+
+services:
+  # Jaeger All-in-One (suitable for development/small production deployments)
+  # For large deployments, split into collector, query, agent services
+  jaeger:
+    image: jaegertracing/all-in-one:1.50
+    container_name: jaeger
+    
+    # Environment Configuration
+    environment:
+      # Collector settings
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+      COLLECTOR_OTLP_ENABLED: "true"
+      
+      # Agent settings
+      AGENT_ZIPKIN_THRIFT_COMPACT_PORT: "6831"
+      AGENT_ZIPKIN_THRIFT_BINARY_PORT: "6832"
+      AGENT_PROCESSOR_JAEGER_COMPACT_SERVER_HOST_PORT: ":6831"
+      AGENT_PROCESSOR_JAEGER_BINARY_SERVER_HOST_PORT: ":6832"
+      
+      # Sampling strategy (trace all requests in development, 10% in production)
+      SAMPLER_TYPE: "remote"
+      SAMPLER_PARAM: "1.0"  # 100% sampling for development
+      # Production: use probabilistic sampler with param=0.1 (10%)
+      
+      # Query/UI settings
+      QUERY_MAX_TRACE_LOOKBACK: "72h"
+      
+      # Storage (in-memory for small deployments; use Elasticsearch for large scale)
+      MEMORY_MAX_TRACES: "10000"
+      
+    # Ports
+    ports:
+      # Jaeger UI
+      - "16686:16686"
+      
+      # Collector endpoints
+      - "14268:14268"  # HTTP - for OpenTelemetry SDK
+      - "14269:14269"  # HTTP Admin port
+      
+      # Agent endpoints (for SDKs that use Agent)
+      - "6831:6831/udp"  # Zipkin compact Thrift
+      - "6832:6832/udp"  # Zipkin binary Thrift
+      - "6833:6833/udp"  # Zipkin JSON
+      
+      # OTLP protocol
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      
+      # Zipkin compatibility
+      - "9411:9411"   # Zipkin HTTP
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:14269/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Network
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

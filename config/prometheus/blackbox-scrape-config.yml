@@ -1,0 +1,107 @@
+# Blackbox Exporter Scrape Configuration
+# Add this to your Prometheus scrape_configs section
+#
+# global:
+#   external_labels:
+#     cluster: on-prem
+#     environment: production
+#
+# scrape_configs:
+#   # ... existing scrape configs ...
+#   - job_name: 'blackbox_http_2xx'
+#     metrics_path: /probe
+#     params:
+#       module: [http_2xx]
+#     static_configs:
+#       - targets:
+#           - https://ide.kushnir.cloud
+#           - http://192.168.168.31:8080
+#           - http://192.168.168.31:9090      # Prometheus
+#           - http://192.168.168.31:3000       # Grafana
+#           - http://192.168.168.31:16686      # Jaeger
+#           - http://192.168.168.31:3100       # Loki
+#           - http://192.168.168.31:9093       # AlertManager
+#     relabel_configs:
+#       - source_labels: [__address__]
+#         target_label: __param_target
+#       - source_labels: [__param_target]
+#         target_label: instance
+#       - target_label: __address__
+#         replacement: blackbox:9115
+#     scrape_interval: 30s
+#     scrape_timeout: 10s
+#
+#   - job_name: 'blackbox_tcp_connect'
+#     metrics_path: /probe
+#     params:
+#       module: [tcp_connect]
+#     static_configs:
+#       - targets:
+#           - 192.168.168.31:5432       # PostgreSQL
+#           - 192.168.168.31:6379       # Redis
+#           - 192.168.168.31:8001       # Kong Admin API (internal)
+#     relabel_configs:
+#       - source_labels: [__address__]
+#         target_label: __param_target
+#       - source_labels: [__param_target]
+#         target_label: instance
+#       - target_label: __address__
+#         replacement: blackbox:9115
+#     scrape_interval: 30s
+#
+#   - job_name: 'blackbox_dns_a'
+#     metrics_path: /probe
+#     params:
+#       module: [dns_a]
+#     static_configs:
+#       - targets:
+#           - ide.kushnir.cloud
+#           - code-server.192.168.168.31.nip.io
+#     relabel_configs:
+#       - source_labels: [__address__]
+#         target_label: __param_target
+#       - source_labels: [__param_target]
+#         target_label: instance
+#       - target_label: __address__
+#         replacement: blackbox:9115
+#     scrape_interval: 1m
+#
+#   - job_name: 'blackbox_icmp_ping'
+#     metrics_path: /probe
+#     params:
+#       module: [icmp]
+#     static_configs:
+#       - targets:
+#           - 192.168.168.31
+#           - 192.168.168.42
+#     relabel_configs:
+#       - source_labels: [__address__]
+#         target_label: __param_target
+#       - source_labels: [__param_target]
+#         target_label: instance
+#       - target_label: __address__
+#         replacement: blackbox:9115
+#     scrape_interval: 10s
+#     scrape_timeout: 5s
+
+# Exemplars Configuration (for Jaeger trace correlation)
+# Add to Prometheus global section:
+#
+# global:
+#   exemplar_storage:
+#     max_exemplars: 100000
+#
+# Grafana Datasource Configuration (for exemplars):
+# {
+#   "name": "Prometheus",
+#   "type": "prometheus",
+#   "url": "http://prometheus:9090",
+#   "jsonData": {
+#     "exemplarTraceIdDestinations": [
+#       {
+#         "datasourceUid": "jaeger-datasource-uid",
+#         "name": "traceID"
+#       }
+#     ]
+#   }
+# }

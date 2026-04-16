@@ -13,7 +13,6 @@
 |-----------|----------|--------|---|
 | **Workflow** | `.github/workflows/post-merge-cleanup-deploy.yml` | ✅ Active | Executed successfully on PR #197 |
 | **Bash Script** | `scripts/redeploy.sh` | ✅ Ready | 15.3 KB, all functions implemented |
-| **PowerShell Script** | `scripts/redeploy.ps1` | ✅ Ready | 12.2 KB, all functions implemented |
 | **Mandate Policy** | `.github/AUTO-MERGE-CLEANUP-DEPLOY-MANDATE.md` | ✅ Published | 10.5 KB, comprehensive guide |
 | **Orchestration Guide** | `.github/DEPLOYMENT_ORCHESTRATION_GUIDE.md` | ✅ Published | 16.5 KB, detailed architecture |
 | **Verification Checklist** | `.github/AUTO-DEPLOY-VERIFICATION-CHECKLIST.md` | ✅ Published | 11.4 KB, step-by-step testing |
@@ -227,7 +226,6 @@ Trigger Deploy Workflow:
 ### Created by Initial Implementation
 - `.github/workflows/post-merge-cleanup-deploy.yml`
 - `scripts/redeploy.sh`
-- `scripts/redeploy.ps1`
 - 5 documentation files
 
 ### Modified by Test Execution

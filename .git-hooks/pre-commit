@@ -1,0 +1,92 @@
+#!/bin/bash
+# .git-hooks/pre-commit
+# Secret detection before commit
+# Install: cp .git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+ERRORS=0
+
+echo -e "${YELLOW}→${NC} Running pre-commit secret detection..."
+echo ""
+
+# 1. Check for obvious password patterns in staged files
+echo "Checking for hardcoded passwords..."
+if git diff --cached --name-only | xargs grep -l "password\|PASSWORD\|passwd" 2>/dev/null | while read file; do
+  if ! echo "$file" | grep -qE "\.example|\.template|\.md|package\.json"; then
+    echo -e "${RED}✗ Found password reference in: $file${NC}"
+    ((ERRORS++))
+  fi
+done; then
+  :
+fi
+
+# 2. Check for API keys and tokens
+echo "Checking for exposed API keys..."
+if git diff --cached | grep -E "api[_-]?key|apikey|secret|token|Bearer\s" | grep -v ".example" | head -3; then
+  echo -e "${RED}✗ Possible API key exposure detected${NC}"
+  ((ERRORS++))
+fi
+
+# 3. Check for AWS/GCP credentials
+echo "Checking for cloud credentials..."
+if git diff --cached | grep -E "AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z\-_]{35}" 2>/dev/null; then
+  echo -e "${RED}✗ AWS/GCP credentials detected${NC}"
+  ((ERRORS++))
+fi
+
+# 4. Check for private SSH keys
+echo "Checking for SSH keys..."
+if git diff --cached --name-only | xargs file 2>/dev/null | grep "OpenSSH" | grep -v ".example"; then
+  echo -e "${RED}✗ SSH private key detected${NC}"
+  ((ERRORS++))
+fi
+
+# 5. Check for OAuth credentials in env files
+echo "Checking for OAuth secrets in .env files..."
+if git diff --cached | grep "^+.*OAUTH.*=" | grep -v "OAUTH_.*=\${" | grep -v ".example" | head -3; then
+  echo -e "${RED}✗ Possible OAuth secret in committed code${NC}"
+  ((ERRORS++))
+fi
+
+# 6. Check for database connection strings
+echo "Checking for database passwords..."
+if git diff --cached | grep -E "postgres://.*:.*@|mysql://.*:.*@|mongodb://.*:.*@" | head -3; then
+  echo -e "${RED}✗ Database connection with password detected${NC}"
+  ((ERRORS++))
+fi
+
+# 7. TruffleHog check (if installed)
+if command -v truffleHog &> /dev/null; then
+  echo "Running TruffleHog scan..."
+  if git diff --cached | truffleHog stdin 2>/dev/null | grep -q "Found unverified result"; then
+    echo -e "${RED}✗ TruffleHog detected potential secrets${NC}"
+    ((ERRORS++))
+  fi
+else
+  echo -e "${YELLOW}⚠ TruffleHog not installed (optional but recommended)${NC}"
+  echo -e "${YELLOW}  Install: pip install truffleHog${NC}"
+fi
+
+# Summary
+echo ""
+if [[ $ERRORS -gt 0 ]]; then
+  echo -e "${RED}❌ COMMIT BLOCKED: Found $ERRORS potential secret(s)${NC}"
+  echo ""
+  echo "To proceed anyway (NOT RECOMMENDED):"
+  echo "  git commit --no-verify"
+  echo ""
+  echo "To fix and retry:"
+  echo "  1. Remove sensitive data from staged files"
+  echo "  2. git add ."
+  echo "  3. git commit"
+  exit 1
+fi
+
+echo -e "${GREEN}✓ No secrets detected${NC}"
+exit 0

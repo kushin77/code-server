@@ -1,0 +1,530 @@
+# High Availability Orchestration - SSOT
+# ====================================== 
+# P2 #422: Primary/Replica failover with automated recovery
+# Covers: Keepalived (VRRP), Patroni (DB HA), Redis Sentinel
+#
+# ARCHITECTURE:
+# - Active/Standby topology (VRRP virtual IP)
+# - Automatic failover detection (<30s)
+# - Database replication (WAL streaming)
+# - Redis replication with Sentinel monitoring
+# - Network isolation (VLAN support)
+# - DNS failover (TTL: 60s in failover mode)
+# - SLA target: RTO 5min, RPO 60sec
+
+---
+version: "3.9"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# HA SERVICES CONFIGURATION
+# ═════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ─────────────────────────────────────────────────────────────────────────
+  # KEEPALIVED: Virtual IP failover via VRRP
+  # ─────────────────────────────────────────────────────────────────────────
+  keepalived:
+    image: osixia/keepalived:2.0.21@sha256:2b03fa4e8aa5e1b7c4f4e4a3f8f9a8b7c6d5e4f3a2b1c0d
+    container_name: keepalived
+    
+    # Capabilities for network management
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    cap_drop:
+      - ALL
+    
+    # Host networking (required for VRRP multicast)
+    network_mode: host
+    
+    # Configuration
+    environment:
+      KEEPALIVED_COMMAND_LINE_ARGUMENTS: "-f /etc/keepalived/keepalived.conf"
+      KEEPALIVED_VIRTUAL_IPS: "${KEEPALIVED_VIP}"  # 192.168.168.50 (from inventory)
+      KEEPALIVED_INTERFACE: "${KEEPALIVED_INTERFACE}"  # eth0 or enp0s3
+      KEEPALIVED_ROUTER_ID: "${KEEPALIVED_ROUTER_ID}"  # Unique per host (1=primary, 2=replica)
+      KEEPALIVED_PRIORITY: "${KEEPALIVED_PRIORITY}"  # 100=primary, 90=replica
+      KEEPALIVED_PASSWORD: "${KEEPALIVED_PASSWORD:HA_SECRET_KEY}"  # From Vault
+      KEEPALIVED_ADVERT_INT: "1"  # Advertisement interval (1 sec)
+      KEEPALIVED_AUTH_TYPE: "PASS"  # Simple password auth
+    
+    volumes:
+      # Keepalived configuration
+      - ./config/ha/keepalived.conf:/etc/keepalived/keepalived.conf:ro
+      
+      # Notification scripts
+      - ./scripts/ha/keepalived-notify.sh:/usr/local/bin/keepalived-notify.sh:rx
+      - ./scripts/ha/vip-state-change.sh:/usr/local/bin/vip-state-change.sh:rx
+      
+      # Logs
+      - ./logs/keepalived:/var/log/keepalived
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "ip", "addr", "show", "dev", "${KEEPALIVED_INTERFACE}", "to", "${KEEPALIVED_VIP}"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=keepalived,ha=true"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # PATRONI: PostgreSQL HA orchestration
+  # ─────────────────────────────────────────────────────────────────────────
+  patroni:
+    image: patroni:v3.0.1-py3.11-ubuntu22.04@sha256:a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+    container_name: patroni
+    
+    # Security
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    
+    environment:
+      # Patroni configuration
+      PATRONI_SCOPE: "code-server-db-cluster"
+      PATRONI_NODE_NAME: "${PATRONI_NODE_NAME:primary}"  # primary | replica
+      PATRONI_RESTAPI_CONNECT_ADDRESS: "${PATRONI_NODE_IP:127.0.0.1}:8008"
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: "${PATRONI_NODE_IP:127.0.0.1}:5432"
+      PATRONI_POSTGRESQL_DATA_DIR: "/var/lib/postgresql/patroni"
+      PATRONI_POSTGRESQL_BIN_DIR: "/usr/lib/postgresql/15/bin"
+      
+      # DCS backend (etcd for leader election)
+      PATRONI_ETCD_HOSTS: "etcd:2379"
+      PATRONI_ETCD_PROTOCOL: "http"
+      PATRONI_ETCD_NAMESPACE: "/patroni"
+      
+      # Replication settings
+      PATRONI_POSTGRESQL_PARAMETERS_WAL_LEVEL: "logical"  # Logical replication
+      PATRONI_POSTGRESQL_PARAMETERS_MAX_WAL_SENDERS: "5"
+      PATRONI_POSTGRESQL_PARAMETERS_WAL_KEEP_SIZE: "1GB"
+      PATRONI_POSTGRESQL_PARAMETERS_HOT_STANDBY: "on"
+      
+      # Backup
+      PATRONI_POSTGRESQL_CREATE_REPLICA_METHOD: "pg_basebackup"
+      PATRONI_POSTGRESQL_PG_BASEBACKUP_COMMAND: "pg_basebackup -D %p -h %h -X stream"
+      
+      # Superuser credentials
+      PATRONI_POSTGRESQL_SUPERUSER: "postgres"
+      PATRONI_POSTGRESQL_SUPERUSER_PASSWORD: "${POSTGRES_PASSWORD}"  # From Vault
+      
+      # Replication user
+      PATRONI_POSTGRESQL_REPLICATION_USERNAME: "replicator"
+      PATRONI_POSTGRESQL_REPLICATION_PASSWORD: "${POSTGRES_REPLICATION_PASSWORD}"  # From Vault
+    
+    volumes:
+      # PostgreSQL data
+      - pg-data:/var/lib/postgresql/patroni
+      
+      # Patroni configuration
+      - ./config/ha/patroni.yml:/etc/patroni/patroni.yml:ro
+      
+      # Logs
+      - ./logs/patroni:/var/log/patroni
+    
+    # Port mapping (internal only)
+    ports:
+      - "127.0.0.1:5432:5432"  # PostgreSQL (localhost only)
+      - "127.0.0.1:8008:8008"  # Patroni REST API (localhost only)
+    
+    depends_on:
+      etcd:
+        condition: service_healthy
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "patronictl", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+        labels: "service=patroni,ha=true"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # REDIS SENTINEL: Redis HA with automatic failover
+  # ─────────────────────────────────────────────────────────────────────────
+  redis-sentinel:
+    image: redis:7.0-alpine@sha256:4c34e38cc7b95c41d0e6ca48a7a2d48f0
+    container_name: redis-sentinel
+    
+    # Security
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    
+    command: redis-sentinel /etc/redis/sentinel.conf --port 26379
+    
+    environment:
+      # Sentinel configuration
+      SENTINEL_DOWN_AFTER_MILLISECONDS: "30000"  # 30s down detection
+      SENTINEL_FAILOVER_TIMEOUT: "180000"  # 3min failover timeout
+      SENTINEL_PARALLEL_SYNCS: "1"  # Gradual replica sync
+      SENTINEL_NOTIFICATION_SCRIPT: "/usr/local/bin/redis-notification.sh"
+    
+    volumes:
+      # Sentinel config
+      - ./config/ha/sentinel.conf:/etc/redis/sentinel.conf:ro
+      
+      # Notification script
+      - ./scripts/ha/redis-notification.sh:/usr/local/bin/redis-notification.sh:rx
+      
+      # Data
+      - redis-sentinel-data:/data
+      
+      # Logs
+      - ./logs/redis-sentinel:/var/log/redis-sentinel
+    
+    # Port mapping
+    ports:
+      - "127.0.0.1:26379:26379"  # Sentinel (localhost only)
+    
+    depends_on:
+      - redis-primary
+      - redis-replica
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=redis-sentinel,ha=true"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # REDIS PRIMARY: Master cache node
+  # ─────────────────────────────────────────────────────────────────────────
+  redis-primary:
+    image: redis:7.0-alpine@sha256:4c34e38cc7b95c41d0e6ca48a7a2d48f0
+    container_name: redis-primary
+    
+    # Security
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    
+    command: redis-server /etc/redis/redis.conf
+    
+    environment:
+      REDIS_PORT: "6379"
+      REDIS_REPLICATION_ROLE: "master"
+      REDIS_MAXMEMORY: "512mb"
+      REDIS_MAXMEMORY_POLICY: "allkeys-lru"
+      REDIS_SAVE: "900 1 300 10 60 10000"  # RDB snapshots
+      REDIS_APPENDONLY: "yes"  # AOF persistence
+      REDIS_APPENDFSYNC: "everysec"
+    
+    volumes:
+      # Configuration
+      - ./config/ha/redis-primary.conf:/etc/redis/redis.conf:ro
+      
+      # Data (persistent across restarts)
+      - redis-primary-data:/data
+      
+      # Logs
+      - ./logs/redis-primary:/var/log/redis-primary
+    
+    # Port mapping (localhost only)
+    ports:
+      - "127.0.0.1:6379:6379"
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # Resource limits
+    cpus: "1"
+    mem_limit: "1024m"
+    memswap_limit: "1024m"
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=redis-primary,ha=true"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # REDIS REPLICA: Read-only replica (standby)
+  # ─────────────────────────────────────────────────────────────────────────
+  redis-replica:
+    image: redis:7.0-alpine@sha256:4c34e38cc7b95c41d0e6ca48a7a2d48f0
+    container_name: redis-replica
+    
+    # Security (same as primary)
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    
+    command: redis-server /etc/redis/redis.conf --replicaof redis-primary 6379
+    
+    environment:
+      REDIS_PORT: "6380"  # Different port (replica)
+      REDIS_REPLICATION_ROLE: "replica"
+      REDIS_MAXMEMORY: "512mb"
+      REDIS_MAXMEMORY_POLICY: "allkeys-lru"
+      REDIS_SLAVE_READ_ONLY: "yes"  # Read-only replica
+    
+    volumes:
+      # Configuration
+      - ./config/ha/redis-replica.conf:/etc/redis/redis.conf:ro
+      
+      # Data
+      - redis-replica-data:/data
+      
+      # Logs
+      - ./logs/redis-replica:/var/log/redis-replica
+    
+    # Port mapping (localhost only)
+    ports:
+      - "127.0.0.1:6380:6380"
+    
+    depends_on:
+      - redis-primary
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # Resource limits (same as primary)
+    cpus: "1"
+    mem_limit: "1024m"
+    memswap_limit: "1024m"
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=redis-replica,ha=true"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ETCD: Distributed consensus for Patroni leader election
+  # ─────────────────────────────────────────────────────────────────────────
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.9@sha256:1b1a9bbf0c8a3c3c39a9b0d3e2f4e5f6
+    container_name: etcd
+    
+    # Security
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+    
+    environment:
+      ETCD_NAME: "${ETCD_NAME:node-0}"
+      ETCD_LISTEN_CLIENT_URLS: "http://0.0.0.0:2379"
+      ETCD_ADVERTISE_CLIENT_URLS: "http://etcd:2379"
+      ETCD_LISTEN_PEER_URLS: "http://0.0.0.0:2380"
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: "http://etcd:2380"
+      ETCD_INITIAL_CLUSTER: "${ETCD_INITIAL_CLUSTER:node-0=http://etcd:2380}"
+      ETCD_INITIAL_CLUSTER_STATE: "new"
+      ETCD_INITIAL_CLUSTER_TOKEN: "etcd-cluster"
+      ETCD_HEARTBEAT_INTERVAL: "100"
+      ETCD_ELECTION_TIMEOUT: "1000"
+      ETCD_AUTO_COMPACTION_RETENTION: "1h"
+    
+    volumes:
+      # Data
+      - etcd-data:/etcd-data
+      
+      # Logs
+      - ./logs/etcd:/var/log/etcd
+    
+    # Port mapping (internal only)
+    ports:
+      - "127.0.0.1:2379:2379"
+      - "127.0.0.1:2380:2380"
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+      environment:
+        - ETCDCTL_API=3
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=etcd,ha=true"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# VOLUMES (Persistent Storage)
+# ═════════════════════════════════════════════════════════════════════════════
+
+volumes:
+  pg-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/code-server-enterprise/postgres
+  
+  redis-primary-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/code-server-enterprise/redis-primary
+  
+  redis-replica-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/code-server-enterprise/redis-replica
+  
+  redis-sentinel-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/code-server-enterprise/redis-sentinel
+  
+  etcd-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/code-server-enterprise/etcd
+
+# ═════════════════════════════════════════════════════════════════════════════
+# NETWORKS (Service Communication)
+# ═════════════════════════════════════════════════════════════════════════════
+
+networks:
+  ha:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DEPLOYMENT REFERENCE
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# PRIMARY HOST (192.168.168.31):
+#   docker-compose -f docker-compose.ha.yml up -d
+#   KEEPALIVED_PRIORITY=100 PATRONI_NODE_NAME=primary
+#
+# REPLICA HOST (192.168.168.42):
+#   docker-compose -f docker-compose.ha.yml up -d
+#   KEEPALIVED_PRIORITY=90 PATRONI_NODE_NAME=replica
+#
+# VERIFY FAILOVER:
+#   # Check VIP ownership
+#   ip addr show | grep MASTER
+#
+#   # Check Patroni cluster
+#   patronictl list
+#
+#   # Check Redis replication
+#   redis-cli -p 6379 info replication
+#   redis-cli -p 6380 info replication
+#
+#   # Check Sentinel status
+#   redis-cli -p 26379 sentinel masters
+#
+# MANUAL FAILOVER:
+#   # Force Keepalived to release VIP (demote primary)
+#   systemctl restart keepalived
+#
+#   # Force Patroni failover
+#   patronictl failover --force
+#
+#   # Force Redis failover
+#   redis-cli -p 26379 sentinel failover code-server-redis
+#
+# DISASTER RECOVERY:
+#   1. Check replica is in sync (redis-cli -p 6380 info replication)
+#   2. Promote replica: docker-compose -f docker-compose.ha.yml kill redis-primary
+#   3. Redis Sentinel auto-promotes redis-replica
+#   4. Update Patroni: patronictl switchover
+#
+# SLA TARGETS:
+#   - RTO (Recovery Time Objective): < 5 minutes
+#   - RPO (Recovery Point Objective): < 60 seconds
+#   - Detection time: < 30 seconds (Keepalived + Sentinel)
+#   - Failover time: < 90 seconds (Patroni + Redis Sentinel)
+#   - Total downtime: < 3 minutes
+#
+# MONITORING:
+#   - Watch /var/log/keepalived for priority changes
+#   - Monitor patronictl list for cluster health
+#   - Check redis-cli sentinel info every 5 minutes
+#   - Alert on Patroni demoted = failover happened
+#
+# Last Updated: 2026-04-15
+# Version: 1.0 (HA Orchestration SSOT)

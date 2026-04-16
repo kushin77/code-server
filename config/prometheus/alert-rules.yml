@@ -1,0 +1,662 @@
+---
+# Master Alert Rules SSOT (Consolidated)
+# Consolidates: alert-rules.yml + config/alert-rules.yml + config/alert-rules-31.yaml
+# Updated: 2026-04-14 via Elite-001 consolidation Phase 1.4
+# Architecture: All rules in single file, symlink from config/, no duplication
+
+groups:
+  # ========== Core SLA Alerts ==========
+  - name: core_sla_alerts
+    interval: 30s
+    rules:
+      # P1: Database Failover Detected
+      - alert: DatabaseFailoverDetected
+        expr: pg_replication_lag_seconds > 60
+        for: 1m
+        annotations:
+          summary: "PostgreSQL replication lag critical"
+          description: "Replication lag {{ $value }}s - failover may be triggered"
+        labels:
+          severity: critical
+          page: "true"
+
+      # P1: Database Primary Down
+      - alert: DatabasePrimaryDown
+        expr: up{job="postgres"} == 0
+        for: 30s
+        annotations:
+          summary: "PostgreSQL primary database unreachable"
+          description: "Failed to connect to database primary - failover activated"
+        labels:
+          severity: critical
+          page: "true"
+
+      # P2: Latency Spike
+      - alert: LatencySpike
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.2
+        for: 5m
+        annotations:
+          summary: "High latency detected (p99 > 200ms)"
+          description: "Latency spike detected - investigate slow queries"
+        labels:
+          severity: high
+          page: "false"
+
+      # P2: Error Rate High
+      - alert: ErrorRateHigh
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.001
+        for: 5m
+        annotations:
+          summary: "Error rate above threshold"
+          description: "Error rate {{ $value }} - check application logs"
+        labels:
+          severity: high
+          page: "false"
+
+      # P2: Redis Memory Critical
+      - alert: RedisMemoryCritical
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        annotations:
+          summary: "Redis memory usage critical (>90%)"
+          description: "Redis approaching memory limit - eviction policy active"
+        labels:
+          severity: high
+          page: "false"
+
+      # P3: Certificate Expiry
+      - alert: CertificateNearExpiry
+        expr: ssl_certificate_not_after_seconds - time() < 604800
+        for: 1h
+        annotations:
+          summary: "SSL certificate expires in < 7 days"
+          description: "Certificate {{ $labels.certificate }} expires soon"
+        labels:
+          severity: medium
+          page: "false"
+
+      # P3: Disk Space Low
+      - alert: DiskSpaceLow
+        expr: disk_free_bytes / disk_total_bytes < 0.1
+        for: 10m
+        annotations:
+          summary: "Disk space running low (<10%)"
+          description: "Available disk space: {{ $value }}%"
+        labels:
+          severity: medium
+          page: "false"
+
+  # ========== Production SLO Alerts ==========
+  - name: production_slos
+    interval: 30s
+    rules:
+      # Error rate alerts (more precise than core_sla_alerts)
+      - alert: HighErrorRate
+        expr: (rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])) > 0.001
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High error rate detected ({{ $value | humanizePercentage }})"
+          description: "Error rate is above 0.1% on {{ $labels.instance }}"
+
+      # Latency alerts (more granular than core_sla_alerts)
+      - alert: HighP99Latency
+        expr: histogram_quantile(0.99, http_request_duration_seconds_bucket) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High p99 latency detected ({{ $value }}s)"
+          description: "p99 latency is above 100ms on {{ $labels.instance }}"
+
+      # CPU alerts
+      - alert: HighCPUUsage
+        expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage detected ({{ $value | humanize }}%)"
+          description: "CPU usage is above 80% on {{ $labels.instance }}"
+
+      # Memory alerts
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage detected"
+          description: "Available memory is below 10% on {{ $labels.instance }}"
+
+  # ========== GPU Alerts (Host: primary.prod.internal) ==========
+  - name: gpu_alerts
+    interval: 15s
+    rules:
+      # GPU Availability
+      - alert: GPUUnavailable
+        expr: 'dcgm_gpu_active == 0'
+        for: 2m
+        labels:
+          severity: critical
+          component: gpu
+          sla_impact: "yes"
+          host: "primary.prod.internal"
+        annotations:
+          summary: "GPU {{ $labels.gpu_index }} is unavailable"
+          description: "GPU {{ $labels.gpu_index }} not responding for 2 minutes. Check NVIDIA driver status."
+
+      # GPU High Temperature
+      - alert: GPUHighTemperature
+        expr: 'dcgm_gpu_temp > 85'
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+          host: "primary.prod.internal"
+        annotations:
+          summary: "GPU {{ $labels.gpu_index }} temperature is {{ $value }}°C"
+          description: "GPU running above 85°C for 5 minutes. Check cooling and reduce load."
+
+      # GPU Critical Temperature
+      - alert: GPUCriticalTemperature
+        expr: 'dcgm_gpu_temp > 95'
+        for: 1m
+        labels:
+          severity: critical
+          component: gpu
+          host: "primary.prod.internal"
+        annotations:
+          summary: "GPU {{ $labels.gpu_index }} CRITICAL temperature: {{ $value }}°C"
+          description: "GPU exceeded 95°C. Shutting down workloads to prevent damage."
+
+      # GPU Memory Exhaustion
+      - alert: GPUMemoryExhaustion
+        expr: '(dcgm_fb_free / (dcgm_fb_free + dcgm_fb_used)) < 0.1'
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+          host: "primary.prod.internal"
+        annotations:
+          summary: "GPU {{ $labels.gpu_index }} memory utilization > 90%"
+          description: "Less than 10% free VRAM. Reduce batch size or offload inference."
+
+      # GPU Power Limit
+      - alert: GPUPowerLimit
+        expr: 'dcgm_power_usage / dcgm_power_limit > 0.95'
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+          host: "primary.prod.internal"
+        annotations:
+          summary: "GPU {{ $labels.gpu_index }} power at {{ $value | humanizePercentage }} of limit"
+          description: "Power consumption exceeds 95% of limit. Check thermal throttling."
+
+  # ========== Operational Coverage Gaps (Issue #374) ==========
+  # 6 critical operational scenarios with no alert coverage before this issue
+  - name: operational_coverage
+    interval: 60s
+    rules:
+
+      # ─── Gap 1: Backup Failures (P0 operational risk) ───
+      - alert: BackupFailed
+        expr: |-
+          (time() - backup_last_success_timestamp_seconds) > 90000
+          or absent(backup_last_success_timestamp_seconds)
+        for: 0m
+        labels:
+          severity: critical
+          component: backup
+          sla_impact: "yes"
+          operational_gap: "gap_1_backup"
+          runbook: "docs/runbooks/backup-failure.md"
+        annotations:
+          summary: "Backup has not completed in 25+ hours"
+          description: "Last successful backup was {{ $value | humanizeDuration }} ago. Data loss risk is increasing."
+          runbook: "docs/runbooks/backup-failure.md"
+
+      - alert: BackupStorageLow
+        expr: (backup_storage_used_bytes / backup_storage_total_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_1_backup"
+        annotations:
+          summary: "Backup storage > 85% full"
+          description: "{{ $value | humanizePercentage }} of backup storage used. Clean old backups soon."
+
+      # ─── Gap 2: TLS Certificate Expiry ───
+      - alert: SSLCertExpiryWarning
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          operational_gap: "gap_2_ssl_cert"
+          runbook: "docs/runbooks/ssl-cert-renewal.md"
+        annotations:
+          summary: "SSL certificate expires in {{ $value | humanize }} days"
+          description: "Certificate for {{ $labels.instance }} expires soon. Check Caddy renewal logs."
+          runbook: "docs/runbooks/ssl-cert-renewal.md"
+
+      - alert: SSLCertExpiryCritical
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 7
+        for: 0m
+        labels:
+          severity: critical
+          operational_gap: "gap_2_ssl_cert"
+          runbook: "docs/runbooks/ssl-cert-renewal.md"
+        annotations:
+          summary: "CRITICAL: SSL certificate expires in {{ $value | humanize }} days"
+          description: "Certificate {{ $labels.instance }} expires soon. Renew immediately to avoid user-facing errors."
+          runbook: "docs/runbooks/ssl-cert-renewal.md"
+
+      # ─── Gap 3: Container Restart Loops ───
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds{name!=""}[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_3_container_restarts"
+        annotations:
+          summary: "Container {{ $labels.name }} has restarted {{ $value }} times in 10m"
+          description: "Possible crash loop. Check: docker logs {{ $labels.name }}"
+
+      - alert: ContainerCrashLoop
+        expr: increase(container_start_time_seconds{name!=""}[10m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          operational_gap: "gap_3_container_restarts"
+          runbook: "docs/runbooks/container-crash-debug.md"
+        annotations:
+          summary: "CRITICAL: Container {{ $labels.name }} is crash-looping ({{ $value }} restarts)"
+          description: "Container restarted {{ $value }} times in 10 minutes. Service is non-functional. Check logs immediately."
+          runbook: "docs/runbooks/container-crash-debug.md"
+
+      # ─── Gap 4: PostgreSQL Replication Lag ───
+      - alert: PostgreSQLReplicationLagWarning
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_4_replication_lag"
+        annotations:
+          summary: "PostgreSQL replication lag is {{ $value }}s (threshold: 30s)"
+          description: "Replica is falling behind primary. Check network and disk I/O on replica."
+
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_seconds > 120
+        for: 2m
+        labels:
+          severity: critical
+          operational_gap: "gap_4_replication_lag"
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+        annotations:
+          summary: "CRITICAL: PostgreSQL replication lag {{ $value }}s — data loss risk if primary fails"
+          description: "Replica is 2+ minutes behind. RPO violation imminent. Check replica health now."
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+
+      - alert: PostgreSQLReplicationBroken
+        expr: pg_replication_is_replica == 0 and on() pg_up{instance=~".*replica.*"} == 1
+        for: 2m
+        labels:
+          severity: critical
+          operational_gap: "gap_4_replication_lag"
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+        annotations:
+          summary: "PostgreSQL replication is BROKEN — standby not receiving WAL"
+          description: "Replica not acting as replica. Replication may have failed. Check replication status immediately."
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+
+      # ─── Gap 5: Disk Space Exhaustion ───
+      - alert: DiskSpaceWarning
+        expr: |-
+          (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"})
+          / node_filesystem_size_bytes{mountpoint="/"} > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          component: filesystem
+          operational_gap: "gap_5_disk_space"
+        annotations:
+          summary: "Disk usage {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+          description: "Root filesystem > 80% full. Check: df -h / && du -sh /var/lib/docker"
+
+      - alert: DiskSpaceCritical
+        expr: |-
+          (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"})
+          / node_filesystem_size_bytes{mountpoint="/"} > 0.93
+        for: 2m
+        labels:
+          severity: critical
+          component: filesystem
+          sla_impact: "yes"
+          operational_gap: "gap_5_disk_space"
+          runbook: "docs/runbooks/disk-space-cleanup.md"
+        annotations:
+          summary: "CRITICAL: Disk {{ $value | humanizePercentage }} full on {{ $labels.instance }}"
+          description: "Root filesystem nearly full. Services will fail if disk fills. Check: df -h / && du -sh /var/lib/docker /opt/prometheus-data"
+          runbook: "docs/runbooks/disk-space-cleanup.md"
+
+      # ─── Gap 6: Ollama GPU Model Server Failures ───
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          operational_gap: "gap_6_ollama"
+          runbook: "docs/runbooks/ollama-troubleshooting.md"
+        annotations:
+          summary: "Ollama model server is down"
+          description: "AI features in code-server will be degraded. Check: docker logs ollama"
+          runbook: "docs/runbooks/ollama-troubleshooting.md"
+
+      - alert: OllamaGPUMemoryHigh
+        expr: (nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) > 0.95
+        for: 5m
+        labels:
+          severity: warning
+          operational_gap: "gap_6_ollama"
+        annotations:
+          summary: "GPU memory {{ $value | humanizePercentage }} used — Ollama may OOM soon"
+          description: "Available VRAM critical. Running models may be evicted. Reduce batch size or unload models."
+
+      - alert: OllamaGPUMemoryOOM
+        expr: (nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) > 0.99
+        for: 1m
+        labels:
+          severity: critical
+          operational_gap: "gap_6_ollama"
+        annotations:
+          summary: "Ollama GPU memory exhausted ({{ $value | humanizePercentage }})"
+          description: "GPU out of memory. Ollama model loading will fail. Restart Ollama or reduce model size."
+
+
+      # GPU ECC Errors
+      - alert: GPUECCErrors
+        expr: 'increase(dcgm_ecc_errors_corrected[1h]) > 10'
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+          host: "primary.prod.internal"
+        annotations:
+          summary: "GPU {{ $labels.gpu_index }} ECC errors: {{ $value }} in last hour"
+          description: "{{ $value }} ECC errors detected. Monitor for hardware degradation."
+
+  # ========== NAS Alerts (Host: 192.168.168.56 + backup 55) ==========
+  - name: nas_alerts
+    interval: 30s
+    rules:
+      # NAS Mount Point Down
+      - alert: NASMountPointDown
+        expr: 'nas_mount_up == 0'
+        for: 2m
+        labels:
+          severity: critical
+          component: nas
+          sla_impact: "yes"
+        annotations:
+          summary: "NAS mount {{ $labels.mount_path }} is unavailable"
+          description: "NAS mount not responding for 2 minutes. Check network and NAS health."
+
+      # NAS Capacity Critical
+      - alert: NASCapacityCritical
+        expr: '(1 - (nas_fs_avail / nas_fs_size)) > 0.9'
+        for: 5m
+        labels:
+          severity: critical
+          component: nas
+        annotations:
+          summary: "NAS {{ $labels.mount_path }} capacity at {{ $value | humanizePercentage }}"
+          description: "90%+ full. Immediate action required to prevent data loss."
+
+      # NAS Capacity Warning
+      - alert: NASCapacityWarning
+        expr: '(1 - (nas_fs_avail / nas_fs_size)) > 0.75'
+        for: 10m
+        labels:
+          severity: warning
+          component: nas
+        annotations:
+          summary: "NAS {{ $labels.mount_path }} capacity at {{ $value | humanizePercentage }}"
+          description: "75%+ full. Plan capacity expansion or cleanup."
+
+      # NAS Latency Degradation
+      - alert: NASLatencyDegraded
+        expr: 'histogram_quantile(0.99, nas_io_latency_seconds) > 0.1'
+        for: 5m
+        labels:
+          severity: warning
+          component: nas
+        annotations:
+          summary: "NAS {{ $labels.mount_path }} p99 latency: {{ $value | humanizeDuration }}"
+          description: "Latency exceeded 100ms threshold. Check network and NAS performance."
+
+      # NAS IOPS Saturation
+      - alert: NASIOPSSaturation
+        expr: 'rate(nas_io_operations_total[5m]) > 100000'
+        for: 5m
+        labels:
+          severity: warning
+          component: nas
+        annotations:
+          summary: "NAS {{ $labels.mount_path }} IOPS: {{ $value | humanize }} ops/sec"
+          description: ">100k IOPS sustained. Check for workload concentration."
+
+      # NAS Backup Failure
+      - alert: NASBackupFailure
+        expr: 'nas_backup_last_success_epoch < (time() - 3600)'
+        for: 10m
+        labels:
+          severity: critical
+          component: nas
+        annotations:
+          summary: "NAS backup {{ $labels.backup_name }} failed for >1 hour"
+          description: "Backup missing or failed. Check backup logs immediately."
+
+  # ========== Application Alerts ==========
+  - name: application_alerts
+    interval: 15s
+    rules:
+      # Code-Server Service Down
+      - alert: CodeServerUnhealthy
+        expr: 'up{job="code-server"} == 0'
+        for: 2m
+        labels:
+          severity: critical
+          component: code-server
+          sla_impact: "yes"
+        annotations:
+          summary: "Code-Server at {{ $labels.instance }} not responding"
+          description: "Health check failed for 2 minutes. Check service logs."
+
+      # Ollama Model Load Failure
+      - alert: OllamaModelLoadFailure
+        expr: 'increase(ollama_model_load_errors_total[5m]) > 0'
+        for: 5m
+        labels:
+          severity: warning
+          component: ollama
+        annotations:
+          summary: "Ollama model load failures detected"
+          description: "{{ $value }} load failures in last 5 minutes. Check model availability."
+
+      # Ollama Inference Timeout
+      - alert: OllamaInferenceTimeout
+        expr: 'histogram_quantile(0.99, ollama_inference_latency_seconds) > 5'
+        for: 5m
+        labels:
+          severity: warning
+          component: ollama
+        annotations:
+          summary: "Ollama inference latency high (p99 > 5s)"
+          description: "Model inference latency exceeds 5 seconds. Check system load."
+
+  # ========== Falco Runtime Security Alerts ==========
+  - name: falco_security_alerts
+    interval: 15s
+    rules:
+      # Falco Critical Security Event
+      - alert: FalcoCriticalEvent
+        expr: 'increase(falco_events_total{priority="CRITICAL"}[5m]) > 0'
+        for: 0m
+        labels:
+          severity: critical
+          component: falco
+          sla_impact: "yes"
+        annotations:
+          summary: "Falco detected critical security event"
+          description: "Immediate investigation required — possible breach or container escape"
+          runbook_url: "docs/runbooks/falco-critical-event.md"
+
+      # Falco High Event Rate (possible attack)
+      - alert: FalcoHighEventRate
+        expr: 'rate(falco_events_total{priority="WARNING"}[5m]) > 0.5'
+        for: 5m
+        labels:
+          severity: high
+          component: falco
+        annotations:
+          summary: "Elevated Falco event rate — possible attack in progress"
+          description: "{{ $value | humanize }} events/sec detected. Review Falco logs immediately."
+          runbook_url: "docs/runbooks/falco-high-event-rate.md"
+
+      # Falco Container Privilege Escalation
+      - alert: FalcoContainerPrivilegeEscalation
+        expr: 'increase(falco_events_total{rule="Privilege Escalation Attempt"}[5m]) > 0'
+        for: 0m
+        labels:
+          severity: critical
+          component: falco
+          sla_impact: "yes"
+        annotations:
+          summary: "Privilege escalation attempt detected in container"
+          description: "Container {{ $labels.container }} attempting unauthorized privilege change"
+          runbook_url: "docs/runbooks/falco-privilege-escalation.md"
+
+      # Falco Crypto Mining Detection
+      - alert: FalcoCryptoMiningDetected
+        expr: 'increase(falco_events_total{rule="Crypto Mining Attempt"}[5m]) > 0'
+        for: 0m
+        labels:
+          severity: critical
+          component: falco
+          sla_impact: "yes"
+        annotations:
+          summary: "Crypto mining activity detected"
+          description: "Container {{ $labels.container }} connecting to suspicious mining pool"
+          runbook_url: "docs/runbooks/falco-crypto-mining.md"
+
+      # Falco Sensitive File Access
+      - alert: FalcoSensitiveFileAccess
+        expr: 'increase(falco_events_total{rule="Sensitive File Access"}[5m]) > 5'
+        for: 1m
+        labels:
+          severity: high
+          component: falco
+        annotations:
+          summary: "Suspicious access to sensitive files detected"
+          description: "{{ $value }} unauthorized file access attempts detected"
+          runbook_url: "docs/runbooks/falco-sensitive-file-access.md"
+
+
+  # ========== VRRP / Keepalived Alerts ==========
+  - name: vrrp_ha_alerts
+    interval: 15s
+    rules:
+      # P1: VIP not reachable — indicates both nodes down or VRRP misconfigured
+      - alert: VIPNotReachable
+        expr: probe_success{instance="prod.internal"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: vrrp
+          page: "true"
+        annotations:
+          summary: "Production VIP (prod.internal) is not responding"
+          description: "The VRRP virtual IP has been unreachable for >30s. Both hosts may be down or VRRP is misconfigured."
+          runbook: "docs/runbooks/vrrp-failover.md"
+
+      # P2: VRRP state changed — informational, logged for audit
+      - alert: VRRPStateChange
+        expr: changes(keepalived_vrrp_state[5m]) > 0
+        for: 0s
+        labels:
+          severity: warning
+          component: vrrp
+          page: "false"
+        annotations:
+          summary: "VRRP state changed on {{ $labels.instance }}"
+          description: "The VRRP instance {{ $labels.vrrp_instance }} on {{ $labels.instance }} changed state. Check failover logs."
+          runbook: "docs/runbooks/vrrp-failover.md"
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          component: ollama
+        annotations:
+          summary: "Ollama model server is down"
+          description: "AI features in code-server will be unavailable. Check: docker logs ollama"
+          runbook: "docs/runbooks/ollama-down.md"
+
+      - alert: OllamaGPUMemoryHigh
+        expr: |-
+          (nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) > 0.95
+        for: 5m
+        labels:
+          severity: warning
+          component: ollama
+          host: "primary.prod.internal"
+        annotations:
+          summary: "Ollama GPU memory {{ $value | humanizePercentage }} used — OOM risk"
+          description: "GPU memory nearly exhausted. Model inference may fail. Reduce batch size or unload models."
+          runbook: "docs/runbooks/ollama-gpu-memory-high.md"
+
+      - alert: OllamaGPUMemoryCritical
+        expr: |-
+          (nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes) > 0.99
+        for: 1m
+        labels:
+          severity: critical
+          component: ollama
+          host: "primary.prod.internal"
+          sla_impact: "yes"
+        annotations:
+          summary: "CRITICAL: Ollama GPU memory critically full ({{ $value | humanizePercentage }})"
+          description: "GPU memory exhausted. Ollama will OOM and crash. Manual intervention required."
+          runbook: "docs/runbooks/ollama-gpu-memory-critical.md"
+
+  # ========== System Alerts ==========
+  - name: system_alerts
+    interval: 15s
+    rules:
+      # System CPU High
+      - alert: SystemCPUHigh
+        expr: '100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80'
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "System CPU {{ $value | humanize }}%"
+          description: "CPU utilization exceeded 80% for 5 minutes."
+
+      # System Memory Pressure
+      - alert: SystemMemoryPressure
+        expr: '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85'
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "System memory pressure detected"
+          description: "Available memory below 15% for 5 minutes. Potential OOM risk."

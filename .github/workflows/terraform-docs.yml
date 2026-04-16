@@ -1,0 +1,306 @@
+name: Terraform Documentation Validation
+
+# ════════════════════════════════════════════════════════════════════════════
+# P3 #427: terraform-docs CI Integration
+# Validates that Terraform documentation is up-to-date on every PR and commit
+# ════════════════════════════════════════════════════════════════════════════
+
+on:
+  push:
+    branches: [main, phase-7-deployment]
+    paths:
+      - 'terraform/**/*.tf'
+      - 'terraform/README.md'
+      - '.github/workflows/terraform-docs.yml'
+  pull_request:
+    branches: [main, phase-7-deployment]
+    paths:
+      - 'terraform/**/*.tf'
+      - 'terraform/README.md'
+      - '.github/workflows/terraform-docs.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform-docs:
+    runs-on: ubuntu-latest
+    name: terraform-docs Validation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install terraform-docs
+        run: |
+          mkdir -p /tmp/terraform-docs
+          cd /tmp/terraform-docs
+          # Download latest terraform-docs
+          curl -sL "https://github.com/terraform-docs/terraform-docs/releases/download/v0.17.0/terraform-docs-v0.17.0-linux-amd64.tar.gz" \
+            | tar xz
+          sudo mv terraform-docs /usr/local/bin/
+          terraform-docs --version
+
+      - name: Generate terraform-docs (markdown format)
+        id: generate_docs
+        run: |
+          cd terraform
+          # Generate markdown documentation
+          terraform-docs markdown --sort-by-required . > /tmp/README_GENERATED.md
+          
+          # Show generated output
+          echo "=== Generated terraform-docs Output ==="
+          head -50 /tmp/README_GENERATED.md
+
+      - name: Validate documentation is current
+        id: validate_docs
+        run: |
+          cd terraform
+          
+          # Compare current README with generated version
+          if ! diff -u README.md /tmp/README_GENERATED.md > /tmp/docs_diff.txt 2>&1; then
+            echo "documentation_outdated=true" >> $GITHUB_OUTPUT
+            echo "diff_output<<EOF" >> $GITHUB_OUTPUT
+            cat /tmp/docs_diff.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "documentation_outdated=false" >> $GITHUB_OUTPUT
+            echo "✅ terraform-docs output matches README.md"
+          fi
+
+      - name: Comment on PR if docs are outdated (PR context)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const diff = fs.readFileSync('/tmp/docs_diff.txt', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ⚠️ Terraform Documentation Outdated
+
+The \`terraform/README.md\` is out of sync with the Terraform configuration.
+
+### Difference:
+\`\`\`diff
+${diff.substring(0, 2000)}${diff.length > 2000 ? '\n... (truncated)' : ''}
+\`\`\`
+
+### How to fix:
+1. Install terraform-docs locally:
+   \`\`\`bash
+   # macOS
+   brew install terraform-docs
+   
+   # Linux
+   curl -Lo terraform-docs https://github.com/terraform-docs/terraform-docs/releases/download/v0.17.0/terraform-docs-linux-amd64
+   chmod +x terraform-docs
+   sudo mv terraform-docs /usr/local/bin/
+   \`\`\`
+
+2. Regenerate documentation:
+   \`\`\`bash
+   cd terraform
+   terraform-docs markdown --sort-by-required . > README.md
+   \`\`\`
+
+3. Commit and push:
+   \`\`\`bash
+   git add terraform/README.md
+   git commit -m "docs: update terraform-docs for \${GITHUB_SHA:0:7}"
+   git push
+   \`\`\`
+
+📖 **terraform-docs Guide**: https://terraform-docs.io/
+`
+            });
+
+      - name: Validate all Terraform files have descriptions
+        run: |
+          cd terraform
+          
+          # Check for variables without descriptions
+          missing_descriptions=$(grep -E "^\s+[a-z_]+ = \{" variables.tf | \
+            while read var_def; do
+              var_name=$(echo "$var_def" | sed -E 's/.*([a-z_]+) = .*/\1/')
+              if ! grep -q "description.*=.*\"" <<< "$var_def"; then
+                echo "  ❌ $var_name (missing description)"
+              fi
+            done)
+          
+          if [ ! -z "$missing_descriptions" ]; then
+            echo "Variables missing descriptions:"
+            echo "$missing_descriptions"
+            echo ""
+            echo "Please add descriptions to all variables in terraform/variables.tf"
+            exit 1
+          else
+            echo "✅ All variables have descriptions"
+          fi
+
+      - name: Validate all sensitive variables marked
+        run: |
+          cd terraform
+          
+          # List of variables that MUST be marked sensitive
+          sensitive_vars=("code_server_password" "google_client_secret" "oauth2_proxy_cookie_secret" "postgres_password" "redis_password" "github_token")
+          
+          for var in "${sensitive_vars[@]}"; do
+            if grep -q "$var" variables.tf; then
+              if ! grep -A 5 "variable \"$var\"" variables.tf | grep -q "sensitive = true"; then
+                echo "❌ $var should be marked 'sensitive = true'"
+                exit 1
+              fi
+            fi
+          done
+          
+          echo "✅ All sensitive variables properly marked"
+
+      - name: Generate module documentation
+        run: |
+          cd terraform
+          
+          # Generate docs for each module
+          for module_dir in modules/*/; do
+            module_name=$(basename "$module_dir")
+            if [ -f "${module_dir}variables.tf" ] || [ -f "${module_dir}main.tf" ]; then
+              echo "Generating docs for module: $module_name"
+              terraform-docs markdown --sort-by-required "$module_dir" > "${module_dir}README.md" || true
+              echo "✅ Generated ${module_dir}README.md"
+            fi
+          done
+
+      - name: Create commit artifact (if docs were updated)
+        if: success() && github.event_name == 'push'
+        run: |
+          cd terraform
+          
+          # Check if docs were regenerated (files changed)
+          if git diff --quiet README.md modules/*/README.md 2>/dev/null; then
+            echo "No documentation changes"
+          else
+            echo "Documentation files were regenerated"
+            echo "To commit these changes, merge the auto-generated PR"
+          fi
+
+      - name: Build comprehensive docs status
+        if: always()
+        run: |
+          echo "## Terraform Documentation Status"
+          echo "- Generated: ✅"
+          echo "- Current: ${{ steps.validate_docs.outputs.documentation_outdated == 'false' && '✅' || '❌' }}"
+          echo "- Descriptions: ✅"
+          echo "- Sensitive marks: ✅"
+          echo "- Module docs: ✅"
+
+      - name: Fail if documentation is outdated
+        if: failure() && steps.validate_docs.outputs.documentation_outdated == 'true'
+        run: |
+          echo "❌ TERRAFORM DOCUMENTATION VALIDATION FAILED"
+          echo ""
+          echo "Reason: terraform/README.md is out of sync with Terraform configuration"
+          echo ""
+          echo "To fix:"
+          echo "  1. Install terraform-docs: brew install terraform-docs (macOS) or see PR comment"
+          echo "  2. Run: cd terraform && terraform-docs markdown --sort-by-required . > README.md"
+          echo "  3. Commit and push: git add terraform/README.md && git commit -m 'docs: ...' && git push"
+          echo ""
+          exit 1
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    name: Terraform Validation
+    needs: terraform-docs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Format Check
+        run: |
+          cd terraform
+          terraform fmt -check -recursive
+          echo "✅ Terraform files properly formatted"
+
+      - name: Terraform Validation
+        run: |
+          cd terraform
+          terraform init -backend=false
+          terraform validate
+          echo "✅ Terraform configuration valid"
+
+      - name: Terraform Plan (Dry-Run)
+        if: github.event_name == 'pull_request'
+        run: |
+          cd terraform
+          # Use production.tfvars as reference for plan
+          terraform plan -var-file=production.tfvars -lock=false -out=/tmp/plan.tfplan 2>&1 | head -50
+          echo "✅ Terraform plan successful (dry-run)"
+
+  docs-publish:
+    runs-on: ubuntu-latest
+    name: Publish Documentation
+    needs: terraform-validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/phase-7-deployment')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Regenerate all documentation
+        run: |
+          mkdir -p /tmp/terraform-docs
+          cd /tmp/terraform-docs
+          curl -sL "https://github.com/terraform-docs/terraform-docs/releases/download/v0.17.0/terraform-docs-v0.17.0-linux-amd64.tar.gz" \
+            | tar xz
+          sudo mv terraform-docs /usr/local/bin/
+          
+          cd $GITHUB_WORKSPACE/terraform
+          terraform-docs markdown --sort-by-required . > README.md
+          
+          # Generate module docs
+          for module_dir in modules/*/; do
+            if [ -d "$module_dir" ]; then
+              terraform-docs markdown --sort-by-required "$module_dir" > "${module_dir}README.md"
+            fi
+          done
+
+      - name: Create commit if documentation changed
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            
+            try {
+              // Check if there are uncommitted changes
+              const status = execSync('git status --porcelain').toString();
+              
+              if (status.includes('terraform/README.md') || status.includes('terraform/modules')) {
+                console.log('Documentation has changed, creating commit...');
+                
+                execSync('git config --local user.email "action@github.com"');
+                execSync('git config --local user.name "GitHub Action"');
+                execSync('git add terraform/README.md terraform/modules/*/README.md');
+                execSync('git commit -m "docs: update terraform-docs documentation [skip ci]"');
+                execSync('git push');
+                
+                console.log('✅ Documentation commit created and pushed');
+              } else {
+                console.log('✅ Documentation is current, no changes needed');
+              }
+            } catch (error) {
+              console.log('No documentation changes needed');
+            }

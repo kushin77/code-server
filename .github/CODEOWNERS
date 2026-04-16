@@ -1,10 +1,17 @@
-# Code Ownership — Enforce Review Requirements
+# Code Ownership — Production Readiness Framework
 # 
-# Require specialized review for high-risk domains.
+# Enforces Phase 2 Code Review requirements from Issue #404.
+# Requires specialized review for high-risk domains.
 # No self-merging for critical paths.
 #
 # Format: <path> <@owner-or-team>
 # Multiple owners: list space-separated
+#
+# All PRs require:
+# ✅ Phase 1: Design review (if applicable)
+# ✅ Phase 2: Code review (2 approvals - listed here)
+# ✅ Phase 3: Operations review (deployment changes)
+# ✅ Phase 4: Production sign-off (before main branch merge)
 
 # ==================== CRITICAL: No Self-Merge ====================
 
@@ -12,7 +19,8 @@
 # Multiple code owners to prevent bottlenecks and enforce independent review
 * @kushin77 @PureBlissAK
 
-# ==================== INFRASTRUCTURE (IaC, Terraform) ====================
+# ==================== PHASE 2 REVIEW: INFRASTRUCTURE (IaC, Terraform) ====================
+# Architecture review required - horizontal scaling, failure isolation, dependencies
 
 # Core infrastructure — critical security and scaling implications
 /terraform/ @kushin77
@@ -22,58 +30,113 @@ variables.tf @kushin77
 *.tfvars @kushin77
 terraform.tfstate* @kushin77
 
-# ==================== SECURITY & SECRETS ====================
+# Docker & Container — immutable artifact versioning, security scanning
+Dockerfile* @kushin77
+docker-compose.yml @kushin77
+docker-compose*.yml @kushin77
+Dockerfile.* @kushin77
+
+# Network & Reverse Proxy — reliability and security critical
+/caddy/ @kushin77
+Caddyfile* @kushin77
+*.caddy.* @kushin77
+
+# ==================== PHASE 2 REVIEW: SECURITY & SECRETS ====================
+# Security review required - threat modeling, input validation, least privilege
 
 # Security policies, secrets management, authentication
 /.github/workflows/security.yml @kushin77
+/.github/workflows/secrets*.yml @kushin77
 /policies/ @kushin77
-/scripts/fetch-gsm-secrets.sh @kushin77
+opa/policies/ @kushin77
+scripts/fetch-gsm-secrets.sh @kushin77
 oauth2-proxy.cfg @kushin77
 code-server-config.yaml @kushin77
+config/vault/ @kushin77
+config/falco/ @kushin77
 
-# ==================== CI/CD & AUTOMATION ====================
+# ==================== PHASE 2 REVIEW: CI/CD & AUTOMATION ====================
+# Operations review required - deployment procedures, rollback validation
 
 # Deployment and automation pipelines — no manual intervention
 /.github/workflows/ @kushin77
 /.github/CODEOWNERS @kushin77
 Makefile @kushin77
-/scripts/ @kushin77
+/scripts/deploy* @kushin77
+/scripts/redis-* @kushin77
+/scripts/nas-* @kushin77
 
-# Docker & Container Configuration
-Dockerfile* @kushin77
-docker-compose.yml @kushin77
-/caddy/ @kushin77
-Caddyfile* @kushin77
+# ==================== PHASE 3 REVIEW: OBSERVABILITY & MONITORING ====================
+# Operations review required - alerting thresholds, SLO definition
 
-# ==================== DEPLOYMENT & OPERATIONS ====================
+# Monitoring and alerting configuration
+monitoring/ @kushin77
+alert-rules*.yml @kushin77
+prometheus*.yml @kushin77
+alertmanager*.yml @kushin77
+/config/loki/ @kushin77
 
-# Production configuration and deployment
-/config/ @kushin77
-DEPLOYMENT.md @kushin77
-RUNBOOKS.md @kushin77
-deploy-iac.* @kushin77
-
-# ==================== DOCUMENTATION ====================
+# ==================== PHASE 2 REVIEW: DOCUMENTATION & STANDARDS ====================
+# Architecture review required - design decisions, platform support
 
 # Architecture and decisions — inform whole team
 /docs/ @kushin77
 /docs/adr/ @kushin77
 ARCHITECTURE.md @kushin77
 CONTRIBUTING.md @kushin77
-README.md @kushin77
+PRODUCTION-READINESS-FRAMEWORK.md @kushin77
+PRODUCTION-STANDARDS.md @kushin77
+DEVELOPMENT-GUIDE.md @kushin77
+SUPPORTED-PLATFORMS.md @kushin77
 
-# ==================== CONFIGURATION ====================
+# ==================== PHASE 2 REVIEW: CONFIGURATION ====================
+# Operations review required - runtime behavior, resource limits
 
 # VS Code and workspace configuration
 settings.json @kushin77
 code-server-config.yaml @kushin77
 
+# Environment configuration templates
+.env.example @kushin77
+.env.production @kushin77
+
+# ==================== PHASE 2 REVIEW: DEPENDENCIES ====================
+# Security review required - vulnerability assessment, version pinning
+
+# Dependency management — immutable versions, vulnerability scanning
+go.mod @kushin77
+go.sum @kushin77
+package.json @kushin77
+package-lock.json @kushin77
+Pipfile @kushin77
+Pipfile.lock @kushin77
+requirements*.txt @kushin77
+renovate.json @kushin77
+.pre-commit-config.yaml @kushin77
+
 # ==================== POLICY: Code Review Requirements ====================
 #
-# MANDATORY:
-# - All security-related changes require principal review
-# - All IaC changes require validation and review
-# - All CI/CD pipeline changes require scrutiny
-# - Self-reviews of code you wrote do NOT count
+# MANDATORY for all PRs:
 #
-# If you wrote it, someone else approves it.
+# Phase 1 (Design):
+#   - Required for: Feature flags, new APIs, architectural changes, breaking changes
+#   - Skip for: Bug fixes, documentation-only, tests-only, refactoring (zero behavior change)
+#   - Deliverable: ADR (Architecture Decision Record) linked in PR
+#
+# Phase 2 (Code):
+#   - Required for: ALL changes
+#   - 2 senior engineer approvals mandatory
+#   - Checklist: Security, testing, observability, deployment readiness
+#   - Status: Automated via pr-quality-gates.yml workflow
+#
+# Phase 3 (Operations):
+#   - Required for: Infrastructure changes, deployment procedure changes
+#   - Reviewer: On-call SRE or operations engineer
+#   - Deliverable: Load test results, rollback validation
+#
+# Phase 4 (Production):
+#   - Required for: ALL changes to main branch
+#   - Final sign-off by: On-call engineer
+#   - Post-deployment: 1-hour monitoring by PR author
+#
+# RULE: Self-reviews do NOT count (your approval doesn't approve your own code)

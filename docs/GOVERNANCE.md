@@ -233,7 +233,7 @@ code-server-enterprise/
 │   │
 │   └── hosts/                  # Host-specific deployments
 │       ├── 192.168.168.31.tfvars
-│       └── 192.168.168.30.tfvars
+│       └── 192.168.168.42.tfvars
 │
 ├── docker/                      # 🐳 Docker images & compose
 │   ├── docker-compose.yml      # Base definition (anchored)

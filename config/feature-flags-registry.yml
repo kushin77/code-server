@@ -1,0 +1,191 @@
+# Feature Flags Registry — Source of Truth for all feature gates
+# ===============================================================
+# DO NOT modify this file to enable/disable flags — use scripts/feature-flags.sh CLI
+# This file is for documentation and discovery only.
+# All changes to flag values must go through Redis (see scripts/feature-flags.sh)
+
+flags:
+  # Session Management
+  - name: session_migration_enabled
+    default: "false"
+    type: boolean
+    description: "Enable versioned session schema migration with server-side silent upgrades (issue #332)"
+    owner: auth-team
+    issues: [332]
+    dependencies: []
+    risky: true
+    notes: "When enabled, sessions auto-upgrade from v1 to v3. Requires FP validation enabled."
+
+  - name: proactive_refresh_enabled
+    default: "false"
+    type: boolean
+    description: "Enable proactive client-side session refresh via scheduler (issue #333)"
+    owner: auth-team
+    issues: [333]
+    dependencies: []
+    risky: false
+    notes: "JS scheduler checks cookie expiry and refreshes before expiration. Safe to enable anytime."
+
+  - name: broadcast_channel_enabled
+    default: "false"
+    type: boolean
+    description: "Enable BroadcastChannel multi-tab session sync with leader election (issue #334)"
+    owner: auth-team
+    issues: [334]
+    dependencies: [proactive_refresh_enabled]
+    risky: false
+    notes: "Prevents thundering herd when multiple tabs refresh simultaneously."
+
+  - name: ws_session_handoff_enabled
+    default: "false"
+    type: boolean
+    description: "Enable WebSocket session hand-off during cookie rotation (issue #335)"
+    owner: auth-team
+    issues: [335]
+    dependencies: [proactive_refresh_enabled]
+    risky: false
+    notes: "Prevents terminal session loss when auth cookie rotates."
+
+  - name: stale_session_grace_enabled
+    default: "false"
+    type: boolean
+    description: "Enable graceful IdP degradation with stale session tolerance window (issue #340)"
+    owner: auth-team
+    issues: [340]
+    dependencies: []
+    risky: true
+    notes: "When IdP unreachable, users continue working for grace period (default 2h). High risk — requires monitoring."
+
+  - name: stale_session_tolerance_hours
+    default: "2"
+    type: integer
+    description: "Grace period for stale sessions when IdP unreachable (hours)"
+    owner: auth-team
+    issues: [340]
+    dependencies: [stale_session_grace_enabled]
+    risky: false
+
+  - name: session_refresh_rate_limit_enabled
+    default: "true"
+    type: boolean
+    description: "Enable rate limiting on session refresh endpoints (issue #343)"
+    owner: auth-team
+    issues: [343]
+    dependencies: []
+    risky: false
+    notes: "Always enabled — prevents self-inflicted DoS from scheduler bugs."
+
+  - name: session_fingerprint_mode
+    default: "monitor"
+    type: enum
+    values: ["monitor", "soft", "strict"]
+    description: "Device fingerprint enforcement mode (issue #337)"
+    owner: auth-team
+    issues: [337]
+    dependencies: []
+    risky: true
+    notes: |
+      monitor: Log fingerprints, no enforcement
+      soft: Warn users of mismatches, allow continue
+      strict: Reject mismatched fingerprints (requires re-auth)
+    rollout_sequence: |
+      Week 1: monitor (collect baseline)
+      Week 2: soft (warn users, gather feedback)
+      Week 3+: strict (after confidence)
+
+  - name: session_fingerprint_pct
+    default: "0"
+    type: integer
+    range: [0, 100]
+    description: "Percentage of users subject to fingerprinting (0-100)"
+    owner: auth-team
+    issues: [337]
+    dependencies: []
+    risky: false
+    notes: "Gradual rollout: 1% → 10% → 50% → 100% based on monitoring."
+
+  - name: service_worker_session_refresh_enabled
+    default: "false"
+    type: boolean
+    description: "Enable Service Worker background session refresh (issue #336)"
+    owner: auth-team
+    issues: [336]
+    dependencies: [proactive_refresh_enabled]
+    risky: false
+    notes: "SW can refresh sessions even when browser tab is inactive. Safe to enable."
+
+  # Observability
+  - name: session_health_metrics_enabled
+    default: "true"
+    type: boolean
+    description: "Emit session health metrics (forced relogin rate, cookie version dist, etc.) (issue #344)"
+    owner: auth-team
+    issues: [344]
+    dependencies: []
+    risky: false
+    notes: "Always enabled — primary KPI for session self-healing system."
+
+  # Infrastructure & Deployment
+  - name: cloudflare_tunnel_enabled
+    default: "false"
+    type: boolean
+    description: "Route all traffic through Cloudflare Tunnel instead of direct IP (issue #348)"
+    owner: infra-team
+    issues: [348]
+    dependencies: []
+    risky: true
+    notes: "When enabled, DNS points to Cloudflare. Requires Tunnel to be running."
+
+  - name: cis_hardening_enabled
+    default: "false"
+    type: boolean
+    description: "Enable CIS Linux hardening (kernel params, audit, fail2ban) (issue #349)"
+    owner: infra-team
+    issues: [349]
+    dependencies: []
+    risky: true
+    notes: "Requires host-level sudo. Must be deployed via Ansible, not toggleable at runtime."
+
+  - name: egress_filtering_enabled
+    default: "false"
+    type: boolean
+    description: "Enable iptables egress filtering (default-deny outbound) (issue #350)"
+    owner: infra-team
+    issues: [350]
+    dependencies: []
+    risky: true
+    notes: "Prevents data exfiltration. Must whitelist allowed outbound (DNS, HTTPS, etc)."
+
+  - name: container_hardening_enabled
+    default: "false"
+    type: boolean
+    description: "Enable container hardening (cap_drop, read-only FS, AppArmor) (issue #354)"
+    owner: infra-team
+    issues: [354]
+    dependencies: []
+    risky: true
+    notes: "Applied via docker-compose cap_drop / security_opt. Requires container restart."
+
+---
+
+# Feature Flag Management CLI Usage
+# ==================================
+# 
+# List all flags:
+#   ./scripts/feature-flags.sh list
+#
+# Get flag value:
+#   ./scripts/feature-flags.sh get session_migration_enabled
+#
+# Set flag value:
+#   ./scripts/feature-flags.sh set session_migration_enabled true
+#
+# Enable with percentage rollout:
+#   ./scripts/feature-flags.sh set-with-rollout session_fingerprint_mode soft 10
+#   (Enables for 10% of users, identified by email hash)
+#
+# Emergency kill switch (disable all session enhancements):
+#   ./scripts/feature-flags.sh kill-switch-all-session-features
+#
+# View audit log:
+#   ./scripts/feature-flags.sh audit-log --tail 50

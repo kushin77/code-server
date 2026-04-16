@@ -1,0 +1,58 @@
+; CoreDNS Reverse Zone File: 168.168.192.in-addr.arpa
+; ====================================================
+; Reverse DNS lookup for 192.168.168.0/24 network
+;
+; Maps IP addresses back to hostnames (reverse DNS / PTR records)
+; Used for various security checks, logging, and service discovery
+;
+; NOTE: The IP octets are REVERSED in this zone!
+; Example: IP 192.168.168.31 → zone entry "31 IN PTR ..."
+;          (Reading from right to left: 31.168.168.192.in-addr.arpa)
+
+$ORIGIN 168.168.192.in-addr.arpa.
+$TTL 3600
+
+; ============================================================================
+; SOA Record (Start of Authority)
+; ============================================================================
+
+@   3600  IN  SOA ns1.prod.internal. admin.kushnir.cloud. (
+            2026041501    ; Serial (YYYYMMDDNN format)
+            3600          ; Refresh (1 hour)
+            1800          ; Retry (30 minutes)
+            604800        ; Expire (7 days)
+            3600          ; TTL (1 hour)
+            )
+
+; ============================================================================
+; Nameserver Records
+; ============================================================================
+
+@               3600  IN  NS   ns1.prod.internal.
+@               3600  IN  NS   ns2.prod.internal.
+
+ns1.prod.internal.      A  192.168.168.31
+ns2.prod.internal.      A  192.168.168.42
+
+; ============================================================================
+; PTR RECORDS (Pointer Records)
+; ============================================================================
+; Maps IP addresses to hostnames
+; Format in reverse zone: <last-octet>  IN  PTR  <hostname>
+
+; Primary node (192.168.168.31)
+31  3600  IN  PTR  primary.prod.internal.
+31  3600  IN  PTR  ns1.prod.internal.
+
+; Replica node (192.168.168.42)
+42  3600  IN  PTR  replica.prod.internal.
+42  3600  IN  PTR  ns2.prod.internal.
+
+; Virtual IP (192.168.168.30)
+30  3600  IN  PTR  prod.internal.
+
+; Gateway (if needed for documentation)
+; 1   3600  IN  PTR  gateway.prod.internal.
+
+; Broadcast address (standard, should not be used)
+; 255 3600  IN  PTR  broadcast.prod.internal.

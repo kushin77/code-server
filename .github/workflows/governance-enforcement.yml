@@ -57,6 +57,25 @@ jobs:
           else
             echo "⚠ Trivy archive not found for v${TRIVY_VERSION}; continuing (advisory scan step may skip)"
           fi
+
+      - name: Calculate governance score
+        run: |
+          bash scripts/governance/calculate-governance-score.sh --format env >> "$GITHUB_ENV"
+
+      - name: Publish governance score summary
+        run: |
+          {
+            echo "## Governance Score"
+            echo
+            echo "| Signal | Count | Penalty |"
+            echo "|---|---:|---:|"
+            echo "| jscpd violations | ${JSCPD_VIOLATIONS} | $((JSCPD_VIOLATIONS * 5)) |"
+            echo "| missing headers | ${MISSING_HEADERS} | $((MISSING_HEADERS * 2)) |"
+            echo "| hardcoded IP files | ${HARDCODED_IPS} | $((HARDCODED_IPS * 10)) |"
+            echo "| active fallback shims | ${ACTIVE_SHIMS_WITH_FALLBACK} | $((ACTIVE_SHIMS_WITH_FALLBACK * 8)) |"
+            echo
+            echo "**Governance Score:** ${GOVERNANCE_SCORE}/100"
+          } >> "$GITHUB_STEP_SUMMARY"
       
       - name: "[P0] Shellcheck - Shell Scripts"
         continue-on-error: true  # Temporarily disabled to debug other checks
@@ -202,4 +221,70 @@ jobs:
           echo "  ⚠️  Vulnerabilities (Trivy)"
           echo "  ⚠️  IaC security (Checkov)"
           echo ""
+          echo "Governance Score: ${GOVERNANCE_SCORE}/100"
+          echo ""
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
+
+      - name: Post governance score to PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          GOVERNANCE_SCORE: ${{ env.GOVERNANCE_SCORE }}
+          JSCPD_VIOLATIONS: ${{ env.JSCPD_VIOLATIONS }}
+          MISSING_HEADERS: ${{ env.MISSING_HEADERS }}
+          HARDCODED_IPS: ${{ env.HARDCODED_IPS }}
+          ACTIVE_SHIMS_WITH_FALLBACK: ${{ env.ACTIVE_SHIMS_WITH_FALLBACK }}
+        with:
+          script: |
+            const marker = '<!-- governance-score -->';
+            const rows = [
+              ['jscpd violations', process.env.JSCPD_VIOLATIONS, Number(process.env.JSCPD_VIOLATIONS) * 5],
+              ['missing headers', process.env.MISSING_HEADERS, Number(process.env.MISSING_HEADERS) * 2],
+              ['hardcoded IP files', process.env.HARDCODED_IPS, Number(process.env.HARDCODED_IPS) * 10],
+              ['active fallback shims', process.env.ACTIVE_SHIMS_WITH_FALLBACK, Number(process.env.ACTIVE_SHIMS_WITH_FALLBACK) * 8],
+            ];
+            const body = `${marker}
+            ## Governance Score
+
+            | Signal | Count | Penalty |
+            |---|---:|---:|
+            ${rows.map(([name, count, penalty]) => `| ${name} | ${count} | ${penalty} |`).join('\n')}
+
+            **Governance Score:** ${process.env.GOVERNANCE_SCORE}/100
+
+            Formula:
+            
+            \`\`\`
+            score = max(0, 100
+                  - (jscpd_violations * 5)
+                  - (missing_headers * 2)
+                  - (hardcoded_ips * 10)
+                  - (active_shims_with_fallback * 8))
+            \`\`\`
+            `;
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.body && comment.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }

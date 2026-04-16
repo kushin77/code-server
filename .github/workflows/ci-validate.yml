@@ -116,3 +116,12 @@ jobs:
 
       - name: Check for Windows-specific content
         run: bash scripts/ci/check-no-windows-content.sh
+
+  credentials-governance:
+    name: Governance — no hardcoded credentials
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Check active scripts for hardcoded credential literals
+        run: bash scripts/ci/check-no-hardcoded-credentials.sh

@@ -18,6 +18,7 @@ docs/
 
 - **New to the project?** Start with [../README.md](../README.md) for overview
 - **Want to contribute?** See [../CONTRIBUTING.md](../CONTRIBUTING.md)
+- **Need the execution sequence?** See [MASTER-EXECUTION-PLAN.md](MASTER-EXECUTION-PLAN.md)
 - **Deploying infrastructure?** See [guides/DEPLOYMENT.md](guides/DEPLOYMENT.md)
 - **Troubleshooting issues?** See [guides/TROUBLESHOOTING.md](guides/TROUBLESHOOTING.md)
 - **Understanding architecture?** See [adc/](adc/)

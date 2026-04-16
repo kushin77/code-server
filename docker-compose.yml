@@ -540,6 +540,33 @@ networks:
       config:
         - subnet: 172.28.0.0/16
 
+  # ─────────────────────────────────────────────────────────────────────────
+  # Portal (Appsmith) — optional profile
+  # Deploy: COMPOSE_PROFILES=portal docker compose up -d
+  # ADR: docs/adr/008-portal-platform-appsmith-vs-backstage.md
+  # ─────────────────────────────────────────────────────────────────────────
+  appsmith:
+    image: appsmith/appsmith-ce:v1.47
+    profiles: [portal]
+    container_name: appsmith
+    restart: unless-stopped
+    environment:
+      - APPSMITH_SIGNUP_DISABLED=true
+      - APPSMITH_OAUTH2_GITHUB_CLIENT_ID=${GITHUB_OAUTH_CLIENT_ID:-}
+      - APPSMITH_OAUTH2_GITHUB_CLIENT_SECRET=${GITHUB_OAUTH_CLIENT_SECRET:-}
+      - APPSMITH_MONGODB_URI=mongodb://localhost/appsmith
+    volumes:
+      - appsmith-data:/appsmith-stacks
+    networks:
+      - enterprise
+    labels:
+      - "traefik.enable=false"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   code-server-enterprise-data:
     driver: local
@@ -558,6 +585,8 @@ volumes:
   prometheus-data:
     driver: local
   grafana-data:
+    driver: local
+  appsmith-data:
     driver: local
   alertmanager-data:
     driver: local

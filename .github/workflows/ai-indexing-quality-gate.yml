@@ -1,0 +1,102 @@
+name: AI Indexing Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - 'backend/src/services/ai/**'
+      - 'backend/package.json'
+      - '.github/workflows/ai-indexing-quality-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/src/services/ai/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ai-quality-gate:
+    name: AI Indexing / Retrieval Quality Gate (#393)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run AI quality benchmark (20-case retrieval suite)
+        id: quality_bench
+        run: |
+          set -euo pipefail
+          npm run test:ai-quality 2>&1 | tee /tmp/ai-quality-output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+
+          # Extract hit-rate from vitest output (logged by evaluateRetrievalQuality)
+          HIT_RATE=$(grep -oP 'hitRate["\s:]+\K[0-9.]+' /tmp/ai-quality-output.txt | tail -1 || echo "")
+          P95=$(grep -oP 'p95["\s:]+\K[0-9.]+' /tmp/ai-quality-output.txt | tail -1 || echo "")
+
+          echo "hit_rate=${HIT_RATE:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "p95_latency=${P95:-unknown}" >> "$GITHUB_OUTPUT"
+
+          exit $EXIT_CODE
+
+      - name: Assert quality thresholds
+        run: |
+          set -euo pipefail
+          HIT_RATE="${{ steps.quality_bench.outputs.hit_rate }}"
+          P95="${{ steps.quality_bench.outputs.p95_latency }}"
+
+          echo "=== AI Quality Gate Thresholds ==="
+          echo "  Hit-rate    : ${HIT_RATE} (minimum: 0.9)"
+          echo "  P95 latency : ${P95}ms    (maximum: 200ms)"
+
+          GATE_FAILED=0
+
+          if [[ -n "$HIT_RATE" && "$HIT_RATE" != "unknown" ]]; then
+            # bc comparison: 1 if condition true, 0 if false
+            if (( $(echo "$HIT_RATE < 0.9" | bc -l) )); then
+              echo "❌ GATE FAIL: hit-rate ${HIT_RATE} is below threshold 0.9"
+              GATE_FAILED=1
+            else
+              echo "✅ hit-rate ${HIT_RATE} ≥ 0.9"
+            fi
+          else
+            echo "⚠️  hit-rate not extracted from test output — relying on vitest exit code"
+          fi
+
+          if [[ -n "$P95" && "$P95" != "unknown" ]]; then
+            if (( $(echo "$P95 > 200" | bc -l) )); then
+              echo "❌ GATE FAIL: p95 latency ${P95}ms exceeds 200ms threshold"
+              GATE_FAILED=1
+            else
+              echo "✅ p95 latency ${P95}ms ≤ 200ms"
+            fi
+          else
+            echo "⚠️  p95 latency not extracted from test output — relying on vitest exit code"
+          fi
+
+          [[ "$GATE_FAILED" -eq 0 ]] || exit 1
+
+      - name: Upload test report
+        if: always()
+        run: |
+          if [ -f /tmp/ai-quality-output.txt ]; then
+            echo "=== AI Quality Benchmark Output ===" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/ai-quality-output.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi

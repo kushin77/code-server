@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
 # Deploy Falco Runtime Security - eBPF kernel monitoring
 # Issue #359: Container anomaly detection, malware, cryptominers

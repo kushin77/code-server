@@ -1,0 +1,128 @@
+# Caddyfile — canonical config, env-var driven
+# Ref: #373 — consolidated from Caddyfile.{base,new,production,tpl} variants
+#
+# Required environment variables (set in .env or docker-compose.yml):
+#   DOMAIN        — public domain, e.g. ide.kushnir.cloud
+#   ACME_EMAIL    — Let's Encrypt notification address
+#   CLOUDFLARE_API_TOKEN — DNS-01 challenge token
+#
+# Validation: caddy validate --config Caddyfile
+
+{
+    # TLS: opt-in per-site below
+    auto_https off
+
+    # ACME
+    email {$ACME_EMAIL:security@example.com}
+
+    # Global logging
+    log default {
+        format json
+        output file /var/log/caddy/caddy.log {
+            roll_size  100mb
+            roll_keep  10
+            roll_keep_for 720h
+        }
+        level info
+    }
+
+    # Prometheus admin API
+    servers {
+        metrics
+    }
+}
+
+# ─────────────────────────────────────────────
+# Production site ({$DOMAIN})
+# ─────────────────────────────────────────────
+{$DOMAIN:ide.kushnir.cloud} {
+
+    # TLS via Cloudflare DNS-01 challenge (works behind NAT / no port-80 needed)
+    tls {
+        issuer acme {
+            email {$ACME_EMAIL:security@example.com}
+            challenges dns cloudflare
+            dns cloudflare {$CLOUDFLARE_API_TOKEN}
+        }
+    }
+
+    # ── Security headers ──────────────────────────────────────────────
+    header {
+        Strict-Transport-Security        "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options           "nosniff"
+        X-Frame-Options                  "SAMEORIGIN"
+        X-XSS-Protection                 "1; mode=block"
+        Referrer-Policy                  "strict-origin-when-cross-origin"
+        Permissions-Policy               "camera=(), microphone=(), geolocation=()"
+        # CSP: allow inline scripts/styles required by code-server, plus WebSocket
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
+        # Never expose Caddy version
+        -Server
+        -X-Powered-By
+    }
+
+    # ── Compression ────────────────────────────────────────────────────
+    encode gzip
+
+    # ── Health check (unauthenticated) ─────────────────────────────────
+    @health path /health
+    respond @health "OK\n" 200
+
+    # ── OAuth2 callback passthrough ────────────────────────────────────
+    @oauth2 path /oauth2/*
+    reverse_proxy @oauth2 oauth2-proxy:4180 {
+        header_up Host              {upstream_hostport}
+        header_up X-Real-IP         {remote_host}
+        header_up X-Forwarded-For   {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-Host  {host}
+        header_up X-Original-URI    {uri}
+        transport http {
+            dial_timeout  10s
+            read_timeout  30s
+            write_timeout 30s
+        }
+    }
+
+    # ── Main app: all traffic → oauth2-proxy → code-server ────────────
+    reverse_proxy oauth2-proxy:4180 {
+        header_up Host              {upstream_hostport}
+        header_up X-Real-IP         {remote_host}
+        header_up X-Forwarded-For   {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-Host  {host}
+        header_up X-Request-ID      {http.request.uuid}
+        transport http {
+            # WebSocket passthrough for code-server terminal / extensions
+            dial_timeout      10s
+            read_timeout      0   # unlimited for long-running WS connections
+            write_timeout     0
+            keep_alive_timeout 90s
+            max_conns_per_host 100
+        }
+    }
+
+    # ── Structured access log ──────────────────────────────────────────
+    log {
+        output file /var/log/caddy/{$DOMAIN:ide.kushnir.cloud}.log {
+            roll_size 100mb
+            roll_keep 14
+            roll_keep_for 336h
+        }
+        format json
+        level  info
+    }
+
+    # ── Error handling (no internal details exposed) ───────────────────
+    handle_errors {
+        header Content-Type "application/json"
+        respond `{"error":"request failed","code":{http.error.status_code}}` {http.error.status_code}
+    }
+}
+
+# ─────────────────────────────────────────────
+# Redirect bare HTTP → HTTPS
+# ─────────────────────────────────────────────
+http://{$DOMAIN:ide.kushnir.cloud} {
+    redir https://{$DOMAIN:ide.kushnir.cloud}{uri} permanent
+}

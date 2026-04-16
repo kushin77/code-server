@@ -29,12 +29,14 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-          run: |
-            if [ -f package-lock.json ]; then
-              npm ci
-            else
-              npm install
-            fi
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f package.json ]; then
+            npm install
+          else
+            echo "No package.json detected; skipping npm dependency install"
+          fi
         timeout-minutes: 10
 
       - name: Audit dependencies

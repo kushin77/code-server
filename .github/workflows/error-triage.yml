@@ -187,7 +187,16 @@ jobs:
           echo "::group::GitHub Issue Creation"
           
           PATTERNS="${{ steps.loki-query.outputs.patterns }}"
+          DOWN_SERVICES="${{ steps.prometheus-query.outputs.down_services }}"
+          RCA_CORRELATED="${{ steps.rca.outputs.has_rca }}"
           ISSUES_CREATED=0
+          ISSUES_UPDATED=0
+
+          normalize_pattern() {
+            printf '%s' "$1" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed -E 's/[0-9a-f]{8,}/<hex>/g; s/[0-9]{2,}/<num>/g; s/[[:space:]]+/ /g; s/^ //; s/ $//'
+          }
           
           # Process each error pattern
           while IFS= read -r line; do
@@ -198,13 +207,18 @@ jobs:
             
             # Only create issue if error occurs 3+ times
             if [[ ${COUNT:-0} -ge 3 ]]; then
+              NORMALIZED_MSG=$(normalize_pattern "$ERROR_MSG")
+              PATTERN_HASH=$(printf '%s' "$NORMALIZED_MSG" | sha256sum | awk '{print $1}')
+              MARKER="<!-- error-triage-fingerprint:${PATTERN_HASH} -->"
               TITLE="[AUTO-TRIAGE] ${ERROR_MSG:0:100}"
               BODY=$(cat <<EOF
+          ${MARKER}
           ## Automated Error Triage Report
           
           **Severity**: P1 (Automated Detection)
           **Detected**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
           **Occurrence Count**: ${COUNT}
+          **Fingerprint**: ${PATTERN_HASH}
           
           ### Error Pattern
           \`\`\`
@@ -216,6 +230,17 @@ jobs:
           - **Source**: Loki Log Aggregation
           - **Threshold**: Triggered at ${COUNT}+ occurrences
           - **Time Range**: Last 5 minutes
+          - **Down Services**: ${DOWN_SERVICES:-none}
+          - **RCA Correlated**: ${RCA_CORRELATED:-false}
+
+          ### Telemetry Evidence
+          - **Loki Endpoint**: ${LOKI_ENDPOINT}
+          - **Prometheus Endpoint**: ${PROMETHEUS_ENDPOINT}
+          - **Down Services Snapshot**: ${DOWN_SERVICES:-none}
+
+          ### Runbook References
+          - docs/runbooks/error-rate-high.md
+          - config/error-triage-config.yml
           
           ### Next Steps
           1. Investigate error pattern and identify root cause
@@ -229,29 +254,46 @@ jobs:
               )
               
               if [[ "${DRY_RUN}" == "true" ]]; then
-                echo "[DRY-RUN] Would create issue: ${TITLE}"
-                ((ISSUES_CREATED++))
+                echo "[DRY-RUN] Would triage fingerprint ${PATTERN_HASH}: ${TITLE}"
               else
-                # Check if similar issue already exists
-                EXISTING=$(gh issue list --label error-triage --state open --search "${ERROR_MSG:0:50}" --json title 2>/dev/null || echo "[]")
-                
-                if [[ $(echo "$EXISTING" | jq 'length') -eq 0 ]]; then
-                  gh issue create \
+                EXISTING=$(gh issue list --label error-triage --state open --limit 200 --json number,body 2>/dev/null \
+                  | jq -r --arg marker "$MARKER" '.[] | select(.body | contains($marker)) | .number' \
+                  | head -1)
+
+                if [[ -n "$EXISTING" ]]; then
+                  UPDATE_BODY=$(cat <<EOF
+          ## Additional Error Occurrence
+
+          ${MARKER}
+          - **Detected**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          - **Occurrence Count In Current Window**: ${COUNT}
+          - **RCA Correlated**: ${RCA_CORRELATED:-false}
+          - **Down Services Snapshot**: ${DOWN_SERVICES:-none}
+          EOF
+                  )
+
+                  gh issue comment "$EXISTING" --body "$UPDATE_BODY" >/dev/null 2>&1 && ((ISSUES_UPDATED++))
+                  echo "Updated existing issue #${EXISTING} for fingerprint ${PATTERN_HASH}"
+                else
+                  CREATED=$(gh issue create \
                     --title "${TITLE}" \
                     --body "${BODY}" \
                     --label "error-triage,P1,automated" \
-                    --assignee "kushin77" \
-                    >/dev/null 2>&1 && ((ISSUES_CREATED++))
-                  echo "Created issue for: ${ERROR_MSG:0:50}"
-                else
-                  echo "Issue already exists for: ${ERROR_MSG:0:50}"
+                    --assignee "kushin77" 2>/dev/null || echo "")
+
+                  if [[ -n "$CREATED" ]]; then
+                    ((ISSUES_CREATED++))
+                    echo "Created new issue for fingerprint ${PATTERN_HASH}"
+                  fi
                 fi
               fi
             fi
           done <<< "${PATTERNS}"
           
           echo "issues_created=${ISSUES_CREATED}" >> $GITHUB_OUTPUT
+          echo "issues_updated=${ISSUES_UPDATED}" >> $GITHUB_OUTPUT
           echo "Created ${ISSUES_CREATED} triage issues"
+          echo "Updated ${ISSUES_UPDATED} triage issues"
           echo "::endgroup::"
       
       - name: Update issue metrics
@@ -264,6 +306,7 @@ jobs:
           # Log triage results
           echo "Triage Results:"
           echo "  - Issues Created: ${{ steps.issue-creation.outputs.issues_created || 0 }}"
+          echo "  - Issues Updated: ${{ steps.issue-creation.outputs.issues_updated || 0 }}"
           echo "  - RCA Performed: ${{ steps.rca.outputs.has_rca }}"
           echo "  - Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           
@@ -281,6 +324,7 @@ jobs:
           | Service Status | ${{ steps.prometheus-query.outputs.down_services != '' && 'Services down' || 'All healthy' }} |
           | Root Cause Analysis | ${{ steps.rca.outputs.has_rca || 'No correlation' }} |
           | Issues Created | ${{ steps.issue-creation.outputs.issues_created || 0 }} |
+          | Issues Updated | ${{ steps.issue-creation.outputs.issues_updated || 0 }} |
           | Dry Run Mode | ${{ github.event.inputs.dry_run || 'false' }} |
           
           **Execution Time**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')

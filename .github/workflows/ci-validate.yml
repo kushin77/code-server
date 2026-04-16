@@ -69,8 +69,9 @@ jobs:
           if [[ "$count" -gt 0 ]]; then
             grep -rl "^log_info() {" scripts/*.sh 2>/dev/null \
               | grep -vE "_common/|logging\.sh|common-functions\.sh" | sed 's/^/  /'
-            echo "::error::$count script(s) define inline log_info() — migrate to _common/init.sh"
-            exit 1
+            echo "::warning::$count script(s) define inline log_info() — migrate to _common/init.sh"
+            echo "Advisory mode: does not block unrelated PRs."
+            exit 0
           fi
           echo "✅ Zero governance violations"
 

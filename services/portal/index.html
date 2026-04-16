@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kushnir.cloud — Enterprise Portal</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent-dev: #2563eb;
+      --accent-obs: #059669;
+      --accent-ai: #7c3aed;
+      --healthy: #22c55e;
+      --unhealthy: #ef4444;
+      --unknown: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+    header h1 span { color: var(--muted); font-weight: 400; }
+
+    .tag {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--border);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 12px;
+      margin-top: 32px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, transform 0.1s;
+      display: block;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: #475569;
+      transform: translateY(-1px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .icon-vscode { background: #1a3a6e; }
+    .icon-grafana { background: #1a3a2e; }
+    .icon-prometheus { background: #3a2a1a; }
+    .icon-alertmanager { background: #3a1a1a; }
+    .icon-jaeger { background: #2a1a3a; }
+    .icon-ollama { background: #2a1a3a; }
+
+    .card-name { font-weight: 600; font-size: 0.95rem; }
+    .card-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.4; margin-bottom: 14px; }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .health-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .health-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+    }
+
+    .health-label.healthy .health-dot { background: var(--healthy); }
+    .health-label.unhealthy .health-dot { background: var(--unhealthy); }
+    .health-label.unknown .health-dot { background: var(--unknown); }
+
+    .open-btn {
+      font-size: 0.75rem;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 3px 10px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>kushnir.cloud <span>/ portal</span></h1>
+    <span class="tag">on-prem · 192.168.168.31</span>
+  </header>
+
+  <main>
+    <div class="section-title">Development</div>
+    <div class="grid">
+      <a class="card" href="http://192.168.168.31:8080" target="_blank">
+        <div class="card-header">
+          <div class="card-icon icon-vscode">&#x1F4BB;</div>
+          <div class="card-name">IDE (code-server)</div>
+        </div>
+        <div class="card-desc">VS Code in the browser — primary development environment</div>
+        <div class="card-footer">
+          <span class="health-label" id="health-code-server">
+            <span class="health-dot"></span>Checking...
+          </span>
+          <span class="open-btn">Open →</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="section-title">Observability</div>
+    <div class="grid">
+      <a class="card" href="http://192.168.168.31:3000" target="_blank">
+        <div class="card-header">
+          <div class="card-icon icon-grafana">&#x1F4CA;</div>
+          <div class="card-name">Grafana</div>
+        </div>
+        <div class="card-desc">Dashboards, SLO burn rates, session health</div>
+        <div class="card-footer">
+          <span class="health-label" id="health-grafana">
+            <span class="health-dot"></span>Checking...
+          </span>
+          <span class="open-btn">Open →</span>
+        </div>
+      </a>
+
+      <a class="card" href="http://192.168.168.31:9090" target="_blank">
+        <div class="card-header">
+          <div class="card-icon icon-prometheus">&#x1F525;</div>
+          <div class="card-name">Prometheus</div>
+        </div>
+        <div class="card-desc">Metrics store — raw query and alerting rule management</div>
+        <div class="card-footer">
+          <span class="health-label" id="health-prometheus">
+            <span class="health-dot"></span>Checking...
+          </span>
+          <span class="open-btn">Open →</span>
+        </div>
+      </a>
+
+      <a class="card" href="http://192.168.168.31:9093" target="_blank">
+        <div class="card-header">
+          <div class="card-icon icon-alertmanager">&#x1F6A8;</div>
+          <div class="card-name">AlertManager</div>
+        </div>
+        <div class="card-desc">Alert routing, silences, and inhibitions</div>
+        <div class="card-footer">
+          <span class="health-label" id="health-alertmanager">
+            <span class="health-dot"></span>Checking...
+          </span>
+          <span class="open-btn">Open →</span>
+        </div>
+      </a>
+
+      <a class="card" href="http://192.168.168.31:16686" target="_blank">
+        <div class="card-header">
+          <div class="card-icon icon-jaeger">&#x1F50D;</div>
+          <div class="card-name">Jaeger</div>
+        </div>
+        <div class="card-desc">Distributed tracing — request flows across services</div>
+        <div class="card-footer">
+          <span class="health-label" id="health-jaeger">
+            <span class="health-dot"></span>Checking...
+          </span>
+          <span class="open-btn">Open →</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="section-title">AI / LLM</div>
+    <div class="grid">
+      <a class="card" href="http://192.168.168.31:11434" target="_blank">
+        <div class="card-header">
+          <div class="card-icon icon-ollama">&#x1F9E0;</div>
+          <div class="card-name">Ollama</div>
+        </div>
+        <div class="card-desc">Local LLM inference — Copilot AI backend</div>
+        <div class="card-footer">
+          <span class="health-label" id="health-ollama">
+            <span class="health-dot"></span>Checking...
+          </span>
+          <span class="open-btn">Open →</span>
+        </div>
+      </a>
+    </div>
+  </main>
+
+  <footer>
+    Enterprise Portal · kushin77/code-server · 192.168.168.31 · <span id="ts"></span>
+  </footer>
+
+  <script>
+    document.getElementById('ts').textContent = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+
+    const services = [
+      { id: 'code-server',   url: 'http://192.168.168.31:8080/healthz' },
+      { id: 'grafana',       url: 'http://192.168.168.31:3000/api/health' },
+      { id: 'prometheus',    url: 'http://192.168.168.31:9090/-/healthy' },
+      { id: 'alertmanager',  url: 'http://192.168.168.31:9093/-/healthy' },
+      { id: 'jaeger',        url: 'http://192.168.168.31:16686/' },
+      { id: 'ollama',        url: 'http://192.168.168.31:11434/api/tags' },
+    ];
+
+    services.forEach(({ id, url }) => {
+      const el = document.getElementById(`health-${id}`);
+      fetch(url, { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
+        .then(() => {
+          el.className = 'health-label healthy';
+          el.innerHTML = '<span class="health-dot"></span>Healthy';
+        })
+        .catch(() => {
+          el.className = 'health-label unknown';
+          el.innerHTML = '<span class="health-dot"></span>Unreachable';
+        });
+    });
+  </script>
+</body>
+</html>

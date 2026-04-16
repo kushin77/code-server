@@ -1,0 +1,48 @@
+groups:
+  - name: session-slos
+    rules:
+      # --- Availability SLO (Target: 99.9%) ---
+      # Success = Migrated + Refreshes
+      # Failure = Invalid
+      - record: session:availability:rate_5m
+        expr: |
+          sum(rate(session_migrated_total[5m]) + rate(session_refresh_total[5m])) 
+          / 
+          sum(rate(session_migrated_total[5m]) + rate(session_refresh_total[5m]) + rate(session_invalid_total[5m]) > 0)
+      
+      - record: session:error_budget:burn_rate_5m
+        expr: 1 - session:availability:rate_5m
+
+      # --- Latency SLO (Target: P99 < 100ms) ---
+      - record: session:migration_latency:p99_5m
+        expr: histogram_quantile(0.99, sum by (le) (rate(session_migration_latency_seconds_bucket[5m])))
+
+      # --- Freshness SLO (Focus on Refresh Failures) ---
+      - record: session:refresh_failure:rate_5m
+        expr: |
+          sum(rate(session_refresh_total{status="failure"}[5m]))
+          /
+          sum(rate(session_refresh_total[5m]) > 0)
+
+      # --- Alerts based on Burn Rate (SRE Best Practice) ---
+  - name: session-alerts
+    rules:
+      - alert: SessionHighBurnRate
+        expr: session:error_budget:burn_rate_5m > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          service: session-service
+        annotations:
+          summary: "High Session Error Budget Burn Rate"
+          description: "Session error budget is burning at >1% over the last 5 minutes. Current availability: {{ $value | humanizePercentage }}"
+
+      - alert: SessionLatencyP99Exceeded
+        expr: session:migration_latency:p99_5m > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: session-service
+        annotations:
+          summary: "Session Migration Latency P99 Exceeded"
+          description: "P99 session migration latency is {{ $value }}s, exceeding 100ms threshold."

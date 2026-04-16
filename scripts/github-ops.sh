@@ -27,6 +27,7 @@ readonly REQUIRED_SCOPES="${REQUIRED_SCOPES:-repo}"
 readonly ENFORCE_GSM_PAT="${ENFORCE_GSM_PAT:-true}"
 readonly GSM_PROJECT="${GSM_PROJECT:-}"
 readonly GSM_SECRET_CANDIDATES="${GSM_SECRET_CANDIDATES:-code-server-enterprise-github-token,github-token,github-pat,prod-github-token,prod-github-pat}"
+readonly GSM_FETCH_TIMEOUT_SECONDS="${GSM_FETCH_TIMEOUT_SECONDS:-8}"
 
 AUTH_TOKEN=""
 AUTH_SOURCE=""
@@ -125,12 +126,16 @@ fetch_gsm_token() {
         secret_name="$(echo "${secret_name}" | xargs)"
         [ -z "${secret_name}" ] && continue
 
-        if token_value="$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet secrets versions access latest --secret="${secret_name}" --project="${project}" 2>/dev/null)"; then
-            if [ -n "${token_value}" ]; then
-                AUTH_TOKEN="${token_value}"
-                AUTH_SOURCE="gsm:${project}/${secret_name}"
-                return 0
-            fi
+        if command -v timeout >/dev/null 2>&1; then
+            token_value="$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 timeout "${GSM_FETCH_TIMEOUT_SECONDS}" gcloud --quiet secrets versions access latest --secret="${secret_name}" --project="${project}" 2>/dev/null || true)"
+        else
+            token_value="$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet secrets versions access latest --secret="${secret_name}" --project="${project}" 2>/dev/null || true)"
+        fi
+
+        if [ -n "${token_value}" ]; then
+            AUTH_TOKEN="${token_value}"
+            AUTH_SOURCE="gsm:${project}/${secret_name}"
+            return 0
         fi
     done
 

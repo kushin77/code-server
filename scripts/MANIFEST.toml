@@ -422,6 +422,30 @@ purpose  = "Enforces issue priority labels and SLO response times."
 depends  = ["_common/init.sh"]
 
 [[script]]
+file     = "appsmith-portal-initialization.js"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Phase 1: Initialize Appsmith service catalog with 7 pre-seeded services, RBAC setup, audit framework."
+called_by = ["docker-compose.appsmith.yml", "APPSMITH-DEPLOYMENT-GUIDE.md"]
+
+[[script]]
+file     = "appsmith-init-db.sql"
+category = "deployment"
+status   = "active"
+owner    = "platform"
+purpose  = "Phase 1: Create Appsmith database schema with service catalog, RBAC roles, audit tables."
+called_by = ["docker-compose.appsmith.yml:appsmith-init service"]
+
+[[script]]
+file     = "iam-audit-schema.sql"
+category = "security"
+status   = "active"
+owner    = "security"
+purpose  = "Phase 1: Create IAM audit schema with 8 tables for session tracking, token revocation, anomaly detection."
+called_by = ["IAM-PHASE-1-DEPLOYMENT-GUIDE.md"]
+
+[[script]]
 file     = "priority-issue-cli.sh"
 category = "operations"
 status   = "active"

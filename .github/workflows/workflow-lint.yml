@@ -40,9 +40,7 @@ jobs:
               comments: disable,
               document-start: disable
             }
-          }' --exclude \
-          .github/workflows/enforce-priority-labels.yml,.github/workflows/phase-1-certification-gate.yml \
-          .github/workflows/
+          }' "${wf_files[@]}"
 
   action-versions:
     name: Detect deprecated/unpinned action versions

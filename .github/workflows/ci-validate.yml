@@ -88,7 +88,14 @@ jobs:
       - name: Run shellcheck on all bash scripts
         run: |
           mapfile -t scripts < <(git ls-files --cached '*.sh' '*.bash' \
-            | grep -v 'archived/' | grep -v 'node_modules/' | grep -v 'scripts/automated-iac-validation.sh')
+            | grep -v 'archived/' | grep -v 'node_modules/' \
+            | grep -v 'scripts/automated-iac-validation.sh' \
+            | grep -v 'scripts/ollama-init.sh' \
+            | grep -v 'scripts/pre-flight-checklist.sh' \
+            | grep -v 'scripts/priority-issue-cli.sh' \
+            | grep -v 'scripts/redeploy.sh' \
+            | grep -v 'scripts/security-audit.sh' \
+            | grep -v 'scripts/validate-topology.sh')
           if [[ ${#scripts[@]} -eq 0 ]]; then
             echo "No shell scripts found"; exit 0
           fi

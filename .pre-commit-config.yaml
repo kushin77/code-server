@@ -38,8 +38,8 @@ repos:
       - id: no-hardcoded-ips
         name: No hardcoded IP addresses in scripts
         entry: bash -c '
-          files=$(grep -rl "192\.168\.168\.\(31\|30\)" scripts/ 2>/dev/null \
-            | grep -v "_common/" | grep -v "config\.sh" | grep "\.sh$")
+          files=$(grep -rlE "192\.168\.168\.\(31\|30\)|:-[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" scripts/ 2>/dev/null \
+            | grep -v "_common/" | grep -v "_archive/" | grep -v "scripts/lib/" | grep -v "config\.sh" | grep "\.sh$")
           if [[ -n "$files" ]]; then
             echo "GOVERNANCE: Hardcoded IP — use \$DEPLOY_HOST from _common/config.sh:"
             echo "$files" | sed "s/^/  /"; exit 1

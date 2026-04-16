@@ -14,13 +14,16 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 # ==============================================================================
 # CONFIGURATION
 # ==============================================================================
 
 STATE="${1:-UNKNOWN}"
 HOSTNAME="$(hostname)"
-VIP="${PROD_VIP:-192.168.168.30}"
+VIP="${PROD_VIP:-${STANDBY_HOST}}"
 LOG_FILE="/var/log/keepalived-notify.log"
 
 # Logging

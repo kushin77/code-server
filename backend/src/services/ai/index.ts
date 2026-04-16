@@ -6,6 +6,10 @@ export {
 	semanticBoundaries,
 	chunkByTokenWindow,
 	evaluateRetrievalQuality,
+	evaluateIncrementalIndexingLatency,
+	formatRetrievalQualityPrometheus,
+	isIndexablePath,
+	startRepositoryFileWatcher,
 } from "./indexing";
 export type {
 	SupportedLanguage,
@@ -17,4 +21,7 @@ export type {
 	SearchResult,
 	RetrievalBenchmarkCase,
 	RetrievalQualityMetrics,
+	IncrementalIndexingLatencyMetrics,
+	FileWatcherEvent,
+	FileWatcherOptions,
 } from "./indexing";

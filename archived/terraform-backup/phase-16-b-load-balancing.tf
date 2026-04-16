@@ -103,11 +103,11 @@ resource "docker_image" "keepalived" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "haproxy_primary" {
-  count         = 0  # Disabled for now - requires extended configuration
-  name          = "haproxy-lb-primary"
-  image         = docker_image.haproxy[0].image_id
-  network_mode  = "host"
-  privileged    = true
+  count        = 0 # Disabled for now - requires extended configuration
+  name         = "haproxy-lb-primary"
+  image        = docker_image.haproxy[0].image_id
+  network_mode = "host"
+  privileged   = true
 
   command = ["haproxy", "-f", "/etc/haproxy/default.cfg"]
 
@@ -157,11 +157,11 @@ resource "docker_container" "haproxy_primary" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "haproxy_backup" {
-  count         = 0  # Disabled for now - requires extended configuration
-  name          = "haproxy-lb-backup"
-  image         = docker_image.haproxy[0].image_id
-  network_mode  = "host"
-  privileged    = true
+  count        = 0 # Disabled for now - requires extended configuration
+  name         = "haproxy-lb-backup"
+  image        = docker_image.haproxy[0].image_id
+  network_mode = "host"
+  privileged   = true
 
   ports {
     internal = 8080
@@ -213,11 +213,11 @@ resource "docker_container" "haproxy_backup" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "keepalived_primary" {
-  count         = var.phase_16_b_enabled ? 1 : 0
-  name          = "keepalived-vip-primary"
-  image         = docker_image.keepalived[0].image_id
-  network_mode  = "host"
-  privileged    = true
+  count        = var.phase_16_b_enabled ? 1 : 0
+  name         = "keepalived-vip-primary"
+  image        = docker_image.keepalived[0].image_id
+  network_mode = "host"
+  privileged   = true
 
   env = [
     "KEEPALIVED_PRIORITY=150",
@@ -248,11 +248,11 @@ resource "docker_container" "keepalived_primary" {
 }
 
 resource "docker_container" "keepalived_backup" {
-  count         = var.phase_16_b_enabled ? 1 : 0
-  name          = "keepalived-vip-backup"
-  image         = docker_image.keepalived[0].image_id
-  network_mode  = "host"
-  privileged    = true
+  count        = var.phase_16_b_enabled ? 1 : 0
+  name         = "keepalived-vip-backup"
+  image        = docker_image.keepalived[0].image_id
+  network_mode = "host"
+  privileged   = true
 
   env = [
     "KEEPALIVED_PRIORITY=100",

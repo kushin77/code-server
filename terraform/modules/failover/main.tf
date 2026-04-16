@@ -133,7 +133,7 @@ resource "kubernetes_service" "etcd" {
   }
 
   spec {
-    cluster_ip = "None"  # Headless service
+    cluster_ip = "None" # Headless service
     selector   = { app = "etcd" }
 
     port {
@@ -280,7 +280,7 @@ resource "kubernetes_service" "postgres" {
   }
 
   spec {
-    cluster_ip = "None"  # Headless for replication
+    cluster_ip = "None" # Headless for replication
 
     selector = { app = "postgres" }
 

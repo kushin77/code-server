@@ -59,8 +59,8 @@ variable "labels" {
   description = "Common labels for all networking resources"
   type        = map(string)
   default = {
-    module      = "networking"
-    managed_by  = "terraform"
+    module     = "networking"
+    managed_by = "terraform"
   }
 }
 

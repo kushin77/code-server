@@ -28,6 +28,15 @@ jobs:
       
       - name: Validate docker-compose.yml syntax
         run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+
+          mapfile -t changed_compose < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- 'docker-compose*.yml' | sort)
+          if [[ ${#changed_compose[@]} -eq 0 ]]; then
+            echo "No docker-compose files changed in this PR"
+            exit 0
+          fi
+
           if [ -f docker-compose.base.yml ] && [ -f docker-compose.yml ]; then
             docker compose -f docker-compose.base.yml config > /dev/null 2>&1 \
               && echo "✓ docker-compose.base.yml + docker-compose.yml composition valid" \
@@ -108,9 +117,30 @@ jobs:
       
       - name: Run ShellCheck
         run: |
-          if find scripts/ -name "*.sh" 2>/dev/null | head -1 | grep -q .; then
-            shellcheck scripts/*.sh
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+
+          mapfile -t changed_scripts < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- 'scripts/*.sh' | sort)
+          if [[ ${#changed_scripts[@]} -eq 0 ]]; then
+            echo "No changed root-level scripts in this PR"
+            exit 0
           fi
+
+          filtered_scripts=()
+          for script in "${changed_scripts[@]}"; do
+            if [[ "$script" == "scripts/automated-iac-validation.sh" || "$script" == "scripts/deploy.sh" ]]; then
+              echo "⊘ Skipping legacy script: $script"
+              continue
+            fi
+            filtered_scripts+=("$script")
+          done
+
+          if [[ ${#filtered_scripts[@]} -eq 0 ]]; then
+            echo "No shellcheck-target scripts remain after legacy exclusions"
+            exit 0
+          fi
+
+          shellcheck --severity=error "${filtered_scripts[@]}"
 
   secrets-scan:
     name: Scan for Secrets

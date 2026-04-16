@@ -74,8 +74,8 @@ variable "labels" {
   description = "Common labels for all DNS resources"
   type        = map(string)
   default = {
-    module      = "dns"
-    managed_by  = "terraform"
+    module     = "dns"
+    managed_by = "terraform"
   }
 }
 

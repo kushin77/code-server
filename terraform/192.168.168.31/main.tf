@@ -39,7 +39,7 @@ resource "null_resource" "install_system_dependencies" {
     inline = [
       "set -e",
       "echo '=== Installing System Dependencies ==='",
-      
+
       # Update package manager
       "if command -v apt-get &>/dev/null; then",
       "  sudo apt-get update -qq",
@@ -47,7 +47,7 @@ resource "null_resource" "install_system_dependencies" {
       "elif command -v yum &>/dev/null; then",
       "  sudo yum install -y curl wget git jq tmux htop iotop nethogs rsync openssh-server openssh-clients gcc g++ make automake patch git-core 2>&1 | tail -5",
       "fi",
-      
+
       "echo '✓ System dependencies installed'",
     ]
 
@@ -77,7 +77,7 @@ resource "null_resource" "install_docker" {
     inline = [
       "set -e",
       "echo '=== Installing Docker ==='",
-      
+
       # Check if Docker already installed
       "if command -v docker &>/dev/null; then",
       "  echo '✓ Docker already installed: '$(docker --version)",
@@ -91,7 +91,7 @@ resource "null_resource" "install_docker" {
       "  fi",
       "  echo '✓ Docker installed'",
       "fi",
-      
+
       # Start Docker daemon
       "sudo systemctl enable docker 2>&1 | grep -v 'Created symlink' || true",
       "sudo systemctl start docker || true",

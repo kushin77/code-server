@@ -326,8 +326,8 @@ scripts/
 │   ├── fix-common-issues.sh
 │   └── troubleshoot-*.sh
 ├── ci/                    # CI/CD operations
-│   ├── admin-merge.ps1
-│   └── ci-merge-automation.ps1
+│   ├── admin-merge.sh
+│   └── ci-merge-automation.sh
 └── lib/                   # Shared functions
     ├── logger.sh
     ├── error-handler.sh

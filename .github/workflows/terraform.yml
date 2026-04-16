@@ -25,10 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # Pin to SHA: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
+        # Pin to SHA: hashicorp/setup-terraform@651b85540e2a2e24d70e2ac4ce41b7c7e02cc1cc
         with:
-          terraform_version: 1.6.0
+          terraform_version: 1.7.0
 
       - name: Terraform Format Check
         working-directory: ./terraform
@@ -49,10 +51,12 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || github.event.inputs.action == 'plan'
     steps:
       - uses: actions/checkout@v4
+        # Pin to SHA: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
+        # Pin to SHA: hashicorp/setup-terraform@651b85540e2a2e24d70e2ac4ce41b7c7e02cc1cc
         with:
-          terraform_version: 1.6.0
+          terraform_version: 1.7.0
 
       - name: Terraform Init
         working-directory: ./terraform

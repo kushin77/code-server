@@ -1,0 +1,58 @@
+{
+  "_comment": "Jaeger per-service adaptive sampling strategies — Phase 3 (#396)",
+  "_doc": "https://www.jaegertracing.io/docs/sampling/#collector-sampling-configuration",
+  "default_strategy": {
+    "type": "probabilistic",
+    "param": 0.05,
+    "_comment": "5% default sampling rate for all services"
+  },
+  "per_operation_strategies": [
+    {
+      "_comment": "Always sample health checks at 0% (pure noise)",
+      "service": "*",
+      "operation": "GET /health",
+      "type": "probabilistic",
+      "param": 0
+    },
+    {
+      "_comment": "Always sample health checks at 0% (pure noise)",
+      "service": "*",
+      "operation": "GET /ready",
+      "type": "probabilistic",
+      "param": 0
+    },
+    {
+      "_comment": "Always sample health checks at 0% (pure noise)",
+      "service": "*",
+      "operation": "GET /metrics",
+      "type": "probabilistic",
+      "param": 0
+    }
+  ],
+  "service_strategies": [
+    {
+      "service": "code-server-enterprise",
+      "type": "probabilistic",
+      "param": 0.1,
+      "_comment": "10% for main service — higher value for user-facing calls"
+    },
+    {
+      "service": "session-service",
+      "type": "ratelimiting",
+      "param": 50,
+      "_comment": "50 traces/sec max for session service (high frequency)"
+    },
+    {
+      "service": "ai-service",
+      "type": "probabilistic",
+      "param": 1.0,
+      "_comment": "100% sampling for AI/LLM calls — always want trace context for debugging"
+    },
+    {
+      "service": "replication-service",
+      "type": "probabilistic",
+      "param": 0.05,
+      "_comment": "5% for background replication"
+    }
+  ]
+}

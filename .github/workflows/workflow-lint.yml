@@ -1,0 +1,141 @@
+name: Workflow Lint
+
+# Closes #339 (GOV-010 partial) — Workflow Reliability Fixes
+# Validates GitHub Actions workflows for syntax, deprecated versions, and best practices.
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  yaml-lint:
+    name: YAML syntax validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint all workflow YAML files
+        run: |
+          yamllint -d '{
+            extends: default,
+            rules: {
+              line-length: {max: 200},
+              truthy: {allowed-values: ["true", "false", "on", "off"]},
+              comments: disable,
+              document-start: disable
+            }
+          }' .github/workflows/
+
+  action-versions:
+    name: Detect deprecated/unpinned action versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for unpinned action versions (@master, @HEAD, @latest)
+        run: |
+          failed=0
+          # Pattern: uses: owner/repo@master or @HEAD or @latest
+          bad=$(grep -rn 'uses:.*@\(master\|HEAD\|latest\)' .github/workflows/ \
+            --include="*.yml" --include="*.yaml" || true)
+          if [[ -n "$bad" ]]; then
+            echo "FAIL: Unpinned action versions detected (must use @vX.Y.Z or SHA):"
+            echo "$bad" | sed 's/^/  /'
+            echo ""
+            echo "Pin to exact version tag (e.g. actions/checkout@v4)"
+            failed=1
+          fi
+
+          # Also flag @v0 which is too loose
+          loose=$(grep -rn 'uses:.*@v0\b' .github/workflows/ \
+            --include="*.yml" --include="*.yaml" || true)
+          if [[ -n "$loose" ]]; then
+            echo "WARN: Loose action version @v0 detected (prefer specific tag):"
+            echo "$loose" | sed 's/^/  /'
+          fi
+
+          if [[ $failed -eq 1 ]]; then
+            exit 1
+          fi
+          echo "✓ All action versions are pinned"
+
+  no-windows-runners:
+    name: No Windows CI runners
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect windows-* runners
+        run: |
+          bad=$(grep -rn 'runs-on:.*windows' .github/workflows/ \
+            --include="*.yml" --include="*.yaml" || true)
+          if [[ -n "$bad" ]]; then
+            echo "FAIL: Windows CI runners detected:"
+            echo "$bad" | sed 's/^/  /'
+            echo ""
+            echo "All workflows must use ubuntu-latest."
+            exit 1
+          fi
+          echo "✓ No Windows runners found"
+
+  secret-references:
+    name: Check for undefined secret references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect secrets that should be in GitHub Secrets
+        run: |
+          # Flag any hardcoded secrets patterns in workflows
+          patterns=(
+            'password:.*[a-zA-Z0-9]{8,}'
+            'token:.*ghp_'
+            'secret:.*[a-zA-Z0-9]{32,}'
+          )
+          failed=0
+          for pattern in "${patterns[@]}"; do
+            matches=$(grep -rn "$pattern" .github/workflows/ \
+              --include="*.yml" --include="*.yaml" 2>/dev/null || true)
+            if [[ -n "$matches" ]]; then
+              echo "FAIL: Potential hardcoded secret in workflow:"
+              echo "$matches" | sed 's/^/  /'
+              failed=1
+            fi
+          done
+          if [[ $failed -eq 1 ]]; then exit 1; fi
+          echo "✓ No hardcoded secrets in workflows"
+
+  required-fields:
+    name: Workflows have name and permissions fields
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate name and permissions present
+        run: |
+          failed=0
+          while IFS= read -r -d '' f; do
+            # Skip templates (TEMPLATE-*.yml)
+            [[ "$(basename "$f")" == TEMPLATE-* ]] && continue
+
+            if ! grep -q '^name:' "$f"; then
+              echo "FAIL: $f — missing 'name:' field"
+              failed=1
+            fi
+            if ! grep -q '^permissions:' "$f"; then
+              echo "WARN: $f — missing 'permissions:' field (principle of least privilege)"
+            fi
+          done < <(find .github/workflows/ -name "*.yml" -print0)
+          if [[ $failed -eq 1 ]]; then exit 1; fi
+          echo "✓ Required fields validated"

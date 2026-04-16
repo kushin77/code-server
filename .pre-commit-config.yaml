@@ -22,15 +22,25 @@ repos:
         pass_filenames: false
         stages: [commit]
 
-      # Phase 2.3: Custom hook - verify metadata headers
+      # Phase 2.3: Custom hook - verify metadata headers (ENHANCED for #297)
       - id: verify-metadata-headers
         name: Verify metadata headers in critical scripts
-        entry: >-
-          bash -c '[[ -f scripts/deploy.sh ]] &&
-          ! grep -q "^# File:" scripts/deploy.sh &&
-          echo "ERROR: deploy.sh missing metadata header"'
+        entry: bash -c '
+          # Check only newly ADDED files (--diff-filter=A) to avoid retrofitting all scripts at once
+          new_scripts=$(git diff --cached --name-only --diff-filter=A -- "scripts/*.sh" "scripts/**/*.sh" 2>/dev/null | grep -v "_common/" | grep -v "_archive/")
+          if [[ -n "$new_scripts" ]]; then
+            missing_headers=0
+            for f in $new_scripts; do
+              if ! head -3 "$f" | grep -qE "@file|@module|@description"; then
+                echo "ERROR: $f missing @file/@module/@description metadata header"
+                missing_headers=$((missing_headers + 1))
+              fi
+            done
+            [[ $missing_headers -gt 0 ]] && exit 1
+          fi
+        '
         language: system
-        files: '^scripts/deploy\.sh$'
+        files: '^scripts/.*\.sh$'
         pass_filenames: false
         stages: [commit]
 

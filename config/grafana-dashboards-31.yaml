@@ -4,9 +4,9 @@
 # Data source: Prometheus with NVIDIA DCGM metrics
 
 dashboard:
-  title: "GPU Monitoring - 192.168.168.31"
+  title: "GPU Monitoring - primary.prod.internal"
   description: "Real-time GPU performance, health, and utilization metrics"
-  tags: ["gpu", "nvidia", "dcgm", "192.168.168.31"]
+  tags: ["gpu", "nvidia", "dcgm", "primary.prod.internal"]
   timezone: "browser"
   refresh: "30s"
   time:
@@ -124,9 +124,9 @@ dashboard:
 # Displays CPU, memory, disk, network metrics
 
 dashboard:
-  title: "System Monitoring - 192.168.168.31"
+  title: "System Monitoring - primary.prod.internal"
   description: "Host system resource utilization and health"
-  tags: ["system", "node", "192.168.168.31"]
+  tags: ["system", "node", "primary.prod.internal"]
   timezone: "browser"
   refresh: "15s"
 
@@ -197,9 +197,9 @@ dashboard:
 # Displays NAS health, capacity, latency, IOPS
 
 dashboard:
-  title: "NAS Storage Monitoring - 192.168.168.31"
+  title: "NAS Storage Monitoring - primary.prod.internal"
   description: "NAS mount points, capacity, latency, and backup status"
-  tags: ["nas", "storage", "192.168.168.31"]
+  tags: ["nas", "storage", "primary.prod.internal"]
   timezone: "browser"
   refresh: "60s"
 

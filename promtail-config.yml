@@ -23,7 +23,7 @@ scrape_configs:
           - localhost
         labels:
           job: docker-logs
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
           __path__: /var/lib/docker/containers/*/*.log
 
     pipeline_stages:
@@ -39,6 +39,16 @@ scrape_configs:
       - timestamp:
           source: time
           format: RFC3339Nano
+      # PII scrubbing — redact tokens, emails, and bearer credentials before shipping to Loki
+      - replace:
+          expression: '((?i)bearer\s+)[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+'
+          replace: '${1}[REDACTED]'
+      - replace:
+          expression: '((?i)"(?:password|secret|token|cookie|credential|api_?key)"\s*:\s*")[^"]*"'
+          replace: '${1}[REDACTED]"'
+      - replace:
+          expression: '[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}'
+          replace: '[EMAIL-REDACTED]'
       - output:
           source: log
 
@@ -49,7 +59,7 @@ scrape_configs:
           - localhost
         labels:
           job: system-logs
-          host: "192.168.168.31"
+          host: "primary.prod.internal"
           __path__: /var/log/*.log
     pipeline_stages:
       - drop:

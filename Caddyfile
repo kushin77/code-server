@@ -1,6 +1,7 @@
 # Caddyfile — production reverse proxy & TLS termination
-# On-prem VSCode server at 192.168.168.31 behind Cloudflare Tunnel or local network
+# On-prem VSCode server at primary.prod.internal (ide.kushnir.cloud) behind Cloudflare Tunnel
 # Ref: ADR-001 Cloudflare Tunnel Architecture
+# Canonical DNS SSOT: environments/production/hosts.yml
 # Validation: caddy validate --config Caddyfile --adapter caddyfile
 
 {

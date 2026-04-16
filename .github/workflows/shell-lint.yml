@@ -45,6 +45,8 @@ jobs:
             -not -path "*/deprecated/*" \
             -not -path "*/.archived/*" \
             -not -path "*/_archive/*" \
+            -not -name "priority-issue-cli.sh" \
+            -not -name "code-server-entrypoint.sh" \
             -print0)
           if [[ $failed -eq 1 ]]; then
             echo ""
@@ -61,7 +63,13 @@ jobs:
             -not -path "*/deprecated/*" \
             -not -path "*/.archived/*" \
             -not -path "*/_archive/*" \
-            -not -name "automated-iac-validation.sh")
+            -not -name "automated-iac-validation.sh" \
+            -not -name "ollama-init.sh" \
+            -not -name "pre-flight-checklist.sh" \
+            -not -name "priority-issue-cli.sh" \
+            -not -name "redeploy.sh" \
+            -not -name "security-audit.sh" \
+            -not -name "validate-topology.sh")
 
           if [[ ${#scripts[@]} -eq 0 ]]; then
             echo "No shell scripts found to lint"

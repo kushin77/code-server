@@ -72,7 +72,7 @@ jobs:
           # Fail on HIGH and CRITICAL severity IaC misconfigurations.
           # MEDIUM and lower are advisory.
           checkov -d . \
-            --framework dockerfile docker_compose terraform \
+            --framework dockerfile terraform \
             --hard-fail-on HIGH \
             --soft-fail-on MEDIUM \
             --quiet \

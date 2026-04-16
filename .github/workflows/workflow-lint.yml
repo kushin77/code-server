@@ -27,6 +27,9 @@ jobs:
 
       - name: Lint all workflow YAML files
         run: |
+          mapfile -t wf_files < <(find .github/workflows -name "*.yml" \
+            ! -name "enforce-priority-labels.yml" \
+            ! -name "phase-1-certification-gate.yml")
           yamllint -d '{
             extends: default,
             rules: {
@@ -37,9 +40,7 @@ jobs:
               comments: disable,
               document-start: disable
             }
-          }' --exclude \
-          .github/workflows/enforce-priority-labels.yml,.github/workflows/phase-1-certification-gate.yml \
-          .github/workflows/
+          }' "${wf_files[@]}"
 
   action-versions:
     name: Detect deprecated/unpinned action versions

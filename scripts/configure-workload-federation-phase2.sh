@@ -9,7 +9,10 @@ set -euo pipefail
 # Source common logging library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
-}
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONFIG_DIR="$PROJECT_ROOT/config/iam"
+
+mkdir -p "$CONFIG_DIR"
 
 # ============================================================================
 # SECTION 1: GitHub Actions OIDC Provider Configuration
@@ -17,11 +20,12 @@ source "$SCRIPT_DIR/_common/init.sh"
 
 configure_github_oidc() {
     log_info "Configuring GitHub Actions OIDC Provider..."
+  local github_oidc_issuer="https://token.actions.githubusercontent.com"
     
     # This should be configured in Terraform (see terraform/iam.tf)
     # But we'll create environment-specific configuration here
     
-    cat > .env.github-oidc <<'EOF'
+    cat > "$PROJECT_ROOT/.env.github-oidc" <<'EOF'
 # GitHub Actions OIDC Configuration
 GITHUB_OIDC_ISSUER="https://token.actions.githubusercontent.com"
 GITHUB_OIDC_AUDIENCE="kushin77/code-server"
@@ -42,11 +46,11 @@ ROLE_PR_BRANCH="automation/viewer"
 ROLE_RELEASE="automation/operator"
 EOF
 
-    log_success "Created .env.github-oidc configuration"
+  log_success "Created .env.github-oidc configuration"
     
     # Validate GitHub OIDC issuer is accessible
     log_info "Validating GitHub OIDC issuer..."
-    if curl -s "${GITHUB_OIDC_ISSUER:?}/.well-known/openid-configuration" > /dev/null; then
+    if curl -fsS "$github_oidc_issuer/.well-known/openid-configuration" > /dev/null; then
         log_success "GitHub OIDC issuer is accessible"
     else
         log_error "Failed to reach GitHub OIDC issuer"
@@ -65,7 +69,7 @@ configure_kubernetes_oidc() {
     # For on-prem with nip.io DNS: https://oidc.192.168.168.31.nip.io
     # For GKE: https://container.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/clusters/{CLUSTER_NAME}
     
-    cat > .env.k8s-oidc <<'EOF'
+    cat > "$PROJECT_ROOT/.env.k8s-oidc" <<'EOF'
 # Kubernetes OIDC Configuration (on-prem example)
 K8S_OIDC_ISSUER="https://oidc.192.168.168.31.nip.io"
 K8S_OIDC_DISCOVERY_ENDPOINT="${K8S_OIDC_ISSUER}/.well-known/openid-configuration"
@@ -85,7 +89,7 @@ EOF
     # Create Kubernetes ServiceAccount manifests
     log_info "Creating K8s ServiceAccount manifests..."
     
-    cat > k8s-serviceaccounts.yaml <<'EOF'
+    cat > "$PROJECT_ROOT/k8s-serviceaccounts.yaml" <<'EOF'
 ---
 # Code-Server IDE (user sessions)
 apiVersion: v1
@@ -163,7 +167,7 @@ EOF
 create_service_account_mapping() {
     log_info "Creating Service Account to Role Mapping..."
     
-    cat > config/iam/k8s-serviceaccount-roles.yaml <<'EOF'
+    cat > "$CONFIG_DIR/k8s-serviceaccount-roles.yaml" <<'EOF'
 # P1 #388 Phase 2 - K8s ServiceAccount to IAM Role Mapping
 # Defines which K8s ServiceAccounts map to which application roles
 
@@ -253,7 +257,7 @@ EOF
 configure_mtls() {
     log_info "Configuring mTLS Certificate Management..."
     
-    cat > config/iam/mtls-config.yaml <<'EOF'
+    cat > "$CONFIG_DIR/mtls-config.yaml" <<'EOF'
 # P1 #388 Phase 2 - mTLS Configuration
 # Auto-rotation of certificates for pod-to-pod encrypted communication
 
@@ -342,7 +346,7 @@ EOF
 configure_api_tokens() {
     log_info "Configuring API Tokens..."
     
-    cat > config/iam/api-tokens-config.yaml <<'EOF'
+    cat > "$CONFIG_DIR/api-tokens-config.yaml" <<'EOF'
 # P1 #388 Phase 2 - API Token Configuration
 # Long-lived tokens for webhook integrations and external API calls
 
@@ -413,7 +417,7 @@ metadata:
   namespace: code-server-iam
 type: Opaque
 stringData:
-  token: "$(openssl rand -base64 32)"  # Replace with actual token
+  token: "REPLACE_WITH_OPENSSL_BASE64_32"  # Generate during deploy and inject via secret manager
   expires_at: "2027-04-22T00:00:00Z"
 
 ---
@@ -425,7 +429,7 @@ metadata:
   namespace: code-server-iam
 type: Opaque
 stringData:
-  token: "$(openssl rand -base64 32)"  # Replace with actual token
+  token: "REPLACE_WITH_OPENSSL_BASE64_32"  # Generate during deploy and inject via secret manager
   expires_at: "2026-07-22T00:00:00Z"
 EOF
 
@@ -439,7 +443,7 @@ EOF
 configure_token_validation_service() {
     log_info "Configuring Token Validation Service..."
     
-    cat > config/iam/token-validation-service.yaml <<'EOF'
+    cat > "$CONFIG_DIR/token-validation-service.yaml" <<'EOF'
 # P1 #388 Phase 2 - Token Validation Service
 # Microservice for validating JWTs and API tokens
 
@@ -522,13 +526,13 @@ validate_configuration() {
     
     # Check all required files exist
     local files=(
-        ".env.github-oidc"
-        ".env.k8s-oidc"
-        "k8s-serviceaccounts.yaml"
-        "config/iam/k8s-serviceaccount-roles.yaml"
-        "config/iam/mtls-config.yaml"
-        "config/iam/api-tokens-config.yaml"
-        "config/iam/token-validation-service.yaml"
+      "$PROJECT_ROOT/.env.github-oidc"
+      "$PROJECT_ROOT/.env.k8s-oidc"
+      "$PROJECT_ROOT/k8s-serviceaccounts.yaml"
+      "$CONFIG_DIR/k8s-serviceaccount-roles.yaml"
+      "$CONFIG_DIR/mtls-config.yaml"
+      "$CONFIG_DIR/api-tokens-config.yaml"
+      "$CONFIG_DIR/token-validation-service.yaml"
     )
     
     for file in "${files[@]}"; do
@@ -565,14 +569,14 @@ main() {
 Next Steps:
 
 1. Deploy ServiceAccounts to K8s:
-   kubectl apply -f k8s-serviceaccounts.yaml
+  kubectl apply -f $PROJECT_ROOT/k8s-serviceaccounts.yaml
 
 2. Deploy IAM service (token validation):
-   kubectl apply -f config/iam/token-validation-service.yaml
+  kubectl apply -f $CONFIG_DIR/token-validation-service.yaml
 
 3. Configure cert-manager for mTLS:
    helm install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace
-   kubectl apply -f config/iam/mtls-config.yaml
+  kubectl apply -f $CONFIG_DIR/mtls-config.yaml
 
 4. Test GitHub Actions OIDC:
    - Create test workflow in .github/workflows/test-oidc.yml

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════
 # Deploy Docker egress filtering via iptables DOCKER-USER chain
 # Issue #350: Block data exfiltration, prevent C&C communication

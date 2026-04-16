@@ -5,43 +5,35 @@
     "security:openssf-scorecard",
     ":semanticCommits",
     ":separateMultipleMajor",
-    "group:allNonMajor",
-    "schedule:weekly"
+    ":dependencyDashboard"
   ],
   "timezone": "America/New_York",
   "semanticCommits": "enabled",
-  "prConcurrentLimit": 5,
-  "prHourlyLimit": 2,
-  "pre-commit": {
-    "enabled": true
-  },
-  "dockerfile": {
-    "enabled": true
-  },
-  "docker": {
-    "pinDigests": true,
+  "schedule": ["before 3am on Monday"],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 1,
+  "vulnerabilityAlerts": {
     "enabled": true,
-    "automerge": false
+    "automerge": true,
+    "autoMergeType": "squash",
+    "labels": ["🔒 security", "P0", "critical"],
+    "assignees": ["kushin77"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "docker": {
+    "enabled": true,
+    "pinDigests": true,
+    "automerge": true,
+    "updateTypes": ["patch"]
   },
   "labels": [
     "dependencies",
-    "renovate"
+    "renovate",
+    "dependencies-update"
   ],
   "assignees": [
     "kushin77"
-  ],
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": [
-      "P0",
-      "security",
-      "critical"
-    ],
-    "assignees": [
-      "kushin77"
-    ]
-  },
-  "osvVulnerabilityAlerts": true,
+  ],"
   "packageRules": [
     {
       "description": "Disable Python updates - handle separately",

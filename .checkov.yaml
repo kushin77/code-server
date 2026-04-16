@@ -6,29 +6,12 @@
 framework:
   - terraform
 
-# Suppress checks with documented justifications
-# Format: Checkov expects check_id and file as required fields
-suppressions:
-  # On-Premises Deployment - No Cloud Resources
-  - check_id: CKV_AWS_1
-    file: terraform/iam.tf
-    comment: On-premises only, no AWS resources
-  
-  - check_id: CKV2_TERRAFORM_6
-    file: terraform/rbac.tf
-    comment: On-premises RBAC design, intentional
-  
-  - check_id: CKV_TERRAFORM_1
-    file: terraform/audit.tf
-    comment: Documentation file, not resources
-  
-  - check_id: CKV_GCP_1
-    file: "terraform/phase-*.tf"
-    comment: On-premises deployment, no GCP
-  
-  - check_id: CKV_K8S_1
-    file: "terraform/**/*.tf"
-    comment: Docker Compose on-premises, no K8s
+# Skip cloud/K8s-specific checks for on-prem Docker Compose deployment.
+skip-check:
+  - CKV_AWS_1
+  - CKV2_TERRAFORM_6
+  - CKV_GCP_1
+  - CKV_K8S_1
 
 # Disable cloud-specific frameworks
 skip-framework:
@@ -39,7 +22,7 @@ skip-framework:
 
 # Scan configuration
 # Scan configuration (flat structure for checkov v3+)
-skip-directory:
+skip-path:
   - .terraform
   - terraform/.terraform
   - terraform/test

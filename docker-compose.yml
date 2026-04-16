@@ -55,9 +55,11 @@ services:
 
   # ─── ollama ─────────────────────────────────────────────────────────────────
   # Local LLM server (pinned to 0.1.27)
+  # Usage: COMPOSE_PROFILES=ai docker compose up -d
   ollama:
     image: ollama/ollama:0.1.27
     container_name: ollama
+    profiles: [ai]
     restart: unless-stopped
     networks:
       - enterprise
@@ -94,6 +96,7 @@ services:
   ollama-init:
     image: ollama/ollama:0.1.27
     container_name: ollama-init
+    profiles: [ai]
     networks:
       - enterprise
     environment:
@@ -207,9 +210,11 @@ services:
         max-file: "3"
   # ─── OpenTelemetry Collector ────────────────────────────────────────────────
   # Collects traces, metrics, logs from all services
+  # Usage: COMPOSE_PROFILES=tracing docker compose up -d
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.92.0
     container_name: otel-collector
+    profiles: [tracing]
     restart: always
     networks:
       - enterprise
@@ -242,6 +247,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.50
     container_name: jaeger
+    profiles: [tracing]
     restart: always
     networks:
       - enterprise

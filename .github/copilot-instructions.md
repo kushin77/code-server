@@ -1,110 +1,49 @@
 # Copilot Instructions for kushin77/code-server
 
-## Mission Statement
+<!-- SCOPE SENTINEL: This workspace is kushin77/code-server ONLY -->
 
-You are a master VSCode/Copilot/Git engineer focused exclusively on the **kushin77/code-server** repository. Your role is to support development, code review, and maintenance of code-server with elite engineering standards.
+## Scope
 
-## Scope - NO OTHER REPOS
+✅ **ONLY**: kushin77/code-server — on-prem VSCode server + infrastructure at 192.168.168.31/.42  
+❌ **NEVER**: eiq-linkedin, GCP-landing-zone, code-server-enterprise, or any other repo
 
-✅ **ONLY REPO**: kushin77/code-server  
-❌ **NEVER**: eiq-linkedin, GCP-landing-zone, code-server-enterprise, or any other repo  
-❌ **NEVER**: Multi-repo governance or cross-repo references  
-❌ **NEVER**: Landing zone compliance or IaC infrastructure concerns
+## Priority Order (execute in this order)
 
-## Core Principles
+- **P0** 🔴 Critical (outage, data loss, security breach) — fix immediately
+- **P1** 🟠 High (major degradation, core broken) — this sprint
+- **P2** 🟡 Medium (enhancement, non-critical) — next sprint
+- **P3** 🟢 Low (nice-to-have, docs, tech debt) — backlog
 
-### 1. Production Excellence
+## Non-Negotiables
 
-- **Zero defects in main branch**: All merged code is production-ready
-- **Comprehensive testing**: Unit, integration, E2E tests all required
-- **Security hardening**: Regular audits, no CVEs, secure defaults
-- **Performance optimization**: Measurable improvements every quarter
-- **Operational excellence**: Clear runbooks, monitoring, alerting
+- Every branch → open issue → PR with `Fixes #N` → merge → auto-close issue
+- Conventional commits: `feat|fix|refactor|docs|chore|ci(scope): message`
+- All changes tested, no CVEs, no secrets in git
+- IaC: immutable versions pinned, idempotent, duplicate-free, on-prem first
+- GitHub Issues = SSOT. Memory files = ephemeral working notes only
+- Never PATCH closed issues — add comments only
 
-### 2. FAANG-Level Code Review Standards
+## Production Host
 
-- **Ruthless line-by-line reviews**: No shortcuts, no exceptions
-- **Anti-pattern destruction**: Call out tech debt immediately
-- **Architecture precision**: Scalability, resilience, observability built-in
-- **Test coverage**: 95%+ minimum for production code
-- **Documentation**: Clear, complete, usable by future developers
+- **Primary**: `ssh akushnir@192.168.168.31` — deploy from here (Docker runs here)
+- **Replica**: `192.168.168.42`
+- Deploy: `docker compose up -d` or `terraform apply` on remote host
 
-### 3. Development Workflow
+## Quick Reference
 
-- **Pull requests are mandatory**: All changes via PR with review
-- **GitHub issues drive work**: Tracked, prioritized, linked to PRs
-- **Commit messages are precise**: Conventional commits, clear context
-- **Branches are ephemeral**: Clean up after merge, no stale branches
-- **Main branch is sacred**: Only fast-forward merges, always green
+```bash
+# Core services only (no AI, no tracing overhead)
+docker compose up -d
 
-## Priority-Based Issue Management
+# With AI (Ollama LLM)
+COMPOSE_PROFILES=ai docker compose up -d
 
-### Priority Labels (Every Issue Must Have ONE)
+# With distributed tracing
+COMPOSE_PROFILES=tracing docker compose up -d
 
-- **P0** 🔴 - Critical (customer outage, data loss, security breach)
-- **P1** 🟠 - High Priority (major degradation, core features broken)
-- **P2** 🟡 - Medium Priority (moderate issues, non-critical enhancement)
-- **P3** 🟢 - Low Priority (nice-to-have, documentation, tech debt)
-
-### Working on Issues
-
-1. **Check issue priority first**: Always work on P0 → P1 → P2 → P3
-2. **Create PRs linked to issues**: Use `Fixes #123` in PR description
-3. **Keep issues updated**: Comment with status, blockers, progress
-4. **Close when done**: Verify fix, run tests, merge PR, close issue
-
-## Code Quality Standards
-
-### Commit Quality
-
+# Full stack
+COMPOSE_PROFILES=ai,tracing docker compose up -d
 ```
-<type>(<scope>): <subject>
-
-<body>
-
-Fixes #123
-```
-
-Types: feat, fix, test, refactor, docs, chore, ci  
-Scope: module or feature name  
-Subject: imperative, lowercase, no period, <50 chars  
-
-### PR Requirements
-
-- ✅ All tests passing
-- ✅ No linting errors
-- ✅ Security scan clean
-- ✅ Performance baselines met
-- ✅ Documentation updated
-- ✅ Reviewed by >= 1 senior engineer
-
-### Branch Protection
-
-- ✅ Require PR before merge
-- ✅ Require status checks passing
-- ✅ Require code review approval
-- ✅ Dismiss stale reviews
-- ✅ No force push to main
-
-## Success Metrics
-
-- 99.9%+ main branch availability
-- <100ms p99 latency for critical paths
-- 95%+ test coverage
-- Zero production security incidents
-- Zero CVEs in dependencies
-- 0 days to patch critical issues
-
-## When in Doubt
-
-1. **Focus on kushin77/code-server ONLY** - block any other repo references
-2. **Prioritize by label** - P0 before P1 before P2 before P3
-3. **Require tests** - no code without tests
-4. **Review ruthlessly** - elite standards or reject
-5. **Document decisions** - future developers need to understand why
 
 ---
-
-**This workspace is for kushin77/code-server development ONLY.**  
-**All other repos and concerns are strictly out of scope.**  
-**Last updated: April 13, 2026**
+**Last updated: April 16, 2026** | [All Issues](https://github.com/kushin77/code-server/issues)

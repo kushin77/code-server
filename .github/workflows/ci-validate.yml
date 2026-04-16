@@ -68,3 +68,35 @@ jobs:
             exit 1
           fi
           echo "✅ Zero governance violations"
+
+  # Ref: #400 — explicit shellcheck job (also run via pre-commit above; this gives
+  # clear per-file annotations in the PR diff view)
+  shellcheck:
+    name: Shellcheck — bash-only standards enforcement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck on all bash scripts
+        run: |
+          mapfile -t scripts < <(git ls-files --cached '*.sh' '*.bash' \
+            | grep -v 'archived/' | grep -v 'node_modules/')
+          if [[ ${#scripts[@]} -eq 0 ]]; then
+            echo "No shell scripts found"; exit 0
+          fi
+          echo "Checking ${#scripts[@]} shell scripts..."
+          shellcheck --severity=warning --shell=bash "${scripts[@]}"
+          echo "✅ Shellcheck passed"
+
+  # Ref: #399 — automated Windows-specific content detection
+  linux-mandate:
+    name: Linux mandate — no Windows-specific content
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Windows-specific content
+        run: bash scripts/ci/check-no-windows-content.sh

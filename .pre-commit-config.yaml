@@ -43,6 +43,20 @@ repos:
         pass_filenames: false
         stages: [commit]
 
+      # #399: Block Windows-specific content (PowerShell, CRLF, Windows paths)
+      - id: no-windows-content
+        name: "Linux mandate: block Windows-specific content in scripts"
+        language: script
+        entry: scripts/ci/check-no-windows-content.sh
+        files: '\.(sh|bash|py|tf|yml|yaml)$'
+        exclude: |
+          (?x)^(
+            extensions/.*node_modules/|
+            \.archived/
+          )
+        pass_filenames: true
+        stages: [commit]
+
   # Phase 2.3: Bash script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.9.0.7

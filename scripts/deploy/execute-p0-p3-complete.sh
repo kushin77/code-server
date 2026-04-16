@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ################################################################################
 # P0-P3 Complete Execution Orchestrator
 # Master script to execute all phases in sequence

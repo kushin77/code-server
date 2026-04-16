@@ -1,13 +1,7 @@
 # Phase 9-B: Prometheus SLO Metrics & Analytics
 # Issue #365: Metrics Analytics & SLO Reporting
-# Immutable version: Prometheus 2.48.0
+# prometheus_version defined in ../../variables.tf (canonical location)
 # NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
-
-variable "prometheus_version" {
-  description = "Prometheus version (immutable)"
-  type        = string
-  default     = "2.48.0"
-}
 
 # SLO Rules Configuration
 resource "local_file" "slo_rules" {

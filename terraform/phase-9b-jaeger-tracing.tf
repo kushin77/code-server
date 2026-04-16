@@ -1,13 +1,7 @@
 # Phase 9-B: Distributed Tracing with Jaeger
 # Issue #363: Distributed Tracing & OpenTelemetry Integration
-# Immutable version: Jaeger 1.50
+# jaeger_version defined in ../../variables.tf (canonical location)
 # NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
-
-variable "jaeger_version" {
-  description = "Jaeger version (immutable)"
-  type        = string
-  default     = "1.50"
-}
 
 # Jaeger All-in-One Configuration
 resource "local_file" "jaeger_config" {

@@ -14,19 +14,8 @@ provider "godaddy" {
 
 ################################################################################
 # Variables
+# NOTE: godaddy_api_key and godaddy_api_secret defined in variables.tf (canonical location)
 ################################################################################
-
-variable "godaddy_api_key" {
-  description = "GoDaddy API key for DNS management"
-  type        = string
-  sensitive   = true
-}
-
-variable "godaddy_api_secret" {
-  description = "GoDaddy API secret"
-  type        = string
-  sensitive   = true
-}
 
 variable "public_domain" {
   description = "Public domain name"

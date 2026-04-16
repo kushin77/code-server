@@ -1,13 +1,7 @@
 # Phase 9-C: Kong API Gateway - Core Configuration
 # Issue #366: API Gateway, Rate Limiting & Request Management
-# Immutable version: Kong 3.4.1
+# kong_version defined in ../../variables.tf (canonical location)
 # NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
-
-variable "kong_version" {
-  description = "Kong version (immutable)"
-  type        = string
-  default     = "3.4.1-alpine"
-}
 
 variable "kong_postgres_version" {
   description = "Kong database version"

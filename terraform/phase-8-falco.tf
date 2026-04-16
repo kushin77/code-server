@@ -1,12 +1,7 @@
 # Phase 8-B: Falco Runtime Security (#359)
 # Runtime threat detection, behavioral monitoring, security anomaly detection
 # Immutable versions: Falco 0.36.0, Falco Rules 0.36.0, Falco Sidekick 0.30.0
-
-variable "falco_version" {
-  description = "Falco runtime security version (immutable)"
-  type        = string
-  default     = "0.36.0"
-}
+# falco_version defined in ../../variables.tf (canonical location)
 
 variable "falco_rules_version" {
   description = "Falco rules version (immutable)"

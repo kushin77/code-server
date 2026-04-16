@@ -1,12 +1,6 @@
 # Phase 8-B: OPA Policy Enforcement (#357)
 # Open Policy Agent with Conftest for declarative policy enforcement
-# Immutable versions: OPA 0.61.0, Conftest 0.50.0
-
-variable "opa_version" {
-  description = "OPA (Open Policy Agent) version (immutable)"
-  type        = string
-  default     = "0.61.0"
-}
+# opa_version defined in ../../variables.tf (canonical location)
 
 variable "conftest_version" {
   description = "Conftest policy testing framework (immutable)"

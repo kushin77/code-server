@@ -1,13 +1,7 @@
 # Phase 9-B: Log Aggregation with Loki
 # Issue #364: Log Aggregation & Centralized Log Storage
-# Immutable version: Loki 2.9.4, Promtail 2.9.4
+# loki_version defined in ../../variables.tf (canonical location)
 # NOTE: terraform block and shared variables defined in main.tf and phase-9-variables.tf
-
-variable "loki_version" {
-  description = "Loki version (immutable)"
-  type        = string
-  default     = "2.9.4"
-}
 
 variable "promtail_version" {
   description = "Promtail version (immutable)"

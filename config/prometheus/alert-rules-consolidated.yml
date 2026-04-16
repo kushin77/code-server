@@ -594,46 +594,11 @@ groups:
           impact: "API calls being rejected - service functionality degraded"
 
 # =========================================================================
-# RECORDING RULES
+# RECORDING RULES (Deferred to Phase 2 - will be added to groups structure)
 # =========================================================================
-# Precomputed metrics for efficient dashboard rendering & alerting
-
-recording_rules:
-  - name: http:metrics
-    interval: 15s
-    rules:
-      # Request rate by status
-      - record: http:requests:rate5m
-        expr: rate(http_requests_total[5m])
-
-      # Error rate calculation
-      - record: http:errors:rate5m
-        expr: rate(http_requests_total{status=~"5.."}[5m])
-
-      # Latency percentiles
-      - record: http:latency:p50:5m
-        expr: histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))
-      
-      - record: http:latency:p95:5m
-        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
-      
-      - record: http:latency:p99:5m
-        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
-
-  - name: database:metrics
-    interval: 15s
-    rules:
-      # Connection pool utilization
-      - record: pg:connections:used:ratio
-        expr: pg_stat_activity_count / pg_settings_max_connections
-
-      # Transaction rate
-      - record: pg:transactions:committed:rate5m
-        expr: rate(pg_stat_database_xact_commit[5m])
-
-      # Slow query detection
-      - record: pg:slow:queries:rate5m
-        expr: rate(pg_stat_statements_mean_exec_time{mean_exec_time > 1000}[5m])
+# Recording rules: Precomputed metrics for efficient dashboard rendering
+# Note: These will be implemented in Phase 2 as separate recording rule groups
+# For now, consolidating alerts which are P0 critical
 
 # =========================================================================
 # NOTES

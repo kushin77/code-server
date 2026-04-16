@@ -14,10 +14,10 @@
 
 set -euo pipefail
 
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 # Source common functions
 if [[ -f "$SCRIPT_DIR/common-functions.sh" ]]; then
@@ -94,9 +94,9 @@ fi
 write_info ""
 
 # Process statistics
-local processed=0
-local successful=0
-local failed=0
+processed=0
+successful=0
+failed=0
 
 # Process each repository
 for repo in "${REPOS[@]}"; do
@@ -108,7 +108,7 @@ for repo in "${REPOS[@]}"; do
     fi
     
     # Get repository info
-    local repo_info
+    repo_info=""
     repo_info=$(gh api repos/"$OWNER"/"$repo" \
         --jq '{name: .name, default_branch: .default_branch, is_private: .private}' 2>/dev/null) || {
         write_error "Failed to fetch repository info for $OWNER/$repo"
@@ -116,7 +116,7 @@ for repo in "${REPOS[@]}"; do
         continue
     }
     
-    local default_branch
+    default_branch=""
     default_branch=$(echo "$repo_info" | jq -r '.default_branch')
     
     if $VERBOSE; then
@@ -125,7 +125,7 @@ for repo in "${REPOS[@]}"; do
     fi
     
     # Create protection payload
-    local protection_payload
+    protection_payload=""
     protection_payload=$(cat << 'EOF'
 {
   "required_status_checks": {
@@ -166,7 +166,7 @@ EOF
         write_info "  Checking workflows..."
     fi
     
-    local workflow_count
+    workflow_count=0
     workflow_count=$(gh api repos/"$OWNER"/"$repo"/contents/.github/workflows \
         --jq '.[].name | select(. != null)' 2>/dev/null | wc -l || echo 0)
     

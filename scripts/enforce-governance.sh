@@ -86,14 +86,18 @@ check_requirements() {
         fi
     done
     
-    if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-        error "GITHUB_TOKEN not set. Export it first."
-        exit 1
+    # Prefer GSM-backed PAT bootstrap (if available) before failing auth.
+    if declare -f bootstrap_github_auth >/dev/null 2>&1; then
+        bootstrap_github_auth || true
     fi
-    
-    # Test GitHub CLI authentication
-    if ! gh auth status &> /dev/null; then
-        error "GitHub CLI not authenticated. Run 'gh auth login'"
+
+    if [[ -n "${GITHUB_TOKEN:-}" && -z "${GH_TOKEN:-}" ]]; then
+        export GH_TOKEN="$GITHUB_TOKEN"
+    fi
+
+    # Validate auth via API probe to avoid false positives from stale gh login state.
+    if ! gh api user --jq '.login' &> /dev/null; then
+        error "GitHub API auth unavailable. Set GH_TOKEN/GITHUB_TOKEN (prefer GSM) or run 'gh auth login'."
         exit 1
     fi
     

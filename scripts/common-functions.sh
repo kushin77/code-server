@@ -182,8 +182,20 @@ update_branch_protection() {
 # ─────────────────────────────────────────────────────────────────────────────
 
 require_github_auth() {
-    if ! gh auth status &> /dev/null; then
-        die "GitHub CLI not authenticated. Run: gh auth login"
+    if declare -f bootstrap_github_auth >/dev/null 2>&1; then
+        bootstrap_github_auth || true
+    fi
+
+    # Normalize token vars for gh CLI compatibility.
+    if [[ -n "${GITHUB_TOKEN:-}" && -z "${GH_TOKEN:-}" ]]; then
+        export GH_TOKEN="$GITHUB_TOKEN"
+    fi
+
+    # Prefer an actual API probe over only checking cached gh auth state.
+    if ! gh api user --jq '.login' >/dev/null 2>&1; then
+        if ! gh auth status &> /dev/null; then
+            die "GitHub auth unavailable. Set GH_TOKEN/GITHUB_TOKEN (prefer GSM) or run: gh auth login"
+        fi
     fi
     write_success "GitHub CLI authenticated"
 }

@@ -16,7 +16,7 @@ fetch_gsm_secret() {
     local secret_id="$1"
     local var_name="$2"
     local value
-    value=$(gcloud secrets versions access latest \
+    value=$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet secrets versions access latest \
         --secret="$secret_id" \
         --project="$GSM_PROJECT" 2>/dev/null) || {
         echo "ERROR: Could not fetch $secret_id from GSM project=$GSM_PROJECT" >&2
@@ -28,18 +28,62 @@ fetch_gsm_secret() {
     echo "export ${var_name}=<redacted>" >&2
 }
 
+fetch_gsm_secret_optional() {
+    local secret_id="$1"
+    local var_name="$2"
+    local value
+
+    value=$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet secrets versions access latest \
+        --secret="$secret_id" \
+        --project="$GSM_PROJECT" 2>/dev/null) || return 1
+
+    printf -v "$var_name" '%s' "$value"
+    export "$var_name"
+    echo "export ${var_name}=<redacted> (from $secret_id)" >&2
+    return 0
+}
+
+fetch_first_available_secret() {
+    local var_name="$1"
+    shift
+
+    local secret_id
+    for secret_id in "$@"; do
+        if fetch_gsm_secret_optional "$secret_id" "$var_name"; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
 echo "Fetching secrets from GSM project=${GSM_PROJECT}..." >&2
 
 # GoDaddy API credentials (DNS management)
 fetch_gsm_secret "prod-godaddy-api-key"    GODADDY_KEY
-fetch_gsm_secret "prod-godaddy-api-secret" GODADDY_SECRE
+fetch_gsm_secret "prod-godaddy-api-secret" GODADDY_SECRET
 
 # Google OAuth2 credentials (code-server login via oauth2-proxy)
 fetch_gsm_secret "prod-portal-google-oauth-client-id"     GOOGLE_CLIENT_ID
-fetch_gsm_secret "prod-portal-google-oauth-client-secret" GOOGLE_CLIENT_SECRE
+fetch_gsm_secret "prod-portal-google-oauth-client-secret" GOOGLE_CLIENT_SECRET
 
 # oauth2-proxy cookie secre
-fetch_gsm_secret "prod-portal-oauth2-cookie-secret" OAUTH2_PROXY_COOKIE_SECRE
+fetch_gsm_secret "prod-portal-oauth2-cookie-secret" OAUTH2_PROXY_COOKIE_SECRET
+
+# GitHub PAT (optional): default auth token for GitHub API/gh CLI calls.
+# Set GSM_GITHUB_TOKEN_SECRET to override the primary secret name.
+if ! fetch_first_available_secret "GITHUB_TOKEN" \
+    "${GSM_GITHUB_TOKEN_SECRET:-prod-github-token}" \
+    "prod-github-pat" \
+    "prod-code-server-github-token" \
+    "github-token"; then
+    echo "WARN: No GitHub PAT found in GSM (continuing without GITHUB_TOKEN)" >&2
+fi
+
+# Keep gh CLI compatibility: GH_TOKEN is honored by gh for API/auth calls.
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    export GH_TOKEN="$GITHUB_TOKEN"
+fi
 
 echo "All secrets fetched successfully." >&2
 
@@ -53,6 +97,7 @@ GODADDY_SECRET=${GODADDY_SECRET}
 GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
 OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
+GITHUB_TOKEN=${GITHUB_TOKEN:-}
 CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-change-me}
 ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS:-*}
 WORKSPACE_PATH=${WORKSPACE_PATH:-./workspace}

@@ -90,6 +90,60 @@ require_var() {
     log_debug "✓ Found required environment variable: $var"
 }
 
+# Ensure GitHub CLI/API auth is available.
+# Priority:
+#   1) GH_TOKEN/GITHUB_TOKEN from environment
+#   2) Google Secret Manager PAT fallback (if gcloud available)
+bootstrap_github_auth() {
+    # Normalize token env vars first.
+    if [[ -n "${GH_TOKEN:-}" && -z "${GITHUB_TOKEN:-}" ]]; then
+        export GITHUB_TOKEN="$GH_TOKEN"
+    elif [[ -n "${GITHUB_TOKEN:-}" && -z "${GH_TOKEN:-}" ]]; then
+        export GH_TOKEN="$GITHUB_TOKEN"
+    fi
+
+    if [[ -n "${GH_TOKEN:-}" ]]; then
+        log_debug "GitHub token already present in environment"
+        return 0
+    fi
+
+    if ! command -v gcloud >/dev/null 2>&1; then
+        log_warn "gcloud not found; cannot fetch GitHub PAT from GSM"
+        return 1
+    fi
+
+    local gsm_project="${GSM_PROJECT:-nexusshield-prod}"
+    local configured_secret="${GSM_GITHUB_TOKEN_SECRET:-}"
+    local candidates=()
+
+    if [[ -n "$configured_secret" ]]; then
+        candidates+=("$configured_secret")
+    fi
+    candidates+=(
+        "prod-github-token"
+        "prod-github-pat"
+        "prod-code-server-github-token"
+        "github-token"
+    )
+
+    local secret_id value
+    for secret_id in "${candidates[@]}"; do
+        value=$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet secrets versions access latest \
+            --secret="$secret_id" \
+            --project="$gsm_project" 2>/dev/null || true)
+
+        if [[ -n "$value" ]]; then
+            export GITHUB_TOKEN="$value"
+            export GH_TOKEN="$value"
+            log_info "Loaded GitHub PAT from GSM secret: $secret_id"
+            return 0
+        fi
+    done
+
+    log_warn "No GitHub PAT secret found in GSM project '$gsm_project'"
+    return 1
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CLEANUP HANDLERS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -266,3 +320,4 @@ docker_wait_healthy() {
 export -f retry require_command require_commands require_file require_dir require_var
 export -f add_cleanup mktemp_dir copy_file string_contains string_match str_trim
 export -f array_contains array_join docker_ready docker_wait_healthy
+export -f bootstrap_github_auth

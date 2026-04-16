@@ -85,7 +85,7 @@ jobs:
               failed=1
             fi
 
-            if grep -qE '^permissions:\s*write-all' "$f"; then
+            if grep -qE '^permissions:[[:space:]]*$' "$f" && grep -qE '^[[:space:]]+write-all:[[:space:]]*' "$f"; then
               echo "FAIL: $f — contains forbidden permissions: write-all"
               failed=1
             fi

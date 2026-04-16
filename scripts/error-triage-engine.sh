@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file        scripts/error-triage-engine.sh
 # @module      operations
-# @description error triage engine — on-prem code-server
+# @description Automated error pattern detection and GitHub issue creation for recurring errors.
 # @owner       platform
 # @status      active
 # ════════════════════════════════════════════════════════════════════════════════════════════

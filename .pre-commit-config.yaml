@@ -24,26 +24,8 @@ repos:
 
       # Phase 2.3: Custom hook - verify metadata headers (GOV-002 #297 — all active scripts)
       - id: verify-metadata-headers
-        name: Verify @file/@module/@description headers in ALL scripts
-        entry: bash -c '
-          # Check ALL staged scripts (not just new ones) — migration complete, enforce globally
-          staged=$(git diff --cached --name-only -- "scripts/*.sh" "scripts/**/*.sh" 2>/dev/null \
-            | grep -v "_common/" | grep -v "_archive/")
-          if [[ -n "$staged" ]]; then
-            missing_headers=0
-            for f in $staged; do
-              [[ -f "$f" ]] || continue
-              if ! head -6 "$f" | grep -qE "@file"; then
-                echo "ERROR: $f missing @file metadata header"
-                echo "  Add: # @file        $f"
-                echo "       # @module      <module>"
-                echo "       # @description <one-line description>"
-                missing_headers=$((missing_headers + 1))
-              fi
-            done
-            [[ $missing_headers -gt 0 ]] && exit 1
-          fi
-        '
+        name: Verify GOV-002 metadata on active scripts
+        entry: bash scripts/ci/check-metadata-headers.sh
         language: system
         files: '^scripts/.*\.sh$'
         pass_filenames: false

@@ -16,6 +16,7 @@ SCRIPTS_DIR="${REPO_ROOT}/scripts"
 DRY_RUN=false
 VERBOSE=false
 TARGET_DIR="${SCRIPTS_DIR}"
+ACTIVE_ONLY=false
 
 usage() {
   cat <<EOF
@@ -26,6 +27,7 @@ Adds @file/@module/@description metadata headers to bash scripts missing them.
 OPTIONS:
   --dry-run         Preview changes without modifying files
   --verbose         Print all files including already-compliant ones
+  --active-only     Only process scripts marked status="active" in scripts/MANIFEST.toml
   --dir PATH        Target directory (default: scripts/)
   --help            Show this help
 
@@ -41,6 +43,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run)   DRY_RUN=true ;;
     --verbose)   VERBOSE=true ;;
+    --active-only) ACTIVE_ONLY=true ;;
     --dir)       TARGET_DIR="$2"; shift ;;
     --help|-h)   usage; exit 0 ;;
     *)           echo "Unknown option: $1"; usage; exit 1 ;;
@@ -88,7 +91,7 @@ derive_description() {
   local name
   name="$(basename "$file" .sh)"
   # Convert kebab-case to sentence
-  echo "${name//-/ }" | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}' | sed 's/$/ — on-prem code-server enterprise/'
+  echo "${name//-/ }" | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}' | sed 's/$/ - on-prem code-server enterprise/'
 }
 
 # Add header to a single file
@@ -139,25 +142,64 @@ total=0
 skipped=0
 added=0
 
-echo "🔍 Scanning ${TARGET_DIR} for scripts missing @file headers..."
+if [[ "${ACTIVE_ONLY}" == "true" ]]; then
+  echo "🔍 Scanning active MANIFEST scripts for missing @file headers..."
+else
+  echo "🔍 Scanning ${TARGET_DIR} for scripts missing @file headers..."
+fi
 [[ "$DRY_RUN" == "true" ]] && echo "   Mode: DRY RUN — no files will be modified"
 echo ""
 
-while IFS= read -r -d '' file; do
-  # Skip _common and _archive directories
-  [[ "$file" == *"/_common/"* || "$file" == *"/_archive/"* ]] && continue
+if [[ "${ACTIVE_ONLY}" == "true" ]]; then
+  while IFS=$'\t' read -r rel status; do
+    [[ "${status}" == "active" ]] || continue
+    file="${REPO_ROOT}/scripts/${rel}"
 
-  total=$((total + 1))
+    total=$((total + 1))
 
-  if head -5 "$file" | grep -qE "@file"; then
-    skipped=$((skipped + 1))
-    [[ "$VERBOSE" == "true" ]] && echo "  ⏭️  Already has header: ${file#${REPO_ROOT}/}"
-    continue
-  fi
+    if [[ ! -f "${file}" ]]; then
+      echo "  ⚠️  Missing file from MANIFEST: scripts/${rel}"
+      continue
+    fi
 
-  add_header "$file"
-  added=$((added + 1))
-done < <(find "${TARGET_DIR}" -name "*.sh" -type f -print0 | sort -z)
+    if head -5 "$file" | grep -qE "@file"; then
+      skipped=$((skipped + 1))
+      [[ "$VERBOSE" == "true" ]] && echo "  ⏭️  Already has header: scripts/${rel}"
+      continue
+    fi
+
+    add_header "$file"
+    added=$((added + 1))
+  done < <(
+    awk -F '"' '
+      BEGIN { in_script=0; file=""; status="" }
+      /^\[\[script\]\]/ { in_script=1; file=""; status=""; next }
+      /^\[\[/ && !/^\[\[script\]\]/ { in_script=0; next }
+      !in_script { next }
+      /^file[[:space:]]*=/ { file=$2; next }
+      /^status[[:space:]]*=/ {
+        status=$2;
+        if (file!="") print file "\t" status;
+      }
+    ' "${REPO_ROOT}/scripts/MANIFEST.toml" | sort -u
+  )
+else
+  while IFS= read -r -d '' file; do
+    # Skip _common and _archive directories
+    [[ "$file" == *"/_common/"* || "$file" == *"/_archive/"* ]] && continue
+
+    total=$((total + 1))
+
+    if head -5 "$file" | grep -qE "@file"; then
+      skipped=$((skipped + 1))
+      [[ "$VERBOSE" == "true" ]] && echo "  ⏭️  Already has header: ${file#${REPO_ROOT}/}"
+      continue
+    fi
+
+    add_header "$file"
+    added=$((added + 1))
+  done < <(find "${TARGET_DIR}" -name "*.sh" -type f -print0 | sort -z)
+fi
 
 echo ""
 echo "────────────────────────────────────────────────────"

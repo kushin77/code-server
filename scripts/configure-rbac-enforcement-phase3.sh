@@ -1,7 +1,7 @@
 #!/bin/bash
 # @file        scripts/configure-rbac-enforcement-phase3.sh
 # @module      iam
-# @description configure rbac enforcement phase3 — on-prem code-server
+# @description Generate RBAC enforcement configuration (Caddyfile JWT middleware, policies, audit logging).
 # @owner       platform
 # @status      active
 #############################################################################

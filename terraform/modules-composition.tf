@@ -1,7 +1,59 @@
 # Terraform Modules Composition - Root Integration
 # P2 #418 Phase 3: Integration of all 5 core modules
 # This file composes all modules into the production infrastructure
-# NOTE: terraform block and provider configurations are in main.tf
+
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.23"
+    }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.11"
+    }
+  }
+}
+
+# Kubernetes Provider
+provider "kubernetes" {
+  host                   = var.kubernetes_host != "" ? var.kubernetes_host : "http://localhost:8080"
+  client_certificate     = var.kubernetes_client_certificate
+  client_key             = var.kubernetes_client_key
+  cluster_ca_certificate = var.kubernetes_cluster_ca_certificate
+  config_path            = var.kubernetes_config_path
+}
+
+# Docker Provider (for Docker-only deployments)
+provider "docker" {
+  host = var.docker_host != "" ? var.docker_host : "unix:///var/run/docker.sock"
+}
+
+# Cloudflare Provider
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
+}
+
+# Helm Provider (for K8s chart deployments)
+provider "helm" {
+  kubernetes {
+    host                   = var.kubernetes_host
+    client_certificate     = var.kubernetes_client_certificate
+    client_key             = var.kubernetes_client_key
+    cluster_ca_certificate = var.kubernetes_cluster_ca_certificate
+    config_path            = var.kubernetes_config_path
+  }
+}
 
 ################################
 # MODULE 1: Monitoring (Prometheus, Grafana, AlertManager)
@@ -10,18 +62,18 @@ module "monitoring" {
   source = "./modules/monitoring"
 
   # Configuration
-  prometheus_version         = var.prometheus_version
-  prometheus_storage_size    = var.prometheus_storage_size
-  prometheus_retention_days  = var.prometheus_retention_days
+  prometheus_version      = var.prometheus_version
+  prometheus_storage_size = var.prometheus_storage_size
+  prometheus_retention_days = var.prometheus_retention_days
   prometheus_scrape_interval = var.prometheus_scrape_interval
 
-  grafana_version        = var.grafana_version
-  grafana_admin_password = var.grafana_admin_password
-  grafana_storage_size   = var.grafana_storage_size
+  grafana_version           = var.grafana_version
+  grafana_admin_password    = var.grafana_admin_password
+  grafana_storage_size      = var.grafana_storage_size
 
-  alertmanager_version       = var.alertmanager_version
-  alertmanager_slack_webhook = var.alertmanager_slack_webhook
-  alertmanager_pagerduty_key = var.alertmanager_pagerduty_key
+  alertmanager_version        = var.alertmanager_version
+  alertmanager_slack_webhook  = var.alertmanager_slack_webhook
+  alertmanager_pagerduty_key  = var.alertmanager_pagerduty_key
 
   slo_error_budget_percentage = var.slo_error_budget_percentage
 
@@ -38,17 +90,17 @@ module "networking" {
   source = "./modules/networking"
 
   # Configuration
-  kong_version           = var.kong_version
-  kong_database_password = var.kong_database_password
-  kong_storage_size      = var.kong_storage_size
+  kong_version                       = var.kong_version
+  kong_database_password             = var.kong_database_password
+  kong_storage_size                  = var.kong_storage_size
 
-  coredns_version = var.coredns_version
-  coredns_config  = var.coredns_config
+  coredns_version               = var.coredns_version
+  coredns_config                = var.coredns_config
 
-  load_balancer_algorithm             = var.load_balancer_algorithm
+  load_balancer_algorithm       = var.load_balancer_algorithm
   load_balancer_health_check_interval = var.load_balancer_health_check_interval
-  service_upstream_timeout            = var.service_upstream_timeout
-  rate_limiting_requests_per_second   = var.rate_limiting_requests_per_second
+  service_upstream_timeout      = var.service_upstream_timeout
+  rate_limiting_requests_per_second = var.rate_limiting_requests_per_second
 
   # Infrastructure
   docker_host = var.docker_host
@@ -63,18 +115,18 @@ module "security" {
   source = "./modules/security"
 
   # Configuration
-  falco_version       = var.falco_version
-  opa_version         = var.opa_version
-  vault_version       = var.vault_version
-  vault_storage_size  = var.vault_storage_size
-  vault_unseal_keys   = var.vault_unseal_keys
-  vault_key_threshold = var.vault_key_threshold
+  falco_version           = var.falco_version
+  opa_version             = var.opa_version
+  vault_version           = var.vault_version
+  vault_storage_size      = var.vault_storage_size
+  vault_unseal_keys       = var.vault_unseal_keys
+  vault_key_threshold     = var.vault_key_threshold
 
-  os_hardening_level           = var.os_hardening_level
-  selinux_enabled              = var.selinux_enabled
-  auditd_enabled               = var.auditd_enabled
+  os_hardening_level      = var.os_hardening_level
+  selinux_enabled         = var.selinux_enabled
+  auditd_enabled          = var.auditd_enabled
   file_integrity_scan_interval = var.file_integrity_scan_interval
-  vulnerability_scan_schedule  = var.vulnerability_scan_schedule
+  vulnerability_scan_schedule = var.vulnerability_scan_schedule
 
   # Infrastructure
   docker_host = var.docker_host
@@ -89,19 +141,19 @@ module "dns" {
   source = "./modules/dns"
 
   # Configuration
-  cloudflare_api_token  = var.cloudflare_api_token
-  cloudflare_account_id = var.cloudflare_account_id
-  cloudflare_zone_id    = var.cloudflare_zone_id
-  godaddy_api_key       = var.godaddy_api_key
-  godaddy_api_secret    = var.godaddy_api_secret
+  cloudflare_api_token    = var.cloudflare_api_token
+  cloudflare_account_id   = var.cloudflare_account_id
+  cloudflare_zone_id      = var.cloudflare_zone_id
+  godaddy_api_key         = var.godaddy_api_key
+  godaddy_api_secret      = var.godaddy_api_secret
 
-  apex_domain           = var.apex_domain
-  tunnel_name           = var.tunnel_name
-  dns_ttl               = var.dns_ttl
-  health_check_interval = var.health_check_interval
-  failover_threshold    = var.failover_threshold
-  primary_ip            = var.primary_ip
-  secondary_ip          = var.secondary_ip
+  apex_domain             = var.apex_domain
+  tunnel_name             = var.tunnel_name
+  dns_ttl                 = var.dns_ttl
+  health_check_interval   = var.health_check_interval
+  failover_threshold      = var.failover_threshold
+  primary_ip              = var.primary_ip
+  secondary_ip            = var.secondary_ip
 
   # Infrastructure
   docker_host = var.docker_host
@@ -115,21 +167,21 @@ module "failover" {
   source = "./modules/failover"
 
   # Configuration
-  patroni_version       = var.patroni_version
-  postgres_version      = var.postgres_version
-  postgres_storage_size = var.postgres_storage_size
-  etcd_version          = var.etcd_version
+  patroni_version         = var.patroni_version
+  postgres_version        = var.postgres_version
+  postgres_storage_size   = var.postgres_storage_size
+  etcd_version            = var.etcd_version
 
-  backup_retention_days = var.backup_retention_days
-  backup_schedule       = var.backup_schedule
-  rpo_seconds           = var.rpo_seconds
-  rto_seconds           = var.rto_seconds
-  replication_slots     = var.replication_slots
-  wal_level             = var.wal_level
-  max_wal_senders       = var.max_wal_senders
+  backup_retention_days   = var.backup_retention_days
+  backup_schedule         = var.backup_schedule
+  rpo_seconds             = var.rpo_seconds
+  rto_seconds             = var.rto_seconds
+  replication_slots       = var.replication_slots
+  wal_level               = var.wal_level
+  max_wal_senders         = var.max_wal_senders
 
-  s3_backup_bucket = var.s3_backup_bucket
-  s3_backup_region = var.s3_backup_region
+  s3_backup_bucket        = var.s3_backup_bucket
+  s3_backup_region        = var.s3_backup_region
 
   # Infrastructure
   docker_host = var.docker_host
@@ -151,15 +203,15 @@ locals {
 
   # Module outputs mapping for easy reference
   module_endpoints = {
-    prometheus   = module.monitoring.prometheus_endpoint
-    grafana      = module.monitoring.grafana_endpoint
+    prometheus  = module.monitoring.prometheus_endpoint
+    grafana     = module.monitoring.grafana_endpoint
     alertmanager = module.monitoring.alertmanager_endpoint
-    kong_admin   = module.networking.kong_admin_endpoint
-    coredns      = module.networking.coredns_endpoint
-    opa          = module.security.opa_endpoint
-    vault        = module.security.vault_endpoint
-    postgres     = module.failover.postgres_endpoint
-    etcd         = module.failover.etcd_endpoint
+    kong_admin  = module.networking.kong_admin_endpoint
+    coredns     = module.networking.coredns_endpoint
+    opa         = module.security.opa_endpoint
+    vault       = module.security.vault_endpoint
+    postgres    = module.failover.postgres_endpoint
+    etcd        = module.failover.etcd_endpoint
   }
 
   # Service discovery map
@@ -167,8 +219,8 @@ locals {
     monitoring = {
       namespace = var.monitoring_namespace
       services = {
-        prometheus   = "prometheus:9090"
-        grafana      = "grafana:3000"
+        prometheus = "prometheus:9090"
+        grafana    = "grafana:3000"
         alertmanager = "alertmanager:9093"
       }
     }
@@ -203,12 +255,12 @@ output "module_outputs" {
   description = "All module endpoints and key outputs"
   value = {
     monitoring = {
-      prometheus_endpoint   = module.monitoring.prometheus_endpoint
-      grafana_endpoint      = module.monitoring.grafana_endpoint
+      prometheus_endpoint  = module.monitoring.prometheus_endpoint
+      grafana_endpoint     = module.monitoring.grafana_endpoint
       alertmanager_endpoint = module.monitoring.alertmanager_endpoint
       versions = {
-        prometheus   = module.monitoring.prometheus_version
-        grafana      = module.monitoring.grafana_version
+        prometheus  = module.monitoring.prometheus_version
+        grafana     = module.monitoring.grafana_version
         alertmanager = module.monitoring.alertmanager_version
       }
     }
@@ -221,7 +273,7 @@ output "module_outputs" {
       }
     }
     security = {
-      opa_endpoint   = module.security.opa_endpoint
+      opa_endpoint  = module.security.opa_endpoint
       vault_endpoint = module.security.vault_endpoint
       versions = {
         falco = module.security.falco_version
@@ -230,8 +282,8 @@ output "module_outputs" {
       }
     }
     dns = {
-      tunnel_url    = module.dns.cloudflare_tunnel_url
-      apex_domain   = module.dns.apex_domain
+      tunnel_url = module.dns.cloudflare_tunnel_url
+      apex_domain = module.dns.apex_domain
       load_balancer = module.dns.load_balancer_endpoint
     }
     failover = {
@@ -266,11 +318,11 @@ output "infrastructure_status" {
 output "disaster_recovery_info" {
   description = "Disaster recovery configuration"
   value = {
-    rpo_seconds           = module.failover.rpo_seconds
-    rto_seconds           = module.failover.rto_seconds
+    rpo_seconds  = module.failover.rpo_seconds
+    rto_seconds  = module.failover.rto_seconds
     backup_retention_days = module.failover.backup_retention_days
-    failover_threshold    = module.dns.failover_threshold
-    postgres_replicas     = 3
-    etcd_nodes            = 3
+    failover_threshold = module.dns.failover_threshold
+    postgres_replicas = 3
+    etcd_nodes = 3
   }
 }

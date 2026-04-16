@@ -1,0 +1,125 @@
+name: Production Readiness Gate
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  readiness-gate:
+    name: Enforce Production Readiness Checklist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR readiness requirements
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || "";
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const nonTrivial = files.some((f) => {
+              const p = f.filename.toLowerCase();
+              return !(
+                p.startsWith("docs/") ||
+                p.endsWith(".md") ||
+                p.startsWith(".github/issue_template/")
+              );
+            });
+
+            const problems = [];
+
+            const hasLinkedIssue = /(closes|fixes|resolves)\s+#\d+/i.test(body);
+            if (!hasLinkedIssue) {
+              problems.push("Missing linked issue keyword: use Closes/Fixes/Resolves #N in PR body.");
+            }
+
+            if (nonTrivial) {
+              if (!/- \[x\] All 4 phases of quality gates completed/i.test(body)) {
+                problems.push("For non-trivial changes, check: 'All 4 phases of quality gates completed'.");
+              }
+              if (!/- \[x\] Production readiness gate acknowledged \(non-trivial changes only\)/i.test(body)) {
+                problems.push("For non-trivial changes, check: 'Production readiness gate acknowledged'.");
+              }
+
+              const placeholders = [
+                "[Describe failure scenarios and their impact]",
+                "[Alerts, logs, metrics, or manual checks]",
+                "[Add any additional context, screenshots, links, or considerations here]",
+              ];
+              for (const token of placeholders) {
+                if (body.includes(token)) {
+                  problems.push(`Replace placeholder text in PR body: ${token}`);
+                }
+              }
+            }
+
+            const statusHeader = "## Production Readiness Gate Result";
+            const upsertGateComment = async (bodyText) => {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                per_page: 100,
+              });
+
+              const existing = comments.find((comment) =>
+                comment.user?.type === "Bot" &&
+                typeof comment.body === "string" &&
+                comment.body.startsWith(statusHeader)
+              );
+
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body: bodyText,
+                });
+                return;
+              }
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: bodyText,
+              });
+            };
+
+            let statusBody;
+            if (problems.length > 0) {
+              statusBody = [
+                statusHeader,
+                "",
+                `Status: FAIL (${nonTrivial ? "non-trivial" : "trivial"} change detected)`,
+                "",
+                "Required fixes:",
+                ...problems.map((p) => `- ${p}`),
+              ].join("\n");
+
+              await upsertGateComment(statusBody);
+
+              core.setFailed(problems.join(" | "));
+              return;
+            }
+
+            statusBody = [
+              statusHeader,
+              "",
+              `Status: PASS (${nonTrivial ? "non-trivial" : "trivial"} change detected)`,
+              "",
+              "All required readiness criteria are present in PR body.",
+            ].join("\n");
+
+            await upsertGateComment(statusBody);

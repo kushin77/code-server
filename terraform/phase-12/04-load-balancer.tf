@@ -38,11 +38,11 @@ resource "google_compute_health_check" "api_health_check" {
   unhealthy_threshold = 3
 
   http_health_check {
-    port               = 8080
-    request_path       = "/health"
-    proxy_header       = "NONE"
-    response           = "OK"
-    use_serving_port   = false
+    port             = 8080
+    request_path     = "/health"
+    proxy_header     = "NONE"
+    response         = "OK"
+    use_serving_port = false
   }
 }
 
@@ -80,8 +80,8 @@ resource "google_compute_backend_service" "regional_backend" {
     interval {
       seconds = 10
     }
-    max_ejection_percent = 50
-    min_request_volume   = 50
+    max_ejection_percent           = 50
+    min_request_volume             = 50
     split_external_local_addresses = true
     success_rate_minimum_hosts     = 5
     success_rate_request_volume    = 100
@@ -145,7 +145,7 @@ resource "google_compute_url_map" "global_routing" {
 
 # HTTPS redirect (enforce HTTPS)
 resource "google_compute_target_http_proxy" "http_proxy" {
-  name   = "api-http-proxy-v1"
+  name    = "api-http-proxy-v1"
   url_map = google_compute_url_map.global_routing.id
 }
 
@@ -182,12 +182,12 @@ resource "google_compute_target_https_proxy" "https_proxy" {
 
 # Global forwarding rule for HTTPS
 resource "google_compute_global_forwarding_rule" "global_https" {
-  name        = "global-api-https-lb-v1"
-  ip_protocol = "TCP"
+  name                  = "global-api-https-lb-v1"
+  ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL"
-  port_range  = "443"
-  target      = google_compute_target_https_proxy.https_proxy.id
-  ip_version  = "IPV4"
+  port_range            = "443"
+  target                = google_compute_target_https_proxy.https_proxy.id
+  ip_version            = "IPV4"
 
   depends_on = [
     google_compute_managed_ssl_certificate.api_cert
@@ -196,12 +196,12 @@ resource "google_compute_global_forwarding_rule" "global_https" {
 
 # Global forwarding rule for HTTP (redirect)
 resource "google_compute_global_forwarding_rule" "global_http" {
-  name        = "global-api-http-lb-v1"
-  ip_protocol = "TCP"
+  name                  = "global-api-http-lb-v1"
+  ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL"
-  port_range  = "80"
-  target      = google_compute_target_http_proxy.http_proxy.id
-  ip_version  = "IPV4"
+  port_range            = "80"
+  target                = google_compute_target_http_proxy.http_proxy.id
+  ip_version            = "IPV4"
 }
 
 # Cloud Armor for DDoS and WAF protection
@@ -290,10 +290,10 @@ resource "google_compute_backend_service" "cdn_backend" {
   enable_cdn = true
 
   cdn_policy {
-    cache_mode               = "CACHE_ALL_STATIC"
-    default_ttl              = 3600
-    max_ttl                  = 86400
-    negative_caching         = true
+    cache_mode       = "CACHE_ALL_STATIC"
+    default_ttl      = 3600
+    max_ttl          = 86400
+    negative_caching = true
     negative_caching_policy {
       code = 404
       ttl  = 120
@@ -312,7 +312,7 @@ resource "google_compute_backend_service_logging_config" "api_logging" {
 
   backend_service = google_compute_backend_service.regional_backend[each.key].id
 
-  enable = true
+  enable      = true
   sample_rate = 0.1 # Log 10% of requests
 }
 

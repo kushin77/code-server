@@ -18,11 +18,11 @@ variable "soc2_trust_services_criteria" {
   description = "SOC 2 Trust Services Criteria to verify"
   type        = list(string)
   default = [
-    "cc-availability",        # Availability and performance
-    "cc-security",            # Security
-    "cc-integrity",           # Processing integrity
-    "cc-confidentiality",     # Confidentiality
-    "cc-privacy",             # Privacy
+    "cc-availability",    # Availability and performance
+    "cc-security",        # Security
+    "cc-integrity",       # Processing integrity
+    "cc-confidentiality", # Confidentiality
+    "cc-privacy",         # Privacy
   ]
 }
 
@@ -87,10 +87,10 @@ resource "docker_image" "fluent_bit" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "loki_audit_logs" {
-  count         = var.phase_18_compliance_enabled ? 1 : 0
-  name          = "loki-audit-logs"
-  image         = docker_image.loki_logs[0].image_id
-  network_mode  = "host"
+  count        = var.phase_18_compliance_enabled ? 1 : 0
+  name         = "loki-audit-logs"
+  image        = docker_image.loki_logs[0].image_id
+  network_mode = "host"
 
   ports {
     internal = 3100
@@ -138,10 +138,10 @@ resource "docker_container" "loki_audit_logs" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "fluent_bit_collector" {
-  count         = var.phase_18_compliance_enabled ? 1 : 0
-  name          = "fluent-bit-audit-collector"
-  image         = docker_image.fluent_bit[0].image_id
-  network_mode  = "host"
+  count        = var.phase_18_compliance_enabled ? 1 : 0
+  name         = "fluent-bit-audit-collector"
+  image        = docker_image.fluent_bit[0].image_id
+  network_mode = "host"
 
   env = [
     "LOKI_ENDPOINT=https://loki.ide.kushnir.cloud/loki/api/v1/push",
@@ -182,10 +182,10 @@ resource "docker_container" "fluent_bit_collector" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "grafana_soc2_dashboard" {
-  count         = var.phase_18_compliance_enabled ? 1 : 0
-  name          = "grafana-soc2-compliance"
-  image         = docker_image.grafana_compliance[0].image_id
-  network_mode  = "host"
+  count        = var.phase_18_compliance_enabled ? 1 : 0
+  name         = "grafana-soc2-compliance"
+  image        = docker_image.grafana_compliance[0].image_id
+  network_mode = "host"
 
   env = [
     "GF_SECURITY_ADMIN_PASSWORD=${random_password.grafana_admin_password.result}",
@@ -296,7 +296,7 @@ variable "incident_response_log_config" {
     notification_channels    = list(string)
   })
   default = {
-    enabled                  = true
+    enabled = true
     incident_detection_rules = [
       "unauthorized_access",
       "suspicious_api_calls",
@@ -334,8 +334,8 @@ variable "rbac_policies" {
         "system:configure",
       ]
       constraints = {
-        ip_whitelist = "0.0.0.0/0"
-        mfa_required = "true"
+        ip_whitelist     = "0.0.0.0/0"
+        mfa_required     = "true"
         session_duration = "8h"
       }
     }
@@ -347,8 +347,8 @@ variable "rbac_policies" {
         "assets:view",
       ]
       constraints = {
-        ip_whitelist = "10.0.0.0/8"
-        mfa_required = "true"
+        ip_whitelist     = "10.0.0.0/8"
+        mfa_required     = "true"
         session_duration = "4h"
       }
     }
@@ -359,8 +359,8 @@ variable "rbac_policies" {
         "monitoring:view",
       ]
       constraints = {
-        ip_whitelist = "0.0.0.0/0"
-        mfa_required = "false"
+        ip_whitelist     = "0.0.0.0/0"
+        mfa_required     = "false"
         session_duration = "2h"
       }
     }

@@ -11,7 +11,7 @@ resource "null_resource" "setup_gpu_drivers" {
     inline = [
       "set -e",
       "echo '=== Installing NVIDIA GPU Drivers ==='",
-      
+
       # Detect current GPU driver version
       "if command -v nvidia-smi &>/dev/null; then",
       "  echo 'GPU drivers already installed:'",
@@ -33,7 +33,7 @@ resource "null_resource" "setup_gpu_drivers" {
       "    echo 'Warning: CentOS driver installation requires NVIDIA RPM'",
       "  fi",
       "fi",
-      
+
       # Attempt to load kernel module if not loaded
       "if ! lsmod | grep -q nvidia; then",
       "  echo 'Loading NVIDIA kernel module...'",
@@ -66,7 +66,7 @@ resource "null_resource" "install_cuda" {
     inline = [
       "set -e",
       "echo '=== Installing CUDA ${var.cuda_version} Toolkit ==='",
-      
+
       "if [ -d '/usr/local/cuda' ]; then",
       "  echo 'CUDA already installed:'",
       "  /usr/local/cuda/bin/nvcc --version",
@@ -83,7 +83,7 @@ resource "null_resource" "install_cuda" {
       "  fi",
       "  echo '✓ CUDA ${var.cuda_version} toolkit availability verified'",
       "fi",
-      
+
       # Add CUDA to PATH
       "if [ -d '/usr/local/cuda/bin' ]; then",
       "  echo 'export PATH=/usr/local/cuda/bin:$PATH' | grep -q 'bashrc' || echo 'export PATH=/usr/local/cuda/bin:$${PATH}' >> ~/.bashrc",
@@ -115,7 +115,7 @@ resource "null_resource" "install_cudnn" {
     inline = [
       "set -e",
       "echo '=== Installing cuDNN ${var.cudnn_version} ==='",
-      
+
       "if find /usr/local/cuda -name 'libcudnn*' 2>/dev/null | grep -q libcudnn; then",
       "  echo 'cuDNN already installed:'",
       "  find /usr/local/cuda -name 'libcudnn.so*' 2>/dev/null | head -1",
@@ -126,7 +126,7 @@ resource "null_resource" "install_cudnn" {
       "  echo 'Then run: tar -xvf cudnn*.tar.xz && sudo cp cudnn*/include/* /usr/local/cuda/include/ && sudo cp cudnn*/lib64/* /usr/local/cuda/lib64/'",
       "  echo 'Environment: curl -H \"Authorization: Bearer $NVIDIA_API_KEY\" https://api.nvidia.com/cuda/cudnn'",
       "fi",
-      
+
       # Verify library linkage
       "if [ -f '/usr/local/cuda/lib64/libcudnn.so.9' ] || [ -f '/usr/local/cuda/lib64/libcudnn.so.8' ]; then",
       "  echo '✓ cuDNN libraries present'",
@@ -158,7 +158,7 @@ resource "null_resource" "install_nvidia_container_runtime" {
     inline = [
       "set -e",
       "echo '=== Installing NVIDIA Container Runtime ==='",
-      
+
       "if command -v nvidia-container-runtime &>/dev/null; then",
       "  echo 'NVIDIA Container Runtime already installed'",
       "  nvidia-container-runtime --version",
@@ -174,7 +174,7 @@ resource "null_resource" "install_nvidia_container_runtime" {
       "    sudo yum clean expire-cache && sudo yum install -y nvidia-container-runtime 2>&1 | tail -3",
       "  fi",
       "fi",
-      
+
       # Configure Docker daemon to use nvidia-container-runtime
       "if [ -f '/etc/docker/daemon.json' ]; then",
       "  echo 'Docker daemon.json already exists - may need manual update for nvidia-container-runtime'",
@@ -188,7 +188,7 @@ resource "null_resource" "install_nvidia_container_runtime" {
       "  echo '  }' | sudo tee -a /etc/docker/daemon.json > /dev/null",
       "  echo '}' | sudo tee -a /etc/docker/daemon.json > /dev/null",
       "fi",
-      
+
       # Restart Docker to apply runtime config
       "sudo systemctl restart docker || echo 'Docker restart may require new SSH session'",
     ]
@@ -217,7 +217,7 @@ resource "null_resource" "validate_gpu_setup" {
 
     inline = [
       "echo '=== GPU Setup Validation ==='",
-      
+
       # Check GPU visibility
       "if command -v nvidia-smi &>/dev/null; then",
       "  echo 'GPU count: '$(nvidia-smi --list-gpus | wc -l)",
@@ -225,7 +225,7 @@ resource "null_resource" "validate_gpu_setup" {
       "else",
       "  echo 'Warning: nvidia-smi not accessible - drivers may still be loading'",
       "fi",
-      
+
       # Test Docker GPU access
       "echo 'Testing Docker GPU access...'",
       "docker run --rm --runtime=nvidia nvidia/cuda:12.4-base nvidia-smi | head -10 || echo 'GPU Docker test failed - runtime may need configuration update'",

@@ -3,7 +3,7 @@
 
 terraform {
   required_version = ">= 1.5.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -25,7 +25,7 @@ terraform {
 locals {
   environment = var.environment
   project     = var.project_name
-  
+
   common_tags = merge(
     var.tags,
     {
@@ -99,9 +99,9 @@ output "deployment_summary" {
       secondary = local.regions.secondary
       tertiary  = local.regions.tertiary
     }
-    vpcs = local.vpcs
-    cidrs = local.cidrs
-    account_id = data.aws_caller_identity.current.account_id
+    vpcs               = local.vpcs
+    cidrs              = local.cidrs
+    account_id         = data.aws_caller_identity.current.account_id
     multi_region_ready = true
   }
 }
@@ -109,8 +109,8 @@ output "deployment_summary" {
 output "dns_failover_status" {
   description = "Route53 DNS failover configuration status"
   value = {
-    enabled = var.enable_dns_failover
-    primary_domain = var.primary_domain
+    enabled               = var.enable_dns_failover
+    primary_domain        = var.primary_domain
     health_check_interval = var.health_check_interval
   }
 }
@@ -118,7 +118,7 @@ output "dns_failover_status" {
 output "cross_region_replication_status" {
   description = "Cross-region replication configuration status"
   value = {
-    enabled = var.enable_cross_region_replication
+    enabled       = var.enable_cross_region_replication
     regions_count = 3
   }
 }
@@ -127,11 +127,11 @@ output "cross_region_replication_status" {
 output "phase_12_1_complete" {
   description = "Phase 12.1 Infrastructure Setup verification"
   value = {
-    vpc_peering = "configured"
+    vpc_peering       = "configured"
     regional_networks = "configured"
-    load_balancers = "configured"
-    dns_failover = "configured"
-    monitoring = "configured"
-    timestamp = timestamp()
+    load_balancers    = "configured"
+    dns_failover      = "configured"
+    monitoring        = "configured"
+    timestamp         = timestamp()
   }
 }

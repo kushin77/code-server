@@ -35,7 +35,7 @@ variable "dlp_scanning_enabled" {
 variable "zero_trust_audit_retention_days" {
   description = "Audit log retention (days) for SOC2 compliance"
   type        = number
-  default     = 2555  # 7 years
+  default     = 2555 # 7 years
 }
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -52,10 +52,10 @@ resource "null_resource" "phase_20_orchestration" {
   }
 
   triggers = {
-    phase_enabled  = var.phase_20_enabled
-    mtls_enabled   = var.istio_mtls_enabled
+    phase_enabled    = var.phase_20_enabled
+    mtls_enabled     = var.istio_mtls_enabled
     policies_enabled = var.network_policies_enabled
-    dlp_enabled    = var.dlp_scanning_enabled
+    dlp_enabled      = var.dlp_scanning_enabled
   }
 }
 
@@ -63,26 +63,26 @@ resource "null_resource" "phase_20_orchestration" {
 output "phase_20_status" {
   description = "Phase 20 deployment status and configuration"
   value = var.phase_20_enabled ? {
-    status                    = "ENABLED"
-    phase                     = "phase-20-zero-trust"
-    orchestration_framework   = "global-orchestration-framework (phase-20-a1)"
-    mtls_enforcement          = var.istio_mtls_enabled ? "ENABLED" : "DISABLED"
-    network_policies          = var.network_policies_enabled ? "ENABLED" : "DISABLED"
-    dlp_scanning              = var.dlp_scanning_enabled ? "ENABLED" : "DISABLED"
-    audit_retention_days      = var.zero_trust_audit_retention_days
-    deployment_date           = "2026-04-15"
-    expected_duration_hours   = 7
+    status                  = "ENABLED"
+    phase                   = "phase-20-zero-trust"
+    orchestration_framework = "global-orchestration-framework (phase-20-a1)"
+    mtls_enforcement        = var.istio_mtls_enabled ? "ENABLED" : "DISABLED"
+    network_policies        = var.network_policies_enabled ? "ENABLED" : "DISABLED"
+    dlp_scanning            = var.dlp_scanning_enabled ? "ENABLED" : "DISABLED"
+    audit_retention_days    = var.zero_trust_audit_retention_days
+    deployment_date         = "2026-04-15"
+    expected_duration_hours = 7
     blockers = [
       "Phase 18 Vault PKI backend configured",
       "Vault mTLS certificates issuing successfully",
       "Consul service discovery operational"
     ]
     features = {
-      istio_mtls                = "Service-to-service encryption (mTLS)"
-      network_policies          = "Default deny with explicit allow rules"
-      zero_trust_hardening      = "Secrets rotation + dynamic credentials"
-      dlp_scanning              = "Sensitive data detection and prevention"
-      audit_logging             = "7-year immutable retention (S3 WORM)"
+      istio_mtls           = "Service-to-service encryption (mTLS)"
+      network_policies     = "Default deny with explicit allow rules"
+      zero_trust_hardening = "Secrets rotation + dynamic credentials"
+      dlp_scanning         = "Sensitive data detection and prevention"
+      audit_logging        = "7-year immutable retention (S3 WORM)"
     }
   } : null
 }

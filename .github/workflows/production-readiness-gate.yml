@@ -52,10 +52,44 @@ jobs:
                 problems.push("For non-trivial changes, check: 'Production readiness gate acknowledged'.");
               }
 
+              const rolloutChecks = [
+                /- \[x\] Deployment strategy selected and justified for this PR/i,
+                /- \[x\] Gradual rollout increments documented or marked not applicable/i,
+                /- \[x\] Kill switch or immediate rollback command documented/i,
+                /- \[x\] Feature flag reference documented or marked not applicable/i,
+                /- \[x\] Waiver issue linked or marked not needed/i,
+                /- \[x\] Training evidence linked \(runbook walkthrough, owner, and date\)/i,
+              ];
+
+              if (!rolloutChecks.every((pattern) => pattern.test(body))) {
+                problems.push("For non-trivial changes, complete the Rollout Enforcement section in the PR template.");
+              }
+
+              const waiverMatch = body.match(/\*\*Waiver issue\*\*:\s*`([^`]+)`/i);
+              if (!waiverMatch) {
+                problems.push("Document '**Waiver issue**' as `none` or `#<issue-number>`.");
+              } else {
+                const waiverValue = waiverMatch[1].trim();
+                if (!/^none$/i.test(waiverValue) && !/^#\d+$/i.test(waiverValue)) {
+                  problems.push("Waiver issue must be `none` or a single issue reference like `#123`.");
+                }
+              }
+
+              const trainingMatch = body.match(/\*\*Training evidence\*\*:\s*`([^`]+)`/i);
+              if (!trainingMatch) {
+                problems.push("Document '**Training evidence**' with a concrete link or comment reference.");
+              } else {
+                const trainingValue = trainingMatch[1].trim();
+                if (/^\[link to /i.test(trainingValue) || /^todo$/i.test(trainingValue)) {
+                  problems.push("Replace training evidence placeholder with a real link or approval comment.");
+                }
+              }
+
               const placeholders = [
                 "[Describe failure scenarios and their impact]",
                 "[Alerts, logs, metrics, or manual checks]",
                 "[Add any additional context, screenshots, links, or considerations here]",
+                "[Link to runbook review, training note, or approval comment]",
               ];
               for (const token of placeholders) {
                 if (body.includes(token)) {

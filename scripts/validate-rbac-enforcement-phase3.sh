@@ -5,7 +5,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 RBAC_NAMESPACE="default"
 APEX_DOMAIN="kushnir.cloud"
@@ -13,16 +14,10 @@ APEX_DOMAIN="kushnir.cloud"
 # Color output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
 NC='\033[0m'
 
 TEST_PASSED=0
 TEST_FAILED=0
-
-log_info() {
-  echo -e "${BLUE}[INFO]${NC} $*"
-}
 
 log_success() {
   echo -e "${GREEN}[✓]${NC} $*"
@@ -34,9 +29,7 @@ log_fail() {
   ((TEST_FAILED++))
 }
 
-log_warning() {
-  echo -e "${YELLOW}[WARN]${NC} $*"
-}
+log_warning() { log_warn "$@"; }
 
 # ============================================================================
 # Test 1: Role Definitions

@@ -4,9 +4,8 @@
 
 set -e
 
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║  PRE-FLIGHT DEPLOYMENT CHECKLIST                          ║"
@@ -189,9 +188,6 @@ echo ""
 echo "📋 PHASE 7: NETWORK & SSH CONNECTIVITY"
 echo "═════════════════════════════════════════════════════════════"
 echo ""
-
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 
 # Test SSH connectivity
 if timeout 5 ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no \

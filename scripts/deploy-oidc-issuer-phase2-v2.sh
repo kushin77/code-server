@@ -17,8 +17,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PHASE2_DIR="$ROOT_DIR/config/iam"
 
+# Load shared defaults when available.
+if [[ -f "$SCRIPT_DIR/_common/config.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/_common/config.sh"
+fi
+
 # Configuration
-OIDC_HOST="${DEPLOY_HOST:-192.168.168.31}"
+OIDC_HOST="${OIDC_HOST:-${DEPLOY_HOST:-localhost}}"
 OIDC_PORT="${OIDC_PORT:-8080}"
 OIDC_PATH="/oidc"
 OIDC_URL="https://${OIDC_HOST}:${OIDC_PORT}${OIDC_PATH}"
@@ -173,7 +179,7 @@ cat > "$SCRIPT_DIR/test-oidc-endpoint.sh" <<'TEST_EOF'
 #!/bin/bash
 set -euo pipefail
 
-OIDC_HOST="${1:-192.168.168.31}"
+OIDC_HOST="${1:-${DEPLOY_HOST:-localhost}}"
 OIDC_PORT="${2:-8080}"
 OIDC_URL="https://${OIDC_HOST}:${OIDC_PORT}"
 

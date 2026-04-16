@@ -6,20 +6,13 @@
 
 set -euo pipefail
 
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $*"; }
-log_warning() { echo -e "${YELLOW}[!]${NC} $*"; }
-log_error() { echo -e "${RED}[✗]${NC} $*" >&2; }
+log_warning() { log_warn "$@"; }
 
 # === Configuration ===
-POSTGRES_HOST="${POSTGRES_HOST:-192.168.168.31}"
+POSTGRES_HOST="${POSTGRES_HOST:-$DEPLOY_HOST}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 POSTGRES_DB="${POSTGRES_DB:-code_server_prod}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"

@@ -1,0 +1,35 @@
+name: "Phase 7d-003: Health Validation"
+
+on:
+  push:
+    branches: [ main, feat/p1-353-health-checks ]
+    paths:
+      - 'scripts/health/*.sh'
+      - 'docker/haproxy/Dockerfile'
+      - '.github/workflows/phase-7d-health-validation.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'scripts/health/*.sh'
+      - 'docker/haproxy/Dockerfile'
+      - '.github/workflows/phase-7d-health-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-health-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: ShellCheck Health Scripts
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5b9f335ca392fc68e146757 # v2.0.0
+        with:
+          scandir: 'scripts/health'
+
+      - name: Lint Workflow Files
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/repo:ro \
+          rhysd/actionlint:1.7.0 -color /repo/.github/workflows/phase-7d-health-validation.yml

@@ -52,6 +52,8 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+    security_opt:
+      - no-new-privileges:true
     cap_drop:
       - ALL
     cap_add:
@@ -105,6 +107,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    security_opt:
+      - no-new-privileges:true
     cap_drop:
       - ALL
 
@@ -138,7 +142,10 @@ services:
     depends_on:
       - ollama
     restart: on-failure
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   # ─── oauth2-proxy ───────────────────────────────────────────────────────────
   # Authentication sidecar (pinned to v7.5.1)
@@ -187,7 +194,10 @@ services:
       start_period: 10s
     depends_on:
       - code-server
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -220,11 +230,12 @@ services:
       start_period: 10s
     depends_on:
       - code-server
-    # Allow binding to privileged ports (80, 443) without full root
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     cap_add:
       - NET_BIND_SERVICE
-    # Note: snap Docker + no-new-privileges causes "operation not permitted" on binary exec
-    # Removed no-new-privileges:true for snap compatibility
     logging:
       driver: json-file
       options:
@@ -258,7 +269,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -293,7 +307,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -323,7 +340,16 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+      - FOWNER
     logging:
       driver: json-file
       options:
@@ -363,7 +389,10 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -400,7 +429,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -436,7 +468,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -467,7 +502,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -496,7 +534,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -520,7 +561,10 @@ services:
     command: ["-config.file=/etc/promtail/promtail-config.yml"]
     depends_on:
       - loki
-    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:

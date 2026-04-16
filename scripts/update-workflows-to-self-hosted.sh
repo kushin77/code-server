@@ -60,7 +60,7 @@ declare -A REPLACEMENTS=(
   # macOS to self-hosted
   ["runs-on: macos-latest"]="runs-on: [self-hosted, on-prem, macos]"
   
-  # Windows to self-hosted
+  # Windows-latest to self-hosted (maps to self-hosted windows runners)
   ["runs-on: windows-latest"]="runs-on: [self-hosted, on-prem, windows]"
 )
 

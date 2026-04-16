@@ -21,7 +21,7 @@ echo ""
 
 echo "[1/5] Creating Backup Strategy Configuration..."
 
-cat > c:\code-server-enterprise\config\backup-strategy.yaml << 'EOF'
+cat > /code-server-enterprise/config/backup-strategy.yaml << 'EOF'
 # Backup Strategy Configuration
 # IaC: Automated, versioned backup procedures
 
@@ -178,14 +178,14 @@ echo ""
 
 echo "[2/5] Creating Failover Automation Script..."
 
-cat > c:\code-server-enterprise\scripts\failover-automation.sh << 'EOF'
+cat > /code-server-enterprise/scripts/failover-automation.sh << 'EOF'
 #!/bin/bash
 # Automated Failover Procedure
 # IaC: Declarative, idempotent failover automation
 
 set -euo pipefail
 
-FAILOVER_CONFIG="c:\code-server-enterprise\config\failover-config.yaml"
+FAILOVER_CONFIG="/code-server-enterprise/config/failover-config.yaml"
 BACKUP_DIR="/backups/disaster-recovery"
 LOG_FILE="/var/log/failover.log"
 
@@ -365,7 +365,7 @@ echo ""
 
 echo "[3/5] Creating Recovery Procedures..."
 
-cat > c:\code-server-enterprise\docs\RECOVERY-PROCEDURES.md << 'EOF'
+cat > /code-server-enterprise/docs/RECOVERY-PROCEDURES.md << 'EOF'
 # Disaster Recovery Procedures
 
 ## RTO/RPO Targets
@@ -463,7 +463,7 @@ echo ""
 
 echo "[4/5] Creating Data Restoration Service..."
 
-cat > c:\code-server-enterprise\services\data-restoration-service.js << 'EOF'
+cat > /code-server-enterprise/services/data-restoration-service.js << 'EOF'
 /**
  * Data Restoration Service
  * Handles backup restoration, PITR, and data recovery
@@ -637,7 +637,7 @@ echo ""
 
 echo "[5/5] Creating DR Testing Framework..."
 
-cat > c:\code-server-enterprise\config\dr-testing-framework.yaml << 'EOF'
+cat > /code-server-enterprise/config/dr-testing-framework.yaml << 'EOF'
 # Disaster Recovery Testing Framework
 # IaC: Automated DR validation and drills
 

@@ -39,7 +39,7 @@ EOF
 # Step 2: Create backend configuration
 echo ""
 echo "Step 2/4: Creating terraform backend configuration..."
-cat > c:\code-server-enterprise\terraform\backend-config.hcl <<'BACKEND'
+cat > /code-server-enterprise/terraform/backend-config.hcl <<'BACKEND'
 # Remote State Backend Configuration
 # MinIO S3-compatible storage on 192.168.168.31:9000
 # 

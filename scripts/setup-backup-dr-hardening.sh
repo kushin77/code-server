@@ -217,7 +217,7 @@ EOF
 # Step 4: Setup backup age monitoring
 echo ""
 echo "Step 4/5: Creating backup monitoring script..."
-cat > c:\code-server-enterprise\scripts\monitor-backup-age.sh <<'MONITORSCRIPT'
+cat > /code-server-enterprise/scripts/monitor-backup-age.sh <<'MONITORSCRIPT'
 #!/bin/bash
 # Monitor backup age and generate alerts for Prometheus/Grafana
 # 
@@ -254,14 +254,14 @@ else
 fi
 MONITORSCRIPT
 
-chmod +x c:\code-server-enterprise\scripts\monitor-backup-age.sh
+chmod +x /code-server-enterprise/scripts/monitor-backup-age.sh
 
 echo "✅ Backup monitoring script created"
 
 # Step 5: Setup Prometheus alerts
 echo ""
 echo "Step 5/5: Configuring Prometheus alerts for backup monitoring..."
-cat > c:\code-server-enterprise\monitoring\backup-alert-rules.yml <<'ALERTRULES'
+cat > /code-server-enterprise/monitoring/backup-alert-rules.yml <<'ALERTRULES'
 groups:
   - name: backup_monitoring
     interval: 1m

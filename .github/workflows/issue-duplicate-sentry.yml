@@ -82,13 +82,15 @@ jobs:
               .map((c) => `- #${c.number} ${c.title}`)
               .join('\n');
 
-            const body = `${marker}
-Potential duplicate or related open issues detected for triage:
-
-${list}
-
-Please choose one canonical issue and close superseded duplicates with a cross-link.
-If this issue is distinct, add a short comment explaining why.`;
+            const body = [
+              marker,
+              'Potential duplicate or related open issues detected for triage:',
+              '',
+              list,
+              '',
+              'Please choose one canonical issue and close superseded duplicates with a cross-link.',
+              'If this issue is distinct, add a short comment explaining why.',
+            ].join('\n');
 
             await github.rest.issues.createComment({
               owner,

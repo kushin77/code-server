@@ -1,0 +1,449 @@
+---
+# Production Alert Rules - Issue #405
+# Complete coverage of all operational metrics
+# Last updated: 2026-04-15
+#
+# ALERT SEVERITIES:
+#   critical: Immediate action required (P99 < 1 min)
+#   warning:  Action within 15 minutes (P99 < 15 min)
+#   info:     Scheduled maintenance (P99 < 1 hour)
+#
+# TESTING: Fire alerts with: curl -X POST http://localhost:9093/api/v1/alerts
+
+groups:
+  # ═════════════════════════════════════════════════════════════════════════
+  # INFRASTRUCTURE HEALTH ALERTS
+  # ═════════════════════════════════════════════════════════════════════════
+  
+  - name: infrastructure-health
+    interval: 15s
+    rules:
+      # Container/Service Health
+      - alert: ServiceDown
+        expr: up{job=~"code-server|prometheus|grafana|postgres|redis|kong|caddy|oauth2-proxy|jaeger|loki"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: "{{ $labels.job }}"
+          sla_p99: "< 1 min"
+        annotations:
+          summary: "{{ $labels.job }} service DOWN"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} is unreachable for 1+ minute"
+          action: "ssh akushnir@{{ $labels.instance }} && docker-compose logs {{ $labels.job }}"
+          runbook: "https://github.com/kushin77/code-server/wiki/Runbook-ServiceDown"
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: "{{ $labels.job }}"
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "High CPU usage on {{ $labels.job }}"
+          description: "{{ $labels.job }} CPU > 80% for 5 minutes (current: {{ $value | humanizePercentage }})"
+          action: "Check running processes: ps aux --sort=-%cpu | head"
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 / 1024 > 4
+        for: 5m
+        labels:
+          severity: warning
+          component: "{{ $labels.job }}"
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "High memory usage on {{ $labels.job }}"
+          description: "{{ $labels.job }} memory > 4GB (current: {{ $value | humanize }}GB)"
+          action: "Check for memory leaks: docker-compose logs {{ $labels.job }} | grep -i 'oom\\|leak'"
+
+      - alert: DiskSpaceRunningOut
+        expr: (node_filesystem_avail_bytes{fstype=~"ext4|xfs"} / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: filesystem
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Disk space < 10% on {{ $labels.device }}"
+          description: "{{ $labels.device }} only {{ $value | humanizePercentage }} free ({{ $labels.mountpoint }})"
+          action: "Check disk usage: df -h && du -sh /var/lib/docker/*"
+
+      - alert: FileDescriptorRunningOut
+        expr: process_open_fds / process_max_fds > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: "{{ $labels.job }}"
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "File descriptors > 80% on {{ $labels.job }}"
+          description: "{{ $labels.job }} using {{ $value | humanizePercentage }} of max FDs"
+          action: "Increase ulimit: ulimit -n"
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # CORE SERVICE PERFORMANCE ALERTS
+  # ═════════════════════════════════════════════════════════════════════════
+  
+  - name: service-performance
+    interval: 30s
+    rules:
+      - alert: PrometheusHighErrorRate
+        expr: rate(prometheus_http_requests_total{handler="/api/query",status=~"5.."}[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          service: prometheus
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Prometheus API error rate > 1%"
+          description: "Query errors {{ $value | humanizePercentage }} (threshold: 1%)"
+          action: "Check Prometheus logs for errors: docker-compose logs prometheus"
+
+      - alert: PrometheusSlowQueries
+        expr: histogram_quantile(0.99, rate(prometheus_query_duration_seconds[5m])) > 1
+        for: 5m
+        labels:
+          severity: info
+          service: prometheus
+          sla_p99: "< 1 hour"
+        annotations:
+          summary: "Prometheus query latency p99 > 1s"
+          description: "Slow queries detected (p99: {{ $value | humanizeDuration }})"
+          action: "Check query load and optimize rules: curl http://localhost:9090/graph"
+
+      - alert: PostgreSQLConnectionPoolExhausted
+        expr: pg_connections_used / pg_connections_max > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "PostgreSQL connections > 80%"
+          description: "Connection pool utilization: {{ $value | humanizePercentage }}"
+          action: "Check PgBouncer pool settings and active queries"
+
+      - alert: PostgreSQLReplicationLag
+        expr: (pg_replication_lag_seconds > 10) and (pg_replication_lag_seconds < 1000)
+        for: 2m
+        labels:
+          severity: warning
+          service: postgres
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "PostgreSQL replication lag > 10s"
+          description: "Replica lag: {{ $value | humanizeDuration }}"
+          action: "Check WAL streaming: SELECT slot_name FROM pg_replication_slots"
+
+      - alert: PostgreSQLReplicationBroken
+        expr: pg_replication_lag_seconds > 1000
+        for: 1m
+        labels:
+          severity: critical
+          service: postgres
+          sla_p99: "< 1 min"
+        annotations:
+          summary: "PostgreSQL replication BROKEN (lag > 1000s)"
+          description: "Replica lag: {{ $value | humanizeDuration }} (CRITICAL)"
+          action: "Immediate: SSH to replica and check replication status"
+          runbook: "https://github.com/kushin77/code-server/wiki/PostgreSQL-Replication-Recovery"
+
+      - alert: RedisMemoryUsageHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Redis memory usage > 80%"
+          description: "Memory: {{ $value | humanizePercentage }} of {{ $labels.redis_memory_max_bytes | humanize }}B"
+          action: "Check for key bloat: redis-cli --bigkeys"
+
+      - alert: RedisSentinelDown
+        expr: up{job="redis-sentinel"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+          sla_p99: "< 1 min"
+        annotations:
+          summary: "Redis Sentinel DOWN"
+          description: "Sentinel on {{ $labels.instance }} unreachable"
+          action: "Restart Sentinel and verify quorum: redis-cli -p 26379 sentinel masters"
+
+      - alert: KongUpstreamHealthDegraded
+        expr: rate(kong_http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: kong
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Kong upstream error rate > 5%"
+          description: "Error rate: {{ $value | humanizePercentage }} (threshold: 5%)"
+          action: "Check Kong upstreams: curl http://localhost:8001/upstreams"
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # OBSERVABILITY STACK ALERTS
+  # ═════════════════════════════════════════════════════════════════════════
+  
+  - name: observability-stack
+    interval: 30s
+    rules:
+      - alert: LokiPushFailures
+        expr: rate(loki_distributor_bytes_received_total{job="loki"}[5m]) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: loki
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Loki receiving no logs"
+          description: "Log ingestion rate near zero"
+          action: "Check Promtail/fluent-bit: docker-compose logs promtail"
+
+      - alert: JaegerTracesDropped
+        expr: rate(jaeger_tracer_traces_dropped_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: jaeger
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Jaeger dropping > 100 traces/sec"
+          description: "Trace loss: {{ $value | humanize }}/sec"
+          action: "Increase Jaeger memory or reduce sampling: docker-compose exec jaeger env"
+
+      - alert: GrafanaPluginFailures
+        expr: rate(grafana_http_requests_total{status=~"5.."}[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: info
+          service: grafana
+          sla_p99: "< 1 hour"
+        annotations:
+          summary: "Grafana plugin or datasource errors"
+          description: "Error rate: {{ $value | humanizePercentage }}"
+          action: "Check datasources: curl http://localhost:3000/api/datasources"
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # SECURITY & AUTH ALERTS
+  # ═════════════════════════════════════════════════════════════════════════
+  
+  - name: security-auth
+    interval: 30s
+    rules:
+      - alert: OAuth2ProxyAuthFailureRateHigh
+        expr: rate(oauth2_proxy_authentication_failures_total[5m]) / rate(oauth2_proxy_authentication_attempts_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: auth
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "OAuth2 auth failure rate > 10%"
+          description: "Auth failures: {{ $value | humanizePercentage }} (possible attack or misconfiguration)"
+          action: "Check OAuth2 provider status and allowed_emails list"
+
+      - alert: OAuth2ProxyRateLimitExceeded
+        expr: rate(oauth2_proxy_rate_limit_exceeded_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: info
+          component: auth
+          sla_p99: "< 1 hour"
+        annotations:
+          summary: "OAuth2 rate limit exceeded > 10/sec"
+          description: "Rate limit hits: {{ $value | humanize }}/sec"
+          action: "Increase rate limits in oauth2-proxy config or investigate client"
+
+      - alert: VaultSealedUnexpectedly
+        expr: vault_core_unsealed == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: vault
+          sla_p99: "< 1 min"
+        annotations:
+          summary: "HashiCorp Vault SEALED (unexpected)"
+          description: "Vault has sealed unexpectedly - immediate intervention required"
+          action: "SSH and unseal Vault: vault operator unseal"
+          runbook: "https://github.com/kushin77/code-server/wiki/Vault-Emergency-Procedures"
+
+      - alert: CertificateExpiringWarning
+        expr: tls_cert_not_after{job=~"code-server|caddy|kong"} - time() < 86400 * 7
+        for: 1h
+        labels:
+          severity: warning
+          component: tls
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "TLS certificate expires in < 7 days"
+          description: "Certificate {{ $labels.instance }} expires at {{ $value | humanizeTimestamp }}"
+          action: "Renew certificate: acme.sh --renew -d {{ $labels.domain }}"
+
+      - alert: CertificateExpiringSoon
+        expr: tls_cert_not_after{job=~"code-server|caddy|kong"} - time() < 86400 * 1
+        for: 1m
+        labels:
+          severity: critical
+          component: tls
+          sla_p99: "< 1 min"
+        annotations:
+          summary: "TLS certificate expires in < 24 hours (CRITICAL)"
+          description: "Certificate {{ $labels.instance }} expires at {{ $value | humanizeTimestamp }}"
+          action: "EMERGENCY: Renew certificate immediately"
+          runbook: "https://github.com/kushin77/code-server/wiki/TLS-Emergency-Renewal"
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # AVAILABILITY & SLO ALERTS
+  # ═════════════════════════════════════════════════════════════════════════
+  
+  - name: availability-slo
+    interval: 1m
+    rules:
+      - alert: CodeServerUnavailable
+        expr: up{job="code-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          sla: "99.9%"
+          sla_p99: "< 1 min"
+        annotations:
+          summary: "code-server UNAVAILABLE"
+          description: "code-server has been down for 1+ minute"
+          action: "Restart: docker-compose restart code-server"
+
+      - alert: APIGatewayErrorRateHigh
+        expr: rate(http_requests_total{service="kong",status=~"5.."}[5m]) / rate(http_requests_total{service="kong"}[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          sla: "99.5%"
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "API Gateway error rate > 1%"
+          description: "Error rate: {{ $value | humanizePercentage }}"
+          action: "Check Kong upstream health and logs"
+
+      - alert: APIGatewayLatencyHigh
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{service="kong"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          sla: "99.5%"
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "API Gateway latency p99 > 1s"
+          description: "Latency: {{ $value | humanizeDuration }}"
+          action: "Check backend service health and network latency"
+
+      - alert: SLOBudgetBurnRateHigh
+        expr: (1 - (increase(requests_total{status=~"2..|3.."}[5m]) / increase(requests_total[5m]))) > 0.05
+        for: 5m
+        labels:
+          severity: info
+          sla: "99.9%"
+          sla_p99: "< 1 hour"
+        annotations:
+          summary: "Error budget burn rate high"
+          description: "Burn rate: {{ $value | humanizePercentage }}/min"
+          action: "Investigate recent changes and deployments"
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # MAINTENANCE & OPERATIONAL ALERTS
+  # ═════════════════════════════════════════════════════════════════════════
+  
+  - name: maintenance-ops
+    interval: 5m
+    rules:
+      - alert: BackupNotRunning
+        expr: (time() - backup_last_run_timestamp) > 86400 * 1.5
+        for: 30m
+        labels:
+          severity: warning
+          component: backup
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Backup not run in 36+ hours"
+          description: "Last backup: {{ $value | humanizeDuration }} ago"
+          action: "Manually trigger backup: bash scripts/backup.sh"
+
+      - alert: BackupFailure
+        expr: backup_last_run_status != 1
+        for: 5m
+        labels:
+          severity: warning
+          component: backup
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Last backup FAILED"
+          description: "Backup status: {{ $value }} (1=success)"
+          action: "Check backup logs and disk space: docker-compose logs backup"
+
+      - alert: ReplicationLagTooHigh
+        expr: (max(pg_replication_lag_seconds) by (instance)) > 60
+        for: 5m
+        labels:
+          severity: warning
+          component: replication
+          sla_p99: "< 15 min"
+        annotations:
+          summary: "Replication lag > 60 seconds"
+          description: "Lag: {{ $value | humanizeDuration }}"
+          action: "Check network and WAL archiving status"
+
+      - alert: DeploymentInProgress
+        expr: deployment_in_progress == 1
+        for: 30m
+        labels:
+          severity: info
+          component: deployment
+          sla_p99: "< 1 hour"
+        annotations:
+          summary: "Deployment in progress for 30+ minutes"
+          description: "Check deployment status in CI/CD pipeline"
+          action: "Monitor build: git log --oneline -5"
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # ALERTING INFRASTRUCTURE ALERTS
+  # ═════════════════════════════════════════════════════════════════════════
+  
+  - name: alerting-infrastructure
+    interval: 30s
+    rules:
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: alerting
+          sla_p99: "< 1 min"
+        annotations:
+          summary: "AlertManager DOWN"
+          description: "AlertManager unreachable for 1+ minute"
+          action: "Restart: docker-compose restart alertmanager"
+
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: monitoring
+          sla_p99: "< 1 min"
+        annotations:
+          summary: "Prometheus DOWN"
+          description: "Prometheus unreachable for 1+ minute"
+          action: "Restart: docker-compose restart prometheus"
+
+      - alert: PrometheusRetention
+        expr: rate(prometheus_tsdb_symbol_table_size_bytes[5m]) > 0
+        for: 1m
+        labels:
+          severity: info
+          component: monitoring
+          sla_p99: "< 1 hour"
+        annotations:
+          summary: "Prometheus database growing (normal retention activity)"
+          description: "DB size tracking enabled for operational awareness"

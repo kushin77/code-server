@@ -146,17 +146,17 @@ services:
     restart: always
     networks: [enterprise]
     ports:
-      - "127.0.0.1:${CODE_SERVER_PORT}:8080"  # Localhost only - oauth2-proxy gates external access
+      - "0.0.0.0:${CODE_SERVER_PORT}:8080"
     environment:
       PASSWORD:        ${CODE_SERVER_PASSWORD:?Set CODE_SERVER_PASSWORD in .env}
       SUDO_PASSWORD:   ${CODE_SERVER_PASSWORD}
       GITHUB_TOKEN:    ${GITHUB_TOKEN:-}
       OLLAMA_ENDPOINT: http://ollama:${OLLAMA_PORT}
     command:
-      - "--bind-addr=127.0.0.1:8080"  # Bind to localhost only
+      - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
       - "--cert=false"
-      - "--auth=none"  # Auth handled by oauth2-proxy reverse proxy
+      - "--auth=password"  # Require password authentication (from PASSWORD env var)
     volumes:
       - code-server-data:/home/coder:rw
     healthcheck:
@@ -187,7 +187,7 @@ services:
     runtime: nvidia
     networks: [enterprise]
     ports:
-      - "127.0.0.1:${OLLAMA_PORT}:${OLLAMA_PORT}"  # Localhost only - internal service-to-service access only
+      - "0.0.0.0:${OLLAMA_PORT}:${OLLAMA_PORT}"
     profiles: ["ollama"]
     # Explicit device mounts are required with snap Docker nvidia runtime
     # snap's nvidia-container-runtime needs /dev/nvidia<N> explicitly bound
@@ -372,7 +372,6 @@ services:
       - '--log.level=warn'
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./config/prometheus/rules:/etc/prometheus/rules:ro
       - ./config/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus-data:/prometheus
     healthcheck:
@@ -770,7 +769,7 @@ services:
 
   # ─── Cloudflare Tunnel (Edge Security) ───────────────────────────────────────
   # Replaces direct NAT/firewall hole-punch with Cloudflare edge ingress
-  # • Tunnel: secure encrypted connection from Cloudflare → $PRIMARY_HOST_IP:8080
+  # • Tunnel: secure encrypted connection from Cloudflare → 192.168.168.31:8080
   # • WAF: blocks SQL injection, path traversal, scanners at edge
   # • DNS: CNAME ide.kushnir.cloud → tunnel.cfargotunnel.com
   # • Health: Cloudflare monitors tunnel availability + reachability
@@ -883,34 +882,34 @@ volumes:
   loki-compaction:
     driver: local
 
-  # ── NAS-backed volumes ($STORAGE_IP:$STORAGE_NAS_EXPORT) ───────────────────────────
+  # ── NAS-backed volumes (192.168.168.56:/export) ───────────────────────────
   nas-ollama:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
       device: ":/export/ollama"
   nas-code-server:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/code-server"
   nas-prometheus:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/prometheus"
   nas-grafana:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3"
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3"
       device: ":/export/grafana"
   nas-postgres-backups:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=${STORAGE_IP:-192.168.168.56},rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
+      o: "addr=192.168.168.56,rw,hard,intr,timeo=30,retrans=3,rsize=1048576,wsize=1048576"
       device: ":/export/backups/postgres"

@@ -13,6 +13,7 @@ alerting:
 
 rule_files:
   - /etc/prometheus/alert-rules.yml
+  - /etc/prometheus/alert-rules-audit-phase4.yml
   - /etc/prometheus/prometheus-rules-phase-23.yml
   - /etc/prometheus/alerts-phase-23.yml
 

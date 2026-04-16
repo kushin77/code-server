@@ -1,0 +1,75 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Phase 4: Audit Logging Alert Rules
+# Integrated with: Prometheus → AlertManager → ops channel
+# ═══════════════════════════════════════════════════════════════════════════
+groups:
+  - name: audit_logging
+    interval: 60s
+    rules:
+
+      # P1: High RBAC denial rate — potential brute-force or misconfiguration
+      - alert: AuditHighDenialRate
+        expr: |
+          (
+            sum(rate(caddy_http_requests_total{status=~"403|401"}[5m])) by (instance)
+            /
+            sum(rate(caddy_http_requests_total[5m])) by (instance)
+          ) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+          category: audit
+          phase: "4"
+        annotations:
+          summary: "High RBAC denial rate (>10%) on {{ $labels.instance }}"
+          description: "Denial rate is {{ $value | humanizePercentage }} — possible brute-force or broken policy"
+          runbook: "https://github.com/kushin77/code-server/blob/main/CRASH_QUICK_REFERENCE.md"
+
+      # P1: Authentication failures spike
+      - alert: AuditAuthFailureSpike
+        expr: |
+          sum(increase(caddy_http_requests_total{status="401"}[5m])) by (instance) > 20
+        for: 2m
+        labels:
+          severity: warning
+          category: audit
+          phase: "4"
+        annotations:
+          summary: "Auth failure spike on {{ $labels.instance }}"
+          description: "{{ $value }} 401 errors in 5 minutes — check oauth2-proxy and JWT validation"
+
+      # P1: Prometheus scrape down (audit data gap)
+      - alert: AuditDataGap
+        expr: up{job="prometheus"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: audit
+          phase: "4"
+        annotations:
+          summary: "Prometheus down — audit data collection interrupted"
+          description: "Prometheus has been unreachable for 2m. Audit trail has a gap."
+
+      # P2: oauth2-proxy down (no authentication logging)
+      - alert: AuditOAuth2ProxyDown
+        expr: up{job="code-server"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          category: audit
+          phase: "4"
+        annotations:
+          summary: "Code-server unreachable — access audit incomplete"
+          description: "code-server has been unreachable for 1m. Session events not being logged."
+
+      # P2: Postgres down (audit DB unavailable)
+      - alert: AuditDatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: audit
+          phase: "4"
+        annotations:
+          summary: "PostgreSQL down — audit log writes failing"
+          description: "Audit log storage is unavailable. RBAC decisions cannot be persisted."

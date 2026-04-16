@@ -395,7 +395,8 @@ services:
       OLLAMA_NUM_GPU: 1
       OLLAMA_MAX_LOADED_MODELS: 2
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      # use native CLI to avoid external tool dependencies (curl/wget)
+      test: ["CMD", "ollama", "list"]
       interval: 60s
       timeout: 10s
       retries: 3

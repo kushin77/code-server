@@ -1,5 +1,75 @@
 # Copilot Instructions for kushin77/code-server
+## Code Governance Rules (Copilot Enforcement)
 
+### Rule 1 — No Duplication
+Before writing any helper function or utility, check these canonical locations:
+- `scripts/_common/utils.sh` — generic utilities (retry, confirm, die, log_*)
+- `scripts/_common/logging.sh` — log_info, log_warn, log_error, log_fatal, log_debug
+- `scripts/_common/config.sh` — config loading (load_env, export_vars)
+- `scripts/lib/secrets.sh` — secret fetching (GSM + .env fallback)
+- `scripts/lib/nas.sh` — NAS mount helpers
+- `scripts/lib/` — other shared libraries
+
+**Never create a new helper if the functionality exists in these files.** Refactor into shared libraries instead.
+
+### Rule 2 — Metadata Headers (mandatory on every new file)
+Every bash script must start with metadata headers per GOV-002:
+```bash
+#!/usr/bin/env bash
+# @file        scripts/<path>/<filename>.sh
+# @module      <category/subcategory>
+# @description <one-line purpose of the script>
+#
+```
+
+Every Python script must start with:
+```python
+#!/usr/bin/env python3
+# @file        scripts/<path>/<filename>.py
+# @module      <category/subcategory>
+# @description <one-line purpose of the script>
+#
+```
+
+Use `./scripts/fix-metadata-headers.sh` to auto-fix missing headers.
+
+### Rule 3 — Configuration Separation
+- **Infrastructure config** (environment-specific): Use env vars from `scripts/_common/_base-config.env`
+	- Example: `$DEPLOY_HOST`, `$REGISTRY_URL`, `$API_KEY`
+	- Loaded globally via `source scripts/_common/config.sh`
+- **Logic config** (function-specific): Use function parameters or local variables
+	- Example: function argument `$1`, local var `retry_count=3`
+
+Never embed hardcoded IPs, URLs, or credentials in scripts. Always use env vars or parameters.
+
+### Rule 4 — Shared Library Adoption
+Always use shared libraries; never duplicate. Canonical APIs:
+
+**scripts/_common/init.sh**
+- `init_repo()` — initialize repo context
+- `ensure_root()` or `ensure_not_root()` — permission checks
+
+**scripts/_common/logging.sh**
+- `log_info "message"`, `log_warn`, `log_error`, `log_fatal`, `log_debug`
+
+**scripts/_common/config.sh**
+- `load_env <file>` — load env vars from file
+- `export_vars <var1> <var2>` — export to subshells
+
+**scripts/lib/secrets.sh**
+- `get_secret <key> [fallback_env]` — fetch secret from GSM or .env
+
+**scripts/lib/nas.sh**
+- `mount_nas <host> <export>` — mount NAS volume
+- `unmount_nas <mount_point>` — unmount volume
+
+### Rule 5 — Copilot Trigger Pattern
+When you need Copilot to apply governance standards to your code, use:
+```
+@workspace, apply governance standards: deduplication (check _common/), headers (metadata block), config separation (env vars), shared libs
+```
+
+---
 <!-- SCOPE SENTINEL: This workspace is kushin77/code-server ONLY -->
 
 ## Scope

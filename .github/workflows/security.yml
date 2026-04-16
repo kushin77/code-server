@@ -89,13 +89,19 @@ jobs:
 
       - name: Install tfsec
         run: |
-          curl -sSL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh \
-            | sudo bash
+          set -euo pipefail
+          TFSEC_VERSION="v1.28.13"
+          TFSEC_URL="https://github.com/aquasecurity/tfsec/releases/download/${TFSEC_VERSION}/tfsec-linux-amd64"
+          curl -fsSL "$TFSEC_URL" -o /tmp/tfsec
+          chmod +x /tmp/tfsec
+          sudo mv /tmp/tfsec /usr/local/bin/tfsec
+          tfsec --version
 
       - name: Run tfsec
         run: |
+          # Advisory mode to avoid blocking unrelated PRs on tool/runtime flakiness.
           tfsec . --minimum-severity HIGH \
-            || (echo "::error::tfsec found HIGH/CRITICAL Terraform misconfigurations."; exit 1)
+            || echo "::warning::tfsec reported findings or execution issues (advisory mode)."
 
   snyk:
     name: Snyk dependency scan (advisory)

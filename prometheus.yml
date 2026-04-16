@@ -16,6 +16,7 @@ rule_files:
   - /etc/prometheus/alert-rules-audit-phase4.yml
   - /etc/prometheus/prometheus-rules-phase-23.yml
   - /etc/prometheus/alerts-phase-23.yml
+  - /etc/prometheus/prometheus-rules-slo-phase-8.yml
 
 scrape_configs:
   - job_name: 'prometheus'

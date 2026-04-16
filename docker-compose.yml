@@ -333,6 +333,52 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ─── PgBouncer ──────────────────────────────────────────────────────────────
+  # Connection pooler (transaction mode) — reduces PG connection overhead
+  # Phase 8 Post-HA performance tuning — profile: performance
+  # Usage: COMPOSE_PROFILES=performance docker compose up -d
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.0
+    container_name: pgbouncer
+    profiles: [performance]
+    restart: unless-stopped
+    networks:
+      - enterprise
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: "${POSTGRES_USER:-codeserver}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD:-change-me-in-env}"
+      DB_NAME: "${POSTGRES_DB:-codeserver}"
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "100"
+      DEFAULT_POOL_SIZE: "20"
+      MIN_POOL_SIZE: "5"
+      RESERVE_POOL_SIZE: "5"
+      MAX_DB_CONNECTIONS: "50"
+      SERVER_IDLE_TIMEOUT: "600"
+      LOG_CONNECTIONS: "0"
+      LOG_DISCONNECTIONS: "0"
+      ADMIN_USERS: pgbouncer
+    volumes:
+      - ./config/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${POSTGRES_USER:-codeserver} || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # ─── Redis ──────────────────────────────────────────────────────────────────
   # Cache and session store for oauth2-proxy
   # Core service — always starts (no profile)
@@ -396,6 +442,9 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - ./config/alert-rules-audit-phase4.yml:/etc/prometheus/alert-rules-audit-phase4.yml:ro
+      - ./prometheus-rules-phase-23.yml:/etc/prometheus/prometheus-rules-phase-23.yml:ro
+      - ./alerts-phase-23.yml:/etc/prometheus/alerts-phase-23.yml:ro
+      - ./prometheus-rules-slo-phase-8.yml:/etc/prometheus/prometheus-rules-slo-phase-8.yml:ro
       - prometheus-data:/prometheus
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]

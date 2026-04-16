@@ -115,7 +115,12 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const report = fs.readFileSync('/tmp/report.md', 'utf8').catch(() => '');
+            let report = '';
+            try {
+              report = fs.readFileSync('/tmp/report.md', 'utf8');
+            } catch (e) {
+              report = '';
+            }
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,

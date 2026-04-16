@@ -213,8 +213,8 @@ main() {
     
     if [[ "$dry_run" == "true" ]]; then
         echo "DRY-RUN MODE: Showing what would be checked..."
-        echo "Scan paths: ${SCAN_PATHS[@]}"
-        echo "Skip patterns: ${SKIP_PATTERNS[@]}"
+        echo "Scan paths:" "${SCAN_PATHS[@]}"
+        echo "Skip patterns:" "${SKIP_PATTERNS[@]}"
         return 0
     fi
     

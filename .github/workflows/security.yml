@@ -70,10 +70,10 @@ jobs:
       - name: Run Checkov
         run: |
           # Fail on HIGH and CRITICAL severity IaC misconfigurations.
-          # --soft-fail-on MEDIUM allows medium findings without blocking.
+          # MEDIUM and lower are advisory.
           checkov -d . \
             --framework dockerfile docker_compose terraform \
-            --check-threshold HIGH \
+            --hard-fail-on HIGH \
             --soft-fail-on MEDIUM \
             --quiet \
             || (echo "::error::Checkov found HIGH/CRITICAL IaC misconfigurations."; exit 1)

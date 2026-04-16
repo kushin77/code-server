@@ -45,6 +45,8 @@ jobs:
             # Exclude: deprecated/, archived/, .archived/, docs/ prose
             matches=$(grep -rn --include="*.yml" --include="*.yaml" \
               --include="*.tf" --include="*.sh" \
+              --exclude="validate-linux-only.yml" \
+              --exclude="check-no-windows-content.sh" \
               --exclude-dir=deprecated \
               --exclude-dir=archived \
               --exclude-dir=".archived" \
@@ -75,7 +77,7 @@ jobs:
 
       - name: Detect windows-* runner references
         run: |
-          bad=$(grep -rn "windows-" .github/workflows/ \
+          bad=$(grep -rn 'runs-on:[[:space:]]*windows' .github/workflows/ \
             --include="*.yml" --include="*.yaml" \
             --exclude="validate-linux-only.yml" 2>/dev/null || true)
           if [[ -n "$bad" ]]; then

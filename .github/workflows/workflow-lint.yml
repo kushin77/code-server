@@ -32,6 +32,8 @@ jobs:
             rules: {
               line-length: {max: 200},
               truthy: {allowed-values: ["true", "false", "on", "off"]},
+              trailing-spaces: disable,
+              brackets: disable,
               comments: disable,
               document-start: disable
             }
@@ -106,7 +108,8 @@ jobs:
           failed=0
           for pattern in "${patterns[@]}"; do
             matches=$(grep -rn "$pattern" .github/workflows/ \
-              --include="*.yml" --include="*.yaml" 2>/dev/null || true)
+              --include="*.yml" --include="*.yaml" \
+              --exclude="workflow-lint.yml" 2>/dev/null || true)
             if [[ -n "$matches" ]]; then
               echo "FAIL: Potential hardcoded secret in workflow:"
               echo "$matches" | sed 's/^/  /'

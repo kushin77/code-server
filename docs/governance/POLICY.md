@@ -393,6 +393,31 @@ governance_remediation_sla_days      # SLA timer for fixing violations
 **Weekly**: Governance violation summary (team Slack digest)  
 **Monthly**: Full governance debt report (email + dashboard)
 
+### 3.3 Governance Score
+
+GitHub Project `Governance Debt Tracker` and the governance enforcement workflow track a composite governance score from **0–100**.
+
+Formula:
+
+```text
+score = max(0, 100
+  - (jscpd_violations * 5)
+  - (missing_headers * 2)
+  - (hardcoded_ips * 10)
+  - (active_shims_with_fallback * 8))
+```
+
+Inputs are derived from canonical repository checks only:
+- `jscpd_violations`: duplicate clusters detected by `jscpd`
+- `missing_headers`: active `scripts/MANIFEST.toml` entries missing `@file/@module/@description`
+- `hardcoded_ips`: active top-level scripts with raw `192.168.168.x` references
+- `active_shims_with_fallback`: compatibility shims still retaining fallback implementations
+
+Usage:
+- PR workflow posts the current score as a comment and step summary.
+- Monthly governance report exports the score as Prometheus metrics.
+- GitHub Project field `Governance Score` stores the current debt posture for governance issues.
+
 ---
 
 ## 4. Toolchain Configuration

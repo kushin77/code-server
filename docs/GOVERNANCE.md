@@ -772,6 +772,12 @@ If Z happens, do W
 - Blocks merges of phase-numbered files
 - Warns about duplicate config files
 
+**Governance Score Tracking**:
+- `.github/workflows/governance-enforcement.yml` calculates a composite governance score on PRs
+- Score inputs come from canonical checks only: jscpd, metadata headers, hardcoded IPs, fallback shims
+- Monthly governance reporting exports the same score to Prometheus artifacts and the governance debt issue thread
+- GitHub Project `Governance Debt Tracker` uses `Governance Score` as the numeric tracking field for governance debt items
+
 ### 2. Manual Governance
 
 **Monthly Structure Review**:

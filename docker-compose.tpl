@@ -62,6 +62,13 @@ services:
           cpus: '0.25'
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
     logging:
       driver: json-file
       options:
@@ -94,6 +101,8 @@ services:
       start_period: 30s
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -135,6 +144,10 @@ services:
     depends_on:
       - ollama
     restart: on-failure
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   # ─── oauth2-proxy ───────────────────────────────────────────────────────────
   # Authentication sidecar (pinned to ${oauth2_proxy_version})
@@ -185,6 +198,8 @@ services:
       - code-server
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging:
       driver: json-file
       options:
@@ -218,6 +233,10 @@ services:
       - oauth2-proxy
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     logging:
       driver: json-file
       options:

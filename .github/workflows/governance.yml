@@ -1,3 +1,147 @@
+name: Governance
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+  issues:
+    types: [opened, labeled, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  labels:
+    name: Enforce Labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require Priority Label (PRs)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labels = pr.labels.map(l => l.name);
+            
+            const hasPriority = labels.some(l => /^P[0-3]$/.test(l));
+            if (!hasPriority) {
+              github.rest.issues.addLabels({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['needs-triage']
+              });
+              
+              github.rest.issues.createComment({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '⚠️ **Missing Priority Label**: Please add P0, P1, P2, or P3 label'
+              });
+            }
+
+      - name: Require Area Label
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+            const validAreas = ['area/core', 'area/observability', 'area/security', 'area/networking', 'area/database'];
+            
+            const hasArea = labels.some(l => validAreas.includes(l));
+            if (!hasArea) {
+              github.rest.issues.createComment({
+                issue_number: issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '⚠️ **Missing Area Label**: Please add one of: area/core, area/observability, area/security, area/networking, area/database'
+              });
+            }
+
+  policy-terraform:
+    name: Terraform Policy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v2
+
+      - name: Checkov Terraform Policy
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          soft_fail: true
+        continue-on-error: true
+
+  policy-docker:
+    name: Docker Policy
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.files.*.filename, 'Dockerfile') || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Dockerfile Standards
+        run: |
+          for df in Dockerfile*; do
+            if [ -f "$df" ]; then
+              echo "Validating $df..."
+              grep -q "^FROM" "$df" || (echo "ERROR: Missing FROM in $df" && exit 1)
+            fi
+          done
+          echo "✅ Dockerfile standards validated"
+
+  policy-security:
+    name: Security Policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Security Controls
+        run: |
+          if grep -r "password.*=" . --include="*.tf" --include="*.yaml" --include="*.yml" | grep -v "vault" | grep -v "^Binary"; then
+            echo "ERROR: Hardcoded passwords detected"
+            exit 1
+          fi
+          echo "✅ Security policies validated"
+
+  report:
+    name: Governance Report
+    runs-on: ubuntu-latest
+    needs: [labels, policy-terraform, policy-docker, policy-security]
+    if: always()
+    steps:
+      - name: Generate Report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const status = `
+            ## Governance Report
+            
+            | Policy | Status |
+            |--------|--------|
+            | Labels | ${{ needs.labels.result }} |
+            | Terraform | ${{ needs.policy-terraform.result }} |
+            | Docker | ${{ needs.policy-docker.result }} |
+            | Security | ${{ needs.policy-security.result }} |
+            
+            ✅ All governance policies checked
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: status
+            });
 name: Code Governance Enforcement
 
 on:

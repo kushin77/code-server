@@ -11,14 +11,14 @@ groups:
 
       - alert: BackupStale
         expr: |
-          (time() - backup_last_success_timestamp_seconds) > 86400
+          (time.time() - backup_last_success_timestamp_seconds) > 86400
         for: 30m
         labels:
           severity: critical
           component: backup
         annotations:
           summary: "Database backup has not run in over 24 hours"
-          description: "Last backup: {{ humanize (time() - backup_last_success_timestamp_seconds) }} ago on {{ $labels.instance }}"
+          description: "Last backup on {{ $labels.instance }} was {{ $value | humanizeDuration }} ago"
           runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-stale.md"
           dashboard_url: "https://grafana.kushnir.cloud/d/backup-recovery"
 
@@ -152,15 +152,15 @@ groups:
 
       - alert: RPOThresholdExceeded
         expr: |
-          # Actual recovery point is max(backup_age, wal_replication_lag)
-          max(backup_age_seconds, postgresql_wal_archive_queue_length * 100) > 300
+          # Actual recovery point is the maximum of backup age or WAL queue length
+          (backup_age_seconds > 300) or (postgresql_wal_archive_queue_length * 100 > 300)
         for: 5m
         labels:
           severity: warning
           component: recovery
         annotations:
           summary: "Recovery Point Objective (RPO) threshold exceeded on {{ $labels.instance }}"
-          description: "Data loss potential > 5 minutes. Current RPO: {{ humanize $value }}s"
+          description: "Data loss potential > 5 minutes. Current backup age: {{ $value | humanizeDuration }}"
           runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/rpo-exceeded.md"
 
       - alert: RTOThresholdExceeded

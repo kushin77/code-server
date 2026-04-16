@@ -1,0 +1,295 @@
+# Infrastructure Inventory - Central Configuration Management
+# Source of truth for all hosts, IPs, services, and roles
+# Version: 2.0 (April 18, 2026)
+# Last Updated: 2026-04-18
+
+---
+
+## HOSTS - Physical and Virtual Infrastructure
+hosts:
+  primary:
+    hostname: "code-server-primary"
+    ip_address: "192.168.168.31"
+    ssh_user: "akushnir"
+    ssh_port: 22
+    roles: [primary, code-server, database, cache, monitoring, observability]
+    description: "Primary production host - code-server, PostgreSQL, Redis, Prometheus, Grafana, Jaeger, Loki"
+    status: "active"
+    deployed: true
+    
+  replica:
+    hostname: "code-server-replica"
+    ip_address: "192.168.168.42"
+    ssh_user: "akushnir"
+    ssh_port: 22
+    roles: [replica, code-server, database, cache, monitoring, observability]
+    description: "Replica/failover host - mirrored configuration, standby mode"
+    status: "active"
+    deployed: true
+    
+  load_balancer:
+    hostname: "code-server-lb"
+    ip_address: "192.168.168.40"
+    ssh_user: "akushnir"
+    ssh_port: 22
+    roles: [load-balancer, gateway, haproxy, keepalived]
+    description: "Load balancer host - HAProxy, Keepalived, VIP management"
+    status: "planning"
+    deployed: false
+    
+  storage:
+    hostname: "nas-56"
+    ip_address: "192.168.168.55"
+    roles: [storage, nfs, backup]
+    description: "NAS storage - backups, WAL archiving, shared volumes"
+    export_path: "/export/backups"
+    nfs_version: 4
+    status: "active"
+    deployed: true
+
+---
+
+## NETWORK - IP Allocation and Connectivity
+network:
+  vlan_id: 168
+  gateway: "192.168.168.1"
+  netmask: "255.255.255.0"
+  subnet: "192.168.168.0/24"
+  
+  ## Primary IPs - Active production
+  primary_ip: "192.168.168.31"
+  replica_ip: "192.168.168.42"
+  
+  ## Virtual IPs - Failover & Load Balancing
+  virtual_ip: "192.168.168.30"
+  virtual_ip_hostname: "code-server-vip"
+  virtual_ip_purpose: "Transparent failover using VRRP/Keepalived"
+  virtual_ip_priority_primary: 200
+  virtual_ip_priority_replica: 100
+  virtual_ip_preempt: false
+  virtual_ip_failover_timeout: 5  # seconds
+  
+  ## Storage IP
+  storage_ip: "192.168.168.55"
+  storage_nfs_export: "/export/backups"
+  
+  ## DNS Configuration
+  dns_servers: ["8.8.8.8", "8.8.4.4"]
+  search_domains: ["example.com"]
+
+---
+
+## SERVICES - Container & System Services
+services:
+  
+  # Core Application Services
+  code_server:
+    name: "code-server"
+    port: 8080
+    protocol: "http"
+    version: "4.115.0"
+    description: "Code-server IDE"
+    dependencies: [oauth2-proxy, caddy]
+    
+  # Database & Cache
+  postgres:
+    name: "postgres"
+    port: 5432
+    protocol: "postgresql"
+    version: "15"
+    description: "PostgreSQL database"
+    backup_enabled: true
+    replication_enabled: true
+    wal_archiving: true
+    
+  redis:
+    name: "redis"
+    port: 6379
+    protocol: "redis"
+    version: "7"
+    description: "Redis cache"
+    sentinel_enabled: true
+    
+  pgbouncer:
+    name: "pgbouncer"
+    port: 6432
+    protocol: "postgresql"
+    version: "1.21"
+    description: "PostgreSQL connection pooler"
+    
+  # Observability Stack
+  prometheus:
+    name: "prometheus"
+    port: 9090
+    protocol: "http"
+    version: "2.48.0"
+    description: "Prometheus metrics"
+    retention_days: 15
+    scrape_interval: 30
+    
+  grafana:
+    name: "grafana"
+    port: 3000
+    protocol: "http"
+    version: "10.2.3"
+    description: "Grafana dashboards"
+    admin_user: "admin"
+    
+  alertmanager:
+    name: "alertmanager"
+    port: 9093
+    protocol: "http"
+    version: "0.26.0"
+    description: "Alert management"
+    
+  jaeger:
+    name: "jaeger"
+    port: 16686
+    protocol: "http"
+    jaeger_otlp_port: 4317
+    version: "1.50"
+    description: "Distributed tracing"
+    
+  loki:
+    name: "loki"
+    port: 3100
+    protocol: "http"
+    version: "2.11"
+    description: "Log aggregation"
+    
+  # Security & Network
+  oauth2_proxy:
+    name: "oauth2-proxy"
+    port: 4180
+    protocol: "http"
+    version: "7.5.1"
+    description: "OAuth2 authentication gateway"
+    
+  caddy:
+    name: "caddy"
+    port: 443
+    protocol: "https"
+    http_port: 80
+    version: "2.7"
+    description: "TLS termination & reverse proxy"
+    
+  kong:
+    name: "kong"
+    admin_port: 8001
+    proxy_port: 8000
+    proxy_ssl_port: 8443
+    version: "3.4"
+    description: "API gateway"
+    
+  coredns:
+    name: "coredns"
+    port: 53
+    protocol: "dns"
+    version: "1.11"
+    description: "DNS server"
+    
+  falco:
+    name: "falco"
+    version: "0.37.1"
+    description: "Runtime security monitoring"
+    mode: "modern-bpf"
+    
+  falcosidekick:
+    name: "falcosidekick"
+    port: 2801
+    version: "0.30.0"
+    description: "Falco alert forwarding"
+
+---
+
+## CREDENTIALS - Vault References
+credentials:
+  database:
+    postgres_user: "vault:secret/database/postgresql/username"
+    postgres_password: "vault:secret/database/postgresql/password"
+    postgres_db: "code_server"
+    
+  cache:
+    redis_password: "vault:secret/cache/redis/password"
+    
+  authentication:
+    google_client_id: "vault:secret/oauth/google/client_id"
+    google_client_secret: "vault:secret/oauth/google/client_secret"
+    github_token: "vault:secret/github/pat/token"
+    
+  cloudflare:
+    cf_api_token: "vault:secret/cloudflare/api_token"
+    cf_account_id: "vault:secret/cloudflare/account_id"
+    cf_zone_id: "vault:secret/cloudflare/zone_id"
+    
+  vrrp:
+    keepalived_auth_secret: "vault:secret/keepalived/auth_secret"
+
+---
+
+## ENVIRONMENT - Deployment Targets
+environments:
+  
+  production:
+    description: "Production environment (192.168.168.31)"
+    target_host: "primary"
+    vip_enabled: true
+    backup_enabled: true
+    replicas_enabled: true
+    slo_targets:
+      availability: "99.99%"
+      latency_p99: "100ms"
+      error_rate: "0.1%"
+    
+  replica:
+    description: "Replica/standby environment (192.168.168.42)"
+    target_host: "replica"
+    vip_enabled: true
+    backup_enabled: true
+    mirror_production: true
+    
+  development:
+    description: "Development environment (local)"
+    target_host: "local"
+    vip_enabled: false
+    backup_enabled: false
+    replicas_enabled: false
+
+---
+
+## MONITORING - Alert & Metric Targets
+monitoring:
+  prometheus_targets:
+    - host: "192.168.168.31"
+      port: 9090
+      job: "prometheus-primary"
+    - host: "192.168.168.42"
+      port: 9090
+      job: "prometheus-replica"
+      
+  alertmanager_targets:
+    - host: "192.168.168.31"
+      port: 9093
+      
+  jaeger_targets:
+    - host: "192.168.168.31"
+      port: 16686
+      
+  loki_targets:
+    - host: "192.168.168.31"
+      port: 3100
+
+---
+
+## METADATA
+metadata:
+  version: "2.0"
+  last_updated: "2026-04-18T00:00:00Z"
+  updated_by: "copilot-agent"
+  schema_version: "inventory-v1"
+  notes: |
+    - All IPs defined in this file (no hardcoding in scripts)
+    - All credentials reference Vault secrets
+    - VIP managed by Keepalived with VRRP
+    - NAS storage for backups and WAL archiving
+    - Load balancer currently in planning (not deployed)

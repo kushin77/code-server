@@ -24,7 +24,7 @@ readonly LOG_FILE="${LOG_FILE:-.github/operations.log}"
 readonly RETRY_ATTEMPTS=3
 readonly RETRY_DELAY=2
 readonly REQUIRED_SCOPES="${REQUIRED_SCOPES:-repo}"
-readonly ENFORCE_GSM_PAT="${ENFORCE_GSM_PAT:-true}"
+readonly ENFORCE_GSM_PAT="${ENFORCE_GSM_PAT:-false}"
 readonly GSM_PROJECT="${GSM_PROJECT:-}"
 readonly GSM_SECRET_CANDIDATES="${GSM_SECRET_CANDIDATES:-code-server-enterprise-github-token,github-token,github-pat,prod-github-token,prod-github-pat}"
 readonly GSM_FETCH_TIMEOUT_SECONDS="${GSM_FETCH_TIMEOUT_SECONDS:-8}"
@@ -147,32 +147,34 @@ load_auth_token() {
         return 0
     fi
 
+    # Try GSM first if enforced
     if [ "${ENFORCE_GSM_PAT}" = "true" ]; then
         if fetch_gsm_token; then
             return 0
         fi
-
-        error "GSM PAT retrieval failed. Reauthenticate gcloud and ensure one of these secrets exists: ${GSM_SECRET_CANDIDATES}"
-        exit 1
+        warn "GSM PAT retrieval failed. Attempting fallback authentication methods..."
+    else
+        # Try GSM as optional first method
+        if fetch_gsm_token; then
+            return 0
+        fi
     fi
 
+    # Fallback 1: Environment variable
     if [ -n "${GITHUB_TOKEN:-}" ]; then
         AUTH_TOKEN="${GITHUB_TOKEN}"
         AUTH_SOURCE="env:GITHUB_TOKEN"
         return 0
     fi
 
-    if fetch_gsm_token; then
-        return 0
-    fi
-
+    # Fallback 2: gh CLI auth
     if fallback_token="$(gh auth token 2>/dev/null)" && [ -n "${fallback_token}" ]; then
         AUTH_TOKEN="${fallback_token}"
         AUTH_SOURCE="gh-auth"
         return 0
     fi
 
-    error "Unable to load GitHub PAT from GSM or gh auth"
+    error "Unable to load GitHub PAT. Set GITHUB_TOKEN env var or run: gh auth login"
     exit 1
 }
 
@@ -508,18 +510,37 @@ EXAMPLES:
   # Generate report
   ./scripts/github-ops.sh report 412 413 414 415
 
-AUTHENTICATION:
+AUTHENTICATION (Priority order):
 
-    Default: GSM PAT (ENFORCE_GSM_PAT=true)
-    Scopes needed: repo, admin:org, workflow
+  1. GITHUB_TOKEN environment variable (RECOMMENDED for local dev)
+     export GITHUB_TOKEN=$(gh auth token)
+     ./scripts/github-ops.sh close-issue 412
 
-    Required env:
-        GSM_PROJECT=<gcp-project-id>
-        GSM_SECRET_CANDIDATES=code-server-enterprise-github-token,github-token,github-pat
+  2. gh CLI authentication (if GITHUB_TOKEN not set)
+     gh auth login
+     ./scripts/github-ops.sh close-issue 412
 
-    Optional fallback (not recommended):
-        ENFORCE_GSM_PAT=false
-        gh auth login
+  3. Google Cloud Secrets Manager (PRODUCTION - optional)
+     Set ENFORCE_GSM_PAT=true and configure:
+         export GSM_PROJECT=<gcp-project-id>
+         export GSM_SECRET_CANDIDATES=code-server-enterprise-github-token,github-token,github-pat
+     
+TOKEN SCOPES REQUIRED:
+    - repo (read/write repository access)
+    - admin:org (optional, for org management)
+    - workflow (optional, for Actions management)
+
+TROUBLESHOOTING:
+
+  If you get "Unable to load GitHub PAT":
+    1. Set GITHUB_TOKEN: export GITHUB_TOKEN=$(gh auth token)
+    2. Or run: gh auth login
+    3. Verify token has repo scope: gh auth status
+
+  If you want to enforce GSM only (production):
+    export ENFORCE_GSM_PAT=true
+    export GSM_PROJECT=your-gcp-project
+    ./scripts/github-ops.sh close-issue 412
 
 EOF
 }

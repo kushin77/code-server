@@ -153,10 +153,10 @@ services:
       GITHUB_TOKEN:    ${GITHUB_TOKEN:-}
       OLLAMA_ENDPOINT: http://ollama:${OLLAMA_PORT}
     command:
-      - "--bind-addr=0.0.0.0:8080"
+      - "--bind-addr=127.0.0.1:8080"  # Loopback ONLY - force through oauth2-proxy
       - "--disable-telemetry"
       - "--cert=false"
-      - "--auth=password"  # Require password authentication (from PASSWORD env var)
+      - "--auth=password"  # Require password as secondary factor
     volumes:
       - code-server-data:/home/coder:rw
     healthcheck:

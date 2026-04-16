@@ -4,11 +4,20 @@
 # Date: April 15, 2026
 # ════════════════════════════════════════════════════════════════
 
-auth_enabled: false  # Authentication disabled for on-prem single-tenant setup
+auth_enabled: true  # Authentication REQUIRED - each service has auth token
+
+# Basic auth credentials for per-service access (override in deployment)
+# Each service uses unique tenant_id to isolate logs
+auth:
+  type: basic
+  basic_auth:
+    realm: "Loki Production"
 
 server:
   http_listen_port: 3100
   log_level: warn
+  http_server_read_timeout: 600s
+  http_server_write_timeout: 600s
 
 common:
   instance_addr: 127.0.0.1

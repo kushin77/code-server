@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # P1 #354: Container Hardening Deployment
 #
@@ -18,10 +18,11 @@
 
 set -euo pipefail
 
-# Source common logging library
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh"
+# ════════════════════════════════════════════════════════════════════════════════════════════
+# CONFIGURATION
+# ════════════════════════════════════════════════════════════════════════════════════════════
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 LOG_FILE="${PROJECT_ROOT}/logs/container-hardening.log"
 
@@ -40,6 +41,23 @@ CONTAINERS=(
   "kong"
   "ollama"
 )
+
+# ════════════════════════════════════════════════════════════════════════════════════════════
+# LOGGING
+# ════════════════════════════════════════════════════════════════════════════════════════════
+
+log() {
+  local level="$1"
+  shift
+  local msg="$*"
+  local timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+  echo "[${timestamp}] [${level}] ${msg}" | tee -a "${LOG_FILE}"
+}
+
+log_error() { log "ERROR" "$@"; }
+log_warn() { log "WARN" "$@"; }
+log_info() { log "INFO" "$@"; }
+log_debug() { log "DEBUG" "$@"; }
 
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # SECURITY PROFILES

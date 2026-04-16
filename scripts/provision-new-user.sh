@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/provision-new-user.sh
+# @module      operations
+# @description provision new user — on-prem code-server
+# @owner       platform
+# @status      active
 # scripts/provision-new-user.sh - Automated User Provisioning
 # Usage: ./scripts/provision-new-user.sh "email@company.com" "viewer|developer|architect|admin" "Display Name"
 

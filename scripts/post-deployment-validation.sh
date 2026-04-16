@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/post-deployment-validation.sh
+# @module      operations
+# @description post deployment validation — on-prem code-server
+# @owner       platform
+# @status      active
 # post-deployment-validation.sh
 # Validates Tier 1 enhancements and measures improvements vs baseline
 

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/priority-enforcer.sh
+# @module      operations
+# @description priority enforcer — on-prem code-server
+# @owner       platform
+# @status      active
 # Priority Issue Enforcement Hook
 # MANDATORY: Forces all issue selection through priority system
 # Blocks random/unstructured issue selection

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/developer-lifecycle.sh
+# @module      operations
+# @description developer lifecycle — on-prem code-server
+# @owner       platform
+# @status      active
 # Developer Access Lifecycle Management
 # 
 # Purpose: Grant time-bounded access to developers with automatic expiration

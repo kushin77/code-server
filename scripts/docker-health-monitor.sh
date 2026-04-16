@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/docker-health-monitor.sh
+# @module      operations
+# @description docker health monitor — on-prem code-server
+# @owner       platform
+# @status      active
 # Docker Container Health Monitor
 # Monitors all containers for crashes, restarts, and resource issues
 

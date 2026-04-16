@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/production-operations-setup-p0.sh
+# @module      operations
+# @description production operations setup p0 — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # Production Operations Setup - P0 Priority
 # Monitoring, Alerting, and Incident Response Infrastructure

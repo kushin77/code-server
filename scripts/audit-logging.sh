@@ -1,5 +1,9 @@
 #!/bin/bash
-
+# @file        scripts/audit-logging.sh
+# @module      audit-logging
+# @description audit logging — on-prem code-server
+# @owner       platform
+# @status      active
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 ################################################################################

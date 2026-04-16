@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/validate-topology.sh
+# @module      testing
+# @description validate topology — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # validate-topology.sh
 #

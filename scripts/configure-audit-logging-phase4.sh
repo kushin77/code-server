@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/configure-audit-logging-phase4.sh
+# @module      operations
+# @description configure audit logging phase4 — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 4: Audit Logging & Testing - Complete Observability for IAM Stack
 # Purpose: Implement immutable audit trail and comprehensive testing
 # Author: Copilot AI Agent

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/automated-deployment-orchestration.sh
+# @module      deployment
+# @description automated deployment orchestration — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: automated-deployment-orchestration.sh
 # Owner: DevOps/Infrastructure Team

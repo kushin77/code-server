@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/deployment-validation-suite.sh
+# @module      deployment
+# @description deployment validation suite — on-prem code-server
+# @owner       platform
+# @status      active
 # Comprehensive IaC Deployment Validation & Testing
 # Executes full deployment, validates all services, runs benchmarks
 

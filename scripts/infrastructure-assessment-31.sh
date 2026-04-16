@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/infrastructure-assessment-31.sh
+# @module      operations
+# @description infrastructure assessment 31 — on-prem code-server
+# @owner       platform
+# @status      active
 # Infrastructure Assessment Script for ${DEPLOY_HOST}
 # Purpose: Gather comprehensive host specifications, GPU config, NAS connectivity
 # Usage: ssh akushnir@${DEPLOY_HOST} 'bash -s' < scripts/infrastructure-assessment-31.sh

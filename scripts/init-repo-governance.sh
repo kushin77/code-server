@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/init-repo-governance.sh
+# @module      operations
+# @description init repo governance — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: init-repo-governance.sh
 # Owner: DevOps/Governance Team

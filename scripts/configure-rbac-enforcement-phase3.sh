@@ -1,5 +1,9 @@
 #!/bin/bash
-
+# @file        scripts/configure-rbac-enforcement-phase3.sh
+# @module      iam
+# @description configure rbac enforcement phase3 — on-prem code-server
+# @owner       platform
+# @status      active
 #############################################################################
 # P1 #388 Phase 3: RBAC Enforcement at Service Boundaries Setup
 #

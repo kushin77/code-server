@@ -183,3 +183,39 @@ jobs:
           set -euo pipefail
           hadolint Dockerfile Dockerfile.code-server Dockerfile.caddy Dockerfile.ssh-proxy Dockerfile.token-microservice
           echo "✅ Dockerfile linting passed"
+
+  file-header-coverage:
+    name: GOV-002 — @file header coverage (active scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Check all active scripts have @file metadata headers
+        run: |
+          set -euo pipefail
+          missing=0
+          total=0
+          while IFS= read -r -d '' f; do
+            # Skip _common and _archive
+            [[ "$f" == */_common/* || "$f" == */_archive/* ]] && continue
+            total=$((total + 1))
+            if ! head -6 "$f" | grep -qE "^# @file"; then
+              echo "MISSING @file header: $f"
+              missing=$((missing + 1))
+            fi
+          done < <(find scripts/ -name "*.sh" -type f -print0 | sort -z)
+
+          echo ""
+          echo "Total scripts scanned: $total"
+          echo "Missing @file headers: $missing"
+
+          if [[ $missing -gt 0 ]]; then
+            echo ""
+            echo "::error::$missing script(s) missing @file metadata header (GOV-002 #297)"
+            echo "Run scripts/dev/add-metadata-headers.sh to fix, or add manually:"
+            echo "  # @file        scripts/<name>.sh"
+            echo "  # @module      <module>"
+            echo "  # @description <one-line description>"
+            exit 1
+          fi
+          echo "✅ All $total scripts have @file metadata headers"

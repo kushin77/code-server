@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/common-functions.sh
+# @module      common
+# @description common functions — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # common-functions.sh
 # ⚠️  DEPRECATED — Use scripts/_common/init.sh instead.

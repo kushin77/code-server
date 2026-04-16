@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/vscode-memory-dashboard.sh
+# @module      vscode-stability
+# @description vscode memory dashboard — on-prem code-server
+# @owner       platform
+# @status      active
 # ═══════════════════════════════════════════════════════════════════════════
 # VSCode Memory Dashboard
 # Purpose: Display memory usage breakdown across all VSCode processes

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/mandatory-redeploy.sh
+# @module      operations
+# @description mandatory redeploy — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # mandatory-redeploy.sh - Post-merge deployment orchestration
 # Executes after successful CI/CD to rebuild and redeploy code-server

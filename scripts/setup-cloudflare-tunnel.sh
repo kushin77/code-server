@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/setup-cloudflare-tunnel.sh
+# @module      operations
+# @description setup cloudflare tunnel — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 7d-001: Cloudflare Tunnel Setup Script (P1 #351)
 # Implements installation and service management for cloudflared on-prem.
 

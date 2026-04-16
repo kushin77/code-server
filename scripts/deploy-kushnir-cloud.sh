@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/deploy-kushnir-cloud.sh
+# @module      deployment
+# @description deploy kushnir cloud — on-prem code-server
+# @owner       platform
+# @status      active
 # deploy-kushnir-cloud.sh
 # Idempotent deploy for <DOMAIN>/ide — fully containerised, no host mutation.
 # Run on any Linux host with Docker installed.

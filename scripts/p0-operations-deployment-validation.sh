@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/p0-operations-deployment-validation.sh
+# @module      operations
+# @description p0 operations deployment validation — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # P0 Operations Deployment Validation
 # Production monitoring, alerting, and incident response setup

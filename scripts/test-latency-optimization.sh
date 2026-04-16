@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/test-latency-optimization.sh
+# @module      testing
+# @description test latency optimization — on-prem code-server
+# @owner       platform
+# @status      active
 # File: scripts/test-latency-optimization.sh
 # Owner: ops
 # Status: ACTIVE

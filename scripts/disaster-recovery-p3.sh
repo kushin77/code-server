@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/disaster-recovery-p3.sh
+# @module      operations
+# @description disaster recovery p3 — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # Disaster Recovery Implementation (P3)
 # IaC: Automated DR procedures, backup strategies, failover automation

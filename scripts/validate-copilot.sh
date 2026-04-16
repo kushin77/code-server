@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/validate-copilot.sh
+# @module      testing
+# @description validate copilot — on-prem code-server
+# @owner       platform
+# @status      active
 # Validate GitHub Copilot Chat installation in code-server
 # Run this inside the container to verify everything is working
 

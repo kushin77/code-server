@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/memory-budget-guard.sh
+# @module      operations
+# @description memory budget guard — on-prem code-server
+# @owner       platform
+# @status      active
 #
 # Memory Budget Guard Script - P2 #448 Implementation
 # Monitors and controls memory usage across services

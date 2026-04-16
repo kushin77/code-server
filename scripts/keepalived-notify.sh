@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/keepalived-notify.sh
+# @module      operations
+# @description keepalived notify — on-prem code-server
+# @owner       platform
+# @status      active
 #
 # Keepalived Notification Script — Handle VRRP state changes
 #

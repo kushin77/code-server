@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/deploy-egress-filtering.sh
+# @module      deployment
+# @description deploy egress filtering — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════
 # Deploy Docker egress filtering via iptables DOCKER-USER chain
 # Issue #350: Block data exfiltration, prevent C&C communication

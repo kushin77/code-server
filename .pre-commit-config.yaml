@@ -22,17 +22,22 @@ repos:
         pass_filenames: false
         stages: [commit]
 
-      # Phase 2.3: Custom hook - verify metadata headers (ENHANCED for #297)
+      # Phase 2.3: Custom hook - verify metadata headers (GOV-002 #297 — all active scripts)
       - id: verify-metadata-headers
-        name: Verify metadata headers in critical scripts
+        name: Verify @file/@module/@description headers in ALL scripts
         entry: bash -c '
-          # Check only newly ADDED files (--diff-filter=A) to avoid retrofitting all scripts at once
-          new_scripts=$(git diff --cached --name-only --diff-filter=A -- "scripts/*.sh" "scripts/**/*.sh" 2>/dev/null | grep -v "_common/" | grep -v "_archive/")
-          if [[ -n "$new_scripts" ]]; then
+          # Check ALL staged scripts (not just new ones) — migration complete, enforce globally
+          staged=$(git diff --cached --name-only -- "scripts/*.sh" "scripts/**/*.sh" 2>/dev/null \
+            | grep -v "_common/" | grep -v "_archive/")
+          if [[ -n "$staged" ]]; then
             missing_headers=0
-            for f in $new_scripts; do
-              if ! head -3 "$f" | grep -qE "@file|@module|@description"; then
-                echo "ERROR: $f missing @file/@module/@description metadata header"
+            for f in $staged; do
+              [[ -f "$f" ]] || continue
+              if ! head -6 "$f" | grep -qE "@file"; then
+                echo "ERROR: $f missing @file metadata header"
+                echo "  Add: # @file        $f"
+                echo "       # @module      <module>"
+                echo "       # @description <one-line description>"
                 missing_headers=$((missing_headers + 1))
               fi
             done

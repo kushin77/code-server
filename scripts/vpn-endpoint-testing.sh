@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/vpn-endpoint-testing.sh
+# @module      networking
+# @description vpn endpoint testing — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════
 # VPN Endpoint Testing & Validation Script
 # Tests connectivity to all critical on-prem infrastructure endpoints

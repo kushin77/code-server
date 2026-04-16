@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/configure-oidc-providers-phase1.sh
+# @module      iam
+# @description configure oidc providers phase1 — on-prem code-server
+# @owner       platform
+# @status      active
 #
 # P1 #388 - OAuth2 Provider Configuration (Phase 1)
 # Sets up OIDC federation with Google, GitHub, and local Keycloak

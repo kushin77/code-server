@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/enforce-governance.sh
+# @module      operations
+# @description enforce governance — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: enforce-governance.sh
 # Owner: DevOps/Governance Team

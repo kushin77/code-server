@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/cleanup-container-overlap.sh
+# @module      maintenance
+# @description cleanup container overlap — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: cleanup-container-overlap.sh
 # Owner: Container Operations Team

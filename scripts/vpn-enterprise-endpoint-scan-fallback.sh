@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/vpn-enterprise-endpoint-scan-fallback.sh
+# @module      networking
+# @description vpn enterprise endpoint scan fallback — on-prem code-server
+# @owner       platform
+# @status      active
 # ═══════════════════════════════════════════════════════════════════════════════
 # VPN Enterprise Endpoint Scan - Fallback (SSH-based Remote Check)
 # ═══════════════════════════════════════════════════════════════════════════════

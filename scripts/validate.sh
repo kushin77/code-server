@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/validate.sh
+# @module      testing
+# @description validate — on-prem code-server
+# @owner       platform
+# @status      active
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

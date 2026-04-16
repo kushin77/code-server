@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/automated-oauth-configuration.sh
+# @module      iam
+# @description automated oauth configuration — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: automated-oauth-configuration.sh
 # Owner: Security/Identity Team

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/deployment-validation-31.sh
+# @module      deployment
+# @description deployment validation 31 — on-prem code-server
+# @owner       platform
+# @status      active
 # File:    deployment-validation-31.sh
 # Owner:   Platform Engineering
 # Purpose: Deployment validation test suite for ${DEPLOY_HOST}

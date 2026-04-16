@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/phase-23-deploy.sh
+# @module      operations
+# @description phase 23 deploy — on-prem code-server
+# @owner       platform
+# @status      active
 # ─────────────────────────────────────────────────────────────────────────────
 # Phase 23: Advanced Observability Deployment
 # Deploys OTel Collector, Jaeger backend, and anomaly detector

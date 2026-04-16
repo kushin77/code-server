@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/deploy-rbac-enforcement-phase3.sh
+# @module      deployment
+# @description deploy rbac enforcement phase3 — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 3: RBAC Enforcement Deployment Script
 # Production deployment for service-to-service authorization controls
 

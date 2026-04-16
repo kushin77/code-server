@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/deploy-falco.sh
+# @module      deployment
+# @description deploy falco — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════
 # Deploy Falco Runtime Security - eBPF kernel monitoring
 # Issue #359: Container anomaly detection, malware, cryptominers

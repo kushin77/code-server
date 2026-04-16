@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/operations-runbook.sh
+# @module      operations
+# @description operations runbook — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: operations-runbook.sh
 # Owner: Operations/On-Call Team

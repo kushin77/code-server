@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/vscode-crash-diagnostics.sh
+# @module      vscode-stability
+# @description vscode crash diagnostics — on-prem code-server
+# @owner       platform
+# @status      active
 # VS Code Crash Diagnostics for code-server-enterprise
 # Run this script to identify the cause of VS Code crashes
 

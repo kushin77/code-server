@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/code-server-entrypoint.sh
+# @module      operations
+# @description code server entrypoint — on-prem code-server
+# @owner       platform
+# @status      active
 set -eu
 
 # ── Patch product.json ────────────────────────────────────────────────────────

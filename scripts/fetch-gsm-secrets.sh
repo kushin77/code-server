@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/fetch-gsm-secrets.sh
+# @module      operations
+# @description fetch gsm secrets — on-prem code-server
+# @owner       platform
+# @status      active
 # fetch-gsm-secrets.sh
 # Fetches code-server secrets from Google Secret Manager (gcp-eiq project)
 # Mimics eiq-org pattern: gcloud secrets versions access → env var injection

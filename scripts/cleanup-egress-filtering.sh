@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/cleanup-egress-filtering.sh
+# @module      maintenance
+# @description cleanup egress filtering — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════
 # Cleanup Docker egress filtering rules (for rollback/uninstall)
 # ════════════════════════════════════════════════════════════════════════════

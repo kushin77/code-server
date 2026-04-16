@@ -1,5 +1,9 @@
 #!/bin/bash
-
+# @file        scripts/incident-simulation.sh
+# @module      operations
+# @description incident simulation — on-prem code-server
+# @owner       platform
+# @status      active
 ##############################################################################
 # Phase 13 Incident Simulation Script
 # Tests incident response procedures and on-call team readiness

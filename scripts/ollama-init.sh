@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/ollama-init.sh
+# @module      operations
+# @description ollama init — on-prem code-server
+# @owner       platform
+# @status      active
 # Ollama initialization and management script — FULLY IDEMPOTENT
 # Handles model pulling, repository indexing, and health checks
 # Safe to run multiple times — all operations are idempotent

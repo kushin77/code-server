@@ -12,6 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Run Global Quality Gate
+        run: |
+          chmod +x scripts/lib/global-quality-gate.sh
+          GATE_MODE=incremental bash scripts/lib/global-quality-gate.sh
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:

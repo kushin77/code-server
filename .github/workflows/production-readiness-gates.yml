@@ -16,6 +16,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Global Quality Gate
+        run: |
+          chmod +x scripts/lib/global-quality-gate.sh
+          GATE_MODE=incremental bash scripts/lib/global-quality-gate.sh
+
       - name: Phase 1: Design Review
         run: |
           echo "::group::Phase 1: Design Review"
@@ -75,5 +80,5 @@ jobs:
             4. ✅ Runbook documented
             5. ✅ Rollback strategy <60 seconds
             
-            Once merged, deployment to \`192.168.168.31\` is automated.`
+            Once merged, deployment to the production primary host is automated.`
             })

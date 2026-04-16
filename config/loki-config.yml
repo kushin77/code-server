@@ -1,0 +1,87 @@
+# Loki configuration — log aggregation and storage
+# Parses Docker container logs + application JSON logs
+# Enables LogQL queries for structured logging
+
+auth_enabled: false
+
+ingester:
+  chunk_idle_period: 3m
+  chunk_retain_period: 1m
+  max_chunk_age: 1h
+  max_streams_per_user: 10000
+  chunk_encoding: snappy
+
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  ingestion_rate_mb: 8
+  ingestion_burst_size_mb: 16
+  max_streams_per_user: 10000
+  max_entries_limit_per_minute: 100000
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v12
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active
+    shared_store: filesystem
+  filesystem:
+    directory: /loki/chunks
+
+chunk_store_config:
+  max_look_back_period: 0s
+
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 168h  # 7 days
+
+server:
+  http_listen_port: 3100
+  log_level: warn
+  log_format: json
+
+# Target configuration — where logs come from
+# docker: All container logs (via Docker API)
+# syslog: System logs from host
+# journal: Systemd journal logs
+targets:
+  - docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+    relabel_configs:
+      # Add container name as label
+      - source_labels: ['__meta_docker_container_name']
+        target_label: 'container'
+      # Add image name as label
+      - source_labels: ['__meta_docker_image_name']
+        target_label: 'image'
+      # Add service label (extracted from container name)
+      - source_labels: ['container']
+        regex: '([a-z0-9-]+)(_[0-9]+)?'
+        target_label: 'service'
+
+# Pipeline stages — extract and parse fields from raw logs
+pipeline_stages:
+  - docker: {}
+  - regex:
+      expression: '(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.?\d*Z?).*'
+  - json:
+      # Parse JSON logs for structure
+      expressions:
+        trace_id: trace_id
+        span_id: span_id
+        level: level
+        message: message
+        error: error
+  - labels:
+      trace_id: ''
+      span_id: ''
+      level: ''

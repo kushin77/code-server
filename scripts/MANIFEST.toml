@@ -93,6 +93,12 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "configure-oidc-phase1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "configure-oidc-providers-phase1.sh"
 category = "uncategorized"
 status   = "active"

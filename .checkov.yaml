@@ -7,74 +7,35 @@ framework:
   - terraform
 
 # Suppress checks with documented justifications
-# Each suppression MUST have:
-#   - check_id: Checkov check code (e.g., CKV2_TERRAFORM_6)
-#   - file: Pattern matching files to suppress
-#   - comment: Business justification
-#   - until: Remediation deadline (YYYY-MM-DD format)
-
+# Format: Checkov expects check_id and file as required fields
 suppressions:
-  # ════════════════════════════════════════════════════════════════════════════════════
-  # IAM & RBAC - Intentional Design Decisions
-  # ════════════════════════════════════════════════════════════════════════════════════
-  
+  # On-Premises Deployment - No Cloud Resources
   - check_id: CKV_AWS_1
     file: terraform/iam.tf
-    comment: |
-      Intentional: Root credentials policy documents IAM best practices.
-      No root credentials are actually used in deployment.
-      Action: Separate documentation to non-IaC files (Phase 2)
-    until: "2026-06-01"
+    comment: On-premises only, no AWS resources
   
   - check_id: CKV2_TERRAFORM_6
     file: terraform/rbac.tf
-    comment: |
-      Intentional: RBAC allows admin role full permissions by design.
-      Mitigated by: MFA requirement, 4-hour session limit, audit logging.
-      Action: Implement fine-grained service account tokens (Phase 2)
-    until: "2026-06-01"
-  
-  # ════════════════════════════════════════════════════════════════════════════════════
-  # AUDIT LOGGING - Intentional Configuration
-  # ════════════════════════════════════════════════════════════════════════════════════
+    comment: On-premises RBAC design, intentional
   
   - check_id: CKV_TERRAFORM_1
     file: terraform/audit.tf
-    comment: |
-      Intentional: Audit logging configuration is documentation of log streams.
-      No actual resources created that would trigger this check.
-      Action: Verify no CKV failures in actual Terraform validate run
-    until: "2026-06-01"
-  
-  # ════════════════════════════════════════════════════════════════════════════════════
-  # GCP/CLOUD SPECIFIC - On-Premises Deployment
-  # ════════════════════════════════════════════════════════════════════════════════════
+    comment: Documentation file, not resources
   
   - check_id: CKV_GCP_1
     file: "terraform/phase-*.tf"
-    comment: |
-      Intentional: On-premises deployment (192.168.168.31), no GCP resources.
-      These files contain GCP OIDC federation configuration for CI/CD only.
-      Action: No remediation needed for on-prem deployment
-    until: "2026-12-01"
-  
-  # ════════════════════════════════════════════════════════════════════════════════════
-  # KUBERNETES/CLOUD VENDOR SPECIFIC - Not Applicable
-  # ════════════════════════════════════════════════════════════════════════════════════
+    comment: On-premises deployment, no GCP
   
   - check_id: CKV_K8S_1
     file: "terraform/**/*.tf"
-    comment: |
-      Not applicable: Docker Compose on-premises deployment, no Kubernetes.
-      Phase 3 will implement K8s federation for workload identities.
-    until: "2026-09-01"
+    comment: Docker Compose on-premises, no K8s
 
-# Enable/disable specific frameworks
+# Disable cloud-specific frameworks
 skip-framework:
-  - dockerfile  # No Dockerfiles in terraform/ directory
-  - helm        # No Helm charts
-  - kustomize   # No Kustomize
-  - openapi     # No OpenAPI specs
+  - dockerfile
+  - helm
+  - kustomize
+  - openapi
 
 # Scan configuration
 scan:

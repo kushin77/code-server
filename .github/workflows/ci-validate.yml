@@ -75,6 +75,44 @@ jobs:
           fi
           echo "✅ Zero governance violations"
 
+  readme-docs-integrity:
+    name: README docs integrity (markdown + local links)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install markdownlint-cli
+        run: |
+          set -euo pipefail
+          sudo npm install -g markdownlint-cli@0.39.0
+
+      - name: Lint README markdown structure
+        run: |
+          set -euo pipefail
+          markdownlint README.md
+
+      - name: Validate README local markdown links
+        run: |
+          set -euo pipefail
+          failures=0
+          # Validate only local relative links: [text](path)
+          while IFS= read -r raw; do
+            target=$(echo "$raw" | sed -E 's/^.*\]\(([^)#]+)(#[^)]+)?\).*/\1/')
+            # Skip URLs, mailto, and empty anchors.
+            if [[ "$target" =~ ^https?:// ]] || [[ "$target" =~ ^mailto: ]] || [[ -z "$target" ]]; then
+              continue
+            fi
+            if [[ ! -e "$target" ]]; then
+              echo "::error::README link target does not exist: $target"
+              failures=1
+            fi
+          done < <(grep -oE '\[[^]]+\]\(([^)]+)\)' README.md || true)
+
+          if [[ "$failures" -ne 0 ]]; then
+            exit 1
+          fi
+          echo "README local link check passed"
+
   # Ref: #400 — explicit shellcheck job (also run via pre-commit above; this gives
   # clear per-file annotations in the PR diff view)
   shellcheck:

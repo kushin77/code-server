@@ -8,19 +8,13 @@
 
 set -euo pipefail
 
-# Color output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+# Source common logging library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
 
 # Config paths
 CONFIG_DIR="${CONFIG_DIR:-./config/iam}"
 SECRETS_DIR="${SECRETS_DIR:-.env.local}"
-
-log_info() { echo -e "${GREEN}✓${NC} $*"; }
-log_warn() { echo -e "${YELLOW}⚠${NC} $*"; }
-log_error() { echo -e "${RED}✗${NC} $*"; exit 1; }
 
 # ============================================================================
 # Phase 1: OIDC Provider Configuration

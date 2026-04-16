@@ -21,6 +21,15 @@ COMPOSE_PROFILES=ai docker compose up -d
 COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
 ```
 
+## Run Mode Matrix
+
+| Mode | Compose command | Includes |
+|---|---|---|
+| IDE-only | `docker compose up -d` | code-server, oauth2-proxy, caddy, postgres, redis |
+| IDE + AI | `COMPOSE_PROFILES=ai docker compose up -d` | IDE-only + ollama |
+| IDE + Observability | `COMPOSE_PROFILES=monitoring,tracing docker compose up -d` | IDE-only + prometheus, grafana, alertmanager, loki, promtail, otel-collector, jaeger |
+| Full platform | `COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d` | IDE, AI, and observability stack |
+
 ## Services
 
 | Service | Port | Profile | Notes |
@@ -56,9 +65,11 @@ cd code-server-enterprise
 docker compose up -d
 ```
 
+For AI or observability in production, use the same profile flags from `Quick Start` on host `192.168.168.31`.
+
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) and [ADR-001](ADR-001-CLOUDFLARE-TUNNEL-ARCHITECTURE.md).
+See [ARCHITECTURE.md](ARCHITECTURE.md), [ADR index](docs/adr/README.md), and [Cloudflare tunnel ADR](docs/adr/006-cloudflare-tunnel-architecture.md).
 
 ## Contributing
 

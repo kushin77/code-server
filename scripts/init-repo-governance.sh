@@ -204,7 +204,6 @@ EOF
     else
         verbose "Skipped: .github/README.md (already exists)"
     fi
-    fi
 fi
 
 # Create COST-ESTIMATE.md template

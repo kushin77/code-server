@@ -64,8 +64,8 @@ set -euo pipefail
 # Exit code: 0 = success, 1 = deployment failed
 # ─────────────────────────────────────────────────────────────────────────────
 
-PROJECT_DIR="$$(cd "$$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$$PROJECT_DIR"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 
 # Bootstrap: single entrypoint loads config, logging, utils, error-handler, docker, ssh
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

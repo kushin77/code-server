@@ -1,0 +1,214 @@
+{
+  "annotations": { "list": [] },
+  "description": "Structured logs — correlation IDs, error fingerprinting, PII-scrubbed stream (#395)",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Log Volume",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${datasource}" },
+      "description": "Log lines per minute by level across all services",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 20, "lineWidth": 1 }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "error" }, "properties": [{ "id": "color", "value": { "fixedColor": "#e02f44", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "warn" },  "properties": [{ "id": "color", "value": { "fixedColor": "#ff9900", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "info" },  "properties": [{ "id": "color", "value": { "fixedColor": "#73bf69", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "expr": "sum by (level) (rate({container_name=~\"$service\"} | json | line_format \"{{.level}}\" [1m]))",
+          "legendFormat": "{{level}}"
+        }
+      ],
+      "title": "Log Volume by Level",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${datasource}" },
+      "description": "Error fingerprint frequency — group recurring errors",
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "id": 2,
+      "options": {
+        "displayMode": "list",
+        "reduceOptions": { "calcs": ["sum"] },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "expr": "sum by (errorFingerprint) (count_over_time({container_name=~\"$service\"} | json | errorFingerprint != \"\" [$__range]))",
+          "legendFormat": "{{errorFingerprint}}"
+        }
+      ],
+      "title": "Error Fingerprints (Top Recurring)",
+      "type": "bargauge"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${datasource}" },
+      "description": "P95 request duration by service (requires structured HTTP logs)",
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "decimals": 0 },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "id": 3,
+      "options": { "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "expr": "quantile_over_time(0.95, {container_name=~\"$service\"} | json | durationMs != \"\" | unwrap durationMs [5m]) by (service)",
+          "legendFormat": "p95 {{service}}"
+        }
+      ],
+      "title": "p95 Request Duration by Service",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "id": 101,
+      "title": "Live Log Stream",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${datasource}" },
+      "description": "Live structured log stream with level filter and correlation ID drill-down",
+      "gridPos": { "h": 15, "w": 24, "x": 0, "y": 18 },
+      "id": 4,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "expr": "{container_name=~\"$service\"} |= \"$search\" | json | level=~\"$level\"",
+          "legendFormat": "",
+          "maxLines": 500
+        }
+      ],
+      "title": "Structured Log Stream",
+      "type": "logs"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "id": 102,
+      "title": "Error Investigation",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${datasource}" },
+      "description": "All error-level log entries with error fingerprint and stack traces",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 34 },
+      "id": 5,
+      "options": {
+        "dedupStrategy": "signature",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "expr": "{container_name=~\"$service\"} | json | level=\"error\"",
+          "legendFormat": "",
+          "maxLines": 200
+        }
+      ],
+      "title": "Errors (deduplicated by signature)",
+      "type": "logs"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["logs", "loki", "observability", "telemetry"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Loki", "value": "loki" },
+        "hide": 0,
+        "includeAll": false,
+        "name": "datasource",
+        "options": [],
+        "query": "loki",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "datasource": { "type": "loki", "uid": "${datasource}" },
+        "definition": "label_values(container_name)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "service",
+        "options": [],
+        "query": "label_values(container_name)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": { "selected": true, "text": "All", "value": ".*" },
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "level",
+        "options": [
+          { "selected": true, "text": "All",   "value": ".*" },
+          { "selected": false, "text": "debug", "value": "debug" },
+          { "selected": false, "text": "info",  "value": "info" },
+          { "selected": false, "text": "warn",  "value": "warn" },
+          { "selected": false, "text": "error", "value": "error" }
+        ],
+        "query": "debug,info,warn,error",
+        "type": "custom"
+      },
+      {
+        "current": { "text": "", "value": "" },
+        "hide": 0,
+        "name": "search",
+        "options": [{ "selected": true, "text": "", "value": "" }],
+        "query": "",
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Structured Logs — Telemetry (Phase 2)",
+  "uid": "structured-logs-phase2",
+  "version": 1
+}

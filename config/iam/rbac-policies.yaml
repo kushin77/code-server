@@ -1,0 +1,397 @@
+#
+# P1 #388 - RBAC Policy Template
+# Phase 1: Identity & Workload Authentication Standardization
+#
+# Defines role-based access control (RBAC) policies for all platform services
+# Three roles: admin (full access), operator (operational access), viewer (read-only)
+#
+
+---
+version: "1.0"
+iam_issue: "P1 #388"
+phase: 1
+
+# Global policy settings
+global:
+  # Deny by default, allow explicitly (principle of least privilege)
+  default_action: deny
+  
+  # Policy evaluation order: explicit deny > explicit allow > default deny
+  evaluation_order: "deny,allow,default"
+  
+  # Case sensitivity for resource names
+  case_sensitive: true
+  
+  # Wildcard matching for resources (glob patterns)
+  wildcard_matching: true
+
+# Service definitions
+services:
+  code-server:
+    description: "Web IDE and code execution environment"
+    resource_prefix: "code-server"
+    
+  backstage:
+    description: "Software catalog and developer portal"
+    resource_prefix: "backstage"
+    
+  appsmith:
+    description: "Operational workflows and incident response"
+    resource_prefix: "appsmith"
+    
+  ollama:
+    description: "AI/ML inference service"
+    resource_prefix: "ollama"
+    
+  prometheus:
+    description: "Metrics collection and alerting"
+    resource_prefix: "prometheus"
+    
+  grafana:
+    description: "Visualization and dashboarding"
+    resource_prefix: "grafana"
+    
+  loki:
+    description: "Log aggregation and search"
+    resource_prefix: "loki"
+    
+  jaeger:
+    description: "Distributed tracing"
+    resource_prefix: "jaeger"
+    
+  terraform:
+    description: "Infrastructure as Code"
+    resource_prefix: "terraform"
+    
+  kubernetes:
+    description: "Container orchestration"
+    resource_prefix: "kubernetes"
+
+# Role Definitions
+roles:
+
+  # =====================================================================
+  # Admin Role
+  # Full platform access, can modify infrastructure and security policies
+  # =====================================================================
+  admin:
+    description: "Platform administrator with full access"
+    priority: 3
+    
+    permissions:
+      # Infrastructure (Terraform)
+      - resource: "terraform:*"
+        actions: ["apply", "destroy", "import", "state:*"]
+        effect: allow
+        
+      # Kubernetes
+      - resource: "kubernetes:*"
+        actions: ["*"]
+        effect: allow
+        
+      # Code-Server (IDE)
+      - resource: "code-server:*"
+        actions: ["execute", "admin"]
+        effect: allow
+        
+      # Backstage
+      - resource: "backstage:*"
+        actions: ["*"]
+        effect: allow
+        
+      # Appsmith
+      - resource: "appsmith:*"
+        actions: ["*"]
+        effect: allow
+        
+      # Ollama (AI service)
+      - resource: "ollama:*"
+        actions: ["*"]
+        effect: allow
+        
+      # Prometheus (Metrics)
+      - resource: "prometheus:*"
+        actions: ["*"]
+        effect: allow
+        
+      # Grafana (Dashboards)
+      - resource: "grafana:*"
+        actions: ["dashboard:create", "dashboard:modify", "dashboard:delete", "admin"]
+        effect: allow
+        
+      # Loki (Logs)
+      - resource: "loki:*"
+        actions: ["*"]
+        effect: allow
+        
+      # Jaeger (Tracing)
+      - resource: "jaeger:*"
+        actions: ["*"]
+        effect: allow
+        
+      # Secrets Management
+      - resource: "secrets:*"
+        actions: ["read", "write", "delete", "rotate"]
+        effect: allow
+        
+      # Audit Logs
+      - resource: "audit:*"
+        actions: ["read", "export", "delete"]
+        effect: allow
+        
+      # IAM Management
+      - resource: "iam:*"
+        actions: ["*"]
+        effect: allow
+        
+      # Incident Management (Full control)
+      - resource: "incidents:*"
+        actions: ["declare", "command", "respond", "mitigate", "post-mortem"]
+        effect: allow
+
+  # =====================================================================
+  # Operator Role
+  # Execute operational tasks: deployments, incident response, troubleshooting
+  # =====================================================================
+  operator:
+    description: "Operator with deployment and incident response access"
+    priority: 2
+    
+    permissions:
+      # Infrastructure (Read-only planning, cannot apply/destroy)
+      - resource: "terraform:*"
+        actions: ["plan", "validate"]
+        effect: allow
+        
+      - resource: "terraform:state"
+        actions: ["read"]
+        effect: allow
+        
+      # Kubernetes (Deploy, restart, but no delete)
+      - resource: "kubernetes:pods"
+        actions: ["get", "list", "describe", "logs", "exec"]
+        effect: allow
+        
+      - resource: "kubernetes:deployments"
+        actions: ["get", "list", "describe", "rollout"]
+        effect: allow
+        
+      - resource: "kubernetes:services"
+        actions: ["get", "list", "describe"]
+        effect: allow
+        
+      # Code-Server (Execute, no admin)
+      - resource: "code-server:*"
+        actions: ["execute"]
+        effect: allow
+        
+      # Backstage (Catalog management)
+      - resource: "backstage:catalog"
+        actions: ["read", "write"]
+        effect: allow
+        
+      - resource: "backstage:service-ownership"
+        actions: ["read", "write"]
+        effect: allow
+        
+      # Appsmith (Workflow execution)
+      - resource: "appsmith:workflows"
+        actions: ["execute", "list", "read"]
+        effect: allow
+        
+      - resource: "appsmith:release-approvals"
+        actions: ["approve", "reject"]
+        effect: allow
+        
+      # Ollama (Inference)
+      - resource: "ollama:inference"
+        actions: ["execute"]
+        effect: allow
+        
+      # Prometheus (Read metrics, acknowledge alerts)
+      - resource: "prometheus:metrics"
+        actions: ["query", "read"]
+        effect: allow
+        
+      - resource: "prometheus:alerts"
+        actions: ["acknowledge", "silence"]
+        effect: allow
+        
+      # Grafana (View dashboards, create temporary ones)
+      - resource: "grafana:dashboards"
+        actions: ["view", "create-temporary"]
+        effect: allow
+        
+      # Loki (Read logs)
+      - resource: "loki:logs"
+        actions: ["query", "read", "export"]
+        effect: allow
+        
+      # Jaeger (Read traces)
+      - resource: "jaeger:traces"
+        actions: ["query", "read"]
+        effect: allow
+        
+      # Secrets (Read only)
+      - resource: "secrets:*"
+        actions: ["read"]
+        effect: allow
+        
+      # Audit Logs (Read only)
+      - resource: "audit:*"
+        actions: ["read"]
+        effect: allow
+        
+      # Incident Management
+      - resource: "incidents:*"
+        actions: ["declare", "respond", "mitigate"]
+        effect: allow
+
+  # =====================================================================
+  # Viewer Role
+  # Read-only access to dashboards, logs, and metrics
+  # =====================================================================
+  viewer:
+    description: "Viewer with read-only access"
+    priority: 1
+    
+    permissions:
+      # Kubernetes (Read-only)
+      - resource: "kubernetes:*"
+        actions: ["get", "list", "describe"]
+        effect: allow
+        
+      # Code-Server (Execute only)
+      - resource: "code-server:*"
+        actions: ["execute"]
+        effect: allow
+        
+      # Backstage (Read-only)
+      - resource: "backstage:catalog"
+        actions: ["read"]
+        effect: allow
+        
+      - resource: "backstage:service-scorecards"
+        actions: ["read"]
+        effect: allow
+        
+      # Appsmith (View only, cannot execute)
+      - resource: "appsmith:workflows"
+        actions: ["list", "read"]
+        effect: allow
+        
+      # Ollama (No access)
+      # (empty - viewer cannot use AI services)
+      
+      # Prometheus (Read metrics)
+      - resource: "prometheus:metrics"
+        actions: ["query", "read"]
+        effect: allow
+        
+      # Grafana (View dashboards)
+      - resource: "grafana:dashboards"
+        actions: ["view"]
+        effect: allow
+        
+      # Loki (Read logs)
+      - resource: "loki:logs"
+        actions: ["query", "read"]
+        effect: allow
+        
+      # Jaeger (Read traces)
+      - resource: "jaeger:traces"
+        actions: ["query", "read"]
+        effect: allow
+        
+      # Status page
+      - resource: "status-page:*"
+        actions: ["view"]
+        effect: allow
+
+# Resource Constraints
+# Limit what resources can be accessed based on metadata
+resource_constraints:
+  namespace_isolation:
+    # Users in different namespaces cannot see each other's resources
+    - resource: "kubernetes:*"
+      constraint: "namespace={{current_namespace}}"
+      
+  environment_isolation:
+    # Restrict access to specific environments
+    - resource: "terraform:*"
+      constraint: "environment={{user_environment}}"
+
+# Conditional Policies
+# Apply policies based on conditions (time, location, device trust, etc.)
+conditional_policies:
+  
+  # Time-based restrictions
+  after_hours:
+    - role: "operator"
+      resource: "terraform:*"
+      action: "plan"
+      condition: "time >= 18:00 OR time <= 06:00"
+      effect: deny
+      reason: "After-hours infrastructure changes require admin approval"
+    
+  # Device trust
+  untrustworthy_device:
+    - role: "admin"
+      resource: "secrets:*"
+      action: "*"
+      condition: "device_trust == false"
+      effect: deny
+      reason: "Untrustworthy device - MFA or re-authentication required"
+  
+  # Location-based (for future IPv6 geofencing)
+  outside_office_network:
+    - role: "operator"
+      resource: "incidents:declare"
+      action: "*"
+      condition: "ip_location != 'office' AND NOT mfa_verified"
+      effect: deny
+      reason: "Off-network incident declaration requires MFA"
+
+# Service-to-Service Permissions (Workload Identity)
+workload_permissions:
+  
+  "backstage-service":
+    role: "operator"
+    permissions:
+      - resource: "backstage:catalog"
+        actions: ["read", "write"]
+      - resource: "github:api"
+        actions: ["read"]
+      - resource: "kubernetes:services"
+        actions: ["list", "get"]
+      
+  "appsmith-service":
+    role: "operator"
+    permissions:
+      - resource: "appsmith:workflows"
+        actions: ["read", "execute"]
+      - resource: "deployments:*"
+        actions: ["view", "execute"]
+      - resource: "incidents:*"
+        actions: ["view"]
+      
+  "ci-cd-runner":
+    role: "operator"
+    permissions:
+      - resource: "terraform:*"
+        actions: ["plan", "apply"]
+      - resource: "docker:registry"
+        actions: ["push"]
+      - resource: "kubernetes:deployments"
+        actions: ["apply"]
+
+# Audit Requirements
+audit_settings:
+  log_all_access: true
+  log_denials: true
+  log_policy_violations: true
+  retention_days: 365
+  alerting:
+    - alert_on_admin_action: true
+    - alert_on_privilege_escalation: true
+    - alert_on_policy_violation: true

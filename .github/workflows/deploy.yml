@@ -7,7 +7,16 @@ on:
     paths:
       - 'terraform/**'
       - '.github/workflows/deploy.yml'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Deployment action to run'
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - destroy
 
 # Ref: #390 — least-privilege permissions (deny write by default)
 # TODO: pin all action refs to commit SHAs via Renovate (#358)
@@ -22,6 +31,7 @@ jobs:
   validate:
     name: Validate Terraform
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
     permissions:
       contents: read
 
@@ -45,6 +55,7 @@ jobs:
     name: Plan Deployment
     runs-on: ubuntu-latest
     needs: validate
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
     permissions:
       contents: read
       pull-requests: write  # allows posting plan summary as PR comment
@@ -72,10 +83,13 @@ jobs:
     name: Apply Deployment
     runs-on: ubuntu-latest
     needs: plan
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
     # Ref: #390 — requires environment protection (branch + reviewer approval)
-    # Create a "production" environment in GitHub → Settings → Environments
+    # Create a "production" environment in GitHub -> Settings -> Environments
     environment: production
+    concurrency:
+      group: deploy-production-control
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write  # allows OIDC token for cloud provider auth (no long-lived secrets)
@@ -100,7 +114,7 @@ jobs:
 
       - name: Get Outputs
         run: |
-          echo "## Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Access URL:** $(terraform output -raw code_server_url)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -112,7 +126,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Code-Server Enterprise Deployed ✅",
+              "text": "Code-Server Enterprise Deployed",
               "blocks": [
                 {
                   "type": "section",
@@ -127,9 +141,12 @@ jobs:
   destroy:
     name: Destroy (Manual Only)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && contains(github.event.inputs.action, 'destroy')
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
     # Ref: #390 — destructive operation requires explicit approval
     environment: production-destroy
+    concurrency:
+      group: deploy-production-control
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
@@ -169,3 +186,56 @@ jobs:
                 }
               ]
             }
+
+  final-status:
+    name: Final Deploy Status
+    runs-on: ubuntu-latest
+    needs: [validate, plan, apply, destroy]
+    if: always()
+    permissions:
+      contents: read
+    steps:
+      - name: Evaluate workflow result
+        run: |
+          validate_result="${{ needs.validate.result }}"
+          plan_result="${{ needs.plan.result }}"
+          apply_result="${{ needs.apply.result }}"
+          destroy_result="${{ needs.destroy.result }}"
+
+          event="${{ github.event_name }}"
+          action="${{ github.event.inputs.action || '' }}"
+
+          echo "## Deploy Workflow Result" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Event: $event" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Action: ${action:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- validate: $validate_result" >> "$GITHUB_STEP_SUMMARY"
+          echo "- plan: $plan_result" >> "$GITHUB_STEP_SUMMARY"
+          echo "- apply: $apply_result" >> "$GITHUB_STEP_SUMMARY"
+          echo "- destroy: $destroy_result" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$event" == "push" ]]; then
+            [[ "$validate_result" == "success" && "$plan_result" == "success" && "$apply_result" == "success" ]] || {
+              echo "Push deployment path failed" >&2
+              exit 1
+            }
+            exit 0
+          fi
+
+          if [[ "$event" == "workflow_dispatch" && "$action" == "deploy" ]]; then
+            [[ "$validate_result" == "success" && "$plan_result" == "success" && "$apply_result" == "success" && "$destroy_result" == "skipped" ]] || {
+              echo "Manual deploy path failed" >&2
+              exit 1
+            }
+            exit 0
+          fi
+
+          if [[ "$event" == "workflow_dispatch" && "$action" == "destroy" ]]; then
+            [[ "$destroy_result" == "success" && "$validate_result" == "skipped" && "$plan_result" == "skipped" && "$apply_result" == "skipped" ]] || {
+              echo "Manual destroy path failed" >&2
+              exit 1
+            }
+            exit 0
+          fi
+
+          echo "Unhandled event/action combination" >&2
+          exit 1

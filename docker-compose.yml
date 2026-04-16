@@ -197,10 +197,10 @@ services:
         max-file: "3"
 
   # ─── caddy ──────────────────────────────────────────────────────────────────
-  # Reverse proxy + TLS (pinned to 2.7.6)
+  # Reverse proxy + TLS (pinned to 2.9.1-alpine for elite best practices)
   caddy:
-    # Production TLS termination
-    image: caddy:2-alpine
+    # Production TLS termination - immutable, pinned version
+    image: caddy:2.9.1-alpine
     container_name: caddy
     restart: always
     networks:

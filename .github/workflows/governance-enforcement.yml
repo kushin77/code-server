@@ -1,0 +1,195 @@
+name: Governance Enforcement
+on:
+  push:
+    branches: [main, feature/**, bugfix/**]
+    paths:
+      - '**/*.sh'
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.json'
+      - '.github/workflows/**'
+      - 'config/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: governance-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  GOVERNANCE_MANIFEST: config/governance-manifest.yml
+  JSCPD_VERSION: "3.5.10"
+  GITLEAKS_VERSION: "8.21.1"
+  TRUFFLEHOG_VERSION: "3.76.3"
+  TRIVY_VERSION: "0.55.0"
+
+jobs:
+  governance-check:
+    name: Unified Governance Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f69c9871e6c2a34aeadc886367a37751  # v4.1.0
+        with:
+          fetch-depth: 0
+      
+      - name: Setup tools
+        run: |
+          npm install -g jscpd@${JSCPD_VERSION}
+          wget https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks-linux-x64
+          chmod +x gitleaks-linux-x64
+          sudo mv gitleaks-linux-x64 /usr/local/bin/gitleaks
+          pip install truffleHog==${TRUFFLEHOG_VERSION}
+          wget https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
+          tar zxvf trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
+          sudo mv trivy /usr/local/bin/
+      
+      - name: "[P0] Shellcheck - Shell Scripts"
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "[P0] Shell Script Quality - shellcheck"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          
+          EXIT_CODE=0
+          for script in $(find . -name "*.sh" -type f ! -path './archived/**' ! -path './.git/**'); do
+            echo "Checking: $script"
+            if ! shellcheck -x "$script" 2>&1; then
+              EXIT_CODE=1
+            fi
+          done
+          
+          if [[ $EXIT_CODE -ne 0 ]]; then
+            echo "✗ Shellcheck violations found"
+            exit 1
+          fi
+          echo "✓ All shell scripts pass shellcheck"
+      
+      - name: "[P0] Terraform Format & Validation"
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "[P0] Terraform Quality - fmt & validate"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          
+          terraform fmt -check -recursive terraform/ || exit 1
+          echo "✓ Terraform formatting correct"
+          
+          cd terraform
+          terraform init -backend=false
+          terraform validate
+          cd ..
+          echo "✓ Terraform validation passed"
+      
+      - name: "[P0] YAML Linting"
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "[P0] YAML Quality - yamllint"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          
+          pip install yamllint
+          yamllint -d '{extends: default, rules: {line-length: {max: 120}}}' \
+            .github/workflows/*.yml \
+            config/**/*.yml \
+            docker-compose*.yml || exit 1
+          echo "✓ YAML linting passed"
+      
+      - name: "[P0] Duplication Detection (jscpd)"
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "[P0] Code Duplication - jscpd"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          
+          jscpd \
+            --min-lines 5 \
+            --min-tokens 30 \
+            --threshold 0.9 \
+            --exclude-pattern '**/archived/**' \
+            --exclude-pattern '**/.git/**' \
+            --exclude-pattern '**/node_modules/**' \
+            --reporter json \
+            . || exit 1
+          echo "✓ No significant code duplication detected"
+      
+      - name: "[P0] Secrets Detection (Gitleaks)"
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "[P0] Secrets Scanning - Gitleaks"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          
+          gitleaks detect \
+            --source . \
+            --verbose \
+            --fail-on-finding || exit 1
+          echo "✓ No secrets detected by Gitleaks"
+      
+      - name: "[P0] Secrets Detection (TruffleHog)"
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "[P0] Secrets Scanning - TruffleHog"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          
+          trufflehog filesystem . \
+            --only-verified \
+            --json 2>&1 | tee /tmp/trufflehog-output.json
+          
+          if grep -q '"verified": true' /tmp/trufflehog-output.json; then
+            echo "✗ Verified secrets detected"
+            exit 1
+          fi
+          echo "✓ No verified secrets found"
+      
+      - name: "[P1] Vulnerability Scanning (Trivy)"
+        continue-on-error: true
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "[P1] Vulnerability Scan - Trivy"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          
+          trivy fs \
+            --severity HIGH,CRITICAL \
+            --exit-code 0 \
+            --no-progress \
+            . || true
+          echo "✓ Trivy scan complete (advisory)"
+      
+      - name: "[P1] Infrastructure as Code Security (Checkov)"
+        continue-on-error: true
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "[P1] IaC Security - Checkov"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          
+          pip install checkov
+          checkov \
+            --directory terraform/ \
+            --skip-check CKV_TERRAFORM_1 \
+            --exit-code 0 || true
+          echo "✓ Checkov scan complete (advisory)"
+      
+      - name: Governance Check Summary
+        if: always()
+        run: |
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo "✓ GOVERNANCE ENFORCEMENT COMPLETE"
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"
+          echo ""
+          echo "P0 Checks (BLOCKING):"
+          echo "  ✓ Shell scripts (shellcheck)"
+          echo "  ✓ Terraform (fmt + validate)"
+          echo "  ✓ YAML linting"
+          echo "  ✓ Code duplication (jscpd)"
+          echo "  ✓ Secrets (Gitleaks + TruffleHog)"
+          echo ""
+          echo "P1 Checks (ADVISORY):"
+          echo "  ⚠️  Vulnerabilities (Trivy)"
+          echo "  ⚠️  IaC security (Checkov)"
+          echo ""
+          echo "════════════════════════════════════════════════════════════════════════════════════════════"

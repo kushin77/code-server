@@ -5,6 +5,7 @@
 // @status      active
 
 import { createHash } from "node:crypto";
+import { watch, type FSWatcher } from "node:fs";
 
 export type SupportedLanguage = "python" | "typescript" | "go" | "rust" | "java" | "unknown";
 
@@ -62,12 +63,34 @@ export interface RetrievalQualityMetrics {
   p95LatencyMs: number;
 }
 
+export interface IncrementalIndexingLatencyMetrics {
+  changedFiles: number;
+  avgLatencyMs: number;
+  p95LatencyMs: number;
+  maxLatencyMs: number;
+  under100msRate: number;
+}
+
+export interface FileWatcherEvent {
+  eventType: "change" | "rename";
+  filePath: string;
+  indexed: boolean;
+}
+
+export interface FileWatcherOptions {
+  debounceMs: number;
+}
+
 type QueueTask = () => Promise<void>;
 
 const DEFAULT_OPTIONS: IndexingOptions = {
   chunkSizeTokens: 800,
   chunkOverlapTokens: 120,
   maxQueueSize: 1000,
+};
+
+const DEFAULT_FILE_WATCHER_OPTIONS: FileWatcherOptions = {
+  debounceMs: 80,
 };
 
 interface SymbolBoundary {
@@ -400,6 +423,128 @@ export function evaluateRetrievalQuality(
     avgLatencyMs,
     p95LatencyMs,
   };
+}
+
+export async function evaluateIncrementalIndexingLatency(
+  indexer: RepositoryIndexer,
+  changedFiles: RepositoryFile[],
+): Promise<IncrementalIndexingLatencyMetrics> {
+  if (changedFiles.length === 0) {
+    return {
+      changedFiles: 0,
+      avgLatencyMs: 0,
+      p95LatencyMs: 0,
+      maxLatencyMs: 0,
+      under100msRate: 0,
+    };
+  }
+
+  const latencies: number[] = [];
+  let under100msCount = 0;
+
+  for (const file of changedFiles) {
+    const started = process.hrtime.bigint();
+    await indexer.reindexChangedFile(file);
+    const elapsedNs = process.hrtime.bigint() - started;
+    const elapsedMs = Number(elapsedNs) / 1_000_000;
+    latencies.push(elapsedMs);
+    if (elapsedMs < 100) {
+      under100msCount += 1;
+    }
+  }
+
+  const avgLatencyMs = latencies.reduce((acc, v) => acc + v, 0) / latencies.length;
+  const sorted = [...latencies].sort((a, b) => a - b);
+  const p95Index = Math.max(0, Math.ceil(sorted.length * 0.95) - 1);
+  const p95LatencyMs = sorted[p95Index] ?? 0;
+
+  return {
+    changedFiles: changedFiles.length,
+    avgLatencyMs,
+    p95LatencyMs,
+    maxLatencyMs: sorted[sorted.length - 1] ?? 0,
+    under100msRate: under100msCount / changedFiles.length,
+  };
+}
+
+export function formatRetrievalQualityPrometheus(metrics: RetrievalQualityMetrics): string {
+  return [
+    "# HELP indexing_retrieval_hit_rate Retrieval benchmark hit-rate.",
+    "# TYPE indexing_retrieval_hit_rate gauge",
+    `indexing_retrieval_hit_rate ${metrics.hitRate}`,
+    "# HELP indexing_retrieval_precision Retrieval benchmark precision.",
+    "# TYPE indexing_retrieval_precision gauge",
+    `indexing_retrieval_precision ${metrics.precision}`,
+    "# HELP indexing_retrieval_recall Retrieval benchmark recall.",
+    "# TYPE indexing_retrieval_recall gauge",
+    `indexing_retrieval_recall ${metrics.recall}`,
+    "# HELP indexing_retrieval_latency_ms_p95 Retrieval benchmark p95 query latency in milliseconds.",
+    "# TYPE indexing_retrieval_latency_ms_p95 gauge",
+    `indexing_retrieval_latency_ms_p95 ${metrics.p95LatencyMs}`,
+  ].join("\n");
+}
+
+export function isIndexablePath(filePath: string): boolean {
+  return inferLanguage(filePath) !== "unknown";
+}
+
+export function startRepositoryFileWatcher(
+  rootPath: string,
+  indexer: RepositoryIndexer,
+  readFile: (path: string) => Promise<string>,
+  onEvent?: (event: FileWatcherEvent) => void,
+  options?: Partial<FileWatcherOptions>,
+): FSWatcher {
+  const watcherOptions: FileWatcherOptions = {
+    ...DEFAULT_FILE_WATCHER_OPTIONS,
+    ...options,
+  };
+
+  const pending = new Map<string, ReturnType<typeof setTimeout>>();
+
+  const flushPath = (filePath: string, eventType: "change" | "rename"): void => {
+    const existing = pending.get(filePath);
+    if (existing) {
+      clearTimeout(existing);
+    }
+
+    pending.set(
+      filePath,
+      setTimeout(() => {
+        pending.delete(filePath);
+
+        if (!isIndexablePath(filePath)) {
+          return;
+        }
+
+        void readFile(filePath)
+          .then((content) => indexer.processFileChange(filePath, content))
+          .then((indexed) => onEvent?.({ eventType, filePath, indexed }))
+          .catch(() => {
+            onEvent?.({ eventType, filePath, indexed: false });
+          });
+      }, watcherOptions.debounceMs),
+    );
+  };
+
+  const watcher = watch(rootPath, { recursive: true }, (eventType, fileName) => {
+    if (!fileName) {
+      return;
+    }
+    if (eventType !== "change" && eventType !== "rename") {
+      return;
+    }
+    flushPath(fileName.toString(), eventType);
+  });
+
+  watcher.on("close", () => {
+    for (const timer of pending.values()) {
+      clearTimeout(timer);
+    }
+    pending.clear();
+  });
+
+  return watcher;
 }
 
 function estimateTokenCount(content: string): number {

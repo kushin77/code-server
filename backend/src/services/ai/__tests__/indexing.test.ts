@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   RepositoryIndexer,
   chunkByTokenWindow,
+  evaluateIncrementalIndexingLatency,
+  formatRetrievalQualityPrometheus,
   inferLanguage,
+  isIndexablePath,
   semanticBoundaries,
 } from "../indexing";
 
@@ -140,5 +143,49 @@ describe("RepositoryIndexer", () => {
     await expect(
       indexer.reindexChangedFile({ path: "a.ts", content: "function x(){}" }),
     ).rejects.toThrow("Index queue is full");
+  });
+
+  it("measures incremental indexing latency for changed files", async () => {
+    const indexer = new RepositoryIndexer();
+
+    await indexer.indexRepository([
+      { path: "src/a.ts", content: "export function a(){ return 1 }" },
+      { path: "src/b.ts", content: "export function b(){ return 2 }" },
+    ]);
+
+    const metrics = await evaluateIncrementalIndexingLatency(indexer, [
+      { path: "src/a.ts", content: "export function a(){ return 10 }" },
+      { path: "src/b.ts", content: "export function b(){ return 20 }" },
+    ]);
+
+    expect(metrics.changedFiles).toBe(2);
+    expect(metrics.avgLatencyMs).toBeGreaterThanOrEqual(0);
+    expect(metrics.p95LatencyMs).toBeGreaterThanOrEqual(0);
+    expect(metrics.maxLatencyMs).toBeGreaterThanOrEqual(metrics.p95LatencyMs);
+    expect(metrics.under100msRate).toBeGreaterThanOrEqual(0);
+    expect(metrics.under100msRate).toBeLessThanOrEqual(1);
+  });
+
+  it("formats retrieval quality metrics as Prometheus exposition", () => {
+    const output = formatRetrievalQualityPrometheus({
+      totalCases: 20,
+      hitRate: 0.95,
+      precision: 0.93,
+      recall: 0.91,
+      avgLatencyMs: 1.2,
+      p95LatencyMs: 2.5,
+    });
+
+    expect(output).toContain("indexing_retrieval_hit_rate 0.95");
+    expect(output).toContain("indexing_retrieval_precision 0.93");
+    expect(output).toContain("indexing_retrieval_recall 0.91");
+    expect(output).toContain("indexing_retrieval_latency_ms_p95 2.5");
+  });
+
+  it("identifies indexable paths for watcher filtering", () => {
+    expect(isIndexablePath("src/auth/session.ts")).toBe(true);
+    expect(isIndexablePath("src/app/models/user.py")).toBe(true);
+    expect(isIndexablePath("README.md")).toBe(false);
+    expect(isIndexablePath("docker-compose.yml")).toBe(false);
   });
 });

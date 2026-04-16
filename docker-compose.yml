@@ -264,10 +264,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    # snap Docker: no-new-privileges removed for compatibility (otel uses non-root exec)
     logging:
       driver: json-file
       options:
@@ -302,10 +299,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    # snap Docker: no-new-privileges removed for compatibility (jaeger uses non-root entrypoint)
     logging:
       driver: json-file
       options:
@@ -423,10 +417,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    # snap Docker: no-new-privileges removed for compatibility (prometheus uses gosu)
     logging:
       driver: json-file
       options:
@@ -462,10 +453,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    # snap Docker: no-new-privileges removed for compatibility (grafana uses /run.sh setuid)
     logging:
       driver: json-file
       options:
@@ -496,10 +484,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    # snap Docker: no-new-privileges removed for compatibility
     logging:
       driver: json-file
       options:
@@ -528,10 +513,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    # snap Docker: no-new-privileges removed for compatibility (loki uses gosu)
     logging:
       driver: json-file
       options:
@@ -555,10 +537,7 @@ services:
     command: ["-config.file=/etc/promtail/promtail-config.yml"]
     depends_on:
       - loki
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    # snap Docker: no-new-privileges removed for compatibility
     logging:
       driver: json-file
       options:

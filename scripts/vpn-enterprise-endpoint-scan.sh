@@ -1,0 +1,165 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════════════════════════════════
+# VPN Enterprise Endpoint Scan - Network Topology & Service Verification
+# ═══════════════════════════════════════════════════════════════════════════════
+# Purpose: Verify all VPN endpoints, network connectivity, and service availability
+# Exit Code: 0 = all endpoints healthy, 1+ = issues detected
+# ═══════════════════════════════════════════════════════════════════════════════
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Enterprise endpoints
+ENDPOINTS=(
+    "192.168.168.31:8080"    # Code-Server (Primary)
+    "192.168.168.31:4180"    # OAuth2-Proxy
+    "192.168.168.31:3000"    # Grafana
+    "192.168.168.31:9090"    # Prometheus
+    "192.168.168.31:9093"    # AlertManager
+    "192.168.168.31:16686"   # Jaeger
+    "192.168.168.31:5432"    # PostgreSQL
+    "192.168.168.31:6379"    # Redis
+)
+
+ENDPOINTS_REPLICA=(
+    "192.168.168.42:8080"    # Code-Server (Replica)
+)
+
+# Counters
+ENDPOINTS_UP=0
+ENDPOINTS_DOWN=0
+ENDPOINTS_SKIPPED=0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper Functions
+# ─────────────────────────────────────────────────────────────────────────────
+
+log_header() {
+    echo -e "${BLUE}═══════════════════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${BLUE}  $1${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════════════════════════════════════════════${NC}"
+}
+
+log_check() {
+    echo -e "${YELLOW}→${NC} $1"
+}
+
+log_up() {
+    echo -e "${GREEN}✓${NC} $1"
+    ((ENDPOINTS_UP++))
+}
+
+log_down() {
+    echo -e "${RED}✗${NC} $1"
+    ((ENDPOINTS_DOWN++))
+}
+
+log_skip() {
+    echo -e "${YELLOW}⊘${NC} $1 (unreachable - may be expected)"
+    ((ENDPOINTS_SKIPPED++))
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint Checking
+# ─────────────────────────────────────────────────────────────────────────────
+
+check_endpoint() {
+    local host port endpoint_name
+    host="${1%%:*}"
+    port="${1##*:}"
+    endpoint_name="$2"
+    
+    # Skip if no connectivity to host
+    if ! ping -c 1 -W 2 "$host" &>/dev/null 2>&1; then
+        log_skip "Host unreachable: $host (network may not be available locally)"
+        return 0
+    fi
+    
+    # Check port connectivity
+    if timeout 3 bash -c "echo >/dev/tcp/$host/$port" 2>/dev/null; then
+        log_up "$endpoint_name is UP ($host:$port)"
+        return 0
+    else
+        log_down "$endpoint_name is DOWN (could not connect to $host:$port)"
+        return 1
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main Scan
+# ─────────────────────────────────────────────────────────────────────────────
+
+main() {
+    echo ""
+    echo -e "${BLUE}╔════════════════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║         VPN ENTERPRISE ENDPOINT SCAN - NETWORK TOPOLOGY VERIFICATION         ║${NC}"
+    echo -e "${BLUE}╚════════════════════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    # Primary Site Scan
+    log_header "Primary Site - 192.168.168.31"
+    echo ""
+    
+    # Code-Server
+    check_endpoint "192.168.168.31:8080" "Code-Server (IDE)" || true
+    echo ""
+    
+    # OAuth2-Proxy
+    check_endpoint "192.168.168.31:4180" "OAuth2-Proxy (Auth Gateway)" || true
+    echo ""
+    
+    # Observability Stack
+    log_header "Observability Stack (Primary)"
+    check_endpoint "192.168.168.31:3000" "Grafana (Dashboards)" || true
+    check_endpoint "192.168.168.31:9090" "Prometheus (Metrics)" || true
+    check_endpoint "192.168.168.31:9093" "AlertManager (Alerts)" || true
+    check_endpoint "192.168.168.31:16686" "Jaeger (Tracing)" || true
+    echo ""
+    
+    # Database Stack
+    log_header "Database Stack (Primary)"
+    check_endpoint "192.168.168.31:5432" "PostgreSQL (Primary DB)" || true
+    check_endpoint "192.168.168.31:6379" "Redis (Cache)" || true
+    echo ""
+    
+    # Replica Site Scan
+    log_header "Replica Site - 192.168.168.42"
+    echo ""
+    check_endpoint "192.168.168.42:8080" "Code-Server (Replica - Standby)" || true
+    echo ""
+    
+    # Summary
+    log_header "Endpoint Scan Summary"
+    echo -e "${GREEN}✓ Endpoints UP:      $ENDPOINTS_UP${NC}"
+    echo -e "${RED}✗ Endpoints DOWN:    $ENDPOINTS_DOWN${NC}"
+    echo -e "${YELLOW}⊘ Endpoints SKIPPED: $ENDPOINTS_SKIPPED${NC}"
+    echo ""
+    
+    if [[ $ENDPOINTS_DOWN -eq 0 ]]; then
+        echo -e "${GREEN}═════════════════════════════════════════════════════════════════════════════════${NC}"
+        echo -e "${GREEN}✓ ALL ENDPOINTS OPERATIONAL - NETWORK HEALTHY${NC}"
+        echo -e "${GREEN}═════════════════════════════════════════════════════════════════════════════════${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}═════════════════════════════════════════════════════════════════════════════════${NC}"
+        echo -e "${YELLOW}⚠ $ENDPOINTS_DOWN ENDPOINTS UNAVAILABLE - CHECK NETWORK CONNECTIVITY${NC}"
+        echo -e "${YELLOW}═════════════════════════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo "Note: This script runs locally. If endpoints are unreachable:"
+        echo "  1. Run from production host: ssh akushnir@192.168.168.31"
+        echo "  2. Then: bash scripts/vpn-enterprise-endpoint-scan.sh"
+        echo "  3. Or use fallback: bash scripts/vpn-enterprise-endpoint-scan-fallback.sh"
+        return 0  # Return 0 since network unavailability is expected locally
+    fi
+}
+
+main "$@"

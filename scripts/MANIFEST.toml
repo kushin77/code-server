@@ -171,6 +171,12 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "error-triage-engine.sh"
+category = "operations"
+status   = "active"
+purpose  = "Automated error pattern detection and GitHub issue creation for recurring errors"
+
+[[script]]
 file     = "fetch-gsm-secrets.sh"
 category = "uncategorized"
 status   = "active"

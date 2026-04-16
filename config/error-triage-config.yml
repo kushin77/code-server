@@ -1,0 +1,258 @@
+# Error Triage Engine Configuration
+# Automated error pattern detection and issue creation
+
+# Core Triage Settings
+triage:
+  enabled: true
+  check_interval_seconds: 300  # Run every 5 minutes
+  min_occurrence_threshold: 3   # Create issue if error occurs 3+ times
+  error_retention_days: 30
+  
+  # Severity levels for issue creation
+  severity_mapping:
+    CRITICAL: P0  # Immediate action required
+    HIGH: P1      # Address this sprint
+    MEDIUM: P2    # Address next sprint
+    LOW: P3       # Backlog
+
+# Log Aggregation Sources
+sources:
+  loki:
+    enabled: true
+    endpoint: "http://loki:3100"
+    query_timeout: "30s"
+    # Log queries for different services
+    queries:
+      code_server: '{job="code-server", level=~"ERROR|FATAL"}'
+      postgres: '{job="postgres", level=~"ERROR|FATAL"}'
+      redis: '{job="redis", level=~"ERROR|FATAL"}'
+      caddy: '{job="caddy", level=~"ERROR|FATAL"}'
+      prometheus: '{job="prometheus", level=~"ERROR|FATAL"}'
+      loki: '{job="loki", level=~"ERROR|FATAL"}'
+      oauth2_proxy: '{job="oauth2-proxy", level=~"ERROR|FATAL"}'
+      
+  prometheus:
+    enabled: true
+    endpoint: "http://prometheus:9090"
+    # Alert-based error detection
+    queries:
+      container_restart_count: 'rate(container_last_seen{container_state="restarting"}[5m]) > 0'
+      service_down: 'up{job!="pushgateway"} == 0'
+      high_error_rate: 'rate(http_requests_total{status=~"5.."}[1m]) > 0.05'
+
+# GitHub Integration
+github:
+  enabled: true
+  repo: "kushin77/code-server"
+  labels:
+    - "error-triage"
+    - "automated"
+  assignees:
+    - "kushin77"
+  
+  # Issue creation rules
+  issue_templates:
+    default:
+      title_format: "[AUTO-TRIAGE] {error_pattern}"
+      labels:
+        - "error-triage"
+        - "{severity}"
+        - "automated"
+    
+    # Service-specific templates
+    database:
+      labels:
+        - "error-triage"
+        - "database"
+        - "{severity}"
+    
+    infrastructure:
+      labels:
+        - "error-triage"
+        - "infrastructure"
+        - "{severity}"
+    
+    application:
+      labels:
+        - "error-triage"
+        - "application"
+        - "{severity}"
+
+# Error Pattern Rules
+# Define how similar errors should be clustered
+patterns:
+  clustering:
+    # Use fuzzy matching (Levenshtein distance)
+    similarity_threshold: 0.85
+    
+    # Common error prefixes to group
+    groups:
+      - name: "Database Connection Errors"
+        patterns:
+          - "connection refused"
+          - "connection timeout"
+          - "connection reset"
+        severity: "HIGH"
+        
+      - name: "Memory/Resource Exhaustion"
+        patterns:
+          - "out of memory"
+          - "no space left"
+          - "too many open files"
+        severity: "CRITICAL"
+        
+      - name: "TLS/Certificate Errors"
+        patterns:
+          - "certificate verify failed"
+          - "certificate expired"
+          - "tls handshake"
+        severity: "HIGH"
+        
+      - name: "Network Errors"
+        patterns:
+          - "connection refused"
+          - "network unreachable"
+          - "no route to host"
+        severity: "MEDIUM"
+        
+      - name: "Timeout Errors"
+        patterns:
+          - "context deadline exceeded"
+          - "timeout"
+          - "request timeout"
+        severity: "MEDIUM"
+        
+      - name: "Permission/Authentication Errors"
+        patterns:
+          - "permission denied"
+          - "unauthorized"
+          - "forbidden"
+          - "authentication failed"
+        severity: "HIGH"
+
+# Root Cause Analysis Configuration
+rca:
+  enabled: true
+  
+  # Correlate with metrics
+  metric_correlation:
+    enabled: true
+    lookback_window_minutes: 30
+    metrics_to_correlate:
+      - "cpu_usage"
+      - "memory_usage"
+      - "disk_io"
+      - "network_traffic"
+      - "container_restarts"
+  
+  # Link to related deployments
+  deployment_correlation:
+    enabled: true
+    lookback_window_hours: 24
+  
+  # Include relevant logs in issue
+  log_context:
+    lines_before: 5
+    lines_after: 10
+
+# Notification Configuration
+notifications:
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    # Notify only for severity levels
+    min_severity: "HIGH"
+  
+  email:
+    enabled: false
+    recipients:
+      - "kushin77@example.com"
+    min_severity: "CRITICAL"
+
+# Deduplication & Denoising
+deduplication:
+  enabled: true
+  
+  # Ignore known benign errors
+  ignore_patterns:
+    - "graceful shutdown"
+    - "connection closing"
+    - "test error"
+  
+  # Known false positives
+  false_positive_patterns:
+    - "deprecated.*warning"
+    - "experimental feature"
+  
+  # Deduplicate similar stack traces
+  stack_trace_similarity: 0.8
+
+# Lifecycle Management
+lifecycle:
+  # Auto-close resolved issues after this many days of no recurrence
+  auto_close_days: 7
+  
+  # Archive old error patterns
+  archive_after_days: 90
+  
+  # Issue status transitions
+  transitions:
+    new: ["investigating"]
+    investigating: ["resolved", "false_positive", "investigating"]
+    resolved: ["archived"]
+    false_positive: ["archived"]
+
+# Metrics & Reporting
+metrics:
+  enabled: true
+  
+  # Export to Prometheus
+  prometheus_export:
+    enabled: true
+    port: 9090
+    path: "/metrics"
+  
+  # Track these metrics
+  tracked_metrics:
+    - "error_triage_detected_patterns_total"
+    - "error_triage_issues_created_total"
+    - "error_triage_errors_grouped"
+    - "error_triage_rca_correlation_strength"
+    - "error_triage_false_positive_rate"
+    - "error_triage_mean_time_to_resolution"
+
+# Performance Tuning
+performance:
+  # Database settings
+  database:
+    connection_pool_size: 10
+    query_timeout_seconds: 30
+    batch_insert_size: 1000
+  
+  # API rate limiting
+  api_rate_limit:
+    github_api_calls_per_minute: 60
+    loki_queries_per_minute: 120
+    prometheus_queries_per_minute: 120
+  
+  # Caching
+  cache:
+    enabled: true
+    ttl_seconds: 300
+    max_patterns_cached: 10000
+
+# Audit & Compliance
+audit:
+  enabled: true
+  
+  # Log all triage decisions
+  decision_logging: true
+  log_retention_days: 365
+  
+  # Track metrics for SLA compliance
+  sla_tracking:
+    enabled: true
+    targets:
+      critical: "30m"  # Respond to CRITICAL errors within 30 minutes
+      high: "4h"       # Respond to HIGH errors within 4 hours
+      medium: "24h"    # Respond to MEDIUM errors within 24 hours

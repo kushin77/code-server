@@ -1,6 +1,6 @@
-# PR Title: [Descriptive title]
+# [TYPE] PR Title: [Descriptive title]
 
-> **🤖 AUTO-DEPLOY MANDATE**: When this PR is merged, it automatically triggers branch cleanup and production deployment. Link issues below so they auto-close when code goes live.
+> **🎯 PRODUCTION READINESS FRAMEWORK**: All PRs follow a 4-phase quality gate system (Design → Code → Performance → Operations). Complete each phase before merging to main.
 
 ## Linked Issues
 
@@ -11,143 +11,179 @@ Fixes #[another-issue]
 Resolves #[third-issue]
 ```
 
+**Linked ADR** (if architectural change):
+```
+See ADR #XXX in docs/adr/
+```
+
 > **ℹ️ Why**: Our auto-merge pipeline closes linked issues when your code deploys. This creates a complete audit trail from issue → code → production.
 
 ---
 
-## Summary
+## Phase 1: Design Certification ✓
 
-**What problem does this solve?** Replace this with a clear, 2-3 sentence explanation of the problem statement.
+> **Gate Owner**: @architecture-team  
+> **Must complete before Phase 2 begins**
 
-**Why is this change necessary?** Explain the business or technical drivers.
+**Primary decision**:
+- [ ] No architectural impact (skip Phase 1 detailed items, proceed to Phase 2)
+- [ ] Architectural change (complete all Phase 1 items below)
+
+**If architectural change, complete these:**
+- [ ] ADR written and peer-reviewed (see [ADR Template](../../docs/adr/TEMPLATE.md))
+- [ ] Horizontal scaling considered and documented
+- [ ] Failure isolation strategy defined
+- [ ] Dependency changes listed and approved
+- [ ] Security threat model documented (STRIDE analysis or equivalent)
+- [ ] Trust boundaries identified
+- [ ] Data flow diagram included (if handling PII/secrets)
+
+**Design Review Certification** (by @architecture-team):
+- [ ] Reviewer: `@[github-user]`
+- [ ] Comments: `[Link to design review thread or approval comment]`
 
 ---
 
-## Architecture Impac
+## Phase 2: Code & Quality Review ✓
 
-- [ ] No architectural impact (minor fix/optimization)
-- [ ] ADR exists and is linked
-- [ ] NEW ADR required — see [docs/adr/TEMPLATE.md](../../docs/adr/TEMPLATE.md)
+> **Gate Owner**: @code-review-team  
+> **Automatically checked by CI; manual review required**
 
-**If architectural change:**
-- ADR Path: `docs/adr/XXX-[description].md
-- Horizontal scaling considered: YES / NO / N/A
-- Failure isolation: [Brief description]
-- Dependency changes: [List any new external dependencies]
-
----
-
-## Security Review
-
-- [ ] No secrets, credentials, or sensitive data in code
+### Security
+- [ ] No secrets, credentials, or sensitive data in code  
 - [ ] Input validation implemented (if applicable)
 - [ ] IAM/authorization reviewed (if applicable)
 - [ ] No public endpoints without authentication (if applicable)
 - [ ] Encryption at rest and in transit (if handling sensitive data)
 - [ ] Least privilege principle applied
+- [ ] Secret scan result: ✅ PASS / ⚠️ REVIEW / ❌ FAIL
 
-**If new service or auth change:**
-- [ ] Threat model documented
-- [ ] Trust boundaries defined
-- [ ] STRIDE/threat analysis attached (link or description)
-
-**Secrets scanning result**: ✅ PASS / ⚠️ REVIEW / ❌ FAIL
-
----
-
-## Performance & Scalability
-
-- [ ] No blocking operations in critical path
-- [ ] No N+1 query patterns (database or API)
-- [ ] Resource limits defined (CPU, memory, connections)
-- [ ] Benchmarked or profiled: YES / NO / N/A
-- [ ] Horizontal scaling validated: YES / NO / N/A
-
-**Performance impact** (if applicable):
-- Latency: [p50/p99 if measured]
-- Throughput: [requests/sec or ops/sec if measured]
-- Resource usage: [CPU/memory/connections]
-
----
-
-## Observability
-
-- [ ] Structured logging implemented (correlation IDs where needed)
-- [ ] Metrics added (Prometheus format if applicable)
-- [ ] Health endpoints implemented (if new service)
-- [ ] Distributed tracing enabled (OpenTelemetry ready if applicable)
-- [ ] Runbook/troubleshooting guide updated
-
-**Logs/Metrics**:
-
-[Example log output or metric name]
-
-
----
-
-## Testing & Quality
-
-- [ ] Unit tests added/updated
-- [ ] Integration tests added/updated
-- [ ] Coverage maintained or improved (target: 80%+)
-- [ ] Manual testing completed
-- [ ] Lint/static analysis passing
+### Code Quality
+- [ ] Lint checks passing (GitHub Actions)
+- [ ] SAST scan passing (semgrep, trivy, etc.)
 - [ ] No test skips (`@skip`, `.skip()`, etc.)
+- [ ] Complexity metrics acceptable (cyclomatic complexity < 10)
+- [ ] Code review approved by >= 1 senior engineer
 
-**Test results**:
+### Testing
+- [ ] Unit tests added/updated (target: 80%+ coverage on modified code)
+- [ ] Integration tests added/updated (if cross-service changes)
+- [ ] Coverage maintained or improved
+- [ ] Manual testing completed and documented
+- [ ] E2E tests passing (if UI-facing)
 
-Coverage: XX%
-Tests passing: YY/YY
-
+### Observability
+- [ ] Structured logging implemented (correlation IDs included)
+- [ ] Metrics added (Prometheus format if applicable)
+- [ ] Health endpoints updated (if new service)
+- [ ] Distributed tracing enabled (OpenTelemetry headers if applicable)
 
 ---
 
-## Deployment & Rollback
+## Phase 3: Performance & Load Testing ✓
 
-**How does this deploy?**
+> **Gate Owner**: @performance-team  
+> **Required for core services and high-impact changes**
+
+**Exemption** (check if applicable):
+- [ ] Change is documentation-only (skip Phase 3)
+- [ ] Change is test code only (skip Phase 3)
+- [ ] Change is non-critical or internal utility (skip Phase 3)
+- [ ] **Performance testing required** (complete all items below)
+
+**Performance Testing**:
+- [ ] Benchmarked against baseline (before/after comparison)
+- [ ] Load test scenarios defined (1x, 2x, 5x, 10x current traffic)
+- [ ] Latency p50/p99 measured and acceptable
+- [ ] Resource limits defined (CPU, memory, connections)
+- [ ] No N+1 query patterns (database or API)
+- [ ] Horizontal scaling validated (if applicable)
+
+**Load Test Results**:
+```
+Baseline (before): [X ms p99 latency, Y requests/sec]
+After this PR:     [X ms p99 latency, Y requests/sec]
+Change:            [+/- Z%]
+Test scenario:     [Description of test (1x, 2x, 5x, etc.)]
+Test duration:     [Minutes]
+```
+
+---
+
+## Phase 4: Operational Readiness ✓
+
+> **Gate Owner**: @operations-team  
+> **Required before production deployment**
+
+**Deployment Planning**:
 - [ ] Backward compatible (safe to deploy independently)
-- [ ] Requires database migration (if yes, migration script attached)
-- [ ] Requires configuration change (list below)
-- [ ] Blue-green / canary required (explain)
+- [ ] Requires database migration: YES / NO (if yes, migration script attached)
+- [ ] Requires configuration change: YES / NO (list below)
+- [ ] Deployment strategy: `rolling` / `blue-green` / `canary` / `feature-flag`
 
-**Rollback plan:**
-- Time to rollback: [X minutes]
-- Rollback command:
+**If feature-flagged deployment:**
+- [ ] Feature flag defined in feature store (LaunchDarkly / internal system)
+- [ ] Rollout strategy documented (1% → 10% → 50% → 100%)
+- [ ] Kill switch procedure documented (how to disable if issues found)
 
-  [git revert / terraform destroy / helm rollback / etc.]
+**Rollback Plan**:
+- [ ] Time to rollback: [X minutes]
+- [ ] Rollback command: `[git revert / terraform destroy / helm rollback / etc.]`
+- [ ] Data consistency on rollback: [What happens to in-flight data?]
+- [ ] Dependent services affected: [List services that depend on this]
 
-- Data considerations: [What happens if we revert?]
-- Dependent services affected: [List any services that depend on this]
+**Runbook & Troubleshooting**:
+- [ ] Runbook updated: [Link to runbooks.md section]
+- [ ] Common failure scenarios documented
+- [ ] How to detect failure (logs, metrics, alerts)
+- [ ] Escalation path defined
 
----
+**Monitoring & Alerts**:
+- [ ] Prometheus metrics defined (new or updated)
+- [ ] Grafana dashboard updated (if applicable)
+- [ ] Alerting rules added (SLO violations trigger alerts)
+- [ ] Alert runbook linked
+- [ ] On-call team trained
 
-## Documentation Updates
-
-- [ ] Code comments added (complex logic)
+**Documentation**:
 - [ ] README updated (if user-facing change)
-- [ ] ADR/Architecture docs updated
-- [ ] Runbook/operations guide updated (if operational impact)
-- [ ] Deployment guide updated (if deployment process changed)
+- [ ] API docs updated (if API change)
+- [ ] Architecture docs updated
+- [ ] Deployment guide updated (if process changed)
+
+
 
 ---
 
-## Risk Assessmen
+## Risk Assessment
 
 **What breaks if this fails?**
+
 [Describe failure scenarios and their impact]
 
 **How do we detect failure?**
+
 [Alerts, logs, metrics, or manual checks]
 
-**Blast radius**: [ONE service / Multiple services / Critical path / Non-critical]
+**Blast radius**: `ONE service` / `Multiple services` / `Critical path` / `Non-critical`
 
 ---
 
-## CI/CD Status
+## CI/CD & Merge Requirements
 
-- [ ] All automated checks passing
-- [ ] SAST scan passing
-- [ ] Dependency scan passing
+- [x] All 4 phases of quality gates completed
+- [ ] All automated checks passing (lint, SAST, dependency scan)
+- [ ] Code review approved (GitHub CODEOWNERS)
+- [ ] Architecture review approved (for architectural changes)
+
+**Do NOT merge if:**
+- Any Phase gate is incomplete
+- Any required check is failing
+- Any blocker comment from reviewers
+
+---
+
+**Checklist**: Once all 4 phases are complete, this PR is eligible for merge. The main branch is protected—merge is automatic when all checks pass and reviewers approve.
 - [ ] Secrets scan passing
 - [ ] Container scan passing (if Docker image)
 - [ ] IaC policy passing (if Terraform/Helm)

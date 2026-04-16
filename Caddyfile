@@ -10,16 +10,12 @@
     # ACME configuration
     email {$ACME_EMAIL:security@kushnir.cloud}
 
-    # Global logging (structured JSON for Prometheus/Loki integration)
+    # Global logging (JSON format for log aggregation)
     log {
         output file /var/log/caddy/access.log {
             roll_size  100mb
             roll_keep  14
             roll_keep_for 336h
-        }
-        format json {
-            request_id  "request_id"
-            time_format "iso8601"
         }
         format json
         level info

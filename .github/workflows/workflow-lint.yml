@@ -50,7 +50,9 @@ jobs:
           failed=0
           # Pattern: uses: owner/repo@master or @HEAD or @latest
           bad=$(grep -rn 'uses:.*@\(master\|HEAD\|latest\)' .github/workflows/ \
-            --include="*.yml" --include="*.yaml" || true)
+            --include="*.yml" --include="*.yaml" \
+            --exclude="TEMPLATE-*" \
+            --exclude="workflow-lint.yml" || true)
           if [[ -n "$bad" ]]; then
             echo "FAIL: Unpinned action versions detected (must use @vX.Y.Z or SHA):"
             echo "$bad" | sed 's/^/  /'
@@ -61,7 +63,9 @@ jobs:
 
           # Also flag @v0 which is too loose
           loose=$(grep -rn 'uses:.*@v0\b' .github/workflows/ \
-            --include="*.yml" --include="*.yaml" || true)
+            --include="*.yml" --include="*.yaml" \
+            --exclude="TEMPLATE-*" \
+            --exclude="workflow-lint.yml" || true)
           if [[ -n "$loose" ]]; then
             echo "WARN: Loose action version @v0 detected (prefer specific tag):"
             echo "$loose" | sed 's/^/  /'

@@ -1,14 +1,11 @@
 # Caddyfile — production reverse proxy & TLS termination
-# Generated from config/environment/caddyfile.tpl via terraform main.tf
+# On-prem VSCode server at 192.168.168.31 behind Cloudflare Tunnel or local network
 # Ref: ADR-001 Cloudflare Tunnel Architecture
 # Validation: caddy validate --config Caddyfile --adapter caddyfile
 
 {
-    # Disable auto-HTTPS since we're using Cloudflare DNS-01
+    # Disable auto-HTTPS for on-prem (no external ACME needed)
     auto_https off
-
-    # ACME configuration
-    email {$ACME_EMAIL:security@kushnir.cloud}
 
     # Global logging (JSON format for log aggregation)
     log {
@@ -22,26 +19,18 @@
     }
 
     # Prometheus metrics exposed on admin API
-    servers {
-        metrics
-    }
+    metrics
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Production Site: {$DOMAIN}
+# Production Site: localhost (on-prem) or domain via Cloudflare Tunnel
 # ═════════════════════════════════════════════════════════════════════════════
-{$DOMAIN:ide.kushnir.cloud} {
-
-    # TLS: Cloudflare DNS-01 challenge (no port 80/443 needed on client)
-    tls {
-        dns cloudflare {$CLOUDFLARE_API_TOKEN}
-    }
+:80 {
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Security Headers (HSTS, CSP, X-*, etc.)
+    # Security Headers (no TLS needed on-prem behind Cloudflare Tunnel)
     # ─────────────────────────────────────────────────────────────────────────
     header {
-        Strict-Transport-Security        "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options           "nosniff"
         X-Frame-Options                  "SAMEORIGIN"
         X-XSS-Protection                 "1; mode=block"
@@ -81,7 +70,7 @@
 
     # ─────────────────────────────────────────────────────────────────────────
     # Main Upstream: code-server via oauth2-proxy (authenticated)
-    # WebSocket for terminal/extensions + W3C Trace Context propagation
+    # WebSocket for terminal/extensions
     # ─────────────────────────────────────────────────────────────────────────
     reverse_proxy oauth2-proxy:4180 {
         transport http {
@@ -103,12 +92,6 @@
     }
 }
 
-# ═════════════════════════════════════════════════════════════════════════════
-# Redirect bare HTTP → HTTPS (optional, works if port 80 is open)
-# ═════════════════════════════════════════════════════════════════════════════
-http://{$DOMAIN:ide.kushnir.cloud} {
-    redir https://{host}{uri} permanent
-}
 
 
 # ─────────────────────────────────────────────

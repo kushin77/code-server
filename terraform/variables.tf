@@ -237,6 +237,12 @@ variable "cloudflare_tunnel_token" {
   default     = ""
 }
 
+variable "primary_host_ip" {
+  description = "Primary host IP (on-prem)"
+  type        = string
+  default     = "192.168.168.31"
+}
+
 variable "replica_host_ip" {
   description = "Replica standby host IP (on-prem)"
   type        = string
@@ -349,6 +355,20 @@ variable "vault_postgres_db" {
   description = "PostgreSQL database for Vault storage backend"
   type        = string
   default     = "vault"
+}
+
+variable "postgres_user" {
+  description = "PostgreSQL administrative user for data tier"
+  type        = string
+  default     = "postgres"
+  sensitive   = true
+}
+
+variable "postgres_password" {
+  description = "PostgreSQL password for data tier"
+  type        = string
+  sensitive   = true
+  default     = "" // Will use environment variable POSTGRES_PASSWORD if not set
 }
 
 variable "vault_api_addr" {
@@ -915,6 +935,40 @@ variable "enable_dns_rate_limiting" {
   description = "Enable DNS query rate limiting"
   type        = bool
   default     = true
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOST & DATABASE VARIABLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "primary_host_ip" {
+  description = "Primary host IP address (for replication and service discovery)"
+  type        = string
+  default     = "192.168.168.31"
+
+  validation {
+    condition     = can(regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", var.primary_host_ip))
+    error_message = "primary_host_ip must be a valid IPv4 address"
+  }
+}
+
+variable "postgres_user" {
+  description = "PostgreSQL username"
+  type        = string
+  default     = "postgres"
+  sensitive   = false
+}
+
+variable "postgres_password" {
+  description = "PostgreSQL password (for backup and replication setup scripts)"
+  type        = string
+  sensitive   = true
+  default     = "changeme"
+
+  validation {
+    condition     = length(var.postgres_password) >= 8
+    error_message = "postgres_password must be at least 8 characters"
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

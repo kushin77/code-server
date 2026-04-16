@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # P1 #388: Workload Identity Provisioning
 #
@@ -13,10 +13,11 @@
 
 set -euo pipefail
 
-# Source common logging library
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh"
+# ════════════════════════════════════════════════════════════════════════════════════════════
+# CONFIGURATION
+# ════════════════════════════════════════════════════════════════════════════════════════════
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 ENV_FILE="${PROJECT_ROOT}/.env"
 LOG_FILE="${PROJECT_ROOT}/logs/provision-workload-identity.log"
@@ -33,6 +34,23 @@ WORKLOADS=(
   "ollama:ollama:11434"
   "appsmith:appsmith:80"
 )
+
+# ════════════════════════════════════════════════════════════════════════════════════════════
+# LOGGING
+# ════════════════════════════════════════════════════════════════════════════════════════════
+
+log() {
+  local level="$1"
+  shift
+  local msg="$*"
+  local timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+  echo "[${timestamp}] [${level}] ${msg}" | tee -a "${LOG_FILE}"
+}
+
+log_error() { log "ERROR" "$@"; }
+log_warn() { log "WARN" "$@"; }
+log_info() { log "INFO" "$@"; }
+log_debug() { log "DEBUG" "$@"; }
 
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # UTILITY FUNCTIONS

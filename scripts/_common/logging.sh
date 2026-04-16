@@ -174,18 +174,18 @@ log_section() {
 # Log success message
 log_success() {
     if [ "$LOG_NO_COLOR" == "1" ]; then
-        log_info "✓ $@"
+        log_info "✓ $*"
     else
-        echo -e "${COLOR_GREEN}✓ $@${COLOR_RESET}"
+        echo -e "${COLOR_GREEN}✓ $*${COLOR_RESET}"
     fi
 }
 
 # Log failure message
 log_failure() {
     if [ "$LOG_NO_COLOR" == "1" ]; then
-        log_error "✗ $@"
+        log_error "✗ $*"
     else
-        echo -e "${COLOR_RED}✗ $@${COLOR_RESET}"
+        echo -e "${COLOR_RED}✗ $*${COLOR_RESET}"
     fi
 }
 

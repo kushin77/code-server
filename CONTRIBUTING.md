@@ -349,6 +349,134 @@ All configuration files are **automatically validated** on every PR:
 - ❌ Hardcoded database passwords or API keys in git history
 - ❌ Obsolete phase-specific files cluttering repository
 
+---
+
+## GitHub Issues as Single Source of Truth (SSOT)
+
+All work tracking flows through GitHub Issues. This section documents mandatory process rules.
+
+**Reference**: Issue #451 — PROCESS [SSOT]: GitHub Issues as SSOT — fix 403-on-closed-issue pattern, enforce branch-issue-PR binding
+
+### Issue Lifecycle
+
+Every piece of work follows this mandatory flow:
+
+```
+OPEN (assigned) → IN-PROGRESS (branch created) → REVIEW (PR opened) → CLOSED (merged to main)
+```
+
+| Phase | Action | Tool | Never Do |
+|-------|--------|------|----------|
+| **OPEN** | Create issue for new work | GitHub Issues UI or `gh issue create` | Track work in memory files only |
+| **IN-PROGRESS** | Create branch linked to issue | `git checkout -b feature/...` | Create branch without an issue |
+| **REVIEW** | Open PR with `Fixes #N` in description | `gh pr create` | Open PR without issue reference |
+| **CLOSED** | PR merges to main; issue auto-closes | GitHub auto-closes via `Fixes #N` | Manually re-open/re-close issues |
+
+### Branch → Issue → PR Binding (Mandatory)
+
+Every feature/fix branch MUST have:
+
+1. **Corresponding open GitHub issue** (created before branch exists)
+2. **PR with `Fixes #N` or `Closes #N`** in description (before merge)
+3. **Automatic closure** when PR merges to main
+
+**Example PR description**:
+```
+## Summary
+Implement GCP Secret Manager integration for GitHub PAT storage.
+
+## Issue
+Fixes #458
+
+## Changes
+- scripts/git-credential-gsm: credential helper
+- scripts/setup-git-credentials.sh: idempotent setup
+- GSM_PROJECT fix in fetch-gsm-secrets.sh
+
+## Testing
+- Tested on 192.168.168.31 with gcloud auth
+- Verified `git ls-remote` authentication
+```
+
+### What NOT to Do (403 Error Prevention)
+
+**❌ NEVER PATCH a closed issue**:
+```bash
+# WRONG — will fail with 403 "Must have admin rights"
+gh issue update 386 --state open
+```
+
+**Why?**: Only repo admins can modify issues after closure. Use comments instead.
+
+**✅ DO THIS INSTEAD** — Add a comment to a closed issue:
+```bash
+# RIGHT — anyone can add comments
+gh issue comment 386 --body "Follow-up work required in #500"
+```
+
+**❌ NEVER create work without an issue**:
+```bash
+# WRONG — branch exists but not tracked
+git checkout -b feature/new-feature
+# ... commits ...
+# Later: "where did this branch come from?"
+```
+
+**✅ DO THIS INSTEAD**:
+```bash
+# 1. Create issue first
+gh issue create --title "feat: add new feature" --body "Description"
+# → Returns issue number (e.g., #500)
+
+# 2. Then create branch
+git checkout -b feature/new-feature-500
+
+# 3. Push and create PR with Fixes #500
+git push origin feature/new-feature-500
+gh pr create --title "feat: new feature" --body "Fixes #500"
+```
+
+### GitHub Actions Token Permissions
+
+The automation token (GitHub Actions) has `write` access but NOT `admin`. This means:
+
+**Permitted** ✅:
+- Create/update issues
+- Add comments to issues
+- PATCH on open issues only
+- Create PRs
+- Push to branches
+
+**Not permitted** ❌:
+- PATCH closed issues (403 error)
+- Create new labels
+- Create milestones
+- Merge PRs (requires branch protection)
+
+**Rule**: Only use existing labels in automation. Never attempt `POST /labels` via Actions.
+
+### Memory File Policy
+
+Memory files (`/memories/repo/`) are **NOT** the source of truth. They're ephemeral working notes.
+
+| File Type | Purpose | Max Age | Action When Stale |
+|-----------|---------|---------|-------------------|
+| `/memories/session/` | In-progress notes | 48 hours | Delete after session ends |
+| `/memories/repo/` | Repo facts (if not on GitHub) | 30 days | Delete once GitHub issue exists |
+| **GitHub Issue** | **SSOT for all work state** | Permanent | Never delete; link instead |
+
+**Rule**: When a fact appears in both a memory file AND a GitHub issue, the GitHub issue wins. Delete the memory file.
+
+### Success Criteria
+
+- ✅ Zero PATCH errors on closed issues in automation logs
+- ✅ Every open branch has a corresponding open GitHub issue
+- ✅ Every PR includes `Fixes #N` or `Closes #N` in description
+- ✅ Zero `/memories/repo/` files older than 30 days
+- ✅ CI enforces `Fixes #` presence in PR titles (Phase 2 CI rule)
+
+---
+
 ### Example: Running CI Validations Locally
 
 Before pushing, validate locally:

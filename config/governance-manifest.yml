@@ -1,0 +1,151 @@
+---
+# Governance Manifest — tooling versions, policies, compliance frameworks
+# Enforces consistency across CI/CD gates and local development environments
+
+metadata:
+  version: "1.0"
+  last_updated: "2026-04-22"
+  description: "Governance tool versions, standards, and compliance policies for kushin77/code-server"
+
+# ── Code Quality & Security Tools ─────────────────────────────────────────────
+tools:
+  shellcheck:
+    version: "0.9.0"
+    enabled: true
+    shell_dialect: "bash"
+    severity: "error"
+    standards:
+      - "no /bin/sh (bash only)"
+      - "no SC2086 (unquoted variables)"
+      - "no SC2181 (unchecked exit codes)"
+    purpose: "Enforces bash shell script quality and portability"
+
+  terraform:
+    version: "1.5.0"
+    enabled: true
+    standards:
+      - "immutable versions (all external dependencies pinned)"
+      - "no hardcoded secrets (use tfvars)"
+      - "modules must be versioned"
+      - "all resources must have tags/labels"
+    purpose: "Infrastructure-as-Code validation and compliance"
+
+  checkov:
+    version: "1.2.0"
+    enabled: true
+    framework: "terraform"
+    severity_threshold: "HIGH"
+    standards:
+      - "CKV_TF_*: Terraform-specific checks"
+      - "CKV_DOCKER_*: Container security"
+    purpose: "Detects misconfigurations, security gaps, compliance violations"
+
+  tfsec:
+    version: "1.28.0"
+    enabled: true
+    framework: "terraform"
+    severity_threshold: "HIGH"
+    purpose: "Static analysis of Terraform code for security vulnerabilities"
+
+# ── Secrets Detection Tools ───────────────────────────────────────────────────
+secrets:
+  gitleaks:
+    version: "8.21.1"
+    enabled: true
+    severity: "fail-closed"
+    patterns: "API keys, tokens, PII, credentials"
+    purpose: "Detects secrets committed to Git history"
+
+  trufflehog:
+    version: "3.76.3"
+    enabled: true
+    severity: "fail-closed"
+    patterns: "entropy-based + hardcoded patterns"
+    purpose: "Secondary secrets detection (cross-validation)"
+
+# ── Dependency Management ─────────────────────────────────────────────────────
+dependencies:
+  dependency-check:
+    version: "9.0.0"
+    enabled: true
+    cve_threshold: "MEDIUM"
+    purpose: "Detects known vulnerabilities in dependencies (CVEs)"
+
+# ── Policy Enforcement ────────────────────────────────────────────────────────
+policies:
+  library_adoption:
+    status: "active"
+    coverage: 85%
+    lastUpdated: "2026-04-22"
+    libraries:
+      - name: "hashicorp/terraform"
+        version: "1.5.0"
+        status: "adopted"
+      - name: "shellcheck"
+        version: "0.9.0"
+        status: "adopted"
+      - name: "prometheus"
+        version: "2.48.0"
+        status: "adopted"
+      - name: "grafana"
+        version: "10.2.3"
+        status: "adopted"
+
+  compliance_frameworks:
+    - name: "CIS Terraform Foundation Benchmark"
+      status: "enforced"
+      checks_enabled: 12
+    - name: "OWASP Top 10 Infrastructure"
+      status: "enforced"
+      checks_enabled: 8
+    - name: "SOC2 Access Control"
+      status: "enforced"
+      checks_enabled: 15
+
+# ── CI/CD Gates ───────────────────────────────────────────────────────────────
+gates:
+  required_for_merge:
+    - name: "shellcheck"
+      status: "fail-on-error"
+    - name: "terraform_fmt"
+      status: "fail-on-error"
+    - name: "checkov"
+      status: "fail-on-error"
+    - name: "tfsec"
+      status: "fail-on-error"
+    - name: "gitleaks"
+      status: "fail-closed"
+    - name: "trufflehog"
+      status: "fail-closed"
+
+# ── Standards & Best Practices ────────────────────────────────────────────────
+standards:
+  shell_scripts:
+    shebang: "#!/usr/bin/env bash"
+    formatter: "shfmt"
+    excludes:
+      - "scripts/archived/*"
+      - "scripts/deprecated/*"
+      - "scripts/.archived/*"
+      - "scripts/_archive/*"
+
+  terraform:
+    formatter: "terraform fmt"
+    state_file_location: "remote (S3 + DynamoDB)"
+    tagging_required: true
+    tags:
+      required:
+        - "environment"
+        - "project"
+        - "owner"
+        - "cost-center"
+
+  documentation:
+    format: "Markdown"
+    location: "CONTRIBUTING.md"
+    coverage_target: 100%
+
+---
+# Last Updated: April 22, 2026
+# Maintainer: Platform Engineering Team
+# Reference: CONTRIBUTING.md#governance

@@ -1,0 +1,161 @@
+# Caddy Routing Configuration for OIDC Issuer
+# Exposes internal K8s OIDC issuer (oidc-issuer.oidc-issuer:8888) to ide.kushnir.cloud domain
+
+# OIDC Discovery Endpoint (.well-known/openid-configuration)
+oidc.{$APEX_DOMAIN} {
+  encode gzip
+
+  # Security Headers for OIDC endpoints
+  header {
+    -Server
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "SAMEORIGIN"
+    X-XSS-Protection "1; mode=block"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    # CORS headers for OIDC discovery (services need to fetch configuration)
+    Access-Control-Allow-Origin "*"
+    Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+    Access-Control-Allow-Headers "Content-Type, Authorization"
+  }
+
+  # Rate limiting for OIDC endpoints (prevent brute force token requests)
+  @token_endpoint {
+    path /token
+    method POST
+  }
+  rate_limit @token_endpoint {
+    rate 100/s  # 100 token requests per second
+    burst 20
+    key {http.request.remote.host}
+  }
+
+  # Health Check Endpoint
+  handle /health {
+    reverse_proxy http://oidc-issuer.oidc-issuer.svc.cluster.local:8888 {
+      header_up X-Forwarded-For {http.request.remote.host}
+      header_up X-Forwarded-Proto https
+      header_up X-Real-IP {http.request.remote.host}
+    }
+    header {
+      Cache-Control "no-cache, no-store, must-revalidate"
+    }
+  }
+
+  # OIDC Discovery Endpoint (.well-known/openid-configuration)
+  handle /.well-known/openid-configuration {
+    reverse_proxy http://oidc-issuer.oidc-issuer.svc.cluster.local:8888 {
+      header_up X-Forwarded-For {http.request.remote.host}
+      header_up X-Forwarded-Proto https
+      header_up X-Real-IP {http.request.remote.host}
+    }
+    # Cache discovery endpoint for 1 hour
+    header {
+      Cache-Control "public, max-age=3600"
+      Content-Type "application/json; charset=utf-8"
+    }
+  }
+
+  # JWKS Endpoint (.well-known/jwks.json)
+  handle /.well-known/jwks.json {
+    reverse_proxy http://oidc-issuer.oidc-issuer.svc.cluster.local:8888 {
+      header_up X-Forwarded-For {http.request.remote.host}
+      header_up X-Forwarded-Proto https
+      header_up X-Real-IP {http.request.remote.host}
+    }
+    # Cache JWKS for 24 hours (key rotation updates this)
+    header {
+      Cache-Control "public, max-age=86400"
+      Content-Type "application/json; charset=utf-8"
+    }
+  }
+
+  # Token Endpoint (/token)
+  handle /token {
+    @token_post method POST
+    @token_get method GET
+    
+    # Only allow POST for token requests (security)
+    handle @token_post {
+      reverse_proxy http://oidc-issuer.oidc-issuer.svc.cluster.local:8888 {
+        header_up X-Forwarded-For {http.request.remote.host}
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {http.request.remote.host}
+        # Log token requests to Caddy for audit trail
+        header_up X-Request-ID {uuid}
+        header_up X-Request-Time {http.request.header.date}
+      }
+      # No caching for token endpoint (sensitive)
+      header {
+        Cache-Control "no-cache, no-store, must-revalidate"
+        Pragma "no-cache"
+        Expires "0"
+        Content-Type "application/json; charset=utf-8"
+      }
+    }
+
+    # Reject GET requests to token endpoint
+    handle @token_get {
+      respond 405 "Method Not Allowed"
+    }
+  }
+
+  # Token Verification Endpoint (optional, for service validation)
+  handle /token/verify {
+    reverse_proxy http://oidc-issuer.oidc-issuer.svc.cluster.local:8888 {
+      header_up X-Forwarded-For {http.request.remote.host}
+      header_up X-Forwarded-Proto https
+      header_up X-Real-IP {http.request.remote.host}
+    }
+    header {
+      Cache-Control "no-cache, no-store, must-revalidate"
+      Content-Type "application/json; charset=utf-8"
+    }
+  }
+
+  # User Info Endpoint (if using OIDC for user info)
+  handle /userinfo {
+    @bearer {
+      header Authorization "Bearer *"
+    }
+    reverse_proxy http://oidc-issuer.oidc-issuer.svc.cluster.local:8888 @bearer {
+      header_up X-Forwarded-For {http.request.remote.host}
+      header_up X-Forwarded-Proto https
+      header_up X-Real-IP {http.request.remote.host}
+    }
+    header {
+      Cache-Control "no-cache, no-store, must-revalidate"
+      Content-Type "application/json; charset=utf-8"
+    }
+  }
+
+  # Catch-all: Reject unknown endpoints
+  handle {
+    respond 404 "Not Found"
+  }
+
+  # Logging
+  log {
+    output stdout
+    format json {
+      time_format iso8601
+      request_headers {
+        Authorization
+        X-Forwarded-For
+        X-Real-IP
+        X-Request-ID
+      }
+    }
+  }
+}
+
+# Alternative: Route OIDC through ide.kushnir.cloud domain
+# (if single domain requirement, use path-based routing instead of subdomain)
+# 
+# ide.{$APEX_DOMAIN} {
+#   handle /oidc/* {
+#     uri strip_prefix /oidc
+#     reverse_proxy http://oidc-issuer.oidc-issuer.svc.cluster.local:8888
+#   }
+# }
+

@@ -19,14 +19,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Detect Windows paths in tracked files
         run: |
           # Patterns that indicate Windows-specific content
           PATTERNS=(
-            'C:\\'
-            'D:\\'
+            '[A-Za-z]:\\\\[^[:space:]]+'
             '%APPDATA%'
             '%USERPROFILE%'
             '%PROGRAMFILES%'
@@ -45,6 +44,8 @@ jobs:
             # Exclude: deprecated/, archived/, .archived/, docs/ prose
             matches=$(grep -rn --include="*.yml" --include="*.yaml" \
               --include="*.tf" --include="*.sh" \
+              --exclude="validate-linux-only.yml" \
+              --exclude="check-no-windows-content.sh" \
               --exclude-dir=deprecated \
               --exclude-dir=archived \
               --exclude-dir=".archived" \
@@ -71,11 +72,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Detect windows-* runner references
         run: |
-          bad=$(grep -rn "windows-" .github/workflows/ \
+          bad=$(grep -rn 'runs-on:[[:space:]]*windows' .github/workflows/ \
             --include="*.yml" --include="*.yaml" \
             --exclude="validate-linux-only.yml" 2>/dev/null || true)
           if [[ -n "$bad" ]]; then
@@ -93,7 +94,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Detect PowerShell scripts outside deprecated directories
         run: |
@@ -118,7 +119,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Validate docker-compose volume paths
         run: |

@@ -20,14 +20,14 @@ NC='\033[0m' # No Color
 
 # Enterprise endpoints
 ENDPOINTS=(
-    "192.168.168.31:8080"    # Code-Server (Primary)
-    "192.168.168.31:4180"    # OAuth2-Proxy
-    "192.168.168.31:3000"    # Grafana
-    "192.168.168.31:9090"    # Prometheus
-    "192.168.168.31:9093"    # AlertManager
-    "192.168.168.31:16686"   # Jaeger
-    "192.168.168.31:5432"    # PostgreSQL
-    "192.168.168.31:6379"    # Redis
+    "${DEPLOY_HOST}:8080"    # Code-Server (Primary)
+    "${DEPLOY_HOST}:4180"    # OAuth2-Proxy
+    "${DEPLOY_HOST}:3000"    # Grafana
+    "${DEPLOY_HOST}:9090"    # Prometheus
+    "${DEPLOY_HOST}:9093"    # AlertManager
+    "${DEPLOY_HOST}:16686"   # Jaeger
+    "${DEPLOY_HOST}:5432"    # PostgreSQL
+    "${DEPLOY_HOST}:6379"    # Redis
 )
 
 ENDPOINTS_REPLICA=(
@@ -106,29 +106,29 @@ main() {
     echo ""
     
     # Primary Site Scan
-    log_header "Primary Site - 192.168.168.31"
+    log_header "Primary Site - ${DEPLOY_HOST}"
     echo ""
     
     # Code-Server
-    check_endpoint "192.168.168.31:8080" "Code-Server (IDE)" || true
+    check_endpoint "${DEPLOY_HOST}:8080" "Code-Server (IDE)" || true
     echo ""
     
     # OAuth2-Proxy
-    check_endpoint "192.168.168.31:4180" "OAuth2-Proxy (Auth Gateway)" || true
+    check_endpoint "${DEPLOY_HOST}:4180" "OAuth2-Proxy (Auth Gateway)" || true
     echo ""
     
     # Observability Stack
     log_header "Observability Stack (Primary)"
-    check_endpoint "192.168.168.31:3000" "Grafana (Dashboards)" || true
-    check_endpoint "192.168.168.31:9090" "Prometheus (Metrics)" || true
-    check_endpoint "192.168.168.31:9093" "AlertManager (Alerts)" || true
-    check_endpoint "192.168.168.31:16686" "Jaeger (Tracing)" || true
+    check_endpoint "${DEPLOY_HOST}:3000" "Grafana (Dashboards)" || true
+    check_endpoint "${DEPLOY_HOST}:9090" "Prometheus (Metrics)" || true
+    check_endpoint "${DEPLOY_HOST}:9093" "AlertManager (Alerts)" || true
+    check_endpoint "${DEPLOY_HOST}:16686" "Jaeger (Tracing)" || true
     echo ""
     
     # Database Stack
     log_header "Database Stack (Primary)"
-    check_endpoint "192.168.168.31:5432" "PostgreSQL (Primary DB)" || true
-    check_endpoint "192.168.168.31:6379" "Redis (Cache)" || true
+    check_endpoint "${DEPLOY_HOST}:5432" "PostgreSQL (Primary DB)" || true
+    check_endpoint "${DEPLOY_HOST}:6379" "Redis (Cache)" || true
     echo ""
     
     # Replica Site Scan
@@ -155,7 +155,7 @@ main() {
         echo -e "${YELLOW}═════════════════════════════════════════════════════════════════════════════════${NC}"
         echo ""
         echo "Note: This script runs locally. If endpoints are unreachable:"
-        echo "  1. Run from production host: ssh akushnir@192.168.168.31"
+        echo "  1. Run from production host: ssh akushnir@${DEPLOY_HOST}"
         echo "  2. Then: bash scripts/vpn-enterprise-endpoint-scan.sh"
         echo "  3. Or use fallback: bash scripts/vpn-enterprise-endpoint-scan-fallback.sh"
         return 0  # Return 0 since network unavailability is expected locally

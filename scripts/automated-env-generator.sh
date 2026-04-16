@@ -47,9 +47,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/.env.production"
 
 echo "====== AUTOMATED PRODUCTION ENVIRONMENT GENERATION ======"
@@ -81,7 +81,6 @@ GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
 
 # Domain Configuration
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 DEPLOY_ENV="${DEPLOY_ENV:-production}"
 
 # Generate credentials

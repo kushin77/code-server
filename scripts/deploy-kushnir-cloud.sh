@@ -20,10 +20,8 @@
 #   ./scripts/deploy-kushnir-cloud.sh [--skip-dns] [--dry-run]
 set -euo pipefail
 
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(dirname "$SCRIPT_DIR")"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 SKIP_DNS=false
 DRY_RUN=false

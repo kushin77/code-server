@@ -217,7 +217,7 @@ jobs:
 
       - name: Create GitHub Issue (if needed)
         if: steps.quota-check.outputs.quota_percentage > 80
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           script: |
             const quotaPercent = ${{ steps.quota-check.outputs.quota_percentage }};
@@ -234,7 +234,7 @@ jobs:
 
       - name: Slack notification
         if: always()
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@70ad2a2e4fa87cb48e2667e6f3b2e24b34c22cec  # v1.25.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK }}
           payload: |
@@ -273,7 +273,7 @@ jobs:
             }
 
       - name: Upload report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22fc38ceea83b5bc9c7ff5a5109b73852e9f  # v4.3.1
         with:
           name: cost-report-${{ env.REPORT_DATE }}
           path: /tmp/cost_report.md

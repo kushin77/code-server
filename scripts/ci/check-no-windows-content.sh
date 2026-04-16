@@ -26,7 +26,7 @@ PS_PATTERNS=(
 # Windows path patterns
 WIN_PATH_PATTERNS=(
   '[A-Za-z]:\\\\[A-Za-z]'          # C:\foo\bar
-  '\\\\\\\\[A-Za-z0-9]'            # \\server UNC path
+  '\\\\\\\\[A-Za-z0-9._-]+\\[A-Za-z0-9._-]+'  # \\server\share UNC path
 )
 
 # CRLF: checked separately via git
@@ -44,6 +44,11 @@ check_file() {
 
   # Skip node_modules and archived directories
   if [[ "$f" == *node_modules* || "$f" == */.archived/* || "$f" == */archived/* ]]; then
+    return 0
+  fi
+
+  # Skip this checker script itself to avoid self-matching regex token definitions.
+  if [[ "$f" == "scripts/ci/check-no-windows-content.sh" ]]; then
     return 0
   fi
 

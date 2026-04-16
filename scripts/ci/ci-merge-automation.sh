@@ -246,7 +246,6 @@ if $MONITOR; then
         write_info "→ Run with --merge flag to execute merge sequence automatically"
     fi
 elif $MERGE; then
-    local status9
     status9=$(get_pr_check_status "$PR_PHASE9")
     
     if [[ "$status9" == "PASSED" ]]; then

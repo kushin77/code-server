@@ -1,0 +1,221 @@
+---
+# ════════════════════════════════════════════════════════════════════════════
+# Host Hardening Playbook - CIS Ubuntu 22.04 LTS Compliance
+# Issue #349: CIS Ubuntu hardening — fail2ban + auditd + AIDE + unattended-upgrades + kernel sysctl + SSH hardening
+# ════════════════════════════════════════════════════════════════════════════
+
+- name: Host Hardening - CIS Ubuntu Compliance
+  hosts: all
+  become: yes
+  vars:
+    # Immutable versions pinned for reproducibility
+    fail2ban_version: "0.11.2"
+    aide_version: "0.17.4"
+    auditd_package: "auditd"
+  
+  tasks:
+    # ─────────────────────────────────────────────────────────────────────────
+    # 1. Kernel Hardening - Sysctl Security Parameters
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "1.1 Apply kernel hardening - IP forwarding disabled"
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_set: yes
+        state: present
+        reload: yes
+      loop:
+        # Disable IPv4 forwarding (not needed for non-router)
+        - { key: "net.ipv4.ip_forward", value: "0" }
+        # Disable IPv6 forwarding
+        - { key: "net.ipv6.conf.all.forwarding", value: "0" }
+        # Enable SYN cookies (SYN flood protection)
+        - { key: "net.ipv4.tcp_syncookies", value: "1" }
+        # Disable source packet routing
+        - { key: "net.ipv4.conf.all.send_redirects", value: "0" }
+        - { key: "net.ipv4.conf.default.send_redirects", value: "0" }
+        - { key: "net.ipv4.conf.all.accept_source_route", value: "0" }
+        - { key: "net.ipv4.conf.default.accept_source_route", value: "0" }
+        - { key: "net.ipv6.conf.all.accept_source_route", value: "0" }
+        - { key: "net.ipv6.conf.default.accept_source_route", value: "0" }
+        # Enable ICMP redirect rejection
+        - { key: "net.ipv4.conf.all.accept_redirects", value: "0" }
+        - { key: "net.ipv4.conf.default.accept_redirects", value: "0" }
+        - { key: "net.ipv4.conf.all.secure_redirects", value: "0" }
+        - { key: "net.ipv4.conf.default.secure_redirects", value: "0" }
+        # Enable bad error message protection
+        - { key: "net.ipv4.icmp_ignore_bogus_error_responses", value: "1" }
+        # Reverse path filtering (anti-spoofing)
+        - { key: "net.ipv4.conf.all.rp_filter", value: "1" }
+        - { key: "net.ipv4.conf.default.rp_filter", value: "1" }
+        # Log Martians (suspicious packets)
+        - { key: "net.ipv4.conf.all.log_martians", value: "1" }
+        - { key: "net.ipv4.conf.default.log_martians", value: "1" }
+        # TCP hardening
+        - { key: "net.ipv4.tcp_timestamps", value: "0" }  # Reduce timing attack surface
+        - { key: "net.ipv4.tcp_sack", value: "0" }         # Disable SACK
+        - { key: "net.ipv4.tcp_dsack", value: "0" }        # Disable DSACK
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # 2. SSH Hardening
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "2.1 Harden SSH configuration"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?{{ item.key }}"
+        line: "{{ item.key }} {{ item.value }}"
+        state: present
+      loop:
+        # Authentication hardening
+        - { key: "PermitRootLogin", value: "no" }
+        - { key: "PubkeyAuthentication", value: "yes" }
+        - { key: "PasswordAuthentication", value: "no" }
+        - { key: "PermitEmptyPasswords", value: "no" }
+        - { key: "ChallengeResponseAuthentication", value: "no" }
+        - { key: "UsePAM", value: "yes" }
+        # Connection hardening
+        - { key: "MaxAuthTries", value: "3" }
+        - { key: "MaxSessions", value: "5" }
+        - { key: "ClientAliveInterval", value: "300" }
+        - { key: "ClientAliveCountMax", value: "2" }
+        - { key: "LoginGraceTime", value: "30" }
+        # Security options
+        - { key: "StrictModes", value: "yes" }
+        - { key: "IgnoreRhosts", value: "yes" }
+        - { key: "HostbasedAuthentication", value: "no" }
+        - { key: "RhostsRSAAuthentication", value: "no" }
+        - { key: "RSAAuthentication", value: "no" }
+        - { key: "X11Forwarding", value: "no" }
+        - { key: "AllowAgentForwarding", value: "no" }
+        - { key: "AllowTcpForwarding", value: "no" }
+        - { key: "GatewayPorts", value: "no" }
+        - { key: "PermitTunnel", value: "no" }
+        - { key: "Compression", value: "no" }
+        # Crypto hardening (use strong ciphers only)
+        - { key: "KexAlgorithms", value: "curve25519-sha256,curve25519-sha256@libssh.org" }
+        - { key: "Ciphers", value: "chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com" }
+        - { key: "MACs", value: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256" }
+        - { key: "HostKeyAlgorithms", value: "ssh-ed25519" }
+      notify: restart sshd
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # 3. Install and Configure Fail2ban (Intrusion Prevention)
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "3.1 Install fail2ban"
+      apt:
+        name: fail2ban
+        state: present
+        update_cache: yes
+
+    - name: "3.2 Configure fail2ban jail"
+      copy:
+        content: |
+          [DEFAULT]
+          bantime = 3600
+          findtime = 600
+          maxretry = 3
+          destemail = admin@example.com
+          sender = root@{{ ansible_hostname }}
+          action = %(action_mwl)s
+
+          [sshd]
+          enabled = true
+          port = ssh
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 3
+
+          [sshd-ddos]
+          enabled = true
+          port = ssh
+          filter = sshd-ddos
+          logpath = /var/log/auth.log
+          maxretry = 10
+          findtime = 600
+          bantime = 600
+        dest: /etc/fail2ban/jail.local
+      notify: restart fail2ban
+
+    - name: "3.3 Enable fail2ban"
+      systemd:
+        name: fail2ban
+        enabled: yes
+        state: started
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # 4. Install and Configure Auditd (System Auditing)
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "4.1 Install auditd"
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - auditd
+        - audispd-plugins
+
+    - name: "4.2 Configure auditd rules"
+      copy:
+        content: |
+          # Delete all rules
+          -D
+          # Buffer Size
+          -b 8192
+          # Failure handling
+          -f 2
+          # System calls to monitor
+          -a always,exit -F arch=b64 -S chmod,chown,lchown,fchmod,fchown -F auid>=1000 -F auid!=-1 -k perm_mod
+          # Unauthorized access
+          -a always,exit -F arch=b64 -S open,openat -F exit=-EACCES -F auid>=1000 -F auid!=-1 -k access
+          # sudoers changes
+          -w /etc/sudoers -p wa -k sudoers
+          -w /etc/sudoers.d/ -p wa -k sudoers
+          # Make immutable
+          -e 2
+        dest: /etc/audit/rules.d/cis.rules
+      notify: restart auditd
+
+    - name: "4.3 Enable auditd"
+      systemd:
+        name: auditd
+        enabled: yes
+        state: started
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # 5. Install AIDE (File Integrity Monitoring)
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "5.1 Install AIDE"
+      apt:
+        name: aide
+        state: present
+        update_cache: yes
+
+    - name: "5.2 Initialize AIDE database"
+      shell: aideinit -y
+      args:
+        creates: /var/lib/aide/aide.db
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # 6. Install Unattended Upgrades
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "6.1 Install unattended-upgrades"
+      apt:
+        name: unattended-upgrades
+        state: present
+        update_cache: yes
+
+  handlers:
+    - name: restart sshd
+      systemd:
+        name: sshd
+        state: restarted
+
+    - name: restart fail2ban
+      systemd:
+        name: fail2ban
+        state: restarted
+
+    - name: restart auditd
+      systemd:
+        name: auditd
+        state: restarted

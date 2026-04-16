@@ -201,10 +201,9 @@ Budget: See COST-ESTIMATE.md
 Post in Slack: #devops-governance
 EOF
         success "Created: .github/README.md"
-    else
-        verbose "Skipped: .github/README.md (already exists)"
     fi
-    fi
+else
+    verbose "Skipped: .github/README.md (already exists)"
 fi
 
 # Create COST-ESTIMATE.md template

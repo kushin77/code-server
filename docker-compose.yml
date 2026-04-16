@@ -34,7 +34,7 @@ services:
     volumes:
       - code-server-enterprise-data:/home/coder
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -52,12 +52,19 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
 
   # ─── ollama ─────────────────────────────────────────────────────────────────
   # Local LLM server (pinned to 0.1.27)
   # Usage: COMPOSE_PROFILES=ai docker compose up -d
   ollama:
-    image: ollama/ollama:0.1.27
+    image: ollama/ollama:0.1.45
     container_name: ollama
     profiles: [ai]
     restart: unless-stopped
@@ -67,11 +74,16 @@ services:
       - "0.0.0.0:11434:11434"
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_KEEP_ALIVE=5m
-      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
-      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
+      - OLLAMA_KEEP_ALIVE=10m
+      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-16}
+      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-1}
+      - OLLAMA_GPU_LAYERS=${OLLAMA_GPU_LAYERS:-99}
+      - OLLAMA_FLASH_ATTENTION=1
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-4}
+      - CUDA_VISIBLE_DEVICES=1
     volumes:
       - ollama-data:/root/.ollama
+      - /mnt/nas-56/ollama:/root/.ollama/models
     healthcheck:
       # ollama container healthcheck using wget
       test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null || exit 1"]
@@ -83,18 +95,23 @@ services:
       resources:
         limits:
           memory: 32g
+          cpus: '8.0'
         reservations:
-          memory: 8g
+          memory: 16g
+          cpus: '4.0'
+    runtime: nvidia
     logging:
       driver: json-file
       options:
         max-size: "20m"
         max-file: "5"
+    cap_drop:
+      - ALL
 
   # ─── ollama-init ────────────────────────────────────────────────────────────
   # One-time service that pulls models on startup
   ollama-init:
-    image: ollama/ollama:0.1.27
+    image: ollama/ollama:0.1.45
     container_name: ollama-init
     profiles: [ai]
     networks:
@@ -121,6 +138,7 @@ services:
     depends_on:
       - ollama
     restart: on-failure
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
 
   # ─── oauth2-proxy ───────────────────────────────────────────────────────────
   # Authentication sidecar (pinned to v7.5.1)
@@ -162,15 +180,14 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4180/ping"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4180/ping || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
     depends_on:
       - code-server
-    security_opt:
-      - no-new-privileges:true
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -178,10 +195,10 @@ services:
         max-file: "3"
 
   # ─── caddy ──────────────────────────────────────────────────────────────────
-  # Reverse proxy + TLS (pinned to 2.7.6)
+  # Reverse proxy + TLS (pinned to 2.9.1-alpine for elite best practices)
   caddy:
-    # Production TLS termination
-    image: caddy:2-alpine
+    # Production TLS termination - immutable, pinned version
+    image: caddy:2.9.1-alpine
     container_name: caddy
     restart: always
     networks:
@@ -196,13 +213,18 @@ services:
     environment:
       - ACME_AGREE=true
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ > /dev/null 2>&1 || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
     depends_on:
       - code-server
+    # Allow binding to privileged ports (80, 443) without full root
+    cap_add:
+      - NET_BIND_SERVICE
+    # Note: snap Docker + no-new-privileges causes "operation not permitted" on binary exec
+    # Removed no-new-privileges:true for snap compatibility
     logging:
       driver: json-file
       options:
@@ -231,11 +253,12 @@ services:
     depends_on:
       - jaeger
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/metrics"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/metrics || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -265,11 +288,12 @@ services:
     volumes:
       - jaeger-data:/badger
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:16686/"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:16686/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -299,8 +323,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
-    security_opt:
-      - no-new-privileges:true
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -340,8 +363,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-    security_opt:
-      - no-new-privileges:true
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -370,15 +392,15 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - ./config/alert-rules-audit-phase4.yml:/etc/prometheus/alert-rules-audit-phase4.yml:ro
       - prometheus-data:/prometheus
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
-    security_opt:
-      - no-new-privileges:true
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -409,13 +431,12 @@ services:
     depends_on:
       - prometheus
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
-    security_opt:
-      - no-new-privileges:true
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -441,13 +462,12 @@ services:
       - ./alertmanager.default.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9093/-/healthy"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/healthy || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
-    security_opt:
-      - no-new-privileges:true
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -471,13 +491,12 @@ services:
       - ./loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki-data:/loki
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3100/ready"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
-    security_opt:
-      - no-new-privileges:true
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:
@@ -501,8 +520,7 @@ services:
     command: ["-config.file=/etc/promtail/promtail-config.yml"]
     depends_on:
       - loki
-    security_opt:
-      - no-new-privileges:true
+    # snap Docker: no-new-privileges removed (incompatible with snap Docker seccomp)
     logging:
       driver: json-file
       options:

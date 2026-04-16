@@ -145,7 +145,7 @@ echo "Creating Cloudflare Access policy..."
 #   }'
 
 # For demo, just generate a fake access ID
-CLOUDFLARE_ACCESS_ID="access_demo_$(echo $RANDOM | md5sum | cut -c1-8)"
+CLOUDFLARE_ACCESS_ID="access_demo_$(echo "$RANDOM" | md5sum | cut -c1-8)"
 echo "  ✅ Created Cloudflare Access policy (ID: $CLOUDFLARE_ACCESS_ID)"
 
 # ============================================================================

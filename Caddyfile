@@ -69,6 +69,14 @@
     }
 
     # ─────────────────────────────────────────────────────────────────────────
+    # Trace Correlation: propagate Cloudflare CF-Ray ID edge-to-container
+    # Forwards CF-Ray as x-cf-ray-id to all upstreams; visible in Jaeger via
+    # OTel span attribute cf.ray.id — enables on-call to trace alert → edge.
+    # ─────────────────────────────────────────────────────────────────────────
+    request_header X-Cf-Ray-Id {http.request.header.Cf-Ray}
+    request_header X-Edge-Trace-Id {http.request.header.Cf-Ray}
+
+    # ─────────────────────────────────────────────────────────────────────────
     # OAuth2 Proxy: auth redirects + callback handling
     # ─────────────────────────────────────────────────────────────────────────
     @oauth2 path /oauth2/*

@@ -39,6 +39,14 @@ scrape_configs:
       - timestamp:
           source: time
           format: RFC3339Nano
+      # Cloudflare-to-container trace correlation: extract CF-Ray ID from Caddy JSON access logs
+      # Enables: LogQL {container_name="caddy"} | json | cf_ray_id != "" | line_format "{{.cf_ray_id}}"
+      - json:
+          expressions:
+            cf_ray_id: request.headers["X-Cf-Ray-Id"][0]
+          source: log
+      - labels:
+          cf_ray_id:
       # PII scrubbing — redact tokens, emails, and bearer credentials before shipping to Loki
       - replace:
           expression: '((?i)bearer\s+)[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+'

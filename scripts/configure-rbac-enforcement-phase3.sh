@@ -32,12 +32,7 @@ readonly CADDY_DIR="${SCRIPT_DIR}/../config/caddy"
 readonly LOGS_DIR="${SCRIPT_DIR}/../docs/runbooks"
 
 # Initialize common functions and logging
-source "${SCRIPT_DIR}/_common/init.sh" 2>/dev/null || {
-  # Fallback if _common/init.sh doesn't exist
-  log_info() { echo "[INFO] $(date -u +'%H:%M:%S%z') $*" >&2; }
-  log_error() { echo "[ERROR] $(date -u +'%H:%M:%S%z') $*" >&2; }
-  log_warn() { echo "[WARN] $(date -u +'%H:%M:%S%z') $*" >&2; }
-}
+source "${SCRIPT_DIR}/_common/init.sh"
 
 #############################################################################
 # Function: Generate Caddyfile JWT Validator Configuration

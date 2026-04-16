@@ -2,7 +2,7 @@
 # Uses docker-compose for container orchestration (declarative)
 # Terraform for infrastructure provisioning (optional future use)
 
-.PHONY: help init validate plan apply deploy destroy destroy-full clean logs status dashboard \
+.PHONY: help init validate validate-env test-env generate-env-docs plan apply deploy destroy destroy-full clean logs status dashboard \
         shell refresh output fmt taint untaint state-list console audit idempotency-check \
         compose-up compose-down compose-restart \
         backup restore rotate-secret update-vsix \
@@ -116,8 +116,14 @@ help:
 	@echo "  make rotate-secret - Rotate OAUTH2_PROXY_COOKIE_SECRET in .env"
 	@echo "  make update-vsix   - Rebuild image with explicit VSIX versions"
 	@echo ""
+	@echo "ENVIRONMENT VALIDATION (NEW - Phase 3):"
+	@echo "  make validate-env  - Validate all required environment variables"
+	@echo "  make test-env      - Test with fake credentials (dry-run)"
+	@echo "  make generate-env-docs - Generate ENV_REFERENCE.md from schema"
+	@echo ""
 	@echo "EXAMPLES:"
 	@echo "  make deploy              - Deploy with Ollama integration"
+	@echo "  make validate-env        - Validate env before deployment"
 	@echo "  make ollama-pull-models  - Get elite LLM models"
 	@echo "  make ollama-status       - Monitor Ollama"
 	@echo "  make destroy             - Destroy everything"
@@ -172,6 +178,32 @@ destroy-full:
 # ✅ Validate docker-compose configuration
 validate:
 	docker compose config > /dev/null 2>&1 && echo "✅ docker-compose configuration is valid" || { echo "❌ Invalid docker-compose configuration"; exit 1; }
+
+# ✅ Validate environment variables (schema-driven)
+validate-env:
+	@echo "🔍 Validating environment configuration..."
+	@bash scripts/validate-env.sh
+	@echo "✅ Environment validation passed"
+
+# ✅ Test environment with fake credentials (dry-run)
+test-env:
+	@echo "🧪 Testing environment with dev credentials..."
+	@export DEPLOYMENT_ENV=dev; \
+	export APEX_DOMAIN=localhost; \
+	export PRIMARY_HOST_IP=127.0.0.1; \
+	export GOOGLE_CLIENT_ID=test-client-id; \
+	export GOOGLE_CLIENT_SECRET=test-client-secret; \
+	export OAUTH2_PROXY_COOKIE_SECRET=0123456789abcdef0123456789abcdef; \
+	export POSTGRES_PASSWORD=test-password; \
+	bash scripts/validate-env.sh --verbose; \
+	echo "✅ Environment test passed (using test credentials)"
+
+# ✅ Generate environment reference documentation
+generate-env-docs:
+	@echo "📝 Generating environment reference documentation..."
+	@bash scripts/generate-env-docs.sh > ENV_REFERENCE.md
+	@echo "✅ Generated: ENV_REFERENCE.md ($(shell wc -l < ENV_REFERENCE.md) lines)"
+	@echo "   Run: cat ENV_REFERENCE.md | less"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # OPERATIONAL TASKS

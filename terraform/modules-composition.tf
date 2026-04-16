@@ -1,59 +1,7 @@
 # Terraform Modules Composition - Root Integration
 # P2 #418 Phase 3: Integration of all 5 core modules
 # This file composes all modules into the production infrastructure
-
-terraform {
-  required_version = ">= 1.5.0"
-
-  required_providers {
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.23"
-    }
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 4.0"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.11"
-    }
-  }
-}
-
-# Kubernetes Provider
-provider "kubernetes" {
-  host                   = var.kubernetes_host != "" ? var.kubernetes_host : "http://localhost:8080"
-  client_certificate     = var.kubernetes_client_certificate
-  client_key             = var.kubernetes_client_key
-  cluster_ca_certificate = var.kubernetes_cluster_ca_certificate
-  config_path            = var.kubernetes_config_path
-}
-
-# Docker Provider (for Docker-only deployments)
-provider "docker" {
-  host = var.docker_host != "" ? var.docker_host : "unix:///var/run/docker.sock"
-}
-
-# Cloudflare Provider
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
-}
-
-# Helm Provider (for K8s chart deployments)
-provider "helm" {
-  kubernetes {
-    host                   = var.kubernetes_host
-    client_certificate     = var.kubernetes_client_certificate
-    client_key             = var.kubernetes_client_key
-    cluster_ca_certificate = var.kubernetes_cluster_ca_certificate
-    config_path            = var.kubernetes_config_path
-  }
-}
+# NOTE: terraform block and provider configurations are in main.tf
 
 ################################
 # MODULE 1: Monitoring (Prometheus, Grafana, AlertManager)

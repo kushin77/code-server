@@ -153,45 +153,6 @@ output "failover_ha_endpoints" {
   }
 }
 
-output "service_discovery" {
-  description = "Complete service discovery map for inter-service communication"
-  value = {
-    monitoring = {
-      namespace = var.monitoring_namespace
-      services = {
-        prometheus_http = "${var.monitoring_namespace}.prometheus:9090"
-        prometheus_scrape = "${var.monitoring_namespace}.prometheus:9090"
-        grafana_http = "${var.monitoring_namespace}.grafana:3000"
-        alertmanager_http = "${var.monitoring_namespace}.alertmanager:9093"
-      }
-    }
-    networking = {
-      namespace = var.networking_namespace
-      services = {
-        kong_proxy = "${var.networking_namespace}.kong:8000"
-        kong_admin = "${var.networking_namespace}.kong:8001"
-        coredns_dns = "${var.networking_namespace}.coredns:53"
-      }
-    }
-    security = {
-      namespace = var.security_namespace
-      services = {
-        vault_http = "${var.security_namespace}.vault:8200"
-        opa_http = "${var.security_namespace}.opa:8181"
-      }
-    }
-    failover = {
-      namespace = var.failover_namespace
-      services = {
-        postgres = "${var.failover_namespace}.postgres:5432"
-        postgres_replica = "${var.failover_namespace}.postgres-replica:5432"
-        etcd = "${var.failover_namespace}.etcd:2379"
-        etcd_peer = "${var.failover_namespace}.etcd:2380"
-      }
-    }
-  }
-}
-
 output "terraform_commands" {
   description = "Common Terraform commands for this infrastructure"
   value = {

@@ -378,10 +378,10 @@ resource "null_resource" "make_deploy_executable" {
 output "deployment_summary" {
   description = "Summary of IaC deployment configuration"
   value = {
-    service_name    = local.service_name
-    environment     = local.environment
-    pinned_versions = local.versions
-    network         = local.network
-    storage_volumes = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
+    service_name          = local.service_name
+    environment           = local.environment
+    pinned_versions       = local.versions
+    network               = local.network
+    storage_volumes       = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
   }
 }

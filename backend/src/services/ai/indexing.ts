@@ -48,6 +48,20 @@ export interface SearchResult {
   score: number;
 }
 
+export interface RetrievalBenchmarkCase {
+  query: string;
+  expectedFilePaths: string[];
+}
+
+export interface RetrievalQualityMetrics {
+  totalCases: number;
+  hitRate: number;
+  precision: number;
+  recall: number;
+  avgLatencyMs: number;
+  p95LatencyMs: number;
+}
+
 type QueueTask = () => Promise<void>;
 
 const DEFAULT_OPTIONS: IndexingOptions = {
@@ -323,6 +337,69 @@ export function chunkByTokenWindow(content: string, chunkSizeTokens: number, ove
   }
 
   return chunks;
+}
+
+export function evaluateRetrievalQuality(
+  indexer: RepositoryIndexer,
+  cases: RetrievalBenchmarkCase[],
+  limit = 5,
+): RetrievalQualityMetrics {
+  if (cases.length === 0) {
+    return {
+      totalCases: 0,
+      hitRate: 0,
+      precision: 0,
+      recall: 0,
+      avgLatencyMs: 0,
+      p95LatencyMs: 0,
+    };
+  }
+
+  let hits = 0;
+  let totalTp = 0;
+  let totalFp = 0;
+  let totalFn = 0;
+  const latencies: number[] = [];
+
+  for (const testCase of cases) {
+    const started = process.hrtime.bigint();
+    const results = indexer.search(testCase.query, limit);
+    const elapsedNs = process.hrtime.bigint() - started;
+    latencies.push(Number(elapsedNs) / 1_000_000);
+
+    const predicted = new Set(results.map((r) => r.chunk.metadata.filePath));
+    const expected = new Set(testCase.expectedFilePaths);
+
+    let tp = 0;
+    for (const file of predicted) {
+      if (expected.has(file)) tp += 1;
+    }
+
+    const fp = Math.max(0, predicted.size - tp);
+    const fn = Math.max(0, expected.size - tp);
+
+    totalTp += tp;
+    totalFp += fp;
+    totalFn += fn;
+    if (tp > 0) hits += 1;
+  }
+
+  const avgLatencyMs = latencies.reduce((acc, v) => acc + v, 0) / latencies.length;
+  const sorted = [...latencies].sort((a, b) => a - b);
+  const p95Index = Math.max(0, Math.ceil(sorted.length * 0.95) - 1);
+  const p95LatencyMs = sorted[p95Index] ?? 0;
+
+  const precisionDenominator = totalTp + totalFp;
+  const recallDenominator = totalTp + totalFn;
+
+  return {
+    totalCases: cases.length,
+    hitRate: hits / cases.length,
+    precision: precisionDenominator > 0 ? totalTp / precisionDenominator : 0,
+    recall: recallDenominator > 0 ? totalTp / recallDenominator : 0,
+    avgLatencyMs,
+    p95LatencyMs,
+  };
 }
 
 function estimateTokenCount(content: string): number {

@@ -75,11 +75,9 @@
     reverse_proxy oauth2-proxy:4180 {
         transport http {
             # WebSocket passthrough for code-server terminal + extensions
-            dial_timeout      10s
-            read_timeout      0   # unlimited for long-running WS
-            write_timeout     0
-            keep_alive_timeout 90s
-            max_conns_per_host 100
+            dial_timeout  10s
+            read_timeout  0
+            write_timeout 0
         }
     }
 

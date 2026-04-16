@@ -250,7 +250,7 @@ echo ""
 # Check for hardcoded secrets
 if [ -f "$PARENT_DIR/docker-compose.yml" ]; then
     if grep -q "password\|secret\|token" "$PARENT_DIR/docker-compose.yml" | \
-       grep -qv "\\${" | grep -qv "#"; then
+       grep -qv '\${' | grep -qv "#"; then
         fail "Possible hardcoded secrets in docker-compose.yml"
     else
         pass "No hardcoded secrets in docker-compose.yml"

@@ -50,9 +50,8 @@ jobs:
           if [ -f Caddyfile ]; then
             # CI image may not include cloudflare DNS plugin; validate base syntax without dns provider line.
             sed '/^\s*dns cloudflare /d' Caddyfile > /tmp/Caddyfile.ci
-            caddy validate --config /tmp/Caddyfile.ci \
-              && echo "✓ Caddyfile syntax valid" \
-              || echo "⚠ Caddyfile validation failed in CI image (non-blocking)"
+            caddy validate --config /tmp/Caddyfile.ci
+            echo "✓ Caddyfile syntax valid"
           else
             echo "⚠ No Caddyfile found"
           fi
@@ -91,10 +90,6 @@ jobs:
           for script in scripts/*.sh; do
             if [ -f "$script" ]; then
               if [ "$script" = "scripts/automated-iac-validation.sh" ]; then
-                echo "⊘ Skipping legacy script: $script"
-                continue
-              fi
-              if [ "$script" = "scripts/deploy.sh" ]; then
                 echo "⊘ Skipping legacy script: $script"
                 continue
               fi

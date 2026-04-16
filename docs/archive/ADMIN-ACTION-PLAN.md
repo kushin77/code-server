@@ -40,7 +40,7 @@
 ### Step 2: Tag Release (1 minute)
 **After PR is merged to main**, run locally:
 ```bash
-cd c:\code-server-enterprise
+cd ~/code-server-enterprise
 git pull origin main
 git tag -a v4.0.0-phase-4-ready -m "Phase 4 execution complete - infrastructure consolidation, OAuth framework, domain migration"
 git push origin v4.0.0-phase-4-ready

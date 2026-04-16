@@ -55,8 +55,7 @@ docker stats --no-stream
 
 # System resources
 df -h /
-free -h              # Linux
-Get-Volume -ErrorAction SilentlyContinue  # Windows
+free -h              # Linux only (production platform)
 
 # Network connectivity
 curl -s https://ide.kushnir.cloud/health | jq .

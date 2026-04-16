@@ -19,7 +19,6 @@ All Phase 7c disaster recovery tests are prepared, tested, and ready for executi
 ### Documentation
 - ✅ IMMEDIATE-ACTION-PLAN.md — Clear next steps
 - ✅ READY-TO-PROCEED.md — Executive summary
-- ✅ WINDOWS-QUICK-START.md — Windows instructions
 - ✅ PHASE-7C-PREFLIGHT-CHECKLIST.md — Pre-flight checklist
 - ✅ ACTION-REQUIRED.md — Quick action guide
 - ✅ START-HERE-PHASE-7C-EXECUTION.md — Detailed execution guide
@@ -60,10 +59,11 @@ All Phase 7c disaster recovery tests are prepared, tested, and ready for executi
 
 ## Next Immediate Action
 
-Execute on your Windows machine:
+Execute from Linux or SSH into production host:
 
-```powershell
-ssh akushnir@192.168.168.31 && cd code-server-enterprise && bash EXECUTE-PHASE-7C-NOW.sh
+```bash
+ssh akushnir@192.168.168.31
+cd code-server-enterprise && bash EXECUTE-PHASE-7C-NOW.sh
 ```
 
 Expected runtime: **5-10 minutes**

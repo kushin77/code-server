@@ -17,7 +17,10 @@ jobs:
       - name: Check Phase 1 (Design Certification)
         id: phase1
         run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
+          cat > /tmp/pr_body.txt <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          PR_BODY="$(cat /tmp/pr_body.txt)"
           if [[ "$PR_BODY" =~ "Phase 1: Design Certification" ]]; then
             echo "✓ Phase 1 section found"
             # Count checked items in Phase 1
@@ -31,7 +34,10 @@ jobs:
       - name: Check Phase 2 (Code Review)
         id: phase2
         run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
+          cat > /tmp/pr_body.txt <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          PR_BODY="$(cat /tmp/pr_body.txt)"
           if [[ "$PR_BODY" =~ "Phase 2: Code & Quality Review" ]]; then
             echo "✓ Phase 2 section found"
             PHASE2_CHECKED=$(echo "$PR_BODY" | grep -o "\[x\]" | wc -l)
@@ -44,7 +50,10 @@ jobs:
       - name: Check Phase 3 (Performance)
         id: phase3
         run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
+          cat > /tmp/pr_body.txt <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          PR_BODY="$(cat /tmp/pr_body.txt)"
           if [[ "$PR_BODY" =~ "Phase 3: Performance & Load Testing" ]]; then
             echo "✓ Phase 3 section found"
             # Phase 3 can be skipped for non-critical changes
@@ -63,7 +72,10 @@ jobs:
       - name: Check Phase 4 (Operations)
         id: phase4
         run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
+          cat > /tmp/pr_body.txt <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          PR_BODY="$(cat /tmp/pr_body.txt)"
           if [[ "$PR_BODY" =~ "Phase 4: Operational Readiness" ]]; then
             echo "✓ Phase 4 section found"
             PHASE4_CHECKED=$(echo "$PR_BODY" | grep -o "\[x\]" | wc -l)
@@ -76,7 +88,10 @@ jobs:
       - name: Check Issue Linkage (Closes/Fixes required)
         id: issues
         run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
+          cat > /tmp/pr_body.txt <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          PR_BODY="$(cat /tmp/pr_body.txt)"
           if [[ "$PR_BODY" =~ "Closes #"  ]] || [[ "$PR_BODY" =~ "Fixes #" ]] || [[ "$PR_BODY" =~ "Resolves #" ]]; then
             echo "✓ Issue linkage found"
             echo "linked=true" >> $GITHUB_OUTPUT

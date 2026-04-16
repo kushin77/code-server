@@ -11,7 +11,7 @@ on:
 env:
   COST_CATEGORY: "ci-security"
 
-  pull_request:
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 

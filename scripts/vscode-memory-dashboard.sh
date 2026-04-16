@@ -122,7 +122,7 @@ if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
   docker stats --no-stream --format "  {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}" 2>/dev/null || \
     echo "  (Docker running but no containers active)"
 else
-  echo "  (Docker not running locally — deploy via SSH to ${DEPLOY_HOST})"
+  echo "  (Docker not running locally — deploy via SSH to 192.168.168.31)"
 fi
 echo ""
 echo "═════════════════════════════════════════════════════════════"

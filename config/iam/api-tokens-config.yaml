@@ -1,21 +1,84 @@
+# P1 #388 Phase 2 - API Token Configuration
+# Long-lived tokens for webhook integrations and external API calls
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: api-tokens-config
   namespace: code-server-iam
 data:
+  
   token-policy.yaml: |
     token_management:
+      
       generation:
         algorithm: HMAC-SHA256
         length_bytes: 32
         encoding: base64url
+      
       storage:
         backend: kubernetes-secret
         encryption: AES-256-GCM
         access_control: RBAC
+      
       rotation:
         enabled: true
         schedule: monthly
         notification_days_before: 7
-        old_token_grace_period: 24
+        old_token_grace_period: 24 # hours
+    
+    token_types:
+      
+      github_webhook:
+        name: GitHub Webhook Auth
+        scope: ["github:webhook:verify"]
+        validity_days: 365
+        issuer: code-server-iam
+      
+      slack_webhook:
+        name: Slack Webhook Auth
+        scope: ["slack:webhook"]
+        validity_days: 90
+        issuer: code-server-iam
+      
+      datadog:
+        name: DataDog Integration
+        scope: ["datadog:events", "datadog:metrics"]
+        validity_days: 365
+        issuer: code-server-iam
+      
+      pagerduty:
+        name: PagerDuty Integration
+        scope: ["pagerduty:incidents"]
+        validity_days: 90
+        issuer: code-server-iam
+      
+      external_api:
+        name: External API Token
+        scope: ["external:api"]
+        validity_days: 180
+        issuer: code-server-iam
+
+---
+# Secret for GitHub webhook token
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-webhook-token
+  namespace: code-server-iam
+type: Opaque
+stringData:
+  token: "REPLACE_WITH_OPENSSL_BASE64_32"  # Generate during deploy and inject via secret manager
+  expires_at: "2027-04-22T00:00:00Z"
+
+---
+# Secret for Slack webhook token
+apiVersion: v1
+kind: Secret
+metadata:
+  name: slack-webhook-token
+  namespace: code-server-iam
+type: Opaque
+stringData:
+  token: "REPLACE_WITH_OPENSSL_BASE64_32"  # Generate during deploy and inject via secret manager
+  expires_at: "2026-07-22T00:00:00Z"

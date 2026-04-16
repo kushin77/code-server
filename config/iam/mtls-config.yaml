@@ -1,10 +1,55 @@
-apiVersion: cert-manager.io/v1
-kind: Issuer
+# P1 #388 Phase 2 - mTLS Configuration
+# Auto-rotation of certificates for pod-to-pod encrypted communication
+
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: selfsigned-issuer
+  name: mtls-config
   namespace: code-server-iam
-spec:
-  selfSigned: {}
+data:
+  
+  ca-config.json: |
+    {
+      "signing": {
+        "default": {
+          "expiration": "87600h",
+          "usages": [
+            "signing",
+            "key encipherment",
+            "server auth",
+            "client auth"
+          ]
+        }
+      }
+    }
+  
+  csr-config.json: |
+    {
+      "CN": "kushin-code-server-ca",
+      "key": {
+        "algo": "rsa",
+        "size": 4096
+      },
+      "names": [
+        {
+          "C": "US",
+          "ST": "CA",
+          "L": "San Francisco",
+          "O": "kushin"
+        }
+      ]
+    }
+  
+  # Certificate rotation schedule
+  rotation-policy.yaml: |
+    rotation:
+      enabled: true
+      schedule: "monthly (1st of month at 00:00 UTC)"
+      validity_days: 90
+      auto_rotation_days: 30
+      overlap_period: 24h  # Old cert valid for 24h after new one issued
+      notification_days_before_expiry: 7
+
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -13,10 +58,19 @@ metadata:
   namespace: code-server-iam
 spec:
   secretName: code-server-ca-secret
-  duration: 87600h
-  renewBefore: 720h
-  commonName: kushin-code-server-ca
+  duration: 87600h  # 10 years
+  renewBefore: 720h  # 30 days
+  commonName: "kushin-code-server-ca"
   isCA: true
   issuerRef:
     name: selfsigned-issuer
     kind: Issuer
+
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+  namespace: code-server-iam
+spec:
+  selfSigned: {}

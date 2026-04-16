@@ -17,10 +17,23 @@ on:
         options:
           - deploy
           - destroy
+      target:
+        description: 'Deployment target'
+        required: true
+        default: 'primary'
+        type: choice
+        options:
+          - primary
+          - replica
+          - both
 
 env:
   TF_VERSION: 1.6.0
-  TERRAFORM_DIR: .
+  TERRAFORM_DIR: terraform
+
+permissions:
+  contents: read
+  deployments: write
 
 jobs:
   validate:
@@ -28,76 +41,173 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Terraform Init (validation mode)
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform init -backend=false
 
       - name: Terraform Validate
-        run: terraform validate
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform validate
 
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform fmt -check -recursive
 
-  plan:
-    name: Plan Deployment
-    runs-on: ubuntu-latest
+  deploy-primary:
+    name: Deploy to Primary (192.168.168.31)
+    runs-on: [self-hosted, on-prem, primary]
     needs: validate
+    if: |
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.target == 'primary' || github.event.inputs.target == 'both')))
+    environment:
+      name: primary
+      url: https://ide.kushnir.cloud
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: hashicorp/setup-terraform@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          terraform_version: ${{ env.TF_VERSION }}
+          fetch-depth: 1
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform init -upgrade
+
+      - name: Terraform Validate
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan -lock=false
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform plan -out=tfplan -lock=false \
+            -var-file=../terraform.production.tfvars \
+            -var="deployment_host=192.168.168.31" \
+            -var="is_primary=true"
 
-      - name: Upload Plan
-        uses: actions/upload-artifact@v3
-        with:
-          name: tfplan
-          path: tfplan
-
-  apply:
-    name: Apply Deployment
-    runs-on: ubuntu-latest
-    needs: plan
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Download Plan
-        uses: actions/download-artifact@v3
-        with:
-          name: tfplan
-
-      - name: Terraform Init
-        run: terraform init
+      - name: Display Plan
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform show -no-color tfplan | head -100
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
-
-      - name: Get Outputs
         run: |
-          echo "## Deployment Complete ✅" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Access URL:** $(terraform output -raw code_server_url)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** All containers deployed and running" >> $GITHUB_STEP_SUMMARY
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform apply -auto-approve -lock=false tfplan
+
+      - name: Verify Deployment
+        run: |
+          cd /home/akushnir/code-server-enterprise
+          
+          echo "📋 Service Status:"
+          docker-compose ps --format 'table {{.Service}}\t{{.Status}}'
+          
+          echo ""
+          echo "🔍 Health Checks:"
+          
+          # Check code-server
+          if docker-compose exec -T code-server curl -sf http://localhost:8080 > /dev/null 2>&1; then
+            echo "✅ code-server responsive"
+          else
+            echo "❌ code-server check failed"
+            exit 1
+          fi
+          
+          # Check Prometheus
+          if docker-compose exec -T prometheus curl -sf http://localhost:9090/-/healthy > /dev/null 2>&1; then
+            echo "✅ Prometheus healthy"
+          else
+            echo "⚠️  Prometheus not ready yet"
+          fi
+
+      - name: Update Deployment Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: context.payload.deployment.id,
+              state: '${{ job.status }}',
+              description: 'Terraform deployment to primary (192.168.168.31)',
+              environment_url: 'https://ide.kushnir.cloud'
+            });
+
+  deploy-replica:
+    name: Deploy to Replica (192.168.168.42)
+    runs-on: [self-hosted, on-prem, replica]
+    needs: deploy-primary
+    if: |
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' &&
+        (github.event.inputs.target == 'replica' || github.event.inputs.target == 'both')))
+    environment:
+      name: replica
+      url: https://metrics.kushnir.cloud
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Terraform Init
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform init -upgrade
+
+      - name: Terraform Validate
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform validate
+
+      - name: Terraform Plan
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform plan -out=tfplan -lock=false \
+            -var-file=../terraform.replica.tfvars \
+            -var="deployment_host=192.168.168.42" \
+            -var="is_primary=false"
+
+      - name: Terraform Apply
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform apply -auto-approve -lock=false tfplan
+
+      - name: Verify Deployment
+        run: |
+          cd /home/akushnir/code-server-enterprise
+          
+          echo "📋 Replica Service Status:"
+          docker-compose ps --format 'table {{.Service}}\t{{.Status}}'
+          
+          echo ""
+          echo "🔍 Health Checks:"
+          
+          # Check Prometheus/Grafana (replica runs monitoring)
+          if docker-compose exec -T prometheus curl -sf http://localhost:9090/-/healthy > /dev/null 2>&1; then
+            echo "✅ Prometheus healthy on replica"
+          else
+            echo "⚠️  Prometheus not ready yet"
+          fi
 
       - name: Slack Notification
         if: success()

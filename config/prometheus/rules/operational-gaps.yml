@@ -1,0 +1,245 @@
+---
+# Alert Rules: Operational Gaps Coverage (#374)
+# P2 #374: Comprehensive monitoring for 6 critical blind spots
+# Alerts for: restart loops, disk I/O, memory, network, DB connections, cert expiry
+
+groups:
+  - name: operational_gaps_coverage
+    interval: 30s
+    rules:
+      # ────────────────────────────────────────────────────────────────────
+      # Gap 1: Container Restart Loops
+      # Problem: No alert when containers crash and restart continuously
+      # Symptom: Service appears up but actually unstable
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: ContainerRestartLoopDetected
+        expr: |
+          rate(container_last_seen_timestamp_seconds[5m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          operational_gap: restart-loops
+          slo: reliability
+        annotations:
+          summary: "Container {{ $labels.container_name }} restarting {{ $value | humanize }} times/min"
+          description: |
+            Container {{ $labels.container_name }} is restarting frequently, indicating:
+            - Application bug or crash loop
+            - Resource exhaustion (memory/CPU limits)
+            - Missing dependencies or configuration
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/container-restart-loop.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # Gap 2: Disk I/O Saturation
+      # Problem: High disk I/O doesn't alert; leads to performance degradation
+      # Symptom: Application latency increases, queries become slow
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: DiskIOSaturation
+        expr: |
+          (node_disk_io_time_seconds_total / 5) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+          operational_gap: disk-io-saturation
+          slo: performance
+        annotations:
+          summary: "Disk I/O saturation {{ humanizePercentage $value }} on {{ $labels.device }}"
+          description: |
+            Disk {{ $labels.device }} on {{ $labels.instance }} is experiencing high I/O utilization.
+            This indicates: query scans, large data transfer, or insufficient disk throughput.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/disk-io-saturation.md"
+
+      - alert: DiskIOSaturationCritical
+        expr: |
+          (node_disk_io_time_seconds_total / 5) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          team: infrastructure
+          operational_gap: disk-io-saturation
+          slo: performance
+          oncall: "true"
+        annotations:
+          summary: "CRITICAL: Disk I/O {{ humanizePercentage $value }} - near total saturation"
+          description: |
+            Disk {{ $labels.device }} is critically saturated.
+            Immediate action required: check slow queries, reduce load, or add disk capacity.
+
+      # ────────────────────────────────────────────────────────────────────
+      # Gap 3: Memory Pressure / OOM Risk
+      # Problem: Memory creeping up undetected until OOM kill
+      # Symptom: Service crash without warning
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: MemoryPressureHigh
+        expr: |
+          (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+          operational_gap: memory-pressure
+          slo: reliability
+        annotations:
+          summary: "Memory pressure high: {{ humanizePercentage $value }} available on {{ $labels.instance }}"
+          description: |
+            Available memory is {{ humanizePercentage $value }} of total.
+            Risk of OOM kill if this continues. Check for memory leaks or resize container limits.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/memory-pressure.md"
+
+      - alert: MemoryPressureCritical
+        expr: |
+          (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.05
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+          operational_gap: memory-critical
+          slo: reliability
+          oncall: "true"
+        annotations:
+          summary: "CRITICAL: Imminent OOM on {{ $labels.instance }} - {{ humanizePercentage $value }} available"
+          description: |
+            System memory is critically low. Kernel will begin OOM killing processes.
+            IMMEDIATE ACTION: Kill non-essential services, scale horizontally, or restart.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/memory-critical.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # Gap 4: Network Saturation / Bandwidth Exhaustion
+      # Problem: No alert for high network utilization
+      # Symptom: Packet loss, timeouts, slow connections
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: NetworkSaturation
+        expr: |
+          (rate(node_network_transmit_bytes_total[5m]) + rate(node_network_receive_bytes_total[5m])) 
+          / (10 * 1024 * 1024 * 1024) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+          operational_gap: network-saturation
+          slo: performance
+        annotations:
+          summary: "Network saturation {{ humanizePercentage $value }} on {{ $labels.instance }}"
+          description: |
+            Network interface {{ $labels.device }} is {{ humanizePercentage $value }} saturated.
+            Check for DDoS, large data transfers, or increase network capacity.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/network-saturation.md"
+
+      - alert: NetworkSaturationCritical
+        expr: |
+          (rate(node_network_transmit_bytes_total[5m]) + rate(node_network_receive_bytes_total[5m])) 
+          / (10 * 1024 * 1024 * 1024) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          team: infrastructure
+          operational_gap: network-saturation
+          slo: performance
+          oncall: "true"
+        annotations:
+          summary: "CRITICAL: Network {{ humanizePercentage $value }} saturated - packet loss likely"
+          description: |
+            Network interface is critically saturated. Packet loss and timeouts are occurring.
+            IMMEDIATE ACTION: Identify source, block if DDoS, or fail over to backup network.
+
+      # ────────────────────────────────────────────────────────────────────
+      # Gap 5: Database Connection Pool Exhaustion
+      # Problem: Pool fills but no alert; leads to connection refused errors
+      # Symptom: "too many connections" errors in application logs
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: PostgreSQLConnectionPoolNearExhaustion
+        expr: |
+          (pg_stat_activity_count / pg_settings_max_connections) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: data
+          operational_gap: db-connection-pool
+          slo: reliability
+        annotations:
+          summary: "PostgreSQL connections at {{ humanizePercentage $value }} of max"
+          description: |
+            Database connection pool is {{ humanizePercentage $value }} full ({{ $labels.connections }} / {{ $labels.max_connections }}).
+            New connections may be rejected. Kill idle sessions or increase pool size.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/pg-connection-pool.md"
+
+      - alert: PostgreSQLConnectionPoolExhausted
+        expr: |
+          (pg_stat_activity_count / pg_settings_max_connections) > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          team: data
+          operational_gap: db-connection-pool
+          slo: reliability
+          oncall: "true"
+        annotations:
+          summary: "CRITICAL: PostgreSQL connection pool {{ humanizePercentage $value }} full"
+          description: |
+            Database connection pool is at {{ humanizePercentage $value }}.
+            New connections are being rejected. Application is experiencing "too many connections" errors.
+            IMMEDIATE ACTION: Kill idle sessions, fail over to replica, or restart pool.
+
+      # ────────────────────────────────────────────────────────────────────
+      # Gap 6: SSL/TLS Certificate Expiry
+      # Problem: Certs expire without warning; site goes dark (security + UX)
+      # Symptom: HTTPS connections fail, browsers show security warnings
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: CertificateExpiryWarning
+        expr: |
+          (certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          team: security
+          operational_gap: cert-expiry
+          slo: availability
+        annotations:
+          summary: "Certificate {{ $labels.certificate_name }} expiring in {{ $value | humanizeDuration }}"
+          description: |
+            TLS certificate {{ $labels.certificate_name }} will expire in {{ $value | humanizeDuration }}.
+            Schedule renewal immediately to prevent service disruption.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/cert-expiry-warning.md"
+
+      - alert: CertificateExpiryCritical
+        expr: |
+          (certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 7
+        for: 30m
+        labels:
+          severity: critical
+          team: security
+          operational_gap: cert-expiry
+          slo: availability
+          oncall: "true"
+        annotations:
+          summary: "CRITICAL: Certificate {{ $labels.certificate_name }} expiring in {{ $value | humanizeDuration }}"
+          description: |
+            TLS certificate {{ $labels.certificate_name }} will expire in {{ $value | humanizeDuration }}.
+            IMMEDIATE ACTION: Renew certificate now. If not renewed, HTTPS will fail and service will be unavailable.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/cert-expiry-critical.md"
+
+      - alert: CertificateExpired
+        expr: |
+          (certmanager_certificate_expiration_timestamp_seconds - time()) < 0
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+          operational_gap: cert-expiry
+          slo: availability
+          oncall: "true"
+        annotations:
+          summary: "CRITICAL: Certificate {{ $labels.certificate_name }} HAS EXPIRED"
+          description: |
+            TLS certificate {{ $labels.certificate_name }} expired {{ (-1 * ($value / 86400)) | humanizeDuration }} ago.
+            HTTPS connections are failing. Users cannot access service.
+            IMMEDIATE ACTION: Renew and redeploy certificate now.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/cert-expired.md"

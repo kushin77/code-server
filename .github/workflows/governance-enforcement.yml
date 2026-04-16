@@ -48,7 +48,9 @@ jobs:
           wget https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz
           tar xzf gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz gitleaks
           sudo mv gitleaks /usr/local/bin/gitleaks
-          pip install truffleHog==${TRUFFLEHOG_VERSION}
+          if ! pip install truffleHog==${TRUFFLEHOG_VERSION}; then
+            echo "⚠ truffleHog==${TRUFFLEHOG_VERSION} not available on pip; continuing (step-level scans handle advisory failures)"
+          fi
           wget https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
           tar zxvf trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
           sudo mv trivy /usr/local/bin/

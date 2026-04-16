@@ -1,0 +1,217 @@
+# Prometheus Alert Rules for Error Fingerprinting - Phase 1 Implementation
+# Implements: docs/ERROR-FINGERPRINTING-SCHEMA.md
+# Status: PRODUCTION - Ready for deployment to 192.168.168.31
+# Date: April 16, 2026
+
+groups:
+  - name: error_fingerprinting_alerts
+    interval: 15s
+    rules:
+      # P0: Error rate spike detected
+      - alert: ErrorFingerprintRateSpike
+        expr: |
+          (error_fingerprint_rate > 0 and 
+           error_fingerprint_rate > 5 * avg_over_time(error_fingerprint_rate offset 1h[5m]))
+        for: 2m
+        labels:
+          severity: critical
+          component: observability
+          team: platform
+        annotations:
+          summary: "Critical error rate spike detected"
+          description: "Error fingerprint rate spiked to {{ $value }} errors/sec (5x normal baseline)"
+          runbook_url: "https://internal.example.com/runbooks/error-fingerprint-spike"
+          dashboard_url: "http://192.168.168.31:3000/d/error-fingerprinting"
+
+      # P1: New critical error pattern emerging
+      - alert: NewCriticalErrorPattern
+        expr: |
+          (error_fingerprint_count > 100 and 
+           increase(error_fingerprint_count[10m]) > 50 and
+           error_fingerprint_severity == "error")
+        for: 5m
+        labels:
+          severity: warning
+          component: observability
+          team: platform
+        annotations:
+          summary: "New critical error pattern detected"
+          description: "Error fingerprint {{ $labels.fingerprint }} (type: {{ $labels.error_type }}) has {{ $value }} occurrences in last 10 minutes"
+          runbook_url: "https://internal.example.com/runbooks/new-error-pattern"
+
+      # P1: Multiple services affected by same error
+      - alert: ErrorAffectingMultipleServices
+        expr: |
+          (error_fingerprint_affected_services >= 3 and
+           error_fingerprint_rate > 0.1)
+        for: 5m
+        labels:
+          severity: warning
+          component: observability
+          team: platform
+        annotations:
+          summary: "Error fingerprint affecting {{ $value }} services"
+          description: "Error {{ $labels.error_type }} (fingerprint: {{ $labels.fingerprint }}) is affecting {{ $value }} services with rate {{ $value }}/sec"
+
+      # P1: High user impact from single error
+      - alert: ErrorHighUserImpact
+        expr: |
+          error_fingerprint_user_impact > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: observability
+          team: platform
+        annotations:
+          summary: "Error affecting {{ $value }} users in last 24h"
+          description: "Error {{ $labels.error_type }} (fingerprint: {{ $labels.fingerprint }}) is affecting {{ $value }} unique users"
+          incident_template: "true"
+
+      # P2: High error detection latency
+      - alert: HighErrorDetectionLatency
+        expr: |
+          histogram_quantile(0.95, error_detection_latency_ms) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          component: observability
+          team: platform
+        annotations:
+          summary: "Error fingerprinting latency is high"
+          description: "95th percentile error detection latency is {{ $value }}ms (threshold: 1000ms)"
+
+      # P2: Loki ingestion errors
+      - alert: LokiIngestionErrors
+        expr: |
+          increase(loki_ingestion_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: logging
+          team: platform
+        annotations:
+          summary: "Loki is experiencing ingestion errors"
+          description: "Loki ingestion errors rate: {{ $value }} errors in last 5 minutes"
+
+      # P2: Fingerprinting effectiveness degradation
+      - alert: FingerprintingEffectivenessDegraded
+        expr: |
+          fingerprinting_deduplication_ratio < 0.70
+        for: 30m
+        labels:
+          severity: warning
+          component: observability
+          team: platform
+        annotations:
+          summary: "Error deduplication effectiveness is below threshold"
+          description: "Deduplication ratio is {{ $value }} (threshold: 0.70) - may indicate high error entropy"
+
+---
+# SLO Rules for Error Fingerprinting Service
+groups:
+  - name: error_fingerprinting_slos
+    interval: 15s
+    rules:
+      # SLO: Error Detection Availability (99.9%)
+      - record: slo:error_fingerprinting:availability
+        expr: |
+          1 - (
+            rate(loki_ingestion_errors_total[5m]) /
+            (rate(loki_request_duration_seconds_count[5m]) + 1)
+          )
+
+      - alert: ErrorFingerprintingAvailabilityBreach
+        expr: |
+          slo:error_fingerprinting:availability < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          slo: "true"
+          component: observability
+        annotations:
+          summary: "Error fingerprinting availability below SLO threshold"
+          description: "Current availability: {{ $value }}, SLO: 99.9%"
+
+      # SLO: Error Detection Latency (p99 < 500ms)
+      - record: slo:error_detection:latency_p99
+        expr: |
+          histogram_quantile(0.99, error_detection_latency_ms)
+
+      - alert: ErrorDetectionLatencyBreachP99
+        expr: |
+          slo:error_detection:latency_p99 > 500
+        for: 10m
+        labels:
+          severity: warning
+          slo: "true"
+          component: observability
+        annotations:
+          summary: "Error detection latency p99 exceeds SLO"
+          description: "Current p99 latency: {{ $value }}ms, SLO: 500ms"
+
+      # SLO: Fingerprinting Accuracy (error deduplication > 80%)
+      - record: slo:fingerprinting:accuracy
+        expr: |
+          fingerprinting_deduplication_ratio
+
+      - alert: FingerprintingAccuracyBreachSLO
+        expr: |
+          slo:fingerprinting:accuracy < 0.80
+        for: 30m
+        labels:
+          severity: warning
+          slo: "true"
+          component: observability
+        annotations:
+          summary: "Error fingerprinting accuracy below SLO"
+          description: "Current deduplication ratio: {{ $value }}, SLO: 80%"
+
+---
+# Recording Rules for Error Fingerprinting Metrics
+groups:
+  - name: error_fingerprinting_recording
+    interval: 15s
+    rules:
+      # 5m rate of errors per service
+      - record: error:rate:5m
+        expr: rate(error_fingerprint_count[5m])
+        labels:
+          slo_tracking: "true"
+
+      # 1h rate of errors per service (longer window for trends)
+      - record: error:rate:1h
+        expr: rate(error_fingerprint_count[1h])
+        labels:
+          slo_tracking: "true"
+
+      # Top 10 error fingerprints by rate
+      - record: topk_error:rate:5m
+        expr: topk(10, rate(error_fingerprint_count[5m]))
+
+      # Top 10 error fingerprints by absolute count
+      - record: topk_error:count:24h
+        expr: topk(10, increase(error_fingerprint_count[24h]))
+
+      # Error rate by severity
+      - record: error:rate_by_severity:5m
+        expr: sum by (severity) (rate(error_fingerprint_count[5m]))
+
+      # Error rate by service
+      - record: error:rate_by_service:5m
+        expr: sum by (service) (rate(error_fingerprint_count[5m]))
+
+      # Error rate by type
+      - record: error:rate_by_type:5m
+        expr: sum by (error_type) (rate(error_fingerprint_count[5m]))
+
+      # Total unique fingerprints in last 24h
+      - record: error:unique_fingerprints:24h
+        expr: count(increase(error_fingerprint_count[24h]) > 0)
+
+      # User impact trend (24h window)
+      - record: error:user_impact:24h
+        expr: increase(error_fingerprint_user_impact[24h])
+
+      # Service impact trend (24h window)
+      - record: error:service_impact:24h
+        expr: increase(error_fingerprint_affected_services[24h])

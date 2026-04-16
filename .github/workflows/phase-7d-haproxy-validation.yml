@@ -1,0 +1,39 @@
+name: "Phase 7d-002: HAProxy Validation"
+
+on:
+  push:
+    branches: [ main, feat/p1-352-haproxy-load-balancing ]
+    paths:
+      - 'config/haproxy.cfg'
+      - 'docker/haproxy/Dockerfile'
+      - 'scripts/haproxy/setup-haproxy.sh'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'config/haproxy.cfg'
+      - 'docker/haproxy/Dockerfile'
+      - 'scripts/haproxy/setup-haproxy.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-haproxy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Lint HAProxy Config
+        run: |
+          docker run --rm -v ${{ github.workspace }}/config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro \
+          haproxy:2.8-alpine haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg
+
+      - name: ShellCheck Setup Script
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5b9f335ca392fc68e146757 # v2.0.0
+        with:
+          scandir: 'scripts/haproxy'
+
+      - name: Build HAProxy Image (Dry Run)
+        run: |
+          docker build -t local/haproxy-lb:test -f docker/haproxy/Dockerfile .

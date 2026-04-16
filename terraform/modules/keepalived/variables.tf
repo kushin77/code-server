@@ -90,8 +90,7 @@ variable "health_check_timeout" {
 }
 
 variable "failover_sla_seconds" {
-  description = "SLA for failover (VIP move from primary to replica)"
+  description = "Expected failover time: <2 seconds"
   type        = number
   default     = 2
-  description = "Expected failover time: <2 seconds"
 }

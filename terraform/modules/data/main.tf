@@ -54,9 +54,11 @@ locals {
     role = "primary"
     standby_setup_enabled = true
     replication_targets = var.replica_host_ip != "" ? [var.replica_host_ip] : []
+    replication_source = ""
   } : {
     role = "replica"
     standby_setup_enabled = false
+    replication_targets = []
     replication_source = var.primary_host_ip
   }
 }

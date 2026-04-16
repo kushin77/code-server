@@ -110,6 +110,23 @@ variable "deployment_port" {
   }
 }
 
+variable "host_ip" {
+  description = "IP address of deployment host (for multi-host scaling)"
+  type        = string
+  default     = "192.168.168.31"
+
+  validation {
+    condition     = can(regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", var.host_ip))
+    error_message = "host_ip must be a valid IPv4 address."
+  }
+}
+
+variable "is_primary" {
+  description = "Is this the primary deployment (true) or replica/standby (false)?"
+  type        = bool
+  default     = true
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Docker Configuration
 // ─────────────────────────────────────────────────────────────────────────────

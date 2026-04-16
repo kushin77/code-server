@@ -16,6 +16,9 @@ module "core" {
 # Module 2: Data Layer (PostgreSQL, Redis, PgBouncer)
 module "data" {
   source = "./modules/data"
+  
+  is_primary = var.is_primary
+  
   depends_on = [module.core]
 }
 

@@ -92,7 +92,7 @@ jobs:
             echo "No shell scripts found"; exit 0
           fi
           echo "Checking ${#scripts[@]} shell scripts..."
-          shellcheck --severity=warning --shell=bash "${scripts[@]}"
+          shellcheck --severity=error --shell=bash "${scripts[@]}"
           echo "✅ Shellcheck passed"
 
   # Ref: #399 — automated Windows-specific content detection

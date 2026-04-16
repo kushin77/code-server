@@ -39,11 +39,7 @@
 
     # TLS via Cloudflare DNS-01 challenge (works behind NAT / no port-80 needed)
     tls {
-        issuer acme {
-            email {$ACME_EMAIL:security@example.com}
-            challenges dns cloudflare
-            dns cloudflare {$CLOUDFLARE_API_TOKEN}
-        }
+        dns cloudflare {$CLOUDFLARE_API_TOKEN}
     }
 
     # ── Security headers ──────────────────────────────────────────────

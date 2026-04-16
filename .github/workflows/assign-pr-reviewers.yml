@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
 
@@ -46,7 +46,7 @@ jobs:
 
       - name: Request Infrastructure Reviews (Terraform, Caddy, Docker)
         if: steps.files.outputs.has_terraform == 'true' || steps.files.outputs.has_docker == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -66,7 +66,7 @@ jobs:
 
       - name: Request Architecture Reviews (ADR/Design changes)
         if: steps.files.outputs.has_architecture == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -79,7 +79,7 @@ jobs:
 
       - name: Request Code Reviews (Application code)
         if: steps.files.outputs.has_code == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -92,7 +92,7 @@ jobs:
 
       - name: Request CI Reviews (GitHub Actions workflows)
         if: steps.files.outputs.has_ci == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -105,7 +105,7 @@ jobs:
 
       - name: Post Assignment Summary
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

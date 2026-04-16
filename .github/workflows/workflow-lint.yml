@@ -83,7 +83,7 @@ jobs:
     name: No Windows CI runners
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Detect windows-* runners
         run: |
@@ -104,7 +104,7 @@ jobs:
     name: Check for undefined secret references
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Detect secrets that should be in GitHub Secrets
         run: |
@@ -132,7 +132,7 @@ jobs:
     name: Workflows have name and permissions fields
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Validate name and permissions present
         run: |

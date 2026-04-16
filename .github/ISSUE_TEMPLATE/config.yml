@@ -6,3 +6,6 @@ contact_links:
   - name: "Architecture Decisions (ADRs)"
     url: "https://github.com/kushin77/code-server/blob/main/docs/adr/"
     about: "Review past architectural decisions before proposing changes"
+  - name: "Governance Policy + Remediation Guide"
+    url: "https://github.com/kushin77/code-server/blob/main/docs/governance/POLICY.md"
+    about: "Map CI policy failures to required remediation steps before opening a new issue"

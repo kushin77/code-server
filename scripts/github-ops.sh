@@ -147,6 +147,15 @@ load_auth_token() {
         return 0
     fi
 
+    if [ "${ENFORCE_GSM_PAT}" = "true" ]; then
+        if fetch_gsm_token; then
+            return 0
+        fi
+
+        error "GSM PAT retrieval failed. Reauthenticate gcloud and ensure one of these secrets exists: ${GSM_SECRET_CANDIDATES}"
+        exit 1
+    fi
+
     if [ -n "${GITHUB_TOKEN:-}" ]; then
         AUTH_TOKEN="${GITHUB_TOKEN}"
         AUTH_SOURCE="env:GITHUB_TOKEN"
@@ -155,11 +164,6 @@ load_auth_token() {
 
     if fetch_gsm_token; then
         return 0
-    fi
-
-    if [ "${ENFORCE_GSM_PAT}" = "true" ]; then
-        error "GSM PAT retrieval failed. Reauthenticate gcloud and ensure one of these secrets exists: ${GSM_SECRET_CANDIDATES}"
-        exit 1
     fi
 
     if fallback_token="$(gh auth token 2>/dev/null)" && [ -n "${fallback_token}" ]; then
@@ -251,9 +255,9 @@ close_issues_batch() {
     
     for issue in "${issues[@]}"; do
         if retry_with_backoff close_issue "${issue}" "completed"; then
-            ((succeeded++))
+            succeeded=$((succeeded + 1))
         else
-            ((failed++))
+            failed=$((failed + 1))
         fi
         sleep 0.5  # Rate limiting
     done
@@ -437,7 +441,7 @@ retry_with_backoff() {
         fi
         warn "Attempt $attempt failed, retrying in ${RETRY_DELAY}s..."
         sleep $((RETRY_DELAY * attempt))
-        ((attempt++))
+        attempt=$((attempt + 1))
     done
     return 0
 }

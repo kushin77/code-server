@@ -27,9 +27,12 @@
 # ═════════════════════════════════════════════════════════════════════════════
 :80 {
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Security Headers (no TLS needed on-prem behind Cloudflare Tunnel)
-    # ─────────────────────────────────────────────────────────────────────────
+    # TLS via Cloudflare DNS-01 challenge (works behind NAT / no port-80 needed)
+    tls {
+        dns cloudflare {$CLOUDFLARE_API_TOKEN}
+    }
+
+    # ── Security headers ──────────────────────────────────────────────
     header {
         X-Content-Type-Options           "nosniff"
         X-Frame-Options                  "SAMEORIGIN"

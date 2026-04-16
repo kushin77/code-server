@@ -3,10 +3,11 @@
 
 FROM python:3.11-slim
 
-# Labels
-LABEL maintainer="kushnir77"
-LABEL description="JWT Token Microservice for service-to-service authentication"
-LABEL version="1.0.0"
+# OCI labels
+LABEL org.opencontainers.image.title="code-server-enterprise-token-microservice"
+LABEL org.opencontainers.image.description="JWT Token Microservice for service-to-service authentication"
+LABEL org.opencontainers.image.source="https://github.com/kushin77/code-server"
+LABEL org.opencontainers.image.licenses="MIT"
 
 # Security: run as non-root
 RUN useradd -m -u 1000 tokenservice

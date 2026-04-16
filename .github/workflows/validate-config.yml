@@ -109,7 +109,13 @@ jobs:
       - name: Run ShellCheck
         run: |
           if find scripts/ -name "*.sh" 2>/dev/null | head -1 | grep -q .; then
-            shellcheck scripts/*.sh
+            mapfile -t root_scripts < <(find scripts -maxdepth 1 -name "*.sh" -type f | sort)
+            if [[ ${#root_scripts[@]} -eq 0 ]]; then
+              echo "No root-level shell scripts found"
+              exit 0
+            fi
+
+            shellcheck --severity=error "${root_scripts[@]}"
           fi
 
   secrets-scan:

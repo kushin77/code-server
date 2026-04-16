@@ -32,7 +32,7 @@ groups:
           summary: "SLO fast burn rate: code-server error budget burning 14.4x faster than allowed"
           description: |
             Error budget for code-server is being consumed 14.4x faster than allowed.
-            Current error rate: {{ printf "%.3f%%" (mul (div $value 0.001) 100) }}
+            Current error rate: {{ humanizePercentage $value }}
             Allowed rate: 0.1%
             If this continues for 1 hour, will exhaust 1 day of error budget.
           runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-burn-fast.md"
@@ -78,7 +78,7 @@ groups:
           summary: "SLO tracking: code-server error rate at (or above) allowed threshold"
           description: |
             Error rate is at the threshold for the SLO.
-            Current 30-day error rate: {{ printf "%.4f%%" (mul $value 100) }}
+            Current 30-day error rate: {{ humanizePercentage $value }}
             If this rate continues, SLO will not be met this month.
 
       # ===== Database Replication SLO (99.99%) =====

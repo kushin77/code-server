@@ -16,7 +16,7 @@ groups:
           severity: critical
           team: infrastructure
         annotations:
-          summary: "Disk space is critical ({{ printf \"%.1f%%\" (mul $value 100) }} free)"
+          summary: "Disk space is critical ({{ humanizePercentage $value }} free)"
           description: "{{ $labels.device }} on {{ $labels.instance }} has < 5% free space"
           runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/disk-full.md"
 
@@ -29,7 +29,7 @@ groups:
           severity: warning
           team: infrastructure
         annotations:
-          summary: "Disk space is running low ({{ printf \"%.1f%%\" (mul $value 100) }} free)"
+          summary: "Disk space is running low ({{ humanizePercentage $value }} free)"
           description: "{{ $labels.device }} on {{ $labels.instance }} has < 15% free space"
 
       # P1: inode exhaustion
@@ -41,7 +41,7 @@ groups:
           severity: warning
           team: infrastructure
         annotations:
-          summary: "Inode space is running low ({{ printf \"%.1f%%\" (mul $value 100) }} free)"
+          summary: "Inode space is running low ({{ humanizePercentage $value }} free)"
           description: "{{ $labels.device }} on {{ $labels.instance }} has < 10% free inodes"
 
       # P1: Memory pressure (system swapping)
@@ -65,7 +65,7 @@ groups:
           severity: warning
           team: infrastructure
         annotations:
-          summary: "CPU utilization is high ({{ printf \"%.1f%%\" (mul (sub 1 $value) 100) }})"
+          summary: "CPU free time is low ({{ humanizePercentage $value }} utilized)"
           description: "{{ $labels.instance }} CPU usage > 80% for 15+ minutes"
 
       # P2: High system load
@@ -102,7 +102,7 @@ groups:
           severity: info
           team: infrastructure
         annotations:
-          summary: "Network latency is high ({{ printf \"%.2f\" (mul $value 1000) }}ms)"
+          summary: "Network latency is high ({{ humanizeDuration $value }})"
           description: "{{ $labels.instance }} has increased latency to upstream"
 
       # P3: Docker daemon issues

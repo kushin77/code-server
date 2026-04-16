@@ -87,8 +87,8 @@ groups:
           severity: warning
           team: platform
         annotations:
-          summary: "Application error rate is high ({{ printf \"%.2f%%\" (mul $value 100) }})"
-          description: "code-server is returning 5xx errors at {{ printf \"%.2f%%\" (mul $value 100) }} rate"
+          summary: "Application error rate is high ({{ humanizePercentage $value }})"
+          description: "code-server is returning 5xx errors at {{ humanizePercentage $value }} rate"
           runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/high-error-rate.md"
 
       # P3: Service degradation (latency threshold)

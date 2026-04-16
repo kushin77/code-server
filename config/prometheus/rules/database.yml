@@ -53,7 +53,7 @@ groups:
           severity: warning
           team: data
         annotations:
-          summary: "PostgreSQL connection pool is nearly full ({{ printf \"%.1f%%\" (mul $value 100) }})"
+          summary: "PostgreSQL connection pool is nearly full ({{ humanizePercentage $value }})"
           description: "Database has {{ $value }} connections - approaching max_connections limit"
           runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/db-connections.md"
 
@@ -89,7 +89,7 @@ groups:
           severity: warning
           team: data
         annotations:
-          summary: "Table {{ $labels.relname }} has significant bloat ({{ printf \"%.1f%%\" (mul $value 100) }})"
+          summary: "Table {{ $labels.relname }} has significant bloat ({{ humanizePercentage $value }})"
           description: "Dead rows > 20% of live rows - consider VACUUM"
 
       # P2: Slow queries

@@ -26,7 +26,7 @@ groups:
           severity: warning
           team: infrastructure
         annotations:
-          summary: "CPU utilization is high ({{ printf \"%.1f%%\" (mul $value 100) }})"
+          summary: "CPU utilization is high ({{ humanizePercentage $value }})"
           description: "Host {{ $labels.instance }} CPU usage > 85%"
 
       # P2: Memory usage high
@@ -40,7 +40,7 @@ groups:
           severity: warning
           team: infrastructure
         annotations:
-          summary: "Memory utilization is high ({{ printf \"%.1f%%\" (mul $value 100) }})"
+          summary: "Memory utilization is high ({{ humanizePercentage $value }})"
           description: "Host {{ $labels.instance }} memory usage > 85%"
 
       # P2: Network saturation

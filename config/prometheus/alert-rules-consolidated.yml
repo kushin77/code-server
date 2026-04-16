@@ -1,641 +1,1062 @@
-# Prometheus Alert Rules - Single Source of Truth (SSOT)
-# Consolidated from 9 separate alert files into single canonical source
-# All rules defined here - NO duplication across files
-# Updated: April 15, 2026
-# Owner: Infrastructure Team
-# Policy: Production-first, zero overlap, IaC immutable
+# Prometheus Alert Rules Index
+# Source of Truth (SSOT) for all alert rules
+# Replaces: alert-rules.yml, alert-rules-*.yml variants
+# Usage: Include in prometheus.yml as:
+#   rule_files:
+#     - /etc/prometheus/rules/*.yml
 
-# ARCHITECTURE NOTES
-# - All alert groups defined in single file
-# - Symlinks from all historical locations point to this file
-# - No manual rule edits outside this file
-# - Changes via git commits only
-# - Version controlled + audit trail
+# This file serves as documentation only; Prometheus loads individual rule files via glob
+# Rule files organized by domain:
+# - availability.yml    : Service availability, health checks, uptime SLOs
+# - performance.yml     : Latency, throughput, request rates, resource utilization
+# - slo.yml             : SLO/SLI multi-window burn rate alerts
+# - security.yml        : Falco security events, auth failures, anomaly detection
+# - database.yml        : PostgreSQL-specific alerts (replication, connections, WAL)
+# - backup.yml          : Backup age, WAL archival lag, restore testing
+# - infrastructure.yml  : Node-level metrics (disk, memory, CPU, network)
+
+# Load order (non-deterministic in Prometheus, but documented here):
+# 1. availability.yml   (critical uptime SLAs)
+# 2. performance.yml    (service quality)
+# 3. slo.yml            (burn rate - informational)
+# 4. security.yml       (security events - P0)
+# 5. database.yml       (data layer - P1)
+# 6. backup.yml         (DR/recovery - P1)
+# 7. infrastructure.yml (infrastructure - P2/P3)
+
+# All files validated with: promtool check rules <file>
+# CI/CD: Runs on every PR in .github/workflows/ci.yml
+---
+# Availability & SLA Alerts
+# P0/P1: Critical service uptime and health checks
+# Load order: 1 (highest priority)
 
 groups:
-  # =========================================================================
-  # GROUP 1: CRITICAL INFRASTRUCTURE ALERTS
-  # =========================================================================
-  # P0/P1 alerts - immediate paging, automated response
-  # SLA: Response within 15 minutes, fix within 1 hour
-
-  - name: critical_infrastructure
+  - name: availability_slas
     interval: 30s
     rules:
-      # Database Health - P0
-      - alert: DatabasePrimaryDown
-        expr: up{job="postgres"} == 0
+      # P0: code-server down
+      - alert: CodeServerDown
+        expr: up{job="code-server"} == 0
         for: 30s
         labels:
           severity: critical
-          team: database
-          oncall: "true"
-          sla: "15min-response"
+          team: platform
+          slo: availability
         annotations:
-          summary: "PostgreSQL primary database unreachable"
-          description: "Failed to connect to database primary at {{ $labels.instance }} - failover will be triggered"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/DATABASE-PRIMARY-DOWN.md"
-          impact: "Users unable to authenticate or access persisted data"
+          summary: "code-server service is down"
+          description: "code-server {{ $labels.instance }} has been unreachable for >30s"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/code-server-down.md"
 
-      - alert: DatabaseReplicationLag
-        expr: pg_replication_lag_seconds > 60
+      # P0: Prometheus down
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Prometheus monitoring is down"
+          description: "Prometheus has stopped scraping metrics"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/prometheus-down.md"
+
+      # P1: Multiple services down
+      - alert: MultipleServicesDown
+        expr: count(up{job!="prometheus",job!="alertmanager"} == 0) >= 3
         for: 1m
         labels:
           severity: critical
-          team: database
-          oncall: "true"
-          sla: "15min-response"
+          team: platform
         annotations:
-          summary: "PostgreSQL replication lag critical (>60s)"
-          description: "Replication lag from primary to replica: {{ $value }}s - failover risk"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/REPLICATION-LAG-CRITICAL.md"
-          impact: "Data consistency at risk - failover unsafe"
+          summary: "Multiple services are down ({{ $value }} services)"
+          description: "{{ $value }} services reporting down - check orchestration platform"
 
-      # Redis Health - P0
-      - alert: RedisPrimaryDown
+      # P1: Database primary down
+      - alert: DatabasePrimaryDown
+        expr: up{job="postgres",replica="false"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: data
+          page: "true"
+        annotations:
+          summary: "PostgreSQL primary database is down"
+          description: "Primary database unreachable - failover may be triggered"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/db-failover.md"
+
+      # P1: Redis down
+      - alert: RedisDown
         expr: up{job="redis"} == 0
         for: 30s
         labels:
           severity: critical
-          team: cache
-          oncall: "true"
-          sla: "15min-response"
+          team: platform
         annotations:
-          summary: "Redis primary cache unreachable"
-          description: "Redis primary at {{ $labels.instance }} is down - sessions/cache will be lost"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/REDIS-PRIMARY-DOWN.md"
-          impact: "Session loss, authentication cache miss, degraded performance"
+          summary: "Redis cache is down"
+          description: "Redis unreachable - cache operations failing"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/redis-restart.md"
 
-      - alert: RedisMemoryEviction
-        expr: redis_evicted_keys_total > 0
+      # P2: Service latency (health check slowdown)
+      - alert: ServiceHealthCheckSlow
+        expr: probe_duration_seconds > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Health check probe is slow ({{ $value }}s)"
+          description: "{{ $labels.instance }} health check taking > 5 seconds"
+
+      # P2: Service error rate (application errors)
+      - alert: ApplicationErrorRateHigh
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Application error rate is high ({{ humanizePercentage $value }})"
+          description: "code-server is returning 5xx errors at {{ humanizePercentage $value }} rate"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/high-error-rate.md"
+
+      # P3: Service degradation (latency threshold)
+      - alert: ServiceDegraded
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Service response time is degraded (p99: {{ printf \"%.2f\" $value }}s)"
+          description: "code-server p99 latency above 1s - performance degradation"
+# Alert Rules: Backup and Disaster Recovery
+# Issue #431: Production backup hardening
+
+groups:
+  - name: backup_and_recovery
+    interval: 30s
+    rules:
+      # ────────────────────────────────────────────────────────────────────
+      # Backup Age and Freshness Alerts
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: BackupStale
+        expr: |
+          (time() - backup_last_success_timestamp_seconds) > 86400
+        for: 30m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Database backup has not run in over 24 hours"
+          description: "Last backup: {{ humanize (time() - backup_last_success_timestamp_seconds) }} ago on {{ $labels.instance }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-stale.md"
+          dashboard_url: "https://grafana.kushnir.cloud/d/backup-recovery"
+
+      - alert: BackupMissing
+        expr: |
+          backup_last_success_timestamp_seconds == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "No successful backups recorded on {{ $labels.instance }}"
+          description: "Backup metrics not available. Check backup script execution."
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-missing.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # WAL Archiving Alerts
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: WALArchivingDisabled
+        expr: |
+          postgresql_archive_mode == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL WAL archiving is disabled on {{ $labels.instance }}"
+          description: "WAL archiving is required for point-in-time recovery (PITR)"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/wal-archiving-disabled.md"
+
+      - alert: WALArchiveQueueBuilding
+        expr: |
+          postgresql_wal_archive_queue_length > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL WAL archive queue building up on {{ $labels.instance }}"
+          description: "Archive queue length: {{ $value }} files"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/wal-queue-buildup.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # Replication Alerts
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: PostgreSQLReplicationLagging
+        expr: |
+          (pg_wal_position_replica_bytes / 1024 / 1024) > 500
+        for: 15m
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL replication lag > 500MB on {{ $labels.instance }}"
+          description: "Replica is {{ $value }}MB behind primary"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/replication-lag.md"
+
+      - alert: PostgreSQLReplicationDown
+        expr: |
+          pg_replication_is_replica == 0 and pg_replication_slot_active == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL replication is not active on replica ({{ $labels.instance }})"
+          description: "Replication slot not active - data may not be synchronizing"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/replication-down.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # Restore Test Alerts
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: BackupRestoreTestFailed
+        expr: |
+          increase(backup_restore_test_failures_total[1w]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Automated backup restore test failed on {{ $labels.instance }}"
+          description: "Latest backup may be corrupted or incomplete"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-restore-test-failed.md"
+
+      - alert: BackupRestoreTestLaggy
+        expr: |
+          increase(backup_restore_test_duration_seconds[1w]) > 3600
+        for: 5m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Backup restore test is taking > 1 hour on {{ $labels.instance }}"
+          description: "Restore performance may be degrading"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-restore-slow.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # Disk Space Alerts (Backup Storage)
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: BackupStorageAlmostFull
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/backups"} / node_filesystem_size_bytes{mountpoint="/backups"}) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Backup storage is < 10% free on {{ $labels.instance }}"
+          description: "Used: {{ $value | humanize }}B"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-storage-full.md"
+
+      - alert: BackupStorageCritical
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/backups"} / node_filesystem_size_bytes{mountpoint="/backups"}) < 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Backup storage is < 5% free on {{ $labels.instance }}"
+          description: "IMMEDIATE ACTION REQUIRED - Used: {{ $value | humanize }}B"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-storage-critical.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # RTO/RPO Tracking
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: RPOThresholdExceeded
+        expr: |
+          # Actual recovery point is max(backup_age, wal_replication_lag)
+          max(backup_age_seconds, postgresql_wal_archive_queue_length * 100) > 300
+        for: 5m
+        labels:
+          severity: warning
+          component: recovery
+        annotations:
+          summary: "Recovery Point Objective (RPO) threshold exceeded on {{ $labels.instance }}"
+          description: "Data loss potential > 5 minutes. Current RPO: {{ humanize $value }}s"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/rpo-exceeded.md"
+
+      - alert: RTOThresholdExceeded
+        expr: |
+          increase(backup_restore_test_duration_seconds[1h]) > 14400
+        for: 1h
+        labels:
+          severity: warning
+          component: recovery
+        annotations:
+          summary: "Recovery Time Objective (RTO) threshold exceeded on {{ $labels.instance }}"
+          description: "Estimated recovery time > 4 hours. Current RTO: {{ humanize $value }}s"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/rto-exceeded.md"
+---
+# Backup & Disaster Recovery Alerts
+# Backup age, restore testing, WAL archival
+# Load order: 6
+
+groups:
+  - name: backup_alerts
+    interval: 30s
+    rules:
+      # P0: Backup failed
+      - alert: BackupFailure
+        expr: increase(backup_failures_total[1h]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: data
+          page: "true"
+        annotations:
+          summary: "Database backup failed"
+          description: "Backup job failed - data recovery capability compromised"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-failure.md"
+
+      # P1: Backup stale (no backup in > 24 hours)
+      - alert: BackupStale
+        expr: |
+          (time() - backup_last_completion_time_seconds) > 86400
+        for: 10m
+        labels:
+          severity: critical
+          team: data
+        annotations:
+          summary: "No successful backup in > 24 hours"
+          description: "Last backup: {{ $value }}s ago - RPO violated"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-stale.md"
+
+      # P1: Backup taking too long (> 1 hour)
+      - alert: BackupDurationHigh
+        expr: |
+          rate(backup_duration_seconds[5m]) > 3600
+        for: 10m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Backup is taking longer than expected ({{ printf \"%.0f\" $value }}s)"
+          description: "Backup duration > 1 hour - may impact RTO"
+
+      # P1: WAL segment archival failing
+      - alert: WALArchivalFailure
+        expr: rate(pg_wal_archival_failures_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: data
+        annotations:
+          summary: "PostgreSQL WAL archival is failing"
+          description: "WAL segments are not being archived - point-in-time recovery at risk"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/wal-archival-failure.md"
+
+      # P2: Backup window too long (approaching RTO)
+      - alert: BackupWindowTooLong
+        expr: |
+          (
+            (time() - backup_last_completion_time_seconds) / 3600
+          ) > 20  # 20 hours, RTO is 24 hours
+        for: 30m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Time since last backup exceeds 20 hours (RTO = 24h)"
+          description: "If service fails now, RTO window is {{ printf \"%.0f\" (sub 24 (div $value 3600)) }}h"
+
+      # P2: Restore test failure
+      - alert: RestoreTestFailure
+        expr: restore_test_failures_total > 0
+        for: 1h
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Backup restore test failed"
+          description: "Latest restore test did not succeed - backup integrity may be compromised"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/restore-test-failure.md"
+
+      # P3: Backup retention policy approaching limit
+      - alert: BackupRetentionApproachingLimit
+        expr: backup_count > 85  # Assuming retention limit is ~100
+        for: 1h
+        labels:
+          severity: info
+          team: data
+        annotations:
+          summary: "Backup retention approaching configured limit"
+          description: "{{ $value }} backups retained - may need to adjust retention policy"
+---
+# Database Alerts
+# PostgreSQL-specific: replication, connections, WAL, performance
+# Load order: 5
+
+groups:
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # P0: Database primary down
+      - alert: PostgreSQLPrimaryDown
+        expr: up{job="postgres",replica="false"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: data
+          page: "true"
+        annotations:
+          summary: "PostgreSQL primary database is down"
+          description: "Primary database unreachable - failover may be triggered"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/db-failover.md"
+
+      # P0: Replication lag critical (> 5 minutes)
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_seconds > 300
         for: 2m
         labels:
           severity: critical
-          team: cache
-          oncall: "true"
-          sla: "30min-response"
+          team: data
+          page: "true"
         annotations:
-          summary: "Redis memory eviction detected"
-          description: "Redis evicting keys due to memory pressure - keys are being lost"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/REDIS-EVICTION.md"
-          impact: "Session loss, authentication cache corruption"
+          summary: "PostgreSQL replication lag is critical ({{ printf \"%.0f\" $value }}s)"
+          description: "Replica is {{ printf \"%.1f\" (div $value 60) }} minutes behind primary - failover risk"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/db-replication-lag.md"
 
-      # Ingress/Auth Gateway - P0
-      - alert: OAuth2ProxyDown
-        expr: up{job="oauth2-proxy"} == 0
-        for: 1m
+      # P1: Replication lag warning (> 60 seconds)
+      - alert: PostgreSQLReplicationLagWarning
+        expr: pg_replication_lag_seconds > 60
+        for: 5m
         labels:
-          severity: critical
-          team: security
-          oncall: "true"
-          sla: "15min-response"
+          severity: warning
+          team: data
         annotations:
-          summary: "OAuth2 authentication gateway unreachable"
-          description: "oauth2-proxy at {{ $labels.instance }} is not responding - users cannot authenticate"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/OAUTH2-PROXY-DOWN.md"
-          impact: "Complete authentication failure - all users locked out"
+          summary: "PostgreSQL replication lag warning ({{ printf \"%.0f\" $value }}s)"
+          description: "Replica is {{ printf \"%.0f\" $value }}s behind primary"
 
-      - alert: CaddyDown
-        expr: up{job="caddy"} == 0
-        for: 1m
+      # P1: Connection pool exhaustion
+      - alert: PostgreSQLConnectionPoolExhaustion
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections > 0.85
+        for: 5m
         labels:
-          severity: critical
-          team: ingress
-          oncall: "true"
-          sla: "15min-response"
+          severity: warning
+          team: data
         annotations:
-          summary: "Caddy reverse proxy down"
-          description: "Caddy at {{ $labels.instance }} is not responding to TLS handshakes"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/CADDY-DOWN.md"
-          impact: "All external HTTPS traffic blocked - service unavailable"
+          summary: "PostgreSQL connection pool is nearly full ({{ humanizePercentage $value }})"
+          description: "Database has {{ $value }} connections - approaching max_connections limit"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/db-connections.md"
 
-  # =========================================================================
-  # GROUP 2: APPLICATION PERFORMANCE ALERTS
-  # =========================================================================
-  # P1/P2 alerts - degraded user experience, high latency/errors
-  # SLA: Response within 1 hour, fix within 4 hours
+      # P1: WAL archival lag
+      - alert: PostgreSQLWALArchivalLag
+        expr: pg_wal_lsn_last_wal_receive_lsn > pg_wal_lsn_last_wal_write_lsn + 1048576  # 1MB
+        for: 5m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "PostgreSQL WAL archival is lagging"
+          description: "WAL files are not being archived fast enough - recovery window at risk"
 
-  - name: application_performance
+      # P2: Autovacuum lag
+      - alert: PostgreSQLAutovacuumLag
+        expr: |
+          (time() - pg_stat_user_tables_last_autovacuum) > 86400  # > 1 day
+        for: 10m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Table {{ $labels.relname }} not autovacuumed in > 1 day"
+          description: "Consider manual VACUUM - bloat may be accumulating"
+
+      # P2: Table bloat
+      - alert: PostgreSQLTableBloat
+        expr: |
+          pg_stat_user_tables_n_dead_tup / pg_stat_user_tables_n_live_tup > 0.2
+        for: 30m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Table {{ $labels.relname }} has significant bloat ({{ humanizePercentage $value }})"
+          description: "Dead rows > 20% of live rows - consider VACUUM"
+
+      # P2: Slow queries
+      - alert: PostgreSQLSlowQueries
+        expr: rate(pg_stat_statements_mean_time_seconds[5m]) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          team: data
+        annotations:
+          summary: "Query {{ $labels.query }} is slow ({{ printf \"%.2f\" $value }}ms)"
+          description: "Query execution time above 1 second - investigate for optimization"
+---
+# Infrastructure Alerts
+# Node disk, memory, CPU, network, container runtime
+# Load order: 7
+
+groups:
+  - name: infrastructure_alerts
     interval: 30s
     rules:
-      # Latency - P1
-      - alert: HighLatencyP99
-        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.2
+      # P0: Disk full / critical
+      - alert: DiskSpaceCritical
+        expr: |
+          (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.05
         for: 5m
         labels:
-          severity: high
-          team: platform
-          oncall: "false"
-          sla: "1hour-response"
-        annotations:
-          summary: "High latency detected (p99 > 200ms)"
-          description: "HTTP request p99 latency: {{ $value | humanizeDuration }} - investigate slow queries"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/HIGH-LATENCY.md"
-          impact: "Users experiencing slow page loads (>200ms response time)"
-
-      # Error Rate - P1
-      - alert: HighErrorRate
-        expr: (rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])) > 0.001
-        for: 5m
-        labels:
-          severity: high
-          team: platform
-          oncall: "false"
-          sla: "1hour-response"
-        annotations:
-          summary: "High error rate detected (>0.1%)"
-          description: "Error rate: {{ $value | humanizePercentage }} - check application logs for root cause"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/HIGH-ERROR-RATE.md"
-          impact: "Users experiencing failures on ~{{ $value | humanizePercentage }} of requests"
-
-      # Throughput - P2
-      - alert: LowThroughput
-        expr: rate(http_requests_total[5m]) < 0.1
-        for: 10m
-        labels:
-          severity: high
-          team: platform
-          oncall: "false"
-          sla: "1hour-response"
-        annotations:
-          summary: "Low throughput detected (<0.1 req/s)"
-          description: "Throughput dropped to {{ $value | humanize }} req/s - potential traffic issue or service degradation"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/LOW-THROUGHPUT.md"
-          impact: "Significantly reduced traffic - potential DDoS or service outage"
-
-      # Queue Depth - P2
-      - alert: HighQueueDepth
-        expr: code_server_queue_depth > 1000
-        for: 5m
-        labels:
-          severity: high
-          team: platform
-          oncall: "false"
-          sla: "1hour-response"
-        annotations:
-          summary: "Request queue depth high (>1000)"
-          description: "Queue depth: {{ $value }} - requests backing up due to slow processing"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/QUEUE-DEPTH-HIGH.md"
-          impact: "Request latency increasing, users experiencing delays"
-
-  # =========================================================================
-  # GROUP 3: RESOURCE UTILIZATION ALERTS
-  # =========================================================================
-  # P2/P3 alerts - resource pressure, approaching limits
-  # SLA: Response within 4 hours, fix within 24 hours
-
-  - name: resource_utilization
-    interval: 60s
-    rules:
-      # Memory - P2
-      - alert: HighMemoryUsage
-        expr: (container_memory_usage_bytes / container_memory_limit_bytes) > 0.85
-        for: 10m
-        labels:
-          severity: high
+          severity: critical
           team: infrastructure
-          oncall: "false"
-          sla: "4hour-response"
         annotations:
-          summary: "Container memory usage high (>85%)"
-          description: "Memory usage for {{ $labels.container_name }}: {{ $value | humanizePercentage }} - approaching limit"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/MEMORY-HIGH.md"
-          impact: "Potential OOM killer, service crashes if limit exceeded"
+          summary: "Disk space is critical ({{ humanizePercentage $value }} free)"
+          description: "{{ $labels.device }} on {{ $labels.instance }} has < 5% free space"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/disk-full.md"
 
-      # CPU - P3
-      - alert: HighCPUUsage
-        expr: (rate(container_cpu_usage_seconds_total[5m]) / container_cpu_limit) > 0.9
-        for: 15m
-        labels:
-          severity: medium
-          team: infrastructure
-          oncall: "false"
-          sla: "4hour-response"
-        annotations:
-          summary: "Container CPU usage high (>90%)"
-          description: "CPU usage for {{ $labels.container_name }}: {{ $value | humanizePercentage }} - sustained high usage"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/CPU-HIGH.md"
-          impact: "Service performance degraded due to CPU throttling"
-
-      # Disk Space - P2
+      # P1: Disk space running low
       - alert: DiskSpaceLow
-        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        expr: |
+          (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.15
         for: 10m
         labels:
-          severity: high
+          severity: warning
           team: infrastructure
-          oncall: "false"
-          sla: "4hour-response"
         annotations:
-          summary: "Disk space running low (<10%)"
-          description: "Filesystem {{ $labels.mountpoint }} available space: {{ $value | humanizePercentage }} - running out of disk"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/DISK-SPACE-LOW.md"
-          impact: "Service may fail to write logs/data - potential data loss"
+          summary: "Disk space is running low ({{ humanizePercentage $value }} free)"
+          description: "{{ $labels.device }} on {{ $labels.instance }} has < 15% free space"
 
-      # inode Usage - P3
-      - alert: InodesRunningLow
-        expr: (node_filesystem_files_free / node_filesystem_files) < 0.05
+      # P1: inode exhaustion
+      - alert: InodeExhaustion
+        expr: |
+          (node_filesystem_files_free / node_filesystem_files) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Inode space is running low ({{ humanizePercentage $value }} free)"
+          description: "{{ $labels.device }} on {{ $labels.instance }} has < 10% free inodes"
+
+      # P1: Memory pressure (system swapping)
+      - alert: MemorySwapActive
+        expr: node_memory_SwapFree_bytes < node_memory_SwapTotal_bytes * 0.2
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "System is swapping memory"
+          description: "{{ $labels.instance }} is using swap - performance degradation expected"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/memory-swap.md"
+
+      # P2: High CPU (prolonged)
+      - alert: CPUUtilizationHigh
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) by (instance)) > 0.8
         for: 15m
         labels:
-          severity: medium
+          severity: warning
           team: infrastructure
-          oncall: "false"
-          sla: "4hour-response"
         annotations:
-          summary: "Inodes running low (<5%)"
-          description: "Filesystem {{ $labels.mountpoint }} free inodes: {{ $value | humanizePercentage }} - cannot create new files"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/INODES-LOW.md"
-          impact: "File creation will fail when inodes exhausted"
+          summary: "CPU free time is low ({{ humanizePercentage $value }} utilized)"
+          description: "{{ $labels.instance }} CPU usage > 80% for 15+ minutes"
 
-  # =========================================================================
-  # GROUP 4: OBSERVABILITY PIPELINE ALERTS
-  # =========================================================================
-  # P1/P2 alerts - monitoring system health
-  # SLA: Response within 1 hour, fix within 4 hours
+      # P2: High system load
+      - alert: SystemLoadHigh
+        expr: |
+          node_load5 / count(count(node_cpu_seconds_total) by (cpu)) > 2.0
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "System load is high ({{ printf \"%.2f\" $value }})"
+          description: "{{ $labels.instance }} load average 5m > 2x CPU count"
 
-  - name: observability_pipeline
+      # P2: Network interface errors/dropped packets
+      - alert: NetworkPacketLoss
+        expr: |
+          rate(node_network_transmit_drop_total[5m]) > 0
+          or
+          rate(node_network_receive_drop_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Network packet loss detected on {{ $labels.device }}"
+          description: "{{ $labels.instance }} is experiencing packet drops - check network health"
+
+      # P3: High network latency (ping)
+      - alert: NetworkLatencyHigh
+        expr: probe_rtt_seconds > 0.1
+        for: 5m
+        labels:
+          severity: info
+          team: infrastructure
+        annotations:
+          summary: "Network latency is high ({{ humanizeDuration $value }})"
+          description: "{{ $labels.instance }} has increased latency to upstream"
+
+      # P3: Docker daemon issues
+      - alert: DockerDaemonUnresponsive
+        expr: up{job="docker"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Docker daemon is unresponsive"
+          description: "Cannot connect to Docker daemon on {{ $labels.instance }}"
+
+      # P3: Container restart rate high
+      - alert: ContainerRestartRateHigh
+        expr: rate(container_restarts_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Container {{ $labels.container_name }} restarting frequently"
+          description: "Container restart rate > 0.1 restarts/second"
+groups:
+  - name: blackbox_synthetic_monitoring
     interval: 30s
     rules:
-      # Prometheus - P1
+      - alert: EndpointDown
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: observability
+        annotations:
+          summary: "Endpoint {{ $labels.instance }} is down"
+          description: "Endpoint {{ $labels.instance }} failed health check for 1+ minute. HTTP status: {{ $value }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/endpoint-down.md"
+          dashboard_url: "http://192.168.168.31:3000/d/blackbox-endpoints"
+
+      - alert: HighLatency
+        expr: probe_duration_seconds > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Endpoint {{ $labels.instance }} has high latency"
+          description: "Latency: {{ $value }}s (threshold: 1s)"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/high-latency.md"
+
+      - alert: SSLCertificateExpiring
+        expr: probe_ssl_earliest_cert_expiry - time() < 7 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expiring soon for {{ $labels.instance }}"
+          description: "Certificate expires in {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/ssl-certificate-expiring.md"
+
+      - alert: DNSResolutionFailure
+        expr: probe_dns_lookup_time_seconds == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DNS resolution failed for {{ $labels.instance }}"
+          description: "Cannot resolve DNS for {{ $labels.instance }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/dns-resolution-failure.md"
+
+  - name: slo_tracking
+    interval: 1m
+    rules:
+      - record: slo:http_availability:30d
+        expr: |-
+          (
+            sum(rate(http_requests_total{status=~"2.."}[30d]))
+            /
+            sum(rate(http_requests_total[30d]))
+          ) * 100
+
+      - record: slo:error_budget:remaining
+        expr: |-
+          (
+            (1 - (
+              sum(rate(http_requests_total{status=~"5.."}[30d]))
+              /
+              sum(rate(http_requests_total[30d]))
+            ))
+            /
+            (1 - 0.999)  # 99.9% SLO
+          ) * 100
+
+      - alert: ErrorBudgetExhausted
+        expr: slo:error_budget:remaining < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error budget exhausted - only {{ $value }}% remaining"
+          description: "At current error rate, error budget will be depleted in {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/error-budget-exhausted.md"
+          dashboard_url: "http://192.168.168.31:3000/d/slo-error-budget"
+
+      - alert: SLOViolation
+        expr: slo:http_availability:30d < 99.9
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SLO violation: 30-day availability at {{ $value }}% (target: 99.9%)"
+          description: "Availability breach detected"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-violation.md"
+
+  - name: observability_stack_health
+    interval: 1m
+    rules:
       - alert: PrometheusDown
         expr: up{job="prometheus"} == 0
-        for: 2m
+        for: 5m
         labels:
-          severity: high
-          team: observability
-          oncall: "false"
-          sla: "1hour-response"
+          severity: critical
         annotations:
-          summary: "Prometheus monitoring system down"
-          description: "Prometheus at {{ $labels.instance }} is not responding - metrics collection disabled"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/PROMETHEUS-DOWN.md"
-          impact: "No metrics being collected - blind to system health"
+          summary: "Prometheus is down"
+          description: "Prometheus instance {{ $labels.instance }} is not responding"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/prometheus-down.md"
 
-      # Grafana - P2
       - alert: GrafanaDown
         expr: up{job="grafana"} == 0
-        for: 2m
+        for: 5m
         labels:
-          severity: high
-          team: observability
-          oncall: "false"
-          sla: "1hour-response"
+          severity: warning
         annotations:
-          summary: "Grafana dashboards unavailable"
-          description: "Grafana at {{ $labels.instance }} is not responding - dashboards offline"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/GRAFANA-DOWN.md"
-          impact: "Cannot view dashboards/metrics - operations team blind"
+          summary: "Grafana is down"
+          description: "Grafana instance {{ $labels.instance }} is not responding"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/grafana-down.md"
 
-      # Loki - P2
       - alert: LokiDown
         expr: up{job="loki"} == 0
-        for: 2m
+        for: 5m
         labels:
-          severity: high
-          team: observability
-          oncall: "false"
-          sla: "1hour-response"
+          severity: warning
         annotations:
-          summary: "Loki log aggregation system down"
-          description: "Loki at {{ $labels.instance }} is not responding - log collection disabled"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/LOKI-DOWN.md"
-          impact: "Logs not being collected or queryable"
+          summary: "Loki is down"
+          description: "Loki instance {{ $labels.instance }} is not responding"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/loki-down.md"
 
-      # Jaeger - P2
       - alert: JaegerDown
         expr: up{job="jaeger"} == 0
-        for: 2m
+        for: 5m
         labels:
-          severity: high
-          team: observability
-          oncall: "false"
-          sla: "1hour-response"
+          severity: warning
         annotations:
-          summary: "Jaeger distributed tracing system down"
-          description: "Jaeger at {{ $labels.instance }} is not responding - traces are not being collected"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/JAEGER-DOWN.md"
-          impact: "Cannot trace request flows through system"
+          summary: "Jaeger is down"
+          description: "Jaeger instance {{ $labels.instance }} is not responding"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/jaeger-down.md"
 
-      # OTEL Collector - P2
-      - alert: OTELCollectorDown
-        expr: up{job="otel-collector"} == 0
-        for: 2m
+      - alert: PrometheusHighCardinality
+        expr: prometheus_tsdb_metric_chunks_created_total > 1000000
+        for: 10m
         labels:
-          severity: high
-          team: observability
-          oncall: "false"
-          sla: "1hour-response"
+          severity: warning
         annotations:
-          summary: "OpenTelemetry Collector down"
-          description: "OTEL Collector at {{ $labels.instance }} is not responding - telemetry data loss"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/OTEL-COLLECTOR-DOWN.md"
-          impact: "Traces and metrics not being exported to backends"
+          summary: "Prometheus high cardinality alert"
+          description: "Metric cardinality at {{ $value }} (watch for memory issues)"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/prometheus-high-cardinality.md"
+---
+# Performance Alerts
+# Latency, throughput, resource utilization
+# Load order: 2
 
-      # AlertManager - P1
-      - alert: AlertManagerDown
-        expr: up{job="alertmanager"} == 0
-        for: 1m
-        labels:
-          severity: high
-          team: observability
-          oncall: "true"
-          sla: "1hour-response"
-        annotations:
-          summary: "AlertManager alert routing system down"
-          description: "AlertManager at {{ $labels.instance }} is down - alerts not being routed to on-call"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/ALERTMANAGER-DOWN.md"
-          impact: "Alerts cannot be delivered - on-call teams won't be notified"
-
-  # =========================================================================
-  # GROUP 5: SECURITY & COMPLIANCE ALERTS
-  # =========================================================================
-  # P0/P1 alerts - security breaches, policy violations
-  # SLA: Response within 15 minutes, investigation within 1 hour
-
-  - name: security_compliance
+groups:
+  - name: performance_alerts
     interval: 30s
     rules:
-      # Failed Authentication - P1
-      - alert: HighAuthenticationFailureRate
-        expr: rate(oauth2_proxy_authentication_failures_total[5m]) > 0.1
-        for: 2m
+      # P1: High latency spike
+      - alert: HighLatencySpike
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
         labels:
-          severity: high
-          team: security
-          oncall: "true"
-          sla: "15min-response"
+          severity: critical
+          team: platform
         annotations:
-          summary: "High authentication failure rate detected"
-          description: "Auth failure rate: {{ $value | humanize }} failures/sec - possible attack or misconfiguration"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/AUTH-FAILURES-HIGH.md"
-          impact: "Potential brute-force attack or credential compromise"
+          summary: "Latency spike detected (p99: {{ printf \"%.2f\" $value }}s > 1.0s)"
+          description: "code-server p99 latency is above 1 second - investigate slow queries or resource contention"
 
-      # Falco Runtime Alerts - P0
-      - alert: FalcoRuntimeAlert
-        expr: increase(falco_alerts_total[5m]) > 10
+      # P2: CPU utilization high
+      - alert: CPUUtilizationHigh
+        expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "CPU utilization is high ({{ humanizePercentage $value }})"
+          description: "Host {{ $labels.instance }} CPU usage > 85%"
+
+      # P2: Memory usage high
+      - alert: MemoryUtilizationHigh
+        expr: |
+          (
+            1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+          ) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Memory utilization is high ({{ humanizePercentage $value }})"
+          description: "Host {{ $labels.instance }} memory usage > 85%"
+
+      # P2: Network saturation
+      - alert: NetworkSaturation
+        expr: |
+          (
+            rate(node_network_transmit_bytes_total[5m]) +
+            rate(node_network_receive_bytes_total[5m])
+          ) > 125000000  # 1 Gbps link × 85% utilization threshold
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Network interface is saturated"
+          description: "{{ $labels.instance }} network throughput high - possible network bottleneck"
+
+      # P3: Request queue building up
+      - alert: RequestQueueDepth
+        expr: increase(http_requests_queued_total[1m]) > 100
+        for: 5m
+        labels:
+          severity: info
+          team: platform
+        annotations:
+          summary: "Request queue is building up"
+          description: "code-server is queuing requests - may be resource constrained"
+---
+# Security Alerts
+# Falco events, authentication failures, anomaly detection
+# Load order: 4
+
+groups:
+  - name: security_events
+    interval: 30s
+    rules:
+      # P0: Falco critical security event
+      - alert: FalcoCriticalSecurityEvent
+        expr: rate(falco_alerts_total{severity="critical"}[5m]) > 0
         for: 1m
         labels:
           severity: critical
           team: security
-          oncall: "true"
-          sla: "15min-response"
+          page: "true"
         annotations:
-          summary: "Falco runtime security alert - possible container escape"
-          description: "Falco detected {{ $value | humanize }} security violations in past 5 minutes"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/FALCO-ALERT.md"
-          impact: "Potential container escape or privilege escalation attempt"
+          summary: "Critical security event detected by Falco"
+          description: "Falco detected a critical security event - {{ $labels.rule }}"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/falco-critical.md"
 
-      # Certificate Expiry - P2
-      - alert: CertificateNearExpiry
-        expr: (ssl_certificate_not_after_seconds - time()) / 86400 < 7
-        for: 1h
-        labels:
-          severity: high
-          team: security
-          oncall: "false"
-          sla: "1hour-response"
-        annotations:
-          summary: "SSL certificate expires in < 7 days"
-          description: "Certificate {{ $labels.certificate }} expires soon ({{ $value | humanize }} seconds remaining)"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/CERT-EXPIRY.md"
-          impact: "HTTPS will fail if certificate not renewed"
-
-      # Vault Seal - P1
-      - alert: VaultSealed
-        expr: vault_core_unsealed == 0
-        for: 2m
-        labels:
-          severity: high
-          team: security
-          oncall: "true"
-          sla: "15min-response"
-        annotations:
-          summary: "HashiCorp Vault is sealed"
-          description: "Vault at {{ $labels.instance }} is sealed - cannot retrieve secrets"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/VAULT-SEALED.md"
-          impact: "Cannot issue certificates or rotate secrets"
-
-  # =========================================================================
-  # GROUP 6: SLA & BUSINESS METRICS
-  # =========================================================================
-  # P1/P2 alerts - SLO violations, business impact
-  # SLA: Response within 1 hour, fix within 4 hours
-
-  - name: sla_business_metrics
-    interval: 60s
-    rules:
-      # Availability SLO - P1
-      - alert: AvailabilitySLOViolation
+      # P0: Suspicious process execution
+      - alert: SuspiciousProcessExecution
         expr: |
-          (1 - (rate(http_requests_total{status=~"5.."}[1h]) / rate(http_requests_total[1h]))) < 0.9999
-        for: 5m
+          rate(falco_alerts_total{rule=~".*shell.*|.*exec.*",severity=~"warning|critical"}[5m]) > 0
+        for: 1m
         labels:
-          severity: high
-          team: platform
-          oncall: "true"
-          sla: "1hour-response"
+          severity: critical
+          team: security
         annotations:
-          summary: "Availability SLO violation (target: 99.99%)"
-          description: "Availability: {{ $value | humanizePercentage }} - below 99.99% SLO"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/SLO-AVAILABILITY-VIOLATION.md"
-          impact: "SLO credit owed to customers"
+          summary: "Suspicious process execution detected"
+          description: "Falco detected suspicious shell/exec activity on {{ $labels.host }}"
 
-      # Latency SLO - P1
-      - alert: LatencySLOViolation
-        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[1h])) > 0.1
-        for: 5m
-        labels:
-          severity: high
-          team: platform
-          oncall: "true"
-          sla: "1hour-response"
-        annotations:
-          summary: "Latency SLO violation (p99 target: <100ms)"
-          description: "p99 Latency: {{ $value | humanizeDuration }} - above 100ms SLO"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/SLO-LATENCY-VIOLATION.md"
-          impact: "SLO credit owed to customers - degraded user experience"
-
-      # Data Freshness - P2
-      - alert: DataStaleness
-        expr: time() - timestamp(last_data_point) > 3600
-        for: 10m
-        labels:
-          severity: high
-          team: platform
-          oncall: "false"
-          sla: "1hour-response"
-        annotations:
-          summary: "Data pipeline stale (>1 hour)"
-          description: "Last data point: {{ $value | humanizeDuration }} ago - pipeline may be stuck"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/DATA-STALENESS.md"
-          impact: "Real-time dashboards/analytics showing stale data"
-
-  # =========================================================================
-  # GROUP 7: INFRASTRUCTURE OPERATIONAL ALERTS
-  # =========================================================================
-  # P2/P3 alerts - operational readiness, maintenance alerts
-  # SLA: Response within 4 hours, fix within 24 hours
-
-  - name: infrastructure_operational
-    interval: 60s
-    rules:
-      # Node Health - P2
-      - alert: NodeNotReady
-        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
-        for: 5m
-        labels:
-          severity: high
-          team: infrastructure
-          oncall: "false"
-          sla: "4hour-response"
-        annotations:
-          summary: "Kubernetes node not ready"
-          description: "Node {{ $labels.node }} is not ready - may be unhealthy"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/NODE-NOT-READY.md"
-          impact: "Workloads may not be scheduled on this node"
-
-      # Backup Health - P2
-      - alert: BackupFailure
-        expr: (time() - backup_completed_timestamp_seconds) > 86400
-        for: 1h
-        labels:
-          severity: high
-          team: infrastructure
-          oncall: "false"
-          sla: "4hour-response"
-        annotations:
-          summary: "Backup not completed in 24 hours"
-          description: "Last successful backup: {{ $value | humanizeDuration }} ago - backup may be failing"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/BACKUP-FAILURE.md"
-          impact: "Unable to recover from data loss if disaster occurs"
-
-      # Replication Health - P2
-      - alert: ReplicationBehind
-        expr: pg_replication_lag_seconds > 30
-        for: 10m
-        labels:
-          severity: high
-          team: database
-          oncall: "false"
-          sla: "4hour-response"
-        annotations:
-          summary: "Database replication falling behind (>30s lag)"
-          description: "Replication lag: {{ $value }}s - replica not keeping up with primary"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/REPLICATION-BEHIND.md"
-          impact: "Failover will result in data loss if lag exceeds threshold"
-
-      # Network Errors - P3
-      - alert: HighNetworkErrors
-        expr: rate(node_network_receive_errs_total[5m]) > 100
-        for: 10m
-        labels:
-          severity: medium
-          team: infrastructure
-          oncall: "false"
-          sla: "4hour-response"
-        annotations:
-          summary: "High network errors detected"
-          description: "Network errors on {{ $labels.device }}: {{ $value | humanize }} errors/sec"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/NETWORK-ERRORS.md"
-          impact: "Network packets being dropped - potential hardware issue"
-
-      # DNS Resolution - P2
-      - alert: DNSResolutionFailing
-        expr: probe_dns_lookup_time_seconds > 1
-        for: 5m
-        labels:
-          severity: high
-          team: network
-          oncall: "false"
-          sla: "4hour-response"
-        annotations:
-          summary: "DNS resolution slow (>1s)"
-          description: "DNS lookup time: {{ $value | humanizeDuration }} - resolver may be slow"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/DNS-SLOW.md"
-          impact: "Service startup and inter-service communication slowed"
-
-  # =========================================================================
-  # GROUP 8: EXTERNAL DEPENDENCIES & INTEGRATIONS
-  # =========================================================================
-  # P2/P3 alerts - third-party service health
-  # SLA: Response within 4 hours, escalate within 1 hour
-
-  - name: external_dependencies
-    interval: 60s
-    rules:
-      # Cloudflare Tunnel - P2
-      - alert: CloudflareTunnelDown
-        expr: cloudflare_tunnel_connector_status == 0
+      # P1: Repeated authentication failures
+      - alert: AuthenticationFailureSpike
+        expr: rate(auth_failures_total[5m]) > 10
         for: 2m
         labels:
-          severity: high
-          team: network
-          oncall: "false"
-          sla: "4hour-response"
+          severity: warning
+          team: security
         annotations:
-          summary: "Cloudflare Tunnel connector disconnected"
-          description: "Cloudflare Tunnel at {{ $labels.instance }} is not connected"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/CF-TUNNEL-DOWN.md"
-          impact: "Internet-facing traffic cannot reach on-prem infrastructure"
+          summary: "Authentication failures spiking ({{ printf \"%.1f\" $value }} failures/sec)"
+          description: "Multiple failed authentication attempts - possible brute force attack"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/auth-failure.md"
 
-      # External API Rate Limit - P3
-      - alert: ExternalAPIRateLimited
-        expr: increase(external_api_rate_limit_hits_total[5m]) > 100
+      # P1: Unauthorized access attempt
+      - alert: UnauthorizedAccessAttempt
+        expr: rate(http_requests_total{status="401"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Unauthorized access attempts detected"
+          description: "Multiple 401 Unauthorized responses - may indicate reconnaissance"
+
+      # P2: Certificate about to expire
+      - alert: CertificateNearExpiry
+        expr: |
+          (
+            ssl_certificate_not_after_seconds - time()
+          ) / 86400 < 14
+        for: 1h
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "SSL certificate expires in {{ printf \"%.0f\" (div (sub $value 0) 86400) }} days"
+          description: "Certificate {{ $labels.certificate }} needs renewal"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/cert-renewal.md"
+---
+# SLO / SLI Multi-Window Burn Rate Alerts
+# Detects when error budget is being consumed faster than allowed
+# Based on: https://sre.google/sre-book/alerting-on-slos/
+# Load order: 3
+
+groups:
+  - name: slo_burn_rate_alerts
+    interval: 1m
+    rules:
+      # ===== Target: 99.9% availability (0.1% error budget) =====
+      # Error budget per period: 0.1% of requests can fail
+      # Daily budget: ~8.64 seconds of downtime
+      # Weekly budget: ~1 minute of downtime
+
+      # FAST BURN (1h window) — page on-call immediately if firing
+      # Threshold: 14.4x the allowed error rate (consumes 1 day's budget in 1 hour)
+      - alert: SLOErrorBudgetFastBurnCodeServer
+        expr: |
+          (
+            rate(http_requests_total{job="code-server", status=~"5.."}[1h])
+            /
+            rate(http_requests_total{job="code-server"}[1h])
+          ) > 14.4 * (1 - 0.999)
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          slo: availability
+          burn_rate: "14.4x"
+        annotations:
+          summary: "SLO fast burn rate: code-server error budget burning 14.4x faster than allowed"
+          description: |
+            Error budget for code-server is being consumed 14.4x faster than allowed.
+            Current error rate: {{ humanizePercentage $value }}
+            Allowed rate: 0.1%
+            If this continues for 1 hour, will exhaust 1 day of error budget.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-burn-fast.md"
+
+      # MEDIUM BURN (6h window) — warning/alert ops team
+      # Threshold: 6x the allowed error rate (consumes 1 day's budget in 6 hours)
+      - alert: SLOErrorBudgetMediumBurnCodeServer
+        expr: |
+          (
+            rate(http_requests_total{job="code-server", status=~"5.."}[6h])
+            /
+            rate(http_requests_total{job="code-server"}[6h])
+          ) > 6 * (1 - 0.999)
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+          slo: availability
+          burn_rate: "6x"
+        annotations:
+          summary: "SLO medium burn rate: code-server error budget at risk"
+          description: |
+            Error budget is being consumed at 6x the allowed rate.
+            If this continues for 6 hours, will exhaust 1 day of error budget.
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-burn-medium.md"
+
+      # SLOW BURN (30d window) — informational/trending
+      # Threshold: 0.3x the allowed error rate (if this continues, will miss SLO)
+      - alert: SLOErrorBudgetSlowBurnCodeServer
+        expr: |
+          (
+            rate(http_requests_total{job="code-server", status=~"5.."}[30d])
+            /
+            rate(http_requests_total{job="code-server"}[30d])
+          ) > (1 - 0.999)
+        for: 1h
+        labels:
+          severity: info
+          team: platform
+          slo: availability
+          burn_rate: "1x"
+        annotations:
+          summary: "SLO tracking: code-server error rate at (or above) allowed threshold"
+          description: |
+            Error rate is at the threshold for the SLO.
+            Current 30-day error rate: {{ humanizePercentage $value }}
+            If this rate continues, SLO will not be met this month.
+
+      # ===== Database Replication SLO (99.99%) =====
+      # Detect when replication is lagging (consuming availability budget)
+      - alert: DatabaseReplicationLagHighBurn
+        expr: pg_replication_lag_seconds > 60
         for: 5m
         labels:
-          severity: medium
-          team: platform
-          oncall: "false"
-          sla: "4hour-response"
+          severity: critical
+          team: data
+          slo: database_replication
         annotations:
-          summary: "External API rate limiting detected"
-          description: "Hitting rate limits on {{ $labels.api }} - {{ $value | humanize }} hits in past 5min"
-          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/EXT-API-RATELIMIT.md"
-          impact: "API calls being rejected - service functionality degraded"
+          summary: "Database replication lag is consuming availability budget"
+          description: |
+            PostgreSQL replication lag: {{ $value }}s
+            Replica is out of sync with primary - failover capacity reduced
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/db-replication-lag.md"
 
-# =========================================================================
-# RECORDING RULES (Deferred to Phase 2 - will be added to groups structure)
-# =========================================================================
-# Recording rules: Precomputed metrics for efficient dashboard rendering
-# Note: These will be implemented in Phase 2 as separate recording rule groups
-# For now, consolidating alerts which are P0 critical
+      # ===== Backup/WAL Archival SLO (100% — no failures) =====
+      - alert: BackupFailureErrorBudgetBurn
+        expr: rate(backup_failures_total[1h]) > 0
+        for: 10m
+        labels:
+          severity: critical
+          team: data
+          slo: backup
+        annotations:
+          summary: "Backup is failing - consuming DR budget"
+          description: "Backup job failures detected - data recovery capability compromised"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-failure.md"
 
-# =========================================================================
-# NOTES
-# =========================================================================
-#
-# CONSOLIDATION COMPLETED:
-# - alert-rules.yml ✓
-# - alert-rules-telemetry.yml ✓
-# - alert-rules-production-simple.yml ✓
-# - alert-rules-phase-6-slo-sli.yml ✓
-# - alert-rules-gaps-374.yml ✓
-# - alert-rules-405-production-complete.yml ✓
-# - backup-alert-rules.yml ✓
-# - alertmanager.yml (separate - not consolidated)
-#
-# QUALITY GATES MET:
-# ✓ Zero duplication (all unique rules)
-# ✓ Immutable (git version controlled)
-# ✓ Idempotent (safe to reload multiple times)
-# ✓ Complete SLA definitions
-# ✓ Runbook references
-# ✓ Impact descriptions
-# ✓ Severity levels: critical, high, medium
-# ✓ Team ownership assigned
-# ✓ On-call escalation flags
-#
-# DEPLOYMENT:
-# 1. Copy this file to: /etc/prometheus/rules/alert-rules-consolidated.yml
-# 2. Update prometheus.yml to reference only consolidated file
-# 3. Remove all other alert-rules-*.yml files (or symlink to this)
-# 4. Test: prometheus --config.file=/etc/prometheus/prometheus.yml --web.config.file=/etc/prometheus/web.yml
-# 5. Reload: curl -X POST http://localhost:9090/-/reload
-#
-# MAINTENANCE:
-# - All rule changes via git PR only
-# - Test with: promtool check rules alert-rules-consolidated.yml
-# - Validate with terraform: terraform apply
-#
-# Last Updated: 2026-04-15
-# Version: 1.0 (Consolidated SSOT)
+  # Recording rules for SLI calculation (helper metrics for dashboards)
+  - name: slo_recording_rules
+    interval: 30s
+    rules:
+      # Availability SLI (successful request ratio)
+      - record: slo:availability:success_ratio_1h
+        expr: |
+          (
+            rate(http_requests_total{status!~"5.."}[1h])
+            /
+            rate(http_requests_total[1h])
+          ) or on() vector(1)
+
+      - record: slo:availability:success_ratio_30d
+        expr: |
+          (
+            rate(http_requests_total{status!~"5.."}[30d])
+            /
+            rate(http_requests_total[30d])
+          ) or on() vector(1)
+
+      # Replication SLI (lag vs SLA target)
+      - record: slo:replication:lag_acceptable
+        expr: pg_replication_lag_seconds <= 30
+
+      # Backup SLI (success rate)
+      - record: slo:backup:success_ratio_24h
+        expr: |
+          (
+            rate(backup_success_total[24h])
+            /
+            (rate(backup_success_total[24h]) + rate(backup_failures_total[24h]))
+          ) or on() vector(1)

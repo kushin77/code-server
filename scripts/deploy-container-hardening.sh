@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # P1 #354: Container Hardening Deployment
 #
@@ -18,11 +18,10 @@
 
 set -euo pipefail
 
-# ════════════════════════════════════════════════════════════════════════════════════════════
-# CONFIGURATION
-# ════════════════════════════════════════════════════════════════════════════════════════════
-
+# Source common logging library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 LOG_FILE="${PROJECT_ROOT}/logs/container-hardening.log"
 

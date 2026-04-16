@@ -1,31 +1,124 @@
 # Caddyfile — production reverse proxy & TLS termination
-# On-prem VSCode server at 192.168.168.31 behind Cloudflare Tunnel or local network
+# Generated from config/environment/caddyfile.tpl via terraform main.tf
 # Ref: ADR-001 Cloudflare Tunnel Architecture
 # Validation: caddy validate --config Caddyfile --adapter caddyfile
 
 {
-    # Disable auto-HTTPS for on-prem (no external ACME needed)
+    # Disable auto-HTTPS since we're using Cloudflare DNS-01
     auto_https off
 
-    # Global logging (JSON format for log aggregation)
+    # ACME configuration
+    email {$ACME_EMAIL:security@kushnir.cloud}
+
+    # Global logging (structured JSON for Prometheus/Loki integration)
     log {
         output file /var/log/caddy/access.log {
             roll_size  100mb
             roll_keep  14
             roll_keep_for 336h
         }
+        format json {
+            request_id  "request_id"
+            time_format "iso8601"
+        }
         format json
         level info
     }
 
     # Prometheus metrics exposed on admin API
-    metrics
+    servers {
+        metrics
+    }
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Production Site: localhost (on-prem) or domain via Cloudflare Tunnel
+# Production Site: {$DOMAIN}
 # ═════════════════════════════════════════════════════════════════════════════
-:80 {
+{$DOMAIN:ide.kushnir.cloud} {
+
+    # TLS: Cloudflare DNS-01 challenge (no port 80/443 needed on client)
+    tls {
+        dns cloudflare {$CLOUDFLARE_API_TOKEN}
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Security Headers (HSTS, CSP, X-*, etc.)
+    # ─────────────────────────────────────────────────────────────────────────
+    header {
+        Strict-Transport-Security        "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options           "nosniff"
+        X-Frame-Options                  "SAMEORIGIN"
+        X-XSS-Protection                 "1; mode=block"
+        Referrer-Policy                  "strict-origin-when-cross-origin"
+        Permissions-Policy               "camera=(), microphone=(), geolocation=()"
+        # CSP for code-server + WebSocket + inline scripts (required by IDE)
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
+        # Remove server version headers
+        -Server
+        -X-Powered-By
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Compression (gzip for JSON/text, skip images/video)
+    # ─────────────────────────────────────────────────────────────────────────
+    encode gzip
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Health check endpoint (unauthenticated for k8s/container probes)
+    # ─────────────────────────────────────────────────────────────────────────
+    @health {
+        path /health /healthz /ping
+    }
+    respond @health "OK" 200
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # OAuth2 Proxy: auth redirects + callback handling
+    # ─────────────────────────────────────────────────────────────────────────
+    @oauth2 path /oauth2/*
+    reverse_proxy @oauth2 oauth2-proxy:4180 {
+        transport http {
+            dial_timeout  10s
+            read_timeout  30s
+            write_timeout 30s
+        }
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Main Upstream: code-server via oauth2-proxy (authenticated)
+    # WebSocket for terminal/extensions + W3C Trace Context propagation
+    # ─────────────────────────────────────────────────────────────────────────
+    reverse_proxy oauth2-proxy:4180 {
+        transport http {
+            # WebSocket passthrough for code-server terminal + extensions
+            dial_timeout      10s
+            read_timeout      0   # unlimited for long-running WS
+            write_timeout     0
+            keep_alive_timeout 90s
+            max_conns_per_host 100
+        }
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Error Handling (don't expose internal details)
+    # ─────────────────────────────────────────────────────────────────────────
+    handle_errors {
+        header Content-Type "application/json"
+        respond `{"error":"request failed","status":{http.error.status_code}}` {http.error.status_code}
+    }
+}
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Redirect bare HTTP → HTTPS (optional, works if port 80 is open)
+# ═════════════════════════════════════════════════════════════════════════════
+http://{$DOMAIN:ide.kushnir.cloud} {
+    redir https://{host}{uri} permanent
+}
+
+
+# ─────────────────────────────────────────────
+# Production site ({$DOMAIN})
+# ─────────────────────────────────────────────
+{$DOMAIN:ide.kushnir.cloud} {
 
     # TLS via Cloudflare DNS-01 challenge (works behind NAT / no port-80 needed)
     tls {

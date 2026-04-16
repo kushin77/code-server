@@ -446,3 +446,15 @@ category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
 
+[[script]]
+file     = "configure-rbac-enforcement-phase3.sh"
+category = "P1 #388 Phase 3"
+status   = "active"
+purpose  = "Generate RBAC enforcement configuration (Caddyfile JWT middleware, policies, audit logging)"
+
+[[script]]
+file     = "vpn-endpoint-testing.sh"
+category = "operations"
+status   = "active"
+purpose  = "Test VPN endpoint connectivity and service health"
+

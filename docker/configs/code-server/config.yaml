@@ -11,11 +11,12 @@ password: ${CODE_SERVER_PASSWORD}
 cert: false  # Let reverse proxy (Caddy) handle TLS
 
 # Security: Proxy domains whitelisted for secure context
+# IPs are forbidden — use canonical DNS (see environments/production/hosts.yml)
 proxy-domain:
   - localhost
-  - 127.0.0.1
-  - 192.168.168.31
-  - 192.168.168.32
+  - prod.internal
+  - primary.prod.internal
+  - replica.prod.internal
   - ide.kushnir.cloud
 
 # Logging for audit trail (set via LOG_LEVEL from Terraform)

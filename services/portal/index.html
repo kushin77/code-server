@@ -157,13 +157,13 @@
 <body>
   <header>
     <h1>kushnir.cloud <span>/ portal</span></h1>
-    <span class="tag">on-prem · 192.168.168.31</span>
+    <span class="tag">on-prem · prod.internal</span>
   </header>
 
   <main>
     <div class="section-title">Development</div>
     <div class="grid">
-      <a class="card" href="http://192.168.168.31:8080" target="_blank">
+      <a class="card" href="http://ide.kushnir.cloud" target="_blank">
         <div class="card-header">
           <div class="card-icon icon-vscode">&#x1F4BB;</div>
           <div class="card-name">IDE (code-server)</div>
@@ -180,7 +180,7 @@
 
     <div class="section-title">Observability</div>
     <div class="grid">
-      <a class="card" href="http://192.168.168.31:3000" target="_blank">
+      <a class="card" href="http://grafana.prod.internal:3000" target="_blank">
         <div class="card-header">
           <div class="card-icon icon-grafana">&#x1F4CA;</div>
           <div class="card-name">Grafana</div>
@@ -194,7 +194,7 @@
         </div>
       </a>
 
-      <a class="card" href="http://192.168.168.31:9090" target="_blank">
+      <a class="card" href="http://prometheus.prod.internal:9090" target="_blank">
         <div class="card-header">
           <div class="card-icon icon-prometheus">&#x1F525;</div>
           <div class="card-name">Prometheus</div>
@@ -208,7 +208,7 @@
         </div>
       </a>
 
-      <a class="card" href="http://192.168.168.31:9093" target="_blank">
+      <a class="card" href="http://alertmanager.prod.internal:9093" target="_blank">
         <div class="card-header">
           <div class="card-icon icon-alertmanager">&#x1F6A8;</div>
           <div class="card-name">AlertManager</div>
@@ -222,7 +222,7 @@
         </div>
       </a>
 
-      <a class="card" href="http://192.168.168.31:16686" target="_blank">
+      <a class="card" href="http://jaeger.prod.internal:16686" target="_blank">
         <div class="card-header">
           <div class="card-icon icon-jaeger">&#x1F50D;</div>
           <div class="card-name">Jaeger</div>
@@ -239,7 +239,7 @@
 
     <div class="section-title">AI / LLM</div>
     <div class="grid">
-      <a class="card" href="http://192.168.168.31:11434" target="_blank">
+      <a class="card" href="http://primary.prod.internal:11434" target="_blank">
         <div class="card-header">
           <div class="card-icon icon-ollama">&#x1F9E0;</div>
           <div class="card-name">Ollama</div>
@@ -256,19 +256,19 @@
   </main>
 
   <footer>
-    Enterprise Portal · kushin77/code-server · 192.168.168.31 · <span id="ts"></span>
+    Enterprise Portal · kushin77/code-server · prod.internal · <span id="ts"></span>
   </footer>
 
   <script>
     document.getElementById('ts').textContent = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 
     const services = [
-      { id: 'code-server',   url: 'http://192.168.168.31:8080/healthz' },
-      { id: 'grafana',       url: 'http://192.168.168.31:3000/api/health' },
-      { id: 'prometheus',    url: 'http://192.168.168.31:9090/-/healthy' },
-      { id: 'alertmanager',  url: 'http://192.168.168.31:9093/-/healthy' },
-      { id: 'jaeger',        url: 'http://192.168.168.31:16686/' },
-      { id: 'ollama',        url: 'http://192.168.168.31:11434/api/tags' },
+      { id: 'code-server',   url: 'http://ide.kushnir.cloud/healthz' },
+      { id: 'grafana',       url: 'http://grafana.prod.internal:3000/api/health' },
+      { id: 'prometheus',    url: 'http://prometheus.prod.internal:9090/-/healthy' },
+      { id: 'alertmanager',  url: 'http://alertmanager.prod.internal:9093/-/healthy' },
+      { id: 'jaeger',        url: 'http://jaeger.prod.internal:16686/' },
+      { id: 'ollama',        url: 'http://primary.prod.internal:11434/api/tags' },
     ];
 
     services.forEach(({ id, url }) => {

@@ -6,8 +6,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TERRAFORM_DIR="${SCRIPT_DIR}"
-MINIO_HOST="${MINIO_HOST:-192.168.168.31:9000}"
+
+# Source environment configuration (exports PRIMARY_HOST, REPLICA_HOST, VIP)
+if [[ -f "${PROJECT_ROOT}/scripts/lib/env.sh" ]]; then
+  source "${PROJECT_ROOT}/scripts/lib/env.sh"
+fi
+
+MINIO_HOST="${MINIO_HOST:-${PRIMARY_HOST}:9000}"
 MINIO_BUCKET="${MINIO_BUCKET:-terraform-state}"
 MINIO_REGION="${MINIO_REGION:-us-east-1}"
 
@@ -46,7 +53,9 @@ echo "Step 2: Creating backend configuration..."
 
 BACKEND_CONFIG="${TERRAFORM_DIR}/backend-config.hcl"
 if [ ! -f "${BACKEND_CONFIG}" ]; then
-    cat > "${BACKEND_CONFIG}" << 'EOF'
+    # Extract host from MINIO_HOST (remove port if present)
+    MINIO_IP="${MINIO_HOST%%:*}"
+    cat > "${BACKEND_CONFIG}" << EOF
 # Backend configuration for MinIO S3-compatible storage
 # DO NOT commit credentials - use environment variables:
 #   export AWS_ACCESS_KEY_ID=minioadmin
@@ -56,7 +65,7 @@ if [ ! -f "${BACKEND_CONFIG}" ]; then
 bucket         = "terraform-state"
 key            = "prod/terraform.tfstate"
 region         = "us-east-1"
-endpoint       = "http://192.168.168.31:9000"
+endpoint       = "http://${MINIO_HOST}"
 use_path_style = true
 
 # Enable state locking via DynamoDB simulation (optional)

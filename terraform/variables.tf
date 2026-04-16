@@ -83,13 +83,13 @@ variable "github_token" {
 // ─────────────────────────────────────────────────────────────────────────────
 
 variable "deployment_host" {
-  description = "SSH host for production deployment (IP or FQDN). Change this to scale/migrate infrastructure."
+  description = "SSH host for production deployment (IP or FQDN). Change this to scale/migrate infrastructure. Load from TF_VAR_deployment_host or terraform.tfvars"
   type        = string
-  default     = "192.168.168.31"
+  nullable    = false
 
   validation {
     condition     = length(var.deployment_host) > 0
-    error_message = "deployment_host must be specified (IP or hostname)."
+    error_message = "deployment_host must be specified (IP or hostname) via TF_VAR_deployment_host or terraform.tfvars."
   }
 }
 
@@ -111,13 +111,13 @@ variable "deployment_port" {
 }
 
 variable "host_ip" {
-  description = "IP address of deployment host (for multi-host scaling)"
+  description = "IP address of deployment host (for multi-host scaling). Load from TF_VAR_host_ip or terraform.tfvars"
   type        = string
-  default     = "192.168.168.31"
+  nullable    = false
 
   validation {
     condition     = can(regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", var.host_ip))
-    error_message = "host_ip must be a valid IPv4 address."
+    error_message = "host_ip must be a valid IPv4 address (provide via TF_VAR_host_ip or terraform.tfvars)."
   }
 }
 
@@ -255,9 +255,9 @@ variable "cloudflare_tunnel_token" {
 }
 
 variable "replica_host_ip" {
-  description = "Replica standby host IP (on-prem)"
+  description = "Replica standby host IP (on-prem). Load from TF_VAR_replica_host_ip or terraform.tfvars"
   type        = string
-  default     = "192.168.168.42"
+  nullable    = false
 }
 
 variable "cloudflare_tunnel_cname" {
@@ -375,9 +375,9 @@ variable "vault_api_addr" {
 }
 
 variable "vault_cluster_addr" {
-  description = "Vault cluster address (HA communication)"
+  description = "Vault cluster address (HA communication). Load from TF_VAR_vault_cluster_addr or terraform.tfvars"
   type        = string
-  default     = "https://192.168.168.31:8201"
+  nullable    = false
 }
 
 variable "vault_tls_cert_pem" {
@@ -939,9 +939,9 @@ variable "enable_dns_rate_limiting" {
 // ═══════════════════════════════════════════════════════════════════════════
 
 variable "primary_host_ip" {
-  description = "Primary host IP address for service discovery"
+  description = "Primary host IP address for service discovery. Load from TF_VAR_primary_host_ip or terraform.tfvars"
   type        = string
-  default     = "192.168.168.31"
+  nullable    = false
 }
 
 variable "postgres_user" {
@@ -964,9 +964,9 @@ variable "ssh_private_key" {
 }
 
 variable "deploy_host" {
-  description = "Deployment host (same as deployment_host)"
+  description = "Deployment host (same as deployment_host). Load from TF_VAR_deploy_host or terraform.tfvars"
   type        = string
-  default     = "192.168.168.31"
+  nullable    = false
 }
 
 variable "deploy_user" {

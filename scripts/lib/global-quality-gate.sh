@@ -81,7 +81,29 @@ else
   fi
 fi
 
-# 3) Validate key single-source-of-truth inventories (non-fatal: warn on missing yq or file).
+# 3) Check for phase-based script naming violations (Issue #382).
+echo "[gate] Checking for deprecated phase-based script naming patterns"
+mapfile -t all_scripts < <(find scripts -type f -name "*.sh" -newer /etc/os-release 2>/dev/null || find scripts -type f -name "*.sh" 2>/dev/null | tail -1000 || true)
+phase_violations=()
+for script in "${all_scripts[@]}"; do
+  if [[ "$script" =~ (phase-|deploy-phase-|PHASE-) ]]; then
+    # Allow if script already has DEPRECATED header
+    if ! head -5 "$script" | grep -q "DEPRECATED"; then
+      phase_violations+=("$script")
+    fi
+  fi
+done
+
+if [[ ${#phase_violations[@]} -gt 0 ]]; then
+  echo "[gate] WARN: Found ${#phase_violations[@]} script(s) using deprecated phase-based naming:"
+  for v in "${phase_violations[@]}"; do
+    echo "[gate]   - $v"
+  done
+  echo "[gate]   See: DEPRECATED-SCRIPTS.md for canonical replacements"
+  echo "[gate]   See: scripts/README.md for task mapping"
+fi
+
+# 4) Validate key single-source-of-truth inventories (non-fatal: warn on missing yq or file).
 if command -v yq >/dev/null 2>&1; then
   echo "[gate] Validating inventory YAML"
   for inv_file in inventory/infrastructure.yaml inventory/dns.yaml; do

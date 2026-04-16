@@ -78,3 +78,155 @@ groups:
         labels:
           severity: medium
           page: "false"
+
+  # ── #374: Missing operational alert gaps ─────────────────────────────────
+  - name: backup
+    interval: 5m
+    rules:
+      # Gap 1a: Backup failure detection (25h silence = missed backup)
+      - alert: BackupFailed
+        expr: time() - backup_last_success_timestamp_seconds > 90000
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup has not completed in 25 hours"
+          description: "Last successful backup was {{ $value | humanizeDuration }} ago. Data loss risk increasing."
+          runbook: "docs/runbooks/backup-failure.md"
+
+      # Gap 1b: Backup storage headroom
+      - alert: BackupStorageLow
+        expr: backup_storage_used_bytes / backup_storage_total_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backup storage > 85% full — {{ $value | humanizePercentage }} used"
+
+  - name: tls
+    interval: 5m
+    rules:
+      # Gap 2a: SSL cert 30-day warning via Blackbox probe
+      - alert: SSLCertExpiryWarning
+        expr: (probe_ssl_earliest_cert_expiry{job="ssl-check"} - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL certificate expires in {{ $value | humanize }} days"
+          description: "Certificate for {{ $labels.instance }} expires soon. Check Caddy renewal logs."
+
+      # Gap 2b: SSL cert 7-day critical
+      - alert: SSLCertExpiryCritical
+        expr: (probe_ssl_earliest_cert_expiry{job="ssl-check"} - time()) / 86400 < 7
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL: SSL certificate expires in {{ $value | humanize }} days"
+          description: "Immediate action required — Caddy auto-renewal may be broken."
+
+  - name: containers
+    interval: 30s
+    rules:
+      # Gap 3a: Container restart loop (2+ restarts in 10 minutes)
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds{name!=""}[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} restarted {{ $value }} times in 10m"
+          description: "Possible crash loop. Check: docker logs {{ $labels.name }}"
+
+      # Gap 3b: Container crash loop (5+ restarts in 10 minutes)
+      - alert: ContainerCrashLoop
+        expr: increase(container_start_time_seconds{name!=""}[10m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL: Container {{ $labels.name }} is crash-looping ({{ $value }} restarts in 10m)"
+          description: "Service is non-functional. Check: docker logs {{ $labels.name }} --tail=100"
+
+  - name: replication
+    interval: 30s
+    rules:
+      # Gap 4a: Replication lag warning
+      - alert: PostgreSQLReplicationLagWarning
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL replication lag is {{ $value }}s (threshold: 30s)"
+
+      # Gap 4b: Replication lag critical
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_seconds > 120
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL: PostgreSQL replication lag {{ $value }}s — data loss risk if primary fails"
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+
+      # Gap 4c: Replication completely broken
+      - alert: PostgreSQLReplicationBroken
+        expr: pg_replication_is_replica == 0 and on() pg_up{instance="replica.prod.internal:9187"} == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL replication is BROKEN on replica — standby not receiving WAL"
+          description: "Run: select * from pg_stat_replication; on primary to diagnose."
+
+  - name: disk
+    interval: 60s
+    rules:
+      # Gap 5a: Disk usage warning (node_exporter metrics, both hosts)
+      - alert: DiskSpaceWarning
+        expr: |
+          (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"})
+          / node_filesystem_size_bytes{mountpoint="/"} > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage > 80% on {{ $labels.instance }}: {{ $value | humanizePercentage }}"
+          description: "Run: df -h / && du -sh /var/lib/docker && du -sh /opt/prometheus-data"
+
+      # Gap 5b: Disk usage critical
+      - alert: DiskSpaceCritical
+        expr: |
+          (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"})
+          / node_filesystem_size_bytes{mountpoint="/"} > 0.93
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL: Disk {{ $value | humanizePercentage }} full on {{ $labels.instance }}"
+          description: "Immediate action: docker system prune -af OR extend volume. Data writes may fail."
+
+  - name: ollama
+    interval: 60s
+    rules:
+      # Gap 6a: Ollama model server down
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ollama model server is down"
+          description: "AI features in code-server will be degraded. Check: docker logs ollama"
+
+      # Gap 6b: GPU memory near capacity
+      - alert: OllamaGPUMemoryHigh
+        expr: nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes > 0.95
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU memory {{ $value | humanizePercentage }} used — Ollama may OOM soon"
+          description: "Run: nvidia-smi to inspect GPU state. Consider unloading unused models."

@@ -17,8 +17,8 @@ echo "✅ Directories created"
 # Create .env file for sensitive data
 cat > ~/code-server-enterprise/.env << EOF
 # Update these with your actual values
-CODE_SERVER_PASSWORD=changeme-enterprise-pwd
-CODE_SERVER_SUDO_PASSWORD=changeme-sudo-pwd
+CODE_SERVER_PASSWORD=
+CODE_SERVER_SUDO_PASSWORD=
 CADDY_EMAIL=admin@example.com
 
 # OAuth2 Settings (optional)
@@ -37,3 +37,4 @@ echo "  2. Run: docker-compose -f ~/code-server-enterprise/docker-compose.yml up
 echo "  3. Access: https://localhost (accept self-signed cert)"
 echo ""
 echo "✨ Enterprise deployment ready!"
+

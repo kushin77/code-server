@@ -83,7 +83,7 @@ retry 6 5 "OTel Collector health check" \
 
 # ── Upload Grafana dashboards ──────────────────────────────────────────────
 GRAFANA_HOST="http://localhost:3000"
-GRAFANA_CREDS="admin:${GRAFANA_PASSWORD:-admin123}"
+readonly GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}`nrequire_var GRAFANA_PASSWORD`nGRAFANA_CREDS="${GRAFANA_ADMIN_USER}:${GRAFANA_PASSWORD}"
 
 log_info "Importing Grafana dashboards..."
 for dashboard in "${PROJECT_DIR}/grafana/dashboards/phase-23-"*.json; do
@@ -117,3 +117,6 @@ log_info   "  OTel Collector HTTP: ${DEPLOY_HOST}:${OTEL_HTTP_PORT}"
 log_info   "  Anomaly metrics:     http://${DEPLOY_HOST}:9095/metrics"
 log_info   "  Grafana Correlation: http://${DEPLOY_HOST}:3000/d/phase23-correlation"
 log_info   "  Grafana SLO:         http://${DEPLOY_HOST}:3000/d/phase23-slo"
+
+
+

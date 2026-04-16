@@ -3,10 +3,10 @@
 
 locals {
   falco_config = {
-    version       = var.falco_version
-    mode          = var.falco_mode
-    memory_limit  = var.falco_memory_limit
-    cpu_limit     = var.falco_cpu_limit
+    version      = var.falco_version
+    mode         = var.falco_mode
+    memory_limit = var.falco_memory_limit
+    cpu_limit    = var.falco_cpu_limit
   }
 
   vault_config = {
@@ -19,22 +19,22 @@ locals {
   }
 
   opa_config = {
-    version       = var.opa_version
-    port          = var.opa_port
-    memory_limit  = var.opa_memory_limit
-    cpu_limit     = var.opa_cpu_limit
+    version      = var.opa_version
+    port         = var.opa_port
+    memory_limit = var.opa_memory_limit
+    cpu_limit    = var.opa_cpu_limit
   }
 
   hardening_config = {
-    apparmor         = var.enable_apparmor
-    seccomp          = var.enable_seccomp
-    selinux          = var.enable_selinux
+    apparmor = var.enable_apparmor
+    seccomp  = var.enable_seccomp
+    selinux  = var.enable_selinux
   }
 
   security_features = {
-    runtime_monitoring    = var.enable_runtime_monitoring
-    policy_enforcement    = var.enable_policy_enforcement
-    secret_management     = var.enable_secret_management
+    runtime_monitoring = var.enable_runtime_monitoring
+    policy_enforcement = var.enable_policy_enforcement
+    secret_management  = var.enable_secret_management
   }
 
   compliance_config = {

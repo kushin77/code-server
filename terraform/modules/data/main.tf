@@ -11,18 +11,18 @@
 locals {
   data_services = {
     postgres = {
-      name      = "postgres"
-      version   = var.postgres_version
-      port      = var.postgres_port
-      memory    = var.postgres_memory_limit
-      cpu       = var.postgres_cpu_limit
-      database  = var.postgres_db
-      user      = var.postgres_user
+      name     = "postgres"
+      version  = var.postgres_version
+      port     = var.postgres_port
+      memory   = var.postgres_memory_limit
+      cpu      = var.postgres_cpu_limit
+      database = var.postgres_db
+      user     = var.postgres_user
       replication = {
-        enabled              = var.enable_replication
-        user                 = var.postgres_replication_user
-        max_lag_ms           = var.postgres_replication_lag_limit_ms
-        hot_standby          = var.enable_hot_standby
+        enabled                 = var.enable_replication
+        user                    = var.postgres_replication_user
+        max_lag_ms              = var.postgres_replication_lag_limit_ms
+        hot_standby             = var.enable_hot_standby
         synchronous_replication = var.enable_synchronous_replication
       }
     }
@@ -35,7 +35,7 @@ locals {
       cpu       = var.redis_cpu_limit
       persistence = {
         enabled = var.redis_persistence_enabled
-        save    = ""  # Disable RDB snapshots for cache-only
+        save    = "" # Disable RDB snapshots for cache-only
       }
     }
     pgbouncer = {
@@ -45,20 +45,20 @@ locals {
       pool_mode       = var.pgbouncer_pool_mode
       pool_size       = var.pgbouncer_pool_size
       connect_timeout = var.pgbouncer_connect_timeout
-      enabled         = true  # When connection pooling needed
+      enabled         = true # When connection pooling needed
     }
   }
 
   # Replication configuration (primary vs replica differentiation)
   replication_config = var.is_primary ? {
-    role = "primary"
+    role                  = "primary"
     standby_setup_enabled = true
-    replication_targets = var.replica_host_ip != "" ? [var.replica_host_ip] : []
-    replication_source = ""
-  } : {
-    role = "replica"
+    replication_targets   = var.replica_host_ip != "" ? [var.replica_host_ip] : []
+    replication_source    = ""
+    } : {
+    role                  = "replica"
     standby_setup_enabled = false
-    replication_targets = []
-    replication_source = var.primary_host_ip
+    replication_targets   = []
+    replication_source    = var.primary_host_ip
   }
 }

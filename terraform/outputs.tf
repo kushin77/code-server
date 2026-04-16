@@ -65,13 +65,13 @@ output "domain_name" {
 output "deployment_summary" {
   description = "Summary of deployment endpoints and access points"
   value = {
-    code_server     = "https://${var.domain}"
-    prometheus      = "http://${var.deployment_host}:9090"
-    grafana         = "http://${var.deployment_host}:3000"
-    alertmanager    = "http://${var.deployment_host}:9093"
-    jaeger          = "http://${var.deployment_host}:16686"
-    ssh_host        = "${var.deployment_user}@${var.deployment_host}"
-    postgresql      = "postgresql:5432"
-    redis           = "redis:6379"
+    code_server  = "https://${var.domain}"
+    prometheus   = "http://${var.deployment_host}:9090"
+    grafana      = "http://${var.deployment_host}:3000"
+    alertmanager = "http://${var.deployment_host}:9093"
+    jaeger       = "http://${var.deployment_host}:16686"
+    ssh_host     = "${var.deployment_user}@${var.deployment_host}"
+    postgresql   = "postgresql:5432"
+    redis        = "redis:6379"
   }
 }

@@ -19,13 +19,13 @@ output "postgres_config" {
 output "redis_config" {
   description = "Redis service configuration"
   value = {
-    name                     = "redis"
-    version                  = var.redis_version
-    port                     = var.redis_port
-    maxmemory                = var.redis_maxmemory
-    memory_limit             = var.redis_memory_limit_container
-    cpu                      = var.redis_cpu_limit
-    persistence_enabled      = var.redis_persistence_enabled
+    name                = "redis"
+    version             = var.redis_version
+    port                = var.redis_port
+    maxmemory           = var.redis_maxmemory
+    memory_limit        = var.redis_memory_limit_container
+    cpu                 = var.redis_cpu_limit
+    persistence_enabled = var.redis_persistence_enabled
   }
 }
 
@@ -44,10 +44,10 @@ output "pgbouncer_config" {
 output "replication_config" {
   description = "PostgreSQL replication configuration (primary vs replica)"
   value = {
-    is_primary = var.is_primary
-    role       = var.is_primary ? "primary" : "replica"
-    replication_enabled = var.enable_replication
-    hot_standby_enabled = var.enable_hot_standby
+    is_primary              = var.is_primary
+    role                    = var.is_primary ? "primary" : "replica"
+    replication_enabled     = var.enable_replication
+    hot_standby_enabled     = var.enable_hot_standby
     synchronous_replication = var.enable_synchronous_replication
   }
 }

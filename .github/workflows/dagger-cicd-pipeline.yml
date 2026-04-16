@@ -132,7 +132,7 @@ jobs:
     if: github.ref == 'refs/heads/develop'
     environment:
       name: development
-      url: https://dev.code-server.192.168.168.31.nip.io
+      url: https://dev.code-server.${{ secrets.PRIMARY_HOST_IP }}.nip.io
 
     steps:
       - name: Checkout code
@@ -176,7 +176,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment:
       name: production
-      url: https://code-server.192.168.168.31.nip.io
+      url: https://code-server.${{ secrets.PRIMARY_HOST_IP }}.nip.io
 
     steps:
       - name: Checkout code

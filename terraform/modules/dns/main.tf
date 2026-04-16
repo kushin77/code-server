@@ -3,29 +3,29 @@
 
 locals {
   cloudflare_config = {
-    enabled            = var.cloudflare_enabled
-    zone_id            = var.cloudflare_zone_id
-    dns_proxy_enabled  = var.cloudflare_dns_proxy_enabled
-    waf_enabled        = var.cloudflare_waf_enabled
+    enabled           = var.cloudflare_enabled
+    zone_id           = var.cloudflare_zone_id
+    dns_proxy_enabled = var.cloudflare_dns_proxy_enabled
+    waf_enabled       = var.cloudflare_waf_enabled
   }
 
   godaddy_config = {
-    enabled      = var.godaddy_enabled
-    api_key      = var.godaddy_api_key
-    api_secret   = var.godaddy_api_secret
+    enabled    = var.godaddy_enabled
+    api_key    = var.godaddy_api_key
+    api_secret = var.godaddy_api_secret
   }
 
   domain_config = {
-    primary            = var.domain_primary
-    secondary          = var.domain_secondary
-    ttl_default        = var.dns_ttl_default
-    ttl_short          = var.dns_ttl_short
+    primary     = var.domain_primary
+    secondary   = var.domain_secondary
+    ttl_default = var.dns_ttl_default
+    ttl_short   = var.dns_ttl_short
   }
 
   failover_config = {
-    enabled              = var.dns_failover_enabled
+    enabled               = var.dns_failover_enabled
     health_check_interval = var.dns_failover_health_check_interval
-    failure_threshold    = var.dns_failover_threshold
+    failure_threshold     = var.dns_failover_threshold
   }
 
   acme_config = {
@@ -35,8 +35,8 @@ locals {
   }
 
   dnssec_config = {
-    enabled        = var.enable_dns_dnssec
-    rate_limiting  = var.enable_dns_rate_limiting
+    enabled       = var.enable_dns_dnssec
+    rate_limiting = var.enable_dns_rate_limiting
   }
 }
 

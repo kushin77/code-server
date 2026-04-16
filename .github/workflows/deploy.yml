@@ -50,9 +50,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Primary (192.168.168.31)
+      - name: Deploy to Primary (${{ secrets.PRIMARY_HOST_IP }})
         run: |
-          ssh -o StrictHostKeyChecking=no akushnir@192.168.168.31 << 'EOF'
+          ssh -o StrictHostKeyChecking=no akushnir@${{ secrets.PRIMARY_HOST_IP }} << 'EOF'
             cd code-server-enterprise
             git fetch origin && git reset --hard origin/phase-7-deployment
             docker-compose pull
@@ -71,9 +71,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Replica (192.168.168.42)
+      - name: Deploy to Replica (${{ secrets.REPLICA_HOST_IP }})
         run: |
-          ssh -o StrictHostKeyChecking=no akushnir@192.168.168.42 << 'EOF'
+          ssh -o StrictHostKeyChecking=no akushnir@${{ secrets.REPLICA_HOST_IP }} << 'EOF'
             cd code-server-enterprise
             git fetch origin && git reset --hard origin/phase-7-deployment
             docker-compose pull
@@ -156,7 +156,7 @@ jobs:
           terraform fmt -check -recursive
 
   deploy-primary:
-    name: Deploy to Primary (192.168.168.31)
+    name: Deploy to Primary (${{ secrets.PRIMARY_HOST_IP }})
     runs-on: [self-hosted, on-prem, primary]
     needs: validate
     if: |
@@ -190,7 +190,7 @@ jobs:
           cd ${{ env.TERRAFORM_DIR }}
           terraform plan -out=tfplan -lock=false \
             -var-file=../terraform.production.tfvars \
-            -var="deployment_host=192.168.168.31" \
+            -var="deployment_host=${{ secrets.PRIMARY_HOST_IP }}" \
             -var="is_primary=true"
 
       - name: Display Plan
@@ -238,7 +238,7 @@ jobs:
               repo: context.repo.repo,
               deployment_id: context.payload.deployment.id,
               state: '${{ job.status }}',
-              description: 'Terraform deployment to primary (192.168.168.31)',
+              description: 'Terraform deployment to primary (${{ secrets.PRIMARY_HOST_IP }}),'
               environment_url: 'https://ide.kushnir.cloud'
             });
 

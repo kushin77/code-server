@@ -154,6 +154,6 @@ jobs:
           echo "  ✅ LINUX-ONLY VALIDATION PASSED"
           echo "══════════════════════════════════════════════════"
           echo ""
-          echo "Production platform: Ubuntu 22.04 (192.168.168.31)"
+          echo "Production platform: Ubuntu 22.04 (${{ secrets.PRIMARY_HOST_IP }})"
           echo "Windows support: NONE (by design)"
           echo "See SUPPORTED-PLATFORMS.md for details"

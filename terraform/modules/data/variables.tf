@@ -113,7 +113,7 @@ variable "redis_cpu_limit" {
 variable "redis_persistence_enabled" {
   description = "Enable Redis persistence (save/appendonly)"
   type        = bool
-  default     = false  # Disable for cache-only; enable for data safety
+  default     = false # Disable for cache-only; enable for data safety
 }
 
 variable "pgbouncer_version" {
@@ -167,7 +167,7 @@ variable "backup_retention_days" {
 variable "backup_schedule_cron" {
   description = "Cron schedule for automated backups"
   type        = string
-  default     = "0 2 * * *"  # 2 AM daily
+  default     = "0 2 * * *" # 2 AM daily
 }
 
 variable "enable_replication" {

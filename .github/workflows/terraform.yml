@@ -133,7 +133,7 @@ jobs:
           sleep 30
           
           echo "Verifying services..."
-          ssh akushnir@192.168.168.31 "cd code-server-enterprise && docker-compose ps" || exit 1
+          ssh akushnir@${{ secrets.PRIMARY_HOST_IP }} "cd code-server-enterprise && docker-compose ps" || exit 1
 
       - name: Deployment Summary
         uses: actions/github-script@v6

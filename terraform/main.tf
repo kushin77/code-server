@@ -8,7 +8,7 @@ terraform {
 # Module 1: Core Services (code-server, Caddy, OAuth2-proxy)
 module "core" {
   source = "./modules/core"
-  
+
   domain  = var.domain
   host_ip = var.host_ip
 }
@@ -16,49 +16,49 @@ module "core" {
 # Module 2: Data Layer (PostgreSQL, Redis, PgBouncer)
 module "data" {
   source = "./modules/data"
-  
+
   is_primary = var.is_primary
-  
+
   depends_on = [module.core]
 }
 
 # Module 3: Monitoring (Prometheus, Grafana, Loki, Jaeger, AlertManager, SLOs)
 module "monitoring" {
-  source = "./modules/monitoring"
+  source     = "./modules/monitoring"
   depends_on = [module.data]
 }
 
 # Module 4: Networking (Kong, CoreDNS, Load Balancing)
 module "networking" {
-  source = "./modules/networking"
+  source     = "./modules/networking"
   depends_on = [module.core, module.data]
 }
 
 # Module 5: Security (Falco, OPA, Vault, Hardening)
 module "security" {
-  source = "./modules/security"
+  source     = "./modules/security"
   depends_on = [module.core, module.data]
 }
 
 # Module 6: DNS (Cloudflare Tunnel, GoDaddy Failover, DNSSEC)
 module "dns" {
-  source = "./modules/dns"
+  source     = "./modules/dns"
   depends_on = [module.core, module.networking]
 }
 
 # Module 7: Failover & DR (Patroni, Backup, Redis Sentinel, Disaster Recovery)
 module "failover" {
-  source = "./modules/failover"
+  source     = "./modules/failover"
   depends_on = [module.data, module.security]
 }
 
 output "phase_4_validation" {
   description = "Phase 4 validation result - all 7 modules composed"
   value = {
-    status           = "✅ PASSED"
-    modules_count    = 7
-    modules_list     = ["core", "data", "monitoring", "networking", "security", "dns", "failover"]
-    dependencies_ok  = "yes"
-    terraform_valid  = "yes"
+    status          = "✅ PASSED"
+    modules_count   = 7
+    modules_list    = ["core", "data", "monitoring", "networking", "security", "dns", "failover"]
+    dependencies_ok = "yes"
+    terraform_valid = "yes"
   }
 }

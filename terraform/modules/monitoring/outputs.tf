@@ -1,46 +1,46 @@
 output "prometheus_config" {
   description = "Prometheus service configuration"
   value = {
-    version       = local.prometheus_config.version
-    port          = local.prometheus_config.port
-    retention     = local.prometheus_config.retention
-    memory_limit  = local.prometheus_config.memory_limit
-    cpu_limit     = local.prometheus_config.cpu_limit
-    endpoint      = "http://prometheus:${local.prometheus_config.port}"
+    version      = local.prometheus_config.version
+    port         = local.prometheus_config.port
+    retention    = local.prometheus_config.retention
+    memory_limit = local.prometheus_config.memory_limit
+    cpu_limit    = local.prometheus_config.cpu_limit
+    endpoint     = "http://prometheus:${local.prometheus_config.port}"
   }
 }
 
 output "grafana_config" {
   description = "Grafana service configuration"
   value = {
-    version       = local.grafana_config.version
-    port          = local.grafana_config.port
-    admin_user    = local.grafana_config.admin_user
-    memory_limit  = local.grafana_config.memory_limit
-    cpu_limit     = local.grafana_config.cpu_limit
-    endpoint      = "http://grafana:${local.grafana_config.port}"
+    version      = local.grafana_config.version
+    port         = local.grafana_config.port
+    admin_user   = local.grafana_config.admin_user
+    memory_limit = local.grafana_config.memory_limit
+    cpu_limit    = local.grafana_config.cpu_limit
+    endpoint     = "http://grafana:${local.grafana_config.port}"
   }
 }
 
 output "alertmanager_config" {
   description = "AlertManager service configuration"
   value = {
-    version       = local.alertmanager_config.version
-    port          = local.alertmanager_config.port
-    memory_limit  = local.alertmanager_config.memory_limit
-    cpu_limit     = local.alertmanager_config.cpu_limit
-    endpoint      = "http://alertmanager:${local.alertmanager_config.port}"
+    version      = local.alertmanager_config.version
+    port         = local.alertmanager_config.port
+    memory_limit = local.alertmanager_config.memory_limit
+    cpu_limit    = local.alertmanager_config.cpu_limit
+    endpoint     = "http://alertmanager:${local.alertmanager_config.port}"
   }
 }
 
 output "loki_config" {
   description = "Loki log aggregation service configuration"
   value = {
-    version       = local.loki_config.version
-    port          = local.loki_config.port
-    memory_limit  = local.loki_config.memory_limit
-    cpu_limit     = local.loki_config.cpu_limit
-    endpoint      = "http://loki:${local.loki_config.port}"
+    version      = local.loki_config.version
+    port         = local.loki_config.port
+    memory_limit = local.loki_config.memory_limit
+    cpu_limit    = local.loki_config.cpu_limit
+    endpoint     = "http://loki:${local.loki_config.port}"
   }
 }
 

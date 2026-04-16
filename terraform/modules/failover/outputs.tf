@@ -9,14 +9,14 @@ output "patroni_config" {
 output "replication_config" {
   description = "PostgreSQL replication configuration"
   value = {
-    slot_enabled              = local.replication_config.slot_enabled
-    slot_name                 = local.replication_config.slot_name
-    wal_level                 = local.replication_config.wal_level
-    max_wal_senders           = local.replication_config.max_wal_senders
-    wal_keep_size_gb          = local.replication_config.wal_keep_size_gb
-    hot_standby_enabled       = local.replication_config.hot_standby
-    synchronous_replication   = local.replication_config.synchronous_enabled
-    sync_replica_count        = local.replication_config.sync_replica_count
+    slot_enabled            = local.replication_config.slot_enabled
+    slot_name               = local.replication_config.slot_name
+    wal_level               = local.replication_config.wal_level
+    max_wal_senders         = local.replication_config.max_wal_senders
+    wal_keep_size_gb        = local.replication_config.wal_keep_size_gb
+    hot_standby_enabled     = local.replication_config.hot_standby
+    synchronous_replication = local.replication_config.synchronous_enabled
+    sync_replica_count      = local.replication_config.sync_replica_count
   }
 }
 
@@ -36,10 +36,10 @@ output "backup_config" {
 output "redis_sentinel_config" {
   description = "Redis Sentinel HA configuration"
   value = {
-    enabled          = local.redis_sentinel_config.enabled
-    port             = local.redis_sentinel_config.port
-    quorum           = local.redis_sentinel_config.quorum
-    down_after_ms    = local.redis_sentinel_config.down_after_ms
+    enabled       = local.redis_sentinel_config.enabled
+    port          = local.redis_sentinel_config.port
+    quorum        = local.redis_sentinel_config.quorum
+    down_after_ms = local.redis_sentinel_config.down_after_ms
   }
 }
 

@@ -35,16 +35,16 @@ locals {
       cpu     = var.code_server_cpu_limit
     }
     caddy = {
-      name    = "caddy"
-      version = var.caddy_version
+      name       = "caddy"
+      version    = var.caddy_version
       http_port  = var.caddy_port_http
       https_port = var.caddy_port_https
       admin_port = var.caddy_admin_port
     }
     oauth2_proxy = {
-      name    = "oauth2-proxy"
-      version = var.oauth2_proxy_version
-      port    = var.oauth2_proxy_port
+      name     = "oauth2-proxy"
+      version  = var.oauth2_proxy_version
+      port     = var.oauth2_proxy_port
       provider = var.oauth2_provider
     }
   }

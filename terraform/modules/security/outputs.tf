@@ -1,10 +1,10 @@
 output "falco_config" {
   description = "Falco runtime security engine configuration"
   value = {
-    version       = local.falco_config.version
-    mode          = local.falco_config.mode
-    memory_limit  = local.falco_config.memory_limit
-    cpu_limit     = local.falco_config.cpu_limit
+    version      = local.falco_config.version
+    mode         = local.falco_config.mode
+    memory_limit = local.falco_config.memory_limit
+    cpu_limit    = local.falco_config.cpu_limit
   }
 }
 
@@ -24,11 +24,11 @@ output "vault_config" {
 output "opa_config" {
   description = "Open Policy Agent configuration"
   value = {
-    version       = local.opa_config.version
-    port          = local.opa_config.port
-    memory_limit  = local.opa_config.memory_limit
-    cpu_limit     = local.opa_config.cpu_limit
-    endpoint      = "http://opa:${local.opa_config.port}"
+    version      = local.opa_config.version
+    port         = local.opa_config.port
+    memory_limit = local.opa_config.memory_limit
+    cpu_limit    = local.opa_config.cpu_limit
+    endpoint     = "http://opa:${local.opa_config.port}"
   }
 }
 
@@ -44,17 +44,17 @@ output "hardening_controls" {
 output "security_features" {
   description = "Security features enabled"
   value = {
-    runtime_monitoring    = local.security_features.runtime_monitoring
-    policy_enforcement    = local.security_features.policy_enforcement
-    secret_management     = local.security_features.secret_management
+    runtime_monitoring = local.security_features.runtime_monitoring
+    policy_enforcement = local.security_features.policy_enforcement
+    secret_management  = local.security_features.secret_management
   }
 }
 
 output "compliance_posture" {
   description = "Compliance and audit configuration"
   value = {
-    audit_log_retention_days    = local.compliance_config.audit_log_retention
-    vulnerability_scanning      = local.compliance_config.vuln_scanning
-    container_image_scanning    = local.compliance_config.image_scanning
+    audit_log_retention_days = local.compliance_config.audit_log_retention
+    vulnerability_scanning   = local.compliance_config.vuln_scanning
+    container_image_scanning = local.compliance_config.image_scanning
   }
 }

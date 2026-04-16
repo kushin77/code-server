@@ -1,0 +1,184 @@
+name: Shell Script Linting (bash-only standards)
+
+# ════════════════════════════════════════════════════════════════════════
+# Issue #400: Enforce bash-only standards and shellcheck linting in CI
+# All .sh scripts must:
+#   - Have #!/bin/bash shebang (not #!/bin/sh or #!/usr/bin/env bash)
+#   - Pass shellcheck with -S warning severity
+#   - Be idiomatic bash (arrays, [[]], process substitution allowed)
+# ════════════════════════════════════════════════════════════════════════
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - 'scripts/**/*.sh'
+      - 'scripts/*.sh'
+      - '.github/workflows/shell-lint.yml'
+  pull_request:
+    branches: [main, phase-7-deployment]
+    paths:
+      - 'scripts/**/*.sh'
+      - 'scripts/*.sh'
+      - '.github/workflows/shell-lint.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  shell-lint:
+    name: Shell Script Lint & Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          shellcheck --version
+
+      - name: Validate #!/bin/bash shebangs
+        id: shebang_check
+        run: |
+          echo "=== Validating #!/bin/bash shebangs ==="
+          FAILED=0
+          CHECKED=0
+
+          # Find all .sh files excluding deprecated/, archived/, node_modules
+          while IFS= read -r -d '' script; do
+            CHECKED=$((CHECKED + 1))
+            FIRST_LINE=$(head -1 "$script")
+
+            if [[ "$FIRST_LINE" != "#!/bin/bash" ]]; then
+              echo "❌ FAIL: $script"
+              echo "   Expected: #!/bin/bash"
+              echo "   Found:    $FIRST_LINE"
+              FAILED=$((FAILED + 1))
+            fi
+          done < <(find . -name "*.sh" \
+            -not -path "./deprecated/*" \
+            -not -path "./archived/*" \
+            -not -path "./node_modules/*" \
+            -not -path "./.git/*" \
+            -print0)
+
+          echo ""
+          echo "=== Shebang Check Results ==="
+          echo "Checked: $CHECKED scripts"
+          echo "Failed: $FAILED scripts"
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo ""
+            echo "To fix: Ensure first line of each script is exactly: #!/bin/bash"
+            exit 1
+          fi
+          echo "✅ All $CHECKED scripts have correct #!/bin/bash shebang"
+
+      - name: Run shellcheck on all scripts
+        id: shellcheck
+        run: |
+          echo "=== Running shellcheck on all scripts ==="
+          FAILED=0
+          CHECKED=0
+          ERRORS=""
+
+          # Find all .sh files excluding deprecated/, archived/, node_modules
+          while IFS= read -r -d '' script; do
+            CHECKED=$((CHECKED + 1))
+            # Run shellcheck with:
+            # -s bash: use bash dialect
+            # -S warning: minimum severity to report
+            # -x: follow source statements
+            if ! shellcheck -s bash -S warning -x "$script" 2>&1; then
+              FAILED=$((FAILED + 1))
+              ERRORS="$ERRORS\n❌ $script"
+            fi
+          done < <(find . -name "*.sh" \
+            -not -path "./deprecated/*" \
+            -not -path "./archived/*" \
+            -not -path "./node_modules/*" \
+            -not -path "./.git/*" \
+            -print0)
+
+          echo ""
+          echo "=== Shellcheck Results ==="
+          echo "Checked: $CHECKED scripts"
+          echo "Failed: $FAILED scripts"
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo ""
+            echo "Scripts with shellcheck warnings:"
+            echo -e "$ERRORS"
+            exit 1
+          fi
+          echo "✅ All $CHECKED scripts pass shellcheck"
+
+      - name: Check for set -euo pipefail
+        id: error_handling
+        run: |
+          echo "=== Checking for proper error handling (set -euo pipefail) ==="
+          MISSING=0
+          CHECKED=0
+
+          while IFS= read -r -d '' script; do
+            CHECKED=$((CHECKED + 1))
+            # Check if script has set -e or set -euo pipefail (within first 20 lines)
+            if ! head -20 "$script" | grep -qE "^set -(e|euo|eu)" ; then
+              # Skip short scripts (< 10 lines) — they may be stubs
+              LINES=$(wc -l < "$script")
+              if [ "$LINES" -gt 10 ]; then
+                echo "⚠️ WARN: $script lacks 'set -euo pipefail' (${LINES} lines)"
+                MISSING=$((MISSING + 1))
+              fi
+            fi
+          done < <(find . -name "*.sh" \
+            -not -path "./deprecated/*" \
+            -not -path "./archived/*" \
+            -not -path "./node_modules/*" \
+            -not -path "./.git/*" \
+            -print0)
+
+          echo ""
+          echo "=== Error Handling Results ==="
+          echo "Checked: $CHECKED scripts"
+          echo "Missing error handling: $MISSING scripts"
+          # Warning only — don't fail on this
+          echo "✅ Check complete (warning-only)"
+
+      - name: Check for Windows-specific bash patterns
+        id: windows_patterns
+        run: |
+          echo "=== Checking for Windows-specific patterns in scripts ==="
+
+          WIN_PATTERNS=$(grep -rn \
+            --include="*.sh" \
+            -E '(C:\\\\|APPDATA|Program Files|\.ps1|PowerShell|cmd\.exe|\.bat\b)' \
+            --exclude-dir=".git" \
+            --exclude-dir="deprecated" \
+            --exclude-dir="archived" \
+            . || true)
+
+          if [ -n "$WIN_PATTERNS" ]; then
+            echo "❌ FAIL: Windows-specific patterns found in bash scripts:"
+            echo "$WIN_PATTERNS"
+            exit 1
+          fi
+          echo "✅ No Windows-specific patterns in bash scripts"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Shell Script Lint Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| #!/bin/bash shebang | ${{ steps.shebang_check.outcome == 'success' && '✅ Pass' || '❌ Fail' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| shellcheck -S warning | ${{ steps.shellcheck.outcome == 'success' && '✅ Pass' || '❌ Fail' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| set -euo pipefail | ${{ steps.error_handling.outcome == 'success' && '✅ Pass' || '⚠️ Warn' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| No Windows patterns | ${{ steps.windows_patterns.outcome == 'success' && '✅ Pass' || '❌ Fail' }} |" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,135 @@
+; CoreDNS Zone File: prod.internal
+; ===================================
+; Forward DNS zone for production *.prod.internal service discovery
+;
+; Format:
+;   <name>   <ttl>  <class>  <type>  <rdata>
+;
+; TTL values:
+;   300 (5 min)  - For service endpoints (DNS-based service discovery relies on frequent updates)
+;   3600 (1 hour) - For static host records (less frequent changes)
+;   0            - For responses that should not be cached (rarely used)
+
+$ORIGIN prod.internal.
+$TTL 300
+
+; ============================================================================
+; SOA Record (Start of Authority)
+; ============================================================================
+; Identifies the primary nameserver and technical contact
+; Format: <mname> <rname> <serial> <refresh> <retry> <expire> <ttl>
+
+@   3600  IN  SOA ns1.prod.internal. admin.kushnir.cloud. (
+            2026041501    ; Serial (YYYYMMDDNN format)
+            3600          ; Refresh (1 hour)
+            1800          ; Retry (30 minutes)
+            604800        ; Expire (7 days)
+            300           ; TTL (5 minutes)
+            )
+
+; ============================================================================
+; Nameserver Records
+; ============================================================================
+; Point internal queries to CoreDNS instances
+
+@               3600  IN  NS   ns1.prod.internal.
+@               3600  IN  NS   ns2.prod.internal.
+
+; CoreDNS instances
+ns1.prod.internal.      3600  IN  A  192.168.168.31
+ns2.prod.internal.      3600  IN  A  192.168.168.42
+
+; ============================================================================
+; HOST RECORDS (Physical Machines)
+; ============================================================================
+; A records for actual physical hosts
+
+; Primary production node
+primary             3600  IN  A  192.168.168.31
+db                  300   IN  CNAME  primary.prod.internal.
+cache               300   IN  CNAME  primary.prod.internal.
+monitoring          300   IN  CNAME  primary.prod.internal.
+prometheus          300   IN  CNAME  primary.prod.internal.
+grafana             300   IN  CNAME  primary.prod.internal.
+alertmanager        300   IN  CNAME  primary.prod.internal.
+jaeger              300   IN  CNAME  primary.prod.internal.
+
+; Replica/standby node
+replica             3600  IN  A  192.168.168.42
+lb                  300   IN  CNAME  replica.prod.internal.
+
+; ============================================================================
+; VIRTUAL IP RECORD (Layer 2 VRRP Failover)
+; ============================================================================
+; Points to the floating VIP that moves between primary and replica
+; This is the primary service endpoint used by clients
+
+@                   300   IN  A  192.168.168.30
+prod                300   IN  CNAME  @                      ; @=prod.internal
+code-server         300   IN  CNAME  @                      ; code-server.prod.internal → VIP
+
+; ============================================================================
+; SERVICE-SPECIFIC ALIASES
+; ============================================================================
+; These can be used by applications for service discovery
+
+; Database connections (points to primary, replication handled by PostgreSQL)
+db-primary          300   IN  CNAME  primary.prod.internal.
+db-replica          300   IN  CNAME  replica.prod.internal.
+postgres            300   IN  CNAME  primary.prod.internal.
+
+; Cache connections
+cache-primary       300   IN  CNAME  primary.prod.internal.
+redis               300   IN  CNAME  primary.prod.internal.
+
+; Monitoring stack
+metrics             300   IN  CNAME  prometheus.prod.internal.
+dashboards          300   IN  CNAME  grafana.prod.internal.
+alerts              300   IN  CNAME  alertmanager.prod.internal.
+tracing             300   IN  CNAME  jaeger.prod.internal.
+
+; ============================================================================
+; SERVICE RECORDS (SRV)
+; ============================================================================
+; Optional: SRV records for service discovery (used by some applications)
+; Format: _service._proto.name TTL IN SRV priority weight port target.
+
+; Example PostgreSQL SRV records (optional, not commonly used for PostgreSQL)
+; _pgsql._tcp.prod.internal.   300  IN  SRV  10 60 5432 primary.prod.internal.
+; _pgsql._tcp.prod.internal.   300  IN  SRV  20 40 5432 replica.prod.internal.
+
+; Example Redis SRV records (optional)
+; _redis._tcp.prod.internal.   300  IN  SRV  10 100 6379 primary.prod.internal.
+
+; ============================================================================
+; TEXT RECORDS (TXT) - Metadata
+; ============================================================================
+; Optional: Store metadata about services in TXT records
+
+; Cluster metadata
+@                   3600  IN  TXT  "cluster=code-server-enterprise"
+@                   3600  IN  TXT  "environment=production"
+@                   3600  IN  TXT  "managed=keepalived-vrrp"
+
+; Service metadata
+primary             3600  IN  TXT  "role=code-server postgres-primary redis-primary prometheus grafana alertmanager jaeger"
+replica             3600  IN  TXT  "role=postgres-replica redis-sentinel haproxy keepalived-backup"
+
+; ============================================================================
+; MAIL EXCHANGE RECORDS (MX) - Optional
+; ============================================================================
+; If you need internal mail routing (usually not needed for this setup)
+; @   3600  IN  MX  10 mail.prod.internal.
+; mail 3600  IN  A   192.168.168.31
+
+; ============================================================================
+; SPECIAL RECORDS
+; ============================================================================
+
+; Catch-all for unmatched queries (optional, helpful for debugging)
+; *   300  IN  A  192.168.168.31
+
+; Health check endpoints (documented for operational reference)
+; code-server         8080   IN  TXT  "health=/healthz"
+; prometheus          9090   IN  TXT  "health=/-/healthy"
+; grafana             3000   IN  TXT  "health=/api/health"

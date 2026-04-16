@@ -1,0 +1,64 @@
+#!/bin/bash
+# Keepalived Configuration - REPLICA Host (192.168.168.42)
+# P2 #365: Virtual IP Failover Implementation
+# Generated: April 15, 2026
+
+global_defs {
+    router_id REPLICA_VRRP_42
+    script_user root
+    enable_script_security
+    notification_email_from keepalived@code-server.internal
+    notification_email {
+        ops@example.com
+    }
+    # Enable script security for health checks
+    script_security 1
+}
+
+# Health check script for replica services
+vrrp_script check_replica_services {
+    script "/usr/local/bin/vrrp-health-check.sh replica"
+    interval 5
+    weight -20
+    fall 3
+    rise 2
+    timeout 3
+}
+
+# VRRP Instance for Virtual IP
+vrrp_instance vip_1 {
+    state BACKUP
+    interface eth0
+    virtual_router_id 1
+    priority 80
+    advert_int 2
+    preempt yes
+    preempt_delay 300
+    
+    # VRRP authentication (must match primary)
+    authentication {
+        auth_type PASS
+        auth_pass code_srv_vrrp_01
+    }
+    
+    # Virtual IP configuration (same as primary)
+    virtual_ipaddress {
+        192.168.168.40/24 dev eth0 label vip_1
+    }
+    
+    # Track health checks
+    track_script {
+        check_replica_services
+    }
+    
+    # State change notifications
+    notify_master "/usr/local/bin/vrrp-notify.sh MASTER replica"
+    notify_backup "/usr/local/bin/vrrp-notify.sh BACKUP replica"
+    notify_fault "/usr/local/bin/vrrp-notify.sh FAULT replica"
+    
+    # GARP settings for ARP updates
+    garp_master_delay 5
+    garp_master_repeat 5
+    garp_lower_prio_delay 5
+    garp_lower_prio_repeat 5
+}

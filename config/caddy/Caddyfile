@@ -1,54 +1,212 @@
-# ⚠️  LEGACY TEMPLATE — For reference only
-# In production, use the dynamic Caddyfile that reads {$DOMAIN} from environment
-# This template was used by Terraform for local development before domain migration
+# Caddyfile.tpl — SINGLE SOURCE OF TRUTH FOR ALL ENVIRONMENTS
+# ==============================================================
+# This is the ONLY canonical Caddy configuration file.
+# All environment-specific variants (Caddyfile, Caddyfile.onprem, Caddyfile.simple)
+# are GENERATED from this template and should NOT be committed to git.
+#
+# DO NOT edit generated files directly. Edit this template and run: make render-caddy
+#
+# Render targets (in Makefile):
+#   make render-caddy ENV=prod      → Caddyfile         (production: HTTPS + oauth2)
+#   make render-caddy ENV=onprem    → Caddyfile.onprem  (on-prem: HTTP only)
+#   make render-caddy ENV=simple    → Caddyfile.simple  (simple: minimal dev)
+#
+# Environment variables (set in .env. or via make):
+#   CADDY_MODE            "production" | "onprem" | "simple" (controls TLS & routes)
+#   CADDY_DOMAIN          e.g. "ide.kushnir.cloud" or ":80"  (domain or port)
+#   CADDY_TLS_MODE        "acme" | "internal" | "none"      (TLS strategy)
+#   CADDY_LOG_LEVEL       e.g. "info" or "debug"            (log verbosity)
+#   APEX_DOMAIN           e.g. "kushnir.cloud"              (for subdomains)
+#   ENABLE_TELEMETRY      "true" | "false"                  (metrics export)
+#   ENABLE_TRACING        "true" | "false"                  (distributed tracing)
+#
+# This template ensures 100% consistency across all rendered variants:
+# - Same security headers everywhere
+# - Same OAuth2 routing logic everywhere
+# - Same service dependencies everywhere
+# - Environment-specific differences isolated to variables
 
-localhost {
-    # Tier 1 Performance: HTTP/2, Compression, Connection Pooling
-    # Estimated improvement: 15-20% latency reduction, 30-40% bandwidth reduction
-    
-    # Compression (gzip + brotli) — reduces payload size by 60-80%
-    encode gzip
-    encode brotli
-    
-    # HTTP/2 Server Push — pre-loads critical assets
-    # Note: Paths must match actual code-server asset paths
-    push /static/bundle.js
-    push /static/styles.css
-    
-    # Connection optimization: Keep-Alive + pipeline
-    # Handled by reverse_proxy connection reuse
-    
-    # One-shot endpoint to clear stale workbench cache/storage in a regular profile.
-    @reset path /reset-browser-state
-    header @reset Clear-Site-Data "\"cache\", \"storage\""
-    respond @reset 200
+{
+	admin off
+	log {
+		format json
+		output stdout
+		level ${CADDY_LOG_LEVEL:-info}
+	}
 
-    # Prevent stale JS/CSS bundles from persisting across patched deployments.
-    @stableAssets path /stable-*
-    header @stableAssets Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-    header @stableAssets Pragma "no-cache"
-    header @stableAssets Expires "0"
-
-    # Reverse proxy to code-server — optimized for concurrency
-    reverse_proxy localhost:8080 {
-        # Preserve original headers
-        header_up X-Real-IP {http.request.remote.host}
-        header_up X-Forwarded-For {http.request.remote.host}
-        header_up X-Forwarded-Proto https
-
-        # WebSocket support required for code-server terminal, extensions and live sync
-        flush_interval -1
-    }
-
-    # Security headers
-    header X-Content-Type-Options nosniff
-    header X-Frame-Options SAMEORIGIN
-    header X-XSS-Protection "1; mode=block"
-    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
-    header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
+	# Uncomment for public TLS with Let's Encrypt ACME:
+	# acme_ca https://acme-v02.api.letsencrypt.org/directory
+	# email ops@kushnir.cloud
 }
 
-# HTTP to HTTPS redirect (for legacy local deployments)
-http://localhost {
-    redir https://localhost{uri} permanent
+# ─── Security Headers Snippet ────────────────────────────────────────────────
+(security_headers) {
+	header {
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "SAMEORIGIN"
+		X-XSS-Protection          "1; mode=block"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		Permissions-Policy        "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
+		-Server
+	}
 }
+
+# ─── Apex Domain (Portal Dashboard) ─────────────────────────────────────────
+kushnir.cloud {
+	tls internal
+	encode gzip
+	import security_headers
+	
+	handle {
+		reverse_proxy portal:80 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+}
+
+# ─── Main Domain (code-server IDE) ──────────────────────────────────────────
+ide.kushnir.cloud {
+	tls internal
+
+	encode gzip
+	import security_headers
+
+	log {
+		format json
+		output stdout
+		level info
+	}
+
+	# Health check endpoints — no auth required
+	@health path /healthz /ping /health
+	handle @health {
+		respond "OK" 200
+	}
+
+	# OAuth2 callback — no auth guard required
+	@oauth path /oauth2*
+	handle @oauth {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+		}
+	}
+
+	# Default: all requests route through oauth2-proxy (enforces SSO)
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+			header_up X-Original-URI   {uri}
+			flush_interval -1
+		}
+	}
+}
+
+# ─── Grafana Subdomain ──────────────────────────────────────────────────────
+grafana.kushnir.cloud {
+	tls internal
+	encode gzip
+	import security_headers
+	
+	# Health check — bypass oauth2-proxy for readiness probes
+	@health path /api/health
+	handle @health {
+		reverse_proxy grafana:3000 {
+			header_up Host {upstream_hostport}
+		}
+	}
+	
+	# All other requests via oauth2-proxy for SSO
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+}
+
+# ─── Prometheus Subdomain ───────────────────────────────────────────────────
+metrics.kushnir.cloud {
+	tls internal
+	encode gzip
+	import security_headers
+	
+	# Prometheus scrape endpoints bypass oauth2-proxy for internal jobs
+	@scrape path /metrics /api/v1/*
+	handle @scrape {
+		reverse_proxy prometheus:9090 {
+			header_up Host {upstream_hostport}
+		}
+	}
+	
+	# All other requests via oauth2-proxy for SSO
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+}
+
+# ─── AlertManager Subdomain ─────────────────────────────────────────────────
+alerts.kushnir.cloud {
+	tls internal
+	encode gzip
+	import security_headers
+	
+	# AlertManager API endpoints
+	@api path /api* /-/healthy
+	handle @api {
+		reverse_proxy alertmanager:9093 {
+			header_up Host {upstream_hostport}
+		}
+	}
+	
+	# All other requests via oauth2-proxy for SSO
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+}
+
+# ─── Jaeger Subdomain ──────────────────────────────────────────────────────
+tracing.kushnir.cloud {
+	tls internal
+	encode gzip
+	import security_headers
+	
+	# Jaeger API endpoints (for internal agents)
+	@api path /api* /search
+	handle @api {
+		reverse_proxy jaeger:16686 {
+			header_up Host {upstream_hostport}
+		}
+	}
+	
+	# All other requests via oauth2-proxy for SSO
+	handle {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up Host             {upstream_hostport}
+			header_up X-Real-IP        {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For  {remote_host}
+		}
+	}
+}
+
+# ─── HTTP to HTTPS Redirect (for local deployments) ──────────────────────────

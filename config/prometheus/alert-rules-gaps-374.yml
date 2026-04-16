@@ -1,0 +1,185 @@
+---
+# Alert Coverage Gaps (#374) - 10 New Production Alerts
+# Issue: kushin77/code-server#374
+# Purpose: Monitor 6 critical operational failure modes previously unmonitored
+# Status: Production Ready
+# Date: April 15, 2026
+
+groups:
+  - name: operational_coverage_gaps_374
+    interval: 30s
+    rules:
+
+      # ========== BACKUP MONITORING ==========
+      - alert: BackupFailed
+        expr: increase(backup_failures_total[1h]) > 0
+        for: 5m
+        annotations:
+          summary: "Backup process failed"
+          description: "Backup job failed to complete. Check backup logs for details."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/BACKUP-FAILURE.md"
+        labels:
+          severity: high
+          category: "backup"
+          page: "true"
+
+      - alert: BackupStorageLow
+        expr: backup_storage_usage_percent > 80
+        for: 30m
+        annotations:
+          summary: "Backup storage capacity warning"
+          description: "Backup storage usage is {{ $value }}% - cleanup may be needed soon"
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/BACKUP-FAILURE.md"
+        labels:
+          severity: medium
+          category: "backup"
+          page: "false"
+
+      # ========== SSL CERTIFICATE MONITORING ==========
+      - alert: SSLCertExpiryWarning
+        expr: ssl_cert_days_until_expiry < 7
+        for: 1m
+        annotations:
+          summary: "SSL certificate expires in 7 days"
+          description: "Certificate expires in {{ $value }} days. Schedule renewal immediately."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/SSL-CERT-EXPIRY.md"
+        labels:
+          severity: medium
+          category: "ssl"
+          page: "false"
+
+      - alert: SSLCertExpiryCritical
+        expr: ssl_cert_days_until_expiry < 1
+        for: 1m
+        annotations:
+          summary: "SSL certificate expires in less than 1 day - CRITICAL"
+          description: "Certificate expires in {{ $value }} days. URGENT: Renew certificate now or service will go down."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/SSL-CERT-EXPIRY.md"
+        labels:
+          severity: critical
+          category: "ssl"
+          page: "true"
+
+      # ========== CONTAINER STABILITY MONITORING ==========
+      - alert: ContainerRestartLoop
+        expr: increase(container_restarts_total[1h]) > 3
+        for: 5m
+        annotations:
+          summary: "Container restart loop detected"
+          description: "Container {{ $labels.container }} has restarted {{ $value }} times in the last hour."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/CONTAINER-CRASH-LOOP.md"
+        labels:
+          severity: high
+          category: "container"
+          page: "true"
+
+      - alert: ContainerCrashLoop
+        expr: increase(container_crashes_total[30m]) > 5
+        for: 5m
+        annotations:
+          summary: "Container crash loop - likely OOM or segfault"
+          description: "Container {{ $labels.container }} has crashed {{ $value }} times in 30 minutes. Check logs immediately."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/CONTAINER-CRASH-LOOP.md"
+        labels:
+          severity: critical
+          category: "container"
+          page: "true"
+
+      # ========== POSTGRESQL REPLICATION MONITORING ==========
+      - alert: PostgreSQLReplicationLagWarning
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        annotations:
+          summary: "PostgreSQL replication lag warning ({{ $value }}s)"
+          description: "Replication lag is {{ $value }} seconds. Monitor closely - if > 5min, failover may occur."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/POSTGRESQL-REPLICATION.md"
+        labels:
+          severity: medium
+          category: "database"
+          page: "false"
+
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_seconds > 300
+        for: 2m
+        annotations:
+          summary: "PostgreSQL replication lag CRITICAL ({{ $value }}s)"
+          description: "Replication lag is {{ $value }} seconds ({{ $value | humanizeDuration }}). URGENT: Investigate replication immediately."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/POSTGRESQL-REPLICATION.md"
+        labels:
+          severity: critical
+          category: "database"
+          page: "true"
+
+      - alert: PostgreSQLReplicationBroken
+        expr: pg_replication_status == 0
+        for: 1m
+        annotations:
+          summary: "PostgreSQL replication is broken - standby not syncing"
+          description: "Replication not active. Standby is not receiving WAL from primary. Manual intervention required."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/POSTGRESQL-REPLICATION.md"
+        labels:
+          severity: critical
+          category: "database"
+          page: "true"
+
+      # ========== DISK SPACE MONITORING ==========
+      - alert: DiskSpaceWarning
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.20
+        for: 30m
+        annotations:
+          summary: "Disk space warning - 20% free"
+          description: "Disk is {{ $value | humanizePercentage }} full. Consider cleanup or expansion."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/DISK-SPACE-LOW.md"
+        labels:
+          severity: medium
+          category: "disk"
+          page: "false"
+
+      - alert: DiskSpaceCritical
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.10
+        for: 10m
+        annotations:
+          summary: "Disk space CRITICAL - 10% free - URGENT"
+          description: "Disk is {{ $value | humanizePercentage }} full. URGENT: Free space immediately or service will fail."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/DISK-SPACE-LOW.md"
+        labels:
+          severity: critical
+          category: "disk"
+          page: "true"
+
+      # ========== OLLAMA GPU MONITORING ==========
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
+        for: 2m
+        annotations:
+          summary: "Ollama service is down"
+          description: "Ollama GPU model server is not responding. Check service status and restart if needed."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/OLLAMA-GPU-MEMORY.md"
+        labels:
+          severity: high
+          category: "ollama"
+          page: "true"
+
+      - alert: OllamaGPUMemoryHigh
+        expr: ollama_gpu_memory_usage_percent > 80
+        for: 10m
+        annotations:
+          summary: "Ollama GPU memory usage high ({{ $value }}%)"
+          description: "GPU memory is {{ $value }}% full. Consider offloading models or stopping inference jobs."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/OLLAMA-GPU-MEMORY.md"
+        labels:
+          severity: medium
+          category: "ollama"
+          page: "false"
+
+      - alert: OllamaGPUMemoryCritical
+        expr: ollama_gpu_memory_usage_percent > 95
+        for: 5m
+        annotations:
+          summary: "Ollama GPU memory CRITICAL ({{ $value }}%) - may crash"
+          description: "GPU memory is {{ $value }}% full. URGENT: Stop inference jobs immediately or service will crash."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/OLLAMA-GPU-MEMORY.md"
+        labels:
+          severity: critical
+          category: "ollama"
+          page: "true"

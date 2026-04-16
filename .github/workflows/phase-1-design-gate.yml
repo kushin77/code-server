@@ -1,0 +1,228 @@
+name: Phase 1 - Code Design & Security Gate
+
+# Trigger on: pull_request opened/synchronize/reopened
+# Purpose: Automated Phase 1 validation (design, security, architecture)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - ".github/*.md"
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  phase-1-security-gate:
+    name: "Phase 1: Security Gate"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for hardcoded secrets
+        id: secrets-check
+        run: |
+          set +e
+          # Scan diff for common secret patterns
+          SECRETS=$(git diff origin/main..HEAD | grep -iE '(password|api[_-]?key|secret|token|auth.*=|credential)' | grep -v '^[+-].*#' | wc -l)
+          
+          if [ "$SECRETS" -gt 0 ]; then
+            echo "❌ FAIL: Found $SECRETS lines matching secret patterns"
+            echo "credential_check=fail" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ PASS: No hardcoded secrets detected"
+            echo "credential_check=pass" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for default credentials
+        id: defaults-check
+        run: |
+          set +e
+          # Check for common default credentials
+          DEFAULTS=$(git diff origin/main..HEAD | grep -iE '(admin:admin|test:test|root:root|user:password)' | wc -l)
+          
+          if [ "$DEFAULTS" -gt 0 ]; then
+            echo "❌ FAIL: Found $DEFAULTS default credential patterns"
+            echo "defaults_check=fail" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ PASS: No default credentials detected"
+            echo "defaults_check=pass" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Dependency security scan
+        id: deps-check
+        run: |
+          set +e
+          
+          # Check npm
+          if [ -f "package.json" ]; then
+            if ! npm audit --json 2>/dev/null | jq -e '.metadata.vulnerabilities | ((.critical // 0) + (.high // 0)) == 0' > /dev/null; then
+              echo "❌ FAIL: npm audit found critical/high vulnerabilities"
+              npm audit
+              echo "npm_check=fail" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          fi
+          
+          # Check pip
+          if [ -f "requirements.txt" ] || [ -f "requirements-*.txt" ]; then
+            if ! pip-audit 2>/dev/null; then
+              echo "⚠️  WARNING: pip-audit not configured or found issues"
+            fi
+          fi
+          
+          echo "✅ PASS: Dependencies scan passed"
+          echo "npm_check=pass" >> $GITHUB_OUTPUT
+
+      - name: Post security check results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const credential = '${{ steps.secrets-check.outputs.credential_check }}';
+            const defaults = '${{ steps.defaults-check.outputs.defaults_check }}';
+            const deps = '${{ steps.deps-check.outputs.npm_check }}';
+            
+            let passed = 0;
+            let failed = 0;
+            
+            if (credential === 'pass') passed++; else failed++;
+            if (defaults === 'pass') passed++; else failed++;
+            if (deps === 'pass') passed++; else failed++;
+            
+            const comment = `## Phase 1: Security Gate Results
+
+**Status**: ${failed === 0 ? '✅ PASS' : '❌ FAIL'}
+
+| Check | Result |
+|-------|--------|
+| Hardcoded Secrets | ${credential === 'pass' ? '✅' : '❌'} |
+| Default Credentials | ${defaults === 'pass' ? '✅' : '❌'} |
+| Dependencies | ${deps === 'pass' ? '✅' : '❌'} |
+
+${failed > 0 ? '⚠️ **Security gate failed. Fix issues before proceeding to Phase 2.**' : '🎉 **Security baseline passed. Ready for Phase 2 code review.**'}
+
+For full security review checklist, see \`.github/PULL_REQUEST_TEMPLATE.md\` (Phase 1A).`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  phase-1-pr-template-check:
+    name: "Phase 1: Checklist Validation"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Check PR description completeness
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            
+            // Check for key Phase 1 items in description
+            const hasDesign = body.includes('Design') || body.includes('Architecture');
+            const hasImpact = body.includes('Impact') || body.includes('Scope');
+            const hasRollback = body.includes('Rollback');
+            
+            let issues = [];
+            if (!hasDesign) issues.push('Missing design/architecture section');
+            if (!hasImpact) issues.push('Missing scope/impact section');
+            if (!hasRollback) issues.push('Missing rollback strategy');
+            
+            const comment = `## Phase 1: PR Description Review
+
+${issues.length === 0 
+  ? '✅ PR description looks complete for Phase 1' 
+  : '⚠️ PR description is missing sections:\n' + issues.map(i => '- ' + i).join('\n')}
+
+**Please ensure your PR description includes**:
+1. **Design/Architecture** - How does this work?
+2. **Scope/Impact** - What does this change affect?
+3. **Rollback Strategy** - How do we undo this?
+
+See \`.github/PULL_REQUEST_TEMPLATE.md\` for the full template.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  phase-1-linting:
+    name: "Phase 1: Code Quality (Lint Check)"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run shellcheck on shell scripts
+        if: always()
+        run: |
+          set +e
+          if command -v shellcheck &> /dev/null; then
+            echo "Running shellcheck on modified shell scripts..."
+            git diff origin/main..HEAD --name-only | grep -E '\.(sh|bash)$' | xargs -r shellcheck -x || true
+          fi
+
+      - name: Check terraform formatting
+        if: always()
+        run: |
+          set +e
+          if command -v terraform &> /dev/null; then
+            echo "Checking Terraform formatting..."
+            git diff origin/main..HEAD --name-only | grep -E '\.tf$' | xargs -r terraform fmt -check || true
+          fi
+
+      - name: Lint YAML files
+        if: always()
+        run: |
+          set +e
+          if command -v yamllint &> /dev/null; then
+            echo "Linting YAML files..."
+            git diff origin/main..HEAD --name-only | grep -E '\.(yaml|yml)$' | xargs -r yamllint || true
+          fi
+
+      - name: Post linting results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## Phase 1: Linting Check
+
+✅ Linting checks completed. Review any warnings above.
+
+**Before Phase 2 code review**:
+- [ ] All linting errors fixed
+- [ ] Format auto-applied (\`terraform fmt\`, \`prettier\`, \`black\`)
+- [ ] No \`# noqa\` or \`# pylint: disable\` unless documented
+
+See CI logs for details.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

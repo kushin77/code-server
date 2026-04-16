@@ -1,0 +1,36 @@
+# .sops.yaml — SOPS encryption configuration
+# ============================================
+# Single source of truth for SOPS encryption rules.
+# All files matching secrets/**/*.yaml are encrypted with age.
+#
+# Setup (one-time per host):
+#   age-keygen -o ~/.config/sops/age/keys.txt
+#   export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
+#
+# Add this host's age public key to the 'age:' list below,
+# then re-encrypt: sops updatekeys secrets/**/*.enc.yaml
+#
+# Encrypt:   sops -e secrets/example.yaml > secrets/example.enc.yaml
+# Decrypt:   sops -d secrets/example.enc.yaml
+# Edit:      sops secrets/example.enc.yaml
+
+creation_rules:
+  # ── Production secrets ────────────────────────────────────────────────────
+  - path_regex: secrets/.*\.enc\.yaml$
+    age: >-
+      # Primary host (primary.prod.internal)
+      # Replace with output of: age-keygen -y ~/.config/sops/age/keys.txt
+      age1placeholder_primary_replace_with_real_age_pubkey00000000000000000
+    encrypted_regex: '^(password|secret|key|token|credential|passphrase|private_key|auth_pass)'
+
+  # ── Environment files ─────────────────────────────────────────────────────
+  - path_regex: secrets/.*\.enc\.env$
+    age: >-
+      age1placeholder_primary_replace_with_real_age_pubkey00000000000000000
+    encrypted_regex: '^.*$'
+
+  # ── All other secrets (fallback) ──────────────────────────────────────────
+  - path_regex: secrets/.*
+    age: >-
+      age1placeholder_primary_replace_with_real_age_pubkey00000000000000000
+    encrypted_regex: '^(password|secret|key|token|credential|passphrase|private_key|auth_pass)'

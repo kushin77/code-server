@@ -6,13 +6,13 @@ repos:
         entry: bash ./scripts/mandatory-redeploy.sh
         language: system
         pass_filenames: false
-        # Only run manually or on local push — requires Docker and Linux environment
+        # Only run manually or on local push - requires Docker and Linux environment
         stages: [manual]
 
       # Phase 2.3: Custom hook - verify scripts source common libraries
       - id: verify-scripts-source-common
         name: Verify scripts source _common libraries
-        entry: bash -c '[[ -d scripts/_common ]] && for f in scripts/{deploy,backup,validate,test}.sh; do [[ -f "$f" ]] && ! grep -q "source.*_common" "$f" && echo "ERROR: $f missing _common source"; done'
+        entry: "bash -c 'if [[ -d scripts/_common ]]; then for f in scripts/{deploy,backup,validate,test}.sh; do if [[ -f \"$f\" ]] && ! grep -q \"source.*_common\" \"$f\"; then echo \"ERROR: $f missing _common source\"; fi; done; fi'"
         language: system
         files: '^scripts/(deploy|backup|validate|test)\.sh$'
         pass_filenames: false
@@ -21,31 +21,83 @@ repos:
       # Phase 2.3: Custom hook - verify metadata headers
       - id: verify-metadata-headers
         name: Verify metadata headers in critical scripts
-        entry: bash -c '[[ -f scripts/deploy.sh ]] && ! grep -q "^# File:" scripts/deploy.sh && echo "ERROR: deploy.sh missing metadata header"'
+        entry: "bash -c 'if [[ -f scripts/deploy.sh ]]; then if ! grep -q \"^#!/bin/bash\" scripts/deploy.sh; then echo \"ERROR: deploy.sh missing bash shebang\"; fi; fi'"
         language: system
         files: '^scripts/deploy\.sh$'
         pass_filenames: false
         stages: [commit]
 
-      # Phase 3: Block hardcoded IPs — use $DEPLOY_HOST from _common/config.sh
+      # Phase 3: Block hardcoded IPs - use $DEPLOY_HOST from _common/config.sh
       - id: no-hardcoded-ips
-        name: No hardcoded IP addresses in scripts
-        entry: bash -c '
-          files=$(grep -rl "192\.168\.168\.\(31\|30\)" scripts/ 2>/dev/null \
-            | grep -v "_common/" | grep -v "config\.sh" | grep "\.sh$")
-          if [[ -n "$files" ]]; then
-            echo "GOVERNANCE: Hardcoded IP — use \$DEPLOY_HOST from _common/config.sh:"
-            echo "$files" | sed "s/^/  /"; exit 1
-          fi
-        '
+        name: No hardcoded IP addresses in scripts/configs
+        entry: bash scripts/lib/check-no-ips.sh
+        language: system
+        files: \.(sh|tf|yml|yaml)$
+        exclude: ^(environments/|config/coredns/|\.archived/|deprecated/)
+        pass_filenames: false
+        stages: [commit]
+
+      # LINUX-ONLY: Block Windows paths in source files
+      - id: no-windows-paths
+        name: No Windows paths (C:\, APPDATA, etc.) in source files
+        entry: "bash -c 'found=$(grep -rn -E \"(C:\\\\\\\\\\\\\\\\|APPDATA|Program Files|\\\\\\\\Users\\\\\\\\)\" --include=\"*.sh\" --include=\"*.tf\" --include=\"*.yml\" --include=\"*.yaml\" --exclude-dir=deprecated --exclude-dir=archived . 2>/dev/null || true); if [[ -n \"$found\" ]]; then echo \"ERROR: Windows paths found in source files:\"; echo \"$found\"; echo \"Use Linux paths only. See SUPPORTED-PLATFORMS.md\"; exit 1; fi'"
+        language: system
+        files: \.(sh|tf|yml|yaml)$
+        exclude: ^(deprecated/|archived/)
+        pass_filenames: false
+        stages: [commit]
+
+      # LINUX-ONLY: Block .ps1 file references in active code
+      - id: no-ps1-references
+        name: No PowerShell (.ps1) references in active code
+        entry: "bash -c 'found=$(grep -rn -E \"(\\.ps1\\b|redeploy\\.ps1)\" --include=\"*.sh\" --include=\"*.yml\" --include=\"*.yaml\" --include=\"*.tf\" --exclude-dir=deprecated --exclude-dir=archived . 2>/dev/null || true); if [[ -n \"$found\" ]]; then echo \"ERROR: PowerShell references found in active code:\"; echo \"$found\"; echo \"Windows not supported. See SUPPORTED-PLATFORMS.md\"; exit 1; fi'"
+        language: system
+        files: \.(sh|tf|yml|yaml)$
+        exclude: ^(deprecated/|archived/)
+        pass_filenames: false
+        stages: [commit]
+
+      # CRITICAL P0: Block hardcoded credentials
+      - id: no-hardcoded-credentials
+        name: Block hardcoded credentials (P0)
+        entry: "bash -c 'if grep -rE \"(redis-secure-default|postgres-secure-default|TestPassword123|admin123|password=secret)\" --include=\"*.sh\" --include=\"*.tf\" --include=\"*.yml\" --include=\"*.yaml\" --include=\"*.py\" --exclude-dir=.archived --exclude-dir=archived . 2>/dev/null; then echo \"ERROR: Hardcoded credentials found - use environment variables \\${REDIS_PASSWORD}, \\${POSTGRES_PASSWORD}, etc.\"; exit 1; fi'"
+        language: system
+        files: \.(sh|tf|yml|yaml|py)$
+        exclude: ^(\.env\.example|CONTRIBUTING\.md|\.archived/|archived/)
+        pass_filenames: false
+        stages: [commit]
+
+      # LINUX-ONLY: Block hardcoded production IPs (#366)
+      - id: no-hardcoded-ips
+        name: No hardcoded production IPs (use env.sh variables or FQDNs)
+        entry: bash scripts/lib/check-no-ips.sh
+        language: system
+        files: \.(sh|tf|yml|yaml)$
+        exclude: ^(environments/|config/coredns/|deprecated/|archived/|scripts/_archive/)
+        pass_filenames: false
+        stages: [commit]
+
+      # GOVERNANCE: Enforce script header metadata
+      - id: enforce-script-headers
+        name: Enforce @file/@description headers in scripts
+        entry: "bash -c 'for f in \"$@\"; do if [[ \"$f\" == *.sh ]] && ! grep -q \"@file:\" \"$f\"; then echo \"GOVERNANCE: $f missing @file header\"; exit 0; fi; done' --"
         language: system
         files: '^scripts/.*\.sh$'
+        exclude: '(archive/|_common/)'
+        stages: [commit]
+
+      # GOVERNANCE: Check Docker image parameterization
+      - id: check-docker-images
+        name: Check Docker images use pinned versions (not latest)
+        entry: "bash -c 'if grep -r \"^FROM.*:latest\" . --include=\"Dockerfile*\" 2>/dev/null; then echo \"GOVERNANCE: Found \\\"FROM ... :latest\\\" - use explicit versions\"; exit 1; fi'"
+        language: system
+        files: '^Dockerfile'
         pass_filenames: false
         stages: [commit]
 
   # Phase 2.3: Bash script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.7
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
         name: Bash script lint (shellcheck)

@@ -1,7 +1,7 @@
-#!/bin/bash
-# Infrastructure Assessment Script for 192.168.168.31
+﻿#!/bin/bash
+# Infrastructure Assessment Script for ${DEPLOY_HOST}
 # Purpose: Gather comprehensive host specifications, GPU config, NAS connectivity
-# Usage: ssh akushnir@192.168.168.31 'bash -s' < scripts/infrastructure-assessment-31.sh
+# Usage: ssh akushnir@${DEPLOY_HOST} 'bash -s' < scripts/infrastructure-assessment-31.sh
 
 set -e
 
@@ -16,7 +16,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║   Infrastructure Assessment: 192.168.168.31                     ║${NC}"
+echo -e "${BLUE}║   Infrastructure Assessment: ${DEPLOY_HOST}                     ║${NC}"
 echo -e "${BLUE}║   Assessment Date: $(date '+%Y-%m-%d %H:%M:%S')                    ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
@@ -327,9 +327,9 @@ echo -e "${BLUE}╚════════════════════�
 echo ""
 echo "Next Steps:"
 echo "1. Export assessment output to file:"
-echo "   ssh akushnir@192.168.168.31 'bash -s' < scripts/infrastructure-assessment-31.sh > docs/assessment-31-results.txt"
+echo "   ssh akushnir@${DEPLOY_HOST} 'bash -s' < scripts/infrastructure-assessment-31.sh > docs/assessment-31-results.txt"
 echo ""
-echo "2. Review results and update docs/192.168.168.31-host-spec.md"
+echo "2. Review results and update docs/${DEPLOY_HOST}-host-spec.md"
 echo ""
 echo "3. Proceed to #140: IaC Development (Terraform modules)"
 echo ""

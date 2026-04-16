@@ -14,8 +14,7 @@
 - ✅ `.github/AUTO-DEPLOY-VERIFICATION-CHECKLIST.md` - Live on main
 - ✅ `.github/AUTO-DEPLOY-IMPLEMENTATION-COMPLETE.md` - Live on main
 - ✅ `.github/AUTO-DEPLOY-SUMMARY.md` - Live on main
-- ✅ `scripts/redeploy.sh` - Live on main
-- ✅ `scripts/redeploy.ps1` - Live on main
+- ✅ `scripts/redeploy.sh` - Live on main (Linux/Bash only)
 - ✅ `.github/pull_request_template.md` (updated with issue linking) - Live on main
 
 ### Current State
@@ -81,7 +80,7 @@ We need to **self-validate** the system by:
 | Item | Status | Evidence |
 |------|--------|----------|
 | Workflow file exists | ✅ | `.github/workflows/post-merge-cleanup-deploy.yml` |
-| Deployment scripts exist | ✅ | `scripts/redeploy.sh`, `scripts/redeploy.ps1` |
+| Deployment scripts exist | ✅ | `scripts/redeploy.sh` (Linux-only) |
 | Documentation complete | ✅ | 5 comprehensive guides in `.github/` |
 | PR template updated | ✅ | Issue linking required |
 | Branch protection active | ✅ | 2 approvals required |

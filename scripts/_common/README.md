@@ -39,7 +39,7 @@ Single bootstrap entrypoint. Sources all modules below in the correct order.
 | `DEPLOY_HOST` | `192.168.168.31` | `export DEPLOY_HOST=...` |
 | `DEPLOY_USER` | `akushnir` | `export DEPLOY_USER=...` |
 | `DEPLOY_DIR` | `/home/akushnir/code-server-enterprise` | `export DEPLOY_DIR=...` |
-| `STANDBY_HOST` | `192.168.168.30` | |
+| `STANDBY_HOST` | `192.168.168.42` | |
 | `DOMAIN` | `ide.kushnir.cloud` | |
 | `REPO` | `kushin77/code-server` | |
 | `ENTERPRISE_NETWORK` | `code-server-enterprise_enterprise` | |

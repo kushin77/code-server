@@ -116,7 +116,7 @@ class CircuitBreaker {
             if (this.consecutiveHalfOpenSuccesses >= this.maxHalfOpenRequests) {
                 this._transitionTo(CircuitBreaker.STATE.CLOSED);
                 this.failures = 0;
-                this.successnes = 0;
+                this.successes = 0;
                 this.consecutiveHalfOpenSuccesses = 0;
             }
         }

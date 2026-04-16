@@ -1,11 +1,11 @@
-#!/bin/bash
+﻿#!/bin/bash
 # post-deployment-validation.sh
 # Validates Tier 1 enhancements and measures improvements vs baseline
 
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
-HOST=${1:-192.168.168.31}
+HOST=${1:-${DEPLOY_HOST}}
 SSH_CMD="ssh -o StrictHostKeyChecking=no akushnir@$HOST"
 
 echo "╔════════════════════════════════════════════════════════════╗"

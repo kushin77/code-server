@@ -1,0 +1,113 @@
+# Falco Custom Rules - Production Security Monitoring
+# Uses valid Falco condition syntax throughout
+
+- list: malware_binaries
+  items: [xmrig, cpuminer, mkxminer, ethminer, cgminer, minerd, cryptominer]
+
+- list: mining_ports
+  items: [3333, 4444, 5555, 7777, 14444, 14433]
+
+- rule: Cryptominer Detection
+  desc: Detect cryptocurrency mining processes in containers
+  condition: >
+    spawned_process and
+    container and
+    proc.name in (malware_binaries)
+  output: >
+    CRYPTOMINER DETECTED: %proc.name spawned in container=%container.name
+    user=%user.name cmd=%proc.cmdline
+  priority: CRITICAL
+  tags: [malware, crypto, container]
+
+- rule: Suspicious Mining Port Connection
+  desc: Detect connections to known mining pool ports
+  condition: >
+    outbound and
+    container and
+    fd.rport in (mining_ports)
+  output: >
+    Possible crypto mining connection container=%container.name
+    dest=%fd.rip:%fd.rport cmdline=%proc.cmdline
+  priority: CRITICAL
+  tags: [malware, network_security, container]
+
+- rule: Privilege Escalation via Setuid
+  desc: Detect privilege escalation via setuid binaries
+  condition: >
+    spawned_process and
+    container and
+    proc.name in (sudo, su, passwd) and
+    not user.name = root
+  output: >
+    Privilege escalation attempt user=%user.name proc=%proc.name
+    container=%container.name cmd=%proc.cmdline
+  priority: WARNING
+  tags: [privilege_escalation, container]
+
+- rule: Shell Spawned in Container
+  desc: Detect unexpected interactive shell in container
+  condition: >
+    spawned_process and
+    container and
+    proc.name in (bash, sh) and
+    proc.tty != 0 and
+    not proc.pname in (sshd, docker-init, supervisord)
+  output: >
+    Unexpected shell container=%container.name shell=%proc.name
+    parent=%proc.pname user=%user.name
+  priority: NOTICE
+  tags: [container, shell]
+
+- rule: Write to Sensitive Path
+  desc: Detect writes to system configuration paths
+  condition: >
+    open_write and
+    container and
+    (fd.name startswith /etc/ or
+     fd.name startswith /boot/ or
+     fd.name startswith /root/) and
+    not proc.name in (apt, dpkg, useradd, passwd)
+  output: >
+    Write to sensitive path file=%fd.name proc=%proc.name
+    user=%user.name container=%container.name
+  priority: WARNING
+  tags: [file_integrity, container]
+
+- rule: Sensitive File Access
+  desc: Detect access to private keys and credential files
+  condition: >
+    open_read and
+    container and
+    (fd.name endswith ".key" or
+     fd.name endswith ".pem" or
+     fd.name contains "credentials") and
+    not proc.name in (sshd, nginx, caddy)
+  output: >
+    Sensitive file access file=%fd.name proc=%proc.name
+    user=%user.name container=%container.name
+  priority: WARNING
+  tags: [secrets, compliance]
+
+- rule: Reverse Shell Attempt
+  desc: Detect common reverse shell patterns in container args
+  condition: >
+    spawned_process and
+    container and
+    (proc.args contains "/dev/tcp" or
+     proc.args contains "bash -i")
+  output: >
+    Possible reverse shell proc=%proc.name args=%proc.args
+    container=%container.name user=%user.name
+  priority: CRITICAL
+  tags: [malware, shell_abuse, container]
+
+- rule: Kernel Module Load Attempt
+  desc: Detect attempts to load kernel modules from containers
+  condition: >
+    evt.type in (init_module, finit_module) and
+    container
+  output: >
+    Kernel module load attempt proc=%proc.name
+    container=%container.name user=%user.name
+  priority: CRITICAL
+  tags: [kernel_exploitation, rootkit]

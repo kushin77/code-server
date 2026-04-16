@@ -1,0 +1,319 @@
+---
+# Phase 8: Security Hardening - Ansible Playbook
+# Applies OS hardening, container hardening, egress filtering, secrets management
+# Immutable, idempotent, production-ready
+
+- name: "Phase 8: Security Hardening Deployment"
+  hosts: "{{ target_host | default('primary') }}"
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    ansible_user: akushnir
+    vault_version: "1.15.0"
+    age_version: "1.1.1"
+  
+  tasks:
+    # ========================================================================
+    # Step 1: CIS Linux Hardening
+    # ========================================================================
+    - name: "Phase 8 Step 1: CIS Linux Hardening"
+      block:
+        - name: Create CIS hardening sysctl config
+          copy:
+            dest: /etc/sysctl.d/99-cis-hardening.conf
+            content: |
+              # CIS Linux Hardening v2.0.1
+              
+              # Kernel parameters
+              kernel.kptr_restrict = 2
+              kernel.dmesg_restrict = 1
+              kernel.printk = 3 3 3 3
+              kernel.unprivileged_bpf_disabled = 1
+              kernel.unprivileged_userns_clone = 0
+              kernel.yama.ptrace_scope = 3
+              
+              # Network hardening
+              net.ipv4.conf.all.forwarding = 0
+              net.ipv4.conf.all.send_redirects = 0
+              net.ipv4.conf.all.accept_source_route = 0
+              net.ipv4.conf.all.accept_redirects = 0
+              net.ipv4.conf.default.accept_redirects = 0
+              net.ipv4.icmp_echo_ignore_broadcasts = 1
+              net.ipv4.conf.all.log_martians = 1
+              net.ipv4.tcp_timestamps = 1
+              net.ipv6.conf.all.accept_source_route = 0
+              net.ipv6.conf.default.accept_source_route = 0
+              
+              # ASLR
+              kernel.randomize_va_space = 2
+              
+              # Panic settings
+              kernel.panic = 60
+              kernel.panic_on_oops = 1
+            owner: root
+            group: root
+            mode: '0644'
+        
+        - name: Apply sysctl configuration
+          command: sysctl -p /etc/sysctl.d/99-cis-hardening.conf
+          register: sysctl_result
+          changed_when: false
+
+    # ========================================================================
+    # Step 2: fail2ban Installation and Configuration
+    # ========================================================================
+    - name: "Phase 8 Step 2: fail2ban Setup"
+      block:
+        - name: Install fail2ban
+          apt:
+            name: fail2ban
+            state: present
+            update_cache: yes
+        
+        - name: Configure fail2ban jail
+          copy:
+            dest: /etc/fail2ban/jail.local
+            content: |
+              [DEFAULT]
+              bantime = 86400
+              findtime = 3600
+              maxretry = 3
+              
+              [sshd]
+              enabled = true
+              port = ssh
+              filter = sshd
+              logpath = /var/log/auth.log
+            owner: root
+            group: root
+            mode: '0644'
+          notify: Restart fail2ban
+        
+        - name: Enable fail2ban service
+          systemd:
+            name: fail2ban
+            enabled: yes
+            state: started
+
+    # ========================================================================
+    # Step 3: auditd Installation and Configuration
+    # ========================================================================
+    - name: "Phase 8 Step 3: auditd Setup"
+      block:
+        - name: Install auditd
+          apt:
+            name: auditd
+            state: present
+        
+        - name: Configure auditd rules
+          copy:
+            dest: /etc/audit/rules.d/audit.rules
+            content: |
+              # Remove any existing rules
+              -D
+              
+              # Exclude audit logs from auditing
+              -b 8192
+              -f 1
+              
+              # Audit rules
+              -w /etc/audit/ -p wa -k audit_config_changes
+              -w /etc/libaudit.conf -p wa -k audit_config_changes
+              -w /etc/audisp/ -p wa -k audit_config_changes
+              
+              # Monitor auth
+              -w /etc/group -p wa -k identity
+              -w /etc/passwd -p wa -k identity
+              -w /etc/sudoers -p wa -k scope
+              -w /etc/sudoers.d/ -p wa -k scope
+              
+              # Monitor system calls
+              -a always,exit -F arch=b64 -S execve -F uid>=1000 -F auid>=1000 -k user_commands
+              -a always,exit -F arch=b64 -S mount -F auid>=1000 -F uid>=1000 -k mount_commands
+              -a always,exit -F arch=b64 -S open -F dir=/etc -F uid>=1000 -k config_access
+              
+              # Make config immutable
+              -e 2
+            owner: root
+            group: root
+            mode: '0640'
+          notify: Restart auditd
+        
+        - name: Enable auditd service
+          systemd:
+            name: auditd
+            enabled: yes
+            state: restarted
+
+    # ========================================================================
+    # Step 4: AIDE Installation and Initialization
+    # ========================================================================
+    - name: "Phase 8 Step 4: AIDE Setup"
+      block:
+        - name: Install AIDE
+          apt:
+            name: "{{ item }}"
+            state: present
+          loop:
+            - aide
+            - aide-common
+        
+        - name: Initialize AIDE database
+          command: aideinit
+          args:
+            creates: /var/lib/aide/aide.db
+          register: aide_init
+          async: 600
+          poll: 0
+        
+        - name: Schedule daily AIDE checks
+          cron:
+            name: "Daily AIDE integrity check"
+            hour: "3"
+            minute: "0"
+            job: "/usr/bin/aide --check > /tmp/aide-report.txt 2>&1"
+            user: root
+            state: present
+
+    # ========================================================================
+    # Step 5: AppArmor Container Profile
+    # ========================================================================
+    - name: "Phase 8 Step 5: AppArmor Container Profiles"
+      block:
+        - name: Install AppArmor
+          apt:
+            name: "{{ item }}"
+            state: present
+          loop:
+            - apparmor
+            - apparmor-utils
+        
+        - name: Create Docker AppArmor profiles
+          copy:
+            dest: /etc/apparmor.d/docker-code-server
+            content: |
+              #include <tunables/global>
+              
+              profile docker-code-server flags=(attach_disconnected,mediate_deleted) {
+                #include <abstractions/base>
+                #include <abstractions/nameservice>
+              
+                # Allow container runtime
+                /proc/*/oom_score_adj rw,
+                /proc/sys/kernel/osrelease r,
+                /etc/ld.so.cache r,
+                /etc/ld.so.conf r,
+                /etc/ld.so.conf.d/ r,
+                /lib/x86_64-linux-gnu/** mr,
+                /usr/lib/x86_64-linux-gnu/** mr,
+              
+                # Deny dangerous capabilities
+                deny capability sys_module,
+                deny capability sys_rawio,
+                deny capability sys_boot,
+                deny capability sys_ptrace,
+                deny capability net_admin,
+                deny capability sys_admin,
+              
+                # Allow code-server specific operations
+                /opt/code-server/** rw,
+                /root/.local/** rw,
+                /tmp/** rw,
+              
+                # Allow networking
+                network inet stream,
+                network inet dgram,
+                network inet6 stream,
+                network inet6 dgram,
+              }
+            owner: root
+            group: root
+            mode: '0644'
+          notify: Load AppArmor profiles
+
+    # ========================================================================
+    # Step 6: Docker Hardening
+    # ========================================================================
+    - name: "Phase 8 Step 6: Docker Hardening"
+      block:
+        - name: Create hardened Docker daemon config
+          copy:
+            dest: /etc/docker/daemon.json
+            content: |
+              {
+                "default-ulimits": {
+                  "nofile": {
+                    "Name": "nofile",
+                    "Hard": 65536,
+                    "Soft": 65536
+                  },
+                  "nproc": {
+                    "Name": "nproc",
+                    "Hard": 4096,
+                    "Soft": 4096
+                  }
+                },
+                "icc": false,
+                "log-driver": "json-file",
+                "log-opts": {
+                  "max-size": "10m",
+                  "max-file": "3"
+                },
+                "storage-driver": "overlay2",
+                "userland-proxy": false
+              }
+            owner: root
+            group: root
+            mode: '0644'
+          notify: Restart Docker
+
+    # ========================================================================
+    # Step 7: Egress Filtering with iptables
+    # ========================================================================
+    - name: "Phase 8 Step 7: Egress Filtering"
+      block:
+        - name: Enable IP forwarding
+          sysctl:
+            name: net.ipv4.ip_forward
+            value: '1'
+            sysctl_set: yes
+            state: present
+        
+        - name: Create Docker egress chain
+          command: iptables -N DOCKER-EGRESS 2>/dev/null || true
+          changed_when: false
+        
+        - name: Configure egress rules
+          command: "{{ item }}"
+          loop:
+            - "iptables -A DOCKER-EGRESS -d 8.8.8.8 -p udp --dport 53 -j ACCEPT"
+            - "iptables -A DOCKER-EGRESS -d 1.1.1.1 -p udp --dport 53 -j ACCEPT"
+            - "iptables -A DOCKER-EGRESS -p tcp --dport 80 -j ACCEPT"
+            - "iptables -A DOCKER-EGRESS -p tcp --dport 443 -j ACCEPT"
+            - "iptables -A DOCKER-EGRESS -d 192.168.168.0/24 -j ACCEPT"
+            - "iptables -A DOCKER-EGRESS -p udp --dport 123 -j ACCEPT"
+            - "iptables -A DOCKER-EGRESS -j DROP"
+          changed_when: false
+          ignore_errors: yes
+
+  handlers:
+    - name: Restart fail2ban
+      systemd:
+        name: fail2ban
+        state: restarted
+
+    - name: Restart auditd
+      systemd:
+        name: auditd
+        state: restarted
+
+    - name: Load AppArmor profiles
+      command: apparmor_parser -r /etc/apparmor.d/docker-code-server
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Restart Docker
+      systemd:
+        name: docker
+        state: restarted

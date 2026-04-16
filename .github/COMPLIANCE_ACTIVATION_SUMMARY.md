@@ -10,7 +10,7 @@
 ### Deployed
 ✅ Auto-deploy mandate system files  
 ✅ GitHub Actions workflow (`post-merge-cleanup-deploy.yml`)  
-✅ Deployment orchestration scripts (`redeploy.sh`, `redeploy.ps1`)  
+✅ Deployment orchestration scripts (`redeploy.sh`) — **Linux/bash only**  
 ✅ Complete documentation (5 comprehensive guides)  
 ✅ Updated PR template (requires issue linking)  
 
@@ -48,7 +48,7 @@
 |-----------|--------|---------|
 | **Mandate Policy** | ✅ LIVE | `.github/AUTO-MERGE-CLEANUP-DEPLOY-MANDATE.md` in main |
 | **Workflow File** | ✅ LIVE | `.github/workflows/post-merge-cleanup-deploy.yml` in main |
-| **Deployment Scripts** | ✅ LIVE | `scripts/redeploy.sh` and `redeploy.ps1` in main |
+| **Deployment Scripts** | ✅ LIVE | `scripts/redeploy.sh` (Linux/bash only) in main |
 | **Documentation** | ✅ COMPLETE | 5 guides + templates in main |
 | **Branch Protection** | ✅ ACTIVE | 2 approvals required for main |
 | **PR Template** | ✅ UPDATED | Issue linking enforced |

@@ -1,0 +1,12 @@
+[Unit]
+Description=Code-Server Health Check Timer (every 10 seconds)
+Documentation=file:///opt/code-server-enterprise/docs/HEALTH-CHECK-MONITORING.md
+
+[Timer]
+OnBootSec=5s
+OnUnitActiveSec=10s
+Persistent=true
+Unit=health-check.service
+
+[Install]
+WantedBy=timers.target

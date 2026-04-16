@@ -1,0 +1,24 @@
+# terraform/production.tfvars
+# P2 #366: Inventory-driven Terraform variables
+# Source: .env.inventory (loaded via: terraform apply -var-file=production.tfvars)
+# 
+# Usage:
+#   source .env.inventory
+#   terraform apply -var-file=production.tfvars
+
+# Deployment Hosts (from inventory/infrastructure.yaml)
+deployment_host = "${DEPLOY_HOST}"
+replica_host    = "${REPLICA_HOST}"
+virtual_ip      = "${VIRTUAL_IP}"
+gateway_ip      = "${GATEWAY_IP}"
+storage_ip      = "${STORAGE_IP}"
+network_subnet  = "${NETWORK_SUBNET}"
+
+# Vault Configuration (uses DEPLOY_HOST)
+vault_addr = "https://${DEPLOY_HOST}:8201"
+
+# Network Configuration
+deploy_port    = 22
+deploy_user    = "akushnir"
+replica_port   = 22
+replica_user   = "akushnir"

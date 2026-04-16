@@ -25,7 +25,7 @@ echo ""
 
 echo "[1/6] Creating OAuth2 Security Configuration..."
 
-cat > c:\code-server-enterprise\config\oauth2-security.yaml << 'EOF'
+cat > /code-server-enterprise/config/oauth2-security.yaml << 'EOF'
 # OAuth2 Security Hardening Configuration
 # IaC: Declarative security policies
 
@@ -195,7 +195,7 @@ echo ""
 
 echo "[2/6] Creating Authentication Hardening Middleware..."
 
-cat > c:\code-server-enterprise\services\auth-hardening-middleware.js << 'EOF'
+cat > /code-server-enterprise/services/auth-hardening-middleware.js << 'EOF'
 /**
  * Authentication Hardening Middleware
  * Implements security best practices for authentication
@@ -397,7 +397,7 @@ echo ""
 
 echo "[3/6] Creating Network Security Configuration..."
 
-cat > c:\code-server-enterprise\config\network-security.yaml << 'EOF'
+cat > /code-server-enterprise/config/network-security.yaml << 'EOF'
 # Network Security Configuration
 # IaC: Firewall rules, WAF policies, DDoS protection
 
@@ -530,7 +530,7 @@ echo ""
 
 echo "[4/6] Creating Data Protection Configuration..."
 
-cat > c:\code-server-enterprise\services\data-protection-service.js << 'EOF'
+cat > /code-server-enterprise/services/data-protection-service.js << 'EOF'
 /**
  * Data Protection Service
  * Handles encryption, PII detection, and compliance
@@ -649,7 +649,7 @@ echo ""
 
 echo "[5/6] Creating Security Scanning Configuration..."
 
-cat > c:\code-server-enterprise\config\security-scanning.yaml << 'EOF'
+cat > /code-server-enterprise/config/security-scanning.yaml << 'EOF'
 # Security Scanning & Compliance Configuration
 # IaC: Automated security checks
 
@@ -748,7 +748,7 @@ echo ""
 
 echo "[6/6] Creating Security Audit Runbook..."
 
-cat > c:\code-server-enterprise\docs\SECURITY-AUDIT-RUNBOOK.md << 'EOF'
+cat > /code-server-enterprise/docs/SECURITY-AUDIT-RUNBOOK.md << 'EOF'
 # Security Audit Runbook
 
 ## Quarterly Security Review Process

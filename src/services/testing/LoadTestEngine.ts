@@ -1,6 +1,9 @@
 /**
- * Load Testing Engine - Phase 12.4: Testing & Validation
+ * Load Testing Engine - Phase 12.4: Testing & Validation [REFACTORED]
  * Distributed load testing for multi-region federation
+ * 
+ * PRODUCTION-FIRST: All configuration from SystemConfig
+ * No hardcoded test parameters. External configuration for easy testing.
  * 
  * Responsibilities:
  * - Generate controlled load across regions
@@ -13,6 +16,7 @@
 import { EventEmitter } from 'events';
 import { Logger } from '../logging/Logger';
 import { Metrics } from '../monitoring/Metrics';
+import { config, createTestConfig, SystemConfig } from '../../config/SystemConfig';
 
 export enum LoadTestPhase {
   IDLE = 'IDLE',
@@ -23,18 +27,18 @@ export enum LoadTestPhase {
 }
 
 export interface LoadTestConfig {
-  name: string;
-  duration: number; // total test duration in milliseconds
-  startRPS: number; // requests per second
-  peakRPS: number; // peak RPS target
-  rampUpDuration: number; // milliseconds
-  steadyStateDuration: number; // milliseconds
-  rampDownDuration: number; // milliseconds
-  regions: string[];
-  enableConnectionPool: boolean;
-  connectionPoolSize: number;
-  requestTimeout: number; // milliseconds
-  payloadSize: number; // bytes
+  name?: string;
+  duration?: number; // total test duration in milliseconds
+  startRPS?: number; // requests per second
+  peakRPS?: number; // peak RPS target
+  rampUpDuration?: number; // milliseconds
+  steadyStateDuration?: number; // milliseconds
+  rampDownDuration?: number; // milliseconds
+  regions?: string[];
+  enableConnectionPool?: boolean;
+  connectionPoolSize?: number;
+  requestTimeout?: number; // milliseconds
+  payloadSize?: number; // bytes
 }
 
 export interface LatencyBucket {
@@ -84,7 +88,7 @@ export interface LoadTestResult {
 export class LoadTestEngine extends EventEmitter {
   private logger: Logger;
   private metrics: Metrics;
-  private config: LoadTestConfig;
+  private resolvedConfig: any;
   private currentPhase: LoadTestPhase = LoadTestPhase.IDLE;
   private currentRPS: number = 0;
   private startTime: Date | null = null;
@@ -102,11 +106,42 @@ export class LoadTestEngine extends EventEmitter {
   private running: boolean = false;
   private testStartTime: Date | null = null;
 
-  constructor(config: LoadTestConfig) {
+  /**
+   * Constructor — merge system config defaults with custom overrides
+   * @param customConfig Optional overrides for test parameters
+   * @example
+   *   // Use system config defaults
+   *   const engine = new LoadTestEngine();
+   * 
+   *   // Override specific parameters
+   *   const engine = new LoadTestEngine({
+   *     peakRPS: 5000,  // Override peak RPS
+   *     duration: 300000  // Override to 5 minutes
+   *   });
+   */
+  constructor(customConfig?: LoadTestConfig) {
     super();
-    this.config = config;
+    
     this.logger = new Logger('LoadTestEngine');
     this.metrics = new Metrics('load_test');
+
+    // Merge system config defaults with custom overrides
+    const systemConfig = config.loadTest;
+    this.resolvedConfig = {
+      name: customConfig?.name ?? 'Load Test',
+      duration: customConfig?.duration ?? systemConfig.durationMs,
+      startRPS: customConfig?.startRPS ?? systemConfig.startRps,
+      peakRPS: customConfig?.peakRPS ?? systemConfig.peakRps,
+      rampUpDuration: customConfig?.rampUpDuration ?? systemConfig.rampUpMs,
+      steadyStateDuration: customConfig?.steadyStateDuration ?? systemConfig.steadyStateMs,
+      rampDownDuration: customConfig?.rampDownDuration ?? systemConfig.rampDownMs,
+      regions: customConfig?.regions ?? ['us-west', 'eu-west', 'ap-southeast'],
+      enableConnectionPool: customConfig?.enableConnectionPool ?? true,
+      connectionPoolSize: customConfig?.connectionPoolSize ?? 100,
+      requestTimeout: customConfig?.requestTimeout ?? systemConfig.requestTimeoutMs,
+      payloadSize: customConfig?.payloadSize ?? systemConfig.payloadSize,
+    };
+
     this.initializeMetrics();
   }
 
@@ -114,7 +149,7 @@ export class LoadTestEngine extends EventEmitter {
    * Initialize region metrics collections
    */
   private initializeMetrics(): void {
-    for (const regionId of this.config.regions) {
+    for (const regionId of this.resolvedConfig.regions) {
       this.regionLatencies.set(regionId, []);
       this.regionRequests.set(regionId, {
         total: 0,
@@ -122,6 +157,65 @@ export class LoadTestEngine extends EventEmitter {
         failed: 0,
       });
     }
+  }
+
+  /**
+   * Get the resolved configuration (for debugging/testing)
+   */
+  getConfig(): any {
+    return { ...this.resolvedConfig };
+  }
+
+  /**
+   * Get peak RPS (for tests)
+   */
+  getPeakRPS(): number {
+    return this.resolvedConfig.peakRPS;/ Merge system config defaults with custom overrides
+    const systemConfig = config.loadTest;
+    this.resolvedConfig = {
+      name: customConfig?.name ?? 'Load Test',
+      duration: customConfig?.duration ?? systemConfig.durationMs,
+      startRPS: customConfig?.startRPS ?? systemConfig.startRps,
+      peakRPS: customConfig?.peakRPS ?? systemConfig.peakRps,
+      rampUpDuration: customConfig?.rampUpDuration ?? systemConfig.rampUpMs,
+      steadyStateDuration: customConfig?.steadyStateDuration ?? systemConfig.steadyStateMs,
+      rampDownDuration: customConfig?.rampDownDuration ?? systemConfig.rampDownMs,
+      regions: customConfig?.regions ?? ['us-west', 'eu-west', 'ap-southeast'],
+      enableConnectionPool: customConfig?.enableConnectionPool ?? true,
+      connectionPoolSize: customConfig?.connectionPoolSize ?? 100,
+      requestTimeout: customConfig?.requestTimeout ?? systemConfig.requestTimeoutMs,
+      payloadSize: customConfig?.payloadSize ?? systemConfig.payloadSize,
+    };
+
+    this.initializeMetrics();
+  }
+
+  /**
+   * Initialize region metrics collections
+   */
+  private initializeMetrics(): void {
+    for (const regionId of this.resolvedConfig.regions) {
+      this.regionLatencies.set(regionId, []);
+      this.regionRequests.set(regionId, {
+        total: 0,
+        successful: 0,
+        failed: 0,
+      });
+    }
+  }
+
+  /**
+   * Get the resolved configuration (for debugging/testing)
+   */
+  getConfig(): any {
+    return { ...this.resolvedConfig };
+  }
+
+  /**
+   * Get peak RPS (for tests)
+   */
+  getPeakRPS(): number {
+    return this.resolvedConfig.peakRPS;
   }
 
   /**

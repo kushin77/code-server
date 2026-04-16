@@ -1,0 +1,193 @@
+name: Phase 3 - Operational Readiness Review
+
+# Trigger on: PR review requested
+# Purpose: Operational readiness validation (performance, monitoring, rollback)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  phase-3-operational-readiness:
+    name: "Phase 3: Operational Readiness"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for observability
+        id: observability
+        run: |
+          set +e
+          
+          ADDED_LINES=$(git diff origin/main..HEAD | grep '^+' | wc -l)
+          
+          # Check for logging
+          LOGGING=$(git diff origin/main..HEAD | grep -E '(log\.|logger|console\.(log|error|warn))' | wc -l)
+          # Check for metrics
+          METRICS=$(git diff origin/main..HEAD | grep -E '(prometheus|metrics|counter|histogram)' | wc -l)
+          # Check for tracing
+          TRACING=$(git diff origin/main..HEAD | grep -E '(trace|span|opentelemetry)' | wc -l)
+          
+          echo "Added lines: $ADDED_LINES"
+          echo "Logging references: $LOGGING"
+          echo "Metrics references: $METRICS"
+          echo "Tracing references: $TRACING"
+          
+          if [ "$LOGGING" -gt 0 ] || [ "$METRICS" -gt 0 ] || [ "$TRACING" -gt 0 ]; then
+            echo "observability=pass" >> $GITHUB_OUTPUT
+            echo "✅ Observability instrumentation found"
+          else
+            if [ "$ADDED_LINES" -gt 50 ]; then
+              echo "observability=warn" >> $GITHUB_OUTPUT
+              echo "⚠️  Warning: Significant changes but no observability instrumentation"
+            else
+              echo "observability=pass" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Check for monitoring/alerting config
+        id: monitoring
+        run: |
+          set +e
+          
+          MONITORING=$(git diff origin/main..HEAD | grep -E '(alert|prometheus|grafana|slo|sli)' | wc -l)
+          
+          if [ "$MONITORING" -gt 0 ]; then
+            echo "monitoring=pass" >> $GITHUB_OUTPUT
+            echo "✅ Monitoring/alerting configuration found"
+          else
+            echo "monitoring=warn" >> $GITHUB_OUTPUT
+            echo "⚠️  Recommend adding alerting configuration"
+          fi
+
+      - name: Check for rollback/rollforward strategy
+        id: rollback
+        run: |
+          set +e
+          
+          ROLLBACK=$(git diff origin/main..HEAD | grep -iE '(rollback|feature.?flag|canary|blue.?green)' | wc -l)
+          
+          if [ "$ROLLBACK" -gt 0 ]; then
+            echo "rollback=pass" >> $GITHUB_OUTPUT
+            echo "✅ Rollback/deployment strategy documented"
+          else
+            echo "rollback=warn" >> $GITHUB_OUTPUT
+            echo "⚠️  Recommend documenting rollback strategy"
+          fi
+
+      - name: Check for database migrations
+        id: migrations
+        run: |
+          set +e
+          
+          MIGRATIONS=$(find . -path ./node_modules -prune -o -name "*migration*" -o -name "*schema*" | grep -E '\.(py|js|sql)$' | wc -l)
+          
+          if [ "$MIGRATIONS" -gt 0 ]; then
+            echo "migrations=found" >> $GITHUB_OUTPUT
+            echo "ℹ️  Database migrations detected - verify backward compatibility"
+          else
+            echo "migrations=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post operational readiness results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const observability = '${{ steps.observability.outputs.observability }}';
+            const monitoring = '${{ steps.monitoring.outputs.monitoring }}';
+            const rollback = '${{ steps.rollback.outputs.rollback }}';
+            const migrations = '${{ steps.migrations.outputs.migrations }}';
+            
+            const comment = `## Phase 3: Operational Readiness Review
+
+**Status**: ✅ Ready for SRE Review
+
+| Requirement | Status |
+|-------------|--------|
+| Observability (Logs/Metrics/Traces) | ${observability === 'pass' ? '✅' : '⚠️'} |
+| Monitoring & Alerting | ${monitoring === 'pass' ? '✅' : '⚠️'} |
+| Rollback/Canary Strategy | ${rollback === 'pass' ? '✅' : '⚠️'} |
+| Database Migrations | ${migrations === 'found' ? 'ℹ️ Verify' : '✅ None'} |
+
+### SRE Review Checklist
+
+Before approving for Phase 4, verify:
+
+- [ ] **Observability**: All new operations have logging/metrics/tracing
+- [ ] **Health Checks**: Readiness and liveness probes configured
+- [ ] **Alerts**: Alert rules defined for new failure modes
+- [ ] **Capacity**: Resource requests/limits appropriate for scale
+- [ ] **Rollout**: Feature flags or canary deployment configured
+- [ ] **Runbook**: Incident response runbook documented
+- [ ] **Load Test**: Verified at 2x expected traffic
+
+### Requesting Review
+
+To request SRE review, comment:
+\`\`\`
+@[sre-team] Phase 3 operational readiness review
+\`\`\`
+
+**Next**: Phase 4 (production acceptance) after SRE approval`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  phase-3-config-validation:
+    name: "Phase 3: Config Validation"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate configuration files
+        run: |
+          set +e
+          
+          # Validate YAML configs
+          if command -v yamllint &> /dev/null; then
+            echo "Validating YAML configuration..."
+            find . -name "*.yml" -o -name "*.yaml" | xargs -r yamllint -d relaxed || true
+          fi
+          
+          # Validate Terraform
+          if command -v terraform &> /dev/null; then
+            echo "Validating Terraform..."
+            terraform init -backend=false -no-color || true
+            terraform validate || true
+          fi
+          
+          # Validate JSON schemas
+          if [ -f ".schema.json" ]; then
+            echo "Validating against JSON schema..."
+          fi
+
+      - name: Check for hardcoded IPs/domains
+        run: |
+          set +e
+          
+          HARDCODED=$(git diff origin/main..HEAD | grep -E '(http://|https://|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})' | grep -v '# Example' | grep -v 'localhost' | grep -v '127\.0\.0\.1' | wc -l)
+          
+          if [ "$HARDCODED" -gt 5 ]; then
+            echo "⚠️  Warning: Found hardcoded URLs/IPs. Use environment variables instead."
+            git diff origin/main..HEAD | grep -E '(http://|https://|[0-9]{1,3}\.[0-9]{1,3})' | head -10
+          else
+            echo "✅ Configuration looks portable"
+          fi

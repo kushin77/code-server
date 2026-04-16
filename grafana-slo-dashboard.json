@@ -1,0 +1,159 @@
+{
+  "dashboard": {
+    "title": "Phase 8: SLO Dashboard",
+    "description": "Real-time SLO tracking (availability, latency, error rate, throughput)",
+    "timezone": "UTC",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Availability SLO",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "slo:availability:ratio * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 99.9},
+                {"color": "green", "value": 99.95}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Latency p99 (ms)",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "slo:latency:p99 * 1000",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "max": 1000,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 400},
+                {"color": "red", "value": 750}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Error Rate (%)",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "slo:error_rate:ratio * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "max": 1,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 0.05},
+                {"color": "red", "value": 0.2}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Throughput (req/s)",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "slo:throughput:rps",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "max": 1000,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 50},
+                {"color": "green", "value": 100}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Availability Trend (30d)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg_over_time(slo:availability:ratio[1h]) * 100",
+            "refId": "A",
+            "legendDisplayMode": "list"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Latency Distribution",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_bucket[5m])",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Error Rate Trend",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "slo:error_rate:ratio * 100",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Throughput Trend",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "slo:throughput:rps",
+            "refId": "A"
+          }
+        ]
+      }
+    ],
+    "refresh": "15s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}

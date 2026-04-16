@@ -1,0 +1,177 @@
+# Cloudflare Tunnel Configuration - Phase 2 Issue #181
+# Lean Remote Developer Access System
+# Remote code-server access without SSH key exposure
+
+tunnel: code-server-tunnel
+credentials-file: /etc/cloudflared/certs/tunnel.json
+loglevel: info
+logDirectory: /var/log/cloudflared
+grace-period: 30s
+
+# ============================================================================
+# Ingress Rules - Route traffic from Cloudflare to local services
+# ============================================================================
+
+ingress:
+  # Primary code-server IDE (read-only access via P1 #187 restrictions)
+  - hostname: code-server.example.com
+    service: http://code-server:8080
+    originRequest:
+      httpHostHeader: "code-server:8080"
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      tcpKeepAlive: 30s
+      noHappyEyeballs: false
+      # Apply security headers at edge
+      headers:
+        add:
+          X-Forwarded-Proto: https
+          X-Forwarded-For: auto
+          X-Forwarded-Host: code-server.example.com
+          # Disable browser caching of IDE content
+          Cache-Control: no-store, no-cache, must-revalidate
+
+  # OAuth2-proxy authentication layer (handles login redirects)
+  - hostname: auth.example.com
+    service: http://oauth2-proxy:4180
+    originRequest:
+      httpHostHeader: "oauth2-proxy:4180"
+      connectTimeout: 10s
+      tlsTimeout: 10s
+      # Security headers for auth endpoints
+      headers:
+        add:
+          X-Forwarded-Proto: https
+          X-Real-IP: auto
+          # Strict security for auth
+          Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+          X-Content-Type-Options: nosniff
+          X-Frame-Options: DENY
+          X-XSS-Protection: "1; mode=block"
+
+  # Prometheus metrics (internal access - IP allowlist recommended)
+  - hostname: metrics.example.com
+    service: http://prometheus:9090
+    originRequest:
+      httpHostHeader: "prometheus:9090"
+      connectTimeout: 10s
+      # Optional: Configure IP allowlist via Cloudflare dashboard
+      # Only allow team members to access metrics
+      access:
+        required: false  # Set to true if Cloudflare Access is configured
+        teamName: engineering  # Adjust to match your Cloudflare team
+
+  # Grafana dashboards (requires OAuth2 auth)
+  - hostname: grafana.example.com
+    service: http://grafana:3000
+    originRequest:
+      httpHostHeader: "grafana:3000"
+      connectTimeout: 10s
+      tlsTimeout: 10s
+      headers:
+        add:
+          X-Forwarded-Proto: https
+          X-Forwarded-For: auto
+
+  # Jaeger distributed tracing (optional - internal metrics)
+  - hostname: tracing.example.com
+    service: http://jaeger:16686
+    originRequest:
+      httpHostHeader: "jaeger:16686"
+      connectTimeout: 10s
+
+  # Catch-all (return 404 for undefined routes)
+  - service: http_status:404
+
+# ============================================================================
+# Tunnel Connection Settings
+# ============================================================================
+
+# Connection retry settings
+retries: 5
+retry-timeout: 1m
+
+# Keep-alive for connections
+tcp-keepalive: 30s
+
+# Connection timeout
+connection-timeout: 30s
+
+# Max connections per tunnel process (adjust based on expected concurrency)
+max-fetch-size: 4294967296  # 4GB (large enough for all typical payloads)
+
+# ============================================================================
+# Logging Configuration
+# ============================================================================
+
+# Structured logging
+log-directory: /var/log/cloudflared
+
+# Log level: debug, info, warn, error
+# For production, use 'info' or 'warn'
+loglevel: info
+
+# File logging settings
+log-format: json  # Use structured JSON logging for better parsing
+
+# ============================================================================
+# Metrics & Health Checks
+# ============================================================================
+
+# Local health check server (used by docker healthcheck)
+local-service-ip: 127.0.0.1
+local-service-port: 9091
+
+# ============================================================================
+# Advanced Settings
+# ============================================================================
+
+# Disable QUIC protocol if experiencing issues (defaults to enabled)
+# disable-quic: false
+
+# Custom SPKI fingerprints (optional, for additional security)
+# pin-options:
+#   pin-sha256: 'sha256/...'
+
+# ============================================================================
+# Notes for Production Deployment
+# ============================================================================
+#
+# 1. DNS Configuration:
+#    - code-server.example.com → CNAME to code-server-tunnel.cfargotunnel.com
+#    - auth.example.com → CNAME to code-server-tunnel.cfargotunnel.com
+#    - metrics.example.com → CNAME to code-server-tunnel.cfargotunnel.com
+#    - grafana.example.com → CNAME to code-server-tunnel.cfargotunnel.com
+#    - tracing.example.com → CNAME to code-server-tunnel.cfargotunnel.com
+#
+# 2. Cloudflare Firewall Rules:
+#    - Enable DDoS protection
+#    - Configure WAF rules for API endpoints
+#    - Set rate limiting (e.g., 100 req/min for /api/*)
+#    - Enable caching for static assets
+#
+# 3. Tunnel Token:
+#    - Store securely (Vault, 1Password, or secrets manager)
+#    - Rotate every 90 days
+#    - Monitor tunnel logs for unauthorized access attempts
+#
+# 4. Performance Optimization:
+#    - Tunnel selection: Auto (recommended)
+#    - Connection reuse: Enabled (automatic)
+#    - Compression: Enabled (automatic)
+#    - Protocol: HTTP/2 and HTTP/3 (QUIC)
+#
+# 5. Security:
+#    - All traffic encrypted end-to-end (TLS 1.3+)
+#    - No private IP exposure
+#    - Firewall rules applied at Cloudflare edge
+#    - OAuth2 authentication required for IDE access
+#    - Read-only restrictions enforced (P1 #187)
+#
+# 6. Monitoring:
+#    - Tunnel metrics exported to Prometheus
+#    - Alerts configured for:
+#      * Tunnel connection failures
+#      * High latency (>200ms p99)
+#      * High error rates (>1%)
+#      * Certificate expiration warnings

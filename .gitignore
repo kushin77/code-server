@@ -1,4 +1,12 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# REPOSITORY CLEANUP MANIFEST (P3 #426)
+# ═════════════════════════════════════════════════════════════════════════════
+# This .gitignore consolidates cleanup rules to prevent re-commitment of
+# session artifacts, build outputs, and dependency files.
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Terraform
+# ─────────────────────────────────────────────────────────────────────────────
 .terraform/
 .terraform.lock.hcl
 terraform.tfstate
@@ -11,36 +19,133 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Logs
+# ─────────────────────────────────────────────────────────────────────────────
+# Build Outputs & Logs
+# ─────────────────────────────────────────────────────────────────────────────
 *.log
 deployment.log
+dist/
+build/
+.build/
+target/
+out/
 
-# IDEs
+# ─────────────────────────────────────────────────────────────────────────────
+# Package Manager Dependencies (NEVER commit node_modules, vendor, venv, etc.)
+# ─────────────────────────────────────────────────────────────────────────────
+node_modules/
+vendor/
+venv/
+env/
+.venv/
+poetry.lock
+package-lock.json
+yarn.lock
+Gemfile.lock
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Generated Configuration Files (P2 #373)
+# ─────────────────────────────────────────────────────────────────────────────
+# Caddyfile variants are RENDERED from config/caddy/Caddyfile.tpl — Never commit rendered files
+config/caddy/Caddyfile
+config/caddy/Caddyfile.onprem
+config/caddy/Caddyfile.simple
+# Only config/caddy/Caddyfile.tpl is committed (single source of truth)
+
+# Docker Compose dev overrides (local development only, contains local IPs)
+docker-compose.dev.yml
+docker-compose.*.yml  # override files
+# Only docker-compose.yml is committed to production
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IDEs & Editor Artifacts
+# ─────────────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+*.sublime-project
+*.sublime-workspace
 
-# OS
+# ─────────────────────────────────────────────────────────────────────────────
+# OS Artifacts
+# ─────────────────────────────────────────────────────────────────────────────
 Thumbs.db
 .DS_Store
 
-# Local temporary files
+# ─────────────────────────────────────────────────────────────────────────────
+# Local Temporary Files
+# ─────────────────────────────────────────────────────────────────────────────
 *.tmp
 *.bak
 *.backup
+*.swp
 
-# Sensitive data (if accidentally created)
+# ─────────────────────────────────────────────────────────────────────────────
+# Sensitive Data (Secrets, Keys, Credentials)
+# ─────────────────────────────────────────────────────────────────────────────
+# Never commit: PEM/key files, .env files, API keys, tokens, etc.
 *.pem
 *.key
+*.pk8
+*.pfx
+*.p12
 .env
 .env.local
+.env.*.local
+.env.production.local
 
 # User session and secrets (never commit)
 sessions/
 .secrets/
+
+# SOPS/age secrets — plaintext variants blocked
+# Only *.enc.yaml and *.enc.env (encrypted) may be committed
+secrets/*.yaml
+secrets/*.env
+!secrets/*.enc.yaml
+!secrets/*.enc.env
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Session Artifacts & Conversation Artifacts (P3 #426)
+# ─────────────────────────────────────────────────────────────────────────────
+# DO NOT commit conversation summaries, session notes, or ephemeral work files
+# These are for `docs/archive/` or excluded entirely
+
+# Root-level session files (should be in docs/archive)
+/*-SESSION*.md
+/*-COMPLETE*.md
+/*-SUMMARY*.md
+/*-STATUS*.md
+/*-PLAN*.md
+/*-AUDIT*.md
+/CONVERSATION-*.md
+/README-CONVERSATION*.md
+
+# Build/test artifacts from development
+test-results/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Archived/Historical Content (should not be in primary commits)
+# ─────────────────────────────────────────────────────────────────────────────
+# Legitimate use: reference/debugging only
+.archived/*
+archived/*
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Generated Files (only Terraform & scripts should create these)
+# ─────────────────────────────────────────────────────────────────────────────
+terraform.tfvars
+*.generated.tf
+*.generated.yaml
+!secrets/*.yaml.template
+!secrets/*.env.template
+!secrets/README.md
 
 # Docker
 docker-compose.override.yml
@@ -65,3 +170,22 @@ workspace/*
 terraform.tfvars
 data/postgresql/
 data/
+
+# One-time ad-hoc admin scripts (not source-controlled)
+fix_gpu.py
+fix_*.py
+patch_*.py
+
+# Binary packages (do not commit)
+archived/*.deb
+archived/*.rpm
+archived/*.tar.gz
+
+# Archived phase scripts (historical reference, not active IaC)
+archived/scripts/
+
+# Environment-specific configs generated at deploy time
+config/environment/
+
+# Old deployment status docs (phase-specific, historical only)
+docs/archived/

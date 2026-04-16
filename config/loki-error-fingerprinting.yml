@@ -1,0 +1,216 @@
+# Loki Configuration for Error Fingerprinting - Phase 1 Implementation
+# Implements: docs/ERROR-FINGERPRINTING-SCHEMA.md
+# Status: PRODUCTION - Ready for deployment to 192.168.168.31
+# Date: April 16, 2026
+
+auth_enabled: true
+
+ingester:
+  chunk_idle_period: 3m
+  max_chunk_age: 1h
+  max_streams_per_user: 10000
+  chunk_retain_period: 1m
+
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  ingestion_rate_mb: 10
+  ingestion_burst_size_mb: 20
+  max_entries_limit_per_minute: 1000000
+  max_global_streams_per_user: 10000
+  max_streams_matchers_per_metric: 1000
+  max_cache_freshness_per_query: 10m
+  split_queries_by_interval: 24h
+  cardinality_limit: 200000
+
+schema_config:
+  configs:
+    - from: 2026-04-16
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+server:
+  http_listen_port: 3100
+  log_level: info
+  log_format: json
+
+storage_config:
+  filesystem:
+    directory: /loki/chunks
+  index_cache_validity: 5m
+  cache_config:
+    enable_fifocache: true
+    default_validity: 1h
+    cache:
+      memcached_client:
+        addresses: localhost:11211
+        update_interval: 1m
+        stale_ttl: 1m
+
+chunk_store_config:
+  max_look_back_period: 0s
+  chunk_cache_config:
+    enable_fifocache: true
+    default_validity: 1h
+
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 504h
+  poll_interval: 10m
+  creation_grace_period: 10m
+
+# Error Fingerprinting Specific Configuration
+# Pipeline: logs -> JSON parsing -> error fingerprint extraction -> label extraction
+pipeline_stages:
+  - json:
+      expressions:
+        timestamp: timestamp
+        level: level
+        service: service
+        error_type: "error.type"
+        error_message: "error.message"
+        error_file: "error.source.file"
+        error_line: "error.source.line"
+        user_id: "context.user_id"
+        operation: "context.operation"
+  
+  - replace:
+      expression: "error_message"
+      replace: "(?P<uuid>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
+      action: replace
+      with: "<UUID>"
+  
+  - replace:
+      expression: "error_message"
+      replace: "(?P<timestamp>\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2})"
+      action: replace
+      with: "<TIMESTAMP>"
+  
+  - replace:
+      expression: "error_message"
+      replace: "(?P<ip>\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})"
+      action: replace
+      with: "<IP>"
+  
+  - replace:
+      expression: "error_message"
+      replace: "(?P<port>:\\d{4,5})"
+      action: replace
+      with: ":<PORT>"
+  
+  - replace:
+      expression: "user_id"
+      replace: ".+"
+      action: replace
+      with: "<USER_ID>"
+  
+  - labels:
+      fingerprint:
+        - error_type
+        - error_message
+        - error_file
+        - error_line
+        - service
+      service:
+        - service
+      error_type:
+        - error_type
+      operation:
+        - operation
+
+# Promtail Scrape Configuration
+scrape_configs:
+  - job_name: code-server
+    pipeline_stages:
+      - json:
+          expressions:
+            output: output
+            timestamp: timestamp
+      - regex:
+          expression: "(?P<error>ERROR|FATAL|WARN)"
+      - labels:
+          job: code-server
+          level: error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: code-server
+          __path__: /code-server/logs/*.log
+
+  - job_name: postgresql
+    pipeline_stages:
+      - json:
+          expressions:
+            message: message
+            severity: severity
+      - regex:
+          expression: "ERROR|FATAL"
+      - labels:
+          job: postgresql
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: postgresql
+          __path__: /postgresql/logs/*.log
+
+  - job_name: oauth2-proxy
+    pipeline_stages:
+      - json:
+          expressions:
+            msg: msg
+            level: level
+      - regex:
+          expression: "error|ERROR"
+      - labels:
+          job: oauth2-proxy
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: oauth2-proxy
+          __path__: /oauth2-proxy/logs/*.log
+
+---
+# Docker Compose Integration
+# Add to services section:
+# loki:
+#   image: grafana/loki:2.9.4
+#   container_name: loki
+#   ports:
+#     - "3100:3100"
+#   volumes:
+#     - ./config/loki-error-fingerprinting.yml:/etc/loki/local-config.yml
+#     - loki-data:/loki
+#   environment:
+#     - LOKI_RETENTION_PERIOD=504h
+#   command: -config.file=/etc/loki/local-config.yml
+#   networks:
+#     - internal
+#   healthcheck:
+#     test: ["CMD", "curl", "-f", "http://localhost:3100/ready"]
+#     interval: 30s
+#     timeout: 10s
+#     retries: 3
+#     start_period: 40s
+#
+# promtail:
+#   image: grafana/promtail:2.9.4
+#   container_name: promtail
+#   volumes:
+#     - /var/log:/var/log
+#     - /code-server/logs:/code-server/logs
+#     - /postgresql/logs:/postgresql/logs
+#     - /oauth2-proxy/logs:/oauth2-proxy/logs
+#     - ./config/promtail-config.yml:/etc/promtail/config.yml
+#   command: -config.file=/etc/promtail/config.yml
+#   networks:
+#     - internal
+#   depends_on:
+#     - loki

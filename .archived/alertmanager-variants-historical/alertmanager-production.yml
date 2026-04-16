@@ -1,0 +1,130 @@
+# alertmanager-production.yml — Enterprise AlertManager Configuration
+# Multi-channel alert routing, deduplication, grouping
+# 
+# IMPORTS: Shared route structure and inhibit rules from alertmanager-base.yml
+# This file extends the base with production-specific receivers and Vault integration
+# 
+# ⚠️ DEPRECATED: Consolidated into alertmanager.tpl (Terraform template)
+# See: alertmanager.tpl for the unified SSOT version
+# Archive Date: 2026-04-18
+
+global:
+  resolve_timeout: 5m
+  slack_api_url: ${VAULT_SLACK_WEBHOOK_URL}
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# SHARED ROUTING from alertmanager-base.yml
+# Base structure provides:
+# - Severity-based routing (critical, high, medium, low)
+# - Group strategy: alertname + cluster + service
+# - Inhibit rules to suppress lower severity when higher is firing
+# @see alertmanager-base.yml for complete route structure
+
+route:
+  receiver: default-team
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 4h
+  
+  # Route rules
+  routes:
+    # Critical alerts → PagerDuty immediately
+    - match:
+        severity: critical
+      receiver: pagerduty-critical
+      group_wait: 0s
+      group_interval: 5m
+      repeat_interval: 1h
+      continue: false
+
+    # High severity → Slack + on-call
+    - match:
+        severity: high
+      receiver: slack-critical
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      continue: false
+
+    # Medium severity → Slack only
+    - match:
+        severity: medium
+      receiver: slack-warnings
+      group_wait: 5m
+      group_interval: 10m
+      repeat_interval: 12h
+      continue: false
+
+    # Low severity → Email daily digest
+    - match:
+        severity: low
+      receiver: email-digest
+      group_wait: 1h
+      group_interval: 1h
+      repeat_interval: 24h
+      continue: false
+
+# Receivers configuration (production-specific)
+receivers:
+  # Default team (everyone)
+  - name: default-team
+    slack_configs:
+      - channel: '#alerts-general'
+        title: 'Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        send_resolved: true
+
+  # PagerDuty for critical incidents
+  - name: pagerduty-critical
+    slack_configs:
+      - channel: '#alerts-critical'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        color: 'danger'
+        send_resolved: true
+    pagerduty_configs:
+      - service_key: ${VAULT_PAGERDUTY_KEY}
+        description: '{{ .GroupLabels.alertname }} ({{ .Status | toUpper }})'
+        details:
+          severity: 'critical'
+          timestamp: '{{ now }}'
+
+  # Slack for high-priority incidents
+  - name: slack-critical
+    slack_configs:
+      - channel: '#alerts-critical'
+        title: '⚠️ HIGH: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        color: 'warning'
+        send_resolved: true
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: 'https://grafana.ide.kushnir.cloud/d/{{ .GroupLabels.dashboard }}'
+
+  # Slack for medium-priority alerts
+  - name: slack-warnings
+    slack_configs:
+      - channel: '#alerts-warnings'
+        title: '⚡️ MEDIUM: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        color: 'good'
+        send_resolved: true
+
+  # Email for low-priority daily digest
+  - name: email-digest
+    email_configs:
+      - to: '{{ template "email.to" }}'
+        from: 'alerts@ide.kushnir.cloud'
+        smarthost: 'smtp.ide.kushnir.cloud:587'
+        auth_username: 'alerts@ide.kushnir.cloud'
+        auth_password: ${VAULT_SMTP_PASSWORD}
+        headers:
+          Subject: 'Daily Alert Digest - {{ .GroupLabels.cluster }}'
+        html: |
+          <h2>Daily Alert Summary</h2>
+          {{ range .Alerts }}
+          <p><strong>{{ .Labels.alertname }}</strong>: {{ .Annotations.summary }}</p>
+          {{ end }}

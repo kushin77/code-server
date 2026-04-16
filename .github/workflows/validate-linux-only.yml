@@ -1,0 +1,159 @@
+name: Validate Linux-Only (No Windows Content)
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, phase-7-deployment]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-linux-only:
+    name: Validate Linux-Only (No Windows Paths/Commands)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for Windows paths in source files
+        run: |
+          echo "=== Checking for Windows paths (C:\\, APPDATA, etc.) ==="
+          
+          # Scan active source files (exclude archived, deprecated, node_modules, docs)
+          WINDOWS_PATHS=$(grep -rn \
+            --include="*.sh" \
+            --include="*.tf" \
+            --include="*.yml" \
+            --include="*.yaml" \
+            --include="*.json" \
+            -E "(C:\\\\|APPDATA|Program Files|\\\\Users\\\\|SystemRoot)" \
+            --exclude-dir=".git" \
+            --exclude-dir="node_modules" \
+            --exclude-dir="deprecated" \
+            --exclude-dir="archived" \
+            . || true)
+          
+          if [ -n "$WINDOWS_PATHS" ]; then
+            echo "❌ FAIL: Windows paths found in active source files:"
+            echo "$WINDOWS_PATHS"
+            exit 1
+          fi
+          echo "✅ No Windows paths in active source files"
+
+      - name: Check for PowerShell references in active code
+        run: |
+          echo "=== Checking for .ps1 references outside deprecated/ ==="
+          
+          PS1_REFS=$(grep -rn \
+            --include="*.sh" \
+            --include="*.yml" \
+            --include="*.yaml" \
+            --include="*.tf" \
+            -E "\.ps1\b|PowerShell|redeploy\.ps1" \
+            --exclude-dir=".git" \
+            --exclude-dir="node_modules" \
+            --exclude-dir="deprecated" \
+            --exclude-dir="archived" \
+            . || true)
+          
+          if [ -n "$PS1_REFS" ]; then
+            echo "❌ FAIL: PowerShell references in active code:"
+            echo "$PS1_REFS"
+            echo "Move PS1 scripts to deprecated/windows/ and remove references"
+            exit 1
+          fi
+          echo "✅ No PowerShell references in active code"
+
+      - name: Check docker-compose.yml for Windows-specific volume syntax
+        run: |
+          echo "=== Checking docker-compose.yml for Windows volume paths ==="
+          
+          if grep -qE "(C:\\\\|APPDATA|\\\\Users\\\\)" docker-compose.yml 2>/dev/null; then
+            echo "❌ FAIL: Windows-specific volume paths in docker-compose.yml"
+            grep -nE "(C:\\\\|APPDATA|\\\\Users\\\\)" docker-compose.yml
+            exit 1
+          fi
+          echo "✅ docker-compose.yml has no Windows volume paths"
+
+      - name: Check GitHub Actions workflows for Windows runners
+        run: |
+          echo "=== Checking CI workflows for Windows runners ==="
+          
+          WINDOWS_RUNNERS=$(grep -rn \
+            --include="*.yml" \
+            --include="*.yaml" \
+            -E "windows-latest|windows-2022|self-hosted.*windows" \
+            .github/workflows/ || true)
+          
+          if [ -n "$WINDOWS_RUNNERS" ]; then
+            echo "❌ FAIL: Windows runners found in CI workflows:"
+            echo "$WINDOWS_RUNNERS"
+            exit 1
+          fi
+          echo "✅ No Windows runners in CI workflows"
+
+      - name: Check Terraform for Windows-specific syntax
+        run: |
+          echo "=== Checking Terraform for Windows-specific syntax ==="
+          
+          TF_WINDOWS=$(grep -rn \
+            --include="*.tf" \
+            -E '(\$\{env:[A-Z]+\}|[Cc]:\\\\|Get-Command|Start-Process)' \
+            --exclude-dir=".git" \
+            --exclude-dir="deprecated" \
+            . || true)
+          
+          if [ -n "$TF_WINDOWS" ]; then
+            echo "❌ FAIL: Windows-specific syntax in Terraform files:"
+            echo "$TF_WINDOWS"
+            exit 1
+          fi
+          echo "✅ No Windows-specific syntax in Terraform"
+
+      - name: Verify no new .ps1 files in scripts/
+        run: |
+          echo "=== Checking scripts/ for .ps1 files ==="
+          
+          PS1_IN_SCRIPTS=$(find scripts/ -name "*.ps1" 2>/dev/null || true)
+          
+          if [ -n "$PS1_IN_SCRIPTS" ]; then
+            echo "❌ FAIL: .ps1 files found in scripts/:"
+            echo "$PS1_IN_SCRIPTS"
+            echo "Remove PS1 files from scripts/. Use bash (.sh) only."
+            exit 1
+          fi
+          echo "✅ No .ps1 files in scripts/ directory"
+
+      - name: Check documentation files for Linux paths (warning only)
+        run: |
+          echo "=== Checking docs for Windows path references (informational) ==="
+          
+          # This is a warning, not a failure - docs may reference paths for historical/comparison reasons
+          DOC_WINDOWS=$(grep -rn \
+            --include="*.md" \
+            -E "C:\\\\code-server|C:\\\\Users|APPDATA\\\\Roaming" \
+            --exclude-dir=".git" \
+            --exclude-dir="deprecated" \
+            --exclude-dir="archived" \
+            . 2>/dev/null || true)
+          
+          if [ -n "$DOC_WINDOWS" ]; then
+            echo "⚠️  WARNING: Windows paths found in active documentation (not a failure):"
+            echo "$DOC_WINDOWS"
+            echo "Consider replacing C:\\ paths with Linux equivalents"
+          else
+            echo "✅ No Windows paths in active documentation"
+          fi
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "══════════════════════════════════════════════════"
+          echo "  ✅ LINUX-ONLY VALIDATION PASSED"
+          echo "══════════════════════════════════════════════════"
+          echo ""
+          echo "Production platform: Ubuntu 22.04 (${{ secrets.PRIMARY_HOST_IP }})"
+          echo "Windows support: NONE (by design)"
+          echo "See SUPPORTED-PLATFORMS.md for details"

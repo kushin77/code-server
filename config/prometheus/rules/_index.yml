@@ -1,0 +1,28 @@
+# Prometheus Alert Rules Index
+# Source of Truth (SSOT) for all alert rules
+# Replaces: alert-rules.yml, alert-rules-*.yml variants
+# Usage: Include in prometheus.yml as:
+#   rule_files:
+#     - /etc/prometheus/rules/*.yml
+
+# This file serves as documentation only; Prometheus loads individual rule files via glob
+# Rule files organized by domain:
+# - availability.yml    : Service availability, health checks, uptime SLOs
+# - performance.yml     : Latency, throughput, request rates, resource utilization
+# - slo.yml             : SLO/SLI multi-window burn rate alerts
+# - security.yml        : Falco security events, auth failures, anomaly detection
+# - database.yml        : PostgreSQL-specific alerts (replication, connections, WAL)
+# - backup.yml          : Backup age, WAL archival lag, restore testing
+# - infrastructure.yml  : Node-level metrics (disk, memory, CPU, network)
+
+# Load order (non-deterministic in Prometheus, but documented here):
+# 1. availability.yml   (critical uptime SLAs)
+# 2. performance.yml    (service quality)
+# 3. slo.yml            (burn rate - informational)
+# 4. security.yml       (security events - P0)
+# 5. database.yml       (data layer - P1)
+# 6. backup.yml         (DR/recovery - P1)
+# 7. infrastructure.yml (infrastructure - P2/P3)
+
+# All files validated with: promtool check rules <file>
+# CI/CD: Runs on every PR in .github/workflows/ci.yml

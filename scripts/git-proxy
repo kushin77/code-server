@@ -1,0 +1,292 @@
+#!/bin/bash
+# ════════════════════════════════════════════════════════════════════════════
+# scripts/git-proxy
+# Intercept and control git operations for access logging and policy enforcement
+# Issue #184: Git Proxy Implementation
+# ════════════════════════════════════════════════════════════════════════════
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/config.sh" 2>/dev/null || {
+    # Fallback if _common/config.sh doesn't exist
+    LOG_DIR="/var/log/code-server"
+    GIT_PROXY_LOG="${LOG_DIR}/git-proxy.log"
+    GIT_AUDIT_DB="${HOME}/.code-server-developers"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIGURATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+GIT_PROXY_LOG="${GIT_PROXY_LOG:-/var/log/code-server/git-proxy.log}"
+GIT_AUDIT_DB="${GIT_AUDIT_DB:-${HOME}/.code-server-developers}"
+GIT_PROXY_PORT="${GIT_PROXY_PORT:-9418}"
+ALLOWED_DOMAINS="${ALLOWED_DOMAINS:-github.com gitlab.com bitbucket.org gitea.local}"
+MAX_REPO_SIZE="${MAX_REPO_SIZE:-1073741824}"  # 1 GB
+RATE_LIMIT_ENABLED="${RATE_LIMIT_ENABLED:-true}"
+RATE_LIMIT_BURST="${RATE_LIMIT_BURST:-10}"
+RATE_LIMIT_WINDOW="${RATE_LIMIT_WINDOW:-60}"  # seconds
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LOGGING & AUDIT
+# ─────────────────────────────────────────────────────────────────────────────
+
+log() {
+    local level="$1"
+    shift
+    local message="$@"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local user="${SUDO_USER:-${USER:-unknown}}"
+    echo "[$timestamp] [$level] [$user] $message" >> "$GIT_PROXY_LOG"
+}
+
+audit_git_op() {
+    local operation="$1"      # push, pull, clone, fetch
+    local repo="$2"           # repo URL
+    local domain="$3"         # github.com, gitlab.com, etc.
+    local status="$4"         # allowed, denied, rate-limited
+    local reason="${5:-}"     # reason if denied
+    
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local user="${SUDO_USER:-${USER:-unknown}}"
+    
+    # Log to audit DB
+    echo "$timestamp,$user,$operation,$repo,$domain,$status,$reason" >> "${GIT_AUDIT_DB}/git-proxy-audit.csv"
+    log "AUDIT" "$operation to $repo ($domain) - $status${reason:+ - $reason}"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# POLICY ENFORCEMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+check_developer_status() {
+    local user="${1:-${SUDO_USER:-${USER:-unknown}}}"
+    
+    # Check if developer has active access
+    if [[ ! -f "${GIT_AUDIT_DB}/developers.csv" ]]; then
+        log "WARN" "Developers database not found"
+        return 1
+    fi
+    
+    # Look up user in developers database
+    if grep -q "^${user}," "${GIT_AUDIT_DB}/developers.csv" 2>/dev/null; then
+        local status=$(grep "^${user}," "${GIT_AUDIT_DB}/developers.csv" | awk -F',' '{print $6}' | head -1)
+        if [[ "$status" == "active" ]]; then
+            return 0  # developer is active
+        fi
+    fi
+    
+    return 1  # developer not found or not active
+}
+
+validate_domain() {
+    local domain="$1"
+    
+    for allowed_domain in $ALLOWED_DOMAINS; do
+        if [[ "$domain" == "$allowed_domain" ]] || [[ "$domain" == *".$allowed_domain" ]]; then
+            return 0  # domain is allowed
+        fi
+    done
+    
+    return 1  # domain not allowed
+}
+
+check_rate_limit() {
+    local user="${1:-${SUDO_USER:-${USER:-unknown}}}"
+    local operation="$2"
+    
+    if [[ "$RATE_LIMIT_ENABLED" != "true" ]]; then
+        return 0  # rate limiting disabled
+    fi
+    
+    local cache_file="/tmp/git-proxy-ratelimit-${user}-${operation}.cache"
+    local current_time=$(date +%s)
+    local window_start=$((current_time - RATE_LIMIT_WINDOW))
+    
+    # Initialize cache if not exists
+    if [[ ! -f "$cache_file" ]]; then
+        echo "$current_time:1" > "$cache_file"
+        return 0
+    fi
+    
+    # Read cache
+    local cached_data=$(cat "$cache_file")
+    local cached_time=$(echo "$cached_data" | cut -d':' -f1)
+    local cached_count=$(echo "$cached_data" | cut -d':' -f2)
+    
+    if (( cached_time < window_start )); then
+        # Window expired, reset counter
+        echo "$current_time:1" > "$cache_file"
+        return 0
+    fi
+    
+    if (( cached_count >= RATE_LIMIT_BURST )); then
+        # Rate limit exceeded
+        return 1
+    fi
+    
+    # Increment counter
+    ((cached_count++))
+    echo "$cached_time:$cached_count" > "$cache_file"
+    return 0
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GIT OPERATION INTERCEPTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+handle_push() {
+    local repo_url="$1"
+    local user="${SUDO_USER:-${USER:-unknown}}"
+    
+    # Extract domain from URL
+    local domain=$(echo "$repo_url" | sed 's|.*@\([^:/]*\).*|\1|' | sed 's|.*://\([^/]*\).*|\1|')
+    
+    # Check developer access
+    if ! check_developer_status "$user"; then
+        audit_git_op "push" "$repo_url" "$domain" "denied" "No active developer access"
+        echo "ERROR: Access denied. Your developer access has expired or been revoked." >&2
+        return 1
+    fi
+    
+    # Validate domain
+    if ! validate_domain "$domain"; then
+        audit_git_op "push" "$repo_url" "$domain" "denied" "Domain not in allowed list"
+        echo "ERROR: Push to $domain is not allowed by policy." >&2
+        return 1
+    fi
+    
+    # Check rate limits
+    if ! check_rate_limit "$user" "push"; then
+        audit_git_op "push" "$repo_url" "$domain" "rate-limited" "Too many pushes in window"
+        echo "ERROR: Rate limit exceeded. Please wait before pushing again." >&2
+        return 1
+    fi
+    
+    audit_git_op "push" "$repo_url" "$domain" "allowed"
+    log "INFO" "Push from $user to $repo_url ALLOWED"
+    return 0
+}
+
+handle_pull() {
+    local repo_url="$1"
+    local user="${SUDO_USER:-${USER:-unknown}}"
+    
+    # Extract domain from URL
+    local domain=$(echo "$repo_url" | sed 's|.*@\([^:/]*\).*|\1|' | sed 's|.*://\([^/]*\).*|\1|')
+    
+    # Check developer access
+    if ! check_developer_status "$user"; then
+        audit_git_op "pull" "$repo_url" "$domain" "denied" "No active developer access"
+        echo "ERROR: Access denied. Your developer access has expired or been revoked." >&2
+        return 1
+    fi
+    
+    # Validate domain
+    if ! validate_domain "$domain"; then
+        audit_git_op "pull" "$repo_url" "$domain" "denied" "Domain not in allowed list"
+        echo "ERROR: Pull from $domain is not allowed by policy." >&2
+        return 1
+    fi
+    
+    # Rate limiting for pulls (more lenient than pushes)
+    if ! check_rate_limit "$user" "pull"; then
+        audit_git_op "pull" "$repo_url" "$domain" "rate-limited" "Too many pulls in window"
+        # Log but allow (not as strict as push)
+    fi
+    
+    audit_git_op "pull" "$repo_url" "$domain" "allowed"
+    log "INFO" "Pull from $user to $repo_url ALLOWED"
+    return 0
+}
+
+handle_clone() {
+    local repo_url="$1"
+    local user="${SUDO_USER:-${USER:-unknown}}"
+    
+    # Same as pull - reads don't require push access
+    handle_pull "$repo_url"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN ENTRY POINT
+# ─────────────────────────────────────────────────────────────────────────────
+
+main() {
+    # Parse git command
+    local git_cmd="$1"
+    local repo_url="${2:-}"
+    
+    # Ensure audit db exists
+    mkdir -p "$GIT_AUDIT_DB"
+    touch "${GIT_AUDIT_DB}/git-proxy-audit.csv"
+    
+    # Ensure log directory exists
+    mkdir -p "$(dirname "$GIT_PROXY_LOG")"
+    
+    log "DEBUG" "Git proxy intercepted: $git_cmd $repo_url"
+    
+    case "$git_cmd" in
+        push)
+            handle_push "$repo_url"
+            ;;
+        pull|fetch)
+            handle_pull "$repo_url"
+            ;;
+        clone)
+            handle_clone "$repo_url"
+            ;;
+        *)
+            log "WARN" "Unknown git operation: $git_cmd"
+            return 0
+            ;;
+    esac
+}
+
+# Run main if arguments provided
+if [[ $# -gt 0 ]]; then
+    main "$@"
+else
+    cat << EOF
+Git Proxy - Issue #184 Implementation
+
+Usage:
+  git-proxy COMMAND REPO_URL
+
+Commands:
+  push    - Log and authorize git push operations
+  pull    - Log and authorize git pull operations
+  clone   - Log and authorize git clone operations
+  fetch   - Log and authorize git fetch operations
+
+Examples:
+  git-proxy push git@github.com:kushin77/code-server.git
+  git-proxy pull git@github.com:kushin77/code-server.git
+  git-proxy clone https://github.com/kushin77/code-server.git
+
+Configuration:
+  ALLOWED_DOMAINS: $ALLOWED_DOMAINS
+  RATE_LIMIT_ENABLED: $RATE_LIMIT_ENABLED
+  RATE_LIMIT_BURST: $RATE_LIMIT_BURST (operations per $RATE_LIMIT_WINDOW seconds)
+  MAX_REPO_SIZE: $MAX_REPO_SIZE bytes
+
+Logs:
+  Audit log: ${GIT_AUDIT_DB}/git-proxy-audit.csv
+  Proxy log: $GIT_PROXY_LOG
+
+Status:
+  ✅ All git operations logged to audit database
+  ✅ Rate limiting enforced (push more strict than pull)
+  ✅ Domain whitelist enforced
+  ✅ Developer access checks enforced
+EOF
+    exit 0
+fi

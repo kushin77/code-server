@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kushnir.cloud - Enterprise Portal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 50px;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .header p {
+      font-size: 1.1em;
+      opacity: 0.9;
+    }
+
+    .user-info {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      font-size: 0.95em;
+      opacity: 0.8;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .service-card {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+
+    .service-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    }
+
+    .service-icon {
+      font-size: 2.5em;
+      margin-bottom: 15px;
+    }
+
+    .service-name {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .service-desc {
+      font-size: 0.9em;
+      color: #666;
+      margin-bottom: 15px;
+      flex-grow: 1;
+    }
+
+    .service-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+
+    .status-healthy {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-loading {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-unhealthy {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .footer {
+      text-align: center;
+      color: white;
+      margin-top: 30px;
+      opacity: 0.7;
+    }
+
+    .logout-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background 0.3s;
+      margin-bottom: 15px;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 1.8em;
+      }
+      
+      .services-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 kushnir.cloud</h1>
+      <p>Enterprise Development Platform</p>
+    </div>
+
+    <div class="user-info" id="userInfo">
+      Loading authentication...
+    </div>
+
+    <div class="services-grid" id="servicesGrid">
+      <!-- Services populated by JavaScript -->
+    </div>
+
+    <div class="footer">
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+      <p>All services require authentication via Google SSO</p>
+    </div>
+  </div>
+
+  <script>
+    // Service registry
+    const APEX_DOMAIN = 'kushnir.cloud';
+    
+    const services = [
+      {
+        name: 'IDE',
+        icon: '💻',
+        desc: 'Code Server - VS Code in your browser',
+        url: `https://ide.${APEX_DOMAIN}`,
+        healthUrl: `https://ide.${APEX_DOMAIN}/healthz`
+      },
+      {
+        name: 'Dashboards',
+        icon: '📊',
+        desc: 'Grafana - Observability dashboards',
+        url: `https://grafana.${APEX_DOMAIN}`,
+        healthUrl: `https://grafana.${APEX_DOMAIN}/api/health`
+      },
+      {
+        name: 'Metrics',
+        icon: '📈',
+        desc: 'Prometheus - Time-series metrics',
+        url: `https://metrics.${APEX_DOMAIN}`,
+        healthUrl: `https://metrics.${APEX_DOMAIN}/-/healthy`
+      },
+      {
+        name: 'Alerts',
+        icon: '🚨',
+        desc: 'AlertManager - Alert routing',
+        url: `https://alerts.${APEX_DOMAIN}`,
+        healthUrl: `https://alerts.${APEX_DOMAIN}/-/healthy`
+      },
+      {
+        name: 'Tracing',
+        icon: '🔍',
+        desc: 'Jaeger - Distributed tracing',
+        url: `https://tracing.${APEX_DOMAIN}`,
+        healthUrl: `https://tracing.${APEX_DOMAIN}/api/traces`
+      }
+    ];
+
+    // Load user info from oauth2-proxy
+    async function loadUserInfo() {
+      try {
+        const response = await fetch('/oauth2/userinfo');
+        if (response.ok) {
+          const user = await response.json();
+          document.getElementById('userInfo').innerHTML = 
+            `<span>Welcome, <strong>${user.email}</strong></span>`;
+        } else {
+          document.getElementById('userInfo').innerHTML = 'Authenticated';
+        }
+      } catch (e) {
+        document.getElementById('userInfo').innerHTML = 'Authenticated User';
+      }
+    }
+
+    // Check service health
+    async function checkHealth(service) {
+      try {
+        const response = await fetch(service.healthUrl);
+        return response.ok ? 'healthy' : 'unhealthy';
+      } catch (e) {
+        return 'unhealthy';
+      }
+    }
+
+    // Render service cards
+    async function renderServices() {
+      const grid = document.getElementById('servicesGrid');
+      
+      for (const service of services) {
+        const card = document.createElement('a');
+        card.href = service.url;
+        card.className = 'service-card';
+        
+        // Initial render with loading state
+        card.innerHTML = `
+          <div class="service-icon">${service.icon}</div>
+          <div class="service-name">${service.name}</div>
+          <div class="service-desc">${service.desc}</div>
+          <div class="service-status status-loading">⏳ Checking...</div>
+        `;
+        
+        grid.appendChild(card);
+
+        // Check health asynchronously
+        const status = await checkHealth(service);
+        const statusClass = status === 'healthy' ? 'status-healthy' : 'status-unhealthy';
+        const statusText = status === 'healthy' ? '✓ Online' : '⚠ Offline';
+        
+        const statusDiv = card.querySelector('.service-status');
+        statusDiv.className = `service-status ${statusClass}`;
+        statusDiv.textContent = statusText;
+      }
+    }
+
+    // Logout handler
+    function logout() {
+      window.location.href = `https://ide.${APEX_DOMAIN}/oauth2/sign_out?rd=https://${APEX_DOMAIN}`;
+    }
+
+    // Initialize page
+    window.addEventListener('load', () => {
+      loadUserInfo();
+      renderServices();
+    });
+  </script>
+</body>
+</html>

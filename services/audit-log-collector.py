@@ -265,42 +265,44 @@ class AuditLogCollector:
     ) -> List[Dict[str, Any]]:
         """Query audit events from database"""
         
-        conn = sqlite3.connect(self.db_file)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        query = "SELECT * FROM audit_events WHERE 1=1"
-        params = []
-        
-        if developer_id:
-            query += " AND developer_id = ?"
-            params.append(developer_id)
-        
-        if event_type:
-            query += " AND event_type = ?"
-            params.append(event_type)
-        
-        if start_time:
-            query += " AND timestamp >= ?"
-            params.append(start_time)
-        
-        if end_time:
-            query += " AND timestamp <= ?"
-            params.append(end_time)
-        
-        if status:
-            query += " AND status = ?"
-            params.append(status)
-        
-        query += " ORDER BY timestamp DESC LIMIT ?"
-        params.append(limit)
-        
-        cursor.execute(query, params)
-        
-        results = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        
-        return results
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                query = "SELECT * FROM audit_events WHERE 1=1"
+                params = []
+                
+                if developer_id:
+                    query += " AND developer_id = ?"
+                    params.append(developer_id)
+                
+                if event_type:
+                    query += " AND event_type = ?"
+                    params.append(event_type)
+                
+                if start_time:
+                    query += " AND timestamp >= ?"
+                    params.append(start_time)
+                
+                if end_time:
+                    query += " AND timestamp <= ?"
+                    params.append(end_time)
+                
+                if status:
+                    query += " AND status = ?"
+                    params.append(status)
+                
+                query += " ORDER BY timestamp DESC LIMIT ?"
+                params.append(limit)
+                
+                cursor.execute(query, params)
+                results = [dict(row) for row in cursor.fetchall()]
+                
+            return results
+        except sqlite3.Error as e:
+            logger.error(f"Database error querying audit events: {e}")
+            return []
     
     def get_compliance_summary(
         self,
@@ -309,44 +311,50 @@ class AuditLogCollector:
     ) -> Dict[str, Any]:
         """Generate compliance summary for a developer"""
         
-        conn = sqlite3.connect(self.db_file)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # Calculate start time
-        start_timestamp = datetime.now()
-        start_timestamp = start_timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_time = start_timestamp.isoformat()
-        
-        # Get events
-        events = self.query_events(
-            developer_id=developer_id,
-            start_time=start_time,
-            limit=10000
-        )
-        
-        # Calculate statistics
-        total_events = len(events)
-        blocked_events = sum(1 for e in events if e['status'] == 'blocked')
-        violations = sum(1 for e in events if e['status'] == 'denied')
-        
-        event_types = {}
-        for event in events:
-            event_type = event['event_type']
-            event_types[event_type] = event_types.get(event_type, 0) + 1
-        
-        conn.close()
-        
-        return {
-            'developer_id': developer_id,
-            'period_days': days,
-            'total_events': total_events,
-            'blocked_events': blocked_events,
-            'violations': violations,
-            'event_types': event_types,
-            'compliance_score': 100 - (violations * 5),  # 5 points per violation
-            'status': 'compliant' if violations == 0 else 'violations_detected'
-        }
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                conn.row_factory = sqlite3.Row
+                
+                # Calculate start time
+                start_timestamp = datetime.now()
+                start_timestamp = start_timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
+                start_time = start_timestamp.isoformat()
+                
+                # Get events
+                events = self.query_events(
+                    developer_id=developer_id,
+                    start_time=start_time,
+                    limit=10000
+                )
+                
+                # Calculate statistics
+                total_events = len(events)
+                blocked_events = sum(1 for e in events if e['status'] == 'blocked')
+                violations = sum(1 for e in events if e['status'] == 'denied')
+                
+                event_types = {}
+                for event in events:
+                    event_type = event['event_type']
+                    event_types[event_type] = event_types.get(event_type, 0) + 1
+                
+                return {
+                    'developer_id': developer_id,
+                    'period_days': days,
+                    'total_events': total_events,
+                    'blocked_events': blocked_events,
+                    'violations': violations,
+                    'event_types': event_types,
+                    'compliance_score': 100 - (violations * 5),  # 5 points per violation
+                    'status': 'compliant' if violations == 0 else 'violations_detected'
+                }
+        except sqlite3.Error as e:
+            logger.error(f"Database error in compliance summary: {e}")
+            return {
+                'developer_id': developer_id,
+                'period_days': days,
+                'error': str(e),
+                'status': 'error'
+            }
 
 ###############################################################################
 # GLOBAL COLLECTOR INSTANCE

@@ -1,0 +1,276 @@
+# GitHub Actions Workflow: GoDaddy Registrar Security Monitoring
+# File: .github/workflows/godaddy-registrar-monitor.yml
+# Purpose: Monitor GoDaddy domain registration settings for security compliance
+# Owner: Platform Engineering
+# References: Issue #347 - GoDaddy Registrar Hardening
+# Schedule: Daily + on-demand
+
+name: GoDaddy Registrar Monitor
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Daily at 9 AM UTC
+  workflow_dispatch:
+    inputs:
+      alert_severity:
+        description: 'Alert severity for findings'
+        required: false
+        default: 'warning'
+
+permissions:
+  contents: read
+  security-events: write  # For GitHub Security tab
+
+env:
+  DOMAIN: "kushin.cloud"
+  NAMESERVER_1: "tara.ns.cloudflare.com"
+  NAMESERVER_2: "vince.ns.cloudflare.com"
+
+jobs:
+  registrar-monitor:
+    name: Check GoDaddy Registrar Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install DNS tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils whois
+
+      - name: Check Nameserver Delegation
+        id: ns_check
+        continue-on-error: true
+        run: |
+          echo "Checking nameserver delegation for $DOMAIN..."
+          
+          NS_RECORDS=$(dig +short NS $DOMAIN @8.8.8.8 | sort)
+          EXPECTED_NS="${NAMESERVER_1}
+          ${NAMESERVER_2}"
+          
+          echo "Current nameservers:"
+          echo "$NS_RECORDS"
+          echo ""
+          
+          if echo "$NS_RECORDS" | grep -q "cloudflare.com"; then
+            echo "ns_status=healthy" >> $GITHUB_OUTPUT
+            echo "✓ Nameservers correctly delegated to Cloudflare"
+          else
+            echo "ns_status=unhealthy" >> $GITHUB_OUTPUT
+            echo "✗ CRITICAL: Nameservers NOT pointing to Cloudflare!"
+            echo "  Expected: $EXPECTED_NS"
+            echo "  Actual:   $NS_RECORDS"
+            exit 1
+          fi
+
+      - name: Check Domain Lock Status
+        id: domain_lock_check
+        continue-on-error: true
+        run: |
+          echo "Checking domain lock status for $DOMAIN..."
+          
+          WHOIS_OUTPUT=$(whois $DOMAIN 2>/dev/null || echo "whois failed")
+          
+          if echo "$WHOIS_OUTPUT" | grep -qi "clientTransferProhibited"; then
+            echo "lock_status=enabled" >> $GITHUB_OUTPUT
+            echo "✓ Domain lock is ENABLED"
+          elif echo "$WHOIS_OUTPUT" | grep -qi "Status.*ok"; then
+            # Some registrars use different status formats
+            echo "lock_status=unknown" >> $GITHUB_OUTPUT
+            echo "⚠ Domain lock status unclear (domain status: ok)"
+            echo "  Verify manually at GoDaddy console"
+          else
+            echo "lock_status=disabled" >> $GITHUB_OUTPUT
+            echo "✗ WARNING: Domain lock may be DISABLED"
+            echo "  Enable in GoDaddy console: My Domains → kushin.cloud → Settings → Domain Lock"
+            exit 1
+          fi
+
+      - name: Check Nameserver Consistency
+        id: ns_consistency_check
+        continue-on-error: true
+        run: |
+          echo "Verifying nameserver consistency across resolvers..."
+          
+          # Check with multiple DNS resolvers
+          NS_GOOGLE=$(dig +short NS $DOMAIN @8.8.8.8 | sort)
+          NS_CLOUDFLARE=$(dig +short NS $DOMAIN @1.1.1.1 | sort)
+          NS_QUAD9=$(dig +short NS $DOMAIN @9.9.9.9 | sort)
+          
+          if [ "$NS_GOOGLE" == "$NS_CLOUDFLARE" ] && [ "$NS_CLOUDFLARE" == "$NS_QUAD9" ]; then
+            echo "consistency=consistent" >> $GITHUB_OUTPUT
+            echo "✓ Nameservers are consistent across all resolvers"
+          else
+            echo "consistency=inconsistent" >> $GITHUB_OUTPUT
+            echo "✗ Nameservers INCONSISTENT (DNS propagation issue?)"
+            echo "  Google (8.8.8.8): $NS_GOOGLE"
+            echo "  Cloudflare (1.1.1.1): $NS_CLOUDFLARE"
+            echo "  Quad9 (9.9.9.9): $NS_QUAD9"
+            # Don't fail here - could be normal propagation delay
+          fi
+
+      - name: Verify SOA Record
+        id: soa_check
+        continue-on-error: true
+        run: |
+          echo "Verifying SOA (Start of Authority) record..."
+          
+          SOA=$(dig +short SOA $DOMAIN @8.8.8.8)
+          
+          if [ -n "$SOA" ]; then
+            echo "soa_status=present" >> $GITHUB_OUTPUT
+            echo "✓ SOA record exists: $SOA"
+          else
+            echo "soa_status=missing" >> $GITHUB_OUTPUT
+            echo "✗ ERROR: No SOA record found"
+            exit 1
+          fi
+
+      - name: Generate Report
+        id: report
+        if: always()
+        run: |
+          cat > /tmp/registrar-report.txt <<EOF
+          ═════════════════════════════════════════════════════════
+          GoDaddy Registrar Security Report
+          Domain: $DOMAIN
+          Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          ═════════════════════════════════════════════════════════
+          
+          NAMESERVER DELEGATION:
+            Status: ${{ steps.ns_check.outputs.ns_status || 'unknown' }}
+            Expected: Cloudflare nameservers
+            Check: dig NS $DOMAIN @8.8.8.8
+          
+          DOMAIN LOCK:
+            Status: ${{ steps.domain_lock_check.outputs.lock_status || 'unknown' }}
+            Check: whois $DOMAIN | grep -i clientTransferProhibited
+          
+          NAMESERVER CONSISTENCY:
+            Status: ${{ steps.ns_consistency_check.outputs.consistency || 'unknown' }}
+            Check: Multiple resolver comparison
+          
+          SOA RECORD:
+            Status: ${{ steps.soa_check.outputs.soa_status || 'unknown' }}
+            Check: dig SOA $DOMAIN @8.8.8.8
+          
+          COMPLIANCE:
+            [ ] Domain lock enabled
+            [ ] Nameservers pointing to Cloudflare
+            [ ] GoDaddy account MFA enabled (manual check)
+            [ ] API key scoped to domain (manual check)
+            [ ] API key <90 days old (manual check)
+          
+          NEXT STEPS:
+            1. Verify domain lock is enabled in GoDaddy console
+            2. Enable GoDaddy account MFA (TOTP, not SMS)
+            3. Rotate GoDaddy API key if >90 days old
+            4. See: docs/runbooks/godaddy-registrar-security.md
+          
+          ═════════════════════════════════════════════════════════
+          EOF
+          
+          cat /tmp/registrar-report.txt
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/registrar-report.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## GoDaddy Registrar Security Check\n\n```\n' + report + '\n```'
+            });
+
+      - name: Alert on Critical Issues
+        if: |
+          failure() &&
+          (steps.ns_check.outcome == 'failure' ||
+           steps.domain_lock_check.outcome == 'failure' ||
+           steps.soa_check.outcome == 'failure')
+        run: |
+          echo "::error::GoDaddy Registrar Security Check FAILED"
+          echo ""
+          echo "Critical findings:"
+          
+          if [ "${{ steps.ns_check.outcome }}" == "failure" ]; then
+            echo "  - Nameserver delegation is broken (not pointing to Cloudflare)"
+          fi
+          
+          if [ "${{ steps.domain_lock_check.outcome }}" == "failure" ]; then
+            echo "  - Domain lock may be disabled"
+          fi
+          
+          if [ "${{ steps.soa_check.outcome }}" == "failure" ]; then
+            echo "  - SOA record missing"
+          fi
+          
+          echo ""
+          echo "Actions:"
+          echo "  1. Log into GoDaddy console immediately"
+          echo "  2. Verify domain lock status"
+          echo "  3. Verify nameserver delegation to Cloudflare"
+          echo "  4. See: docs/runbooks/godaddy-registrar-security.md#incident-response"
+
+      - name: Create Issue on Critical Failure
+        if: |
+          failure() &&
+          github.event_name != 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const report = require('fs').readFileSync('/tmp/registrar-report.txt', 'utf8');
+            const findings = [];
+            
+            if ('${{ steps.ns_check.outcome }}' === 'failure') {
+              findings.push('Nameserver delegation is broken (not Cloudflare)');
+            }
+            
+            if ('${{ steps.domain_lock_check.outcome }}' === 'failure') {
+              findings.push('Domain lock may be disabled');
+            }
+            
+            if ('${{ steps.soa_check.outcome }}' === 'failure') {
+              findings.push('SOA record is missing');
+            }
+            
+            if (findings.length > 0) {
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🚨 GoDaddy Registrar Security Alert',
+                body: '## Critical Findings\n\n' +
+                  findings.map(f => '- ' + f).join('\n') + '\n\n' +
+                  '## Report\n\n```\n' + report + '\n```\n\n' +
+                  '## Action Required\n\n' +
+                  'See: [GoDaddy Registrar Security Runbook](docs/runbooks/godaddy-registrar-security.md)',
+                labels: ['security', 'P0', 'registrar'],
+                assignees: ['kushin77']
+              });
+            }
+
+      - name: Success Summary
+        if: success()
+        run: |
+          echo "✓ GoDaddy registrar security check passed"
+          echo ""
+          echo "Verified:"
+          echo "  - Nameservers delegated to Cloudflare"
+          echo "  - Domain lock status acceptable"
+          echo "  - SOA record present and valid"
+          echo ""
+          echo "Manual checks still required:"
+          echo "  - GoDaddy account MFA (TOTP) enabled"
+          echo "  - API key scoped to kushin.cloud domain"
+          echo "  - API key last rotated <90 days ago"
+          echo ""
+          echo "See: docs/runbooks/godaddy-registrar-security.md"

@@ -35,12 +35,11 @@ grep -l "DEPLOYMENT_ORCHESTRATION" .github/*.md
 
 ### Scripts
 - [ ] `scripts/redeploy.sh` exists and is executable
-- [ ] `scripts/redeploy.ps1` exists and is executable
 - [ ] `scripts/deploy-phase-12-all.sh` exists
 
 **Check:**
 ```bash
-ls -la scripts/redeploy.*
+ls -la scripts/redeploy.sh
 ls -la scripts/deploy-phase-12-all.sh
 chmod +x scripts/redeploy.sh scripts/deploy-phase-12-all.sh
 ```

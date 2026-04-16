@@ -1,0 +1,176 @@
+# Alert Rules: Backup and Disaster Recovery
+# Issue #431: Production backup hardening
+
+groups:
+  - name: backup_and_recovery
+    interval: 30s
+    rules:
+      # ────────────────────────────────────────────────────────────────────
+      # Backup Age and Freshness Alerts
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: BackupStale
+        expr: |
+          (time.time() - backup_last_success_timestamp_seconds) > 86400
+        for: 30m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Database backup has not run in over 24 hours"
+          description: "Last backup on {{ $labels.instance }} was {{ $value | humanizeDuration }} ago"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-stale.md"
+          dashboard_url: "https://grafana.kushnir.cloud/d/backup-recovery"
+
+      - alert: BackupMissing
+        expr: |
+          backup_last_success_timestamp_seconds == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "No successful backups recorded on {{ $labels.instance }}"
+          description: "Backup metrics not available. Check backup script execution."
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-missing.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # WAL Archiving Alerts
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: WALArchivingDisabled
+        expr: |
+          postgresql_archive_mode == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL WAL archiving is disabled on {{ $labels.instance }}"
+          description: "WAL archiving is required for point-in-time recovery (PITR)"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/wal-archiving-disabled.md"
+
+      - alert: WALArchiveQueueBuilding
+        expr: |
+          postgresql_wal_archive_queue_length > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL WAL archive queue building up on {{ $labels.instance }}"
+          description: "Archive queue length: {{ $value }} files"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/wal-queue-buildup.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # Replication Alerts
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: PostgreSQLReplicationLagging
+        expr: |
+          (pg_wal_position_replica_bytes / 1024 / 1024) > 500
+        for: 15m
+        labels:
+          severity: warning
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL replication lag > 500MB on {{ $labels.instance }}"
+          description: "Replica is {{ $value }}MB behind primary"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/replication-lag.md"
+
+      - alert: PostgreSQLReplicationDown
+        expr: |
+          pg_replication_is_replica == 0 and pg_replication_slot_active == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: postgresql
+        annotations:
+          summary: "PostgreSQL replication is not active on replica ({{ $labels.instance }})"
+          description: "Replication slot not active - data may not be synchronizing"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/replication-down.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # Restore Test Alerts
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: BackupRestoreTestFailed
+        expr: |
+          increase(backup_restore_test_failures_total[1w]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Automated backup restore test failed on {{ $labels.instance }}"
+          description: "Latest backup may be corrupted or incomplete"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-restore-test-failed.md"
+
+      - alert: BackupRestoreTestLaggy
+        expr: |
+          increase(backup_restore_test_duration_seconds[1w]) > 3600
+        for: 5m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Backup restore test is taking > 1 hour on {{ $labels.instance }}"
+          description: "Restore performance may be degrading"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-restore-slow.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # Disk Space Alerts (Backup Storage)
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: BackupStorageAlmostFull
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/backups"} / node_filesystem_size_bytes{mountpoint="/backups"}) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Backup storage is < 10% free on {{ $labels.instance }}"
+          description: "Used: {{ $value | humanize }}B"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-storage-full.md"
+
+      - alert: BackupStorageCritical
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/backups"} / node_filesystem_size_bytes{mountpoint="/backups"}) < 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Backup storage is < 5% free on {{ $labels.instance }}"
+          description: "IMMEDIATE ACTION REQUIRED - Used: {{ $value | humanize }}B"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/backup-storage-critical.md"
+
+      # ────────────────────────────────────────────────────────────────────
+      # RTO/RPO Tracking
+      # ────────────────────────────────────────────────────────────────────
+
+      - alert: RPOThresholdExceeded
+        expr: |
+          # Actual recovery point is the maximum of backup age or WAL queue length
+          (backup_age_seconds > 300) or (postgresql_wal_archive_queue_length * 100 > 300)
+        for: 5m
+        labels:
+          severity: warning
+          component: recovery
+        annotations:
+          summary: "Recovery Point Objective (RPO) threshold exceeded on {{ $labels.instance }}"
+          description: "Data loss potential > 5 minutes. Current backup age: {{ $value | humanizeDuration }}"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/rpo-exceeded.md"
+
+      - alert: RTOThresholdExceeded
+        expr: |
+          increase(backup_restore_test_duration_seconds[1h]) > 14400
+        for: 1h
+        labels:
+          severity: warning
+          component: recovery
+        annotations:
+          summary: "Recovery Time Objective (RTO) threshold exceeded on {{ $labels.instance }}"
+          description: "Estimated recovery time > 4 hours. Current RTO: {{ humanize $value }}s"
+          runbook_url: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/rto-exceeded.md"

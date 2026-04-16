@@ -63,6 +63,11 @@ _load "error-handler.sh"
 # Ensure common safe-execution flags are set for the calling script
 set -euo pipefail
 
+# Global non-interactive defaults for automation reliability.
+export CLOUDSDK_CORE_DISABLE_PROMPTS="${CLOUDSDK_CORE_DISABLE_PROMPTS:-1}"
+export TF_INPUT="${TF_INPUT:-0}"
+export DEBIAN_FRONTEND="${DEBIAN_FRONTEND:-noninteractive}"
+
 unset _COMMON_DIR
 unset -f _load
 

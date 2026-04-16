@@ -1,0 +1,46 @@
+{
+  "maxLookback": "72h",
+  "menu": [
+    {
+      "label": "Code-Server Dashboard",
+      "url": "http://grafana:3000/d/observability"
+    }
+  ],
+  "tracking": {
+    "gaID": ""
+  },
+  "defaultOperationName": "HTTP GET",
+  "dependencies": {
+    "dagMaxNumServices": 200,
+    "menuEnabled": true
+  },
+  "search": {
+    "maxLookback": "72h",
+    "maxResults": 20,
+    "defaultShowErrorsOnly": false
+  },
+  "servicePerformance": {
+    "menuEnabled": true
+  },
+  "logViewerEnabled": true,
+  "topTagPrefixes": [
+    "http.",
+    "db.",
+    "messaging.",
+    "rpc.",
+    "faas.",
+    "graphql.",
+    "grpc.",
+    "aws.",
+    "gcp.",
+    "azure.",
+    "mongodb.",
+    "mysql.",
+    "postgresql.",
+    "redis.",
+    "elasticsearch."
+  ],
+  "archiveEnabled": false,
+  "docsLink": "https://www.jaegertracing.io/docs/",
+  "reconfigurable": true
+}

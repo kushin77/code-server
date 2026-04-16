@@ -9,35 +9,26 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  - job_name: syslog
+  - job_name: varlog
     static_configs:
       - targets:
           - localhost
         labels:
-          job: syslog
+          job: varlog
           env: production
-    syslog_sd_configs:
-      - listen_address: 127.0.0.1:5140
+    file_sd_configs:
+      - files:
+          - /var/log/*.log
     relabel_configs:
-      - source_labels: ['__syslog_message_hostname']
-        target_label: 'hostname'
-      - source_labels: ['__syslog_message_app_name']
-        target_label: 'app'
+      - source_labels: ['__path__']
+        target_label: 'path'
     pipeline_stages:
+      - multiline:
+          line_start_pattern: '^\d{4}-\d{2}-\d{2}'
       - json:
           expressions:
             output: log
           skip_parse_error_log: true
       - regex:
           expression: '(?P<json_log>.*)'
-          skip_parse_error_log: true
-      - json:
-          expressions:
-            trace_id: trace_id
-            span_id: span_id
-            level: level
-          skip_parse_error_log: true
-      - timestamp:
-          format: RFC3339
-          source: time
           skip_parse_error_log: true

@@ -72,13 +72,13 @@ jobs:
         run: |
           BRANCH="${{ needs.check-merge.outputs.branch }}"
           echo "🗑️ Cleaning up branch: $BRANCH"
-          
+
           # Don't delete protected branches
           if [[ "$BRANCH" =~ ^(main|develop|release|hotfix)$ ]]; then
             echo "⚠️ Skipping protected branch: $BRANCH"
             exit 0
           fi
-          
+
           # Try to delete remote branch
           if git push origin --delete "$BRANCH" 2>/dev/null; then
             echo "✅ Successfully deleted remote branch: $BRANCH"
@@ -117,7 +117,7 @@ jobs:
           script: |
             const prNum = '${{ needs.check-merge.outputs.pr_number }}';
             console.log(`🚀 Triggering deployment pipeline for PR #${prNum}`);
-            
+
             // Create deployment record
             await github.rest.repos.createDeployment({
               owner: context.repo.owner,
@@ -130,37 +130,67 @@ jobs:
             });
 
       - name: Trigger Deploy Workflow
+        id: dispatch
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
-        continue-on-error: true
         with:
           script: |
             console.log('📋 Dispatching deployment workflow...');
-            
-            try {
-              const response = await github.rest.actions.createWorkflowDispatch({
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy.yml',
+              ref: 'main',
+              inputs: {
+                action: 'deploy'
+              }
+            });
+
+            const dispatchedAt = new Date().toISOString();
+            core.setOutput('dispatched_at', dispatchedAt);
+            console.log(`✅ Deployment workflow dispatched at ${dispatchedAt}`);
+
+      - name: Verify Deploy Workflow Dispatch
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const dispatchedAt = '${{ steps.dispatch.outputs.dispatched_at }}';
+            const dispatchedAtMs = Date.parse(dispatchedAt);
+
+            if (Number.isNaN(dispatchedAtMs)) {
+              core.setFailed('Dispatch timestamp was not recorded; failing closed.');
+              return;
+            }
+
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const maxAttempts = 12;
+            const delayMs = 5000;
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              const runs = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: 'deploy.yml',
-                ref: 'main',
-                inputs: {
-                  trigger_source: 'auto-merge-pipeline',
-                  pr_number: '${{ needs.check-merge.outputs.pr_number }}'
-                }
+                branch: 'main',
+                event: 'workflow_dispatch',
+                per_page: 20
               });
-              
-              console.log('✅ Deployment workflow dispatched');
-              return response;
-            } catch (error) {
-              if (error.message.includes('Could not resolve to a repository')) {
-                console.warn('⚠️ Deployment workflow not found, but proceeding with redeploy');
-              } else if (error.message.includes('Resource not accessible') || error.status === 403) {
-                console.warn('⚠️ Workflow dispatch permission denied - deployment trigger deferred');
-                console.warn('   This is normal if deploy.yml has restricted permissions');
-                console.warn('   Cleanup and issue closure are complete and working');
-              } else {
-                throw error;
+
+              const foundRun = runs.data.workflow_runs.find((run) => {
+                const createdMs = Date.parse(run.created_at);
+                return !Number.isNaN(createdMs) && createdMs >= dispatchedAtMs - 10000;
+              });
+
+              if (foundRun) {
+                console.log(`✅ Verified dispatched run: ${foundRun.html_url}`);
+                return;
               }
+
+              console.log(`⏳ Awaiting deploy workflow run registration (${attempt}/${maxAttempts})...`);
+              await sleep(delayMs);
             }
+
+            core.setFailed('Deploy workflow dispatch did not register a run within the expected window.');
 
   close-related-issues:
     name: Auto-Close Resolved Issues
@@ -173,7 +203,7 @@ jobs:
         with:
           script: |
             const prNum = '${{ needs.check-merge.outputs.pr_number }}';
-            
+
             if (prNum === 'push-event') {
               console.log('ℹ️ Push event detected - skipping issue auto-close');
               return;
@@ -191,7 +221,7 @@ jobs:
             // Extract issue numbers from PR body (e.g., "Closes #123", "Fixes #456")
             const body = pr.data.body || '';
             const issueMatches = body.match(/(?:clos|fix|resolv)(?:es|ed)?\s+#(\d+)/gi);
-            
+
             if (!issueMatches) {
               console.log('ℹ️ No linked issues found in PR body');
               return;

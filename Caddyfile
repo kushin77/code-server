@@ -57,6 +57,17 @@
     respond @health "OK" 200
 
     # ─────────────────────────────────────────────────────────────────────────
+    # Enterprise Service Portal — /portal (unauthenticated, served from bind-mount)
+    # config/service-catalog.yml is the SSOT; HTML references that config
+    # ─────────────────────────────────────────────────────────────────────────
+    @portal path /portal /portal/*
+    handle @portal {
+        uri strip_prefix /portal
+        root * /srv/portal
+        file_server
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
     # OAuth2 Proxy: auth redirects + callback handling
     # ─────────────────────────────────────────────────────────────────────────
     @oauth2 path /oauth2/*

@@ -1,0 +1,74 @@
+# ═══════════════════════════════════════════════════════════════
+# Service Catalog — SSOT for portal.192.168.168.31.nip.io
+# All service definitions live here; portal is generated from this config
+# DO NOT hardcode service URLs in the portal HTML directly
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  - id: code-server
+    name: "IDE (code-server)"
+    description: "VS Code in the browser — primary development environment"
+    url: "http://192.168.168.31:8080"
+    icon: "vscode"
+    category: development
+    health_url: "http://192.168.168.31:8080/healthz"
+    priority: 1
+
+  - id: grafana
+    name: "Grafana"
+    description: "Dashboards, SLO burn rates, session health"
+    url: "http://192.168.168.31:3000"
+    icon: "grafana"
+    category: observability
+    health_url: "http://192.168.168.31:3000/api/health"
+    priority: 2
+
+  - id: prometheus
+    name: "Prometheus"
+    description: "Metrics store — raw query and alerting rule management"
+    url: "http://192.168.168.31:9090"
+    icon: "prometheus"
+    category: observability
+    health_url: "http://192.168.168.31:9090/-/healthy"
+    priority: 3
+
+  - id: alertmanager
+    name: "AlertManager"
+    description: "Alert routing, silences, and inhibitions"
+    url: "http://192.168.168.31:9093"
+    icon: "alertmanager"
+    category: observability
+    health_url: "http://192.168.168.31:9093/-/healthy"
+    priority: 4
+
+  - id: jaeger
+    name: "Jaeger"
+    description: "Distributed tracing — request flows across services"
+    url: "http://192.168.168.31:16686"
+    icon: "jaeger"
+    category: observability
+    health_url: "http://192.168.168.31:16686/"
+    priority: 5
+
+  - id: ollama
+    name: "Ollama (LLM API)"
+    description: "Local LLM inference — Copilot AI backend"
+    url: "http://192.168.168.31:11434"
+    icon: "ollama"
+    category: ai
+    health_url: "http://192.168.168.31:11434/api/tags"
+    priority: 6
+
+# ═══════════════════════════════════════════════════════════════
+# Categories for portal grouping
+# ═══════════════════════════════════════════════════════════════
+categories:
+  development:
+    label: "Development"
+    color: "#2563eb"
+  observability:
+    label: "Observability"
+    color: "#059669"
+  ai:
+    label: "AI / LLM"
+    color: "#7c3aed"

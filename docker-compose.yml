@@ -208,6 +208,7 @@ services:
       - "0.0.0.0:443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./services/portal:/srv/portal:ro
       - caddy-config:/config
       - caddy-data:/data
     environment:

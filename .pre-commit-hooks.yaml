@@ -227,3 +227,25 @@
   pass_filenames: false
   stages: [commit]
   always_run: true
+
+- id: no-rendered-caddyfiles
+  name: Prevent committing rendered Caddyfile variants (P2 #373)
+  description: >
+    Caddyfile variants (Caddyfile, Caddyfile.onprem, Caddyfile.simple) are GENERATED
+    from Caddyfile.tpl and must never be committed directly. Use `make render-caddy-all`
+    to regenerate them locally before deployment.
+  entry: bash -c '
+    rendered_files=(Caddyfile Caddyfile.onprem Caddyfile.simple)
+    for file in "${rendered_files[@]}"; do
+      if git diff --cached --name-only | grep -q "^$file$"; then
+        echo "❌ ERROR: Cannot commit $file (rendered artifact from Caddyfile.tpl)"
+        echo "FIX: Remove from staging with: git reset $file"
+        exit 1
+      fi
+    done
+    exit 0
+  '
+  language: system
+  pass_filenames: false
+  stages: [commit]
+

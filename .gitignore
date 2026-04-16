@@ -44,6 +44,15 @@ yarn.lock
 Gemfile.lock
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Generated Configuration Files (P2 #373)
+# ─────────────────────────────────────────────────────────────────────────────
+# Caddyfile variants are RENDERED from config/caddy/Caddyfile.tpl — Never commit rendered files
+config/caddy/Caddyfile
+config/caddy/Caddyfile.onprem
+config/caddy/Caddyfile.simple
+# Only config/caddy/Caddyfile.tpl is committed (single source of truth)
+
+# ─────────────────────────────────────────────────────────────────────────────
 # IDEs & Editor Artifacts
 # ─────────────────────────────────────────────────────────────────────────────
 .vscode/

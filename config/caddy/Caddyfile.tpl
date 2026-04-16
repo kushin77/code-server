@@ -1,21 +1,30 @@
-# Caddyfile.tpl — SINGLE SOURCE OF TRUTH
-# ========================================
-# This is the canonical Caddy configuration template.
-# All environment-specific Caddyfile variants are rendered from this file.
+# Caddyfile.tpl — SINGLE SOURCE OF TRUTH FOR ALL ENVIRONMENTS
+# ==============================================================
+# This is the ONLY canonical Caddy configuration file.
+# All environment-specific variants (Caddyfile, Caddyfile.onprem, Caddyfile.simple)
+# are GENERATED from this template and should NOT be committed to git.
+#
+# DO NOT edit generated files directly. Edit this template and run: make render-caddy
 #
 # Render targets (in Makefile):
-#   make render-caddy-prod      → Caddyfile         (production: HTTPS + oauth2)
-#   make render-caddy-onprem    → Caddyfile.onprem  (on-prem: HTTP only)
-#   make render-caddy-simple    → Caddyfile.simple  (simple: minimal dev)
+#   make render-caddy ENV=prod      → Caddyfile         (production: HTTPS + oauth2)
+#   make render-caddy ENV=onprem    → Caddyfile.onprem  (on-prem: HTTP only)
+#   make render-caddy ENV=simple    → Caddyfile.simple  (simple: minimal dev)
 #
-# Environment variables used (set in .env or passed via make):
-#   CADDY_TLS_BLOCK       e.g. "tls internal" or "tls /path/cert /path/key"
-#   CADDY_DOMAIN          e.g. "ide.kushnir.cloud" or ":80"
-#   CODE_SERVER_UPSTREAM  e.g. "code-server:8080" or "oauth2-proxy:4180"
-#   CADDY_LOG_LEVEL       e.g. "info" or "debug"
+# Environment variables (set in .env.${ENV} or via make):
+#   CADDY_MODE            "production" | "onprem" | "simple" (controls TLS & routes)
+#   CADDY_DOMAIN          e.g. "ide.kushnir.cloud" or ":80"  (domain or port)
+#   CADDY_TLS_MODE        "acme" | "internal" | "none"      (TLS strategy)
+#   CADDY_LOG_LEVEL       e.g. "info" or "debug"            (log verbosity)
+#   APEX_DOMAIN           e.g. "kushnir.cloud"              (for subdomains)
+#   ENABLE_TELEMETRY      "true" | "false"                  (metrics export)
+#   ENABLE_TRACING        "true" | "false"                  (distributed tracing)
 #
-# DO NOT edit rendered files (Caddyfile, Caddyfile.onprem) directly.
-# Edit this template and re-render.
+# This template ensures 100% consistency across all rendered variants:
+# - Same security headers everywhere
+# - Same OAuth2 routing logic everywhere
+# - Same service dependencies everywhere
+# - Environment-specific differences isolated to variables
 
 {
 	admin off
@@ -45,8 +54,8 @@
 }
 
 # ─── Apex Domain (Portal Dashboard) ─────────────────────────────────────────
-${APEX_DOMAIN:-kushnir.cloud} {
-	${CADDY_TLS_BLOCK:-tls internal}
+${APEX_DOMAIN} {
+	${CADDY_TLS_BLOCK}
 	encode gzip
 	import security_headers
 	
@@ -60,8 +69,8 @@ ${APEX_DOMAIN:-kushnir.cloud} {
 }
 
 # ─── Main Domain (code-server IDE) ──────────────────────────────────────────
-${DOMAIN:-ide.kushnir.cloud} {
-	${CADDY_TLS_BLOCK:-tls internal}
+${DOMAIN} {
+	${CADDY_TLS_BLOCK}
 
 	encode gzip
 	import security_headers
@@ -69,7 +78,7 @@ ${DOMAIN:-ide.kushnir.cloud} {
 	log {
 		format json
 		output stdout
-		level ${CADDY_LOG_LEVEL:-info}
+		level ${CADDY_LOG_LEVEL}
 	}
 
 	# Health check endpoints — no auth required
@@ -101,8 +110,8 @@ ${DOMAIN:-ide.kushnir.cloud} {
 }
 
 # ─── Grafana Subdomain ──────────────────────────────────────────────────────
-grafana.${APEX_DOMAIN:-kushnir.cloud} {
-	${CADDY_TLS_BLOCK:-tls internal}
+grafana.${APEX_DOMAIN} {
+	${CADDY_TLS_BLOCK}
 	encode gzip
 	import security_headers
 	
@@ -126,8 +135,8 @@ grafana.${APEX_DOMAIN:-kushnir.cloud} {
 }
 
 # ─── Prometheus Subdomain ───────────────────────────────────────────────────
-metrics.${APEX_DOMAIN:-kushnir.cloud} {
-	${CADDY_TLS_BLOCK:-tls internal}
+metrics.${APEX_DOMAIN} {
+	${CADDY_TLS_BLOCK}
 	encode gzip
 	import security_headers
 	
@@ -151,8 +160,8 @@ metrics.${APEX_DOMAIN:-kushnir.cloud} {
 }
 
 # ─── AlertManager Subdomain ─────────────────────────────────────────────────
-alerts.${APEX_DOMAIN:-kushnir.cloud} {
-	${CADDY_TLS_BLOCK:-tls internal}
+alerts.${APEX_DOMAIN} {
+	${CADDY_TLS_BLOCK}
 	encode gzip
 	import security_headers
 	
@@ -176,8 +185,8 @@ alerts.${APEX_DOMAIN:-kushnir.cloud} {
 }
 
 # ─── Jaeger Subdomain ──────────────────────────────────────────────────────
-tracing.${APEX_DOMAIN:-kushnir.cloud} {
-	${CADDY_TLS_BLOCK:-tls internal}
+tracing.${APEX_DOMAIN} {
+	${CADDY_TLS_BLOCK}
 	encode gzip
 	import security_headers
 	

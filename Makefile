@@ -999,50 +999,71 @@ ollama-pull:
 
 # ─── Caddyfile render targets (#373) ─────────────────────────────────────────
 # Render Caddyfile variants from the single template source (Caddyfile.tpl)
+# Template: config/caddy/Caddyfile.tpl (single source of truth)
+# Output: config/caddy/Caddyfile*, config/caddy/Caddyfile.onprem, config/caddy/Caddyfile.simple
 
 .PHONY: render-caddy-prod render-caddy-onprem render-caddy-simple render-caddy-all caddy-validate
 
 render-caddy-prod:
-	@echo "Rendering Caddyfile (production) from Caddyfile.tpl..."
+	@echo "Rendering config/caddy/Caddyfile (production) from template..."
 	@set -a && . ./.env 2>/dev/null || true && set +a && \
 	  CADDY_DOMAIN=$${CADDY_DOMAIN:-ide.kushnir.cloud} \
 	  CADDY_TLS_BLOCK=$${CADDY_TLS_BLOCK:-tls internal} \
 	  CADDY_LOG_LEVEL=$${CADDY_LOG_LEVEL:-info} \
 	  CODE_SERVER_UPSTREAM=$${CODE_SERVER_UPSTREAM:-oauth2-proxy:4180} \
-	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT' \
-	  < Caddyfile.tpl > Caddyfile
-	@echo "✅ Caddyfile rendered (production)"
+	  GRAFANA_PORT=$${GRAFANA_PORT:-3000} \
+	  PROMETHEUS_PORT=$${PROMETHEUS_PORT:-9090} \
+	  ALERTMANAGER_PORT=$${ALERTMANAGER_PORT:-9093} \
+	  JAEGER_PORT=$${JAEGER_PORT:-16686} \
+	  APEX_DOMAIN=$${APEX_DOMAIN:-kushnir.cloud} \
+	  ENABLE_TELEMETRY=$${ENABLE_TELEMETRY:-false} \
+	  ENABLE_TRACING=$${ENABLE_TRACING:-false} \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT $$APEX_DOMAIN $$ENABLE_TELEMETRY $$ENABLE_TRACING' \
+	  < config/caddy/Caddyfile.tpl > config/caddy/Caddyfile
+	@echo "✅ config/caddy/Caddyfile rendered (production)"
 
 render-caddy-onprem:
-	@echo "Rendering Caddyfile.onprem from Caddyfile.tpl..."
+	@echo "Rendering config/caddy/Caddyfile.onprem from template..."
 	@CADDY_DOMAIN=":80" \
 	  CADDY_TLS_BLOCK="" \
 	  CADDY_LOG_LEVEL=info \
 	  CODE_SERVER_UPSTREAM=oauth2-proxy:4180 \
-	  GRAFANA_PORT=3001 PROMETHEUS_PORT=9090 ALERTMANAGER_PORT=9093 JAEGER_PORT=16686 \
-	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT' \
-	  < Caddyfile.tpl > Caddyfile.onprem
-	@echo "✅ Caddyfile.onprem rendered (on-premises HTTP)"
+	  GRAFANA_PORT=3001 \
+	  PROMETHEUS_PORT=9090 \
+	  ALERTMANAGER_PORT=9093 \
+	  JAEGER_PORT=16686 \
+	  APEX_DOMAIN=:8080 \
+	  ENABLE_TELEMETRY=false \
+	  ENABLE_TRACING=false \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT $$APEX_DOMAIN $$ENABLE_TELEMETRY $$ENABLE_TRACING' \
+	  < config/caddy/Caddyfile.tpl > config/caddy/Caddyfile.onprem
+	@echo "✅ config/caddy/Caddyfile.onprem rendered (on-premises HTTP)"
 
 render-caddy-simple:
-	@echo "Rendering Caddyfile.simple from Caddyfile.tpl..."
+	@echo "Rendering config/caddy/Caddyfile.simple from template..."
 	@CADDY_DOMAIN=":80" \
 	  CADDY_TLS_BLOCK="" \
 	  CADDY_LOG_LEVEL=debug \
 	  CODE_SERVER_UPSTREAM=code-server:8080 \
-	  GRAFANA_PORT=3001 PROMETHEUS_PORT=9090 ALERTMANAGER_PORT=9093 JAEGER_PORT=16686 \
-	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT' \
-	  < Caddyfile.tpl > Caddyfile.simple
-	@echo "✅ Caddyfile.simple rendered (simple dev mode)"
+	  GRAFANA_PORT=3001 \
+	  PROMETHEUS_PORT=9090 \
+	  ALERTMANAGER_PORT=9093 \
+	  JAEGER_PORT=16686 \
+	  APEX_DOMAIN=:8080 \
+	  ENABLE_TELEMETRY=false \
+	  ENABLE_TRACING=false \
+	  envsubst '$$CADDY_DOMAIN $$CADDY_TLS_BLOCK $$CADDY_LOG_LEVEL $$CODE_SERVER_UPSTREAM $$GRAFANA_PORT $$PROMETHEUS_PORT $$ALERTMANAGER_PORT $$JAEGER_PORT $$APEX_DOMAIN $$ENABLE_TELEMETRY $$ENABLE_TRACING' \
+	  < config/caddy/Caddyfile.tpl > config/caddy/Caddyfile.simple
+	@echo "✅ config/caddy/Caddyfile.simple rendered (simple dev mode)"
 
 render-caddy-all: render-caddy-prod render-caddy-onprem render-caddy-simple
 	@echo "✅ All Caddyfile variants rendered from template"
 
 caddy-validate:
-	@echo "Validating rendered Caddyfile syntax..."
-	@docker run --rm -v "$$(pwd)/Caddyfile:/etc/caddy/Caddyfile:ro" \
+	@echo "Validating rendered config/caddy/Caddyfile syntax..."
+	@docker run --rm -v "$$(pwd)/config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
 	  caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile && \
-	  echo "✅ Caddyfile is valid" || echo "❌ Caddyfile has syntax errors"
+	  echo "✅ config/caddy/Caddyfile is valid" || echo "❌ config/caddy/Caddyfile has syntax errors"
 
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -360,6 +360,30 @@ python scripts/migrate_db.py
 }
 ```
 
+### Caddyfile Configuration (P2 #373)
+
+Caddyfile variants are **generated from `Caddyfile.tpl`** — never commit rendered files:
+
+```bash
+# Render all variants (production, on-prem, dev)
+make render-caddy-all
+
+# Render specific variant
+make render-caddy-prod    # Production (HTTPS)
+make render-caddy-onprem  # On-premises (HTTP)
+make render-caddy-simple  # Development (debug mode)
+
+# Validate Caddy configuration syntax
+make caddy-validate
+```
+
+**⚠️ Important:** 
+- `.gitignore` prevents accidental commits of rendered Caddyfiles
+- Pre-commit hook blocks commits if rendering files are staged
+- Only `Caddyfile.tpl` should be committed (single source of truth)
+
+👉 Full details: [Caddyfile Template Management](docs/CADDYFILE-TEMPLATE-MANAGEMENT.md)
+
 ### Useful Make Targets
 
 ```bash
@@ -370,6 +394,7 @@ make format         # Auto-format all code
 make security       # Run security scans
 make local-deploy   # Deploy to local environment
 make validate       # Validate all standards
+make render-caddy-all  # Render Caddyfile variants (P2 #373)
 ```
 
 ---

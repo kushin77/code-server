@@ -1,0 +1,195 @@
+name: Governance Waiver Audit
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  validate-waiver-request:
+    name: Validate governance waiver requests
+    if: github.event_name == 'issues' && github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate waiver issue template fields
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || "";
+            const marker = "<!-- governance-waiver-request -->";
+            const commentMarker = "<!-- governance-waiver-validation -->";
+
+            if (!body.includes(marker)) {
+              core.info("Issue is not a governance waiver request.");
+              return;
+            }
+
+            const ensureLabel = async (name, color, description) => {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name,
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name,
+                  color,
+                  description,
+                });
+              }
+            };
+
+            await ensureLabel("governance", "0e8a16", "Governance policy and enforcement work");
+            await ensureLabel("waiver", "fbca04", "Time-limited governance policy exception");
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ["governance", "waiver"],
+            });
+
+            const extract = (pattern) => {
+              const match = body.match(pattern);
+              return match ? match[1].trim() : "";
+            };
+
+            const isBlank = (value) => !value || /^<.*>$/.test(value) || /^(tbd|pending)$/i.test(value);
+
+            const fields = [
+              ["Requested by", extract(/^- Requested by:\s*(.*)$/m)],
+              ["PR/Issue", extract(/^- PR\/Issue:\s*(.*)$/m)],
+              ["Policy violated", extract(/^- Policy violated:\s*(.*)$/m)],
+              ["Violation details", extract(/^- Violation details:\s*(.*)$/m)],
+              ["Justification", extract(/^- Justification:\s*(.*)$/m)],
+              ["Expiration (YYYY-MM-DD)", extract(/^- Expiration \(YYYY-MM-DD\):\s*(.*)$/m)],
+              ["Impact", extract(/^- Impact:\s*(.*)$/m)],
+              ["Owner for remediation", extract(/^- Owner for remediation:\s*(.*)$/m)],
+              ["Security impact", extract(/^- Security impact:\s*(.*)$/m)],
+              ["Compensating controls", extract(/^- Compensating controls:\s*(.*)$/m)],
+              ["On-prem impact on 192.168.168.31", extract(/^- On-prem impact on 192\.168\.168\.31:\s*(.*)$/m)],
+            ];
+
+            const approvalFields = [
+              ["Approved by", extract(/^- Approved by:\s*(.*)$/m)],
+              ["Approval date (YYYY-MM-DD)", extract(/^- Approval date \(YYYY-MM-DD\):\s*(.*)$/m)],
+              ["Approval notes", extract(/^- Approval notes:\s*(.*)$/m)],
+            ];
+
+            const missing = fields.filter(([, value]) => isBlank(value)).map(([name]) => name);
+            const missingApproval = approvalFields.filter(([, value]) => isBlank(value)).map(([name]) => name);
+            const registryChecked = /- \[x\] Registry entry added to docs\/governance\/WAIVERS\.md/i.test(body);
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) =>
+              comment.user?.login === "github-actions[bot]" && comment.body?.includes(commentMarker)
+            );
+
+            const lines = [
+              commentMarker,
+              "## Governance Waiver Validation",
+              "",
+            ];
+
+            if (missing.length > 0) {
+              lines.push("Request is incomplete. Fill the missing required fields:");
+              lines.push(...missing.map((field) => `- [ ] ${field}`));
+            } else {
+              lines.push("Request metadata is complete.");
+            }
+
+            lines.push("");
+
+            if (missingApproval.length > 0) {
+              lines.push("Approval metadata is still pending:");
+              lines.push(...missingApproval.map((field) => `- [ ] ${field}`));
+            } else {
+              lines.push("Approval metadata is complete.");
+            }
+
+            lines.push("");
+            lines.push(registryChecked
+              ? "- [x] Registry entry checkbox marked complete"
+              : "- [ ] Add approved waiver to docs/governance/WAIVERS.md and mark the registry checkbox");
+            lines.push("- Use docs/governance/WAIVER-REQUEST.md for policy and approval guidance.");
+
+            const bodyText = lines.join("\n");
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: bodyText,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: bodyText,
+              });
+            }
+
+  audit-waivers:
+    name: Audit open governance waivers
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Verify script syntax
+        run: bash -n scripts/governance/generate-waiver-report.sh
+
+      - name: Generate waiver audit report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x scripts/governance/generate-waiver-report.sh
+          scripts/governance/generate-waiver-report.sh "${{ github.repository }}" 380
+          REPORT_FILE=$(ls -1 .github/reports/governance/governance_waiver_report_*.md | tail -n 1)
+          METRICS_FILE=$(ls -1 .github/reports/governance/governance_waiver_metrics_*.prom | tail -n 1)
+          {
+            echo "## Governance Waiver Audit"
+            echo
+            cat "$REPORT_FILE"
+            echo
+            echo "### Prometheus Metrics File"
+            echo
+            echo '```prometheus'
+            cat "$METRICS_FILE"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload waiver audit artifacts
+        uses: actions/upload-artifact@5d5d22fc38ceea83b5bc9c7ff5a5109b73852e9f  # v4.3.1
+        with:
+          name: governance-waiver-audit
+          path: .github/reports/governance/governance_waiver_*
+
+      - name: Post waiver audit to canonical governance issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPORT_FILE=$(ls -1 .github/reports/governance/governance_waiver_report_*.md | tail -n 1)
+          gh issue comment 380 --repo "${{ github.repository }}" --body-file "$REPORT_FILE"

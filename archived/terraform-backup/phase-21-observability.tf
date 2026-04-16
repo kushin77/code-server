@@ -36,30 +36,30 @@ variable "alertmanager_enabled" {
 variable "slo_targets" {
   description = "SLO targets for observability"
   type = object({
-    availability_target_percent      = number  # 99.9% = 9 hours downtime/year
-    latency_p99_target_ms           = number  # <100ms
-    error_rate_target_percent       = number  # <0.1%
-    apdex_threshold_ms              = number  # Application Performance Index threshold
+    availability_target_percent = number # 99.9% = 9 hours downtime/year
+    latency_p99_target_ms       = number # <100ms
+    error_rate_target_percent   = number # <0.1%
+    apdex_threshold_ms          = number # Application Performance Index threshold
   })
   default = {
-    availability_target_percent      = 99.9
-    latency_p99_target_ms           = 100
-    error_rate_target_percent       = 0.1
-    apdex_threshold_ms              = 50
+    availability_target_percent = 99.9
+    latency_p99_target_ms       = 100
+    error_rate_target_percent   = 0.1
+    apdex_threshold_ms          = 50
   }
 }
 
 variable "alert_channels" {
   description = "Alert notification channels"
   type = object({
-    slack_webhook_url          = string  # Slack #incidents channel
-    pagerduty_integration_key  = string  # PagerDuty on-call escalation
-    email_alerts               = list(string)
+    slack_webhook_url         = string # Slack #incidents channel
+    pagerduty_integration_key = string # PagerDuty on-call escalation
+    email_alerts              = list(string)
   })
   default = {
-    slack_webhook_url          = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-    pagerduty_integration_key  = "YOUR_PAGERDUTY_KEY"
-    email_alerts               = ["devops@example.com"]
+    slack_webhook_url         = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+    pagerduty_integration_key = "YOUR_PAGERDUTY_KEY"
+    email_alerts              = ["devops@example.com"]
   }
   sensitive = true
 }
@@ -75,9 +75,9 @@ resource "docker_image" "prometheus" {
 }
 
 resource "docker_container" "prometheus" {
-  count         = var.phase_21_enabled && var.prometheus_enabled ? 1 : 0
-  name          = "prometheus-operator"
-  image         = local.docker_images["prometheus"]
+  count = var.phase_21_enabled && var.prometheus_enabled ? 1 : 0
+  name  = "prometheus-operator"
+  image = local.docker_images["prometheus"]
 
   command = [
     "--config.file=/etc/prometheus/prometheus.yml",
@@ -132,9 +132,9 @@ resource "docker_image" "grafana" {
 }
 
 resource "docker_container" "grafana" {
-  count         = var.phase_21_enabled && var.grafana_enabled ? 1 : 0
-  name          = "grafana-dashboards"
-  image         = local.docker_images["grafana"]
+  count = var.phase_21_enabled && var.grafana_enabled ? 1 : 0
+  name  = "grafana-dashboards"
+  image = local.docker_images["grafana"]
 
   env = [
     "GF_SECURITY_ADMIN_PASSWORD=admin123",
@@ -191,9 +191,9 @@ resource "docker_image" "alertmanager" {
 }
 
 resource "docker_container" "alertmanager" {
-  count         = var.phase_21_enabled && var.alertmanager_enabled ? 1 : 0
-  name          = "alertmanager-incidents"
-  image         = local.docker_images["alertmanager"]
+  count = var.phase_21_enabled && var.alertmanager_enabled ? 1 : 0
+  name  = "alertmanager-incidents"
+  image = local.docker_images["alertmanager"]
 
   command = [
     "--config.file=/etc/alertmanager/config.yml",
@@ -234,9 +234,9 @@ resource "docker_container" "alertmanager" {
 locals {
   prometheus_config = yamlencode({
     global = {
-      scrape_interval      = "15s"
-      scrape_timeout       = "10s"
-      evaluation_interval  = "15s"
+      scrape_interval     = "15s"
+      scrape_timeout      = "10s"
+      evaluation_interval = "15s"
       external_labels = {
         cluster = "production"
         env     = "prod"
@@ -261,7 +261,7 @@ locals {
 
     scrape_configs = [
       {
-        job_name = "prometheus"
+        job_name     = "prometheus"
         metrics_path = "/metrics"
         static_configs = [
           {
@@ -372,9 +372,9 @@ locals {
     }
 
     route = {
-      group_by       = ["alertname", "cluster", "service"]
-      group_wait     = "30s"
-      group_interval = "5m"
+      group_by        = ["alertname", "cluster", "service"]
+      group_wait      = "30s"
+      group_interval  = "5m"
       repeat_interval = "1h"
       receiver        = "default"
       routes = [
@@ -417,27 +417,27 @@ resource "local_file" "alertmanager_config" {
 # ─────────────────────────────────────────────────────────────────────────────
 
 resource "local_file" "slo_definitions" {
-  count   = var.phase_21_enabled ? 1 : 0
+  count    = var.phase_21_enabled ? 1 : 0
   filename = "/etc/prometheus/slo-definitions.yml"
   content = yamlencode({
     slos = {
       availability = {
-        target        = var.slo_targets.availability_target_percent
-        error_budget  = 100 - var.slo_targets.availability_target_percent
-        measurement   = "uptime_percent"
-        description   = "System availability (9 hours downtime allowed per year)"
+        target       = var.slo_targets.availability_target_percent
+        error_budget = 100 - var.slo_targets.availability_target_percent
+        measurement  = "uptime_percent"
+        description  = "System availability (9 hours downtime allowed per year)"
       },
       latency = {
-        target        = var.slo_targets.latency_p99_target_ms
-        measurement   = "http_request_duration_seconds_bucket{le=\"${var.slo_targets.latency_p99_target_ms / 1000}\"}"
-        percentile    = 99
-        description   = "99th percentile latency < 100ms"
+        target      = var.slo_targets.latency_p99_target_ms
+        measurement = "http_request_duration_seconds_bucket{le=\"${var.slo_targets.latency_p99_target_ms / 1000}\"}"
+        percentile  = 99
+        description = "99th percentile latency < 100ms"
       },
       error_rate = {
-        target        = var.slo_targets.error_rate_target_percent
-        error_budget  = var.slo_targets.error_rate_target_percent
-        measurement   = "http_requests_total{status=~'5..'}"
-        description   = "Error rate < 0.1% (99.9% success rate)"
+        target       = var.slo_targets.error_rate_target_percent
+        error_budget = var.slo_targets.error_rate_target_percent
+        measurement  = "http_requests_total{status=~'5..'}"
+        description  = "Error rate < 0.1% (99.9% success rate)"
       },
     }
   })
@@ -451,13 +451,13 @@ resource "local_file" "slo_definitions" {
 output "phase_21_observability_status" {
   description = "Phase 21 Observability deployment status"
   value = {
-    prometheus_enabled  = var.phase_21_enabled && var.prometheus_enabled
-    grafana_enabled     = var.phase_21_enabled && var.grafana_enabled
+    prometheus_enabled   = var.phase_21_enabled && var.prometheus_enabled
+    grafana_enabled      = var.phase_21_enabled && var.grafana_enabled
     alertmanager_enabled = var.phase_21_enabled && var.alertmanager_enabled
-    prometheus_url     = "http://localhost:9090"
-    grafana_url        = "http://localhost:3000"
-    alertmanager_url   = "http://localhost:9093"
-    slo_targets        = var.slo_targets
+    prometheus_url       = "http://localhost:9090"
+    grafana_url          = "http://localhost:3000"
+    alertmanager_url     = "http://localhost:9093"
+    slo_targets          = var.slo_targets
     deployment_timestamp = timestamp()
   }
 }

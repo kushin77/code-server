@@ -16,17 +16,17 @@ terraform {
 # ==============================================================================
 
 locals {
-  vrrp_router_id         = var.vrrp_router_id
-  vip                    = var.inventory.vip.ip
-  primary_host           = var.inventory.hosts.primary
-  replica_host           = var.inventory.hosts.replica
-  keepalived_version     = var.keepalived_version
-  health_check_interval  = var.health_check_interval
-  health_check_retries   = var.health_check_retries
-  health_check_timeout   = var.health_check_timeout
-  vrrp_interval          = var.vrrp_interval
-  scripts_path           = "${path.module}/scripts"
-  templates_path         = "${path.module}/templates"
+  vrrp_router_id        = var.vrrp_router_id
+  vip                   = var.inventory.vip.ip
+  primary_host          = var.inventory.hosts.primary
+  replica_host          = var.inventory.hosts.replica
+  keepalived_version    = var.keepalived_version
+  health_check_interval = var.health_check_interval
+  health_check_retries  = var.health_check_retries
+  health_check_timeout  = var.health_check_timeout
+  vrrp_interval         = var.vrrp_interval
+  scripts_path          = "${path.module}/scripts"
+  templates_path        = "${path.module}/templates"
 }
 
 # ==============================================================================
@@ -62,7 +62,7 @@ resource "docker_image" "keepalived" {
 # Keepalived config on primary (MASTER, priority 150)
 resource "local_file" "keepalived_primary_config" {
   filename = "${local.templates_path}/keepalived-primary.conf"
-  content = <<-EOT
+  content  = <<-EOT
 # Keepalived Configuration — PRIMARY (VRRP Master)
 # Generated from Terraform — DO NOT EDIT
 # This host holds the VRRP VIP (${local.vip}) by default
@@ -115,59 +115,59 @@ EOT
 
 # Health check script on primary
 resource "local_file" "vrrp_health_check_primary" {
-  filename = "${local.scripts_path}/vrrp-health-monitor.sh"
-  content = file("${path.module}/scripts/vrrp-health-monitor.sh")
+  filename        = "${local.scripts_path}/vrrp-health-monitor.sh"
+  content         = file("${path.module}/scripts/vrrp-health-monitor.sh")
   file_permission = "0755"
 }
 
 # Keepalived Docker container on primary
 resource "docker_container" "keepalived_primary" {
-  count             = var.enable_on_primary ? 1 : 0
-  provider          = docker.primary
-  name              = "keepalived"
-  image             = docker_image.keepalived.repo_digest
-  restart_policy    = "always"
-  privileged        = true
-  network_mode      = "host"
-  
+  count          = var.enable_on_primary ? 1 : 0
+  provider       = docker.primary
+  name           = "keepalived"
+  image          = docker_image.keepalived.repo_digest
+  restart_policy = "always"
+  privileged     = true
+  network_mode   = "host"
+
   mounts {
     type   = "bind"
     source = abspath(local_file.keepalived_primary_config.filename)
     target = "/etc/keepalived/keepalived.conf"
   }
-  
+
   mounts {
     type   = "bind"
     source = abspath(local_file.vrrp_health_check_primary.filename)
     target = "/usr/local/bin/vrrp-health-monitor.sh"
   }
-  
+
   mounts {
     type   = "bind"
     source = abspath("${local.scripts_path}/keepalived-notify.sh")
     target = "/usr/local/bin/keepalived-notify.sh"
   }
-  
+
   env = ["PROD_VIP=${local.vip}"]
-  
+
   log_driver = "json-file"
   log_opts = {
     "max-size" = "10m"
     "max-file" = "3"
   }
-  
+
   healthcheck {
     test     = ["CMD", "/usr/local/bin/vrrp-health-monitor.sh"]
     interval = "${local.health_check_interval}s"
     timeout  = "${local.health_check_timeout}s"
     retries  = local.health_check_retries
   }
-  
+
   depends_on = [
     docker_image.keepalived,
     local_file.keepalived_primary_config,
   ]
-  
+
   lifecycle {
     create_before_destroy = true
   }
@@ -180,7 +180,7 @@ resource "docker_container" "keepalived_primary" {
 # Keepalived config on replica (BACKUP, priority 100)
 resource "local_file" "keepalived_replica_config" {
   filename = "${local.templates_path}/keepalived-replica.conf"
-  content = <<-EOT
+  content  = <<-EOT
 # Keepalived Configuration — REPLICA (VRRP Backup)
 # Generated from Terraform — DO NOT EDIT
 # This host is standby for the VRRP VIP (${local.vip})
@@ -232,59 +232,59 @@ EOT
 
 # Health check script on replica
 resource "local_file" "vrrp_health_check_replica" {
-  filename = "${local.scripts_path}/vrrp-health-monitor-replica.sh"
-  content = file("${path.module}/scripts/vrrp-health-monitor.sh")
+  filename        = "${local.scripts_path}/vrrp-health-monitor-replica.sh"
+  content         = file("${path.module}/scripts/vrrp-health-monitor.sh")
   file_permission = "0755"
 }
 
 # Keepalived Docker container on replica
 resource "docker_container" "keepalived_replica" {
-  count             = var.enable_on_replica ? 1 : 0
-  provider          = docker.replica
-  name              = "keepalived"
-  image             = docker_image.keepalived.repo_digest
-  restart_policy    = "always"
-  privileged        = true
-  network_mode      = "host"
-  
+  count          = var.enable_on_replica ? 1 : 0
+  provider       = docker.replica
+  name           = "keepalived"
+  image          = docker_image.keepalived.repo_digest
+  restart_policy = "always"
+  privileged     = true
+  network_mode   = "host"
+
   mounts {
     type   = "bind"
     source = abspath(local_file.keepalived_replica_config.filename)
     target = "/etc/keepalived/keepalived.conf"
   }
-  
+
   mounts {
     type   = "bind"
     source = abspath(local_file.vrrp_health_check_replica.filename)
     target = "/usr/local/bin/vrrp-health-monitor.sh"
   }
-  
+
   mounts {
     type   = "bind"
     source = abspath("${local.scripts_path}/keepalived-notify.sh")
     target = "/usr/local/bin/keepalived-notify.sh"
   }
-  
+
   env = ["PROD_VIP=${local.vip}"]
-  
+
   log_driver = "json-file"
   log_opts = {
     "max-size" = "10m"
     "max-file" = "3"
   }
-  
+
   healthcheck {
     test     = ["CMD", "/usr/local/bin/vrrp-health-monitor.sh"]
     interval = "${local.health_check_interval}s"
     timeout  = "${local.health_check_timeout}s"
     retries  = local.health_check_retries
   }
-  
+
   depends_on = [
     docker_image.keepalived,
     local_file.keepalived_replica_config,
   ]
-  
+
   lifecycle {
     create_before_destroy = true
   }

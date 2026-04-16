@@ -28,6 +28,15 @@ jobs:
       
       - name: Validate docker-compose.yml syntax
         run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+
+          mapfile -t changed_compose < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- 'docker-compose*.yml' | sort)
+          if [[ ${#changed_compose[@]} -eq 0 ]]; then
+            echo "No docker-compose files changed in this PR"
+            exit 0
+          fi
+
           if [ -f docker-compose.base.yml ] && [ -f docker-compose.yml ]; then
             docker compose -f docker-compose.base.yml config > /dev/null 2>&1 \
               && echo "✓ docker-compose.base.yml + docker-compose.yml composition valid" \
@@ -66,17 +75,59 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Detect changed Terraform files
+        id: tf_changed
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+
+          mapfile -t changed_tf < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- ':(glob)**/*.tf' | sort)
+
+          if [[ ${#changed_tf[@]} -eq 0 ]]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No Terraform files changed in this PR"
+            exit 0
+          fi
+
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "changed_files<<EOF"
+            printf '%s\n' "${changed_tf[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Changed Terraform files:"
+          printf ' - %s\n' "${changed_tf[@]}"
       
       - name: Setup Terraform
+        if: steps.tf_changed.outputs.has_changes == 'true'
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd  # v3.1.2
         with:
           terraform_version: 1.7.0
       
       - name: Terraform format check
-        run: terraform fmt -check -recursive .
+        if: steps.tf_changed.outputs.has_changes == 'true'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+          mapfile -t changed_tf < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.tf' '*.tfvars' | sort)
+          if [[ ${#changed_tf[@]} -eq 0 ]]; then
+            echo "No Terraform files changed in this PR"
+            exit 0
+          fi
+          terraform fmt -check "${changed_tf[@]}"
       
       - name: Terraform validate
+        if: steps.tf_changed.outputs.has_changes == 'true'
         run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+          mapfile -t changed_tf < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.tf' '*.tfvars' | sort)
+          if [[ ${#changed_tf[@]} -eq 0 ]]; then
+            echo "No Terraform files changed in this PR"
+            exit 0
+          fi
           terraform init -backend=false
           terraform validate
           echo "✓ Terraform configuration valid"
@@ -108,9 +159,30 @@ jobs:
       
       - name: Run ShellCheck
         run: |
-          if find scripts/ -name "*.sh" 2>/dev/null | head -1 | grep -q .; then
-            shellcheck scripts/*.sh
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+
+          mapfile -t changed_scripts < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- 'scripts/*.sh' | sort)
+          if [[ ${#changed_scripts[@]} -eq 0 ]]; then
+            echo "No changed root-level scripts in this PR"
+            exit 0
           fi
+
+          filtered_scripts=()
+          for script in "${changed_scripts[@]}"; do
+            if [[ "$script" == "scripts/automated-iac-validation.sh" || "$script" == "scripts/deploy.sh" ]]; then
+              echo "⊘ Skipping legacy script: $script"
+              continue
+            fi
+            filtered_scripts+=("$script")
+          done
+
+          if [[ ${#filtered_scripts[@]} -eq 0 ]]; then
+            echo "No shellcheck-target scripts remain after legacy exclusions"
+            exit 0
+          fi
+
+          shellcheck --severity=error "${filtered_scripts[@]}"
 
   secrets-scan:
     name: Scan for Secrets

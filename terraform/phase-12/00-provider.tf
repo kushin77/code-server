@@ -28,8 +28,8 @@ terraform {
   }
 
   backend "gcs" {
-    bucket  = "code-server-terraform-state"
-    prefix  = "phase-12/infrastructure"
+    bucket = "code-server-terraform-state"
+    prefix = "phase-12/infrastructure"
   }
 }
 
@@ -70,10 +70,10 @@ data "google_client_config" "current" {}
 # Get available zones per region (for spreading resources)
 data "google_compute_zones" "available" {
   for_each = {
-    us-west     = "us-west1"
-    eu-west    = "eu-west1"
-    eu-central = "europe-west1"
-    ap-south   = "asia-southeast1"
+    us-west      = "us-west1"
+    eu-west      = "eu-west1"
+    eu-central   = "europe-west1"
+    ap-south     = "asia-southeast1"
     ap-northeast = "asia-northeast1"
   }
 
@@ -86,27 +86,27 @@ data "google_compute_zones" "available" {
 # ============================================================================
 
 locals {
-  project_id   = var.gcp_project_id
+  project_id    = var.gcp_project_id
   federation_id = var.federation_name
-  timestamp    = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
+  timestamp     = formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())
 
   # Common labels for all resources
   common_labels = merge(
     var.labels,
     {
-      terraform   = "true"
-      phase       = "12-infrastructure"
-      federation  = local.federation_id
-      created_at  = local.timestamp
+      terraform  = "true"
+      phase      = "12-infrastructure"
+      federation = local.federation_id
+      created_at = local.timestamp
     }
   )
 
   # Region configuration
   regions = {
-    us-west     = "us-west1"
-    eu-west    = "eu-west1"
-    eu-central = "europe-west1"
-    ap-south   = "asia-southeast1"
+    us-west      = "us-west1"
+    eu-west      = "eu-west1"
+    eu-central   = "europe-west1"
+    ap-south     = "asia-southeast1"
     ap-northeast = "asia-northeast1"
   }
 }

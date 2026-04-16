@@ -75,10 +75,10 @@ resource "aws_subnet" "us_west_public" {
 resource "aws_subnet" "us_west_private" {
   for_each = toset(var.availability_zones_us_west)
 
-  provider           = aws.us_west
-  vpc_id             = var.vpc_id_us_west
-  availability_zone  = each.value
-  cidr_block         = "10.0.${100 + index(var.availability_zones_us_west, each.value)}.0/24"
+  provider          = aws.us_west
+  vpc_id            = var.vpc_id_us_west
+  availability_zone = each.value
+  cidr_block        = "10.0.${100 + index(var.availability_zones_us_west, each.value)}.0/24"
 
   tags = {
     Name = "subnet-us-west-private-${replace(each.value, "us-west-2", "")}"
@@ -105,10 +105,10 @@ resource "aws_subnet" "eu_west_public" {
 resource "aws_subnet" "eu_west_private" {
   for_each = toset(var.availability_zones_eu_west)
 
-  provider           = aws.eu_west
-  vpc_id             = var.vpc_id_eu_west
-  availability_zone  = each.value
-  cidr_block         = "10.1.${100 + index(var.availability_zones_eu_west, each.value)}.0/24"
+  provider          = aws.eu_west
+  vpc_id            = var.vpc_id_eu_west
+  availability_zone = each.value
+  cidr_block        = "10.1.${100 + index(var.availability_zones_eu_west, each.value)}.0/24"
 
   tags = {
     Name = "subnet-eu-west-private-${replace(each.value, "eu-west-1", "")}"
@@ -135,10 +135,10 @@ resource "aws_subnet" "ap_south_public" {
 resource "aws_subnet" "ap_south_private" {
   for_each = toset(var.availability_zones_ap_south)
 
-  provider           = aws.ap_south
-  vpc_id             = var.vpc_id_ap_south
-  availability_zone  = each.value
-  cidr_block         = "10.2.${100 + index(var.availability_zones_ap_south, each.value)}.0/24"
+  provider          = aws.ap_south
+  vpc_id            = var.vpc_id_ap_south
+  availability_zone = each.value
+  cidr_block        = "10.2.${100 + index(var.availability_zones_ap_south, each.value)}.0/24"
 
   tags = {
     Name = "subnet-ap-south-private-${replace(each.value, "ap-south-1", "")}"

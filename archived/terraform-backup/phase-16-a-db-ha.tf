@@ -100,7 +100,7 @@ resource "docker_image" "postgresql_ha" {
   count         = var.phase_16_a_enabled ? 1 : 0
   name          = "postgres:15.2-alpine"
   pull_triggers = ["15.2"]
-  
+
   lifecycle {
     prevent_destroy = false
   }
@@ -110,7 +110,7 @@ resource "docker_image" "pgbouncer" {
   count         = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
   name          = "pgbouncer/pgbouncer:${var.pgbouncer_version}"
   pull_triggers = [var.pgbouncer_version]
-  
+
   lifecycle {
     prevent_destroy = false
   }
@@ -120,7 +120,7 @@ resource "docker_image" "patroni" {
   count         = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
   name          = "patroni:3.0.2-alpine"
   pull_triggers = ["3.0.2-alpine"]
-  
+
   lifecycle {
     prevent_destroy = false
   }
@@ -131,13 +131,13 @@ resource "docker_image" "patroni" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "postgres_primary" {
-  count         = var.phase_16_a_enabled ? 1 : 0
-  name          = "postgres-ha-primary"
-  image         = docker_image.postgresql_ha[0].image_id
+  count = var.phase_16_a_enabled ? 1 : 0
+  name  = "postgres-ha-primary"
+  image = docker_image.postgresql_ha[0].image_id
   networks_advanced {
     name = docker_network.postgres_ha_network[0].name
   }
-  
+
   env = [
     "POSTGRES_DB=code_server_db",
     "POSTGRES_USER=db_admin",
@@ -176,9 +176,9 @@ resource "docker_container" "postgres_primary" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "postgres_replica" {
-  count         = var.phase_16_a_enabled ? var.db_instance_count - 1 : 0
-  name          = "postgres-ha-replica-${count.index + 1}"
-  image         = docker_image.postgresql_ha[0].image_id
+  count = var.phase_16_a_enabled ? var.db_instance_count - 1 : 0
+  name  = "postgres-ha-replica-${count.index + 1}"
+  image = docker_image.postgresql_ha[0].image_id
   networks_advanced {
     name = docker_network.postgres_ha_network[0].name
   }
@@ -227,9 +227,9 @@ resource "docker_container" "postgres_replica" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "pgbouncer_pool" {
-  count         = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
-  name          = "pgbouncer-pool"
-  image         = docker_image.pgbouncer[0].image_id
+  count = var.phase_16_a_enabled && var.pgbouncer_enabled ? 1 : 0
+  name  = "pgbouncer-pool"
+  image = docker_image.pgbouncer[0].image_id
   networks_advanced {
     name = docker_network.postgres_ha_network[0].name
   }
@@ -276,9 +276,9 @@ resource "docker_container" "pgbouncer_pool" {
 # ───────────────────────────────────────────────────────────────────────────
 
 resource "docker_container" "patroni_ha" {
-  count         = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
-  name          = "patroni-ha-controller"
-  image         = docker_image.patroni[0].image_id
+  count = var.phase_16_a_enabled && var.patroni_enabled ? 1 : 0
+  name  = "patroni-ha-controller"
+  image = docker_image.patroni[0].image_id
   networks_advanced {
     name = docker_network.postgres_ha_network[0].name
   }
@@ -364,10 +364,10 @@ output "patroni_endpoint" {
 output "replication_status" {
   description = "Database replication status"
   value = var.phase_16_a_enabled ? {
-    primary_up       = try(docker_container.postgres_primary[0].id != "", false)
-    replicas_up      = length(docker_container.postgres_replica)
-    patroni_enabled  = var.patroni_enabled
-    pool_mode        = var.pool_mode
+    primary_up      = try(docker_container.postgres_primary[0].id != "", false)
+    replicas_up     = length(docker_container.postgres_replica)
+    patroni_enabled = var.patroni_enabled
+    pool_mode       = var.pool_mode
   } : null
 }
 

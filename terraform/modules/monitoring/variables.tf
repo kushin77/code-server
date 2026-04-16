@@ -73,8 +73,8 @@ variable "labels" {
   description = "Common labels for all monitoring resources"
   type        = map(string)
   default = {
-    module      = "monitoring"
-    managed_by  = "terraform"
+    module     = "monitoring"
+    managed_by = "terraform"
   }
 }
 

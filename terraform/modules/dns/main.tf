@@ -57,13 +57,13 @@ resource "cloudflare_record" "primary" {
 
 # Secondary DNS Record (failover)
 resource "cloudflare_record" "secondary" {
-  zone_id = var.cloudflare_zone_id
-  name    = "@"
-  type    = "A"
-  value   = var.secondary_ip
-  ttl     = var.dns_ttl
-  proxied = false
-  priority = 10  # Lower priority for failover
+  zone_id  = var.cloudflare_zone_id
+  name     = "@"
+  type     = "A"
+  value    = var.secondary_ip
+  ttl      = var.dns_ttl
+  proxied  = false
+  priority = 10 # Lower priority for failover
 }
 
 # Cloudflare Load Balancer (health checks + failover)
@@ -78,8 +78,8 @@ resource "cloudflare_load_balancer" "main" {
   description = "Load balancer with automatic failover"
   proxied     = true
 
-  session_affinity = "cookie"
-  session_affinity_ttl = 82800  # 23 hours
+  session_affinity     = "cookie"
+  session_affinity_ttl = 82800 # 23 hours
 }
 
 # Primary Pool
@@ -126,7 +126,7 @@ resource "cloudflare_load_balancer_monitor" "primary_health" {
   timeout  = 5
   retries  = var.failover_threshold
 
-  allow_insecure = false
+  allow_insecure   = false
   follow_redirects = false
 
   expected_codes = "200"
@@ -146,7 +146,7 @@ resource "cloudflare_load_balancer_monitor" "secondary_health" {
   timeout  = 5
   retries  = var.failover_threshold
 
-  allow_insecure = false
+  allow_insecure   = false
   follow_redirects = false
 
   expected_codes = "200"

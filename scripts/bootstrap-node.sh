@@ -35,8 +35,6 @@ source "$SCRIPT_DIR/_common/init.sh"
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Bootstrap options

@@ -1,0 +1,133 @@
+name: Validate Linux-Only Content
+
+# Closes #399
+# Blocks merges that contain Windows-specific content in IaC / workflow files.
+# Applies to: docker-compose.yml, Terraform, GitHub Actions workflows, scripts.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  no-windows-paths:
+    name: No Windows paths in IaC files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect Windows paths in tracked files
+        run: |
+          # Patterns that indicate Windows-specific content
+          PATTERNS=(
+            'C:\\'
+            'D:\\'
+            '%APPDATA%'
+            '%USERPROFILE%'
+            '%PROGRAMFILES%'
+            'AppData\\Roaming'
+            'Program Files'
+            '\${env:'
+            'Get-Command'
+            'Get-ChildItem'
+            'Set-Location'
+            'Write-Host'
+            'Invoke-Expression'
+          )
+
+          failed=0
+          for pattern in "${PATTERNS[@]}"; do
+            # Exclude: deprecated/, archived/, .archived/, docs/ prose
+            matches=$(grep -rn --include="*.yml" --include="*.yaml" \
+              --include="*.tf" --include="*.sh" \
+              --exclude-dir=deprecated \
+              --exclude-dir=archived \
+              --exclude-dir=".archived" \
+              --exclude-dir=".github/ISSUE_TEMPLATE" \
+              -- "$pattern" . 2>/dev/null || true)
+            if [[ -n "$matches" ]]; then
+              echo "FAIL: Windows-specific pattern '$pattern' found:"
+              echo "$matches" | head -10 | sed 's/^/  /'
+              failed=1
+            fi
+          done
+
+          if [[ $failed -eq 1 ]]; then
+            echo ""
+            echo "Windows paths/cmdlets are not permitted in IaC, workflows, or scripts."
+            echo "This project is Linux/on-prem only. See: CONTRIBUTING.md"
+            exit 1
+          fi
+          echo "✓ No Windows paths detected"
+
+  no-windows-runners:
+    name: No Windows runners in GitHub Actions workflows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect windows-* runner references
+        run: |
+          bad=$(grep -rn "windows-" .github/workflows/ \
+            --include="*.yml" --include="*.yaml" \
+            --exclude="validate-linux-only.yml" 2>/dev/null || true)
+          if [[ -n "$bad" ]]; then
+            echo "FAIL: Windows runner detected in GitHub Actions:"
+            echo "$bad" | sed 's/^/  /'
+            echo ""
+            echo "All CI/CD must run on ubuntu-latest. No windows-* runners allowed."
+            exit 1
+          fi
+          echo "✓ No Windows runners found"
+
+  no-ps1-in-active-scripts:
+    name: No .ps1 files outside deprecated/
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect PowerShell scripts outside deprecated directories
+        run: |
+          bad=$(find . -name "*.ps1" \
+            -not -path "*/deprecated/*" \
+            -not -path "*/archived/*" \
+            -not -path "*/.archived/*" \
+            -not -path "*/.git/*" 2>/dev/null || true)
+          if [[ -n "$bad" ]]; then
+            echo "FAIL: PowerShell (.ps1) files found outside deprecated/:"
+            echo "$bad" | sed 's/^/  /'
+            echo ""
+            echo "PowerShell is deprecated. Move to deprecated/windows/ and add DEPRECATED notice."
+            echo "See: CONTRIBUTING.md#windows-policy and issue #398"
+            exit 1
+          fi
+          echo "✓ No active .ps1 files found"
+
+  docker-compose-linux-volumes:
+    name: docker-compose.yml has no Windows volume paths
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose volume paths
+        run: |
+          # Windows-style volume paths in docker-compose are invalid on Linux
+          bad=$(grep -n 'C:\\\\:\|D:\\\\:\|/c/Users\|/mnt/c' \
+            docker-compose.yml docker-compose.dev.yml 2>/dev/null || true)
+          if [[ -n "$bad" ]]; then
+            echo "FAIL: Windows volume mount paths in docker-compose:"
+            echo "$bad" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "✓ docker-compose volume paths are Linux-compatible"

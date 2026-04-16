@@ -915,3 +915,57 @@ If:
 Elite engineering = **enforcement + culture + automation**.
 
 No exceptions. No compromises. No "we'll clean it up later."
+
+---
+
+## Shell Script Standards
+
+> See also: `.github/workflows/shell-lint.yml` — enforced on every PR. Closes #400.
+
+### Rules (non-negotiable)
+
+1. **Shebang**: All scripts MUST begin with exactly `#!/bin/bash` — not `/bin/sh`, not `#!/usr/bin/env bash`
+2. **Linting**: All scripts MUST pass `shellcheck --severity=warning --shell=bash`
+3. **Error handling**: All scripts MUST use `set -euo pipefail`
+4. **Source**: All scripts MUST source `scripts/_common/init.sh` for shared helpers
+5. **No platform assumptions**: Scripts MUST run on Linux only; no Windows paths
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/_common/init.sh"
+
+# ... your script body
+```
+
+### Validation
+
+```bash
+# Run locally before pushing
+shellcheck --severity=warning --shell=bash scripts/**/*.sh
+```
+
+---
+
+## Windows Policy
+
+> See also: `deprecated/windows/README.md` and `.github/workflows/validate-linux-only.yml`. Closes #398 #399.
+
+**Windows is not a supported deployment or development platform.**
+
+This project deploys exclusively to on-premises Linux hosts at `192.168.168.31` and `192.168.168.42`.
+
+### What this means
+
+- ❌ **Do not add PowerShell scripts** (`.ps1`) anywhere outside `deprecated/windows/`
+- ❌ **Do not add Windows paths** (`C:\`, `%APPDATA%`, `Program Files`) in any IaC, workflow, or script
+- ❌ **Do not use Windows runners** (`windows-*`) in GitHub Actions workflows
+- ❌ **Do not reference Windows commands** (`Get-Command`, `Set-Location`, `Write-Host`) in CI/CD
+- ✅ **All scripts MUST be bash** and run on `ubuntu-latest` or the production Linux hosts
+- ✅ **Deploy via SSH** to `akushnir@192.168.168.31` — never run Terraform/Docker locally on Windows
+
+### Enforcement
+
+CI workflow `validate-linux-only.yml` blocks any PR containing Windows-specific content.

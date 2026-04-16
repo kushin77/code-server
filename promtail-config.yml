@@ -1,0 +1,57 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Promtail Configuration — Log Shipper (Docker → Loki)
+# Version: 2.9.3
+# Usage: COMPOSE_PROFILES=tracing docker compose up -d
+# ════════════════════════════════════════════════════════════════════════════
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape all Docker container logs
+  - job_name: docker-containers
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker-logs
+          host: "192.168.168.31"
+          __path__: /var/lib/docker/containers/*/*.log
+
+    pipeline_stages:
+      - json:
+          expressions:
+            log: log
+            stream: stream
+            time: time
+            container_name: attrs.name
+      - labels:
+          stream:
+          container_name:
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+      - output:
+          source: log
+
+  # Scrape system logs
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system-logs
+          host: "192.168.168.31"
+          __path__: /var/log/*.log
+    pipeline_stages:
+      - drop:
+          longer_than: 8KB
+          drop_counter_reason: too_long_line

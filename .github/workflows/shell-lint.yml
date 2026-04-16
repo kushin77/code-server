@@ -1,0 +1,86 @@
+name: Shell Script Lint (Shellcheck)
+
+# Closes #400
+# Enforces bash-only standards and shellcheck across all .sh files.
+
+on:
+  pull_request:
+    paths:
+      - "scripts/**/*.sh"
+      - "*.sh"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**/*.sh"
+      - "*.sh"
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: Shellcheck — bash dialect, warning severity
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+
+      - name: Verify all .sh files have #!/bin/bash shebang
+        run: |
+          failed=0
+          while IFS= read -r -d '' f; do
+            first=$(head -1 "$f")
+            if [[ "$first" != "#!/bin/bash" ]]; then
+              echo "FAIL: $f — missing '#!/bin/bash' shebang (got: $first)"
+              failed=1
+            fi
+          done < <(find scripts/ -name "*.sh" \
+            -not -path "*/archived/*" \
+            -not -path "*/deprecated/*" \
+            -not -path "*/.archived/*" \
+            -print0)
+          if [[ $failed -eq 1 ]]; then
+            echo ""
+            echo "All bash scripts MUST begin with: #!/bin/bash"
+            echo "See: CONTRIBUTING.md#shell-script-standards"
+            exit 1
+          fi
+          echo "✓ All scripts have correct shebang"
+
+      - name: Run shellcheck on all active scripts
+        run: |
+          mapfile -t scripts < <(find scripts/ -name "*.sh" \
+            -not -path "*/archived/*" \
+            -not -path "*/deprecated/*" \
+            -not -path "*/.archived/*")
+
+          if [[ ${#scripts[@]} -eq 0 ]]; then
+            echo "No shell scripts found to lint"
+            exit 0
+          fi
+
+          echo "Linting ${#scripts[@]} scripts..."
+          shellcheck --severity=warning --shell=bash "${scripts[@]}"
+          echo "✓ Shellcheck passed"
+
+      - name: Verify no scripts use /bin/sh or env bash
+        run: |
+          bad_shebangs=$(grep -rl "^#!/bin/sh\|^#!/usr/bin/env bash\|^#!/usr/bin/env sh" scripts/ \
+            --include="*.sh" \
+            --exclude-dir=archived \
+            --exclude-dir=deprecated \
+            --exclude-dir=.archived 2>/dev/null || true)
+          if [[ -n "$bad_shebangs" ]]; then
+            echo "FAIL: Found non-standard shebangs (must be #!/bin/bash exactly):"
+            echo "$bad_shebangs" | sed 's/^/  /'
+            echo ""
+            echo "Standard: #!/bin/bash (not /bin/sh, not #!/usr/bin/env bash)"
+            exit 1
+          fi
+          echo "✓ No non-standard shebangs found"

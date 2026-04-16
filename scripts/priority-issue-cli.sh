@@ -1,3 +1,8 @@
+# @file        scripts/priority-issue-cli.sh
+# @module      operations
+# @description priority issue cli — on-prem code-server
+# @owner       platform
+# @status      active
 
 #!/bin/bash
 # Priority-Based Issue Management CLI

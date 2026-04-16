@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/bootstrap-node.sh
+# @module      bootstrap
+# @description bootstrap node — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # bootstrap-node.sh
 #

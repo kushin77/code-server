@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/phase-22-batch-4-5-automation.sh
+# @module      operations
+# @description phase 22 batch 4 5 automation — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════
 # Phase 22b Batch 4 & 5 Automation: Script & Archive Reorganization
 #

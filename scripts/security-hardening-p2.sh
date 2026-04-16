@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/security-hardening-p2.sh
+# @module      security
+# @description security hardening p2 — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # Security Hardening: OAuth2 & Authentication Security Audit (P2)
 # IaC: All security configurations version-controlled and auditable

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/ide-access-restrictions.sh
+# @module      operations
+# @description ide access restrictions — on-prem code-server
+# @owner       platform
+# @status      active
 # Read-Only IDE Access Wrapper for Code-Server
 # 
 # Purpose: Prevent developers from using code-server to bypass security

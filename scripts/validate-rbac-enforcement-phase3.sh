@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/validate-rbac-enforcement-phase3.sh
+# @module      testing
+# @description validate rbac enforcement phase3 — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 3: RBAC Enforcement Health Check & Validation
 # Comprehensive testing suite for authorization controls
 

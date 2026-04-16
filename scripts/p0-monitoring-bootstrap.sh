@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/p0-monitoring-bootstrap.sh
+# @module      operations
+# @description p0 monitoring bootstrap — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # P0 Monitoring Bootstrap - Production Operations Setup
 # Simplified version without jq dependency

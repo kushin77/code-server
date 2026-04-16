@@ -1,5 +1,9 @@
 #!/bin/bash
-
+# @file        scripts/security-audit.sh
+# @module      security
+# @description security audit — on-prem code-server
+# @owner       platform
+# @status      active
 ##############################################################################
 # Phase 13 Security Audit Script
 # Validates zero-trust security: no SSH exposure, audit logging, compliance

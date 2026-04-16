@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/configure-audit-logging-phase1.sh
+# @module      operations
+# @description configure audit logging phase1 — on-prem code-server
+# @owner       platform
+# @status      active
 #
 # P1 #388 - IAM Audit Event Schema & Logging Configuration
 # Phase 1: Identity & Workload Authentication Standardization

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/deploy-oidc-issuer-phase2-v2.sh
+# @module      deployment
+# @description deploy oidc issuer phase2 v2 — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 2.1: Kubernetes OIDC Issuer Deployment (v2 - Fixed)
 # Exposes K8s OIDC endpoint publicly for service token validation
 # Author: @kushin77

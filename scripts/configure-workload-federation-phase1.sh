@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/configure-workload-federation-phase1.sh
+# @module      iam
+# @description configure workload federation phase1 — on-prem code-server
+# @owner       platform
+# @status      active
 #
 # P1 #388 - Phase 1: Workload Federation Setup Script
 # Configures GitHub Actions OIDC and baseline RBAC for kushin77/code-server.

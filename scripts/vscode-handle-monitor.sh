@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/vscode-handle-monitor.sh
+# @module      vscode-stability
+# @description vscode handle monitor — on-prem code-server
+# @owner       platform
+# @status      active
 # ═══════════════════════════════════════════════════════════════════════════
 # VSCode Process & Handle Health Monitor
 # Purpose: Real-time snapshot of VSCode/terminal process health

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/manage-users.sh
+# @module      operations
+# @description manage users — on-prem code-server
+# @owner       platform
+# @status      active
 # scripts/manage-users.sh - IDE User Management CLI
 
 set -e

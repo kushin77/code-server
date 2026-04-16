@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/deploy-rbac-enforcement-docker-phase3.sh
+# @module      deployment
+# @description deploy rbac enforcement docker phase3 — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 3: RBAC Enforcement for Docker-Based Infrastructure
 # Service-to-service authorization control via environment variables + Caddy middleware
 

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/deploy-oidc-issuer-phase2-1.sh
+# @module      deployment
+# @description deploy oidc issuer phase2 1 — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 2.1: OIDC Issuer Deployment Script
 # Production deployment for ide.kushnir.cloud workload identity
 

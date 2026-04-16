@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/cleanup-falco.sh
+# @module      maintenance
+# @description cleanup falco — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════
 # Cleanup Falco Runtime Security (for rollback)
 # ════════════════════════════════════════════════════════════════════════════

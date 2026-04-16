@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/postgresql-replication-setup.sh
+# @module      operations
+# @description postgresql replication setup — on-prem code-server
+# @owner       platform
+# @status      active
 # File: scripts/postgresql-replication-setup.sh
 # Owner: ops
 # Status: ACTIVE

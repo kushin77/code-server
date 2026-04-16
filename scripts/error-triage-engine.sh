@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/error-triage-engine.sh
+# @module      operations
+# @description error triage engine — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # P1 #378: Automated Error Triage Framework
 #

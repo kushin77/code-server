@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/provision-workload-identity.sh
+# @module      operations
+# @description provision workload identity — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # P1 #388: Workload Identity Provisioning
 #

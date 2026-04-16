@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/automated-env-generator.sh
+# @module      configuration
+# @description automated env generator — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: automated-env-generator.sh
 # Owner: DevOps/Configuration Team

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/logging.sh
+# @module      operations
+# @description logging — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════
 # scripts/logging.sh
 # ⚠️  DEPRECATED — Use scripts/_common/logging.sh instead.

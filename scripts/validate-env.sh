@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/validate-env.sh
+# @module      testing
+# @description validate env — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # scripts/validate-env.sh — Environment Variable Validation
 # ════════════════════════════════════════════════════════════════════════════════════════════

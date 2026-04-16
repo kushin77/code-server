@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/configure-workload-federation-phase2.sh
+# @module      iam
+# @description configure workload federation phase2 — on-prem code-server
+# @owner       platform
+# @status      active
 #
 # P1 #388 - Phase 2: Workload Federation Setup Script
 # Generates deterministic IAM artifacts for service-to-service authentication.

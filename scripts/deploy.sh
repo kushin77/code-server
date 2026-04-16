@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/deploy.sh
+# @module      deployment
+# @description deploy — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: deploy.sh
 # Owner: DevOps/Infrastructure Team

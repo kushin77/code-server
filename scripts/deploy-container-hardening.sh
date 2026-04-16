@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/deploy-container-hardening.sh
+# @module      deployment
+# @description deploy container hardening — on-prem code-server
+# @owner       platform
+# @status      active
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # P1 #354: Container Hardening Deployment
 #

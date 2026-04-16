@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/validate-host-31.sh
+# @module      testing
+# @description validate host 31 — on-prem code-server
+# @owner       platform
+# @status      active
 ###############################################################################
 # POST-REBOOT VALIDATION SCRIPT FOR HOST ${DEPLOY_HOST}
 #

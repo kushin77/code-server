@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/p0-p3-operations-master.sh
+# @module      operations
+# @description p0 p3 operations master — on-prem code-server
+# @owner       platform
+# @status      active
 # P0-P3 Operations Stack Master Orchestrator
 # 
 # Purpose: Execute all phase progressions and operational validations

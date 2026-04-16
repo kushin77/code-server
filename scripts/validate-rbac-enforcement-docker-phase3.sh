@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/validate-rbac-enforcement-docker-phase3.sh
+# @module      testing
+# @description validate rbac enforcement docker phase3 — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 3: RBAC Enforcement Validation for Docker Infrastructure
 # Comprehensive testing suite for Docker-based authorization controls
 

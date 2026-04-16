@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/redeploy.sh
+# @module      operations
+# @description redeploy — on-prem code-server
+# @owner       platform
+# @status      active
 # File:    redeploy.sh
 # Owner:   Platform Engineering
 # Purpose: Post-merge deployment orchestration triggered by GitHub Actions

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/setup-git-credentials.sh
+# @module      operations
+# @description setup git credentials — on-prem code-server
+# @owner       platform
+# @status      active
 # setup-git-credentials.sh
 # One-time idempotent setup: wire git to fetch GitHub PAT from GCP Secret Manager.
 #

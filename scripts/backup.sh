@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/backup.sh
+# @module      data-management
+# @description backup — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: backup.sh
 # Owner: Data Management Team

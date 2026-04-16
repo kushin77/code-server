@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/automated-certificate-management.sh
+# @module      tls
+# @description automated certificate management — on-prem code-server
+# @owner       platform
+# @status      active
 # Automated SSL/TLS Certificate Management - IaC
 # Manages Let's Encrypt certificates with automatic renewal
 # Integrates with Caddy for zero-downtime ACME

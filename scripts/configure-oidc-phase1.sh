@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/configure-oidc-phase1.sh
+# @module      iam
+# @description configure oidc phase1 — on-prem code-server
+# @owner       platform
+# @status      active
 # scripts/configure-oidc-phase1.sh
 # P1 #388 Phase 1: OIDC Provider Configuration
 # Sets up Google/GitHub OIDC providers for identity federation

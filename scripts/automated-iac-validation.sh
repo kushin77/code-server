@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/automated-iac-validation.sh
+# @module      iac-validation
+# @description automated iac validation — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # File: automated-iac-validation.sh
 # Owner: Infrastructure/DevOps Team

@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# @file        scripts/apply-governance.sh
+# @module      governance
+# @description apply governance — on-prem code-server
+# @owner       platform
+# @status      active
 ################################################################################
 # apply-governance.sh
 # Apply GitHub Governance Framework to repositories

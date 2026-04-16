@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/memory-monitor.sh
+# @module      operations
+# @description memory monitor — on-prem code-server
+# @owner       platform
+# @status      active
 # Memory Monitor & Alert Script
 # Monitors VS Code and Docker container memory usage
 # Alerts when threshold exceeded, suggests remediation

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/gpu-deploy-31.sh
+# @module      operations
+# @description gpu deploy 31 — on-prem code-server
+# @owner       platform
+# @status      active
 # File:    gpu-deploy-31.sh
 # Owner:   Platform Engineering
 # Purpose: GPU deployment and validation for ${DEPLOY_HOST}

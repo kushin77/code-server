@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/nas-mount-31.sh
+# @module      operations
+# @description nas mount 31 — on-prem code-server
+# @owner       platform
+# @status      active
 # File:    nas-mount-31.sh
 # Owner:   Platform Engineering
 # Purpose: NAS mount automation and validation for ${DEPLOY_HOST}

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/validate-oidc-issuer-phase2-1.sh
+# @module      testing
+# @description validate oidc issuer phase2 1 — on-prem code-server
+# @owner       platform
+# @status      active
 # Phase 2.1: OIDC Issuer Health Check & Validation
 # Comprehensive testing suite for workload identity federation
 

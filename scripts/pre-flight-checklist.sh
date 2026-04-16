@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/pre-flight-checklist.sh
+# @module      operations
+# @description pre flight checklist — on-prem code-server
+# @owner       platform
+# @status      active
 # Pre-Flight Deployment Checklist
 # Ensures all prerequisites are met before production deployment
 

@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/tier-2-master-orchestrator.sh
+# @module      operations
+# @description tier 2 master orchestrator — on-prem code-server
+# @owner       platform
+# @status      active
 # File: scripts/tier-2-master-orchestrator.sh
 # Owner: ops
 # Status: ACTIVE

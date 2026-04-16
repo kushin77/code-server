@@ -396,7 +396,7 @@ groups:
           sla: "1hour-response"
         annotations:
           summary: "SSL certificate expires in < 7 days"
-          description: "Certificate {{ $labels.certificate }} expires in {{ (($value) / 86400) | humanize }} days"
+          description: "Certificate {{ $labels.certificate }} expires soon ({{ $value | humanize }} seconds remaining)"
           runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/CERT-EXPIRY.md"
           impact: "HTTPS will fail if certificate not renewed"
 

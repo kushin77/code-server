@@ -56,6 +56,32 @@ elapsed_since() {
   echo $(( $(date +%s) - $1 ))
 }
 
+pg_env() {
+  local key="$1"
+  docker inspect postgres --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | awk -F= -v key="$key" '$1 == key { print substr($0, index($0, "=") + 1); exit }'
+}
+
+redis_requirepass() {
+  docker inspect redis --format '{{range .Config.Cmd}}{{println .}}{{end}}' 2>/dev/null | awk 'prev == "--requirepass" { print; exit } { prev = $0 }'
+}
+
+PG_USER="$(pg_env POSTGRES_USER)"
+PG_DB="$(pg_env POSTGRES_DB)"
+PG_PASSWORD="$(pg_env POSTGRES_PASSWORD)"
+REDIS_PASSWORD="$(redis_requirepass)"
+
+pg_exec() {
+  docker exec -e PGPASSWORD="$PG_PASSWORD" postgres psql -U "${PG_USER:-postgres}" -d "${PG_DB:-postgres}" "$@"
+}
+
+redis_exec() {
+  if [[ -n "$REDIS_PASSWORD" ]]; then
+    docker exec redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning "$@"
+  else
+    docker exec redis redis-cli "$@"
+  fi
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Pre-flight: must run on primary host
 # ─────────────────────────────────────────────────────────────────────────────
@@ -97,12 +123,12 @@ fi
 
 # T3: PostgreSQL replication active
 log_info "T3: PostgreSQL replication lag..."
-PG_LAG=$(docker exec postgres psql -U coder -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::int AS lag_seconds;" -t 2>/dev/null | tr -d ' ' || echo "N/A")
+PG_LAG=$(pg_exec -c "SELECT EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp()))::int AS lag_seconds;" -t 2>/dev/null | tr -d ' ' || echo "N/A")
 if [[ "$PG_LAG" =~ ^[0-9]+$ ]] && [[ "$PG_LAG" -lt "$RPO_TARGET" ]]; then
   pass "T3: PostgreSQL replication lag ${PG_LAG}s (RPO target <${RPO_TARGET}s)"
-elif docker exec postgres psql -U coder -c "SELECT pg_is_in_recovery();" -t 2>/dev/null | grep -q "f"; then
+elif pg_exec -c "SELECT pg_is_in_recovery();" -t 2>/dev/null | grep -q "f"; then
   # Primary node: check that WAL sender is active
-  WAL_SENDERS=$(docker exec postgres psql -U coder -c "SELECT count(*) FROM pg_stat_replication;" -t 2>/dev/null | tr -d ' ' || echo 0)
+  WAL_SENDERS=$(pg_exec -c "SELECT count(*) FROM pg_stat_replication;" -t 2>/dev/null | tr -d ' ' || echo 0)
   if [[ "$WAL_SENDERS" -ge 1 ]]; then
     pass "T3: PostgreSQL WAL senders active ($WAL_SENDERS replicas streaming)"
   else
@@ -114,9 +140,9 @@ fi
 
 # T4: Redis replication active
 log_info "T4: Redis replication state..."
-REDIS_ROLE=$(docker exec redis redis-cli role 2>/dev/null | head -1 || echo "unknown")
+REDIS_ROLE=$(redis_exec role 2>/dev/null | head -1 || echo "unknown")
 if [[ "$REDIS_ROLE" == "master" ]]; then
-  REDIS_SLAVES=$(docker exec redis redis-cli info replication 2>/dev/null | grep "connected_slaves:" | awk -F: '{print $2}' | tr -d '\r' || echo 0)
+  REDIS_SLAVES=$(redis_exec info replication 2>/dev/null | grep "connected_slaves:" | awk -F: '{print $2}' | tr -d '\r' || echo 0)
   if [[ "$REDIS_SLAVES" -ge 1 ]]; then
     pass "T4: Redis primary with $REDIS_SLAVES connected replica(s)"
   else
@@ -136,7 +162,7 @@ section "Phase 7c-2: PostgreSQL Failover Test"
 # T5: Write marker to PostgreSQL
 MARKER="dr_test_$(date +%s)"
 log_info "T5: Writing marker '$MARKER' to PostgreSQL..."
-if docker exec postgres psql -U coder -c "CREATE TABLE IF NOT EXISTS dr_markers (id serial primary key, marker text, created_at timestamptz default now()); INSERT INTO dr_markers(marker) VALUES ('$MARKER');" >/dev/null 2>&1; then
+if pg_exec -c "CREATE TABLE IF NOT EXISTS dr_markers (id serial primary key, marker text, created_at timestamptz default now()); INSERT INTO dr_markers(marker) VALUES ('$MARKER');" >/dev/null 2>&1; then
   pass "T5: DR marker written to PostgreSQL"
 else
   fail "T5: Failed to write DR marker to PostgreSQL — skipping PG failover test"
@@ -146,7 +172,7 @@ fi
 # T6: PostgreSQL recovery-from-replica validation
 log_info "T6: Verify marker visible on replica..."
 if ssh -o ConnectTimeout=5 -o BatchMode=yes "akushnir@$REPLICA_HOST" \
-   "docker exec postgres psql -U coder -c \"SELECT marker FROM dr_markers WHERE marker='$MARKER';\" -t 2>/dev/null | grep -q '$MARKER'" 2>/dev/null; then
+  "docker exec -e PGPASSWORD='$PG_PASSWORD' postgres psql -U '${PG_USER:-postgres}' -d '${PG_DB:-postgres}' -c \"SELECT marker FROM dr_markers WHERE marker='$MARKER';\" -t 2>/dev/null | grep -q '$MARKER'" 2>/dev/null; then
   pass "T6: DR marker replicated to replica (zero RPO confirmed)"
 else
   # Non-fatal: replica may be in standalone mode for this phase
@@ -160,7 +186,7 @@ T_START=$(date +%s)
 docker restart postgres >/dev/null 2>&1
 for i in $(seq 1 30); do
   sleep 1
-  if docker exec postgres psql -U coder -c "SELECT 1;" >/dev/null 2>&1; then
+  if pg_exec -c "SELECT 1;" >/dev/null 2>&1; then
     RTO=$(elapsed_since "$T_START")
     break
   fi
@@ -174,7 +200,7 @@ fi
 
 # T8: Post-restart marker integrity
 log_info "T8: Post-restart marker integrity..."
-if docker exec postgres psql -U coder -c "SELECT marker FROM dr_markers WHERE marker='$MARKER';" -t 2>/dev/null | grep -q "$MARKER"; then
+if pg_exec -c "SELECT marker FROM dr_markers WHERE marker='$MARKER';" -t 2>/dev/null | grep -q "$MARKER"; then
   pass "T8: DR marker intact after restart (zero data loss)"
 else
   fail "T8: DR marker missing after restart — potential data loss"
@@ -188,7 +214,7 @@ section "Phase 7c-3: Redis Failover Test"
 # T9: Write test key
 REDIS_KEY="dr:test:$(date +%s)"
 log_info "T9: Writing key '$REDIS_KEY' to Redis..."
-if docker exec redis redis-cli SET "$REDIS_KEY" "dr_marker_value" EX 300 >/dev/null 2>&1; then
+if redis_exec SET "$REDIS_KEY" "dr_marker_value" EX 300 >/dev/null 2>&1; then
   pass "T9: Redis test key written"
 else
   fail "T9: Failed to write Redis test key"
@@ -200,7 +226,7 @@ T_START=$(date +%s)
 docker restart redis >/dev/null 2>&1
 for i in $(seq 1 20); do
   sleep 1
-  if docker exec redis redis-cli PING >/dev/null 2>&1; then
+  if redis_exec PING >/dev/null 2>&1; then
     REDIS_RTO=$(elapsed_since "$T_START")
     break
   fi
@@ -215,7 +241,7 @@ fi
 # T11: Redis key persistence (AOF/RDB)
 log_info "T11: Redis key persistence after restart..."
 # Note: TTL-based keys may be gone if AOF not enabled; check and document
-if docker exec redis redis-cli GET "$REDIS_KEY" 2>/dev/null | grep -q "dr_marker_value"; then
+if redis_exec GET "$REDIS_KEY" 2>/dev/null | grep -q "dr_marker_value"; then
   pass "T11: Redis key persisted after restart (AOF/RDB active)"
 else
   # Non-fatal: Redis may be in-memory only for session cache

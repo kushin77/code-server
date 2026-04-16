@@ -83,7 +83,7 @@ add_cleanup cleanup_deployment_handler
 
 echo "════════════════════════════════════════════════════════════════════════════"
 echo "IDEMPOTENT DEPLOYMENT: code-server-enterprise"
-echo "Timestamp: $$(date -Iseconds)"
+echo "Timestamp: $(date -Iseconds)"
 echo "════════════════════════════════════════════════════════════════════════════"
 
 # Step 1: Terraform init + apply (generates docker-compose.yml with versions)
@@ -121,22 +121,22 @@ echo ""
 echo "Step 4: Waiting for all services to be healthy..."
 MAX_WAIT=120
 ELAPSED=0
-while [ $$ELAPSED -lt $$MAX_WAIT ]; do
-  HEALTHY=$$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
-  TOTAL=$$(docker compose ps --format json | jq 'length')
-  echo "  [$$ELAPSED/$$MAX_WAIT] Healthy services: $$HEALTHY/$$TOTAL"
+while [ $ELAPSED -lt $MAX_WAIT ]; do
+  HEALTHY=$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
+  TOTAL=$(docker compose ps --format json | jq 'length')
+  echo "  [$ELAPSED/$MAX_WAIT] Healthy services: $HEALTHY/$TOTAL"
   
-  if [ "$$HEALTHY" -eq "$$TOTAL" ]; then
+  if [ "$HEALTHY" -eq "$TOTAL" ]; then
     echo "✅ All services healthy"
     break
   fi
   
   sleep 5
-  ELAPSED=$$((ELAPSED + 5))
+  ELAPSED=$((ELAPSED + 5))
 done
 
-if [ $$ELAPSED -ge $$MAX_WAIT ]; then
-  echo "⚠️  WARNING: Services not fully healthy after $$MAX_WAIT seconds (may still be starting)"
+if [ $ELAPSED -ge $MAX_WAIT ]; then
+  echo "⚠️  WARNING: Services not fully healthy after $MAX_WAIT seconds (may still be starting)"
   docker compose ps
 fi
 

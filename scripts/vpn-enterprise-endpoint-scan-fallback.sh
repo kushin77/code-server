@@ -12,20 +12,16 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Source common library for log_info, log_error, etc.
+source "$SCRIPT_DIR/_common/init.sh"
+
 # SSH Configuration
 SSH_USER="akushnir"
 SSH_HOST="192.168.168.31"
 SSH_KEY="${HOME}/.ssh/akushnir-31"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
 # ─────────────────────────────────────────────────────────────────────────────
-# Helper Functions
+# Local Helper Functions (append to common library)
 # ─────────────────────────────────────────────────────────────────────────────
 
 log_header() {
@@ -36,18 +32,6 @@ log_header() {
 
 log_check() {
     echo -e "${YELLOW}→${NC} $1"
-}
-
-log_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}✗${NC} $1"
-}
-
-log_info() {
-    echo -e "${BLUE}ℹ${NC} $1"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

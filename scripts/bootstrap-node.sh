@@ -28,6 +28,10 @@
 
 set -euo pipefail
 
+# Source common library for log_info, log_error, etc.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
@@ -62,20 +66,8 @@ BOOTSTRAP_STAGES=(
 )
 
 # =============================================================================
-# UTILITIES
+# LOCAL UTILITIES (append to common library)
 # =============================================================================
-
-log_info() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $*"
-}
-
-log_warn() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] WARN: $*" >&2
-}
-
-log_error() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2
-}
 
 log_stage() {
     echo ""

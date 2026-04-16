@@ -5,6 +5,7 @@ export {
 	inferLanguage,
 	semanticBoundaries,
 	chunkByTokenWindow,
+	evaluateRetrievalQuality,
 } from "./indexing";
 export type {
 	SupportedLanguage,
@@ -14,4 +15,6 @@ export type {
 	IndexingOptions,
 	IndexingResult,
 	SearchResult,
+	RetrievalBenchmarkCase,
+	RetrievalQualityMetrics,
 } from "./indexing";

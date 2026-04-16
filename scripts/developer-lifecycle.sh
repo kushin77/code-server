@@ -167,14 +167,16 @@ grant_access() {
     init_db
     
     # Insert or update record
-    sqlite3 "$DB_FILE" <<SQL || {
-        echo -e "${RED}✗ Failed to update database${NC}" >&2
-        log_audit "grant" "$username" "$actor" "failure" "Database update failed"
-        return 1
-    }
+    sqlite3 "$DB_FILE" <<SQL
 INSERT OR REPLACE INTO developers (username, email, grant_date, expiration_date, status, reason, created_by, updated_at)
 VALUES ('$username', '$email', '$grant_date', '$expiration_date', 'active', '$reason', '$actor', CURRENT_TIMESTAMP);
 SQL
+    
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}✗ Failed to update database${NC}" >&2
+        log_audit "grant" "$username" "$actor" "failure" "Database update failed"
+        return 1
+    fi
     
     # Create SSH key if not exists
     if [[ ! -f "$HOME/.ssh/${username}_key" ]]; then

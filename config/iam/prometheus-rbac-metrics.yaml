@@ -1,0 +1,107 @@
+# Prometheus Metrics Configuration for Phase 3 RBAC Enforcement
+# 
+# Metrics to be exported by the token-validation-service microservice
+# (or added to oauth2-proxy metrics)
+
+metrics:
+  # RBAC Decision Counters
+  rbac_decision_total:
+    help: "Total RBAC policy decisions (allow/deny) by role and endpoint"
+    type: counter
+    labels: [role, action, endpoint, method, status_code]
+    examples:
+      - name: rbac_decision_total
+        labels: {role: "admin", action: "allow", endpoint: "/admin/deploy", method: "POST", status_code: "200"}
+        value: 1523
+      - name: rbac_decision_total
+        labels: {role: "viewer", action: "deny", endpoint: "/admin/deploy", method: "POST", status_code: "403"}
+        value: 47
+
+  # RBAC Denial Reasons Breakdown
+  rbac_denial_reason_total:
+    help: "RBAC denials by reason (insufficient_role, invalid_identity_type, rate_limit, etc.)"
+    type: counter
+    labels: [reason, role, endpoint]
+    examples:
+      - name: rbac_denial_reason_total
+        labels: {reason: "insufficient_role", role: "viewer", endpoint: "/admin/deploy"}
+        value: 42
+
+  # Policy Evaluation Latency
+  rbac_policy_eval_seconds:
+    help: "Time spent evaluating RBAC policy per endpoint"
+    type: histogram
+    buckets: [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1]
+    labels: [endpoint, method]
+
+  # Active Authenticated Sessions by Role
+  rbac_active_sessions:
+    help: "Current number of authenticated sessions by role"
+    type: gauge
+    labels: [role, identity_type]
+    examples:
+      - name: rbac_active_sessions
+        labels: {role: "admin", identity_type: "human"}
+        value: 3
+      - name: rbac_active_sessions
+        labels: {role: "operator", identity_type: "workload"}
+        value: 12
+
+  # JWT Validation Status
+  jwt_validation_total:
+    help: "JWT validation results (valid, expired, invalid_signature, missing)"
+    type: counter
+    labels: [result, issuer]
+    examples:
+      - name: jwt_validation_total
+        labels: {result: "valid", issuer: "https://oauth.company.com"}
+        value: 12530
+      - name: jwt_validation_total
+        labels: {result: "invalid_signature", issuer: "https://oauth.company.com"}
+        value: 23
+
+  # Audit Log Write Performance
+  audit_log_write_seconds:
+    help: "Time to write audit log entry to PostgreSQL"
+    type: histogram
+    buckets: [0.01, 0.05, 0.1, 0.5, 1.0]
+    labels: [table_name, result]
+
+# Prometheus Scrape Configuration
+scrape_configs:
+  - job_name: 'phase3-rbac'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['localhost:8081']  # Token validation service metrics port
+
+# Alerting Rules for Phase 3
+alerting_rules:
+  - alert: RBACHighDenialRate
+    expr: |
+      (rate(rbac_decision_total{action="deny"}[5m]) / rate(rbac_decision_total[5m])) > 0.05
+    for: 5m
+    annotations:
+      summary: "High RBAC denial rate (>5%)"
+      description: "{{ $value | humanizePercentage }} of policy decisions were denials"
+
+  - alert: RBACPolicyEvalLatencyHigh
+    expr: histogram_quantile(0.99, rbac_policy_eval_seconds) > 0.01
+    for: 5m
+    annotations:
+      summary: "RBAC policy evaluation latency high (p99 > 10ms)"
+      description: "Endpoint: {{ $labels.endpoint }}, latency p99: {{ $value }}s"
+
+  - alert: JWTValidationFailures
+    expr: rate(jwt_validation_total{result!="valid"}[5m]) > 0.1
+    for: 5m
+    annotations:
+      summary: "High JWT validation failure rate"
+      description: "{{ $value | humanize }} failures/sec"
+
+  - alert: AuditLogWriteLatencyHigh
+    expr: histogram_quantile(0.95, audit_log_write_seconds) > 0.5
+    for: 5m
+    annotations:
+      summary: "Audit log write latency high (p95 > 500ms)"
+      description: "Possible PostgreSQL performance issue"

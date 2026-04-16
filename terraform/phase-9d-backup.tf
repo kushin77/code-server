@@ -207,7 +207,7 @@ START_TIME=$(date +%s)
 ssh akushnir@"$PRIMARY_HOST" "cd code-server-enterprise && docker-compose restart code-server && sleep 3 && docker-compose ps code-server | grep -q 'healthy'"
 END_TIME=$(date +%s)
 RTO=$((END_TIME - START_TIME))
-echo "✓ Code-Server RTO: ${RTO}s (target: < 300s)"
+echo "✓ Code-Server RTO: $${RTO}s (target: \< 300s)"
 echo ""
 
 echo "════════════════════════════════════════════════════════════════"

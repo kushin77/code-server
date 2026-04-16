@@ -27,10 +27,14 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 18
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+          run: |
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
         timeout-minutes: 10
 
       - name: Audit dependencies

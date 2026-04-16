@@ -112,13 +112,7 @@ EOF
   # Store hash for next run
   if [ -n "$current_hash" ]; then
     echo "$current_hash" > "$index_hash_file"
-  fi "key_dirPull models (idempotent — checks if already exist)
-  log "Stage 2: Pulling elite models (idempotent)
-    "config_files": [],
-    "documentation_files": []
-  }
-}
-EOF
+  fi
   
   log "✅ Repository index created at $index_file"
 }

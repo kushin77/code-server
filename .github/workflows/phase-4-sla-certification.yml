@@ -101,4 +101,3 @@ jobs:
               repo: context.repo.repo,
               body: 'Phase 4 Post-Deploy SLA Certification complete. Issue is ready for closure.'
             })
-

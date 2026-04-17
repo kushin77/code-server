@@ -133,4 +133,3 @@ jobs:
               repo: context.repo.repo,
               body: `## Phase 1 Design Approvals Needed\n\n${list}`
             })
-

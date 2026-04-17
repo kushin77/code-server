@@ -142,4 +142,3 @@ jobs:
               repo: context.repo.repo,
               body: `Phase 2 peer review approved. Approval count: ${{ steps.check-reviews.outputs.APPROVAL_COUNT }}`
             })
-

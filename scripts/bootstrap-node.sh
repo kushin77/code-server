@@ -536,7 +536,7 @@ main() {
         echo "  1. Verify services: docker-compose ps"
         echo "  2. Check logs: docker-compose logs -f code-server"
         echo "  3. Confirm DNS: nslookup $DOMAIN_INTERNAL"
-        echo "  4. Access code-server: https://prod.internal:8080"
+        echo "  4. Access code-server: https://${DOMAIN_INTERNAL:-prod.internal}:${PORT_CODE_SERVER}"
     else
         log_error "❌ Bootstrap failed"
     fi

@@ -96,7 +96,7 @@ check_hardcoded_ips() {
             [[ -z "$line" ]] && continue
         
             # Skip SSOT files and archived directories
-            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]] || [[ "$file" == "scripts/ci/detect-config-drift.sh" ]]; then
                 continue
             fi
         

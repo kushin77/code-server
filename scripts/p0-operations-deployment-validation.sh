@@ -349,7 +349,7 @@ P0 operations infrastructure has been deployed. This includes:
 ## Dashboard Access
 
 **Production SLO Dashboard:**
-- URL: http://${GRAFANA_HOST}:3000
+- URL: http://${GRAFANA_HOST}:${PORT_GRAFANA}
 - Default username: admin
 - Default password: admin (change immediately)
 - Key dashboards:
@@ -358,7 +358,7 @@ P0 operations infrastructure has been deployed. This includes:
   * Application Metrics (Request Rate, Latency)
 
 **Prometheus:**
-- URL: http://${PROMETHEUS_HOST}:9090
+- URL: http://${PROMETHEUS_HOST}:${PORT_PROMETHEUS}
 - Query interface for metrics analysis
 
 **Log Aggregation:**

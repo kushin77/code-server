@@ -21,7 +21,8 @@ jobs:
           path: ./
           base: ${{ github.event.repository.default_branch }}
           head: HEAD
-          extra_args: --debug --json --entropy=false
+          # Keep arguments compatible with current trufflehog action wrapper.
+          extra_args: --debug --json
 
   gitleaks:
     name: Gitleaks Secret Detection

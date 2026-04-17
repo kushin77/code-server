@@ -56,10 +56,10 @@ DRY_RUN=false
 VERBOSE=false
 SKIP_DNS=false
 
-# Derived from inventory
-REPO_URL="https://github.com/kushin77/code-server.git"
-REPO_BRANCH="main"
-REPO_DIR="${REPO_DIR:-/opt/code-server}"  # Configurable deployment path
+# Derived from inventory (dedicated names avoid collisions with readonly globals from _common)
+BOOTSTRAP_REPO_URL="${BOOTSTRAP_REPO_URL:-${REPO_URL:-https://github.com/kushin77/code-server.git}}"
+BOOTSTRAP_REPO_BRANCH="${BOOTSTRAP_REPO_BRANCH:-${REPO_BRANCH:-main}}"
+BOOTSTRAP_REPO_DIR="${BOOTSTRAP_REPO_DIR:-${REPO_DIR:-/opt/code-server}}"  # Configurable deployment path
 
 # Bootstrap stages (ordered — names map to shell functions)
 BOOTSTRAP_STAGES=(
@@ -195,22 +195,22 @@ install_docker() {
 clone_repository() {
     log_stage "Clone Repository"
     
-    if [[ -d "$REPO_DIR" ]]; then
-        log_info "Repository already exists at $REPO_DIR"
-        cd "$REPO_DIR" && git pull origin "$REPO_BRANCH"
+    if [[ -d "$BOOTSTRAP_REPO_DIR" ]]; then
+        log_info "Repository already exists at $BOOTSTRAP_REPO_DIR"
+        cd "$BOOTSTRAP_REPO_DIR" && git pull origin "$BOOTSTRAP_REPO_BRANCH"
         return 0
     fi
     
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "[DRY-RUN] Would clone $REPO_URL -> $REPO_DIR"
+        log_info "[DRY-RUN] Would clone $BOOTSTRAP_REPO_URL -> $BOOTSTRAP_REPO_DIR"
         return 0
     fi
     
     log_info "Cloning repository..."
-    mkdir -p "$(dirname "$REPO_DIR")"
-    git clone -b "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR"
+    mkdir -p "$(dirname "$BOOTSTRAP_REPO_DIR")"
+    git clone -b "$BOOTSTRAP_REPO_BRANCH" "$BOOTSTRAP_REPO_URL" "$BOOTSTRAP_REPO_DIR"
     
-    log_info "✓ Repository cloned to $REPO_DIR"
+    log_info "✓ Repository cloned to $BOOTSTRAP_REPO_DIR"
 }
 
 # =============================================================================
@@ -225,7 +225,7 @@ load_inventory() {
         return 0
     fi
     
-    cd "$REPO_DIR"
+    cd "$BOOTSTRAP_REPO_DIR"
     
     if [[ ! -f "environments/production/hosts.yml" ]]; then
         log_error "Inventory file not found: environments/production/hosts.yml"
@@ -255,7 +255,7 @@ deploy_services() {
         return 0
     fi
 
-    cd "$REPO_DIR"
+    cd "$BOOTSTRAP_REPO_DIR"
 
     log_info "Starting Docker Compose services..."
     if [[ "$ROLE" == "primary" ]]; then
@@ -447,14 +447,14 @@ register_prometheus() {
     hostname="$(hostname -s)"
     local host_ip
     host_ip="$(hostname -I | awk '{print $1}')"
-    local targets_dir="${REPO_DIR}/config/prometheus/targets"
+    local targets_dir="${BOOTSTRAP_REPO_DIR}/config/prometheus/targets"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY-RUN] Would add ${hostname} to Prometheus scrape targets at ${targets_dir}/${hostname}.yml"
         return 0
     fi
 
-    if [[ ! -d "$REPO_DIR" ]]; then
+    if [[ ! -d "$BOOTSTRAP_REPO_DIR" ]]; then
         log_info "Skipping Prometheus registration (repo not cloned)"
         return 0
     fi
@@ -544,7 +544,7 @@ main() {
         echo "  1. Verify services: docker-compose ps"
         echo "  2. Check logs: docker-compose logs -f code-server"
         echo "  3. Confirm DNS: nslookup $DOMAIN_INTERNAL"
-        echo "  4. Access code-server: https://${DOMAIN_INTERNAL:-prod.internal}:${PORT_CODE_SERVER}"
+        echo "  4. Access code-server: https://${DOMAIN_INTERNAL:-prod.internal}:${PORT_CODE_SERVER:-8080}"
     else
         log_error "❌ Bootstrap failed"
     fi
@@ -612,5 +612,5 @@ HELP
 done
 
 # Run bootstrap
-cd "$PROJECT_DIR"
+cd "${PROJECT_DIR:-$(pwd)}"
 main "$@"

@@ -61,105 +61,118 @@ is_ssot_file() {
     return 1
 }
 
+collect_scan_files() {
+    local -A seen=()
+    local pattern
+    local file
+
+    shopt -s nullglob globstar
+    for pattern in "${SCAN_PATTERNS[@]}"; do
+        for file in $pattern; do
+            if [[ -f "$file" ]]; then
+                seen["$file"]=1
+            fi
+        done
+    done
+    shopt -u nullglob globstar
+
+    for file in "${!seen[@]}"; do
+        printf '%s\n' "$file"
+    done | sort
+}
+
 check_hardcoded_ips() {
     local drift_found=0
+    local -a files=()
+    local file
+    local line
     
     log_info "Checking for hardcoded IPs (192.168.168.*)..."
     
-    # Search for hardcoded IPs
-    while IFS= read -r line; do
-        local file="${line%%:*}"
+    mapfile -t files < <(collect_scan_files)
+
+    for file in "${files[@]}"; do
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
         
-        # Skip SSOT files and archived directories
-        if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
-            continue
-        fi
+            # Skip SSOT files and archived directories
+            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+                continue
+            fi
         
-        # Skip comments
-        if [[ "$line" =~ ^[[:space:]]*# ]]; then
-            continue
-        fi
+            # Skip comments
+            if [[ "$line" =~ ^[[:space:]]*# ]]; then
+                continue
+            fi
         
-        log_warn "  Found hardcoded IP in $file: $(echo "$line" | cut -d: -f2-)"
-        drift_found=1
-    done < <(grep -rn "192\.168\.168\." \
-        --include="*.yml" \
-        --include="*.yaml" \
-        --include="*.sh" \
-        --include="*.tf" \
-        --include="Caddyfile*" \
-        --exclude-dir=.git \
-        --exclude-dir=terraform/.terraform \
-        --exclude-dir=archived \
-        --exclude-dir=_archive \
-        2>/dev/null || true)
+            log_warn "  Found hardcoded IP in $file: $line"
+            drift_found=1
+        done < <(grep -nE "192\.168\.168\." "$file" 2>/dev/null | cut -d: -f2- || true)
+    done
     
     return $drift_found
 }
 
 check_hardcoded_domains() {
     local drift_found=0
+    local -a files=()
+    local file
+    local line
     
     log_info "Checking for hardcoded domains (kushnir.cloud, prod.internal)..."
     
-    # Search for hardcoded domains
-    while IFS= read -r line; do
-        local file="${line%%:*}"
+    mapfile -t files < <(collect_scan_files)
+
+    for file in "${files[@]}"; do
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
         
-        # Skip SSOT files and archived directories
-        if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
-            continue
-        fi
+            # Skip SSOT files and archived directories
+            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+                continue
+            fi
         
-        # Skip comments
-        if [[ "$line" =~ ^[[:space:]]*# ]]; then
-            continue
-        fi
+            # Skip comments
+            if [[ "$line" =~ ^[[:space:]]*# ]]; then
+                continue
+            fi
         
-        log_warn "  Found hardcoded domain in $file: $(echo "$line" | cut -d: -f2-)"
-        drift_found=1
-    done < <(grep -rn "kushnir\.cloud\|prod\.internal" \
-        --include="*.yml" \
-        --include="*.yaml" \
-        --include="*.conf" \
-        --include="*.json" \
-        --exclude-dir=.git \
-        --exclude-dir=archived \
-        --exclude-dir=_archive \
-        2>/dev/null || true)
+            log_warn "  Found hardcoded domain in $file: $line"
+            drift_found=1
+        done < <(grep -nE "kushnir\.cloud|prod\.internal" "$file" 2>/dev/null | cut -d: -f2- || true)
+    done
     
     return $drift_found
 }
 
 check_hardcoded_ports() {
     local drift_found=0
+    local -a files=()
+    local file
+    local line
     
     log_info "Checking for hardcoded ports (9090, 3000, 8080)..."
     
-    # Search for hardcoded ports in docker-compose and Caddyfile
-    while IFS= read -r line; do
-        local file="${line%%:*}"
+    mapfile -t files < <(collect_scan_files)
+
+    for file in "${files[@]}"; do
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
         
-        # Skip SSOT files and archived directories
-        if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
-            continue
-        fi
+            # Skip SSOT files and archived directories
+            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+                continue
+            fi
         
-        # Skip comments
-        if [[ "$line" =~ ^[[:space:]]*# ]]; then
-            continue
-        fi
+            # Skip comments
+            if [[ "$line" =~ ^[[:space:]]*# ]]; then
+                continue
+            fi
         
-        log_warn "  Found hardcoded port in $file: $(echo "$line" | cut -d: -f2-)"
-        drift_found=1
-    done < <(grep -rn ":[9308][0908][909][0]" \
-        docker-compose*.yml \
-        docker-compose*.yaml \
-        Caddyfile* \
-        --exclude-dir=.git \
-        --exclude-dir=archived \
-        --exclude-dir=_archive \
-        2>/dev/null || true)
+            log_warn "  Found hardcoded port in $file: $line"
+            drift_found=1
+        done < <(grep -nE ":[9308][0908][909][0]" "$file" 2>/dev/null | cut -d: -f2- || true)
+    done
     
     return $drift_found
 }

@@ -28,33 +28,19 @@ env:
   TERRAFORM_DIR: .
 
 jobs:
-  validate:
-    name: Validate Terraform
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
-    permissions:
-      contents: read
-
-    steps:
-      - uses: actions/checkout@f43a0e5ff2bd3817752ebde0a1148ad556a47da8  # v3.6.0
-
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd  # v3.1.2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
+  terraform-validate:
+    name: Terraform Validation
+    uses: ./.github/workflows/TEMPLATE-validate-iac.yml
+    with:
+      check_checkov: false
+      check_tfsec: false
+      check_terraform: true
+      check_docker_compose: false
 
   plan:
     name: Plan Deployment
     runs-on: ubuntu-latest
-    needs: validate
+    needs: terraform-validate
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
     permissions:
       contents: read

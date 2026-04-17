@@ -1,0 +1,59 @@
+name: Config Drift Detector
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.env.template'
+      - 'environments/production/hosts.yml'
+      - 'terraform/variables.tf'
+      - 'docker-compose*.yml'
+      - 'Caddyfile'
+      - 'config/**'
+      - 'scripts/**'
+      - '.github/workflows/config-drift-detector.yml'
+
+jobs:
+  config-drift-check:
+    name: Detect Configuration Drift
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@2b9a9ca1c65b1d06b6d1d9f07ac1e5b8c0e5e2c5 # v4.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Run config drift detection
+        id: drift
+        run: |
+          bash scripts/dev/check-config-drift.sh 2>&1 | tee drift-output.log
+          exit_code=${PIPESTATUS[0]}
+          echo "drift_exit_code=$exit_code" >> $GITHUB_OUTPUT
+          exit $exit_code
+
+      - name: Comment on PR if drift found
+        if: failure() && steps.drift.outcome == 'failure'
+        uses: actions/github-script@7a5f60ed0de999d87e666efc529efaeb5423ceba # v7.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const driftLog = fs.readFileSync('drift-output.log', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ⚠️ Configuration Drift Detected\n\n\`\`\`\n${driftLog}\n\`\`\`\n\n### How to Fix\n\n1. **For hardcoded IPs**: Replace with DNS names or environment variable references\n   - Primary: Use \`primary.prod.internal\` or \$DEPLOY_HOST env var\n   - Replica: Use \`replica.prod.internal\` or \$REPLICA_HOST env var\n   - VIP: Use \`vip.prod.internal\` or \$VIP_HOST env var\n\n2. **For hardcoded domains**: Add to \`.env.template\` and reference via variable\n   - Example: \`DOMAIN=kushnir.cloud\` in .env.template\n\n3. **For environment variables**: Document in \`.env.template\` as SSOT\n\n4. **For Terraform variables**: Ensure alignment with \`.env.template\`\n\nSee \`environments/production/hosts.yml\` and \`.env.template\` as configuration SSOT.\n`
+            });
+
+      - name: Report drift detection
+        if: always()
+        run: |
+          echo "## Config Drift Detection Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Exit Code: ${{ steps.drift.outputs.drift_exit_code || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Result: $([ '${{ steps.drift.outcome }}' = 'success' ] && echo '✓ PASS - No drift detected' || echo '✗ FAIL - Drift detected')" >> $GITHUB_STEP_SUMMARY

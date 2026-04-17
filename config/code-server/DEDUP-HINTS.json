@@ -1,0 +1,200 @@
+{
+  "deduplication_hints": {
+    "logging": {
+      "intent": "Output a message with severity level",
+      "canonical_function": "log_info / log_error / log_warn / log_debug",
+      "canonical_location": "scripts/_common/logging.sh",
+      "usage_examples": [
+        "log_info \"Service started on port $PORT\"",
+        "log_error \"Database connection failed\"",
+        "log_warn \"Configuration deprecated, using fallback\"",
+        "log_debug \"Variable VALUE=$VALUE\""
+      ],
+      "avoid_patterns": [
+        "echo \"INFO:\"",
+        "echo \"ERROR:\"",
+        "printf \"message\"",
+        "Custom log wrappers"
+      ],
+      "quick_fix": "Replace 'echo' or 'printf' with 'log_info/error/warn/debug'"
+    },
+    
+    "error_handling": {
+      "intent": "Stop execution on fatal error with cleanup",
+      "canonical_function": "die",
+      "canonical_location": "scripts/_common/utils.sh",
+      "usage_examples": [
+        "die \"Database unavailable\"",
+        "require_var DATABASE_URL || die \"DATABASE_URL not set\"",
+        "[ -f \"$config\" ] || die \"Config file missing: $config\""
+      ],
+      "avoid_patterns": [
+        "exit 1",
+        "return 1 (in main script)",
+        "Manual trap cleanup"
+      ],
+      "quick_fix": "Use 'die \"message\"' instead of direct exit"
+    },
+    
+    "variable_validation": {
+      "intent": "Require variable to be set before use",
+      "canonical_function": "require_var",
+      "canonical_location": "scripts/_common/utils.sh",
+      "usage_examples": [
+        "require_var DOMAIN",
+        "require_var DATABASE_PASSWORD || die \"Password required\"",
+        "# At top of script: require_var SERVICE_NAME CLUSTER_SIZE PORT"
+      ],
+      "avoid_patterns": [
+        "[ -z \"$VAR\" ] && die",
+        "if [ -z \"$VAR\" ]; then exit 1; fi",
+        "Manual validation patterns"
+      ],
+      "quick_fix": "Replace '[ -z $VAR ]' checks with 'require_var VAR'"
+    },
+    
+    "command_validation": {
+      "intent": "Ensure command exists in PATH",
+      "canonical_function": "require_command",
+      "canonical_location": "scripts/_common/utils.sh",
+      "usage_examples": [
+        "require_command docker",
+        "require_command jq || die \"jq required for JSON processing\"",
+        "# At top of script: require_command curl wget python3"
+      ],
+      "avoid_patterns": [
+        "which docker || die",
+        "command -v jq >/dev/null || die",
+        "Manual command checks"
+      ],
+      "quick_fix": "Replace 'which' or 'command -v' with 'require_command'"
+    },
+    
+    "file_validation": {
+      "intent": "Ensure file exists before use",
+      "canonical_function": "require_file",
+      "canonical_location": "scripts/_common/utils.sh",
+      "usage_examples": [
+        "require_file /etc/config/app.conf",
+        "CONFIG_FILE=\"${1:-.}/config.yaml\"; require_file \"$CONFIG_FILE\"",
+        "require_file \"$HOME/.ssh/id_rsa\" || die \"SSH key not found\""
+      ],
+      "avoid_patterns": [
+        "[ ! -f \"$file\" ] && die",
+        "if [ ! -f \"$file\" ]; then exit 1; fi",
+        "Manual file checks"
+      ],
+      "quick_fix": "Replace '[ ! -f ]' checks with 'require_file'"
+    },
+    
+    "retry_logic": {
+      "intent": "Retry operation with exponential backoff",
+      "canonical_function": "retry",
+      "canonical_location": "scripts/_common/utils.sh",
+      "usage_examples": [
+        "retry 5 docker pull $IMAGE",
+        "retry 10 curl https://api.example.com/health",
+        "# Retry with timeout: retry 3 timeout 30 kubectl get pods"
+      ],
+      "avoid_patterns": [
+        "for i in {1..5}; do command && break; done",
+        "while [ $count -lt 5 ]; do ... done",
+        "Manual sleep/retry loops"
+      ],
+      "quick_fix": "Replace manual retry loops with 'retry N command'"
+    },
+    
+    "configuration_loading": {
+      "intent": "Load environment variables from .env file",
+      "canonical_function": "load_env",
+      "canonical_location": "scripts/_common/config.sh",
+      "usage_examples": [
+        "load_env .env",
+        "load_env \"${CONFIG_DIR}/.env.production\"",
+        "# In init.sh: already called via init.sh sourcing"
+      ],
+      "avoid_patterns": [
+        "source .env",
+        "export $(cat .env | xargs)",
+        "Manual env loading"
+      ],
+      "quick_fix": "Use 'load_env .env' from _common/config.sh"
+    },
+    
+    "docker_compose_ports": {
+      "intent": "Reference service ports via environment variables",
+      "canonical_pattern": "${SERVICE_PORT:-8080}",
+      "canonical_location": "docker-compose.yml",
+      "usage_examples": [
+        "ports:\n  - \"${CODE_SERVER_PORT:-8080}:8080\"",
+        "ports:\n  - \"${POSTGRES_PORT:-5433}:5432\"",
+        "environment:\n  - SERVICE_PORT=${SERVICE_PORT:-8080}"
+      ],
+      "avoid_patterns": [
+        "ports:\n  - \"8080:8080\"",
+        "ports:\n  - \"5432:5432\"",
+        "Hardcoded port values"
+      ],
+      "quick_fix": "Use ${VAR:-default} syntax for all service ports"
+    },
+    
+    "docker_compose_domains": {
+      "intent": "Reference domain names via environment variables",
+      "canonical_pattern": "${DOMAIN:-192.168.168.31.nip.io}",
+      "canonical_location": "docker-compose.yml",
+      "usage_examples": [
+        "environment:\n  - DOMAIN=${DOMAIN:-192.168.168.31.nip.io}",
+        "environment:\n  - API_URL=https://api.${DOMAIN}"
+      ],
+      "avoid_patterns": [
+        "- DOMAIN=kushnir.cloud",
+        "- API_URL=https://api.example.com",
+        "Hardcoded domain values"
+      ],
+      "quick_fix": "Use ${DOMAIN:-default} for all domain references"
+    },
+    
+    "secret_provisioning": {
+      "intent": "Fetch secrets from Google Secret Manager or .env fallback",
+      "canonical_function": "get_secret",
+      "canonical_location": "scripts/lib/secrets.sh",
+      "usage_examples": [
+        "DB_PASSWORD=$(get_secret db-password)",
+        "GITHUB_TOKEN=$(get_secret prod-github-token)",
+        "# Automatically falls back to .env if GSM unavailable"
+      ],
+      "avoid_patterns": [
+        "Reading secrets from .env directly",
+        "Hardcoded secrets in scripts",
+        "Manual GSM API calls"
+      ],
+      "quick_fix": "Use 'get_secret SECRET_NAME' for all secret retrieval"
+    }
+  },
+  
+  "enforcement_rules": {
+    "during_development": {
+      "hint_style": "informational",
+      "inline_code_actions": true,
+      "quick_fixes_available": true,
+      "severity": "info"
+    },
+    
+    "during_code_review": {
+      "check_in_ci": true,
+      "comment_on_violations": true,
+      "block_merge_if_high_duplicates": true,
+      "severity": "error"
+    }
+  },
+  
+  "workspace_defaults": {
+    "enable_copilot_hints": true,
+    "show_dedup_suggestions": true,
+    "require_canonical_helpers": "enterprise",
+    "waiver_process": "link_issue_and_owner_approval"
+  },
+  
+  "last_updated": "2026-04-17",
+  "version": "1.0"
+}

@@ -90,8 +90,8 @@ jobs:
           framework: docker,kubernetes,terraform
           quiet: false
           soft_fail: false
-          # Fail on HIGH + CRITICAL only; skip LOW/MEDIUM
-          check: "-c high,critical"
+          # Fail on HIGH + CRITICAL only; skip LOW/MEDIUM.
+          check: "HIGH,CRITICAL"
         continue-on-error: false
 
       - name: Summary

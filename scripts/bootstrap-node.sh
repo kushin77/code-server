@@ -41,9 +41,6 @@ source "$SCRIPT_DIR/_common/init.sh"
 # CONFIGURATION
 # =============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh"
-
 # Bootstrap options
 ROLE="${ROLE:-}"
 ENVIRONMENT="${ENVIRONMENT:-production}"

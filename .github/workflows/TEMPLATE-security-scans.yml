@@ -33,6 +33,9 @@ jobs:
       
       - name: Gitleaks scan
         uses: gitleaks/gitleaks-action@e6dab246340401bf53eec993b8f05aebe80ac636  # v2.3.4
+        env:
+          # Work around upstream artifact-name regression that fails runs before reporting results.
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
         with:
           source: ${{ github.server_url }}/${{ github.repository }}
           verbose: true

@@ -63,10 +63,58 @@ Always use shared libraries; never duplicate. Canonical APIs:
 - `mount_nas <host> <export>` — mount NAS volume
 - `unmount_nas <mount_point>` — unmount volume
 
-### Rule 5 — Copilot Trigger Pattern
+### Rule 5 — Script Template & Writing Guide (mandatory for new scripts)
+All new bash scripts MUST use the canonical template to ensure consistency:
+```bash
+cp scripts/_template.sh scripts/my-new-script.sh
+```
+
+The template pre-configures:
+- ✅ GOV-002 metadata headers (`@file`, `@module`, `@description`, `@owner`, `@status`)
+- ✅ Canonical initialization via `source "$SCRIPT_DIR/_common/init.sh"`
+- ✅ Structured logging with `log_info`, `log_error`, `log_fatal`
+- ✅ Automatic error handling (set -euo pipefail, ERR trap, stack traces)
+- ✅ Configuration separation (env vars only, no hardcoded values)
+- ✅ Input validation patterns (require_var, require_command, require_file)
+- ✅ Cleanup hooks (trap cleanup EXIT)
+
+**Complete Reference**: [docs/SCRIPT-WRITING-GUIDE.md](docs/SCRIPT-WRITING-GUIDE.md) — covers all patterns, examples, checklist, common mistakes.
+
+### Rule 6 — Deduplication Enforcement (April 17, 2026 analysis)
+Repository underwent comprehensive deduplication audit (see [DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md)):
+
+**Logging System**: Use ONLY `log_*` from `scripts/_common/logging.sh`
+- ❌ Avoid: `echo`, `echo "ERROR:"`, `write_error`, `die`, custom functions
+- ✅ Use: `log_info`, `log_warn`, `log_error`, `log_fatal`, `log_debug`
+
+**Script Initialization**: Use ONLY `source "$SCRIPT_DIR/_common/init.sh"`
+- ❌ Avoid: Sourcing config.sh, logging.sh, utils.sh separately (27 scripts did this)
+- ✅ Use: Single init.sh which loads all dependencies in correct order
+
+**Configuration Sources**: NEVER hardcode values
+- ❌ Avoid: `DEPLOY_HOST="192.168.168.31"`, `DOMAIN="kushnir.cloud"` in scripts
+- ✅ Use: `DEPLOY_HOST="${DEPLOY_HOST}"` (loads from .env via init.sh → config.sh)
+- Master config SSOT: `.env.template` (deployment config), `terraform/variables.tf` (IaC config)
+
+**Workflow Deduplication**: Use `TEMPLATE-*.yml` as base for all workflows
+- ❌ Avoid: Duplicating validation jobs across 3+ workflows
+- ✅ Use: Centralized `TEMPLATE-validate-iac.yml` (docker-compose, terraform validation)
+- New workflows inherit security jobs, cache setup, and validation checks
+
+**Known Deduplication Debt** (archived for reference):
+- `scripts/common-functions.sh` — deprecated, use `_common/` instead
+- Inline `echo` logging in 12+ scripts — migrate to `log_*` in next Phase
+- 27-copy `SCRIPT_DIR` pattern — now obsolete (init.sh handles this)
+
+### Rule 7 — Copilot Trigger Pattern
 When you need Copilot to apply governance standards to your code, use:
 ```
-@workspace, apply governance standards: deduplication (check _common/), headers (metadata block), config separation (env vars), shared libs
+@workspace, apply governance standards: deduplication (check _common/), headers (metadata block), config separation (env vars), shared libs, use _template.sh for new scripts
+```
+
+For deduplication review across entire codebase:
+```
+@workspace, review governance compliance: logging systems, initialization patterns, config duplication, library adoption
 ```
 
 ---
@@ -115,5 +163,4 @@ COMPOSE_PROFILES=tracing docker compose up -d
 COMPOSE_PROFILES=ai,tracing docker compose up -d
 ```
 
----
-**Last updated: April 16, 2026** | [All Issues](https://github.com/kushin77/code-server/issues)
+**Last updated: April 17, 2026** | [All Issues](https://github.com/kushin77/code-server/issues) | [Deduplication Analysis](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md) | [Script Writing Guide](docs/SCRIPT-WRITING-GUIDE.md)

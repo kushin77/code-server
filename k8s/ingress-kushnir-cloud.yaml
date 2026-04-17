@@ -1,0 +1,61 @@
+#!/usr/bin/env kubectl apply -f
+# @file        k8s/ingress-kushnir-cloud.yaml
+# @module      k8s/ingress
+# @description Kubernetes ingress resources for kushnir.cloud and ide.kushnir.cloud on the .42 K8s cluster
+#
+# Architecture:
+#   Browser → 173.77.179.148:443 → K8s nginx ingress (192.168.168.42)
+#             ├── ide.kushnir.cloud → ssl-passthrough → 192.168.168.31:443 (Caddy)
+#             │     └── Caddy: oauth2-proxy gate → code-server IDE
+#             └── kushnir.cloud   → ssl-passthrough → 192.168.168.31:443 (Caddy)
+#                   └── Caddy: reverse_proxy appsmith:80 (Appsmith CE admin portal)
+#
+# ssl-passthrough=true is REQUIRED on BOTH ingresses:
+#   - Without it, K8s nginx terminates TLS with its own cert (causes "Not Secure" warning)
+#   - With it, TLS is passed to Caddy on .31 which holds the valid Let's Encrypt cert
+#
+# Apply:
+#   kubectl apply -f k8s/ingress-kushnir-cloud.yaml --context <.42-context>
+#
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kushnir-cloud
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: kushnir.cloud
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ide-windows-backend
+            port:
+              number: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ide-kushnir-cloud
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: ide.kushnir.cloud
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ide-windows-backend
+            port:
+              number: 443

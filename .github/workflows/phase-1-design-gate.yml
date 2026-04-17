@@ -58,7 +58,7 @@ jobs:
       
       - name: Post comment if Phase 1 incomplete
         if: steps.check-phase-1.outputs.PHASE_1_REQUIRED == 'true' && steps.check-phase-1.outputs.PHASE_1_COMPLETE == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             const reason = `${{ steps.check-phase-1.outputs.REASON }}`;
@@ -115,7 +115,7 @@ jobs:
       
       - name: Post comment about approvals needed
         if: (steps.check-approvals.outputs.ARCH_OWNER_TAGGED == 'false' || steps.check-approvals.outputs.ONCALL_TAGGED == 'false')
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             const missingApprovals = [];

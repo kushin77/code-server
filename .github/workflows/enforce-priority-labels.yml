@@ -33,23 +33,26 @@ jobs:
               });
               
               // Add comment explaining priority requirement
+              const body = [
+                '## Priority Label Required',
+                '',
+                'This issue does not have a priority label. All issues **MUST** be assigned a priority:',
+                '',
+                '- **P0** - Critical/Blocking (customer impact, security, data loss, downtime)',
+                '- **P1** - High (significant impact, core functionality)',
+                '- **P2** - Medium (moderate impact, enhancement)',
+                '- **P3** - Low (minor impact, nice-to-have)',
+                '',
+                '**Please add a priority label:** `/label P0` or `/label P1`, etc.',
+                '',
+                '---',
+                '*This check is automated. Issues without priority labels will be deprioritized in backlog triage.*'
+              ].join('\n');
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `## ⚠️ Priority Label Required
-
-This issue does not have a priority label. All issues **MUST** be assigned a priority:
-
-- **P0** 🔴 - Critical/Blocking (customer impact, security, data loss, downtime)
-- **P1** 🟠 - High (significant impact, core functionality)
-- **P2** 🟡 - Medium (moderate impact, enhancement)
-- **P3** 🟢 - Low (minor impact, nice-to-have)
-
-**Please add a priority label:** \`/label P0\` or \`/label P1\`, etc.
-
----
-*This check is automated. Issues without priority labels will be deprioritized in backlog triage.*`
+                body
               });
               
               console.log(`⚠️ Added "needs-priority" label to issue #${issue.number}`);

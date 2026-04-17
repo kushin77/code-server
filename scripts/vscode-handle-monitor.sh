@@ -27,7 +27,23 @@ echo -e "${BOLD}[1] Terminal & Shell Process Counts${NC}"
 echo "─────────────────────────────────────────────────────"
 
 count_proc() {
-  pgrep -c "$1" 2>/dev/null || echo 0
+  local count
+  count=$(pgrep -c "$1" 2>/dev/null || true)
+  if [[ "$count" =~ ^[0-9]+$ ]]; then
+    echo "$count"
+  else
+    echo 0
+  fi
+}
+
+count_proc_full() {
+  local count
+  count=$(pgrep -fc "$1" 2>/dev/null || true)
+  if [[ "$count" =~ ^[0-9]+$ ]]; then
+    echo "$count"
+  else
+    echo 0
+  fi
 }
 
 bash_count=$(count_proc bash)
@@ -56,8 +72,8 @@ echo ""
 echo -e "${BOLD}[2] VSCode Extension Host Processes${NC}"
 echo "─────────────────────────────────────────────────────"
 
-ext_count=$(pgrep -f "extensionHost" 2>/dev/null | wc -l || echo 0)
-renderer_count=$(pgrep -f "renderer" 2>/dev/null | wc -l || echo 0)
+ext_count=$(count_proc_full "extensionHost")
+renderer_count=$(count_proc_full "renderer")
 
 echo -e "  Extension hosts: ${ext_count}"
 echo -e "  Renderer procs:  ${renderer_count}"

@@ -27,7 +27,29 @@ echo -e "${BOLD}[1] Terminal & Shell Process Counts${NC}"
 echo "─────────────────────────────────────────────────────"
 
 count_proc() {
-  pgrep -c "$1" 2>/dev/null || echo 0
+  local pattern="$1"
+  local count
+
+  # Keep output strictly numeric even when pgrep exits 1 (no matches).
+  count=$(pgrep -c "$pattern" 2>/dev/null || true)
+  if [[ "$count" =~ ^[0-9]+$ ]]; then
+    echo "$count"
+  else
+    echo 0
+  fi
+}
+
+count_proc_full() {
+  local pattern="$1"
+  local count
+
+  # With pipefail enabled, avoid "wc + fallback" double-output behavior.
+  count=$(pgrep -f "$pattern" 2>/dev/null | wc -l | tr -d '[:space:]' || true)
+  if [[ "$count" =~ ^[0-9]+$ ]]; then
+    echo "$count"
+  else
+    echo 0
+  fi
 }
 
 bash_count=$(count_proc bash)
@@ -56,8 +78,8 @@ echo ""
 echo -e "${BOLD}[2] VSCode Extension Host Processes${NC}"
 echo "─────────────────────────────────────────────────────"
 
-ext_count=$(pgrep -f "extensionHost" 2>/dev/null | wc -l || echo 0)
-renderer_count=$(pgrep -f "renderer" 2>/dev/null | wc -l || echo 0)
+ext_count=$(count_proc_full "extensionHost")
+renderer_count=$(count_proc_full "renderer")
 
 echo -e "  Extension hosts: ${ext_count}"
 echo -e "  Renderer procs:  ${renderer_count}"

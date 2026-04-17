@@ -12,8 +12,8 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+# Domain and deploy user from config.sh (sourced via init.sh)
+# No need to redefine — use $DOMAIN and $DEPLOY_USER directly
 VALIDATION_REPORT="${SCRIPT_DIR}/DEPLOYMENT-VALIDATION-REPORT.md"
 
 echo "╔════════════════════════════════════════════════════════════╗"

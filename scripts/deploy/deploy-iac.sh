@@ -173,7 +173,7 @@ output_details() {
 
     log INFO ""
     log INFO "Next steps:"
-    log INFO "1. Open browser: https://ide.kushnir.cloud"
+    log INFO "1. Open browser: https://${DOMAIN}"
     log INFO "2. Login with password above"
     log INFO "3. No GitHub authentication needed"
     log INFO "4. All infrastructure managed by Terraform"

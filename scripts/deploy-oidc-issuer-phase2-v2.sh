@@ -127,7 +127,7 @@ metadata:
   name: oidc-issuer-config
   namespace: default
 data:
-  issuer: "https://oidc.kushnir.cloud:${OIDC_PORT}"
+  issuer: "https://${OIDC_HOST:-${DEPLOY_HOST}}:${OIDC_PORT:-${PORT_CODE_SERVER}}"
   client_id: "code-server-services"
   audiences: "code-server,prometheus,loki,grafana,redis,postgresql"
   subject_claim: "sub"
@@ -225,7 +225,7 @@ cat > "$PHASE2_DIR/oidc-issuer.env.template" <<'ENV_EOF'
 # Phase 2.1: OIDC Issuer Configuration
 
 # Public OIDC issuer URL
-OIDC_ISSUER_URL=https://oidc.kushnir.cloud:${OIDC_PORT}
+OIDC_ISSUER_URL=https://${OIDC_HOST:-${DEPLOY_HOST}}:${OIDC_PORT}
 
 # Token configuration
 TOKEN_EXPIRY=3600  # 1 hour

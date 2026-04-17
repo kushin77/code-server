@@ -276,7 +276,7 @@ log "  • Grafana (metrics & dashboards): http://localhost:3000"
 log "  • Prometheus (raw metrics): http://localhost:9090"
 log "  • AlertManager (alerts): http://localhost:9093"
 log "  • Loki (logs): http://localhost:3100"
-log "  • Code-Server IDE: https://ide.kushnir.cloud"
+log "  • Code-Server IDE: https://${DOMAIN:-ide.kushnir.cloud}"
 log ""
 
 log "Logs saved to: $LOG_FILE"

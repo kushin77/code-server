@@ -110,11 +110,9 @@ audit_log_event() {
     local status="${5:-success}"
     local details="${6:-{}}"
     
-    # Validate inputs
-    if [ -z "$event_type" ] || [ -z "$developer_id" ]; then
-        echo "ERROR: event_type and developer_id required" >&2
-        return 1
-    fi
+    # Validate inputs using canonical function
+    require_var "event_type" "Audit event type required"
+    require_var "developer_id" "Developer ID required"
     
     local timestamp=$(get_iso_timestamp)
     local hostname=$(hostname)

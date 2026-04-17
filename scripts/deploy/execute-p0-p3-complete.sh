@@ -21,6 +21,8 @@ NC='\033[0m'
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 LOG_FILE="/tmp/p0-p3-orchestrator-$(date +%Y%m%d-%H%M%S).log"
 PHASE_TIMEOUT=300  # 5 minutes per phase
 STABILITY_CHECK_INTERVAL=10  # Check every 10 seconds

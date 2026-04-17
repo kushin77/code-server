@@ -29,6 +29,7 @@ services:
     volumes:
       - ${CODER_DATA_PATH:-/mnt/nas-56/code-server}:/home/coder
       - ${WORKSPACE_PATH:-/mnt/nas-56/kushin77/applications/code-server-enterprise}:/home/coder/workspace
+      - ./config/product-patch.json:/usr/lib/code-server/lib/vscode/product.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s

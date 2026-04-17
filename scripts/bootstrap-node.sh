@@ -35,7 +35,15 @@ set -euo pipefail
 
 # Source common library for log_info, log_error, etc.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh"
+if [[ -f "$SCRIPT_DIR/_common/init.sh" ]]; then
+    source "$SCRIPT_DIR/_common/init.sh"
+elif [[ -f "$(pwd)/scripts/_common/init.sh" ]]; then
+    # CI smoke tests execute a temporary copy from /tmp; fall back to repo-relative path.
+    source "$(pwd)/scripts/_common/init.sh"
+else
+    echo "FATAL: Cannot source _common/init.sh" >&2
+    exit 1
+fi
 
 # =============================================================================
 # CONFIGURATION

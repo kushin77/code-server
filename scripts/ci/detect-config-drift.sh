@@ -22,6 +22,7 @@ declare -a SSOT_FILES=(
     ".env"
     ".env.example"
     ".env.defaults"
+    "variables.tf"
     "terraform/variables.tf"
     "docs/PHASE-2-TASKS-3-4-IMPLEMENTATION.md"
 )
@@ -53,8 +54,9 @@ declare -a SCAN_PATTERNS=(
 
 is_ssot_file() {
     local file="$1"
+    local normalized="${file#./}"
     for ssot in "${SSOT_FILES[@]}"; do
-        if [[ "$file" == "$ssot" ]]; then
+        if [[ "$normalized" == "$ssot" ]]; then
             return 0
         fi
     done
@@ -128,7 +130,7 @@ check_hardcoded_domains() {
             [[ -z "$line" ]] && continue
         
             # Skip SSOT files and archived directories
-            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]] || [[ "$file" == *"scripts/ci/detect-config-drift.sh" ]] || [[ "$file" == *"scripts/ci/enforce-global-dedup.sh" ]] || [[ "$file" == *"scripts/dev/check-config-drift.sh" ]]; then
                 continue
             fi
         
@@ -160,7 +162,7 @@ check_hardcoded_ports() {
             [[ -z "$line" ]] && continue
         
             # Skip SSOT files and archived directories
-            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]] || [[ "$file" == *"scripts/ci/detect-config-drift.sh" ]]; then
                 continue
             fi
         

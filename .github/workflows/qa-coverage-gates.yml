@@ -49,9 +49,11 @@ jobs:
 
       - name: Check on-prem connectivity
         if: inputs.skip_vpn_check != true
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST_INTERNAL || '192.168.168.31' }}
         run: |
-          echo "Checking on-prem host connectivity (192.168.168.31)..."
-          if curl -f --max-time 5 http://192.168.168.31/health > /dev/null 2>&1; then
+          echo "Checking on-prem host connectivity (${DEPLOY_HOST})..."
+          if curl -f --max-time 5 http://${DEPLOY_HOST}/health > /dev/null 2>&1; then
             echo "✅ On-prem host accessible"
           else
             echo "⚠️ On-prem host not accessible (may be outside VPN) — using cached coverage data"
@@ -61,17 +63,18 @@ jobs:
       - name: Run endpoint coverage scan
         if: env.SKIP_LIVE_SCAN != 'true'
         env:
-          TARGET_HOST: "192.168.168.31"
+          TARGET_HOST: ${{ secrets.DEPLOY_HOST_INTERNAL || '192.168.168.31' }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST_INTERNAL || '192.168.168.31' }}
         run: |
           set -euo pipefail
           mkdir -p .coverage-history
 
           HEALTH_ENDPOINTS=(
-            "http://192.168.168.31/health"
-            "http://192.168.168.31:9090/-/healthy"
-            "http://192.168.168.31:3000/api/health"
-            "http://192.168.168.31:9093/-/healthy"
-            "http://192.168.168.31:16686/"
+            "http://${DEPLOY_HOST}/health"
+            "http://${DEPLOY_HOST}:9090/-/healthy"
+            "http://${DEPLOY_HOST}:3000/api/health"
+            "http://${DEPLOY_HOST}:9093/-/healthy"
+            "http://${DEPLOY_HOST}:16686/"
           )
 
           TOTAL=${#HEALTH_ENDPOINTS[@]}

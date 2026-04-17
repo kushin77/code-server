@@ -1,6 +1,69 @@
 # [TYPE] PR Title: [Descriptive title]
 
 > **🎯 PRODUCTION READINESS FRAMEWORK**: All PRs follow a 4-phase quality gate system (Design → Code → Performance → Operations). Complete each phase before merging to main.
+> 
+> **Read**: [Production Readiness Gate Framework](docs/production-readiness-gate.md)
+
+---
+
+## ⚡ Is this a non-trivial change?
+
+**Non-trivial** (requires full 4-phase gate): backend/service code, infrastructure, security, performance-critical  
+**Trivial** (skip full gate): docs, comments, dependency security patches, test-only  
+
+**This PR involves**:
+- [ ] Documentation change only (skip to Linked Issues section)
+- [ ] Dependency security patch (skip full gate)
+- [ ] Test code only (skip full gate)
+- [ ] Non-trivial change (complete ALL phases below) ← **Most PRs are here**
+
+---
+
+## Phase 1: Design Quality Gate ✓
+
+> **When**: Before implementation / PR creation  
+> **Approvers**: Architecture owner + on-call reliability engineer  
+> **Blocker**: YES — no Phase 2 review without Phase 1 approval
+
+**Complete this section for NON-TRIVIAL changes:**
+
+### Design Checklist
+
+- [ ] **SLA Target** (Documented availability, latency, throughput impact):
+  ```
+  [Your SLA target here - e.g., "Maintain P99 < 50ms, 99.99% availability"]
+  ```
+
+- [ ] **Failure Mode Analysis** (What breaks? Blast radius?):
+  ```
+  Mode 1: [description] → Blast radius: [affected components] → Detection time: [X seconds]
+  Mode 2: [description] → Blast radius: [affected components] → Detection time: [X seconds]
+  ```
+
+- [ ] **Rollback Plan** (Can this be rolled back in < 60 seconds?):
+  ```
+  Immediate: [e.g., disable feature flag in 5s]
+  Fallback: [e.g., revert commit + restart in 30s]
+  Tested: YES / NO (validated on staging)
+  Total time: [X seconds]
+  ```
+
+- [ ] **Observability** (What metrics/logs/traces prove success AND failure?):
+  ```
+  Success signal: [metric name] > [threshold]
+  Failure signal: [metric name] < [threshold]
+  Alert: [Alert name] if [condition] for [duration]
+  Traces: [What OpenTelemetry span attributes?]
+  Logs: [What structured fields?]
+  Dashboard: [Link to Grafana or monitoring tool]
+  ```
+
+### Design Approval
+
+**Architecture Owner**: `@[github-user]` — [ ] Reviewed SLA / Failure modes  
+**On-Call Reliability Engineer**: `@[github-user]` — [ ] Reviewed rollback / observability  
+
+---
 
 ## Linked Issues
 

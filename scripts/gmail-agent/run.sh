@@ -1,10 +1,13 @@
 #!/bin/bash
+# @file        scripts/gmail-agent/run.sh
+# @module      tools/gmail-agent
+# @description Gmail Agent runner - activates venv and executes agent
+# @status      active
 
-# Gmail Agent Runner Script
-# Automatically uses the virtual environment
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Create venv if it doesn't exist
 if [ ! -d "venv" ]; then

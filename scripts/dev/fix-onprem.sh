@@ -1,16 +1,10 @@
 #!/bin/bash
 # fix-onprem.sh — Fastest path to working on-prem IDE + Ollama
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source logging library for structured logging
-export LOG_FILE="${SCRIPT_DIR}/.logs/onprem-fix.log"
-source "${SCRIPT_DIR}/scripts/logging.sh" || {
-    echo "ERROR: Cannot source logging library at ${SCRIPT_DIR}/scripts/logging.sh"
-    exit 1
-}
+source "$SCRIPT_DIR/../_common/init.sh"
 
 cd ~/code-server-enterprise
 

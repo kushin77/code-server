@@ -11,7 +11,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 SCRIPTS_DIR="${REPO_ROOT}/scripts"
 DRY_RUN=false
 VERBOSE=false

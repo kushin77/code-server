@@ -14,19 +14,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║         DISASTER RECOVERY: P3 Priority Implementation         ║"
-echo "║         Backup, Failover, Recovery Automation                 ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-echo ""
+log_info "DISASTER RECOVERY: P3 Priority Implementation"
+log_info "Backup, Failover, Recovery Automation"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Backup Strategy Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo "[1/5] Creating Backup Strategy Configuration..."
+log_info "[1/5] Creating Backup Strategy Configuration..."
 
-cat > c:\code-server-enterprise\config\backup-strategy.yaml << 'EOF'
+ROOT_DIR="${ROOT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+BACKUP_CONFIG_DIR="$ROOT_DIR/config"
+mkdir -p "$BACKUP_CONFIG_DIR"
+
+cat > "$BACKUP_CONFIG_DIR/backup-strategy.yaml" << 'EOF'
 # Backup Strategy Configuration
 # IaC: Automated, versioned backup procedures
 
@@ -181,16 +182,17 @@ echo ""
 # 2. Failover Automation Script
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo "[2/5] Creating Failover Automation Script..."
+log_info "[2/5] Creating Failover Automation Script..."
 
-cat > c:\code-server-enterprise\scripts\failover-automation.sh << 'EOF'
+FAILOVER_SCRIPT="$ROOT_DIR/scripts/failover-automation.sh"
+cat > "$FAILOVER_SCRIPT" << 'EOF'
 #!/bin/bash
 # Automated Failover Procedure
 # IaC: Declarative, idempotent failover automation
 
 set -euo pipefail
 
-FAILOVER_CONFIG="c:\code-server-enterprise\config\failover-config.yaml"
+FAILOVER_CONFIG="${ROOT_DIR}/config/failover-config.yaml"
 BACKUP_DIR="/backups/disaster-recovery"
 LOG_FILE="/var/log/failover.log"
 
@@ -370,7 +372,9 @@ echo ""
 
 echo "[3/5] Creating Recovery Procedures..."
 
-cat > c:\code-server-enterprise\docs\RECOVERY-PROCEDURES.md << 'EOF'
+RECOVERY_DOCS="$ROOT_DIR/docs/RECOVERY-PROCEDURES.md"
+mkdir -p "$(dirname "$RECOVERY_DOCS")"
+cat > "$RECOVERY_DOCS" << 'EOF'
 # Disaster Recovery Procedures
 
 ## RTO/RPO Targets
@@ -466,9 +470,11 @@ echo ""
 # 4. Data Restoration Service
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo "[4/5] Creating Data Restoration Service..."
+log_info "[4/5] Creating Data Restoration Service..."
 
-cat > c:\code-server-enterprise\services\data-restoration-service.js << 'EOF'
+REST_SERVICE="$ROOT_DIR/services/data-restoration-service.js"
+mkdir -p "$(dirname "$REST_SERVICE")"
+cat > "$REST_SERVICE" << 'EOF'
 /**
  * Data Restoration Service
  * Handles backup restoration, PITR, and data recovery
@@ -642,7 +648,8 @@ echo ""
 
 echo "[5/5] Creating DR Testing Framework..."
 
-cat > c:\code-server-enterprise\config\dr-testing-framework.yaml << 'EOF'
+DR_TESTING="$ROOT_DIR/config/dr-testing-framework.yaml"
+cat > "$DR_TESTING" << 'EOF'
 # Disaster Recovery Testing Framework
 # IaC: Automated DR validation and drills
 

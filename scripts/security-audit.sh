@@ -19,44 +19,33 @@ REPORT_FILE="security-audit-$(date +%Y%m%d-%H%M%S).txt"
 PASSED=0
 FAILED=0
 
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Test result logging
+# Test result logging using canonical logging
 test_result() {
   local test_name=$1
   local status=$2
   local details=${3:-""}
   
   if [ "$status" = "PASS" ]; then
-    echo -e "${GREEN}✅ PASS${NC}: $test_name"
+    log_info "PASS: $test_name"
     ((PASSED++))
   else
-    echo -e "${RED}❌ FAIL${NC}: $test_name"
+    log_error "FAIL: $test_name"
     if [ -n "$details" ]; then
-      echo "   Details: $details"
+      log_warn "  Details: $details"
     fi
     ((FAILED++))
   fi
 }
 
-echo "🔒 Phase 13 Security Audit"
-echo "=================================================="
-echo "Report: $REPORT_FILE"
-echo "Start Time: $(date)"
-echo "=================================================="
-echo ""
+log_info "Phase 13 Security Audit"
+log_info "Report: $REPORT_FILE"
+log_info "Start Time: $(date)"
+log_info ""
 
 # ============================================================================
 # SECTION 1: Zero-Trust Architecture Validation
 # ============================================================================
-echo "📋 SECTION 1: Zero-Trust Architecture"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+log_info "SECTION 1: Zero-Trust Architecture"
 
 # Test: Direct SSH access ENABLED (direct .31 node development)
 echo "Testing SSH Access..."

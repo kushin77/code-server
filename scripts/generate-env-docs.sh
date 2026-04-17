@@ -17,16 +17,17 @@
 #   bash scripts/generate-env-docs.sh | tee ENV_REFERENCE.md
 # ════════════════════════════════════════════════════════════════════════════════════════════
 
-set -e
+set -euo pipefail
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+source "$SCRIPT_DIR/_common/init.sh"
+
 SCHEMA_FILE="${REPO_ROOT}/.env.schema.json"
 
 # Check if jq is installed
 if ! command -v jq &> /dev/null; then
-  echo "ERROR: jq not found. Install via: apt install jq" >&2
+  log_error "jq not found. Install via: apt install jq"
   exit 2
 fi
 

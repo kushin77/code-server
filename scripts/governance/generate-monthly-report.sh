@@ -1,18 +1,26 @@
 #!/usr/bin/env bash
+# @file        scripts/governance/generate-monthly-report.sh
+# @module      governance/reporting
+# @description Generate monthly governance report for repositories
+# @status      active
+
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 <owner/repo>" >&2
+  log_error "Usage: $0 <owner/repo>"
   exit 1
 fi
 
 if ! command -v gh >/dev/null 2>&1; then
-  echo "gh CLI is required" >&2
+  log_error "gh CLI is required"
   exit 1
 fi
 
 if ! command -v jq >/dev/null 2>&1; then
-  echo "jq is required" >&2
+  log_error "jq is required"
   exit 1
 fi
 

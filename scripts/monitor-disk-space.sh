@@ -8,6 +8,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
 METRICS_DIR="${METRICS_DIR:-/var/lib/node_exporter/textfile_collector}"
 METRICS_FILE="${METRICS_DIR}/disk_space.prom"
 

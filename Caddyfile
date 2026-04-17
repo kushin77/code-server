@@ -33,7 +33,7 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
 }
 
 kushnir.cloud {
-    # Root SSO landing is always available and fronted by oauth2-proxy.
+    # Root portal is fronted by oauth2-proxy-portal (admin portal with Appsmith).
 
     encode gzip
 
@@ -52,10 +52,10 @@ kushnir.cloud {
     @logout path /logout /signout
     redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
 
-    # oauth2-proxy control plane endpoints
+    # oauth2-proxy-portal control plane endpoints
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
-        reverse_proxy oauth2-proxy:4180 {
+        reverse_proxy oauth2-proxy-portal:4181 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
         }
@@ -64,8 +64,8 @@ kushnir.cloud {
     # Convenience deep link to IDE app.
     redir /ide https://ide.kushnir.cloud/ 302
 
-    # Root remains SSO protected and reachable even without optional portal profile.
-    reverse_proxy oauth2-proxy:4180 {
+    # Root is SSO protected via oauth2-proxy-portal (Appsmith admin backend).
+    reverse_proxy oauth2-proxy-portal:4181 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }

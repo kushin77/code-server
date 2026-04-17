@@ -22,13 +22,6 @@ ide.kushnir.cloud {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    @portal path /portal /portal/*
-    handle @portal {
-        uri strip_prefix /portal
-        root * /srv/portal
-        file_server
-    }
-
     # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
@@ -40,59 +33,12 @@ ide.kushnir.cloud {
         }
     }
 
-    # Grafana - SSO via forward_auth then proxy with auth header
-    @grafana path /grafana /grafana/*
-    handle @grafana {
-        forward_auth oauth2-proxy:4180 {
-            uri /oauth2/auth
-            copy_headers X-Auth-Request-User X-Auth-Request-Email
-        }
-        uri strip_prefix /grafana
-        reverse_proxy grafana:3000 {
-            header_up X-WEBAUTH-USER {http.reverse_proxy.header.X-Auth-Request-Email}
-            header_up Host {host}
-        }
-    }
-
-    # Prometheus - SSO via forward_auth
-    @prometheus path /prometheus /prometheus/*
-    handle @prometheus {
-        forward_auth oauth2-proxy:4180 {
-            uri /oauth2/auth
-            copy_headers X-Auth-Request-User X-Auth-Request-Email
-        }
-        uri strip_prefix /prometheus
-        reverse_proxy prometheus:9090
-    }
-
-    # AlertManager - SSO via forward_auth
-    @alertmanager path /alertmanager /alertmanager/*
-    handle @alertmanager {
-        forward_auth oauth2-proxy:4180 {
-            uri /oauth2/auth
-            copy_headers X-Auth-Request-User X-Auth-Request-Email
-        }
-        uri strip_prefix /alertmanager
-        reverse_proxy alertmanager:9093
-    }
-
-    # Jaeger - SSO via forward_auth
-    @jaeger path /jaeger /jaeger/*
-    handle @jaeger {
-        forward_auth oauth2-proxy:4180 {
-            uri /oauth2/auth
-            copy_headers X-Auth-Request-User X-Auth-Request-Email
-        }
-        uri strip_prefix /jaeger
-        reverse_proxy jaeger:16686
-    }
-
     # Unauthenticated requests -> redirect to oauth2 sign-in with return URL
     handle_errors 401 {
         redir /oauth2/sign_in?rd={http.request.orig_uri} 302
     }
 
-    # Default: code-server (via oauth2-proxy full reverse proxy)
+    # Default: ALL traffic proxied through oauth2-proxy (code-server behind it)
     reverse_proxy oauth2-proxy:4180 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
@@ -107,6 +53,47 @@ ide.kushnir.cloud {
 }
 
 kushnir.cloud {
+    # Main portal — Appsmith/Backstage for admin and user portals
+    # ALL requests require oauth2-proxy authentication
 
-    redir https://ide.kushnir.cloud{uri} permanent
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
+    @oauth2 path /oauth2 /oauth2/*
+    handle @oauth2 {
+        reverse_proxy oauth2-proxy:4180 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    # All other requests: forward_auth via oauth2-proxy, then proxy to portal service
+    # Portal service should be Appsmith or Backstage (configure via COMPOSE_PROFILES or add to main compose)
+    forward_auth oauth2-proxy:4180 {
+        uri /oauth2/auth
+        copy_headers X-Auth-Request-User X-Auth-Request-Email
+    }
+
+    reverse_proxy appsmith:80 {
+        header_up X-WEBAUTH-USER {http.reverse_proxy.header.X-Auth-Request-Email}
+        header_up Host {host}
+    }
+
+    # Fallback: if appsmith not running, serve placeholder
+    handle_errors 502 503 {
+        respond "Portal service not running. Configure Appsmith/Backstage and add to docker-compose." 503
+    }
 }

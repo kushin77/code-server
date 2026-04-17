@@ -42,7 +42,7 @@ source "$SCRIPT_DIR/_common/init.sh"
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
 
 # Bootstrap options
 ROLE="${ROLE:-}"
@@ -54,7 +54,7 @@ SKIP_DNS=false
 # Derived from inventory
 REPO_URL="https://github.com/kushin77/code-server.git"
 REPO_BRANCH="main"
-REPO_DIR="/opt/code-server"
+REPO_DIR="${REPO_DIR:-/opt/code-server}"  # Configurable deployment path
 
 # Bootstrap stages (ordered — names map to shell functions)
 BOOTSTRAP_STAGES=(

@@ -65,7 +65,7 @@ require_env() {
     local var_name=$1
     local var_value="${!var_name}"
     if [ -z "$var_value" ]; then
-        echo "ERROR: Required environment variable not set: $var_name"
+        log_error "Required environment variable not set: $var_name"
         echo "Set via: export $var_name=<value>"
         return 1
     fi

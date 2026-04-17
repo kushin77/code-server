@@ -45,10 +45,10 @@ kushnir.cloud {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    # Portal oauth2-proxy control plane endpoints
+    # oauth2-proxy control plane endpoints
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
-        reverse_proxy oauth2-proxy-portal:4181 {
+        reverse_proxy oauth2-proxy:4180 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
         }
@@ -57,13 +57,13 @@ kushnir.cloud {
     # Convenience launch path for IDE from the portal
     redir /ide https://ide.kushnir.cloud 302
 
-    # Authenticated portal traffic (oauth2-proxy-portal -> appsmith)
+    # Authenticated portal traffic flows through dedicated portal oauth2-proxy
     reverse_proxy oauth2-proxy-portal:4181 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
 
-    # Fallback: if Appsmith not running, start with: COMPOSE_PROFILES=portal docker compose up -d appsmith
+    # Fallback if portal auth/app is not running
     handle_errors {
         respond "Admin portal (Appsmith) not running. Start: COMPOSE_PROFILES=portal docker compose up -d appsmith" 503
     }

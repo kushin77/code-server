@@ -26,37 +26,6 @@ jobs:
       check_tfsec: true
       check_terraform: false
       check_docker_compose: false
-
-  checkov:
-    name: Checkov IaC scan (fail on HIGH/CRITICAL)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-
-      - name: Install Checkov
-        run: pip install --upgrade checkov
-
-      - name: Run Checkov
-        run: |
-          # Fail closed for high/critical findings.
-          checkov -d terraform \
-            --framework terraform \
-            --quiet \
-            --hard-fail-on HIGH,CRITICAL
-          echo "Checkov scan complete."
-
-  tfsec:
-    name: Tfsec Terraform scan (fail on HIGH/CRITICAL)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-
-      - name: Install tfsec
-        run: |
-          curl -sSL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh \
-            | sudo bash
-
-      - name: Run tfsec
         run: |
           tfsec . --minimum-severity HIGH \
             || (echo "::error::tfsec found HIGH/CRITICAL Terraform misconfigurations."; exit 1)

@@ -222,8 +222,6 @@ services:
       - "2019:2019"
     volumes:
       - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-config:/config
-      - caddy-data:/data
     environment:
       - DOMAIN=${DOMAIN:-192.168.168.31.nip.io}
       - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}
@@ -251,8 +249,8 @@ services:
     restart: unless-stopped
     networks:
       - enterprise
-    expose:
-      - "5432"
+    ports:
+      - "5433:5432"
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-codeserver}
       - POSTGRES_USER=${POSTGRES_USER:-codeserver}

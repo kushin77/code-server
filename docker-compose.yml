@@ -221,7 +221,7 @@ services:
       - "443:443"
       - "2019:2019"
     volumes:
-      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
     environment:
       - DOMAIN=${DOMAIN:-192.168.168.31.nip.io}
       - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}

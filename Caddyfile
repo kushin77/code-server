@@ -1,14 +1,4 @@
-http://ide.kushnir.cloud, http://kushnir.cloud {
-    redir https://{host}{uri} permanent
-}
-
-# Keep a local responder for container health probes that hit localhost:80
-http://localhost {
-    respond "OK" 200
-}
-
-ide.kushnir.cloud {
-
+ide.kushnir.cloud, ide.kushnir.cloud:443 {
     encode gzip
 
     header {
@@ -27,27 +17,14 @@ ide.kushnir.cloud {
     handle @oauth2 {
         reverse_proxy oauth2-proxy:4180 {
             header_up Host {host}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto https
         }
-    }
-
-    # Unauthenticated requests -> redirect to oauth2 sign-in with return URL
-    handle_errors 401 {
-        redir /oauth2/sign_in?rd={http.request.orig_uri} 302
     }
 
     # Default: ALL traffic proxied through oauth2-proxy (code-server behind it)
     reverse_proxy oauth2-proxy:4180 {
         header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto https
-        transport http {
-            dial_timeout 10s
-            read_timeout 0
-            write_timeout 0
+    }
+}
         }
     }
 }

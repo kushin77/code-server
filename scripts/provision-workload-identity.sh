@@ -33,7 +33,7 @@ mkdir -p "${PROJECT_ROOT}/logs"
 WORKLOADS=(
   "code-server:code-server:1000"
   "loki:loki:3100"
-  "prometheus:prometheus:9090"
+  "prometheus:prometheus:${PORT_PROMETHEUS}"
   "kong:kong:8000"
   "ollama:ollama:11434"
   "appsmith:appsmith:80"

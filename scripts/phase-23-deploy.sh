@@ -20,6 +20,8 @@ readonly SERVICES=("otel-collector" "jaeger" "anomaly-detector")
 readonly JAEGER_UI_PORT=16686
 readonly OTEL_GRPC_PORT=4317
 readonly OTEL_HTTP_PORT=4318
+readonly PROMETHEUS_RELOAD_URL="http://localhost:${PORT_PROMETHEUS}/-/reload"
+readonly GRAFANA_URL="http://localhost:${PORT_GRAFANA}"
 
 log_info "Starting Phase 23 deployment: Advanced Observability"
 log_info "Host: ${DEPLOY_HOST} | Services: ${SERVICES[*]}"
@@ -51,7 +53,7 @@ ssh_upload "${PROJECT_DIR}/prometheus.yml" "${PROJECT_DIR}/prometheus.yml"
 
 # Reload Prometheus to pick up new rules
 log_info "Reloading Prometheus configuration..."
-if ssh_exec "docker exec prometheus curl -s -X POST http://localhost:9090/-/reload"; then
+if ssh_exec "docker exec prometheus curl -s -X POST ${PROMETHEUS_RELOAD_URL}"; then
     log_success "Prometheus reloaded with Phase 23 rules"
 else
     log_warn "Prometheus reload failed — may need manual restart"
@@ -87,8 +89,9 @@ retry 6 5 "OTel Collector health check" \
     "ssh_exec 'curl -sf http://localhost:13133/ > /dev/null'"
 
 # ── Upload Grafana dashboards ──────────────────────────────────────────────
-GRAFANA_HOST="http://localhost:3000"
-readonly GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}`nrequire_var GRAFANA_PASSWORD`nGRAFANA_CREDS="${GRAFANA_ADMIN_USER}:${GRAFANA_PASSWORD}"
+readonly GRAFANA_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
+require_var GRAFANA_PASSWORD
+readonly GRAFANA_CREDS="${GRAFANA_ADMIN_USER}:${GRAFANA_PASSWORD}"
 
 log_info "Importing Grafana dashboards..."
 for dashboard in "${PROJECT_DIR}/grafana/dashboards/phase-23-"*.json; do
@@ -99,7 +102,7 @@ for dashboard in "${PROJECT_DIR}/grafana/dashboards/phase-23-"*.json; do
     IMPORT_RESULT=$(ssh_exec "curl -s -u '${GRAFANA_CREDS}' \
         -H 'Content-Type: application/json' \
         -d '{\"dashboard\": $(cat ${PROJECT_DIR}/grafana/dashboards/${local_name}), \"overwrite\": true, \"folderId\": 0}' \
-        ${GRAFANA_HOST}/api/dashboards/import")
+        ${GRAFANA_URL}/api/dashboards/import")
     
     if echo "${IMPORT_RESULT}" | grep -q '"status":"success"'; then
         log_success "Imported dashboard: ${local_name}"
@@ -120,8 +123,8 @@ log_info   "  Jaeger UI:           http://${DEPLOY_HOST}:${JAEGER_UI_PORT}"
 log_info   "  OTel Collector gRPC: ${DEPLOY_HOST}:${OTEL_GRPC_PORT}"
 log_info   "  OTel Collector HTTP: ${DEPLOY_HOST}:${OTEL_HTTP_PORT}"
 log_info   "  Anomaly metrics:     http://${DEPLOY_HOST}:9095/metrics"
-log_info   "  Grafana Correlation: http://${DEPLOY_HOST}:3000/d/phase23-correlation"
-log_info   "  Grafana SLO:         http://${DEPLOY_HOST}:3000/d/phase23-slo"
+log_info   "  Grafana Correlation: http://${DEPLOY_HOST}:${PORT_GRAFANA}/d/phase23-correlation"
+log_info   "  Grafana SLO:         http://${DEPLOY_HOST}:${PORT_GRAFANA}/d/phase23-slo"
 
 
 

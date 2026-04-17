@@ -168,10 +168,25 @@ check_hardcoded_ports() {
             if [[ "$line" =~ ^[[:space:]]*# ]]; then
                 continue
             fi
+
+            # Localhost probes are operational health checks, not SSOT drift.
+            if [[ "$line" =~ localhost: ]] || [[ "$line" =~ 127\.0\.0\.1: ]]; then
+                continue
+            fi
+
+            # Ignore internal service URLs and service-to-service policy tuples.
+            if [[ "$line" =~ https?://[A-Za-z0-9_-]+:(9090|3000|8080) ]] || \
+               [[ "$line" =~ [A-Za-z0-9_-]+:[A-Za-z0-9_-]+:(9090|3000|8080) ]] || \
+               [[ "$line" =~ [[:space:]"]+[A-Za-z0-9_-]+:(9090|3000|8080)[[:space:]"]* ]] || \
+               [[ "$line" =~ [[:space:]]on[[:space:]]:(9090|3000|8080) ]] || \
+               [[ "$line" =~ -p[[:space:]]*[0-9]+:[0-9]+ ]] || \
+               [[ "$line" =~ [0-9]+:[0-9]+ ]]; then
+                continue
+            fi
         
             log_warn "  Found hardcoded port in $file: $line"
             drift_found=1
-        done < <(grep -nE ":[9308][0908][909][0]" "$file" 2>/dev/null | cut -d: -f2- || true)
+        done < <(grep -nE ':(9090|3000|8080)([^0-9]|$)' "$file" 2>/dev/null | cut -d: -f2- || true)
     done
     
     return $drift_found

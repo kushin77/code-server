@@ -22,9 +22,9 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 ENVIRONMENT="production"
 MONITORING_NAMESPACE="monitoring"
 PROMETHEUS_HOST="${DEPLOY_HOST}"
-PROMETHEUS_PORT="9090"
+PROMETHEUS_PORT="${PORT_PROMETHEUS}"
 GRAFANA_HOST="${DEPLOY_HOST}"
-GRAFANA_PORT="3000"
+GRAFANA_PORT="${PORT_GRAFANA}"
 LOKI_HOST="${DEPLOY_HOST}"
 LOKI_PORT="3100"
 
@@ -226,11 +226,11 @@ create_incident_runbooks() {
 ### 1. Verify the Alert
 ```bash
 # Check Prometheus query
-http://${DEPLOY_HOST}:9090/graph
+http://${DEPLOY_HOST}:${PORT_PROMETHEUS}/graph
 Query: histogram_quantile(0.99, rate(http_request_duration_seconds[5m]))
 
 # Check Grafana dashboard
-http://${DEPLOY_HOST}:3000/SLO-Dashboard
+http://${DEPLOY_HOST}:${PORT_GRAFANA}/SLO-Dashboard
 ```
 
 ### 2. Check Infrastructure Health

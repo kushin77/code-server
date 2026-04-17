@@ -57,7 +57,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 REPO_FULL="${1:?Repository required (e.g., kushin77/repo-name)}"
 DRY_RUN="${DRY_RUN:-false}"

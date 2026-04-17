@@ -12,7 +12,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 # Get script directory
 REPO_ROOT="$(git rev-parse --show-toplevel)"

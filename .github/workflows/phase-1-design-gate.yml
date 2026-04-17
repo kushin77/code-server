@@ -1,0 +1,153 @@
+name: "Phase 1: Design Quality Gate"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  phase-1-design-gate-check:
+    name: Verify Phase 1 Design Certification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      
+      - name: Check PR description for Phase 1 gate
+        id: check-phase-1
+        run: |
+          BODY="${{ github.event.pull_request.body }}"
+          TITLE="${{ github.event.pull_request.title }}"
+          
+          # Check if this is a trivial change
+          if echo "$BODY" | grep -q "^\- \[x\] Documentation change only" || \
+             echo "$BODY" | grep -q "^\- \[x\] Dependency security patch" || \
+             echo "$BODY" | grep -q "^\- \[x\] Test code only"; then
+            echo "PHASE_1_REQUIRED=false" >> $GITHUB_OUTPUT
+            echo "REASON=Trivial change exemption marked" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Check if non-trivial is explicitly checked
+          if echo "$BODY" | grep -q "^\- \[x\].*Non-trivial change"; then
+            echo "PHASE_1_REQUIRED=true" >> $GITHUB_OUTPUT
+          else
+            # If PR body doesn't have the new template, it might be an older PR or auto-generated
+            # Default to requiring it unless explicitly exempted
+            echo "PHASE_1_REQUIRED=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for Phase 1 Design Quality Gate section
+          if echo "$BODY" | grep -q "## Phase 1: Design Quality Gate"; then
+            # Check if all required items are present
+            if echo "$BODY" | grep -q "SLA Target" && \
+               echo "$BODY" | grep -q "Failure Mode Analysis" && \
+               echo "$BODY" | grep -q "Rollback Plan" && \
+               echo "$BODY" | grep -q "Observability"; then
+              echo "PHASE_1_COMPLETE=true" >> $GITHUB_OUTPUT
+            else
+              echo "PHASE_1_COMPLETE=false" >> $GITHUB_OUTPUT
+              echo "REASON=Phase 1 section incomplete - missing required items" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "PHASE_1_COMPLETE=false" >> $GITHUB_OUTPUT
+            echo "REASON=Phase 1 Design Quality Gate section not found" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Post comment if Phase 1 incomplete
+        if: steps.check-phase-1.outputs.PHASE_1_REQUIRED == 'true' && steps.check-phase-1.outputs.PHASE_1_COMPLETE == 'false'
+        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ⚠️ Phase 1 Design Quality Gate Incomplete
+
+**This appears to be a non-trivial change** (backend, infrastructure, security, or performance-critical). 
+
+Per [Production Readiness Gate Framework](docs/production-readiness-gate.md), Phase 1 must be completed before code review.
+
+**What's missing:**
+${`${{ steps.check-phase-1.outputs.REASON }}`}
+
+**Action Required:**
+1. Add the Phase 1 Design Quality Gate section to this PR description
+2. Complete all required items:
+   - [ ] **SLA Target** 
+   - [ ] **Failure Mode Analysis**
+   - [ ] **Rollback Plan**
+   - [ ] **Observability**
+3. Ensure approvals from:
+   - Architecture Owner (\`@[github-user]\`)
+   - On-Call Reliability Engineer (\`@[github-user]\`)
+
+See the [PR template](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-1-design-quality-gate-) for detailed guidance.
+
+**If this is a trivial change**, mark the appropriate exemption checkbox in the PR template (Documentation change only, Dependency security patch, or Test code only).`
+            })
+      
+      - name: Report status to GitHub Checks
+        if: steps.check-phase-1.outputs.PHASE_1_REQUIRED == 'true'
+        run: |
+          if [ "${{ steps.check-phase-1.outputs.PHASE_1_COMPLETE }}" = "false" ]; then
+            echo "❌ Phase 1 Design Quality Gate incomplete"
+            exit 1
+          else
+            echo "✅ Phase 1 Design Quality Gate verified"
+            exit 0
+          fi
+
+  phase-1-design-approval-check:
+    name: Phase 1 Design Approval Status
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      
+      - name: Check for Phase 1 approvals
+        id: check-approvals
+        run: |
+          BODY="${{ github.event.pull_request.body }}"
+          
+          # Check for architecture owner approval
+          if echo "$BODY" | grep -q "Architecture Owner.*@"; then
+            echo "ARCH_OWNER_TAGGED=true" >> $GITHUB_OUTPUT
+          else
+            echo "ARCH_OWNER_TAGGED=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for on-call engineer approval  
+          if echo "$BODY" | grep -q "On-Call.*@"; then
+            echo "ONCALL_TAGGED=true" >> $GITHUB_OUTPUT
+          else
+            echo "ONCALL_TAGGED=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Post comment about approvals needed
+        if: (steps.check-approvals.outputs.ARCH_OWNER_TAGGED == 'false' || steps.check-approvals.outputs.ONCALL_TAGGED == 'false')
+        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        with:
+          script: |
+            const missingApprovals = [];
+            if ('${{ steps.check-approvals.outputs.ARCH_OWNER_TAGGED }}' === 'false') {
+              missingApprovals.push('Architecture Owner');
+            }
+            if ('${{ steps.check-approvals.outputs.ONCALL_TAGGED }}' === 'false') {
+              missingApprovals.push('On-Call Reliability Engineer');
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ℹ️ Phase 1 Design Approvals Needed
+
+The following reviewers are needed for Phase 1 Design Quality Gate:
+${missingApprovals.map(a => `- [ ] ${a}`).join('\n')}
+
+**Next step**: @mention them in the Phase 1 section and confirm approval once they review.`
+            })

@@ -1,0 +1,96 @@
+name: TEMPLATE validate-iac (reusable validation jobs)
+
+on:
+  workflow_call:
+    inputs:
+      docker_compose_file:
+        description: "Path to docker-compose file to validate"
+        type: string
+        default: "docker-compose.yml"
+      check_terraform:
+        description: "Enable terraform validation"
+        type: boolean
+        default: true
+      check_docker_compose:
+        description: "Enable docker-compose validation"
+        type: boolean
+        default: true
+      check_checkov:
+        description: "Enable Checkov IaC scanning"
+        type: boolean
+        default: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Validate docker-compose manifest
+  # ─────────────────────────────────────────────────────────────────────────────
+  validate-docker-compose:
+    if: inputs.check_docker_compose
+    runs-on: ubuntu-latest
+    name: Validate docker-compose
+    steps:
+      - uses: actions/checkout@1f9a0c22d41e8f586a814688e619ab8849d6668b
+        with:
+          fetch-depth: 0
+
+      - name: Validate docker-compose syntax
+        run: |
+          docker-compose -f "${{ inputs.docker_compose_file }}" config > /dev/null || {
+            echo "❌ Invalid docker-compose syntax: ${{ inputs.docker_compose_file }}"
+            exit 1
+          }
+          echo "✓ docker-compose manifest valid"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Validate terraform configurations
+  # ─────────────────────────────────────────────────────────────────────────────
+  validate-terraform:
+    if: inputs.check_terraform
+    runs-on: ubuntu-latest
+    name: Validate terraform
+    steps:
+      - uses: actions/checkout@1f9a0c22d41e8f586a814688e619ab8849d6668b
+        with:
+          fetch-depth: 0
+
+      - uses: hashicorp/setup-terraform@17aaffcf42165ad5e37b7d91c75646645201a434
+        with:
+          terraform_version: ~> 1.5.0
+
+      - name: Initialize terraform
+        run: terraform init -backend=false
+        working-directory: ./terraform
+
+      - name: Validate terraform syntax
+        run: terraform validate
+        working-directory: ./terraform
+
+      - name: Check terraform formatting
+        run: terraform fmt -check -recursive
+        working-directory: ./terraform
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Security scanning: Checkov
+  # ─────────────────────────────────────────────────────────────────────────────
+  security-checkov:
+    if: inputs.check_checkov
+    runs-on: ubuntu-latest
+    name: Security scan (Checkov)
+    steps:
+      - uses: actions/checkout@1f9a0c22d41e8f586a814688e619ab8849d6668b
+        with:
+          fetch-depth: 0
+
+      - uses: bridgecrewio/checkov-action@b45c9c3a4d1e25b5cccf0fc8a1f9d9a7e4d0c5f8
+        with:
+          directory: .
+          framework: docker,kubernetes,terraform
+          quiet: false
+          soft_fail: false
+          # Fail on HIGH + CRITICAL only; skip LOW/MEDIUM
+          check: "-c high,critical"
+        continue-on-error: false
+
+      - name: Summary
+        if: always()
+        run: echo "✓ Checkov security scan completed"

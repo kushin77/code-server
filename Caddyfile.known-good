@@ -1,0 +1,112 @@
+# Caddyfile — production reverse proxy & TLS termination
+# On-prem VSCode server at primary.prod.internal (ide.kushnir.cloud) behind Cloudflare Tunnel
+# Ref: ADR-001 Cloudflare Tunnel Architecture
+# Canonical DNS SSOT: environments/production/hosts.yml
+# Validation: caddy validate --config Caddyfile --adapter caddyfile
+
+{
+    # Disable auto-HTTPS for on-prem (no external ACME needed)
+    auto_https off
+
+    # Global logging (JSON format for log aggregation)
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size  100mb
+            roll_keep  14
+            roll_keep_for 336h
+        }
+        format json
+        level info
+    }
+
+    # Prometheus metrics exposed on admin API
+    metrics
+}
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Production Site: localhost (on-prem) or domain via Cloudflare Tunnel
+# ═════════════════════════════════════════════════════════════════════════════
+:80 {
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Security Headers (no TLS needed on-prem behind Cloudflare Tunnel)
+    # ─────────────────────────────────────────────────────────────────────────
+    header {
+        X-Content-Type-Options           "nosniff"
+        X-Frame-Options                  "SAMEORIGIN"
+        X-XSS-Protection                 "1; mode=block"
+        Referrer-Policy                  "strict-origin-when-cross-origin"
+        Permissions-Policy               "camera=(), microphone=(), geolocation=()"
+        # CSP for code-server + WebSocket + inline scripts (required by IDE)
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss: ws:; worker-src 'self' blob:; frame-src 'self';"
+        # Remove server version headers
+        -Server
+        -X-Powered-By
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Compression (gzip for JSON/text, skip images/video)
+    # ─────────────────────────────────────────────────────────────────────────
+    encode gzip
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Health check endpoint (unauthenticated for k8s/container probes)
+    # ─────────────────────────────────────────────────────────────────────────
+    @health {
+        path /health /healthz /ping
+    }
+    respond @health "OK" 200
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Enterprise Service Portal — /portal (unauthenticated, served from bind-mount)
+    # config/service-catalog.yml is the SSOT; HTML references that config
+    # ─────────────────────────────────────────────────────────────────────────
+    @portal path /portal /portal/*
+    handle @portal {
+        uri strip_prefix /portal
+        root * /srv/portal
+        file_server
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Trace Correlation: propagate Cloudflare CF-Ray ID edge-to-container
+    # Forwards CF-Ray as x-cf-ray-id to all upstreams; visible in Jaeger via
+    # OTel span attribute cf.ray.id — enables on-call to trace alert → edge.
+    # ─────────────────────────────────────────────────────────────────────────
+    request_header X-Cf-Ray-Id {http.request.header.Cf-Ray}
+    request_header X-Edge-Trace-Id {http.request.header.Cf-Ray}
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # OAuth2 Proxy: auth redirects + callback handling
+    # ─────────────────────────────────────────────────────────────────────────
+    @oauth2 path /oauth2/*
+    reverse_proxy @oauth2 oauth2-proxy:4180 {
+        transport http {
+            dial_timeout  10s
+            read_timeout  30s
+            write_timeout 30s
+        }
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Main Upstream: code-server via oauth2-proxy (authenticated)
+    # WebSocket for terminal/extensions
+    # ─────────────────────────────────────────────────────────────────────────
+    reverse_proxy oauth2-proxy:4180 {
+        transport http {
+            # WebSocket passthrough for code-server terminal + extensions
+            dial_timeout  10s
+            read_timeout  0
+            write_timeout 0
+        }
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Error Handling (don't expose internal details)
+    # ─────────────────────────────────────────────────────────────────────────
+    handle_errors {
+        header Content-Type "application/json"
+        respond `{"error":"request failed","status":{http.error.status_code}}` {http.error.status_code}
+    }
+}
+

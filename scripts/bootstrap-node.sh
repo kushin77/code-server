@@ -360,11 +360,11 @@ register_dns() {
         mkdir -p /etc/systemd/resolved.conf.d
         cat > /etc/systemd/resolved.conf.d/prod-internal.conf <<EOF
 [Resolve]
-DNS=192.168.168.31
+DNS=${DNS_SERVER:-192.168.168.31}
 Domains=~prod.internal
 EOF
         systemctl restart systemd-resolved || true
-        log_info "✓ systemd-resolved configured for .prod.internal"
+        log_info "✓ systemd-resolved configured for .prod.internal (DNS: ${DNS_SERVER:-192.168.168.31})"
     fi
 
     # Add /etc/hosts fallback entry (idempotent)

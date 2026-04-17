@@ -39,7 +39,7 @@ set -euo pipefail
 
 # Bootstrap: single entrypoint loads config, logging, utils, error-handler, docker, ssh
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 # Precondition assertions — fail fast before any side effects
 assert_docker   # Docker must be running to backup volumes

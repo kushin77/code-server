@@ -106,6 +106,10 @@ ide.kushnir.cloud {
     respond @health_check "OK\n" 200 {
         header Content-Type "text/plain; charset=UTF-8"
     }
+
+    # Unified sign-out endpoint.
+    @logout path /logout /signout
+    redir @logout /oauth2/sign_out?rd=https://ide.kushnir.cloud/ 302
     
     # All other traffic goes through OAuth2-Proxy → Code-Server
     # OAuth2-Proxy handles authentication before forwarding
@@ -191,8 +195,23 @@ ide.kushnir.cloud {
     header X-Content-Type-Options "nosniff"
     header X-Frame-Options "DENY"
     
-    # Default response for wildcard
-    respond "Subdomain not configured" 404
+    # Blanket SSO for wildcard tenant hosts.
+    @oauth2 path /oauth2 /oauth2/*
+    handle @oauth2 {
+        reverse_proxy oauth2-proxy:4180 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+        }
+    }
+
+    reverse_proxy oauth2-proxy:4180 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-Host {host}
+    }
     
     log {
         format json

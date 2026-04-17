@@ -24,13 +24,14 @@ services:
       # Use strong password from .env, not defaults
       - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
-      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:11434
     command:
       - "--bind-addr=0.0.0.0:8080"
       - "--disable-telemetry"
       - "--cert=false"
       - "--auth=password"
+      - "--user-data-dir=/home/coder/.local/share/code-server"
+      - "--extensions-dir=/home/coder/.local/share/code-server/extensions"
     volumes:
       - code-server-enterprise-data:/home/coder
     healthcheck:
@@ -148,7 +149,7 @@ services:
       OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
       OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
       OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
-      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "false"
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
       OAUTH2_PROXY_PASS_USER_HEADERS: "true"
       OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
@@ -206,6 +207,38 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ─── code-server-profile-backup ───────────────────────────────────────────
+  # Periodic backup for code-server user profile state.
+  code-server-profile-backup:
+    image: alpine:3.20
+    container_name: code-server-profile-backup
+    restart: unless-stopped
+    networks:
+      - enterprise
+    depends_on:
+      - code-server
+    volumes:
+      - code-server-enterprise-data:/source:ro
+      - code-server-profile-backups:/backups
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p /backups
+        while true; do
+          ts="$(date +%Y%m%d-%H%M%S)"
+          out="/backups/code-server-user-profile-$ts.tgz"
+          tar -czf "$out" -C /source .local/share/code-server/User || true
+          find /backups -type f -name 'code-server-user-profile-*.tgz' -mtime +30 -delete || true
+          sleep 21600
+        done
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks & Volumes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,6 +251,8 @@ networks:
 
 volumes:
   code-server-enterprise-data:
+    driver: local
+  code-server-profile-backups:
     driver: local
   ollama-data:
     driver: local

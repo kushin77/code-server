@@ -7,6 +7,13 @@
 
 set -euo pipefail
 
+# Cleanup trap: always remove chaos disk-fill artifacts on exit/signal
+_CHAOS_TMPFILE=""
+_chaos_cleanup() {
+  [[ -n "$_CHAOS_TMPFILE" ]] && rm -f "$_CHAOS_TMPFILE" 2>/dev/null || true
+}
+trap '_chaos_cleanup' EXIT INT TERM HUP
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
@@ -416,6 +423,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
   skip "Scenario 9 — DRY_RUN"
 else
   TMPFILE="/tmp/chaos-diskfill-$$.dat"
+  _CHAOS_TMPFILE="$TMPFILE"  # register for trap cleanup on exit/signal
   TMP_FREE_KB=$(df /tmp --output=avail | tail -1 | tr -d ' ')
   TARGET_KB=$(( TMP_FREE_KB * 90 / 100 ))
   MAX_FILL_KB=$(( 512 * 1024 ))

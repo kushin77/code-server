@@ -25,7 +25,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
 
 readonly GSM_PROJECT="${GSM_PROJECT:-gcp-eiq}"
 readonly GSM_SECRET_NAME="${GSM_SECRET_NAME:-prod-github-token}"

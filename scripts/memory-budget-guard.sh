@@ -431,9 +431,7 @@ main "$@"
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../lib/logger.sh" 2>/dev/null || {
-    log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
-}
+source "$SCRIPT_DIR/_common/init.sh"
 
 # Configuration
 CONTAINER_NAME="${1:-code-server}"

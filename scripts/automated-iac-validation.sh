@@ -51,12 +51,11 @@
 # IaC Validation Audit - Zero Manual Steps Verification
 # Ensures everything is code or committed, nothing is manual
 
-set -e
-
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+source "$SCRIPT_DIR/_common/init.sh"
+
 AUDIT_FILE="${SCRIPT_DIR}/IaC-AUDIT-REPORT.md"
 
 echo "════════════════════════════════════════════════════════════"

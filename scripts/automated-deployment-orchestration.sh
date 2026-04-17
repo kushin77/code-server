@@ -90,7 +90,7 @@ validate_environment() {
     # Check local commands
     for cmd in ssh scp docker docker-compose openssl curl jq; do
         if ! command -v $cmd &> /dev/null; then
-            echo "ERROR: Required command not found: $cmd"
+            log_error "Required command not found: $cmd"
             return 1
         fi
     done
@@ -99,7 +99,7 @@ validate_environment() {
     # Check SSH connectivity
     if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'echo "SSH connectivity verified" && docker --version' &>/dev/null; then
-        echo "ERROR: Cannot connect to ${DEPLOY_USER}@${DEPLOY_HOST}"
+        log_error "Cannot connect to ${DEPLOY_USER}@${DEPLOY_HOST}"
         return 1
     fi
     echo "✓ SSH connectivity to ${DEPLOY_HOST} verified"
@@ -139,7 +139,7 @@ generate_configuration() {
     
     # Generate .env
     bash "${SCRIPT_DIR}/automated-env-generator.sh" || {
-        echo "ERROR: Failed to generate environment configuration"
+        log_error "Failed to generate environment configuration"
         return 1
     }
     echo ""
@@ -186,7 +186,7 @@ prepare_deployment_files() {
         "${PARENT_DIR}/Caddyfile" \
         "${PARENT_DIR}/.env.production" \
         "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOYMENT_DIR}/" || {
-        echo "ERROR: Failed to copy deployment files"
+        log_error "Failed to copy deployment files"
         return 1
     }
     

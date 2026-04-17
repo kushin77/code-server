@@ -37,6 +37,7 @@ jobs:
         env:
           # Work around upstream artifact-name regression that fails runs before reporting results.
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           source: ${{ github.server_url }}/${{ github.repository }}
           verbose: true

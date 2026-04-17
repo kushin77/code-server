@@ -82,6 +82,7 @@ RUN mkdir -p /usr/lib/code-server/lib/vscode/extensions/github-authentication/di
 #
 # Build-time assertions: (1) fail if the shim is not found (VS Code restructured — needs review);
 #                        (2) fail if the patch did not apply (pattern changed — needs review).
+# hadolint ignore=DL4006
 RUN EXTHOST=/usr/lib/code-server/lib/vscode/out/vs/workbench/api/node/extensionHostProcess.js \
     && if ! grep -q 'supportGlobalNavigator' "$EXTHOST"; then \
          echo 'FATAL: navigator shim not found in extensionHostProcess.js — update patch for new VS Code version' >&2; exit 1; \
@@ -98,6 +99,7 @@ RUN EXTHOST=/usr/lib/code-server/lib/vscode/out/vs/workbench/api/node/extensionH
 
 # Optional: Cache Copilot VSIX payloads (only if versions are valid/downloadable)
 # If versions fail to download, skip caching and rely on entrypoint install
+# hadolint ignore=DL4006
 RUN mkdir -p /opt/vsix \
     && (curl -fL -o /tmp/github-copilot.vsix.gz \
       "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/1.295.0/vspackage" \

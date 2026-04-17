@@ -14,7 +14,7 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 RBAC_NAMESPACE="default"
-APEX_DOMAIN="kushnir.cloud"
+APEX_DOMAIN="${APEX_DOMAIN:-${DOMAIN#*.}}"
 
 # Color output
 RED='\033[0;31m'

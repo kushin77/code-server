@@ -95,9 +95,11 @@ jobs:
           set -euo pipefail
           # Patch EUID check to allow non-root
           sed "s/EUID != 0/EUID != 999999/" scripts/bootstrap-node.sh > /tmp/bootstrap-test.sh
-          if bash /tmp/bootstrap-test.sh --role invalid --dry-run 2>&1 | grep -q "Invalid ROLE"; then
+          output=$(bash /tmp/bootstrap-test.sh --role invalid --dry-run 2>&1 || true)
+          if echo "$output" | grep -q "Invalid ROLE"; then
             echo "✅ Invalid role correctly rejected"
           else
             echo "❌ Expected invalid role rejection"
+            echo "$output"
             exit 1
           fi

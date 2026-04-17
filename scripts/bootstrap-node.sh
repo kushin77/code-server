@@ -35,7 +35,15 @@ set -euo pipefail
 
 # Source common library for log_info, log_error, etc.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh"
+if [[ -f "$SCRIPT_DIR/_common/init.sh" ]]; then
+    source "$SCRIPT_DIR/_common/init.sh"
+elif [[ -f "$(pwd)/scripts/_common/init.sh" ]]; then
+    # CI smoke tests execute a temporary copy from /tmp; fall back to repo-relative path.
+    source "$(pwd)/scripts/_common/init.sh"
+else
+    echo "FATAL: Cannot source _common/init.sh" >&2
+    exit 1
+fi
 
 # =============================================================================
 # CONFIGURATION
@@ -48,10 +56,10 @@ DRY_RUN=false
 VERBOSE=false
 SKIP_DNS=false
 
-# Derived from inventory
-REPO_URL="https://github.com/kushin77/code-server.git"
-REPO_BRANCH="main"
-REPO_DIR="${REPO_DIR:-/opt/code-server}"  # Configurable deployment path
+# Derived from inventory (dedicated names avoid collisions with readonly globals from _common)
+BOOTSTRAP_REPO_URL="${BOOTSTRAP_REPO_URL:-${REPO_URL:-https://github.com/kushin77/code-server.git}}"
+BOOTSTRAP_REPO_BRANCH="${BOOTSTRAP_REPO_BRANCH:-${REPO_BRANCH:-main}}"
+BOOTSTRAP_REPO_DIR="${BOOTSTRAP_REPO_DIR:-${REPO_DIR:-/opt/code-server}}"  # Configurable deployment path
 
 # Bootstrap stages (ordered — names map to shell functions)
 BOOTSTRAP_STAGES=(
@@ -97,7 +105,7 @@ validate_prerequisites() {
     fi
     
     # Check if running as root
-    if [[ "$EUID" != 0 ]]; then
+    if [[ "$EUID" != 0 && "$DRY_RUN" != "true" ]]; then
         log_error "This script must run as root on the target node"
         log_error "Run: sudo scripts/bootstrap-node.sh ..."
         return 1
@@ -115,10 +123,13 @@ validate_prerequisites() {
     fi
     
     # Check disk space
-    local available_gb=$(df /opt 2>/dev/null | awk 'NR==2 {print $4/1024/1024}' || echo 0)
+    local available_gb
+    available_gb=$(df /opt 2>/dev/null | awk 'NR==2 {print $4/1024/1024}' || echo 0)
     local required_gb=100
-    
-    if (( $(echo "$available_gb < $required_gb" | bc -l) )); then
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY-RUN] Skipping strict disk space enforcement (${available_gb}GB available)"
+    elif (( $(echo "$available_gb < $required_gb" | bc -l) )); then
         log_error "Insufficient disk space: ${available_gb}GB available, ${required_gb}GB required"
         return 1
     fi
@@ -126,6 +137,7 @@ validate_prerequisites() {
     log_info "✓ Prerequisites validated"
     log_info "  Role: $ROLE"
     log_info "  Environment: $ENVIRONMENT"
+    log_info "  Verbose: $VERBOSE"
     log_info "  Available disk: ${available_gb}GB"
     
     return 0
@@ -187,22 +199,22 @@ install_docker() {
 clone_repository() {
     log_stage "Clone Repository"
     
-    if [[ -d "$REPO_DIR" ]]; then
-        log_info "Repository already exists at $REPO_DIR"
-        cd "$REPO_DIR" && git pull origin "$REPO_BRANCH"
+    if [[ -d "$BOOTSTRAP_REPO_DIR" ]]; then
+        log_info "Repository already exists at $BOOTSTRAP_REPO_DIR"
+        cd "$BOOTSTRAP_REPO_DIR" && git pull origin "$BOOTSTRAP_REPO_BRANCH"
         return 0
     fi
     
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "[DRY-RUN] Would clone $REPO_URL -> $REPO_DIR"
+        log_info "[DRY-RUN] Would clone $BOOTSTRAP_REPO_URL -> $BOOTSTRAP_REPO_DIR"
         return 0
     fi
     
     log_info "Cloning repository..."
-    mkdir -p "$(dirname "$REPO_DIR")"
-    git clone -b "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR"
+    mkdir -p "$(dirname "$BOOTSTRAP_REPO_DIR")"
+    git clone -b "$BOOTSTRAP_REPO_BRANCH" "$BOOTSTRAP_REPO_URL" "$BOOTSTRAP_REPO_DIR"
     
-    log_info "✓ Repository cloned to $REPO_DIR"
+    log_info "✓ Repository cloned to $BOOTSTRAP_REPO_DIR"
 }
 
 # =============================================================================
@@ -217,7 +229,7 @@ load_inventory() {
         return 0
     fi
     
-    cd "$REPO_DIR"
+    cd "$BOOTSTRAP_REPO_DIR"
     
     if [[ ! -f "environments/production/hosts.yml" ]]; then
         log_error "Inventory file not found: environments/production/hosts.yml"
@@ -247,7 +259,7 @@ deploy_services() {
         return 0
     fi
 
-    cd "$REPO_DIR"
+    cd "$BOOTSTRAP_REPO_DIR"
 
     log_info "Starting Docker Compose services..."
     if [[ "$ROLE" == "primary" ]]; then
@@ -439,14 +451,14 @@ register_prometheus() {
     hostname="$(hostname -s)"
     local host_ip
     host_ip="$(hostname -I | awk '{print $1}')"
-    local targets_dir="${REPO_DIR}/config/prometheus/targets"
+    local targets_dir="${BOOTSTRAP_REPO_DIR}/config/prometheus/targets"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY-RUN] Would add ${hostname} to Prometheus scrape targets at ${targets_dir}/${hostname}.yml"
         return 0
     fi
 
-    if [[ ! -d "$REPO_DIR" ]]; then
+    if [[ ! -d "$BOOTSTRAP_REPO_DIR" ]]; then
         log_info "Skipping Prometheus registration (repo not cloned)"
         return 0
     fi
@@ -479,6 +491,11 @@ EOF
 
 verify_health() {
     log_stage "Verify Health"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY-RUN] Would verify container health"
+        return 0
+    fi
     
     log_info "Waiting for services to become healthy..."
     sleep 10  # Initial wait
@@ -489,7 +506,13 @@ verify_health() {
     local expected_services=5
     
     while [[ $attempt -lt $max_attempts ]]; do
-        healthy_services=$(docker compose ps --services --filter "status=running" 2>/dev/null | wc -l || echo 0)
+        if healthy_services=$(docker compose ps --services --filter "status=running" 2>/dev/null | wc -l 2>/dev/null); then
+            :
+        else
+            healthy_services=0
+        fi
+        healthy_services="${healthy_services//[^0-9]/}"
+        healthy_services="${healthy_services:-0}"
         
         if [[ $healthy_services -ge $expected_services ]]; then
             log_info "✓ All services healthy"
@@ -535,8 +558,8 @@ main() {
         echo "Next steps:"
         echo "  1. Verify services: docker-compose ps"
         echo "  2. Check logs: docker-compose logs -f code-server"
-        echo "  3. Confirm DNS: nslookup $DOMAIN_INTERNAL"
-        echo "  4. Access code-server: https://prod.internal:8080"
+        echo "  3. Confirm DNS: nslookup ${DOMAIN_INTERNAL:-prod.internal}"
+        echo "  4. Access code-server: https://${DOMAIN_INTERNAL:-prod.internal}:${PORT_CODE_SERVER:-8080}"
     else
         log_error "❌ Bootstrap failed"
     fi
@@ -604,5 +627,5 @@ HELP
 done
 
 # Run bootstrap
-cd "$PROJECT_DIR"
+cd "${PROJECT_DIR:-$(pwd)}"
 main "$@"

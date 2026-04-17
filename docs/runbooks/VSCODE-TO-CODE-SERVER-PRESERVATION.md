@@ -110,6 +110,7 @@ cd /home/akushnir/code-server-enterprise
 docker compose ps --format 'table {{.Names}}\t{{.Status}}' | egrep '^(code-server|code-server-profile-backup)\s'
 docker exec code-server ls -la /home/coder/.local/share/code-server/User | head -30
 docker exec code-server ls -la /home/coder/.local/share/code-server/extensions | head -30
+docker exec code-server ls -la /home/coder/.local/share/code-server | egrep 'User|extensions|workspaceStorage|History|Backups'
 ```
 
 ## Step 4: Verify Instruction Rules And Enhancements
@@ -121,6 +122,10 @@ ls -la .github/copilot-instructions.md
 # Enterprise defaults should still be the baseline for first-launch users
 cat config/code-server/settings.json
 ```
+
+Enterprise defaults are merged additively at container start. User-defined
+values remain authoritative for keys they already set, while new shared
+defaults are appended for all users automatically.
 
 ## Step 5: Secrets And Credentials Validation
 This repository already uses canonical secrets and credential handling. Keep these unchanged after migration.

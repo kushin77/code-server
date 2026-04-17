@@ -34,6 +34,8 @@ DEFAULT_TARGET="production"
 DRY_RUN=false
 NOTIFY_SLACK=true
 VERBOSE=false
+PROD_ENDPOINT="${PROD_ENDPOINT:-https://${DOMAIN:-localhost}}"
+STAGING_ENDPOINT="${STAGING_ENDPOINT:-https://staging.${DOMAIN:-localhost}}"
 
 ###############################################################################
 # Utility Functions
@@ -192,9 +194,9 @@ check_health_before_deploy() {
 
     # Check if deployment endpoints are reachable
     if [[ "${TARGET}" == "production" ]]; then
-        local endpoint="https://code-server.kushnir.cloud"
+        local endpoint="$PROD_ENDPOINT"
     else
-        local endpoint="https://staging-code-server.kushnir.cloud"
+        local endpoint="$STAGING_ENDPOINT"
     fi
 
     if timeout 5 curl -sf "${endpoint}/health" &> /dev/null; then
@@ -278,12 +280,12 @@ check_health_after_deploy() {
 
     local max_retries=10
     local retry_count=0
-    local Health_check_url
+    local health_check_url
 
     if [[ "${TARGET}" == "production" ]]; then
-        health_check_url="https://code-server.kushnir.cloud/health"
+        health_check_url="${PROD_ENDPOINT%/}/health"
     else
-        health_check_url="https://staging-code-server.kushnir.cloud/health"
+        health_check_url="${STAGING_ENDPOINT%/}/health"
     fi
 
     while [[ $retry_count -lt $max_retries ]]; do

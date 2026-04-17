@@ -11,11 +11,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 OIDC_NAMESPACE="oidc-issuer"
-OIDC_ISSUER_URL="https://oidc.kushnir.cloud"
+OIDC_ISSUER_HOST="${OIDC_ISSUER_HOST:-oidc.${DOMAIN}}"
+OIDC_ISSUER_URL="https://${OIDC_ISSUER_HOST}"
 OIDC_ISSUER_SERVICE="oidc-issuer.oidc-issuer.svc.cluster.local:8888"
-APEX_DOMAIN="kushnir.cloud"
+APEX_DOMAIN="${APEX_DOMAIN:-${DOMAIN#*.}}"
 
 # Color output
 RED='\033[0;31m'
@@ -27,10 +29,6 @@ NC='\033[0m'
 TEST_RESULTS=0
 TEST_PASSED=0
 TEST_FAILED=0
-
-log_info() {
-  echo -e "${BLUE}[INFO]${NC} $*"
-}
 
 log_success() {
   echo -e "${GREEN}[✓]${NC} $*"

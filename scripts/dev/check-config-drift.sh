@@ -21,7 +21,7 @@ DRIFT_FOUND=0
 WARNINGS_FOUND=0
 
 # SSOT file locations
-ENV_TEMPLATE=".env.template"
+ENV_TEMPLATE=""
 HOSTS_FILE="environments/production/hosts.yml"
 TERRAFORM_VARS="terraform/variables.tf"
 
@@ -136,10 +136,19 @@ generate_report() {
 
 main() {
     log_header
+
+    # Resolve canonical env SSOT file in priority order.
+    if [[ -f ".env.template" ]]; then
+        ENV_TEMPLATE=".env.template"
+    elif [[ -f ".env.example" ]]; then
+        ENV_TEMPLATE=".env.example"
+    elif [[ -f ".env.defaults" ]]; then
+        ENV_TEMPLATE=".env.defaults"
+    fi
     
     # Check if files exist
-    if [[ ! -f "$ENV_TEMPLATE" ]]; then
-        log_error "$ENV_TEMPLATE not found"
+    if [[ -z "$ENV_TEMPLATE" ]]; then
+        log_error "No env SSOT file found (.env.template, .env.example, .env.defaults)"
         exit 1
     fi
     

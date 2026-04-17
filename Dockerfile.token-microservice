@@ -16,6 +16,7 @@ RUN useradd -m -u 1000 tokenservice
 WORKDIR /app
 
 # Install dependencies
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \

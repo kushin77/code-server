@@ -140,6 +140,31 @@ services:
         max-size: "50m"
         max-file: "10"
 
+  # ─── Appsmith (portal profile) ─────────────────────────────────────────────
+  # Admin portal — service catalog, automation triggers, user management
+  # Deploy: COMPOSE_PROFILES=portal docker compose up -d
+  # ADR: docs/adr/008-portal-platform-appsmith-vs-backstage.md
+  appsmith:
+    image: appsmith/appsmith-ce:v1.47
+    profiles: [portal]
+    container_name: appsmith
+    restart: unless-stopped
+    environment:
+      - APPSMITH_SIGNUP_DISABLED=true
+      - APPSMITH_OAUTH2_GITHUB_CLIENT_ID=${GITHUB_OAUTH_CLIENT_ID:-}
+      - APPSMITH_OAUTH2_GITHUB_CLIENT_SECRET=${GITHUB_OAUTH_CLIENT_SECRET:-}
+    expose:
+      - "80"
+    volumes:
+      - appsmith-data:/appsmith-stacks
+    networks:
+      - enterprise
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   coder-data:
     driver: local
@@ -150,6 +175,8 @@ volumes:
   caddy-data:
     driver: local
   caddy-config:
+    driver: local
+  appsmith-data:
     driver: local
 
 networks:

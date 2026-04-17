@@ -32,20 +32,6 @@ jobs:
       check_terraform: true
       check_docker_compose: false
       check_caddyfile: false
-      
-      - name: Terraform validate
-        if: steps.tf_changed.outputs.has_changes == 'true'
-        run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.sha }}"
-          mapfile -t changed_tf < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.tf' '*.tfvars' | sort)
-          if [[ ${#changed_tf[@]} -eq 0 ]]; then
-            echo "No Terraform files changed in this PR"
-            exit 0
-          fi
-          terraform init -backend=false
-          terraform validate
-          echo "✓ Terraform configuration valid"
 
   shell-script-validate:
     name: Validate Shell Scripts

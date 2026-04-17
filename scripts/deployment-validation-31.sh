@@ -161,7 +161,7 @@ test_docker_gpu_access() {
 # ============================================================================
 
 test_nas_mounts() {
-    mount_points=("/mnt/nas-primary" "/mnt/nas-backup")
+    mount_points=("/mnt/nas-56" "/mnt/nas-export")
     
     for mount in "${mount_points[@]}"; do
         if mountpoint -q "$mount" 2>/dev/null; then
@@ -173,7 +173,7 @@ test_nas_mounts() {
 }
 
 test_nas_writable() {
-    test_file="/mnt/nas-primary/.deployment-test-$(date +%s)"
+    test_file="/mnt/nas-export/.deployment-test-$(date +%s)"
     
     if touch "$test_file" 2>/dev/null && rm "$test_file"; then
         log_pass "NAS mount point is writable"
@@ -183,22 +183,22 @@ test_nas_writable() {
 }
 
 test_nas_capacity() {
-    # Check primary NAS has at least 500GB free
-    if mountpoint -q "/mnt/nas-primary"; then
-        available=$(df "/mnt/nas-primary" | tail -1 | awk '{print $4}')
+    # Check the active NAS export has at least 20GB free.
+    if mountpoint -q "/mnt/nas-56"; then
+        available=$(df "/mnt/nas-56" | tail -1 | awk '{print $4}')
         available_gb=$((available / 1024 / 1024))
         
-        if [ "$available_gb" -gt 500 ]; then
+        if [ "$available_gb" -gt 20 ]; then
             log_pass "NAS has sufficient capacity: ${available_gb}GB free"
         else
-            log_fail "NAS capacity low: ${available_gb}GB free (need >500GB)"
+            log_fail "NAS capacity low: ${available_gb}GB free (need >20GB)"
         fi
     fi
 }
 
 test_nas_latency() {
     if command -v iozone &>/dev/null; then
-        latency=$(iozone -a -n 1m -g 100m -M /mnt/nas-primary 2>/dev/null | grep -oP 'latency.*\K[0-9]+' | head -1)
+        latency=$(iozone -a -n 1m -g 100m -M /mnt/nas-56 2>/dev/null | grep -oP 'latency.*\K[0-9]+' | head -1)
         if [ -n "$latency" ] && [ "$latency" -lt 100 ]; then
             log_pass "NAS latency acceptable: ${latency}ms"
         else

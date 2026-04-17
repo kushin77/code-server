@@ -97,12 +97,14 @@ GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
 OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
 CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD}
 ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS:-*}
-WORKSPACE_PATH=${WORKSPACE_PATH:-./workspace}
+WORKSPACE_PATH=${WORKSPACE_PATH:-/mnt/nas-56/kushin77/applications/code-server-enterprise}
+CODER_DATA_PATH=${CODER_DATA_PATH:-/mnt/nas-56/code-server}
+OLLAMA_DATA_PATH=${OLLAMA_DATA_PATH:-/mnt/nas-56/ollama}
 EOF
 run chmod 600 .env
 
 # Create workspace dir if not exists (idempotent)
-run mkdir -p "${WORKSPACE_PATH:-./workspace}"
+run mkdir -p "${WORKSPACE_PATH:-/mnt/nas-56/kushin77/applications/code-server-enterprise}"
 
 # Pull latest images then bring up all services
 run docker compose pull

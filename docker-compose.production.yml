@@ -32,13 +32,13 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /data/coder
+      device: ${CODER_DATA_PATH:-/mnt/nas-56/code-server}
   ollama-data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /data/ollama
+      device: ${OLLAMA_DATA_PATH:-/mnt/nas-56/ollama}
   postgres-data:
     driver: local
     driver_opts:
@@ -341,7 +341,7 @@ services:
   # ════════════════════════════════════════════════════════════
   
   code-server:
-    image: code-server-patched:latest
+    image: codercom/code-server:4.115.0
     container_name: code-server
     restart: always
     networks:
@@ -362,6 +362,9 @@ services:
       # Resilience
       CONNECTION_TIMEOUT: "30000"
       READ_TIMEOUT: "60000"
+    volumes:
+      - ${CODER_DATA_PATH:-/mnt/nas-56/code-server}:/home/coder
+      - ${WORKSPACE_PATH:-/mnt/nas-56/kushin77/applications/code-server-enterprise}:/home/coder/workspace
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
@@ -402,7 +405,7 @@ services:
       retries: 3
       start_period: 120s
     volumes:
-      - ollama-data:/root/.ollama
+      - ${OLLAMA_DATA_PATH:-/mnt/nas-56/ollama}:/root/.ollama
     deploy:
       resources:
         limits:

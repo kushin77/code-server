@@ -28,6 +28,11 @@ trap _shutdown TERM INT
 EXT_DIR="/home/coder/.local/share/code-server/extensions"
 mkdir -p "$EXT_DIR"
 
+if command -v git >/dev/null 2>&1 && command -v git-credential-gsm >/dev/null 2>&1; then
+  git config --global credential.helper gsm >/dev/null 2>&1 || true
+  git config --global credential.https://github.com.helper gsm >/dev/null 2>&1 || true
+fi
+
 # ── Install Copilot extensions from pre-cached VSIX ──────────────────────────
 if ! /usr/bin/code-server --list-extensions --extensions-dir "$EXT_DIR" 2>/dev/null | grep -qi '^github.copilot$'; then
   echo "[entrypoint] Installing github.copilot from /opt/vsix/..."
@@ -48,14 +53,61 @@ if [ -d /opt/extensions/ollama-chat ] && [ -f /opt/extensions/ollama-chat/packag
   echo "[entrypoint] Ollama Chat extension registered"
 fi
 
-# ── Seed enterprise settings on first launch ─────────────────────────────────
-# Copies /etc/code-server/settings.json (bind-mounted from config/settings.json)
-# ONLY if the user has no existing settings -- never overwrites customizations.
+# ── Merge enterprise settings at startup ─────────────────────────────────────
+# User-defined values win so new enterprise defaults can be rolled out without
+# overwriting existing customizations.
 SETTINGS_DIR="/home/coder/.local/share/code-server/User"
 mkdir -p "$SETTINGS_DIR"
 if [ ! -f "$SETTINGS_DIR/settings.json" ] && [ -f /etc/code-server/settings.json ]; then
   echo "[entrypoint] Seeding enterprise settings into $SETTINGS_DIR/settings.json"
   cp /etc/code-server/settings.json "$SETTINGS_DIR/settings.json"
+elif [ -f "$SETTINGS_DIR/settings.json" ] && [ -f /etc/code-server/settings.json ]; then
+  export CODE_SERVER_DEFAULT_SETTINGS=/etc/code-server/settings.json
+  export CODE_SERVER_USER_SETTINGS="$SETTINGS_DIR/settings.json"
+  /usr/bin/node <<'NODE'
+const fs = require("fs");
+
+const defaultPath = process.env.CODE_SERVER_DEFAULT_SETTINGS;
+const userPath = process.env.CODE_SERVER_USER_SETTINGS;
+
+const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+
+const mergeDefaults = (current, defaults) => {
+  if (Array.isArray(defaults)) {
+    return Array.isArray(current) ? current : defaults;
+  }
+
+  if (isObject(defaults)) {
+    const base = isObject(current) ? { ...current } : {};
+    for (const [key, value] of Object.entries(defaults)) {
+      if (!(key in base)) {
+        base[key] = value;
+        continue;
+      }
+
+      if (isObject(base[key]) && isObject(value)) {
+        base[key] = mergeDefaults(base[key], value);
+      }
+    }
+    return base;
+  }
+
+  return current === undefined ? defaults : current;
+};
+
+try {
+  const defaults = JSON.parse(fs.readFileSync(defaultPath, "utf8"));
+  const current = JSON.parse(fs.readFileSync(userPath, "utf8"));
+  const merged = mergeDefaults(current, defaults);
+
+  if (JSON.stringify(current) !== JSON.stringify(merged)) {
+    fs.writeFileSync(userPath, JSON.stringify(merged, null, 2) + "\n");
+    console.log(`[entrypoint] Merged enterprise defaults into ${userPath}`);
+  }
+} catch (error) {
+  console.error(`[entrypoint] WARNING: Could not merge settings: ${error.message}`);
+}
+NODE
 fi
 
 # ── Start code-server (background so trap can catch SIGTERM) ─────────────────

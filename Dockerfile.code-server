@@ -35,9 +35,18 @@ USER root
 # Update packages and install core development tools (immutable, pre-installed)
 # Python packages via apt to avoid PEP 668 conflicts
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-transport-https ca-certificates gnupg \
     build-essential git curl python3 python3-pip python3-venv \
     nodejs npm \
     vim gdb tmux htop jq docker.io postgresql-client \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+      | gpg --dearmor -o /etc/apt/keyrings/google-cloud-cli.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/google-cloud-cli.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
+      > /etc/apt/sources.list.d/google-cloud-sdk.list \
+    && apt-get update && apt-get install -y --no-install-recommends google-cloud-cli \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js development packages globally  
@@ -97,7 +106,8 @@ RUN mkdir -p /opt/vsix \
     rm -f /tmp/github-copilot.vsix.gz /tmp/github-copilot-chat.vsix.gz || true
 
 COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
-RUN chmod +x /usr/local/bin/code-server-entrypoint.sh
+COPY scripts/git-credential-gsm /usr/local/bin/git-credential-gsm
+RUN chmod +x /usr/local/bin/code-server-entrypoint.sh /usr/local/bin/git-credential-gsm
 
 USER coder
 

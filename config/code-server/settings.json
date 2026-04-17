@@ -27,9 +27,19 @@
   },
   "search.followSymlinks": false,
   "search.useParentIgnoreFiles": true,
+  "window.restoreWindows": "all",
+  "workbench.localHistory.enabled": true,
+  "workbench.startupEditor": "none",
   "typescript.tsserver.maxTsServerMemory": 3072,
   "editor.minimap.enabled": false,
   "editor.inlineSuggest.enabled": true,
+  "terminal.integrated.enablePersistentSessions": true,
+  "terminal.integrated.scrollback": 50000,
+  "terminal.integrated.env.linux": {
+    "GSM_PROJECT": "gcp-eiq",
+    "GSM_SECRET_NAME": "prod-github-token",
+    "GSM_GITHUB_TOKEN_SECRET": "prod-github-token"
+  },
   "extensions.autoCheckUpdates": false,
   "extensions.autoUpdate": false
 }

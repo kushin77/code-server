@@ -145,7 +145,7 @@ jobs:
   summary:
     name: Validation Summary
     runs-on: ubuntu-latest
-    needs: [docker-compose-validate, caddyfile-validate, terraform-validate, shell-script-validate, secrets-scan, no-obsolete-files]
+    needs: [docker-compose, caddyfile, iac, shell-script-validate, secrets-scan, no-obsolete-files]
     if: always()
     steps:
       - name: Print Summary
@@ -154,9 +154,9 @@ jobs:
           echo "=================================="
           echo "All checks completed. Review results above."
           
-          if [ "${{ needs.docker-compose-validate.result }}" == "failure" ] || \
-             [ "${{ needs.caddyfile-validate.result }}" == "failure" ] || \
-             [ "${{ needs.terraform-validate.result }}" == "failure" ] || \
+          if [ "${{ needs.docker-compose.result }}" == "failure" ] || \
+             [ "${{ needs.caddyfile.result }}" == "failure" ] || \
+             [ "${{ needs.iac.result }}" == "failure" ] || \
              [ "${{ needs.shell-script-validate.result }}" == "failure" ]; then
             echo ""
             echo "❌ Validation failures detected - blocking"

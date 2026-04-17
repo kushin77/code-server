@@ -80,30 +80,30 @@ check_container_logs() {
     local error_count=$(docker logs $container 2>/dev/null | grep -iE "error|exception|fatal|crash" | wc -l || echo "0")
     
     if [ "$error_count" -gt 0 ]; then
-        log "WARN" "Container [$container] has $error_count error entries in logs"
-        log "INFO" "Recent errors:"
+        log_warn "Container [$container] has $error_count error entries in logs"
+        log_info "Recent errors:"
         docker logs $container --tail 3 2>/dev/null | grep -iE "error|exception|fatal" | head -3 | sed 's/^/  /'
         return 1
     else
-        log "OK" "Container [$container] logs: no errors detected"
+        log_info "Container [$container] logs: no errors detected"
         return 0
     fi
 }
 
 # Main monitoring loop
 main() {
-    log "INFO" "Docker Health Monitor started"
+    log_info "Docker Health Monitor started"
     
     # Get list of containers
     local containers=$(docker ps -a --format "{{.Names}}" || echo "")
     
     if [ -z "$containers" ]; then
-        log "WARN" "No Docker containers found"
+        log_warn "No Docker containers found"
         exit 1
     fi
     
     while true; do
-        log "INFO" "--- Health Check Cycle ---"
+        log_info "--- Health Check Cycle ---"
         
         for container in $containers; do
             check_container_status "$container" || true
@@ -113,12 +113,12 @@ main() {
             echo "" >> "$LOG_FILE"
         done
         
-        log "INFO" "Health check complete. Sleeping ${CHECK_INTERVAL}s..."
+        log_info "Health check complete. Sleeping ${CHECK_INTERVAL}s..."
         sleep "$CHECK_INTERVAL"
     done
 }
 
 # Handle SIGTERM
-trap 'log "INFO" "Docker Health Monitor stopped"; exit 0' SIGTERM
+    trap 'log_info "Docker Health Monitor stopped"; exit 0' SIGTERM
 
 main "$@"

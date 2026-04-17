@@ -1,5 +1,30 @@
 # PR #462 Quality Gate Failure Analysis
 
+## Addendum - April 17, 2026 (Post-Remediation Validation)
+
+Recent continuation work identified and fixed additional CI-breakage regressions introduced after the original analysis.
+
+### Findings and Fixes
+
+1. validate-config workflow summary job referenced non-existent job IDs.
+  - Root cause: job names were refactored to reusable workflow jobs, but summary needs still used legacy identifiers.
+  - Fix: updated needs to docker-compose, caddyfile, iac and aligned result checks to the same IDs.
+
+2. scripts/docker-health-monitor.sh mixed canonical log_* with legacy log LEVEL calls.
+  - Root cause: partial refactor left legacy calls in check_container_logs, main, and SIGTERM trap.
+  - Fix: replaced remaining legacy logging with canonical log_info/log_warn/log_error usage.
+
+3. scripts/security-audit.sh had runtime safety issues.
+  - Root cause: partial logging migration left an invalid local declaration outside function scope and lingering colorized output assumptions.
+  - Fix: removed init fallback echo in favor of canonical init source, corrected recent_count assignment scope, normalized section/status output to canonical logging-compatible text.
+
+### Outcome
+
+- CI configuration now references valid workflow job IDs.
+- Both governance-target scripts are consistent with canonical logging usage.
+- Security audit script no longer contains invalid shell scope usage from the partial migration.
+
+
 **PR**: #462 - "Strategic architecture + Phase 2 Terraform modules + session completion"  
 **Date**: April 16-22, 2026  
 **Analysis Date**: April 22, 2026  

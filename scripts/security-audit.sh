@@ -13,7 +13,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 REPORT_FILE="security-audit-$(date +%Y%m%d-%H%M%S).txt"
 PASSED=0
@@ -40,7 +40,7 @@ test_result() {
 log_info "Phase 13 Security Audit"
 log_info "Report: $REPORT_FILE"
 log_info "Start Time: $(date)"
-log_info ""
+echo ""
 
 # ============================================================================
 # SECTION 1: Zero-Trust Architecture Validation
@@ -84,8 +84,8 @@ echo ""
 # ============================================================================
 # SECTION 2: Authentication & Authorization
 # ============================================================================
-echo "📋 SECTION 2: Authentication & Authorization"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+log_info "SECTION 2: Authentication & Authorization"
+log_info "----------------------------------------------------------"
 echo ""
 
 # Test: OAuth2 Proxy is configured
@@ -111,8 +111,8 @@ echo ""
 # ============================================================================
 # SECTION 3: Audit Logging
 # ============================================================================
-echo "📋 SECTION 3: Audit Logging"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+log_info "SECTION 3: Audit Logging"
+log_info "----------------------------------------------------------"
 echo ""
 
 # Test: Audit log files exist
@@ -152,7 +152,7 @@ fi
 # Test: Recent audit entries
 echo "Checking Recent Audit Activity..."
 if [ -f "/var/log/git-rca-audit.log" ]; then
-  local recent_count=$(tail -100 /var/log/git-rca-audit.log 2>/dev/null | wc -l)
+  recent_count=$(tail -100 /var/log/git-rca-audit.log 2>/dev/null | wc -l)
   if [ $recent_count -gt 0 ]; then
     test_result "Recent Audit Logs Present (count: $recent_count)" "PASS"
   else
@@ -167,8 +167,8 @@ echo ""
 # ============================================================================
 # SECTION 4: SSH Key Proxying
 # ============================================================================
-echo "📋 SECTION 4: SSH Key Proxying"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+log_info "SECTION 4: SSH Key Proxying"
+log_info "----------------------------------------------------------"
 echo ""
 
 # Test: SSH agent forwarding setup
@@ -197,8 +197,8 @@ echo ""
 # ============================================================================
 # SECTION 5: Compliance Checks
 # ============================================================================
-echo "📋 SECTION 5: Compliance Checks"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+log_info "SECTION 5: Compliance Checks"
+log_info "----------------------------------------------------------"
 echo ""
 
 # Test: Encryption in transit (TLS)
@@ -230,8 +230,8 @@ echo ""
 # ============================================================================
 # SECTION 6: Vulnerability Scanning
 # ============================================================================
-echo "📋 SECTION 6: Vulnerability Scanning"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+log_info "SECTION 6: Vulnerability Scanning"
+log_info "----------------------------------------------------------"
 echo ""
 
 # Test: Container images scanned
@@ -241,7 +241,7 @@ if command -v trivy &> /dev/null; then
   # Would run: trivy image code-server:latest (if available)
   test_result "Container Scanning Capability Available" "PASS"
 else
-  echo "ℹ️  Trivy not installed (install for vulnerability scanning)"
+  log_warn "Trivy not installed (install for vulnerability scanning)"
   test_result "Container Scanning Available" "FAIL" "Trivy not installed"
 fi
 
@@ -258,15 +258,15 @@ echo ""
 # ============================================================================
 # SUMMARY
 # ============================================================================
-echo "📊 AUDIT SUMMARY"
+log_info "AUDIT SUMMARY"
 echo "=================================================="
 
 TOTAL=$((PASSED + FAILED))
 COMPLIANCE_SCORE=$(( (PASSED * 100) / TOTAL ))
 
 echo "Total Tests: $TOTAL"
-echo -e "Passed: ${GREEN}$PASSED${NC}"
-echo -e "Failed: ${RED}$FAILED${NC}"
+echo "Passed: $PASSED"
+echo "Failed: $FAILED"
 echo ""
 echo "Compliance Score: $COMPLIANCE_SCORE%"
 echo ""
@@ -286,7 +286,7 @@ else
   STATUS="Requires Remediation"
 fi
 
-echo -e "Overall Grade: ${YELLOW}${GRADE}${NC} - ${STATUS}"
+echo "Overall Grade: $GRADE - $STATUS"
 echo "=================================================="
 echo ""
 
@@ -315,13 +315,13 @@ echo ""
   fi
 } | tee "$REPORT_FILE"
 
-echo "📄 Report saved to: $REPORT_FILE"
+log_info "Report saved to: $REPORT_FILE"
 echo ""
 
 if [ $FAILED -gt 0 ]; then
-  echo -e "${RED}⚠️  SECURITY AUDIT FAILED - Review failures before deployment${NC}"
+  log_error "SECURITY AUDIT FAILED - Review failures before deployment"
   exit 1
 else
-  echo -e "${GREEN}✅ Security Audit PASSED - Ready for deployment${NC}"
+  log_info "Security Audit PASSED - Ready for deployment"
   exit 0
 fi

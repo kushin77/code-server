@@ -16,10 +16,15 @@ services:
 
   # ────────────────────────────────────────────────────────────────────────────
   # code-server — VS Code in the browser
-  # Uses upstream codercom image (entrypoint handles bind-addr + serving)
+  # Custom enterprise image with comprehensive development tools pre-installed
+  # All dependencies baked into image for immutable, reproducible deployments
+  # Users never need to manually install packages (admin-only via IaC)
   # ────────────────────────────────────────────────────────────────────────────
   code-server:
-    image: codercom/code-server:4.115.0
+    build:
+      context: .
+      dockerfile: Dockerfile.code-server
+    image: code-server-enterprise:latest
     container_name: code-server
     restart: unless-stopped
     user: "1000"
@@ -38,9 +43,16 @@ services:
       - OLLAMA_ENDPOINT=http://ollama:11434
       - OLLAMA_DEFAULT_MODEL=llama2:7b-chat
       - NODE_TLS_REJECT_UNAUTHORIZED=0
+      # Development tools environment variables
+      - PATH=/home/coder/.local/bin:/home/coder/node_modules/.bin:/usr/local/cargo/bin:/usr/local/go/bin:$PATH
+      - PYTHONUNBUFFERED=1
+      - GOPATH=/opt/go
+      - RUST_BACKTRACE=1
     volumes:
       - code-server-data:/home/coder
       - ./workspace:/home/coder/workspace
+      # Mount Docker socket for container development inside IDE
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s

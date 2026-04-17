@@ -92,20 +92,31 @@ jobs:
 
       - name: Check for peer review approval
         id: check-reviews
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          APPROVAL_COUNT=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews" \
+            | jq '[.[] | select(.state == "APPROVED")] | length')
 
           if [ "$APPROVAL_COUNT" -gt 0 ]; then
-            echo "HAS_PEER_APPROVAL=true" >> $GITHUB_OUTPUT
-            echo "APPROVAL_COUNT=$APPROVAL_COUNT" >> $GITHUB_OUTPUT
+            echo "HAS_PEER_APPROVAL=true" >> "$GITHUB_OUTPUT"
+            echo "APPROVAL_COUNT=$APPROVAL_COUNT" >> "$GITHUB_OUTPUT"
           else
-            echo "HAS_PEER_APPROVAL=false" >> $GITHUB_OUTPUT
-            echo "APPROVAL_COUNT=0" >> $GITHUB_OUTPUT
+            echo "HAS_PEER_APPROVAL=false" >> "$GITHUB_OUTPUT"
+            echo "APPROVAL_COUNT=0" >> "$GITHUB_OUTPUT"
           fi
 
           REVIEWERS_REQUESTED='${{ toJSON(github.event.pull_request.requested_reviewers) }}'
           if [ -z "$REVIEWERS_REQUESTED" ] || [ "$REVIEWERS_REQUESTED" = "[]" ]; then
-            echo "REVIEWERS_ASSIGNED=false" >> $GITHUB_OUTPUT
+            echo "REVIEWERS_ASSIGNED=false" >> "$GITHUB_OUTPUT"
           else
-            echo "REVIEWERS_ASSIGNED=true" >> $GITHUB_OUTPUT
+            echo "REVIEWERS_ASSIGNED=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Post reminder if no reviewers assigned

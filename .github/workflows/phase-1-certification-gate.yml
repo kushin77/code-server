@@ -34,31 +34,35 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const reviewer = '${{ steps.auth.outputs.reviewer }}';
+            const body = [
+              '## Phase 1: Design Certification - APPROVED',
+              '',
+              `Approved by: @${reviewer}`,
+              '',
+              '### Phase 1 Requirements Met',
+              '- [x] ADR requirement satisfied',
+              '- [x] Architecture review completed',
+              '- [x] Failure isolation verified',
+              '- [x] Threat modeling (STRIDE) completed',
+              '',
+              '### Next: Phase 2 Code Review',
+              'This PR is now ready for **Phase 2: Code & Quality Review**',
+              '',
+              'Code reviewers (@code-review-team) can now proceed with:',
+              '- [ ] Security scan validation (SAST, secrets, dependencies)',
+              '- [ ] Code quality checks (lint, tests, coverage >80%)',
+              '- [ ] Integration testing if cross-service changes',
+              '- [ ] E2E testing if UI changes',
+              '- [ ] Observability validation (logging, metrics, tracing)',
+              '',
+              'See the PR template for Phase 2 complete checklist.'
+            ].join('\n');
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ✅ Phase 1: Design Certification — APPROVED
-              
-Approved by: @${{ steps.auth.outputs.reviewer }}
-
-### Phase 1 Requirements Met ✓
-- [x] ADR requirement satisfied
-- [x] Architecture review completed
-- [x] Failure isolation verified
-- [x] Threat modeling (STRIDE) completed
-
-### Next: Phase 2 Code Review
-This PR is now ready for **Phase 2: Code & Quality Review**
-
-Code reviewers (@code-review-team) can now proceed with:
-- [ ] Security scan validation (SAST, secrets, dependencies)
-- [ ] Code quality checks (lint, tests, coverage >80%)
-- [ ] Integration testing if cross-service changes
-- [ ] E2E testing if UI changes
-- [ ] Observability validation (logging, metrics, tracing)
-
-See the PR template for Phase 2 complete checklist.`
+              body,
             });
 
       - name: Post Unauthorized Reviewer Warning
@@ -67,19 +71,23 @@ See the PR template for Phase 2 complete checklist.`
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const reviewer = '${{ steps.auth.outputs.reviewer }}';
+            const body = [
+              'Phase 1 Approval Not Recognized',
+              '',
+              `Review approved by: @${reviewer}`,
+              '',
+              '**Note**: Only the following reviewers are authorized to approve **Phase 1: Design Certification**:',
+              '- @kushin77',
+              '- @PureBlissAK',
+              '',
+              "If you're authorized to approve Phase 1, please ensure you're using one of the authorized accounts.",
+              '',
+              'Alternatively, any CODEOWNER can approve Phase 2 (Code & Quality Review) once Phase 1 is certified.'
+            ].join('\n');
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `⚠️ **Phase 1 Approval Not Recognized**
-
-Review approved by: @${{ steps.auth.outputs.reviewer }}
-
-**Note**: Only the following reviewers are authorized to approve **Phase 1: Design Certification**:
-- @kushin77
-- @PureBlissAK
-
-If you're authorized to approve Phase 1, please ensure you're using one of the authorized accounts.
-
-Alternatively, any CODEOWNER can approve Phase 2 (Code & Quality Review) once Phase 1 is certified.`
+              body,
             });

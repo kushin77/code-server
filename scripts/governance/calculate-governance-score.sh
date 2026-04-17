@@ -202,13 +202,11 @@ EOF
 
 Formula:
 
-\`\`\`
-score = max(0, 100
-      - (jscpd_violations * 5)
-      - (missing_headers * 2)
-      - (hardcoded_ips * 10)
-      - (active_shims_with_fallback * 8))
-\`\`\`
+    score = max(0, 100
+  - (jscpd_violations * 5)
+  - (missing_headers * 2)
+  - (hardcoded_ips * 10)
+  - (active_shims_with_fallback * 8))
 EOF
     ;;
   prometheus)

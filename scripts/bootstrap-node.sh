@@ -126,8 +126,10 @@ validate_prerequisites() {
     local available_gb
     available_gb=$(df /opt 2>/dev/null | awk 'NR==2 {print $4/1024/1024}' || echo 0)
     local required_gb=100
-    
-    if (( $(echo "$available_gb < $required_gb" | bc -l) )); then
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY-RUN] Skipping strict disk space enforcement (${available_gb}GB available)"
+    elif (( $(echo "$available_gb < $required_gb" | bc -l) )); then
         log_error "Insufficient disk space: ${available_gb}GB available, ${required_gb}GB required"
         return 1
     fi

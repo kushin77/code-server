@@ -53,8 +53,9 @@ ide.kushnir.cloud {
 }
 
 kushnir.cloud {
-    # Main portal — Appsmith/Backstage for admin and user portals
-    # ALL requests require oauth2-proxy authentication
+    # Admin portal — Appsmith CE handles its own authentication (first-time setup + login)
+    # No oauth2-proxy gate: avoids forward_auth redirect-loop issues and double-auth complexity.
+    # Security: Appsmith requires account login; APPSMITH_SIGNUP_DISABLED=true prevents self-registration.
 
     encode gzip
 
@@ -69,26 +70,11 @@ kushnir.cloud {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
-    @oauth2 path /oauth2 /oauth2/*
-    handle @oauth2 {
-        reverse_proxy oauth2-proxy:4180 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto https
-        }
-    }
-
-    # All other requests: forward_auth via oauth2-proxy, then proxy to Appsmith admin portal
-    forward_auth oauth2-proxy:4180 {
-        uri /oauth2/auth
-        copy_headers X-Auth-Request-User X-Auth-Request-Email
-    }
-
+    # Proxy all portal traffic directly to Appsmith
     reverse_proxy appsmith:80 {
-        header_up X-WEBAUTH-USER {http.reverse_proxy.header.X-Auth-Request-Email}
         header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto https
         transport http {
             dial_timeout 10s
             read_timeout 0

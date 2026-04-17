@@ -12,6 +12,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -20,14 +23,14 @@ NC='\033[0m' # No Color
 
 # Target endpoints
 declare -a ENDPOINTS=(
-    "${DEPLOY_HOST}:8080:code-server-http"
-    "${DEPLOY_HOST}:80:caddy-http"
-    "${DEPLOY_HOST}:443:caddy-https"
-    "${DEPLOY_HOST}:11434:ollama"
-    "${DEPLOY_HOST}:9090:prometheus"
-    "${DEPLOY_HOST}:3000:grafana"
+    "${DEPLOY_HOST}:${PORT_CODE_SERVER}:code-server-http"
+    "${DEPLOY_HOST}:${PORT_CADDY_HTTP}:caddy-http"
+    "${DEPLOY_HOST}:${PORT_CADDY_HTTPS}:caddy-https"
+    "${DEPLOY_HOST}:${PORT_OLLAMA}:ollama"
+    "${DEPLOY_HOST}:${PORT_PROMETHEUS}:prometheus"
+    "${DEPLOY_HOST}:${PORT_GRAFANA}:grafana"
     "${DEPLOY_HOST}:16686:jaeger"
-    "${DEPLOY_HOST}:9093:alertmanager"
+    "${DEPLOY_HOST}:${PORT_ALERTMANAGER}:alertmanager"
     "${DEPLOY_HOST}:4180:oauth2-proxy"
     "${DEPLOY_HOST}:5432:postgres"
     "${DEPLOY_HOST}:6379:redis"
@@ -68,13 +71,13 @@ done
 echo -e "\n${YELLOW}═══ HTTP Health Checks ═══${NC}"
 
 declare -a HTTP_ENDPOINTS=(
-    "http://${DEPLOY_HOST}:8080/healthz:code-server"
-    "http://${DEPLOY_HOST}:80/health:caddy"
-    "http://${DEPLOY_HOST}:11434/api/tags:ollama"
-    "http://${DEPLOY_HOST}:9090/-/healthy:prometheus"
-    "http://${DEPLOY_HOST}:3000/api/health:grafana"
+    "http://${DEPLOY_HOST}:${PORT_CODE_SERVER}/healthz:code-server"
+    "http://${DEPLOY_HOST}:${PORT_CADDY_HTTP}/health:caddy"
+    "http://${DEPLOY_HOST}:${PORT_OLLAMA}/api/tags:ollama"
+    "http://${DEPLOY_HOST}:${PORT_PROMETHEUS}/-/healthy:prometheus"
+    "http://${DEPLOY_HOST}:${PORT_GRAFANA}/api/health:grafana"
     "http://${DEPLOY_HOST}:16686/:jaeger"
-    "http://${DEPLOY_HOST}:9093/-/healthy:alertmanager"
+    "http://${DEPLOY_HOST}:${PORT_ALERTMANAGER}/-/healthy:alertmanager"
 )
 
 for http_endpoint in "${HTTP_ENDPOINTS[@]}"; do
@@ -116,13 +119,13 @@ fi
 echo -e "\n${YELLOW}═══ Docker Service Verification ═══${NC}"
 
 declare -a SERVICES=(
-    "code-server:8080"
-    "caddy:80"
-    "ollama:11434"
-    "prometheus:9090"
-    "grafana:3000"
+    "code-server:${PORT_CODE_SERVER}"
+    "caddy:${PORT_CADDY_HTTP}"
+    "ollama:${PORT_OLLAMA}"
+    "prometheus:${PORT_PROMETHEUS}"
+    "grafana:${PORT_GRAFANA}"
     "jaeger:16686"
-    "alertmanager:9093"
+    "alertmanager:${PORT_ALERTMANAGER}"
 )
 
 for service in "${SERVICES[@]}"; do

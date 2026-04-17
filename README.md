@@ -1,6 +1,7 @@
 # code-server — On-Premises VSCode Server
 
-Production-grade self-hosted VSCode in the browser with enterprise security, monitoring, and high availability.
+Production-grade self-hosted VSCode in the browser with enterprise
+security, monitoring, and high availability.
 
 ## Quick Start
 
@@ -23,12 +24,17 @@ COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
 
 ## Run Mode Matrix
 
-| Mode | Compose command | Includes |
-|---|---|---|
-| IDE-only | `docker compose up -d` | code-server, oauth2-proxy, caddy, postgres, redis |
-| IDE + AI | `COMPOSE_PROFILES=ai docker compose up -d` | IDE-only + ollama |
-| IDE + Observability | `COMPOSE_PROFILES=monitoring,tracing docker compose up -d` | IDE-only + prometheus, grafana, alertmanager, loki, promtail, otel-collector, jaeger |
-| Full platform | `COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d` | IDE, AI, and observability stack |
+- IDE-only: `docker compose up -d`
+  Includes code-server, oauth2-proxy, caddy, postgres, and redis.
+- IDE + AI: `COMPOSE_PROFILES=ai docker compose up -d`
+  Includes IDE-only plus ollama.
+- IDE + Observability:
+  `COMPOSE_PROFILES=monitoring,tracing docker compose up -d`
+  Includes IDE-only plus prometheus, grafana, alertmanager, loki,
+  promtail, otel-collector, and jaeger.
+- Full platform:
+  `COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d`
+  Includes IDE, AI, and the observability stack.
 
 ## Services
 
@@ -65,11 +71,13 @@ cd code-server-enterprise
 docker compose up -d
 ```
 
-For AI or observability in production, use the same profile flags from `Quick Start` on host `192.168.168.31`.
+For AI or observability in production, use the same profile flags from
+`Quick Start` on host `192.168.168.31`.
 
 ## Profile Persistence And Backups
 
-code-server user state is persisted across logins, container recreation, and image upgrades.
+code-server user state is persisted across logins, container
+recreation, and image upgrades.
 
 - Primary persistence: Docker volume mounted at `/home/coder`
 - User profile path: `/home/coder/.local/share/code-server/User`
@@ -85,20 +93,26 @@ Run on production host:
 ```bash
 ssh akushnir@192.168.168.31
 cd code-server-enterprise
-docker compose ps --format 'table {{.Names}}\t{{.Status}}' | egrep '^(code-server|code-server-profile-backup)\s'
-docker exec code-server ls -la /home/coder/.local/share/code-server/User | head -20
+docker compose ps --format 'table {{.Names}}  {{.Status}}' |
+  egrep '^(code-server|code-server-profile-backup)\s'
+docker exec code-server \
+  ls -la /home/coder/.local/share/code-server/User | head -20
 ```
 
 ### Restore A Profile Backup
 
 ```bash
 ssh akushnir@192.168.168.31
-docker run --rm -v code-server-enterprise_code-server-profile-backups:/backups alpine:3.20 ls -la /backups
 docker run --rm \
-	-v code-server-enterprise_code-server-data:/target \
-	-v code-server-enterprise_code-server-profile-backups:/backups \
-	alpine:3.20 \
-	sh -lc 'tar -xzf /backups/code-server-user-profile-YYYYMMDD-HHMMSS.tgz -C /target'
+  -v code-server-enterprise_code-server-profile-backups:/backups \
+  alpine:3.20 ls -la /backups
+docker run --rm \
+  -v code-server-enterprise_code-server-data:/target \
+  -v code-server-enterprise_code-server-profile-backups:/backups \
+  alpine:3.20 \
+  sh -lc \
+    'tar -xzf /backups/code-server-user-profile-YYYYMMDD-HHMMSS.tgz \
+    -C /target'
 ```
 
 After restore:
@@ -110,8 +124,11 @@ docker compose up -d --force-recreate code-server
 
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md), [ADR index](docs/adr/README.md), and [Cloudflare tunnel ADR](docs/adr/006-cloudflare-tunnel-architecture.md).
+See [ARCHITECTURE.md](ARCHITECTURE.md),
+[ADR index](docs/adr/README.md), and
+[Cloudflare tunnel ADR](docs/adr/006-cloudflare-tunnel-architecture.md).
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [GitHub Issues](https://github.com/kushin77/code-server/issues).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and
+[GitHub Issues](https://github.com/kushin77/code-server/issues).

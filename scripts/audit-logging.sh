@@ -138,7 +138,7 @@ EOF
     if echo "$json_event" >> "$AUDIT_LOG_FILE"; then
         return 0
     else
-        echo "ERROR: Failed to write to audit log" >&2
+        log_error "Failed to write to audit log at $AUDIT_LOG_FILE"
         return 1
     fi
 }

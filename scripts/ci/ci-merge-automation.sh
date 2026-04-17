@@ -20,8 +20,11 @@ set -euo pipefail
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source common functions
-source "$SCRIPT_DIR/../common-functions.sh"
+# Source canonical initialization (includes all common libraries)
+source "$SCRIPT_DIR/../_common/init.sh" || {
+    echo "FATAL: Cannot load _common/init.sh" >&2
+    exit 1
+}
 
 # Configuration
 REPO="${REPO:-kushin77/code-server}"

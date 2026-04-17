@@ -264,7 +264,7 @@ show_summary() {
     log_info ""
     log_info "Next steps:"
     log_info "  1. Monitor container: docker-compose logs -f code-server"
-    log_info "  2. Test in browser: http://code-server.192.168.168.31.nip.io:8080"
+    log_info "  2. Test in browser: http://code-server.${DEPLOY_HOST}.nip.io:${PORT_CODE_SERVER}"
     log_info "  3. Verify tools: docker exec code-server python3 --version"
     log_info ""
     log_info "If rollback needed:"

@@ -53,7 +53,7 @@ if [[ -f "${REPO_DIR}/.env" ]]; then
 fi
 
 # ── Derive domain ─────────────────────────────────────────────────────────────
-DOMAIN="${DOMAIN:-kushnir.cloud}"
+DOMAIN="${DOMAIN:-${DOMAIN}}"
 log "Target domain: ${DOMAIN}"
 
 # ── Step 1: Fetch secrets from GSM ───────────────────────────────────────────
@@ -115,7 +115,7 @@ run docker compose ps
 log "Step 4/4: Waiting for services to be healthy..."
 [[ "$DRY_RUN" == false ]] && sleep 8
 
-for svc in "code-server:8080/ide/healthz" "oauth2-proxy:4180/ping"; do
+for svc in "code-server:${PORT_CODE_SERVER}/ide/healthz" "oauth2-proxy:4180/ping"; do
     name="${svc%%:*}"
     endpoint="http://localhost:${svc##*:}"
     if docker compose exec -T "${name}" wget -q --spider "${endpoint}" 2>/dev/null; then

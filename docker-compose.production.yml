@@ -356,8 +356,9 @@ services:
     environment:
       PASSWORD: ${CODE_SERVER_PASSWORD}
       SUDO_PASSWORD: ${CODE_SERVER_PASSWORD}
-      NODE_OPTIONS: "--enable-source-maps --max-old-space-size=4000"
+      NODE_OPTIONS: "--max-old-space-size=6144"
       OLLAMA_ENDPOINT: "http://ollama:11434"
+      OLLAMA_DEFAULT_MODEL: "codellama:7b"
       
       # Observability
       OTEL_ENABLED: "true"
@@ -378,11 +379,11 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
           cpus: '2'
           memory: 4G
-        reservations:
-          cpus: '1'
-          memory: 2G
     logging:
       driver: json-file
       options:
@@ -431,6 +432,7 @@ services:
       OLLAMA_HOST: "0.0.0.0:11434"
       OLLAMA_NUM_GPU: 1
       OLLAMA_MAX_LOADED_MODELS: 2
+      OLLAMA_KEEP_ALIVE: "30m"
     healthcheck:
       # use native CLI to avoid external tool dependencies (curl/wget)
       test: ["CMD", "ollama", "list"]

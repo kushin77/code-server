@@ -1,0 +1,35 @@
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/target/**": true,
+    "**/coverage/**": true,
+    "**/.next/**": true,
+    "**/.turbo/**": true,
+    "**/.cache/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/target": true,
+    "**/coverage": true,
+    "**/.next": true,
+    "**/.turbo": true,
+    "**/.cache": true
+  },
+  "files.exclude": {
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true
+  },
+  "search.followSymlinks": false,
+  "search.useParentIgnoreFiles": true,
+  "typescript.tsserver.maxTsServerMemory": 3072,
+  "editor.minimap.enabled": false,
+  "editor.inlineSuggest.enabled": true,
+  "extensions.autoCheckUpdates": false,
+  "extensions.autoUpdate": false
+}

@@ -38,9 +38,9 @@ services:
       - SERVICE_URL=https://open-vsx.org/vscode/gallery
       - ITEM_URL=https://open-vsx.org/vscode/item
       - CS_DISABLE_FILE_DOWNLOADS=false
-      - NODE_OPTIONS=--enable-source-maps
+      - NODE_OPTIONS=--max-old-space-size=6144
       - OLLAMA_ENDPOINT=http://ollama:11434
-      - OLLAMA_DEFAULT_MODEL=llama2:7b-chat
+      - OLLAMA_DEFAULT_MODEL=codellama:7b
       - NODE_TLS_REJECT_UNAUTHORIZED=0
       # Development tools environment variables
       - PATH=/home/coder/.local/bin:/home/coder/node_modules/.bin:/usr/local/cargo/bin:/usr/local/go/bin:$PATH
@@ -50,6 +50,7 @@ services:
     volumes:
       - code-server-data:/home/coder
       - ./workspace:/home/coder/workspace
+      - ./config/code-server/settings.json:/etc/code-server/settings.json:ro
       # Mount Docker socket for container development inside IDE
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
@@ -61,11 +62,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4g
-          cpus: "2.0"
+          memory: 8g
+          cpus: "4.0"
         reservations:
-          memory: 512m
-          cpus: "0.25"
+          memory: 1g
+          cpus: "1.0"
     logging:
       driver: json-file
       options:
@@ -87,7 +88,7 @@ services:
       - "11434"
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_KEEP_ALIVE=5m
+      - OLLAMA_KEEP_ALIVE=30m
       - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
       # ✅ GPU: Set OLLAMA_NUM_GPU to enable GPU acceleration (0=CPU-only by default)
       # To enable GPU:

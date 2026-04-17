@@ -64,7 +64,7 @@ jobs:
 
       - name: Post guidance comment if Phase 2 incomplete
         if: steps.check-phase-2.outputs.PHASE_2_REQUIRED == 'true' && steps.check-phase-2.outputs.PHASE_2_COMPLETE == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             const reason = `${{ steps.check-phase-2.outputs.REASON }}`;
@@ -121,7 +121,7 @@ jobs:
 
       - name: Post reminder if no reviewers assigned
         if: steps.check-reviews.outputs.REVIEWERS_ASSIGNED == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             github.rest.issues.createComment({
@@ -133,7 +133,7 @@ jobs:
 
       - name: Post status if review approved
         if: steps.check-reviews.outputs.HAS_PEER_APPROVAL == 'true'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             github.rest.issues.createComment({
@@ -142,3 +142,4 @@ jobs:
               repo: context.repo.repo,
               body: `Phase 2 peer review approved. Approval count: ${{ steps.check-reviews.outputs.APPROVAL_COUNT }}`
             })
+

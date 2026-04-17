@@ -48,7 +48,7 @@ jobs:
 
       - name: Post guidance if Phase 4 incomplete
         if: steps.check-phase-4.outputs.PHASE_4_FOUND == 'true' && steps.check-phase-4.outputs.PHASE_4_COMPLETE == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             const reason = `${{ steps.check-phase-4.outputs.REASON }}`;
@@ -92,7 +92,7 @@ jobs:
 
       - name: Close issue if Phase 4 complete
         if: steps.check-phase-4.outputs.PHASE_4_COMPLETE == 'true'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             github.rest.issues.createComment({
@@ -101,3 +101,4 @@ jobs:
               repo: context.repo.repo,
               body: 'Phase 4 Post-Deploy SLA Certification complete. Issue is ready for closure.'
             })
+

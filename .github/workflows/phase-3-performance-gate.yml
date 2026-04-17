@@ -64,7 +64,7 @@ jobs:
 
       - name: Post guidance comment if Phase 3 incomplete
         if: steps.check-phase-3.outputs.PHASE_3_REQUIRED == 'true' && steps.check-phase-3.outputs.PHASE_3_COMPLETE == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             const reason = `${{ steps.check-phase-3.outputs.REASON }}`;
@@ -119,7 +119,7 @@ jobs:
 
       - name: Post operational readiness reminder
         if: steps.check-operational.outputs.DEPLOYMENT_STRATEGY == 'false' || steps.check-operational.outputs.RUNBOOK_DOCUMENTED == 'false' || steps.check-operational.outputs.ROLLBACK_PLAN == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             const missing = [];
@@ -140,3 +140,4 @@ jobs:
               repo: context.repo.repo,
               body: `## Phase 3 Operational Readiness Items Needed\n\n${list}`
             })
+

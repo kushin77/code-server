@@ -33,15 +33,14 @@ USER root
 # Update package manager and install comprehensive development tools
 # This ensures code-server users have everything needed without manual installation
 # Update packages and install core development tools (immutable, pre-installed)
+# Python packages via apt to avoid PEP 668 conflicts
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential git curl python3 python3-pip nodejs npm \
+    build-essential git curl python3 python3-pip python3-venv \
+    nodejs npm \
     vim gdb tmux htop jq docker.io postgresql-client \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install common Python development packages
-RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel black pytest
-
-# Install common Node.js development packages  
+# Install Node.js development packages globally  
 RUN npm install -g typescript eslint prettier jest
 
 # Optional: Install Rust (best-effort, non-blocking)

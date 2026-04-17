@@ -51,13 +51,11 @@
 # Guides through Google Cloud Console OAuth app creation (cannot be fully automated)
 # But integrates the credentials into deployment
 
-set -e
+set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/.oauth-config"
 
 echo "════════════════════════════════════════════════════════════"
@@ -66,18 +64,18 @@ echo "════════════════════════�
 echo ""
 
 # Check if credentials already provided
-if [ ! -z "$GOOGLE_CLIENT_ID" ] && [ ! -z "$GOOGLE_CLIENT_SECRET" ]; then
-    echo "✓ Google OAuth credentials detected from environment"
-    echo "  Client ID: ${GOOGLE_CLIENT_ID:0:20}***"
-    echo ""
+if [ -n "${GOOGLE_CLIENT_ID:-}" ] && [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
+    log_info "Google OAuth credentials detected from environment"
+    log_info "Client ID: ${GOOGLE_CLIENT_ID:0:20}..." || true
+    log_info ""
     
     # Validate format
     if [ ${#GOOGLE_CLIENT_ID} -lt 20 ]; then
-        echo "⚠ WARNING: Client ID seems short. Verify it's correct."
+        log_warn "Client ID seems short. Verify it's correct."
     fi
     
     if [ ${#GOOGLE_CLIENT_SECRET} -lt 20 ]; then
-        echo "⚠ WARNING: Client Secret seems short. Verify it's correct."
+        log_warn "Client Secret seems short. Verify it's correct."
     fi
     
     # Save to config

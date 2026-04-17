@@ -14,19 +14,19 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║         DISASTER RECOVERY: P3 Priority Implementation         ║"
-echo "║         Backup, Failover, Recovery Automation                 ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-echo ""
+log_info "DISASTER RECOVERY: P3 Priority Implementation"
+log_info "Backup, Failover, Recovery Automation"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Backup Strategy Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo "[1/5] Creating Backup Strategy Configuration..."
+log_info "[1/5] Creating Backup Strategy Configuration..."
 
-cat > c:\code-server-enterprise\config\backup-strategy.yaml << 'EOF'
+BACKUP_CONFIG_DIR="${ROOT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}/config"
+mkdir -p "$BACKUP_CONFIG_DIR"
+
+cat > "$BACKUP_CONFIG_DIR/backup-strategy.yaml" << 'EOF'
 # Backup Strategy Configuration
 # IaC: Automated, versioned backup procedures
 

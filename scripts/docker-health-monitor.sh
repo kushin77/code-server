@@ -16,12 +16,7 @@ CHECK_INTERVAL=30
 RESTART_THRESHOLD=3
 LOG_FILE="/tmp/docker-health-monitor.log"
 
-log() {
-    local level=$1
-    local message=$2
-    local timestamp=$(date -u "+%Y-%m-%d %H:%M:%S UTC")
-    echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
-}
+# Note: using canonical log_* functions from _common/logging.sh (sourced via init.sh)
 
 # Function to check if container is running
 check_container_status() {
@@ -29,17 +24,17 @@ check_container_status() {
     local status=$(docker inspect $container --format='{{.State.Running}}' 2>/dev/null || echo "false")
     
     if [ "$status" = "false" ]; then
-        log "WARN" "Container [$container] is NOT running"
+        log_warn "Container [$container] is NOT running"
         
         # Check restart count
         local restart_count=$(docker inspect $container --format='{{.RestartCount}}' 2>/dev/null || echo "0")
         if [ "$restart_count" -gt "$RESTART_THRESHOLD" ]; then
-            log "ALERT" "Container [$container] restarted $restart_count times - potential crash loop"
+            log_error "Container [$container] restarted $restart_count times - potential crash loop"
         fi
         
         return 1
     else
-        log "OK" "Container [$container] is running"
+        log_info "Container [$container] is running"
         return 0
     fi
 }
@@ -51,19 +46,19 @@ check_container_health() {
     
     case $health in
         "healthy")
-            log "OK" "Container [$container] health: HEALTHY"
+            log_info "Container [$container] health: HEALTHY"
             return 0
             ;;
         "unhealthy")
-            log "ALERT" "Container [$container] health: UNHEALTHY - may crash soon"
+            log_error "Container [$container] health: UNHEALTHY - may crash soon"
             return 1
             ;;
         "starting")
-            log "INFO" "Container [$container] health: STARTING"
+            log_info "Container [$container] health: STARTING"
             return 0
             ;;
         *)
-            log "INFO" "Container [$container] health: $health (no health check configured)"
+            log_debug "Container [$container] health: $health (no health check configured)"
             return 0
             ;;
     esac
@@ -75,7 +70,7 @@ check_container_resources() {
     
     if command -v docker &> /dev/null && docker stats --no-stream "$container" &>/dev/null 2>&1; then
         local stats=$(docker stats --no-stream $container --format "table {{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" 2>/dev/null || echo "N/A")
-        log "OK" "Container [$container] resources: CPU={{.CPUPerc}} Memory={{.MemUsage}} ({{.MemPerc}})"
+        log_debug "Container [$container] resources: $stats"
     fi
 }
 

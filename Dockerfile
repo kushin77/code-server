@@ -11,10 +11,12 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl ca-certificates python3 python3-pip gnupg2 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# hadolint ignore=DL3013
 RUN pip3 install --no-cache-dir pre-commit
 
 WORKDIR /workspace

@@ -105,7 +105,7 @@ validate_prerequisites() {
     fi
     
     # Check if running as root
-    if [[ "$EUID" != 0 ]]; then
+    if [[ "$EUID" != 0 && "$DRY_RUN" != "true" ]]; then
         log_error "This script must run as root on the target node"
         log_error "Run: sudo scripts/bootstrap-node.sh ..."
         return 1
@@ -123,7 +123,8 @@ validate_prerequisites() {
     fi
     
     # Check disk space
-    local available_gb=$(df /opt 2>/dev/null | awk 'NR==2 {print $4/1024/1024}' || echo 0)
+    local available_gb
+    available_gb=$(df /opt 2>/dev/null | awk 'NR==2 {print $4/1024/1024}' || echo 0)
     local required_gb=100
     
     if (( $(echo "$available_gb < $required_gb" | bc -l) )); then
@@ -134,6 +135,7 @@ validate_prerequisites() {
     log_info "✓ Prerequisites validated"
     log_info "  Role: $ROLE"
     log_info "  Environment: $ENVIRONMENT"
+    log_info "  Verbose: $VERBOSE"
     log_info "  Available disk: ${available_gb}GB"
     
     return 0
@@ -487,6 +489,11 @@ EOF
 
 verify_health() {
     log_stage "Verify Health"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY-RUN] Would verify container health"
+        return 0
+    fi
     
     log_info "Waiting for services to become healthy..."
     sleep 10  # Initial wait
@@ -497,7 +504,13 @@ verify_health() {
     local expected_services=5
     
     while [[ $attempt -lt $max_attempts ]]; do
-        healthy_services=$(docker compose ps --services --filter "status=running" 2>/dev/null | wc -l || echo 0)
+        if healthy_services=$(docker compose ps --services --filter "status=running" 2>/dev/null | wc -l 2>/dev/null); then
+            :
+        else
+            healthy_services=0
+        fi
+        healthy_services="${healthy_services//[^0-9]/}"
+        healthy_services="${healthy_services:-0}"
         
         if [[ $healthy_services -ge $expected_services ]]; then
             log_info "✓ All services healthy"
@@ -543,7 +556,7 @@ main() {
         echo "Next steps:"
         echo "  1. Verify services: docker-compose ps"
         echo "  2. Check logs: docker-compose logs -f code-server"
-        echo "  3. Confirm DNS: nslookup $DOMAIN_INTERNAL"
+        echo "  3. Confirm DNS: nslookup ${DOMAIN_INTERNAL:-prod.internal}"
         echo "  4. Access code-server: https://${DOMAIN_INTERNAL:-prod.internal}:${PORT_CODE_SERVER:-8080}"
     else
         log_error "❌ Bootstrap failed"

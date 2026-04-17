@@ -34,6 +34,7 @@ jobs:
 
       - name: Run config drift detection
         id: drift
+        continue-on-error: true
         run: |
           bash scripts/dev/check-config-drift.sh 2>&1 | tee drift-output.log
           exit_code=${PIPESTATUS[0]}

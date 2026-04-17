@@ -37,8 +37,8 @@ cat > c:\code-server-enterprise\config\oauth2-security.yaml << 'EOF'
 oauth2:
   # Token Configuration
   token:
-    issuer: "ide.kushnir.cloud"
-    audience: ["https://ide.kushnir.cloud"]
+    issuer: "${DOMAIN}"
+    audience: ["https://${DOMAIN}"]
     algorithm: "RS256"  # Asymmetric signing
     expiration: 3600    # 1 hour
     refresh_expiration: 604800  # 7 days
@@ -50,10 +50,10 @@ oauth2:
     
   # Authorization Server Security
   server:
-    authorization_endpoint: "https://auth.kushnir.cloud/oauth/authorize"
-    token_endpoint: "https://auth.kushnir.cloud/oauth/token"
-    introspection_endpoint: "https://auth.kushnir.cloud/oauth/introspect"
-    revocation_endpoint: "https://auth.kushnir.cloud/oauth/revoke"
+    authorization_endpoint: "https://auth.${DOMAIN#*.}/oauth/authorize"
+    token_endpoint: "https://auth.${DOMAIN#*.}/oauth/token"
+    introspection_endpoint: "https://auth.${DOMAIN#*.}/oauth/introspect"
+    revocation_endpoint: "https://auth.${DOMAIN#*.}/oauth/revoke"
     
     # HTTPS/TLS
     tls_version: "TLSv1.2"  # Minimum 1.2
@@ -114,7 +114,7 @@ security_headers:
     style-src 'self' 'unsafe-inline';
     img-src 'self' data:;
     font-src 'self';
-    connect-src 'self' https://auth.kushnir.cloud;
+    connect-src 'self' https://auth.${DOMAIN#*.};
     frame-ancestors 'none';
     base-uri 'self';
     form-action 'self';
@@ -258,8 +258,8 @@ class AuthHardeningMiddleware {
       // Verify signature
       const decoded = require('jsonwebtoken').verify(token, publicKey, {
         algorithms: ['RS256'],
-        issuer: 'ide.kushnir.cloud',
-        audience: ['https://ide.kushnir.cloud']
+        issuer: '${DOMAIN}',
+        audience: ['https://${DOMAIN}']
       });
 
       // Check expiration

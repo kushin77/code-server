@@ -1,22 +1,20 @@
 # code-server Configuration
 # Deploy to: ~/.config/code-server/config.yaml
+#
+# NOTE: auth is disabled here because authentication is handled by oauth2-proxy (SSO).
+# Caddy → oauth2-proxy (Google OAuth) → code-server (auth: none)
+# All password prompts are removed at the infrastructure level.
 
 bind-addr: 0.0.0.0:8080
-auth: password
-password: ${CODE_SERVER_PASSWORD}
-cert: true  # Enable HTTPS with auto-generated self-signed cer
-            # Required for secure context (crypto.subtle, webviews, clipboard)
+auth: none
+cert: false
 
-# First run: accept self-signed cert in browser via Advanced -> Proceed
-
-# Security
+# Security: trusted proxy domains for port-forwarding tabs
 proxy-domain:
+  - ide.kushnir.cloud
+  - kushnir.cloud
   - localhost
   - 127.0.0.1
-  - 192.168.168.32
-  - 192.168.168.31
-  - ide.kushnir.cloud
-  - "${DEPLOY_HOST:localhost}"
 
 # Logging for audit trail
 logging: debug

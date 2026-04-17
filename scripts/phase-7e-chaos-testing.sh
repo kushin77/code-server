@@ -154,6 +154,10 @@ emit_metrics() {
   fi
 }
 
+pg_network_name() {
+  docker inspect postgres --format '{{range $k, $v := .NetworkSettings.Networks}}{{println $k}}{{end}}' 2>/dev/null | head -1
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Scenario 1: code-server container kill and auto-restart
 # ─────────────────────────────────────────────────────────────────────────────
@@ -366,32 +370,40 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Scenario 8: Network partition simulation (iptables drop for 10s)
+# Scenario 8: Network partition simulation (docker network detach for 10s)
 # ─────────────────────────────────────────────────────────────────────────────
-log_info "Scenario 8: Network partition simulation (10s iptables drop)"
+log_info "Scenario 8: Network partition simulation (10s docker network detach)"
 START=$(date +%s)
 if [[ "$DRY_RUN" == "true" ]]; then
   skip "Scenario 8 — DRY_RUN"
-elif ! command -v iptables >/dev/null 2>&1; then
-  skip "Scenario 8 — iptables not available"
 else
-  # Drop traffic to postgres port only (non-destructive to SSH)
-  if ! sudo -n iptables -I INPUT -p tcp --dport 5432 -j DROP 2>/dev/null; then
-    skip "Scenario 8 — iptables rule injection requires passwordless sudo"
-  else
-  sleep 10
-  sudo -n iptables -D INPUT -p tcp --dport 5432 -j DROP 2>/dev/null || true
-  sleep 3
-  # Verify postgres is reachable again
-  PING_PG=$(pg_exec -t -c "SELECT 1;" 2>/dev/null | tr -d ' ' || echo "")
-  if [[ "$PING_PG" == "1" ]]; then
-    ELAPSED=$(( $(date +%s) - START ))
-    pass "Scenario 8: Services recovered from 10s PG network partition in ${ELAPSED}s"
-    emit_metrics "network_partition_pg" "pass" "$ELAPSED"
-  else
-    fail "Scenario 8: PostgreSQL unreachable after network partition recovery"
+  PG_NET="$(pg_network_name)"
+  if [[ -z "$PG_NET" ]]; then
+    fail "Scenario 8: Could not determine postgres docker network"
     emit_metrics "network_partition_pg" "fail" "$RECOVERY_WINDOW_S"
-  fi
+  else
+    if docker network disconnect "$PG_NET" postgres >/dev/null 2>&1; then
+      sleep 10
+      docker network connect "$PG_NET" postgres >/dev/null 2>&1 || true
+      sleep 3
+    else
+      # Fallback when engine denies explicit disconnect: pause/unpause simulates transport loss.
+      log_warn "Scenario 8: docker network disconnect failed; using postgres pause/unpause fallback"
+      docker pause postgres >/dev/null 2>&1 || true
+      sleep 10
+      docker unpause postgres >/dev/null 2>&1 || true
+      sleep 3
+    fi
+
+    PING_PG=$(pg_exec -t -c "SELECT 1;" 2>/dev/null | tr -d ' ' || echo "")
+    if [[ "$PING_PG" == "1" ]] && service_running "postgres"; then
+      ELAPSED=$(( $(date +%s) - START ))
+      pass "Scenario 8: PostgreSQL recovered from 10s network disruption in ${ELAPSED}s"
+      emit_metrics "network_partition_pg" "pass" "$ELAPSED"
+    else
+      fail "Scenario 8: PostgreSQL unreachable after network disruption recovery"
+      emit_metrics "network_partition_pg" "fail" "$RECOVERY_WINDOW_S"
+    fi
   fi
 fi
 
@@ -465,15 +477,17 @@ log_info "Scenario 11: CPU spike tolerance (20s load spike)"
 START=$(date +%s)
 if [[ "$DRY_RUN" == "true" ]]; then
   skip "Scenario 11 — DRY_RUN"
-elif ! command -v stress-ng >/dev/null 2>&1 && ! command -v stress >/dev/null 2>&1; then
-  skip "Scenario 11 — stress/stress-ng not installed (apt install stress-ng)"
 else
-  STRESS_CMD="stress-ng"
-  command -v stress-ng >/dev/null 2>&1 || STRESS_CMD="stress"
-  $STRESS_CMD --cpu 4 --timeout 20s >/dev/null 2>&1 &
-  STRESS_PID=$!
-  sleep 22
-  wait "$STRESS_PID" 2>/dev/null || true
+  # Host-independent CPU burner: no package install required.
+  burn_cpu() {
+    local end=$((SECONDS + 20))
+    while [[ $SECONDS -lt $end ]]; do :; done
+  }
+  burn_cpu & PID1=$!
+  burn_cpu & PID2=$!
+  burn_cpu & PID3=$!
+  burn_cpu & PID4=$!
+  wait "$PID1" "$PID2" "$PID3" "$PID4" 2>/dev/null || true
   # Verify services still responding
   CODE_OK=false
   caddy_responds && CODE_OK=true

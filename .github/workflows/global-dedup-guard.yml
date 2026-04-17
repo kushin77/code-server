@@ -1,0 +1,42 @@
+name: Global Dedup Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "docker-compose*.yml"
+      - "Caddyfile*"
+      - "main.tf"
+      - "terraform/**"
+      - "scripts/**"
+      - "docs/**"
+      - "config/**"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "docker-compose*.yml"
+      - "Caddyfile*"
+      - "main.tf"
+      - "terraform/**"
+      - "scripts/**"
+      - "docs/**"
+      - "config/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  dedup-ssot-enforcement:
+    name: Dedup + SSOT Enforcement
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Enforce global dedup guard
+        run: bash scripts/ci/enforce-global-dedup.sh

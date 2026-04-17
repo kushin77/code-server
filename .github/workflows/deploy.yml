@@ -176,14 +176,14 @@ jobs:
   final-status:
     name: Final Deploy Status
     runs-on: ubuntu-latest
-    needs: [validate, plan, apply, destroy]
+    needs: [terraform-validate, plan, apply, destroy]
     if: always()
     permissions:
       contents: read
     steps:
       - name: Evaluate workflow result
         run: |
-          validate_result="${{ needs.validate.result }}"
+          validate_result="${{ needs.terraform-validate.result }}"
           plan_result="${{ needs.plan.result }}"
           apply_result="${{ needs.apply.result }}"
           destroy_result="${{ needs.destroy.result }}"

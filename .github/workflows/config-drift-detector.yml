@@ -26,7 +26,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@2b9a9ca1c65b1d06b6d1d9f07ac1e5b8c0e5e2c5 # v4.0.0
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -40,7 +40,7 @@ jobs:
 
       - name: Comment on PR if drift found
         if: failure() && steps.drift.outcome == 'failure'
-        uses: actions/github-script@7a5f60ed0de999d87e666efc529efaeb5423ceba # v7.0.0
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
             const fs = require('fs');

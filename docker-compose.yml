@@ -24,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.code-server
-    image: code-server-enterprise:latest
+    image: code-server-enterprise:${CODE_SERVER_IMAGE_TAG:-4.115.0}
     container_name: code-server
     restart: unless-stopped
     user: "1000"

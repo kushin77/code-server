@@ -1,0 +1,29 @@
+name: Validate docker-compose Configuration (Reusable)
+
+on:
+  workflow_call:
+
+jobs:
+  validate:
+    name: Validate docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      
+      - name: Install Docker
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+      
+      - name: Validate docker-compose.yml syntax
+        run: |
+          if [ -f docker-compose.base.yml ] && [ -f docker-compose.yml ]; then
+            docker compose -f docker-compose.base.yml config > /dev/null 2>&1 \
+              && echo "✓ docker-compose.base.yml + docker-compose.yml composition valid" \
+              || (echo "❌ docker-compose composition validation failed"; exit 1)
+          elif [ -f docker-compose.yml ]; then
+            docker compose config > /dev/null 2>&1 \
+              && echo "✓ docker-compose.yml syntax valid" \
+              || (echo "❌ docker-compose syntax validation failed"; exit 1)
+          else
+            echo "❌ No docker-compose.yml found"
+            exit 1
+          fi

@@ -381,8 +381,12 @@ services:
       - "--web.console.templates=/usr/share/prometheus/consoles"
       - "--web.enable-lifecycle"
     volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./config/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-rules-phase-23.yml:/etc/prometheus/prometheus-rules-phase-23.yml:ro
+      - ./prometheus-rules-alerts-operational.yml:/etc/prometheus/prometheus-rules-alerts-operational.yml:ro
+      - ./prometheus-rules-slo-phase-8.yml:/etc/prometheus/prometheus-rules-slo-phase-8.yml:ro
+      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - ./alerts-phase-23.yml:/etc/prometheus/alerts-phase-23.yml:ro
       - prometheus-data:/prometheus
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/ready || exit 1"]

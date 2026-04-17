@@ -1,0 +1,89 @@
+{
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[markdown].editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[json].editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.suggest.localityBonus": true,
+  "editor.wordBasedSuggestions": true,
+  "editor.wordWrap": "on",
+  "editor.minimap.enabled": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+  "editor.trimAutoWhitespace": true,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  "editor.scrollBeyondLastLine": false,
+  "editor.fontLigatures": true,
+  "editor.fontSize": 13,
+  "editor.lineHeight": 1.6,
+  "editor.renderWhitespace": "selection",
+  "workbench.editor.tabCloseButton": "left",
+  "workbench.sideBar.location": "left",
+  "workbench.colorTheme": "Default Dark Modern",
+  "explorer.confirmDelete": true,
+  "explorer.confirmDragAndDrop": true,
+  "explorer.excludeGitIgnore": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git": true,
+    "**/dist/**": true,
+    "**/build/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.git": true,
+    "**/.env": true,
+    "**/dist": true,
+    "**/build": true
+  },
+  "git.ignoreLimitWarning": true,
+  "git.checkoutType": "local",
+  "git.requireGitUserConfig": true,
+  "git.confirmSync": true,
+  "git.pushTags": true,
+  "git.showPushSuccessNotification": true,
+  "scm.defaultViewMode": "list",
+  "security.workspace.trust.enabled": true,
+  "extensions.autoCheckUpdates": false,
+  "extensions.ignoreRecommendations": false,
+  "telemetry.telemetryLevel": "off",
+  "error.diagnose": false,
+  "githubPullRequests.autoMerge": false,
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 2000,
+  "debug.inlineValues": "auto",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit"
+    }
+  },
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
+  },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit"
+    }
+  },
+  "github.copilot.enable": {
+    "*": true
+  },
+  "[comment]": {
+    "editor.quickSuggestions": false,
+    "editor.suggest.localityBonus": false
+  },
+  "_comment": "Enterprise Policy Pack v1.0 - DO NOT EDIT MANUALLY. Changes to Tier 1 settings will be reverted on startup."
+}

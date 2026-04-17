@@ -1,0 +1,160 @@
+{
+  "version": "1.0",
+  "created": "2026-04-17",
+  "description": "Enterprise VS Code extension policy pack",
+  
+  "tier_1_required": [
+    {
+      "id": "ms-vscode.cpptools",
+      "name": "C/C++ Tools",
+      "category": "Languages",
+      "reason": "Multi-language C++ support"
+    },
+    {
+      "id": "esbenp.prettier-vscode",
+      "name": "Prettier",
+      "category": "Formatters",
+      "reason": "Enterprise code formatting standard"
+    },
+    {
+      "id": "dbaeumer.vscode-eslint",
+      "name": "ESLint",
+      "category": "Linters",
+      "reason": "JavaScript/TypeScript linting"
+    },
+    {
+      "id": "rust-lang.rust-analyzer",
+      "name": "Rust Analyzer",
+      "category": "Languages",
+      "reason": "Rust language support"
+    },
+    {
+      "id": "golang.go",
+      "name": "Go",
+      "category": "Languages",
+      "reason": "Go language support"
+    },
+    {
+      "id": "ms-python.python",
+      "name": "Python",
+      "category": "Languages",
+      "reason": "Python language support"
+    },
+    {
+      "id": "hashicorp.terraform",
+      "name": "Terraform",
+      "category": "IaC",
+      "reason": "Infrastructure-as-Code support"
+    },
+    {
+      "id": "ms-azuretools.vscode-docker",
+      "name": "Docker",
+      "category": "DevOps",
+      "reason": "Container support"
+    },
+    {
+      "id": "github.copilot",
+      "name": "GitHub Copilot",
+      "category": "AI",
+      "reason": "Enterprise AI coding assistant"
+    },
+    {
+      "id": "github.github-vscode-theme",
+      "name": "GitHub Theme",
+      "category": "Themes",
+      "reason": "Enterprise color scheme"
+    },
+    {
+      "id": "ms-vscode.remote-explorer",
+      "name": "Remote Explorer",
+      "category": "Remote",
+      "reason": "Remote SSH/container support"
+    },
+    {
+      "id": "eamodio.gitlens",
+      "name": "GitLens",
+      "category": "Git",
+      "reason": "Enhanced Git capabilities"
+    }
+  ],
+  
+  "tier_2_recommended": [
+    {
+      "id": "ms-vscode-remote.remote-ssh",
+      "name": "Remote - SSH",
+      "category": "Remote",
+      "reason": "Remote SSH development environment"
+    },
+    {
+      "id": "ms-vscode-remote.vscode-remote-extensionpack",
+      "name": "Remote Development",
+      "category": "Remote",
+      "reason": "Complete remote development pack"
+    },
+    {
+      "id": "github.vscode-pull-request-github",
+      "name": "GitHub Pull Requests",
+      "category": "Version Control",
+      "reason": "Integrated PR management"
+    },
+    {
+      "id": "ms-vscode.makefile-tools",
+      "name": "Makefile Tools",
+      "category": "Build",
+      "reason": "Makefile support"
+    },
+    {
+      "id": "ms-vscode.cmake-tools",
+      "name": "CMake Tools",
+      "category": "Build",
+      "reason": "CMake build system support"
+    }
+  ],
+  
+  "tier_1_behavior": {
+    "auto_install": true,
+    "can_disable": false,
+    "can_uninstall": false,
+    "update_automatic": true
+  },
+  
+  "tier_2_behavior": {
+    "auto_install": false,
+    "can_disable": true,
+    "can_uninstall": true,
+    "update_automatic": true
+  },
+  
+  "blocklist": [
+    {
+      "id": "ms.vscode-remote.remote-wsl",
+      "name": "Remote - WSL",
+      "reason": "Not supported in enterprise Linux environment"
+    },
+    {
+      "id": "ms.vscode-remote.remote-containers",
+      "name": "Remote - Containers",
+      "reason": "Docker support via Docker extension instead"
+    },
+    {
+      "id": "*eval*",
+      "name": "Code evaluation extensions",
+      "reason": "Security: prevents arbitrary code execution"
+    }
+  ],
+  
+  "conflict_rules": [
+    {
+      "conflicts": ["esbenp.prettier-vscode", "ms-vscode.vscode-typescript-formatter"],
+      "resolution": "Prettier takes precedence",
+      "reason": "Single formatter standard for consistency"
+    }
+  ],
+  
+  "_meta": {
+    "policy_version": "1.0",
+    "last_updated": "2026-04-17",
+    "next_review": "2026-05-17",
+    "owner": "Enterprise Platform"
+  }
+}

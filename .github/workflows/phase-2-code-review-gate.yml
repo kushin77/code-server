@@ -8,34 +8,34 @@ permissions:
   pull-requests: write
   contents: read
 
-jobs:
-  phase-2-code-review-gate:
-    name: Verify Phase 2 Code & Quality Review
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
-      - name: Check PR for Phase 2 completion
-        id: check-phase-2
-        run: |
-          BODY="${{ github.event.pull_request.body }}"
-          
-          # Check if this is a trivial change (skip Phase 2)
-          if echo "$BODY" | grep -q "^\- \[x\] Documentation change only" || \
-             echo "$BODY" | grep -q "^\- \[x\] Dependency security patch" || \
-             echo "$BODY" | grep -q "^\- \[x\] Test code only"; then
-            echo "PHASE_2_REQUIRED=false" >> $GITHUB_OUTPUT
-            echo "REASON=Trivial change exemption marked" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          # If Phase 1 is incomplete, Phase 2 can't proceed
-          if echo "$BODY" | grep -q "## Phase 1: Design Quality Gate" && \
-             ! echo "$BODY" | grep -q "SLA Target" && \
-             ! echo "$BODY" | grep -q "Failure Mode Analysis"; then
-            echo "PHASE_2_REQUIRED=false" >> $GITHUB_OUTPUT
-            echo "REASON=Phase 1 not yet completed - Phase 2 depends on Phase 1" >> $GITHUB_OUTPUT
-            exit 0
+        **This PR requires Phase 2 code review verification** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-2-implementation-quality-gate).
+
+        **What's missing:**
+        ${{ steps.check-phase-2.outputs.REASON }}
+
+        **Action Required:**
+        1. Ensure Phase 1 (Design Quality Gate) is fully approved and included in PR
+        2. Have a code reviewer (different domain from author) complete the Phase 2 checklist:
+          - Security review (secrets, auth, input validation)
+          - Code quality (lint, SAST, complexity)
+          - Testing (unit coverage, integration tests)
+          - Observability (metrics, traces, logs)
+
+        3. Check off each item in the Phase 2 section as reviewed and verified
+
+        **Example**:
+        \`\`\`markdown
+        ### Security
+        - [x] No secrets, credentials, or sensitive data in code
+        - [x] Input validation implemented (if applicable)
+        - [x] IAM/authorization reviewed (if applicable)
+        - [x] Least privilege principle applied
+        \`\`\`
+
+        See the [PR template Phase 2 section](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-2-code--quality-review-) for full guidance.
+
+        **Note**: This is advisory feedback. Code reviewer approval is the blocking requirement for merge.`
           fi
           
           # Check for Phase 2 Code & Quality Review section
@@ -75,6 +75,7 @@ jobs:
         uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
         with:
           script: |
+            const reason = `${{ steps.check-phase-2.outputs.REASON }}`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -84,7 +85,7 @@ jobs:
 **This PR requires Phase 2 code review verification** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-2-implementation-quality-gate).
 
 **What's missing:**
-${`${{ steps.check-phase-2.outputs.REASON }}`}
+${reason}
 
 **Action Required:**
 1. Ensure Phase 1 (Design Quality Gate) is fully approved and included in PR

@@ -67,6 +67,7 @@ jobs:
         uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
         with:
           script: |
+            const reason = `${{ steps.check-phase-3.outputs.REASON }}`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -76,7 +77,7 @@ jobs:
 **This PR requires Phase 3 performance validation** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-3-operational-readiness-gate).
 
 **What's missing:**
-${`${{ steps.check-phase-3.outputs.REASON }}`}
+${reason}
 
 **Action Required:**
 

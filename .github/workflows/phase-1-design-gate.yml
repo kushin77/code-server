@@ -61,33 +61,34 @@ jobs:
         uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
         with:
           script: |
+            const reason = `${{ steps.check-phase-1.outputs.REASON }}`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `## ⚠️ Phase 1 Design Quality Gate Incomplete
 
-**This appears to be a non-trivial change** (backend, infrastructure, security, or performance-critical). 
+            **This appears to be a non-trivial change** (backend, infrastructure, security, or performance-critical). 
 
-Per [Production Readiness Gate Framework](docs/production-readiness-gate.md), Phase 1 must be completed before code review.
+            Per [Production Readiness Gate Framework](docs/production-readiness-gate.md), Phase 1 must be completed before code review.
 
-**What's missing:**
-${`${{ steps.check-phase-1.outputs.REASON }}`}
+            **What's missing:**
+            ${reason}
 
-**Action Required:**
-1. Add the Phase 1 Design Quality Gate section to this PR description
-2. Complete all required items:
-   - [ ] **SLA Target** 
-   - [ ] **Failure Mode Analysis**
-   - [ ] **Rollback Plan**
-   - [ ] **Observability**
-3. Ensure approvals from:
-   - Architecture Owner (\`@[github-user]\`)
-   - On-Call Reliability Engineer (\`@[github-user]\`)
+            **Action Required:**
+            1. Add the Phase 1 Design Quality Gate section to this PR description
+            2. Complete all required items:
+              - [ ] **SLA Target** 
+              - [ ] **Failure Mode Analysis**
+              - [ ] **Rollback Plan**
+              - [ ] **Observability**
+            3. Ensure approvals from:
+              - Architecture Owner (\`@[github-user]\`)
+              - On-Call Reliability Engineer (\`@[github-user]\`)
 
-See the [PR template](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-1-design-quality-gate-) for detailed guidance.
+            See the [PR template](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-1-design-quality-gate-) for detailed guidance.
 
-**If this is a trivial change**, mark the appropriate exemption checkbox in the PR template (Documentation change only, Dependency security patch, or Test code only).`
+            **If this is a trivial change**, mark the appropriate exemption checkbox in the PR template (Documentation change only, Dependency security patch, or Test code only).`
             })
       
       - name: Report status to GitHub Checks

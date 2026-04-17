@@ -138,11 +138,11 @@ elif pg_exec -c "SELECT pg_is_in_recovery();" -t 2>/dev/null | grep -q "f"; then
     pass "T3: PostgreSQL WAL senders active ($WAL_SENDERS replicas streaming)"
   else
     # WAL_SENDERS=0 is expected in single-node Phase 7c; multi-region replication tracked in #293
-    warn "T3: No active WAL senders — single-node mode (expected until #293 multi-region ships)"
+    log_warn "T3: No active WAL senders — single-node mode (expected until #293 multi-region ships)"
     pass "T3: PostgreSQL standalone — WAL replication deferred to Phase 7 multi-region (#293)"
   fi
 else
-  warn "T3: Cannot determine PostgreSQL replication state (lag=$PG_LAG) — treating as standalone"
+  log_warn "T3: Cannot determine PostgreSQL replication state (lag=$PG_LAG) — treating as standalone"
   pass "T3: PostgreSQL replication state indeterminate — standalone mode assumed"
 fi
 

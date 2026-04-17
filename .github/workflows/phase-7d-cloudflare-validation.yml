@@ -14,6 +14,9 @@ on:
       - '.github/workflows/phase-7d-cloudflare-validation.yml'
       - 'terraform/modules/dns/**'
 
+permissions:
+  contents: read
+
 jobs:
   validate-scripts:
     name: "Validate Setup Scripts"

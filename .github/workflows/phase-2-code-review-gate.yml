@@ -82,33 +82,33 @@ permissions:
               repo: context.repo.repo,
               body: `## ⚠️ Phase 2 Code & Quality Review Incomplete
 
-**This PR requires Phase 2 code review verification** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-2-implementation-quality-gate).
+            **This PR requires Phase 2 code review verification** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-2-implementation-quality-gate).
 
-**What's missing:**
-${reason}
+            **What's missing:**
+            ${reason}
 
-**Action Required:**
-1. Ensure Phase 1 (Design Quality Gate) is fully approved and included in PR
-2. Have a code reviewer (different domain from author) complete the Phase 2 checklist:
-   - Security review (secrets, auth, input validation)
-   - Code quality (lint, SAST, complexity)
-   - Testing (unit coverage, integration tests)
-   - Observability (metrics, traces, logs)
+            **Action Required:**
+            1. Ensure Phase 1 (Design Quality Gate) is fully approved and included in PR
+            2. Have a code reviewer (different domain from author) complete the Phase 2 checklist:
+              - Security review (secrets, auth, input validation)
+              - Code quality (lint, SAST, complexity)
+              - Testing (unit coverage, integration tests)
+              - Observability (metrics, traces, logs)
 
-3. Check off each item in the Phase 2 section as reviewed and verified
+            3. Check off each item in the Phase 2 section as reviewed and verified
 
-**Example**:
-\`\`\`markdown
-### Security
-- [x] No secrets, credentials, or sensitive data in code
-- [x] Input validation implemented (if applicable)
-- [x] IAM/authorization reviewed (if applicable)
-- [x] Least privilege principle applied
-\`\`\`
+            **Example**:
+            \`\`\`markdown
+            ### Security
+            - [x] No secrets, credentials, or sensitive data in code
+            - [x] Input validation implemented (if applicable)
+            - [x] IAM/authorization reviewed (if applicable)
+            - [x] Least privilege principle applied
+            \`\`\`
 
-See the [PR template Phase 2 section](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-2-code--quality-review-) for full guidance.
+            See the [PR template Phase 2 section](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-2-code--quality-review-) for full guidance.
 
-**Note**: This is advisory feedback. Code reviewer approval is the blocking requirement for merge.`
+            **Note**: This is advisory feedback. Code reviewer approval is the blocking requirement for merge.`
             })
 
   phase-2-reviewer-check:

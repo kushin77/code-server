@@ -74,41 +74,41 @@ jobs:
               repo: context.repo.repo,
               body: `## ⚠️ Phase 3 Performance & Load Testing Incomplete
 
-**This PR requires Phase 3 performance validation** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-3-operational-readiness-gate).
+            **This PR requires Phase 3 performance validation** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-3-operational-readiness-gate).
 
-**What's missing:**
-${reason}
+            **What's missing:**
+            ${reason}
 
-**Action Required:**
+            **Action Required:**
 
-If this change is **performance-critical** or affects **core services** (API, database, cache), you must:
+            If this change is **performance-critical** or affects **core services** (API, database, cache), you must:
 
-1. Establish a baseline from main branch
-2. Run load tests at 1x, 2x, 5x, and 10x current traffic
-3. Measure latency p50/p99 and requests/sec
-4. Document results with before/after comparison
-5. Verify no N+1 query patterns
-6. Validate horizontal scaling (if applicable)
+            1. Establish a baseline from main branch
+            2. Run load tests at 1x, 2x, 5x, and 10x current traffic
+            3. Measure latency p50/p99 and requests/sec
+            4. Document results with before/after comparison
+            5. Verify no N+1 query patterns
+            6. Validate horizontal scaling (if applicable)
 
-**If this change is NON-CRITICAL** (internal utility, documentation, test infrastructure):
+            **If this change is NON-CRITICAL** (internal utility, documentation, test infrastructure):
 
-Check the exemption box in Phase 3 section:
-\`\`\`markdown
-## Phase 3: Performance & Load Testing ✓
+            Check the exemption box in Phase 3 section:
+            \`\`\`markdown
+            ## Phase 3: Performance & Load Testing ✓
 
-**Exemption** (check if applicable):
-- [x] Change is non-critical or internal utility (skip Phase 3)
-\`\`\`
+            **Exemption** (check if applicable):
+            - [x] Change is non-critical or internal utility (skip Phase 3)
+            \`\`\`
 
-**Example baseline/results**:
-\`\`\`
-Baseline (before): 45 ms p99 latency, 10,000 requests/sec
-After this PR:     47 ms p99 latency, 9,950 requests/sec
-Change:            +4.4% latency, -0.5% throughput
-Test scenario:     2x peak traffic (20,000 requests/sec for 5 minutes)
-\`\`\`
+            **Example baseline/results**:
+            \`\`\`
+            Baseline (before): 45 ms p99 latency, 10,000 requests/sec
+            After this PR:     47 ms p99 latency, 9,950 requests/sec
+            Change:            +4.4% latency, -0.5% throughput
+            Test scenario:     2x peak traffic (20,000 requests/sec for 5 minutes)
+            \`\`\`
 
-See [PR template Phase 3](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-3-performance--load-testing-) for full guidance.`
+            See [PR template Phase 3](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-3-performance--load-testing-) for full guidance.`
             })
 
   phase-3-operational-readiness:

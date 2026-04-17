@@ -26,9 +26,6 @@ jobs:
       check_tfsec: true
       check_terraform: false
       check_docker_compose: false
-        run: |
-          tfsec . --minimum-severity HIGH \
-            || (echo "::error::tfsec found HIGH/CRITICAL Terraform misconfigurations."; exit 1)
 
   snyk:
     name: Snyk dependency scan (advisory)

@@ -152,6 +152,10 @@ services:
       OAUTH2_PROXY_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       OAUTH2_PROXY_REDIRECT_URL: "https://${DOMAIN}/oauth2/callback"
       OAUTH2_PROXY_COOKIE_SECRET: ${OAUTH2_PROXY_COOKIE_SECRET}
+      OAUTH2_PROXY_EMAIL_DOMAINS: ${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}
+      OAUTH2_PROXY_SESSION_STORE_TYPE: redis
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: redis://redis:6379
+      OAUTH2_PROXY_UPSTREAMS: http://code-server:8080/
       
       # Production Security Settings
       OAUTH2_PROXY_COOKIE_SECURE: "true"
@@ -353,7 +357,6 @@ services:
       PASSWORD: ${CODE_SERVER_PASSWORD}
       SUDO_PASSWORD: ${CODE_SERVER_PASSWORD}
       NODE_OPTIONS: "--enable-source-maps --max-old-space-size=4000"
-      GITHUB_TOKEN: ${VAULT_GITHUB_TOKEN}
       OLLAMA_ENDPOINT: "http://ollama:11434"
       
       # Observability
@@ -385,6 +388,36 @@ services:
       options:
         max-size: "100m"
         labels: "service=code-server,tier=application"
+
+  code-server-profile-backup:
+    image: alpine:3.20
+    container_name: code-server-profile-backup
+    restart: always
+    networks:
+      - enterprise
+    depends_on:
+      - code-server
+    volumes:
+      - ${CODER_DATA_PATH:-/mnt/nas-56/code-server}:/source:ro
+      - /data/code-server-profile-backups:/backups
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p /backups
+        while true; do
+          ts="$$(date +%Y%m%d-%H%M%S)"
+          out="/backups/code-server-user-profile-$$ts.tgz"
+          tar -czf "$$out" -C /source .local/share/code-server/User || true
+          find /backups -type f -name 'code-server-user-profile-*.tgz' -mtime +30 -delete || true
+          sleep 21600
+        done
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        labels: "service=code-server-profile-backup,tier=operations"
 
   ollama:
     image: ollama/ollama:0.1.27

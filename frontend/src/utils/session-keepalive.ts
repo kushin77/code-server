@@ -91,9 +91,10 @@ export async function doSilentRefresh(): Promise<boolean> {
       
       // Only leader tab redirects to login (prevent multiple redirects)
       if (isLeader()) {
-        console.warn('[Session] Leader tab: redirecting to login...');
+        console.warn('[Session] Leader tab: redirecting to SSO sign-in...');
         setTimeout(() => {
-          window.location.href = '/login?reason=session-expired';
+          const loginRedirect = `/oauth2/sign_in?rd=${encodeURIComponent(window.location.href)}`;
+          window.location.href = loginRedirect;
         }, 100);
       } else {
         console.debug('[Session] Follower tab: leader will handle redirect');

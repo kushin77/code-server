@@ -39,7 +39,6 @@ services:
       - ITEM_URL=https://open-vsx.org/vscode/item
       - CS_DISABLE_FILE_DOWNLOADS=false
       - NODE_OPTIONS=--enable-source-maps
-      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:11434
       - OLLAMA_DEFAULT_MODEL=llama2:7b-chat
       - NODE_TLS_REJECT_UNAUTHORIZED=0
@@ -169,10 +168,12 @@ services:
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      OAUTH2_PROXY_REDIRECT_URL: "https://${DOMAIN:-192.168.168.31}/oauth2/callback"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://code-server:8080/"
-      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
+      OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://redis:6379"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
@@ -185,7 +186,7 @@ services:
       OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
       OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
       OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
-      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "false"
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
       OAUTH2_PROXY_PASS_USER_HEADERS: "true"
       OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
@@ -231,10 +232,12 @@ services:
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      OAUTH2_PROXY_REDIRECT_URL: "https://ide.kushnir.cloud/oauth2/callback"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
-      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
+      OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://redis:6379"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
@@ -247,7 +250,7 @@ services:
       OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4181"
       OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
       OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
-      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "false"
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
       OAUTH2_PROXY_PASS_USER_HEADERS: "true"
       OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
@@ -429,6 +432,39 @@ services:
         max-file: "3"
 
   # ────────────────────────────────────────────────────────────────────────────
+  # code-server-profile-backup — periodic backup of user profile state
+  # ────────────────────────────────────────────────────────────────────────────
+  code-server-profile-backup:
+    image: alpine:3.20
+    container_name: code-server-profile-backup
+    restart: unless-stopped
+    networks:
+      - enterprise
+    depends_on:
+      - code-server
+    volumes:
+      - code-server-data:/source:ro
+      - code-server-profile-backups:/backups
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p /backups
+        while true; do
+          ts="$$(date +%Y%m%d-%H%M%S)"
+          out="/backups/code-server-user-profile-$$ts.tgz"
+          tar -czf "$$out" -C /source .local/share/code-server/User || true
+          find /backups -type f -name 'code-server-user-profile-*.tgz' -mtime +30 -delete || true
+          sleep 21600
+        done
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
   # prometheus — Metrics collection and alerting engine
   # ────────────────────────────────────────────────────────────────────────────
   prometheus:
@@ -587,6 +623,12 @@ services:
       - enterprise
     environment:
       - APPSMITH_SIGNUP_DISABLED=true
+      - APPSMITH_FORM_LOGIN_DISABLED=true
+      - APPSMITH_OAUTH2_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - APPSMITH_BASE_URL=https://kushnir.cloud
+      - APPSMITH_CUSTOM_DOMAIN=kushnir.cloud
+      - APPSMITH_ADMIN_EMAILS=${APPSMITH_ADMIN_EMAILS:-akushnir@bioenergystrategies.com}
     expose:
       - "80"
     volumes:
@@ -619,6 +661,9 @@ networks:
 # ════════════════════════════════════════════════════════════════════════════
 volumes:
   code-server-data:
+    driver: local
+
+  code-server-profile-backups:
     driver: local
   
   # ✅ NAS-backed storage for ollama models (persistent across failover to .30)

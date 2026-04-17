@@ -12,6 +12,10 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
+    # Unified sign-out endpoint: clear oauth2 session and return to root SSO landing.
+    @logout path /logout /signout
+    redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
+
     # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
@@ -29,8 +33,7 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
 }
 
 kushnir.cloud {
-    # Production posture: kushnir.cloud is the authenticated front door.
-    # All app launches originate here after oauth2-proxy authentication.
+    # Root SSO landing is always available and fronted by oauth2-proxy.
 
     encode gzip
 
@@ -45,6 +48,10 @@ kushnir.cloud {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
+    # Unified sign-out endpoint: clear oauth2 session and return to root.
+    @logout path /logout /signout
+    redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
+
     # oauth2-proxy control plane endpoints
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
@@ -54,22 +61,17 @@ kushnir.cloud {
         }
     }
 
-    # Convenience launch path for IDE from the portal
-    redir /ide https://ide.kushnir.cloud 302
+    # Convenience deep link to IDE app.
+    redir /ide https://ide.kushnir.cloud/ 302
 
-    # Authenticated portal traffic flows through dedicated portal oauth2-proxy
-    reverse_proxy oauth2-proxy-portal:4181 {
+    # Root remains SSO protected and reachable even without optional portal profile.
+    reverse_proxy oauth2-proxy:4180 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
-
-    # Fallback if portal auth/app is not running
-    handle_errors {
-        respond "Admin portal (Appsmith) not running. Start: COMPOSE_PROFILES=portal docker compose up -d appsmith" 503
-    }
 }
 
-# Locked wildcard policy: all unexpected subdomains require auth and expose no app surface.
+# Blanket SSO policy for all subdomains under kushnir.cloud.
 *.kushnir.cloud {
     encode gzip
 
@@ -81,5 +83,22 @@ kushnir.cloud {
         -Server
     }
 
-    respond "Subdomain not configured" 404
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    @logout path /logout /signout
+    redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
+
+    @oauth2 path /oauth2 /oauth2/*
+    handle @oauth2 {
+        reverse_proxy oauth2-proxy:4180 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    reverse_proxy oauth2-proxy:4180 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
 }

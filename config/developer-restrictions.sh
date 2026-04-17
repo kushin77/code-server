@@ -70,6 +70,33 @@ alias logs='tail -f /var/log/*.log 2>/dev/null || echo "No logs readable"'
 git() {
     # Log the git operation
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] GIT: $*" >> "$DEVELOPER_SESSION_LOG"
+
+    local repo_url=""
+    local repo_owner=""
+
+    case "$1" in
+        clone)
+            repo_url="$2"
+            ;;
+        remote)
+            if [ "$2" = "add" ] || [ "$2" = "set-url" ]; then
+                repo_url="$4"
+            fi
+            ;;
+        submodule)
+            if [ "$2" = "add" ]; then
+                repo_url="$3"
+            fi
+            ;;
+    esac
+
+    if [ -n "$repo_url" ]; then
+        repo_owner="$(_extract_github_owner_from_url "$repo_url")"
+        if ! _is_allowed_github_owner "$repo_owner"; then
+            echo "ACCESS DENIED: repository owner '$repo_owner' is not in ALLOWED_GITHUB_OWNERS=$ALLOWED_GITHUB_OWNERS"
+            return 1
+        fi
+    fi
     
     # Allow git operations (credential helper will handle SSH key access)
     command git "$@"
@@ -164,6 +191,38 @@ session_remaining() {
 # GIT Configuration for proxy
 export GIT_PROXY_HOST="${GIT_PROXY_HOST:-git-proxy.ide.kushnir.cloud}"
 export GIT_CREDENTIAL_CACHE_DAEMON_TIMEOUT=3600  # 1 hour
+export ALLOWED_GITHUB_OWNERS="${ALLOWED_GITHUB_OWNERS:-kushin77}"
+
+_extract_github_owner_from_url() {
+    local url="$1"
+
+    if [[ "$url" =~ ^https://github.com/([^/]+)/[^/]+(\.git)?$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return 0
+    fi
+
+    if [[ "$url" =~ ^git@github.com:([^/]+)/[^/]+(\.git)?$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+        return 0
+    fi
+
+    echo ""
+}
+
+_is_allowed_github_owner() {
+    local owner="$1"
+    local item
+
+    [ -z "$owner" ] && return 0
+
+    IFS=',' read -r -a _owners <<< "$ALLOWED_GITHUB_OWNERS"
+    for item in "${_owners[@]}"; do
+        item="${item//[[:space:]]/}"
+        [ "$owner" = "$item" ] && return 0
+    done
+
+    return 1
+}
 
 # Cloudflare Access Token (set via environment at login)
 # This is injected by the authentication system
@@ -179,6 +238,9 @@ export PIP_INDEX_URL="${PIP_INDEX_URL:-https://pypi.org/simple}"
 
 # Create session log file
 mkdir -p "$(dirname "$DEVELOPER_SESSION_LOG")" 2>/dev/null || true
+
+# Include repo path in credential lookups so proxy can authorize per repository.
+command git config --global credential.useHttpPath true >/dev/null 2>&1 || true
 
 # Log session start
 {

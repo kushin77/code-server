@@ -67,6 +67,47 @@ docker compose up -d
 
 For AI or observability in production, use the same profile flags from `Quick Start` on host `192.168.168.31`.
 
+## Profile Persistence And Backups
+
+code-server user state is persisted across logins, container recreation, and image upgrades.
+
+- Primary persistence: Docker volume mounted at `/home/coder`
+- User profile path: `/home/coder/.local/share/code-server/User`
+- Extensions path: `/home/coder/.local/share/code-server/extensions`
+- Backup service: `code-server-profile-backup`
+- Backup cadence: every 6 hours
+- Retention: 30 days
+
+### Verify Runtime Persistence
+
+Run on production host:
+
+```bash
+ssh akushnir@192.168.168.31
+cd code-server-enterprise
+docker compose ps --format 'table {{.Names}}\t{{.Status}}' | egrep '^(code-server|code-server-profile-backup)\s'
+docker exec code-server ls -la /home/coder/.local/share/code-server/User | head -20
+```
+
+### Restore A Profile Backup
+
+```bash
+ssh akushnir@192.168.168.31
+docker run --rm -v code-server-enterprise_code-server-profile-backups:/backups alpine:3.20 ls -la /backups
+docker run --rm \
+	-v code-server-enterprise_code-server-data:/target \
+	-v code-server-enterprise_code-server-profile-backups:/backups \
+	alpine:3.20 \
+	sh -lc 'tar -xzf /backups/code-server-user-profile-YYYYMMDD-HHMMSS.tgz -C /target'
+```
+
+After restore:
+
+```bash
+cd code-server-enterprise
+docker compose up -d --force-recreate code-server
+```
+
 ## Architecture
 
 See [ARCHITECTURE.md](ARCHITECTURE.md), [ADR index](docs/adr/README.md), and [Cloudflare tunnel ADR](docs/adr/006-cloudflare-tunnel-architecture.md).

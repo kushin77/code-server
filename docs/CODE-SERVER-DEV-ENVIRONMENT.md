@@ -234,6 +234,48 @@ docker exec code-server npm list -g typescript
 
 ## Design Principles
 
+## Profile Durability Runbook
+
+Profile state is designed to survive user logins, container recreation, and code-server version updates.
+
+### Persistence Layout
+
+- Home volume mount: `/home/coder`
+- User profile: `/home/coder/.local/share/code-server/User`
+- Extensions: `/home/coder/.local/share/code-server/extensions`
+- Backup volume: `code-server-enterprise_code-server-profile-backups`
+- Backup container: `code-server-profile-backup`
+
+### Validate On Host
+
+```bash
+ssh akushnir@192.168.168.31
+cd /home/akushnir/code-server-enterprise
+docker-compose ps --format 'table {{.Names}}\t{{.Status}}' | egrep '^(code-server|code-server-profile-backup)\s'
+docker exec code-server sh -lc 'ls -la /home/coder/.local/share/code-server/User | head -20'
+docker run --rm -v code-server-enterprise_code-server-profile-backups:/b alpine:3.20 ls -la /b
+```
+
+### Restore Procedure
+
+```bash
+ssh akushnir@192.168.168.31
+docker run --rm \
+  -v code-server-enterprise_code-server-data:/target \
+  -v code-server-enterprise_code-server-profile-backups:/backups \
+  alpine:3.20 \
+  sh -lc 'tar -xzf /backups/code-server-user-profile-YYYYMMDD-HHMMSS.tgz -C /target'
+
+cd /home/akushnir/code-server-enterprise
+docker-compose up -d --force-recreate code-server
+```
+
+### Notes
+
+- Restore extracts the saved `User` subtree into the persisted home volume.
+- Use the most recent backup artifact unless a point-in-time rollback is needed.
+- Keep this runbook aligned with compose template changes in `docker-compose.tpl`.
+
 ### ✅ Immutability
 
 All packages are installed during image build, not at runtime:

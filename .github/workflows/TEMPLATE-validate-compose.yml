@@ -3,6 +3,9 @@ name: Validate docker-compose Configuration (Reusable)
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: Validate docker-compose

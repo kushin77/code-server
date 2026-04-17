@@ -165,7 +165,7 @@ jobs:
 
       - name: Upload coverage artifacts
         if: always()
-        uses: actions/upload-artifact@5d5d22fc38ceea83b5bc9c7ff5a5109b73852e9f  # v4.3.1
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
         with:
           name: coverage-report-${{ github.run_id }}
           path: .coverage-history/

@@ -15,6 +15,9 @@ on:
       - 'scripts/**'
       - '.github/workflows/config-drift-detector.yml'
 
+permissions:
+  contents: read
+
 jobs:
   config-drift-check:
     name: Detect Configuration Drift

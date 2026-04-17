@@ -359,9 +359,6 @@ services:
       NODE_OPTIONS: "--max-old-space-size=6144"
       OLLAMA_ENDPOINT: "http://ollama:11434"
       OLLAMA_DEFAULT_MODEL: "codellama:7b"
-      GSM_PROJECT: "${GSM_PROJECT:-gcp-eiq}"
-      GSM_SECRET_NAME: "${GSM_SECRET_NAME:-prod-github-token}"
-      GSM_GITHUB_TOKEN_SECRET: "${GSM_GITHUB_TOKEN_SECRET:-prod-github-token}"
       
       # Observability
       OTEL_ENABLED: "true"
@@ -413,7 +410,7 @@ services:
         while true; do
           ts="$$(date +%Y%m%d-%H%M%S)"
           out="/backups/code-server-user-profile-$$ts.tgz"
-          tar -czf "$$out" -C /source .local/share/code-server || true
+          tar -czf "$$out" -C /source .local/share/code-server/User || true
           find /backups -type f -name 'code-server-user-profile-*.tgz' -mtime +30 -delete || true
           sleep 21600
         done

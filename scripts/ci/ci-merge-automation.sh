@@ -20,8 +20,8 @@ set -euo pipefail
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source common functions
-source "$SCRIPT_DIR/../common-functions.sh"
+# Source common initialization (canonical library)
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 REPO="${REPO:-kushin77/code-server}"

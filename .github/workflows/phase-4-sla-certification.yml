@@ -21,19 +21,14 @@ jobs:
       - name: Check for Phase 4 completion
         id: check-phase-4
         run: |
-          # Determine if we're working with issue body or comment body
           CONTENT="${{ github.event.issue.body }}"
           if [ -z "$CONTENT" ]; then
             CONTENT="${{ github.event.comment.body }}"
           fi
-          
-          # Check if Phase 4 section exists
+
           if echo "$CONTENT" | grep -q "## Phase 4: Post-Deploy SLA Certification"; then
-            # Check for required certification items
             monitoring_items=$(echo "$CONTENT" | sed -n '/## Phase 4: Post-Deploy SLA Certification/,/^##/p' | grep -c "^\- \[x\]" || true)
-            
             if [ "$monitoring_items" -ge 4 ]; then
-              # Check for key SLA/SLO status indicators
               if echo "$CONTENT" | grep -q "SLA Status:" && \
                  echo "$CONTENT" | grep -q "Error Budget:" && \
                  echo "$CONTENT" | grep -q "Author Certification:"; then
@@ -63,38 +58,37 @@ jobs:
               repo: context.repo.repo,
               body: `## ⚠️ Phase 4 Post-Deploy SLA Certification Incomplete
 
-**This issue requires Phase 4 post-deploy certification** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-4-production-acceptance-gate).
+              **This issue requires Phase 4 post-deploy certification** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-4-production-acceptance-gate).
 
-**What's missing:**
-${reason}
+              **What's missing:**
+              ${reason}
 
-**Action Required:**
+              **Action Required:**
 
-Author must complete 1-hour post-deploy monitoring and certify:
+              Author must complete 1-hour post-deploy monitoring and certify:
 
-1. **Monitoring Period**: \`YYYY-MM-DDTHH:MM UTC → HH:MM UTC\` (at least 1 hour)
-2. **SLA Status**: Compare actual vs. Phase 1 target
-   - P99 latency: [actual] ms (target [target] ms) ✅ / ⚠️ / ❌
-   - Hit rate: [actual]% (target [target]%) ✅ / ⚠️ / ❌
-3. **Error Budget Impact**: Quantify cost of any issues found
-4. **Incidents**: Log any errors/alerts and resolution
-5. **Author Certification**: \`@[author] — READY FOR PRODUCTION\` or \`NEEDS ROLLBACK\`
+              1. **Monitoring Period**: \`YYYY-MM-DDTHH:MM UTC → HH:MM UTC\` (at least 1 hour)
+              2. **SLA Status**: Compare actual vs. Phase 1 target
+                 - P99 latency: [actual] ms (target [target] ms) ✅ / ⚠️ / ❌
+                 - Hit rate: [actual]% (target [target]%) ✅ / ⚠️ / ❌
+              3. **Error Budget Impact**: Quantify cost of any issues found
+              4. **Incidents**: Log any errors/alerts and resolution
+              5. **Author Certification**: \`@[author] — READY FOR PRODUCTION\` or \`NEEDS ROLLBACK\`
 
-**Example**:
-\`\`\`markdown
-## Phase 4: Post-Deploy SLA Certification ✅
+              **Example**:
+              \`\`\`markdown
+              ## Phase 4: Post-Deploy SLA Certification ✅
 
-- [x] 1-Hour post-deploy monitoring completed (2026-04-17 14:30 → 15:30 UTC)
-- [x] SLA Status: P99 latency 48ms (target <50ms) ✅; hit rate 82% (target >80%) ✅
-- [x] Error Budget: 0% impact (new feature, no existing traffic affected)
-- [x] Incidents: None detected during monitoring window
-- [x] Author Certification: @akushnir — READY FOR PRODUCTION
+              - [x] 1-Hour post-deploy monitoring completed (2026-04-17 14:30 → 15:30 UTC)
+              - [x] SLA Status: P99 latency 48ms (target <50ms) ✅; hit rate 82% (target >80%) ✅
+              - [x] Error Budget: 0% impact (new feature, no existing traffic affected)
+              - [x] Incidents: None detected during monitoring window
+              - [x] Author Certification: @akushnir — READY FOR PRODUCTION
 
-Issue ready for closure.
-\`\`\`
+              Issue ready for closure.
+              \`\`\`
 
-See [Phase 4 section](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-4-post-deploy-sla-certification) for full details.`
-            })
+              See [Phase 4 section](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-4-post-deploy-sla-certification) for full details.`
 
       - name: Close issue if Phase 4 complete
         if: steps.check-phase-4.outputs.PHASE_4_COMPLETE == 'true'
@@ -105,13 +99,5 @@ See [Phase 4 section](https://github.com/kushin77/code-server/blob/main/.github/
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ✅ Phase 4 Post-Deploy SLA Certification Complete
-
-All production readiness gates have been satisfied:
-- ✅ Phase 1: Design Quality Gate
-- ✅ Phase 2: Code & Quality Review
-- ✅ Phase 3: Performance & Load Testing
-- ✅ Phase 4: Post-Deploy SLA Certification
-
-**This issue is production-ready for closure.**`
+              body: 'Phase 4 Post-Deploy SLA Certification complete. Issue is ready for closure.'
             })

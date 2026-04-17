@@ -80,8 +80,7 @@ kushnir.cloud {
         }
     }
 
-    # All other requests: forward_auth via oauth2-proxy, then proxy to portal service
-    # Portal service should be Appsmith or Backstage (configure via COMPOSE_PROFILES or add to main compose)
+    # All other requests: forward_auth via oauth2-proxy, then proxy to Appsmith admin portal
     forward_auth oauth2-proxy:4180 {
         uri /oauth2/auth
         copy_headers X-Auth-Request-User X-Auth-Request-Email
@@ -90,10 +89,15 @@ kushnir.cloud {
     reverse_proxy appsmith:80 {
         header_up X-WEBAUTH-USER {http.reverse_proxy.header.X-Auth-Request-Email}
         header_up Host {host}
+        transport http {
+            dial_timeout 10s
+            read_timeout 0
+            write_timeout 0
+        }
     }
 
-    # Fallback: if appsmith not running, serve placeholder
+    # Fallback: if Appsmith not running, start with: COMPOSE_PROFILES=portal docker compose up -d appsmith
     handle_errors 502 503 {
-        respond "Portal service not running. Configure Appsmith/Backstage and add to docker-compose." 503
+        respond "Admin portal (Appsmith) not running. Start: COMPOSE_PROFILES=portal docker compose up -d appsmith" 503
     }
 }

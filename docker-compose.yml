@@ -174,11 +174,14 @@ services:
       OAUTH2_PROXY_EMAIL_DOMAINS: "*"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
-      OAUTH2_PROXY_COOKIE_SECURE: "false"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
       OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
+      OAUTH2_PROXY_COOKIE_DOMAINS: ".kushnir.cloud"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: ".kushnir.cloud"
       OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
       OAUTH2_PROXY_COOKIE_REFRESH: "15m"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
       OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
       OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
       OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
@@ -200,6 +203,69 @@ services:
       start_period: 10s
     depends_on:
       - code-server
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # oauth2-proxy-portal — Google OIDC gate for kushnir.cloud portal
+  # Shared cookie domain enables SSO across kushnir.cloud and ide.kushnir.cloud
+  # ────────────────────────────────────────────────────────────────────────────
+  oauth2-proxy-portal:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    container_name: oauth2-proxy-portal
+    profiles: [portal]
+    restart: unless-stopped
+    networks:
+      - enterprise
+    expose:
+      - "4181"
+    user: "0:0"
+    env_file:
+      - .env
+    environment:
+      OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
+      OAUTH2_PROXY_PROVIDER: "google"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
+      OAUTH2_PROXY_REDIRECT_URL: "https://kushnir.cloud/oauth2/callback"
+      OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
+      OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
+      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
+      OAUTH2_PROXY_COOKIE_DOMAINS: ".kushnir.cloud"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: ".kushnir.cloud"
+      OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
+      OAUTH2_PROXY_COOKIE_REFRESH: "15m"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4181"
+      OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
+      OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
+      OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
+      OAUTH2_PROXY_AUTH_LOGGING: "true"
+      OAUTH2_PROXY_REQUEST_LOGGING: "false"
+      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/oauth2|^/ping"
+    volumes:
+      - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4181/ping || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      appsmith:
+        condition: service_started
     logging:
       driver: json-file
       options:

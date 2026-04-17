@@ -1,0 +1,131 @@
+{
+  "dashboard": {
+    "title": "Disk Space Monitoring",
+    "description": "Monitor disk usage trends and capacity planning",
+    "tags": ["infrastructure", "monitoring", "disk"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Current Disk Usage (%)",
+        "type": "gauge",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 80
+                },
+                {
+                  "color": "red",
+                  "value": 90
+                }
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "targets": [
+          {
+            "expr": "100 * disk_usage_bytes{mountpoint=\"/\"} / (disk_usage_bytes{mountpoint=\"/\"} + disk_available_bytes{mountpoint=\"/\"})",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Disk Usage Trend (24h)",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        },
+        "targets": [
+          {
+            "expr": "disk_usage_bytes{mountpoint=\"/\"}",
+            "legendFormat": "Used Space",
+            "refId": "A"
+          },
+          {
+            "expr": "disk_available_bytes{mountpoint=\"/\"}",
+            "legendFormat": "Available Space",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Root Filesystem Details",
+        "type": "table",
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "label_join(disk_usage_bytes{mountpoint=\"/\"}, \"info\", \"=\", \"device\")",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Disk Usage % - 7 Day Trend",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "custom": {
+              "fillOpacity": 10,
+              "lineWidth": 2
+            }
+          }
+        },
+        "targets": [
+          {
+            "expr": "100 * disk_usage_bytes{mountpoint=\"/\"} / (disk_usage_bytes{mountpoint=\"/\"} + disk_available_bytes{mountpoint=\"/\"})",
+            "legendFormat": "Root FS Usage %",
+            "refId": "A"
+          }
+        ]
+      }
+    ]
+  }
+}

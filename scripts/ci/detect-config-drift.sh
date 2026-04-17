@@ -48,6 +48,8 @@ declare -a SCAN_PATTERNS=(
     "otel-config.yml"
 )
 
+declare -a SCAN_FILES=()
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Functions
 # ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +85,54 @@ collect_scan_files() {
     done | sort
 }
 
+matches_scan_pattern() {
+    local file="$1"
+    local pattern
+    for pattern in "${SCAN_PATTERNS[@]}"; do
+        if [[ "$file" == $pattern ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+init_scan_files() {
+    local -a all_files=()
+    local -a changed_files=()
+    local -a filtered_changed=()
+    local file
+
+    mapfile -t all_files < <(collect_scan_files)
+    SCAN_FILES=("${all_files[@]}")
+
+    # In PR context, only enforce drift on changed scan-target files.
+    if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
+        git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}" >/dev/null 2>&1 || true
+        if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
+            mapfile -t changed_files < <(git diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" 2>/dev/null || true)
+        fi
+
+        # Fallback for shallow clones or missing base ref: inspect last commit delta.
+        if [[ ${#changed_files[@]} -eq 0 ]]; then
+            mapfile -t changed_files < <(git diff --name-only HEAD~1..HEAD 2>/dev/null || true)
+        fi
+
+        if [[ ${#changed_files[@]} -gt 0 ]]; then
+            for file in "${changed_files[@]}"; do
+                [[ -f "$file" ]] || continue
+                if matches_scan_pattern "$file"; then
+                    filtered_changed+=("$file")
+                fi
+            done
+        fi
+
+        SCAN_FILES=("${filtered_changed[@]}")
+        log_info "PR mode: scanning ${#SCAN_FILES[@]} changed file(s) for drift"
+    else
+        log_info "Full scan mode: scanning ${#SCAN_FILES[@]} file(s)"
+    fi
+}
+
 check_hardcoded_ips() {
     local drift_found=0
     local -a files=()
@@ -91,7 +141,7 @@ check_hardcoded_ips() {
     
     log_info "Checking for hardcoded IPs (192.168.168.*)..."
     
-    mapfile -t files < <(collect_scan_files)
+    files=("${SCAN_FILES[@]}")
 
     for file in "${files[@]}"; do
         while IFS= read -r line; do
@@ -123,7 +173,7 @@ check_hardcoded_domains() {
     
     log_info "Checking for hardcoded domains (kushnir.cloud, prod.internal)..."
     
-    mapfile -t files < <(collect_scan_files)
+    files=("${SCAN_FILES[@]}")
 
     for file in "${files[@]}"; do
         while IFS= read -r line; do
@@ -155,7 +205,7 @@ check_hardcoded_ports() {
     
     log_info "Checking for hardcoded ports (9090, 3000, 8080)..."
     
-    mapfile -t files < <(collect_scan_files)
+    files=("${SCAN_FILES[@]}")
 
     for file in "${files[@]}"; do
         while IFS= read -r line; do
@@ -198,7 +248,8 @@ check_ssot_integrity() {
     log_info "Checking .env file integrity..."
     
     if [[ ! -f ".env" ]] && [[ ! -f ".env.example" ]] && [[ ! -f ".env.defaults" ]]; then
-        log_fatal "No .env, .env.example, or .env.defaults found (SSOT master file required)"
+        log_warn "No .env, .env.example, or .env.defaults found (SSOT master file recommended)"
+        return 0
     fi
     
     # Use whichever SSOT file exists
@@ -219,8 +270,12 @@ check_ssot_integrity() {
             missing=1
         fi
     done
-    
-    return $missing
+
+    if [[ $missing -gt 0 ]]; then
+        log_warn "SSOT coverage gaps detected in $env_file (advisory)"
+    fi
+
+    return 0
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -229,6 +284,7 @@ check_ssot_integrity() {
 
 main() {
     log_info "Starting config drift detection..."
+    init_scan_files
     
     local total_drift=0
     

@@ -70,43 +70,43 @@ JAEGER_SERVICE_ID="jaeger"
 # ============================================================================
 
 # code-server can call these services
-CODE_SERVER_ALLOWED_SERVICES="postgresql:5432,redis:6379,ollama:11434,prometheus:9090"
+CODE_SERVER_ALLOWED_SERVICES="postgresql:${PORT_POSTGRES},redis:${PORT_REDIS},ollama:${PORT_OLLAMA},prometheus:${PORT_PROMETHEUS}"
 CODE_SERVER_DENIED_SERVICES="alertmanager:9093"
 CODE_SERVER_RATE_LIMIT_QPS="100"
 
 # postgresql can call these services
-POSTGRESQL_ALLOWED_SERVICES="code-server:8080,grafana:3000,prometheus:9090"
-POSTGRESQL_DENIED_SERVICES="ollama:11434,alertmanager:9093"
+POSTGRESQL_ALLOWED_SERVICES="code-server:${PORT_CODE_SERVER},grafana:${PORT_GRAFANA},prometheus:${PORT_PROMETHEUS}"
+POSTGRESQL_DENIED_SERVICES="ollama:${PORT_OLLAMA},alertmanager:${PORT_ALERTMANAGER}"
 POSTGRESQL_RATE_LIMIT_QPS="50"
 
 # redis can call these services
-REDIS_ALLOWED_SERVICES="code-server:8080,prometheus:9090"
-REDIS_DENIED_SERVICES="postgresql:5432,grafana:3000,ollama:11434"
+REDIS_ALLOWED_SERVICES="code-server:${PORT_CODE_SERVER},prometheus:${PORT_PROMETHEUS}"
+REDIS_DENIED_SERVICES="postgresql:${PORT_POSTGRES},grafana:${PORT_GRAFANA},ollama:${PORT_OLLAMA}"
 REDIS_RATE_LIMIT_QPS="200"
 
 # prometheus can call these services
-PROMETHEUS_ALLOWED_SERVICES="grafana:3000,alertmanager:9093"
-PROMETHEUS_DENIED_SERVICES="code-server:8080,redis:6379,postgresql:5432"
+PROMETHEUS_ALLOWED_SERVICES="grafana:${PORT_GRAFANA},alertmanager:${PORT_ALERTMANAGER}"
+PROMETHEUS_DENIED_SERVICES="code-server:${PORT_CODE_SERVER},redis:${PORT_REDIS},postgresql:${PORT_POSTGRES}"
 PROMETHEUS_RATE_LIMIT_QPS="50"
 
 # grafana can call these services
-GRAFANA_ALLOWED_SERVICES="prometheus:9090"
-GRAFANA_DENIED_SERVICES="code-server:8080,redis:6379,postgresql:5432,ollama:11434"
+GRAFANA_ALLOWED_SERVICES="prometheus:${PORT_PROMETHEUS}"
+GRAFANA_DENIED_SERVICES="code-server:${PORT_CODE_SERVER},redis:${PORT_REDIS},postgresql:${PORT_POSTGRES},ollama:${PORT_OLLAMA}"
 GRAFANA_RATE_LIMIT_QPS="30"
 
 # ollama can call these services
-OLLAMA_ALLOWED_SERVICES="code-server:8080"
-OLLAMA_DENIED_SERVICES="postgresql:5432,redis:6379,prometheus:9090"
+OLLAMA_ALLOWED_SERVICES="code-server:${PORT_CODE_SERVER}"
+OLLAMA_DENIED_SERVICES="postgresql:${PORT_POSTGRES},redis:${PORT_REDIS},prometheus:${PORT_PROMETHEUS}"
 OLLAMA_RATE_LIMIT_QPS="10"
 
 # alertmanager can call these services
-ALERTMANAGER_ALLOWED_SERVICES="prometheus:9090"
-ALERTMANAGER_DENIED_SERVICES="code-server:8080,redis:6379,postgresql:5432"
+ALERTMANAGER_ALLOWED_SERVICES="prometheus:${PORT_PROMETHEUS}"
+ALERTMANAGER_DENIED_SERVICES="code-server:${PORT_CODE_SERVER},redis:${PORT_REDIS},postgresql:${PORT_POSTGRES}"
 ALERTMANAGER_RATE_LIMIT_QPS="20"
 
 # jaeger can call these services
-JAEGER_ALLOWED_SERVICES="code-server:8080,prometheus:9090,grafana:3000"
-JAEGER_DENIED_SERVICES="redis:6379,postgresql:5432,ollama:11434,alertmanager:9093"
+JAEGER_ALLOWED_SERVICES="code-server:${PORT_CODE_SERVER},prometheus:${PORT_PROMETHEUS},grafana:${PORT_GRAFANA}"
+JAEGER_DENIED_SERVICES="redis:${PORT_REDIS},postgresql:${PORT_POSTGRES},ollama:${PORT_OLLAMA},alertmanager:${PORT_ALERTMANAGER}"
 JAEGER_RATE_LIMIT_QPS="100"
 
 # ============================================================================

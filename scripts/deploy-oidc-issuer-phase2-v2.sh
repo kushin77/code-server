@@ -25,7 +25,7 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 
 # Configuration
 OIDC_HOST="${OIDC_HOST:-${DEPLOY_HOST}}"
-OIDC_PORT="${OIDC_PORT:-8080}"
+OIDC_PORT="${OIDC_PORT:-${PORT_CODE_SERVER}}"
 OIDC_PATH="/oidc"
 OIDC_URL="https://${OIDC_HOST}:${OIDC_PORT}${OIDC_PATH}"
 K8S_API_HOST="${K8S_API_HOST:-kubernetes.default.svc.cluster.local}"
@@ -127,7 +127,7 @@ metadata:
   name: oidc-issuer-config
   namespace: default
 data:
-  issuer: "https://oidc.kushnir.cloud:8080"
+  issuer: "https://oidc.kushnir.cloud:${OIDC_PORT}"
   client_id: "code-server-services"
   audiences: "code-server,prometheus,loki,grafana,redis,postgresql"
   subject_claim: "sub"
@@ -180,7 +180,7 @@ cat > "$SCRIPT_DIR/test-oidc-endpoint.sh" <<'TEST_EOF'
 set -euo pipefail
 
 OIDC_HOST="${1:-${DEPLOY_HOST}}"
-OIDC_PORT="${2:-8080}"
+OIDC_PORT="${2:-${PORT_CODE_SERVER}}"
 OIDC_URL="https://${OIDC_HOST}:${OIDC_PORT}"
 
 echo "Testing OIDC endpoint: $OIDC_URL"
@@ -225,7 +225,7 @@ cat > "$PHASE2_DIR/oidc-issuer.env.template" <<'ENV_EOF'
 # Phase 2.1: OIDC Issuer Configuration
 
 # Public OIDC issuer URL
-OIDC_ISSUER_URL=https://oidc.kushnir.cloud:8080
+OIDC_ISSUER_URL=https://oidc.kushnir.cloud:${OIDC_PORT}
 
 # Token configuration
 TOKEN_EXPIRY=3600  # 1 hour
@@ -263,6 +263,6 @@ log_info "Next steps:"
 log_info "  1. Deploy Caddy: docker-compose up -d caddy"
 log_info "  2. Apply K8s config: kubectl apply -f $PHASE2_DIR/k8s-oidc-issuer.yaml"
 log_info "  3. Test endpoint: bash $SCRIPT_DIR/test-oidc-endpoint.sh"
-log_info "  4. Verify from pod: kubectl exec -it <pod> -- curl https://oidc.kushnir.cloud:8080/.well-known/openid-configuration"
+log_info "  4. Verify from pod: kubectl exec -it <pod> -- curl https://oidc.kushnir.cloud:${OIDC_PORT}/.well-known/openid-configuration"
 log_info ""
 log_success "✓ Phase 2.1 Configuration Ready for Deployment"

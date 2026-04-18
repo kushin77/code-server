@@ -926,6 +926,115 @@
         "Success criteria defined - pre-flight check, callback URLs distinct+working, complete OAuth flow, <0.1% error rate post-deploy, evidence filing, CTO+ops sign-off",
         "Risk level LOW - split callbacks cause no breaking changes; easy rollback to prior image"
       ]
+    },
+    {
+      "number": 690,
+      "title": "P0: Provision GitHub Actions SSH secret for portal OAuth redeploy",
+      "class": "unblock",
+      "lane": "release",
+      "priority": "P0",
+      "status": "closed",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Provision the required SSH deploy secret in GitHub Actions so the portal OAuth redeploy workflow can install a key before attempting SSH.",
+      "evidence": [
+        "DEPLOY_SSH_PRIVATE_KEY and DEPLOY_SSH_KNOWN_HOSTS were added to GitHub Actions secrets",
+        "Workflow run 24608080969 passed secret installation",
+        "Issue #690 was closed after verification"
+      ]
+    },
+    {
+      "number": 691,
+      "title": "P3: Consolidate legacy docs root into canonical folder indexes",
+      "class": "tracker",
+      "lane": "docs",
+      "priority": "P3",
+      "status": "closed",
+      "branchType": "docs",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Consolidate the legacy docs root into canonical folder indexes while preserving archival material; the bridge files were collapsed to short compatibility stubs and the issue is closed.",
+      "evidence": [
+        "Canonical docs SSOT exists in docs/structure/README.md",
+        "Elite best-practices indexes are created under docs/elite-best-practices/",
+        "docs/adr/README.md now serves as the ADR-folder index",
+        "docs/status/README.md now serves as the status-folder index",
+        "Legacy docs-root files were collapsed to short compatibility stubs",
+        "GitHub issue #691 is closed and the bridge policy is recorded in docs/structure/README.md",
+        "docs/structure/README.md records the canonical layout and bridge policy"
+      ]
+    },
+    {
+      "number": 692,
+      "title": "P0: Provide reachable execution path for portal OAuth redeploy workflow",
+      "class": "unblock",
+      "lane": "release",
+      "priority": "P0",
+      "status": "open",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [688, 690],
+      "executionBrief": "GitHub Actions now has the deploy SSH secret. A temporary self-hosted runner validated the portal workflow path and the VPN gate, but the issue stays open until the production-capable apply path reaches 192.168.168.31 and live redirects are verified.",
+      "evidence": [
+        "Workflow run 24608080969 failed at host reachability, not secret installation",
+        "DEPLOY_SSH_PRIVATE_KEY and DEPLOY_SSH_KNOWN_HOSTS were provisioned",
+        "Temporary self-hosted runner registered in-session and executed portal-oauth-redeploy.yml run 24608948773 successfully",
+        "Temporary self-hosted runner executed vpn-e2e-gate.yml run 24608949154 successfully",
+        ".github/workflows/portal-oauth-redeploy.yml now targets a self-hosted runner",
+        "scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local validated successfully in workspace"
+      ]
+    },
+    {
+      "number": 686,
+      "title": "fix(oauth): enforce surface-specific redirect callbacks and add redeploy helper",
+      "class": "fix",
+      "lane": "release",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Portal OAuth callback split and idempotent redeploy helper are implemented in the open PR; keep it in the release lane for review and merge once the runner-backed execution path is ready.",
+      "evidence": [
+        "docker-compose.yml contains split apex/IDE OAUTH2_PROXY_REDIRECT_URL entries",
+        "scripts/deploy/redeploy-portal-oauth-routing.sh supports idempotent portal service redeploys",
+        ".github/workflows/portal-oauth-redeploy.yml now uses the self-hosted local path"
+      ]
+    },
+    {
+      "number": 684,
+      "title": "feat(monorepo): bootstrap pnpm workspace and lockfile governance",
+      "class": "foundation",
+      "lane": "monorepo",
+      "priority": "P2",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "pnpm workspace and lockfile governance foundation is implemented in the open PR and should stay in the monorepo lane until review merges.",
+      "evidence": [
+        "pnpm-workspace.yaml exists at repo root",
+        "scripts/ci/check-pnpm-lockfile.sh validates workspace bootstrap and lockfile immutability",
+        "docs/elite-best-practices/pnpm/README.md documents the pnpm governance lane"
+      ]
+    },
+    {
+      "number": 649,
+      "title": "feat(policy): Implement VS Code Enterprise Policy Pack v1.0 (#618)",
+      "class": "governance",
+      "lane": "policy",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "VS Code Enterprise policy-pack framework is implemented and awaiting review; keep it separate from the release blocker lane.",
+      "evidence": [
+        "config/code-server/POLICY-PACK-README.md documents the enterprise policy pack",
+        "config/code-server/extensions/EXTENSIONS-POLICY.md links issue #618",
+        "docs/status/WORK-COMPLETE-FINAL-STATUS.md records the policy pack framework as complete"
+      ]
     }
   ]
 }

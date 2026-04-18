@@ -187,24 +187,17 @@ code-server-enterprise/
 ├── docs/                        # 📚 ALL documentation
 │   ├── README.md               # Docs index
 │   ├── GOVERNANCE.md           # This file
-│   ├── ARCHITECTURE.md
-│   ├── GETTING-STARTED.md
-│   ├── CONTRIBUTING.md
-│   ├── guides/
-│   │   ├── DEPLOYMENT.md
-│   │   ├── LOCAL-DEVELOPMENT.md
-│   │   ├── TROUBLESHOOTING.md
-│   │   └── SSH-REMOTE-ACCESS.md
-│   ├── adc/                    # Architecture Decision Records
-│   │   ├── ADR-001-CLOUDFLARE-TUNNEL.md
-│   │   └── ADR-002-POSTGRES-HA.md
-│   ├── runbooks/
-│   │   ├── README.md
-│   │   ├── INCIDENT-RESPONSE.md
-│   │   ├── DEPLOYMENT-RUNBOOK.md
-│   │   └── ROLLBACK-PLAYBOOK.md
-│   └── archived/              # Old docs (read-only)
-│       └── PHASE-14-SUMMARY.md
+│   ├── structure/              # Documentation SSOT and naming rules
+│   ├── elite-best-practices/   # Navigation-only best-practices index
+│   ├── ai/                     # AI governance, access, and contracts
+│   ├── adr/                    # Architecture Decision Records
+│   ├── archives/               # Historical documentation
+│   ├── ops/                    # Runbooks and operational procedures
+│   ├── status/                 # Proof artifacts and execution evidence
+│   └── triage/                 # Issue blockers and remediation notes
+│
+│   Legacy bridge docs may remain at the repository root until they are
+│   next edited and moved into the canonical folders above.
 │
 ├── terraform/                   # 🏗️ Infrastructure as Code
 │   ├── README.md              # Terraform overview & usage
@@ -443,8 +436,8 @@ Every file type must have metadata headers:
 # Description: Docker container infrastructure for code-server deployment
 # Usage: Include in main.tf via module "containers" block
 # References: 
-#   - Docs: docs/guides/DEPLOYMENT.md
-#   - ADR: docs/adc/ADR-001-CLOUDFLARE-TUNNEL.md
+#   - Docs: docs/ops/
+#   - ADR: docs/adr/
 # Author: @akushnir
 # Last Updated: 2026-04-14
 ################################################################################
@@ -480,8 +473,8 @@ terraform {
 #   - Always requires plan approval unless -auto-approve passed
 #   - Logs to logs/terraform-$(date +%s).log
 # References:
-#   - docs/guides/DEPLOYMENT.md
-#   - docs/runbooks/DEPLOYMENT-RUNBOOK.md
+#   - docs/ops/
+#   - docs/structure/README.md
 # Exit Codes:
 #   - 0: Success
 #   - 1: Terraform error
@@ -500,7 +493,7 @@ set -euo pipefail
 # Purpose: Prometheus scrape targets and global settings
 # Usage: Mounted at /etc/prometheus/prometheus.yml in Prometheus container
 # References:
-#   - docs/guides/DEPLOYMENT.md
+#   - docs/ops/
 #   - terraform/modules/observability/main.tf
 # Author: @akushnir
 # Last Updated: 2026-04-14
@@ -526,7 +519,7 @@ Functions:
     check_docker_health(): Verify Docker daemon
     check_terraform_state(): Validate terraform state
 References:
-    - docs/guides/TROUBLESHOOTING.md
+    - docs/ops/
     - scripts/health/validate-config.sh
 Author: @akushnir
 Last Updated: 2026-04-14
@@ -553,7 +546,7 @@ some_command "$parameter"
 ```terraform
 # CONTEXT: Force recreation of code-server container when image changes
 # WHY: Ensures latest patches/security fixes are always deployed
-# REFERENCE: docs/guides/DEPLOYMENT.md#image-update-strategy
+# REFERENCE: docs/ops/
 docker_image.code_server.id
 ->
 docker_container.code_server
@@ -586,8 +579,8 @@ Common usage patterns
 Common issues and fixes
 
 ## See Also
-- [Related doc](../docs/GUIDE.md)
-- [Related script](../scripts/deploy/deploy.sh)
+- [Documentation Structure SSOT](structure/README.md)
+- [Portal redeploy script](../scripts/deploy/redeploy-portal-oauth-routing.sh)
 ```
 
 ---
@@ -597,6 +590,7 @@ Common issues and fixes
 ### 1. Documentation Standards
 
 **All documentation must**:
+- ✅ Follow the canonical folder map in [structure/README.md](structure/README.md)
 - ✅ Be in `docs/` directory (not root, not scattered)
 - ✅ Use Markdown with GitHub-flavored syntax
 - ✅ Include Table of Contents (ToC) for files > 100 lines
@@ -605,16 +599,18 @@ Common issues and fixes
 - ✅ List dependencies/prerequisites
 - ✅ Indicate last update date and author
 - ✅ Have clear "See Also" section
+- ✅ Use canonical subfolders for new work instead of adding new loose files
 
 **Never**:
 - ❌ Place status documents in root (Phase-14-STATUS.md)
 - ❌ Keep outdated copies (Caddyfile.new, .bak files)
 - ❌ Skip examples and prerequisites
 - ❌ Use absolute URLs for internal links
+- ❌ Add new root-level markdown files without an explicit migration plan
 
 ### 2. ADR (Architecture Decision Records)
 
-When making significant architectural decisions, create an ADR in `docs/adc/`:
+When making significant architectural decisions, create an ADR in `docs/adr/`:
 
 **Format**:
 ```markdown
@@ -644,13 +640,13 @@ What will follow from this decision?
 - Option B: Why we rejected it
 
 ## Related
-- Implements: docs/guides/...
+- Implements: docs/ops/...
 - Supersedes: ADR-001 (if applicable)
 ```
 
 ### 3. Runbooks
 
-Every operational procedure must have a runbook in `docs/runbooks/`:
+Every operational procedure must have a runbook in `docs/ops/`:
 
 **Structure**:
 ```markdown
@@ -745,7 +741,7 @@ If Z happens, do W
 - Quarterly capacity planning
 
 **Incident Response**:
-- Follows docs/runbooks/INCIDENT-RESPONSE.md
+- Follows docs/ops/
 - All incidents logged in GitHub Issues with label: incident
 - Post-mortems within 48 hours (critical) or 1 week (others)
 
@@ -767,7 +763,7 @@ If Z happens, do W
 - Block merge if any fail
 - Required checks: test, lint, tf-validate, secret-scan
 
-**Code Review Bot** (configured in CONTRIBUTING.md):
+**Code Review Bot** (configured in [elite-best-practices/instructions/README.md](elite-best-practices/instructions/README.md)):
 - Requests architecture review for terraform changes
 - Blocks merges of phase-numbered files
 - Warns about duplicate config files
@@ -788,7 +784,7 @@ If Z happens, do W
 **Quarterly Documentation Audit**:
 - Verify all docs are current
 - Check for stale status documents
-- Update archived/ directory
+- Update archives/ directory
 
 **Annual Architecture Review**:
 - Assess overall design
@@ -805,7 +801,7 @@ If Z happens, do W
 **Path Violations** (files in wrong location):
 - Auto-flagged in code review
 - Must move to correct location
-- No exceptions except archived/
+- No exceptions except archives/
 
 **Missing Documentation**:
 - Code review blocks merge
@@ -820,11 +816,10 @@ If Z happens, do W
 
 ## References
 
-- [Repository Structure Details](FOLDER-STRUCTURE.md)
-- [Consolidation Plan](../CONSOLIDATION-PLAN.md)
-- [Contributing Guide](CONTRIBUTING.md)
-- [Architecture Documentation](ARCHITECTURE.md)
-- [Deployment Guide](guides/DEPLOYMENT.md)
+- [Documentation Structure SSOT](structure/README.md)
+- [Contributor Instructions](elite-best-practices/instructions/)
+- [Architecture Documentation](adr/README.md)
+- [Deployment and Operations](ops/)
 
 ---
 

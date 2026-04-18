@@ -36,17 +36,28 @@ Canonical machine-readable companion:
 - `#639` Autopilot setup-state drift epic
 - `#640` Autopilot setup-state RCA
 - `#641` Setup-state reconciler and self-healing
+- `#691` Consolidate legacy docs root into canonical folder indexes
 - `#291` VSCode crash RCA and persistent stability tracking (closed in GitHub; persistent tracker)
 
 ## Open Issues Without Landed Implementation Yet
 
-- `#690` Provision GitHub Actions SSH secret for portal OAuth redeploy
+- `#692` Provide reachable execution path for portal OAuth redeploy workflow
+- `#686` fix(oauth): enforce surface-specific redirect callbacks and add redeploy helper
+- `#684` feat(monorepo): bootstrap pnpm workspace and lockfile governance
+- `#649` feat(policy): Implement VS Code Enterprise Policy Pack v1.0 (#618)
 
 ## Recommended Execution Order
 
-1. `#690` provision the deploy SSH secret and re-run the hardened portal workflow.
+1. `#692` provision a reachable execution path and re-run the hardened portal workflow.
+2. `#686` keep the OAuth helper lane aligned with the portal redeploy path and review the open PR.
+3. `#684` keep the monorepo/pnpm governance lane moving independently of the release blocker.
+4. `#649` keep the policy-pack governance lane moving independently of the release blocker.
 
 ## Operational Notes
 
 - The current `main` branch already contains merged scaffolding for several closed issues.
+- `#690` is resolved: the deploy SSH secret is now provisioned in GitHub Actions.
+- Local portal redeploy dry-run now passes with `bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local`, and the temporary self-hosted runner validated both the portal dry-run and the VPN gate.
+- `#691` is closed: the legacy docs-root bridge files were collapsed to compatibility stubs and the canonical folder indexes remain in place.
+- `#686`, `#684`, and `#649` are open PR-backed lanes with existing repo artifacts; they are parallel review tracks, not the current release blocker.
 - Keep issue comments current when additional AC evidence lands so GitHub remains usable without local context.

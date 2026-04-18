@@ -74,8 +74,9 @@ ssh_upload_dir() {
 assert_ssh_up() {
     local target_host="${1:-$DEPLOY_HOST}"
     local target_user="${2:-$DEPLOY_USER}"
-    if ! timeout "$SSH_CONNECT_TIMEOUT" ssh $SSH_OPTS "$target_user@$target_host" "echo OK" > /dev/null 2>&1; then
-        log_fatal "Cannot SSH to $target_user@$target_host — is the host reachable?"
+    local ssh_error
+    if ! ssh_error="$(timeout "$SSH_CONNECT_TIMEOUT" ssh $SSH_OPTS "$target_user@$target_host" "echo OK" 2>&1)"; then
+        log_fatal "Cannot SSH to $target_user@$target_host — is the host reachable? ${ssh_error}"
     fi
     log_debug "✓ SSH connectivity confirmed: $target_user@$target_host"
 }

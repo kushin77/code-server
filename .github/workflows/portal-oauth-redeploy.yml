@@ -1,6 +1,6 @@
 name: Portal OAuth Redeploy
 
-# Issue #688: Production portal OAuth callback redeploy automation
+# Issue #692: Production portal OAuth callback redeploy execution path
 # Syncs docker-compose.yml to production host and redeploysvservices with split redirect URLs
 # Apex (kushnir.cloud) vs. IDE (ide.kushnir.cloud) share cookie domain but use distinct OAuth callbacks
 
@@ -23,7 +23,8 @@ concurrency:
 jobs:
   redeploy-portal-oauth:
     name: Redeploy portal OAuth routing
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    environment: production
     env:
       DEPLOY_HOST: 192.168.168.31
       DEPLOY_USER: akushnir
@@ -99,7 +100,7 @@ jobs:
           set -euo pipefail
           {
             echo "## Portal OAuth Redeploy"
-            echo "- Runner: ubuntu-latest (ephemeral)"
+            echo "- Runner: self-hosted"
             echo "- Execution: scripts/deploy/redeploy-portal-oauth-routing.sh"
             if [[ "${{ inputs.dry_run }}" == "true" ]]; then
               echo "- Mode: dry-run"

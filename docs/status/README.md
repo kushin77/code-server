@@ -1,134 +1,91 @@
-# code-server — On-Premises VSCode Server
+# Status
 
-Production-grade self-hosted VSCode in the browser with enterprise
-security, monitoring, and high availability.
+Purpose:
+- Proof artifacts, status ledgers, execution summaries, and evidence bundles.
 
-## Quick Start
+SSOT:
+- [../structure/README.md](../structure/README.md)
 
-```bash
-# Core services only (code-server + oauth2-proxy + caddy + postgres + redis)
-docker compose up -d
+## Ledgers
 
-# With monitoring (Prometheus + Grafana + AlertManager)
-COMPOSE_PROFILES=monitoring docker compose up -d
+- [ACCEPTANCE-CRITERIA-BY-ISSUE.md](ACCEPTANCE-CRITERIA-BY-ISSUE.md)
+- [AUTONOMOUS-EXECUTION-MANIFEST-2026-04-18.md](AUTONOMOUS-EXECUTION-MANIFEST-2026-04-18.md)
+- [AUTONOMOUS-OPEN-ISSUE-STATUS-2026-04-18.md](AUTONOMOUS-OPEN-ISSUE-STATUS-2026-04-18.md)
+- [AUTONOMOUS-READINESS-REPORT.md](AUTONOMOUS-READINESS-REPORT.md)
+- [AUTONOMOUS-TRIAGE-COMPLETION-2026-04-18.md](AUTONOMOUS-TRIAGE-COMPLETION-2026-04-18.md)
+- [MANIFEST.md](MANIFEST.md)
 
-# With distributed tracing (OTel Collector + Jaeger + Loki + Promtail)
-COMPOSE_PROFILES=tracing docker compose up -d
+## Proofs
 
-# With AI assistant (Ollama LLM — requires GPU)
-COMPOSE_PROFILES=ai docker compose up -d
+- [AUTOPILOT-SETUP-STATE-RCA-PROOF-2026-04-18.md](AUTOPILOT-SETUP-STATE-RCA-PROOF-2026-04-18.md)
+- [E2E-BROWSER-AUTOMATION-PROOF-2026-04-18.md](E2E-BROWSER-AUTOMATION-PROOF-2026-04-18.md)
+- [E2E-SERVICE-ACCOUNT-COVERAGE-PROOF-2026-04-18.md](E2E-SERVICE-ACCOUNT-COVERAGE-PROOF-2026-04-18.md)
+- [E2E-SERVICE-ACCOUNT-PROOF-2026-04-18.md](E2E-SERVICE-ACCOUNT-PROOF-2026-04-18.md)
+- [GPU-ROUTING-FAILOVER-PROOF-2026-04-18.md](GPU-ROUTING-FAILOVER-PROOF-2026-04-18.md)
+- [OLLAMA-INTEGRATION-CONTRACT-PROOF-2026-04-18.md](OLLAMA-INTEGRATION-CONTRACT-PROOF-2026-04-18.md)
+- [OLLAMA-MODEL-PROMOTION-GATES-PROOF-2026-04-18.md](OLLAMA-MODEL-PROMOTION-GATES-PROOF-2026-04-18.md)
+- [REPO-AWARE-AI-PIPELINE-PROOF-2026-04-18.md](REPO-AWARE-AI-PIPELINE-PROOF-2026-04-18.md)
+- [SECRETSLESS-AI-ACCESS-PROOF-2026-04-18.md](SECRETSLESS-AI-ACCESS-PROOF-2026-04-18.md)
+- [SETUP-STATE-RECONCILER-PROOF-2026-04-18.md](SETUP-STATE-RECONCILER-PROOF-2026-04-18.md)
+- [VPN-GATE-PROOF-2026-04-18.md](VPN-GATE-PROOF-2026-04-18.md)
 
-# Full stack (monitoring + tracing + AI)
-COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
-```
+## Completion Reports
 
-## Run Mode Matrix
+- [AGENT-HAND-OFF-COMPLETE-2026-04-18.md](AGENT-HAND-OFF-COMPLETE-2026-04-18.md)
+- [AGENT-EXEC-QUICKSTART.md](AGENT-EXEC-QUICKSTART.md)
+- [AGENT-TRIAGE-APRIL-18-2026.md](AGENT-TRIAGE-APRIL-18-2026.md)
+- [FINAL-TRIAGE-COMPLETION-2026-04-18.md](FINAL-TRIAGE-COMPLETION-2026-04-18.md)
+- [SESSION-2-APRIL-16-2026-SUMMARY.md](SESSION-2-APRIL-16-2026-SUMMARY.md)
+- [SESSION-3-FINAL-STATUS.md](SESSION-3-FINAL-STATUS.md)
+- [SESSION-3-REMEDIATION-SUMMARY.md](SESSION-3-REMEDIATION-SUMMARY.md)
+- [SESSION-4-PHASE-2-1-DEPLOYMENT-COMPLETE.md](SESSION-4-PHASE-2-1-DEPLOYMENT-COMPLETE.md)
+- [SESSION-5-PHASE-2-COMPLETE-AND-P2-418-STARTED.md](SESSION-5-PHASE-2-COMPLETE-AND-P2-418-STARTED.md)
+- [SESSION-APRIL-17-COMPLETION-RECORD.md](SESSION-APRIL-17-COMPLETION-RECORD.md)
+- [SESSION-APRIL-17-PHASE2-COMPLETION.md](SESSION-APRIL-17-PHASE2-COMPLETION.md)
+- [SESSION-COMPLETION-APRIL-22-2026.md](SESSION-COMPLETION-APRIL-22-2026.md)
+- [SESSION-COMPLETION-REPORT.md](SESSION-COMPLETION-REPORT.md)
+- [TRIAGE-COMPLETION-REPORT-2026-04-18.md](TRIAGE-COMPLETION-REPORT-2026-04-18.md)
+- [TRIAGE-COMPLETION-REPORT-APRIL-18-2026.md](TRIAGE-COMPLETION-REPORT-APRIL-18-2026.md)
+- [TRIAGE-COMPLETION-SUMMARY-2026-04-18.md](TRIAGE-COMPLETION-SUMMARY-2026-04-18.md)
+- [WORK-COMPLETE-FINAL-STATUS.md](WORK-COMPLETE-FINAL-STATUS.md)
 
-- IDE-only: `docker compose up -d`
-  Includes code-server, oauth2-proxy, caddy, postgres, and redis.
-- IDE + AI: `COMPOSE_PROFILES=ai docker compose up -d`
-  Includes IDE-only plus ollama.
-- IDE + Observability:
-  `COMPOSE_PROFILES=monitoring,tracing docker compose up -d`
-  Includes IDE-only plus prometheus, grafana, alertmanager, loki,
-  promtail, otel-collector, and jaeger.
-- Full platform:
-  `COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d`
-  Includes IDE, AI, and the observability stack.
+## Operational Evidence
 
-## Services
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [DELIVERY-ROADMAP-APRIL-2026.md](DELIVERY-ROADMAP-APRIL-2026.md)
+- [DEPLOYMENT-CHECKLIST-CODE-SERVER-DEV-ENV.md](DEPLOYMENT-CHECKLIST-CODE-SERVER-DEV-ENV.md)
+- [GOLDEN-RULE-ENFORCEMENT.md](GOLDEN-RULE-ENFORCEMENT.md)
+- [IMPLEMENTATION-ROADMAP-APRIL-23-2026.md](IMPLEMENTATION-ROADMAP-APRIL-23-2026.md)
+- [IMPLEMENTATION_SUMMARY_ISSUE_334.md](IMPLEMENTATION_SUMMARY_ISSUE_334.md)
+- [MIGRATION-COMPLETION-VERIFICATION.md](MIGRATION-COMPLETION-VERIFICATION.md)
+- [MIGRATION-FINAL-STATUS.md](MIGRATION-FINAL-STATUS.md)
+- [MIGRATION-PR-103-FIXES-REQUIRED.md](MIGRATION-PR-103-FIXES-REQUIRED.md)
+- [MIGRATION-PR-103-VERIFICATION.md](MIGRATION-PR-103-VERIFICATION.md)
+- [MONOREPO-REFACTOR-EVIDENCE.md](MONOREPO-REFACTOR-EVIDENCE.md)
+- [OAUTH2-LOGIN-FIX-COMPLETE.md](OAUTH2-LOGIN-FIX-COMPLETE.md)
+- [OAUTH2-RESOLUTION-SUMMARY.md](OAUTH2-RESOLUTION-SUMMARY.md)
+- [OLLAMA-INTEGRATION.md](OLLAMA-INTEGRATION.md)
+- [OLLAMA-MIGRATION.md](OLLAMA-MIGRATION.md)
+- [PHASE-3-CONSOLIDATION-COMPLETE.md](PHASE-3-CONSOLIDATION-COMPLETE.md)
+- [PHASE-3-EXECUTIVE-SUMMARY.md](PHASE-3-EXECUTIVE-SUMMARY.md)
+- [PHASE-4-CLEANUP-IMPLEMENTATION.md](PHASE-4-CLEANUP-IMPLEMENTATION.md)
+- [PHASE-5-PRODUCTION-DEPLOYMENT.md](PHASE-5-PRODUCTION-DEPLOYMENT.md)
+- [PRODUCTION-DEPLOYMENT-AUTHORIZATION-2026-04-18.md](PRODUCTION-DEPLOYMENT-AUTHORIZATION-2026-04-18.md)
+- [QUALITY-GATE-FAILURE-ANALYSIS.md](QUALITY-GATE-FAILURE-ANALYSIS.md)
+- [QUALITY-GATE-REMEDIATION-STATUS.md](QUALITY-GATE-REMEDIATION-STATUS.md)
+- [RUNBOOK-POLICY-ROLLBACK.md](RUNBOOK-POLICY-ROLLBACK.md)
+- [RUNBOOK-POLICY-UPDATE.md](RUNBOOK-POLICY-UPDATE.md)
+- [SECURITY-HARDENING-P0-COMPLETE.md](SECURITY-HARDENING-P0-COMPLETE.md)
+- [WORKLOAD_FEDERATION_IMPLEMENTATION.md](WORKLOAD_FEDERATION_IMPLEMENTATION.md)
 
-| Service | Port | Profile | Notes |
-|---------|------|---------|-------|
-| code-server | 8080 | core | VS Code in browser |
-| oauth2-proxy | 4180 | core | Authentication gateway |
-| caddy (TLS) | 80/443 | core | Reverse proxy |
-| postgres | 5432 | core | Session/audit DB |
-| redis | 6379 | core | Cache/session store |
-| prometheus | 9090 | monitoring | Metrics scraper |
-| grafana | 3000 | monitoring | Dashboards |
-| alertmanager | 9093 | monitoring | Alert routing |
-| loki | 3100 | tracing | Log aggregation |
-| promtail | — | tracing | Log shipping agent |
-| otel-collector | 4317/4318 | tracing | Trace aggregator |
-| jaeger UI | 16686 | tracing | Trace visualiser |
-| ollama (LLM) | 11434 | ai | Local LLM server |
+## Reports
 
-## Local Development
+- [DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md)
+- [ELITE-INFRASTRUCTURE-SUMMARY.md](ELITE-INFRASTRUCTURE-SUMMARY.md)
+- [ISSUE-TRIAGE-APRIL-16-2026.md](ISSUE-TRIAGE-APRIL-16-2026.md)
 
-```bash
-# Dev overlay — bypasses oauth2-proxy, exposes db ports
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-```
+## Notes
 
-## Deployment
-
-All deployments run **on the production host** (not locally):
-
-```bash
-ssh akushnir@192.168.168.31
-cd code-server-enterprise
-docker compose up -d
-```
-
-For AI or observability in production, use the same profile flags from
-`Quick Start` on host `192.168.168.31`.
-
-## Profile Persistence And Backups
-
-code-server user state is persisted across logins, container
-recreation, and image upgrades.
-
-- Primary persistence: Docker volume mounted at `/home/coder`
-- User profile path: `/home/coder/.local/share/code-server/User`
-- Extensions path: `/home/coder/.local/share/code-server/extensions`
-- Backup service: `code-server-profile-backup`
-- Backup cadence: every 6 hours
-- Retention: 30 days
-
-### Verify Runtime Persistence
-
-Run on production host:
-
-```bash
-ssh akushnir@192.168.168.31
-cd code-server-enterprise
-docker compose ps --format 'table {{.Names}}  {{.Status}}' |
-  egrep '^(code-server|code-server-profile-backup)\s'
-docker exec code-server \
-  ls -la /home/coder/.local/share/code-server/User | head -20
-```
-
-### Restore A Profile Backup
-
-```bash
-ssh akushnir@192.168.168.31
-docker run --rm \
-  -v code-server-enterprise_code-server-profile-backups:/backups \
-  alpine:3.20 ls -la /backups
-docker run --rm \
-  -v code-server-enterprise_code-server-data:/target \
-  -v code-server-enterprise_code-server-profile-backups:/backups \
-  alpine:3.20 \
-  sh -lc \
-    'tar -xzf /backups/code-server-user-profile-YYYYMMDD-HHMMSS.tgz \
-    -C /target'
-```
-
-After restore:
-
-```bash
-cd code-server-enterprise
-docker compose up -d --force-recreate code-server
-```
-
-## Architecture
-
-See [ARCHITECTURE.md](ARCHITECTURE.md),
-[ADR index](docs/adr/README.md), and
-[Cloudflare tunnel ADR](docs/adr/006-cloudflare-tunnel-architecture.md).
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and
-[GitHub Issues](https://github.com/kushin77/code-server/issues).
+- Keep durable evidence in this folder only when it is meant to be retained.
+- Route active blockers to [../triage/README.md](../triage/README.md), runbooks to [../ops/README.md](../ops/README.md), and canonical structure guidance to [../structure/README.md](../structure/README.md).

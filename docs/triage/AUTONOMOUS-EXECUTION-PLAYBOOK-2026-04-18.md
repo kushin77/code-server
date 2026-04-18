@@ -8,15 +8,15 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Epic: #660
 - Branch feature: #671
 - CI stabilization blocker: #687
-- Production OAuth redeploy blocker: #688
+- Production OAuth redeploy blocker: #692
 
 ## Closed Duplicate
 - #689 (duplicate of #687)
 
 ## Dependency Order
 1. Resolve #687 first (branch CI determinism).
-2. Resolve #688 second (production callback redeploy execution path + runtime verification).
-3. Resume completion/closure flow for #671 once #687 and #688 are closed.
+2. Resolve #692 second (production callback redeploy execution path + runtime verification).
+3. Resume completion/closure flow for #671 once #687 and #692 are closed.
 
 ## Issue #687 Execution Checklist
 - Reproduce failing workflows listed in issue body.
@@ -24,9 +24,9 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Ensure all checks are deterministic and idempotent.
 - Re-run failed workflows and attach run URLs proving green state.
 
-## Issue #688 Execution Checklist
+## Issue #692 Execution Checklist
 - Provision an executable path to prod host:
-  - preferred: register self-hosted Actions runner for repo
+  - preferred: register self-hosted Actions runner for repo on a Docker-capable production host
   - fallback: non-interactive SSH access to `192.168.168.31`
 - Execute idempotent script:
   - `bash scripts/deploy/redeploy-portal-oauth-routing.sh`
@@ -43,6 +43,8 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Use `Fixes #N` in PRs to close issues automatically on merge.
 
 ## Current Runtime Facts
-- Local script validation passes; deploy execution fails due missing auth path to prod host.
-- Self-hosted runner count observed as zero for this repo during triage.
-- Live apex redirect still points to IDE callback until #688 is executed.
+- Local script validation passes in `--local` mode; a temporary self-hosted runner in this session also validated the workflow path and the VPN-only gate.
+- Temporary self-hosted runner evidence: portal-oauth-redeploy.yml run `24608948773` succeeded; vpn-e2e-gate.yml run `24608949154` succeeded.
+- Live apex redirect still points to IDE callback until #692 is executed.
+- Docs consolidation tracker #691 is closed; the legacy docs-root files are compatibility stubs and the canonical indexes are in place.
+- Parallel open PR lanes remain for #686, #684, and #649; keep them separate from the production blocker path.

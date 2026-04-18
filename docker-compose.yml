@@ -317,7 +317,7 @@ services:
       - DOCKER_SOCKET=/var/run/docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:rw
-      - /var/lib/code-server-sessions:/var/lib/code-server-sessions:rw
+      - session-broker-sessions:/var/lib/code-server-sessions:rw
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
       interval: 30s
@@ -778,6 +778,9 @@ volumes:
   caddy-config:
     driver: local
   caddy-data:
+    driver: local
+
+  session-broker-sessions:
     driver: local
 
   appsmith-data:

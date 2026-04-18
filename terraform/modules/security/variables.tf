@@ -19,6 +19,17 @@ variable "vault_version" {
   default     = "1.15.0"
 }
 
+variable "vault_mode" {
+  description = "Vault runtime mode (dev or production)"
+  type        = string
+  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "production"], var.vault_mode)
+    error_message = "vault_mode must be dev or production"
+  }
+}
+
 variable "vault_storage_size" {
   description = "Vault persistent volume size"
   type        = string

@@ -66,6 +66,7 @@ module "security" {
   falco_version       = var.falco_version
   opa_version         = var.opa_version
   vault_version       = var.vault_version
+  vault_mode          = var.vault_mode
   vault_storage_size  = var.vault_storage_size
   vault_unseal_keys   = var.vault_unseal_keys
   vault_key_threshold = var.vault_key_threshold

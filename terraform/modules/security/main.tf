@@ -8,6 +8,8 @@ locals {
       module = "security"
     }
   )
+
+  vault_is_dev = var.vault_mode == "dev"
 }
 
 # Namespace
@@ -250,24 +252,47 @@ resource "kubernetes_deployment" "vault" {
           name  = "vault"
           image = "vault:${var.vault_version}"
 
+          args = local.vault_is_dev ? [
+            "server",
+            "-dev"
+          ] : [
+            "server",
+            "-config=/vault/config/vault.hcl"
+          ]
+
           port {
             container_port = 8200
             name           = "http"
           }
 
-          env {
-            name  = "VAULT_DEV_ROOT_TOKEN_ID"
-            value = "dev-root-token"
+          dynamic "env" {
+            for_each = local.vault_is_dev ? [1] : []
+            content {
+              name  = "VAULT_DEV_ROOT_TOKEN_ID"
+              value = "dev-root-token"
+            }
           }
 
-          env {
-            name  = "VAULT_DEV_LISTEN_ADDRESS"
-            value = "0.0.0.0:8200"
+          dynamic "env" {
+            for_each = local.vault_is_dev ? [1] : []
+            content {
+              name  = "VAULT_DEV_LISTEN_ADDRESS"
+              value = "0.0.0.0:8200"
+            }
           }
 
           volume_mount {
             mount_path = "/vault/data"
             name       = "storage"
+          }
+
+          dynamic "volume_mount" {
+            for_each = local.vault_is_dev ? [] : [1]
+            content {
+              mount_path = "/vault/config"
+              name       = "vault-config"
+              read_only  = true
+            }
           }
 
           resources {
@@ -290,6 +315,16 @@ resource "kubernetes_deployment" "vault" {
           name = "storage"
           persistent_volume_claim {
             claim_name = kubernetes_persistent_volume_claim.vault[0].metadata[0].name
+          }
+        }
+
+        dynamic "volume" {
+          for_each = local.vault_is_dev ? [] : [1]
+          content {
+            name = "vault-config"
+            config_map {
+              name = kubernetes_config_map.vault_config[0].metadata[0].name
+            }
           }
         }
       }
@@ -361,6 +396,32 @@ resource "kubernetes_persistent_volume_claim" "vault" {
         storage = var.vault_storage_size
       }
     }
+  }
+}
+
+# Vault ConfigMap (production mode)
+resource "kubernetes_config_map" "vault_config" {
+  count = var.docker_host == "" && !local.vault_is_dev ? 1 : 0
+  metadata {
+    name      = "vault-config"
+    namespace = var.namespace
+  }
+
+  data = {
+    "vault.hcl" = <<-EOT
+      ui = true
+
+      listener "tcp" {
+        address     = "0.0.0.0:8200"
+        tls_disable = 1
+      }
+
+      storage "file" {
+        path = "/vault/data"
+      }
+
+      api_addr = "http://vault.${var.namespace}.svc.cluster.local:8200"
+    EOT
   }
 }
 

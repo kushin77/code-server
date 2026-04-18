@@ -35,6 +35,11 @@ output "vault_version" {
   value       = var.vault_version
 }
 
+output "vault_mode" {
+  description = "Vault runtime mode"
+  value       = var.vault_mode
+}
+
 output "vault_unseal_keys_count" {
   description = "Number of Vault unseal keys"
   value       = var.vault_unseal_keys

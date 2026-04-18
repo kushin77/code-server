@@ -1,0 +1,93 @@
+# @file        config/control-plane-contract.yml
+# @module      policy/contract
+# @description Admin-portal-to-code-server control-plane contract.
+#              Defines the canonical schema for policy bundles issued by the admin portal.
+#              Code-server consumes this contract as a thin client; it does NOT own access decisions.
+#
+# This file is the SSOT for the contract shape. Runtime policy bundles are fetched from
+# the admin portal at session start and cached for a short window only.
+
+version: "1"
+contract_id: "code-server-thin-client-v1"
+
+# ── Identity assertion ────────────────────────────────────────────────────────
+# Signed by admin portal OIDC issuer; verified by code-server at session start.
+identity:
+  fields:
+    - email           # Required: user@example.com
+    - sub             # Required: stable user ID
+    - roles           # Required: ["developer", "admin", "read-only"]
+    - org             # Required: kushin77 or scoped org
+    - iat             # Required: issued-at epoch
+    - exp             # Required: expiry epoch
+  signature:
+    algorithm: RS256
+    issuer: "${POLICY_ISSUER_URL:-https://kushnir.cloud}"
+    audience: "code-server"
+
+# ── Session policy bundle ─────────────────────────────────────────────────────
+# Issued at login; short-lived cache (ttl = max_cache_ttl_seconds).
+session:
+  max_cache_ttl_seconds: 300    # 5 minutes — then re-fetch or enter fail-safe
+  revocation_check_interval: 60 # seconds between revocation checks
+  fail_safe_mode: deny-mutating  # deny-all | deny-mutating | read-only-cache
+  propagation_window_seconds: 30 # max time to reflect portal revoke in code-server
+
+# ── Repository entitlements ───────────────────────────────────────────────────
+# Admin portal controls which repos a user can open and what they can do.
+entitlements:
+  fields:
+    - repos           # List of allowed repos (glob or explicit)
+    - workspace_policy # Policy bundle name for each repo
+    - credential_scope # GSM secrets accessible in this workspace
+    - extension_allowlist # Extensions allowed in this repo context
+    - terminal_policy  # Allowed commands, env var injection rules
+
+# ── Workspace policy bundle ───────────────────────────────────────────────────
+# JSON blob fetched from admin portal and applied to running code-server session.
+workspace_policy:
+  required_fields:
+    - policy_version
+    - policy_date
+    - repo_pattern
+    - extension_allowlist
+    - terminal_env
+  optional_fields:
+    - ai_endpoint
+    - db_credentials_scope
+    - break_glass_allowed
+
+# ── Audit/event propagation ───────────────────────────────────────────────────
+# All enforcement decisions are logged with correlation IDs.
+audit:
+  correlation_id_header: "X-Correlation-ID"
+  events:
+    - session_start
+    - session_revoke
+    - policy_apply
+    - drift_detected
+    - break_glass_used
+    - entitlement_failure
+  sink: "${AUDIT_SINK_URL:-/tmp/ide-audit.log}"
+
+# ── Fail-safe modes ───────────────────────────────────────────────────────────
+fail_safe:
+  trigger: portal_unreachable   # When admin portal is not reachable
+  behavior: deny-mutating        # deny-all | deny-mutating | read-only-cache
+  # deny-mutating: read-only IDE access permitted; no git push, no credential changes
+  # deny-all: full lockout — only safe if break_glass override exists
+  # read-only-cache: use last-known-good policy bundle (risk: stale entitlements)
+  cache_validity_seconds: 600   # Use cached bundle for up to 10 minutes
+
+# ── Drift detection ───────────────────────────────────────────────────────────
+drift_detection:
+  monitored_paths:
+    - "${HOME}/.local/share/code-server/User/settings.json"
+    - "${HOME}/.gitconfig"
+    - "${HOME}/.git-credentials"
+  monitored_env_vars:
+    - GSM_PROJECT
+    - GSM_SECRET_NAME
+    - GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME
+  alert_on_local_mutation: true
+  auto_remediate: false   # Require explicit approval before auto-revert

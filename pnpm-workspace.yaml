@@ -3,8 +3,4 @@ packages:
   - frontend
   - extensions/*
 
-onlyBuiltDependencies: []packages:
-  - apps/*
-  - packages/*
-  - services/*
-  - frontend/*
+onlyBuiltDependencies: []

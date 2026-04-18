@@ -45,8 +45,8 @@ jobs:
           provider="${provider#//iam.googleapis.com/}"
           provider="${provider#https://iam.googleapis.com/}"
           provider="${provider#iam.googleapis.com/}"
-          if [[ "$provider" != projects/*/locations/global/workloadIdentityPools/*/providers/* ]]; then
-            echo "GCP_WIF_PROVIDER is not a canonical provider resource; using ${default_provider}" >&2
+          if [[ ! "$provider" =~ ^projects/[0-9]+/locations/global/workloadIdentityPools/[^/]+/providers/[^/]+$ ]]; then
+            echo "GCP_WIF_PROVIDER is not a canonical numeric provider resource; using ${default_provider}" >&2
             provider="$default_provider"
           fi
           if [[ -z "$provider" ]]; then

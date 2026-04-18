@@ -92,6 +92,7 @@ kushnir.cloud {
     @auth_reset path /auth/reset
     handle @auth_reset {
         header Clear-Site-Data "\"cache\", \"cookies\", \"storage\""
+        header Content-Type "text/html; charset=utf-8"
         header Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
         header +Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
         header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"

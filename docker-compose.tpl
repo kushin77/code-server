@@ -44,7 +44,7 @@ services:
       - "--auth=password"
     volumes:
       - ${data_volume}:/home/coder/.local/share/code-server
-      - ${workspace_dir}:${workspace_path}
+      - ${workspace_volume}:${workspace_path}
       - ./config/settings.json:/etc/code-server/settings.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${code_server_port}/healthz"]
@@ -254,10 +254,29 @@ networks:
         - subnet: 172.28.0.0/16
 
 volumes:
+  # ── NAS-backed (shared across .31 and .42 via NFS) ──────────────────────
   ${data_volume}:
     driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${nas_host},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      device: ":${nas_export_path}/code-server/profile"
+
+  ${workspace_volume}:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${nas_host},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      device: ":${nas_export_path}/code-server/workspace"
+
   ${ollama_volume}:
     driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${nas_host},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      device: ":${nas_export_path}/ollama"
+
+  # ── Local-only (NFS locking incompatible with these engines) ─────────────
   caddy-config:
     driver: local
   caddy-data:

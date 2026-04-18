@@ -55,6 +55,14 @@ check_absent "$TEMPLATE_COMPOSE" '--auth=none' 'unauthenticated code-server mode
 check_absent "$TEMPLATE_COMPOSE" 'CODE_SERVER_PASSWORD:-' 'weak fallback password syntax in template'
 check_present "$TEMPLATE_COMPOSE" 'CODE_SERVER_PASSWORD:\?CODE_SERVER_PASSWORD must be set' 'required CODE_SERVER_PASSWORD guard in template'
 
+# ── NAS-backed volume invariants ──────────────────────────────────────────────
+# Ensure key stateful volumes use NFS and the workspace is not a host bind-mount
+check_present "$BASE_COMPOSE" 'NAS_HOST.*192\.168\.168\.56|addr=.*192\.168\.168\.56' 'NAS host .56 referenced in volume driver_opts'
+check_present "$BASE_COMPOSE" 'type: nfs' 'NFS volume type declared'
+check_absent "$BASE_COMPOSE" '^\s*- \./workspace:' 'host-local workspace bind-mount (must use NFS volume)'
+
+check_present "$TEMPLATE_COMPOSE" 'type: nfs' 'NFS volume type in template'
+
 if [[ "$has_failure" -ne 0 ]]; then
   log_fatal "Compose hardening guard failed"
 fi

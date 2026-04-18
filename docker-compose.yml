@@ -51,7 +51,7 @@ services:
       - GOPATH=/opt/go
       - RUST_BACKTRACE=1
     volumes:
-      - ./workspace:/home/coder/workspace
+      - code-server-workspace:/home/coder/workspace
       - code-server-profile:/home/coder/.local/share/code-server
       - ./config/code-server/settings.json:/etc/code-server/settings.json:ro
     security_opt:
@@ -674,22 +674,52 @@ networks:
 
 # ════════════════════════════════════════════════════════════════════════════
 # Volumes — All named, all persisted. No anonymous volumes.
+# NAS-backed volumes (code-server-workspace, code-server-profile, code-server-profile-backups,
+# ollama-data, postgres-backup) mount NFS from NAS_HOST (192.168.168.56).
+# Both .31 and .42 mount the same NFS exports — no rsync replication needed.
+# DB engine volumes (postgres-data, redis-data, prometheus-data, grafana-data, caddy-*)
+# stay driver:local — NFS causes locking issues with those engines.
 # ════════════════════════════════════════════════════════════════════════════
 volumes:
+  # ── NAS-backed (shared across .31 and .42 via NFS) ───────────────────────
+  code-server-workspace:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      device: ":${NAS_EXPORT_PATH:-/export}/code-server/workspace"
+
   code-server-profile:
     driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      device: ":${NAS_EXPORT_PATH:-/export}/code-server/profile"
 
   code-server-profile-backups:
     driver: local
-  
-  # ✅ NAS-backed storage for ollama models (persistent across failover to .30)
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      device: ":${NAS_EXPORT_PATH:-/export}/code-server/profile-backups"
+
+  # ✅ NAS-backed: ollama models persist across failover
   ollama-data:
     driver: local
-  
-  # ✅ NAS-backed storage for PostgreSQL automated backups
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      device: ":${NAS_EXPORT_PATH:-/export}/ollama"
+
+  # ✅ NAS-backed: postgres backups/PITR persist across failover
   postgres-backup:
     driver: local
-  
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      device: ":${NAS_EXPORT_PATH:-/export}/postgres/backups"
+
+  # ── Local-only (NFS locking incompatible with these engines) ─────────────
   postgres-data:
     driver: local
   redis-data:

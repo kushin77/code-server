@@ -25,40 +25,9 @@ jobs:
     name: Redeploy portal OAuth routing
     runs-on: self-hosted
     environment: production
-    env:
-      DEPLOY_HOST: 192.168.168.31
-      DEPLOY_USER: akushnir
-      DEPLOY_DIR: /home/akushnir/code-server-enterprise
-      DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
-      DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-
-      - name: Install SSH key
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "${DEPLOY_SSH_PRIVATE_KEY:-}" ]]; then
-            echo "::error::Missing required secret DEPLOY_SSH_PRIVATE_KEY"
-            exit 1
-          fi
-
-          SSH_KEY_PATH="${RUNNER_TEMP}/deploy_key"
-          SSH_KNOWN_HOSTS="${RUNNER_TEMP}/known_hosts"
-
-          mkdir -p "$HOME/.ssh"
-          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > "$SSH_KEY_PATH"
-          chmod 600 "$SSH_KEY_PATH"
-
-          if [[ -n "${DEPLOY_SSH_KNOWN_HOSTS:-}" ]]; then
-            printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > "$SSH_KNOWN_HOSTS"
-          else
-            ssh-keyscan -H "$DEPLOY_HOST" > "$SSH_KNOWN_HOSTS"
-          fi
-          chmod 644 "$SSH_KNOWN_HOSTS"
-
-          echo "SSH_OPTS=-i $SSH_KEY_PATH -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=10" >> "$GITHUB_ENV"
 
       - name: Validate callback split in source compose
         shell: bash
@@ -72,14 +41,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run
+          bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local
 
       - name: Redeploy portal services
         if: ${{ !inputs.dry_run }}
         shell: bash
         run: |
           set -euo pipefail
-          bash scripts/deploy/redeploy-portal-oauth-routing.sh
+          bash scripts/deploy/redeploy-portal-oauth-routing.sh --local
 
       - name: Verify live redirects
         if: ${{ !inputs.dry_run }}
@@ -101,7 +70,7 @@ jobs:
           {
             echo "## Portal OAuth Redeploy"
             echo "- Runner: self-hosted"
-            echo "- Execution: scripts/deploy/redeploy-portal-oauth-routing.sh"
+            echo "- Execution: scripts/deploy/redeploy-portal-oauth-routing.sh --local"
             if [[ "${{ inputs.dry_run }}" == "true" ]]; then
               echo "- Mode: dry-run"
             else

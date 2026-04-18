@@ -279,6 +279,17 @@ The following metadata ensures safe concurrent agent execution:
 
 ---
 
+## Parallel Work PRs (Not Blocking)
+
+**Note:** Three PRs exist for issues closed in prior work sessions (#618, #670, #643):
+- **PR #649:** feat(policy): Enterprise Policy Pack (#618) - Closed issue, unmerged feature branch
+- **PR #684:** feat(monorepo): Bootstrap pnpm workspace (#670) - Closed issue, unmerged feature branch  
+- **PR #686:** fix(oauth): Surface-specific redirects (#643) - Closed issue, unmerged feature branch
+
+**Status:** These are NOT part of the 41-issue triage scope. Issues were closed Apr 18 morning via prior work. PRs have merge conflicts with main due to subsequent changes. **No blocker for production deployment.** Next agent may evaluate for future merge if desired.
+
+---
+
 ## Final Status
 
 ```

@@ -38,6 +38,22 @@ Last Updated: 2026-04-18
 4. Verify health gates
 5. Record evidence and close or update issues
 
+## Canonical Command Entry Points
+
+- `bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode ssh --fix-stale-logs`
+- `bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode ssh --fix-stale-logs`
+- `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action status|promote|failback`
+- `bash scripts/operations/redeploy/onprem/operator-run-mode.sh --action preflight|redeploy|status|promote|failback`
+
+## Operator Run Mode
+
+- Workspace tasks in `.vscode/tasks.json` are canonical in-code-server operation entrypoints:
+	- `ops:preflight-onprem`
+	- `ops:redeploy-onprem`
+	- `ops:failover-status`
+	- `ops:failover-promote-replica`
+	- `ops:failover-failback-primary`
+
 ## Non-Negotiables
 
 - No local Windows terraform apply for production stack

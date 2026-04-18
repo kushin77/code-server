@@ -89,6 +89,33 @@ docker-compose ps
 docker-compose logs --tail=100 code-server oauth2-proxy caddy
 ```
 
+## Canonical Failover Sequence
+
+Single entrypoint for status, promotion, and failback:
+
+```bash
+bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action status
+bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action promote
+bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action failback
+```
+
+In-code-server operator wrapper (single command family for preflight/redeploy/failover/failback):
+
+```bash
+bash scripts/operations/redeploy/onprem/operator-run-mode.sh --action preflight
+bash scripts/operations/redeploy/onprem/operator-run-mode.sh --action redeploy
+bash scripts/operations/redeploy/onprem/operator-run-mode.sh --action status
+bash scripts/operations/redeploy/onprem/operator-run-mode.sh --action promote
+bash scripts/operations/redeploy/onprem/operator-run-mode.sh --action failback
+```
+
+Failover script guarantees:
+
+- Session-aware host lock at `/tmp/code-server-failover.lock` to prevent multi-actor overlap.
+- Health gates for `code-server` on primary and replica before marker updates.
+- Structured evidence JSON written under `/tmp/code-server-failover-evidence/` on primary host.
+- Replica ingress verification through `http://192.168.168.42:18080/oauth2/start?rd=/` when `:80/:443` are unavailable on replica.
+
 ## Health Gates
 
 - `code-server`, `oauth2-proxy`, `caddy`, `postgres`, and `redis` are up

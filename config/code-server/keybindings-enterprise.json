@@ -1,0 +1,50 @@
+[
+  {
+    "key": "ctrl+shift+g c",
+    "command": "git.commit",
+    "when": "gitFocus",
+    "label": "Stage and Commit (Git)"
+  },
+  {
+    "key": "ctrl+shift+g p",
+    "command": "git.pull",
+    "when": "gitFocus",
+    "label": "Pull (Git)"
+  },
+  {
+    "key": "ctrl+shift+g u",
+    "command": "git.push",
+    "when": "gitFocus",
+    "label": "Push (Git)"
+  },
+  {
+    "key": "shift+alt+f",
+    "command": "editor.action.formatDocument",
+    "when": "editorTextFocus",
+    "label": "Format Document"
+  },
+  {
+    "key": "ctrl+.",
+    "command": "editor.action.quickFix",
+    "when": "editorTextFocus && editorHasQuickFixProvider",
+    "label": "Quick Fix"
+  },
+  {
+    "key": "ctrl+alt+l",
+    "command": "editor.action.formatDocument",
+    "when": "editorTextFocus",
+    "label": "Format Document (Alternative)"
+  },
+  {
+    "key": "ctrl+k ctrl+x",
+    "command": "editor.action.trimTrailingWhitespace",
+    "when": "editorTextFocus",
+    "label": "Trim Trailing Whitespace"
+  },
+  {
+    "key": "ctrl+shift+o",
+    "command": "editor.action.organizeImports",
+    "when": "editorTextFocus && editorLangId == 'typescript' || editorLangId == 'javascript' || editorLangId == 'python'",
+    "label": "Organize Imports"
+  }
+]

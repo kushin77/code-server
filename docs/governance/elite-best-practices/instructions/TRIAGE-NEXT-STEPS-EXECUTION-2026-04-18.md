@@ -118,6 +118,10 @@ Run compose hardening baseline guard:
 
 - `bash scripts/ci/check-compose-hardening-guard.sh`
 
+Run overlap/staleness backlog guard:
+
+- `bash scripts/ci/validate-triage-open-backlog.sh`
+
 ## Bootstrap Reference
 
 - See `docs/governance/elite-best-practices/instructions/DEPLOY-IDENTITY-BOOTSTRAP.md` for deterministic identity setup and `local-on-host` fallback.

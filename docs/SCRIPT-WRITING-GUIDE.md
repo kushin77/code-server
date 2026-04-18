@@ -134,13 +134,14 @@ DOMAIN="kushnir.cloud"             # ← Hardcoded!
 DEPLOY_TIMEOUT="300"               # ← Hardcoded!
 ```
 
-✅ **CORRECT** (single source of truth = `.env`):
+✅ **CORRECT** (GSM-first secret flow; `.env` only for local fallback):
 ```bash
-# All config loaded from .env by init.sh → config.sh
-# NO hardcoded values allowed
-DEPLOY_HOST="${DEPLOY_HOST}"       # ← From .env
-DEPLOY_USER="${DEPLOY_USER}"       # ← From .env
-DOMAIN="${DOMAIN}"                 # ← From .env
+# Secret material comes from GSM via scripts/fetch-gsm-secrets.sh
+# Local development may fall back to .env only when explicitly configured
+source scripts/fetch-gsm-secrets.sh
+DEPLOY_HOST="${DEPLOY_HOST}"       # ← From env / config
+DEPLOY_USER="${DEPLOY_USER}"       # ← From env / config
+DOMAIN="${DOMAIN}"                 # ← From env / config
 DEPLOY_TIMEOUT="${DEPLOY_TIMEOUT:-300}"  # ← Default if missing
 
 # Validate required config exists
@@ -148,9 +149,9 @@ require_var "DEPLOY_HOST" "Deployment host required from .env"
 require_var "DEPLOY_USER" "SSH user required from .env"
 ```
 
-**Master Config File**: `.env.template`
+**Master Config File**: `.env.template` for non-secret deployment config; GSM for secret material
 ```bash
-# This is the SINGLE SOURCE OF TRUTH for all deployment config
+# This is the single source of truth for non-secret deployment config
 export DEPLOY_HOST="192.168.168.31"
 export DEPLOY_USER="akushnir"
 export DOMAIN="kushnir.cloud"
@@ -158,10 +159,15 @@ export REGISTRY_URL="ghcr.io"
 # ... all other config
 ```
 
+**Credential Model**
+- GSM is the default source for secret material.
+- Service accounts are for workload identity and machine-to-machine API access.
+- SSH keys are for host transport/authentication only.
+
 **Load in script**:
 ```bash
 # init.sh automatically loads from .env if it exists
-# No action needed — it's automatic!
+# No action needed for local non-secret config — it's automatic!
 ```
 
 ---

@@ -18,11 +18,15 @@ Root cause classification:
 Evidence bundle:
 - `scripts/ops/reconcile-setup-state.sh` emits a structured JSON report with reason codes.
 - `scripts/ci/check-autopilot-setup-drift.sh` fails when setup-state drift reappears while capability probes remain healthy.
+- `scripts/ops/reconcile-setup-state.sh` now bootstraps `GITHUB_TOKEN` from GSM when the shell does not already export it.
+- `docs/ops/AUTOPILOT-SETUP-STATE-RUNBOOK.md` captures the immutable operator recovery flow.
+- The reconciler report now includes `started_at`, `finished_at`, and `elapsed_seconds` for startup timing evidence.
 
 Validated remediation:
 - Enforce canonical auth env at startup.
 - Run a deterministic reconciler instead of relying on stale UI cache.
 - Only clear setup flags when capability probes are healthy.
+- Prefer GSM-backed auth bootstrap over ad hoc token export when running the reconciler locally.
 
 Actionable diagnostics:
 - Operators should use the reconciler reason codes instead of a generic setup CTA.

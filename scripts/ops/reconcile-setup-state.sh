@@ -9,12 +9,18 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
+STARTED_AT_EPOCH="$(date +%s)"
+STARTED_AT_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 DRY_RUN="${DRY_RUN:-0}"
 FIX_MODE="${1:-}"
 [[ "$FIX_MODE" == "--dry-run" ]] && DRY_RUN=1
 
-_log()  { echo "[setup-reconcile] $*"; }
-_warn() { echo "[setup-reconcile] WARN: $*" >&2; }
+setup_log()  { log_info "[setup-reconcile] $*"; }
+setup_warn() { log_warn "[setup-reconcile] $*"; }
 
 PASS=0; FAIL=0; FIXED=0
 REPORT_FILE="${SETUP_RECONCILE_REPORT:-/tmp/setup-reconcile-report.json}"
@@ -25,10 +31,10 @@ probe() {
   local name="$1" status="$2" reason_code="$3" detail="${4:-}"
   RESULTS+=("{\"probe\":$(printf '%s' "$name" | python3 -c "import sys,json;print(json.dumps(sys.stdin.read()))"),\"status\":\"$status\",\"reason_code\":\"$reason_code\",\"detail\":$(printf '%s' "$detail" | python3 -c "import sys,json;print(json.dumps(sys.stdin.read()))")}")
   if [[ "$status" == "ok" ]]; then
-    _log "OK    $name [$reason_code]${detail:+: $detail}"
+    setup_log "OK    $name [$reason_code]${detail:+: $detail}"
     PASS=$(( PASS + 1 ))
   else
-    _warn "FAIL  $name [$reason_code]${detail:+: $detail}"
+    setup_warn "FAIL  $name [$reason_code]${detail:+: $detail}"
     FAIL=$(( FAIL + 1 ))
     FAILED_REASONS+=("$reason_code")
   fi
@@ -44,7 +50,7 @@ else
   if [[ "$FIX_MODE" == "--fix" && "$DRY_RUN" != "1" ]]; then
     git config --global credential.helper "$(command -v git-credential-gsm 2>/dev/null || echo /usr/local/bin/git-credential-gsm)"
     FIXED=$(( FIXED + 1 ))
-    _log "FIX: set git credential.helper"
+    setup_log "FIX: set git credential.helper"
   fi
 fi
 
@@ -55,7 +61,7 @@ if [[ -x "$KEEPALIVE_BIN" ]] && "$KEEPALIVE_BIN" status > /dev/null 2>&1; then
 else
   probe "auth-keepalive" "fail" "AUTH_KEEPALIVE_STOPPED" "daemon not running"
   if [[ "$FIX_MODE" == "--fix" && "$DRY_RUN" != "1" && -x "$KEEPALIVE_BIN" ]]; then
-    "$KEEPALIVE_BIN" start && FIXED=$(( FIXED + 1 )) && _log "FIX: started auth-keepalive"
+    "$KEEPALIVE_BIN" start && FIXED=$(( FIXED + 1 )) && setup_log "FIX: started auth-keepalive"
   fi
 fi
 
@@ -66,14 +72,19 @@ else
   probe "gsm-env-canonical" "fail" "AUTH_ENV_DRIFT" "GSM_PROJECT=${GSM_PROJECT:-<unset>} GSM_SECRET_NAME=${GSM_SECRET_NAME:-<unset>}"
 fi
 
-# 4. GITHUB_TOKEN available
+# 4. Bootstrap GitHub auth from the canonical GSM path when needed.
+if [[ -z "${GITHUB_TOKEN:-}" || -z "${GH_TOKEN:-}" ]]; then
+  bootstrap_github_auth || true
+fi
+
+# 5. GITHUB_TOKEN available
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
   probe "github-token" "ok" "HEALTHY" "[set]"
 else
   probe "github-token" "fail" "AUTH_SCOPE_MISSING" "GITHUB_TOKEN not set — git push/fetch may fail"
 fi
 
-# 5. code-server-auth doctor (if available)
+# 6. code-server-auth doctor (if available)
 if command -v code-server-auth >/dev/null 2>&1; then
   if code-server-auth doctor > /dev/null 2>&1; then
     probe "code-server-auth-doctor" "ok" "HEALTHY"
@@ -82,7 +93,7 @@ if command -v code-server-auth >/dev/null 2>&1; then
   fi
 fi
 
-# 6. Policy bundle/portal reachable (best-effort)
+# 7. Policy bundle/portal reachable (best-effort)
 PORTAL="${POLICY_PORTAL_URL:-https://kushnir.cloud}"
 if command -v curl >/dev/null 2>&1; then
   if curl -sf --max-time 3 "$PORTAL/health" > /dev/null 2>&1 || \
@@ -96,7 +107,7 @@ fi
 # ── Auto-correct stale setup flags ────────────────────────────────────────────
 SETUP_STATE_FILE="${HOME}/.local/share/code-server/User/globalStorage/github.copilot-chat/state.json"
 if [[ -f "$SETUP_STATE_FILE" ]]; then
-  _log "checking persisted setup state: $SETUP_STATE_FILE"
+  setup_log "checking persisted setup state: $SETUP_STATE_FILE"
   # Detect 'finishSetup' flags that are stuck
   STALE=$(python3 -c "
 import json, sys
@@ -112,7 +123,7 @@ except Exception:
     probe "setup-state-flags" "fail" "STATE_CACHE_STALE" "stale flags detected: $STALE"
     if [[ "$FIX_MODE" == "--fix" && "$DRY_RUN" != "1" && $FAIL -eq 0 ]]; then
       # Only auto-correct if all capability probes passed
-      _log "FIX: all capabilities OK — clearing stale setup flags"
+      setup_log "FIX: all capabilities OK — clearing stale setup flags"
       python3 -c "
 import json
 try:
@@ -150,9 +161,15 @@ else
 fi
 
 # JSON report
+FINISHED_AT_EPOCH="$(date +%s)"
+FINISHED_AT_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+ELAPSED_SECONDS="$(( FINISHED_AT_EPOCH - STARTED_AT_EPOCH ))"
 {
   echo "{"
-  echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
+  echo "  \"timestamp\": \"${FINISHED_AT_UTC}\","
+  echo "  \"started_at\": \"${STARTED_AT_UTC}\","
+  echo "  \"finished_at\": \"${FINISHED_AT_UTC}\","
+  echo "  \"elapsed_seconds\": ${ELAPSED_SECONDS},"
   echo "  \"pass\": $PASS, \"fail\": $FAIL, \"fixed\": $FIXED,"
   echo "  \"probes\": [$(IFS=,; echo "${RESULTS[*]}")]"
   echo "}"

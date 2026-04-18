@@ -98,12 +98,16 @@ These issues already have implementation artifacts in `main`, but they remain op
     - `scripts/ci/check-autopilot-setup-drift.sh`
   - Remaining gap:
     - reproducible matrix, evidence bundle, and regression definitions still need explicit sign-off
+    - reconciler now self-bootstraps `GITHUB_TOKEN` from GSM and passes the drift guard in local verification
 
 - `#641` Setup-state reconciler and self-healing
   - Landed artifacts:
     - `scripts/ops/reconcile-setup-state.sh`
+    - `docs/ops/AUTOPILOT-SETUP-STATE-RUNBOOK.md`
+    - `docs/status/SETUP-STATE-RECONCILER-PROOF-2026-04-18.md`
   - Remaining gap:
-    - runbook, startup timing validation, telemetry wiring, and scenario proof still needed
+    - local dry-run and fix-mode validation now pass with canonical GSM auth bootstrap
+    - reconciler report now includes timing telemetry (`started_at`, `finished_at`, `elapsed_seconds`)
 
 ## Open Issues Without Landed Implementation Yet
 

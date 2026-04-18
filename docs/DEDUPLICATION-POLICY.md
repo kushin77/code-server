@@ -17,7 +17,7 @@ Before implementing any helper function or utility, check these canonical locati
 3. `scripts/_common/config.sh` — config loading
 4. `scripts/_common/docker.sh` — Docker helpers
 5. `scripts/_common/ssh.sh` — SSH helpers
-6. `scripts/lib/secrets.sh` — secret fetching (GSM + .env fallback)
+6. `scripts/fetch-gsm-secrets.sh` — GSM secret bootstrap (GSM first; `.env` fallback only for local dev)
 7. `scripts/lib/nas.sh` — NAS mount helpers
 8. `scripts/lib/` — other shared libraries
 
@@ -61,11 +61,13 @@ Before implementing any helper function or utility, check these canonical locati
 | `load_env FILE` | Load env from file | `source` or `set -a; . FILE` |
 | `export_vars VAR1 VAR2` | Export vars to subshells | manual `export` calls |
 
-### scripts/lib/secrets.sh
+### scripts/fetch-gsm-secrets.sh
 
 | Function | Purpose | Use Instead Of |
 |----------|---------|----------------|
-| `get_secret KEY [fallback]` | Fetch from GSM or .env | inline `gcloud secrets` calls |
+| `source scripts/fetch-gsm-secrets.sh` | Populate GSM-backed env vars | inline `gcloud secrets` calls |
+
+**Credential Default**: GSM is the default secret source; service accounts own machine-to-machine API access; SSH keys are limited to host transport/authentication.
 
 ### scripts/lib/nas.sh
 

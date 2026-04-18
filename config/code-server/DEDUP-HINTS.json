@@ -22,9 +22,9 @@
       }
     },
     "secrets": {
-      "source": "scripts/lib/secrets.sh",
+      "source": "scripts/fetch-gsm-secrets.sh",
       "prefer": {
-        "get_secret": ["gcloud secrets versions access", "gsutil cat"]
+        "source scripts/fetch-gsm-secrets.sh": ["gcloud secrets versions access", "gsutil cat"]
       }
     }
   },

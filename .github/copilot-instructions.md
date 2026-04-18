@@ -6,7 +6,7 @@ Before writing any helper function or utility, check these canonical locations:
 - `scripts/_common/utils.sh` — generic utilities (retry, confirm, die, log_*)
 - `scripts/_common/logging.sh` — log_info, log_warn, log_error, log_fatal, log_debug
 - `scripts/_common/config.sh` — config loading (load_env, export_vars)
-- `scripts/lib/secrets.sh` — secret fetching (GSM + .env fallback)
+- `scripts/fetch-gsm-secrets.sh` — GSM secret bootstrap (GSM first; `.env` fallback only for local dev)
 - `scripts/lib/nas.sh` — NAS mount helpers
 - `scripts/lib/` — other shared libraries
 
@@ -40,6 +40,8 @@ Use `./scripts/fix-metadata-headers.sh` to auto-fix missing headers.
 - **Logic config** (function-specific): Use function parameters or local variables
 	- Example: function argument `$1`, local var `retry_count=3`
 
+Default secret source is Google Secret Manager. Use the GSM bootstrap script for secret material, service accounts for workload identity and automated API access, and SSH keys only for host transport/authentication.
+
 Never embed hardcoded IPs, URLs, or credentials in scripts. Always use env vars or parameters.
 
 ### Rule 4 — Shared Library Adoption
@@ -56,8 +58,8 @@ Always use shared libraries; never duplicate. Canonical APIs:
 - `load_env <file>` — load env vars from file
 - `export_vars <var1> <var2>` — export to subshells
 
-**scripts/lib/secrets.sh**
-- `get_secret <key> [fallback_env]` — fetch secret from GSM or .env
+**scripts/fetch-gsm-secrets.sh**
+- `source scripts/fetch-gsm-secrets.sh` — populate GSM-backed secret env vars for the current shell
 
 **scripts/lib/nas.sh**
 - `mount_nas <host> <export>` — mount NAS volume
@@ -95,6 +97,8 @@ Repository underwent comprehensive deduplication audit (see [DEDUPLICATION-AND-E
 - ❌ Avoid: `DEPLOY_HOST="192.168.168.31"`, `DOMAIN="kushnir.cloud"` in scripts
 - ✅ Use: `DEPLOY_HOST="${DEPLOY_HOST}"` (loads from .env via init.sh → config.sh)
 - Master config SSOT: `.env.template` (deployment config), `terraform/variables.tf` (IaC config)
+
+**Credential Defaults**: GSM is the default secret source; service accounts own machine-to-machine API access; SSH keys are limited to remote host login and transport.
 
 **Workflow Deduplication**: Use `TEMPLATE-*.yml` as base for all workflows
 - ❌ Avoid: Duplicating validation jobs across 3+ workflows

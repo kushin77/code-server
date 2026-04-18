@@ -294,7 +294,7 @@ Then replace all custom definitions with: `source "_common/init.sh"` (already do
 - `log_info`, `log_debug`, `log_warn`, `log_error`, `log_fatal` — [scripts/_common/logging.sh](scripts/_common/logging.sh)
 - `die`, `require_command`, `confirm` — [scripts/_common/utils.sh](scripts/_common/utils.sh)
 - `load_env`, `export_vars` — [scripts/_common/config.sh](scripts/_common/config.sh)
-- `get_secret` — [scripts/lib/secrets.sh](scripts/lib/secrets.sh)
+- `scripts/fetch-gsm-secrets.sh` — GSM secret bootstrap (secret env vars)
 - `docker_*` helpers — [scripts/_common/docker.sh](scripts/_common/docker.sh)
 
 **Scripts NOT using libraries** (should be):

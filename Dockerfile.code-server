@@ -9,6 +9,8 @@
 # @status      active
 
 ARG CODE_SERVER_VERSION=4.115.0
+# Pin Google Cloud SDK version for reproducible builds; update intentionally via PR
+ARG GCLOUD_SDK_VERSION=479.0.0
 
 FROM codercom/code-server:${CODE_SERVER_VERSION}
 

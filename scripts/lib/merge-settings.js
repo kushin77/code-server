@@ -159,4 +159,9 @@ function main() {
   fs.writeFileSync(outputPath, `${JSON.stringify(merged, null, 2)}\n`, "utf8");
 }
 
-main();
+// Run as script when invoked directly; export for unit testing
+if (require.main === module) {
+  main();
+}
+
+module.exports = { stripJsonComments, readJsonc, isPlainObject, clone, deepMerge, applyLockedKeys, LOCKED_KEYS };

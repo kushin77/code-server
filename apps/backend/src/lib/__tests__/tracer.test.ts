@@ -4,19 +4,20 @@
  * @description Unit tests for tracer initialization and middleware.
  */
 
-import { tracingMiddleware, errorTracingMiddleware, getCurrentTraceContext } from '../../middleware/tracing';
-import type { Request, Response, NextFunction } from 'express';
+import { vi, afterEach, describe, it, expect } from 'vitest';
 
-jest.mock('@opentelemetry/api', () => ({
+vi.mock('@opentelemetry/api', () => ({
   trace: {
-    getActiveSpan: jest.fn(),
+    getActiveSpan: vi.fn(),
   },
   context: {},
   SpanStatusCode: { ERROR: 2, OK: 1, UNSET: 0 },
 }));
 
+import { tracingMiddleware, errorTracingMiddleware, getCurrentTraceContext } from '../../middleware/tracing';
+import type { Request, Response, NextFunction } from 'express';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
-const mockGetActiveSpan = trace.getActiveSpan as jest.Mock;
+const mockGetActiveSpan = trace.getActiveSpan as ReturnType<typeof vi.fn>;
 
 const makeReq = (): Partial<Request> => ({ url: '/api/test' });
 const makeRes = (): Partial<Response> & { headers: Record<string, string>; locals: Record<string, string> } => {
@@ -25,13 +26,13 @@ const makeRes = (): Partial<Response> & { headers: Record<string, string>; local
   return {
     headers,
     locals,
-    setHeader: jest.fn((k: string, v: string) => { headers[k] = v; }),
-  } as any;
+    setHeader: vi.fn((k: string, v: string) => { headers[k] = v; }),
+  } as ReturnType<typeof makeRes>;
 };
-const makeNext = (): NextFunction => jest.fn();
+const makeNext = (): NextFunction => vi.fn() as unknown as NextFunction;
 
 describe('tracingMiddleware', () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
   it('injects X-Trace-Id and X-Span-Id headers when span is active', () => {
     mockGetActiveSpan.mockReturnValue({
@@ -60,12 +61,12 @@ describe('tracingMiddleware', () => {
 });
 
 describe('errorTracingMiddleware', () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
   it('records exception and sets ERROR status on active span', () => {
     const mockSpan = {
-      setStatus: jest.fn(),
-      recordException: jest.fn(),
+      setStatus: vi.fn(),
+      recordException: vi.fn(),
       spanContext: () => ({ traceId: 'aaa', spanId: 'bbb' }),
     };
     mockGetActiveSpan.mockReturnValue(mockSpan);
@@ -89,7 +90,7 @@ describe('errorTracingMiddleware', () => {
 });
 
 describe('getCurrentTraceContext', () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
   it('returns traceId and spanId when span is active', () => {
     mockGetActiveSpan.mockReturnValue({

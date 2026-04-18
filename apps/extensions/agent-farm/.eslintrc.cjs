@@ -14,5 +14,9 @@ module.exports = {
     node: true,
     es2020: true,
   },
-  rules: {},
+  rules: {
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "warn",
+    "no-unused-vars": "off",
+  },
 };

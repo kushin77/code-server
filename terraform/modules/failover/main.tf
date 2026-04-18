@@ -306,6 +306,10 @@ resource "kubernetes_cron_job_v1" "postgres_backup" {
     schedule = var.backup_schedule
 
     job_template {
+      metadata {
+        labels = merge(local.failover_labels, { job = "backup" })
+      }
+
       spec {
         template {
           metadata {

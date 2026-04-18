@@ -306,8 +306,10 @@ resource "kubernetes_deployment" "vault" {
             }
           }
 
-          capabilities {
-            add = ["IPC_LOCK"]
+          security_context {
+            capabilities {
+              add = ["IPC_LOCK"]
+            }
           }
         }
 

@@ -100,7 +100,7 @@ kushnir.cloud {
         header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
         header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
         header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        redir https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/ 302
+        respond "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"1;url=https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/\"><title>Auth Reset</title></head><body>Auth reset complete. Redirecting to login... <a href=\"https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/\">Continue</a></body></html>" 200
     }
 
     # Unified sign-out endpoint: clear oauth2 session and return to root.

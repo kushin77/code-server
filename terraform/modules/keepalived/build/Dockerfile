@@ -15,9 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /etc/keepalived /var/log/keepalived && \
     chmod 755 /etc/keepalived /var/log/keepalived
 
-# Create non-root user for logging
-RUN useradd -u 65534 -G root -s /bin/false -d / -M keepalived-log
-
 # Health check
 HEALTHCHECK --interval=10s --timeout=3s --retries=2 \
     CMD ping -c 1 127.0.0.1 || exit 1

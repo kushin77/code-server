@@ -9,10 +9,6 @@ terraform {
       source  = "hashicorp/null"
       version = "~> 3.0"
     }
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.5"
@@ -22,10 +18,6 @@ terraform {
       version = "~> 5.0"
     }
   }
-}
-
-provider "docker" {
-  host = var.docker_host
 }
 
 # ════════════════════════════════════════════════════════════════════════════

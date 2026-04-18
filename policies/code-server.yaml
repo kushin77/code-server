@@ -1,0 +1,322 @@
+# Code-Server Baseline RBAC Policy Pack
+# Issue #650: Org-Wide Auth & Policy Baseline
+# Establishes standardized identity, session, and access control rules for all code-server instances
+
+apiVersion: policies.kushin77/v1
+kind: CodeServerPolicy
+metadata:
+  name: baseline
+  namespace: code-server
+  version: 1.0.0
+  lastUpdated: "2026-04-18T03:15:00Z"
+  owner: kushin77-platform-team
+
+spec:
+  # ============================================================================
+  # Global Authentication & Identity
+  # ============================================================================
+  authentication:
+    # Google SSO via admin-portal (single source of truth)
+    provider: admin-portal
+    googleClientId: ${GOOGLE_CLIENT_ID}
+    googleClientSecret: ${GOOGLE_CLIENT_SECRET_GSM}
+    
+    # Session lifecycle
+    sessionTTL: 8h           # Default session duration
+    absoluteTimeout: 30d     # Max session age regardless of activity
+    idleTimeout: 1h          # Revoke if no activity
+    gracefulRefreshWindow: 5m # Allow refresh 5 min before expiration
+    
+    # Identity propagation
+    headerPropagation:
+      enabled: true
+      userHeader: X-User-Identity
+      emailHeader: X-User-Email
+      groupsHeader: X-User-Groups
+      
+  # ============================================================================
+  # Authorization & RBAC
+  # ============================================================================
+  authorization:
+    # Role-based access control definitions
+    roles:
+      admin:
+        displayName: "Administrator"
+        description: "Full access to code-server instance, all workspaces, all repos"
+        permissions:
+          - code-server:*
+          - workspace:*
+          - admin-portal:manage-policies
+          - audit:view
+        assignments:
+          - kushtripathi@gmail.com  # Primary admin
+          - akushnir@bioenergystrategies.com
+          
+      developer:
+        displayName: "Developer"
+        description: "Full access to assigned workspaces and repositories"
+        permissions:
+          - code-server:read
+          - code-server:write
+          - workspace:read
+          - workspace:write
+          - audit:view
+        assignments:
+          # Auto-populated from repo CODEOWNERS + team membership
+          
+      viewer:
+        displayName: "Viewer"
+        description: "Read-only access to code and workspace information"
+        permissions:
+          - code-server:read
+          - workspace:read
+          - audit:view-own
+          
+      service-account:
+        displayName: "Service Account"
+        description: "Limited access for CI/CD, automation, and E2E testing"
+        permissions:
+          - code-server:read
+          - workspace:read-metadata
+          - ci-cd:execute
+          - e2e:execute
+        assignments:
+          - e2e-test-account@gcp-eiq.iam.gserviceaccount.com
+          - ci-automation@gcp-eiq.iam.gserviceaccount.com
+
+    # Policy evaluation defaults
+    defaultRole: viewer
+    denyByDefault: true          # Explicit allow, not implicit
+    policyConflictStrategy: deny  # Deny if policies conflict
+    
+  # ============================================================================
+  # Audit Logging & Compliance
+  # ============================================================================
+  auditLogging:
+    enabled: true
+    destination: stackdriver  # Google Cloud Logging
+    projectId: gcp-eiq
+    logName: projects/gcp-eiq/logs/code-server-auth-policy
+    
+    # Events to audit
+    events:
+      - auth.login
+      - auth.logout
+      - auth.refresh
+      - auth.failed
+      - policy.evaluated
+      - policy.denied
+      - auth.keepalive.tick
+      - session.created
+      - session.expired
+      - session.revoked
+      - workspace.accessed
+      - workspace.modified
+      
+    # Log retention
+    retentionDays: 90
+    
+    # Compliance fields (all audit entries must include)
+    requiredFields:
+      - timestamp
+      - userId
+      - userEmail
+      - userGroups
+      - action
+      - resource
+      - result
+      - sourceIP
+      - userAgent
+      - reason (on deny)
+      
+  # ============================================================================
+  # Drift Detection & Monitoring
+  # ============================================================================
+  driftDetection:
+    enabled: true
+    checkInterval: 15m
+    
+    # Policies to drift-check
+    checks:
+      - name: auth-flow-integrity
+        description: Verify oauth2-proxy config matches baseline
+        alerts: true
+        threshold: 1         # Alert on any drift
+        
+      - name: policy-config-drift
+        description: Verify policies/code-server.yaml not modified outside IaC
+        alerts: true
+        threshold: 5         # Alert if >5% drift
+        
+      - name: audit-log-health
+        description: Verify audit logs being written correctly
+        alerts: true
+        threshold: 0         # Alert on any failure
+        
+      - name: identity-provider-health
+        description: Verify admin-portal OAuth endpoint responding
+        alerts: true
+        threshold: 0         # Alert on any failure
+        probeInterval: 5m
+        probeTimeout: 10s
+      
+    # Alert destinations
+    alerting:
+      channels:
+        - type: slack
+          webhook: ${SLACK_WEBHOOK_ALERTS}
+          mentions: "@platform-team"
+        - type: pagerduty
+          integrationKey: ${PAGERDUTY_INT_KEY}
+          severity: critical
+          
+  # ============================================================================
+  # Enforcement & Gating
+  # ============================================================================
+  enforcement:
+    # Policy rejection handling
+    onDeny: reject           # reject | log-only | throttle
+    throttleDelayMs: 1000
+    
+    # User notification
+    denyMessage: |
+      Access Denied: Your request does not meet the authorization policy.
+      Policy: {{.policyName}}
+      Reason: {{.reason}}
+      Contact: kushin77-platform-team
+      
+    # Exemptions (rare, require issue + approval)
+    exemptions: []
+    
+  # ============================================================================
+  # Compliance & Standards
+  # ============================================================================
+  compliance:
+    standards:
+      - name: SOC2
+        description: Service Organization Control 2 compliance
+        mappings:
+          - cc6_1: "Audit logging for all auth events"
+          - cc6_2: "Policy-based access control"
+          - a1_1: "Asset inventory of authenticated users"
+        
+      - name: ISO27001
+        description: Information Security Management
+        mappings:
+          - a_9_1_1: "RBAC with principle of least privilege"
+          - a_9_4_1: "Session management with timeouts"
+          - a_10_3_1: "Audit logs with integrity controls"
+    
+    # Data classification
+    dataClassification:
+      code: confidential        # Source code is confidential
+      sessions: restricted      # Session tokens are restricted
+      auditLogs: internal-only  # Audit logs internal only
+      
+  # ============================================================================
+  # Version & History
+  # ============================================================================
+  versioning:
+    version: 1.0.0
+    previousVersions:
+      - version: 0.9.0
+        deprecated: true
+        sunset: "2026-05-18T00:00:00Z"
+    changeLog:
+      - version: 1.0.0
+        date: "2026-04-18"
+        changes:
+          - "Initial baseline policy release (Issue #650)"
+          - "Org-wide auth + RBAC + audit logging"
+          - "Drift detection + compliance mappings"
+        author: kushin77-platform-team
+        approved: akushnir@bioenergystrategies.com
+
+---
+# Baseline Policy Validation Rules (enforcement)
+# These rules ensure policy compliance across all code-server instances
+
+apiVersion: policies.kushin77/v1
+kind: PolicyValidationRules
+
+rules:
+  # All users must have role assigned
+  - name: role-required
+    target: user
+    condition: '!empty(.roles)'
+    onViolation: reject
+    
+  # No user can have multiple conflicting roles simultaneously
+  - name: role-conflict-detection
+    target: user
+    condition: 'count(.roles) <= 1'
+    onViolation: log-and-alert
+    
+  # Service accounts must have restricted permissions
+  - name: service-account-restrictions
+    target: service-account
+    condition: |
+      !(.permissions | any(. == "admin"))
+      && !(.permissions | any(. == "workspace:*"))
+    onViolation: auto-remediate
+    
+  # Policy must be IaC versioned (not manual edits)
+  - name: iac-source-of-truth
+    target: policy
+    condition: '.gitCommit | startswith("feat|fix|chore")'
+    onViolation: alert
+    
+  # Drift check must pass
+  - name: no-manual-drift
+    target: deployment
+    condition: '.driftScore < 0.05'
+    onViolation: block-session
+    
+---
+# Default Identity Provider Configuration (parameterized with env vars)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: identity-provider-config
+  namespace: code-server
+  
+data:
+  oauth2_provider_url: "${ADMIN_PORTAL_URL:-https://admin.kushnir.cloud}"
+  admin_portal_url: "${ADMIN_PORTAL_URL:-https://admin.kushnir.cloud}"
+  userinfo_endpoint: "${ADMIN_PORTAL_URL:-https://admin.kushnir.cloud}/oauth2/api/v1/userinfo"
+  token_endpoint: "${ADMIN_PORTAL_URL:-https://admin.kushnir.cloud}/oauth2/auth/token"
+  authorize_endpoint: "${ADMIN_PORTAL_URL:-https://admin.kushnir.cloud}/oauth2/auth/authorize"
+  revoke_endpoint: "${ADMIN_PORTAL_URL:-https://admin.kushnir.cloud}/oauth2/auth/revoke"
+
+---
+# RBAC Binding Template (for each workspace)
+apiVersion: policies.kushin77/v1
+kind: RBACBinding
+metadata:
+  name: workspace-rbac
+  namespace: code-server
+  
+spec:
+  # Workspace identifies which workspace these bindings apply to
+  workspace: ${WORKSPACE_NAME}
+  
+  # Subject identifies who this applies to
+  subject:
+    type: user | group | service-account
+    name: ${SUBJECT_NAME}
+    email: ${SUBJECT_EMAIL} # For user lookups
+    
+  # Role assigns permissions
+  role: admin | developer | viewer | service-account
+  
+  # Conditions restrict when binding applies (optional)
+  conditions:
+    - type: time-based
+      start: "2026-04-01T00:00:00Z"
+      end: "2026-12-31T23:59:59Z"
+    - type: network
+      allowedCIDRs:
+        - "192.168.168.0/24"  # On-prem only
+        - "10.0.0.0/8"        # Internal networks
+    - type: device
+      requireMFA: true

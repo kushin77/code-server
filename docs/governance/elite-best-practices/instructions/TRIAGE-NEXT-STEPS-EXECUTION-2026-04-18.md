@@ -35,7 +35,10 @@ Last Updated: 2026-04-18
    - `.github/workflows/e2e-authenticated-failover-continuity.yml`
    - `scripts/ci/prepare-playwright-storage-state.sh`
    - `docs/ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md`
-- Remaining strict closure gate for #733: set `PLAYWRIGHT_STORAGE_STATE_B64` and run the authenticated workflow.
+- Previously open failover/runtime gate issues are now closed with evidence:
+   - #692, #695, #710, #711, #712, #713, #714, #733, #750, #751
+- Auth conformance reporting now supports minimal environments without `jq`:
+   - `scripts/ci/test-auth-conformance.sh` (JSON quoting fallback)
 - Latest validated operational run (2026-04-18, explicit SSH key path):
    - preflight passed (`--mode ssh --ssh-key ~/.ssh/id_rsa_onprem --fix-stale-logs`)
    - redeploy passed (`--mode ssh --ssh-key ~/.ssh/id_rsa_onprem --fix-stale-logs`)
@@ -52,46 +55,45 @@ Last Updated: 2026-04-18
    - #741 -> superseded by #757
    - #749 -> superseded by #758
 
-## Issue-Mapped Next Steps
+## Issue-Mapped Next Steps (Open Backlog)
 
-1. **#692 (P0)**: Portal OAuth redeploy reachable execution path — validate `redeploy-remote-execute.sh` succeeds from all operator environments.
-2. **#695 (P0)**: Non-interactive GSM auth path for portal redeploy — implement `--non-interactive` flag in `scripts/fetch-gsm-secrets.sh`.
-3. **#733 (P1)**: Validate authenticated code-server continuity during failover with workflow evidence.
-4. **#750 (P1)**: Provision non-interactive Playwright storage-state secret pipeline for #733.
-5. **#714 (P1)**: DR game-day suite — scripted promote+failback drill from `.31`→`.42`→`.31` with RPO/RTO evidence.
-6. **#751 (P1 EPIC)**: Execute core runtime transformation stream with #752-#760 in dependency order.
-7. **#742 (P1 EPIC)**: Execute Backstage/Appsmith/OPA/Vault adoption stream with dependency links to #751 and #735.
-8. **#710 (P0 EPIC)**: Close only when #733 authenticated continuity evidence is attached and accepted.
+### Stream A: Governance Foundations (dedupe first)
+1. **#700 (EPIC)**: Enterprise global governance control plane (single policy authority).
+2. **#704 (EPIC)**: Canonical policy SSOT and deduplication of governance sources.
+3. **#701 (EPIC)**: Org-wide GitHub governance enforcement (rulesets + branch protections).
+4. **#702 (EPIC)**: Fail-closed governance pipeline (P0 controls block merge).
 
-## Execution Order
+### Stream B: Runtime Governance
+5. **#703 (EPIC)**: Enterprise IDE policy runtime.
+6. **#705 (EPIC)**: Centralized waiver governance.
+7. **#708 (EPIC)**: OPA policy service evolution.
 
-1. Validate SSH identity is available in runtime that executes deploy.
-2. Run:
-   - `bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode ssh --ssh-key "$SSH_KEY_PATH" --fix-stale-logs`
-3. Run deterministic redeploy wrapper:
-   - `bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode ssh --ssh-key "$SSH_KEY_PATH" --fix-stale-logs`
-   - WSL fallback: add `--ssh-bin ssh.exe` when OpenSSH key permissions differ across runtimes.
-4. Run failover orchestration flow:
-   - `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action status`
-   - `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action promote`
-   - `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action failback`
-5. Run authenticated continuity workflow after secret provisioning:
-   - Workflow: `E2E Authenticated Failover Continuity`
-   - Inputs: `failover_wait_ms=45000` and optional `failover_trigger_cmd`
-6. Capture and attach evidence in issues:
-   - branch and commit
-   - compose render success
-   - container health table
-   - auth redirect verification
-   - failover evidence JSON path under `/tmp/code-server-failover-evidence/`
-   - state evidence JSON paths under `/tmp/code-server-state-evidence/`
-   - authenticated continuity workflow run URL and pass/fail output
-   - note any degraded but non-blocking services (example: `pgbouncer` unhealthy) with a follow-up issue
-7. Open runtime transformation implementation PR batches by epic child grouping:
-   - Batch A: #752 + #753
-   - Batch B: #754 + #755
-   - Batch C: #756 + #757 + #758
-   - Batch D: #759 + #760
+### Stream C: Control Plane Productization
+8. **#706 (EPIC)**: Governance admin center (Backstage + Appsmith).
+9. **#707 (EPIC)**: Repository onboarding and continuous compliance.
+10. **#742 (EPIC)**: Open-source control-plane adoption stream.
+
+### Stream D: Multi-Repo UX (execute after governance stabilizes)
+11. **#717 (EPIC)** with child features:
+   - #718 instant repo switcher
+   - #719 multi-repo home view
+   - #720 session persistence and safe restore
+   - #721 workspace tabs
+
+## Execution Order (Overlap-Reduced)
+
+1. **Single authority first**: execute #700 and #704 before any new governance feature work.
+2. **Enforcement second**: land #701 then #702 so merge gates and branch rules enforce SSOT.
+3. **Runtime policy third**: execute #703 with #705 and #708 in that order.
+4. **Control-plane apps fourth**: execute #706 and #707, then align #742 on the same contracts.
+5. **UX last**: execute #717 and children (#718-#721) only after Stream A-C contracts are stable.
+
+### Debug/Triage Rule Set
+
+- Keep one active epic stream in progress at a time unless a dependency requires parallel work.
+- Each stream must name one canonical config source and one canonical runbook.
+- No duplicate helper scripts: reuse `scripts/_common/` and existing operation wrappers.
+- Evidence format is uniform across streams: issue comment includes commit, command, pass/fail, artifact path.
 
 ## State Durability Commands
 
@@ -117,7 +119,8 @@ Run compose hardening baseline guard:
 
 ## Done Definition
 
-- P0 reachability and secret bootstrap issues are resolved with successful run evidence.
-- Redeploy path is deterministic, repeatable, and host-executed.
-- Authenticated continuity evidence is attached to #733 and linked to #710.
+- Stream A done when #700/#704/#701/#702 are implemented with no policy-source duplication.
+- Stream B done when #703/#705/#708 enforce fail-closed decisions with auditable exceptions.
+- Stream C done when #706/#707/#742 use Stream A-B contracts without redefining schema/policy paths.
+- Stream D done when #717/#718/#719/#720/#721 ship without introducing alternate state stores or policy models.
 - No new loose root files are introduced in active branches.

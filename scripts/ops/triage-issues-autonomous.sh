@@ -14,6 +14,7 @@ GH_OWNER="kushin77"
 GH_REPO="code-server"
 API_BASE="https://api.github.com/repos/${GH_OWNER}/${GH_REPO}"
 MARKER="[agent-autonomy-ready-v1]"
+AGENT_READY_LABEL="agent-ready"
 
 resolve_token() {
     if [[ -n "${GITHUB_TOKEN:-}" ]]; then
@@ -57,6 +58,33 @@ api_post() {
         --data @"${payload_file}"
 }
 
+ensure_label_exists() {
+    local token="$1"
+    local name="$2"
+    local color="$3"
+    local description="$4"
+
+    local labels
+    labels=$(api_get "${token}" "${API_BASE}/labels?per_page=100")
+    if echo "${labels}" | grep -F -q "\"name\":\"${name}\""; then
+        log_info "Label ${name} already exists"
+        return
+    fi
+
+    NAME_VALUE="${name}" COLOR_VALUE="${color}" DESCRIPTION_VALUE="${description}" python3 - <<'PY' > /tmp/triage-create-label.json
+import json
+import os
+
+name = os.environ["NAME_VALUE"]
+color = os.environ["COLOR_VALUE"]
+description = os.environ["DESCRIPTION_VALUE"]
+print(json.dumps({"name": name, "color": color, "description": description}))
+PY
+
+    api_post "${token}" "${API_BASE}/labels" "/tmp/triage-create-label.json" >/dev/null
+    log_info "Created label ${name}"
+}
+
 label_needs_priority() {
     local token="$1"
     local number="$2"
@@ -69,11 +97,23 @@ label_needs_priority() {
         651|654|613) priority="P2" ;;
     esac
 
-    cat > /tmp/triage-label.json <<EOF
+    cat > /tmp/triage-label.json <<EOF2
 {"labels":["${priority}"]}
-EOF
+EOF2
     api_post "${token}" "${API_BASE}/issues/${number}/labels" "/tmp/triage-label.json" >/dev/null
     log_info "Applied ${priority} to #${number} (${title})"
+}
+
+apply_agent_ready_label() {
+    local token="$1"
+    local number="$2"
+    local title="$3"
+
+    cat > /tmp/triage-agent-ready-label.json <<EOF2
+{"labels":["${AGENT_READY_LABEL}"]}
+EOF2
+    api_post "${token}" "${API_BASE}/issues/${number}/labels" "/tmp/triage-agent-ready-label.json" >/dev/null
+    log_info "Applied ${AGENT_READY_LABEL} to #${number} (${title})"
 }
 
 post_agent_ready_comment() {
@@ -121,6 +161,7 @@ main() {
     token=$(resolve_token)
 
     log_info "Fetching open issues"
+    ensure_label_exists "${token}" "${AGENT_READY_LABEL}" "0e8a16" "Issue has autonomous execution brief and is ready for agent implementation"
     local issues_file="/tmp/open-issues.json"
     api_get "${token}" "${API_BASE}/issues?state=open&per_page=100" > "${issues_file}"
 
@@ -141,6 +182,10 @@ PY
 
         if [[ "${labels}" == *"needs-priority"* ]]; then
             label_needs_priority "${token}" "${number}" "${title}"
+        fi
+
+        if [[ "${labels}" != *"${AGENT_READY_LABEL}"* ]]; then
+            apply_agent_ready_label "${token}" "${number}" "${title}"
         fi
 
         # Keep issue #291 as persistent tracker but still prepare autonomous brief.

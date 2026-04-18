@@ -981,6 +981,7 @@
         "DEPLOY_SSH_PRIVATE_KEY and DEPLOY_SSH_KNOWN_HOSTS were provisioned",
         "Temporary self-hosted runner registered in-session and executed portal-oauth-redeploy.yml run 24608948773 successfully",
         "Temporary self-hosted runner executed vpn-e2e-gate.yml run 24608949154 successfully",
+        "Published portal workflow run 24609258258 failed at SSH auth with Permission denied (publickey,password)",
         ".github/workflows/portal-oauth-redeploy.yml now targets a self-hosted runner",
         "scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local validated successfully in workspace"
       ]

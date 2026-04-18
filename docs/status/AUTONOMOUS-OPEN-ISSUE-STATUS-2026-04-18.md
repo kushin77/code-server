@@ -36,7 +36,7 @@ Canonical machine-readable companion:
 - `#639` Autopilot setup-state drift epic
 - `#640` Autopilot setup-state RCA
 - `#641` Setup-state reconciler and self-healing
-- `#691` Consolidate legacy docs root into canonical folder indexes
+- `#691` Consolidate legacy docs root into canonical folder indexes (closed in GitHub; compatibility stubs landed)
 - `#291` VSCode crash RCA and persistent stability tracking (closed in GitHub; persistent tracker)
 
 ## Open Issues Without Landed Implementation Yet
@@ -59,5 +59,6 @@ Canonical machine-readable companion:
 - `#690` is resolved: the deploy SSH secret is now provisioned in GitHub Actions.
 - Local portal redeploy dry-run now passes with `bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local`, and the temporary self-hosted runner validated both the portal dry-run and the VPN gate.
 - `#691` is closed: the legacy docs-root bridge files were collapsed to compatibility stubs and the canonical folder indexes remain in place.
+- The latest published portal OAuth run still fails in the Redeploy portal services step because the published workflow invokes the helper in SSH mode and the host rejects the key.
 - `#686`, `#684`, and `#649` are open PR-backed lanes with existing repo artifacts; they are parallel review tracks, not the current release blocker.
 - Keep issue comments current when additional AC evidence lands so GitHub remains usable without local context.

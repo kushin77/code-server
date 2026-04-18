@@ -10,11 +10,12 @@ Execution path is blocked, not implementation:
 - IaC compose split callback fix exists in branch (OAUTH2_PROXY_IDE_REDIRECT_URL + OAUTH2_PROXY_PORTAL_REDIRECT_URL)
 - idempotent redeploy script exists: scripts/deploy/redeploy-portal-oauth-routing.sh
 - direct non-interactive SSH to 192.168.168.31 unavailable from current runtime shell
-- GitHub Actions deploy secret is provisioned, and the standalone portal workflow now targets self-hosted execution; a temporary runner in this session validated the workflow path, but the live production apply still needs a production-capable host
+- GitHub Actions deploy secret is provisioned, and the standalone portal workflow now targets self-hosted execution; a temporary runner in this session validated the workflow path, but the live production apply still fails on SSH auth with `Permission denied (publickey,password)`
 - Local dry-run validation passes with `bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local`
 
 ## Required Work (Immutable + Idempotent)
 - [ ] Provide a reachable execution path for the redeploy workflow (self-hosted runner or approved tunnel/proxy)
+- [ ] Provide the correct SSH deploy credential or host-side runner access so the production host accepts the public key
 - [ ] Keep the deploy path secret-driven, immutable, and idempotent
 - [ ] Execute `scripts/deploy/redeploy-portal-oauth-routing.sh` through the `portal-oauth-redeploy.yml` workflow against production
 - [ ] Verify redirects:
@@ -35,3 +36,4 @@ Execution path is blocked, not implementation:
 - Secret-provisioning issue: #690 (resolved)
 - Network-reachability follow-up issue: #692
 - Self-hosted validation runs: portal-oauth-redeploy.yml #24608948773, vpn-e2e-gate.yml #24608949154
+- Latest published portal run: #24609258258 failed at SSH auth with `Permission denied (publickey,password)`

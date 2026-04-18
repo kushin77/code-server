@@ -47,4 +47,5 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Temporary self-hosted runner evidence: portal-oauth-redeploy.yml run `24608948773` succeeded; vpn-e2e-gate.yml run `24608949154` succeeded.
 - Live apex redirect still points to IDE callback until #692 is executed.
 - Docs consolidation tracker #691 is closed; the legacy docs-root files are compatibility stubs and the canonical indexes are in place.
+- Latest published portal OAuth run `24609258258` failed during SSH authentication in the Redeploy portal services step.
 - Parallel open PR lanes remain for #686, #684, and #649; keep them separate from the production blocker path.

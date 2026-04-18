@@ -34,20 +34,23 @@ ALLOWED_ROOT_ENTRIES=(
   Dockerfile.ssh-proxy Dockerfile.token-microservice
   docker-compose.yml docker-compose.base.yml docker-compose.dev.yml
   docker-compose.production.yml docker-compose.tpl
+  docker-compose.yml.remote
   # Config entrypoints
   .env.defaults .env.example .env.template .env
   Caddyfile Caddyfile.clean Caddyfile.known-good Caddyfile.production Caddyfile.tpl
   code-server-config.yaml oauth2-proxy.cfg allowed-emails.txt
   # Infrastructure
-  main.tf .terraform.lock.hcl
+  main.tf variables.tf .terraform.lock.hcl terraform.phase-14.tfvars
+  package.json pnpm-lock.yaml pnpm-workspace.yaml
   # GitHub Actions/Meta
   .github .gitignore .gitattributes .hadolint.yaml .editorconfig
   # Canonical root directories
-  scripts docs terraform config k8s extensions
-  apps lib packages infra
-  policies workspace services kubernetes operations ansible
+  scripts docs terraform config k8s kubernetes extensions
+  apps backend frontend src environments opa docker deprecated grafana
+  lib packages infra policies workspace services operations ansible
   .vscode
   # Monitoring/alerting config entrypoints
+  prometheus.yml
   prometheus-production.yml alert-rules.yml alertmanager.yml
   alertmanager-base.yml alertmanager-production.yml
   loki-config.yml otel-config.yml grafana-datasources.yml

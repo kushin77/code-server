@@ -1,3 +1,6 @@
+Purpose: historical operations record migrated from root.
+Lifecycle: historical
+
 # Session 4 Execution Summary: Phase 2.1 OIDC Deployment Complete
 
 **Date**: April 16, 2026  

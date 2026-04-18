@@ -24,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.code-server
-    image: code-server-enterprise:${CODE_SERVER_IMAGE_TAG:-4.115.0}
+    image: code-server-enterprise:latest
     container_name: code-server
     restart: unless-stopped
     user: "1000"
@@ -42,9 +42,6 @@ services:
       - OLLAMA_ENDPOINT=http://ollama:11434
       - OLLAMA_DEFAULT_MODEL=codellama:7b
       - NODE_TLS_REJECT_UNAUTHORIZED=0
-      - GSM_PROJECT=${GSM_PROJECT:-gcp-eiq}
-      - GSM_SECRET_NAME=${GSM_SECRET_NAME:-prod-github-token}
-      - GSM_GITHUB_TOKEN_SECRET=${GSM_GITHUB_TOKEN_SECRET:-prod-github-token}
       # Development tools environment variables
       - PATH=/home/coder/.local/bin:/home/coder/node_modules/.bin:/usr/local/cargo/bin:/usr/local/go/bin:$PATH
       - PYTHONUNBUFFERED=1
@@ -458,7 +455,7 @@ services:
         while true; do
           ts="$$(date +%Y%m%d-%H%M%S)"
           out="/backups/code-server-user-profile-$$ts.tgz"
-          tar -czf "$$out" -C /source .local/share/code-server || true
+          tar -czf "$$out" -C /source .local/share/code-server/User || true
           find /backups -type f -name 'code-server-user-profile-*.tgz' -mtime +30 -delete || true
           sleep 21600
         done

@@ -1,3 +1,6 @@
+Purpose: historical operations record migrated from root.
+Lifecycle: historical
+
 # Session 3 Quality Gate Remediation Summary
 
 **Date**: April 22, 2026 (Session 3)  

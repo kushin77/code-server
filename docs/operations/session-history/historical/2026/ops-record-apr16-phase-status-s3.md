@@ -1,3 +1,6 @@
+Purpose: historical operations record migrated from root.
+Lifecycle: historical
+
 # Quality Gate Remediation - Session 3 Final Status
 
 **Task**: Issue #463 - P0: PR #462 Quality Gate Remediation  

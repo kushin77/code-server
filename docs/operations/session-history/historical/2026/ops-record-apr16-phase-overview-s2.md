@@ -1,3 +1,6 @@
+Purpose: historical operations record migrated from root.
+Lifecycle: historical
+
 # Session 2 Execution Summary — April 16, 2026
 
 **Session Duration**: Full  

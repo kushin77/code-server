@@ -1,3 +1,6 @@
+Purpose: historical operations record migrated from root.
+Lifecycle: historical
+
 # Session 5: Comprehensive Phase 2 Design + P2 #418 Phase 2 Execution
 
 **Date**: April 16, 2026 (Continuation from Sessions 2-4)  

@@ -19,9 +19,10 @@ docs/
 - **New to the project?** Start with [../README.md](../README.md) for overview
 - **Want to contribute?** See [../CONTRIBUTING.md](../CONTRIBUTING.md)
 - **Need the execution sequence?** See [MASTER-EXECUTION-PLAN.md](MASTER-EXECUTION-PLAN.md)
+- **Need elite governance standards?** See [governance/elite-best-practices/README.md](governance/elite-best-practices/README.md)
 - **Deploying infrastructure?** See [guides/DEPLOYMENT.md](guides/DEPLOYMENT.md)
 - **Troubleshooting issues?** See [guides/TROUBLESHOOTING.md](guides/TROUBLESHOOTING.md)
-- **Understanding architecture?** See [adc/](adc/)
+- **Understanding architecture?** See [adr/](adr/)
 - **Running operations?** See [runbooks/](runbooks/)
 
 ## Documentation Standards
@@ -43,6 +44,13 @@ All documentation MUST follow standards in [GOVERNANCE.md](GOVERNANCE.md#documen
 5. Link from related sections
 
 ## Document Categories
+
+### Governance SSOT
+- `docs/governance/elite-best-practices/` contains canonical standards for:
+- on-prem immutable and idempotent redeploy
+- monorepo pnpm workspace policy
+- session-aware agent coordination
+- clean git tree and naming conventions
 
 ### Guides (how-to, tutorials)
 - Deployment procedures

@@ -122,12 +122,6 @@
     "**/yarn.lock": true,
     "**/package-lock.json": true,
     "**/.pnpm-store/**": true,
-    "**/backups-phase7b/**": true,
-    "**/containerd/**": true,
-    "**/docker-data/**": true,
-    "**/ollama/blobs/**": true,
-    "**/package-cache/**": true,
-    "**/postgres-backups/**": true,
     "**/bower_components/**": true,
     "**/jspm_packages/**": true,
     "**/.sass-cache/**": true,
@@ -380,26 +374,5 @@
   "editor.formatOnSave": false,
   "editor.formatOnPaste": false,
   "editor.formatOnType": false,
-  "editor.guides.indentation": false,
-
-  "// ░░░ Multi-Session Process Isolation (#444) ░░░": "",
-  "// NAS workspace watcher exclusions (prep for #445)": "",
-  "files.watcherExclude": {
-    "**/.git/objects/**": true,
-    "**/.git/subtree-cache/**": true,
-    "**/node_modules/**": true,
-    "**/dist/**": true,
-    "**/.venv/**": true,
-    "**/__pycache__/**": true,
-    "**/*.log": true,
-    "**/.recycle/**": true,
-    "**/@snapshot/**": true,
-    "**/@Recently-Snapshot/**": true
-  },
-  "// Isolate extension recommendations per workspace (avoids cross-workspace noise)": "",
-  "extensions.recommendations": [],
-  "extensions.ignoreRecommendations": true,
-  "// Prevent Copilot context bleed across concurrent windows": "",
-  "github.copilot.enable": { "*": true },
-  "github.copilot.advanced": {}
+  "editor.guides.indentation": false
 }

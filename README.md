@@ -132,3 +132,14 @@ See [ARCHITECTURE.md](ARCHITECTURE.md),
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and
 [GitHub Issues](https://github.com/kushin77/code-server/issues).
+
+## Governance SSOT
+
+- Elite best-practices index: [docs/governance/elite-best-practices/README.md](docs/governance/elite-best-practices/README.md)
+- On-prem immutable/idempotent redeploy: [docs/governance/elite-best-practices/ssot/ON-PREM-REDEPLOY-IMMUTABLE-IDEMPOTENT.md](docs/governance/elite-best-practices/ssot/ON-PREM-REDEPLOY-IMMUTABLE-IDEMPOTENT.md)
+- Repository structure and clean-tree policy: [docs/governance/elite-best-practices/structure/ELITE-FOLDER-STRUCTURE.md](docs/governance/elite-best-practices/structure/ELITE-FOLDER-STRUCTURE.md)
+- Redeploy preflight automation: [scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh](scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh)
+
+## Monorepo Workspace
+
+- staged pnpm workspace plan: [docs/governance/elite-best-practices/monorepo-pnpm/MONOREPO-PNPM-PLAN.md](docs/governance/elite-best-practices/monorepo-pnpm/MONOREPO-PNPM-PLAN.md)

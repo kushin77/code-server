@@ -48,6 +48,15 @@ if command -v code-server-auth >/dev/null 2>&1; then
   fi
 fi
 
+if command -v ai-runtime-env >/dev/null 2>&1; then
+  if eval "$(ai-runtime-env env)"; then
+    ai-runtime-env doctor >/dev/null 2>&1 || echo "[entrypoint] WARNING: ai-runtime-env doctor reported contract drift"
+    echo "[entrypoint] AI runtime profile: ${AI_ACCESS_PROFILE:-unknown} (${OLLAMA_ENDPOINT:-unset} -> ${OLLAMA_FALLBACK_ENDPOINT:-unset})"
+  else
+    echo "[entrypoint] WARNING: failed to render AI runtime environment"
+  fi
+fi
+
 # ── Install Copilot extensions from pre-cached VSIX ──────────────────────────
 if ! /usr/bin/code-server --list-extensions --extensions-dir "$EXT_DIR" 2>/dev/null | grep -qi '^github.copilot$'; then
   echo "[entrypoint] Installing github.copilot from /opt/vsix/..."

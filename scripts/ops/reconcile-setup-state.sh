@@ -19,16 +19,18 @@ _warn() { echo "[setup-reconcile] WARN: $*" >&2; }
 PASS=0; FAIL=0; FIXED=0
 REPORT_FILE="${SETUP_RECONCILE_REPORT:-/tmp/setup-reconcile-report.json}"
 RESULTS=()
+FAILED_REASONS=()
 
 probe() {
-  local name="$1" status="$2" detail="${3:-}"
-  RESULTS+=("{\"probe\":$(printf '%s' "$name" | python3 -c "import sys,json;print(json.dumps(sys.stdin.read()))"),\"status\":\"$status\",\"detail\":$(printf '%s' "$detail" | python3 -c "import sys,json;print(json.dumps(sys.stdin.read()))")}")
+  local name="$1" status="$2" reason_code="$3" detail="${4:-}"
+  RESULTS+=("{\"probe\":$(printf '%s' "$name" | python3 -c "import sys,json;print(json.dumps(sys.stdin.read()))"),\"status\":\"$status\",\"reason_code\":\"$reason_code\",\"detail\":$(printf '%s' "$detail" | python3 -c "import sys,json;print(json.dumps(sys.stdin.read()))")}")
   if [[ "$status" == "ok" ]]; then
-    _log "OK    $name${detail:+: $detail}"
+    _log "OK    $name [$reason_code]${detail:+: $detail}"
     PASS=$(( PASS + 1 ))
   else
-    _warn "FAIL  $name${detail:+: $detail}"
+    _warn "FAIL  $name [$reason_code]${detail:+: $detail}"
     FAIL=$(( FAIL + 1 ))
+    FAILED_REASONS+=("$reason_code")
   fi
 }
 
@@ -36,9 +38,9 @@ probe() {
 
 # 1. Git credential helper registered
 if git config --global --get credential.helper 2>/dev/null | grep -q "gsm\|credential"; then
-  probe "git-credential-helper" "ok" "$(git config --global --get credential.helper)"
+  probe "git-credential-helper" "ok" "HEALTHY" "$(git config --global --get credential.helper)"
 else
-  probe "git-credential-helper" "fail" "credential.helper not set or not gsm-backed"
+  probe "git-credential-helper" "fail" "AUTH_HELPER_MISSING" "credential.helper not set or not gsm-backed"
   if [[ "$FIX_MODE" == "--fix" && "$DRY_RUN" != "1" ]]; then
     git config --global credential.helper "$(command -v git-credential-gsm 2>/dev/null || echo /usr/local/bin/git-credential-gsm)"
     FIXED=$(( FIXED + 1 ))
@@ -49,9 +51,9 @@ fi
 # 2. Auth keepalive running
 KEEPALIVE_BIN="${AUTH_KEEPALIVE_BIN:-$(command -v auth-keepalive 2>/dev/null || echo scripts/auth-keepalive)}"
 if [[ -x "$KEEPALIVE_BIN" ]] && "$KEEPALIVE_BIN" status > /dev/null 2>&1; then
-  probe "auth-keepalive" "ok" "daemon running"
+  probe "auth-keepalive" "ok" "HEALTHY" "daemon running"
 else
-  probe "auth-keepalive" "fail" "daemon not running"
+  probe "auth-keepalive" "fail" "AUTH_KEEPALIVE_STOPPED" "daemon not running"
   if [[ "$FIX_MODE" == "--fix" && "$DRY_RUN" != "1" && -x "$KEEPALIVE_BIN" ]]; then
     "$KEEPALIVE_BIN" start && FIXED=$(( FIXED + 1 )) && _log "FIX: started auth-keepalive"
   fi
@@ -59,24 +61,24 @@ fi
 
 # 3. GSM env canonical
 if [[ "${GSM_PROJECT:-}" == "gcp-eiq" && "${GSM_SECRET_NAME:-}" == "github-token" ]]; then
-  probe "gsm-env-canonical" "ok"
+  probe "gsm-env-canonical" "ok" "HEALTHY"
 else
-  probe "gsm-env-canonical" "fail" "GSM_PROJECT=${GSM_PROJECT:-<unset>} GSM_SECRET_NAME=${GSM_SECRET_NAME:-<unset>}"
+  probe "gsm-env-canonical" "fail" "AUTH_ENV_DRIFT" "GSM_PROJECT=${GSM_PROJECT:-<unset>} GSM_SECRET_NAME=${GSM_SECRET_NAME:-<unset>}"
 fi
 
 # 4. GITHUB_TOKEN available
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-  probe "github-token" "ok" "[set]"
+  probe "github-token" "ok" "HEALTHY" "[set]"
 else
-  probe "github-token" "fail" "GITHUB_TOKEN not set — git push/fetch may fail"
+  probe "github-token" "fail" "AUTH_SCOPE_MISSING" "GITHUB_TOKEN not set — git push/fetch may fail"
 fi
 
 # 5. code-server-auth doctor (if available)
 if command -v code-server-auth >/dev/null 2>&1; then
   if code-server-auth doctor > /dev/null 2>&1; then
-    probe "code-server-auth-doctor" "ok"
+    probe "code-server-auth-doctor" "ok" "HEALTHY"
   else
-    probe "code-server-auth-doctor" "fail" "auth doctor reported drift"
+    probe "code-server-auth-doctor" "fail" "AUTH_ENV_DRIFT" "auth doctor reported drift"
   fi
 fi
 
@@ -85,9 +87,9 @@ PORTAL="${POLICY_PORTAL_URL:-https://kushnir.cloud}"
 if command -v curl >/dev/null 2>&1; then
   if curl -sf --max-time 3 "$PORTAL/health" > /dev/null 2>&1 || \
      curl -sf --max-time 3 "$PORTAL" > /dev/null 2>&1; then
-    probe "admin-portal-reachable" "ok" "$PORTAL"
+    probe "admin-portal-reachable" "ok" "HEALTHY" "$PORTAL"
   else
-    probe "admin-portal-reachable" "fail" "$PORTAL unreachable (fail-safe may apply)"
+    probe "admin-portal-reachable" "fail" "PORTAL_UNREACHABLE" "$PORTAL unreachable (fail-safe may apply)"
   fi
 fi
 
@@ -107,7 +109,7 @@ except Exception:
     print('')
 " 2>/dev/null)
   if [[ -n "$STALE" ]]; then
-    probe "setup-state-flags" "fail" "stale flags detected: $STALE"
+    probe "setup-state-flags" "fail" "STATE_CACHE_STALE" "stale flags detected: $STALE"
     if [[ "$FIX_MODE" == "--fix" && "$DRY_RUN" != "1" && $FAIL -eq 0 ]]; then
       # Only auto-correct if all capability probes passed
       _log "FIX: all capabilities OK — clearing stale setup flags"
@@ -127,7 +129,7 @@ except Exception as e:
 " && FIXED=$(( FIXED + 1 ))
     fi
   else
-    probe "setup-state-flags" "ok" "no stale flags"
+    probe "setup-state-flags" "ok" "HEALTHY" "no stale flags"
   fi
 fi
 
@@ -140,6 +142,9 @@ echo "  probes: $((PASS + FAIL)) total — $PASS ok, $FAIL failing, $FIXED fixed
 if (( FAIL > 0 && FIXED < FAIL )); then
   echo "  STATUS: setup has $((FAIL - FIXED)) unresolved capability gap(s)"
   echo "  ACTION: run --fix to attempt auto-remediation"
+  if (( ${#FAILED_REASONS[@]} > 0 )); then
+    printf '  reason-codes: %s\n' "$(printf '%s\n' "${FAILED_REASONS[@]}" | sort -u | paste -sd ',' -)"
+  fi
 else
   echo "  STATUS: all capabilities healthy — setup state should resolve"
 fi

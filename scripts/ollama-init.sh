@@ -13,9 +13,15 @@ set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+
+if command -v ai-runtime-env >/dev/null 2>&1; then
+  eval "$(ai-runtime-env env 2>/dev/null)" || true
+fi
+
 OLLAMA_ENDPOINT="${OLLAMA_ENDPOINT:-http://ollama:11434}"
+OLLAMA_FALLBACK_ENDPOINT="${OLLAMA_FALLBACK_ENDPOINT:-}"
 WORKSPACE_PATH="${WORKSPACE_PATH:-.}"
-MODELS=("llama2:70b-chat" "codegemma" "neural-chat" "mistral")
+IFS=',' read -r -a MODELS <<< "${OLLAMA_ALLOWED_MODELS:-codellama:7b,mistral}"
 MAX_RETRIES=3
 RETRY_DELAY=5
 
@@ -124,24 +130,30 @@ EOF
 
 # Main initialization flow
 main() {
+  local active_endpoint="$OLLAMA_ENDPOINT"
+
   log "🚀 Initializing Ollama integration..."
   
   # Stage 1: Health check
   log "Stage 1: Checking Ollama connectivity..."
-  if ! check_health "$OLLAMA_ENDPOINT"; then
-    log "⚠️  Ollama not yet ready, continuing with startup..."
-    # Don't exit here - Ollama may start after code-server
+  if ! check_health "$active_endpoint"; then
+    if [ -n "$OLLAMA_FALLBACK_ENDPOINT" ] && [ "$OLLAMA_FALLBACK_ENDPOINT" != "$active_endpoint" ] && check_health "$OLLAMA_FALLBACK_ENDPOINT"; then
+      active_endpoint="$OLLAMA_FALLBACK_ENDPOINT"
+      log "⚠️  Primary endpoint unavailable, using fallback $active_endpoint"
+    else
+      log "⚠️  Ollama not yet ready on primary or fallback, continuing with startup..."
+    fi
   fi
   
   # Stage 2: Attempt to pull models (will retry as needed)
   log "Stage 2: Pulling elite models..."
   for model in "${MODELS[@]}"; do
-    pull_model "$model" "$OLLAMA_ENDPOINT" || true
+    pull_model "$model" "$active_endpoint" || true
   done
   
   # Stage 3: List available models
   log "Stage 3: Listing available models..."
-  list_models "$OLLAMA_ENDPOINT" || true
+  list_models "$active_endpoint" || true
   
   # Stage 4: Build repository index (idempotent — checks hash)
   log "Stage 4: Building repository context index..."
@@ -178,6 +190,7 @@ IMPORTANT: All commands are FULLY IDEMPOTENT — safe to run multiple times.
 
 Environment variables:
   OLLAMA_ENDPOINT  Ollama API endpoint (default: http://ollama:11434)
+  OLLAMA_FALLBACK_ENDPOINT  Fallback API endpoint used when primary is unhealthy
   WORKSPACE_PATH   Workspace directory for indexing (default: .)
 
 Examples:

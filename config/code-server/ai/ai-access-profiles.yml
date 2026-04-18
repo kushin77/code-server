@@ -1,0 +1,45 @@
+# @file        config/code-server/ai/ai-access-profiles.yml
+# @module      ai/access
+# @description Secretsless AI access profiles injected into code-server at workspace startup.
+#
+
+version: "1"
+default_profile: "standard-developer"
+deny_by_default: true
+
+profiles:
+  standard-developer:
+    primary_endpoint: "http://192.168.168.42:11434"
+    fallback_endpoint: "http://192.168.168.31:11434"
+    allowed_models_csv: "codellama:7b,mistral"
+    default_model: "codellama:7b"
+    quota_tier: "standard"
+    max_context_tokens: 16384
+    max_output_tokens: 2048
+
+  power-user:
+    primary_endpoint: "http://192.168.168.42:11434"
+    fallback_endpoint: "http://192.168.168.31:11434"
+    allowed_models_csv: "codellama:7b,mistral,llama3"
+    default_model: "llama3"
+    quota_tier: "power"
+    max_context_tokens: 32768
+    max_output_tokens: 4096
+
+  platform-admin:
+    primary_endpoint: "http://192.168.168.42:11434"
+    fallback_endpoint: "http://192.168.168.31:11434"
+    allowed_models_csv: "codellama:7b,mistral,llama3"
+    default_model: "llama3"
+    quota_tier: "admin"
+    max_context_tokens: 32768
+    max_output_tokens: 4096
+
+  denied:
+    primary_endpoint: ""
+    fallback_endpoint: ""
+    allowed_models_csv: ""
+    default_model: ""
+    quota_tier: "none"
+    max_context_tokens: 0
+    max_output_tokens: 0

@@ -104,12 +104,16 @@ RUN mkdir -p /opt/vsix \
     && echo "[build] Cached github.copilot-chat v0.42.3" || echo "[build] SKIP: Could not cache github.copilot-chat"); \
     rm -f /tmp/github-copilot.vsix.gz /tmp/github-copilot-chat.vsix.gz || true
 
-RUN mkdir -p /usr/local/lib/code-server
+RUN mkdir -p /usr/local/lib/code-server /etc/code-server/ai
 COPY --chmod=755 scripts/lib/merge-settings.js /usr/local/lib/code-server/merge-settings.js
 COPY --chmod=755 scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
 COPY --chmod=755 scripts/code-server-auth /usr/local/bin/code-server-auth
 COPY --chmod=755 scripts/auth-keepalive /usr/local/bin/auth-keepalive
+COPY --chmod=755 scripts/ai-runtime-env /usr/local/bin/ai-runtime-env
 COPY --chmod=755 scripts/workspace-provision /usr/local/bin/workspace-provision
+COPY config/ollama-integration-contract.yml /etc/code-server/ai/ollama-integration-contract.yml
+COPY config/ollama-model-promotion-gates.yml /etc/code-server/ai/ollama-model-promotion-gates.yml
+COPY config/code-server/ai/ /etc/code-server/ai/
 
 USER coder
 

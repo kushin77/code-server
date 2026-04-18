@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# @file        scripts/ai-runtime-env
+# @module      ai/runtime
+# @description Render and validate startup environment for secretsless Ollama access.
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
+readonly REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+readonly ETC_AI_DIR="/etc/code-server/ai"
+readonly REPO_AI_DIR="$REPO_ROOT/config/code-server/ai"
+readonly REPO_CONTRACT_DIR="$REPO_ROOT/config"
+
+if [[ -d "$ETC_AI_DIR" ]]; then
+    readonly AI_DIR="$ETC_AI_DIR"
+else
+    readonly AI_DIR="$REPO_AI_DIR"
+fi
+
+if [[ -f "$ETC_AI_DIR/ollama-integration-contract.yml" ]]; then
+    readonly CONTRACT_FILE="$ETC_AI_DIR/ollama-integration-contract.yml"
+else
+    readonly CONTRACT_FILE="$REPO_CONTRACT_DIR/ollama-integration-contract.yml"
+fi
+
+readonly PROFILE_FILE="$AI_DIR/ai-access-profiles.yml"
+readonly ENTITLEMENTS_FILE="$AI_DIR/model-entitlements.yml"
+readonly QUOTA_FILE="$AI_DIR/quota-policy.yml"
+
+trim_quotes() {
+    local value="$1"
+    value="${value#\"}"
+    value="${value%\"}"
+    printf '%s' "$value"
+}
+
+read_contract_value() {
+    local key="$1"
+
+    case "$key" in
+        primary_host)
+            awk '/^endpoints:/{flag=1; next} flag && /^  primary:/{block=1; next} block && /^    host:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        primary_port)
+            awk '/^endpoints:/{flag=1; next} flag && /^  primary:/{block=1; next} block && /^    port:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        fallback_host)
+            awk '/^endpoints:/{flag=1; next} flag && /^  fallback:/{block=1; next} block && /^    host:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        fallback_port)
+            awk '/^endpoints:/{flag=1; next} flag && /^  fallback:/{block=1; next} block && /^    port:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        default_model)
+            awk '/^supported_models:/{flag=1; next} flag && /^  default:/{block=1; next} block && /^    name:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        header_name)
+            awk '/^auth:/{flag=1; next} flag && /^  header_name:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        auth_mode)
+            awk '/^auth:/{flag=1; next} flag && /^  mode:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        token_source)
+            awk '/^auth:/{flag=1; next} flag && /^  token_source:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        routing_strategy)
+            awk '/^routing:/{flag=1; next} flag && /^  strategy:/{print $2; exit}' "$CONTRACT_FILE"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+default_profile() {
+    awk '/^default_profile:/{print $2; exit}' "$PROFILE_FILE"
+}
+
+read_profile_value() {
+    local profile="$1"
+    local key="$2"
+
+    awk -v profile="$profile" -v key="$key" '
+        /^profiles:/ { in_profiles=1; next }
+        in_profiles && $0 ~ "^  " profile ":" { in_profile=1; next }
+        in_profile && $0 ~ /^  [^ ]/ { in_profile=0 }
+        in_profile && $1 == key ":" {
+            $1=""
+            sub(/^ /, "")
+            print
+            exit
+        }
+    ' "$PROFILE_FILE"
+}
+
+emit_env() {
+    local profile
+    local primary_endpoint
+    local fallback_endpoint
+    local default_model
+    local allowed_models
+    local quota_tier
+    local max_context_tokens
+    local max_output_tokens
+    local header_name
+    local auth_mode
+    local token_source
+    local routing_strategy
+
+    profile="${AI_ACCESS_PROFILE:-$(trim_quotes "$(default_profile)") }"
+    profile="${profile// /}"
+
+    primary_endpoint="$(trim_quotes "$(read_profile_value "$profile" primary_endpoint)")"
+    fallback_endpoint="$(trim_quotes "$(read_profile_value "$profile" fallback_endpoint)")"
+    default_model="$(trim_quotes "$(read_profile_value "$profile" default_model)")"
+    allowed_models="$(trim_quotes "$(read_profile_value "$profile" allowed_models_csv)")"
+    quota_tier="$(trim_quotes "$(read_profile_value "$profile" quota_tier)")"
+    max_context_tokens="$(trim_quotes "$(read_profile_value "$profile" max_context_tokens)")"
+    max_output_tokens="$(trim_quotes "$(read_profile_value "$profile" max_output_tokens)")"
+
+    if [[ -z "$primary_endpoint" ]]; then
+        primary_endpoint="http://$(trim_quotes "$(read_contract_value primary_host)"):$(trim_quotes "$(read_contract_value primary_port)")"
+    fi
+
+    if [[ -z "$fallback_endpoint" ]]; then
+        fallback_endpoint="http://$(trim_quotes "$(read_contract_value fallback_host)"):$(trim_quotes "$(read_contract_value fallback_port)")"
+    fi
+
+    if [[ -z "$default_model" ]]; then
+        default_model="$(trim_quotes "$(read_contract_value default_model)")"
+    fi
+
+    if [[ -z "$allowed_models" ]]; then
+        allowed_models="$default_model"
+    fi
+
+    header_name="$(trim_quotes "$(read_contract_value header_name)")"
+    auth_mode="$(trim_quotes "$(read_contract_value auth_mode)")"
+    token_source="$(trim_quotes "$(read_contract_value token_source)")"
+    routing_strategy="$(trim_quotes "$(read_contract_value routing_strategy)")"
+
+    printf 'export AI_ACCESS_PROFILE=%q\n' "$profile"
+    printf 'export OLLAMA_ENDPOINT=%q\n' "$primary_endpoint"
+    printf 'export OLLAMA_FALLBACK_ENDPOINT=%q\n' "$fallback_endpoint"
+    printf 'export OLLAMA_DEFAULT_MODEL=%q\n' "$default_model"
+    printf 'export OLLAMA_ALLOWED_MODELS=%q\n' "$allowed_models"
+    printf 'export OLLAMA_QUOTA_TIER=%q\n' "${quota_tier:-standard}"
+    printf 'export OLLAMA_MAX_CONTEXT_TOKENS=%q\n' "${max_context_tokens:-16384}"
+    printf 'export OLLAMA_MAX_OUTPUT_TOKENS=%q\n' "${max_output_tokens:-2048}"
+    printf 'export OLLAMA_WORKSPACE_USER_HEADER=%q\n' "$header_name"
+    printf 'export OLLAMA_AUTH_MODE=%q\n' "$auth_mode"
+    printf 'export OLLAMA_TOKEN_SOURCE=%q\n' "$token_source"
+    printf 'export OLLAMA_ROUTING_STRATEGY=%q\n' "$routing_strategy"
+}
+
+doctor() {
+    require_file "$CONTRACT_FILE" "ollama contract is required"
+    require_file "$PROFILE_FILE" "AI access profiles are required"
+    require_file "$ENTITLEMENTS_FILE" "model entitlements are required"
+    require_file "$QUOTA_FILE" "quota policy is required"
+
+    local profile
+    profile="${AI_ACCESS_PROFILE:-$(trim_quotes "$(default_profile)") }"
+    profile="${profile// /}"
+
+    if [[ -z "$(read_profile_value "$profile" quota_tier)" ]]; then
+        log_error "AI profile '$profile' not found in $PROFILE_FILE"
+        return 1
+    fi
+
+    log_info "AI runtime env contract healthy for profile '$profile'"
+    return 0
+}
+
+main() {
+    case "${1:-env}" in
+        env)
+            emit_env
+            ;;
+        doctor)
+            doctor
+            ;;
+        *)
+            log_error "Usage: $(basename "$0") [env|doctor]"
+            return 2
+            ;;
+    esac
+}
+
+main "$@"

@@ -1,0 +1,77 @@
+# @file        config/ollama-integration-contract.yml
+# @module      ai/contract
+# @description Cross-repo integration contract: code-server ↔ ollama.
+#              Defines versioned compatibility, model support matrix, and upgrade protocol.
+#              Pinned at build time; changes require PR with version bump.
+
+version: "1"
+contract_id: "code-server-ollama-v1"
+updated: "2026-04-18"
+
+# ── Endpoint configuration ────────────────────────────────────────────────────
+endpoints:
+  primary:
+    host: "192.168.168.42"
+    port: 11434
+    gpu: true
+    description: "GPU-backed replica — primary inference pool"
+  fallback:
+    host: "192.168.168.31"
+    port: 11434
+    gpu: false
+    description: "CPU fallback — primary deploy host"
+
+# ── Routing policy ────────────────────────────────────────────────────────────
+routing:
+  strategy: "health-primary-fallback"  # Route to primary unless health check fails
+  health_check_interval_seconds: 30
+  health_check_path: "/api/version"
+  failover_threshold_ms: 5000          # Failover if primary latency > 5s
+  failback_after_seconds: 120          # Retry primary after 2min of fallback
+
+# ── Supported models (compatibility matrix) ───────────────────────────────────
+supported_models:
+  default:
+    name: "codellama:7b"
+    minimum_ollama_version: "0.1.27"
+    environment: ["primary", "fallback"]
+  optional:
+    - name: "llama3"
+      minimum_ollama_version: "0.1.35"
+      environment: ["primary"]          # GPU-only
+    - name: "mistral"
+      minimum_ollama_version: "0.1.27"
+      environment: ["primary", "fallback"]
+
+# ── Upgrade protocol ──────────────────────────────────────────────────────────
+upgrade:
+  version_pin_file: "config/ollama-integration-contract.yml"
+  require_pr: true
+  require_model_promotion_gate: true   # See ollama-model-promotion-gates.yml
+  rollback_via: "git revert"
+
+# ── Capacity and rollout guardrails ───────────────────────────────────────────
+capacity:
+  gpu_memory_pressure_percent: 85
+  global_requests_per_minute: 60
+  overload_behavior: "queue-then-downgrade"
+  per_model_concurrency:
+    codellama: 4
+    mistral: 4
+    llama3: 2
+
+canary:
+  traffic_percentages: [10, 50, 100]
+  rollback_triggers:
+    error_rate_percent: 5
+    latency_regression_percent: 20
+    safety_incidents: 1
+
+# ── Identity propagation ──────────────────────────────────────────────────────
+auth:
+  mode: "secretsless"
+  require_client_secret: false
+  inject_workspace_user_header: true
+  header_name: "X-Workspace-User"
+  correlation_id_header: "X-Correlation-ID"
+  token_source: "none"

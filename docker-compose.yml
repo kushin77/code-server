@@ -172,7 +172,7 @@ services:
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"
       OAUTH2_PROXY_UPSTREAMS: "http://code-server:8080/"
       # Allow any Google domain to attempt auth; authenticated-emails-file is the real gate.
       # This prevents org_internal 403 errors for accounts outside bioenergystrategies.com (e.g. gmail.com).
@@ -239,7 +239,7 @@ services:
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
       # Allow any Google domain to complete OAuth; authenticated-emails-file remains the real gate.
       # This prevents Google from returning org_internal 403 before our explicit allowlist is checked.

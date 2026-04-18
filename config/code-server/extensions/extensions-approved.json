@@ -1,0 +1,94 @@
+{
+  "policy_version": "1.0.0",
+  "policy_date": "2026-04-18",
+  "extensions": [
+    {
+      "id": "GitHub.copilot",
+      "version": "1.295.0",
+      "tier": "T1-Core",
+      "reason": "AI code completion — enterprise licensed, pre-installed",
+      "pre_installed": true,
+      "user_can_uninstall": false
+    },
+    {
+      "id": "GitHub.copilot-chat",
+      "version": "0.42.3",
+      "tier": "T1-Core",
+      "reason": "AI chat and inline chat — enterprise licensed, pre-installed",
+      "pre_installed": true,
+      "user_can_uninstall": false
+    },
+    {
+      "id": "ms-python.python",
+      "version": "2024.6.0",
+      "tier": "T1-Core",
+      "reason": "Python language support — required for scripts and tooling",
+      "pre_installed": false,
+      "user_can_uninstall": false
+    },
+    {
+      "id": "ms-python.black-formatter",
+      "version": "2024.2.0",
+      "tier": "T1-Core",
+      "reason": "Black formatter — required by T1 Python formatting policy",
+      "pre_installed": false,
+      "user_can_uninstall": false
+    },
+    {
+      "id": "esbenp.prettier-vscode",
+      "version": "10.4.0",
+      "tier": "T1-Core",
+      "reason": "Prettier formatter — required by T1 JS/TS/JSON/YAML formatting policy",
+      "pre_installed": false,
+      "user_can_uninstall": false
+    },
+    {
+      "id": "redhat.vscode-yaml",
+      "version": "1.15.0",
+      "tier": "T1-Core",
+      "reason": "YAML language support — required for compose/k8s/prometheus files",
+      "pre_installed": false,
+      "user_can_uninstall": false
+    },
+    {
+      "id": "hashicorp.terraform",
+      "version": "2.32.0",
+      "tier": "T2-Recommended",
+      "reason": "Terraform IaC support — recommended for all infra contributors",
+      "pre_installed": false,
+      "user_can_uninstall": true
+    },
+    {
+      "id": "timonwong.shellcheck",
+      "version": "0.38.2",
+      "tier": "T2-Recommended",
+      "reason": "Shellcheck integration — surfaces bash lint warnings inline",
+      "pre_installed": false,
+      "user_can_uninstall": true
+    },
+    {
+      "id": "ms-azuretools.vscode-docker",
+      "version": "1.29.2",
+      "tier": "T2-Recommended",
+      "reason": "Docker Compose and Dockerfile support",
+      "pre_installed": false,
+      "user_can_uninstall": true
+    },
+    {
+      "id": "eamodio.gitlens",
+      "version": "15.4.0",
+      "tier": "T2-Recommended",
+      "reason": "Git blame and history inline — productivity boost",
+      "pre_installed": false,
+      "user_can_uninstall": true
+    },
+    {
+      "id": "github.vscode-github-actions",
+      "version": "0.26.4",
+      "tier": "T2-Recommended",
+      "reason": "GitHub Actions workflow editing and validation",
+      "pre_installed": false,
+      "user_can_uninstall": true
+    }
+  ]
+}

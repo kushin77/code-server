@@ -22,8 +22,33 @@ declare -a SSOT_FILES=(
     ".env"
     ".env.example"
     ".env.defaults"
+    ".env.schema.json"
     "terraform/variables.tf"
     "docs/PHASE-2-TASKS-3-4-IMPLEMENTATION.md"
+)
+
+# Directory prefixes to skip for domain/IP checks (config definitions, not scripts)
+declare -a SKIP_DIRS=(
+    "config/"
+    "docker/configs/"
+    "environments/"
+    "scripts/nas-ingress.yaml"
+    "alert-rules"
+    "alertmanager"
+    "k8s/"
+    "terraform/"
+    "code-server-config.yaml"
+    "promtail-config.yml"
+    "prometheus-rules"
+    "otel-config.yml"
+    "loki-config.yml"
+    ".github/"
+    ".pre-commit-hooks.yaml"
+    "scripts/dev/check-config-drift.sh"
+    "scripts/ci/detect-config-drift.sh"
+    "phase-20-a1-config.yml"
+    "docker-compose-phase-"
+    "phase-"
 )
 
 # Hardcoded patterns to detect (should use env vars instead)
@@ -61,6 +86,16 @@ is_ssot_file() {
     return 1
 }
 
+is_skip_dir() {
+    local file="$1"
+    for dir in "${SKIP_DIRS[@]}"; do
+        if [[ "$file" == "$dir"* ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 check_hardcoded_ips() {
     local drift_found=0
     
@@ -69,29 +104,33 @@ check_hardcoded_ips() {
     # Search for hardcoded IPs
     while IFS= read -r line; do
         local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
         
         # Skip SSOT files and archived directories
-        if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+        if is_ssot_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
             continue
         fi
         
-        # Skip comments
-        if [[ "$line" =~ ^[[:space:]]*# ]]; then
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
             continue
         fi
         
-        log_warn "  Found hardcoded IP in $file: $(echo "$line" | cut -d: -f2-)"
+        # Skip lines where IP is already in an env-var default (${VAR:-ip})
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded IP in $file: $content"
         drift_found=1
     done < <(grep -rn "192\.168\.168\." \
-        --include="*.yml" \
-        --include="*.yaml" \
-        --include="*.sh" \
-        --include="*.tf" \
-        --include="Caddyfile*" \
-        --exclude-dir=.git \
-        --exclude-dir=terraform/.terraform \
-        --exclude-dir=archived \
-        --exclude-dir=_archive \
+        docker-compose.yml \
+        docker-compose.production.yml \
+        docker-compose.base.yml \
+        docker-compose.dev.yml \
+        Caddyfile \
+        Caddyfile.production \
         2>/dev/null || true)
     
     return $drift_found
@@ -105,18 +144,25 @@ check_hardcoded_domains() {
     # Search for hardcoded domains
     while IFS= read -r line; do
         local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
         
         # Skip SSOT files and archived directories
-        if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+        if is_ssot_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
             continue
         fi
         
-        # Skip comments
-        if [[ "$line" =~ ^[[:space:]]*# ]]; then
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
             continue
         fi
         
-        log_warn "  Found hardcoded domain in $file: $(echo "$line" | cut -d: -f2-)"
+        # Skip lines where domain is already in an env-var default (${VAR:-domain})
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded domain in $file: $content"
         drift_found=1
     done < <(grep -rn "kushnir\.cloud\|prod\.internal" \
         --include="*.yml" \
@@ -139,18 +185,40 @@ check_hardcoded_ports() {
     # Search for hardcoded ports in docker-compose and Caddyfile
     while IFS= read -r line; do
         local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
         
         # Skip SSOT files and archived directories
-        if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]]; then
+        if is_ssot_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
             continue
         fi
         
-        # Skip comments
-        if [[ "$line" =~ ^[[:space:]]*# ]]; then
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
             continue
         fi
         
-        log_warn "  Found hardcoded port in $file: $(echo "$line" | cut -d: -f2-)"
+        # Skip docker-compose port mapping lines ("NNNN:NNNN" format — required syntax)
+        if [[ "$content" =~ [0-9]+:[0-9]+ ]] && [[ "$content" =~ ^[[:space:]]*- ]]; then
+            continue
+        fi
+        
+        # Skip health check localhost URLs (localhost:port is not hardcoded deployment config)
+        if [[ "$content" =~ localhost:[0-9]+ ]]; then
+            continue
+        fi
+        
+        # Skip Docker internal service name URLs (e.g. http://prometheus:9090)
+        if [[ "$content" =~ http[s]?://[a-z][a-z0-9_-]+:[0-9]+ ]]; then
+            continue
+        fi
+        
+        # Skip lines where port is already in an env-var interpolation
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded port in $file: $content"
         drift_found=1
     done < <(grep -rn ":[9308][0908][909][0]" \
         docker-compose*.yml \

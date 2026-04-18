@@ -24,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.code-server
-    image: code-server-enterprise:latest
+    image: code-server-enterprise:dev
     container_name: code-server
     restart: unless-stopped
     user: "1000"
@@ -178,8 +178,8 @@ services:
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
       OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
-      OAUTH2_PROXY_COOKIE_DOMAINS: ".kushnir.cloud"
-      OAUTH2_PROXY_WHITELIST_DOMAINS: ".kushnir.cloud"
+      OAUTH2_PROXY_COOKIE_DOMAINS: ".${DOMAIN:-kushnir.cloud}"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: ".${DOMAIN:-kushnir.cloud}"
       OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
       OAUTH2_PROXY_COOKIE_REFRESH: "15m"
       OAUTH2_PROXY_REVERSE_PROXY: "true"
@@ -242,8 +242,8 @@ services:
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
       OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
-      OAUTH2_PROXY_COOKIE_DOMAINS: ".kushnir.cloud"
-      OAUTH2_PROXY_WHITELIST_DOMAINS: ".kushnir.cloud"
+      OAUTH2_PROXY_COOKIE_DOMAINS: ".${DOMAIN:-kushnir.cloud}"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: ".${DOMAIN:-kushnir.cloud}"
       OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
       OAUTH2_PROXY_COOKIE_REFRESH: "15m"
       OAUTH2_PROXY_REVERSE_PROXY: "true"
@@ -292,7 +292,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     environment:
-      - DOMAIN=${DOMAIN:-192.168.168.31.nip.io}
+      - DOMAIN=${DOMAIN:-${DEPLOY_HOST:-localhost}.nip.io}
       - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}
       - ACME_AGREE=true
     healthcheck:
@@ -522,7 +522,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
       - GF_SECURITY_ADMIN_USER=admin
       - GF_AUTH_ANONYMOUS_ENABLED=false
-      - GF_SERVER_ROOT_URL=http://192.168.168.31:3000
+      - GF_SERVER_ROOT_URL=http://${DEPLOY_HOST:-localhost}:3000
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
       - grafana-data:/var/lib/grafana
@@ -626,8 +626,8 @@ services:
       - APPSMITH_FORM_LOGIN_DISABLED=true
       - APPSMITH_OAUTH2_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - APPSMITH_BASE_URL=https://kushnir.cloud
-      - APPSMITH_CUSTOM_DOMAIN=kushnir.cloud
+      - APPSMITH_BASE_URL=https://${DOMAIN:-kushnir.cloud}
+      - APPSMITH_CUSTOM_DOMAIN=${DOMAIN:-kushnir.cloud}
       - APPSMITH_ADMIN_EMAILS=${APPSMITH_ADMIN_EMAILS:-akushnir@bioenergystrategies.com}
     expose:
       - "80"

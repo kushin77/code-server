@@ -34,14 +34,16 @@ USER root
 # This ensures code-server users have everything needed without manual installation
 # Update packages and install core development tools (immutable, pre-installed)
 # Python packages via apt to avoid PEP 668 conflicts
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential git curl python3 python3-pip python3-venv \
     nodejs npm \
     vim gdb tmux htop jq docker.io postgresql-client \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js development packages globally  
-RUN npm install -g typescript eslint prettier jest
+# Install Node.js development packages globally
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN npm install -g typescript@5.4.5 eslint@9.3.0 prettier@3.3.0 jest@29.7.0
 
 # Optional: Install Rust (best-effort, non-blocking)
 RUN mkdir -p /opt/dev-tools && chmod -R 777 /opt/dev-tools && \

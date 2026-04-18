@@ -22,10 +22,10 @@ LOG_FILE="${LOG_DIR}/nas-mount-${TIMESTAMP}.log"
 DRY_RUN=false
 ACTION="${1:-all}"
 
-# NAS Configuration
-NAS_PRIMARY="192.168.168.10"
-NAS_SECONDARY="192.168.168.11"
-NAS_ARCHIVE="192.168.168.12"
+# NAS Configuration — use env vars with production defaults
+NAS_PRIMARY="${NAS_PRIMARY:-192.168.168.10}"
+NAS_SECONDARY="${NAS_SECONDARY:-192.168.168.11}"
+NAS_ARCHIVE="${NAS_ARCHIVE:-192.168.168.12}"
 
 # Mount Points
 MOUNTS=(
@@ -203,7 +203,7 @@ setup_backup_automation() {
 
 BACKUP_LOG="/var/log/nas-backup.log"
 MODELS_SOURCE="/mnt/models"
-BACKUP_DEST="192.168.168.11:/export/backups/models"
+BACKUP_DEST="${NAS_SECONDARY:-192.168.168.11}:/export/backups/models"
 
 log() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] $@" | tee -a "$BACKUP_LOG"
@@ -234,7 +234,7 @@ BACKUP_SCRIPT
 
 BACKUP_LOG="/var/log/nas-backup.log"
 MODELS_SOURCE="/mnt/models"
-BACKUP_DEST="192.168.168.11:/export/backups/models"
+BACKUP_DEST="${NAS_SECONDARY:-192.168.168.11}:/export/backups/models"
 
 log() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] $@" | tee -a "$BACKUP_LOG"

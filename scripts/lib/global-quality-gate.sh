@@ -107,7 +107,7 @@ check_docker_services() {
     
     # Skip if Docker daemon is not reachable (e.g., running quality gate locally on Windows/WSL)
     if ! docker info &>/dev/null 2>&1; then
-        log_skip "Docker daemon not reachable — skipping service checks (run on 192.168.168.31 for full validation)"
+        log_skip "Docker daemon not reachable — skipping service checks (run on ${DEPLOY_HOST:-192.168.168.31} for full validation)"
         return 0
     fi
     

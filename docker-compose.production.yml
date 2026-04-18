@@ -70,7 +70,7 @@ services:
   # ════════════════════════════════════════════════════════════
   
   caddy:
-    image: caddy:latest
+    image: caddy:2.8.4
     container_name: caddy
     restart: always
     networks:
@@ -87,7 +87,7 @@ services:
       
       # TLS Configuration
       TLS_MIN_VERSION: "1.3"
-      ENFORCED_HOST: "ide.kushnir.cloud"
+      ENFORCED_HOST: "${DOMAIN:-ide.kushnir.cloud}"
     volumes:
       - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -112,7 +112,7 @@ services:
   # ════════════════════════════════════════════════════════════
   
   vault:
-    image: vault:latest
+    image: vault:1.17.2
     container_name: vault
     restart: always
     networks:
@@ -194,7 +194,7 @@ services:
   # ════════════════════════════════════════════════════════════
   
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.53.1
     container_name: prometheus
     restart: always
     networks:
@@ -227,7 +227,7 @@ services:
         labels: "service=prometheus,tier=observability"
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.27.0
     container_name: alertmanager
     restart: always
     networks:
@@ -255,7 +255,7 @@ services:
         labels: "service=alertmanager,tier=observability"
 
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    image: jaegertracing/all-in-one:1.60.0
     container_name: jaeger
     restart: always
     networks:
@@ -553,7 +553,7 @@ services:
   # ════════════════════════════════════════════════════════════
   
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.8.2
     container_name: node-exporter
     restart: always
     networks:
@@ -575,7 +575,7 @@ services:
         labels: "service=node-exporter,tier=monitoring"
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: cadvisor
     restart: always
     networks:

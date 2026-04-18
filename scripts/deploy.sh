@@ -169,7 +169,7 @@ fi
 echo ""
 echo "════════════════════════════════════════════════════════════════════════════"
 echo "DEPLOYMENT COMPLETE"
-echo "✅ Access IDE at: https://ide.kushnir.cloud"
+echo "✅ Access IDE at: https://${DOMAIN}"
 echo "✅ Authentication: Google OAuth2"
 echo "✅ TLS: Let's Encrypt (auto-renewed)"
 echo "════════════════════════════════════════════════════════════════════════════"

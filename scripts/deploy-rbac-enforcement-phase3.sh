@@ -14,7 +14,8 @@ source "$SCRIPT_DIR/_common/init.sh"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 RBAC_NAMESPACE="default"
-APEX_DOMAIN="kushnir.cloud"
+# Use env var or default from config
+APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
 
 log_warning() { log_warn "$@"; }
 log_error() { log_fatal "$@"; }

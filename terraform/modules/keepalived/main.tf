@@ -237,13 +237,6 @@ vrrp_instance VI_1 {
 EOT
 }
 
-# Health check script on replica — written to /tmp for reference only
-resource "local_file" "vrrp_health_check_replica" {
-  filename        = "${local.scripts_path}/vrrp-health-monitor-replica.sh"
-  content         = file("${path.module}/scripts/vrrp-health-monitor.sh")
-  file_permission = "0755"
-}
-
 # Keepalived Docker container on replica
 resource "docker_container" "keepalived_replica" {
   count          = var.enable_on_replica ? 1 : 0

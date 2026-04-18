@@ -64,17 +64,35 @@ jobs:
             console.log('storage-state JSON validated');
             process.exit(0);
           } catch (_) {
-            // Fallback: secret may be a JS object literal (keys unquoted), not strict JSON.
-            try {
-              const obj = Function(`"use strict"; return (${raw});`)();
-              fs.writeFileSync(path, JSON.stringify(obj, null, 2));
-              JSON.parse(fs.readFileSync(path, 'utf8'));
-              console.log('storage-state normalized from JS object literal to JSON');
-              process.exit(0);
-            } catch (err) {
-              console.error('storage-state parse/normalize failed:', err.message);
-              process.exit(1);
+            // Fallbacks for legacy secret formats.
+            const candidates = [raw, `{${raw}}`];
+
+            for (const candidate of candidates) {
+              try {
+                const obj = Function(`"use strict"; return (${candidate});`)();
+                fs.writeFileSync(path, JSON.stringify(obj, null, 2));
+                JSON.parse(fs.readFileSync(path, 'utf8'));
+                console.log('storage-state normalized from JS object literal to JSON');
+                process.exit(0);
+              } catch (_) {
+                // try next candidate
+              }
+
+              try {
+                const normalized = candidate
+                  .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_-]*)(\s*:)/g, '$1"$2"$3')
+                  .replace(/'/g, '"');
+                const obj = JSON.parse(normalized);
+                fs.writeFileSync(path, JSON.stringify(obj, null, 2));
+                console.log('storage-state normalized from loose JSON format');
+                process.exit(0);
+              } catch (_) {
+                // try next candidate
+              }
             }
+
+            console.error('storage-state parse/normalize failed: unsupported secret format');
+            process.exit(1);
           }
           NODE
 

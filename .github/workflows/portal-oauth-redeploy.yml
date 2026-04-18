@@ -30,30 +30,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-      - name: Normalize WIF provider value
+      - name: Resolve canonical WIF provider
         if: ${{ !inputs.dry_run && !hashFiles('.env') }}
         env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT }}
           GCP_WIF_PROVIDER_RAW: ${{ secrets.GCP_WIF_PROVIDER }}
         shell: bash
         run: |
           set -euo pipefail
-          provider="${GCP_WIF_PROVIDER_RAW#"${GCP_WIF_PROVIDER_RAW%%[![:space:]]*}"}"
+          default_provider="projects/${GCP_PROJECT_ID}/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          provider="${GCP_WIF_PROVIDER_RAW:-$default_provider}"
+          provider="${provider#"${provider%%[![:space:]]*}"}"
           provider="${provider%"${provider##*[![:space:]]}"}"
-          provider="${provider#http://iam.googleapis.com/}"
-          provider="${GCP_WIF_PROVIDER_RAW#//iam.googleapis.com/}"
+          provider="${provider#//iam.googleapis.com/}"
           provider="${provider#https://iam.googleapis.com/}"
           provider="${provider#iam.googleapis.com/}"
+          if [[ "$provider" != projects/*/locations/global/workloadIdentityPools/*/providers/* ]]; then
+            echo "GCP_WIF_PROVIDER is not a canonical provider resource; using ${default_provider}" >&2
+            provider="$default_provider"
+          fi
           if [[ -z "$provider" ]]; then
-            echo "GCP_WIF_PROVIDER is empty after normalization" >&2
+            echo "GCP_WIF_PROVIDER resolved to an empty provider" >&2
             exit 1
           fi
-          echo "GCP_WIF_PROVIDER_NORMALIZED=$provider" >> "$GITHUB_ENV"
+          echo "GCP_WIF_PROVIDER_RESOLVED=$provider" >> "$GITHUB_ENV"
 
       - name: Authenticate to GCP via Workload Identity
         if: ${{ !inputs.dry_run && !hashFiles('.env') }}
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER_NORMALIZED }}
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER_RESOLVED }}
           service_account: ${{ secrets.GCP_SA }}
 
       - name: Setup gcloud CLI

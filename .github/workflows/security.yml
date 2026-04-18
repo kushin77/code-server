@@ -26,6 +26,20 @@ jobs:
       - name: Validate deterministic fallback and strict mode behavior
         run: bash scripts/ci/test-git-credential-gsm.sh
 
+  auth-conformance:
+    name: Auth/Policy Conformance Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run auth conformance tests
+        run: bash scripts/ci/test-auth-conformance.sh
+      - name: Upload conformance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-conformance-report
+          path: /tmp/auth-conformance-report.json
+
   iac-security:
     name: Checkov + Tfsec IaC Scans
     uses: ./.github/workflows/TEMPLATE-validate-iac.yml

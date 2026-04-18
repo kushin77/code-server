@@ -1,0 +1,58 @@
+name: E2E Authenticated Failover Continuity
+
+on:
+  workflow_dispatch:
+    inputs:
+      failover_wait_ms:
+        description: "Wait window during failover event (milliseconds)"
+        required: false
+        default: "45000"
+        type: string
+      failover_trigger_cmd:
+        description: "Optional shell command to trigger failover during test"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  continuity-auth:
+    name: Run authenticated continuity check
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Decode authenticated storage state
+        shell: bash
+        env:
+          PLAYWRIGHT_STORAGE_STATE_B64: ${{ secrets.PLAYWRIGHT_STORAGE_STATE_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PLAYWRIGHT_STORAGE_STATE_B64:-}" ]]; then
+            echo "PLAYWRIGHT_STORAGE_STATE_B64 secret is not set" >&2
+            exit 1
+          fi
+
+          mkdir -p /tmp/e2e-auth
+          echo "$PLAYWRIGHT_STORAGE_STATE_B64" | base64 -d > /tmp/e2e-auth/storage-state.json
+          test -s /tmp/e2e-auth/storage-state.json
+
+      - name: Run authenticated failover continuity test
+        shell: bash
+        env:
+          CONTINUITY_MODE: auth
+          TEST_BASE_URL: https://ide.kushnir.cloud
+          PLAYWRIGHT_STORAGE_STATE: /tmp/e2e-auth/storage-state.json
+          FAILOVER_WAIT_MS: ${{ inputs.failover_wait_ms }}
+          FAILOVER_TRIGGER_CMD: ${{ inputs.failover_trigger_cmd }}
+        run: |
+          set -euo pipefail
+          bash scripts/ci/run-playwright-failover-continuity.sh

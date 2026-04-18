@@ -135,6 +135,7 @@ locals {
     ollama_port              = local.network.ollama_port
     data_volume              = local.storage.data_volume
     workspace_volume         = local.storage.workspace_volume
+    workspace_dir            = local.storage.workspace_volume
     ollama_volume            = local.storage.ollama_volume
     workspace_path           = local.storage.workspace_path
     nas_host                 = local.storage.nas_host

@@ -126,7 +126,6 @@ resource "docker_container" "keepalived_primary" {
   provider       = docker.primary
   name           = "keepalived"
   image          = docker_image.keepalived.repo_digest
-  restart_policy = "always"
   privileged     = true
   network_mode   = "host"
 
@@ -243,7 +242,6 @@ resource "docker_container" "keepalived_replica" {
   provider       = docker.replica
   name           = "keepalived"
   image          = docker_image.keepalived.repo_digest
-  restart_policy = "always"
   privileged     = true
   network_mode   = "host"
 

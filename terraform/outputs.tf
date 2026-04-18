@@ -21,6 +21,7 @@ output "infrastructure_summary" {
 
 output "monitoring_endpoints" {
   description = "Monitoring infrastructure endpoints"
+  sensitive   = true
   value = {
     prometheus = {
       endpoint       = module.monitoring.prometheus_endpoint

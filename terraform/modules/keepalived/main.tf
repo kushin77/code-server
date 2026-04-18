@@ -36,11 +36,27 @@ locals {
 provider "docker" {
   alias = "primary"
   host  = "ssh://${local.primary_host.ssh_user}@${local.primary_host.ip}:${local.primary_host.ssh_port}"
+  ssh_opts = [
+    "-i",
+    pathexpand(var.ssh_identity_file),
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+  ]
 }
 
 provider "docker" {
   alias = "replica"
   host  = "ssh://${local.replica_host.ssh_user}@${local.replica_host.ip}:${local.replica_host.ssh_port}"
+  ssh_opts = [
+    "-i",
+    pathexpand(var.ssh_identity_file),
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+  ]
 }
 
 # ==============================================================================

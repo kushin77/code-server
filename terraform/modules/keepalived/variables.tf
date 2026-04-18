@@ -45,6 +45,12 @@ variable "docker_host" {
   default     = ""
 }
 
+variable "ssh_identity_file" {
+  description = "SSH private key path used by Docker provider SSH transport"
+  type        = string
+  default     = "~/.ssh/id_iac_service"
+}
+
 variable "keepalived_version" {
   description = "Keepalived container version"
   type        = string

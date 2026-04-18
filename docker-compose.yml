@@ -409,7 +409,7 @@ services:
   # Query performance: Same latency, Higher throughput (3x req/sec improvement)
   # ────────────────────────────────────────────────────────────────────────────
   pgbouncer:
-    image: iserko/pgbouncer:1.21.0-debian
+    image: edoburu/pgbouncer@sha256:85d1e38593617af1b5f7f285e97d407e56c29939683cc7cfe4c8f6dc19f1268b
     container_name: pgbouncer
     restart: unless-stopped
     networks:

@@ -297,17 +297,17 @@ run_primary_redeploy() {
 }
 
 run_replica_promote() {
-  # Replica path uses docker/docker-compose.yml to avoid host conflicts with db/cache services.
-  run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; set -a; [ -f .env ] && . ./.env || true; set +a; export ts=\"\${ts:-na}\"; export out=\"\${out:-/tmp}\"; services='code-server oauth2-proxy'; if ${REPLICA_COMPOSE_BIN} -f docker/docker-compose.yml config --services | grep -qx 'code-server-profile-backup'; then services=\"\${services} code-server-profile-backup\"; fi; ${REPLICA_COMPOSE_BIN} -f docker/docker-compose.yml up -d \${services}"
+  # Replica path uses canonical root compose file. The old docker/docker-compose.yml is retired.
+  run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; set -a; [ -f .env ] && . ./.env || true; set +a; export ts=\"\${ts:-na}\"; export out=\"\${out:-/tmp}\"; services='code-server oauth2-proxy'; if ${REPLICA_COMPOSE_BIN} -f docker-compose.yml config --services | grep -qx 'code-server-profile-backup'; then services=\"\${services} code-server-profile-backup\"; fi; for svc in \${services}; do if docker inspect \"\${svc}\" >/dev/null 2>&1; then docker start \"\${svc}\" >/dev/null 2>&1 || true; else ${REPLICA_COMPOSE_BIN} -f docker-compose.yml up -d \"\${svc}\"; fi; done"
 
   # Ensure alternate ingress endpoint exists for validation when 80/443 are unavailable.
-  run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; cat > /tmp/Caddyfile.replica <<'EOF'
+  run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; replica_oauth_network=\"\$(docker inspect oauth2-proxy --format '{{range \$k, \$v := .NetworkSettings.Networks}}{{\$k}} {{end}}' 2>/dev/null | awk '{print \$1}')\"; [ -n \"\${replica_oauth_network}\" ] || replica_oauth_network='enterprise'; cat > /tmp/Caddyfile.replica <<'EOF'
 :80 {
   reverse_proxy oauth2-proxy:4180
 }
 EOF
 docker rm -f caddy-replica >/dev/null 2>&1 || true
-docker run -d --name caddy-replica --restart unless-stopped --network docker_enterprise -p 18080:80 -v /tmp/Caddyfile.replica:/etc/caddy/Caddyfile:ro caddy:2.7.6 >/dev/null
+docker run -d --name caddy-replica --restart unless-stopped --network \"\${replica_oauth_network}\" -p 18080:80 -v /tmp/Caddyfile.replica:/etc/caddy/Caddyfile:ro caddy:2.7.6 >/dev/null
 sleep 3
 ok=0
 for i in \$(seq 1 ${INGRESS_PROBE_ATTEMPTS}); do
@@ -362,8 +362,12 @@ promote_replica() {
 
 failback_primary() {
   log_section "Failback Primary"
-  run_primary_redeploy
-  primary_health >/dev/null
+  if primary_health >/dev/null; then
+    log_info "Primary already healthy; skipping full redeploy during failback"
+  else
+    run_primary_redeploy
+    primary_health >/dev/null
+  fi
   write_active_host_marker "$PRIMARY_HOST" >/dev/null
   assert_post_cycle_state "$PRIMARY_HOST"
   log_success "Primary failback gates passed and active marker updated"

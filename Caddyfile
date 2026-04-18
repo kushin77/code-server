@@ -26,7 +26,7 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
-        reverse_proxy oauth2-proxy:4180 192.168.168.42:4180 {
+        reverse_proxy oauth2-proxy:4180 192.168.168.42:18080 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
             header_down X-LB-Upstream {http.reverse_proxy.upstream.address}

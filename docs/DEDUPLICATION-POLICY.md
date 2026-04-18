@@ -1,3 +1,5 @@
+**Lifecycle**: active-production
+
 # Deduplication Policy
 
 **Version:** 1.0.0  

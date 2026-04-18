@@ -22,6 +22,7 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
         reverse_proxy oauth2-proxy:4180 192.168.168.42:4180 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
+            header_down X-LB-Upstream {http.reverse_proxy.upstream.hostport}
             # Sticky load balancing for auth callbacks and browser session continuity.
             lb_policy cookie ide_lb_shared secret734
             health_uri /ping
@@ -36,6 +37,7 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     reverse_proxy oauth2-proxy:4180 192.168.168.42:4180 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
+        header_down X-LB-Upstream {http.reverse_proxy.upstream.hostport}
         # Sticky load balancing for websocket-heavy IDE traffic.
         lb_policy cookie ide_lb_shared secret734
         health_uri /ping

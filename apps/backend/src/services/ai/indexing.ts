@@ -161,16 +161,20 @@ export class RepositoryIndexer {
     const q = tokenize(query.toLowerCase());
     if (q.length === 0) return [];
 
+    // For multi-term queries, require stronger overlap to reduce noisy matches.
+    const minOverlap = q.length >= 2 ? 2 : 1;
+
     const scored = this.getAllChunks().map((chunk) => {
       const hay = tokenize(chunk.content.toLowerCase());
       const overlap = q.filter((term) => hay.includes(term)).length;
       const score = overlap / q.length;
-      return { chunk, score };
+      return { chunk, score, overlap };
     });
 
     return scored
-      .filter((s) => s.score > 0)
+      .filter((s) => s.overlap >= minOverlap)
       .sort((a, b) => b.score - a.score)
+      .map(({ chunk, score }) => ({ chunk, score }))
       .slice(0, limit);
   }
 

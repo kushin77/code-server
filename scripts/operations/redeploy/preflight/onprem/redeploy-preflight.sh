@@ -248,6 +248,25 @@ check_redeploy_safety() {
   fi
 }
 
+check_domain_drift() {
+  log_section "Domain Drift Check"
+
+  local domain_value
+  domain_value=$(remote "cd ${TARGET_REPO} && if [[ -f .env ]]; then sed -n 's/^DOMAIN=//p' .env | tail -n1; fi" || true)
+
+  if [[ -z "${domain_value}" ]]; then
+    log_warn "DOMAIN is not set in ${TARGET_REPO}/.env"
+    return 0
+  fi
+
+  if [[ "${domain_value}" != "kushnir.cloud" ]]; then
+    log_warn "DOMAIN drift detected: .env DOMAIN=${domain_value} (expected kushnir.cloud)"
+    log_warn "Current compose pins critical portal/auth domains, but updating .env reduces future overlap risk"
+  else
+    log_success "DOMAIN is aligned: ${domain_value}"
+  fi
+}
+
 cleanup_stale_log_tails() {
   if [[ "${FIX_STALE_LOGS}" != "true" ]]; then
     return 0
@@ -279,6 +298,7 @@ main() {
   check_remote_baseline
   emit_remote_fingerprint
   check_redeploy_safety
+  check_domain_drift
   cleanup_stale_log_tails
   log_success "On-prem redeploy preflight completed"
 }

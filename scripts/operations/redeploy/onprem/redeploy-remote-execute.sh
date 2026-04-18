@@ -22,11 +22,12 @@ FIX_STALE_LOGS="false"
 DRY_RUN="false"
 ALLOW_RECREATE="false"
 ALL_SERVICES="false"
-REDEPLOY_SERVICES="code-server oauth2-proxy caddy postgres redis pgbouncer"
+REDEPLOY_SERVICES="code-server oauth2-proxy oauth2-proxy-portal caddy postgres redis pgbouncer session-broker appsmith"
+REDEPLOY_PROFILES="${REDEPLOY_PROFILES:-portal}"
 
 usage() {
   cat <<'EOF'
-Usage: redeploy-remote-execute.sh [--host HOST] [--user USER] [--repo PATH] [--compose-bin CMD] [--mode MODE] [--ssh-key PATH] [--ssh-bin CMD] [--fix-stale-logs] [--dry-run] [--allow-recreate] [--all-services] [--services "svc1 svc2"]
+Usage: redeploy-remote-execute.sh [--host HOST] [--user USER] [--repo PATH] [--compose-bin CMD] [--mode MODE] [--ssh-key PATH] [--ssh-bin CMD] [--fix-stale-logs] [--dry-run] [--allow-recreate] [--all-services] [--profiles "p1,p2"] [--services "svc1 svc2"]
 
 Options:
   --host HOST         Remote host. Default: 192.168.168.31
@@ -40,11 +41,12 @@ Options:
   --dry-run           Print remote commands without applying changes
   --allow-recreate    Allow compose to recreate resources when needed
   --all-services      Redeploy all compose services (may trigger prompts for drifted volumes)
+  --profiles "..."   COMPOSE_PROFILES value for remote compose execution. Default: portal
   --services "..."    Space-separated service list to redeploy
   -h, --help          Show this help
 
 Environment:
-  TARGET_HOST, TARGET_USER, TARGET_REPO, COMPOSE_BIN, EXEC_MODE, SSH_KEY_PATH, SSH_BIN, REDEPLOY_SSH_TIMEOUT
+  TARGET_HOST, TARGET_USER, TARGET_REPO, COMPOSE_BIN, EXEC_MODE, SSH_KEY_PATH, SSH_BIN, REDEPLOY_SSH_TIMEOUT, REDEPLOY_PROFILES
 EOF
 }
 
@@ -94,6 +96,10 @@ parse_args() {
       --all-services)
         ALL_SERVICES="true"
         shift
+        ;;
+      --profiles)
+        REDEPLOY_PROFILES="$2"
+        shift 2
         ;;
       --services)
         REDEPLOY_SERVICES="$2"
@@ -254,6 +260,7 @@ run_remote_redeploy() {
   rollout_cmd=$(cat <<EOF
 set -euo pipefail
 export COMPOSE_INTERACTIVE_NO_CLI=1
+export COMPOSE_PROFILES='${REDEPLOY_PROFILES}'
 cd ${TARGET_REPO}
 
 git rev-parse --abbrev-ref HEAD

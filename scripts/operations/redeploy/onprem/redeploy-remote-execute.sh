@@ -22,8 +22,9 @@ FIX_STALE_LOGS="false"
 DRY_RUN="false"
 ALLOW_RECREATE="false"
 ALL_SERVICES="false"
-REDEPLOY_SERVICES="code-server oauth2-proxy oauth2-proxy-portal caddy postgres redis pgbouncer session-broker appsmith"
+REDEPLOY_SERVICES="code-server oauth2-proxy oauth2-proxy-portal caddy redis session-broker appsmith"
 REDEPLOY_PROFILES="${REDEPLOY_PROFILES:-portal}"
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-code-server-enterprise}"
 
 usage() {
   cat <<'EOF'
@@ -46,7 +47,7 @@ Options:
   -h, --help          Show this help
 
 Environment:
-  TARGET_HOST, TARGET_USER, TARGET_REPO, COMPOSE_BIN, EXEC_MODE, SSH_KEY_PATH, SSH_BIN, REDEPLOY_SSH_TIMEOUT, REDEPLOY_PROFILES
+  TARGET_HOST, TARGET_USER, TARGET_REPO, COMPOSE_BIN, EXEC_MODE, SSH_KEY_PATH, SSH_BIN, REDEPLOY_SSH_TIMEOUT, REDEPLOY_PROFILES, COMPOSE_PROJECT_NAME
 EOF
 }
 
@@ -257,11 +258,31 @@ run_remote_redeploy() {
     service_args="${REDEPLOY_SERVICES}"
   fi
 
+  # Remove foreign containers that have static container_name collisions (for example
+  # containers created by CI compose projects with different compose.project labels).
+  local conflict_cleanup_cmd
+  conflict_cleanup_cmd=$(cat <<EOF
+set -euo pipefail
+for cname in appsmith oauth2-proxy-portal oauth2-proxy caddy session-broker code-server redis pgbouncer postgres; do
+  if docker ps -a --format '{{.Names}}' | grep -qx "${cname}"; then
+    project_label=\$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "\${cname}" 2>/dev/null || true)
+    if [[ "\${project_label}" != "${COMPOSE_PROJECT_NAME}" ]]; then
+      echo "[cleanup] removing foreign container_name collision: \${cname} (project=\${project_label})"
+      docker rm -f "\${cname}" >/dev/null
+    fi
+  fi
+done
+EOF
+)
+
   rollout_cmd=$(cat <<EOF
 set -euo pipefail
 export COMPOSE_INTERACTIVE_NO_CLI=1
 export COMPOSE_PROFILES='${REDEPLOY_PROFILES}'
+export COMPOSE_PROJECT_NAME='${COMPOSE_PROJECT_NAME}'
 cd ${TARGET_REPO}
+
+${conflict_cleanup_cmd}
 
 git rev-parse --abbrev-ref HEAD
 git rev-parse --short HEAD

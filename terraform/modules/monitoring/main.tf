@@ -1,6 +1,19 @@
 # Monitoring Module Main Configuration
 # P2 #418 Phase 2
 
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.35"
+    }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
+  }
+}
+
 locals {
   monitoring_labels = merge(
     var.labels,

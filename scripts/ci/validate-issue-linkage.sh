@@ -73,28 +73,21 @@ main() {
 
     log_info "Validating commit issue linkage in range: ${range}"
 
-    local commits
-    commits="$(git log --format='%H%x09%s%x09%b' "$range" 2>/dev/null || true)"
-
-    if [[ -z "$commits" ]]; then
-        log_info "No commits found in range; linkage validation passed"
-        return 0
-    fi
-
     local failed=0
-    while IFS=$'\t' read -r sha subject body; do
+    while read -r sha; do
         [[ -z "${sha:-}" ]] && continue
+        read -r subject || break
 
         if is_exempt_subject "$subject"; then
             log_info "Exempt commit: ${sha:0:12} ${subject}"
             continue
         fi
 
-        if ! has_issue_linkage "$subject $body"; then
+        if ! has_issue_linkage "$subject"; then
             log_error "Missing issue linkage in commit ${sha:0:12}: $subject"
             failed=1
         fi
-    done <<< "$commits"
+    done < <(git log --format='%H%n%s' "$range" 2>/dev/null || true)
 
     if [[ $failed -ne 0 ]]; then
         if [[ "$STRICT_ISSUE_LINKAGE" == "true" ]]; then

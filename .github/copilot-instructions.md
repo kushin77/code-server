@@ -135,6 +135,7 @@ For deduplication review across entire codebase:
 ## Non-Negotiables
 
 - Every branch → open issue → PR with `Fixes #N` → merge → auto-close issue
+- Every merge to `main` or direct push to `main` MUST trigger production redeploy immediately (no manual deferral)
 - Conventional commits: `feat|fix|refactor|docs|chore|ci(scope): message`
 - All changes tested, no CVEs, no secrets in git
 - IaC: immutable versions pinned, idempotent, duplicate-free, on-prem first
@@ -163,4 +164,4 @@ COMPOSE_PROFILES=tracing docker compose up -d
 COMPOSE_PROFILES=ai,tracing docker compose up -d
 ```
 
-**Last updated: April 17, 2026** | [All Issues](https://github.com/kushin77/code-server/issues) | [Deduplication Analysis](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md) | [Script Writing Guide](docs/SCRIPT-WRITING-GUIDE.md)
+**Last updated: April 18, 2026** | [All Issues](https://github.com/kushin77/code-server/issues) | [Deduplication Analysis](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md) | [Script Writing Guide](docs/SCRIPT-WRITING-GUIDE.md)

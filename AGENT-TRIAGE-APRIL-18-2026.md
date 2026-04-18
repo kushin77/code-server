@@ -3,9 +3,14 @@
 Date: April 18, 2026
 Status: Active
 
+Canonical machine-readable execution source:
+- `config/issues/agent-execution-manifest.json`
+
 This document is the live triage plan for autonomous implementation.
 
 ## Open Issue Set
+
+Current open count: 26 issues.
 
 Program:
 - #659 Program: Production transition (monorepo + code-server co-dev + active-active reliability)
@@ -25,7 +30,6 @@ Sprint gates:
 
 Implementation lane:
 - #669 Define monorepo target architecture and package boundaries
-- #670 Bootstrap pnpm workspace and lockfile governance
 - #671 Refactor repository layout into apps/packages/infra structure
 - #672 Migrate CI to pnpm workspace-aware pipelines
 - #673 Define upstream fork/sync operating model for code-server
@@ -40,6 +44,13 @@ Implementation lane:
 - #682 Implement automated pre/post deploy verification gates
 - #683 Create rollback validation suite and game-day checklist
 
+Urgent unblock lane:
+- #687 P1: Stabilize CI gates for monorepo refactor branch
+- #688 P0: Unblock production portal OAuth callback redeploy
+
+Recently completed:
+- #670 Bootstrap pnpm workspace and lockfile governance (closed via linkage validation and autonomous triage)
+
 Persistent tracker:
 - #291 VSCode Crash RCA and stability tracking (never close)
 
@@ -50,11 +61,21 @@ Execution order:
 2. #665 and #661
 3. #666 and #662
 4. #667, #663, and #668
-5. #669 -> #676 architecture and CI implementation lane
+5. #669 and #671 -> #676 architecture and CI implementation lane
 6. #677 -> #683 resilience/release/verification lane
-7. Close #659 after all child epics/gates meet acceptance criteria
+7. #687 and #688 urgent unblock lane (run in parallel where ownership permits)
+8. Close #659 after all child epics/gates meet acceptance criteria
 
 The persistent tracker #291 remains open and is updated with evidence weekly.
+
+## Multi-Agent Coordination Protocol
+
+Use this lightweight protocol when multiple agents execute in parallel:
+- Claim one issue at a time by posting a short "agent-claim" comment in the issue.
+- Include branch name and expected scope boundary in the claim.
+- Rebase before opening a PR and avoid cross-issue code churn.
+- Link PR with `Fixes #N` for implementation issues and `Relates to #N` for epic/meta updates.
+- Post a completion comment with validation commands and rollback notes before releasing the claim.
 
 ## Triage Quality Requirements
 
@@ -64,10 +85,13 @@ Every open issue must have:
 - autonomous execution brief comment
 - clear acceptance criteria in body
 
+Validation status (April 18, 2026 refresh): all current open issues meet the above requirements.
+
 Triage command:
 
 ```bash
 GITHUB_TOKEN="<token>" bash scripts/ops/triage-issues-autonomous.sh
+python3 scripts/ops/issue_execution_manifest.py queue
 ```
 
 Live verification command:

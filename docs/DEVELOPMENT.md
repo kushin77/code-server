@@ -34,9 +34,13 @@ make dev
 ### Directory Structure
 ```
 repos/code-server/
-├── backend/           # Go backend services
-├── frontend/          # React web UI
-├── extensions/        # VS Code extensions
+├── apps/
+│   ├── backend/       # Backend application
+│   ├── frontend/      # React web UI
+│   └── extensions/    # VS Code extensions
+├── backend -> apps/backend       # Compatibility symlink during migration
+├── frontend -> apps/frontend     # Compatibility symlink during migration
+├── extensions -> apps/extensions # Compatibility symlink during migration
 ├── scripts/           # Automation scripts
 ├── services/          # Microservices
 ├── config/            # Configuration files
@@ -477,7 +481,7 @@ Closes #182
 ## Resources
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [API Documentation](frontend/API.md)
+- [API Documentation](../apps/frontend/API.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Contributing](CONTRIBUTING.md)

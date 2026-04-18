@@ -141,6 +141,12 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "deploy/redeploy-portal-oauth-routing.sh"
+category = "deployment"
+status   = "active"
+purpose  = "idempotently redeploy portal oauth routing on the primary host"
+
+[[script]]
 file     = "deployment-validation-31.sh"
 category = "uncategorized"
 status   = "active"

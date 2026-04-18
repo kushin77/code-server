@@ -3,6 +3,20 @@ program_issue: 659
 epic_issue: 660
 child_issue: 669
 
+canonical_roots:
+  - apps/
+  - packages/
+  - infra/
+  - docs/
+
+legacy_compatibility_shims:
+  - path: backend
+    target: apps/backend
+  - path: frontend
+    target: apps/frontend
+  - path: extensions
+    target: apps/extensions
+
 owner_map:
   apps:
     owner: "platform-apps"
@@ -60,7 +74,8 @@ migration_slices:
   - id: S3
     name: "App and runtime convergence"
     scope:
-      - "align src/, backend/, frontend/, extensions/ under app ownership"
+      - "align src/, apps/backend/, apps/frontend/, and apps/extensions/ under app ownership"
+      - "maintain temporary compatibility symlinks until legacy path references are retired"
       - "stabilize build and test pipelines"
     risk: medium
     rollback: "restore prior build matrix and path routing"

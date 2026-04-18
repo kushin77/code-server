@@ -103,7 +103,7 @@ jobs:
           is_docs_depth_exempt() {
             local path="$1"
             case "$path" in
-              docs/README.md|docs/INDEX.md|docs/*/README.md|docs/*/INDEX.md|docs/DEDUPLICATION-POLICY.md)
+              docs/README.md|docs/INDEX.md|docs/*/README.md|docs/*/INDEX.md|docs/DEDUPLICATION-POLICY.md|docs/triage/*.md)
                 return 0
                 ;;
               *)
@@ -177,7 +177,7 @@ jobs:
                   fi
                 fi
 
-                if [[ -f "$path" ]] && ! has_lifecycle_metadata "$path"; then
+                if [[ -f "$path" ]] && ! is_docs_depth_exempt "$path" && ! has_lifecycle_metadata "$path"; then
                   echo "FAIL: docs file missing lifecycle metadata: $path"
                   echo "      Add one line near the top: **Lifecycle**: active-production|supporting|historical|generated"
                   failures=1

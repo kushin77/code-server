@@ -73,6 +73,7 @@ resource "docker_image" "keepalived" {
   provider = docker.primary
   name     = "keepalived:${local.keepalived_version}"
   keep_locally = true
+  force_remove = true
   build {
     context    = "${path.module}/build"
     dockerfile = "Dockerfile"
@@ -83,6 +84,7 @@ resource "docker_image" "keepalived_replica" {
   provider = docker.replica
   name     = "keepalived:${local.keepalived_version}"
   keep_locally = true
+  force_remove = true
   build {
     context    = "${path.module}/build"
     dockerfile = "Dockerfile"

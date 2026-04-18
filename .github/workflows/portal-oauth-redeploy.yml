@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: portal-oauth-redeploy-production
+  group: portal-oauth-redeploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:

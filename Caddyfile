@@ -1,3 +1,7 @@
+{
+    email {$ACME_EMAIL:admin@kushnir.cloud}
+}
+
 ide.kushnir.cloud, ide.kushnir.cloud:443 {
     encode gzip
 

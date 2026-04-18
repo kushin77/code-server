@@ -9,6 +9,7 @@
 # Run:
 #   docker-compose up -d          # Start all services
 #   docker-compose down -v        # Teardown with volumes
+# Manual redeploy trigger: refresh production container stack
 #   docker-compose restart caddy  # Restart single service
 # ════════════════════════════════════════════════════════════════════════════
 

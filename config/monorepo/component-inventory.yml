@@ -1,0 +1,34 @@
+version: "1"
+generated_for_issue: 669
+
+classification:
+  apps:
+    - backend/
+    - frontend/
+    - src/
+    - extensions/
+    - services/
+    - operations/
+  packages:
+    - lib/
+    - libs/
+    - scripts/_common/
+    - scripts/lib/
+  infra:
+    - terraform/
+    - k8s/
+    - kubernetes/
+    - infra/
+    - environments/
+    - .github/workflows/
+    - docker-compose.yml
+    - Dockerfile
+  docs:
+    - docs/
+    - ARCHITECTURE.md
+    - README.md
+    - CONTRIBUTING.md
+
+notes:
+  - "Current repository is transitional; classification is an ownership map, not a mandatory folder move in this commit."
+  - "Future migration commits should preserve idempotent deploy/build behavior while moving to explicit apps/packages/infra/docs conventions."

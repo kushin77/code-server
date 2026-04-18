@@ -1,0 +1,73 @@
+version: "1"
+program_issue: 659
+epic_issue: 660
+child_issue: 669
+
+owner_map:
+  apps:
+    owner: "platform-apps"
+    scope: "deployable applications and entrypoints"
+  packages:
+    owner: "platform-core"
+    scope: "shared libraries and reusable modules"
+  infra:
+    owner: "platform-infra"
+    scope: "terraform, k8s, compose, deployment automation"
+  docs:
+    owner: "platform-ops"
+    scope: "runbooks, standards, and operational references"
+
+dependency_direction_rules:
+  allowed:
+    - from: apps
+      to: packages
+    - from: apps
+      to: infra
+    - from: apps
+      to: docs
+    - from: packages
+      to: packages
+    - from: infra
+      to: packages
+    - from: docs
+      to: docs
+  denied:
+    - from: packages
+      to: apps
+      reason: "shared modules must not depend on deployable apps"
+    - from: infra
+      to: apps
+      reason: "deployment code must not import runtime app code"
+    - from: docs
+      to: apps
+      reason: "documentation is non-runtime and non-build dependency"
+
+migration_slices:
+  - id: S1
+    name: "Foundation layout"
+    scope:
+      - "create apps/, packages/, infra/, docs/ entry conventions"
+      - "freeze ownership map and dependency rules"
+    risk: low
+    rollback: "revert layout policy files and validator changes"
+  - id: S2
+    name: "Package boundary extraction"
+    scope:
+      - "move shared libs and utilities under packages/"
+      - "update import paths and lint checks"
+    risk: medium
+    rollback: "restore previous paths and import aliases"
+  - id: S3
+    name: "App and runtime convergence"
+    scope:
+      - "align src/, backend/, frontend/, extensions/ under app ownership"
+      - "stabilize build and test pipelines"
+    risk: medium
+    rollback: "restore prior build matrix and path routing"
+  - id: S4
+    name: "Infra and release hardening"
+    scope:
+      - "standardize infra/ with existing terraform, k8s, and workflows"
+      - "enforce dependency direction in CI"
+    risk: high
+    rollback: "disable enforcement gate and restore prior deploy workflow"

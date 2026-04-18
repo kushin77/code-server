@@ -24,9 +24,22 @@ RESULTS=()
 
 ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
+json_quote() {
+  local input="$1"
+
+  if command -v jq >/dev/null 2>&1; then
+    jq -Rs . <<< "$input"
+    return
+  fi
+
+  # Fallback: JSON-escape without jq so reports remain valid on minimal environments.
+  python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' <<< "$input" 2>/dev/null \
+    || node -e 'process.stdin.setEncoding("utf8");let data="";process.stdin.on("data",d=>data+=d);process.stdin.on("end",()=>process.stdout.write(JSON.stringify(data)));' <<< "$input"
+}
+
 record() {
   local name="$1" status="$2" detail="${3:-}"
-  RESULTS+=("{\"name\":$(jq -Rs . <<< "$name"),\"status\":\"$status\",\"detail\":$(jq -Rs . <<< "$detail"),\"ts\":\"$(ts)\"}")
+  RESULTS+=("{\"name\":$(json_quote "$name"),\"status\":\"$status\",\"detail\":$(json_quote "$detail"),\"ts\":\"$(ts)\"}")
   TOTAL=$(( TOTAL + 1 ))
   if [[ "$status" == "pass" ]]; then
     echo "  PASS  $name"

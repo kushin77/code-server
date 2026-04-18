@@ -24,7 +24,7 @@ concurrency:
 jobs:
   redeploy-portal-oauth:
     name: Redeploy portal OAuth routing
-    runs-on: [self-hosted, onprem, portal-oauth]
+    runs-on: [self-hosted, onprem, portal-oauth-redeploy]
     environment: production
     steps:
       - name: Checkout repository
@@ -37,8 +37,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          provider="${GCP_WIF_PROVIDER_RAW#"${GCP_WIF_PROVIDER_RAW%%[![:space:]]*}"}"
+          provider="${provider%"${provider##*[![:space:]]}"}"
+          provider="${provider#http://iam.googleapis.com/}"
           provider="${GCP_WIF_PROVIDER_RAW#//iam.googleapis.com/}"
           provider="${provider#https://iam.googleapis.com/}"
+          provider="${provider#iam.googleapis.com/}"
           if [[ -z "$provider" ]]; then
             echo "GCP_WIF_PROVIDER is empty after normalization" >&2
             exit 1

@@ -156,6 +156,12 @@ check_remote_baseline() {
   fi
 }
 
+emit_remote_fingerprint() {
+  log_section "Remote Runtime Fingerprint"
+
+  remote "set -e; echo host=$(hostname); echo user=$(whoami); echo kernel=$(uname -sr); echo bash=$(bash --version | head -1); echo git=$(git --version); echo docker=$(docker --version 2>/dev/null || echo 'missing'); if command -v docker-compose >/dev/null 2>&1; then echo compose_cmd=docker-compose; echo compose_version=$(docker-compose version --short 2>/dev/null || docker-compose version 2>/dev/null | head -1); elif docker compose version >/dev/null 2>&1; then echo compose_cmd='docker compose'; echo compose_version=$(docker compose version --short 2>/dev/null || docker compose version 2>/dev/null | head -1); else echo compose_cmd=missing; fi" | sed 's/^/[fingerprint] /'
+}
+
 check_redeploy_safety() {
   log_section "Redeploy Safety Checks"
 
@@ -233,6 +239,7 @@ main() {
 
   check_local_prereqs
   check_remote_baseline
+  emit_remote_fingerprint
   check_redeploy_safety
   cleanup_stale_log_tails
   log_success "On-prem redeploy preflight completed"

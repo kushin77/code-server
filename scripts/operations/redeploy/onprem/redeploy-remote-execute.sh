@@ -12,7 +12,8 @@ source "$SCRIPT_DIR/../../../_common/init.sh"
 TARGET_HOST="${TARGET_HOST:-${DEPLOY_HOST:-192.168.168.31}}"
 TARGET_USER="${TARGET_USER:-${DEPLOY_USER:-akushnir}}"
 TARGET_REPO="${TARGET_REPO:-~/code-server-enterprise}"
-COMPOSE_BIN="${COMPOSE_BIN:-docker-compose}"
+COMPOSE_BIN="${COMPOSE_BIN:-auto}"
+RESOLVED_COMPOSE_BIN=""
 EXEC_MODE="${EXEC_MODE:-auto}"
 SSH_KEY_PATH="${SSH_KEY_PATH:-}"
 SSH_BIN="${SSH_BIN:-ssh}"
@@ -31,7 +32,7 @@ Options:
   --host HOST         Remote host. Default: 192.168.168.31
   --user USER         Remote user. Default: akushnir
   --repo PATH         Remote repository path. Default: ~/code-server-enterprise
-  --compose-bin CMD   docker compose command binary on remote host. Default: docker-compose
+  --compose-bin CMD   docker compose command on remote host: auto|docker-compose|docker compose. Default: auto
   --mode MODE         Connection mode: auto|ssh|local-on-host. Default: auto
   --ssh-key PATH      SSH private key path for deterministic auth
   --ssh-bin CMD       SSH client binary (e.g. ssh, ssh.exe). Default: ssh
@@ -174,6 +175,36 @@ check_ssh_access() {
   log_success "SSH authenticated to ${TARGET_USER}@${TARGET_HOST}"
 }
 
+resolve_remote_compose_bin() {
+  log_section "Compose Command Resolution"
+
+  if [[ "${COMPOSE_BIN}" != "auto" ]]; then
+    RESOLVED_COMPOSE_BIN="${COMPOSE_BIN}"
+    log_success "Using caller-selected compose command: ${RESOLVED_COMPOSE_BIN}"
+    return 0
+  fi
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    RESOLVED_COMPOSE_BIN="docker compose"
+    log_info "[DRY-RUN] Assuming compose command: ${RESOLVED_COMPOSE_BIN}"
+    return 0
+  fi
+
+  if remote "command -v docker-compose >/dev/null 2>&1"; then
+    RESOLVED_COMPOSE_BIN="docker-compose"
+    log_success "Resolved compose command on target: ${RESOLVED_COMPOSE_BIN}"
+    return 0
+  fi
+
+  if remote "docker compose version >/dev/null 2>&1"; then
+    RESOLVED_COMPOSE_BIN="docker compose"
+    log_success "Resolved compose command on target: ${RESOLVED_COMPOSE_BIN}"
+    return 0
+  fi
+
+  log_fatal "Unable to resolve compose command on target host (tried docker-compose and docker compose)"
+}
+
 run_remote_preflight() {
   log_section "Remote Preflight"
 
@@ -219,11 +250,11 @@ git rev-parse --abbrev-ref HEAD
 git rev-parse --short HEAD
 git status --short
 
-${COMPOSE_BIN} config >/tmp/code-server-compose-rendered.yaml
-${COMPOSE_BIN} up ${up_args} ${service_args}
+${RESOLVED_COMPOSE_BIN} config >/tmp/code-server-compose-rendered.yaml
+${RESOLVED_COMPOSE_BIN} up ${up_args} ${service_args}
 
-${COMPOSE_BIN} ps
-${COMPOSE_BIN} logs --tail=100 code-server oauth2-proxy caddy
+${RESOLVED_COMPOSE_BIN} ps
+${RESOLVED_COMPOSE_BIN} logs --tail=100 code-server oauth2-proxy caddy
 EOF
 )
 
@@ -247,6 +278,7 @@ main() {
   require_command "${SSH_BIN}"
   check_ssh_access
   run_remote_preflight
+  resolve_remote_compose_bin
   run_remote_redeploy
 }
 

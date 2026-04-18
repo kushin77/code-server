@@ -17,7 +17,7 @@ Last Updated: 2026-04-18
 | `docker-compose.tpl` | Terraform template source for compose generation |
 | `docker-compose.socket-override.yml` | Local-dev-only docker socket override |
 | `terraform/main.tf` | IaC entry point — versions, storage, Keepalived module |
-| `Caddyfile.production` | Production Caddy reverse proxy config |
+| `Caddyfile` | Canonical production reverse proxy config |
 | `.env.example` | Required environment variable template |
 
 ### Operations and Deployment
@@ -54,15 +54,35 @@ Last Updated: 2026-04-18
 
 | # | Priority | Title |
 |---|----------|-------|
-| #715 | P0 | Automate failover/failback orchestration (.31/.42) |
-| #729 | P1 | Replica ingress ownership on .42 / VIP cutover |
+| #751 | P1 | EPIC: Core code-server transformation to domain-managed multi-user client |
+| #752 | P1 | Replace shared single-user runtime with per-session/per-user isolation |
+| #753 | P1 | Tenant-aware profile hierarchy and immutable policy overlay |
+| #754 | P1 | Shared workspace ACL broker for controlled folder sharing |
+| #755 | P1 | Ephemeral workspace container lifecycle with TTL and snapshots |
+| #756 | P1 | Mandatory portal assertion and signed policy bundle at bootstrap |
+| #757 | P1 | Strict revocation path with p95 propagation SLO |
+| #758 | P1 | End-to-end correlation-id audit fabric in runtime decisions |
+| #759 | P2 | Harden extension supply chain and unmanaged marketplace paths |
+| #760 | P2 | Core conformance suite for domain-managed client behavior |
+| #742 | P1 | EPIC: Open-source control-plane adoption (Backstage/Appsmith) |
+| #735 | P1 | EPIC: Portal-only extension governance for thin-client IDE |
+| #710 | P0 | Stateful failover EPIC (closure depends on #733 authenticated evidence) |
+| #733 | P1 | Validate authenticated code-server session continuity during failover |
+| #750 | P1 | Provision non-interactive authenticated Playwright storage state for #733 |
 | #714 | P1 | DR game-day suite |
 | #712 | P1 | In-code-server operator run mode |
 | #698 | P1 | SSH deploy identity bootstrap standardization |
-| #697 | P1 | Root markdown sprawl reduction |
-| #696 | P1 | Elite SSOT structure + redeploy hardening |
 | #695 | P0 | Non-interactive GSM auth for portal redeploy |
 | #692 | P0 | Portal OAuth redeploy reachable execution path |
+
+## Recently Superseded Issues
+
+| Closed | Superseded By | Reason |
+|--------|----------------|--------|
+| #738 | #759 | Consolidated marketplace + extension supply-chain hardening scope |
+| #739 | #756 | Consolidated mandatory bootstrap policy assertion and signed bundle enforcement |
+| #741 | #757 | Consolidated strict revocation and propagation SLO implementation |
+| #749 | #758 | Consolidated runtime-path audit correlation enforcement |
 
 ## Navigation Rule
 

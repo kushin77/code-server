@@ -30,19 +30,31 @@ Last Updated: 2026-04-18
    - VIP: `192.168.168.30`
    - Primary: `.31` (MASTER, priority 150), Replica: `.42` (BACKUP, priority 100)
    - `advert_int=1`, `fall=2` → ~2s failover SLA
-   - **Activation pending**: `terraform apply -target=module.keepalived` from SSH on `.31`
+   - Activation and orchestration path completed under #715 (closed)
+- Authenticated failover continuity execution path is now present:
+   - `.github/workflows/e2e-authenticated-failover-continuity.yml`
+   - `scripts/ci/prepare-playwright-storage-state.sh`
+   - `docs/ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md`
+- Remaining strict closure gate for #733: set `PLAYWRIGHT_STORAGE_STATE_B64` and run the authenticated workflow.
+- Core domain-managed client enhancement stream is now consolidated under:
+   - #751 EPIC (runtime transformation)
+   - #752-#760 child implementation issues
+- Overlap cleanup completed for superseded issues:
+   - #738 -> superseded by #759
+   - #739 -> superseded by #756
+   - #741 -> superseded by #757
+   - #749 -> superseded by #758
 
 ## Issue-Mapped Next Steps
 
-1. **#715 (P0)**: Activate Keepalived on hosts — `terraform apply -target=module.keepalived` from `.31`. Attach VIP verification (`ip addr show`) as evidence.
-2. **#729 (P1)**: Resolve `:80/:443` ingress ownership on `.42`. Implement deterministic ingress cutover in `failover-orchestrate.sh`. Evidence: `curl` to VIP `.30` from LAN.
-3. **#714 (P1)**: DR game-day suite — scripted promote+failback drill from `.31`→`.42`→`.31` with RPO/RTO evidence.
-4. **#712 (P1)**: Keep operator-run mode task coverage current as scripts evolve.
-5. **#698 (P1)**: Standardize SSH deploy identity bootstrap — validate `DEPLOY-SSH-IDENTITY-BOOTSTRAP.md` covers all environments (CI, local, host-native).
-6. **#696 (P1)**: Close — Elite SSOT structure complete (12 subfolders, all content, no stubs, no duplicates).
-7. **#697 (P1)**: Close — root loose markdown reduced to 1 file (COMPREHENSIVE-WORK-ROADMAP moved to archives).
-8. **#695 (P0)**: Non-interactive GSM auth path for portal redeploy — implement `--non-interactive` flag in `scripts/fetch-gsm-secrets.sh`.
-9. **#692 (P0)**: Portal OAuth redeploy reachable execution path — validate `redeploy-remote-execute.sh` succeeds from all operator environments.
+1. **#692 (P0)**: Portal OAuth redeploy reachable execution path — validate `redeploy-remote-execute.sh` succeeds from all operator environments.
+2. **#695 (P0)**: Non-interactive GSM auth path for portal redeploy — implement `--non-interactive` flag in `scripts/fetch-gsm-secrets.sh`.
+3. **#733 (P1)**: Validate authenticated code-server continuity during failover with workflow evidence.
+4. **#750 (P1)**: Provision non-interactive Playwright storage-state secret pipeline for #733.
+5. **#714 (P1)**: DR game-day suite — scripted promote+failback drill from `.31`→`.42`→`.31` with RPO/RTO evidence.
+6. **#751 (P1 EPIC)**: Execute core runtime transformation stream with #752-#760 in dependency order.
+7. **#742 (P1 EPIC)**: Execute Backstage/Appsmith/OPA/Vault adoption stream with dependency links to #751 and #735.
+8. **#710 (P0 EPIC)**: Close only when #733 authenticated continuity evidence is attached and accepted.
 
 ## Execution Order
 
@@ -56,14 +68,23 @@ Last Updated: 2026-04-18
    - `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action status`
    - `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action promote`
    - `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action failback`
-5. Capture and attach evidence in issues:
+5. Run authenticated continuity workflow after secret provisioning:
+   - Workflow: `E2E Authenticated Failover Continuity`
+   - Inputs: `failover_wait_ms=45000` and optional `failover_trigger_cmd`
+6. Capture and attach evidence in issues:
    - branch and commit
    - compose render success
    - container health table
    - auth redirect verification
    - failover evidence JSON path under `/tmp/code-server-failover-evidence/`
    - state evidence JSON paths under `/tmp/code-server-state-evidence/`
+   - authenticated continuity workflow run URL and pass/fail output
    - note any degraded but non-blocking services (example: `pgbouncer` unhealthy) with a follow-up issue
+7. Open runtime transformation implementation PR batches by epic child grouping:
+   - Batch A: #752 + #753
+   - Batch B: #754 + #755
+   - Batch C: #756 + #757 + #758
+   - Batch D: #759 + #760
 
 ## State Durability Commands
 
@@ -91,5 +112,5 @@ Run compose hardening baseline guard:
 
 - P0 reachability and secret bootstrap issues are resolved with successful run evidence.
 - Redeploy path is deterministic, repeatable, and host-executed.
-- Root markdown migration is in progress with no broken links.
+- Authenticated continuity evidence is attached to #733 and linked to #710.
 - No new loose root files are introduced in active branches.

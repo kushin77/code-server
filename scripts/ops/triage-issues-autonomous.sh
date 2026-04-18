@@ -152,7 +152,10 @@ body = (
 print(json.dumps({"body": body}))
 PY
 
-    api_post "${token}" "${API_BASE}/issues/${number}/comments" "/tmp/triage-comment.json" >/dev/null
+    if ! api_post "${token}" "${API_BASE}/issues/${number}/comments" "/tmp/triage-comment.json" >/dev/null; then
+        log_warn "Unable to post agent-ready brief on #${number} (${title}); continuing"
+        return
+    fi
     log_info "Posted agent-ready brief on #${number} (${title})"
 }
 

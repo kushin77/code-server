@@ -144,13 +144,6 @@ vrrp_instance VI_1 {
 EOT
 }
 
-# Health check script on primary
-resource "local_file" "vrrp_health_check_primary" {
-  filename        = "${local.scripts_path}/vrrp-health-monitor.sh"
-  content         = file("${path.module}/scripts/vrrp-health-monitor.sh")
-  file_permission = "0755"
-}
-
 # Keepalived Docker container on primary
 resource "docker_container" "keepalived_primary" {
   count          = var.enable_on_primary ? 1 : 0
@@ -160,25 +153,10 @@ resource "docker_container" "keepalived_primary" {
   privileged     = true
   network_mode   = "host"
 
-  mounts {
-    type   = "bind"
-    source = abspath(local_file.keepalived_primary_config.filename)
-    target = "/etc/keepalived/keepalived.conf"
-  }
-
-  mounts {
-    type   = "bind"
-    source = abspath(local_file.vrrp_health_check_primary.filename)
-    target = "/usr/local/bin/vrrp-health-monitor.sh"
-  }
-
-  mounts {
-    type   = "bind"
-    source = abspath("${local.scripts_path}/keepalived-notify.sh")
-    target = "/usr/local/bin/keepalived-notify.sh"
-  }
-
-  env = ["PROD_VIP=${local.vip}"]
+  env = [
+    "KEEPALIVED_CONF=${local_file.keepalived_primary_config.content}",
+    "PROD_VIP=${local.vip}",
+  ]
 
   log_driver = "json-file"
   log_opts = {
@@ -197,7 +175,6 @@ resource "docker_container" "keepalived_primary" {
     docker_image.keepalived,
     local_file.keepalived_primary_config,
   ]
-
 
   lifecycle {
     create_before_destroy = true
@@ -260,53 +237,11 @@ vrrp_instance VI_1 {
 EOT
 }
 
-# Health check script on replica
+# Health check script on replica — written to /tmp for reference only
 resource "local_file" "vrrp_health_check_replica" {
   filename        = "${local.scripts_path}/vrrp-health-monitor-replica.sh"
   content         = file("${path.module}/scripts/vrrp-health-monitor.sh")
   file_permission = "0755"
-}
-
-# Provision keepalived files on replica host via SSH before container creation
-resource "null_resource" "replica_provision" {
-  count = var.enable_on_replica ? 1 : 0
-
-  connection {
-    type        = "ssh"
-    host        = local.replica_host.ip
-    user        = local.replica_host.ssh_user
-    port        = local.replica_host.ssh_port
-    private_key = file(pathexpand(var.ssh_identity_file))
-  }
-
-  provisioner "remote-exec" {
-    inline = ["mkdir -p /home/${local.replica_host.ssh_user}/keepalived"]
-  }
-
-  provisioner "file" {
-    content     = local_file.keepalived_replica_config.content
-    destination = "/home/${local.replica_host.ssh_user}/keepalived/keepalived.conf"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/scripts/vrrp-health-monitor.sh"
-    destination = "/home/${local.replica_host.ssh_user}/keepalived/vrrp-health-monitor.sh"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/scripts/keepalived-notify.sh"
-    destination = "/home/${local.replica_host.ssh_user}/keepalived/keepalived-notify.sh"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "chmod 640 /home/${local.replica_host.ssh_user}/keepalived/keepalived.conf",
-      "chmod 755 /home/${local.replica_host.ssh_user}/keepalived/vrrp-health-monitor.sh",
-      "chmod 755 /home/${local.replica_host.ssh_user}/keepalived/keepalived-notify.sh",
-    ]
-  }
-
-  depends_on = [local_file.keepalived_replica_config]
 }
 
 # Keepalived Docker container on replica
@@ -318,25 +253,10 @@ resource "docker_container" "keepalived_replica" {
   privileged     = true
   network_mode   = "host"
 
-  mounts {
-    type   = "bind"
-    source = "/home/${local.replica_host.ssh_user}/keepalived/keepalived.conf"
-    target = "/etc/keepalived/keepalived.conf"
-  }
-
-  mounts {
-    type   = "bind"
-    source = "/home/${local.replica_host.ssh_user}/keepalived/vrrp-health-monitor.sh"
-    target = "/usr/local/bin/vrrp-health-monitor.sh"
-  }
-
-  mounts {
-    type   = "bind"
-    source = "/home/${local.replica_host.ssh_user}/keepalived/keepalived-notify.sh"
-    target = "/usr/local/bin/keepalived-notify.sh"
-  }
-
-  env = ["PROD_VIP=${local.vip}"]
+  env = [
+    "KEEPALIVED_CONF=${local_file.keepalived_replica_config.content}",
+    "PROD_VIP=${local.vip}",
+  ]
 
   log_driver = "json-file"
   log_opts = {
@@ -353,7 +273,6 @@ resource "docker_container" "keepalived_replica" {
 
   depends_on = [
     docker_image.keepalived_replica,
-    null_resource.replica_provision,
     local_file.keepalived_replica_config,
   ]
 

@@ -15,6 +15,9 @@ GH_REPO="code-server"
 API_BASE="https://api.github.com/repos/${GH_OWNER}/${GH_REPO}"
 MARKER="[agent-autonomy-ready-v1]"
 AGENT_READY_LABEL="agent-ready"
+AUTO_CLOSE_MARKER="[auto-close-by-linkage-v1]"
+
+RESOLVED_IDS_FILE="/tmp/triage-resolved-issue-ids.txt"
 
 resolve_token() {
     if [[ -n "${GITHUB_TOKEN:-}" ]]; then
@@ -56,6 +59,107 @@ api_post() {
         -H "User-Agent: code-server-agent" \
         "${url}" \
         --data @"${payload_file}"
+}
+
+api_patch() {
+    local token="$1"
+    local url="$2"
+    local payload_file="$3"
+    curl --max-time 30 -fsSL \
+        -X PATCH \
+        -H "Authorization: token ${token}" \
+        -H "Accept: application/vnd.github+json" \
+        -H "Content-Type: application/json" \
+        -H "User-Agent: code-server-agent" \
+        "${url}" \
+        --data @"${payload_file}"
+}
+
+prepare_resolved_issue_ids() {
+    cd "${REPO_ROOT}"
+
+    if ! command -v git >/dev/null 2>&1; then
+        : > "${RESOLVED_IDS_FILE}"
+        log_warn "git unavailable; skipping auto-close linkage resolution"
+        return
+    fi
+
+    git log --format='%s%n%b' \
+        | grep -Eoi '(Fixes|Closes|Resolves) #[0-9]+' \
+        | grep -Eo '#[0-9]+' \
+        | tr -d '#' \
+        | sort -u > "${RESOLVED_IDS_FILE}" || true
+
+    local resolved_count
+    resolved_count=$(wc -l < "${RESOLVED_IDS_FILE}" | tr -d ' ')
+    log_info "Prepared ${resolved_count} resolved issue id(s) from git history"
+}
+
+is_resolved_by_git_history() {
+    local number="$1"
+    [[ -f "${RESOLVED_IDS_FILE}" ]] || return 1
+    grep -Fxq "${number}" "${RESOLVED_IDS_FILE}"
+}
+
+is_epic_issue() {
+    local title="$1"
+    local labels_csv="$2"
+
+    if [[ "${title}" =~ ^EPIC: ]]; then
+        return 0
+    fi
+    if [[ "${labels_csv}" == *"epic"* ]]; then
+        return 0
+    fi
+    return 1
+}
+
+auto_close_resolved_issue() {
+    local token="$1"
+    local number="$2"
+    local title="$3"
+    local labels="$4"
+
+    if ! is_resolved_by_git_history "${number}"; then
+        return 1
+    fi
+
+    if [[ "${number}" == "291" ]]; then
+        log_info "Skipping auto-close for persistent tracker #291"
+        return 1
+    fi
+
+    if is_epic_issue "${title}" "${labels}"; then
+        log_info "Skipping auto-close for epic issue #${number} (${title})"
+        return 1
+    fi
+
+    local comments
+    comments=$(api_get "${token}" "${API_BASE}/issues/${number}/comments?per_page=100")
+    if ! echo "${comments}" | grep -F -q "${AUTO_CLOSE_MARKER}"; then
+        ISSUE_NUMBER="${number}" MARKER_VALUE="${AUTO_CLOSE_MARKER}" python3 - <<'PY' > /tmp/triage-auto-close-comment.json
+import json
+import os
+
+issue_number = os.environ["ISSUE_NUMBER"]
+marker = os.environ["MARKER_VALUE"]
+body = (
+    f"{marker}\n"
+    f"Auto-closing as resolved: merged default-branch history already contains "
+    f"Fixes/Closes/Resolves linkage for #{issue_number}. "
+    "Reopen if additional scope remains."
+)
+print(json.dumps({"body": body}))
+PY
+        api_post "${token}" "${API_BASE}/issues/${number}/comments" "/tmp/triage-auto-close-comment.json" >/dev/null
+    fi
+
+    cat > /tmp/triage-close-issue.json <<EOF2
+{"state":"closed"}
+EOF2
+    api_patch "${token}" "${API_BASE}/issues/${number}" "/tmp/triage-close-issue.json" >/dev/null
+    log_info "Auto-closed resolved issue #${number} (${title})"
+    return 0
 }
 
 ensure_label_exists() {
@@ -163,6 +267,8 @@ main() {
     local token
     token=$(resolve_token)
 
+    prepare_resolved_issue_ids
+
     log_info "Fetching open issues"
     ensure_label_exists "${token}" "${AGENT_READY_LABEL}" "0e8a16" "Issue has autonomous execution brief and is ready for agent implementation"
     local issues_file="/tmp/open-issues.json"
@@ -182,6 +288,10 @@ PY
     local total=0
     while IFS=$'\t' read -r number title labels; do
         total=$((total + 1))
+
+        if auto_close_resolved_issue "${token}" "${number}" "${title}" "${labels}"; then
+            continue
+        fi
 
         if [[ "${labels}" == *"needs-priority"* ]]; then
             label_needs_priority "${token}" "${number}" "${title}"

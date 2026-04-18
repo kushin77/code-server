@@ -53,6 +53,8 @@ docker-compose.override.yml
 node_modules/
 dist/
 build/
+!terraform/modules/keepalived/build/
+!terraform/modules/keepalived/build/Dockerfile
 *.d.ts
 *.d.ts.map
 *.js.map

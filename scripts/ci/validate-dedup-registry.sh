@@ -128,7 +128,7 @@ REPORT_FILE="/tmp/dedup-registry-validation.txt"
   echo "Phase 1: Unregistered Helpers"
   echo "  Found: $UNREGISTERED potentially unregistered functions"
   if [ $UNREGISTERED -gt 0 ]; then
-    echo "  Examples: ${FOUND_HELPERS[@]}"
+    echo "  Examples: ${FOUND_HELPERS[*]}"
   fi
   echo ""
   echo "Phase 2: Pattern Violations"

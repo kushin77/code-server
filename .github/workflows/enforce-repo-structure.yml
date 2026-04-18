@@ -46,17 +46,24 @@ jobs:
 
           allowlisted_new_root_files=(
             ".env.example"
+            ".npmrc"
             ".gitleaks.toml"
             ".gitignore"
             ".pre-commit-config.yaml"
             "CODEOWNERS"
             "Makefile"
+            "package.json"
+            "pnpm-lock.yaml"
+            "pnpm-workspace.yaml"
             "README.md"
             "CONTRIBUTING.md"
             "LICENSE.md"
             "SECURITY.md"
             "CODE_OF_CONDUCT.md"
             "CHANGELOG.md"
+            "backend"
+            "frontend"
+            "extensions"
             "docker-compose.yml"
             "main.tf"
             "variables.tf"
@@ -108,7 +115,7 @@ jobs:
           is_scripts_depth_exempt() {
             local path="$1"
             case "$path" in
-              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/*-entrypoint.ps1|scripts/dev/start-work-from-issue.sh|scripts/ops/triage-issues-autonomous.sh|scripts/ci/detect-duplicate-helpers.sh)
+              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/*-entrypoint.ps1|scripts/dev/start-work-from-issue.sh|scripts/ops/triage-issues-autonomous.sh|scripts/ci/detect-duplicate-helpers.sh|scripts/ci/check-pnpm-lockfile.sh)
                 return 0
                 ;;
               *)
@@ -209,9 +216,21 @@ jobs:
           head_root_file_count=$(git ls-tree -r --name-only "$HEAD_SHA" | awk -F/ 'NF==1 {c++} END {print c+0}')
           echo "Root file budget (baseline -> proposed): $base_root_file_count -> $head_root_file_count"
           if (( head_root_file_count > base_root_file_count )); then
-            echo "FAIL: root file budget increased."
-            echo "      Keep root as entrypoints only; move artifacts to structured folders."
-            failures=1
+            mapfile -t added_root_files < <(git diff --name-status "$BASE_SHA" "$HEAD_SHA" | awk '$1 == "A" && $2 !~ /\// {print $2}')
+            non_allowlisted_root_additions=0
+            for root_file in "${added_root_files[@]}"; do
+              if ! is_allowlisted_new_root_file "$root_file"; then
+                non_allowlisted_root_additions=$((non_allowlisted_root_additions + 1))
+              fi
+            done
+
+            if (( non_allowlisted_root_additions > 0 )); then
+              echo "FAIL: root file budget increased by non-allowlisted files."
+              echo "      Keep root as entrypoints only; move artifacts to structured folders."
+              failures=1
+            else
+              echo "Root file budget increased only by allowlisted migration entrypoints."
+            fi
           fi
 
           echo "New root files introduced in this PR: $new_root_file_count"

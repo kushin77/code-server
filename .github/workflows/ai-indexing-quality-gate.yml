@@ -20,9 +20,6 @@ jobs:
     name: AI Indexing / Retrieval Quality Gate (#393)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: apps/backend
 
     steps:
       - name: Checkout
@@ -32,17 +29,17 @@ jobs:
         uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: apps/backend/package.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm install
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Run AI quality benchmark (20-case retrieval suite)
         id: quality_bench
         run: |
           set -euo pipefail
-          npm run test:ai-quality 2>&1 | tee /tmp/ai-quality-output.txt
+          corepack pnpm --filter ./apps/backend test:ai-quality 2>&1 | tee /tmp/ai-quality-output.txt
           EXIT_CODE=${PIPESTATUS[0]}
 
           # Extract hit-rate from vitest output (logged by evaluateRetrievalQuality)

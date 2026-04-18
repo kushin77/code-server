@@ -9,8 +9,6 @@ on:
       - "docker-compose*.yaml"
       - ".github/workflows/deduplication-guard.yml"
 
-permissions:
-  contents: read
   checks: write
   pull-requests: write
 

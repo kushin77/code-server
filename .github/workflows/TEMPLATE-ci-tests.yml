@@ -4,16 +4,20 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'src/**'
+      - 'apps/**'
       - 'tests/**'
       - 'package.json'
-      - '.github/workflows/test.yml'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/TEMPLATE-ci-tests.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'src/**'
+      - 'apps/**'
       - 'tests/**'
       - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
 
 permissions:
   contents: read
@@ -49,27 +53,28 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
         timeout-minutes: 10
 
       - name: Run unit tests
-        run: npm run test:unit -- --coverage
+        run: corepack pnpm --filter ./apps/backend test:coverage
         timeout-minutes: 15
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@5ecb98a3c6b747a43f2a6a6e4b37d24b3718c495  # v3.1.4
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
         with:
-          files: ./coverage/coverage-final.json
+          files: ./apps/backend/coverage/coverage-final.json
           flags: unittests
           name: codecov-${{ matrix.node-version }}
           fail_ci_if_error: false
 
       - name: Publish test results
         if: always()
-        uses: EnricoMi/publish-unit-test-result-action@ec810a7d82f5e73415bf2d3b3cff7b9672e1fa0d  # v2.16.0
+        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040  # v2.23.0
         with:
           files: test-results.xml
           check_name: Test Results (${{ matrix.node-version }})
@@ -85,7 +90,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          npm cache clean --force 2>/dev/null || true
+          corepack pnpm store prune 2>/dev/null || true
           docker system prune -af 2>/dev/null || true
 
   integration-tests:
@@ -122,14 +127,15 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: 18
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
         timeout-minutes: 10
 
       - name: Run integration tests
-        run: npm run test:integration
+        run: corepack pnpm --filter ./apps/backend test
         timeout-minutes: 20
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
@@ -144,7 +150,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          npm cache clean --force 2>/dev/null || true
+          corepack pnpm store prune 2>/dev/null || true
           docker system prune -af 2>/dev/null || true
 
   test-summary:

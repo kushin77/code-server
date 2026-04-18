@@ -34,8 +34,11 @@ readonly BLOCKED_FILES=(
 # Some files intentionally document legacy paths and are exempt from reference checks.
 readonly REFERENCE_ALLOWLIST=(
   "scripts/ci/enforce-global-dedup.sh"
+  "scripts/ci/detect-config-drift.sh"
+  "scripts/ci/detect-duplicate-helpers.sh"
   "docs/governance/GLOBAL-DEDUP-GOVERNANCE.md"
   "docs/governance/GLOBAL-DEDUP-TRIAGE.md"
+  "docs/DEDUPLICATION-POLICY.md"
 )
 
 # Determine a robust diff range for both PR and push events.

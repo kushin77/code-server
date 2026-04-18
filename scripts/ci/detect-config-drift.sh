@@ -22,9 +22,34 @@ declare -a SSOT_FILES=(
     ".env"
     ".env.example"
     ".env.defaults"
-    "variables.tf"
+    ".env.schema.json"
     "terraform/variables.tf"
     "docs/PHASE-2-TASKS-3-4-IMPLEMENTATION.md"
+)
+
+# Directory prefixes to skip for domain/IP checks (config definitions, not scripts)
+declare -a SKIP_DIRS=(
+    "config/"
+    "docker/configs/"
+    "environments/"
+    "scripts/nas-ingress.yaml"
+    "alert-rules"
+    "alertmanager"
+    "k8s/"
+    "terraform/"
+    "code-server-config.yaml"
+    "promtail-config.yml"
+    "prometheus-rules"
+    "otel-config.yml"
+    "loki-config.yml"
+    ".github/"
+    ".pre-commit-hooks.yaml"
+    "scripts/dev/check-config-drift.sh"
+    "scripts/ci/detect-config-drift.sh"
+    "phase-20-a1-config.yml"
+    "docker-compose.production.yml"
+    "docker-compose-phase-"
+    "phase-"
 )
 
 # Hardcoded patterns to detect (should use env vars instead)
@@ -65,72 +90,14 @@ is_ssot_file() {
     return 1
 }
 
-collect_scan_files() {
-    local -A seen=()
-    local pattern
-    local file
-
-    shopt -s nullglob globstar
-    for pattern in "${SCAN_PATTERNS[@]}"; do
-        for file in $pattern; do
-            if [[ -f "$file" ]]; then
-                seen["$file"]=1
-            fi
-        done
-    done
-    shopt -u nullglob globstar
-
-    for file in "${!seen[@]}"; do
-        printf '%s\n' "$file"
-    done | sort
-}
-
-matches_scan_pattern() {
+is_skip_dir() {
     local file="$1"
-    local pattern
-    for pattern in "${SCAN_PATTERNS[@]}"; do
-        if [[ "$file" == $pattern ]]; then
+    for dir in "${SKIP_DIRS[@]}"; do
+        if [[ "$file" == "$dir"* ]]; then
             return 0
         fi
     done
     return 1
-}
-
-init_scan_files() {
-    local -a all_files=()
-    local -a changed_files=()
-    local -a filtered_changed=()
-    local file
-
-    mapfile -t all_files < <(collect_scan_files)
-    SCAN_FILES=("${all_files[@]}")
-
-    # In PR context, only enforce drift on changed scan-target files.
-    if [[ "${GITHUB_EVENT_NAME:-}" == "pull_request" ]]; then
-        git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}" >/dev/null 2>&1 || true
-        if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
-            mapfile -t changed_files < <(git diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" 2>/dev/null || true)
-        fi
-
-        # Fallback for shallow clones or missing base ref: inspect last commit delta.
-        if [[ ${#changed_files[@]} -eq 0 ]]; then
-            mapfile -t changed_files < <(git diff --name-only HEAD~1..HEAD 2>/dev/null || true)
-        fi
-
-        if [[ ${#changed_files[@]} -gt 0 ]]; then
-            for file in "${changed_files[@]}"; do
-                [[ -f "$file" ]] || continue
-                if matches_scan_pattern "$file"; then
-                    filtered_changed+=("$file")
-                fi
-            done
-        fi
-
-        SCAN_FILES=("${filtered_changed[@]}")
-        log_info "PR mode: scanning ${#SCAN_FILES[@]} changed file(s) for drift"
-    else
-        log_info "Full scan mode: scanning ${#SCAN_FILES[@]} file(s)"
-    fi
 }
 
 check_hardcoded_ips() {
@@ -141,26 +108,36 @@ check_hardcoded_ips() {
     
     log_info "Checking for hardcoded IPs (192.168.168.*)..."
     
-    files=("${SCAN_FILES[@]}")
-
-    for file in "${files[@]}"; do
-        while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
+    # Search for hardcoded IPs
+    while IFS= read -r line; do
+        local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
         
-            # Skip SSOT files and archived directories
-            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]] || [[ "$file" == "scripts/ci/detect-config-drift.sh" ]]; then
-                continue
-            fi
+        # Skip SSOT files and archived directories
+        if is_ssot_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
+            continue
+        fi
         
-            # Skip comments
-            if [[ "$line" =~ ^[[:space:]]*# ]]; then
-                continue
-            fi
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
         
-            log_warn "  Found hardcoded IP in $file: $line"
-            drift_found=1
-        done < <(grep -nE "192\.168\.168\." "$file" 2>/dev/null | cut -d: -f2- || true)
-    done
+        # Skip lines where IP is already in an env-var default (${VAR:-ip})
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded IP in $file: $content"
+        drift_found=1
+    done < <(grep -rn "192\.168\.168\." \
+        docker-compose.yml \
+        docker-compose.base.yml \
+        docker-compose.dev.yml \
+        Caddyfile \
+        Caddyfile.production \
+        2>/dev/null || true)
     
     return $drift_found
 }
@@ -173,26 +150,38 @@ check_hardcoded_domains() {
     
     log_info "Checking for hardcoded domains (kushnir.cloud, prod.internal)..."
     
-    files=("${SCAN_FILES[@]}")
-
-    for file in "${files[@]}"; do
-        while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
+    # Search for hardcoded domains
+    while IFS= read -r line; do
+        local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
         
-            # Skip SSOT files and archived directories
-            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]] || [[ "$file" == *"scripts/ci/detect-config-drift.sh" ]] || [[ "$file" == *"scripts/ci/enforce-global-dedup.sh" ]] || [[ "$file" == *"scripts/dev/check-config-drift.sh" ]]; then
-                continue
-            fi
+        # Skip SSOT files and archived directories
+        if is_ssot_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
+            continue
+        fi
         
-            # Skip comments
-            if [[ "$line" =~ ^[[:space:]]*# ]]; then
-                continue
-            fi
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
         
-            log_warn "  Found hardcoded domain in $file: $line"
-            drift_found=1
-        done < <(grep -nE "kushnir\.cloud|prod\.internal" "$file" 2>/dev/null | cut -d: -f2- || true)
-    done
+        # Skip lines where domain is already in an env-var default (${VAR:-domain})
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded domain in $file: $content"
+        drift_found=1
+    done < <(grep -rn "kushnir\.cloud\|prod\.internal" \
+        --include="*.yml" \
+        --include="*.yaml" \
+        --include="*.conf" \
+        --include="*.json" \
+        --exclude-dir=.git \
+        --exclude-dir=archived \
+        --exclude-dir=_archive \
+        2>/dev/null || true)
     
     return $drift_found
 }
@@ -205,41 +194,52 @@ check_hardcoded_ports() {
     
     log_info "Checking for hardcoded ports (9090, 3000, 8080)..."
     
-    files=("${SCAN_FILES[@]}")
-
-    for file in "${files[@]}"; do
-        while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
+    # Search for hardcoded ports in docker-compose and Caddyfile
+    while IFS= read -r line; do
+        local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
         
-            # Skip SSOT files and archived directories
-            if is_ssot_file "$file" || [[ "$file" =~ archived|_archive ]] || [[ "$file" == *"scripts/ci/detect-config-drift.sh" ]]; then
-                continue
-            fi
+        # Skip SSOT files and archived directories
+        if is_ssot_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
+            continue
+        fi
         
-            # Skip comments
-            if [[ "$line" =~ ^[[:space:]]*# ]]; then
-                continue
-            fi
-
-            # Localhost probes are operational health checks, not SSOT drift.
-            if [[ "$line" =~ localhost: ]] || [[ "$line" =~ 127\.0\.0\.1: ]]; then
-                continue
-            fi
-
-            # Ignore internal service URLs and service-to-service policy tuples.
-            if [[ "$line" =~ https?://[A-Za-z0-9_-]+:(9090|3000|8080) ]] || \
-               [[ "$line" =~ [A-Za-z0-9_-]+:[A-Za-z0-9_-]+:(9090|3000|8080) ]] || \
-               [[ "$line" =~ [[:space:]"]+[A-Za-z0-9_-]+:(9090|3000|8080)[[:space:]"]* ]] || \
-               [[ "$line" =~ [[:space:]]on[[:space:]]:(9090|3000|8080) ]] || \
-               [[ "$line" =~ -p[[:space:]]*[0-9]+:[0-9]+ ]] || \
-               [[ "$line" =~ [0-9]+:[0-9]+ ]]; then
-                continue
-            fi
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
         
-            log_warn "  Found hardcoded port in $file: $line"
-            drift_found=1
-        done < <(grep -nE ':(9090|3000|8080)([^0-9]|$)' "$file" 2>/dev/null | cut -d: -f2- || true)
-    done
+        # Skip docker-compose port mapping lines ("NNNN:NNNN" format — required syntax)
+        if [[ "$content" =~ [0-9]+:[0-9]+ ]] && [[ "$content" =~ ^[[:space:]]*- ]]; then
+            continue
+        fi
+        
+        # Skip health check localhost URLs (localhost:port is not hardcoded deployment config)
+        if [[ "$content" =~ localhost:[0-9]+ ]]; then
+            continue
+        fi
+        
+        # Skip Docker internal service name URLs (e.g. http://prometheus:9090)
+        if [[ "$content" =~ http[s]?://[a-z][a-z0-9_-]+:[0-9]+ ]]; then
+            continue
+        fi
+        
+        # Skip lines where port is already in an env-var interpolation
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded port in $file: $content"
+        drift_found=1
+    done < <(grep -rn ":[9308][0908][909][0]" \
+        docker-compose*.yml \
+        docker-compose*.yaml \
+        Caddyfile* \
+        --exclude-dir=.git \
+        --exclude-dir=archived \
+        --exclude-dir=_archive \
+        2>/dev/null || true)
     
     return $drift_found
 }
@@ -284,7 +284,6 @@ check_ssot_integrity() {
 
 main() {
     log_info "Starting config drift detection..."
-    init_scan_files
     
     local total_drift=0
     

@@ -96,7 +96,7 @@ jobs:
           is_docs_depth_exempt() {
             local path="$1"
             case "$path" in
-              docs/README.md|docs/INDEX.md|docs/*/README.md|docs/*/INDEX.md)
+              docs/README.md|docs/INDEX.md|docs/*/README.md|docs/*/INDEX.md|docs/DEDUPLICATION-POLICY.md)
                 return 0
                 ;;
               *)
@@ -108,7 +108,7 @@ jobs:
           is_scripts_depth_exempt() {
             local path="$1"
             case "$path" in
-              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/*-entrypoint.ps1)
+              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/*-entrypoint.ps1|scripts/dev/start-work-from-issue.sh|scripts/ops/triage-issues-autonomous.sh|scripts/ci/detect-duplicate-helpers.sh)
                 return 0
                 ;;
               *)

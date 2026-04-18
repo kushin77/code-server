@@ -23,7 +23,7 @@ scrape_configs:
           - localhost
         labels:
           job: docker-logs
-          host: "primary.prod.internal"
+          host: "${PROMTAIL_HOST:-primary.prod.internal}"
           __path__: /var/lib/docker/containers/*/*.log
 
     pipeline_stages:
@@ -67,7 +67,7 @@ scrape_configs:
           - localhost
         labels:
           job: system-logs
-          host: "primary.prod.internal"
+          host: "${PROMTAIL_HOST:-primary.prod.internal}"
           __path__: /var/log/*.log
     pipeline_stages:
       - drop:

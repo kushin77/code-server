@@ -16,8 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl ca-certificates python3 python3-pip gnupg2 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# hadolint ignore=DL3013
-RUN pip3 install --no-cache-dir pre-commit
+RUN pip3 install --no-cache-dir pre-commit==3.7.1
 
 WORKDIR /workspace
 

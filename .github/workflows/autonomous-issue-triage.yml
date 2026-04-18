@@ -1,0 +1,30 @@
+name: Autonomous Issue Triage
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: autonomous-issue-triage
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    name: Priority + Agent-Ready Triage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run autonomous triage script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/ops/triage-issues-autonomous.sh
+          bash scripts/ops/triage-issues-autonomous.sh

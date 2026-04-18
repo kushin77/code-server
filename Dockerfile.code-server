@@ -42,18 +42,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim gdb tmux htop jq docker.io postgresql-client \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# hadolint ignore=DL3008,DL4006
-RUN mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-      | gpg --dearmor -o /etc/apt/keyrings/google-cloud-cli.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/google-cloud-cli.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
-      > /etc/apt/sources.list.d/google-cloud-sdk.list \
-    && apt-get update && apt-get install -y --no-install-recommends google-cloud-cli \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install Node.js development packages globally  
-# hadolint ignore=DL3016
-RUN npm install -g typescript eslint prettier jest
+# Install Node.js development packages globally
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN npm install -g typescript@5.4.5 eslint@9.3.0 prettier@3.3.0 jest@29.7.0
 
 # Optional: Install Rust (best-effort, non-blocking)
 # hadolint ignore=DL4006
@@ -109,9 +100,9 @@ RUN mkdir -p /opt/vsix \
     && echo "[build] Cached github.copilot-chat v0.42.3" || echo "[build] SKIP: Could not cache github.copilot-chat"); \
     rm -f /tmp/github-copilot.vsix.gz /tmp/github-copilot-chat.vsix.gz || true
 
-COPY scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
-COPY scripts/git-credential-gsm /usr/local/bin/git-credential-gsm
-RUN chmod +x /usr/local/bin/code-server-entrypoint.sh /usr/local/bin/git-credential-gsm
+RUN mkdir -p /usr/local/lib/code-server
+COPY --chmod=755 scripts/lib/merge-settings.js /usr/local/lib/code-server/merge-settings.js
+COPY --chmod=755 scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
 
 USER coder
 

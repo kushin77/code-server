@@ -1,0 +1,58 @@
+{
+  "_version": "1.0.0",
+  "_description": "IDE hints for canonical helper function usage. Used for developer guidance and linting integration.",
+  "canonical_helpers": {
+    "logging": {
+      "source": "scripts/_common/logging.sh",
+      "prefer": {
+        "log_info": ["echo \"INFO", "echo \"[INFO"],
+        "log_warn": ["echo \"WARN", "echo \"WARNING", "echo \"[WARN"],
+        "log_error": ["echo \"ERROR", "echo \"[ERROR", "echo -e \"\\033[31mERROR"],
+        "log_fatal": ["echo \"FATAL", "die()", "exit 1"],
+        "log_section": ["echo \"===", "echo \"---"]
+      }
+    },
+    "utilities": {
+      "source": "scripts/_common/utils.sh",
+      "prefer": {
+        "require_var": ["[ -z \"$", "test -z \"$"],
+        "require_command": ["command -v", "which "],
+        "require_file": ["[ -f \"", "test -f \""],
+        "retry": ["for ((attempt", "while (( attempt"]
+      }
+    },
+    "secrets": {
+      "source": "scripts/lib/secrets.sh",
+      "prefer": {
+        "get_secret": ["gcloud secrets versions access", "gsutil cat"]
+      }
+    }
+  },
+  "anti_patterns": [
+    {
+      "pattern": "echo \"ERROR:",
+      "message": "Use log_error from scripts/_common/logging.sh",
+      "severity": "warning"
+    },
+    {
+      "pattern": "echo \"WARN",
+      "message": "Use log_warn from scripts/_common/logging.sh",
+      "severity": "warning"
+    },
+    {
+      "pattern": "exit 1",
+      "message": "Prefer log_fatal which exits with structured logging",
+      "severity": "info"
+    },
+    {
+      "pattern": "192.168.168.",
+      "message": "Use ${DEPLOY_HOST:-default} env var instead of hardcoded IP",
+      "severity": "error"
+    },
+    {
+      "pattern": "kushnir.cloud",
+      "message": "Use ${DOMAIN:-default} env var instead of hardcoded domain",
+      "severity": "warning"
+    }
+  ]
+}

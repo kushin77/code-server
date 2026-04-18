@@ -1,0 +1,41 @@
+{
+  "policy_version": "1.0.0",
+  "policy_date": "2026-04-18",
+  "blocked": [
+    {
+      "pattern": "ms-vscode-remote.*",
+      "reason": "Remote development extensions are incompatible with code-server web architecture",
+      "alternative": "code-server provides native browser-based remote development"
+    },
+    {
+      "pattern": "ms-vsliveshare.*",
+      "reason": "Live Share requires VS Code desktop and conflicts with multi-user server sessions",
+      "alternative": "Use GitHub Codespaces or pair via code-server shared URLs"
+    },
+    {
+      "pattern": "visualstudioexptteam.vscodeintellicode",
+      "reason": "Redundant with GitHub Copilot; increases startup time and memory usage",
+      "alternative": "GitHub Copilot (T1-Core, pre-installed)"
+    },
+    {
+      "pattern": "TabNine.*",
+      "reason": "Redundant AI completion — conflicts with Copilot; uploads code to external servers",
+      "alternative": "GitHub Copilot (T1-Core, pre-installed)"
+    },
+    {
+      "pattern": "Codeium.*",
+      "reason": "Redundant AI completion — conflicts with Copilot; violates data residency policy",
+      "alternative": "GitHub Copilot (T1-Core, pre-installed)"
+    },
+    {
+      "pattern": "amazonwebservices.aws-toolkit-vscode",
+      "reason": "AWS toolkit not approved for on-prem environment; use GCP/local tooling",
+      "alternative": "Use terraform + on-prem scripts per governance docs"
+    },
+    {
+      "pattern": "ms-vscode.remote-server",
+      "reason": "Conflicts with code-server architecture",
+      "alternative": "Native code-server browser interface"
+    }
+  ]
+}

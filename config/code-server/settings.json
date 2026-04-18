@@ -1,45 +1,141 @@
 {
-  "files.watcherExclude": {
-    "**/.git/objects/**": true,
-    "**/.git/subtree-cache/**": true,
-    "**/node_modules/**": true,
-    "**/dist/**": true,
-    "**/build/**": true,
-    "**/target/**": true,
-    "**/coverage/**": true,
-    "**/.next/**": true,
-    "**/.turbo/**": true,
-    "**/.cache/**": true
+  "__policy_version": "1.0.0",
+  "__policy_date": "2026-04-18",
+  "__policy_tier_legend": "T1=immutable, T2=recommended, T3=user-overridable",
+
+  // ─── T1: FORMATTING & SAVE-TIME CLEANUP (immutable) ───────────────────────
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "editor.renderWhitespace": "boundary",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.rulers": [100, 120],
+
+  // ─── T1: FILE VISIBILITY (immutable) ──────────────────────────────────────
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/*.pyo": true,
+    "**/node_modules": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.terraform": true,
+    "**/.terraform.lock.hcl": false,
+    "**/coverage": true,
+    "**/.coverage": true,
+    "**/*.egg-info": true,
+    "**/.venv": true,
+    "**/venv": true,
+    "**/.env.local": false,
+    "**/.env.*.local": false
   },
   "search.exclude": {
     "**/node_modules": true,
+    "**/__pycache__": true,
     "**/dist": true,
     "**/build": true,
-    "**/target": true,
+    "**/.terraform": true,
+    "**/.venv": true,
+    "**/venv": true,
     "**/coverage": true,
-    "**/.next": true,
-    "**/.turbo": true,
-    "**/.cache": true
+    "**/*.min.js": true,
+    "**/*.min.css": true
   },
-  "files.exclude": {
-    "**/.DS_Store": true,
-    "**/Thumbs.db": true
-  },
-  "search.followSymlinks": false,
-  "search.useParentIgnoreFiles": true,
-  "window.restoreWindows": "all",
-  "workbench.localHistory.enabled": true,
-  "workbench.startupEditor": "none",
-  "typescript.tsserver.maxTsServerMemory": 3072,
-  "editor.minimap.enabled": false,
-  "editor.inlineSuggest.enabled": true,
-  "terminal.integrated.enablePersistentSessions": true,
-  "terminal.integrated.scrollback": 50000,
-  "terminal.integrated.env.linux": {
-    "GSM_PROJECT": "gcp-eiq",
-    "GSM_SECRET_NAME": "prod-github-token",
-    "GSM_GITHUB_TOKEN_SECRET": "prod-github-token"
-  },
+
+  // ─── T1: SECURITY & AUDIT (immutable) ─────────────────────────────────────
+  "telemetry.telemetryLevel": "off",
   "extensions.autoCheckUpdates": false,
-  "extensions.autoUpdate": false
+  "extensions.autoUpdate": false,
+  "update.mode": "none",
+  "security.workspace.trust.enabled": true,
+  "security.workspace.trust.startupPrompt": "once",
+
+  // ─── T1: GIT HYGIENE (immutable) ──────────────────────────────────────────
+  "git.requireGitUserConfig": true,
+  "git.branchProtection": ["main", "master"],
+  "git.branchProtectionPrompt": "alwaysCommitToNewBranch",
+  "git.enableCommitSigning": false,
+  "git.autofetch": false,
+  "git.confirmSync": true,
+  "git.allowForcePush": false,
+  "git.rebaseWhenSync": false,
+  "git.mergeEditor": true,
+  "git.enableSmartCommit": false,
+  "git.postCommitCommand": "none",
+
+  // ─── T1: GITHUB ISSUE-CENTRIC WORKFLOW (immutable) ────────────────────────
+  "github.branchProtection": true,
+  "terminal.integrated.env.linux": {
+    "GITHUB_WORKFLOW_POLICY": "issue-first"
+  },
+
+  // ─── T2: RECOMMENDED (user may override) ──────────────────────────────────
+  "editor.minimap.enabled": false,
+  "editor.stickyScroll.enabled": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+  "editor.wordWrap": "off",
+  "editor.fontFamily": "'JetBrains Mono', 'Cascadia Code', Consolas, monospace",
+  "editor.fontSize": 14,
+  "editor.lineHeight": 1.6,
+  "editor.linkedEditing": true,
+  "editor.suggest.showStatusBar": true,
+  "editor.parameterHints.enabled": true,
+  "workbench.colorTheme": "Default Dark+",
+  "workbench.iconTheme": "vs-seti",
+  "workbench.startupEditor": "none",
+  "workbench.editor.untitled.hint": "hidden",
+  "terminal.integrated.scrollback": 10000,
+  "terminal.integrated.persistentSessionReviveProcess": "onExit",
+
+  // ─── T2: LANGUAGE DEFAULTS (user may override per workspace) ──────────────
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.formatOnSave": true
+  },
+  "[shellscript]": {
+    "editor.tabSize": 2,
+    "files.trimTrailingWhitespace": true
+  },
+  "[dockerfile]": {
+    "editor.formatOnSave": false
+  },
+
+  // ─── T3: USER CONVENIENCE (seeded, fully overridable) ─────────────────────
+  "window.restoreWindows": "folders",
+  "explorer.confirmDelete": true,
+  "explorer.confirmDragAndDrop": true,
+  "breadcrumbs.enabled": true,
+  "problems.showCurrentInStatus": true
 }

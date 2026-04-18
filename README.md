@@ -132,4 +132,3 @@ See [ARCHITECTURE.md](ARCHITECTURE.md),
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and
 [GitHub Issues](https://github.com/kushin77/code-server/issues).
-# CI trigger

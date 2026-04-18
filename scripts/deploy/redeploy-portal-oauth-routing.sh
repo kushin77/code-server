@@ -132,8 +132,23 @@ verify_remote_compose() {
 }
 
 redeploy_services() {
-    run_target "cd '${TARGET_DEPLOY_DIR}' && (COMPOSE_PROFILES=portal docker-compose up -d --remove-orphans ${PORTAL_SERVICES[*]} || COMPOSE_PROFILES=portal docker compose up -d --remove-orphans ${PORTAL_SERVICES[*]})"
-    log_info "Requested idempotent portal service redeploy"
+    local compose_cmd="cd '${TARGET_DEPLOY_DIR}' && (COMPOSE_PROFILES=portal docker-compose up -d --remove-orphans ${PORTAL_SERVICES[*]} || COMPOSE_PROFILES=portal docker compose up -d --remove-orphans ${PORTAL_SERVICES[*]})"
+
+    if run_target "$compose_cmd"; then
+        log_info "Requested idempotent portal service redeploy via compose"
+        return 0
+    fi
+
+    if [[ "$LOCAL_EXECUTION" == true ]]; then
+        log_warn "Compose redeploy failed on local runner; falling back to targeted container restarts"
+        for service in "${PORTAL_SERVICES[@]}"; do
+            run_target "docker ps --format '{{.Names}}' | grep -qx '${service}' && docker restart '${service}' >/dev/null || true"
+        done
+        log_info "Requested targeted container restart fallback for portal services"
+        return 0
+    fi
+
+    log_fatal "Portal service redeploy failed"
 }
 
 wait_for_target_service() {

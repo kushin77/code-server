@@ -42,16 +42,18 @@ Canonical machine-readable companion:
 ## Open Issues Without Landed Implementation Yet
 
 - `#692` Provide reachable execution path for portal OAuth redeploy workflow
+- `#695` Add non-interactive GSM auth path for self-hosted portal redeploy workflow
 - `#686` fix(oauth): enforce surface-specific redirect callbacks and add redeploy helper
 - `#684` feat(monorepo): bootstrap pnpm workspace and lockfile governance
 - `#649` feat(policy): Implement VS Code Enterprise Policy Pack v1.0 (#618)
 
 ## Recommended Execution Order
 
-1. `#692` provision a reachable execution path and re-run the hardened portal workflow.
-2. `#686` keep the OAuth helper lane aligned with the portal redeploy path and review the open PR.
-3. `#684` keep the monorepo/pnpm governance lane moving independently of the release blocker.
-4. `#649` keep the policy-pack governance lane moving independently of the release blocker.
+1. `#695` correct non-interactive GSM auth for self-hosted portal workflow execution.
+2. `#692` re-run the hardened portal workflow on `main` and complete live redirect verification.
+3. `#686` keep the OAuth helper lane aligned with the portal redeploy path and review the open PR.
+4. `#684` keep the monorepo/pnpm governance lane moving independently of the release blocker.
+5. `#649` keep the policy-pack governance lane moving independently of the release blocker.
 
 ## Operational Notes
 
@@ -59,7 +61,9 @@ Canonical machine-readable companion:
 - `#690` is resolved: the deploy SSH secret is now provisioned in GitHub Actions.
 - Local portal redeploy dry-run now passes with `bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local`, and the temporary self-hosted runner validated both the portal dry-run and the VPN gate.
 - `#691` is closed: the legacy docs-root bridge files were collapsed to compatibility stubs and the canonical folder indexes remain in place.
-- The latest published portal OAuth run still fails in the Redeploy portal services step because the published workflow invokes the helper in SSH mode and the host rejects the key.
-- The published branch fix `fix/692-local-execution-path` reached the redeploy step but failed because the self-hosted runner lacked `docker`; the next blocker is a Docker-capable runner or host-side execution path.
+- PR #693 is merged and the published portal workflow now uses the self-hosted local execution path.
+- The workflow is now isolated for multi-agent execution with branch-scoped concurrency and a dedicated portal redeploy runner label.
+- Latest `main` run `24610587990` reaches `google-github-actions/auth@v2` but fails with `invalid_request` because `GCP_WIF_PROVIDER` is not accepted as a valid full identity-provider resource name for audience.
+- `#695` is the active secret-bootstrap dependency for closing `#692`.
 - `#686`, `#684`, and `#649` are open PR-backed lanes with existing repo artifacts; they are parallel review tracks, not the current release blocker.
 - Keep issue comments current when additional AC evidence lands so GitHub remains usable without local context.

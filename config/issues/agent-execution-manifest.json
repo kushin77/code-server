@@ -975,7 +975,7 @@
       "branchType": "fix",
       "closePolicy": "standard",
       "dependencies": [688, 690],
-      "executionBrief": "GitHub Actions now has the deploy SSH secret. A temporary self-hosted runner validated the portal workflow path and the VPN gate, but the issue stays open until the production-capable apply path reaches 192.168.168.31 and live redirects are verified.",
+      "executionBrief": "The published workflow now runs in self-hosted local mode with dedicated runner labeling, but #692 remains open until non-interactive GSM auth is fully functional and production redirect verification passes.",
       "evidence": [
         "Workflow run 24608080969 failed at host reachability, not secret installation",
         "DEPLOY_SSH_PRIVATE_KEY and DEPLOY_SSH_KNOWN_HOSTS were provisioned",
@@ -983,8 +983,27 @@
         "Temporary self-hosted runner executed vpn-e2e-gate.yml run 24608949154 successfully",
         "Published portal workflow run 24609258258 failed at SSH auth with Permission denied (publickey,password)",
         "Branch fix run 24609414318 reached the deploy step and failed because the runner lacked docker",
-        ".github/workflows/portal-oauth-redeploy.yml now targets a self-hosted runner",
+        ".github/workflows/portal-oauth-redeploy.yml now targets dedicated self-hosted portal redeploy labels with branch-scoped concurrency",
+        "Main run 24610587990 reaches google-github-actions/auth and fails with invalid_request audience for GCP_WIF_PROVIDER",
         "scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local validated successfully in workspace"
+      ]
+    },
+    {
+      "number": 695,
+      "title": "P0: Add non-interactive GSM auth path for self-hosted portal redeploy workflow",
+      "class": "unblock",
+      "lane": "release",
+      "priority": "P0",
+      "status": "open",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Enable deterministic non-interactive GSM auth in portal-oauth-redeploy.yml by using valid workload identity provider metadata and re-validating production apply on main.",
+      "evidence": [
+        "Issue #695 opened to track non-interactive GSM auth and ephemeral bootstrap requirements",
+        "Workflow now attempts google-github-actions/auth@v2 before fetch-gsm-secrets.sh",
+        "Main run 24610587990 fails with invalid_request audience, indicating GCP_WIF_PROVIDER secret format mismatch",
+        "Portal workflow execution path, Docker availability, and runner isolation are verified"
       ]
     },
     {

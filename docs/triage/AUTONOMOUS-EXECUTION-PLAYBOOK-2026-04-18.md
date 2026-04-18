@@ -9,14 +9,16 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Branch feature: #671
 - CI stabilization blocker: #687
 - Production OAuth redeploy blocker: #692
+- Secret bootstrap blocker: #695
 
 ## Closed Duplicate
 - #689 (duplicate of #687)
 
 ## Dependency Order
 1. Resolve #687 first (branch CI determinism).
-2. Resolve #692 second (production callback redeploy execution path + runtime verification).
-3. Resume completion/closure flow for #671 once #687 and #692 are closed.
+2. Resolve #695 second (non-interactive GSM auth and WIF secret correctness for self-hosted runners).
+3. Resolve #692 third (production callback redeploy execution path + runtime verification).
+4. Resume completion/closure flow for #671 once #687, #695, and #692 are closed.
 
 ## Issue #687 Execution Checklist
 - Reproduce failing workflows listed in issue body.
@@ -47,6 +49,7 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Temporary self-hosted runner evidence: portal-oauth-redeploy.yml run `24608948773` succeeded; vpn-e2e-gate.yml run `24608949154` succeeded.
 - Live apex redirect still points to IDE callback until #692 is executed.
 - Docs consolidation tracker #691 is closed; the legacy docs-root files are compatibility stubs and the canonical indexes are in place.
-- Latest published portal OAuth run `24609258258` failed during SSH authentication in the Redeploy portal services step.
-- Branch `fix/692-local-execution-path` run `24609414318` reached the deploy step but failed because the runner lacked `docker`.
+- PR #693 is merged on `main`; the portal workflow now runs in local execution mode on self-hosted runners.
+- Latest `main` portal run `24610587990` reaches `google-github-actions/auth@v2` and fails with `invalid_request` because `GCP_WIF_PROVIDER` is not a valid full identity-provider audience value.
+- The portal workflow now has branch-scoped concurrency and a dedicated runner label to reduce cross-agent contention.
 - Parallel open PR lanes remain for #686, #684, and #649; keep them separate from the production blocker path.

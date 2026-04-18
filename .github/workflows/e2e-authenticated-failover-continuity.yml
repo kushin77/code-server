@@ -45,7 +45,23 @@ jobs:
           echo "$PLAYWRIGHT_STORAGE_STATE_B64" | base64 -d > /tmp/e2e-auth/storage-state.json
           test -s /tmp/e2e-auth/storage-state.json
 
-      - name: Run authenticated failover continuity test
+      - name: Setup Playwright for E2E
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci/setup-e2e-playwright.sh
+
+      - name: Run authenticated session persistence tests
+        shell: bash
+        env:
+          TEST_BASE_URL: https://ide.kushnir.cloud
+          PLAYWRIGHT_STORAGE_STATE: /tmp/e2e-auth/storage-state.json
+        run: |
+          set -euo pipefail
+          cd tests/e2e
+          npx playwright test specs/authenticated-session-persistence.spec.ts
+
+      - name: Run authenticated failover continuity tests
         shell: bash
         env:
           CONTINUITY_MODE: auth
@@ -55,4 +71,13 @@ jobs:
           FAILOVER_TRIGGER_CMD: ${{ inputs.failover_trigger_cmd }}
         run: |
           set -euo pipefail
-          bash scripts/ci/run-playwright-failover-continuity.sh
+          cd tests/e2e
+          npx playwright test specs/failover-session-continuity.spec.ts
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: tests/e2e/artifacts/html/
+          retention-days: 7

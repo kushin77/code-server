@@ -982,6 +982,7 @@
         "Temporary self-hosted runner registered in-session and executed portal-oauth-redeploy.yml run 24608948773 successfully",
         "Temporary self-hosted runner executed vpn-e2e-gate.yml run 24608949154 successfully",
         "Published portal workflow run 24609258258 failed at SSH auth with Permission denied (publickey,password)",
+        "Branch fix run 24609414318 reached the deploy step and failed because the runner lacked docker",
         ".github/workflows/portal-oauth-redeploy.yml now targets a self-hosted runner",
         "scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local validated successfully in workspace"
       ]

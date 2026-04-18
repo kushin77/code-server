@@ -48,4 +48,5 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Live apex redirect still points to IDE callback until #692 is executed.
 - Docs consolidation tracker #691 is closed; the legacy docs-root files are compatibility stubs and the canonical indexes are in place.
 - Latest published portal OAuth run `24609258258` failed during SSH authentication in the Redeploy portal services step.
+- Branch `fix/692-local-execution-path` run `24609414318` reached the deploy step but failed because the runner lacked `docker`.
 - Parallel open PR lanes remain for #686, #684, and #649; keep them separate from the production blocker path.

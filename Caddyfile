@@ -12,6 +12,14 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
+    # Portal-first gate: require a valid portal cookie before allowing IDE host access.
+    # This keeps ide.kushnir.cloud out of the normal public entry path.
+    @no_portal_access {
+        not path /health /healthz /ping /oauth2 /oauth2/*
+        not header Cookie *_oauth2_proxy_portal=*
+    }
+    redir @no_portal_access https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/ 302
+
     # Logout handler: clean up session before sign out
     @logout path /logout /signout
     handle @logout {

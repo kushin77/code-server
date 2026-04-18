@@ -72,7 +72,7 @@ All 42 GitHub issues have been systematically triaged, advanced, and closed. The
 #### #677 — Traffic Routing Policy for Active-Active ✅
 - **Status**: Closed
 - **Achievement**: 95/5 distribution, 30s health checks, 10s failover timeout, quarterly drills
-- **Evidence**: docs/ACTIVE-ACTIVE-ROUTING-POLICY.md, Caddy configs, monitoring metrics
+- **Evidence**: legacy bridge at `docs/ACTIVE-ACTIVE-ROUTING-POLICY.md`; current remediation/design thread lives at `docs/triage/ACTIVE-ACTIVE-IDE-LOAD-BALANCING-734.md`
 - **Impact**: Foundation for zero-downtime deployment
 
 #### #678 — Runtime State Replication ✅

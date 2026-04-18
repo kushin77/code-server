@@ -145,7 +145,7 @@ This ensures:
   - ✅ Can provision multiple code-server instances via Terraform
   - Each instance isolated in separate container
   - Load balancer (Caddy) routes across instances
-  - Stateless (no session affinity needed)
+  - Session-affine routing is required for active IDE sessions; code-server should not be treated as a generic stateless backend under active-active ingress
 
 - **Bottlenecks**:
   - Single Docker Desktop instance on Windows (performance capped)

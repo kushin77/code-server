@@ -173,7 +173,8 @@ All GitHub issues (42 total) have been systematically triaged and advanced. 7 ma
 
 **Status**: Closed — Routing Policy Defined  
 **Evidence Provided**:
-- `docs/ACTIVE-ACTIVE-ROUTING-POLICY.md` — complete policy (500+ lines)
+- `docs/ACTIVE-ACTIVE-ROUTING-POLICY.md` — legacy bridge for prior policy reference
+- `docs/triage/ACTIVE-ACTIVE-IDE-LOAD-BALANCING-734.md` — current canonical design/remediation thread for active-active IDE balancing
   - **Traffic Distribution**:
     - IDE workspace users: 95% → .31 (primary), 5% → .42 (canary)
     - Portal users: Round-robin (stateless)

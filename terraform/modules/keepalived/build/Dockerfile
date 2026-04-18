@@ -11,8 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Create keepalived config directory
+# Create keepalived config directory and placeholder config file
+# (placeholder ensures Docker bind-mount treats it as a file, not a directory)
 RUN mkdir -p /etc/keepalived /var/log/keepalived && \
+    touch /etc/keepalived/keepalived.conf && \
     chmod 755 /etc/keepalived /var/log/keepalived
 
 # Health check

@@ -29,6 +29,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
+      - name: Bootstrap ephemeral env file from GSM
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f .env ]]; then
+            echo "DEPLOY_ENV_CREATED=false" >> "$GITHUB_ENV"
+            echo "Using existing .env from runner workspace"
+            exit 0
+          fi
+
+          if ! command -v gcloud >/dev/null 2>&1; then
+            echo "gcloud is required to fetch GSM-backed secrets when .env is absent" >&2
+            exit 1
+          fi
+
+          bash scripts/fetch-gsm-secrets.sh > .env
+          chmod 600 .env
+          echo "DEPLOY_ENV_CREATED=true" >> "$GITHUB_ENV"
+          echo "Generated ephemeral .env from GSM secrets"
+
       - name: Validate callback split in source compose
         shell: bash
         run: |
@@ -76,4 +96,16 @@ jobs:
             else
               echo "- Mode: apply"
             fi
+            if [[ "${DEPLOY_ENV_CREATED:-false}" == "true" ]]; then
+              echo "- Env bootstrap: ephemeral .env generated from GSM"
+            else
+              echo "- Env bootstrap: existing .env reused"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cleanup ephemeral env file
+        if: always() && env.DEPLOY_ENV_CREATED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .env

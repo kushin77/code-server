@@ -28,7 +28,7 @@ PRIMARY_REPO="${PRIMARY_REPO:-~/code-server-enterprise}"
 REPLICA_REPO="${REPLICA_REPO:-~/code-server-enterprise-replica}"
 PRIMARY_COMPOSE_BIN="${PRIMARY_COMPOSE_BIN:-docker-compose}"
 REPLICA_COMPOSE_BIN="${REPLICA_COMPOSE_BIN:-docker-compose}"
-SSH_BIN="${SSH_BIN:-ssh}"
+SSH_BIN="${SSH_BIN:-}"
 SSH_KEY_PATH="${SSH_KEY_PATH:-}"
 SSH_TIMEOUT="${SSH_TIMEOUT:-8}"
 EXEC_MODE="${EXEC_MODE:-ssh}"
@@ -38,6 +38,9 @@ ACTIVE_HOST_STATE_FILE="${ACTIVE_HOST_STATE_FILE:-/tmp/code-server-active-host.s
 EVIDENCE_DIR="${EVIDENCE_DIR:-/tmp/code-server-failover-evidence}"
 LOCK_DIR="/tmp/${LOCK_KEY}.lock"
 LOCK_HOST=""
+INGRESS_PROBE_ATTEMPTS="${INGRESS_PROBE_ATTEMPTS:-8}"
+INGRESS_PROBE_DELAY="${INGRESS_PROBE_DELAY:-2}"
+INGRESS_PROBE_CONSECUTIVE_OK="${INGRESS_PROBE_CONSECUTIVE_OK:-2}"
 
 usage() {
   cat <<'EOF'
@@ -132,6 +135,16 @@ parse_args() {
   done
 }
 
+initialize_platform_defaults() {
+  if [[ -z "$SSH_BIN" ]]; then
+    if command -v ssh.exe >/dev/null 2>&1; then
+      SSH_BIN="ssh.exe"
+    else
+      SSH_BIN="ssh"
+    fi
+  fi
+}
+
 ssh_common_args() {
   local -a args
   args=(
@@ -190,15 +203,23 @@ check_reachability() {
 }
 
 replica_ingress_health() {
-  local attempts=3
+  local attempts="$INGRESS_PROBE_ATTEMPTS"
+  local delay="$INGRESS_PROBE_DELAY"
+  local consecutive_required="$INGRESS_PROBE_CONSECUTIVE_OK"
   local i=0
+  local consecutive_ok=0
 
   for i in $(seq 1 "$attempts"); do
     if run_replica_cmd "curl --max-time 5 -fsS http://127.0.0.1:18080/oauth2/start?rd=/ >/dev/null"; then
-      echo healthy
-      return 0
+      consecutive_ok="$((consecutive_ok + 1))"
+      if [[ "$consecutive_ok" -ge "$consecutive_required" ]]; then
+        echo healthy
+        return 0
+      fi
+    else
+      consecutive_ok=0
     fi
-    sleep 1
+    sleep "$delay"
   done
 
   echo unhealthy
@@ -272,12 +293,12 @@ EOF"
 }
 
 run_primary_redeploy() {
-  run_primary_cmd "set -euo pipefail; cd ${PRIMARY_REPO}; bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs; bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode local-on-host --fix-stale-logs"
+  run_primary_cmd "set -euo pipefail; cd ${PRIMARY_REPO}; export ts=\"\${ts:-na}\"; export out=\"\${out:-/tmp}\"; bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs; bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode local-on-host --fix-stale-logs"
 }
 
 run_replica_promote() {
   # Replica path uses docker/docker-compose.yml to avoid host conflicts with db/cache services.
-  run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; set -a; [ -f .env ] && . ./.env || true; set +a; ${REPLICA_COMPOSE_BIN} -f docker/docker-compose.yml up -d code-server oauth2-proxy code-server-profile-backup"
+  run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; set -a; [ -f .env ] && . ./.env || true; set +a; export ts=\"\${ts:-na}\"; export out=\"\${out:-/tmp}\"; ${REPLICA_COMPOSE_BIN} -f docker/docker-compose.yml up -d code-server oauth2-proxy code-server-profile-backup"
 
   # Ensure alternate ingress endpoint exists for validation when 80/443 are unavailable.
   run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; cat > /tmp/Caddyfile.replica <<'EOF'
@@ -287,13 +308,37 @@ run_replica_promote() {
 EOF
 docker rm -f caddy-replica >/dev/null 2>&1 || true
 docker run -d --name caddy-replica --restart unless-stopped --network docker_enterprise -p 18080:80 -v /tmp/Caddyfile.replica:/etc/caddy/Caddyfile:ro caddy:2.7.6 >/dev/null
-for i in \$(seq 1 15); do
-  if curl -fsS http://127.0.0.1:18080/oauth2/start?rd=/ >/dev/null; then
+sleep 3
+ok=0
+for i in \$(seq 1 ${INGRESS_PROBE_ATTEMPTS}); do
+  if curl --max-time 5 -fsS http://127.0.0.1:18080/oauth2/start?rd=/ >/dev/null; then
+    ok=\$((ok + 1))
+    if [ \"\$ok\" -ge ${INGRESS_PROBE_CONSECUTIVE_OK} ]; then
+      exit 0
+    fi
+  else
+    ok=0
+  fi
+  sleep ${INGRESS_PROBE_DELAY}
+done
+if curl --max-time 5 -fsS http://127.0.0.1:18080/oauth2/start?rd=/ >/dev/null; then
     exit 0
   fi
-  sleep 2
-done
 exit 1"
+}
+
+assert_post_cycle_state() {
+  local expected_active_host="$1"
+  local active_marker
+  active_marker="$(run_primary_cmd "cat ${ACTIVE_HOST_STATE_FILE} 2>/dev/null || echo ${PRIMARY_HOST}")"
+
+  if [[ "$active_marker" != "$expected_active_host" ]]; then
+    log_fatal "Post-cycle integrity check failed: active host marker '${active_marker}' != expected '${expected_active_host}'"
+  fi
+
+  primary_health >/dev/null || log_fatal "Post-cycle integrity check failed: primary health is not healthy"
+  replica_health >/dev/null || log_fatal "Post-cycle integrity check failed: replica health is not healthy"
+  replica_ingress_health >/dev/null || log_fatal "Post-cycle integrity check failed: replica ingress check failed"
 }
 
 status_report() {
@@ -311,6 +356,7 @@ promote_replica() {
   run_replica_promote
   replica_health >/dev/null
   write_active_host_marker "$REPLICA_HOST" >/dev/null
+  assert_post_cycle_state "$REPLICA_HOST"
   log_success "Replica promotion gates passed and active marker updated"
 }
 
@@ -319,11 +365,13 @@ failback_primary() {
   run_primary_redeploy
   primary_health >/dev/null
   write_active_host_marker "$PRIMARY_HOST" >/dev/null
+  assert_post_cycle_state "$PRIMARY_HOST"
   log_success "Primary failback gates passed and active marker updated"
 }
 
 main() {
   parse_args "$@"
+  initialize_platform_defaults
 
   case "$ACTION" in
     status|promote|failback)

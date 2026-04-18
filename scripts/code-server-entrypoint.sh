@@ -107,6 +107,12 @@ if [ -f /etc/code-server/settings.json ]; then
   fi
 fi
 
+# ── Start auth keepalive daemon (single-instance, background) ─────────────────
+if command -v auth-keepalive >/dev/null 2>&1; then
+  echo "[entrypoint] starting auth-keepalive daemon"
+  auth-keepalive start || echo "[entrypoint] WARNING: auth-keepalive failed to start"
+fi
+
 # ── Start code-server (background so trap can catch SIGTERM) ─────────────────
 /usr/bin/code-server "$@" &
 CS_PID=$!

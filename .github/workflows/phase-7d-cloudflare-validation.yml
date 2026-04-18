@@ -85,3 +85,47 @@ jobs:
             # This is non-blocking until Phase 7d is fully merged and active
             exit 0
           fi
+
+  portal-oauth-redeploy:
+    name: "Portal OAuth Callback Redeploy"
+    runs-on: self-hosted
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4.1.3
+
+      - name: "Resolve deployment directory"
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -d "/home/akushnir/code-server-enterprise" ]]; then
+            echo "DEPLOY_DIR=/home/akushnir/code-server-enterprise" >> "$GITHUB_ENV"
+          else
+            echo "DEPLOY_DIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          fi
+
+      - name: "Validate callback split"
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qF 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"' docker-compose.yml
+          grep -qF 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"' docker-compose.yml
+
+      - name: "Sync compose and redeploy portal services"
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 0644 docker-compose.yml "$DEPLOY_DIR/docker-compose.yml"
+          cd "$DEPLOY_DIR"
+          COMPOSE_PROFILES=portal docker compose up -d --remove-orphans oauth2-proxy-portal caddy appsmith
+
+      - name: "Verify apex and IDE callbacks"
+        shell: bash
+        run: |
+          set -euo pipefail
+          apex_location="$(curl -skI 'https://kushnir.cloud/oauth2/start?rd=%2F' | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^location:/ {print $0}')"
+          ide_location="$(curl -skI 'https://ide.kushnir.cloud/oauth2/start?rd=%2F' | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^location:/ {print $0}')"
+          echo "$apex_location"
+          echo "$ide_location"
+          echo "$apex_location" | grep -qi 'redirect_uri=https%3A%2F%2Fkushnir.cloud%2Foauth2%2Fcallback'
+          echo "$ide_location" | grep -qi 'redirect_uri=https%3A%2F%2Fide.kushnir.cloud%2Foauth2%2Fcallback'

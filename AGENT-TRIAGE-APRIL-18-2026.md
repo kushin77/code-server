@@ -77,6 +77,8 @@ Every open issue must have:
 - autonomous execution brief comment
 - clear acceptance criteria in body
 
+Validation status (April 18, 2026 refresh): all current open issues meet the above requirements.
+
 Triage command:
 
 ```bash

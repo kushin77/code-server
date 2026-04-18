@@ -9,6 +9,7 @@ This document records current autonomous triage readiness.
 - Autonomous execution brief comments have been posted.
 - Triage script is idempotent and can be re-run safely.
 - Issue #670 was auto-closed by linkage-aware triage on April 18, 2026.
+- Acceptance criteria sections were normalized across remaining open gate/tracker issues (#664-#668, #291).
 
 ## Source of Truth
 

@@ -7,7 +7,7 @@ This document is the live triage plan for autonomous implementation.
 
 ## Open Issue Set
 
-Current open count: 24 issues.
+Current open count: 26 issues.
 
 Program:
 - #659 Program: Production transition (monorepo + code-server co-dev + active-active reliability)
@@ -41,6 +41,10 @@ Implementation lane:
 - #682 Implement automated pre/post deploy verification gates
 - #683 Create rollback validation suite and game-day checklist
 
+Urgent unblock lane:
+- #687 P1: Stabilize CI gates for monorepo refactor branch
+- #688 P0: Unblock production portal OAuth callback redeploy
+
 Recently completed:
 - #670 Bootstrap pnpm workspace and lockfile governance (closed via linkage validation and autonomous triage)
 
@@ -56,7 +60,8 @@ Execution order:
 4. #667, #663, and #668
 5. #669 and #671 -> #676 architecture and CI implementation lane
 6. #677 -> #683 resilience/release/verification lane
-7. Close #659 after all child epics/gates meet acceptance criteria
+7. #687 and #688 urgent unblock lane (run in parallel where ownership permits)
+8. Close #659 after all child epics/gates meet acceptance criteria
 
 The persistent tracker #291 remains open and is updated with evidence weekly.
 

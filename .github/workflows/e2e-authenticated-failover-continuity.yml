@@ -54,7 +54,29 @@ jobs:
           fi
 
           test -s /tmp/e2e-auth/storage-state.json
-          node -e 'JSON.parse(require("fs").readFileSync("/tmp/e2e-auth/storage-state.json", "utf8")); console.log("storage-state JSON validated")'
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = '/tmp/e2e-auth/storage-state.json';
+          const raw = fs.readFileSync(path, 'utf8');
+
+          try {
+            JSON.parse(raw);
+            console.log('storage-state JSON validated');
+            process.exit(0);
+          } catch (_) {
+            // Fallback: secret may be a JS object literal (keys unquoted), not strict JSON.
+            try {
+              const obj = Function(`"use strict"; return (${raw});`)();
+              fs.writeFileSync(path, JSON.stringify(obj, null, 2));
+              JSON.parse(fs.readFileSync(path, 'utf8'));
+              console.log('storage-state normalized from JS object literal to JSON');
+              process.exit(0);
+            } catch (err) {
+              console.error('storage-state parse/normalize failed:', err.message);
+              process.exit(1);
+            }
+          }
+          NODE
 
       - name: Setup Playwright for E2E
         shell: bash

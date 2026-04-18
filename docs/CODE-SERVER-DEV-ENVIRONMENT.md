@@ -241,8 +241,10 @@ Profile state is designed to survive user logins, container recreation, and code
 ### Persistence Layout
 
 - Home volume mount: `/home/coder`
+- Code-server state root: `/home/coder/.local/share/code-server`
 - User profile: `/home/coder/.local/share/code-server/User`
 - Extensions: `/home/coder/.local/share/code-server/extensions`
+- Chat and workspace state: code-server state root (including `workspaceStorage`, `History`, and `Backups` when present)
 - Backup volume: `code-server-enterprise_code-server-profile-backups`
 - Backup container: `code-server-profile-backup`
 
@@ -253,6 +255,7 @@ ssh akushnir@192.168.168.31
 cd /home/akushnir/code-server-enterprise
 docker-compose ps --format 'table {{.Names}}\t{{.Status}}' | egrep '^(code-server|code-server-profile-backup)\s'
 docker exec code-server sh -lc 'ls -la /home/coder/.local/share/code-server/User | head -20'
+docker exec code-server sh -lc 'ls -la /home/coder/.local/share/code-server | egrep "User|extensions|workspaceStorage|History|Backups"'
 docker run --rm -v code-server-enterprise_code-server-profile-backups:/b alpine:3.20 ls -la /b
 ```
 
@@ -269,6 +272,9 @@ docker run --rm \
 cd /home/akushnir/code-server-enterprise
 docker-compose up -d --force-recreate code-server
 ```
+
+Enterprise defaults are merged into the user settings file on container start.
+Existing user-defined keys stay intact; only missing shared defaults are added.
 
 ### Notes
 

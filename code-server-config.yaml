@@ -17,7 +17,7 @@ proxy-domain:
   - 127.0.0.1
 
 # Logging for audit trail
-logging: debug
+logging: info
 
 # Extensions marketplace
 # NOTE: Disabled marketplace validation since Copilot Chat is pre-installed via VSIX

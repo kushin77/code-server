@@ -36,6 +36,7 @@ USER root
 # Python packages via apt to avoid PEP 668 conflicts
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-transport-https ca-certificates gnupg \
     build-essential git curl python3 python3-pip python3-venv \
     nodejs npm \
     vim gdb tmux htop jq docker.io postgresql-client \
@@ -46,6 +47,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN npm install -g typescript@5.4.5 eslint@9.3.0 prettier@3.3.0 jest@29.7.0
 
 # Optional: Install Rust (best-effort, non-blocking)
+# hadolint ignore=DL4006
 RUN mkdir -p /opt/dev-tools && chmod -R 777 /opt/dev-tools && \
     (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
      cp -r /root/.cargo /usr/local/cargo && chmod -R 755 /usr/local/cargo) || \

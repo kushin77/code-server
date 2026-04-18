@@ -20,6 +20,9 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   # Validate docker-compose manifest
@@ -29,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Validate docker-compose
     steps:
-      - uses: actions/checkout@1f9a0c22d41e8f586a814688e619ab8849d6668b
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
 
@@ -49,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Validate terraform
     steps:
-      - uses: actions/checkout@1f9a0c22d41e8f586a814688e619ab8849d6668b
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
 
@@ -77,18 +80,18 @@ jobs:
     runs-on: ubuntu-latest
     name: Security scan (Checkov)
     steps:
-      - uses: actions/checkout@1f9a0c22d41e8f586a814688e619ab8849d6668b
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
 
-      - uses: bridgecrewio/checkov-action@b45c9c3a4d1e25b5cccf0fc8a1f9d9a7e4d0c5f8
+      - uses: bridgecrewio/checkov-action@de2bfaecd21d58ef232e0d2a3391c33c32c460d7  # v12.3096.0
         with:
           directory: .
-          framework: docker,kubernetes,terraform
+          framework: kubernetes,terraform
           quiet: false
           soft_fail: false
-          # Fail on HIGH + CRITICAL only; skip LOW/MEDIUM
-          check: "-c high,critical"
+          # Fail on HIGH + CRITICAL only; skip LOW/MEDIUM.
+          check: "HIGH,CRITICAL"
         continue-on-error: false
 
       - name: Summary

@@ -179,12 +179,12 @@ cat > "$KEYCLOAK_CONFIG" << 'EOF'
       "consentRequired": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://code-server.${DEPLOY_HOST}.nip.io:8080/oauth2/callback",
-        "https://code-server.kushnir.cloud/oauth2/callback"
+        "http://code-server.${DEPLOY_HOST}.nip.io:${PORT_CODE_SERVER}/oauth2/callback",
+        "https://code-server.${DOMAIN#*.}/oauth2/callback"
       ],
       "webOrigins": [
-        "http://code-server.${DEPLOY_HOST}.nip.io:8080",
-        "https://code-server.kushnir.cloud"
+        "http://code-server.${DEPLOY_HOST}.nip.io:${PORT_CODE_SERVER}",
+        "https://code-server.${DOMAIN#*.}"
       ],
       "defaultClientScopes": [
         "email",
@@ -420,7 +420,7 @@ SESSION_MAX_LIFETIME=86400
 KEYCLOAK_REALM=code-server
 KEYCLOAK_CLIENT_ID=code-server
 KEYCLOAK_CLIENT_SECRET=<generate-via-keycloak>
-KEYCLOAK_URL=http://keycloak.${DEPLOY_HOST}.nip.io:8080
+KEYCLOAK_URL=http://keycloak.${DEPLOY_HOST}.nip.io:${PORT_CODE_SERVER}
 EOF
 echo -e "${GREEN}✓ Created config/iam/oidc/.env.template${NC}"
 

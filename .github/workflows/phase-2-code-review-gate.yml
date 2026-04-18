@@ -17,10 +17,11 @@ jobs:
 
       - name: Check PR for Phase 2 completion
         id: check-phase-2
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
-          
-          # Check if this is a trivial change (skip Phase 2)
+          BODY="$PR_BODY"
+
           if echo "$BODY" | grep -q "^\- \[x\] Documentation change only" || \
              echo "$BODY" | grep -q "^\- \[x\] Dependency security patch" || \
              echo "$BODY" | grep -q "^\- \[x\] Test code only"; then
@@ -28,8 +29,7 @@ jobs:
             echo "REASON=Trivial change exemption marked" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          # If Phase 1 is incomplete, Phase 2 can't proceed
+
           if echo "$BODY" | grep -q "## Phase 1: Design Quality Gate" && \
              ! echo "$BODY" | grep -q "SLA Target" && \
              ! echo "$BODY" | grep -q "Failure Mode Analysis"; then
@@ -37,24 +37,18 @@ jobs:
             echo "REASON=Phase 1 not yet completed - Phase 2 depends on Phase 1" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
-          # Check for Phase 2 Code & Quality Review section
+
           if echo "$BODY" | grep -q "## Phase 2: Code & Quality Review"; then
-            # Check minimum required sections
             if echo "$BODY" | grep -q "### Security" && \
                echo "$BODY" | grep -q "### Code Quality" && \
                echo "$BODY" | grep -q "### Testing" && \
                echo "$BODY" | grep -q "### Observability"; then
-              
-              # Check that at least some items are checked
               security_checked=$(echo "$BODY" | sed -n '/### Security/,/### Code Quality/p' | grep -c "^\- \[x\]" || true)
               quality_checked=$(echo "$BODY" | sed -n '/### Code Quality/,/### Testing/p' | grep -c "^\- \[x\]" || true)
               testing_checked=$(echo "$BODY" | sed -n '/### Testing/,/### Observability/p' | grep -c "^\- \[x\]" || true)
               observability_checked=$(echo "$BODY" | sed -n '/### Observability/,/---/p' | grep -c "^\- \[x\]" || true)
-              
               total_checked=$((security_checked + quality_checked + testing_checked + observability_checked))
-              
-              if [ $total_checked -lt 8 ]; then
+              if [ "$total_checked" -lt 8 ]; then
                 echo "PHASE_2_COMPLETE=false" >> $GITHUB_OUTPUT
                 echo "REASON=Phase 2 section found but fewer than 8 items checked (checked: $total_checked)" >> $GITHUB_OUTPUT
               else
@@ -72,42 +66,23 @@ jobs:
 
       - name: Post guidance comment if Phase 2 incomplete
         if: steps.check-phase-2.outputs.PHASE_2_REQUIRED == 'true' && steps.check-phase-2.outputs.PHASE_2_COMPLETE == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
+            const reason = `${{ steps.check-phase-2.outputs.REASON }}`;
+            const body = [
+              '## Phase 2 Code & Quality Review Incomplete',
+              '',
+              "What's missing:",
+              reason,
+              '',
+              'Complete the Phase 2 section in the PR template (Security, Code Quality, Testing, Observability).'
+            ].join('\n');
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ⚠️ Phase 2 Code & Quality Review Incomplete
-
-**This PR requires Phase 2 code review verification** per [Production Readiness Gate Framework](docs/production-readiness-gate.md#phase-2-implementation-quality-gate).
-
-**What's missing:**
-${`${{ steps.check-phase-2.outputs.REASON }}`}
-
-**Action Required:**
-1. Ensure Phase 1 (Design Quality Gate) is fully approved and included in PR
-2. Have a code reviewer (different domain from author) complete the Phase 2 checklist:
-   - Security review (secrets, auth, input validation)
-   - Code quality (lint, SAST, complexity)
-   - Testing (unit coverage, integration tests)
-   - Observability (metrics, traces, logs)
-
-3. Check off each item in the Phase 2 section as reviewed and verified
-
-**Example**:
-\`\`\`markdown
-### Security
-- [x] No secrets, credentials, or sensitive data in code
-- [x] Input validation implemented (if applicable)
-- [x] IAM/authorization reviewed (if applicable)
-- [x] Least privilege principle applied
-\`\`\`
-
-See the [PR template Phase 2 section](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-2-code--quality-review-) for full guidance.
-
-**Note**: This is advisory feedback. Code reviewer approval is the blocking requirement for merge.`
+              body,
             })
 
   phase-2-reviewer-check:
@@ -119,62 +94,53 @@ See the [PR template Phase 2 section](https://github.com/kushin77/code-server/bl
 
       - name: Check for peer review approval
         id: check-reviews
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          AUTHOR="${{ github.event.pull_request.user.login }}"
-          REVIEWS_JSON="${{ toJSON(github.event.pull_request.reviews) }}"
-          
-          # Count approvals from reviewers other than PR author
-          APPROVAL_COUNT=$(echo "$REVIEWS_JSON" | jq -r '[.[] | select(.state == "APPROVED" and .user.login != "'$AUTHOR'")] | length')
-          
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          APPROVAL_COUNT=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews" \
+            | jq '[.[] | select(.state == "APPROVED")] | length')
+
           if [ "$APPROVAL_COUNT" -gt 0 ]; then
-            echo "HAS_PEER_APPROVAL=true" >> $GITHUB_OUTPUT
-            echo "APPROVAL_COUNT=$APPROVAL_COUNT" >> $GITHUB_OUTPUT
+            echo "HAS_PEER_APPROVAL=true" >> "$GITHUB_OUTPUT"
+            echo "APPROVAL_COUNT=$APPROVAL_COUNT" >> "$GITHUB_OUTPUT"
           else
-            echo "HAS_PEER_APPROVAL=false" >> $GITHUB_OUTPUT
-            echo "APPROVAL_COUNT=0" >> $GITHUB_OUTPUT
+            echo "HAS_PEER_APPROVAL=false" >> "$GITHUB_OUTPUT"
+            echo "APPROVAL_COUNT=0" >> "$GITHUB_OUTPUT"
           fi
-          
-          # Check if reviewers requested
-          REVIEWERS_REQUESTED="${{ github.event.pull_request.requested_reviewers }}"
-          if [ -z "$REVIEWERS_REQUESTED" ] || [ "$REVIEWERS_REQUESTED" == "[]" ]; then
-            echo "REVIEWERS_ASSIGNED=false" >> $GITHUB_OUTPUT
+
+          REVIEWERS_REQUESTED='${{ toJSON(github.event.pull_request.requested_reviewers) }}'
+          if [ -z "$REVIEWERS_REQUESTED" ] || [ "$REVIEWERS_REQUESTED" = "[]" ]; then
+            echo "REVIEWERS_ASSIGNED=false" >> "$GITHUB_OUTPUT"
           else
-            echo "REVIEWERS_ASSIGNED=true" >> $GITHUB_OUTPUT
+            echo "REVIEWERS_ASSIGNED=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Post reminder if no reviewers assigned
         if: steps.check-reviews.outputs.REVIEWERS_ASSIGNED == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ℹ️ Phase 2 Peer Review Not Assigned
-
-**No reviewers have been requested** for this PR.
-
-**Action Required:**
-1. Request review from at least 1 engineer (ideally from different team domain)
-2. Use GitHub's "Reviewers" panel or mention them in a comment
-3. Ensure the reviewer completes Phase 2 Code & Quality checklist
-
-Peer review is a **blocking requirement** for merge.`
+              body: 'Phase 2 peer review is not assigned yet. Request at least one reviewer before merge.'
             })
 
       - name: Post status if review approved
         if: steps.check-reviews.outputs.HAS_PEER_APPROVAL == 'true'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ✅ Phase 2 Peer Review Approved
-
-Approval count: ${{ steps.check-reviews.outputs.APPROVAL_COUNT }}
-
-This PR is ready to proceed to Phase 3 (Performance & Load Testing) or Phase 4 (Operational Readiness), depending on scope.`
+              body: `Phase 2 peer review approved. Approval count: ${{ steps.check-reviews.outputs.APPROVAL_COUNT }}`
             })

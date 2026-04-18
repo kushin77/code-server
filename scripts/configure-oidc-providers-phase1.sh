@@ -66,7 +66,7 @@ GOOGLE_OAUTH2_REFRESH_TOKEN_EXPIRY_SECONDS="604800"
 
 # Callback URLs for dev/staging/prod (must match GCP Console)
 GOOGLE_OAUTH2_CALLBACK_URL_DEV="http://localhost:8080/auth/google/callback"
-GOOGLE_OAUTH2_CALLBACK_URL_PROD="https://code-server.${DEPLOY_HOST}.nip.io:8080/auth/google/callback"
+GOOGLE_OAUTH2_CALLBACK_URL_PROD="https://code-server.${DEPLOY_HOST}.nip.io:${PORT_CODE_SERVER}/auth/google/callback"
 GOOGLE_OAUTH2_CALLBACK_URL_BACKSTAGE="https://backstage.kushin.cloud/auth/google/callback"
 GOOGLE_OAUTH2_CALLBACK_URL_APPSMITH="https://appsmith.kushin.cloud/auth/google/callback"
 EOF
@@ -140,7 +140,7 @@ KEYCLOAK_SCOPES="openid email profile roles"
 KEYCLOAK_TOKEN_EXPIRY_SECONDS="3600"
 
 # Callback URLs
-KEYCLOAK_CALLBACK_URL="https://code-server.${DEPLOY_HOST}.nip.io:8080/auth/keycloak/callback"
+KEYCLOAK_CALLBACK_URL="https://code-server.${DEPLOY_HOST}.nip.io:${PORT_CODE_SERVER}/auth/keycloak/callback"
 
 # User federation: sync users from LDAP/AD
 KEYCLOAK_USER_FEDERATION_ENABLED="false"

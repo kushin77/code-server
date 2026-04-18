@@ -3,6 +3,9 @@ name: Security Scans (Reusable)
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   secret-scan:
     name: TruffleHog Secret Scanning
@@ -12,13 +15,23 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: TruffleHog scan for secrets
-        uses: trufflesecurity/trufflehog@main
+      - name: TruffleHog scan for secrets (push/PR diff)
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: trufflesecurity/trufflehog@47e7b7cd74f578e1e3145d48f669f22fd1330ca6  # v3.94.3
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --json --entropy=false
+          base: ${{ github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
+          head: ${{ github.sha }}
+          # Keep arguments compatible with current trufflehog action wrapper.
+          extra_args: --debug --json
+
+      - name: TruffleHog scan for secrets (scheduled full scan)
+        if: github.event_name == 'schedule'
+        uses: trufflesecurity/trufflehog@47e7b7cd74f578e1e3145d48f669f22fd1330ca6  # v3.94.3
+        with:
+          path: ./
+          # Keep arguments compatible with current trufflehog action wrapper.
+          extra_args: --debug --json
 
   gitleaks:
     name: Gitleaks Secret Detection
@@ -29,7 +42,11 @@ jobs:
           fetch-depth: 0
       
       - name: Gitleaks scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@e6dab246340401bf53eec993b8f05aebe80ac636  # v2.3.4
+        env:
+          # Work around upstream artifact-name regression that fails runs before reporting results.
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           source: ${{ github.server_url }}/${{ github.repository }}
           verbose: true

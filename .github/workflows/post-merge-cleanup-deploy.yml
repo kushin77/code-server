@@ -11,6 +11,7 @@ on:
       - main
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
   deployments: write

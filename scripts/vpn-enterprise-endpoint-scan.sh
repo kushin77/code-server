@@ -15,6 +15,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
 # Colors for output
 RED='\033[0;31m'
@@ -25,18 +26,18 @@ NC='\033[0m' # No Color
 
 # Enterprise endpoints
 ENDPOINTS=(
-    "${DEPLOY_HOST}:8080"    # Code-Server (Primary)
+    "${DEPLOY_HOST}:${PORT_CODE_SERVER}"    # Code-Server (Primary)
     "${DEPLOY_HOST}:4180"    # OAuth2-Proxy
-    "${DEPLOY_HOST}:3000"    # Grafana
-    "${DEPLOY_HOST}:9090"    # Prometheus
-    "${DEPLOY_HOST}:9093"    # AlertManager
+    "${DEPLOY_HOST}:${PORT_GRAFANA}"    # Grafana
+    "${DEPLOY_HOST}:${PORT_PROMETHEUS}"    # Prometheus
+    "${DEPLOY_HOST}:${PORT_ALERTMANAGER}"    # AlertManager
     "${DEPLOY_HOST}:16686"   # Jaeger
     "${DEPLOY_HOST}:5432"    # PostgreSQL
     "${DEPLOY_HOST}:6379"    # Redis
 )
 
 ENDPOINTS_REPLICA=(
-    "192.168.168.42:8080"    # Code-Server (Replica)
+    "${REPLICA_HOST:-192.168.168.42}:${PORT_CODE_SERVER}"    # Code-Server (Replica)
 )
 
 # Counters
@@ -115,7 +116,7 @@ main() {
     echo ""
     
     # Code-Server
-    check_endpoint "${DEPLOY_HOST}:8080" "Code-Server (IDE)" || true
+    check_endpoint "${DEPLOY_HOST}:${PORT_CODE_SERVER}" "Code-Server (IDE)" || true
     echo ""
     
     # OAuth2-Proxy
@@ -124,9 +125,9 @@ main() {
     
     # Observability Stack
     log_header "Observability Stack (Primary)"
-    check_endpoint "${DEPLOY_HOST}:3000" "Grafana (Dashboards)" || true
-    check_endpoint "${DEPLOY_HOST}:9090" "Prometheus (Metrics)" || true
-    check_endpoint "${DEPLOY_HOST}:9093" "AlertManager (Alerts)" || true
+    check_endpoint "${DEPLOY_HOST}:${PORT_GRAFANA}" "Grafana (Dashboards)" || true
+    check_endpoint "${DEPLOY_HOST}:${PORT_PROMETHEUS}" "Prometheus (Metrics)" || true
+    check_endpoint "${DEPLOY_HOST}:${PORT_ALERTMANAGER}" "AlertManager (Alerts)" || true
     check_endpoint "${DEPLOY_HOST}:16686" "Jaeger (Tracing)" || true
     echo ""
     
@@ -137,9 +138,9 @@ main() {
     echo ""
     
     # Replica Site Scan
-    log_header "Replica Site - 192.168.168.42"
+    log_header "Replica Site - ${REPLICA_HOST:-192.168.168.42}"
     echo ""
-    check_endpoint "192.168.168.42:8080" "Code-Server (Replica - Standby)" || true
+    check_endpoint "${REPLICA_HOST:-192.168.168.42}:${PORT_CODE_SERVER}" "Code-Server (Replica - Standby)" || true
     echo ""
     
     # Summary

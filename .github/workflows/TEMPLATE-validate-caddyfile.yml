@@ -3,6 +3,9 @@ name: Validate Caddyfile Configuration (Reusable)
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: Validate Caddyfile

@@ -17,8 +17,10 @@ jobs:
       
       - name: Check PR description for Phase 1 gate
         id: check-phase-1
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          BODY="$PR_BODY"
           TITLE="${{ github.event.pull_request.title }}"
           
           # Check if this is a trivial change
@@ -58,36 +60,22 @@ jobs:
       
       - name: Post comment if Phase 1 incomplete
         if: steps.check-phase-1.outputs.PHASE_1_REQUIRED == 'true' && steps.check-phase-1.outputs.PHASE_1_COMPLETE == 'false'
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
+            const reason = `${{ steps.check-phase-1.outputs.REASON }}`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ⚠️ Phase 1 Design Quality Gate Incomplete
-
-**This appears to be a non-trivial change** (backend, infrastructure, security, or performance-critical). 
-
-Per [Production Readiness Gate Framework](docs/production-readiness-gate.md), Phase 1 must be completed before code review.
-
-**What's missing:**
-${`${{ steps.check-phase-1.outputs.REASON }}`}
-
-**Action Required:**
-1. Add the Phase 1 Design Quality Gate section to this PR description
-2. Complete all required items:
-   - [ ] **SLA Target** 
-   - [ ] **Failure Mode Analysis**
-   - [ ] **Rollback Plan**
-   - [ ] **Observability**
-3. Ensure approvals from:
-   - Architecture Owner (\`@[github-user]\`)
-   - On-Call Reliability Engineer (\`@[github-user]\`)
-
-See the [PR template](https://github.com/kushin77/code-server/blob/main/.github/pull_request_template.md#phase-1-design-quality-gate-) for detailed guidance.
-
-**If this is a trivial change**, mark the appropriate exemption checkbox in the PR template (Documentation change only, Dependency security patch, or Test code only).`
+              body: [
+                '## Phase 1 Design Quality Gate Incomplete',
+                '',
+                "What's missing:",
+                reason,
+                '',
+                'Complete the Phase 1 section in the PR template before code review.'
+              ].join('\n')
             })
       
       - name: Report status to GitHub Checks
@@ -110,8 +98,10 @@ See the [PR template](https://github.com/kushin77/code-server/blob/main/.github/
       
       - name: Check for Phase 1 approvals
         id: check-approvals
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          BODY="$PR_BODY"
           
           # Check for architecture owner approval
           if echo "$BODY" | grep -q "Architecture Owner.*@"; then
@@ -129,7 +119,7 @@ See the [PR template](https://github.com/kushin77/code-server/blob/main/.github/
       
       - name: Post comment about approvals needed
         if: (steps.check-approvals.outputs.ARCH_OWNER_TAGGED == 'false' || steps.check-approvals.outputs.ONCALL_TAGGED == 'false')
-        uses: actions/github-script@7a6c5c75f8a04a748ae30dc0c64bacd98d32f841  # v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
         with:
           script: |
             const missingApprovals = [];
@@ -139,15 +129,11 @@ See the [PR template](https://github.com/kushin77/code-server/blob/main/.github/
             if ('${{ steps.check-approvals.outputs.ONCALL_TAGGED }}' === 'false') {
               missingApprovals.push('On-Call Reliability Engineer');
             }
+            const list = missingApprovals.map((x) => `- [ ] ${x}`).join('\n');
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ℹ️ Phase 1 Design Approvals Needed
-
-The following reviewers are needed for Phase 1 Design Quality Gate:
-${missingApprovals.map(a => `- [ ] ${a}`).join('\n')}
-
-**Next step**: @mention them in the Phase 1 section and confirm approval once they review.`
+              body: `## Phase 1 Design Approvals Needed\n\n${list}`
             })

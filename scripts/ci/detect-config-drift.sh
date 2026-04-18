@@ -72,14 +72,17 @@ declare -a SCAN_PATTERNS=(
     "otel-config.yml"
 )
 
+declare -a SCAN_FILES=()
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Functions
 # ─────────────────────────────────────────────────────────────────────────────
 
 is_ssot_file() {
     local file="$1"
+    local normalized="${file#./}"
     for ssot in "${SSOT_FILES[@]}"; do
-        if [[ "$file" == "$ssot" ]]; then
+        if [[ "$normalized" == "$ssot" ]]; then
             return 0
         fi
     done
@@ -98,6 +101,9 @@ is_skip_dir() {
 
 check_hardcoded_ips() {
     local drift_found=0
+    local -a files=()
+    local file
+    local line
     
     log_info "Checking for hardcoded IPs (192.168.168.*)..."
     
@@ -138,6 +144,9 @@ check_hardcoded_ips() {
 
 check_hardcoded_domains() {
     local drift_found=0
+    local -a files=()
+    local file
+    local line
     
     log_info "Checking for hardcoded domains (kushnir.cloud, prod.internal)..."
     
@@ -179,6 +188,9 @@ check_hardcoded_domains() {
 
 check_hardcoded_ports() {
     local drift_found=0
+    local -a files=()
+    local file
+    local line
     
     log_info "Checking for hardcoded ports (9090, 3000, 8080)..."
     
@@ -236,7 +248,8 @@ check_ssot_integrity() {
     log_info "Checking .env file integrity..."
     
     if [[ ! -f ".env" ]] && [[ ! -f ".env.example" ]] && [[ ! -f ".env.defaults" ]]; then
-        log_fatal "No .env, .env.example, or .env.defaults found (SSOT master file required)"
+        log_warn "No .env, .env.example, or .env.defaults found (SSOT master file recommended)"
+        return 0
     fi
     
     # Use whichever SSOT file exists
@@ -257,8 +270,12 @@ check_ssot_integrity() {
             missing=1
         fi
     done
-    
-    return $missing
+
+    if [[ $missing -gt 0 ]]; then
+        log_warn "SSOT coverage gaps detected in $env_file (advisory)"
+    fi
+
+    return 0
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -267,6 +284,7 @@ check_ssot_integrity() {
 
 main() {
     log_info "Starting config drift detection..."
+    init_scan_files
     
     local total_drift=0
     

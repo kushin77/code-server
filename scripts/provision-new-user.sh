@@ -41,6 +41,7 @@ fi
 
 USER_ID=$(printf '%s' "$EMAIL" | tr '[:upper:]' '[:lower:]' | sed 's/@/-at-/g; s/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+IDE_URL="${IDE_URL:-https://${DOMAIN:-localhost}}"
 
 cd "$REPO_ROOT"
 
@@ -347,7 +348,7 @@ echo "3️⃣  Docker will auto-reload (Caddy will detect new email):"
 echo "   $ docker compose restart oauth2-proxy"
 echo ""
 echo "4️⃣  User Login Process:"
-echo "   • User navigates to: https://ide.kushnir.cloud"
+echo "   • User navigates to: ${IDE_URL}"
 echo "   • Redirected to Google OAuth"
 echo "   • Validates $EMAIL against allowed-emails.txt ✅"
 echo "   • Loads role-based settings from $USER_CONFIG_DIR"

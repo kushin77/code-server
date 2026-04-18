@@ -28,6 +28,11 @@ trap _shutdown TERM INT
 EXT_DIR="/home/coder/.local/share/code-server/extensions"
 mkdir -p "$EXT_DIR"
 
+if command -v git >/dev/null 2>&1 && command -v git-credential-gsm >/dev/null 2>&1; then
+  git config --global credential.helper gsm >/dev/null 2>&1 || true
+  git config --global credential.https://github.com.helper gsm >/dev/null 2>&1 || true
+fi
+
 # ── Install Copilot extensions from pre-cached VSIX ──────────────────────────
 if ! /usr/bin/code-server --list-extensions --extensions-dir "$EXT_DIR" 2>/dev/null | grep -qi '^github.copilot$'; then
   echo "[entrypoint] Installing github.copilot from /opt/vsix/..."

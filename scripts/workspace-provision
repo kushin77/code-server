@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# @file        scripts/workspace-provision
+# @module      auth/provisioning
+# @description Workspace credential provisioning — detects authenticated user identity,
+#              provisions GSM-backed credentials, and exports them into the workspace environment.
+#              Designed to be sourced from the entrypoint or run standalone.
+#
+# Usage:
+#   source scripts/workspace-provision   # inject into current env
+#   bash scripts/workspace-provision     # provision + print summary
+#
+# Environment inputs:
+#   OAUTH2_PROXY_USERINFO_URL  — oauth2-proxy /api/v1/userinfo endpoint (default: http://oauth2-proxy:4180/oauth2/userinfo)
+#   GSM_PROJECT                — GCP project for GSM (default: gcp-eiq)
+#   WORKSPACE_USER             — override: skip identity detection and use this email
+#   WORKSPACE_PROVISION_SKIP   — set to 1 to skip all provisioning (no-op mode)
+
+set -euo pipefail
+
+_wp_log()  { echo "[workspace-provision] $*"; }
+_wp_warn() { echo "[workspace-provision] WARNING: $*" >&2; }
+
+# ── Identity detection ────────────────────────────────────────────────────────
+detect_workspace_user() {
+  # 1. Honor explicit override
+  if [[ -n "${WORKSPACE_USER:-}" ]]; then
+    echo "$WORKSPACE_USER"
+    return 0
+  fi
+
+  # 2. Try OAuth2-proxy userinfo endpoint
+  local userinfo_url="${OAUTH2_PROXY_USERINFO_URL:-http://oauth2-proxy:4180/oauth2/userinfo}"
+  local email=""
+  if command -v curl >/dev/null 2>&1; then
+    email=$(curl -sf --max-time 2 "$userinfo_url" 2>/dev/null | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('email') or d.get('user') or '')
+except Exception:
+    print('')
+" 2>/dev/null || echo "")
+  fi
+
+  if [[ -n "$email" ]]; then
+    echo "$email"
+    return 0
+  fi
+
+  # 3. Fallback: X-Forwarded-Email or REMOTE_USER env (set by reverse proxy)
+  if [[ -n "${X_FORWARDED_EMAIL:-}" ]]; then
+    echo "$X_FORWARDED_EMAIL"
+    return 0
+  fi
+
+  if [[ -n "${REMOTE_USER:-}" ]]; then
+    echo "$REMOTE_USER"
+    return 0
+  fi
+
+  # 4. Fallback: USER env (container user)
+  echo "${USER:-unknown}"
+}
+
+# ── Credential provisioning ──────────────────────────────────────────────────
+provision_github_token() {
+  local project="${GSM_PROJECT:-gcp-eiq}"
+  local secret_name="${GSM_SECRET_NAME:-github-token}"
+
+  # Skip if already set
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    _wp_log "GITHUB_TOKEN already set — skipping GSM fetch"
+    return 0
+  fi
+
+  if command -v gcloud >/dev/null 2>&1; then
+    local token
+    token=$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet secrets versions access latest \
+      --secret="$secret_name" --project="$project" 2>/dev/null || echo "")
+    if [[ -n "$token" ]]; then
+      export GITHUB_TOKEN="$token"
+      _wp_log "GITHUB_TOKEN provisioned from GSM ($project/$secret_name)"
+      return 0
+    fi
+  fi
+
+  _wp_warn "GITHUB_TOKEN not provisioned (gcloud unavailable or secret not found)"
+  return 1
+}
+
+provision_gcp_credentials() {
+  local project="${GSM_PROJECT:-gcp-eiq}"
+
+  if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" && -f "$GOOGLE_APPLICATION_CREDENTIALS" ]]; then
+    _wp_log "GOOGLE_APPLICATION_CREDENTIALS already set: $GOOGLE_APPLICATION_CREDENTIALS"
+    return 0
+  fi
+
+  # Check for workload identity or ADC
+  if command -v gcloud >/dev/null 2>&1; then
+    if CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet auth print-access-token \
+        --project="$project" >/dev/null 2>&1; then
+      export GCLOUD_PROJECT="$project"
+      _wp_log "GCP Application Default Credentials active (project=$project)"
+      return 0
+    fi
+  fi
+
+  _wp_warn "GCP credentials not available — run: gcloud auth login"
+  return 1
+}
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+main() {
+  if [[ "${WORKSPACE_PROVISION_SKIP:-0}" == "1" ]]; then
+    _wp_log "WORKSPACE_PROVISION_SKIP=1 — skipping"
+    return 0
+  fi
+
+  local user
+  user=$(detect_workspace_user)
+  export WORKSPACE_USER="$user"
+  _wp_log "workspace user: $WORKSPACE_USER"
+
+  local errors=0
+
+  provision_github_token || errors=$(( errors + 1 ))
+  provision_gcp_credentials || errors=$(( errors + 1 ))
+
+  if (( errors > 0 )); then
+    _wp_log "provisioning completed with $errors warning(s) — workspace accessible but some credentials may be unavailable"
+  else
+    _wp_log "provisioning complete — all credentials available"
+  fi
+
+  return 0   # Non-fatal: workspace starts regardless
+}
+
+# Source-safe: only run main if executed directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

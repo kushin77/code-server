@@ -127,7 +127,7 @@ class JWTValidator:
     
     def _local_validate(self, token: str, audience: str) -> Dict:
         """
-        Validate JWT token locally using cached JWKS
+        Validate JWT token locally using cached JWKS with cryptographic verification
         
         Args:
             token: JWT token
@@ -140,11 +140,16 @@ class JWTValidator:
             JWTValidationError: If validation fails
         """
         try:
-            # Decode without verification first to get kid
+            # SECURITY: Decode header to get algorithm and kid
             header = jwt.get_unverified_header(token)
             kid = header.get("kid")
+            alg = header.get("alg")
             
-            # Get JWKS and find the key
+            # SECURITY: Enforce RS256 algorithm (reject HS256, none, etc.)
+            if alg != "RS256":
+                raise JWTValidationError(f"Invalid algorithm: {alg}, expected RS256")
+            
+            # Get JWKS and find the matching key
             jwks = self.get_jwks()
             key = None
             for jwk in jwks.get("keys", []):
@@ -155,19 +160,24 @@ class JWTValidator:
             if not key:
                 raise JWTValidationError(f"Key not found: {kid}")
             
-            # Decode and verify
+            # SECURITY: Import RSA algorithm module and create key from JWK
+            from jwt.algorithms import RSAAlgorithm
+            import json as json_lib
+            
+            rsa_key = RSAAlgorithm.from_jwk(json_lib.dumps(key))
+            
+            # SECURITY: Decode with MANDATORY cryptographic signature verification
             decoded = jwt.decode(
                 token,
-                options={"verify_signature": False}  # We'll verify manually
+                key=rsa_key,
+                algorithms=["RS256"],  # Algorithm pinning
+                audience=audience,
+                options={"verify_signature": True}  # MANDATORY verification
             )
             
-            # Validate claims
-            if decoded.get("aud") != audience:
-                raise JWTValidationError(f"Invalid audience: {decoded.get('aud')}")
-            
-            exp = decoded.get("exp")
-            if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
-                raise JWTValidationError("Token expired")
+            # Validate required claims
+            if not decoded.get("exp") or not decoded.get("iat"):
+                raise JWTValidationError("Missing exp or iat claims")
             
             return decoded
         except JWTValidationError:

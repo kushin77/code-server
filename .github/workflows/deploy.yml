@@ -33,7 +33,6 @@ jobs:
     uses: ./.github/workflows/TEMPLATE-validate-iac.yml
     with:
       check_checkov: false
-      check_tfsec: false
       check_terraform: true
       check_docker_compose: false
 

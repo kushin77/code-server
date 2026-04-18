@@ -26,6 +26,26 @@ ssh_exec() {
     ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "$@"
 }
 
+# Execute a command on an arbitrary host/user with optional identity key.
+# Usage: ssh_exec_target "host" "user" "command" [ssh_key_path]
+ssh_exec_target() {
+    local target_host="$1"
+    local target_user="$2"
+    local target_cmd="$3"
+    local ssh_key_path="${4:-}"
+
+    local -a ssh_args
+    read -r -a ssh_args <<< "$SSH_OPTS"
+
+    if [[ -n "$ssh_key_path" ]]; then
+        require_file "$ssh_key_path"
+        ssh_args+=( -i "$ssh_key_path" )
+    fi
+
+    log_debug "ssh_exec_target → ${target_user}@${target_host}: ${target_cmd}"
+    ssh "${ssh_args[@]}" "${target_user}@${target_host}" "$target_cmd"
+}
+
 # Execute a command on the standby host
 # Usage: ssh_standby "docker ps"
 ssh_standby() {
@@ -79,6 +99,20 @@ assert_ssh_up() {
         log_fatal "Cannot SSH to $target_user@$target_host — is the host reachable? ${ssh_error}"
     fi
     log_debug "✓ SSH connectivity confirmed: $target_user@$target_host"
+}
+
+# Assert SSH connectivity for an arbitrary host/user with optional identity key.
+# Usage: assert_ssh_target "host" "user" [ssh_key_path]
+assert_ssh_target() {
+    local target_host="$1"
+    local target_user="$2"
+    local ssh_key_path="${3:-}"
+
+    if ! ssh_exec_target "$target_host" "$target_user" "echo OK" "$ssh_key_path" > /dev/null 2>&1; then
+        log_fatal "Cannot SSH to $target_user@$target_host — is the host reachable and key configured?"
+    fi
+
+    log_debug "✓ SSH connectivity confirmed: ${target_user}@${target_host}"
 }
 
 # Assert a TCP port is reachable

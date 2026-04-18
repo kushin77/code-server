@@ -1,0 +1,15 @@
+{
+  "name": "code-server-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "extensions/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint"
+  }
+}

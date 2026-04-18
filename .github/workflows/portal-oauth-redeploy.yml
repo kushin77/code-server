@@ -14,6 +14,7 @@ on:
         type: boolean
 
 permissions:
+  id-token: write
   contents: read
 
 concurrency:
@@ -29,45 +30,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
+      - name: Authenticate to GCP via Workload Identity
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: Setup gcloud CLI
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+
       - name: Bootstrap ephemeral env file from GSM
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
         shell: bash
-        env:
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          OAUTH2_PROXY_COOKIE_SECRET: ${{ secrets.OAUTH2_PROXY_COOKIE_SECRET }}
         run: |
           set -euo pipefail
-          if [[ -f .env ]]; then
-            echo "DEPLOY_ENV_CREATED=false" >> "$GITHUB_ENV"
-            echo "DEPLOY_ENV_SOURCE=existing" >> "$GITHUB_ENV"
-            echo "Using existing .env from runner workspace"
-            exit 0
-          fi
-
-          if command -v gcloud >/dev/null 2>&1 && bash scripts/fetch-gsm-secrets.sh > .env; then
-            chmod 600 .env
-            echo "DEPLOY_ENV_CREATED=true" >> "$GITHUB_ENV"
-            echo "DEPLOY_ENV_SOURCE=gsm" >> "$GITHUB_ENV"
-            echo "Generated ephemeral .env from GSM secrets"
-            exit 0
-          fi
-
-          # Fallback for ephemeral runners without GSM auth: use GitHub environment secrets.
-          if [[ -z "${GOOGLE_CLIENT_ID:-}" || -z "${GOOGLE_CLIENT_SECRET:-}" || -z "${OAUTH2_PROXY_COOKIE_SECRET:-}" ]]; then
-            echo "Unable to build .env: GSM fetch failed and required GitHub secrets are missing" >&2
-            exit 1
-          fi
-
-          {
-            echo "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}"
-            echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
-            echo "OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}"
-          } > .env
-
+          bash scripts/fetch-gsm-secrets.sh > .env
           chmod 600 .env
           echo "DEPLOY_ENV_CREATED=true" >> "$GITHUB_ENV"
-          echo "DEPLOY_ENV_SOURCE=github-secrets" >> "$GITHUB_ENV"
-          echo "Generated ephemeral .env from GitHub environment secrets"
+          echo "DEPLOY_ENV_SOURCE=gsm" >> "$GITHUB_ENV"
+
+      - name: Detect existing env file
+        if: ${{ !inputs.dry_run && hashFiles('.env') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "DEPLOY_ENV_CREATED=false" >> "$GITHUB_ENV"
+          echo "DEPLOY_ENV_SOURCE=existing" >> "$GITHUB_ENV"
 
       - name: Validate callback split in source compose
         shell: bash
@@ -115,8 +107,8 @@ jobs:
               echo "- Mode: dry-run"
             else
               echo "- Mode: apply"
+              echo "- Env bootstrap: ${DEPLOY_ENV_SOURCE:-n/a}"
             fi
-            echo "- Env bootstrap: ${DEPLOY_ENV_SOURCE:-unknown}"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Cleanup ephemeral env file

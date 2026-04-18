@@ -55,6 +55,7 @@ security_namespace  = "security"
 falco_version       = "0.36.0"
 opa_version         = "0.55.0"
 vault_version       = "1.15.0"
+vault_mode          = "production"
 vault_storage_size  = "10Gi"
 vault_unseal_keys   = 5
 vault_key_threshold = 3

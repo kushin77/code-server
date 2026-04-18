@@ -71,6 +71,7 @@ output "security_endpoints" {
     vault = {
       endpoint    = module.security.vault_endpoint
       version     = module.security.vault_version
+      mode        = module.security.vault_mode
       unseal_keys = var.vault_unseal_keys
       threshold   = var.vault_key_threshold
       storage     = var.vault_storage_size

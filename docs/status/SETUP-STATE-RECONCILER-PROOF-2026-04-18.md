@@ -20,6 +20,10 @@ Verified commands:
    - Report fields confirmed: `started_at`, `finished_at`, `elapsed_seconds`
    - Result: report is machine-readable and suitable for issue evidence
 
+4. Contract validator
+   - `bash scripts/ci/validate-autopilot-setup-state-reconciler.sh`
+   - Result: passed
+
 Operator observations:
 - `git-credential-helper` was healthy and GSM-backed.
 - `auth-keepalive` was running.
@@ -31,6 +35,15 @@ Acceptance evidence:
 - The reconciler dry-run completed without modifying persisted state.
 - The drift guard passed after reconciliation.
 - Timing telemetry is now included in the reconcile report for startup validation evidence.
+- The reconciliation contract is paired with a formal reason-code regression matrix in [AUTOPILOT-SETUP-STATE-REGRESSION-MATRIX.md](../../docs/ops/AUTOPILOT-SETUP-STATE-REGRESSION-MATRIX.md).
+
+Matrix alignment:
+- `STATE_CACHE_STALE` covers stale setup markers that may only be cleared when capability probes are healthy.
+- `AUTH_ENV_DRIFT` covers mismatched canonical GSM environment values.
+- `AUTH_SCOPE_MISSING` covers missing token/scope bootstrap failures.
+- `PORTAL_UNREACHABLE` covers policy source outages.
+- `AUTH_KEEPALIVE_STOPPED` covers refresh daemon failure.
+- `HEALTHY` covers the no-action baseline.
 
 Operational note:
 - Keep the token bootstrap ephemeral; do not persist ad hoc tokens in files or shell history.

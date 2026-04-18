@@ -50,6 +50,14 @@ upgrade:
   require_model_promotion_gate: true   # See ollama-model-promotion-gates.yml
   rollback_via: "git revert"
 
+# ── Release handshake ───────────────────────────────────────────────────────
+release_handshake:
+  version_bump_required: true
+  contract_validation_required: true
+  matrix_verification_required: true
+  pr_required: true
+  production_approval_required: true
+
 # ── Capacity and rollout guardrails ───────────────────────────────────────────
 capacity:
   gpu_memory_pressure_percent: 85

@@ -20,6 +20,8 @@ Evidence bundle:
 - `scripts/ci/check-autopilot-setup-drift.sh` fails when setup-state drift reappears while capability probes remain healthy.
 - `scripts/ops/reconcile-setup-state.sh` now bootstraps `GITHUB_TOKEN` from GSM when the shell does not already export it.
 - `docs/ops/AUTOPILOT-SETUP-STATE-RUNBOOK.md` captures the immutable operator recovery flow.
+- `docs/ops/AUTOPILOT-SETUP-STATE-REGRESSION-MATRIX.md` defines the reason-code regression matrix and expected remediation behavior.
+- `scripts/ci/validate-autopilot-setup-state-reconciler.sh` validates the RCA contract, regression matrix, and report schema.
 - The reconciler report now includes `started_at`, `finished_at`, and `elapsed_seconds` for startup timing evidence.
 
 Validated remediation:

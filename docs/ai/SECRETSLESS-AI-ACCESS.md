@@ -22,3 +22,10 @@ Safeguards:
 
 Persistence rule:
 - AI access state must not be written into user settings, workspace files, or checked-in secrets.
+
+Evidence contract:
+- `config/code-server/ai/ai-access-profiles.yml` must keep deny-by-default profiles and explicit endpoints.
+- `config/code-server/ai/model-entitlements.yml` must keep portal-owned entitlement inputs and override audit requirements.
+- `config/code-server/ai/quota-policy.yml` must keep deny-by-default quota enforcement and explicit user messages.
+- `scripts/ai-runtime-env` must export the effective runtime contract from those files.
+- `scripts/ci/validate-secretsless-ai-access.sh` must validate the contract and evidence schema locally and in CI.

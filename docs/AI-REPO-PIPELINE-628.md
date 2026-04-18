@@ -40,6 +40,8 @@ Implemented repository-aware AI pipeline with governed retrieval, freshness metr
 ✅ Evaluation set created and validated  
 ✅ Freshness metrics implemented and passing  
 ✅ Access control end-to-end validated  
+✅ Evidence contract captured in `scripts/ci/validate-repo-aware-ai-pipeline.sh`
+✅ CI enforcement captured in `.github/workflows/repo-aware-ai-pipeline.yml`
 ✅ Documentation: docs/AI-CONTEXT-RETRIEVAL-628.md
 
 ---

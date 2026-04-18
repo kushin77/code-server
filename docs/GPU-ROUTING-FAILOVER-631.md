@@ -30,6 +30,15 @@ GPU routing for AI inference replicated across both hosts (.31 and .42). Automat
 ✅ Performance baseline: GPU 50ms, CPU 500ms  
 ✅ Docs: docs/GPU-ROUTING-FAILOVER-631.md
 
+## Evidence Contract
+
+The GPU routing and failover implementation is considered complete only when the committed contract and evidence bundle validate together:
+
+- `config/ollama-integration-contract.yml` must declare the primary and fallback hosts, health strategy, failover timing, canary percentages, capacity guardrails, and secretsless auth mode.
+- `docs/ai/OLLAMA-ROUTING-POLICY.md` must describe the routing policy, health checks, failover rules, and rollout thresholds.
+- `docs/ops/OLLAMA-GPU-REPLICA-OPERATIONS.md` must remain the operator runbook for checks and failover drills.
+- `scripts/ci/validate-ollama-gpu-routing-failover.sh` must pass locally and in CI.
+
 ---
 
 **Date**: 2026-04-18 | **Status**: Production Ready

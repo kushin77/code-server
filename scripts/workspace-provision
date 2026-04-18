@@ -17,8 +17,11 @@
 
 set -euo pipefail
 
-_wp_log()  { echo "[workspace-provision] $*"; }
-_wp_warn() { echo "[workspace-provision] WARNING: $*" >&2; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
+wp_log()  { log_info "[workspace-provision] $*"; }
+wp_warn() { log_warn "[workspace-provision] $*"; }
 
 # ── Identity detection ────────────────────────────────────────────────────────
 detect_workspace_user() {
@@ -64,27 +67,18 @@ except Exception:
 
 # ── Credential provisioning ──────────────────────────────────────────────────
 provision_github_token() {
-  local project="${GSM_PROJECT:-gcp-eiq}"
-  local secret_name="${GSM_SECRET_NAME:-github-token}"
-
   # Skip if already set
   if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-    _wp_log "GITHUB_TOKEN already set — skipping GSM fetch"
+    wp_log "GITHUB_TOKEN already set — skipping GSM fetch"
     return 0
   fi
 
-  if command -v gcloud >/dev/null 2>&1; then
-    local token
-    token=$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet secrets versions access latest \
-      --secret="$secret_name" --project="$project" 2>/dev/null || echo "")
-    if [[ -n "$token" ]]; then
-      export GITHUB_TOKEN="$token"
-      _wp_log "GITHUB_TOKEN provisioned from GSM ($project/$secret_name)"
-      return 0
-    fi
+  if bootstrap_github_auth; then
+    wp_log "GITHUB_TOKEN provisioned from GSM (${GSM_PROJECT:-gcp-eiq}/${GSM_SECRET_NAME:-github-token})"
+    return 0
   fi
 
-  _wp_warn "GITHUB_TOKEN not provisioned (gcloud unavailable or secret not found)"
+  wp_warn "GITHUB_TOKEN not provisioned (GSM unavailable or secret not found)"
   return 1
 }
 
@@ -92,7 +86,7 @@ provision_gcp_credentials() {
   local project="${GSM_PROJECT:-gcp-eiq}"
 
   if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" && -f "$GOOGLE_APPLICATION_CREDENTIALS" ]]; then
-    _wp_log "GOOGLE_APPLICATION_CREDENTIALS already set: $GOOGLE_APPLICATION_CREDENTIALS"
+    wp_log "GOOGLE_APPLICATION_CREDENTIALS already set: $GOOGLE_APPLICATION_CREDENTIALS"
     return 0
   fi
 
@@ -101,26 +95,26 @@ provision_gcp_credentials() {
     if CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet auth print-access-token \
         --project="$project" >/dev/null 2>&1; then
       export GCLOUD_PROJECT="$project"
-      _wp_log "GCP Application Default Credentials active (project=$project)"
+      wp_log "GCP Application Default Credentials active (project=$project)"
       return 0
     fi
   fi
 
-  _wp_warn "GCP credentials not available — run: gcloud auth login"
+  wp_warn "GCP credentials not available — run: gcloud auth login"
   return 1
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 main() {
   if [[ "${WORKSPACE_PROVISION_SKIP:-0}" == "1" ]]; then
-    _wp_log "WORKSPACE_PROVISION_SKIP=1 — skipping"
+    wp_log "WORKSPACE_PROVISION_SKIP=1 — skipping"
     return 0
   fi
 
   local user
   user=$(detect_workspace_user)
   export WORKSPACE_USER="$user"
-  _wp_log "workspace user: $WORKSPACE_USER"
+  wp_log "workspace user: $WORKSPACE_USER"
 
   local errors=0
 
@@ -128,9 +122,9 @@ main() {
   provision_gcp_credentials || errors=$(( errors + 1 ))
 
   if (( errors > 0 )); then
-    _wp_log "provisioning completed with $errors warning(s) — workspace accessible but some credentials may be unavailable"
+    wp_log "provisioning completed with $errors warning(s) — workspace accessible but some credentials may be unavailable"
   else
-    _wp_log "provisioning complete — all credentials available"
+    wp_log "provisioning complete — all credentials available"
   fi
 
   return 0   # Non-fatal: workspace starts regardless

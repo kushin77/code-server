@@ -1,0 +1,37 @@
+name: Ollama GPU Routing Failover
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'config/ollama-integration-contract.yml'
+      - 'docs/ai/OLLAMA-ROUTING-POLICY.md'
+      - 'docs/ops/OLLAMA-GPU-REPLICA-OPERATIONS.md'
+      - 'docs/GPU-ROUTING-FAILOVER-631.md'
+      - 'scripts/ci/validate-ollama-gpu-routing-failover.sh'
+      - '.github/workflows/ollama-gpu-routing-failover.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/ollama-integration-contract.yml'
+      - 'docs/ai/OLLAMA-ROUTING-POLICY.md'
+      - 'docs/ops/OLLAMA-GPU-REPLICA-OPERATIONS.md'
+      - 'docs/GPU-ROUTING-FAILOVER-631.md'
+      - 'scripts/ci/validate-ollama-gpu-routing-failover.sh'
+      - '.github/workflows/ollama-gpu-routing-failover.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-gpu-routing:
+    name: Validate GPU routing and failover
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate GPU routing contract
+        shell: bash
+        run: bash scripts/ci/validate-ollama-gpu-routing-failover.sh

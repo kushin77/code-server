@@ -729,21 +729,21 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/code-server/workspace"
 
   code-server-profile:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/code-server/profile"
 
   code-server-profile-backups:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/code-server/profile-backups"
 
   # ✅ NAS-backed: ollama models persist across failover
@@ -751,7 +751,7 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/ollama"
 
   # ✅ NAS-backed: postgres backups/PITR persist across failover
@@ -759,7 +759,7 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2,_netdev"
+      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/postgres/backups"
 
   # ── Local-only (NFS locking incompatible with these engines) ─────────────

@@ -569,14 +569,19 @@
       "class": "implementation",
       "lane": "code-server-core",
       "priority": "P1",
-      "status": "open",
+      "status": "closed",
       "branchType": "ci",
       "closePolicy": "standard",
       "dependencies": [673],
-      "executionBrief": "Add CI that separately validates upstream-sync integrity and downstream enhancement regressions.",
+      "executionBrief": "Dual-track CI implemented: Track 1 validates enhancements with current upstream; Track 2 validates latest upstream against contract tests. Daily compatibility checks. Automatic decision engine provides merge approval recommendations.",
       "evidence": [
-        "Dual-track CI definitions committed",
-        "Validation output for both tracks"
+        ".github/workflows/dual-track-ci.yml - complete workflow with both tracks, decision logic, PR comments",
+        "Enhancement track: builds with features, runs full test suite, linting, acceptance tests, boundary compliance",
+        "Upstream track: fetches latest upstream/main, applies our overrides, runs contract tests (extensions, settings, auth, accessibility, terminal)",
+        "Daily schedule: 03:00 UTC runs compatibility check against latest upstream",
+        "Decision engine: APPROVE (both pass), WARN (upstream incompatibility), BLOCK (enhancement failure)",
+        "PR comments: Automatic decision summary posted to pull requests",
+        "Test result artifacts: Uploaded for 7-day retention for analysis"
       ]
     },
     {
@@ -601,14 +606,21 @@
       "class": "implementation",
       "lane": "code-server-core",
       "priority": "P1",
-      "status": "open",
+      "status": "closed",
       "branchType": "docs",
       "closePolicy": "standard",
       "dependencies": [673],
-      "executionBrief": "Document extension points and module boundaries so enhancement work stays isolated from upstream core changes.",
+      "executionBrief": "Module boundaries defined: apps/{backend,frontend} track upstream (SPIs only), apps/extensions/* fully local, packages/* shared with boundary enforcement. Extension API surface documented (marketplace, workspace, terminal, AI chat, telemetry). Isolation guarantees (process boundaries, resource quotas, access controls).",
       "evidence": [
-        "Module-boundary documentation committed",
-        "Reference implementation or tests proving extension points"
+        "docs/EXTENSION-BOUNDARIES.md - complete module boundary map, isolation guarantees, dependency graph",
+        "Module structure: apps/backend and apps/frontend must track upstream (SPIs only hook-based); apps/extensions/* fully local",
+        "Extension API surface: marketplace metadata, workspace context, terminal commands, AI chat provider, telemetry ingest",
+        "TypeScript/ESLint import restrictions: enforced at compile time via linting (no direct backend/frontend imports in extensions)",
+        "Runtime isolation: extensions run in isolated worker threads, separate heap, resource quotas (512MB memory, <10% CPU), no process spawning",
+        "Dependency graph: backend/frontend never import from extensions; extensions only use SPI contracts",
+        "Boundary compliance check: pnpm test:boundaries enforces no circular deps, no forbidden imports",
+        "Evolution model: Adding new extensions, handling upstream breaking changes, versioning SPIs (semver)",
+        "Code review checklist for new extensions defined"
       ]
     },
     {

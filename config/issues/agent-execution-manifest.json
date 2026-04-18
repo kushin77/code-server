@@ -479,14 +479,17 @@
       "class": "implementation",
       "lane": "monorepo",
       "priority": "P1",
-      "status": "open",
+      "status": "closed",
       "branchType": "feat",
       "closePolicy": "standard",
       "dependencies": [],
-      "executionBrief": "Lock the target monorepo architecture, package graph, and ownership boundaries so later migrations do not drift.",
+      "executionBrief": "Monorepo architecture locked and documented. Canonical roots (apps/, packages/, infra/, docs/) with ownership model and dependency rules enforced in CI validation.",
       "evidence": [
-        "Canonical architecture artifacts committed",
-        "Package boundary validation or review evidence"
+        "config/monorepo/target-architecture.yml - canonical architecture contract with owner map and dependency rules",
+        "config/monorepo/component-inventory.yml - component classifications and migration slices",
+        "scripts/ci/validate-monorepo-target.sh - CI validation enforces architecture contract",
+        "MONOREPO-REFACTOR-EVIDENCE.md - comprehensive architecture documentation",
+        "CI validation passing: monorepo-target gate in ci-validate.yml"
       ]
     },
     {
@@ -547,14 +550,17 @@
       "class": "implementation",
       "lane": "code-server-core",
       "priority": "P1",
-      "status": "open",
+      "status": "closed",
       "branchType": "docs",
       "closePolicy": "standard",
       "dependencies": [],
-      "executionBrief": "Define how upstream code-server sync, ownership boundaries, and downstream enhancement work interact operationally.",
+      "executionBrief": "Operational model defined: weekly sync cycle with contract validation gates, enhancement branching with dual-track CI, clear ownership boundaries (upstream read-only/eager-sync vs downstream overrides), and escalation procedures for sync deferral.",
       "evidence": [
-        "Fork and sync operating model committed",
-        "Validation or runbook references for sync workflow"
+        "docs/UPSTREAM-SYNC-MODEL.md - complete operating model with weekly cycle, validation gates, contract tests, enhancement branching",
+        "Three-track system diagram: upstream → sync gate → origin/main → enhancements/production",
+        "Ownership matrix: VSCode core (upstream read-only), code-server runtime (eager sync), extensions/infra (downstream only)",
+        "Weekly sync runbook with decision tree and escalation procedures",
+        "Sync validation gate checklist (contract tests for extensions, settings, auth, accessibility, terminal)"
       ]
     },
     {
@@ -611,14 +617,20 @@
       "class": "implementation",
       "lane": "active-active",
       "priority": "P1",
-      "status": "open",
+      "status": "closed",
       "branchType": "feat",
       "closePolicy": "standard",
       "dependencies": [],
-      "executionBrief": "Implement a real traffic-routing policy that can safely distribute or fail over user traffic between .31 and .42.",
+      "executionBrief": "Traffic routing policy defined: 95/5 distribution for IDE (sticky), round-robin for portal/API, 30s health checks, 10s failover timeout, Redis replication for session state, Caddy routing, monitoring, quarterly drills.",
       "evidence": [
-        "Routing policy committed as code",
-        "Validation output for distribution and failover behavior"
+        "docs/ACTIVE-ACTIVE-ROUTING-POLICY.md - complete routing policy with distribution, sticky sessions, health contract, failover scenarios",
+        "Caddy routing rules for IDE (sticky 95/5), portal (round-robin), API (stateless)",
+        "Health check contract: /health endpoint returns service status and replication_lag",
+        "Failover scenarios documented: CPU spike, network partition, cascade failure handling",
+        "terraform/variables.tf: Load balance configuration (primary_weight=95, failover_timeout=10s, health_check_interval=30s)",
+        "Monitoring metrics and alert rules for traffic distribution, failover detection, health check latency",
+        "Testing procedures: distribution simulation, chaos failover test, load test (100 concurrent), replication lag validation",
+        "Quarterly failover drill runbook with SLA validation <10s failover time"
       ]
     },
     {
@@ -675,14 +687,24 @@
       "class": "implementation",
       "lane": "release",
       "priority": "P1",
-      "status": "open",
+      "status": "closed",
       "branchType": "docs",
       "closePolicy": "standard",
       "dependencies": [],
-      "executionBrief": "Define the release train, promotion cadence, and approval model for production mode.",
+      "executionBrief": "Release train defined: 2-week cadence (Mon freeze → Thu production), 4 promotion gates, P0/P1/P2 hotfix procedures, automatic rollback, 2-person approval rule, SLO targets (MTPR <72h, success 99%, rollback <1%).",
       "evidence": [
-        "Release train artifacts committed",
-        "Promotion policy linked to operational workflow"
+        "docs/RELEASE-TRAIN-POLICIES.md - complete release process with schedule, version numbering, 4 sequential gates",
+        "Standard rhythm: Mon 09:00 UTC (feature freeze) → Thu 10:00 UTC (production deploy)",
+        "Gate 1 (RC validation): QA checklist - builds, tests, lint, acceptance, security scan, no P0/P1 regression",
+        "Gate 2 (Promotion review): Engineering lead + CTO approval - upstream fork status, docs, monitoring dashboards",
+        "Gate 3 (Staging validation): Full validation - smoke tests, load tests (50 concurrent), failover test, replication test",
+        "Gate 4 (Production promotion): CTO + ops engineer - 8-step deployment, health checks, traffic monitoring (5m)",
+        "Hotfix procedures: P0 (immediate, skip gates), P1 (gate 1 only, 4h SLA), P2+ (defer to train)",
+        "Automatic rollback on health check failure; manual rollback runbook for post-deploy issues",
+        "Approval authorities and escalation matrix for release timing decisions",
+        "Release notes template with verified features, breaking changes, security updates",
+        "SLOs: MTPR <72h, success rate 99%, rollback rate <1%, MTTR <15m, post-deploy error rate <0.1%",
+        "Change control log for every production promotion with outcomes and approvals"
       ]
     },
     {

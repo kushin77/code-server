@@ -24,7 +24,7 @@ concurrency:
 jobs:
   redeploy-portal-oauth:
     name: Redeploy portal OAuth routing
-    runs-on: self-hosted
+    runs-on: [self-hosted, onprem, portal-oauth]
     environment: production
     steps:
       - name: Checkout repository

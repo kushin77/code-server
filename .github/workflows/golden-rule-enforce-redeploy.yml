@@ -1,0 +1,316 @@
+name: 🚀 Golden Rule — Auto-Redeploy After Merge
+
+# Mandatory policy: After every successful merge to main, code must be redeployed to production
+# No exceptions. Every push to main = automatic production redeploy.
+on:
+  push:
+    branches:
+      - main
+    # Trigger on ALL code changes (not just specific paths)
+    # This ensures the golden rule is always enforced
+    paths-ignore:
+      - '*.md'
+      - '.gitignore'
+      - 'CODEOWNERS'
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+jobs:
+  redeploy-production:
+    name: 🚀 Redeploy Latest Code to Production
+    runs-on: self-hosted  # Must run on production host
+    environment: production  # Requires environment approval if configured
+    
+    steps:
+      - name: Checkout Latest Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          ref: main
+          fetch-depth: 0
+      
+      - name: Get Recent Commit Info
+        id: commit
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          echo "sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "author=${COMMIT_AUTHOR}" >> $GITHUB_OUTPUT
+          echo "message=${COMMIT_MSG}" >> $GITHUB_OUTPUT
+      
+      - name: Pre-Deploy Validation
+        run: |
+          echo "✅ Validating pre-deployment requirements..."
+          
+          # Check Docker availability
+          if ! command -v docker &> /dev/null; then
+            echo "❌ Docker not found"
+            exit 1
+          fi
+          
+          # Check docker-compose
+          if ! docker compose version &> /dev/null; then
+            echo "❌ Docker Compose not available"
+            exit 1
+          fi
+          
+          # Check connectivity to required services
+          if ! ping -c 1 192.168.168.31 &> /dev/null; then
+            echo "⚠️  Primary host unreachable, attempting secondary..."
+            if ! ping -c 1 192.168.168.42 &> /dev/null; then
+              echo "❌ Both production hosts unreachable"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ Pre-deployment validation passed"
+      
+      - name: Deploy Code — Primary Host (.31)
+        id: deploy-primary
+        continue-on-error: true
+        run: |
+          set +e  # Don't exit on error, we want to try secondary
+          
+          echo "📦 Deploying to primary host (192.168.168.31)..."
+          
+          # Pull latest code
+          if docker compose -H ssh://akushnir@192.168.168.31:22 down -t 30; then
+            echo "✅ Stopped running services on .31"
+          else
+            echo "⚠️  Could not stop services gracefully (may be first deploy)"
+          fi
+          
+          # Deploy fresh code
+          if docker compose -H ssh://akushnir@192.168.168.31:22 \
+            -f docker-compose.yml \
+            up -d --remove-orphans --pull always; then
+            
+            echo "✅ Deployed code to .31"
+            
+            # Wait for services to stabilize
+            sleep 10
+            
+            # Quick health check
+            if docker compose -H ssh://akushnir@192.168.168.31:22 ps | grep -q "running"; then
+              echo "✅ Services running on .31"
+              echo "status=success" >> $GITHUB_OUTPUT
+              exit 0
+            else
+              echo "❌ Services failed to start on .31"
+              echo "status=failed" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          else
+            echo "❌ Deployment to .31 failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+      
+      - name: Deploy Code — Secondary Host (.42)
+        id: deploy-secondary
+        if: steps.deploy-primary.outcome != 'success'
+        run: |
+          echo "⚠️  Primary deployment failed, attempting secondary host (.42)..."
+          
+          if docker compose -H ssh://akushnir@192.168.168.42:22 down -t 30; then
+            echo "✅ Stopped running services on .42"
+          fi
+          
+          if docker compose -H ssh://akushnir@192.168.168.42:22 \
+            -f docker-compose.yml \
+            up -d --remove-orphans --pull always; then
+            
+            echo "✅ Deployed code to .42 (secondary)"
+            sleep 10
+            
+            if docker compose -H ssh://akushnir@192.168.168.42:22 ps | grep -q "running"; then
+              echo "✅ Services running on .42"
+              exit 0
+            fi
+          fi
+          
+          echo "❌ Deployment to .42 also failed — BOTH HOSTS DOWN"
+          exit 1
+      
+      - name: Health Check — Production Endpoints
+        id: health-check
+        run: |
+          echo "🏥 Running post-deploy health checks..."
+          
+          TIMEOUT=60
+          INTERVAL=5
+          ELAPSED=0
+          
+          # Check primary
+          PRIMARY_HEALTHY=0
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            if curl -sf http://192.168.168.31:8080/health &>/dev/null; then
+              PRIMARY_HEALTHY=1
+              echo "✅ Primary host (.31) is healthy"
+              break
+            fi
+            echo "⏳ Waiting for .31 health check... (${ELAPSED}s)"
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+          
+          # Check secondary as fallback
+          SECONDARY_HEALTHY=0
+          ELAPSED=0
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            if curl -sf http://192.168.168.42:8080/health &>/dev/null; then
+              SECONDARY_HEALTHY=1
+              echo "✅ Secondary host (.42) is healthy"
+              break
+            fi
+            echo "⏳ Waiting for .42 health check... (${ELAPSED}s)"
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+          
+          if [ $PRIMARY_HEALTHY -eq 1 ] || [ $SECONDARY_HEALTHY -eq 1 ]; then
+            echo "✅ At least one production endpoint is healthy"
+            exit 0
+          else
+            echo "❌ No healthy endpoints found after redeploy"
+            exit 1
+          fi
+      
+      - name: Create Deployment Status
+        if: success()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              environment: 'production',
+              description: 'Auto-redeploy: ${{ steps.commit.outputs.message }}',
+              required_contexts: [],
+              auto_merge: false
+            });
+            
+            // Create deployment status
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.data.id,
+              state: 'success',
+              environment_url: 'https://ide.kushnir.cloud',
+              description: 'Production redeploy complete'
+            });
+            
+            console.log(`✅ Deployment #${deployment.data.id} created and marked successful`);
+      
+      - name: Post Results to PR
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_run'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        continue-on-error: true
+        with:
+          script: |
+            const prNum = context.issue.number;
+            if (!prNum) {
+              console.log('ℹ️  No PR associated with this push, skipping comment');
+              return;
+            }
+            
+            const success = '${{ job.status }}' === 'success';
+            const message = success
+              ? `✅ **Golden Rule Enforced**: Code redeployed to production\n\n- Commit: \`${{ steps.commit.outputs.sha }}\`\n- Author: @${{ steps.commit.outputs.author }}\n- Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)\n\nProduction is now running the latest code.`
+              : `❌ **Redeploy Failed**: Production deployment encountered an error\n\nStatus: see workflow logs\nCommit: \`${{ steps.commit.outputs.sha }}\`\n\nImmediate action required by DevOps team.`;
+            
+            await github.rest.issues.createComment({
+              issue_number: prNum,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+      
+      - name: Slack Notification — Success
+        if: success()
+        uses: slackapi/slack-github-action@70beee3748df4e8eb994e300daacde16df1c5532  # v1.26.0
+        with:
+          payload: |
+            {
+              "text": "✅ Golden Rule: Production redeployed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*✅ Golden Rule Enforced*\n\nProduction has been automatically redeployed with the latest code.\n\n*Commit:* `${{ steps.commit.outputs.sha }}`\n*Author:* ${{ steps.commit.outputs.author }}\n*Message:* ${{ steps.commit.outputs.message }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+      
+      - name: Slack Notification — Failure
+        if: failure()
+        uses: slackapi/slack-github-action@70beee3748df4e8eb994e300daacde16df1c5532  # v1.26.0
+        with:
+          payload: |
+            {
+              "text": "❌ Golden Rule: Redeploy FAILED",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*❌ CRITICAL: Production Redeploy Failed*\n\nThe mandatory golden rule enforcement failed. Production may be running stale code.\n\n*Commit:* `${{ steps.commit.outputs.sha }}`\n*Author:* ${{ steps.commit.outputs.author }}\n*Action Required:* Manual intervention needed\n*Link:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  notify-failure:
+    name: 🔔 Alert DevOps on Failure
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [redeploy-production]
+    
+    steps:
+      - name: Create Critical Incident
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            // Create critical issue for DevOps if redeploy fails
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🔴 CRITICAL: Production Redeploy Failed — Golden Rule Violated',
+              body: `## Incident Report
+
+**Golden Rule Status**: 🔴 FAILED
+
+The mandatory post-merge production redeploy has failed.
+
+**Details**:
+- Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+- Commit: ${{ github.sha }}
+- Branch: ${{ github.ref_name }}
+- Triggered by: ${{ github.actor }}
+
+**Impact**: Production may be running stale code. Previous deployment may still be active.
+
+**Required Actions**:
+1. [ ] Investigate workflow logs for root cause
+2. [ ] Manually verify production health
+3. [ ] Manually trigger redeploy if necessary
+4. [ ] Update status once resolved
+
+**Golden Rule Reminder**: After every successful merge to main, code MUST be redeployed to production automatically. No exceptions.`,
+              labels: ['P0', 'production', 'golden-rule-violation'],
+              assignees: ['@kushin77']  // Assign to ops/infra team
+            });
+            
+            console.log(`🔴 Created critical incident: #${issue.data.number}`);

@@ -303,7 +303,14 @@ resource "kubernetes_config_map" "prometheus" {
   }
 
   data = {
-    "prometheus.yml" = file("${path.module}/prometheus.yml")
+    "prometheus.yml" = <<-EOT
+      global:
+        scrape_interval: 15s
+      scrape_configs:
+        - job_name: prometheus
+          static_configs:
+            - targets: ["localhost:9090"]
+    EOT
   }
 }
 
@@ -315,7 +322,15 @@ resource "kubernetes_config_map" "grafana_provisioning" {
   }
 
   data = {
-    "datasources.yml" = file("${path.module}/grafana-datasources.yml")
+    "datasources.yml" = <<-EOT
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus:9090
+          isDefault: true
+    EOT
   }
 }
 
@@ -327,7 +342,14 @@ resource "kubernetes_config_map" "alertmanager" {
   }
 
   data = {
-    "alertmanager.yml" = file("${path.module}/alertmanager.yml")
+    "alertmanager.yml" = <<-EOT
+      global:
+        resolve_timeout: 5m
+      route:
+        receiver: default
+      receivers:
+        - name: default
+    EOT
   }
 }
 

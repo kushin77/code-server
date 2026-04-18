@@ -390,7 +390,14 @@ resource "kubernetes_config_map" "patroni" {
   }
 
   data = {
-    "patroni.yml" = file("${path.module}/patroni-config.yml")
+    "patroni.yml" = <<-EOT
+      scope: postgres-cluster
+      namespace: ${var.namespace}
+      name: postgres
+      postgresql:
+        parameters:
+          max_connections: 200
+    EOT
   }
 }
 

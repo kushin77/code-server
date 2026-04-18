@@ -23,8 +23,8 @@ if ! echo "$TYPE" | grep -qE "^($ALLOWED_TYPES)$"; then
 fi
 
 # Fetch issue title from GitHub API
-REPO=$(git remote get-url origin | sed 's|.*github.com[:/]\(.*\)\.git|\1|' | sed 's|.*github.com[:/]\(.*\)|\1|')
-TITLE=$(curl -fsSL "https://api.github.com/repos/${REPO}/issues/${ISSUE_NUMBER}" \
+GH_REPO_TARGET=$(git remote get-url origin | sed 's|.*github.com[:/]\(.*\)\.git|\1|' | sed 's|.*github.com[:/]\(.*\)|\1|')
+TITLE=$(curl -fsSL "https://api.github.com/repos/${GH_REPO_TARGET}/issues/${ISSUE_NUMBER}" \
   -H "Authorization: token ${GITHUB_TOKEN:-}" 2>/dev/null \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['title'])" 2>/dev/null \
   || echo "issue-${ISSUE_NUMBER}")

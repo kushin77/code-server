@@ -155,7 +155,7 @@ locals {
 # ════════════════════════════════════════════════════════════════════════════
 resource "null_resource" "workspace_setup" {
   provisioner "local-exec" {
-    command = "powershell -Command \"New-Item -ItemType Directory -Force -Path '${path.module}/workspace', '${path.module}/config/caddy' | Out-Null\""
+    command = "mkdir -p ${path.module}/workspace ${path.module}/config/caddy"
   }
 }
 

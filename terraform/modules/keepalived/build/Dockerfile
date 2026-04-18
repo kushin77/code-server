@@ -18,13 +18,13 @@ RUN mkdir -p /etc/keepalived /var/log/keepalived && \
     chmod 755 /etc/keepalived /var/log/keepalived
 
 # Copy default health monitor and notify scripts into image
-COPY scripts/vrrp-health-monitor.sh /usr/local/bin/vrrp-health-monitor.sh
-COPY scripts/keepalived-notify.sh   /usr/local/bin/keepalived-notify.sh
+COPY vrrp-health-monitor.sh /usr/local/bin/vrrp-health-monitor.sh
+COPY keepalived-notify.sh   /usr/local/bin/keepalived-notify.sh
 RUN chmod 755 /usr/local/bin/vrrp-health-monitor.sh \
               /usr/local/bin/keepalived-notify.sh
 
 # Entrypoint: writes config from KEEPALIVED_CONF env var, then exec keepalived
-COPY build/entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod 755 /entrypoint.sh
 
 HEALTHCHECK --interval=10s --timeout=3s --retries=2 \

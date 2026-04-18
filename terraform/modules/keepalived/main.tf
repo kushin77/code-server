@@ -73,8 +73,8 @@ resource "docker_image" "keepalived" {
   provider = docker.primary
   name     = "keepalived:${local.keepalived_version}"
   build {
-    context    = path.module
-    dockerfile = "build/Dockerfile"
+    context    = "${path.module}/build"
+    dockerfile = "Dockerfile"
   }
 }
 
@@ -82,8 +82,8 @@ resource "docker_image" "keepalived_replica" {
   provider = docker.replica
   name     = "keepalived:${local.keepalived_version}"
   build {
-    context    = path.module
-    dockerfile = "build/Dockerfile"
+    context    = "${path.module}/build"
+    dockerfile = "Dockerfile"
   }
 }
 

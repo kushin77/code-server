@@ -72,6 +72,7 @@ provider "docker" {
 resource "docker_image" "keepalived" {
   provider = docker.primary
   name     = "keepalived:${local.keepalived_version}"
+  keep_locally = true
   build {
     context    = "${path.module}/build"
     dockerfile = "Dockerfile"
@@ -81,6 +82,7 @@ resource "docker_image" "keepalived" {
 resource "docker_image" "keepalived_replica" {
   provider = docker.replica
   name     = "keepalived:${local.keepalived_version}"
+  keep_locally = true
   build {
     context    = "${path.module}/build"
     dockerfile = "Dockerfile"
@@ -176,9 +178,6 @@ resource "docker_container" "keepalived_primary" {
     local_file.keepalived_primary_config,
   ]
 
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # ==============================================================================
@@ -269,7 +268,4 @@ resource "docker_container" "keepalived_replica" {
     local_file.keepalived_replica_config,
   ]
 
-  lifecycle {
-    create_before_destroy = true
-  }
 }

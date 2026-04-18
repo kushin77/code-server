@@ -36,16 +36,15 @@ Canonical machine-readable companion:
 - `#639` Autopilot setup-state drift epic
 - `#640` Autopilot setup-state RCA
 - `#641` Setup-state reconciler and self-healing
+- `#291` VSCode crash RCA and persistent stability tracking (closed in GitHub; persistent tracker)
 
 ## Open Issues Without Landed Implementation Yet
 
 - `#690` Provision GitHub Actions SSH secret for portal OAuth redeploy
-- `#291` VSCode crash RCA and persistent stability tracking
 
 ## Recommended Execution Order
 
 1. `#690` provision the deploy SSH secret and re-run the hardened portal workflow.
-2. `#291` remains persistent and should never be used as a delivery blocker for unrelated work.
 
 ## Operational Notes
 

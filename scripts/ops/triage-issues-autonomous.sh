@@ -76,6 +76,17 @@ api_patch() {
         --data @"${payload_file}"
 }
 
+api_delete() {
+    local token="$1"
+    local url="$2"
+    curl --max-time 30 -fsSL \
+        -X DELETE \
+        -H "Authorization: token ${token}" \
+        -H "Accept: application/vnd.github+json" \
+        -H "User-Agent: code-server-agent" \
+        "${url}" >/dev/null
+}
+
 prepare_resolved_issue_ids() {
     cd "${REPO_ROOT}"
 
@@ -194,8 +205,20 @@ label_needs_priority() {
     local token="$1"
     local number="$2"
     local title="$3"
+    local labels="$4"
 
     local priority="P2"
+
+    # Preserve explicit critical-path signal from issue metadata.
+    if [[ "${labels}" == *"critical-path"* ]]; then
+        priority="P1"
+    fi
+
+    # Current production-transition execution lane defaults.
+    if (( number >= 669 && number <= 683 )); then
+        priority="P1"
+    fi
+
     case "${number}" in
         623) priority="P0" ;;
         650|652|653|655|657) priority="P1" ;;
@@ -206,6 +229,12 @@ label_needs_priority() {
 {"labels":["${priority}"]}
 EOF2
     api_post "${token}" "${API_BASE}/issues/${number}/labels" "/tmp/triage-label.json" >/dev/null
+
+    # Clear temporary queue label once a concrete priority is set.
+    if [[ "${labels}" == *"needs-priority"* ]]; then
+        api_delete "${token}" "${API_BASE}/issues/${number}/labels/needs-priority" || true
+    fi
+
     log_info "Applied ${priority} to #${number} (${title})"
 }
 
@@ -295,7 +324,7 @@ PY
         fi
 
         if [[ "${labels}" == *"needs-priority"* ]]; then
-            label_needs_priority "${token}" "${number}" "${title}"
+            label_needs_priority "${token}" "${number}" "${title}" "${labels}"
         fi
 
         if [[ "${labels}" != *"${AGENT_READY_LABEL}"* ]]; then

@@ -60,7 +60,8 @@ migration_slices:
   - id: S3
     name: "App and runtime convergence"
     scope:
-      - "align src/, backend/, frontend/, extensions/ under app ownership"
+      - "align src/, apps/backend/, apps/frontend/, and apps/extensions/ under app ownership"
+      - "maintain temporary compatibility symlinks until legacy path references are retired"
       - "stabilize build and test pipelines"
     risk: medium
     rollback: "restore prior build matrix and path routing"

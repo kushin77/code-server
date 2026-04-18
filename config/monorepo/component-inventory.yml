@@ -3,10 +3,10 @@ generated_for_issue: 669
 
 classification:
   apps:
-    - backend/
-    - frontend/
+    - apps/backend/
+    - apps/frontend/
     - src/
-    - extensions/
+    - apps/extensions/
     - services/
     - operations/
   packages:
@@ -30,5 +30,5 @@ classification:
     - CONTRIBUTING.md
 
 notes:
-  - "Current repository is transitional; classification is an ownership map, not a mandatory folder move in this commit."
-  - "Future migration commits should preserve idempotent deploy/build behavior while moving to explicit apps/packages/infra/docs conventions."
+  - "Canonical app roots now live under apps/; legacy top-level backend/, frontend/, and extensions/ are compatibility symlinks during transition."
+  - "Future migration commits should continue removing hardcoded legacy paths while preserving idempotent deploy/build behavior."

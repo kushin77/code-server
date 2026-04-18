@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  backend:
+  apps/backend:
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^1.6.0
@@ -20,7 +20,7 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)(lightningcss@1.32.0)(terser@5.46.1)
 
-  extensions/agent-farm:
+  apps/extensions/agent-farm:
     devDependencies:
       '@types/jest':
         specifier: ^29.5.0
@@ -56,7 +56,7 @@ importers:
         specifier: ^5.1.0
         version: 5.1.4(webpack@5.106.2)
 
-  extensions/ollama-chat:
+  apps/extensions/ollama-chat:
     dependencies:
       axios:
         specifier: ^1.7.9
@@ -75,7 +75,7 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
-  frontend:
+  apps/frontend:
     dependencies:
       axios:
         specifier: ^1.7.9

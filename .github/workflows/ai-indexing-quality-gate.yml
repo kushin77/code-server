@@ -3,13 +3,13 @@ name: AI Indexing Quality Gate
 on:
   pull_request:
     paths:
-      - 'backend/src/services/ai/**'
-      - 'backend/package.json'
+      - 'apps/backend/src/services/ai/**'
+      - 'apps/backend/package.json'
       - '.github/workflows/ai-indexing-quality-gate.yml'
   push:
     branches: [main]
     paths:
-      - 'backend/src/services/ai/**'
+      - 'apps/backend/src/services/ai/**'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: backend
+        working-directory: apps/backend
 
     steps:
       - name: Checkout
@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/package.json
+          cache-dependency-path: apps/backend/package.json
 
       - name: Install dependencies
         run: npm install

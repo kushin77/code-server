@@ -55,7 +55,7 @@ repos:
         files: '\.(sh|bash|py|tf|yml|yaml)$'
         exclude: |
           (?x)^(
-            extensions/.*node_modules/|
+            apps/extensions/.*node_modules/|
             \.archived/
           )
         pass_filenames: true

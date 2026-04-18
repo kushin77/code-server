@@ -1,6 +1,6 @@
 packages:
-  - backend
-  - frontend
-  - extensions/*
+  - apps/backend
+  - apps/frontend
+  - apps/extensions/*
 
 onlyBuiltDependencies: []

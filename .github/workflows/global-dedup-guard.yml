@@ -40,3 +40,6 @@ jobs:
 
       - name: Enforce global dedup guard
         run: bash scripts/ci/enforce-global-dedup.sh
+
+      - name: Detect duplicate helper reimplementation
+        run: bash scripts/ci/detect-duplicate-helpers.sh

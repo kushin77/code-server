@@ -48,14 +48,43 @@ if [ -d /opt/extensions/ollama-chat ] && [ -f /opt/extensions/ollama-chat/packag
   echo "[entrypoint] Ollama Chat extension registered"
 fi
 
-# ── Seed enterprise settings on first launch ─────────────────────────────────
-# Copies /etc/code-server/settings.json (bind-mounted from config/settings.json)
-# ONLY if the user has no existing settings -- never overwrites customizations.
+# ── Validate git-credential-gsm availability ─────────────────────────────────
+# Emit warning early if git-credential-gsm is missing so deployment errors are
+# caught at startup rather than at first git credential use (#638)
+if [ ! -f "/usr/local/bin/git-credential-gsm" ]; then
+  echo "[entrypoint] WARNING: /usr/local/bin/git-credential-gsm not found — GSM-backed git auth will not work. Check Dockerfile COPY step."
+else
+  echo "[entrypoint] git-credential-gsm present at /usr/local/bin/git-credential-gsm"
+fi
+
+# ── Merge enterprise settings into user settings ─────────────────────────────
+# Applies enterprise defaults on every launch without overwriting user-owned
+# T2/T3 preferences. Locked T1 keys remain enterprise-controlled.
 SETTINGS_DIR="/home/coder/.local/share/code-server/User"
+MERGE_SCRIPT="/usr/local/lib/code-server/merge-settings.js"
 mkdir -p "$SETTINGS_DIR"
-if [ ! -f "$SETTINGS_DIR/settings.json" ] && [ -f /etc/code-server/settings.json ]; then
-  echo "[entrypoint] Seeding enterprise settings into $SETTINGS_DIR/settings.json"
-  cp /etc/code-server/settings.json "$SETTINGS_DIR/settings.json"
+if [ -f /etc/code-server/settings.json ]; then
+  if [ -f "$MERGE_SCRIPT" ]; then
+    TMP_SETTINGS=$(mktemp)
+    if [ -f "$SETTINGS_DIR/settings.json" ]; then
+      echo "[entrypoint] Merging enterprise settings into $SETTINGS_DIR/settings.json"
+    else
+      echo "[entrypoint] Seeding enterprise settings into $SETTINGS_DIR/settings.json"
+      printf '{}\n' > "$SETTINGS_DIR/settings.json"
+    fi
+
+    if /usr/bin/node "$MERGE_SCRIPT" /etc/code-server/settings.json "$SETTINGS_DIR/settings.json" "$TMP_SETTINGS"; then
+      mv "$TMP_SETTINGS" "$SETTINGS_DIR/settings.json"
+    else
+      rm -f "$TMP_SETTINGS"
+      echo "[entrypoint] WARNING: enterprise settings merge failed; preserving existing user settings"
+    fi
+  elif [ ! -f "$SETTINGS_DIR/settings.json" ]; then
+    echo "[entrypoint] WARNING: merge-settings.js missing; falling back to one-time seed"
+    cp /etc/code-server/settings.json "$SETTINGS_DIR/settings.json"
+  else
+    echo "[entrypoint] WARNING: merge-settings.js missing; existing user settings left unchanged"
+  fi
 fi
 
 # ── Start code-server (background so trap can catch SIGTERM) ─────────────────

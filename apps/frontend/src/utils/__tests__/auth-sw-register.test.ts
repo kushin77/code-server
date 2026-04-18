@@ -166,7 +166,7 @@ describe('auth-sw-register', () => {
   });
 
   describe('message handling from SW', () => {
-    let messageHandler: Function;
+    let messageHandler: ((event: string, handler: (e: MessageEvent) => void) => void) | undefined;
 
     beforeEach(async () => {
       mockNavigatorSW.addEventListener = vi.fn((event, handler) => {

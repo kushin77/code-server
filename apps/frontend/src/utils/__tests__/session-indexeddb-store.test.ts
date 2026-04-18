@@ -23,7 +23,7 @@ class MockIDBDatabase {
         put: (value: any, key: string) => ({
           onerror: null,
           get error() { return null; },
-          onsuccess: () => { store[key] = value; }(),
+          onsuccess: () => { store[key] = value; },
         }),
         get: (key: string) => ({
           onerror: null,
@@ -32,7 +32,7 @@ class MockIDBDatabase {
         }),
         delete: (key: string) => ({
           onerror: null,
-          onsuccess: () => { delete store[key]; }(),
+          onsuccess: () => { delete store[key]; },
         }),
       }),
       oncomplete: null,

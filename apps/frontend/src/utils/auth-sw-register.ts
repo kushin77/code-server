@@ -17,7 +17,7 @@ export interface ServiceWorkerHealth {
 
 // Module state
 let swRegistration: ServiceWorkerRegistration | null = null;
-let swHealth: ServiceWorkerHealth = {
+const swHealth: ServiceWorkerHealth = {
   isActive: false,
   registrationTime: 0,
 };
@@ -146,11 +146,12 @@ function setupMessageHandlers(): void {
         reportMetric('sw_refresh_failed', 1);
         break;
 
-      case 'GET_SESSION_EXPIRY':
+      case 'GET_SESSION_EXPIRY': {
         // SW asking for expiry via IndexedDB
         const expiry = await getSessionExpiry();
         event.ports[0].postMessage({ type: 'SESSION_EXPIRY_RESPONSE', expiry });
         break;
+      }
     }
   });
 

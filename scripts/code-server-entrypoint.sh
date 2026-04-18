@@ -33,6 +33,21 @@ if command -v git >/dev/null 2>&1 && command -v git-credential-gsm >/dev/null 2>
   git config --global credential.https://github.com.helper gsm >/dev/null 2>&1 || true
 fi
 
+# ── Canonical auth environment contract (#651) ──────────────────────────────
+export GSM_PROJECT="gcp-eiq"
+export GSM_SECRET_NAME="github-token"
+export GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME="github-token"
+if [ -n "${GSM_GITHUB_TOKEN_SECRET:-}" ]; then
+  echo "[entrypoint] WARNING: GSM_GITHUB_TOKEN_SECRET is deprecated and will be unset to avoid env drift"
+  unset GSM_GITHUB_TOKEN_SECRET
+fi
+
+if command -v code-server-auth >/dev/null 2>&1; then
+  if ! code-server-auth doctor; then
+    echo "[entrypoint] WARNING: auth doctor detected environment drift; canonical values were enforced"
+  fi
+fi
+
 # ── Install Copilot extensions from pre-cached VSIX ──────────────────────────
 if ! /usr/bin/code-server --list-extensions --extensions-dir "$EXT_DIR" 2>/dev/null | grep -qi '^github.copilot$'; then
   echo "[entrypoint] Installing github.copilot from /opt/vsix/..."

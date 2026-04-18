@@ -76,12 +76,14 @@ fetch_gsm_secret "prod-portal-google-oauth-client-secret" GOOGLE_CLIENT_SECRET
 fetch_gsm_secret "prod-portal-oauth2-cookie-secret" OAUTH2_PROXY_COOKIE_SECRET
 
 # GitHub PAT (optional): default auth token for GitHub API/gh CLI calls.
-# Set GSM_GITHUB_TOKEN_SECRET to override the primary secret name.
+# Canonical secret is github-token. GSM_GITHUB_TOKEN_SECRET is legacy fallback.
 if ! fetch_first_available_secret "GITHUB_TOKEN" \
-    "${GSM_GITHUB_TOKEN_SECRET:-prod-github-token}" \
+    "${GSM_SECRET_NAME:-github-token}" \
+    "${GSM_GITHUB_TOKEN_SECRET:-}" \
+    "github-token" \
     "prod-github-pat" \
     "prod-code-server-github-token" \
-    "github-token"; then
+    "prod-github-token"; then
     echo "WARN: No GitHub PAT found in GSM (continuing without GITHUB_TOKEN)" >&2
 fi
 

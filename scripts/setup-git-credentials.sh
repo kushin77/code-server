@@ -12,7 +12,7 @@
 #
 # What it does:
 #   1. Validates gcloud auth (prompts to login if expired)
-#   2. Creates/updates the GSM secret prod-github-token (prompts for PAT if missing)
+#   2. Creates/updates the GSM secret github-token (prompts for PAT if missing)
 #   3. Installs git-credential-gsm to /usr/local/bin/
 #   4. Removes hardcoded [url ...insteadOf] and credential.helper=store from ~/.gitconfig
 #   5. Configures: credential.helper = gsm  (GSM-backed, no plaintext)
@@ -20,7 +20,7 @@
 #
 # Environment:
 #   GSM_PROJECT       GCP project (default: gcp-eiq)
-#   GSM_SECRET_NAME   Secret name  (default: prod-github-token)
+#   GSM_SECRET_NAME   Secret name  (default: github-token)
 #   GITHUB_PAT        PAT to store (if not already in GSM); prompted if unset
 set -euo pipefail
 
@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
 readonly GSM_PROJECT="${GSM_PROJECT:-gcp-eiq}"
-readonly GSM_SECRET_NAME="${GSM_SECRET_NAME:-prod-github-token}"
+readonly GSM_SECRET_NAME="${GSM_SECRET_NAME:-github-token}"
 readonly CREDENTIAL_HELPER_BIN="/usr/local/bin/git-credential-gsm"
 readonly CREDENTIAL_HELPER_SRC="${SCRIPT_DIR}/git-credential-gsm"
 

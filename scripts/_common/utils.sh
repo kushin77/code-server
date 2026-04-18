@@ -113,17 +113,21 @@ bootstrap_github_auth() {
     fi
 
     local gsm_project="${GSM_PROJECT:-gcp-eiq}"
-    local configured_secret="${GSM_GITHUB_TOKEN_SECRET:-}"
+    local canonical_secret="${GSM_SECRET_NAME:-github-token}"
+    local legacy_secret_override="${GSM_GITHUB_TOKEN_SECRET:-}"
     local candidates=()
 
-    if [[ -n "$configured_secret" ]]; then
-        candidates+=("$configured_secret")
+    candidates+=("$canonical_secret")
+
+    if [[ -n "$legacy_secret_override" && "$legacy_secret_override" != "$canonical_secret" ]]; then
+        log_warn "GSM_GITHUB_TOKEN_SECRET is deprecated; treating '$legacy_secret_override' as fallback only"
+        candidates+=("$legacy_secret_override")
     fi
+
     candidates+=(
-        "prod-github-token"
         "prod-github-pat"
         "prod-code-server-github-token"
-        "github-token"
+        "prod-github-token"
     )
 
     local secret_id value

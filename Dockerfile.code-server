@@ -105,6 +105,7 @@ RUN mkdir -p /opt/vsix \
 RUN mkdir -p /usr/local/lib/code-server
 COPY --chmod=755 scripts/lib/merge-settings.js /usr/local/lib/code-server/merge-settings.js
 COPY --chmod=755 scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
+COPY --chmod=755 scripts/code-server-auth /usr/local/bin/code-server-auth
 
 USER coder
 

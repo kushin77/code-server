@@ -43,8 +43,8 @@ services:
       - OLLAMA_DEFAULT_MODEL=codellama:7b
       - NODE_TLS_REJECT_UNAUTHORIZED=0
       - GSM_PROJECT=${GSM_PROJECT:-gcp-eiq}
-      - GSM_SECRET_NAME=${GSM_SECRET_NAME:-prod-github-token}
-      - GSM_GITHUB_TOKEN_SECRET=${GSM_GITHUB_TOKEN_SECRET:-prod-github-token}
+      - GSM_SECRET_NAME=${GSM_SECRET_NAME:-github-token}
+      - GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=${GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME:-github-token}
       # Development tools environment variables
       - PATH=/home/coder/.local/bin:/home/coder/node_modules/.bin:/usr/local/cargo/bin:/usr/local/go/bin:$PATH
       - PYTHONUNBUFFERED=1
@@ -167,14 +167,14 @@ services:
     env_file:
       - .env
     environment:
-      OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
-      OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_IDE_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID}}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_IDE_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET}}"
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"
       OAUTH2_PROXY_UPSTREAMS: "http://code-server:8080/"
-      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_IDE_EMAIL_DOMAINS:-${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}}"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
       OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://redis:6379"
@@ -191,6 +191,7 @@ services:
       OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
       OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
       OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "false"
+      OAUTH2_PROXY_PROMPT: "select_account"
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
       OAUTH2_PROXY_PASS_USER_HEADERS: "true"
       OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
@@ -231,14 +232,14 @@ services:
     env_file:
       - .env
     environment:
-      OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
-      OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_PORTAL_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID}}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_PORTAL_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET}}"
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
-      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_PORTAL_EMAIL_DOMAINS:-${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}}"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
       OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://redis:6379"
@@ -255,6 +256,7 @@ services:
       OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
       OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
       OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "false"
+      OAUTH2_PROXY_PROMPT: "select_account"
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
       OAUTH2_PROXY_PASS_USER_HEADERS: "true"
       OAUTH2_PROXY_PASS_BASIC_AUTH: "false"

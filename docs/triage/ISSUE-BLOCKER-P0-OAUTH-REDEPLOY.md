@@ -32,6 +32,7 @@ Execution path is blocked, not implementation:
 ## References
 - Branch: feat/671-issue-671
 - Failing script in current runtime: bash scripts/deploy/redeploy-portal-oauth-routing.sh
+- Canonical GCP/GSM runbook: [../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md](../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md)
 - Deploy workflow run with queued GitHub-hosted job: 24608080969
 - Secret-provisioning issue: #690 (resolved)
 - Network-reachability follow-up issue: #692

@@ -50,6 +50,8 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Live apex redirect still points to IDE callback until #692 is executed.
 - Docs consolidation tracker #691 is closed; the legacy docs-root files are compatibility stubs and the canonical indexes are in place.
 - PR #693 is merged on `main`; the portal workflow now runs in local execution mode on self-hosted runners.
+- Canonical GCP/GSM bootstrap guidance lives in [../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md](../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md).
 - Latest `main` portal run `24610587990` reaches `google-github-actions/auth@v2` and fails with `invalid_request` because `GCP_WIF_PROVIDER` is not a valid full identity-provider audience value.
+- Latest branch portal run `24610724917` also reaches `google-github-actions/auth@v2` and fails with the same invalid audience error after WIF provider normalization.
 - The portal workflow now has branch-scoped concurrency and a dedicated runner label to reduce cross-agent contention.
 - Parallel open PR lanes remain for #686, #684, and #649; keep them separate from the production blocker path.

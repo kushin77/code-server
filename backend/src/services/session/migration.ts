@@ -6,6 +6,8 @@
 import { CURRENT_SESSION_VERSION, Session, SessionV1, SessionV2, AnySession, MigrationResult, SessionMigrationEvent } from "./types";
 import crypto from "crypto";
 
+export { CURRENT_SESSION_VERSION } from "./types";
+
 /**
  * Migration functions from version N to version N+1.
  * Key must equal source version (e.g., 1 migrates v1->v2, 2 migrates v2->v3).
@@ -169,7 +171,7 @@ export function updateSessionActivity(session: Session): Session {
  * Check if session is expired.
  */
 export function isSessionExpired(session: Session): boolean {
-  return session.exp < Math.floor(Date.now() / 1000);
+  return session.exp <= Math.floor(Date.now() / 1000);
 }
 
 /**

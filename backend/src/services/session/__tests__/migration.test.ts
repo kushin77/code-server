@@ -3,6 +3,8 @@
  * Tests all migration paths from v1 to v3 and edge cases.
  */
 
+import { beforeEach, describe, expect, it } from 'vitest'
+
 import { migrateSession, updateSessionActivity, isSessionExpired, isSessionStale, CURRENT_SESSION_VERSION } from "../migration";
 import { Session, SessionV1, SessionV2 } from "../types";
 

@@ -1,0 +1,120 @@
+# Caddyfile.base — Shared security headers and common blocks
+# Purpose: Central definitions for production and staging Caddyfiles
+# Use via: @import Caddyfile.base in any Caddyfile variant
+#
+# CANONICAL SOURCE: lib/caddyfile-shared-blocks.txt (for documentation)
+# VALIDATED: caddy validate -config Caddyfile.base
+
+# ════════════════════════════════════════════════════════════
+# SHARED BLOCK: security_headers_base
+# ════════════════════════════════════════════════════════════
+# Mandatory security headers for all domains
+# Applied to all routes handling user traffic or sensitive data
+#
+(security_headers_base) {
+    header {
+        # Prevent content-type sniffing (XS-S via SVG, JPEG tricks)
+        X-Content-Type-Options nosniff
+        
+        # Clickjacking prevention (unless explicitly framed)
+        X-Frame-Options SAMEORIGIN
+        
+        # Legacy XSS protection (modern browsers use CSP, kept for compat)
+        X-XSS-Protection "1; mode=block"
+        
+        # Enforce TLS 1.3 for 63072000 seconds (2 years)
+        # includeSubDomains + preload for HSTS preload list registration
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        
+        # Remove Server header (avoid fingerprinting)
+        -Server
+    }
+}
+
+# ════════════════════════════════════════════════════════════
+# SHARED BLOCK: security_headers_strict
+# ════════════════════════════════════════════════════════════
+# Enhanced headers for high-security zones (admin, auth, token endpoints)
+#
+(security_headers_strict) {
+    import security_headers_base
+    
+    header {
+        # Content Security Policy: strict with no inline scripts
+        # Form action restricted to self only
+        Content-Security-Policy "default-src 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+        
+        # Referrer policy: strict, only send referrer when same-origin
+        Referrer-Policy strict-origin-when-cross-origin
+        
+        # Feature policy: disable user-sensitive features not needed
+        Permissions-Policy "geolocation=(); microphone=(); camera=(); payment=()"
+    }
+}
+
+# ════════════════════════════════════════════════════════════
+# SHARED BLOCK: oauth2_auth_flow
+# ════════════════════════════════════════════════════════════
+# Standard OAuth2 proxy routing (control plane for auth)
+#
+(oauth2_auth_flow) {
+    # OAuth2 control plane endpoints must pass through to oauth2-proxy directly
+    # (allowing them to issue cookies, manage sessions, OIDC callback)
+    @oauth2 path /oauth2 /oauth2/*
+    handle @oauth2 {
+        reverse_proxy oauth2-proxy:4180 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+}
+
+# ════════════════════════════════════════════════════════════
+# SHARED BLOCK: health_checks
+# ════════════════════════════════════════════════════════════
+# Standard health check endpoints (no auth required, fast fail)
+#
+(health_checks) {
+    @health path /health /healthz /ping /live /ready
+    respond @health "OK" 200
+}
+
+# ════════════════════════════════════════════════════════════
+# SHARED BLOCK: sign_out_redirect
+# ════════════════════════════════════════════════════════════
+# Standard sign-off endpoint: clears oauth2-proxy session and redirects
+#
+(sign_out_redirect) {
+    @logout path /logout /signout /sign_out
+    redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
+}
+
+# ════════════════════════════════════════════════════════════
+# SHARED BLOCK: app_backend_proxy
+# ════════════════════════════════════════════════════════════
+# Default proxy handler: all traffic via oauth2-proxy (auth gating)
+#
+(app_backend_proxy) {
+    reverse_proxy oauth2-proxy:4180 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+# ════════════════════════════════════════════════════════════
+# GLOBAL CONFIG SNIPPET (OPTIONAL: applied if uncommented in main Caddyfile)
+# ════════════════════════════════════════════════════════════
+# NOTE: This section is NOT imported automatically.
+# Include in main Caddyfile's global block only if needed (conditional TLS, logging, etc.)
+#
+# email {$ACME_EMAIL:security@example.com}
+# acme_dns cloudflare {$CLOUDFLARE_API_TOKEN}
+# log default {
+#     format json
+#     output file /var/log/caddy/caddy.log {
+#         roll_size 100mb
+#         roll_keep 10
+#         roll_keep_for 720h
+#     }
+#     level info
+# }

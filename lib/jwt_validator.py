@@ -14,6 +14,7 @@ Usage:
     # Handle invalid token
 """
 
+import json
 import requests
 import jwt
 import logging
@@ -42,6 +43,7 @@ class JWTValidator:
             "TOKEN_MICROSERVICE_URL", 
             "http://localhost:8888"
         )
+        self.expected_issuer = os.getenv("TOKEN_EXPECTED_ISSUER", "")
         self.cache_ttl = cache_ttl_seconds
         self._jwks_cache: Optional[Dict] = None
         self._jwks_cache_time: Optional[datetime] = None
@@ -155,20 +157,19 @@ class JWTValidator:
             if not key:
                 raise JWTValidationError(f"Key not found: {kid}")
             
-            # Decode and verify
-            decoded = jwt.decode(
-                token,
-                options={"verify_signature": False}  # We'll verify manually
-            )
-            
-            # Validate claims
-            if decoded.get("aud") != audience:
-                raise JWTValidationError(f"Invalid audience: {decoded.get('aud')}")
-            
-            exp = decoded.get("exp")
-            if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
-                raise JWTValidationError("Token expired")
-            
+            signing_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
+            decode_kwargs = {
+                "key": signing_key,
+                "algorithms": ["RS256"],
+                "audience": audience,
+                "options": {
+                    "require": ["exp", "iat", "aud"]
+                }
+            }
+            if self.expected_issuer:
+                decode_kwargs["issuer"] = self.expected_issuer
+
+            decoded = jwt.decode(token, **decode_kwargs)
             return decoded
         except JWTValidationError:
             raise

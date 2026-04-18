@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getFeatureFlagService } from "../index";
 
 describe("FeatureFlagService", () => {
@@ -8,9 +9,9 @@ describe("FeatureFlagService", () => {
     // Reset singleton if necessary or use a fresh service
     mockRedis = {
       data: new Map<string, string>(),
-      get: jest.fn(async (key: string) => mockRedis.data.get(key) || null),
-      set: jest.fn(async (key: string, val: string) => { mockRedis.data.set(key, val); }),
-      del: jest.fn(async (key: string) => { mockRedis.data.delete(key); }),
+      get: vi.fn(async (key: string) => mockRedis.data.get(key) || null),
+      set: vi.fn(async (key: string, val: string) => { mockRedis.data.set(key, val); }),
+      del: vi.fn(async (key: string) => { mockRedis.data.delete(key); }),
     };
     ff = getFeatureFlagService(mockRedis);
   });

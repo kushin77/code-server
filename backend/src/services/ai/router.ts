@@ -61,7 +61,7 @@ interface Registry {
 function loadRegistry(): Registry {
   const configPath = path.resolve(
     __dirname,
-    "../../../config/model-registry.yml"
+    "../../../../config/model-registry.yml"
   );
   const raw = fs.readFileSync(configPath, "utf8");
   return yaml.load(raw) as Registry;

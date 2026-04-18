@@ -5,9 +5,13 @@
 # IMPORTS: Shared blocks from Caddyfile.base
 # @see Caddyfile.base for common security headers, cache rules, compression
 
-@import Caddyfile.base
-    # Global configuration for all domains
-    auto_https off  # We'll handle HTTPS explicitly for flexibility
+# ════════════════════════════════════════════════════════════
+# GLOBAL CONFIGURATION
+# ════════════════════════════════════════════════════════════
+
+{
+    # We handle HTTPS explicitly for flexibility and control
+    auto_https off
     
     # Email for ACME certificate notifications (Let's Encrypt)
     email {$ACME_EMAIL:security@example.com}
@@ -16,7 +20,7 @@
     acme_dns cloudflare {$CLOUDFLARE_API_TOKEN}
     acme_ca https://acme-v02.api.letsencrypt.org/directory
     
-    # Production logging
+    # Production logging with JSON format for structured analysis
     log default {
         format json
         output file /var/log/caddy/caddy.log {
@@ -27,6 +31,11 @@
         level info
     }
 }
+
+# ════════════════════════════════════════════════════════════
+# IMPORT SHARED BLOCKS (security headers, routing patterns)
+# ════════════════════════════════════════════════════════════
+import Caddyfile.base
 
 # ════════════════════════════════════════════════════════════
 # IDE SERVICE (ide.kushnir.cloud)

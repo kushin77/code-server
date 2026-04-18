@@ -180,13 +180,16 @@ resource "kubernetes_deployment" "external_dns" {
             "--source=ingress",
             "--source=service",
             "--provider=cloudflare",
-            "--cloudflare-api-token=${var.cloudflare_api_token}",
-            "--cloudflare-api-key=${cloudflare_argo_tunnel.main.account_id}",
             "--cloudflare-zones-per-page=50",
             "--zone-id-filter=${var.cloudflare_zone_id}",
             "--txt-owner-id=external-dns",
             "--log-level=info"
           ]
+
+          env {
+            name  = "CF_API_TOKEN"
+            value = var.cloudflare_api_token
+          }
 
           resources {
             requests = {

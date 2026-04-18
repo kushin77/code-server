@@ -169,7 +169,7 @@ export class RepositoryIndexer {
     });
 
     return scored
-      .filter((s) => s.score > 0)
+      .filter((s) => s.score >= 0.5)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
   }
@@ -553,8 +553,9 @@ function estimateTokenCount(content: string): number {
 
 function tokenize(content: string): string[] {
   return content
+    .toLowerCase()
     .split(/\s+/)
-    .map((x) => x.trim())
+    .map((x) => x.trim().replace(/[^a-z0-9_\-]/gi, ""))
     .filter((x) => x.length > 0);
 }
 

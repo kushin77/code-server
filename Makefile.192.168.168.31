@@ -9,6 +9,7 @@ HOST := 192.168.168.31
 USER := akushnir
 SSH_HOST := $(USER)@$(HOST)
 DEPLOY_DIR := /home/akushnir/code-server-enterprise
+DEPLOY_SSH_KEY ?= $(HOME)/.ssh/akushnir-31
 TERRAFORM_DIR := terraform/$(HOST)
 SCRIPTS_DIR := scripts
 DOCS_DIR := docs
@@ -31,6 +32,7 @@ help:
 	@echo ""
 	@echo "$(GREEN)Deployment Targets:$(NC)"
 	@echo "  make deploy              - Deploy via remote Docker Compose on the primary host"
+	@echo "  make deploy-31           - Alias for deploy (primary host)"
 	@echo "  make deploy-gpu          - Deploy GPU infrastructure only"
 	@echo "  make deploy-nas          - Deploy NAS mounts only"
 	@echo "  make deploy-dry-run      - Dry-run remote compose deployment (no changes)"
@@ -74,10 +76,12 @@ help:
 # DEPLOYMENT TARGETS
 # ============================================================================
 
-.PHONY: deploy deploy-gpu deploy-nas deploy-infrastructure deploy-dry-run compose-deploy
+.PHONY: deploy deploy-31 deploy-gpu deploy-nas deploy-infrastructure deploy-dry-run compose-deploy
 
 deploy: validate-prerequisites deploy-infrastructure gpu-status nas-status all-checks
 	@echo "$(GREEN)✓ Deployment completed successfully$(NC)"
+
+deploy-31: deploy
 
 deploy-infrastructure: compose-deploy
 	@echo "$(GREEN)✓ Infrastructure deployment complete$(NC)"
@@ -85,9 +89,10 @@ deploy-infrastructure: compose-deploy
 compose-deploy:
 	@echo "$(BLUE)→ Deploying via remote Docker Compose...$(NC)"
 	@if [ -z "$(DRY_RUN)" ]; then \
+		SSH_OPTS="-i $(DEPLOY_SSH_KEY) -o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=10" \
 		bash -lc 'set -euo pipefail; source scripts/_common/init.sh; assert_ssh_up; ssh_exec "cd $$DEPLOY_DIR && docker compose up -d --remove-orphans --pull always"'; \
 	else \
-		echo "$(BLUE)[DRY-RUN] Would run: ssh $(SSH_HOST) \"cd $(DEPLOY_DIR) && docker compose up -d --remove-orphans --pull always\"$(NC)"; \
+		echo "$(BLUE)[DRY-RUN] Would run: ssh -i $(DEPLOY_SSH_KEY) $(SSH_HOST) \"cd $(DEPLOY_DIR) && docker compose up -d --remove-orphans --pull always\"$(NC)"; \
 	fi
 	@echo "$(GREEN)✓ Remote compose deployment complete$(NC)"
 
@@ -156,7 +161,7 @@ validate-prerequisites:
 	@echo "$(BLUE)→ Checking prerequisites...$(NC)"
 	@which ssh > /dev/null || { echo "$(RED)✗ SSH not available$(NC)"; exit 1; }
 	@if [ -z "$(DRY_RUN)" ]; then \
-		ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 $(SSH_HOST) "echo SSH_OK" >/dev/null 2>&1 || { echo "$(RED)✗ Cannot SSH to $(SSH_HOST)$(NC)"; exit 1; }; \
+		ssh -i "$(DEPLOY_SSH_KEY)" -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 $(SSH_HOST) "echo SSH_OK" >/dev/null 2>&1 || { echo "$(RED)✗ Cannot SSH to $(SSH_HOST) using $(DEPLOY_SSH_KEY)$(NC)"; exit 1; }; \
 	else \
 		echo "$(YELLOW)⚠ DRY-RUN skips live SSH connectivity check$(NC)"; \
 	fi

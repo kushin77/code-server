@@ -254,7 +254,7 @@ output "infrastructure_status" {
   value = {
     all_modules_deployed = true
     deployment_date      = timestamp()
-    environment          = var.environment
+    environment          = var.deployment_environment
     regions = {
       primary   = var.primary_ip
       secondary = var.secondary_ip

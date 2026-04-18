@@ -24,7 +24,7 @@ locals {
 }
 
 # Cloudflare Tunnel (encrypted connection to on-prem)
-resource "cloudflare_argo_tunnel" "main" {
+resource "cloudflare_tunnel" "main" {
   account_id = var.cloudflare_account_id
   name       = var.tunnel_name
   secret     = base64encode(random_bytes.tunnel_secret.result)
@@ -40,7 +40,7 @@ resource "cloudflare_record" "tunnel" {
   zone_id = var.cloudflare_zone_id
   name    = "@"
   type    = "CNAME"
-  value   = cloudflare_argo_tunnel.main.cname
+  value   = cloudflare_tunnel.main.cname
   ttl     = 1
   proxied = true
 }
@@ -224,6 +224,18 @@ resource "kubernetes_service_account" "external_dns" {
   }
 }
 
+# Secret for Cloudflare API token used by External DNS
+resource "kubernetes_secret" "cloudflare_api" {
+  metadata {
+    name      = "cloudflare-api-token"
+    namespace = "default"
+  }
+
+  data = {
+    "api-token" = var.cloudflare_api_token
+  }
+}
+
 # ClusterRole for External DNS
 resource "kubernetes_cluster_role" "external_dns" {
   metadata {
@@ -265,5 +277,4 @@ resource "kubernetes_cluster_role_binding" "external_dns" {
 # DNS Security: DNSSEC (Cloudflare managed)
 resource "cloudflare_zone_dnssec" "main" {
   zone_id = var.cloudflare_zone_id
-  status  = "active"
 }

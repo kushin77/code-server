@@ -91,16 +91,14 @@ kushnir.cloud {
     # One-shot auth reset to clear stale cookies that can cause redirect loops.
     @auth_reset path /auth/reset
     handle @auth_reset {
-        header {
-            Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            +Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        }
+        header Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+        header +Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+        header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+        header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+        header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+        header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+        header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+        header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
         redir https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/ 302
     }
 

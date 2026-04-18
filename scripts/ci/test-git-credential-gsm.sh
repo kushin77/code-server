@@ -29,15 +29,29 @@ assert_contains() {
   else
     fail "$label (missing: $needle)"
   fi
-}
+    output=$(PATH="$tmpdir:$PATH" \
+      MOCK_MODE="$mode" \
+      GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME="prod-github-token" \
+      GSM_SECRET_NAME="" \
+      $env_extra "$HELPER" get <<< "$stdin_payload" 2>&1) || status=$?
 
 run_with_mock() {
   local mode="$1"
   local env_extra="$2"
+  local status=0
+  local output=""
 
   local tmpdir
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' RETURN
+
+  # Case 3b: Stale GSM_SECRET_NAME env cannot redefine canonical strict behavior.
+  res=$(run_with_mock "legacy" "GSM_SECRET_NAME=github-token GIT_CREDENTIAL_GSM_STRICT=true GIT_CREDENTIAL_GSM_ENV=production")
+  status=$(echo "$res" | sed -n '1p')
+  out=$(echo "$res" | sed -n '2,$p')
+  [[ "$status" != "0" ]] || fail "strict production should block stale GSM_SECRET_NAME canonical drift"
+  assert_contains "$out" "deprecated_override_used" "deprecated override warning emitted"
+  assert_contains "$out" "strict_mode_block" "strict mode still blocks non-canonical source"
 
   cat > "$tmpdir/gcloud" <<'EOS'
 #!/usr/bin/env bash
@@ -83,7 +97,6 @@ EOS
   cmd+=("bash" "$HELPER" get)
 
   output=$("${cmd[@]}" <<< "$stdin_payload" 2>&1) || status=$?
-  status=${status:-0}
 
   printf '%s\n' "$status"
   printf '%s\n' "$output"

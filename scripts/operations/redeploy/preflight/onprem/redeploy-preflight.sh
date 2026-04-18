@@ -31,6 +31,9 @@ PRECHECK_SSH_TIMEOUT="${PRECHECK_SSH_TIMEOUT:-8}"
 PRECHECK_COMMAND_TIMEOUT="${PRECHECK_COMMAND_TIMEOUT:-90}"
 FIX_STALE_LOGS="false"
 MAX_LOG_TAIL_AGE_SEC="${MAX_LOG_TAIL_AGE_SEC:-3600}"
+NAS_HOST_DEFAULT="${NAS_HOST:-192.168.168.56}"
+NAS_EXPORT_PATH_DEFAULT="${NAS_EXPORT_PATH:-/export}"
+NAS_SSH_USER="${NAS_SSH_USER:-}"
 
 usage() {
   cat <<'EOF'
@@ -248,6 +251,74 @@ check_redeploy_safety() {
   fi
 }
 
+check_nas_export_paths() {
+  log_section "NAS Export Path Preflight"
+
+  local resolved_nas_host
+  local resolved_export_path
+  local env_nas_host
+  local env_export_path
+  local nas_user
+  local -a required_suffixes
+  local -a ssh_args
+  local missing_count=0
+
+  env_nas_host="$(remote "cd ${TARGET_REPO} && if [[ -f .env ]]; then sed -n 's/^NAS_HOST=//p' .env | tail -n1; fi" || true)"
+  env_export_path="$(remote "cd ${TARGET_REPO} && if [[ -f .env ]]; then sed -n 's/^NAS_EXPORT_PATH=//p' .env | tail -n1; fi" || true)"
+
+  resolved_nas_host="${env_nas_host:-${NAS_HOST_DEFAULT}}"
+  resolved_export_path="${env_export_path:-${NAS_EXPORT_PATH_DEFAULT}}"
+  nas_user="${NAS_SSH_USER:-${TARGET_USER}}"
+
+  required_suffixes=(
+    "/code-server/workspace"
+    "/code-server/profile"
+    "/code-server/profile-backups"
+    "/ollama"
+    "/postgres/backups"
+  )
+
+  ssh_args=(
+    -o BatchMode=yes
+    -o ConnectTimeout="${PRECHECK_SSH_TIMEOUT}"
+    -o StrictHostKeyChecking=accept-new
+  )
+
+  if [[ -n "${SSH_KEY_PATH}" ]]; then
+    ssh_args+=( -i "${SSH_KEY_PATH}" )
+  fi
+
+  if ! "${SSH_BIN}" "${ssh_args[@]}" "${nas_user}@${resolved_nas_host}" "echo OK" >/dev/null 2>&1; then
+    log_error "Cannot establish non-interactive SSH session to NAS ${nas_user}@${resolved_nas_host}"
+    log_error "Set NAS_SSH_USER and SSH_KEY_PATH appropriately, then rerun preflight"
+    return 1
+  fi
+
+  if remote "showmount -e ${resolved_nas_host} >/dev/null 2>&1"; then
+    log_success "NFS export service reachable: ${resolved_nas_host}"
+  else
+    log_warn "showmount from target host failed for ${resolved_nas_host}; continuing with direct NAS path checks"
+  fi
+
+  local suffix
+  for suffix in "${required_suffixes[@]}"; do
+    local full_path="${resolved_export_path}${suffix}"
+    if "${SSH_BIN}" "${ssh_args[@]}" "${nas_user}@${resolved_nas_host}" "test -d '${full_path}'"; then
+      log_success "NAS path present: ${full_path}"
+    else
+      log_error "Missing NAS path: ${full_path}"
+      missing_count=$((missing_count + 1))
+    fi
+  done
+
+  if [[ "${missing_count}" -gt 0 ]]; then
+    log_error "NAS preflight failed: ${missing_count} required path(s) missing under ${resolved_export_path} on ${resolved_nas_host}"
+    return 1
+  fi
+
+  log_success "NAS export path preflight passed"
+}
+
 check_domain_drift() {
   log_section "Domain Drift Check"
 
@@ -298,6 +369,7 @@ main() {
   check_remote_baseline
   emit_remote_fingerprint
   check_redeploy_safety
+  check_nas_export_paths
   check_domain_drift
   cleanup_stale_log_tails
   log_success "On-prem redeploy preflight completed"

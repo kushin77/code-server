@@ -172,16 +172,28 @@ resource "kubernetes_deployment" "external_dns" {
       }
 
       spec {
+        service_account_name = kubernetes_service_account.external_dns.metadata[0].name
+
         container {
           name  = "external-dns"
           image = "registry.k8s.io/external-dns/external-dns:v0.13.6"
+
+          # SECURITY: API token moved to env var, not command args
+          env {
+            name  = "CF_API_TOKEN"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.cloudflare_api.metadata[0].name
+                key  = "api-token"
+              }
+            }
+          }
 
           args = [
             "--source=ingress",
             "--source=service",
             "--provider=cloudflare",
-            "--cloudflare-api-token=${var.cloudflare_api_token}",
-            "--cloudflare-api-key=${cloudflare_argo_tunnel.main.account_id}",
+            "--cloudflare-api-token=$(CF_API_TOKEN)",
             "--cloudflare-zones-per-page=50",
             "--zone-id-filter=${var.cloudflare_zone_id}",
             "--txt-owner-id=external-dns",

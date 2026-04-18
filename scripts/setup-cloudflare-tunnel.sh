@@ -45,8 +45,16 @@ if ! id "$TUNNEL_USER" &>/dev/null; then
     sudo useradd -r -s /usr/sbin/nologin "$TUNNEL_USER"
 fi
 
-# 3. Create systemd service
-echo "🏗️ Configuring systemd service..."
+# 3. Create /etc/cloudflared directory and save token securely
+echo "🏗️ Securing token in /etc/cloudflared/cloudflared.env..."
+sudo install -d -m 700 /etc/cloudflared
+sudo bash -c "cat > /etc/cloudflared/cloudflared.env << EOF_TOKEN
+CLOUDFLARE_TUNNEL_TOKEN=$(echo "$CLOUDFLARE_TUNNEL_TOKEN" | sed 's/[&/\]/\\\\&/g')
+EOF_TOKEN"
+sudo chmod 600 /etc/cloudflared/cloudflared.env
+
+# 4. Create systemd service
+echo "🔗 Configuring systemd service..."
 cat <<EOF | sudo tee /etc/systemd/system/cloudflared.service
 [Unit]
 Description=Cloudflare Tunnel (P1 #351)
@@ -57,7 +65,8 @@ StartLimitBurst=0
 [Service]
 Type=simple
 User=$TUNNEL_USER
-ExecStart=/usr/local/bin/cloudflared tunnel run --token $CLOUDFLARE_TUNNEL_TOKEN
+EnvironmentFile=/etc/cloudflared/cloudflared.env
+ExecStart=/usr/local/bin/cloudflared tunnel run --token=\${CLOUDFLARE_TUNNEL_TOKEN}
 Restart=always
 RestartSec=5
 StandardOutput=journal

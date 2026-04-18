@@ -45,7 +45,13 @@ Last Updated: 2026-04-18
 - `bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode ssh --fix-stale-logs`
 - `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action status|promote|failback`
 - `bash scripts/operations/redeploy/onprem/operator-run-mode.sh --action preflight|redeploy|status|promote|failback`
-- `bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action drift-report|snapshot-restore-test`
+- `bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action drift-report|replicate-tier-a|snapshot-restore-test`
+
+Baseline compose policy:
+
+- `docker-compose.yml` is the secure production baseline and must not include docker socket mounts.
+- `docker-compose.socket-override.yml` is optional and local-only for container-development workflows.
+- `CODE_SERVER_PASSWORD` is required for deterministic secure startup; no weak fallback defaults.
 
 ## Operator Run Mode
 

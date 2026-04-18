@@ -34,15 +34,14 @@ services:
     expose:
       - "8080"
     environment:
-      - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
-      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
+      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SERVICE_URL=https://open-vsx.org/vscode/gallery
       - ITEM_URL=https://open-vsx.org/vscode/item
       - CS_DISABLE_FILE_DOWNLOADS=false
       - NODE_OPTIONS=--max-old-space-size=6144
       - OLLAMA_ENDPOINT=http://ollama:11434
       - OLLAMA_DEFAULT_MODEL=codellama:7b
-      - NODE_TLS_REJECT_UNAUTHORIZED=0
       - GSM_PROJECT=${GSM_PROJECT:-gcp-eiq}
       - GSM_SECRET_NAME=${GSM_SECRET_NAME:-github-token}
       - GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=${GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME:-github-token}
@@ -52,11 +51,13 @@ services:
       - GOPATH=/opt/go
       - RUST_BACKTRACE=1
     volumes:
-      - code-server-data:/home/coder
       - ./workspace:/home/coder/workspace
+      - code-server-profile:/home/coder/.local/share/code-server
       - ./config/code-server/settings.json:/etc/code-server/settings.json:ro
-      # Mount Docker socket for container development inside IDE
-      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s
@@ -456,7 +457,7 @@ services:
     depends_on:
       - code-server
     volumes:
-      - code-server-data:/source:ro
+      - code-server-profile:/source:ro
       - code-server-profile-backups:/backups
     command:
       - /bin/sh
@@ -467,8 +468,10 @@ services:
         while true; do
           ts="$$(date +%Y%m%d-%H%M%S)"
           out="/backups/code-server-user-profile-$$ts.tgz"
-          tar -czf "$$out" -C /source .local/share/code-server || true
+          tar -czf "$$out" -C /source .
+          sha256sum "$$out" > "$$out.sha256"
           find /backups -type f -name 'code-server-user-profile-*.tgz' -mtime +30 -delete || true
+          find /backups -type f -name 'code-server-user-profile-*.tgz.sha256' -mtime +30 -delete || true
           sleep 21600
         done
     logging:
@@ -673,7 +676,7 @@ networks:
 # Volumes — All named, all persisted. No anonymous volumes.
 # ════════════════════════════════════════════════════════════════════════════
 volumes:
-  code-server-data:
+  code-server-profile:
     driver: local
 
   code-server-profile-backups:

@@ -10,10 +10,10 @@ Define the single source of truth for code-server user durability across primary
   - Source of truth mount: bind mount from repository workspace path via docker compose.
   - Business criticality: highest (user repositories and active work).
 - /home/coder/.local/share/code-server/User
-  - Source of truth mount: code-server-data volume.
+  - Source of truth mount: code-server-profile volume.
   - Business criticality: highest (settings, keybindings, user profile).
 - /home/coder/.local/share/code-server/extensions
-  - Source of truth mount: code-server-data volume.
+  - Source of truth mount: code-server-profile volume.
   - Business criticality: high (extension state and capability parity).
 
 ### Tier B: Recoverable Cache/Temp
@@ -26,10 +26,15 @@ Tier B may be reconstructed. Tier A is protected by replication checks and snaps
 ## Canonical Persistence Layout
 
 Current canonical compose mappings in docker-compose.yml:
-- code-server-data -> /home/coder
+- code-server-profile -> /home/coder/.local/share/code-server
 - ./workspace -> /home/coder/workspace
 
-This mapping is immutable in practice because redeploy and failover scripts read compose state from source-controlled files and do not rely on mutable in-container edits.
+This mapping enforces ephemeral container state outside the profile/workspace mounts and is immutable in practice because redeploy and failover scripts read compose state from source-controlled files and do not rely on mutable in-container edits.
+
+Security baseline constraints for this model:
+- code-server auth mode is password-based (no `--auth=none` in production baseline).
+- `CODE_SERVER_PASSWORD` must be explicitly set; no weak fallback defaults.
+- Baseline compose does not mount `/var/run/docker.sock`.
 
 ## Retention and Rollback Points
 - Periodic profile backup container writes tiered profile archives to code-server-profile-backups volume.
@@ -45,6 +50,8 @@ This mapping is immutable in practice because redeploy and failover scripts read
 ## Evidence Requirements
 - Drift report (Tier A signatures, file counts, byte counts):
   - scripts/operations/redeploy/onprem/state-replication-verify.sh --action drift-report
+- Tier-A replication sync from primary to replica:
+  - scripts/operations/redeploy/onprem/state-replication-verify.sh --action replicate-tier-a
 - Snapshot + restore extraction verification:
   - scripts/operations/redeploy/onprem/state-replication-verify.sh --action snapshot-restore-test
 
@@ -56,6 +63,7 @@ From operator workspace:
 
 ```bash
 bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action drift-report
+bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action replicate-tier-a
 bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action snapshot-restore-test
 ```
 
@@ -63,6 +71,7 @@ From host-local run mode:
 
 ```bash
 bash scripts/operations/redeploy/onprem/state-replication-verify.sh --mode local-on-host --action drift-report
+bash scripts/operations/redeploy/onprem/state-replication-verify.sh --mode local-on-host --action replicate-tier-a
 bash scripts/operations/redeploy/onprem/state-replication-verify.sh --mode local-on-host --action snapshot-restore-test
 ```
 

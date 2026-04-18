@@ -71,6 +71,9 @@ If SSH keys are not available in the local shell context, run from the on-prem h
 - Idempotent: repeated deploy command yields same target state.
 - Ephemeral: temporary files may exist only during job execution and are removed after completion.
 - Never mutate running container filesystem as source of truth.
+- Baseline secure compose must not include `NODE_TLS_REJECT_UNAUTHORIZED=0` or `--auth=none`.
+- Baseline secure compose must not include `/var/run/docker.sock` mount.
+- Optional developer socket access, when explicitly needed, must use `docker-compose.socket-override.yml` and never be part of standard production redeploy path.
 
 ## Canonical Redeploy Sequence
 
@@ -87,6 +90,9 @@ docker-compose up -d
 
 docker-compose ps
 docker-compose logs --tail=100 code-server oauth2-proxy caddy
+
+# Local-only optional workflow (not for production baseline)
+docker-compose -f docker-compose.yml -f docker-compose.socket-override.yml up -d code-server
 ```
 
 ## Canonical Failover Sequence

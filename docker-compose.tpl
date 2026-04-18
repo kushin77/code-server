@@ -27,8 +27,8 @@ services:
     expose:
       - "${code_server_port}"
     environment:
-      - PASSWORD=$${CODE_SERVER_PASSWORD:-change-me-in-env}
-      - SUDO_PASSWORD=$${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - PASSWORD=$${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
+      - SUDO_PASSWORD=$${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SERVICE_URL=https://open-vsx.org/vscode/gallery
       - ITEM_URL=https://open-vsx.org/vscode/item
       - CS_DISABLE_FILE_DOWNLOADS=false
@@ -41,9 +41,9 @@ services:
       - "--bind-addr=0.0.0.0:${code_server_port}"
       - "--disable-telemetry"
       - "--cert=false"
-      - "--auth=none"
+      - "--auth=password"
     volumes:
-      - ${data_volume}:/home/coder
+      - ${data_volume}:/home/coder/.local/share/code-server
       - ${workspace_dir}:${workspace_path}
       - ./config/settings.json:/etc/code-server/settings.json:ro
     healthcheck:

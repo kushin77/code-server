@@ -41,6 +41,8 @@ powershell -Command "
 - Avoid ambiguous auth from ambient ssh-agent state.
 - Avoid local-only terraform or docker assumptions for production.
 - Capture branch, commit, and compose status in issue evidence before apply.
+- Reject insecure compose defaults in baseline paths: `--auth=none`, `NODE_TLS_REJECT_UNAUTHORIZED=0`, or weak password fallbacks.
+- Keep docker socket mount out of baseline deploy compose; use optional override file only for explicit local development workflows.
 
 ## Evidence Checklist
 

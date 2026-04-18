@@ -985,6 +985,7 @@
         "Branch fix run 24609414318 reached the deploy step and failed because the runner lacked docker",
         ".github/workflows/portal-oauth-redeploy.yml now targets dedicated self-hosted portal redeploy labels with branch-scoped concurrency",
         "Main run 24610587990 reaches google-github-actions/auth and fails with invalid_request audience for GCP_WIF_PROVIDER",
+        "Branch run 24610724917 also reaches google-github-actions/auth and fails with invalid_request audience after WIF provider normalization",
         "scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local validated successfully in workspace"
       ]
     },
@@ -1003,6 +1004,8 @@
         "Issue #695 opened to track non-interactive GSM auth and ephemeral bootstrap requirements",
         "Workflow now attempts google-github-actions/auth@v2 before fetch-gsm-secrets.sh",
         "Main run 24610587990 fails with invalid_request audience, indicating GCP_WIF_PROVIDER secret format mismatch",
+        "Branch run 24610724917 fails with invalid_request audience after WIF provider normalization",
+        "Canonical GCP/GSM runbook documented in docs/ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md",
         "Portal workflow execution path, Docker availability, and runner isolation are verified"
       ]
     },

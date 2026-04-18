@@ -63,7 +63,9 @@ Canonical machine-readable companion:
 - `#691` is closed: the legacy docs-root bridge files were collapsed to compatibility stubs and the canonical folder indexes remain in place.
 - PR #693 is merged and the published portal workflow now uses the self-hosted local execution path.
 - The workflow is now isolated for multi-agent execution with branch-scoped concurrency and a dedicated portal redeploy runner label.
+- Canonical GCP/GSM bootstrap guidance now lives in [../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md](../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md).
 - Latest `main` run `24610587990` reaches `google-github-actions/auth@v2` but fails with `invalid_request` because `GCP_WIF_PROVIDER` is not accepted as a valid full identity-provider resource name for audience.
+- Latest branch run `24610724917` reaches `google-github-actions/auth@v2` and fails with the same invalid audience error after WIF normalization.
 - `#695` is the active secret-bootstrap dependency for closing `#692`.
 - `#686`, `#684`, and `#649` are open PR-backed lanes with existing repo artifacts; they are parallel review tracks, not the current release blocker.
 - Keep issue comments current when additional AC evidence lands so GitHub remains usable without local context.

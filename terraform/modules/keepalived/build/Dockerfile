@@ -20,5 +20,5 @@ HEALTHCHECK --interval=10s --timeout=3s --retries=2 \
     CMD ping -c 1 127.0.0.1 || exit 1
 
 # Entrypoint: Run Keepalived in foreground
-ENTRYPOINT ["/usr/sbin/keepalived", "-f", "/etc/keepalived/keepalived.conf", "-D", "-l"]
+ENTRYPOINT ["/usr/sbin/keepalived", "-n", "-D", "-l", "-G", "-f", "/etc/keepalived/keepalived.conf"]
 CMD []

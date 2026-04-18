@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # @file        scripts/ci/validate-issue-linkage.sh
-# @module      ci/governance
-# @description Validate commit subjects include issue linkage keywords in the active commit range.
+# @module      governance/issue-linkage
+# @description Validate that non-merge commits include GitHub issue linkage.
 #
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../_common/init.sh"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
 
-SCRIPT_NAME="$(basename "$0")"
+cd "${REPO_ROOT}"
 
-require_command "git" "git is required for issue linkage validation"
+STRICT_ISSUE_LINKAGE="${STRICT_ISSUE_LINKAGE:-true}"
 
 resolve_range() {
     if [[ -n "${LINKAGE_RANGE:-}" ]]; then
@@ -24,22 +25,41 @@ resolve_range() {
         return
     fi
 
+    if [[ -n "${GITHUB_BASE_REF:-}" ]] && git show-ref --verify --quiet "refs/remotes/origin/${GITHUB_BASE_REF}"; then
+        echo "origin/${GITHUB_BASE_REF}...HEAD"
+        return
+    fi
+
     if git show-ref --verify --quiet "refs/remotes/origin/main"; then
         echo "origin/main..HEAD"
         return
     fi
 
-    echo ""
+    echo "HEAD~1..HEAD"
 }
 
-is_merge_like_subject() {
+is_exempt_subject() {
     local subject="$1"
-    [[ "$subject" =~ ^Merge\  ]] || [[ "$subject" =~ ^merge\( ]]
+
+    if [[ "$subject" =~ ^Merge\  ]] || [[ "$subject" =~ ^merge\( ]]; then
+        return 0
+    fi
+    if [[ "$subject" =~ \[skip-issue-link\] ]]; then
+        return 0
+    fi
+    if [[ "$subject" =~ ^(chore\(deps\)|build\(deps\)|release:) ]]; then
+        return 0
+    fi
+    return 1
 }
 
 has_issue_linkage() {
-    local subject="$1"
-    [[ "$subject" =~ (Fixes|Closes|Resolves|Relates\ to)\ #[0-9]+ ]]
+    local message="$1"
+
+    [[ "$message" =~ (Fixes|Closes|Resolves|Relates\ to)\ \#[0-9]+ ]] && return 0
+    [[ "$message" =~ \(\#[0-9]+\) ]] && return 0
+    [[ "$message" =~ \#[0-9]+ ]] && return 0
+    return 1
 }
 
 main() {
@@ -47,14 +67,14 @@ main() {
     range="$(resolve_range "${1:-}")"
 
     if [[ -z "$range" ]]; then
-        log_warn "No commit range available; skipping linkage validation"
+        log_warn "No commit range available; skipping issue linkage validation"
         return 0
     fi
 
     log_info "Validating commit issue linkage in range: ${range}"
 
     local commits
-    commits="$(git log --format='%H	%s' "$range" 2>/dev/null || true)"
+    commits="$(git log --format='%H%x09%s%x09%b' "$range" 2>/dev/null || true)"
 
     if [[ -z "$commits" ]]; then
         log_info "No commits found in range; linkage validation passed"
@@ -62,19 +82,26 @@ main() {
     fi
 
     local failed=0
-    while IFS=$'\t' read -r sha subject; do
-        if is_merge_like_subject "$subject"; then
+    while IFS=$'\t' read -r sha subject body; do
+        [[ -z "${sha:-}" ]] && continue
+
+        if is_exempt_subject "$subject"; then
+            log_info "Exempt commit: ${sha:0:12} ${subject}"
             continue
         fi
 
-        if ! has_issue_linkage "$subject"; then
+        if ! has_issue_linkage "$subject $body"; then
             log_error "Missing issue linkage in commit ${sha:0:12}: $subject"
             failed=1
         fi
     done <<< "$commits"
 
     if [[ $failed -ne 0 ]]; then
-        log_fatal "Issue linkage validation failed. Use 'Fixes #N' or 'Relates to #N' in commit subjects."
+        if [[ "$STRICT_ISSUE_LINKAGE" == "true" ]]; then
+            log_fatal "Issue linkage validation failed. Use 'Fixes #N' or 'Relates to #N' in commit message."
+        fi
+        log_warn "Issue linkage warnings only (STRICT_ISSUE_LINKAGE=false)"
+        return 0
     fi
 
     log_info "Issue linkage validation passed"

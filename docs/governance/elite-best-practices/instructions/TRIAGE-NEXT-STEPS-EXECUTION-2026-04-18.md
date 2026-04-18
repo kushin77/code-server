@@ -20,8 +20,8 @@ Last Updated: 2026-04-18
 ## Issue-Mapped Next Steps
 
 1. #715 (P0): attach failover/failback evidence from scripted promote + failback drill.
-2. #713 (P0): finalize immutable code-server state map and backup class verification evidence.
-3. #711 (P1): implement and evidence host replication + restore checks.
+2. #713 (P0): immutable code-server state map codified; run evidence capture and close.
+3. #711 (P1): replication + restore verification script implemented; run evidence capture and close.
 4. #712 (P1): keep operator-run mode task coverage current as scripts evolve.
 5. New ingress cutover gap: automate DNS/VIP transition for `.31/.42` (current replica ingress proof uses `:18080` due occupied `:80/:443` on `.42`).
 
@@ -43,7 +43,15 @@ Last Updated: 2026-04-18
    - container health table
    - auth redirect verification
    - failover evidence JSON path under `/tmp/code-server-failover-evidence/`
+   - state evidence JSON paths under `/tmp/code-server-state-evidence/`
    - note any degraded but non-blocking services (example: `pgbouncer` unhealthy) with a follow-up issue
+
+## State Durability Commands
+
+Run Tier-A drift and snapshot-restore verification:
+
+- `bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action drift-report`
+- `bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action snapshot-restore-test`
 
 ## Bootstrap Reference
 

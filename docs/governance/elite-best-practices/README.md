@@ -29,6 +29,7 @@ Last Updated: 2026-04-18
 
 - Works-on-my-computer elimination: [instructions/WORKS-ON-MY-COMPUTER-ELIMINATION.md](instructions/WORKS-ON-MY-COMPUTER-ELIMINATION.md)
 - Deploy SSH identity bootstrap: [instructions/DEPLOY-SSH-IDENTITY-BOOTSTRAP.md](instructions/DEPLOY-SSH-IDENTITY-BOOTSTRAP.md)
+- Immutable state data plane: [ssot/ON-PREM-IMMUTABLE-STATE-DATA-PLANE.md](ssot/ON-PREM-IMMUTABLE-STATE-DATA-PLANE.md)
 
 ## Redeploy Priority Order
 
@@ -44,6 +45,7 @@ Last Updated: 2026-04-18
 - `bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode ssh --fix-stale-logs`
 - `bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action status|promote|failback`
 - `bash scripts/operations/redeploy/onprem/operator-run-mode.sh --action preflight|redeploy|status|promote|failback`
+- `bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action drift-report|snapshot-restore-test`
 
 ## Operator Run Mode
 

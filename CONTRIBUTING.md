@@ -70,6 +70,36 @@ Every PR must satisfy these non-negotiable gates:
 - [ ] Security scans enforced (SAST, dependency, secrets, container)
 - [ ] Artifacts versioned immutably
 - [ ] Rollback strategy documented
+- [ ] Reviewer checklist confirms canonical helper reuse (no duplicated helper logic)
+
+---
+
+## How To Avoid Overlap (Dedup First)
+
+Before adding any new helper or utility, always check canonical locations first:
+
+1. `scripts/_common/`
+2. `scripts/lib/`
+3. Existing service-specific utilities
+
+If capability already exists, reuse it. Do not re-implement.
+
+### Required Dedup Checks Before PR
+
+```bash
+# Detect duplicate helper re-implementation
+bash scripts/ci/detect-duplicate-helpers.sh
+
+# Advisory compose overlap detector
+bash scripts/ci/detect-duplicate-compose-keys.sh
+
+# PR dedup quality score
+bash scripts/ci/dedup-score-report.sh
+```
+
+### Reviewer Prompt
+
+Reviewers should explicitly ask: "Did this PR reuse canonical helpers and avoid overlap-prone duplication?"
 
 ---
 

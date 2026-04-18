@@ -43,3 +43,6 @@ jobs:
 
       - name: Detect duplicate helper reimplementation
         run: bash scripts/ci/detect-duplicate-helpers.sh
+
+      - name: Detect duplicate compose keys (advisory)
+        run: bash scripts/ci/detect-duplicate-compose-keys.sh

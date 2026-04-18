@@ -40,7 +40,7 @@ Waiver control:
 1. No new top-level compose variants beyond docker-compose.yml.
 2. No new Caddyfile variants beyond Caddyfile.
 3. Keep main.tf and terraform/main.tf synchronized whenever either mirror is changed.
-4. OAuth callback settings must be centralized using OAUTH2_REDIRECT_URL in docker-compose.yml.
+4. OAuth callback settings must remain surface-specific in docker-compose.yml: IDE uses OAUTH2_PROXY_IDE_REDIRECT_URL and portal uses OAUTH2_PROXY_PORTAL_REDIRECT_URL.
 5. New documentation files under docs/ must not create normalized filename collisions with existing docs.
 
 ## Enforcement

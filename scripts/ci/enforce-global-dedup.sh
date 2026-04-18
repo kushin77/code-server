@@ -164,15 +164,16 @@ fi
 # 4) Enforce single callback variable pattern in canonical compose auth blocks.
 if [[ -f "${CANONICAL_COMPOSE}" ]]; then
   callback_count="$(grep -c 'OAUTH2_PROXY_REDIRECT_URL:' "${CANONICAL_COMPOSE}" || true)"
-  callback_var_count="$(grep -c 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}"' "${CANONICAL_COMPOSE}" || true)"
+  ide_callback_count="$(grep -cF 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"' "${CANONICAL_COMPOSE}" || true)"
+  portal_callback_count="$(grep -cF 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"' "${CANONICAL_COMPOSE}" || true)"
 
   if [[ "${callback_count}" -lt 2 ]]; then
     log_error "Expected at least 2 OAUTH2_PROXY_REDIRECT_URL entries in ${CANONICAL_COMPOSE}, found ${callback_count}"
     failures=$((failures + 1))
   fi
 
-  if [[ "${callback_var_count}" -lt 2 ]]; then
-    log_error "Auth callback in ${CANONICAL_COMPOSE} is not centralized via OAUTH2_REDIRECT_URL in both proxy blocks"
+  if [[ "${ide_callback_count}" -lt 1 || "${portal_callback_count}" -lt 1 ]]; then
+    log_error "Auth callbacks in ${CANONICAL_COMPOSE} must use distinct IDE and portal redirect variables"
     failures=$((failures + 1))
   fi
 fi

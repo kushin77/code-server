@@ -15,9 +15,10 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     # Logout handler: clean up session before sign out
     @logout path /logout /signout
     handle @logout {
-        # Extract session ID from cookie and POST to session-broker logout
+        # Rewrite logout path before proxying to session-broker endpoint.
+        rewrite * /oauth2/logout
+        # Extract session ID from cookie and pass it to session-broker logout.
         reverse_proxy session-broker:5000 {
-            uri /oauth2/logout
             header_up X-Session-Id {http.request.cookie._code_server_session_id}
         }
     }

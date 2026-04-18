@@ -9,6 +9,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${REPO_ROOT}/scripts/_common/init.sh"
+source "${REPO_ROOT}/scripts/lib/automation-policy-gate.sh"
 
 GH_OWNER="kushin77"
 GH_REPO="code-server"

@@ -38,20 +38,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-<<<<<<< Updated upstream
-          provider="$GCP_WIF_PROVIDER_RAW"
-          provider="${provider#"${provider%%[![:space:]]*}"}"
-          provider="${provider%"${provider##*[![:space:]]}"}"
-          provider="${provider#http://iam.googleapis.com/}"
-=======
+          if [[ -z "${GCP_PROJECT_ID:-}" ]]; then
+            echo "GCP_PROJECT is required to resolve the canonical WIF provider" >&2
+            exit 1
+          fi
+
           default_provider="projects/${GCP_PROJECT_ID}/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
           provider="${GCP_WIF_PROVIDER_RAW:-$default_provider}"
           provider="${provider#"${provider%%[![:space:]]*}"}"
           provider="${provider%"${provider##*[![:space:]]}"}"
           provider="${provider#//iam.googleapis.com/}"
->>>>>>> Stashed changes
           provider="${provider#https://iam.googleapis.com/}"
-          provider="${provider#//iam.googleapis.com/}"
           provider="${provider#iam.googleapis.com/}"
           if [[ "$provider" != projects/*/locations/global/workloadIdentityPools/*/providers/* ]]; then
             echo "GCP_WIF_PROVIDER is not a canonical provider resource; using ${default_provider}" >&2

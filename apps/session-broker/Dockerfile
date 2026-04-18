@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for service
-RUN useradd -m -u 1000 session-broker
+RUN useradd -m -u 10001 session-broker
 
 WORKDIR /app
 

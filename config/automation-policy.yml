@@ -1,0 +1,61 @@
+# @file        config/automation-policy.yml
+# @module      policy/automation
+# @description Cross-repo automation policy gate — controls which repos, actions, and batches
+#              are allowed. Read by all automation scripts at startup.
+#
+# Override: set AUTOMATION_POLICY_BREAK_GLASS=1 with a reason in BREAK_GLASS_REASON env var.
+# All break-glass executions are audit-logged.
+
+# ── Global defaults ────────────────────────────────────────────────────────────
+global:
+  # First run in any unlisted repo: dry-run only. Explicit allowlist required for mutations.
+  default_new_repo_mode: dry-run
+  # Maximum issues to mutate per automation run
+  max_batch_size: 50
+  # Require explicit dry-run pass before first mutation in any repo
+  require_dry_run_first: true
+  # Audit log file (appended on every mutating action)
+  audit_log: /tmp/automation-audit.log
+
+# ── Allowed repos (explicit allowlist) ────────────────────────────────────────
+# Format: "org/repo": { allowed_actions: [...] }
+allowed_repos:
+  kushin77/code-server:
+    allowed_actions:
+      - triage
+      - comment
+      - close
+      - label
+      - create_issue
+    max_batch_size: 100
+    first_run_dry_run: false   # Already established — skip mandatory first dry-run
+
+# ── Allowed action categories ─────────────────────────────────────────────────
+# Referenced by automation wrappers to validate action type before execution.
+action_categories:
+  read:
+    - list_issues
+    - view_issue
+    - list_prs
+    - view_pr
+    - get_labels
+  triage:
+    - add_label
+    - remove_label
+    - add_comment
+  mutating:
+    - close
+    - reopen
+    - create_issue
+    - edit_issue
+    - create_pr
+    - merge_pr
+
+# ── Break-glass overrides ─────────────────────────────────────────────────────
+# Explicit named users or CI identities allowed to bypass policy with logging
+break_glass:
+  allowed_actors:
+    - platform@kushnir.cloud
+    - akushnir@bioenergystrategies.com
+  # All break-glass events emit to audit log with actor + reason
+  require_reason: true

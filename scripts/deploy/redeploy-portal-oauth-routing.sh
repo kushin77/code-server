@@ -184,6 +184,10 @@ verify_remote_compose() {
 }
 
 redeploy_services() {
+    if [[ "$LOCAL_EXECUTION" == true && "$DRY_RUN" == false ]]; then
+        run_target "docker rm -f ${PORTAL_SERVICES[*]} >/dev/null 2>&1 || true"
+    fi
+
     run_target "cd '${TARGET_DEPLOY_DIR}' && COMPOSE_PROFILES=portal docker compose up -d --remove-orphans ${PORTAL_SERVICES[*]}"
     log_info "Requested idempotent portal service redeploy"
 }

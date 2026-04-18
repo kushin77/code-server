@@ -5,7 +5,6 @@
 //
 
 import * as crypto from "crypto"
-import * as jwt from "jsonwebtoken"
 import { PolicyBundleVerifier, PolicyBundle } from "../policy-bundle-verifier"
 import {
   SessionContext,
@@ -52,7 +51,7 @@ export class SessionBootstrapEnforcer {
       // Step 2: Decode and validate JWT format
       let decodedToken: any
       try {
-        decodedToken = jwt.decode(options.assertion, { complete: true })
+        decodedToken = this.decodeJwtWithoutVerification(options.assertion)
         if (!decodedToken) {
           throw new Error("Invalid JWT format")
         }
@@ -181,7 +180,7 @@ export class SessionBootstrapEnforcer {
 
     // Check if session has expired
     const now = Math.floor(Date.now() / 1000)
-    if (now > session.expires_at) {
+    if (now >= session.expires_at) {
       auditEvent.details.reason = "Session expired"
       this.sessions.delete(sessionId)
       return {
@@ -298,6 +297,36 @@ export class SessionBootstrapEnforcer {
       throw new Error("Missing required bundle fields")
     }
     return data as PolicyBundle
+  }
+
+  /**
+   * Decode a JWT payload without signature verification.
+   * The bootstrap flow delegates signature and contract validation to PolicyBundleVerifier.
+   */
+  private decodeJwtWithoutVerification(assertion: string): { header: Record<string, unknown>; payload: Record<string, any> } {
+    const segments = assertion.split(".")
+    if (segments.length < 2) {
+      throw new Error("JWT must contain header and payload segments")
+    }
+
+    const [encodedHeader, encodedPayload] = segments
+    const header = JSON.parse(Buffer.from(this.normalizeBase64Url(encodedHeader), "base64").toString("utf8")) as Record<string, unknown>
+    const payload = JSON.parse(Buffer.from(this.normalizeBase64Url(encodedPayload), "base64").toString("utf8")) as Record<string, any>
+
+    return { header, payload }
+  }
+
+  /**
+   * Convert a base64url segment into standard base64 for Buffer decoding.
+   */
+  private normalizeBase64Url(value: string): string {
+    const base64 = value.replace(/-/g, "+").replace(/_/g, "/")
+    const padding = base64.length % 4
+    if (padding === 0) {
+      return base64
+    }
+
+    return `${base64}${"=".repeat(4 - padding)}`
   }
 
   /**

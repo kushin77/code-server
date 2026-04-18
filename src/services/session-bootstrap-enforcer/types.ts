@@ -6,6 +6,8 @@
 
 import { PolicyBundle, IdentityAssertion, FailSafeMode } from "../policy-bundle-verifier"
 
+export { FailSafeMode } from "../policy-bundle-verifier"
+
 /**
  * Session context with authentication and policy state.
  * Created at code-server startup after assertion validation.

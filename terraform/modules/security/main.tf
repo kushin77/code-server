@@ -255,7 +255,7 @@ resource "kubernetes_deployment" "vault" {
           args = local.vault_is_dev ? [
             "server",
             "-dev"
-          ] : [
+            ] : [
             "server",
             "-config=/vault/config/vault.hcl"
           ]

@@ -180,7 +180,7 @@ resource "kubernetes_deployment" "external_dns" {
 
           # SECURITY: API token moved to env var, not command args
           env {
-            name  = "CF_API_TOKEN"
+            name = "CF_API_TOKEN"
             value_from {
               secret_key_ref {
                 name = kubernetes_secret.cloudflare_api.metadata[0].name

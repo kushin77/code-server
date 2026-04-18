@@ -160,7 +160,7 @@ resource "null_resource" "workspace_setup" {
 resource "local_file" "docker_compose_yml" {
   filename = "${path.module}/docker-compose.yml"
 
-  content = templatefile("${path.module}/docker-compose.tpl", local.docker_compose_vars)
+  content = templatefile("${path.module}/../docker-compose.tpl", local.docker_compose_vars)
 
   # Ensure workspace exists first
   depends_on = [null_resource.workspace_setup]

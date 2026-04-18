@@ -166,10 +166,20 @@ check_ssh_access() {
   fi
 
   if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
-    log_error "SSH auth failed for ${TARGET_USER}@${TARGET_HOST}."
-    log_error "Set SSH_KEY_PATH or run from target host with --mode local-on-host"
-    log_error "If running from WSL, use --ssh-bin ssh.exe to use Windows SSH agent"
-    log_fatal "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode local-on-host --fix-stale-logs'"
+    if [[ "${SSH_BIN}" == "ssh" ]] && command -v ssh.exe >/dev/null 2>&1; then
+      log_warn "Default ssh failed; retrying with ssh.exe for Windows agent compatibility"
+      SSH_BIN="ssh.exe"
+      if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
+        log_error "SSH auth failed for ${TARGET_USER}@${TARGET_HOST}."
+        log_error "Set SSH_KEY_PATH or run from target host with --mode local-on-host"
+        log_fatal "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode local-on-host --fix-stale-logs'"
+      fi
+    else
+      log_error "SSH auth failed for ${TARGET_USER}@${TARGET_HOST}."
+      log_error "Set SSH_KEY_PATH or run from target host with --mode local-on-host"
+      log_error "If running from WSL, use --ssh-bin ssh.exe to use Windows SSH agent"
+      log_fatal "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/onprem/redeploy-remote-execute.sh --mode local-on-host --fix-stale-logs'"
+    fi
   fi
 
   log_success "SSH authenticated to ${TARGET_USER}@${TARGET_HOST}"

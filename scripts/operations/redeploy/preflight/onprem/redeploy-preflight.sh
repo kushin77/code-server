@@ -28,6 +28,7 @@ EXEC_MODE="${EXEC_MODE:-auto}"
 SSH_KEY_PATH="${SSH_KEY_PATH:-}"
 SSH_BIN="${SSH_BIN:-ssh}"
 PRECHECK_SSH_TIMEOUT="${PRECHECK_SSH_TIMEOUT:-8}"
+PRECHECK_COMMAND_TIMEOUT="${PRECHECK_COMMAND_TIMEOUT:-90}"
 FIX_STALE_LOGS="false"
 MAX_LOG_TAIL_AGE_SEC="${MAX_LOG_TAIL_AGE_SEC:-3600}"
 
@@ -46,7 +47,7 @@ Options:
   -h, --help         Show this help text.
 
 Environment:
-  TARGET_HOST, TARGET_USER, TARGET_REPO, EXEC_MODE, SSH_KEY_PATH, SSH_BIN, PRECHECK_SSH_TIMEOUT, MAX_LOG_TAIL_AGE_SEC
+  TARGET_HOST, TARGET_USER, TARGET_REPO, EXEC_MODE, SSH_KEY_PATH, SSH_BIN, PRECHECK_SSH_TIMEOUT, PRECHECK_COMMAND_TIMEOUT, MAX_LOG_TAIL_AGE_SEC
 EOF
 }
 
@@ -119,11 +120,22 @@ remote() {
   fi
 
   if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
-    log_error "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
-    log_error "Set SSH_KEY_PATH or run with --mode local-on-host directly on target host"
-    log_error "If running from WSL, use --ssh-bin ssh.exe to use Windows SSH agent"
-    log_error "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs'"
-    return 1
+    if [[ "${SSH_BIN}" == "ssh" ]] && command -v ssh.exe >/dev/null 2>&1; then
+      log_warn "Default ssh failed; retrying with ssh.exe for Windows agent compatibility"
+      SSH_BIN="ssh.exe"
+      if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
+        log_error "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
+        log_error "Set SSH_KEY_PATH or run with --mode local-on-host directly on target host"
+        log_error "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs'"
+        return 1
+      fi
+    else
+      log_error "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
+      log_error "Set SSH_KEY_PATH or run with --mode local-on-host directly on target host"
+      log_error "If running from WSL, use --ssh-bin ssh.exe to use Windows SSH agent"
+      log_error "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs'"
+      return 1
+    fi
   fi
 
   "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "$cmd"
@@ -159,7 +171,33 @@ check_remote_baseline() {
 emit_remote_fingerprint() {
   log_section "Remote Runtime Fingerprint"
 
-  remote "set -e; echo host=$(hostname); echo user=$(whoami); echo kernel=$(uname -sr); echo bash=$(bash --version | head -1); echo git=$(git --version); echo docker=$(docker --version 2>/dev/null || echo 'missing'); if command -v docker-compose >/dev/null 2>&1; then echo compose_cmd=docker-compose; echo compose_version=$(docker-compose version --short 2>/dev/null || docker-compose version 2>/dev/null | head -1); elif docker compose version >/dev/null 2>&1; then echo compose_cmd='docker compose'; echo compose_version=$(docker compose version --short 2>/dev/null || docker compose version 2>/dev/null | head -1); else echo compose_cmd=missing; fi" | sed 's/^/[fingerprint] /'
+  local fingerprint_cmd
+  fingerprint_cmd=$(cat <<'EOF'
+set -e
+echo "host=$(hostname)"
+echo "user=$(whoami)"
+echo "kernel=$(uname -sr)"
+echo "bash=$(bash --version | head -1)"
+echo "git=$(git --version)"
+if command -v docker >/dev/null 2>&1; then
+  echo "docker=$(docker --version 2>/dev/null || echo missing)"
+else
+  echo "docker=missing"
+fi
+
+if command -v docker-compose >/dev/null 2>&1; then
+  echo "compose_cmd=docker-compose"
+  echo "compose_version=$(docker-compose version --short 2>/dev/null || docker-compose version 2>/dev/null | head -1)"
+elif docker compose version >/dev/null 2>&1; then
+  echo "compose_cmd=docker compose"
+  echo "compose_version=$(docker compose version --short 2>/dev/null || docker compose version 2>/dev/null | head -1)"
+else
+  echo "compose_cmd=missing"
+fi
+EOF
+)
+
+  remote "$fingerprint_cmd" | sed 's/^/[fingerprint] /'
 }
 
 check_redeploy_safety() {
@@ -180,7 +218,7 @@ check_redeploy_safety() {
     return 1
   fi
 
-  if ! remote "cd ${TARGET_REPO} && (docker-compose config >/dev/null 2>&1 || docker compose config >/dev/null 2>&1)"; then
+  if ! remote "cd ${TARGET_REPO} && if command -v timeout >/dev/null 2>&1; then timeout ${PRECHECK_COMMAND_TIMEOUT}s bash -lc '(docker-compose config >/dev/null 2>&1 || docker compose config >/dev/null 2>&1)'; else (docker-compose config >/dev/null 2>&1 || docker compose config >/dev/null 2>&1); fi"; then
     log_error "Compose configuration validation failed in execution environment"
     log_error "Ensure Docker/Compose is installed and reachable in the target runtime"
     log_error "For production validation, run from 192.168.168.31 with --mode local-on-host"
@@ -189,7 +227,7 @@ check_redeploy_safety() {
   log_success "Compose configuration renders successfully"
 
   local compose_ps_output
-  if compose_ps_output=$(remote "cd ${TARGET_REPO} && (docker-compose ps || docker compose ps)" 2>&1); then
+  if compose_ps_output=$(remote "cd ${TARGET_REPO} && if command -v timeout >/dev/null 2>&1; then timeout ${PRECHECK_COMMAND_TIMEOUT}s bash -lc '(docker-compose ps || docker compose ps)'; else (docker-compose ps || docker compose ps); fi" 2>&1); then
     echo "${compose_ps_output}" | sed 's/^/[compose] /'
     if echo "${compose_ps_output}" | grep -Eqi "could not be found in this WSL 2 distro|cannot connect to the docker daemon|error during connect"; then
       log_error "Compose process inspection indicates Docker is unavailable in runtime"

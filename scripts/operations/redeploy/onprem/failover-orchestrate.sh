@@ -177,8 +177,32 @@ check_reachability() {
   local -a args
   mapfile -t args < <(ssh_common_args)
   if ! "$SSH_BIN" "${args[@]}" "${TARGET_USER}@${host}" "echo OK" >/dev/null 2>&1; then
-    log_fatal "SSH reachability failed for ${TARGET_USER}@${host}"
+    if [[ "${SSH_BIN}" == "ssh" ]] && command -v ssh.exe >/dev/null 2>&1; then
+      log_warn "Default ssh failed; retrying with ssh.exe for Windows agent compatibility"
+      SSH_BIN="ssh.exe"
+      if ! "$SSH_BIN" "${args[@]}" "${TARGET_USER}@${host}" "echo OK" >/dev/null 2>&1; then
+        log_fatal "SSH reachability failed for ${TARGET_USER}@${host}"
+      fi
+    else
+      log_fatal "SSH reachability failed for ${TARGET_USER}@${host}"
+    fi
   fi
+}
+
+replica_ingress_health() {
+  local attempts=3
+  local i=0
+
+  for i in $(seq 1 "$attempts"); do
+    if run_replica_cmd "curl --max-time 5 -fsS http://127.0.0.1:18080/oauth2/start?rd=/ >/dev/null"; then
+      echo healthy
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo unhealthy
+  return 1
 }
 
 acquire_lock() {
@@ -263,7 +287,13 @@ run_replica_promote() {
 EOF
 docker rm -f caddy-replica >/dev/null 2>&1 || true
 docker run -d --name caddy-replica --restart unless-stopped --network docker_enterprise -p 18080:80 -v /tmp/Caddyfile.replica:/etc/caddy/Caddyfile:ro caddy:2.7.6 >/dev/null
-curl -fsS http://127.0.0.1:18080/oauth2/start?rd=/ >/dev/null"
+for i in \$(seq 1 15); do
+  if curl -fsS http://127.0.0.1:18080/oauth2/start?rd=/ >/dev/null; then
+    exit 0
+  fi
+  sleep 2
+done
+exit 1"
 }
 
 status_report() {
@@ -273,7 +303,7 @@ status_report() {
   log_info "Active host marker: ${active_marker}"
   log_info "Primary health: $(primary_health)"
   log_info "Replica health: $(replica_health)"
-  log_info "Replica ingress check: $(run_replica_cmd "curl -fsS http://127.0.0.1:18080/oauth2/start?rd=/ >/dev/null && echo healthy || echo unhealthy")"
+  log_info "Replica ingress check: $(replica_ingress_health || true)"
 }
 
 promote_replica() {

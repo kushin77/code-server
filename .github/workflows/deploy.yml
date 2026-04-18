@@ -87,7 +87,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Download Plan
-        uses: actions/download-artifact@c850b930e6ba138408f3ff43c5d5be350b7ade31  # v4.1.7
+        uses: actions/download-artifact@v4
         with:
           name: tfplan
 
@@ -107,7 +107,7 @@ jobs:
 
       - name: Slack Notification
         if: success()
-        uses: slackapi/slack-github-action@70ad2a2e4fa87cb48e2667e6f3b2e24b34c22cec  # v1.25.0
+        uses: slackapi/slack-github-action@v1.25.0
         with:
           payload: |
             {
@@ -156,7 +156,7 @@ jobs:
 
       - name: Slack Notification
         if: success()
-        uses: slackapi/slack-github-action@70ad2a2e4fa87cb48e2667e6f3b2e24b34c22cec  # v1.25.0
+        uses: slackapi/slack-github-action@v1.25.0
         with:
           payload: |
             {

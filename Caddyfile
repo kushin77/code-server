@@ -15,10 +15,12 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     # Deterministic auth bootstrap for apex host: avoid oauth2-proxy 403 landing
     # and route users directly into the OAuth start flow when no portal cookie exists.
     @no_portal_cookie {
-        not path /health /healthz /ping /oauth2 /oauth2/* /auth/reset /logout /signout /ide
-        not header Cookie *_oauth2_proxy_portal=*
+        path_regexp portal_protected ^/(?!health$|healthz$|ping$|oauth2(?:/.*)?$|auth/reset$|logout$|signout$|ide$).*
+        not header_regexp portal_cookie Cookie (?i)_oauth2_proxy_portal=
     }
-    redir @no_portal_cookie /oauth2/start?rd=https://kushnir.cloud/ 302
+    handle @no_portal_cookie {
+        redir /oauth2/start?rd=https://kushnir.cloud/ 302
+    }
 
     # Portal-first gate: require a valid portal cookie before allowing IDE host access.
     # This keeps ide.kushnir.cloud out of the normal public entry path.

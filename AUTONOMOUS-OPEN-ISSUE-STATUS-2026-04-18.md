@@ -6,6 +6,9 @@ This file is the authoritative repo-side execution ledger for the remaining open
 
 Use this document for autonomous agent work selection and issue hygiene.
 
+Canonical machine-readable companion:
+- `config/issues/agent-execution-manifest.json`
+
 ## Rules
 
 - GitHub label priority (`P1`, `P2`, `P3`) is authoritative.

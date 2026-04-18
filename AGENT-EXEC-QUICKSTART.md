@@ -2,6 +2,9 @@
 
 Status: Active as of April 18, 2026
 
+Canonical machine-readable execution source:
+- `config/issues/agent-execution-manifest.json`
+
 This guide is the current source of truth for autonomous issue execution in this repository.
 
 ## What To Do First
@@ -44,6 +47,7 @@ This guide is the current source of truth for autonomous issue execution in this
 
 Live source of truth:
 - `gh issue list --state open --limit 50`
+- `python3 scripts/ops/issue_execution_manifest.py queue`
 - If issue titles change, prefer GitHub state over static text.
 
 ## Execution Rules
@@ -77,6 +81,7 @@ gh pr create --title "feat(platform): implement foundation contract gate" --body
 
 ```bash
 GITHUB_TOKEN="<token>" bash scripts/ops/triage-issues-autonomous.sh
+python3 scripts/ops/issue_execution_manifest.py validate
 ```
 
 Expected result:

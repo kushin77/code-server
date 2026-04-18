@@ -1,0 +1,753 @@
+{
+  "version": 1,
+  "generatedAt": "2026-04-18",
+  "sourceDocuments": [
+    "ACCEPTANCE-CRITERIA-BY-ISSUE.md",
+    "AGENT-TRIAGE-APRIL-18-2026.md",
+    "AGENT-EXEC-QUICKSTART.md",
+    "AUTONOMOUS-OPEN-ISSUE-STATUS-2026-04-18.md"
+  ],
+  "issues": [
+    {
+      "number": 291,
+      "title": "VSCode crash RCA and stability tracking",
+      "class": "tracker",
+      "lane": "stability",
+      "priority": "Persistent",
+      "status": "persistent",
+      "branchType": "ops",
+      "closePolicy": "never",
+      "dependencies": [],
+      "executionBrief": "Maintain recurring RCA evidence, trend metrics, and links to mitigation issues without blocking unrelated delivery.",
+      "evidence": [
+        "RCA update with incident evidence",
+        "Trend metrics covering frequency, severity, and MTTR",
+        "Links to mitigation implementation issues"
+      ]
+    },
+    {
+      "number": 627,
+      "title": "Enterprise IDE policy rollout epic",
+      "class": "epic",
+      "lane": "ai-governance",
+      "priority": "P2",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "children-only",
+      "dependencies": [628, 629, 630, 631, 632],
+      "executionBrief": "Close only after the remaining AI entitlement, contract, promotion, routing, and access-control issues have merged evidence and verification.",
+      "evidence": [
+        "Child issue evidence linked from the epic",
+        "Policy rollout summary with operational verification"
+      ]
+    },
+    {
+      "number": 628,
+      "title": "Repo-aware AI pipeline",
+      "class": "implementation",
+      "lane": "ai-governance",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Finish governed repository-aware retrieval with measurable evaluation, freshness, and access-control proof.",
+      "remainingGaps": [
+        "Add explicit evaluation set",
+        "Capture freshness metrics",
+        "Validate retrieval access controls end to end"
+      ],
+      "evidence": [
+        "Evaluation output checked into repo or linked from CI",
+        "Freshness metric definition and sample report",
+        "Access-control validation evidence"
+      ]
+    },
+    {
+      "number": 629,
+      "title": "Cross-repo contract and compatibility matrix",
+      "class": "implementation",
+      "lane": "ai-governance",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [628],
+      "executionBrief": "Complete the cross-repo contract with CI validation and a compatibility matrix that agents can enforce.",
+      "remainingGaps": [
+        "Publish contract documentation",
+        "Add CI validation for contract conformance",
+        "Verify release handshake and compatibility matrix"
+      ],
+      "evidence": [
+        "Contract document linked from issue",
+        "CI job output proving validation",
+        "Compatibility matrix verification output"
+      ]
+    },
+    {
+      "number": 630,
+      "title": "Model promotion gates",
+      "class": "implementation",
+      "lane": "ai-governance",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "ci",
+      "closePolicy": "standard",
+      "dependencies": [629],
+      "executionBrief": "Turn model promotion policy into enforced gates with canary evidence and postmortem feedback loops.",
+      "remainingGaps": [
+        "Publish promotion policy documentation",
+        "Enforce promotion checks in CI",
+        "Define canary evidence and postmortem loop"
+      ],
+      "evidence": [
+        "CI enforcement output",
+        "Canary evidence template and sample",
+        "Postmortem feedback path documented in code or runbook"
+      ]
+    },
+    {
+      "number": 631,
+      "title": "Replica GPU routing and failover",
+      "class": "implementation",
+      "lane": "ai-governance",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [628],
+      "executionBrief": "Prove GPU replica routing and failover across both production hosts with repeatable validation.",
+      "remainingGaps": [
+        "Validate host behavior on .31",
+        "Validate host behavior on .42",
+        "Publish failover proof"
+      ],
+      "evidence": [
+        "Host validation output for both replicas",
+        "Failover and recovery proof",
+        "Operational runbook link"
+      ]
+    },
+    {
+      "number": 632,
+      "title": "Secretsless AI access",
+      "class": "implementation",
+      "lane": "ai-governance",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [628, 629, 630],
+      "executionBrief": "Verify per-user secretsless provisioning and quota enforcement as real, auditable behavior.",
+      "remainingGaps": [
+        "Run end-to-end per-user provisioning validation",
+        "Prove quota enforcement"
+      ],
+      "evidence": [
+        "Provisioning validation evidence",
+        "Quota enforcement test output",
+        "Audit trail proving secretsless access"
+      ]
+    },
+    {
+      "number": 633,
+      "title": "Dedicated E2E service account",
+      "class": "implementation",
+      "lane": "autopilot-e2e",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Replace scaffolding with a real service-account OAuth path and production validation evidence.",
+      "remainingGaps": [
+        "Implement the real OAuth service-account flow",
+        "Source secrets correctly",
+        "Capture production validation proof"
+      ],
+      "evidence": [
+        "Working service-account authentication path",
+        "Secret sourcing proof without hardcoding",
+        "Production validation output"
+      ]
+    },
+    {
+      "number": 634,
+      "title": "Production endpoint E2E testing program epic",
+      "class": "epic",
+      "lane": "autopilot-e2e",
+      "priority": "P2",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "children-only",
+      "dependencies": [633, 635, 636, 637],
+      "executionBrief": "Close only after the service-account, VPN gate, regression profile, and deterministic automation lane all have validated evidence.",
+      "evidence": [
+        "Child issue evidence linked from the epic",
+        "E2E program summary with operator sign-off"
+      ]
+    },
+    {
+      "number": 635,
+      "title": "VPN-only testing path",
+      "class": "implementation",
+      "lane": "autopilot-e2e",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "ci",
+      "closePolicy": "standard",
+      "dependencies": [633],
+      "executionBrief": "Integrate the VPN gate into CI and operator preflight so production-only tests cannot leak to the public path.",
+      "remainingGaps": [
+        "Integrate the VPN gate into CI",
+        "Validate operator workflow"
+      ],
+      "evidence": [
+        "CI job output showing VPN gate enforcement",
+        "Operator validation steps and proof"
+      ]
+    },
+    {
+      "number": 636,
+      "title": "Dedicated service-account feature profile and regression coverage",
+      "class": "implementation",
+      "lane": "autopilot-e2e",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [633, 637],
+      "executionBrief": "Turn the service-account profile into a maintained regression contract with release-gate coverage.",
+      "remainingGaps": [
+        "Publish the full regression matrix",
+        "Define ownership model",
+        "Add release-gate coverage"
+      ],
+      "evidence": [
+        "Regression matrix committed in repo",
+        "Ownership and release-gate documentation",
+        "Validation output for profile-driven tests"
+      ]
+    },
+    {
+      "number": 637,
+      "title": "Deterministic browser automation kit",
+      "class": "implementation",
+      "lane": "autopilot-e2e",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Finish the deterministic browser automation kit with fallback policy, shared fixtures, and artifact standards.",
+      "remainingGaps": [
+        "Define fallback policy",
+        "Create shared fixtures",
+        "Set artifact standards and runbook"
+      ],
+      "evidence": [
+        "Shared fixtures committed",
+        "Artifact standard documented in repo",
+        "Runbook or CI output proving deterministic runs"
+      ]
+    },
+    {
+      "number": 639,
+      "title": "Autopilot setup-state drift epic",
+      "class": "epic",
+      "lane": "setup-state",
+      "priority": "P2",
+      "status": "open",
+      "branchType": "fix",
+      "closePolicy": "children-only",
+      "dependencies": [640, 641],
+      "executionBrief": "Close only after the RCA and reconciler issues have reproducible evidence, recovery guidance, and regression coverage.",
+      "evidence": [
+        "Child issue evidence linked from the epic",
+        "Drift-control summary with recovery validation"
+      ]
+    },
+    {
+      "number": 640,
+      "title": "Autopilot setup-state RCA",
+      "class": "implementation",
+      "lane": "setup-state",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Finish the setup-state root-cause analysis with a reproducible matrix, evidence bundle, and regression taxonomy.",
+      "remainingGaps": [
+        "Create reproducible matrix",
+        "Publish evidence bundle",
+        "Define regression reason codes"
+      ],
+      "evidence": [
+        "Reproduction matrix committed or linked from CI",
+        "Evidence bundle with failure signatures",
+        "Regression definition in code or docs"
+      ]
+    },
+    {
+      "number": 641,
+      "title": "Setup-state reconciler and self-healing",
+      "class": "implementation",
+      "lane": "setup-state",
+      "priority": "P2",
+      "status": "partial",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [640],
+      "executionBrief": "Complete the reconciler with validated timing, telemetry, and scenario proof so it is safe to run autonomously.",
+      "remainingGaps": [
+        "Publish runbook",
+        "Validate startup timing",
+        "Wire telemetry and capture scenario proof"
+      ],
+      "evidence": [
+        "Runbook linked from issue",
+        "Timing validation output",
+        "Telemetry and scenario proof"
+      ]
+    },
+    {
+      "number": 659,
+      "title": "Program: Production transition (monorepo + code-server co-dev + active-active reliability)",
+      "class": "program",
+      "lane": "program",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "children-only",
+      "dependencies": [660, 661, 662, 663, 664, 665, 666, 667, 668],
+      "executionBrief": "Close only after the monorepo, co-development, active-active, and production hardening epics and sprint gates are fully evidenced and linked.",
+      "evidence": [
+        "Program summary linked to merged PRs",
+        "No unresolved blocker issues in the child set"
+      ]
+    },
+    {
+      "number": 660,
+      "title": "EPIC: True monorepo and pnpm migration",
+      "class": "epic",
+      "lane": "monorepo",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "children-only",
+      "dependencies": [669, 670, 671, 672],
+      "executionBrief": "Drive canonical monorepo package boundaries, lockfile discipline, deterministic entrypoints, and rollback compatibility to completion.",
+      "evidence": [
+        "Merged monorepo controls linked from epic",
+        "Validation coverage for workspace graph and lock discipline"
+      ]
+    },
+    {
+      "number": 661,
+      "title": "EPIC: code-server core plus enhancement co-development model",
+      "class": "epic",
+      "lane": "code-server-core",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "children-only",
+      "dependencies": [673, 674, 675, 676],
+      "executionBrief": "Codify ownership boundaries, dual-track validation, and reproducible contribution flow for core plus enhancement work.",
+      "evidence": [
+        "Merged co-development model artifacts",
+        "Unified validation evidence for both tracks"
+      ]
+    },
+    {
+      "number": 662,
+      "title": "EPIC: Active-active autoscale and zero-downtime service continuity (.31/.42)",
+      "class": "epic",
+      "lane": "active-active",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "children-only",
+      "dependencies": [677, 678, 679, 680],
+      "executionBrief": "Implement a real active-active continuity model with codified traffic policy, replicated state, orchestrated deploys, and tested drills.",
+      "evidence": [
+        "Active-active topology committed as code",
+        "Failover and failback validation linked from epic"
+      ]
+    },
+    {
+      "number": 663,
+      "title": "EPIC: Release engineering and operational hardening for production mode",
+      "class": "epic",
+      "lane": "release",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "children-only",
+      "dependencies": [681, 682, 683, 687, 688],
+      "executionBrief": "Complete release engineering, production hardening, verification, rollback, and urgent unblock items before closing the production-mode epic.",
+      "evidence": [
+        "Release and hardening artifacts linked from epic",
+        "Regression guard evidence for release-path failures"
+      ]
+    },
+    {
+      "number": 664,
+      "title": "Sprint Gate: Monorepo foundation approved",
+      "class": "gate",
+      "lane": "monorepo",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [660, 669, 670, 671],
+      "executionBrief": "Prove the foundation artifacts, stable layout, and exit criteria for the monorepo baseline.",
+      "evidence": [
+        "Foundation artifacts approved and merged",
+        "Gate exit evidence posted with validation commands"
+      ]
+    },
+    {
+      "number": 665,
+      "title": "Sprint Gate: Monorepo migration execution complete",
+      "class": "gate",
+      "lane": "monorepo",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [660, 670, 671, 672],
+      "executionBrief": "Demonstrate successful monorepo migration in CI and local workflow with rollback and recovery proof.",
+      "evidence": [
+        "Migration validation output",
+        "Rollback and recovery documentation"
+      ]
+    },
+    {
+      "number": 666,
+      "title": "Sprint Gate: code-server co-development pipeline proven",
+      "class": "gate",
+      "lane": "code-server-core",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "ci",
+      "closePolicy": "standard",
+      "dependencies": [661, 673, 674, 675, 676],
+      "executionBrief": "Prove that core and enhancement changes pass through one reproducible, validated pipeline with failure handling.",
+      "evidence": [
+        "Unified pipeline validation output",
+        "Rollback or failure-handling verification"
+      ]
+    },
+    {
+      "number": 667,
+      "title": "Sprint Gate: Active-active autoscale and failover drills passed",
+      "class": "gate",
+      "lane": "active-active",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [662, 677, 678, 679, 680],
+      "executionBrief": "Run and evidence autoscale, failover, and failback drills with measurable continuity KPIs.",
+      "evidence": [
+        "Load and drill evidence",
+        "Before and after continuity KPI report"
+      ]
+    },
+    {
+      "number": 668,
+      "title": "Sprint Gate: Production cutover and SLO sign-off complete",
+      "class": "gate",
+      "lane": "release",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [663, 681, 682, 683, 688],
+      "executionBrief": "Only close after cutover, SLO sign-off, and residual-risk handling are all linked to merged rollout evidence.",
+      "evidence": [
+        "Production cutover checklist",
+        "SLO sign-off evidence",
+        "Residual risk register or exception list"
+      ]
+    },
+    {
+      "number": 669,
+      "title": "Define monorepo target architecture and package boundaries",
+      "class": "implementation",
+      "lane": "monorepo",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Lock the target monorepo architecture, package graph, and ownership boundaries so later migrations do not drift.",
+      "evidence": [
+        "Canonical architecture artifacts committed",
+        "Package boundary validation or review evidence"
+      ]
+    },
+    {
+      "number": 670,
+      "title": "Bootstrap pnpm workspace and lockfile governance",
+      "class": "implementation",
+      "lane": "monorepo",
+      "priority": "P1",
+      "status": "closed",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Closed item retained in the manifest because downstream issues depend on the workspace and lockfile baseline.",
+      "evidence": [
+        "pnpm workspace baseline landed",
+        "Lockfile governance validation in CI"
+      ]
+    },
+    {
+      "number": 671,
+      "title": "Refactor repository layout into apps/packages/infra structure",
+      "class": "implementation",
+      "lane": "monorepo",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "refactor",
+      "closePolicy": "standard",
+      "dependencies": [669, 670],
+      "executionBrief": "Complete the canonical apps and infra layout, keep only necessary compatibility shims, and validate references across CI and runtime paths.",
+      "evidence": [
+        "Stable apps and infra roots committed",
+        "Workspace-aware validation output showing no broken references"
+      ]
+    },
+    {
+      "number": 672,
+      "title": "Migrate CI to pnpm workspace-aware pipelines",
+      "class": "implementation",
+      "lane": "monorepo",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "ci",
+      "closePolicy": "standard",
+      "dependencies": [670, 671],
+      "executionBrief": "Move CI to deterministic pnpm workspace-aware execution and remove root-layout assumptions.",
+      "evidence": [
+        "Workspace-aware CI jobs committed",
+        "Validation output for build, test, and lint entrypoints"
+      ]
+    },
+    {
+      "number": 673,
+      "title": "Define upstream fork/sync operating model for code-server",
+      "class": "implementation",
+      "lane": "code-server-core",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "docs",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Define how upstream code-server sync, ownership boundaries, and downstream enhancement work interact operationally.",
+      "evidence": [
+        "Fork and sync operating model committed",
+        "Validation or runbook references for sync workflow"
+      ]
+    },
+    {
+      "number": 674,
+      "title": "Build dual-track CI: upstream validation and enhancement regression",
+      "class": "implementation",
+      "lane": "code-server-core",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "ci",
+      "closePolicy": "standard",
+      "dependencies": [673],
+      "executionBrief": "Add CI that separately validates upstream-sync integrity and downstream enhancement regressions.",
+      "evidence": [
+        "Dual-track CI definitions committed",
+        "Validation output for both tracks"
+      ]
+    },
+    {
+      "number": 675,
+      "title": "Create compatibility contract tests for core workstation workflows",
+      "class": "implementation",
+      "lane": "code-server-core",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [673, 674],
+      "executionBrief": "Codify compatibility contract tests for the highest-value workstation workflows that must survive upstream syncs.",
+      "evidence": [
+        "Contract tests committed",
+        "Regression output for core workflows"
+      ]
+    },
+    {
+      "number": 676,
+      "title": "Document enhancement module boundaries and extension points",
+      "class": "implementation",
+      "lane": "code-server-core",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "docs",
+      "closePolicy": "standard",
+      "dependencies": [673],
+      "executionBrief": "Document extension points and module boundaries so enhancement work stays isolated from upstream core changes.",
+      "evidence": [
+        "Module-boundary documentation committed",
+        "Reference implementation or tests proving extension points"
+      ]
+    },
+    {
+      "number": 677,
+      "title": "Implement traffic policy for .31/.42 active-active routing",
+      "class": "implementation",
+      "lane": "active-active",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Implement a real traffic-routing policy that can safely distribute or fail over user traffic between .31 and .42.",
+      "evidence": [
+        "Routing policy committed as code",
+        "Validation output for distribution and failover behavior"
+      ]
+    },
+    {
+      "number": 678,
+      "title": "Externalize and replicate runtime state for seamless failover",
+      "class": "implementation",
+      "lane": "active-active",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [677],
+      "executionBrief": "Move state out of singleton runtimes and replicate it so failover does not drop sessions or identity context.",
+      "evidence": [
+        "Replicated runtime state architecture committed",
+        "Failover validation output"
+      ]
+    },
+    {
+      "number": 679,
+      "title": "Build zero-downtime deploy orchestration with health gates",
+      "class": "implementation",
+      "lane": "active-active",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [677, 678],
+      "executionBrief": "Create idempotent deploy orchestration with explicit health gates and rollback-safe transitions.",
+      "evidence": [
+        "Deploy orchestration committed",
+        "Health-gate and rollback validation output"
+      ]
+    },
+    {
+      "number": 680,
+      "title": "Run resilience drills and publish active-active production runbook",
+      "class": "implementation",
+      "lane": "active-active",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "docs",
+      "closePolicy": "standard",
+      "dependencies": [677, 678, 679],
+      "executionBrief": "Run resilience drills against the active-active controls and publish the operational runbook with measured outcomes.",
+      "evidence": [
+        "Resilience drill results",
+        "Production runbook committed"
+      ]
+    },
+    {
+      "number": 681,
+      "title": "Define production release train and promotion policies",
+      "class": "implementation",
+      "lane": "release",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "docs",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Define the release train, promotion cadence, and approval model for production mode.",
+      "evidence": [
+        "Release train artifacts committed",
+        "Promotion policy linked to operational workflow"
+      ]
+    },
+    {
+      "number": 682,
+      "title": "Implement automated pre/post deploy verification gates",
+      "class": "implementation",
+      "lane": "release",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "ci",
+      "closePolicy": "standard",
+      "dependencies": [679, 681],
+      "executionBrief": "Automate pre-deploy and post-deploy verification so release promotion is evidence-based and reproducible.",
+      "evidence": [
+        "Verification gates committed",
+        "Automated validation output for both sides of deployment"
+      ]
+    },
+    {
+      "number": 683,
+      "title": "Create rollback validation suite and game-day checklist",
+      "class": "implementation",
+      "lane": "release",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "feat",
+      "closePolicy": "standard",
+      "dependencies": [679, 682],
+      "executionBrief": "Create a rollback validation suite and operator checklist that makes failure recovery routine instead of ad hoc.",
+      "evidence": [
+        "Rollback validation suite committed",
+        "Game-day checklist and sample execution proof"
+      ]
+    },
+    {
+      "number": 687,
+      "title": "P1: Stabilize CI gates for monorepo refactor branch",
+      "class": "unblock",
+      "lane": "monorepo",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [670, 671, 672],
+      "executionBrief": "Stabilize the monorepo refactor branch CI gates so downstream issue work is not blocked by nondeterministic validation failures.",
+      "evidence": [
+        "CI stabilization changes committed",
+        "Green validation across affected jobs"
+      ]
+    },
+    {
+      "number": 688,
+      "title": "P0: Unblock production portal OAuth callback redeploy",
+      "class": "unblock",
+      "lane": "release",
+      "priority": "P0",
+      "status": "partial",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Portal OAuth redeploy automation is now discoverable and documented. Automation exists and validates correctly in dry-run. Remaining: production runtime evidence of successful callback redeploy.",
+      "evidence": [
+        "Redeploy script: scripts/deploy/redeploy-portal-oauth-routing.sh (validated in dry-run)",
+        "GitHub workflow: .github/workflows/portal-oauth-redeploy.yml (split callback logic)",
+        "Discoverable command: pnpm redeploy:portal-oauth (package.json)",
+        "docker-compose.yml commented with issue #688 and dual callback URLs",
+        "Dry-run validation passed: curl -skI https://kushnir.cloud/oauth2/start confirms apex callback",
+        "Production runtime evidence: Still needed (run actual redeploy on .31)"
+      ]
+    }
+  ]
+}

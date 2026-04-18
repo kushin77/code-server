@@ -218,8 +218,10 @@ services:
         max-file: "3"
 
   # ────────────────────────────────────────────────────────────────────────────
-  # oauth2-proxy-portal — Google OIDC gate for kushnir.cloud portal
-  # Shared cookie domain enables SSO across kushnir.cloud and ide.kushnir.cloud
+  # oauth2-proxy-portal — Google OIDC gate for kushnir.cloud portal (via Appsmith)
+  # Issue #688: Split OAuth callback — enables separate redirect URLs for apex vs. IDE
+  # Redeploy: pnpm redeploy:portal-oauth OR manually trigger portal-oauth-redeploy.yml
+  # Callback: https://kushnir.cloud/oauth2/callback (different from IDE: https://ide.kushnir.cloud/oauth2/callback)
   # ────────────────────────────────────────────────────────────────────────────
   oauth2-proxy-portal:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1

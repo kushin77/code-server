@@ -21,6 +21,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
+      - name: Validate issue execution manifest
+        run: |
+          set -euo pipefail
+          python3 scripts/ops/issue_execution_manifest.py validate
+
       - name: Run autonomous triage script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,9 @@
 name: Portal OAuth Redeploy
 
+# Issue #688: Production portal OAuth callback redeploy automation
+# Syncs docker-compose.yml to production host and redeploysvservices with split redirect URLs
+# Apex (kushnir.cloud) vs. IDE (ide.kushnir.cloud) share cookie domain but use distinct OAuth callbacks
+
 on:
   workflow_dispatch:
     inputs:

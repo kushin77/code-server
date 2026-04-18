@@ -14,11 +14,19 @@ source "${REPO_ROOT}/scripts/lib/automation-policy-gate.sh"
 GH_OWNER="kushin77"
 GH_REPO="code-server"
 API_BASE="https://api.github.com/repos/${GH_OWNER}/${GH_REPO}"
-MARKER="[agent-autonomy-ready-v1]"
+MARKER="[agent-autonomy-ready-v2]"
 AGENT_READY_LABEL="agent-ready"
 AUTO_CLOSE_MARKER="[auto-close-by-linkage-v1]"
+MANIFEST_HELPER="${REPO_ROOT}/scripts/ops/issue_execution_manifest.py"
 
 RESOLVED_IDS_FILE="/tmp/triage-resolved-issue-ids.txt"
+
+manifest_get_field() {
+    local number="$1"
+    local field="$2"
+
+    python3 "${MANIFEST_HELPER}" get --number "${number}" --field "${field}" 2>/dev/null || true
+}
 
 resolve_token() {
     if [[ -n "${GITHUB_TOKEN:-}" ]]; then
@@ -136,8 +144,16 @@ auto_close_resolved_issue() {
         return 1
     fi
 
-    if [[ "${number}" == "291" ]]; then
+    local close_policy
+    close_policy="$(manifest_get_field "${number}" closePolicy)"
+
+    if [[ "${close_policy}" == "never" ]] || [[ "${number}" == "291" ]]; then
         log_info "Skipping auto-close for persistent tracker #291"
+        return 1
+    fi
+
+    if [[ "${close_policy}" == "children-only" ]]; then
+        log_info "Skipping auto-close for parent issue #${number} (${title})"
         return 1
     fi
 
@@ -207,23 +223,22 @@ label_needs_priority() {
     local title="$3"
     local labels="$4"
 
-    local priority="P2"
+    local priority
+    priority="$(manifest_get_field "${number}" priority)"
+
+    if [[ -z "${priority}" ]]; then
+        priority="P2"
+    fi
+
+    if [[ "${priority}" == "Persistent" ]]; then
+        log_info "Skipping priority label for persistent tracker #${number} (${title})"
+        return
+    fi
 
     # Preserve explicit critical-path signal from issue metadata.
-    if [[ "${labels}" == *"critical-path"* ]]; then
+    if [[ "${labels}" == *"critical-path"* ]] && [[ "${priority}" != "P0" ]]; then
         priority="P1"
     fi
-
-    # Current production-transition execution lane defaults.
-    if (( number >= 669 && number <= 683 )); then
-        priority="P1"
-    fi
-
-    case "${number}" in
-        623) priority="P0" ;;
-        650|652|653|655|657) priority="P1" ;;
-        651|654|613) priority="P2" ;;
-    esac
 
     cat > /tmp/triage-label.json <<EOF2
 {"labels":["${priority}"]}
@@ -262,26 +277,34 @@ post_agent_ready_comment() {
         return
     fi
 
-    MARKER_VALUE="${MARKER}" ISSUE_NUMBER="${number}" python3 - <<'PY' > /tmp/triage-comment.json
+    local comment_body
+    comment_body="$(python3 "${MANIFEST_HELPER}" comment --number "${number}" 2>/dev/null || true)"
+    if [[ -z "${comment_body}" ]]; then
+        comment_body=$(
+            cat <<EOF2
+Autonomous execution brief for agents:
+
+1. Reproduce current behavior and capture evidence in PR description.
+2. Implement minimal, immutable, idempotent change in canonical files only (no duplication).
+3. Add or adjust tests and CI checks for regression coverage.
+4. Update docs and config only where required by behavior changes.
+5. Open PR with Fixes #${number} (or Relates to #${number} for epic or meta issues), include rollout and rollback notes and verification commands.
+
+Definition of done:
+- CI green for touched scopes
+- No config drift or hardcoded secret regressions
+- IaC and deployment paths remain deterministic and reproducible
+- Evidence posted in issue and PR links back here
+EOF2
+        )
+    fi
+
+    MARKER_VALUE="${MARKER}" COMMENT_BODY="${comment_body}" python3 - <<'PY' > /tmp/triage-comment.json
 import json
 import os
 
 marker = os.environ["MARKER_VALUE"]
-issue_number = os.environ["ISSUE_NUMBER"]
-body = (
-    f"{marker}\n"
-    "Autonomous execution brief for agents:\n\n"
-    "1. Reproduce current behavior and capture evidence in PR description.\n"
-    "2. Implement minimal, immutable, idempotent change in canonical files only (no duplication).\n"
-    "3. Add/adjust tests and CI checks for regression coverage.\n"
-    "4. Update docs/config only where required by behavior changes.\n"
-    f"5. Open PR with `Fixes #{issue_number}` (or `Relates to #{issue_number}` for epic/meta issues), include rollout/rollback notes and verification commands.\n\n"
-    "Definition of done:\n"
-    "- CI green for touched scopes\n"
-    "- No config drift or hardcoded secret regressions\n"
-    "- IaC/deployment paths remain deterministic and reproducible\n"
-    "- Evidence posted in issue and PR links back here"
-)
+body = f"{marker}\n" + os.environ["COMMENT_BODY"]
 
 print(json.dumps({"body": body}))
 PY
@@ -296,6 +319,8 @@ PY
 main() {
     local token
     token=$(resolve_token)
+
+    python3 "${MANIFEST_HELPER}" validate >/dev/null
 
     prepare_resolved_issue_ids
 

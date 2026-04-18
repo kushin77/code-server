@@ -10,6 +10,7 @@ classification:
     - services/
     - operations/
   packages:
+    - packages/
     - lib/
     - libs/
     - scripts/_common/

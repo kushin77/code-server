@@ -3,6 +3,9 @@
 Date: April 18, 2026
 Status: Active
 
+Canonical machine-readable execution source:
+- `config/issues/agent-execution-manifest.json`
+
 This document is the live triage plan for autonomous implementation.
 
 ## Open Issue Set
@@ -88,6 +91,7 @@ Triage command:
 
 ```bash
 GITHUB_TOKEN="<token>" bash scripts/ops/triage-issues-autonomous.sh
+python3 scripts/ops/issue_execution_manifest.py queue
 ```
 
 Live verification command:

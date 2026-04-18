@@ -29,11 +29,7 @@ assert_contains() {
   else
     fail "$label (missing: $needle)"
   fi
-    output=$(PATH="$tmpdir:$PATH" \
-      MOCK_MODE="$mode" \
-      GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME="prod-github-token" \
-      GSM_SECRET_NAME="" \
-      $env_extra "$HELPER" get <<< "$stdin_payload" 2>&1) || status=$?
+}
 
 run_with_mock() {
   local mode="$1"
@@ -44,14 +40,6 @@ run_with_mock() {
   local tmpdir
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' RETURN
-
-  # Case 3b: Stale GSM_SECRET_NAME env cannot redefine canonical strict behavior.
-  res=$(run_with_mock "legacy" "GSM_SECRET_NAME=github-token GIT_CREDENTIAL_GSM_STRICT=true GIT_CREDENTIAL_GSM_ENV=production")
-  status=$(echo "$res" | sed -n '1p')
-  out=$(echo "$res" | sed -n '2,$p')
-  [[ "$status" != "0" ]] || fail "strict production should block stale GSM_SECRET_NAME canonical drift"
-  assert_contains "$out" "deprecated_override_used" "deprecated override warning emitted"
-  assert_contains "$out" "strict_mode_block" "strict mode still blocks non-canonical source"
 
   cat > "$tmpdir/gcloud" <<'EOS'
 #!/usr/bin/env bash
@@ -89,7 +77,6 @@ EOS
   cmd=(env "PATH=$tmpdir:$PATH" "MOCK_MODE=$mode")
 
   if [[ -n "$env_extra" ]]; then
-    # env_extra contains KEY=VALUE pairs separated by spaces.
     read -r -a extra_env <<< "$env_extra"
     cmd+=("${extra_env[@]}")
   fi
@@ -103,7 +90,7 @@ EOS
 }
 
 # Case 1: Canonical secret selected, deterministic over env fallback.
-res=$(run_with_mock "canonical" "GSM_SECRET_NAME=prod-github-token GH_TOKEN=STALE_ENV")
+res=$(run_with_mock "canonical" "GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=prod-github-token GH_TOKEN=STALE_ENV")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" == "0" ]] || fail "canonical resolution should succeed"
@@ -111,7 +98,7 @@ assert_contains "$out" "password=CANONICAL_TOKEN" "canonical token returned"
 assert_contains "$out" "canonical_secret_selected" "canonical selection telemetry emitted"
 
 # Case 2: Legacy fallback is used and logged.
-res=$(run_with_mock "legacy" "GSM_SECRET_NAME=prod-github-token")
+res=$(run_with_mock "legacy" "GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=prod-github-token")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" == "0" ]] || fail "legacy fallback should succeed in non-strict mode"
@@ -119,18 +106,26 @@ assert_contains "$out" "password=LEGACY_TOKEN" "legacy token returned"
 assert_contains "$out" "fallback_used" "fallback telemetry emitted"
 
 # Case 3: Strict production mode blocks non-canonical source.
-res=$(run_with_mock "legacy" "GSM_SECRET_NAME=prod-github-token GIT_CREDENTIAL_GSM_STRICT=true GIT_CREDENTIAL_GSM_ENV=production")
+res=$(run_with_mock "legacy" "GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=prod-github-token GIT_CREDENTIAL_GSM_STRICT=true GIT_CREDENTIAL_GSM_ENV=production")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" != "0" ]] || fail "strict production should block legacy source"
 assert_contains "$out" "strict_mode_block" "strict mode block telemetry emitted"
 
 # Case 4: Env fallback works when GSM chain exhausted.
-res=$(run_with_mock "none" "GSM_SECRET_NAME=prod-github-token GH_TOKEN=ENV_TOKEN_A GITHUB_TOKEN=ENV_TOKEN_B GIT_CREDENTIAL_GSM_ALLOW_ENV_FALLBACK=true GIT_CREDENTIAL_GSM_STRICT=false GIT_CREDENTIAL_GSM_ENV=dev")
+res=$(run_with_mock "none" "GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=prod-github-token GH_TOKEN=ENV_TOKEN_A GITHUB_TOKEN=ENV_TOKEN_B GIT_CREDENTIAL_GSM_ALLOW_ENV_FALLBACK=true GIT_CREDENTIAL_GSM_STRICT=false GIT_CREDENTIAL_GSM_ENV=dev")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" == "0" ]] || fail "env fallback should succeed when enabled"
 assert_contains "$out" "password=ENV_TOKEN_A" "deterministic env fallback precedence (GH_TOKEN first)"
 assert_contains "$out" "fallback_used" "env fallback telemetry emitted"
+
+# Case 5: Deprecated GSM_SECRET_NAME override cannot redefine strict canonical behavior.
+res=$(run_with_mock "legacy" "GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=prod-github-token GSM_SECRET_NAME=github-token GIT_CREDENTIAL_GSM_STRICT=true GIT_CREDENTIAL_GSM_ENV=production")
+status=$(echo "$res" | sed -n '1p')
+out=$(echo "$res" | sed -n '2,$p')
+[[ "$status" != "0" ]] || fail "strict production should block stale GSM_SECRET_NAME canonical drift"
+assert_contains "$out" "deprecated_override_used" "deprecated override warning emitted"
+assert_contains "$out" "strict_mode_block" "strict mode still blocks non-canonical source"
 
 log_info "All git-credential-gsm tests passed"

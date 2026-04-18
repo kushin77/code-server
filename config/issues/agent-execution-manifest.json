@@ -984,7 +984,8 @@
         "Published portal workflow run 24609258258 failed at SSH auth with Permission denied (publickey,password)",
         "Branch fix run 24609414318 reached the deploy step and failed because the runner lacked docker",
         ".github/workflows/portal-oauth-redeploy.yml now targets dedicated self-hosted portal redeploy labels with branch-scoped concurrency",
-        "Main run 24610587990 reaches google-github-actions/auth and fails with invalid_request audience for GCP_WIF_PROVIDER",
+        "Main run 24610858158 reaches google-github-actions/auth and fails with invalid_target for the canonical provider path",
+        "Local gcloud refresh is blocked by invalid_rapt, preventing direct project-number/provider lookup",
         "scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local validated successfully in workspace"
       ]
     },
@@ -998,11 +999,13 @@
       "branchType": "fix",
       "closePolicy": "standard",
       "dependencies": [],
-      "executionBrief": "Enable deterministic non-interactive GSM auth in portal-oauth-redeploy.yml by using valid workload identity provider metadata and re-validating production apply on main.",
+      "executionBrief": "Enable deterministic non-interactive GSM auth in portal-oauth-redeploy.yml by using valid workload identity provider metadata; latest run reaches auth but fails with invalid_target because the backing provider cannot be resolved from this workstation session.",
       "evidence": [
         "Issue #695 opened to track non-interactive GSM auth and ephemeral bootstrap requirements",
         "Workflow now attempts google-github-actions/auth@v2 before fetch-gsm-secrets.sh",
-        "Main run 24610587990 fails with invalid_request audience, indicating GCP_WIF_PROVIDER secret format mismatch",
+        "Main run 24610858158 fails with invalid_target for the canonical provider path",
+        "Local gcloud auth cannot refresh because of invalid_rapt, blocking provider discovery from the workstation",
+        "Canonical GCP/GSM runbook documented in docs/ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md",
         "Portal workflow execution path, Docker availability, and runner isolation are verified"
       ]
     },

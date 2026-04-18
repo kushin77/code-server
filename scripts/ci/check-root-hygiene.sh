@@ -44,6 +44,8 @@ ALLOWED_ROOT_ENTRIES=(
   .github .gitignore .gitattributes .hadolint.yaml .editorconfig
   # Canonical root directories
   scripts docs terraform config k8s extensions
+  apps lib packages infra
+  policies workspace services kubernetes operations ansible
   .vscode
   # Monitoring/alerting config entrypoints
   prometheus-production.yml alert-rules.yml alertmanager.yml

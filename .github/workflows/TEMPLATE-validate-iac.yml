@@ -56,7 +56,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: hashicorp/setup-terraform@17aaffcf42165ad5e37b7d91c75646645201a434
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd  # v3.1.2
         with:
           terraform_version: ~> 1.5.0
 

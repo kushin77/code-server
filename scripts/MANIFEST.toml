@@ -144,7 +144,7 @@ purpose  = "TODO: add purpose"
 file     = "deploy/redeploy-portal-oauth-routing.sh"
 category = "deployment"
 status   = "active"
-purpose  = "Idempotently upload canonical compose config and recreate portal OAuth routing services"
+purpose  = "idempotently redeploy portal oauth routing on the primary host"
 
 [[script]]
 file     = "deployment-validation-31.sh"

@@ -29,8 +29,9 @@ jobs:
         uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version: '20'
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable corepack
+        run: corepack enable
 
       - name: Install dependencies
         run: corepack pnpm install --frozen-lockfile --ignore-scripts

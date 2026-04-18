@@ -47,6 +47,7 @@ declare -a SKIP_DIRS=(
     "scripts/dev/check-config-drift.sh"
     "scripts/ci/detect-config-drift.sh"
     "phase-20-a1-config.yml"
+    "docker-compose.production.yml"
     "docker-compose-phase-"
     "phase-"
 )

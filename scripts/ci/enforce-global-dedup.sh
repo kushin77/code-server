@@ -36,6 +36,7 @@ readonly REFERENCE_ALLOWLIST=(
   "scripts/ci/enforce-global-dedup.sh"
   "docs/governance/GLOBAL-DEDUP-GOVERNANCE.md"
   "docs/governance/GLOBAL-DEDUP-TRIAGE.md"
+  "docs/DEDUPLICATION-POLICY.md"
 )
 
 # Determine a robust diff range for both PR and push events.

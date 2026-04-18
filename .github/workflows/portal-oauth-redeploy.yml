@@ -29,46 +29,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-      - name: Bootstrap ephemeral env file from GSM
-        shell: bash
-        env:
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          OAUTH2_PROXY_COOKIE_SECRET: ${{ secrets.OAUTH2_PROXY_COOKIE_SECRET }}
-        run: |
-          set -euo pipefail
-          if [[ -f .env ]]; then
-            echo "DEPLOY_ENV_CREATED=false" >> "$GITHUB_ENV"
-            echo "DEPLOY_ENV_SOURCE=existing" >> "$GITHUB_ENV"
-            echo "Using existing .env from runner workspace"
-            exit 0
-          fi
-
-          if command -v gcloud >/dev/null 2>&1 && bash scripts/fetch-gsm-secrets.sh > .env; then
-            chmod 600 .env
-            echo "DEPLOY_ENV_CREATED=true" >> "$GITHUB_ENV"
-            echo "DEPLOY_ENV_SOURCE=gsm" >> "$GITHUB_ENV"
-            echo "Generated ephemeral .env from GSM secrets"
-            exit 0
-          fi
-
-          # Fallback for ephemeral runners without GSM auth: use GitHub environment secrets.
-          if [[ -z "${GOOGLE_CLIENT_ID:-}" || -z "${GOOGLE_CLIENT_SECRET:-}" || -z "${OAUTH2_PROXY_COOKIE_SECRET:-}" ]]; then
-            echo "Unable to build .env: GSM fetch failed and required GitHub secrets are missing" >&2
-            exit 1
-          fi
-
-          {
-            echo "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}"
-            echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}"
-            echo "OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}"
-          } > .env
-
-          chmod 600 .env
-          echo "DEPLOY_ENV_CREATED=true" >> "$GITHUB_ENV"
-          echo "DEPLOY_ENV_SOURCE=github-secrets" >> "$GITHUB_ENV"
-          echo "Generated ephemeral .env from GitHub environment secrets"
-
       - name: Validate callback split in source compose
         shell: bash
         run: |
@@ -116,12 +76,4 @@ jobs:
             else
               echo "- Mode: apply"
             fi
-            echo "- Env bootstrap: ${DEPLOY_ENV_SOURCE:-unknown}"
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Cleanup ephemeral env file
-        if: always() && env.DEPLOY_ENV_CREATED == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f .env

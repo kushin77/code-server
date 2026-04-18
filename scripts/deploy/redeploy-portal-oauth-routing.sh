@@ -13,6 +13,9 @@ PROJECT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCRIPT_NAME="$(basename "$0")"
 
 readonly LOCAL_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
+readonly LOCAL_ENV_PRODUCTION_FILE="${PROJECT_DIR}/.env.production"
+readonly LOCAL_ENV_DEFAULTS_FILE="${PROJECT_DIR}/.env.defaults"
+readonly LOCAL_ENV_EXAMPLE_FILE="${PROJECT_DIR}/.env.example"
 readonly REMOTE_COMPOSE_FILE="${DOCKER_COMPOSE_FILE}"
 readonly PORTAL_CALLBACK_URL="${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"
 readonly IDE_CALLBACK_URL="${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"
@@ -22,6 +25,7 @@ DRY_RUN=false
 LOCAL_EXECUTION=false
 TARGET_DEPLOY_DIR="${DEPLOY_DIR}"
 TARGET_COMPOSE_FILE="${REMOTE_COMPOSE_FILE}"
+TARGET_ENV_FILE="${TARGET_DEPLOY_DIR}/.env"
 
 usage() {
     cat <<EOF
@@ -60,6 +64,54 @@ resolve_target_paths() {
     fi
 
     TARGET_COMPOSE_FILE="${TARGET_DEPLOY_DIR}/docker-compose.yml"
+    TARGET_ENV_FILE="${TARGET_DEPLOY_DIR}/.env"
+}
+
+resolve_local_env_source() {
+    if [[ -f "$LOCAL_ENV_PRODUCTION_FILE" ]]; then
+        printf '%s\n' "$LOCAL_ENV_PRODUCTION_FILE"
+        return 0
+    fi
+
+    if [[ -f "$LOCAL_ENV_DEFAULTS_FILE" ]]; then
+        printf '%s\n' "$LOCAL_ENV_DEFAULTS_FILE"
+        return 0
+    fi
+
+    if [[ -f "$LOCAL_ENV_EXAMPLE_FILE" ]]; then
+        printf '%s\n' "$LOCAL_ENV_EXAMPLE_FILE"
+        return 0
+    fi
+
+    return 1
+}
+
+prepare_local_env_file() {
+    if [[ "$LOCAL_EXECUTION" != true ]]; then
+        return 0
+    fi
+
+    if [[ -f "$TARGET_ENV_FILE" ]]; then
+        if [[ "$DRY_RUN" == true ]]; then
+            log_info "[dry-run] local env file already matches target env file"
+        fi
+        return 0
+    fi
+
+    local env_source
+    if ! env_source="$(resolve_local_env_source)"; then
+        log_fatal "No local env template found (.env.production, .env.defaults, or .env.example)"
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        log_info "[dry-run] copy ${env_source} -> ${TARGET_ENV_FILE}"
+        return 0
+    fi
+
+    require_dir "$TARGET_DEPLOY_DIR"
+    mkdir -p "$(dirname "$TARGET_ENV_FILE")"
+    copy_file "$env_source" "$TARGET_ENV_FILE"
+    log_info "Prepared target env file from ${env_source}"
 }
 
 run_target() {
@@ -132,6 +184,10 @@ verify_remote_compose() {
 }
 
 redeploy_services() {
+    if [[ "$LOCAL_EXECUTION" == true && "$DRY_RUN" == false ]]; then
+        run_target "docker rm -f ${PORTAL_SERVICES[*]} >/dev/null 2>&1 || true"
+    fi
+
     run_target "cd '${TARGET_DEPLOY_DIR}' && COMPOSE_PROFILES=portal docker compose up -d --remove-orphans ${PORTAL_SERVICES[*]}"
     log_info "Requested idempotent portal service redeploy"
 }
@@ -184,6 +240,7 @@ main() {
         log_info "Uploading canonical compose file to ${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_COMPOSE_FILE}"
     fi
     upload_compose
+    prepare_local_env_file
     verify_remote_compose
 
     log_info "Redeploying portal services: ${PORTAL_SERVICES[*]}"

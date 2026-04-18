@@ -10,12 +10,15 @@ Execution path is blocked, not implementation:
 - IaC compose split callback fix exists in branch (OAUTH2_PROXY_IDE_REDIRECT_URL + OAUTH2_PROXY_PORTAL_REDIRECT_URL)
 - idempotent redeploy script exists: scripts/deploy/redeploy-portal-oauth-routing.sh
 - direct non-interactive SSH to 192.168.168.31 unavailable from current runtime shell
-- GitHub Actions deploy secret is provisioned, and the standalone portal workflow now targets self-hosted execution; the published main workflow still fails on SSH auth, while the published branch fix reaches the deploy step and then fails because the runner lacks `docker`
+- GitHub Actions deploy secret is provisioned, and the standalone portal workflow now targets self-hosted execution
+- Docker is now available on the temporary self-hosted runner path
+- The latest portal workflow now fails before deploy because the runner cannot fetch GSM secrets non-interactively and no GitHub environment OAuth secrets are configured
 - Local dry-run validation passes with `bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local`
 
 ## Required Work (Immutable + Idempotent)
-- [ ] Provide a Docker-capable reachable execution path for the redeploy workflow (self-hosted runner or approved tunnel/proxy)
-- [ ] Provide the correct SSH deploy credential or host-side runner access for the published main workflow, or keep the local-mode branch path as the published execution path
+- [x] Provide a Docker-capable reachable execution path for the redeploy workflow (self-hosted runner or approved tunnel/proxy)
+- [x] Publish the local-mode branch path on `main` for self-hosted execution
+- [ ] Provide non-interactive secret material on the self-hosted runner path (GSM auth via WIF/service account or equivalent env secrets)
 - [ ] Keep the deploy path secret-driven, immutable, and idempotent
 - [ ] Execute `scripts/deploy/redeploy-portal-oauth-routing.sh` through the `portal-oauth-redeploy.yml` workflow against production
 - [ ] Verify redirects:
@@ -38,3 +41,4 @@ Execution path is blocked, not implementation:
 - Self-hosted validation runs: portal-oauth-redeploy.yml #24608948773, vpn-e2e-gate.yml #24608949154
 - Latest published portal run: #24609258258 failed at SSH auth with `Permission denied (publickey,password)`
 - Branch fix run: #24609414318 failed because the self-hosted runner lacked `docker`
+- Latest mainline portal runs: #24609720382 and #24609751800 failed in env bootstrap because GSM auth is unavailable and GitHub environment OAuth secrets are unset

@@ -14,6 +14,13 @@ Last Updated: 2026-04-18
 - New deterministic failover entrypoint implemented:
    - `scripts/operations/redeploy/onprem/failover-orchestrate.sh`
 - In-workspace operator tasks added for preflight, redeploy, status, promote, failback.
+- Secure baseline hardening completed in compose/template:
+   - required `CODE_SERVER_PASSWORD` (no weak fallback)
+   - no TLS bypass env in baseline compose
+   - no baseline docker socket mount (optional override file only)
+   - profile backups emit `sha256` checksum sidecars
+- Compose hardening CI guard added:
+   - `scripts/ci/check-compose-hardening-guard.sh`
 - Host-side failover status run executed successfully from `.31` context with evidence file:
    - `/tmp/code-server-failover-evidence/failover-20260418T182653Z.json`
 
@@ -24,6 +31,7 @@ Last Updated: 2026-04-18
 3. #711 (P1): replication + restore verification script implemented; run evidence capture and close.
 4. #712 (P1): keep operator-run mode task coverage current as scripts evolve.
 5. New ingress cutover gap: automate DNS/VIP transition for `.31/.42` (current replica ingress proof uses `:18080` due occupied `:80/:443` on `.42`).
+6. #730 (P1): retire or align legacy compose variants to eliminate baseline/security overlap and drift.
 
 ## Execution Order
 
@@ -51,7 +59,12 @@ Last Updated: 2026-04-18
 Run Tier-A drift and snapshot-restore verification:
 
 - `bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action drift-report`
+- `bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action replicate-tier-a`
 - `bash scripts/operations/redeploy/onprem/state-replication-verify.sh --action snapshot-restore-test`
+
+Run compose hardening baseline guard:
+
+- `bash scripts/ci/check-compose-hardening-guard.sh`
 
 ## Bootstrap Reference
 

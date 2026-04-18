@@ -481,7 +481,7 @@ Closes #182
 ## Resources
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [API Documentation](frontend/API.md)
+- [API Documentation](../apps/frontend/API.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Contributing](CONTRIBUTING.md)

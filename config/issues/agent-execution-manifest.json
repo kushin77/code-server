@@ -511,14 +511,18 @@
       "class": "implementation",
       "lane": "monorepo",
       "priority": "P1",
-      "status": "open",
+      "status": "partial",
       "branchType": "refactor",
       "closePolicy": "standard",
       "dependencies": [669, 670],
-      "executionBrief": "Complete the canonical apps and infra layout, keep only necessary compatibility shims, and validate references across CI and runtime paths.",
+      "executionBrief": "Monorepo layout refactor substantially complete. Apps, packages, infra, and docs roots established with CI validation. Compatibility shims in place. Remaining: full CI gate execution and any broken reference fixes.",
       "evidence": [
-        "Stable apps and infra roots committed",
-        "Workspace-aware validation output showing no broken references"
+        "Canonical roots verified: apps/, packages/, infra/, docs/ all exist and tracked in git",
+        "Compatibility shims created: backend → apps/backend, frontend → apps/frontend, extensions → apps/extensions",
+        "pnpm-workspace.yaml configured with apps/backend, apps/frontend, apps/extensions/* packages",
+        "CI validation integrated: validate-monorepo-target.sh checks root existence, symlink integrity, YAML schema",
+        "CI gate passing locally: monorepo-target validation ✓, pnpm-lockfile validation ✓",
+        "Branch commit: feat/671-issue-671 with monorepo architecture and validation script"
       ]
     },
     {

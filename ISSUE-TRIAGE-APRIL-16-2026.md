@@ -1,3 +1,7 @@
+# HISTORICAL SNAPSHOT
+# This file is retained for audit/history only and is not the current operational triage source.
+# Current source of truth: AGENT-TRIAGE-APRIL-18-2026.md and live GitHub issue state.
+
 # Comprehensive Issue Triage & Execution Plan - April 16, 2026
 
 **Status**: Session 2 - Continuation  

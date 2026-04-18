@@ -132,7 +132,7 @@ verify_remote_compose() {
 }
 
 redeploy_services() {
-    run_target "cd '${TARGET_DEPLOY_DIR}' && COMPOSE_PROFILES=portal (docker-compose up -d --remove-orphans ${PORTAL_SERVICES[*]} || docker compose up -d --remove-orphans ${PORTAL_SERVICES[*]})"
+    run_target "cd '${TARGET_DEPLOY_DIR}' && (COMPOSE_PROFILES=portal docker-compose up -d --remove-orphans ${PORTAL_SERVICES[*]} || COMPOSE_PROFILES=portal docker compose up -d --remove-orphans ${PORTAL_SERVICES[*]})"
     log_info "Requested idempotent portal service redeploy"
 }
 

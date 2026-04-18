@@ -86,56 +86,59 @@ kushnir.cloud {
     }
 
     @health path /health /healthz /ping
-    respond @health "OK" 200
-
-    # Deterministic auth bootstrap for apex host: avoid oauth2-proxy 403 landing
-    # and route users directly into the OAuth start flow when no portal cookie exists.
     @root_no_portal_cookie {
         path /
         not header_regexp portal_cookie Cookie (?i)_oauth2_proxy_portal=
     }
-    handle @root_no_portal_cookie {
-        redir /oauth2/start?rd=https://kushnir.cloud/ 302
-    }
-
-    # One-shot auth reset to clear stale cookies that can cause redirect loops.
     @auth_reset path /auth/reset
-    handle @auth_reset {
-        header Clear-Site-Data "\"cache\", \"cookies\", \"storage\""
-        header Content-Type "text/html; charset=utf-8"
-        header Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        header +Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        respond "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"1;url=https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/\"><title>Auth Reset</title></head><body>Auth reset complete. Redirecting to login... <a href=\"https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/\">Continue</a></body></html>" 200
-    }
-
-    # Unified sign-out endpoint: clear oauth2 session and return to root.
     @logout path /logout /signout
-    redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
-
-    # oauth2-proxy-portal control plane endpoints
     @oauth2 path /oauth2 /oauth2/*
-    handle @oauth2 {
+
+    route {
+        respond @health "OK" 200
+
+        # Deterministic auth bootstrap for apex host: avoid oauth2-proxy 403 landing
+        # and route users directly into the OAuth start flow when no portal cookie exists.
+        handle @root_no_portal_cookie {
+            redir /oauth2/start?rd=https://kushnir.cloud/ 302
+        }
+
+        # One-shot auth reset to clear stale cookies that can cause redirect loops.
+        handle @auth_reset {
+            header Clear-Site-Data "\"cache\", \"cookies\", \"storage\""
+            header Content-Type "text/html; charset=utf-8"
+            header Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            respond "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"1;url=https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/\"><title>Auth Reset</title></head><body>Auth reset complete. Redirecting to login... <a href=\"https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/\">Continue</a></body></html>" 200
+        }
+
+        # Unified sign-out endpoint: clear oauth2 session and return to root.
+        redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
+
+        # oauth2-proxy-portal control plane endpoints
+        handle @oauth2 {
+            reverse_proxy oauth2-proxy-portal:4181 {
+                header_up Host {host}
+                header_up X-Real-IP {remote_host}
+                header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
+            }
+        }
+
+        # Convenience deep link to IDE app.
+        redir /ide https://ide.kushnir.cloud/ 302
+
+        # Root is SSO protected via oauth2-proxy-portal (Appsmith admin backend).
         reverse_proxy oauth2-proxy-portal:4181 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
             header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
         }
-    }
-
-    # Convenience deep link to IDE app.
-    redir /ide https://ide.kushnir.cloud/ 302
-
-    # Root is SSO protected via oauth2-proxy-portal (Appsmith admin backend).
-    reverse_proxy oauth2-proxy-portal:4181 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
     }
 }
 

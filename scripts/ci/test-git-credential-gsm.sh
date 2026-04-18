@@ -113,7 +113,7 @@ out=$(echo "$res" | sed -n '2,$p')
 assert_contains "$out" "strict_mode_block" "strict mode block telemetry emitted"
 
 # Case 4: Env fallback works when GSM chain exhausted.
-res=$(run_with_mock "none" "GSM_SECRET_NAME=prod-github-token GH_TOKEN=ENV_TOKEN_A GITHUB_TOKEN=ENV_TOKEN_B GIT_CREDENTIAL_GSM_ALLOW_ENV_FALLBACK=true")
+res=$(run_with_mock "none" "GSM_SECRET_NAME=prod-github-token GH_TOKEN=ENV_TOKEN_A GITHUB_TOKEN=ENV_TOKEN_B GIT_CREDENTIAL_GSM_ALLOW_ENV_FALLBACK=true GIT_CREDENTIAL_GSM_STRICT=false GIT_CREDENTIAL_GSM_ENV=dev")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" == "0" ]] || fail "env fallback should succeed when enabled"

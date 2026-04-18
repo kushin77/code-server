@@ -401,5 +401,23 @@
   "extensions.ignoreRecommendations": true,
   "// Prevent Copilot context bleed across concurrent windows": "",
   "github.copilot.enable": { "*": true },
-  "github.copilot.advanced": {}
+  "github.copilot.advanced": {},
+
+  "// ─── Folder Taxonomy / Root Hygiene (Issue #613) ──────────────────────────": "",
+  "// Root should contain only entrypoints. Docs, scripts, config go in subdirectories.": "",
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "docker-compose.yml": "docker-compose.*.yml,docker-compose-*.yml",
+    "Caddyfile": "Caddyfile.*",
+    "Makefile": "Makefile.*",
+    ".env.defaults": ".env.example,.env.template,.env",
+    "main.tf": "*.tf,*.tf.disabled,terraform.tfvars.example,tfplan"
+  },
+  "// Highlight 'off-limits' root-level files with a visual cue": "",
+  "files.associations": {
+    "PHASE-*.md": "markdown",
+    "MIGRATION-*.md": "markdown",
+    "DEPLOYMENT-CHECKLIST-*.md": "markdown"
+  }
 }

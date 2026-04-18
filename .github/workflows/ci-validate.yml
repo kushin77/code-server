@@ -201,3 +201,11 @@ jobs:
 
       - name: Check active scripts satisfy GOV-002 metadata policy
         run: bash scripts/ci/check-metadata-headers.sh
+
+  root-hygiene:
+    name: Repository root taxonomy check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Check root-level file hygiene
+        run: bash scripts/ci/check-root-hygiene.sh --warn-only

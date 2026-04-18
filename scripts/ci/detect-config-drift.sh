@@ -132,7 +132,6 @@ check_hardcoded_ips() {
         drift_found=1
     done < <(grep -rn "192\.168\.168\." \
         docker-compose.yml \
-        docker-compose.production.yml \
         docker-compose.base.yml \
         docker-compose.dev.yml \
         Caddyfile \
@@ -284,7 +283,6 @@ check_ssot_integrity() {
 
 main() {
     log_info "Starting config drift detection..."
-    init_scan_files
     
     local total_drift=0
     

@@ -163,6 +163,8 @@ services:
     restart: unless-stopped
     networks:
       - enterprise
+    ports:
+      - "${OAUTH2_PROXY_HOST_BIND:-127.0.0.1}:4180:4180"
     expose:
       - "4180"
     user: "0:0"

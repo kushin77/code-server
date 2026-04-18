@@ -19,16 +19,30 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
-        reverse_proxy oauth2-proxy:4180 {
+        reverse_proxy oauth2-proxy:4180 192.168.168.42:4180 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
+            # Sticky load balancing for auth callbacks and browser session continuity.
+            lb_policy cookie ide_lb_shared secret734
+            health_uri /ping
+            health_interval 10s
+            health_timeout 2s
+            fail_duration 30s
+            lb_try_duration 5s
         }
     }
 
     # Default: ALL traffic proxied through oauth2-proxy (code-server behind it)
-    reverse_proxy oauth2-proxy:4180 {
+    reverse_proxy oauth2-proxy:4180 192.168.168.42:4180 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
+        # Sticky load balancing for websocket-heavy IDE traffic.
+        lb_policy cookie ide_lb_shared secret734
+        health_uri /ping
+        health_interval 10s
+        health_timeout 2s
+        fail_duration 30s
+        lb_try_duration 5s
     }
 }
 

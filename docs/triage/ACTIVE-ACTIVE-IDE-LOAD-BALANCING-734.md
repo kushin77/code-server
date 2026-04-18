@@ -35,9 +35,9 @@ Recommended Target Topology:
 
 Implementation Slices:
 1. Canonical ingress model
-- Decision: use HAProxy as the active-active traffic control point for IDE routing policy.
-- Sticky routing is enforced in `config/haproxy.cfg` backend `code_server_backend`.
-- Caddy remains TLS edge and host routing layer; HAProxy owns weighted distribution and affinity policy.
+- Decision: use the live Caddy `ide.kushnir.cloud` site block as the active-active traffic control point.
+- Sticky routing is enforced in `Caddyfile` via `lb_policy cookie` across primary and replica oauth2-proxy upstreams.
+- HAProxy policy remains a fallback artifact, but production balancing is executed in Caddy.
 
 2. Session affinity contract
 - Choose the stable affinity key.
@@ -66,13 +66,11 @@ Exit Criteria for #734:
 - Evidence includes balanced traffic, session continuity, and rollback/drain procedures.
 
 Current Implementation Baseline (April 18, 2026):
-- `config/haproxy.cfg` now encodes stage-1 active-active behavior for IDE traffic:
-  - weighted split `50/50` (`primary`/`replica`)
-  - sticky affinity on oauth2-proxy IDE session cookie `_oauth2_proxy_ide`
-  - fallback LB cookie `IDE_NODE` for pre-auth requests
-  - backend health checks on `/ping` for oauth2-proxy readiness
-  - long-lived tunnel/client/server timeouts for websocket-heavy editor traffic
-  - response header `X-LB-Backend` for drill observability
+- `Caddyfile` now routes `ide.kushnir.cloud` traffic to both oauth2-proxy upstreams:
+  - upstreams: `oauth2-proxy:4180` (primary) and `192.168.168.42:4180` (replica)
+  - sticky affinity: `lb_policy cookie ide_lb_shared secret734`
+  - active health checks on `/ping` with fast failover timing
+  - callback and default IDE paths use the same balanced upstream set
 
 Related Issues:
 - #710 epic

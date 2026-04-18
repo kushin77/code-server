@@ -90,7 +90,7 @@ EOS
 }
 
 # Case 1: Canonical secret selected, deterministic over env fallback.
-res=$(run_with_mock "canonical" "GH_TOKEN=STALE_ENV")
+res=$(run_with_mock "canonical" "GSM_SECRET_NAME=prod-github-token GH_TOKEN=STALE_ENV")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" == "0" ]] || fail "canonical resolution should succeed"
@@ -98,7 +98,7 @@ assert_contains "$out" "password=CANONICAL_TOKEN" "canonical token returned"
 assert_contains "$out" "canonical_secret_selected" "canonical selection telemetry emitted"
 
 # Case 2: Legacy fallback is used and logged.
-res=$(run_with_mock "legacy" "")
+res=$(run_with_mock "legacy" "GSM_SECRET_NAME=prod-github-token")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" == "0" ]] || fail "legacy fallback should succeed in non-strict mode"
@@ -106,14 +106,14 @@ assert_contains "$out" "password=LEGACY_TOKEN" "legacy token returned"
 assert_contains "$out" "fallback_used" "fallback telemetry emitted"
 
 # Case 3: Strict production mode blocks non-canonical source.
-res=$(run_with_mock "legacy" "GIT_CREDENTIAL_GSM_STRICT=true GIT_CREDENTIAL_GSM_ENV=production")
+res=$(run_with_mock "legacy" "GSM_SECRET_NAME=prod-github-token GIT_CREDENTIAL_GSM_STRICT=true GIT_CREDENTIAL_GSM_ENV=production")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" != "0" ]] || fail "strict production should block legacy source"
 assert_contains "$out" "strict_mode_block" "strict mode block telemetry emitted"
 
 # Case 4: Env fallback works when GSM chain exhausted.
-res=$(run_with_mock "none" "GH_TOKEN=ENV_TOKEN_A GITHUB_TOKEN=ENV_TOKEN_B GIT_CREDENTIAL_GSM_ALLOW_ENV_FALLBACK=true")
+res=$(run_with_mock "none" "GSM_SECRET_NAME=prod-github-token GH_TOKEN=ENV_TOKEN_A GITHUB_TOKEN=ENV_TOKEN_B GIT_CREDENTIAL_GSM_ALLOW_ENV_FALLBACK=true")
 status=$(echo "$res" | sed -n '1p')
 out=$(echo "$res" | sed -n '2,$p')
 [[ "$status" == "0" ]] || fail "env fallback should succeed when enabled"

@@ -685,8 +685,8 @@ services:
       - APPSMITH_FORM_LOGIN_DISABLED=true
       - APPSMITH_OAUTH2_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - APPSMITH_BASE_URL=https://${DOMAIN:-kushnir.cloud}
-      - APPSMITH_CUSTOM_DOMAIN=${DOMAIN:-kushnir.cloud}
+      - APPSMITH_BASE_URL=https://kushnir.cloud
+      - APPSMITH_CUSTOM_DOMAIN=kushnir.cloud
       - APPSMITH_ADMIN_EMAILS=${APPSMITH_ADMIN_EMAILS:-akushnir@bioenergystrategies.com}
     expose:
       - "80"

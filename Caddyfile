@@ -24,19 +24,15 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     }
 
     # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
+    # IMPORTANT: auth MUST be single-origin (no LB here). CSRF tokens and sessions
+    # are stored in Redis on .31; splitting auth across hosts causes CSRF failures
+    # and redirect loops. LB only applies to the IDE content path (session-broker).
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
-        reverse_proxy oauth2-proxy:4180 192.168.168.42:18080 {
+        reverse_proxy oauth2-proxy:4180 {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
             header_down X-LB-Upstream {http.reverse_proxy.upstream.address}
-            # Sticky load balancing for auth callbacks and browser session continuity.
-            lb_policy cookie ide_lb_shared secret734
-            health_uri /ping
-            health_interval 10s
-            health_timeout 2s
-            fail_duration 30s
-            lb_try_duration 5s
         }
     }
 

@@ -2,6 +2,7 @@ name: 🚀 Golden Rule — Auto-Redeploy After Merge
 
 # Mandatory policy: After every successful merge to main, code must be redeployed to production
 # No exceptions. Every push to main = automatic production redeploy.
+# Manual redeploy trigger: workflow touch to refresh production stack
 on:
   push:
     branches:

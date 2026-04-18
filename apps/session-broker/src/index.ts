@@ -746,7 +746,7 @@ app.all('*', async (req: Request, res: Response) => {
 // Server Startup
 // ────────────────────────────────────────────────────────────────────────────
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   logger.info(`Session broker listening on port ${PORT}`);
 });

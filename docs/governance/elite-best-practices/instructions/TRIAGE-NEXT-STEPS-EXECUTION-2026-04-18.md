@@ -9,29 +9,40 @@ Last Updated: 2026-04-18
 
 ## Current State
 
-- Elite best-practices folder structure exists with 8+ subfolders and no loose governance files added.
+- Elite best-practices folder structure consolidated to single canonical tree: `docs/governance/elite-best-practices/` (12 subfolders, no stubs, no duplicates).
+- Former `docs/elite-best-practices/` stub tree retired (git rm'd, redirected here).
 - Replica failover host path is live on `.42` for code-server + oauth2-proxy, with ingress validation on `:18080`.
 - New deterministic failover entrypoint implemented:
    - `scripts/operations/redeploy/onprem/failover-orchestrate.sh`
 - In-workspace operator tasks added for preflight, redeploy, status, promote, failback.
-- Secure baseline hardening completed in compose/template:
+- Secure baseline hardening completed in compose/template (13/13 CI guard checks passing):
    - required `CODE_SERVER_PASSWORD` (no weak fallback)
    - no TLS bypass env in baseline compose
    - no baseline docker socket mount (optional override file only)
    - profile backups emit `sha256` checksum sidecars
-- Compose hardening CI guard added:
-   - `scripts/ci/check-compose-hardening-guard.sh`
-- Host-side failover status run executed successfully from `.31` context with evidence file:
-   - `/tmp/code-server-failover-evidence/failover-20260418T182653Z.json`
+   - NFS-backed volumes for NAS .56 (workspace, profile, ollama, postgres-backup)
+   - legacy compose stubs retired (`scripts/docker-compose.yml`, `docker/docker-compose.yml`)
+- Compose hardening CI guard: `scripts/ci/check-compose-hardening-guard.sh` (13/13)
+- NAS `.56` shared storage wired (commit `4e1882b4`):
+   - workspace, profile, profile-backups, ollama-data, postgres-backup → NFS `/export/*`
+   - DB engines remain `driver: local` (NFS locking incompatible)
+- Keepalived VRRP module wired in Terraform (commit `e2e7d149`):
+   - VIP: `192.168.168.30`
+   - Primary: `.31` (MASTER, priority 150), Replica: `.42` (BACKUP, priority 100)
+   - `advert_int=1`, `fall=2` → ~2s failover SLA
+   - **Activation pending**: `terraform apply -target=module.keepalived` from SSH on `.31`
 
 ## Issue-Mapped Next Steps
 
-1. #715 (P0): attach failover/failback evidence from scripted promote + failback drill.
-2. #713 (P0): immutable code-server state map codified; run evidence capture and close.
-3. #711 (P1): replication + restore verification script implemented; run evidence capture and close.
-4. #712 (P1): keep operator-run mode task coverage current as scripts evolve.
-5. New ingress cutover gap: automate DNS/VIP transition for `.31/.42` (current replica ingress proof uses `:18080` due occupied `:80/:443` on `.42`).
-6. #730 (P1): retire or align legacy compose variants to eliminate baseline/security overlap and drift.
+1. **#715 (P0)**: Activate Keepalived on hosts — `terraform apply -target=module.keepalived` from `.31`. Attach VIP verification (`ip addr show`) as evidence.
+2. **#729 (P1)**: Resolve `:80/:443` ingress ownership on `.42`. Implement deterministic ingress cutover in `failover-orchestrate.sh`. Evidence: `curl` to VIP `.30` from LAN.
+3. **#714 (P1)**: DR game-day suite — scripted promote+failback drill from `.31`→`.42`→`.31` with RPO/RTO evidence.
+4. **#712 (P1)**: Keep operator-run mode task coverage current as scripts evolve.
+5. **#698 (P1)**: Standardize SSH deploy identity bootstrap — validate `DEPLOY-SSH-IDENTITY-BOOTSTRAP.md` covers all environments (CI, local, host-native).
+6. **#696 (P1)**: Close — Elite SSOT structure complete (12 subfolders, all content, no stubs, no duplicates).
+7. **#697 (P1)**: Close — root loose markdown reduced to 1 file (COMPREHENSIVE-WORK-ROADMAP moved to archives).
+8. **#695 (P0)**: Non-interactive GSM auth path for portal redeploy — implement `--non-interactive` flag in `scripts/fetch-gsm-secrets.sh`.
+9. **#692 (P0)**: Portal OAuth redeploy reachable execution path — validate `redeploy-remote-execute.sh` succeeds from all operator environments.
 
 ## Execution Order
 

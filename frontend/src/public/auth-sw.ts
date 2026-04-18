@@ -6,6 +6,8 @@
  * @module service-worker/auth
  */
 
+/// <reference lib="webworker" />
+
 // Types for messages between SW and clients
 type SessionMessage =
   | { type: 'SESSION_REFRESHED'; expiry: number }
@@ -23,14 +25,74 @@ const SKIP_INTERCEPTION_PATHS = ['/oauth2/', '/health', '/healthz', '/ping'];
 const SKIP_INTERCEPTION_HOSTS = ['api.openai.com', 'api.anthropic.com', 'huggingface.co'];
 
 /**
+ * Sanitizes chat request payload to prevent empty/whitespace text content blocks
+ */
+async function sanitizeChatRequest(request: Request): Promise<Request> {
+  if (request.method !== 'POST' || !request.headers.get('content-type')?.includes('application/json')) {
+    return request;
+  }
+
+  try {
+    const body = await request.clone().json();
+    if (!body.messages || !Array.isArray(body.messages)) {
+      return request;
+    }
+
+    // Sanitize messages
+    const sanitizedMessages = body.messages.map((msg: any) => {
+      if (msg.content && Array.isArray(msg.content)) {
+        // Anthropic/Claude style content blocks
+        msg.content = msg.content.filter((block: any) => {
+          if (block.type === 'text') {
+            // Trim and check if non-empty
+            block.text = block.text.trim();
+            return block.text.length > 0;
+          }
+          return true; // Keep non-text blocks
+        });
+        // If no content blocks left, add a safe placeholder
+        if (msg.content.length === 0) {
+          msg.content = [{ type: 'text', text: '.' }];
+        }
+      }
+      return msg;
+    });
+
+    body.messages = sanitizedMessages;
+
+    // Create new request with sanitized body
+    const sanitizedBody = JSON.stringify(body);
+    return new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: sanitizedBody,
+      credentials: request.credentials,
+      cache: request.cache,
+      redirect: request.redirect,
+      referrer: request.referrer,
+      integrity: request.integrity,
+    });
+  } catch (error) {
+    // If parsing fails, return original request
+    console.warn('[auth-sw] Failed to sanitize chat request:', error);
+    return request;
+  }
+}
+
+/**
  * Determines if a URL should be intercepted by the auth SW
  */
 function shouldIntercept(url: string): boolean {
   const urlObj = new URL(url);
 
-  // Skip external hosts
+  // Skip external hosts except api.github.com for chat sanitization
   if (SKIP_INTERCEPTION_HOSTS.some(host => urlObj.hostname.includes(host))) {
     return false;
+  }
+
+  // Allow interception for api.github.com
+  if (urlObj.hostname === 'api.github.com') {
+    return true;
   }
 
   // Skip auth and health endpoints
@@ -121,18 +183,19 @@ async function notifyClients(message: SessionMessage): Promise<void> {
 
 /**
  * Main request interception handler
- * Intercepts all same-origin requests and handles 401 with automatic refresh
+ * Intercepts all same-origin requests and api.github.com requests for sanitization/auth
  */
 (self as any).addEventListener('fetch', (event: FetchEvent) => {
   const { request } = event;
+  const urlObj = new URL(request.url);
 
   // Only intercept GET/POST requests
   if (!['GET', 'POST'].includes(request.method)) {
     return;
   }
 
-  // Only intercept same-origin
-  if (new URL(request.url).origin !== (self as any).location.origin) {
+  // Only intercept same-origin or api.github.com
+  if (urlObj.origin !== (self as any).location.origin && urlObj.hostname !== 'api.github.com') {
     return;
   }
 
@@ -145,7 +208,13 @@ async function notifyClients(message: SessionMessage): Promise<void> {
   event.respondWith(
     (async () => {
       try {
-        const response = await fetch(request.clone());
+        // Sanitize chat requests to api.github.com
+        let sanitizedRequest = request;
+        if (urlObj.hostname === 'api.github.com') {
+          sanitizedRequest = await sanitizeChatRequest(request);
+        }
+
+        const response = await fetch(sanitizedRequest.clone());
 
         // Handle 401: attempt silent refresh and retry
         if (response.status === 401) {
@@ -160,8 +229,12 @@ async function notifyClients(message: SessionMessage): Promise<void> {
               notifyClients({ type: 'SESSION_REFRESHED', expiry: refreshResult.expiry });
             }
 
-            // Retry the original request
-            const retryResponse = await fetch(request.clone());
+            // Retry the original request (re-sanitize if needed)
+            let retryRequest = request;
+            if (urlObj.hostname === 'api.github.com') {
+              retryRequest = await sanitizeChatRequest(request);
+            }
+            const retryResponse = await fetch(retryRequest.clone());
             return retryResponse;
           } else {
             // Refresh failed, session truly expired

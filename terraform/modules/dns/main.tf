@@ -211,8 +211,6 @@ resource "kubernetes_deployment" "external_dns" {
             }
           }
         }
-
-        service_account_name = kubernetes_service_account.external_dns.metadata[0].name
       }
     }
   }

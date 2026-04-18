@@ -169,7 +169,7 @@ export function updateSessionActivity(session: Session): Session {
  * Check if session is expired.
  */
 export function isSessionExpired(session: Session): boolean {
-  return session.exp < Math.floor(Date.now() / 1000);
+  return session.exp <= Math.floor(Date.now() / 1000);
 }
 
 /**

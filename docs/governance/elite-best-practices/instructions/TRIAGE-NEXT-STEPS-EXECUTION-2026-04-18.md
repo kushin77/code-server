@@ -95,6 +95,17 @@ Last Updated: 2026-04-18
 - No duplicate helper scripts: reuse `scripts/_common/` and existing operation wrappers.
 - Evidence format is uniform across streams: issue comment includes commit, command, pass/fail, artifact path.
 
+### PowerShell-Safe Remote Docker Inspect
+
+When running inspect commands from Windows PowerShell, avoid heavily escaped Go templates that commonly fail with parsing errors.
+
+- Safe label dump:
+   - `ssh akushnir@192.168.168.31 "docker inspect appsmith --format '{{json .Config.Labels}}'"`
+- Service health/name check:
+   - `ssh akushnir@192.168.168.31 "docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}' | egrep -i 'appsmith|portal|oauth2|caddy'"`
+
+Use these as the canonical diagnostics before deeper redeploy/failover investigation.
+
 ## State Durability Commands
 
 Run Tier-A drift and snapshot-restore verification:

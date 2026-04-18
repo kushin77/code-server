@@ -55,6 +55,20 @@ jobs:
           fi
           echo "GCP_WIF_PROVIDER_RESOLVED=$provider" >> "$GITHUB_ENV"
 
+      - name: Prefer host env file on on-prem runner
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          host_env="/home/akushnir/code-server-enterprise/.env"
+          if [[ -f "$host_env" ]]; then
+            cp "$host_env" .env
+            chmod 600 .env
+            echo "DEPLOY_ENV_CREATED=false" >> "$GITHUB_ENV"
+            echo "DEPLOY_ENV_SOURCE=host" >> "$GITHUB_ENV"
+            echo "Using host env fallback from on-prem runner"
+          fi
+
       - name: Authenticate to GCP via Workload Identity
         if: ${{ !inputs.dry_run && !hashFiles('.env') }}
         uses: google-github-actions/auth@v2

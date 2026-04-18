@@ -99,8 +99,8 @@ module "dns" {
   apex_domain           = var.apex_domain
   tunnel_name           = var.tunnel_name
   dns_ttl               = var.dns_ttl
-  health_check_interval = var.health_check_interval
-  failover_threshold    = var.failover_threshold
+  health_check_interval = var.dns_health_check_interval
+  failover_threshold    = var.dns_failover_threshold
   primary_ip            = var.primary_ip
   secondary_ip          = var.secondary_ip
 
@@ -143,7 +143,7 @@ module "failover" {
 ################################
 locals {
   common_labels = {
-    environment = var.environment
+    environment = var.deployment_environment
     managed_by  = "terraform"
     project     = "code-server-enterprise"
     phase       = "2.3"

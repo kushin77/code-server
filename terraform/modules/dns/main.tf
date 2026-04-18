@@ -27,7 +27,7 @@ locals {
 resource "cloudflare_tunnel" "main" {
   account_id = var.cloudflare_account_id
   name       = var.tunnel_name
-  secret     = base64encode(random_bytes.tunnel_secret.result)
+  secret     = random_bytes.tunnel_secret.base64
 }
 
 # Random tunnel secret

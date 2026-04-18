@@ -12,9 +12,13 @@ WORKDIR /build
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && \
-    npm run build
+# Install dependencies (including dev for TypeScript build)
+RUN npm ci
+
+# Copy source and compile
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build && npm prune --omit=dev
 
 # ════════════════════════════════════════════════════════════════════════════
 # Stage 2: Runtime

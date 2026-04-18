@@ -8,11 +8,12 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { Client as DockerClient } from 'docker-api';
+import Docker from 'dockerode';
 import { Pool as PgPool } from 'pg';
 import winston from 'winston';
 import Joi from 'joi';
 import axios from 'axios';
+import cookieParser from 'cookie-parser';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Logging Setup
@@ -69,15 +70,16 @@ interface ContainerConfig {
 // ────────────────────────────────────────────────────────────────────────────
 
 class SessionManager {
-  private docker: DockerClient;
+  private docker: Docker;
   private db: PgPool;
   private sessions: Map<string, SessionContext> = new Map();
   private nextPort: number = 8081; // Start at 8081 (8080 is primary)
 
   constructor(dockerSocket: string, dbUrl: string) {
-    this.docker = new DockerClient({ socketPath: dockerSocket });
+    const socketPath = dockerSocket.replace('unix://', '');
+    this.docker = new Docker({ socketPath });
     this.db = new PgPool({ connectionString: dbUrl });
-    logger.info('SessionManager initialized', { dockerSocket, dbUrl });
+    logger.info('SessionManager initialized', { socketPath, dbUrl });
   }
 
   /**
@@ -115,10 +117,13 @@ class SessionManager {
 
       // Create Docker container
       const container = await this.docker.createContainer({
-        ...containerConfig,
+        name: containerName,
         Hostname: containerConfig.hostname,
         Image: containerConfig.image,
         Env: Object.entries(containerConfig.env).map(([k, v]) => `${k}=${v}`),
+        ExposedPorts: {
+          '8080/tcp': {}
+        },
         HostConfig: {
           PortBindings: {
             '8080/tcp': [{ HostPort: String(containerPort) }]
@@ -255,7 +260,7 @@ class SessionManager {
         'SELECT * FROM sessions WHERE user_id = $1 AND status = $2 ORDER BY created_at DESC',
         [userId, 'running']
       );
-      return result.rows.map(row => this.dbRowToSession(row));
+      return result.rows.map((row: any) => this.dbRowToSession(row));
     } catch (error) {
       logger.error('Failed to list user sessions', { userId, error: String(error) });
       return [];
@@ -367,7 +372,7 @@ class SessionManager {
       createdAt: new Date(row.created_at),
       expiresAt: new Date(row.expires_at),
       quotas: row.quotas || {},
-      status: row.status,
+      status: row.status as SessionContext['status'],
       lastActivity: new Date(row.last_activity)
     };
   }
@@ -384,6 +389,7 @@ const manager = new SessionManager(
 );
 
 app.use(express.json());
+app.use(cookieParser());
 
 // ────────────────────────────────────────────────────────────────────────────
 // Authentication Middleware (Phase 2 Integration)
@@ -395,21 +401,15 @@ interface AuthUser {
   email: string;
 }
 
-const getAuthUser = async (req: Request): Promise<AuthUser | null> => {
+type BrokerRequest = Request & { authUser?: AuthUser };
+
+const getAuthUser = (req: Request): AuthUser | null => {
   // Check for X-Auth-Request headers set by oauth2-proxy
   const email = req.headers['x-auth-request-email'] as string;
   const user = req.headers['x-auth-request-user'] as string;
 
   if (!email || !user) {
-    // Check for oauth2 session cookie
-    const cookie = req.cookies._oauth2_proxy_ide;
-    if (!cookie) {
-      return null;
-    }
-
-    // In production, validate the cookie signature with redis
-    // For now, assume oauth2-proxy has already validated it
-    logger.info('Found oauth2 session cookie');
+    return null;
   }
 
   return {
@@ -428,7 +428,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   const authUser = getAuthUser(req);
   if (authUser) {
-    (req as any).authUser = authUser;
+    (req as BrokerRequest).authUser = authUser;
   }
   next();
 });
@@ -445,11 +445,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       method: req.method,
       path: req.path,
       statusCode: res.statusCode,
-      duration: `${duration}ms`
+      duration: `${duration}ms`,
       ip: req.ip
-    });
+    };
     const sessionId = req.cookies._code_server_session_id;
-    const authUser = (req as any).authUser;
+    const authUser = (req as BrokerRequest).authUser;
 
     if (authUser) {
       logEntry.userId = authUser.userId;
@@ -559,7 +559,8 @@ app.post('/oauth2/callback', async (req: Request, res: Response) => {
  */
 app.post('/oauth2/logout', async (req: Request, res: Response) => {
   try {
-    const sessionId = req.body.sessionId || req.headers['x-session-id'];
+    const rawSessionId = req.body?.sessionId ?? req.headers['x-session-id'];
+    const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
     
     if (sessionId) {
       logger.info('Terminating session on logout', { sessionId });
@@ -661,7 +662,7 @@ app.get('/health', (req: Request, res: Response) => {
  */
 app.all('*', async (req: Request, res: Response) => {
   try {
-    const authUser = (req as any).authUser;
+    const authUser = (req as BrokerRequest).authUser;
 
     // Redirect unauthenticated requests to oauth2-proxy
     if (!authUser) {
@@ -715,7 +716,7 @@ app.all('*', async (req: Request, res: Response) => {
       const response = await axios({
         method: req.method,
         url: targetUrl,
-        headers: req.headers,
+        headers: req.headers as Record<string, string>,
         data: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
         validateStatus: () => true // Accept all status codes
       });

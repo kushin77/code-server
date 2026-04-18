@@ -974,8 +974,8 @@
       "status": "open",
       "branchType": "fix",
       "closePolicy": "standard",
-      "dependencies": [688, 690],
-      "executionBrief": "GitHub Actions now has the deploy SSH secret. A temporary self-hosted runner validated the portal workflow path and the VPN gate, but the issue stays open until the production-capable apply path reaches 192.168.168.31 and live redirects are verified.",
+      "dependencies": [688, 690, 695],
+      "executionBrief": "GitHub Actions now has the deploy SSH secret and the self-hosted local execution workflow is merged on main. Temporary self-hosted runners validate scheduling and Docker availability, but the issue stays open until non-interactive secret material is available on runner execution and live redirects are verified.",
       "evidence": [
         "Workflow run 24608080969 failed at host reachability, not secret installation",
         "DEPLOY_SSH_PRIVATE_KEY and DEPLOY_SSH_KNOWN_HOSTS were provisioned",
@@ -984,7 +984,27 @@
         "Published portal workflow run 24609258258 failed at SSH auth with Permission denied (publickey,password)",
         "Branch fix run 24609414318 reached the deploy step and failed because the runner lacked docker",
         ".github/workflows/portal-oauth-redeploy.yml now targets a self-hosted runner",
-        "scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local validated successfully in workspace"
+        "scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local validated successfully in workspace",
+        "PR #693 merged local execution path into main for portal redeploy workflow",
+        "Portal runs 24609720382 and 24609751800 fail in env bootstrap because GSM auth is unavailable and environment OAuth secrets are unset"
+      ]
+    },
+    {
+      "number": 695,
+      "title": "P0: Add non-interactive GSM auth path for self-hosted portal redeploy workflow",
+      "class": "unblock",
+      "lane": "release",
+      "priority": "P0",
+      "status": "open",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [],
+      "executionBrief": "Portal redeploy now runs in local self-hosted mode on main, but fails before compose apply because ephemeral runners cannot fetch GSM secrets non-interactively and no production environment OAuth fallback secrets are configured.",
+      "evidence": [
+        "Portal run 24609720382 failed in Bootstrap ephemeral env file from GSM",
+        "Portal run 24609751800 failed in Bootstrap ephemeral env file from GSM",
+        "Repository has GCP_WIF_PROVIDER and GCP_SA secrets but no production environment OAuth fallback secrets",
+        "Issue #695 created as direct dependency to close #692"
       ]
     },
     {

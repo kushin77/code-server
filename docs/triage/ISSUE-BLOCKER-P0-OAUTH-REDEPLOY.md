@@ -31,3 +31,4 @@ Execution path is blocked, not implementation:
 - Branch: feat/671-issue-671
 - Failing script in current runtime: bash scripts/deploy/redeploy-portal-oauth-routing.sh
 - Deploy workflow run with queued self-hosted job: 24597100366
+- Follow-up secret-provisioning issue: #690

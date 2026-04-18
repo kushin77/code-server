@@ -68,7 +68,7 @@ resource "docker_image" "keepalived" {
   name     = "keepalived:${local.keepalived_version}"
   build {
     context    = path.module
-    dockerfile = "build/Dockerfile"
+    dockerfile = "${path.module}/build/Dockerfile"
   }
 }
 

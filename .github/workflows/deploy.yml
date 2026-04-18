@@ -99,15 +99,18 @@ jobs:
 
       - name: Get Outputs
         run: |
+          access_url="$(terraform output -raw code_server_url 2>/dev/null || echo 'https://ide.kushnir.cloud')"
           echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Access URL:** $(terraform output -raw code_server_url)" >> $GITHUB_STEP_SUMMARY
+          echo "**Access URL:** ${access_url}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Status:** All containers deployed and running" >> $GITHUB_STEP_SUMMARY
 
       - name: Slack Notification
-        if: success()
+        if: success() && secrets.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1.25.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
             {
@@ -155,8 +158,10 @@ jobs:
         run: terraform apply destroy-plan
 
       - name: Slack Notification
-        if: success()
+        if: success() && secrets.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1.25.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           payload: |
             {

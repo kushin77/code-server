@@ -34,6 +34,7 @@ readonly BLOCKED_FILES=(
 # Some files intentionally document legacy paths and are exempt from reference checks.
 readonly REFERENCE_ALLOWLIST=(
   "scripts/ci/enforce-global-dedup.sh"
+  "scripts/ci/detect-config-drift.sh"
   "docs/governance/GLOBAL-DEDUP-GOVERNANCE.md"
   "docs/governance/GLOBAL-DEDUP-TRIAGE.md"
   "docs/DEDUPLICATION-POLICY.md"

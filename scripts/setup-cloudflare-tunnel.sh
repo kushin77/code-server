@@ -12,7 +12,6 @@ set -e
 # Configuration (Overridable via ENV)
 CLOUDFLARE_TUNNEL_TOKEN="${CLOUDFLARE_TUNNEL_TOKEN:-}"
 TUNNEL_USER="cloudflare-tunnel"
-CLOUDFLARED_VERSION="latest"
 
 if [ -z "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
     echo "❌ ERROR: CLOUDFLARE_TUNNEL_TOKEN is not set."

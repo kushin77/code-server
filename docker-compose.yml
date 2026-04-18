@@ -54,10 +54,8 @@ services:
       - code-server-workspace:/home/coder/workspace
       - code-server-profile:/home/coder/.local/share/code-server
       - ./config/code-server/settings.json:/etc/code-server/settings.json:ro
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    # Snap Docker on primary host denies exec with no-new-privileges+cap_drop under user 1000.
+    # Keep service functional; hardening is enforced at network/auth layers.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
       interval: 30s

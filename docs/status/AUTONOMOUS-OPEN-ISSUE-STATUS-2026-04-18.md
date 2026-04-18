@@ -60,5 +60,6 @@ Canonical machine-readable companion:
 - Local portal redeploy dry-run now passes with `bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local`, and the temporary self-hosted runner validated both the portal dry-run and the VPN gate.
 - `#691` is closed: the legacy docs-root bridge files were collapsed to compatibility stubs and the canonical folder indexes remain in place.
 - The latest published portal OAuth run still fails in the Redeploy portal services step because the published workflow invokes the helper in SSH mode and the host rejects the key.
+- The published branch fix `fix/692-local-execution-path` reached the redeploy step but failed because the self-hosted runner lacked `docker`; the next blocker is a Docker-capable runner or host-side execution path.
 - `#686`, `#684`, and `#649` are open PR-backed lanes with existing repo artifacts; they are parallel review tracks, not the current release blocker.
 - Keep issue comments current when additional AC evidence lands so GitHub remains usable without local context.

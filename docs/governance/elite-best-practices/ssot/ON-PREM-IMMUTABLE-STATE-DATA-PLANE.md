@@ -26,10 +26,11 @@ Tier B may be reconstructed. Tier A is protected by replication checks and snaps
 ## Canonical Persistence Layout
 
 Current canonical compose mappings in docker-compose.yml:
-- code-server-profile -> /home/coder/.local/share/code-server
-- ./workspace -> /home/coder/workspace
+- code-server-workspace (NFS volume: ${NAS_HOST}:/export/code-server/workspace) -> /home/coder/workspace
+- code-server-profile (NFS volume: ${NAS_HOST}:/export/code-server/profile) -> /home/coder/.local/share/code-server
+- code-server-profile-backups (NFS volume: ${NAS_HOST}:/export/code-server/profile-backups) -> backup snapshots
 
-This mapping enforces ephemeral container state outside the profile/workspace mounts and is immutable in practice because redeploy and failover scripts read compose state from source-controlled files and do not rely on mutable in-container edits.
+This mapping enforces ephemeral container state outside Tier A mounts and is immutable in practice because redeploy and failover scripts read compose state from source-controlled files and do not rely on mutable in-container edits.
 
 Security baseline constraints for this model:
 - code-server auth mode is password-based (no `--auth=none` in production baseline).

@@ -1,40 +1,42 @@
 ## Summary
-Production apex OAuth is still misrouted: kushnir.cloud starts OAuth with IDE callback instead of portal callback.
+Production apex OAuth is now blocked in the GCP/GSM bootstrap phase, not in the compose helper or SSH transport.
 
 Observed on 2026-04-18:
-- https://kushnir.cloud/oauth2/start?rd=/ returns redirect_uri=https://ide.kushnir.cloud/oauth2/callback
-- expected redirect_uri=https://kushnir.cloud/oauth2/callback
+- Latest main run `24610858158` reaches `google-github-actions/auth@v2` with the canonical numeric provider path and fails with `invalid_target`.
+- Local gcloud refresh from this workstation returns `invalid_rapt`, so provider discovery cannot be completed here.
+- Canonical GCP/GSM bootstrap guidance lives in [../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md](../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md).
 
 ## Root Cause
-Execution path is blocked, not implementation:
-- IaC compose split callback fix exists in branch (OAUTH2_PROXY_IDE_REDIRECT_URL + OAUTH2_PROXY_PORTAL_REDIRECT_URL)
-- idempotent redeploy script exists: scripts/deploy/redeploy-portal-oauth-routing.sh
-- direct non-interactive SSH to 192.168.168.31 unavailable from current runtime shell
-- GitHub Actions deploy secret is provisioned, and the standalone portal workflow now targets self-hosted execution; the published main workflow still fails on SSH auth, while the published branch fix reaches the deploy step and then fails because the runner lacks `docker`
-- Local dry-run validation passes with `bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local`
+Execution path is codified; the active blocker is secret/provider resolution:
+- The portal workflow now targets self-hosted execution with branch-scoped concurrency.
+- The GSM bootstrap path depends on canonical Workload Identity provider resolution.
+- The backing workload identity pool/provider does not currently resolve in GCP from the current session.
+- The repository-side secret surface is limited to `GCP_PROJECT`, `GCP_SA`, and `GCP_WIF_PROVIDER`.
+- There is no repo-side fallback that can recreate the missing GCP provider resource.
 
 ## Required Work (Immutable + Idempotent)
-- [ ] Provide a Docker-capable reachable execution path for the redeploy workflow (self-hosted runner or approved tunnel/proxy)
-- [ ] Provide the correct SSH deploy credential or host-side runner access for the published main workflow, or keep the local-mode branch path as the published execution path
-- [ ] Keep the deploy path secret-driven, immutable, and idempotent
-- [ ] Execute `scripts/deploy/redeploy-portal-oauth-routing.sh` through the `portal-oauth-redeploy.yml` workflow against production
+- [ ] Recreate or correct the GCP workload identity pool/provider so the canonical numeric provider path resolves.
+- [ ] Confirm the exact secret contract for `GCP_PROJECT` versus `GCP_WIF_PROVIDER`.
+- [ ] Re-run the portal workflow and capture the first successful GSM bootstrap.
 - [ ] Verify redirects:
   - apex -> https://kushnir.cloud/oauth2/callback
   - ide -> https://ide.kushnir.cloud/oauth2/callback
-- [ ] Capture evidence in issue comment (exact curl -I location lines)
+- [ ] Capture evidence in issue comment (exact curl -I location lines).
 
 ## Acceptance Criteria
-- [ ] Live apex callback uses kushnir.cloud callback
-- [ ] Live ide callback uses ide.kushnir.cloud callback
-- [ ] Redeploy execution path is codified and repeatable from a registered reachable runner
-- [ ] No manual in-container edits; compose-driven idempotent deploy only
+- [ ] Live apex callback uses kushnir.cloud callback.
+- [ ] Live ide callback uses ide.kushnir.cloud callback.
+- [ ] The bootstrap path is codified and repeatable from a registered reachable runner.
+- [ ] No manual in-container edits; compose-driven idempotent deploy only.
 
 ## References
 - Branch: feat/671-issue-671
-- Failing script in current runtime: bash scripts/deploy/redeploy-portal-oauth-routing.sh
-- Deploy workflow run with queued GitHub-hosted job: 24608080969
-- Secret-provisioning issue: #690 (resolved)
-- Network-reachability follow-up issue: #692
-- Self-hosted validation runs: portal-oauth-redeploy.yml #24608948773, vpn-e2e-gate.yml #24608949154
-- Latest published portal run: #24609258258 failed at SSH auth with `Permission denied (publickey,password)`
-- Branch fix run: #24609414318 failed because the self-hosted runner lacked `docker`
+- [Portal OAuth GCP/GSM bootstrap runbook](../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md)
+- Portal 502 follow-up issue: `#709`
+- Failing script in current runtime: `bash scripts/deploy/redeploy-portal-oauth-routing.sh`
+- Deploy workflow run with queued GitHub-hosted job: `24608080969`
+- Secret-provisioning issue: `#690` (resolved)
+- Network-reachability follow-up issue: `#692`
+- Self-hosted validation runs: `portal-oauth-redeploy.yml #24608948773`, `vpn-e2e-gate.yml #24608949154`
+- Latest published portal run: `#24609258258` failed at SSH auth with `Permission denied (publickey,password)`
+- Branch fix run: `#24609414318` failed because the self-hosted runner lacked `docker`

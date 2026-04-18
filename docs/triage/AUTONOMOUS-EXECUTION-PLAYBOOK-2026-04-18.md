@@ -10,6 +10,7 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - CI stabilization blocker: #687
 - Production OAuth redeploy blocker: #692
 - Secret bootstrap blocker: #695
+- Portal 502 follow-up: #709
 
 ## Closed Duplicate
 - #689 (duplicate of #687)
@@ -18,7 +19,8 @@ This playbook is the canonical handoff for parallel agents working from branch `
 1. Resolve #687 first (branch CI determinism).
 2. Resolve #695 second (non-interactive GSM auth and WIF secret correctness for self-hosted runners).
 3. Resolve #692 third (production callback redeploy execution path + runtime verification).
-4. Resume completion/closure flow for #671 once #687, #695, and #692 are closed.
+4. Resolve #709 fourth (portal 502 path: caddy TLS wildcard ACME + oauth2-proxy-portal DNS upstream).
+5. Resume completion/closure flow for #671 once #687, #695, #692, and #709 are closed.
 
 ## Issue #687 Execution Checklist
 - Reproduce failing workflows listed in issue body.
@@ -53,5 +55,6 @@ This playbook is the canonical handoff for parallel agents working from branch `
 - Canonical GCP/GSM bootstrap guidance lives in [../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md](../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md).
 - Latest `main` portal run `24610858158` reaches `google-github-actions/auth@v2` with a canonical numeric provider path, but fails with `invalid_target` because the backing workload identity pool/provider does not resolve.
 - Local gcloud auth is blocked by `invalid_rapt`, so project-number/provider discovery cannot be completed from this workstation session.
+- Portal 502 follow-up `#709` remains the next runtime issue after auth/bootstrap recovers.
 - The portal workflow now has branch-scoped concurrency and a dedicated runner label to reduce cross-agent contention.
 - Parallel open PR lanes remain for #686, #684, and #649; keep them separate from the production blocker path.

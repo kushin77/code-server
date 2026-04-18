@@ -1010,6 +1010,25 @@
       ]
     },
     {
+      "number": 709,
+      "title": "P1: Resolve portal 502 path (caddy TLS wildcard ACME + oauth2-proxy-portal DNS upstream)",
+      "class": "unblock",
+      "lane": "release",
+      "priority": "P1",
+      "status": "open",
+      "branchType": "fix",
+      "closePolicy": "standard",
+      "dependencies": [692, 695, 698],
+      "executionBrief": "After deterministic redeploy completion, eliminate the remaining portal 502 path by fixing wildcard Caddy TLS ACME handling and oauth2-proxy-portal DNS upstream resolution.",
+      "evidence": [
+        "Portal requests to kushnir.cloud still returned 502 after redeploy completion",
+        "Caddy wildcard certificate attempts failed due to missing DNS solver configuration for *.kushnir.cloud",
+        "ZeroSSL EAB legacy user removal produced code 2977 in the on-prem wrapper logs",
+        "Reverse proxy upstream lookup failed for oauth2-proxy-portal on 127.0.0.11:53",
+        "Issue #709 is related to #692, #695, and #698"
+      ]
+    },
+    {
       "number": 686,
       "title": "fix(oauth): enforce surface-specific redirect callbacks and add redeploy helper",
       "class": "fix",

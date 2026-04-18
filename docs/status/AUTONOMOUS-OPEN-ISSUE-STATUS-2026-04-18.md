@@ -43,6 +43,7 @@ Canonical machine-readable companion:
 
 - `#692` Provide reachable execution path for portal OAuth redeploy workflow
 - `#695` Add non-interactive GSM auth path for self-hosted portal redeploy workflow
+- `#709` Resolve portal 502 path (caddy TLS wildcard ACME + oauth2-proxy-portal DNS upstream)
 - `#686` fix(oauth): enforce surface-specific redirect callbacks and add redeploy helper
 - `#684` feat(monorepo): bootstrap pnpm workspace and lockfile governance
 - `#649` feat(policy): Implement VS Code Enterprise Policy Pack v1.0 (#618)
@@ -51,9 +52,10 @@ Canonical machine-readable companion:
 
 1. `#695` correct non-interactive GSM auth for self-hosted portal workflow execution.
 2. `#692` re-run the hardened portal workflow on `main` and complete live redirect verification.
-3. `#686` keep the OAuth helper lane aligned with the portal redeploy path and review the open PR.
-4. `#684` keep the monorepo/pnpm governance lane moving independently of the release blocker.
-5. `#649` keep the policy-pack governance lane moving independently of the release blocker.
+3. `#709` remove the remaining portal 502 path by fixing caddy TLS wildcard ACME and oauth2-proxy-portal DNS upstream resolution.
+4. `#686` keep the OAuth helper lane aligned with the portal redeploy path and review the open PR.
+5. `#684` keep the monorepo/pnpm governance lane moving independently of the release blocker.
+6. `#649` keep the policy-pack governance lane moving independently of the release blocker.
 
 ## Operational Notes
 
@@ -66,6 +68,7 @@ Canonical machine-readable companion:
 - Canonical GCP/GSM bootstrap guidance now lives in [../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md](../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md).
 - Latest `main` run `24610858158` reaches `google-github-actions/auth@v2` with a canonical numeric provider path, but fails with `invalid_target` because the underlying workload identity pool/provider is not resolving in GCP.
 - Local gcloud refresh now returns `invalid_rapt`, so direct project-number/provider discovery is blocked until the workstation account is reauthenticated.
+- Portal 502 follow-up issue `#709` is queued behind the bootstrap work and should be handled immediately after the auth path is restored.
 - `#695` is the active secret-bootstrap dependency for closing `#692`.
 - `#686`, `#684`, and `#649` are open PR-backed lanes with existing repo artifacts; they are parallel review tracks, not the current release blocker.
 - Keep issue comments current when additional AC evidence lands so GitHub remains usable without local context.

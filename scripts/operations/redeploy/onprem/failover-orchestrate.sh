@@ -298,7 +298,7 @@ run_primary_redeploy() {
 
 run_replica_promote() {
   # Replica path uses docker/docker-compose.yml to avoid host conflicts with db/cache services.
-  run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; set -a; [ -f .env ] && . ./.env || true; set +a; export ts=\"\${ts:-na}\"; export out=\"\${out:-/tmp}\"; ${REPLICA_COMPOSE_BIN} -f docker/docker-compose.yml up -d code-server oauth2-proxy code-server-profile-backup"
+  run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; set -a; [ -f .env ] && . ./.env || true; set +a; export ts=\"\${ts:-na}\"; export out=\"\${out:-/tmp}\"; services='code-server oauth2-proxy'; if ${REPLICA_COMPOSE_BIN} -f docker/docker-compose.yml config --services | grep -qx 'code-server-profile-backup'; then services=\"\${services} code-server-profile-backup\"; fi; ${REPLICA_COMPOSE_BIN} -f docker/docker-compose.yml up -d \${services}"
 
   # Ensure alternate ingress endpoint exists for validation when 80/443 are unavailable.
   run_replica_cmd "set -euo pipefail; cd ${REPLICA_REPO}; cat > /tmp/Caddyfile.replica <<'EOF'

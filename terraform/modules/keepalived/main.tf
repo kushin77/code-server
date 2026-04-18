@@ -72,6 +72,15 @@ resource "docker_image" "keepalived" {
   }
 }
 
+resource "docker_image" "keepalived_replica" {
+  provider = docker.replica
+  name     = "keepalived:${local.keepalived_version}"
+  build {
+    context    = path.module
+    dockerfile = "${path.module}/build/Dockerfile"
+  }
+}
+
 # ==============================================================================
 # PRIMARY HOST — KEEPALIVED CONFIGURATION
 # ==============================================================================
@@ -142,7 +151,7 @@ resource "docker_container" "keepalived_primary" {
   count          = var.enable_on_primary ? 1 : 0
   provider       = docker.primary
   name           = "keepalived"
-  image          = docker_image.keepalived.repo_digest
+  image          = docker_image.keepalived.image_id
   privileged     = true
   network_mode   = "host"
 
@@ -183,6 +192,7 @@ resource "docker_container" "keepalived_primary" {
     docker_image.keepalived,
     local_file.keepalived_primary_config,
   ]
+
 
   lifecycle {
     create_before_destroy = true
@@ -258,7 +268,7 @@ resource "docker_container" "keepalived_replica" {
   count          = var.enable_on_replica ? 1 : 0
   provider       = docker.replica
   name           = "keepalived"
-  image          = docker_image.keepalived.repo_digest
+  image          = docker_image.keepalived_replica.image_id
   privileged     = true
   network_mode   = "host"
 
@@ -296,7 +306,7 @@ resource "docker_container" "keepalived_replica" {
   }
 
   depends_on = [
-    docker_image.keepalived,
+    docker_image.keepalived_replica,
     local_file.keepalived_replica_config,
   ]
 

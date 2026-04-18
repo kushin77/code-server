@@ -30,11 +30,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
+      - name: Normalize WIF provider value
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        env:
+          GCP_WIF_PROVIDER_RAW: ${{ secrets.GCP_WIF_PROVIDER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          provider="${GCP_WIF_PROVIDER_RAW#//iam.googleapis.com/}"
+          provider="${provider#https://iam.googleapis.com/}"
+          if [[ -z "$provider" ]]; then
+            echo "GCP_WIF_PROVIDER is empty after normalization" >&2
+            exit 1
+          fi
+          echo "GCP_WIF_PROVIDER_NORMALIZED=$provider" >> "$GITHUB_ENV"
+
       - name: Authenticate to GCP via Workload Identity
         if: ${{ !inputs.dry_run && !hashFiles('.env') }}
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER_NORMALIZED }}
           service_account: ${{ secrets.GCP_SA }}
 
       - name: Setup gcloud CLI

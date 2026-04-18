@@ -1,98 +1,16 @@
-version: '3.8'
-
-services:
-  code-server:
-    image: codercom/code-server:latest
-    container_name: code-server
-    restart: unless-stopped
-    ports:
-      - "8443:8443"
-    environment:
-      - PASSWORD=${CODE_SERVER_PASSWORD:-}
-      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-}
-      - NODE_OPTIONS=--max-workers=8 --expose-gc
-      - NODE_ENV=production
-    volumes:
-      - ${CODE_SERVER_DATA:-./data}:/home/coder
-      - /var/run/docker.sock:/var/run/docker.sock
-    expose:
-      - "8443"
-    mem_limit: 4g
-    memswap_limit: 4g
-    cpus: 3.0
-    tmpfs:
-      - /tmp
-      - /run
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8443/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    networks:
-      - code-server-net
-    labels:
-      - "com.example.tier=1-optimized"
-      - "com.example.version=2026-04-13"
-    sysctls:
-      - net.ipv4.tcp_keepalives_intvl=15
-      - net.ipv4.tcp_keepalives_probes=5
-
-  caddy:
-    image: caddy:latest
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - ${CADDY_CONFIG:-./Caddyfile}:/etc/caddy/Caddyfile
-      - ${CADDY_DATA:-caddy-data}:/data
-      - ${CADDY_CONFIG:.}:/config
-    environment:
-      - CADDY_ADMIN=127.0.0.1:2019
-    expose:
-      - "3000"
-    mem_limit: 512m
-    memswap_limit: 512m
-    cpus: 1.0
-    depends_on:
-      code-server:
-        condition: service_healthy
-    networks:
-      - code-server-net
-    labels:
-      - "com.example.tier=1-optimized"
-      - "com.example.version=2026-04-13"
-
-networks:
-  code-server-net:
-    driver: bridge
-    driver_opts:
-      com.docker.driver.mtu: 1450
-
-volumes:
-  caddy-data:
-    driver: local
-
-# Caddyfile content (inline for reference):
-# {
-#   admin off
-#   default_bind 0.0.0.0
-#   default_sni_header
-# }
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  RETIRED — DO NOT USE                                                   ║
+# ║  This file has been superseded by the canonical compose baseline.       ║
+# ║  Canonical file: /docker-compose.yml (repo root)                        ║
+# ║                                                                          ║
+# ║  REASON: Security violations — docker socket mounted, weak password     ║
+# ║  fallback (PASSWORD:-), mutable :latest image tag, no NFS volumes.      ║
+# ║  See issue #730 for retirement rationale.                               ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
 #
-# :3000 {
-#   encode brotli gzip {
-#     minimum_length 500
-#   }
-#   header -Server
-#   header -X-Powered-By
-#   header X-Content-Type-Options "nosniff"
-#   header X-Frame-Options "SAMEORIGIN"
-#   header Referrer-Policy "strict-origin-when-cross-origin"
-#   reverse_proxy localhost:8443 {
-#     header_up X-Forwarded-Proto https
-#     header_up X-Forwarded-Host {host}
-#     header_up X-Forwarded-For {remote_host}
-#   }
-# }
+# To deploy: ssh akushnir@192.168.168.31
+#            cd ~/code-server-enterprise
+#            docker compose up -d
+#
+# This file is intentionally left as a comment-only stub to prevent
+# accidental use of this retired compose file.

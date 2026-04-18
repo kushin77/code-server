@@ -80,10 +80,12 @@ locals {
   # Storage Configuration
   # ─────────────────────────────────────────────────────────────────────────
   storage = {
-    data_volume    = "${local.service_name}-data"
-    ollama_volume  = "ollama-data"
-    workspace_path = "/home/coder/workspace"
-    workspace_dir  = "${path.module}/workspace" # Local path on deploy host
+    data_volume      = "code-server-profile"
+    workspace_volume = "code-server-workspace"
+    ollama_volume    = "ollama-data"
+    workspace_path   = "/home/coder/workspace"
+    nas_host         = "192.168.168.56"
+    nas_export_path  = "/export"
   }
 
   # ─────────────────────────────────────────────────────────────────────────
@@ -132,9 +134,11 @@ locals {
     caddy_https_port         = local.network.caddy_https_port
     ollama_port              = local.network.ollama_port
     data_volume              = local.storage.data_volume
+    workspace_volume         = local.storage.workspace_volume
     ollama_volume            = local.storage.ollama_volume
     workspace_path           = local.storage.workspace_path
-    workspace_dir            = local.storage.workspace_dir
+    nas_host                 = local.storage.nas_host
+    nas_export_path          = local.storage.nas_export_path
     code_server_memory_limit = local.resources.code_server.limits.memory
     code_server_cpus_limit   = local.resources.code_server.limits.cpus
     llama_model              = "llama2:70b-chat"
@@ -374,6 +378,59 @@ output "deployment_summary" {
     environment     = local.environment
     pinned_versions = local.versions
     network         = local.network
-    storage_volumes = { data = local.storage.data_volume, ollama = local.storage.ollama_volume }
+    storage_volumes = {
+      data      = local.storage.data_volume
+      workspace = local.storage.workspace_volume
+      ollama    = local.storage.ollama_volume
+      nas_host  = local.storage.nas_host
+    }
+  }
+}
+
+# ════════════════════════════════════════════════════════════════════════════
+# KEEPALIVED MODULE — Active/Passive VRRP failover between .31 and .42
+#
+# VIP 192.168.168.30 floats between primary (.31) and replica (.42).
+# Both hosts mount the same NFS exports from NAS .56 — zero data drift on
+# failover. Keepalived monitors port 8080 (code-server) + 9090 (Prometheus) +
+# 5432 (PostgreSQL). If health checks fail on primary, VIP moves to replica
+# within ~2 seconds (advert_int=1, fall=2).
+#
+# To apply ONLY this module from the production host:
+#   ssh akushnir@192.168.168.31
+#   cd ~/code-server-enterprise/terraform
+#   terraform apply -target=module.keepalived
+# ════════════════════════════════════════════════════════════════════════════
+module "keepalived" {
+  source = "./modules/keepalived"
+
+  vrrp_router_id        = 51
+  keepalived_version    = "2.2.8"
+  health_check_interval = 5
+  health_check_retries  = 2
+  health_check_timeout  = 3
+  vrrp_interval         = 1
+
+  inventory = {
+    vip = {
+      ip   = "192.168.168.30"
+      fqdn = "code-server.kushnir.local"
+    }
+    hosts = {
+      primary = {
+        ip       = "192.168.168.31"
+        fqdn     = "code-server-31.kushnir.local"
+        ssh_user = "akushnir"
+        ssh_port = 22
+        roles    = ["code-server", "prometheus", "grafana"]
+      }
+      replica = {
+        ip       = "192.168.168.42"
+        fqdn     = "code-server-42.kushnir.local"
+        ssh_user = "akushnir"
+        ssh_port = 22
+        roles    = ["code-server", "prometheus", "grafana"]
+      }
+    }
   }
 }

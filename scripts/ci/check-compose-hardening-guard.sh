@@ -63,6 +63,17 @@ check_absent "$BASE_COMPOSE" '^\s*- \./workspace:' 'host-local workspace bind-mo
 
 check_present "$TEMPLATE_COMPOSE" 'type: nfs' 'NFS volume type in template'
 
+# ── Legacy compose stub invariants ───────────────────────────────────────────
+# These files must be retired stubs (comment-only) — not active compose configs
+LEGACY_SCRIPTS_COMPOSE="scripts/docker-compose.yml"
+LEGACY_DOCKER_COMPOSE="docker/docker-compose.yml"
+
+for legacy_file in "$LEGACY_SCRIPTS_COMPOSE" "$LEGACY_DOCKER_COMPOSE"; do
+  if [[ -f "$legacy_file" ]]; then
+    check_absent "$legacy_file" '^[^#].*image:|^[^#].*services:' "active service definitions in retired legacy file ${legacy_file}"
+  fi
+done
+
 if [[ "$has_failure" -ne 0 ]]; then
   log_fatal "Compose hardening guard failed"
 fi

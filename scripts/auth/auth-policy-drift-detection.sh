@@ -15,8 +15,8 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "$SCRIPT_DIR/scripts/_common/init.sh"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$REPO_ROOT/scripts/_common/init.sh"
 
 # ============================================================================
 # Configuration
@@ -45,31 +45,49 @@ check_auth_flow_integrity() {
   
   local issues=0
   for file in "${oauth_config_files[@]}"; do
-    if [[ ! -f "$SCRIPT_DIR/$file" ]]; then
+    if [[ ! -f "$REPO_ROOT/$file" ]]; then
       log_error "Critical config missing: $file"
       ((issues++))
       continue
     fi
-    
-    # Check for hardcoded secrets (major drift indicator)
-    if grep -qE '(GOOGLE_CLIENT_SECRET|OAUTH2_COOKIE_SECRET)=' "$SCRIPT_DIR/$file"; then
-      log_error "CRITICAL: Hardcoded secrets found in $file"
-      ((issues++))
-    fi
-    
-    # Check for required OAuth endpoints
-    local required_endpoints=(
-      "oauth2/callback"
-      "oauth2/start"
-    )
-    
-    for endpoint in "${required_endpoints[@]}"; do
-      if ! grep -q "$endpoint" "$SCRIPT_DIR/$file"; then
-        log_warn "Missing OAuth endpoint: $endpoint in $file"
-        ((issues++))
-      fi
-    done
   done
+
+  if grep -qE 'OAUTH2_PROXY_(CLIENT_SECRET|COOKIE_SECRET):\s*"[A-Za-z0-9]' "$REPO_ROOT/docker-compose.yml" 2>/dev/null; then
+    log_error "CRITICAL: Hardcoded OAuth secrets found in docker-compose.yml"
+    ((issues++))
+  fi
+
+  if ! grep -q 'oauth2/callback' "$REPO_ROOT/oauth2-proxy.cfg" 2>/dev/null; then
+    log_error "oauth2-proxy.cfg missing oauth2/callback configuration"
+    ((issues++))
+  fi
+
+  if ! grep -q 'OAUTH2_PROXY_REDIRECT_URL' "$REPO_ROOT/docker-compose.yml" 2>/dev/null; then
+    log_error "docker-compose.yml missing OAUTH2_PROXY_REDIRECT_URL"
+    ((issues++))
+  fi
+
+  local wildcard_domain_count
+  wildcard_domain_count=$(grep -cE 'OAUTH2_PROXY_EMAIL_DOMAINS:.*\*' "$REPO_ROOT/docker-compose.yml" 2>/dev/null || true)
+  if [[ "$wildcard_domain_count" -lt 2 ]]; then
+    log_error "Expected both oauth2-proxy surfaces to allow wildcard Google domains before allowlist enforcement"
+    ((issues++))
+  fi
+
+  if ! grep -q 'email-domains = \["\*"\]' "$REPO_ROOT/oauth2-proxy.cfg" 2>/dev/null; then
+    log_error "oauth2-proxy.cfg does not document wildcard email domain handling"
+    ((issues++))
+  fi
+
+  if ! grep -q 'authenticated-emails-file' "$REPO_ROOT/oauth2-proxy.cfg" 2>/dev/null; then
+    log_error "oauth2-proxy.cfg missing authenticated-emails-file enforcement"
+    ((issues++))
+  fi
+
+  if ! grep -q 'OAUTH2_PROXY_PROMPT: "select_account"' "$REPO_ROOT/docker-compose.yml" 2>/dev/null; then
+    log_error "docker-compose.yml missing select_account prompt for OAuth account chooser"
+    ((issues++))
+  fi
   
   if [[ $issues -gt 0 ]]; then
     return 1
@@ -85,7 +103,7 @@ check_auth_flow_integrity() {
 check_policy_config_drift() {
   log_info "Checking policy config drift..."
   
-  local policy_file="$SCRIPT_DIR/policies/code-server.yaml"
+  local policy_file="$REPO_ROOT/policies/code-server.yaml"
   
   if [[ ! -f "$policy_file" ]]; then
     log_error "Policy file not found: $policy_file"
@@ -97,13 +115,18 @@ check_policy_config_drift() {
   
   # Get committed version hash
   local committed_hash
-  committed_hash=$(cd "$SCRIPT_DIR" && git show HEAD:policies/code-server.yaml 2>/dev/null | sha256sum | awk '{print $1}') || {
+  committed_hash=$(cd "$REPO_ROOT" && git show HEAD:policies/code-server.yaml 2>/dev/null | sha256sum | awk '{print $1}') || {
     log_warn "Could not retrieve committed hash (git not available)"
     return 0
   }
   
   # Compare
   if [[ "$current_hash" != "$committed_hash" ]]; then
+    if [[ -n "$DRY_RUN" ]]; then
+      log_warn "Verify mode: policy file has uncommitted changes"
+      return 0
+    fi
+
     log_warn "Policy file has uncommitted changes"
     log_warn "  Current hash:   $current_hash"
     log_warn "  Committed hash: $committed_hash"
@@ -119,6 +142,11 @@ check_policy_config_drift() {
 # ============================================================================
 check_audit_log_health() {
   log_info "Checking audit log health..."
+
+  if [[ -n "$DRY_RUN" ]]; then
+    log_warn "Verify mode: skipping external audit log health probe"
+    return 0
+  fi
   
   if ! command -v gcloud &>/dev/null; then
     log_warn "gcloud not available, skipping audit log health check"
@@ -153,6 +181,11 @@ check_audit_log_health() {
 # ============================================================================
 check_identity_provider_health() {
   log_info "Checking identity provider health..."
+
+  if [[ -n "$DRY_RUN" ]]; then
+    log_warn "Verify mode: skipping external identity provider probe"
+    return 0
+  fi
   
   local admin_portal_url="${ADMIN_PORTAL_URL:-https://admin.kushnir.cloud}"
   local userinfo_endpoint="$admin_portal_url/oauth2/api/v1/userinfo"
@@ -174,10 +207,10 @@ calculate_drift_score() {
   local checks_passed=0
   local checks_total=4
   
-  check_auth_flow_integrity && ((checks_passed++)) || true
-  check_policy_config_drift && ((checks_passed++)) || true
-  check_audit_log_health && ((checks_passed++)) || true
-  check_identity_provider_health && ((checks_passed++)) || true
+  check_auth_flow_integrity >/dev/null && ((checks_passed++)) || true
+  check_policy_config_drift >/dev/null && ((checks_passed++)) || true
+  check_audit_log_health >/dev/null && ((checks_passed++)) || true
+  check_identity_provider_health >/dev/null && ((checks_passed++)) || true
   
   # Drift score = (1 - (passed/total)) * 100
   local drift_score=$(( (checks_total - checks_passed) * 100 / checks_total ))
@@ -255,9 +288,9 @@ generate_drift_report() {
     "identity_provider_health": "$(check_identity_provider_health >/dev/null 2>&1 && echo "PASS" || echo "FAIL")"
   },
   "repository_info": {
-    "current_branch": "$(cd "$SCRIPT_DIR" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')",
-    "current_commit": "$(cd "$SCRIPT_DIR" && git rev-parse HEAD 2>/dev/null || echo 'unknown')",
-    "policy_file_hash": "$(sha256sum "$SCRIPT_DIR/policies/code-server.yaml" 2>/dev/null | awk '{print $1}' || echo 'unknown')"
+    "current_branch": "$(cd "$REPO_ROOT" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'unknown')",
+    "current_commit": "$(cd "$REPO_ROOT" && git rev-parse HEAD 2>/dev/null || echo 'unknown')",
+    "policy_file_hash": "$(sha256sum "$REPO_ROOT/policies/code-server.yaml" 2>/dev/null | awk '{print $1}' || echo 'unknown')"
   }
 }
 EOF

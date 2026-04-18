@@ -20,6 +20,17 @@ spec:
     provider: admin-portal
     googleClientId: ${GOOGLE_CLIENT_ID}
     googleClientSecret: ${GOOGLE_CLIENT_SECRET_GSM}
+    oauthAccessControl:
+      ide:
+        emailDomains:
+          - "*"
+        prompt: select_account
+      portal:
+        emailDomains:
+          - "*"
+        prompt: select_account
+      enforcementGate: authenticated-emails-file
+      authenticatedEmailsFile: /etc/oauth2-proxy/allowed-emails.txt
     
     # Session lifecycle
     sessionTTL: 8h           # Default session duration

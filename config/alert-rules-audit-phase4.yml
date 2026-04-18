@@ -38,6 +38,20 @@ groups:
           summary: "Auth failure spike on {{ $labels.instance }}"
           description: "{{ $value }} 401 errors in 5 minutes — check oauth2-proxy and JWT validation"
 
+      # P1: any 403 on the auth path is actionable for org_internal regressions
+      - alert: AuditOAuth403Detected
+        expr: |
+          sum(increase(caddy_http_requests_total{status="403"}[5m])) by (instance) > 0
+        for: 1m
+        labels:
+          severity: warning
+          category: audit
+          phase: "4"
+        annotations:
+          summary: "OAuth 403 detected on {{ $labels.instance }}"
+          description: "{{ $value }} forbidden responses in 5 minutes. Check for org_internal regressions and email domain drift."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OAUTH-ORG-INTERNAL-403-TROUBLESHOOTING.md"
+
       # P1: Prometheus scrape down (audit data gap)
       - alert: AuditDataGap
         expr: up{job="prometheus"} == 0

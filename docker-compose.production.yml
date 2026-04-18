@@ -152,7 +152,8 @@ services:
       OAUTH2_PROXY_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       OAUTH2_PROXY_REDIRECT_URL: "https://${DOMAIN}/oauth2/callback"
       OAUTH2_PROXY_COOKIE_SECRET: ${OAUTH2_PROXY_COOKIE_SECRET}
-      OAUTH2_PROXY_EMAIL_DOMAINS: ${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}
+      # Allow the OAuth handshake for any Google account; explicit email allowlists enforce access.
+      OAUTH2_PROXY_EMAIL_DOMAINS: ${OAUTH2_PROXY_IDE_EMAIL_DOMAINS:-*}
       OAUTH2_PROXY_SESSION_STORE_TYPE: redis
       OAUTH2_PROXY_REDIS_CONNECTION_URL: redis://redis:6379
       OAUTH2_PROXY_UPSTREAMS: http://code-server:8080/

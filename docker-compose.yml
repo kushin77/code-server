@@ -241,7 +241,9 @@ services:
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
       OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
-      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_PORTAL_EMAIL_DOMAINS:-${OAUTH2_ALLOWED_EMAIL_DOMAIN:-bioenergystrategies.com}}"
+        # Allow any Google domain to complete OAuth; authenticated-emails-file remains the real gate.
+        # This prevents Google from returning org_internal 403 before our explicit allowlist is checked.
+        OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_PORTAL_EMAIL_DOMAINS:-*}"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
       OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://redis:6379"

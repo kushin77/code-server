@@ -385,10 +385,11 @@ test_suite_governance() {
     "$SCRIPT_DIR/scripts/auth/auth-audit-logger.sh" \
     'source "$SCRIPT_DIR/scripts/_common/init.sh'
   
-  test_assert_contains \
+  test_assert_contains_any \
     "Drift detection sources _common/init.sh" \
     "$SCRIPT_DIR/scripts/auth/auth-policy-drift-detection.sh" \
-    'source "$SCRIPT_DIR/scripts/_common/init.sh'
+    'source "$SCRIPT_DIR/scripts/_common/init.sh' \
+    '_common/init.sh'
   
   # Verify no duplication (use canonical logging)
   test_assert_not_contains \

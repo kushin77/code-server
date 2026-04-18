@@ -31,6 +31,8 @@ locals {
   vrrp_interval         = var.vrrp_interval
   scripts_path          = "${path.module}/scripts"
   templates_path        = "${path.module}/templates"
+  primary_interface     = var.vrrp_primary_interface
+  replica_interface     = var.vrrp_replica_interface
 }
 
 # ==============================================================================
@@ -103,8 +105,6 @@ global_defs {
     router_id VRRP_PRIMARY_${local.vip}
     script_user root root
     enable_script_security
-    log_detail
-    log_facility LOCAL0
 }
 
 # Health check script — Run every ${local.health_check_interval}s
@@ -120,7 +120,7 @@ vrrp_script check_services {
 # VRRP Instance — Controls the Virtual IP
 vrrp_instance VI_1 {
     state MASTER
-    interface eth0
+    interface ${local.primary_interface}
     virtual_router_id ${local.vrrp_router_id}
     priority 150
     advert_int ${local.vrrp_interval}
@@ -222,8 +222,6 @@ global_defs {
     router_id VRRP_REPLICA_${local.vip}
     script_user root root
     enable_script_security
-    log_detail
-    log_facility LOCAL0
 }
 
 # Health check script — Run every ${local.health_check_interval}s
@@ -239,7 +237,7 @@ vrrp_script check_services {
 # VRRP Instance — Controls the Virtual IP
 vrrp_instance VI_1 {
     state BACKUP
-    interface eth0
+    interface ${local.replica_interface}
     virtual_router_id ${local.vrrp_router_id}
     priority 100
     advert_int ${local.vrrp_interval}

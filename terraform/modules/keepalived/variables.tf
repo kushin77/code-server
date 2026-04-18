@@ -51,6 +51,18 @@ variable "ssh_identity_file" {
   default     = "~/.ssh/id_iac_service"
 }
 
+variable "vrrp_primary_interface" {
+  description = "Network interface for VRRP on primary host (e.g. enp0s25)"
+  type        = string
+  default     = "enp0s25"
+}
+
+variable "vrrp_replica_interface" {
+  description = "Network interface for VRRP on replica host (e.g. eno1)"
+  type        = string
+  default     = "eno1"
+}
+
 variable "keepalived_version" {
   description = "Keepalived container version"
   type        = string

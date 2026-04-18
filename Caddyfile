@@ -86,10 +86,7 @@ kushnir.cloud {
     }
 
     @health path /health /healthz /ping
-    @root_no_portal_cookie {
-        path /
-        not header_regexp portal_cookie Cookie (?i)_oauth2_proxy_portal=
-    }
+    @root path /
     @auth_reset path /auth/reset
     @logout path /logout /signout
     @oauth2 path /oauth2 /oauth2/*
@@ -99,7 +96,7 @@ kushnir.cloud {
 
         # Deterministic auth bootstrap for apex host: avoid oauth2-proxy 403 landing
         # and route users directly into the OAuth start flow when no portal cookie exists.
-        handle @root_no_portal_cookie {
+        handle @root {
             redir /oauth2/start?rd=https://kushnir.cloud/ 302
         }
 

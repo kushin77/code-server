@@ -36,6 +36,13 @@ Last Updated: 2026-04-18
    - `scripts/ci/prepare-playwright-storage-state.sh`
    - `docs/ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md`
 - Remaining strict closure gate for #733: set `PLAYWRIGHT_STORAGE_STATE_B64` and run the authenticated workflow.
+- Latest validated operational run (2026-04-18, explicit SSH key path):
+   - preflight passed (`--mode ssh --ssh-key ~/.ssh/id_rsa_onprem --fix-stale-logs`)
+   - redeploy passed (`--mode ssh --ssh-key ~/.ssh/id_rsa_onprem --fix-stale-logs`)
+   - failover status baseline evidence: `/tmp/code-server-failover-evidence/failover-20260418T210450Z.json`
+   - promote evidence (active marker `.31` -> `.42`): `/tmp/code-server-failover-evidence/failover-20260418T210458Z.json`
+   - failback evidence (active marker `.42` -> `.31`): `/tmp/code-server-failover-evidence/failover-20260418T210513Z.json`
+   - final result: primary HEALTHY, replica HEALTHY, replica ingress healthy
 - Core domain-managed client enhancement stream is now consolidated under:
    - #751 EPIC (runtime transformation)
    - #752-#760 child implementation issues

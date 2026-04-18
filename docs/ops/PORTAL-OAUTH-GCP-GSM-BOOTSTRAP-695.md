@@ -26,7 +26,7 @@ If `GCP_PROJECT` is not numeric, treat the secret contract as incomplete and fix
 1. Resolve `GCP_WIF_PROVIDER` from the secret or the repo default.
 2. Authenticate to GCP via `google-github-actions/auth@v2`.
 3. Configure gcloud with `google-github-actions/setup-gcloud@v2`.
-4. Bootstrap an ephemeral `.env` from GSM using `scripts/fetch-gsm-secrets.sh`.
+4. Bootstrap an ephemeral `.env` from GSM using `scripts/fetch-gsm-secrets.sh --non-interactive`.
 5. Run `scripts/deploy/redeploy-portal-oauth-routing.sh --local`.
 6. Verify redirect targets for the apex and IDE callbacks.
 
@@ -36,6 +36,7 @@ If `GCP_PROJECT` is not numeric, treat the secret contract as incomplete and fix
 - `invalid_target`: the provider value is canonical, but the backing workload identity pool/provider does not resolve in GCP.
 - `invalid_rapt`: local workstation gcloud refresh has expired; reauthenticate before attempting provider discovery on the workstation.
 - `docker` missing on runner: the workflow is not executing on the approved Docker-capable self-hosted host.
+- `Non-interactive GSM mode requires active gcloud auth or GOOGLE_APPLICATION_CREDENTIALS`: runner identity is not configured for unattended GSM access.
 
 ## Validation
 

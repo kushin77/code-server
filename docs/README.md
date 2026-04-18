@@ -10,7 +10,7 @@ docs/
 ├── ai/ - AI governance, access, contracts, and policy docs
 ├── adr/ - Architecture Decision Records
 ├── archives/ - Historical documentation
-├── elite-best-practices/ - Navigation-only best-practices index and folder map
+├── governance/elite-best-practices/ - Canonical elite best-practices SSOT tree
 ├── ops/ - Runbooks and operational procedures
 ├── status/ - Proof artifacts, status ledgers, and evidence bundles
 ├── triage/ - Issue blockers and execution plans
@@ -21,12 +21,12 @@ docs/
 
 - **Documentation SSOT**: [structure/README.md](structure/README.md)
 - **New to the project?** Start with [structure/README.md](structure/README.md) for the documentation map
-- **Want contributor guidance?** See [elite-best-practices/instructions/README.md](elite-best-practices/instructions/README.md)
+- **Want contributor guidance?** See [governance/elite-best-practices/instructions/AGENT-SESSION-COORDINATION.md](governance/elite-best-practices/instructions/AGENT-SESSION-COORDINATION.md)
 - **Need architecture decisions?** Check [adr/README.md](adr/README.md)
 - **Need operational evidence?** Check [status/README.md](status/README.md)
 - **Need recovery steps or runbooks?** Check [ops/README.md](ops/README.md)
 - **Need issue blockers or active triage notes?** Check [triage/README.md](triage/README.md)
-- **Need elite best-practices navigation?** Check [elite-best-practices/README.md](elite-best-practices/README.md)
+- **Need elite best-practices navigation?** Check [governance/elite-best-practices/README.md](governance/elite-best-practices/README.md)
 - **Need AI contracts or access rules?** Check [ai/README.md](ai/README.md)
 - **Need historical records?** Check [archives/README.md](archives/README.md)
 
@@ -66,7 +66,7 @@ All documentation MUST follow the rules in [structure/README.md](structure/READM
 - Open issue blockers and execution notes belong in [triage/README.md](triage/README.md).
 
 ### Elite Best Practices
-- Navigation-only index for monorepo, pnpm, shared, SSOT, repo rules, instructions, and naming guidance belongs in [elite-best-practices/README.md](elite-best-practices/README.md).
+- Canonical index for monorepo, pnpm, shared, SSOT, repo rules, instructions, and naming guidance belongs in [governance/elite-best-practices/README.md](governance/elite-best-practices/README.md).
 
 ### Archives
 - Historical records and retired artifacts belong in [archives/README.md](archives/README.md).
@@ -75,4 +75,4 @@ All documentation MUST follow the rules in [structure/README.md](structure/READM
 
 **Last Updated**: April 18, 2026
 **Owner**: @akushnir  
-**Related**: [GOVERNANCE.md](GOVERNANCE.md) • [structure/README.md](structure/README.md) • [elite-best-practices/README.md](elite-best-practices/README.md)
+**Related**: [GOVERNANCE.md](GOVERNANCE.md) • [structure/README.md](structure/README.md) • [governance/elite-best-practices/README.md](governance/elite-best-practices/README.md)

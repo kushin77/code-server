@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash scripts/fetch-gsm-secrets.sh > .env
+          bash scripts/fetch-gsm-secrets.sh --non-interactive > .env
           chmod 600 .env
           echo "DEPLOY_ENV_CREATED=true" >> "$GITHUB_ENV"
           echo "DEPLOY_ENV_SOURCE=gsm" >> "$GITHUB_ENV"

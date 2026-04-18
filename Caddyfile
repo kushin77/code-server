@@ -12,9 +12,15 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    # Unified sign-out endpoint: clear oauth2 session and return to root SSO landing.
+    # Logout handler: clean up session before sign out
     @logout path /logout /signout
-    redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
+    handle @logout {
+        # Extract session ID from cookie and POST to session-broker logout
+        reverse_proxy session-broker:5000 {
+            uri /oauth2/logout
+            header_up X-Session-Id {http.request.cookie._code_server_session_id}
+        }
+    }
 
     # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
     @oauth2 path /oauth2 /oauth2/*
@@ -33,16 +39,29 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
         }
     }
 
-    # Default: ALL traffic proxied through oauth2-proxy (code-server behind it)
-    reverse_proxy oauth2-proxy:4180 192.168.168.42:4180 {
+    # Session broker routes: session management APIs
+    # POST /sessions — create new isolated session
+    # DELETE /sessions/:id — terminate session
+    @session-api path /sessions /sessions/*
+    handle @session-api {
+        reverse_proxy session-broker:5000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Default: ALL traffic proxied through session-broker (handles auth + routing to container)
+    # Session broker validates oauth2 session cookie, creates/retrieves user's isolated session,
+    # and routes to the corresponding code-server container.
+    reverse_proxy session-broker:5000 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
-        header_down X-LB-Upstream {http.reverse_proxy.upstream.address}
-        # Sticky load balancing for websocket-heavy IDE traffic.
-        lb_policy cookie ide_lb_shared secret734
-        health_uri /ping
-        health_interval 10s
-        health_timeout 2s
+        header_up X-Session-Id {http.request.cookie._code_server_session_id}
+        # Sticky load balancing for WebSocket IDE traffic within a user's session.
+        lb_policy cookie ide_session_lb secret734
+        health_uri /health
+        health_interval 30s
+        health_timeout 5s
         fail_duration 30s
         lb_try_duration 5s
     }

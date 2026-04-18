@@ -292,6 +292,50 @@ services:
         max-file: "3"
 
   # ────────────────────────────────────────────────────────────────────────────
+  # session-broker — Per-session container isolation and routing (P1 #752)
+  # Routes authenticated users to isolated code-server containers with resource quotas
+  # ────────────────────────────────────────────────────────────────────────────
+  session-broker:
+    build:
+      context: apps/session-broker
+      dockerfile: Dockerfile
+    image: session-broker:dev
+    container_name: session-broker
+    restart: unless-stopped
+    networks:
+      - enterprise
+    expose:
+      - "5000"
+    user: "0:0"
+    environment:
+      - LOG_LEVEL=${SESSION_BROKER_LOG_LEVEL:-info}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:-codeserver-local}@postgres:5432/${POSTGRES_DB:-codeserver}
+      - CODE_SERVER_IMAGE_ID=code-server-enterprise:dev
+      - SESSION_CPU_LIMIT=${SESSION_CPU_LIMIT:-2.0}
+      - SESSION_MEMORY_LIMIT=${SESSION_MEMORY_LIMIT:-4g}
+      - SESSION_STORAGE_LIMIT=${SESSION_STORAGE_LIMIT:-50g}
+      - DOCKER_SOCKET=/var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      - /var/lib/code-server-sessions:/var/lib/code-server-sessions:rw
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      code-server:
+        condition: service_started
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
   # caddy — Reverse proxy + TLS termination
   # Healthcheck uses the caddy binary to avoid endpoint/probe-tool mismatches.
   # ────────────────────────────────────────────────────────────────────────────
@@ -319,6 +363,7 @@ services:
       start_period: 15s
     depends_on:
       - oauth2-proxy
+      - session-broker
     logging:
       driver: json-file
       options:

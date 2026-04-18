@@ -91,7 +91,8 @@ resource "docker_image" "keepalived_replica" {
 
 # Keepalived config on primary (MASTER, priority 150)
 resource "local_file" "keepalived_primary_config" {
-  filename = "${local.templates_path}/keepalived-primary.conf"
+  filename        = "${local.templates_path}/keepalived-primary.conf"
+  file_permission = "0640"
   content  = <<-EOT
 # Keepalived Configuration — PRIMARY (VRRP Master)
 # Generated from Terraform — DO NOT EDIT
@@ -209,7 +210,8 @@ resource "docker_container" "keepalived_primary" {
 
 # Keepalived config on replica (BACKUP, priority 100)
 resource "local_file" "keepalived_replica_config" {
-  filename = "${local.templates_path}/keepalived-replica.conf"
+  filename        = "${local.templates_path}/keepalived-replica.conf"
+  file_permission = "0640"
   content  = <<-EOT
 # Keepalived Configuration — REPLICA (VRRP Backup)
 # Generated from Terraform — DO NOT EDIT
@@ -300,6 +302,7 @@ resource "null_resource" "replica_provision" {
 
   provisioner "remote-exec" {
     inline = [
+      "chmod 640 /home/${local.replica_host.ssh_user}/keepalived/keepalived.conf",
       "chmod 755 /home/${local.replica_host.ssh_user}/keepalived/vrrp-health-monitor.sh",
       "chmod 755 /home/${local.replica_host.ssh_user}/keepalived/keepalived-notify.sh",
     ]

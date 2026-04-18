@@ -107,6 +107,11 @@ if [ -f /etc/code-server/settings.json ]; then
   fi
 fi
 
+# ── Workspace credential provisioning (passwordless, session-scoped) ──────────
+if command -v workspace-provision >/dev/null 2>&1; then
+  workspace-provision || echo "[entrypoint] WARNING: workspace-provision had warnings (non-fatal)"
+fi
+
 # ── Start auth keepalive daemon (single-instance, background) ─────────────────
 if command -v auth-keepalive >/dev/null 2>&1; then
   echo "[entrypoint] starting auth-keepalive daemon"

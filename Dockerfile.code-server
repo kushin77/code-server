@@ -109,6 +109,7 @@ COPY --chmod=755 scripts/lib/merge-settings.js /usr/local/lib/code-server/merge-
 COPY --chmod=755 scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
 COPY --chmod=755 scripts/code-server-auth /usr/local/bin/code-server-auth
 COPY --chmod=755 scripts/auth-keepalive /usr/local/bin/auth-keepalive
+COPY --chmod=755 scripts/workspace-provision /usr/local/bin/workspace-provision
 
 USER coder
 

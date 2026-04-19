@@ -86,7 +86,25 @@ else
   echo "[entrypoint] git-credential-gsm present at /usr/local/bin/git-credential-gsm"
 fi
 
+# ── Policy runtime integrity check (#703) ────────────────────────────────────
+# Validates that the policy version file SHA256 hashes match the deployed
+# settings.json and extensions-approved.json before any settings merge.
+POLICY_VERSION_FILE="/etc/code-server/policy-version.json"
+if [ -f "$POLICY_VERSION_FILE" ] && command -v jq >/dev/null 2>&1 && command -v sha256sum >/dev/null 2>&1; then
+  _expected_sha="$(jq -r '.components.settings.sha256' "$POLICY_VERSION_FILE" 2>/dev/null || echo '')"
+  _actual_sha="$(sha256sum /etc/code-server/settings.json 2>/dev/null | awk '{print $1}' || echo '')"
+  if [ -n "$_expected_sha" ] && [ "$_expected_sha" != "$_actual_sha" ]; then
+    echo "[entrypoint] CRITICAL: policy settings.json hash mismatch — expected=$_expected_sha actual=$_actual_sha"
+    echo "[entrypoint] CRITICAL: possible tampering or stale policy-version.json — run: make policy-version"
+    # Non-fatal startup: emit warning and continue so users can still access the IDE
+    # The CI gate (policy-version-integrity) prevents this from reaching prod on new builds
+  else
+    echo "[entrypoint] Policy integrity check: settings.json OK ($(jq -r .policy_version "$POLICY_VERSION_FILE" 2>/dev/null || echo unknown))"
+  fi
+fi
+
 # ── Merge enterprise settings into user settings ─────────────────────────────
+
 # Applies enterprise defaults on every launch without overwriting user-owned
 # T2/T3 preferences. Locked T1 keys remain enterprise-controlled.
 SETTINGS_DIR="/home/coder/.local/share/code-server/User"

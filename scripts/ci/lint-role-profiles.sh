@@ -20,8 +20,8 @@ for profile in "$PROFILES_DIR"/*.json; do
 
   # Parse with jq when available, otherwise fallback to Python.
   if command -v jq &>/dev/null; then
-    rec_value=$(jq -r '.settings["extensions.recommendations"] // "missing"' "$profile")
-    ignore_value=$(jq -r '.settings["extensions.ignoreRecommendations"] // "missing"' "$profile")
+    rec_value=$(jq -r 'if (.settings | has("extensions.recommendations")) then .settings["extensions.recommendations"] else "missing" end' "$profile")
+    ignore_value=$(jq -r 'if (.settings | has("extensions.ignoreRecommendations")) then .settings["extensions.ignoreRecommendations"] else "missing" end' "$profile")
   elif command -v python3 &>/dev/null; then
     rec_value=$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1], encoding="utf-8")); print(p.get("settings",{}).get("extensions.recommendations","missing"))' "$profile" 2>/dev/null || echo "missing")
     ignore_value=$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1], encoding="utf-8")); print(p.get("settings",{}).get("extensions.ignoreRecommendations","missing"))' "$profile" 2>/dev/null || echo "missing")

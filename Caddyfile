@@ -99,13 +99,8 @@ kushnir.cloud {
     route {
         respond @health "OK" 200
 
-        # Deterministic auth bootstrap for apex host: avoid oauth2-proxy 403 landing
-        # and route users directly into the OAuth start flow when no portal cookie exists.
-        handle @root {
-            redir * /oauth2/start?rd=https://kushnir.cloud/ 302
-        }
-
         # One-shot auth reset to clear stale cookies that can cause redirect loops.
+        # If you're stuck in a login loop, visit: /auth/reset
         handle @auth_reset {
             header Clear-Site-Data "\"cache\", \"cookies\", \"storage\""
             header Content-Type "text/html; charset=utf-8"
@@ -143,4 +138,3 @@ kushnir.cloud {
         }
     }
 }
-

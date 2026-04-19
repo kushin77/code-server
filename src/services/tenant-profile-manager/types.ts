@@ -204,6 +204,10 @@ export enum LockedPolicyKey {
   // Marketplace/extension settings
   MARKETPLACE_ENABLED = "marketplace.enabled",
   MARKETPLACE_ALLOWLIST = "marketplace.allowlist",
+
+  // Extension recommendations — must not be re-enabled by user settings
+  EXTENSIONS_RECOMMENDATIONS = "extensions.recommendations",
+  EXTENSIONS_IGNORE_RECOMMENDATIONS = "extensions.ignoreRecommendations",
   
   // Proxy and network settings
   HTTP_PROXY = "http.proxy",

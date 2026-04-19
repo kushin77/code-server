@@ -196,6 +196,8 @@ describe("TenantProfileManager - Hierarchy and Immutable Policy Tests", () => {
         LockedPolicyKey.KEYBINDINGS,
         LockedPolicyKey.MARKETPLACE_ENABLED,
         LockedPolicyKey.HTTP_PROXY,
+        LockedPolicyKey.EXTENSIONS_RECOMMENDATIONS,
+        LockedPolicyKey.EXTENSIONS_IGNORE_RECOMMENDATIONS,
       ]
 
       // Global policy sets all locked keys
@@ -261,6 +263,44 @@ describe("TenantProfileManager - Hierarchy and Immutable Policy Tests", () => {
       // Regular key should not be immutable
       expect(result.settings.get("editor.fontSize")?.immutable).toBe(false)
     })
+
+    it("should prevent user from re-enabling extension recommendations", async () => {
+      await fs.promises.mkdir(path.join(tempDir, "kushin77"), { recursive: true })
+
+      // Enterprise policy disables recommendations
+      await fs.promises.writeFile(path.join(tempDir, "global-policy.json"), JSON.stringify({
+        [LockedPolicyKey.EXTENSIONS_RECOMMENDATIONS]: false,
+        [LockedPolicyKey.EXTENSIONS_IGNORE_RECOMMENDATIONS]: true,
+      }))
+
+      const userPath = path.join(tempDir, "kushin77", "test_example_com")
+      await fs.promises.mkdir(userPath, { recursive: true })
+
+      // User attempts to re-enable recommendations
+      await fs.promises.writeFile(path.join(userPath, "preferences.json"), JSON.stringify({
+        [LockedPolicyKey.EXTENSIONS_RECOMMENDATIONS]: true,
+        [LockedPolicyKey.EXTENSIONS_IGNORE_RECOMMENDATIONS]: false,
+      }))
+
+      const namespace = manager.getNamespace("kushin77", "test@example.com")
+      const result = await manager.mergeProfiles({
+        namespace,
+        roles: [],
+        org: "kushin77",
+        includeUserPreferences: true,
+        enforceImmutability: true,
+        detectDrift: false,
+        auditLog: false,
+        correlationId: "test-extension-rec-override",
+      })
+
+      // Enterprise values must win — recommendations stay off
+      expect(result.settings.get(LockedPolicyKey.EXTENSIONS_RECOMMENDATIONS)?.value).toBe(false)
+      expect(result.settings.get(LockedPolicyKey.EXTENSIONS_IGNORE_RECOMMENDATIONS)?.value).toBe(true)
+      expect(result.settings.get(LockedPolicyKey.EXTENSIONS_RECOMMENDATIONS)?.immutable).toBe(true)
+      expect(result.settings.get(LockedPolicyKey.EXTENSIONS_IGNORE_RECOMMENDATIONS)?.immutable).toBe(true)
+    })
+
   })
 
   describe("3. Namespace Isolation", () => {

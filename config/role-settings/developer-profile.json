@@ -53,8 +53,8 @@
     "security.workspace.trust.startup": "always",
     "workbench.colorTheme": "Default Dark+",
     "workbench.startupEditor": "none",
-    "extensions.recommendations": true,
-    "extensions.ignoreRecommendations": false,
+    "extensions.recommendations": false,
+    "extensions.ignoreRecommendations": true,
     "telemetry.telemetryLevel": "off"
   }
 }

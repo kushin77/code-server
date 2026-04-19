@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# @file        scripts/validate-oauth-config.sh
+# @module      security/oauth
+# @description Pre-deployment check for OAuth configuration and redirect URI registration
+# @owner       security
+# @status      active
+#
 # Pre-deployment check for OAuth configuration
 # This script validates that both redirect URIs are registered in Google Cloud Console
 

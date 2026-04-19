@@ -193,6 +193,27 @@ jobs:
       - name: Validate curated extension manifest and marketplace block
         run: bash scripts/ci/validate-extension-supply-chain.sh
 
+  waiver-registry-conformance:
+    name: Governance — centralized waiver registry conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install jq
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+
+      - name: Validate waiver registry (no expired active waivers, all entries valid)
+        run: |
+          mkdir -p .github/reports/governance
+          bash scripts/governance/validate-waiver-registry.sh \
+            --registry config/governance-waivers.json \
+            --report .github/reports/governance/waiver_registry_validation.json \
+            --events .github/reports/governance/waiver_audit_events.jsonl \
+            --expired .github/reports/governance/waiver_expired_active.json
+          echo "Waiver registry conformance: PASS"
+
   dockerfile-lint:
     name: Dockerfile lint (hadolint v2.12.0)
     runs-on: ubuntu-latest

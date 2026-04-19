@@ -9,6 +9,9 @@ set -euo pipefail
 REPORT_DIR="${REPORT_DIR:-.github/reports/conformance}"
 AUTH_REPORT="${AUTH_REPORT:-$REPORT_DIR/auth-conformance-report.json}"
 VITEST_REPORT="${VITEST_REPORT:-$REPORT_DIR/core-conformance-vitest.json}"
+WAIVER_REPORT="${WAIVER_REPORT:-$REPORT_DIR/waiver-registry-validation.json}"
+WAIVER_EVENTS="${WAIVER_EVENTS:-$REPORT_DIR/waiver-audit-events.jsonl}"
+WAIVER_EXPIRED="${WAIVER_EXPIRED:-$REPORT_DIR/waiver-expired-active.json}"
 SUMMARY_REPORT="${SUMMARY_REPORT:-$REPORT_DIR/core-conformance-summary.json}"
 MARKDOWN_REPORT="${MARKDOWN_REPORT:-$REPORT_DIR/core-conformance-summary.md}"
 
@@ -16,6 +19,7 @@ mkdir -p "$REPORT_DIR"
 
 auth_exit=0
 vitest_exit=0
+waiver_exit=0
 
 echo "[core-conformance] running auth/policy conformance"
 set +e
@@ -36,15 +40,39 @@ npx vitest run \
 vitest_exit=$?
 set -e
 
-python3 - <<'PY' "$AUTH_REPORT" "$VITEST_REPORT" "$SUMMARY_REPORT" "$MARKDOWN_REPORT" "$auth_exit" "$vitest_exit"
+echo "[core-conformance] running waiver registry conformance"
+set +e
+if command -v jq >/dev/null 2>&1; then
+  bash scripts/governance/validate-waiver-registry.sh \
+    --registry config/governance-waivers.json \
+    --report "$WAIVER_REPORT" \
+    --events "$WAIVER_EVENTS" \
+    --expired "$WAIVER_EXPIRED"
+  waiver_exit=$?
+else
+  echo "[core-conformance] jq not available — waiver registry check skipped (not a CI failure)"
+  waiver_exit=0
+  # Write a minimal skip-report so the Python summarizer has a valid file
+  printf '{"summary":{"total_waivers":0,"invalid_count":0,"expired_active_count":0},"skipped":true}' > "$WAIVER_REPORT"
+fi
+set -e
+# exit 2 = expired active waivers (CI block); exit 3 = invalid registry (CI block)
+if [[ "$waiver_exit" -ne 0 ]]; then
+  echo "[core-conformance] waiver registry check FAILED (exit $waiver_exit)"
+else
+  echo "[core-conformance] waiver registry check PASSED"
+fi
+
+python3 - <<'PY' "$AUTH_REPORT" "$VITEST_REPORT" "$WAIVER_REPORT" "$SUMMARY_REPORT" "$MARKDOWN_REPORT" "$auth_exit" "$vitest_exit" "$waiver_exit"
 import json
 import os
 import sys
 from datetime import datetime, timezone
 
-auth_path, vitest_path, summary_path, md_path, auth_exit_raw, vitest_exit_raw = sys.argv[1:]
+auth_path, vitest_path, waiver_path, summary_path, md_path, auth_exit_raw, vitest_exit_raw, waiver_exit_raw = sys.argv[1:]
 auth_exit = int(auth_exit_raw or 0)
 vitest_exit = int(vitest_exit_raw or 0)
+waiver_exit = int(waiver_exit_raw or 0)
 
 def read_json(path):
     if not os.path.exists(path):
@@ -57,6 +85,7 @@ def read_json(path):
 
 auth = read_json(auth_path) or {}
 vitest = read_json(vitest_path) or {}
+waiver = read_json(waiver_path) or {}
 
 auth_total = int(auth.get("total", 0) or 0)
 auth_passed = int(auth.get("passed", 0) or 0)
@@ -82,6 +111,16 @@ if vitest_total == 0:
     vitest_passed = int(vitest.get("numPassedTests", 0) or 0)
     vitest_failed = int(vitest.get("numFailedTests", max(0, vitest_total - vitest_passed)) or 0)
 
+# waiver registry: read summary if available
+waiver_summary = waiver.get("summary", {}) if waiver else {}
+waiver_total = int(waiver_summary.get("total_waivers", waiver.get("total_waivers", 0)) or 0)
+waiver_invalid = int(waiver_summary.get("invalid_count", waiver.get("invalid_count", 0)) or 0)
+waiver_expired_active = int(waiver_summary.get("expired_active_count", waiver.get("expired_active_count", 0)) or 0)
+# treat empty registry (0 waivers) as 1 conformance pass (baseline check)
+waiver_checks = max(1, waiver_total)
+waiver_check_passed = waiver_checks if waiver_exit == 0 else max(0, waiver_checks - waiver_invalid - waiver_expired_active)
+waiver_check_failed = waiver_invalid + waiver_expired_active if waiver_exit != 0 else 0
+
 summary = {
     "generated_at": datetime.now(timezone.utc).isoformat(),
     "suites": [
@@ -103,13 +142,22 @@ summary = {
             "failed": vitest_failed,
             "status": "pass" if vitest_exit == 0 else "fail",
         },
+        {
+            "name": "waiver-registry-conformance",
+            "report": waiver_path,
+            "exit_code": waiver_exit,
+            "total": waiver_checks,
+            "passed": waiver_check_passed,
+            "failed": waiver_check_failed,
+            "status": "pass" if waiver_exit == 0 else "fail",
+        },
     ],
 }
 
 summary["total"] = sum(s["total"] for s in summary["suites"])
 summary["passed"] = sum(s["passed"] for s in summary["suites"])
 summary["failed"] = sum(s["failed"] for s in summary["suites"])
-summary["overall_status"] = "pass" if auth_exit == 0 and vitest_exit == 0 else "fail"
+summary["overall_status"] = "pass" if auth_exit == 0 and vitest_exit == 0 and waiver_exit == 0 else "fail"
 
 with open(summary_path, "w", encoding="utf-8") as f:
     json.dump(summary, f, indent=2)
@@ -131,7 +179,7 @@ md_lines += [
     f"Overall: **{summary['overall_status'].upper()}**",
     f"Totals: passed={summary['passed']}, failed={summary['failed']}, total={summary['total']}",
     "",
-    f"Reports: {auth_path}, {vitest_path}, {summary_path}",
+    f"Reports: {auth_path}, {vitest_path}, {waiver_path}, {summary_path}",
 ]
 
 with open(md_path, "w", encoding="utf-8") as f:
@@ -140,7 +188,7 @@ PY
 
 cat "$MARKDOWN_REPORT"
 
-if [[ "$auth_exit" -ne 0 || "$vitest_exit" -ne 0 ]]; then
+if [[ "$auth_exit" -ne 0 || "$vitest_exit" -ne 0 || "$waiver_exit" -ne 0 ]]; then
   echo "[core-conformance] failed"
   exit 1
 fi

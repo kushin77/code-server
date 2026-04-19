@@ -189,7 +189,7 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${oauth2_proxy_port}/ping"]
+      test: ["CMD", "/bin/oauth2-proxy", "--version"]
       interval: 30s
       timeout: 5s
       retries: 3

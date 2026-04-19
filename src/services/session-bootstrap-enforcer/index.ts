@@ -6,6 +6,7 @@
 
 import * as crypto from "crypto"
 import { PolicyBundleVerifier, PolicyBundle } from "../policy-bundle-verifier"
+import { OpaPolicyService, PolicyDecisionInput, PolicyDecisionResult } from "../opa-policy-service"
 import {
   SessionContext,
   BootstrapOptions,
@@ -27,10 +28,12 @@ import {
  */
 export class SessionBootstrapEnforcer {
   private verifier: PolicyBundleVerifier
+  private policyService?: OpaPolicyService
   private sessions: Map<string, SessionContext> = new Map()
 
-  constructor(verifier: PolicyBundleVerifier) {
+  constructor(verifier: PolicyBundleVerifier, policyService?: OpaPolicyService) {
     this.verifier = verifier
+    this.policyService = policyService
   }
 
   /**
@@ -211,14 +214,30 @@ export class SessionBootstrapEnforcer {
     }
 
     // Check policy-based authorization for the operation
-    const policyAllows = this.checkPolicyAuthorization(session, operation)
-    if (!policyAllows) {
-      auditEvent.details.reason = "Policy does not allow operation"
+    const policyResult = await this.checkPolicyAuthorization(session, operation)
+    if (!policyResult.allowed) {
+      auditEvent.details.reason = policyResult.reason || "Policy does not allow operation"
+      auditEvent.details.policy_repo = policyResult.repo
+      auditEvent.details.policy_action = policyResult.action
+      if (policyResult.decision) {
+        auditEvent.details.policy_decision = policyResult.decision.decision
+        auditEvent.details.policy_channel = policyResult.decision.channel
+        auditEvent.details.policy_bundle_version = policyResult.decision.bundleVersion
+      }
       return {
         allowed: false,
-        reason: "Operation not allowed by policy",
+        reason: policyResult.reason || "Operation not allowed by policy",
         audit_event: auditEvent,
       }
+    }
+
+    auditEvent.details.policy_repo = policyResult.repo
+    auditEvent.details.policy_action = policyResult.action
+    if (policyResult.decision) {
+      auditEvent.details.policy_decision = policyResult.decision.decision
+      auditEvent.details.policy_channel = policyResult.decision.channel
+      auditEvent.details.policy_bundle_version = policyResult.decision.bundleVersion
+      auditEvent.details.policy_reason = policyResult.decision.reason
     }
 
     // Detect policy drift
@@ -382,16 +401,77 @@ export class SessionBootstrapEnforcer {
   /**
    * Check if operation is allowed by policy.
    */
-  private checkPolicyAuthorization(session: SessionContext, operation: PrivilegedOperation): boolean {
-    // Placeholder for policy-based authorization
-    // In production, this would:
-    // 1. Check workspace_policy for the operation type
-    // 2. Check extension_allowlist for install_extension operations
-    // 3. Check credential_scope for secret access operations
-    // 4. Check terminal_policy for command execution
+  private async checkPolicyAuthorization(
+    session: SessionContext,
+    operation: PrivilegedOperation,
+  ): Promise<{
+    allowed: boolean
+    reason?: string
+    decision?: PolicyDecisionResult
+    repo: string
+    action: PolicyDecisionInput["action"]
+  }> {
+    const repo = this.resolvePolicyRepo(session, operation)
+    const action = this.resolvePolicyAction(operation)
 
-    // For now, allow all operations if policy is valid
-    return session.policy.valid
+    if (!this.policyService) {
+      return {
+        allowed: session.policy.valid,
+        reason: session.policy.valid ? undefined : "Policy invalid",
+        repo,
+        action,
+      }
+    }
+
+    const input: PolicyDecisionInput = {
+      actor: session.user.email,
+      repo,
+      action,
+      correlationId: session.correlation_id,
+    }
+
+    const decision = this.policyService.simulateDecision(input)
+    this.policyService.logDecision(input, decision, "ide-governance")
+
+    return {
+      allowed: decision.decision === "allow",
+      reason: decision.decision === "allow" ? undefined : decision.reason,
+      decision,
+      repo,
+      action,
+    }
+  }
+
+  /**
+   * Resolve the repository context used for policy decisions.
+   */
+  private resolvePolicyRepo(session: SessionContext, operation: PrivilegedOperation): string {
+    if (operation.resource && operation.resource.trim().length > 0) {
+      return operation.resource.trim()
+    }
+
+    const entitlementRepo = session.policy.bundle.entitlements.repos[0]
+    if (entitlementRepo && entitlementRepo.trim().length > 0) {
+      return entitlementRepo.trim()
+    }
+
+    return session.user.org
+  }
+
+  /**
+   * Map privileged operations into OPA action categories.
+   */
+  private resolvePolicyAction(operation: PrivilegedOperation): PolicyDecisionInput["action"] {
+    const operationType = operation.operation_type.toLowerCase()
+    if (operationType.includes("read")) {
+      return "read"
+    }
+
+    if (operationType.includes("admin") || operationType.includes("revoke") || operationType.includes("break_glass")) {
+      return "admin"
+    }
+
+    return "write"
   }
 
   /**
@@ -448,8 +528,11 @@ export class SessionBootstrapEnforcer {
 /**
  * Factory function to create enforcer with configured verifier.
  */
-export function createSessionBootstrapEnforcer(verifier: PolicyBundleVerifier): SessionBootstrapEnforcer {
-  return new SessionBootstrapEnforcer(verifier)
+export function createSessionBootstrapEnforcer(
+  verifier: PolicyBundleVerifier,
+  policyService?: OpaPolicyService,
+): SessionBootstrapEnforcer {
+  return new SessionBootstrapEnforcer(verifier, policyService)
 }
 
 // Export types for consumers

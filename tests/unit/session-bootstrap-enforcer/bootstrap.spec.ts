@@ -4,9 +4,13 @@
 // @description Bootstrap enforcement integration tests
 //
 
-import { describe, it, beforeEach, expect, vi } from "vitest"
+import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
+import { afterEach, describe, it, beforeEach, expect, vi } from "vitest"
 import { SessionBootstrapEnforcer, createSessionBootstrapEnforcer } from "../../../src/services/session-bootstrap-enforcer"
 import { PolicyBundleVerifier, createPolicyBundleVerifier, PolicyBundle } from "../../../src/services/policy-bundle-verifier"
+import { OpaPolicyService } from "../../../src/services/opa-policy-service"
 import {
   BootstrapOptions,
   EnforcementMode,
@@ -20,6 +24,31 @@ import * as jwt from "jsonwebtoken"
 /**
  * Helper: Create a valid JWT assertion for testing.
  */
+function createPolicyCatalog(root: string): string {
+  const catalogPath = path.join(root, "bundle-catalog.json")
+  const catalog = {
+    schema_version: "1",
+    updated_at: "2026-04-18T00:00:00Z",
+    channels: {
+      stable: {
+        version: "1.0.0",
+        bundle_manifest: "artifacts/policy-bundles/policy-bundle-1.0.0-stable.manifest.json",
+      },
+      canary: {
+        version: "1.0.0",
+        bundle_manifest: "artifacts/policy-bundles/policy-bundle-1.0.0-canary.manifest.json",
+      },
+      rollback: {
+        version: "0.9.9",
+        bundle_manifest: "artifacts/policy-bundles/policy-bundle-0.9.9-stable.manifest.json",
+      },
+    },
+  }
+
+  fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2) + "\n", "utf-8")
+  return catalogPath
+}
+
 function createValidAssertion(overrides: any = {}): string {
   const now = Math.floor(Date.now() / 1000)
   const payload = {
@@ -76,15 +105,41 @@ function createValidAssertion(overrides: any = {}): string {
 describe("SessionBootstrapEnforcer - Bootstrap Integration Tests", () => {
   let verifier: PolicyBundleVerifier
   let enforcer: SessionBootstrapEnforcer
+  let policyService: OpaPolicyService
+  let tempDir: string
+  let catalogPath: string
+  let decisionLogPath: string
 
   beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "session-bootstrap-enforcer-"))
+    catalogPath = createPolicyCatalog(tempDir)
+    decisionLogPath = path.join(tempDir, "decision-log.jsonl")
+
     verifier = new PolicyBundleVerifier({
       expectedIssuer: "https://kushnir.cloud",
       expectedAudience: "code-server",
       allowUnsigned: true, // Testing mode
     })
 
-    enforcer = createSessionBootstrapEnforcer(verifier)
+    policyService = new OpaPolicyService({
+      catalogPath,
+      decisionLogPath,
+      retentionDays: 7,
+    })
+    policyService.setDistributionContract({
+      rules: [
+        {
+          repo_pattern: "https://github.com/kushin77/legacy-*",
+          channel: "rollback",
+        },
+      ],
+    })
+
+    enforcer = createSessionBootstrapEnforcer(verifier, policyService)
+  })
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true })
   })
 
   describe("1. Valid Bootstrap", () => {
@@ -241,6 +296,61 @@ describe("SessionBootstrapEnforcer - Bootstrap Integration Tests", () => {
       expect(result.audit_event).toBeDefined()
       expect(result.audit_event?.event_type).toBe(PrivilegedOperationEventType.PRIVILEGED_OP_ALLOWED)
       expect(result.audit_event?.status).toBe("success")
+    })
+
+    it("should deny mutating operation when OPA routes repo to rollback and log the decision", async () => {
+      const assertion = createValidAssertion({
+        policy_bundle: {
+          version: "1",
+          contract_id: "code-server-thin-client-v1",
+          issued_at: Math.floor(Date.now() / 1000),
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          signature: "test",
+          algorithm: "RS256",
+          issuer: "https://kushnir.cloud",
+          identity: {
+            email: "test@example.com",
+            sub: "user-123",
+            roles: ["developer"],
+            org: "kushin77",
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600,
+          },
+          entitlements: {
+            repos: ["https://github.com/kushin77/legacy-*"],
+            workspace_policy: "default",
+          },
+          workspace_policies: {
+            default: {
+              policy_version: "1.0",
+              policy_date: new Date().toISOString(),
+              repo_pattern: "https://github.com/kushin77/legacy-*",
+              extension_allowlist: ["ms-python.python"],
+              terminal_env: { PATH: "/usr/bin:/bin" },
+            },
+          },
+        },
+      })
+
+      const bootstrapResult = await enforcer.bootstrap({ assertion })
+      const sessionId = bootstrapResult.session?.session_id!
+
+      const result = await enforcer.checkPrivilegedOperation(sessionId, {
+        operation_type: "execute_terminal",
+        resource: "https://github.com/kushin77/legacy-app",
+      })
+
+      expect(result.allowed).toBe(false)
+      expect(result.reason).toContain("rollback")
+
+      const decisionLog = fs
+        .readFileSync(decisionLogPath, "utf-8")
+        .split(/\r?\n/)
+        .filter((line) => line.trim().length > 0)
+
+      expect(decisionLog).toHaveLength(1)
+      expect(decisionLog[0]).toContain('"decision":"deny"')
+      expect(decisionLog[0]).toContain('"policy_domain":"ide-governance"')
     })
   })
 

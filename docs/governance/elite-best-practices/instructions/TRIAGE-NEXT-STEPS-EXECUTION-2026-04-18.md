@@ -108,7 +108,7 @@ Last Updated: 2026-04-19
 2. **Enforcement second**: land #701 then #702 so merge gates and branch rules enforce SSOT.
 3. **Runtime policy third**: execute #703 with #705 and #708 in that order.
 4. **Control-plane apps fourth**: execute #706 and #707, then implement #742 through #743-#748 in order.
-5. **Extension governance fifth**: execute #735 with #736/#737 first, then #759/#760.
+5. **Extension governance fifth**: execute #735 first, then #759 and #760.
 6. **UX last**: execute #717 and children (#718-#721) only after Stream A-E contracts are stable.
 
 ### Debug/Triage Rule Set
@@ -161,6 +161,6 @@ Run overlap/staleness backlog guard:
 - Stream B done when #703/#705/#708 enforce fail-closed decisions with auditable exceptions.
 - Stream C done when #706/#707/#742 use Stream A-B contracts without redefining schema/policy paths.
 - Stream D done when #743/#744/#745/#746/#747/#748 are integrated without introducing a second policy authority.
-- Stream E done when #735/#736/#737/#759/#760 enforce portal-only extension policy with conformance evidence.
+- Stream E done when #735/#759/#760 enforce portal-only extension policy with conformance evidence.
 - Stream F done when #717/#718/#719/#720/#721 ship without introducing alternate state stores or policy models.
 - No new loose root files are introduced in active branches.

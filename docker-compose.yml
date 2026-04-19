@@ -235,12 +235,16 @@ services:
       - "4181"
     user: "0:0"
     environment:
-      OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_PORTAL_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID}}"
-      OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_PORTAL_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET}}"
+      # Portal uses the same Google OAuth app as IDE
+      # IMPORTANT: Both redirect URIs must be registered in Google Cloud Console OAuth app:
+      #   - https://ide.kushnir.cloud/oauth2/callback (IDE)
+      #   - https://kushnir.cloud/oauth2/callback (Portal)
+      OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"
+      OAUTH2_PROXY_REDIRECT_URL: "https://kushnir.cloud/oauth2/callback"
       OAUTH2_PROXY_LOGIN_URL: "https://kushnir.cloud/oauth2/start"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
       # Allow any Google domain to complete OAuth; authenticated-emails-file remains the real gate.

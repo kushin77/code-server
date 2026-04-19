@@ -76,7 +76,7 @@ Last Updated: 2026-04-19
 
 Run this queue before any P2/P3 work.
 
-1. **P0 critical gate**: #702 (fail-closed governance pipeline).
+1. **P0 critical gate status**: #702 closed; retain fail-closed evidence and monitor for regressions.
 2. **P1 policy authority foundations**: #700 -> #701 -> #704.
 3. **P1 runtime enforcement path**: #703 -> #705 -> #708.
 4. **P1 control-plane enablement**: #706 -> #707 -> #742.
@@ -84,7 +84,7 @@ Run this queue before any P2/P3 work.
 6. **P1 extension-governance status**: Stream E closure evidence retained (extension-governance closure stream completed).
 
 Priority debug rule:
-- Any failing CI/conformance result tied to #702, #701, #703, #705, or #708 preempts lower-priority implementation work until green.
+- Any failing CI/conformance result tied to #701, #703, #705, or #708 preempts lower-priority implementation work until green.
 
 ## Issue-Mapped Next Steps (Open Backlog)
 
@@ -92,7 +92,7 @@ Priority debug rule:
 1. **#700 (EPIC)**: Enterprise global governance control plane (single policy authority).
 2. **#704 (EPIC)**: Canonical policy SSOT and deduplication of governance sources.
 3. **#701 (EPIC)**: Org-wide GitHub governance enforcement (rulesets + branch protections).
-4. **#702 (EPIC)**: Fail-closed governance pipeline (P0 controls block merge).
+4. **COMPLETED**: #702 fail-closed governance pipeline closed with evidence retained in tracker comments and CI history.
 
 ### Stream B: Runtime Governance
 5. **#703 (EPIC)**: Enterprise IDE policy runtime.
@@ -131,7 +131,7 @@ Priority debug rule:
 ## Execution Order (Overlap-Reduced)
 
 1. **Single authority first**: execute #700 and #704 before any new governance feature work.
-2. **Enforcement second**: land #701 then #702 so merge gates and branch rules enforce SSOT.
+2. **Enforcement second**: land #701 and keep #702 closure evidence/regression checks in place for fail-closed coverage.
 3. **Runtime policy third**: execute #703 with #705 and #708 in that order.
 4. **Control-plane apps fourth**: execute #706 and #707, then implement #742 through #743-#748 in order.
 5. **Extension governance fifth**: maintain stream closure evidence and monitor regressions.
@@ -183,7 +183,7 @@ Run overlap/staleness backlog guard:
 
 ## Done Definition
 
-- Stream A done when #700/#704/#701/#702 are implemented with no policy-source duplication.
+- Stream A done when #700/#704/#701 are implemented with #702 closure evidence retained and no policy-source duplication.
 - Stream B done when #703/#705/#708 enforce fail-closed decisions with auditable exceptions.
 - Stream C done when #706/#707/#742 use Stream A-B contracts without redefining schema/policy paths.
 - Stream D done when #743/#744/#745/#746/#747/#748 are integrated without introducing a second policy authority.

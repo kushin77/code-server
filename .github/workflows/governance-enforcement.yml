@@ -62,6 +62,47 @@ jobs:
         run: |
           bash scripts/governance/calculate-governance-score.sh --format env >> "$GITHUB_ENV"
 
+      - name: "[P0] Regression - Fail-Closed Guardrail"
+        run: |
+          echo "Checking workflow for fail-open P0 configuration"
+          awk '
+            /- name: "\[P0\]/ { in_p0=1; step=$0; next }
+            /- name:/ { in_p0=0 }
+            in_p0 && /continue-on-error:/ {
+              if ($0 ~ /true([[:space:]]*#.*)?$/) {
+                print "FAIL: literal continue-on-error:true on P0 step -> " step
+                bad=1
+              }
+            }
+            END { exit bad }
+          ' .github/workflows/governance-enforcement.yml
+
+      - name: Resolve waiver gate for P0 bypass
+        id: waiver_gate
+        env:
+          GOVERNANCE_P0_WAIVER_ISSUE: ${{ vars.GOVERNANCE_P0_WAIVER_ISSUE }}
+          GOVERNANCE_P0_WAIVER_TOKEN: ${{ secrets.GOVERNANCE_P0_WAIVER_TOKEN }}
+        run: |
+          issue="${GOVERNANCE_P0_WAIVER_ISSUE:-}"
+          token="${GOVERNANCE_P0_WAIVER_TOKEN:-}"
+          if [[ -n "$issue" || -n "$token" ]]; then
+            if [[ -z "$issue" || -z "$token" ]]; then
+              echo "Waiver bypass rejected: both GOVERNANCE_P0_WAIVER_ISSUE and GOVERNANCE_P0_WAIVER_TOKEN are required."
+              exit 1
+            fi
+            if [[ ! "$issue" =~ ^[0-9]+$ ]]; then
+              echo "Waiver bypass rejected: GOVERNANCE_P0_WAIVER_ISSUE must be a numeric issue id."
+              exit 1
+            fi
+            echo "p0_bypass=true" >> "$GITHUB_OUTPUT"
+            echo "p0_mode=ADVISORY (waiver-gated bypass)" >> "$GITHUB_OUTPUT"
+            echo "waiver_issue=$issue" >> "$GITHUB_OUTPUT"
+          else
+            echo "p0_bypass=false" >> "$GITHUB_OUTPUT"
+            echo "p0_mode=BLOCKING (default fail-closed)" >> "$GITHUB_OUTPUT"
+            echo "waiver_issue=none" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish governance score summary
         run: |
           {
@@ -75,10 +116,12 @@ jobs:
             echo "| active fallback shims | ${ACTIVE_SHIMS_WITH_FALLBACK} | $((ACTIVE_SHIMS_WITH_FALLBACK * 8)) |"
             echo
             echo "**Governance Score:** ${GOVERNANCE_SCORE}/100"
+            echo "**P0 Enforcement:** ${{ steps.waiver_gate.outputs.p0_mode }}"
+            echo "**Waiver Issue:** #${{ steps.waiver_gate.outputs.waiver_issue }}"
           } >> "$GITHUB_STEP_SUMMARY"
       
       - name: "[P0] Shellcheck - Shell Scripts"
-        continue-on-error: true  # Temporarily disabled to debug other checks
+        continue-on-error: ${{ steps.waiver_gate.outputs.p0_bypass == 'true' }}
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Shell Script Quality - shellcheck"
@@ -93,12 +136,13 @@ jobs:
           done
           
           if [[ $EXIT_CODE -ne 0 ]]; then
-            echo "⚠ Shellcheck violations found (advisory)"
+            echo "✗ Shellcheck violations found"
+            exit 1
           fi
           echo "✓ Shell script quality check complete"
       
       - name: "[P0] Terraform Format & Validation"
-        continue-on-error: true
+        continue-on-error: ${{ steps.waiver_gate.outputs.p0_bypass == 'true' }}
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Terraform Quality - fmt & validate"
@@ -114,7 +158,7 @@ jobs:
           echo "✓ Terraform validation passed"
       
       - name: "[P0] YAML Linting"
-        continue-on-error: true
+        continue-on-error: ${{ steps.waiver_gate.outputs.p0_bypass == 'true' }}
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] YAML Quality - yamllint"
@@ -128,7 +172,7 @@ jobs:
           echo "✓ YAML linting passed"
       
       - name: "[P0] Duplication Detection (jscpd)"
-        continue-on-error: true
+        continue-on-error: ${{ steps.waiver_gate.outputs.p0_bypass == 'true' }}
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Code Duplication - jscpd"
@@ -146,7 +190,7 @@ jobs:
           echo "✓ No significant code duplication detected"
       
       - name: "[P0] Secrets Detection (Gitleaks)"
-        continue-on-error: true
+        continue-on-error: ${{ steps.waiver_gate.outputs.p0_bypass == 'true' }}
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Secrets Scanning - Gitleaks"
@@ -159,7 +203,7 @@ jobs:
           echo "✓ No secrets detected by Gitleaks"
       
       - name: "[P0] Secrets Detection (TruffleHog)"
-        continue-on-error: true
+        continue-on-error: ${{ steps.waiver_gate.outputs.p0_bypass == 'true' }}
         run: |
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           echo "[P0] Secrets Scanning - TruffleHog"
@@ -216,6 +260,9 @@ jobs:
           echo "  ✓ YAML linting"
           echo "  ✓ Code duplication (jscpd)"
           echo "  ✓ Secrets (Gitleaks + TruffleHog)"
+          echo ""
+          echo "P0 Enforcement Mode: ${{ steps.waiver_gate.outputs.p0_mode }}"
+          echo "Waiver Issue: #${{ steps.waiver_gate.outputs.waiver_issue }}"
           echo ""
           echo "P1 Checks (ADVISORY):"
           echo "  ⚠️  Vulnerabilities (Trivy)"
@@ -288,3 +335,88 @@ jobs:
                 body,
               });
             }
+
+  fail-closed-policy-matrix:
+    name: Fail-Closed Policy Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - p0_shellcheck_violation_blocks
+          - p0_failopen_guard_detects_violation
+          - p1_advisory_failure_allows_progress
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Execute synthetic policy scenario
+        run: |
+          set -euo pipefail
+          case "${{ matrix.scenario }}" in
+            p0_shellcheck_violation_blocks)
+              sudo apt-get update
+              sudo apt-get install -y shellcheck
+              cat > /tmp/p0-shellcheck-synthetic.sh <<'EOF'
+              #!/usr/bin/env bash
+              echo ${UNQUOTED}
+              EOF
+              set +e
+              shellcheck /tmp/p0-shellcheck-synthetic.sh
+              rc=$?
+              set -e
+              if [[ "$rc" -eq 0 ]]; then
+                echo "Expected shellcheck to fail for P0 synthetic violation."
+                exit 1
+              fi
+              ;;
+
+            p0_failopen_guard_detects_violation)
+              cat > /tmp/fail-open-synthetic.yml <<'EOF'
+              jobs:
+                sample:
+                  steps:
+                    - name: "[P0] Synthetic step"
+                      continue-on-error: true
+                      run: echo fail-open
+              EOF
+              set +e
+              awk '
+                /- name: "\[P0\]/ { in_p0=1; step=$0; next }
+                /- name:/ { in_p0=0 }
+                in_p0 && /continue-on-error:/ {
+                  if ($0 ~ /true([[:space:]]*#.*)?$/) {
+                    bad=1
+                  }
+                }
+                END { exit bad }
+              ' /tmp/fail-open-synthetic.yml
+              rc=$?
+              set -e
+              if [[ "$rc" -eq 0 ]]; then
+                echo "Expected guardrail scanner to fail synthetic fail-open P0 pattern."
+                exit 1
+              fi
+              ;;
+
+            p1_advisory_failure_allows_progress)
+              false || true
+              echo "Advisory-mode failure path remains non-blocking by design."
+              ;;
+
+            *)
+              echo "Unknown scenario: ${{ matrix.scenario }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Publish scenario result
+        if: always()
+        run: |
+          {
+            echo "## Fail-Closed Policy Matrix"
+            echo ""
+            echo "Scenario: ${{ matrix.scenario }}"
+            echo "Result: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"

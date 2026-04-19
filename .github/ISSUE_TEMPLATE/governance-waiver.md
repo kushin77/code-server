@@ -19,6 +19,7 @@ assignees: ''
 - Requested by:
 - PR/Issue:
 - Policy violated:
+- Scope (repos/paths/users):
 - Violation details:
 - Justification:
 - Expiration (YYYY-MM-DD):
@@ -35,6 +36,7 @@ assignees: ''
 
 - Approved by:
 - Approval date (YYYY-MM-DD):
+- Approval signature (sha256:<64-hex>):
 - Approval notes:
 
 ## Closure Tracking

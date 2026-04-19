@@ -117,11 +117,17 @@ Priority debug rule:
 18. **#759**: Harden extension supply chain and remove unmanaged marketplace paths.
 
 ### Stream F: Multi-Repo UX (execute after governance contracts stabilize)
-22. **#717 (EPIC)** with child features:
-   - #718 instant repo switcher
-   - #719 multi-repo home view
-   - #720 session persistence and safe restore
-   - #721 workspace tabs
+19. **#717 (EPIC)**: Multi-repo developer navigation experience.
+20. **#718**: Instant repo switcher.
+21. **#719**: Multi-repo home view.
+22. **#720**: Session persistence and safe restore.
+23. **#721**: Workspace tabs in toolbar.
+24. **#722**: Cross-repo isolation and permission model.
+25. **#723**: Sub-2s repo switch SLO and resource guardrails.
+26. **#724**: Enterprise policy defaults/limits/compliance for multi-repo UX.
+27. **#725**: Pilot rollout and feature-flag validation.
+28. **#726**: Architecture decision for best multi-repo interaction model.
+29. **#727**: Developer context hub integration.
 
 ## Execution Order (Overlap-Reduced)
 
@@ -130,7 +136,7 @@ Priority debug rule:
 3. **Runtime policy third**: execute #703 with #705 and #708 in that order.
 4. **Control-plane apps fourth**: execute #706 and #707, then implement #742 through #743-#748 in order.
 5. **Extension governance fifth**: execute #735 first, then #759.
-6. **UX last**: execute #717 and children (#718-#721) only after Stream A-E contracts are stable.
+6. **UX last**: execute #717 through #727 only after Stream A-E contracts are stable.
 
 ### Debug/Triage Rule Set
 
@@ -183,5 +189,5 @@ Run overlap/staleness backlog guard:
 - Stream C done when #706/#707/#742 use Stream A-B contracts without redefining schema/policy paths.
 - Stream D done when #743/#744/#745/#746/#747/#748 are integrated without introducing a second policy authority.
 - Stream E done when #735/#759 enforce portal-only extension policy with #760 conformance evidence retained.
-- Stream F done when #717/#718/#719/#720/#721 ship without introducing alternate state stores or policy models.
+- Stream F done when #717 through #727 ship without introducing alternate state stores or policy models.
 - No new loose root files are introduced in active branches.

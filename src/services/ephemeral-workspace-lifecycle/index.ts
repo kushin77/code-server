@@ -18,6 +18,20 @@ import {
   WorkspaceLifecycleStats,
 } from "./types"
 
+export {
+  WorkspaceLifecycleState,
+  WorkspaceLifecycleEventType,
+  WorkspaceLifecycleEvent,
+  WorkspaceSnapshot,
+  WorkspaceLifecycleConfig,
+  WorkspaceLifecycleContext,
+  LifecycleOperationResult,
+  IdleDetectionResult,
+  TtlCheckResult,
+  WorkspaceCascadeCleanupEvent,
+  WorkspaceLifecycleStats,
+} from "./types"
+
 /**
  * EphemeralWorkspaceLifecycleManager
  *
@@ -780,5 +794,3 @@ export function createEphemeralWorkspaceLifecycleManager(
   })
 }
 
-// Export factory
-export { EphemeralWorkspaceLifecycleManager }

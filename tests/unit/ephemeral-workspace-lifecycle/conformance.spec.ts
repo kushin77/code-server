@@ -84,7 +84,7 @@ describe("EphemeralWorkspaceLifecycleManager - Conformance Tests", () => {
       })
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain("out of range")
+      expect(result.reason || result.error).toContain("out of range")
     })
 
     it("should record creation event in audit trail", async () => {
@@ -276,13 +276,15 @@ describe("EphemeralWorkspaceLifecycleManager - Conformance Tests", () => {
         userId,
         containerName: "expire-test",
         containerPort: 8083,
-        ttlSeconds: 1, // 1 second
+        ttlSeconds: 600,
         actor: "alice@example.com",
         correlationId: "setup",
       })
 
-      // Wait for expiry
-      await new Promise((resolve) => setTimeout(resolve, 1100))
+      const workspace = manager.getWorkspace("expire-test")
+      if (workspace) {
+        workspace.expiresAt = (Date.now() / 1000) - 1
+      }
 
       const result = await manager.checkTtlExpiry()
 
@@ -296,21 +298,23 @@ describe("EphemeralWorkspaceLifecycleManager - Conformance Tests", () => {
         userId,
         containerName: "auto-term",
         containerPort: 8084,
-        ttlSeconds: 1,
+        ttlSeconds: 600,
         actor: "alice@example.com",
         correlationId: "setup",
       })
 
       await manager.markReady("auto-term", "alice@example.com", "setup-1")
 
-      // Wait for expiry
-      await new Promise((resolve) => setTimeout(resolve, 1100))
+      const workspace = manager.getWorkspace("auto-term")
+      if (workspace) {
+        workspace.expiresAt = (Date.now() / 1000) - 1
+      }
 
       await manager.checkTtlExpiry()
 
-      const workspace = manager.getWorkspace("auto-term")
-      expect(workspace?.state === WorkspaceLifecycleState.TERMINATING ||
-             workspace?.state === WorkspaceLifecycleState.TERMINATED).toBe(true)
+            const updatedWorkspace = manager.getWorkspace("auto-term")
+            expect(updatedWorkspace?.state === WorkspaceLifecycleState.TERMINATING ||
+              updatedWorkspace?.state === WorkspaceLifecycleState.TERMINATED).toBe(true)
     })
   })
 

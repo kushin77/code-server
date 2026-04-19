@@ -178,6 +178,12 @@ else
   record "extension-governance: role profile recommendation policy lint" "fail" "$(tail -n 20 /tmp/role-profile-lint.log 2>/dev/null || echo 'lint output unavailable')"
 fi
 
+if bash scripts/ci/validate-extension-supply-chain.sh --report /tmp/extension-supply-chain-report.json >/tmp/extension-supply-chain.log 2>&1; then
+  record "extension-governance: curated manifest signature + marketplace block" "pass"
+else
+  record "extension-governance: curated manifest signature + marketplace block" "fail" "$(tail -n 20 /tmp/extension-supply-chain.log 2>/dev/null || echo 'validation output unavailable')"
+fi
+
 # ── Report ────────────────────────────────────────────────────────────────────
 echo ""
 echo "═══════════════════════════════════════════════════════════════"

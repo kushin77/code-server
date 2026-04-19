@@ -12,6 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
 # Environment inputs (can be set by caller)
+E2E_DIR="${E2E_DIR:-tests/e2e}"
 TARGET_URL="${TARGET_URL:-https://ide.kushnir.cloud}"
 E2E_USER_EMAIL="${E2E_USER_EMAIL:-}"
 E2E_USER_PASSWORD="${E2E_USER_PASSWORD:-}"
@@ -59,12 +60,12 @@ require_command "node" "Node.js is required"
 log_info "Setting up Playwright kit for storage state capture"
 bash "$SCRIPT_DIR/setup-e2e-playwright.sh"
 
-# Create a temporary directory for the capture script
-CAPTURE_TEMP_DIR="$(mktemp -d)"
-trap "rm -rf $CAPTURE_TEMP_DIR" EXIT
+# Create a temporary capture script inside E2E_DIR so local node_modules are visible
+CAPTURE_SCRIPT="$(cd "$E2E_DIR" && mktemp "$PWD/capture.XXXXXX.mjs")"
+trap "rm -f $CAPTURE_SCRIPT" EXIT
 
 log_info "Generating Playwright capture script"
-cat > "$CAPTURE_TEMP_DIR/capture.ts" << 'PLAYWRIGHT_SCRIPT'
+cat > "$CAPTURE_SCRIPT" << 'PLAYWRIGHT_SCRIPT'
 import { chromium } from '@playwright/test';
 
 async function captureStorageState() {
@@ -136,26 +137,18 @@ captureStorageState().catch(err => {
 PLAYWRIGHT_SCRIPT
 
 log_info "Compiling and running capture script"
+
 (
-  cd "$CAPTURE_TEMP_DIR"
-  cat > package.json << 'EOF'
-{
-  "type": "module",
-  "devDependencies": {
-    "@playwright/test": "^1.44.0"
-  }
-}
-EOF
-  
+  cd "$E2E_DIR"
+
   export TARGET_URL
   export E2E_USER_EMAIL
   export E2E_USER_PASSWORD
   export E2E_OAUTH_TOKEN
   export OUTPUT_FILE
   export HEADLESS
-  
-  # Use npx to run TypeScript directly
-  npx tsx capture.ts
+
+  node "$CAPTURE_SCRIPT"
 )
 
 if [[ ! -f "$OUTPUT_FILE" ]]; then

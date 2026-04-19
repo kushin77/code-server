@@ -30,7 +30,9 @@ Do NOT request waivers for:
 
 ## Waiver Request Format
 
-All waivers recorded in `docs/governance/WAIVERS.md`
+All waivers are recorded in:
+- `docs/governance/WAIVERS.md` (human-readable registry)
+- `config/governance-waivers.json` (machine-enforced canonical registry)
 
 ### Required Information
 
@@ -41,13 +43,16 @@ All waivers recorded in `docs/governance/WAIVERS.md`
 **Requested By**: @github_username  
 **PR/Issue**: [GitHub link to PR or issue]  
 **Policy Violated**: [Name of policy section violated]  
+**Scope**: [Repositories/paths/users covered by this waiver]  
 **Violation Details**: [Specific violation, e.g., "Script without error handling header"]  
 **Justification**: [2-3 sentences explaining why waiver is necessary]  
 **Expiration**: [Date or version when this waiver expires]  
 **Impact**: [How many files/lines affected]  
+**Owner for Remediation**: @github_username  
 
 **Approved By**: @maintainer_github_handle  
 **Approval Date**: YYYY-MM-DD  
+**Approval Signature**: sha256:<64-hex>  
 **Approval Notes**: [Any conditions or requirements for waiver]  
 
 ---
@@ -66,6 +71,8 @@ Waivers approved if:
 | Expiration date set | Required | Max 180 days or next version release |
 | Impact quantified | Required | "5 files, 200 lines" not "some code" |
 | Owner assigned for remediation | Required | Name of person fixing post-expiration |
+| Scope explicitly bounded | Required | Repos/paths/users must be listed |
+| Approval signature recorded | Required | `sha256:<64-hex>` attestation |
 | No security bypass | Required | Waivers cannot approve security violations |
 
 ---
@@ -87,8 +94,8 @@ Waivers approved if:
 
 ### 3. Approval Phase
 
-**Action**: Infrastructure lead adds waiver to `docs/governance/WAIVERS.md`  
-**Automation**: `.github/workflows/governance-waiver-audit.yml` validates request completeness on issue updates and publishes recurring waiver audit metrics.  
+**Action**: Infrastructure lead adds waiver to `docs/governance/WAIVERS.md` and `config/governance-waivers.json`  
+**Automation**: `.github/workflows/governance-waiver-audit.yml` validates request completeness on issue updates, validates centralized registry schema/expiry, and publishes recurring waiver audit metrics + events.  
 **Notification**: Automated comment on PR with approval
 
 ### 4. Post-Expiration
@@ -99,6 +106,7 @@ Waivers approved if:
 
 **After expiration date**:
 - Waiver no longer valid
+- Centralized registry marks active expired waivers as revocation-required
 - Code must meet policy or be removed
 - CI/CD rejects any new use of that pattern
 

@@ -2,11 +2,13 @@
 
 Canonical registry for approved governance waivers.
 
+Machine-enforced canonical source: `config/governance-waivers.json`
+
 ## Status
 
 No approved waivers are currently recorded.
 
-Add new entries only after approval metadata is complete in the linked waiver issue.
+Add new entries only after approval metadata is complete in the linked waiver issue and corresponding JSON entry is added to `config/governance-waivers.json`.
 
 ## Entry Template
 

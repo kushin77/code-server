@@ -5,7 +5,7 @@ Purpose: convert current governance and redeploy work into issue-driven, measura
 Status: ACTIVE
 Lifecycle: active-production
 Owner: platform engineering
-Last Updated: 2026-04-18
+Last Updated: 2026-04-19
 
 ## Current State
 
@@ -52,6 +52,12 @@ Last Updated: 2026-04-18
 - Redeploy preflight hardening completed and validated on production host:
    - commit `2ac5232f`: NAS export subpath gate (fail-fast before compose)
    - commit `05cf1cf0`: dual-domain drift check alignment (`ide` + apex-aware)
+- Extension-governance conformance stream progressed under #760:
+   - commit `0f620e71`: auth conformance suite Category 5 added (`scripts/ci/lint-role-profiles.sh` integration)
+   - local stability evidence: 3/3 passing runs (`/tmp/auth-conformance-report*.json`, 10/10 pass each)
+   - CI regression root cause from run `24617562996` isolated (jq fallback misread explicit `false` as missing)
+   - commit `c2bbb35f`: key-presence parsing fix in `scripts/ci/lint-role-profiles.sh`
+   - CI verification: Security run `24617607483` reports `Auth/Policy Conformance Suite` completed/success
 - Overlap cleanup completed for superseded issues:
    - #738 -> superseded by #759
    - #739 -> superseded by #756
@@ -86,10 +92,8 @@ Last Updated: 2026-04-18
 
 ### Stream E: Extension Governance and Conformance
 17. **#735 (EPIC)**: Portal-only extension governance for thin-client IDE.
-18. **#736**: Disable extension recommendations across role profiles.
-19. **#737**: Lock extension recommendation keys as immutable enterprise policy.
-20. **#759**: Harden extension supply chain and remove unmanaged marketplace paths.
-21. **#760**: Core conformance suite for domain-managed client behavior.
+18. **#759**: Harden extension supply chain and remove unmanaged marketplace paths.
+19. **#760**: Core conformance suite for domain-managed client behavior.
 
 ### Stream F: Multi-Repo UX (execute after governance contracts stabilize)
 22. **#717 (EPIC)** with child features:

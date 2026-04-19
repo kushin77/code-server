@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# @file        scripts/bootstrap-node.sh
+# @module      operations/bootstrap
+# @description Bare-metal node bootstrap for primary/replica deployment nodes
+#
 ################################################################################
 # bootstrap-node.sh
 #

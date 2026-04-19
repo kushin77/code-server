@@ -81,7 +81,7 @@ Run this queue before any P2/P3 work.
 3. **P1 runtime enforcement path**: #703 -> #705 -> #708.
 4. **P1 control-plane enablement**: #706 -> #707 -> #742.
 5. **P1 portal delivery children**: #743 -> #744 -> #745 -> #746 -> #747 -> #748.
-6. **P1 extension-governance status**: Stream E closure evidence retained (#735, #759, #760 closed).
+6. **P1 extension-governance status**: Stream E closure evidence retained (extension-governance closure stream completed).
 
 Priority debug rule:
 - Any failing CI/conformance result tied to #702, #701, #703, #705, or #708 preempts lower-priority implementation work until green.
@@ -113,7 +113,7 @@ Priority debug rule:
 16. **#748**: Vault adoption for policy-signing keys and secret lifecycle.
 
 ### Stream E: Extension Governance and Conformance
-17. **COMPLETED**: Portal-only extension governance stream closed with #735/#759/#760 evidence.
+17. **COMPLETED**: Portal-only extension governance stream is closed; evidence is retained in the issue tracker and conformance artifacts.
 
 ### Stream F: Multi-Repo UX (execute after governance contracts stabilize)
 19. **#717 (EPIC)**: Multi-repo developer navigation experience.
@@ -134,7 +134,7 @@ Priority debug rule:
 2. **Enforcement second**: land #701 then #702 so merge gates and branch rules enforce SSOT.
 3. **Runtime policy third**: execute #703 with #705 and #708 in that order.
 4. **Control-plane apps fourth**: execute #706 and #707, then implement #742 through #743-#748 in order.
-5. **Extension governance fifth**: maintain #735/#759/#760 closure evidence and monitor regressions.
+5. **Extension governance fifth**: maintain stream closure evidence and monitor regressions.
 6. **UX last**: execute #717 through #727 only after Stream A-E contracts are stable.
 
 ### Debug/Triage Rule Set
@@ -187,6 +187,6 @@ Run overlap/staleness backlog guard:
 - Stream B done when #703/#705/#708 enforce fail-closed decisions with auditable exceptions.
 - Stream C done when #706/#707/#742 use Stream A-B contracts without redefining schema/policy paths.
 - Stream D done when #743/#744/#745/#746/#747/#748 are integrated without introducing a second policy authority.
-- Stream E done and retained as evidence from #735/#759/#760 closure artifacts.
+- Stream E done and retained as closure evidence in issue comments and conformance artifacts.
 - Stream F done when #717 through #727 ship without introducing alternate state stores or policy models.
 - No new loose root files are introduced in active branches.

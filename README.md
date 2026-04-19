@@ -124,7 +124,7 @@ docker compose up -d --force-recreate code-server
 
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md),
+See [ARCHITECTURE.md](docs/status/ARCHITECTURE.md),
 [ADR index](docs/adr/README.md), and
 [Cloudflare tunnel ADR](docs/adr/006-cloudflare-tunnel-architecture.md).
 
@@ -142,4 +142,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 ## Monorepo Workspace
 
-- staged pnpm workspace plan: [docs/governance/elite-best-practices/monorepo-pnpm/MONOREPO-PNPM-PLAN.md](docs/governance/elite-best-practices/monorepo-pnpm/MONOREPO-PNPM-PLAN.md)
+- staged pnpm workspace plan: [docs/governance/elite-best-practices/monorepo/MONOREPO-PNPM-PLAN.md](docs/governance/elite-best-practices/monorepo/MONOREPO-PNPM-PLAN.md)

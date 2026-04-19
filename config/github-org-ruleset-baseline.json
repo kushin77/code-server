@@ -1,4 +1,21 @@
 {
+  "schema_version": "1.0",
+  "org": "kushin77",
+  "rulesets": [
+    {
+      "name": "default-branch-protection-baseline",
+      "target": "default_branch",
+      "required_status_checks": [
+        "governance-check",
+        "shellcheck",
+        "credentials-governance",
+        "linux-mandate"
+      ],
+      "required_approving_review_count": 1,
+      "enforce_admins": true,
+      "required_conversation_resolution": true
+    }
+  ],
   "version": "2026-04-18",
   "organization": "kushin77",
   "required_status_checks": [

@@ -1,12 +1,15 @@
 {
   "policy_version": "1.0.0",
-  "policy_date": "2026-04-18",
+  "policy_date": "2026-04-19",
+  "manifest_algorithm": "sha256",
+  "manifest_signature": "d15b5be828e9811cfcf00ec2ae91dd41c354514fe7f1705de6067b6807c9319c",
+  "signature_note": "SHA256 of JSON.stringify(extensions, sorted-keys). Recompute with scripts/ci/validate-extension-supply-chain.sh --sign",
   "extensions": [
     {
       "id": "GitHub.copilot",
       "version": "1.295.0",
       "tier": "T1-Core",
-      "reason": "AI code completion — enterprise licensed, pre-installed",
+      "reason": "AI code completion \u2014 enterprise licensed, pre-installed",
       "pre_installed": true,
       "user_can_uninstall": false
     },
@@ -14,7 +17,7 @@
       "id": "GitHub.copilot-chat",
       "version": "0.42.3",
       "tier": "T1-Core",
-      "reason": "AI chat and inline chat — enterprise licensed, pre-installed",
+      "reason": "AI chat and inline chat \u2014 enterprise licensed, pre-installed",
       "pre_installed": true,
       "user_can_uninstall": false
     },
@@ -22,7 +25,7 @@
       "id": "ms-python.python",
       "version": "2024.6.0",
       "tier": "T1-Core",
-      "reason": "Python language support — required for scripts and tooling",
+      "reason": "Python language support \u2014 required for scripts and tooling",
       "pre_installed": false,
       "user_can_uninstall": false
     },
@@ -30,7 +33,7 @@
       "id": "ms-python.black-formatter",
       "version": "2024.2.0",
       "tier": "T1-Core",
-      "reason": "Black formatter — required by T1 Python formatting policy",
+      "reason": "Black formatter \u2014 required by T1 Python formatting policy",
       "pre_installed": false,
       "user_can_uninstall": false
     },
@@ -38,7 +41,7 @@
       "id": "esbenp.prettier-vscode",
       "version": "10.4.0",
       "tier": "T1-Core",
-      "reason": "Prettier formatter — required by T1 JS/TS/JSON/YAML formatting policy",
+      "reason": "Prettier formatter \u2014 required by T1 JS/TS/JSON/YAML formatting policy",
       "pre_installed": false,
       "user_can_uninstall": false
     },
@@ -46,7 +49,7 @@
       "id": "redhat.vscode-yaml",
       "version": "1.15.0",
       "tier": "T1-Core",
-      "reason": "YAML language support — required for compose/k8s/prometheus files",
+      "reason": "YAML language support \u2014 required for compose/k8s/prometheus files",
       "pre_installed": false,
       "user_can_uninstall": false
     },
@@ -54,7 +57,7 @@
       "id": "hashicorp.terraform",
       "version": "2.32.0",
       "tier": "T2-Recommended",
-      "reason": "Terraform IaC support — recommended for all infra contributors",
+      "reason": "Terraform IaC support \u2014 recommended for all infra contributors",
       "pre_installed": false,
       "user_can_uninstall": true
     },
@@ -62,7 +65,7 @@
       "id": "timonwong.shellcheck",
       "version": "0.38.2",
       "tier": "T2-Recommended",
-      "reason": "Shellcheck integration — surfaces bash lint warnings inline",
+      "reason": "Shellcheck integration \u2014 surfaces bash lint warnings inline",
       "pre_installed": false,
       "user_can_uninstall": true
     },
@@ -78,7 +81,7 @@
       "id": "eamodio.gitlens",
       "version": "15.4.0",
       "tier": "T2-Recommended",
-      "reason": "Git blame and history inline — productivity boost",
+      "reason": "Git blame and history inline \u2014 productivity boost",
       "pre_installed": false,
       "user_can_uninstall": true
     },

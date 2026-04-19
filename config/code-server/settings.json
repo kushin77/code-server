@@ -60,6 +60,17 @@
   "security.workspace.trust.enabled": true,
   "security.workspace.trust.startupPrompt": "once",
 
+  // ─── T1: EXTENSION SUPPLY CHAIN (immutable) ───────────────────────────────
+  // Disable public marketplace; all extension installs must go through the
+  // curated internal channel defined in config/code-server/extensions/.
+  // EXTENSIONS_GALLERY env var in docker-compose controls the actual gallery
+  // URL; these settings disable the built-in fallback discovery paths.
+  "extensions.gallery.serviceUrl": "",
+  "extensions.gallery.itemUrl": "",
+  "extensions.gallery.resourceUrlTemplate": "",
+  "extensions.recommendations": false,
+  "extensions.ignoreRecommendations": true,
+
   // ─── T1: GIT HYGIENE (immutable) ──────────────────────────────────────────
   "git.requireGitUserConfig": true,
   "git.branchProtection": ["main", "master"],

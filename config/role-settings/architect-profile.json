@@ -66,6 +66,9 @@
     "security.workspace.trust.enabled": true,
     "extensions.recommendations": false,
     "extensions.ignoreRecommendations": true,
+    "extensions.gallery.serviceUrl": "",
+    "extensions.gallery.itemUrl": "",
+    "extensions.gallery.resourceUrlTemplate": "",
     "telemetry.telemetryLevel": "off"
   }
 }

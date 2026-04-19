@@ -143,34 +143,3 @@ kushnir.cloud {
     }
 }
 
-# Blanket SSO policy for all subdomains under kushnir.cloud.
-*.kushnir.cloud {
-    encode gzip
-
-    header {
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        -Server
-    }
-
-    @health path /health /healthz /ping
-    respond @health "OK" 200
-
-    @logout path /logout /signout
-    redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
-
-    @oauth2 path /oauth2 /oauth2/*
-    handle @oauth2 {
-        reverse_proxy oauth2-proxy:4180 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-        }
-    }
-
-    reverse_proxy oauth2-proxy:4180 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-    }
-}

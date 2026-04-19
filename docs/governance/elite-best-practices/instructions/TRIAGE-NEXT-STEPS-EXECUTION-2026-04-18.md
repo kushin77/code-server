@@ -92,7 +92,7 @@ Priority debug rule:
 1. **#700 (EPIC)**: Enterprise global governance control plane (single policy authority).
 2. **#704 (EPIC)**: Canonical policy SSOT and deduplication of governance sources.
 3. **#701 (EPIC)**: Org-wide GitHub governance enforcement (rulesets + branch protections).
-4. **COMPLETED**: #702 fail-closed governance pipeline closed with evidence retained in tracker comments and CI history.
+4. **COMPLETED**: Fail-closed governance pipeline closed with evidence retained in tracker comments and CI history.
 
 ### Stream B: Runtime Governance
 5. **#703 (EPIC)**: Enterprise IDE policy runtime.

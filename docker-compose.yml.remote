@@ -22,8 +22,8 @@ services:
       - "0.0.0.0:8080:8080"
     environment:
       # Use strong password from .env, not defaults
-      - PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
-      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:-change-me-in-env}
+      - PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
+      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - OLLAMA_ENDPOINT=http://ollama:11434
     command:

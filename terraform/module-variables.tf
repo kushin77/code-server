@@ -127,7 +127,12 @@ variable "grafana_admin_password" {
   description = "Grafana admin password"
   type        = string
   sensitive   = true
-  default     = "admin123" # CHANGE IN PRODUCTION
+  default     = ""
+
+  validation {
+    condition     = length(var.grafana_admin_password) >= 12
+    error_message = "grafana_admin_password must be set and at least 12 characters."
+  }
 }
 
 variable "grafana_storage_size" {
@@ -182,7 +187,24 @@ variable "kong_database_password" {
   description = "Kong PostgreSQL database password"
   type        = string
   sensitive   = true
-  default     = "change-me" # CHANGE IN PRODUCTION
+  default     = ""
+
+  validation {
+    condition     = length(var.kong_database_password) >= 12
+    error_message = "kong_database_password must be set and at least 12 characters."
+  }
+}
+
+variable "postgres_password" {
+  description = "PostgreSQL password used by failover workloads"
+  type        = string
+  sensitive   = true
+  default     = ""
+
+  validation {
+    condition     = length(var.postgres_password) >= 12
+    error_message = "postgres_password must be set and at least 12 characters."
+  }
 }
 
 variable "kong_storage_size" {

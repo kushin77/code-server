@@ -13,6 +13,18 @@ variable "postgres_version" {
   default     = "15.3"
 }
 
+variable "postgres_password" {
+  description = "PostgreSQL password for failover stateful workloads"
+  type        = string
+  sensitive   = true
+  default     = ""
+
+  validation {
+    condition     = length(var.postgres_password) >= 12
+    error_message = "postgres_password must be set and at least 12 characters."
+  }
+}
+
 variable "postgres_storage_size" {
   description = "PostgreSQL persistent volume size"
   type        = string

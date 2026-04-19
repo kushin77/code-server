@@ -11,11 +11,11 @@ variable "code_server_password" {
   description = "Code-Server authentication password (immutable after deployment; change via docker exec)"
   type        = string
   sensitive   = true
-  default     = "change-me-in-production"
+  default     = ""
 
   validation {
-    condition     = length(var.code_server_password) >= 8
-    error_message = "code_server_password must be at least 8 characters."
+    condition     = length(var.code_server_password) >= 12
+    error_message = "code_server_password must be set and at least 12 characters."
   }
 }
 
@@ -54,10 +54,10 @@ variable "oauth2_proxy_cookie_secret" {
   description = "Random cookie encryption secret for oauth2-proxy (generate: openssl rand -base64 32)"
   type        = string
   sensitive   = true
-  default     = "KPm7K8L9vN6q3W2zM5xJ4pL6K9mN8qW3zR5xY7tJ9pM2vO4wQ6sT8uV0xW2zY4aB"
+  default     = ""
 
   validation {
-    condition     = length(var.oauth2_proxy_cookie_secret) > 0
+    condition     = length(var.oauth2_proxy_cookie_secret) >= 16
     error_message = "oauth2_proxy_cookie_secret is required; generate: openssl rand -base64 32"
   }
 }

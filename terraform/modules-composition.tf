@@ -128,6 +128,7 @@ module "failover" {
   replication_slots     = var.replication_slots
   wal_level             = var.wal_level
   max_wal_senders       = var.max_wal_senders
+  postgres_password     = var.postgres_password
 
   s3_backup_bucket = var.s3_backup_bucket
   s3_backup_region = var.s3_backup_region

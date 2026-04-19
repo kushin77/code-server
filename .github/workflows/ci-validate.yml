@@ -33,7 +33,7 @@ jobs:
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Run pre-commit (all files)
-        continue-on-error: true
+        # P0 blocking: shellcheck, yamllint, and governance hooks must pass
         run: pre-commit run --all-files --show-diff-on-failure
         env:
           SKIP: mandatory-redeploy,terraform_fmt,terraform_validate
@@ -41,7 +41,7 @@ jobs:
   governance:
     name: Governance audit (library adoption + MANIFEST)
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # P0 blocking (#702): governance violations must block merge — no silent pass-through
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
@@ -52,16 +52,19 @@ jobs:
         run: make lib-check
 
       - name: MANIFEST registry validation (make index)
+        # P0: unregistered scripts are a governance violation — must block
         run: |
           make SHELL=/bin/bash index
-          # Fail if any active script is unregistered
           violations=$(make SHELL=/bin/bash index 2>&1 | grep -c '✗' || true)
           if [[ "$violations" -gt 0 ]]; then
-            echo "::warning::$violations script(s) not registered in scripts/MANIFEST.toml"
+            echo "::error::$violations script(s) not registered in scripts/MANIFEST.toml"
             echo "Run: make manifest-init to regenerate, then commit"
+            exit 1
           fi
+          echo "✅ MANIFEST registry: no violations"
 
       - name: Zero active log_info() governance violations
+        # P1 advisory: inline log_info() is tech debt — annotate but do not block (#702 classification)
         run: |
           count=$(grep -rl "^log_info() {" scripts/*.sh 2>/dev/null \
             | grep -vE "_common/|logging\.sh|common-functions\.sh" | wc -l || echo 0)
@@ -69,11 +72,10 @@ jobs:
           if [[ "$count" -gt 0 ]]; then
             grep -rl "^log_info() {" scripts/*.sh 2>/dev/null \
               | grep -vE "_common/|logging\.sh|common-functions\.sh" | sed 's/^/  /'
-            echo "::warning::$count script(s) define inline log_info() — migrate to _common/init.sh"
-            echo "Advisory mode: does not block unrelated PRs."
-            exit 0
+            echo "::warning::P1-advisory: $count script(s) define inline log_info() — migrate to _common/init.sh"
+          else
+            echo "✅ Zero log_info() governance violations"
           fi
-          echo "✅ Zero governance violations"
 
   readme-docs-integrity:
     name: README docs integrity (markdown + local links)
@@ -253,3 +255,101 @@ jobs:
 
       - name: Validate monorepo architecture and layout contract
         run: bash scripts/ci/validate-monorepo-target.sh
+
+  # ── P0 #702: Fail-closed regression test ─────────────────────────────────
+  # Proves that governance checks actually block — a synthetic violation must
+  # cause the validate-extension-supply-chain.sh script to exit non-zero.
+  fail-closed-regression:
+    name: Governance — fail-closed regression proof
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Synthetic violation — tampered manifest must fail
+        run: |
+          set -euo pipefail
+          # Corrupt the manifest signature; expect non-zero exit
+          tmpfile=$(mktemp)
+          python3 -c "
+          import json, sys
+          with open('config/code-server/extensions/extensions-approved.json') as f:
+              d = json.load(f)
+          d['manifest_signature'] = 'deadbeef000000000000000000000000'
+          with open('$tmpfile', 'w') as f:
+              json.dump(d, f, indent=2)
+          "
+          cp config/code-server/extensions/extensions-approved.json /tmp/orig-approved.json
+          cp "$tmpfile" config/code-server/extensions/extensions-approved.json
+          if bash scripts/ci/validate-extension-supply-chain.sh 2>/dev/null; then
+            echo "::error::FAIL-CLOSED REGRESSION: tampered manifest was NOT detected"
+            cp /tmp/orig-approved.json config/code-server/extensions/extensions-approved.json
+            exit 1
+          fi
+          cp /tmp/orig-approved.json config/code-server/extensions/extensions-approved.json
+          echo "✅ Fail-closed regression: tampered manifest correctly rejected"
+
+      - name: Synthetic violation — missing gallery block must fail
+        run: |
+          set -euo pipefail
+          tmpfile=$(mktemp)
+          python3 -c "
+          import json
+          with open('config/role-settings/viewer-profile.json') as f:
+              d = json.load(f)
+          for k in ['extensions.gallery.serviceUrl','extensions.gallery.itemUrl','extensions.gallery.resourceUrlTemplate']:
+              d['settings'].pop(k, None)
+          with open('$tmpfile', 'w') as f:
+              json.dump(d, f, indent=2)
+          "
+          cp config/role-settings/viewer-profile.json /tmp/orig-viewer.json
+          cp "$tmpfile" config/role-settings/viewer-profile.json
+          if bash scripts/ci/validate-extension-supply-chain.sh 2>/dev/null; then
+            echo "::error::FAIL-CLOSED REGRESSION: missing gallery block was NOT detected"
+            cp /tmp/orig-viewer.json config/role-settings/viewer-profile.json
+            exit 1
+          fi
+          cp /tmp/orig-viewer.json config/role-settings/viewer-profile.json
+          echo "✅ Fail-closed regression: missing gallery block correctly rejected"
+
+  # ── P1 #701: Org governance workflows ────────────────────────────────────
+  org-governance-drift:
+    name: Governance — org ruleset drift scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Validate org ruleset baseline schema
+        run: |
+          set -euo pipefail
+          python3 -c "
+          import json, sys
+          with open('config/github-org-ruleset-baseline.json') as f:
+              data = json.load(f)
+          required = ['schema_version', 'org', 'rulesets']
+          missing = [k for k in required if k not in data]
+          if missing:
+              print('ERROR: Missing required fields:', missing)
+              sys.exit(1)
+          print('✅ Org ruleset baseline schema valid:', len(data['rulesets']), 'rulesets defined')
+          "
+
+  # ── P1 #705: Waiver governance validation ────────────────────────────────
+  waiver-governance:
+    name: Governance — waiver registry validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Validate waiver registry against schema
+        run: bash scripts/governance/validate-waiver-registry.sh
+
+  # ── P2 #704: Policy SSOT guard ───────────────────────────────────────────
+  policy-ssot-guard:
+    name: Governance — policy SSOT deduplication check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Check policy SSOT (no duplicate normative sections)
+        # P2 advisory: duplicate policy is tech debt, not a blocking security violation
+        run: bash scripts/ci/check-policy-ssot.sh || echo "::warning::P2-advisory: policy SSOT violations found \u2014 resolve before next release"

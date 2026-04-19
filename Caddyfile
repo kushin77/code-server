@@ -43,7 +43,11 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     @oauth2 path /oauth2 /oauth2/*
     handle @oauth2 {
         reverse_proxy oauth2-proxy:4180 {
-            header_up Host {host}
+            # Use canonical domain for oauth2-proxy, not the VIP
+            # This prevents redirect loops when requests arrive via VIP (192.168.168.30)
+            header_up Host ide.kushnir.cloud
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto https
             header_up X-Real-IP {remote_host}
             header_down X-LB-Upstream {http.reverse_proxy.upstream.address}
         }
@@ -55,7 +59,9 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     @session-api path /sessions /sessions/*
     handle @session-api {
         reverse_proxy session-broker:5000 {
-            header_up Host {host}
+            header_up Host ide.kushnir.cloud
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto https
             header_up X-Real-IP {remote_host}
         }
     }
@@ -64,7 +70,9 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
     # Session broker validates oauth2 session cookie, creates/retrieves user's isolated session,
     # and routes to the corresponding code-server container.
     reverse_proxy session-broker:5000 {
-        header_up Host {host}
+        header_up Host ide.kushnir.cloud
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}
         header_up X-Session-Id {http.request.cookie._code_server_session_id}
         # Sticky load balancing for WebSocket IDE traffic within a user's session.
@@ -121,7 +129,11 @@ kushnir.cloud {
         # oauth2-proxy-portal control plane endpoints
         handle @oauth2 {
             reverse_proxy oauth2-proxy-portal:4181 {
-                header_up Host {host}
+                # Use canonical domain for oauth2-proxy, not the VIP
+                # This prevents redirect loops when requests arrive via VIP (192.168.168.30)
+                header_up Host kushnir.cloud
+                header_up X-Forwarded-Host {host}
+                header_up X-Forwarded-Proto https
                 header_up X-Real-IP {remote_host}
                 header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
             }
@@ -131,8 +143,11 @@ kushnir.cloud {
         redir /ide https://ide.kushnir.cloud/ 302
 
         # Root is SSO protected via oauth2-proxy-portal (Appsmith admin backend).
+        # Use canonical domain for oauth2-proxy, not the VIP
         reverse_proxy oauth2-proxy-portal:4181 {
-            header_up Host {host}
+            header_up Host kushnir.cloud
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto https
             header_up X-Real-IP {remote_host}
             header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
         }

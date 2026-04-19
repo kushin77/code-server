@@ -345,6 +345,8 @@ services:
       - "2019:2019"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
     environment:
       - DOMAIN=kushnir.cloud
       - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}

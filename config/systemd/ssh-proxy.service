@@ -1,0 +1,56 @@
+[Unit]
+Description=SSH Proxy with Audit Logging - Phase 13
+After=docker.service
+Requires=docker.service
+Documentation=https://github.com/kushin77/code-server/blob/main/PHASE-13-INFRASTRUCTURE-TEAM-DEPLOYMENT-GUIDE.md
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Environment
+Environment="SSH_PROXY_CONTAINER=ssh-proxy"
+Environment="SSH_PROXY_IMAGE=code-server-ssh-proxy:latest"
+Environment="SSH_AUDIT_LOG=/var/log/code-server-audit.log"
+Environment="SSH_AUDIT_DB=/var/lib/code-server/audit.db"
+
+# Execution
+ExecStartPre=-/usr/bin/docker pull ${SSH_PROXY_IMAGE}
+ExecStartPre=-/usr/bin/docker rm -f ${SSH_PROXY_CONTAINER}
+ExecStart=/usr/bin/docker run \
+  --name ${SSH_PROXY_CONTAINER} \
+  --rm \
+  --net host \
+  --restart unless-stopped \
+  -v ${SSH_AUDIT_LOG}:${SSH_AUDIT_LOG}:rw \
+  -v ${SSH_AUDIT_DB}:${SSH_AUDIT_DB}:rw \
+  -e "AUDIT_LOG_PATH=${SSH_AUDIT_LOG}" \
+  -e "AUDIT_DB_PATH=${SSH_AUDIT_DB}" \
+  -e "LISTEN_PORT=2222" \
+  -e "FORWARD_HOST=code-server" \
+  -e "FORWARD_PORT=22" \
+  ${SSH_PROXY_IMAGE}
+ExecStop=/usr/bin/docker stop ${SSH_PROXY_CONTAINER}
+
+# Security
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=${SSH_AUDIT_LOG} ${SSH_AUDIT_DB}
+
+# Resources
+MemoryLimit=256M
+CPUQuota=50%
+TasksMax=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ssh-proxy
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "JWT Token Claims Schema for P1 #388 Identity & Workload Authentication",
+  "type": "object",
+  "required": ["sub", "iss", "aud", "exp", "iat", "email", "identity_type"],
+  "properties": {
+    "sub": {
+      "type": "string",
+      "description": "Subject identifier (unique ID from OIDC provider)"
+    },
+    "iss": {
+      "type": "string",
+      "enum": ["https://accounts.google.com", "https://github.com", "https://iam.kushin.cloud"],
+      "description": "Token issuer (OIDC provider)"
+    },
+    "aud": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Intended audiences (services that can use this token)",
+      "examples": [["code-server", "backstage", "appsmith"]]
+    },
+    "exp": {
+      "type": "integer",
+      "description": "Token expiration timestamp (Unix epoch)"
+    },
+    "iat": {
+      "type": "integer",
+      "description": "Token issued at timestamp (Unix epoch)"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "User email address"
+    },
+    "email_verified": {
+      "type": "boolean",
+      "description": "Whether email has been verified by OIDC provider",
+      "default": false
+    },
+    "name": {
+      "type": "string",
+      "description": "User full name"
+    },
+    "picture": {
+      "type": "string",
+      "description": "User avatar URL"
+    },
+    "identity_type": {
+      "type": "string",
+      "enum": ["human", "workload", "automation"],
+      "description": "Three-tier identity model: human user, K8s/service workload, or CI/CD automation"
+    },
+    "roles": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "List of roles assigned to this identity",
+      "examples": [["admin", "operator", "viewer"]]
+    },
+    "github_login": {
+      "type": "string",
+      "description": "GitHub username (if authenticated via GitHub)"
+    },
+    "github_teams": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "GitHub team memberships (org/team format)",
+      "examples": [["kushin77/platform-engineers", "kushin77/security-team"]]
+    },
+    "github_org": {
+      "type": "string",
+      "description": "GitHub organization"
+    },
+    "service_account_name": {
+      "type": "string",
+      "description": "K8s service account name (if identity_type=workload)"
+    },
+    "service_account_namespace": {
+      "type": "string",
+      "description": "K8s namespace (if identity_type=workload)"
+    },
+    "workload_identity_pool": {
+      "type": "string",
+      "description": "GCP Workload Identity Pool ID (for service federation)",
+      "examples": ["github-actions"]
+    },
+    "permissions": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Fine-grained permissions (service:action format)",
+      "examples": [["code-server:deploy", "backstage:catalog_edit", "appsmith:approval_sign"]]
+    },
+    "mfa_verified": {
+      "type": "boolean",
+      "description": "Whether multi-factor authentication has been completed",
+      "default": false
+    },
+    "mfa_methods": {
+      "type": "array",
+      "items": {"enum": ["totp", "webauthn", "sms"]},
+      "description": "MFA methods registered for this user"
+    },
+    "tenant_id": {
+      "type": "string",
+      "description": "Multi-tenant support: tenant/workspace identifier"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Unique session identifier for audit trail correlation"
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Request correlation ID for distributed tracing"
+    },
+    "custom": {
+      "type": "object",
+      "description": "Custom claims (extensibility for specific use cases)",
+      "additionalProperties": true
+    }
+  },
+  "examples": [
+    {
+      "sub": "user-123-google",
+      "iss": "https://accounts.google.com",
+      "aud": ["code-server", "backstage"],
+      "exp": 1713272400,
+      "iat": 1713268800,
+      "email": "developer@kushin.cloud",
+      "email_verified": true,
+      "name": "Alice Developer",
+      "identity_type": "human",
+      "roles": ["viewer", "operator"],
+      "github_login": "alice-dev",
+      "github_teams": ["kushin77/platform-engineers"],
+      "permissions": ["code-server:execute", "backstage:catalog_view"],
+      "mfa_verified": true,
+      "mfa_methods": ["webauthn", "totp"],
+      "session_id": "sess-abc-123",
+      "correlation_id": "req-xyz-789"
+    },
+    {
+      "sub": "workload-ollama-prod",
+      "iss": "https://iam.kushin.cloud",
+      "aud": ["ollama", "prometheus"],
+      "exp": 1713458400,
+      "iat": 1713368400,
+      "service_account_name": "ollama-service",
+      "service_account_namespace": "prod",
+      "identity_type": "workload",
+      "roles": ["service"],
+      "permissions": ["ollama:inference", "prometheus:scrape"],
+      "mfa_verified": false,
+      "session_id": "sess-workload-001",
+      "correlation_id": "workflow-inference-batch"
+    }
+  ]
+}

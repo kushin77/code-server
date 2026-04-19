@@ -1,0 +1,185 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Operational Alerts — 6 Missing Critical Scenarios (Issue #569)
+# Backup failures, cert expiration, container restarts, replication lag, disk space, ollama latency
+# ─────────────────────────────────────────────────────────────────────────────
+# Referenced by: prometheus.yml rule_files
+# Created: 2026-04-23
+# ─────────────────────────────────────────────────────────────────────────────
+
+groups:
+  - name: operational_alerts
+    interval: 30s
+    rules:
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Alert 1: Backup Job Failures
+      # ─────────────────────────────────────────────────────────────────────────
+      - alert: BackupJobFailed
+        expr: increase(backup_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Backup job failed"
+          description: "Backup job has recorded errors in the last 5 minutes. Immediate investigation required."
+          runbook: "docs/runbooks/backup-recovery.md"
+          dashboard: "https://grafana.kushnir.cloud/d/backup-dashboard"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Alert 2: Certificate Expiration Warning
+      # ─────────────────────────────────────────────────────────────────────────
+      - alert: CertificateExpirationWarning
+        expr: (ssl_cert_expiration_days < 30) or (certmanager_cert_expiration_days < 30)
+        for: 5m
+        labels:
+          severity: warning
+          component: tls
+        annotations:
+          summary: "TLS certificate expiring soon"
+          description: "Certificate {{ $labels.cert_name }} expires in {{ $value | humanize }} days"
+          runbook: "docs/runbooks/certificate-renewal.md"
+          action: "Renew certificate immediately using Caddy or cert-manager"
+
+      - alert: CertificateExpirationCritical
+        expr: (ssl_cert_expiration_days < 7) or (certmanager_cert_expiration_days < 7)
+        for: 1m
+        labels:
+          severity: critical
+          component: tls
+        annotations:
+          summary: "TLS certificate expiring in less than 7 days"
+          description: "Certificate {{ $labels.cert_name }} expires in {{ $value | humanize }} days — IMMEDIATE ACTION REQUIRED"
+          runbook: "docs/runbooks/certificate-renewal.md"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Alert 3: Container Restart Storm
+      # ─────────────────────────────────────────────────────────────────────────
+      - alert: ContainerRestartStorm
+        expr: rate(container_last_seen{job="docker-ce"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: container
+        annotations:
+          summary: "Container restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ $value | humanize }} times per second (threshold: 0.1/s)"
+          runbook: "docs/runbooks/container-restart-investigation.md"
+          command: "docker logs --tail 50 {{ $labels.name }}"
+
+      - alert: ContainerRestartStormCritical
+        expr: rate(container_last_seen{job="docker-ce"}[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+          component: container
+        annotations:
+          summary: "Critical: Container restarting at high frequency"
+          description: "Container {{ $labels.name }} restarting > 1 time/sec — likely crash loop"
+          runbook: "docs/runbooks/container-restart-investigation.md"
+          action: "Immediately inspect logs and health status"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Alert 4: PostgreSQL Replication Lag
+      # ─────────────────────────────────────────────────────────────────────────
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag_bytes > (1024*1024*100)
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL replication lag detected"
+          description: "Standby replica is {{ humanize $value }} bytes behind primary"
+          runbook: "docs/runbooks/postgresql-replication-lag.md"
+          threshold: "100 MB"
+
+      - alert: PostgreSQLReplicationLagCritical
+        expr: pg_replication_lag_bytes > (1024*1024*500)
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Critical: PostgreSQL replication severely lagged"
+          description: "Standby is {{ humanize $value }} bytes behind — replica may be out of sync"
+          runbook: "docs/runbooks/postgresql-replication-lag.md"
+          threshold: "500 MB"
+
+      - alert: PostgreSQLReplicationDown
+        expr: pg_replication_slots_active < 1
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL replication connection lost"
+          description: "No active replication slots detected on primary — standby connection failed"
+          runbook: "docs/runbooks/postgresql-replication-lag.md"
+          action: "Check network connectivity and standby postgres service status"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Alert 5: Disk Space Approaching Capacity
+      # ─────────────────────────────────────────────────────────────────────────
+      - alert: DiskSpaceWarning
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.10
+        for: 5m
+        labels:
+          severity: warning
+          component: disk
+        annotations:
+          summary: "Disk space running low"
+          description: "Disk {{ $labels.device }} has {{ $value | humanizePercentage }} free (threshold: 10%)"
+          runbook: "docs/runbooks/disk-space-cleanup.md"
+          command: "df -h && du -sh /*"
+
+      - alert: DiskSpaceCritical
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: disk
+        annotations:
+          summary: "Critical: Disk space critically low"
+          description: "Disk {{ $labels.device }} has only {{ $value | humanizePercentage }} free — services may fail"
+          runbook: "docs/runbooks/disk-space-cleanup.md"
+          action: "Immediately free disk space or extend volume"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Alert 6: Ollama Latency Spike
+      # ─────────────────────────────────────────────────────────────────────────
+      - alert: OllamaLatencySpike
+        expr: histogram_quantile(0.95, sum(rate(ollama_inference_duration_seconds_bucket[5m])) by (le)) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: ollama
+        annotations:
+          summary: "Ollama inference latency spike"
+          description: "Ollama p95 latency is {{ $value | humanize }}s (threshold: 5s)"
+          runbook: "docs/runbooks/ollama-performance-investigation.md"
+          dashboard: "https://grafana.kushnir.cloud/d/ollama-dashboard"
+
+      - alert: OllamaLatencyCritical
+        expr: histogram_quantile(0.95, sum(rate(ollama_inference_duration_seconds_bucket[5m])) by (le)) > 15
+        for: 2m
+        labels:
+          severity: critical
+          component: ollama
+        annotations:
+          summary: "Critical: Ollama inference severely degraded"
+          description: "Ollama p95 latency {{ $value | humanize }}s — LLM inference timing out"
+          runbook: "docs/runbooks/ollama-performance-investigation.md"
+          action: "Check GPU memory, model load status, and resource availability"
+
+      - alert: OllamaServiceDown
+        expr: up{job="ollama"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: ollama
+        annotations:
+          summary: "Ollama service unreachable"
+          description: "Ollama service at {{ $labels.instance }} is not responding to health checks"
+          runbook: "docs/runbooks/ollama-service-recovery.md"
+          command: "docker ps | grep ollama && docker logs --tail 50 ollama"

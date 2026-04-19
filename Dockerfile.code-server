@@ -1,0 +1,125 @@
+# ════════════════════════════════════════════════════════════════════════════
+# code-server enterprise build — IaC, immutable, idempotent
+# Pin all versions for reproducible builds and true immutability
+# ════════════════════════════════════════════════════════════════════════════
+# @file        Dockerfile.code-server
+# @description Production VS Code server with Copilot extensions, auth patches, and comprehensive dev tools
+# @module      ide
+# @owner       platform
+# @status      active
+
+ARG CODE_SERVER_VERSION=4.115.0
+# Pin Google Cloud SDK version for reproducible builds; update intentionally via PR
+ARG GCLOUD_SDK_VERSION=479.0.0
+
+FROM codercom/code-server:${CODE_SERVER_VERSION}
+
+# OCI image metadata (org.opencontainers.image spec)
+LABEL org.opencontainers.image.title="code-server-enterprise"
+LABEL org.opencontainers.image.description="Production VS Code server with Copilot extensions, oauth2 session patches, and comprehensive development tools"
+LABEL org.opencontainers.image.source="https://github.com/kushin77/code-server"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.dev-tools="python3 node go rust java typescript bash git curl wget docker"
+
+# Version pinning for all extensions — set at build time, baked into image
+ARG COPILOT_VERSION=1.299.0
+ARG COPILOT_CHAT_VERSION=0.43.2026040705
+
+# ════════════════════════════════════════════════════════════════════════════
+# DEVELOPMENT ENVIRONMENT — Install all required developer tools
+# Idempotent: Safe to rebuild at any time with same result
+# All packages pinned to specific versions for reproducibility
+# ════════════════════════════════════════════════════════════════════════════
+USER root
+
+# Update package manager and install comprehensive development tools
+# This ensures code-server users have everything needed without manual installation
+# Update packages and install core development tools (immutable, pre-installed)
+# Python packages via apt to avoid PEP 668 conflicts
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-transport-https ca-certificates gnupg \
+    build-essential git curl python3 python3-pip python3-venv \
+    nodejs npm \
+    vim gdb tmux htop jq docker.io postgresql-client \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js development packages globally
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN npm install -g typescript@5.4.5 eslint@9.3.0 prettier@3.3.0 jest@29.7.0
+
+# Optional: Install Rust (best-effort, non-blocking)
+# hadolint ignore=DL4006
+RUN mkdir -p /opt/dev-tools && chmod -R 777 /opt/dev-tools && \
+    (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
+     cp -r /root/.cargo /usr/local/cargo && chmod -R 755 /usr/local/cargo) || \
+    echo "[build] SKIP: Rust installation failed (optional)"
+
+# Pre-warm package manager caches
+RUN mkdir -p /usr/local/npm-cache /root/.npm && chmod -R 777 /usr/local/npm-cache
+
+# Patch github-authentication extension path expected by web workbench.
+RUN mkdir -p /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser \
+    && ln -sf ../extension.js /usr/lib/code-server/lib/vscode/extensions/github-authentication/dist/browser/extension.js
+
+# Patch extensionHostProcess.js: neutralize the navigator-throwing shim.
+#
+# VS Code 1.115+ defines Object.defineProperty(globalThis,"navigator",{get:()=>{throw PendingMigrationError}})
+# controlled by a --supportGlobalNavigator argv flag. Extensions that access `navigator` (e.g. via Zod
+# schema init in Copilot Chat 0.43+) crash at activation, after which VS Code attempts a gallery
+# reinstall that fails on Open VSX → "cannot be installed because it was not found".
+#
+# Fix: remove the throwing defineProperty so any extension that uses navigator works unmodified.
+# The pattern anchor is the unminified string 'supportGlobalNavigator' which VS Code uses as a flag
+# name and will not change without also changing the documented CLI interface.
+#
+# Build-time assertions: (1) fail if the shim is not found (VS Code restructured — needs review);
+#                        (2) fail if the patch did not apply (pattern changed — needs review).
+# hadolint ignore=DL4006
+RUN EXTHOST=/usr/lib/code-server/lib/vscode/out/vs/workbench/api/node/extensionHostProcess.js \
+    && if ! grep -q 'supportGlobalNavigator' "$EXTHOST"; then \
+         echo 'FATAL: navigator shim not found in extensionHostProcess.js — update patch for new VS Code version' >&2; exit 1; \
+       fi \
+    && perl -i -pe \
+         's/\w+\.supportGlobalNavigator\|\|Object\.defineProperty\(globalThis,"navigator",\{get:\(\)=>\{[^}]+\}\}\);//' \
+         "$EXTHOST" \
+    && if grep -q 'navigator is now a global' "$EXTHOST"; then \
+         echo 'FATAL: navigator shim patch did not apply — pattern changed, update Dockerfile' >&2; exit 1; \
+       fi
+
+# NOTE: Copilot Chat product.json patch applied in code-server-entrypoint.sh instead
+# (at runtime when all dependencies are available)
+
+# Optional: Cache Copilot VSIX payloads (only if versions are valid/downloadable)
+# If versions fail to download, skip caching and rely on entrypoint install
+# hadolint ignore=DL4006
+RUN mkdir -p /opt/vsix \
+    && (curl -fL -o /tmp/github-copilot.vsix.gz \
+      "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/1.295.0/vspackage" \
+    && gzip -dc /tmp/github-copilot.vsix.gz > /opt/vsix/github-copilot.vsix && test -s /opt/vsix/github-copilot.vsix \
+    && echo "[build] Cached github.copilot v1.295.0" || echo "[build] SKIP: Could not cache github.copilot") \
+    && (curl -fL -o /tmp/github-copilot-chat.vsix.gz \
+      "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot-chat/0.42.3/vspackage" \
+    && gzip -dc /tmp/github-copilot-chat.vsix.gz > /opt/vsix/github-copilot-chat.vsix && test -s /opt/vsix/github-copilot-chat.vsix \
+    && echo "[build] Cached github.copilot-chat v0.42.3" || echo "[build] SKIP: Could not cache github.copilot-chat"); \
+    rm -f /tmp/github-copilot.vsix.gz /tmp/github-copilot-chat.vsix.gz || true
+
+RUN mkdir -p /usr/local/lib/code-server /etc/code-server/ai /etc/code-server/extensions
+COPY --chmod=755 scripts/lib/merge-settings.js /usr/local/lib/code-server/merge-settings.js
+COPY --chmod=755 scripts/code-server-entrypoint.sh /usr/local/bin/code-server-entrypoint.sh
+COPY --chmod=755 scripts/code-server-auth /usr/local/bin/code-server-auth
+COPY --chmod=755 scripts/auth-keepalive /usr/local/bin/auth-keepalive
+COPY --chmod=755 scripts/ai-runtime-env /usr/local/bin/ai-runtime-env
+COPY --chmod=755 scripts/workspace-provision /usr/local/bin/workspace-provision
+COPY config/ollama-integration-contract.yml /etc/code-server/ai/ollama-integration-contract.yml
+COPY config/ollama-model-promotion-gates.yml /etc/code-server/ai/ollama-model-promotion-gates.yml
+COPY config/code-server/ai/ /etc/code-server/ai/
+# Policy runtime (#703): version manifest + extension approved list for integrity checks
+COPY config/code-server/policy-version.json /etc/code-server/policy-version.json
+COPY config/code-server/extensions/extensions-approved.json /etc/code-server/extensions/extensions-approved.json
+
+
+USER coder
+
+ENTRYPOINT ["/usr/local/bin/code-server-entrypoint.sh"]
+CMD ["--bind-addr=0.0.0.0:8080", "--disable-telemetry", "--cert=false", "--auth=none"]

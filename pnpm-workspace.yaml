@@ -1,0 +1,6 @@
+packages:
+  - apps/backend
+  - apps/frontend
+  - apps/extensions/*
+
+onlyBuiltDependencies: []

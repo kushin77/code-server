@@ -1,0 +1,60 @@
+# Autonomous Execution Playbook (2026-04-18)
+
+## Scope
+This playbook is the canonical handoff for parallel agents working from branch `feat/671-issue-671`.
+
+## Canonical Active Issues
+- Program: #659
+- Epic: #660
+- Branch feature: #671
+- CI stabilization blocker: #687
+- Production OAuth redeploy blocker: #692
+- Secret bootstrap blocker: #695
+- Portal 502 follow-up: #709
+
+## Closed Duplicate
+- #689 (duplicate of #687)
+
+## Dependency Order
+1. Resolve #687 first (branch CI determinism).
+2. Resolve #695 second (non-interactive GSM auth and WIF secret correctness for self-hosted runners).
+3. Resolve #692 third (production callback redeploy execution path + runtime verification).
+4. Resolve #709 fourth (portal 502 path: caddy TLS wildcard ACME + oauth2-proxy-portal DNS upstream).
+5. Resume completion/closure flow for #671 once #687, #695, #692, and #709 are closed.
+
+## Issue #687 Execution Checklist
+- Reproduce failing workflows listed in issue body.
+- Fix root causes in workflows/scripts for monorepo path migration (`apps/*` + compatibility symlinks).
+- Ensure all checks are deterministic and idempotent.
+- Re-run failed workflows and attach run URLs proving green state.
+
+## Issue #692 Execution Checklist
+- Provision an executable path to prod host:
+  - preferred: register self-hosted Actions runner for repo on a Docker-capable production host
+  - fallback: non-interactive SSH access to `192.168.168.31`
+- Execute idempotent script:
+  - `bash scripts/deploy/redeploy-portal-oauth-routing.sh`
+- Verify live redirects:
+  - `curl -skI 'https://kushnir.cloud/oauth2/start?rd=%2F' | tr -d '\r' | grep -i '^location:'`
+  - `curl -skI 'https://ide.kushnir.cloud/oauth2/start?rd=%2F' | tr -d '\r' | grep -i '^location:'`
+- Confirm apex callback points to `https://kushnir.cloud/oauth2/callback`
+- Post evidence in issue comments and close issue.
+
+## Governance Rules
+- No manual in-container edits.
+- Compose-driven, immutable, idempotent changes only.
+- If not committed, it does not exist.
+- Use `Fixes #N` in PRs to close issues automatically on merge.
+
+## Current Runtime Facts
+- Local script validation passes in `--local` mode; a temporary self-hosted runner in this session also validated the workflow path and the VPN-only gate.
+- Temporary self-hosted runner evidence: portal-oauth-redeploy.yml run `24608948773` succeeded; vpn-e2e-gate.yml run `24608949154` succeeded.
+- Live apex redirect still points to IDE callback until #692 is executed.
+- Docs consolidation tracker #691 is closed; the legacy docs-root files are compatibility stubs and the canonical indexes are in place.
+- PR #693 is merged on `main`; the portal workflow now runs in local execution mode on self-hosted runners.
+- Canonical GCP/GSM bootstrap guidance lives in [../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md](../ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md).
+- Latest `main` portal run `24610858158` reaches `google-github-actions/auth@v2` with a canonical numeric provider path, but fails with `invalid_target` because the backing workload identity pool/provider does not resolve.
+- Local gcloud auth is blocked by `invalid_rapt`, so project-number/provider discovery cannot be completed from this workstation session.
+- Portal 502 follow-up `#709` remains the next runtime issue after auth/bootstrap recovers.
+- The portal workflow now has branch-scoped concurrency and a dedicated runner label to reduce cross-agent contention.
+- Parallel open PR lanes remain for #686, #684, and #649; keep them separate from the production blocker path.

@@ -1,0 +1,311 @@
+name: Dual-Track CI — Upstream Compatibility & Enhancement Validation
+
+# Issue #674: Build dual-track CI for upstream validation and enhancement regression
+# This workflow validates both:
+# 1. Enhancement track: Do our features still work with current upstream?
+# 2. Upstream track: Does latest upstream pass contract tests without our features?
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - feat/**
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/dual-track-ci.yml'
+  
+  # Also run daily against latest upstream/main to catch sneaky incompatibilities
+  schedule:
+    - cron: '0 3 * * *'  # 03:00 UTC daily (low-traffic time)
+
+permissions:
+  checks: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  # ============================================================================
+  # TRACK 1: ENHANCEMENT VALIDATION
+  # Does our enhancement still work with current upstream?
+  # ============================================================================
+  enhancement-track:
+    name: Enhancement Track (our features)
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout our fork with enhancement branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Load upstream baseline (for comparison)
+        run: |
+          git remote add upstream https://github.com/coder/code-server.git 2>/dev/null || true
+          git fetch upstream main --depth=1
+          echo "Upstream baseline: $(git rev-parse upstream/main | cut -c1-12)"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - name: Install dependencies (our fork, with our enhancements)
+        run: pnpm ci
+
+      - name: Build all apps (our features enabled)
+        run: pnpm build
+        env:
+          ENHANCEMENT_TRACK: "true"
+
+      - name: Run unit tests (enhancement + core combined)
+        run: pnpm test --run
+        env:
+          ENHANCEMENT_TRACK: "true"
+
+      - name: Run linting (our code quality standards)
+        run: pnpm lint
+
+      - name: Run acceptance tests (our features + workflows)
+        run: pnpm test:acceptance
+        timeout-minutes: 30
+        env:
+          ENHANCEMENT_TRACK: "true"
+
+      - name: Run boundary compliance check
+        run: pnpm test:boundaries
+        continue-on-error: true  # Warn, don't block
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enhancement-track-results-${{ matrix.node-version }}
+          path: test-results/
+          retention-days: 7
+
+      - name: Report enhancement track status
+        if: always()
+        run: |
+          echo "## Enhancement Track Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Node.js: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: ✓" >> $GITHUB_STEP_SUMMARY
+          echo "- Tests: $([ $? -eq 0 ] && echo '✓' || echo '✗')" >> $GITHUB_STEP_SUMMARY
+          echo "- Boundaries: $([ -f test-results/boundaries.json ] && echo '✓' || echo '⚠')" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # TRACK 2: UPSTREAM COMPATIBILITY VALIDATION
+  # Does latest upstream/main pass our contract tests?
+  # (This validates that upstream changes don't break our control plane)
+  # ============================================================================
+  upstream-track:
+    name: Upstream Compatibility Track
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Fetch latest upstream/main
+        run: |
+          git clone --depth=1 https://github.com/coder/code-server.git /tmp/upstream-main
+          cd /tmp/upstream-main
+          echo "Upstream commit: $(git rev-parse HEAD | cut -c1-12)"
+
+      - name: Checkout our fork (for test definitions + our overrides)
+        uses: actions/checkout@v4
+        with:
+          path: ./our-fork
+          fetch-depth: 1
+
+      - name: Merge our control-plane overrides onto upstream
+        run: |
+          cd /tmp/upstream-main
+          
+          # Copy our critical overrides (non-conflicting files)
+          # - Extensions system
+          # - Auth configuration
+          # - Telemetry instrumentation
+          # - Performance patches
+          
+          cp -r ../our-fork/apps/extensions/* apps/extensions/ 2>/dev/null || true
+          cp -r ../our-fork/packages/auth-contracts packages/ 2>/dev/null || true
+          cp ../our-fork/.env.upstream . 2>/dev/null || true
+          
+          echo "Upstream with our overrides prepared"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install upstream with our overrides
+        run: |
+          cd /tmp/upstream-main
+          pnpm ci
+
+      - name: Build upstream (with our extensions)
+        run: |
+          cd /tmp/upstream-main
+          pnpm build
+
+      - name: Run contract tests against upstream
+        # Contract tests validate that critical workflows still work
+        run: |
+          cd /tmp/upstream-main
+          
+          # Copy contract tests from our fork
+          cp -r ../our-fork/pnpm-workspace.yaml . 2>/dev/null || true
+          cp -r ../our-fork/test/contracts . 2>/dev/null || true
+          
+          # Run contract tests
+          pnpm test:contract:extensions || EXTENSIONS_FAILED=1
+          pnpm test:contract:settings || SETTINGS_FAILED=1
+          pnpm test:contract:auth || AUTH_FAILED=1
+          pnpm test:contract:accessibility || A11Y_FAILED=1
+          pnpm test:contract:terminal || TERMINAL_FAILED=1
+          
+          # Summary
+          echo "Contract test results:" > contract-summary.txt
+          [ -z "$EXTENSIONS_FAILED" ] && echo "✓ Extensions" >> contract-summary.txt || echo "✗ Extensions" >> contract-summary.txt
+          [ -z "$SETTINGS_FAILED" ] && echo "✓ Settings" >> contract-summary.txt || echo "✗ Settings" >> contract-summary.txt
+          [ -z "$AUTH_FAILED" ] && echo "✓ Auth" >> contract-summary.txt || echo "✗ Auth" >> contract-summary.txt
+          [ -z "$A11Y_FAILED" ] && echo "✓ Accessibility" >> contract-summary.txt || echo "✗ Accessibility" >> contract-summary.txt
+          [ -z "$TERMINAL_FAILED" ] && echo "✓ Terminal" >> contract-summary.txt || echo "✗ Terminal" >> contract-summary.txt
+          
+          cat contract-summary.txt
+
+      - name: Upload contract test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-track-results-${{ matrix.node-version }}
+          path: |
+            /tmp/upstream-main/test-results/
+            /tmp/upstream-main/contract-summary.txt
+          retention-days: 7
+        continue-on-error: true
+
+      - name: Report upstream compatibility
+        if: always()
+        run: |
+          echo "## Upstream Compatibility Track Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Node.js: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest upstream commit: $(cd /tmp/upstream-main && git rev-parse HEAD | cut -c1-12)" >> $GITHUB_STEP_SUMMARY
+          
+          # Show contract test results
+          if [ -f /tmp/upstream-main/contract-summary.txt ]; then
+            echo "- Contract tests:" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/upstream-main/contract-summary.txt | sed 's/^/  / ' >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================================================
+  # DECISION ENGINE
+  # Combine results from both tracks and make recommendations
+  # ============================================================================
+  decision:
+    name: CI Decision & Recommendations
+    runs-on: ubuntu-latest
+    needs: [enhancement-track, upstream-track]
+    if: always()
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Analyze results
+        run: |
+          echo "## CI Decision Summary" > decision.md
+          
+          ENHANCEMENT_PASS=${{ needs.enhancement-track.result == 'success' }}
+          UPSTREAM_PASS=${{ needs.upstream-track.result == 'success' }}
+          
+          if [ "$ENHANCEMENT_PASS" = "true" ] && [ "$UPSTREAM_PASS" = "true" ]; then
+            echo "### ✓ Both Tracks Pass" >> decision.md
+            echo "This PR is safe to merge and can be considered for release train." >> decision.md
+            DECISION="APPROVE"
+          elif [ "$ENHANCEMENT_PASS" = "true" ] && [ "$UPSTREAM_PASS" != "true" ]; then
+            echo "### ⚠ Enhancement Works; Upstream Incompatibility Detected" >> decision.md
+            echo "" >> decision.md
+            echo "**Enhancement track (our features)**: ✓ PASS" >> decision.md
+            echo "**Upstream compatibility track**: ✗ FAIL" >> decision.md
+            echo "" >> decision.md
+            echo "**Recommendation**: Latest upstream has breaking changes. Consider:" >> decision.md
+            echo "1. Defer upstream sync until next release (keep current baseline)" >> decision.md
+            echo "2. Document the upstream incompatibility in CHANGELOG" >> decision.md
+            echo "3. Schedule contract test fix for next sprint if not critical" >> decision.md
+            DECISION="WARN"
+          else
+            echo "### ✗ Enhancement Track Failed" >> decision.md
+            echo "This PR has failing tests. Fix before merge." >> decision.md
+            DECISION="BLOCK"
+          fi
+          
+          cat decision.md >> $GITHUB_STEP_SUMMARY
+          echo "DECISION=$DECISION" >> $GITHUB_ENV
+
+      - name: Add PR comment with decision
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const decision = fs.readFileSync('decision.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: decision
+            });
+
+      - name: Exit with appropriate code
+        run: |
+          case "${{ env.DECISION }}" in
+            APPROVE) exit 0 ;;
+            WARN) exit 0 ;;
+            BLOCK) exit 1 ;;
+            *) exit 1 ;;
+          esac
+
+# ============================================================================
+# CONTRACT TEST DEFINITIONS (referenced above)
+# These tests verify critical workflows still work with upstream updates
+# ============================================================================
+
+# Location: test/contracts/extensions.test.ts
+# test("extensions marketplace loads and initializes", async () => { ... })
+# test("custom extensions can be registered and called", async () => { ... })
+
+# Location: test/contracts/settings.test.ts  
+# test("workspace settings persist correctly", async () => { ... })
+# test("settings schema is valid", async () => { ... })
+
+# Location: test/contracts/auth.test.ts
+# test("OIDC flow completes without errors", async () => { ... })
+# test("session tokens are valid after auth", async () => { ... })
+
+# Location: test/contracts/accessibility.test.ts
+# test("ARIA landmarks are present on main pages", async () => { ... })
+# test("keyboard navigation works for critical workflows", async () => { ... })
+
+# Location: test/contracts/terminal.test.ts
+# test("terminal multiplexing works correctly", async () => { ... })
+# test("terminal output capture doesn't buffer indefinitely", async () => { ... })

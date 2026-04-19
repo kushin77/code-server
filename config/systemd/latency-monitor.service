@@ -1,0 +1,69 @@
+[Unit]
+Description=Latency Monitor - Real-time Metrics Collection & Analysis Service
+Documentation=file:///opt/code-server/docs/LATENCY_OPTIMIZATION_INTEGRATION.md
+After=network-online.target code-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+WorkingDirectory=/opt/code-server
+
+# Service executable
+ExecStart=/usr/bin/python3 /opt/code-server/services/latency-monitor.py
+
+# Environment variables
+Environment="LOG_LEVEL=info"
+Environment="LISTEN_HOST=127.0.0.1"
+Environment="LISTEN_PORT=8082"
+Environment="DATABASE_PATH=/var/lib/latency-monitor/latency_metrics.db"
+Environment="RETENTION_DAYS=30"
+Environment="AUTO_CLEANUP_ENABLED=true"
+Environment="CLEANUP_HOUR=2"
+Environment="CLEANUP_MINUTE=0"
+Environment="ANOMALY_SIGMA_THRESHOLD=3.0"
+Environment="ANOMALY_MIN_SAMPLES=10"
+Environment="METRICS_CACHE_TTL=60"
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Process management
+Restart=on-failure
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=latency-monitor
+
+# Resource limits (prevent runaway)
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryLimit=1G
+CPUQuota=30%
+
+# Timeout for graceful shutdown
+TimeoutStartSec=30s
+TimeoutStopSec=10s
+KillMode=mixed
+
+# Performance
+TasksMax=256
+
+# Pre-start/post-stop hooks
+ExecStartPre=/usr/bin/mkdir -p /var/lib/latency-monitor
+ExecStartPre=/usr/bin/chown -R nobody:nogroup /var/lib/latency-monitor
+ExecStartPost=/bin/sleep 2
+
+[Install]
+WantedBy=multi-user.target

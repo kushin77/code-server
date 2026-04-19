@@ -1,0 +1,37 @@
+# @file        config/code-server/ai/quota-policy.yml
+# @module      ai/quota
+# @description Quota tiers for secretsless Ollama access in code-server.
+#
+
+version: "1"
+enforcement_mode: "deny-by-default"
+graceful_exceed_behavior: "throttle-with-message"
+
+tiers:
+  none:
+    requests_per_minute: 0
+    requests_per_day: 0
+    requests_per_month: 0
+    burst_limit: 0
+
+  standard:
+    requests_per_minute: 20
+    requests_per_day: 500
+    requests_per_month: 10000
+    burst_limit: 5
+
+  power:
+    requests_per_minute: 40
+    requests_per_day: 1500
+    requests_per_month: 25000
+    burst_limit: 10
+
+  admin:
+    requests_per_minute: 60
+    requests_per_day: 3000
+    requests_per_month: 50000
+    burst_limit: 15
+
+user_message:
+  throttle: "AI quota limit reached for this profile. Retry after cooldown or request a temporary override."
+  denied: "AI access is not enabled for this workspace policy."

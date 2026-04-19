@@ -1,0 +1,252 @@
+#!/bin/bash
+###############################################################################
+# DEVELOPER-LIST: View All Developers & Access Status
+# Issue #186: Developer Access Lifecycle - Provisioning & Revocation
+#
+# Usage:
+#   developer-list                      # Show all developers
+#   developer-list --active             # Show only active developers
+#   developer-list --revoked            # Show only revoked developers
+#   developer-list --expired            # Show only expired developers
+#   developer-list --json               # Output as JSON
+#   developer-list --csv                # Output as CSV
+#
+###############################################################################
+
+set -e
+
+# Configuration
+DEVELOPERS_DIR="${HOME}/.code-server-developers"
+DEVELOPERS_CSV="${DEVELOPERS_DIR}/developers.csv"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+GRAY='\033[0;37m'
+NC='\033[0m'
+
+log() {
+    echo -e "${BLUE}[developer-list]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+    exit 1
+}
+
+###############################################################################
+# PARAMETER PARSING
+###############################################################################
+
+FILTER="${1:-all}"
+FORMAT="${2:-table}"
+
+case "$FILTER" in
+    --active)
+        FILTER="active"
+        ;;
+    --revoked)
+        FILTER="revoked"
+        ;;
+    --expired)
+        FILTER="expired"
+        ;;
+    --json)
+        FILTER="all"
+        FORMAT="json"
+        ;;
+    --csv)
+        FILTER="all"
+        FORMAT="csv"
+        ;;
+    *)
+        FILTER="all"
+        ;;
+esac
+
+###############################################################################
+# VERIFY DATABASE EXISTS
+###############################################################################
+
+if [ ! -f "$DEVELOPERS_CSV" ]; then
+    error "Developer database not found: $DEVELOPERS_CSV"
+fi
+
+###############################################################################
+# HELPER FUNCTIONS
+###############################################################################
+
+# Check if date has expired
+is_expired() {
+    local expiry_date="$1"
+    local current_date=$(date '+%Y-%m-%d')
+    
+    [ "$current_date" > "$expiry_date" ] && echo "yes" || echo "no"
+}
+
+# Format status with color
+format_status() {
+    local status="$1"
+    local expiry="$2"
+    
+    if [ "$status" = "revoked" ]; then
+        echo -e "${RED}revoked${NC}"
+    elif [ "$(is_expired "$expiry")" = "yes" ]; then
+        echo -e "${YELLOW}expired${NC}"
+    else
+        echo -e "${GREEN}active${NC}"
+    fi
+}
+
+# Format remaining days
+remaining_days() {
+    local expiry_date="$1"
+    local current_date=$(date '+%Y-%m-%d')
+    
+    if [ "$current_date" \> "$expiry_date" ]; then
+        echo "0"
+    else
+        local expiry_sec=$(date -d "$expiry_date" '+%s')
+        local current_sec=$(date -d "$current_date" '+%s')
+        local diff=$((($expiry_sec - $current_sec) / 86400))
+        echo "$diff"
+    fi
+}
+
+###############################################################################
+# OUTPUT FUNCTIONS
+###############################################################################
+
+output_table() {
+    # Print header
+    printf "${BLUE}%-30s %-20s %-12s %-12s %-10s${NC}\n" "Email" "Name" "Granted" "Expires" "Status"
+    printf "%-30s %-20s %-12s %-12s %-10s\n" "$(printf '%.0s-' {1..30})" "$(printf '%.0s-' {1..20})" "$(printf '%.0s-' {1..12})" "$(printf '%.0s-' {1..12})" "$(printf '%.0s-' {1..10})"
+    
+    # Print rows (skip header)
+    tail -n +2 "$DEVELOPERS_CSV" | while IFS=',' read -r email name grant_date expiry_date duration status cloudflare_id invite_code share_link notes; do
+        # Skip empty lines
+        [ -z "$email" ] && continue
+        
+        # Apply filters
+        if [ "$FILTER" != "all" ]; then
+            if [ "$FILTER" = "active" ] && [ "$status" != "active" ]; then
+                continue
+            elif [ "$FILTER" = "revoked" ] && [ "$status" != "revoked" ]; then
+                continue
+            elif [ "$FILTER" = "expired" ] && [ "$(is_expired "$expiry_date")" != "yes" ]; then
+                continue
+            fi
+        fi
+        
+        STATUS_COLOR=$(format_status "$status" "$expiry_date")
+        printf "%-30s %-20s %-12s %-12s ${STATUS_COLOR}\n" "$email" "$name" "$grant_date" "$expiry_date"
+    done
+}
+
+output_json() {
+    echo "["
+    first=true
+    tail -n +2 "$DEVELOPERS_CSV" | while IFS=',' read -r email name grant_date expiry_date duration status cloudflare_id invite_code share_link notes; do
+        # Skip empty lines
+        [ -z "$email" ] && continue
+        
+        # Apply filters
+        if [ "$FILTER" != "all" ]; then
+            if [ "$FILTER" = "active" ] && [ "$status" != "active" ]; then
+                continue
+            elif [ "$FILTER" = "revoked" ] && [ "$status" != "revoked" ]; then
+                continue
+            elif [ "$FILTER" = "expired" ] && [ "$(is_expired "$expiry_date")" != "yes" ]; then
+                continue
+            fi
+        fi
+        
+        if [ "$first" = true ]; then
+            first=false
+        else
+            echo ","
+        fi
+        
+        printf '  {\n'
+        printf '    "email": "%s",\n' "$email"
+        printf '    "name": "%s",\n' "$name"
+        printf '    "granted": "%s",\n' "$grant_date"
+        printf '    "expires": "%s",\n' "$expiry_date"
+        printf '    "duration_days": %s,\n' "$duration"
+        printf '    "status": "%s",\n' "$status"
+        printf '    "remaining_days": %d,\n' "$(remaining_days "$expiry_date")"
+        printf '    "cloudflare_access_id": "%s",\n' "$cloudflare_id"
+        printf '    "expired": %s\n' "$([ "$(is_expired "$expiry_date")" = "yes" ] && echo "true" || echo "false")"
+        printf '  }'
+    done
+    echo ""
+    echo "]"
+}
+
+output_csv() {
+    # Print header
+    echo "email,name,granted,expires,duration_days,status,remaining_days,expired"
+    
+    # Print rows
+    tail -n +2 "$DEVELOPERS_CSV" | while IFS=',' read -r email name grant_date expiry_date duration status cloudflare_id invite_code share_link notes; do
+        # Skip empty lines
+        [ -z "$email" ] && continue
+        
+        # Apply filters
+        if [ "$FILTER" != "all" ]; then
+            if [ "$FILTER" = "active" ] && [ "$status" != "active" ]; then
+                continue
+            elif [ "$FILTER" = "revoked" ] && [ "$status" != "revoked" ]; then
+                continue
+            elif [ "$FILTER" = "expired" ] && [ "$(is_expired "$expiry_date")" != "yes" ]; then
+                continue
+            fi
+        fi
+        
+        printf '%s,%s,%s,%s,%s,%s,%d,%s\n' \
+            "$email" "$name" "$grant_date" "$expiry_date" "$duration" "$status" \
+            "$(remaining_days "$expiry_date")" \
+            "$([ "$(is_expired "$expiry_date")" = "yes" ] && echo "true" || echo "false")"
+    done
+}
+
+###############################################################################
+# STATISTICS
+###############################################################################
+
+print_stats() {
+    echo ""
+    echo -e "${BLUE}========== STATISTICS ==========${NC}"
+    
+    TOTAL=$(tail -n +2 "$DEVELOPERS_CSV" | wc -l)
+    ACTIVE=$(tail -n +2 "$DEVELOPERS_CSV" | awk -F',' '$6 == "active"' | wc -l)
+    REVOKED=$(tail -n +2 "$DEVELOPERS_CSV" | awk -F',' '$6 == "revoked"' | wc -l)
+    EXPIRED=$(tail -n +2 "$DEVELOPERS_CSV" | awk -F',' '
+        {
+            split($4, a, "-")
+            current_date = strftime("%Y-%m-%d")
+            if ($4 < current_date) count++
+        }
+        END { print count }
+    ')
+    
+    echo "Total developers:        $TOTAL"
+    echo "Active developers:       $ACTIVE"
+    echo "Revoked developers:      $REVOKED"
+    echo "Expired developers:      $EXPIRED"
+}
+
+###############################################################################
+# MAIN
+###############################################################################
+
+if [ "$FORMAT" = "table" ]; then
+    output_table
+    print_stats
+elif [ "$FORMAT" = "json" ]; then
+    output_json
+elif [ "$FORMAT" = "csv" ]; then
+    output_csv
+fi

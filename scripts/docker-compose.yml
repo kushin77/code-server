@@ -1,0 +1,16 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  RETIRED — DO NOT USE                                                   ║
+# ║  This file has been superseded by the canonical compose baseline.       ║
+# ║  Canonical file: /docker-compose.yml (repo root)                        ║
+# ║                                                                          ║
+# ║  REASON: Security violations — docker socket mounted, weak password     ║
+# ║  fallback (PASSWORD:-), mutable :latest image tag, no NFS volumes.      ║
+# ║  See issue #730 for retirement rationale.                               ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+#
+# To deploy: ssh akushnir@192.168.168.31
+#            cd ~/code-server-enterprise
+#            docker compose up -d
+#
+# This file is intentionally left as a comment-only stub to prevent
+# accidental use of this retired compose file.

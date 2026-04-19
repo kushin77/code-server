@@ -1,0 +1,102 @@
+name: Issue Duplicate Sentry
+
+on:
+  issues:
+    types: [opened, reopened, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  suggest-duplicates:
+    name: Suggest potential duplicate issues
+    runs-on: ubuntu-latest
+    steps:
+      - name: Suggest likely duplicate threads
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const issue = context.payload.issue;
+            if (!issue || issue.pull_request) {
+              core.info('Not a standard issue; skipping.');
+              return;
+            }
+
+            const title = (issue.title || '').trim();
+            if (!title) {
+              core.info('Empty issue title; skipping.');
+              return;
+            }
+
+            // Build a focused query from meaningful words to reduce false positives.
+            const words = title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, ' ')
+              .split(/\s+/)
+              .filter((w) => w.length >= 4)
+              .slice(0, 6);
+
+            if (words.length === 0) {
+              core.info('No meaningful title keywords; skipping.');
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const query = `repo:${owner}/${repo} is:issue is:open -is:pull-request ${words.join(' ')}`;
+
+            const search = await github.rest.search.issuesAndPullRequests({
+              q: query,
+              per_page: 20,
+            });
+
+            const currentNumber = issue.number;
+            const candidates = search.data.items
+              .filter((i) => i.number !== currentNumber)
+              .slice(0, 5);
+
+            if (candidates.length === 0) {
+              core.info('No likely duplicates found.');
+              return;
+            }
+
+            const marker = '<!-- duplicate-sentry -->';
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: currentNumber,
+              per_page: 100,
+            });
+
+            const alreadyCommented = comments.some((c) =>
+              c.user?.login === 'github-actions[bot]' && typeof c.body === 'string' && c.body.includes(marker)
+            );
+
+            if (alreadyCommented && context.payload.action !== 'opened') {
+              core.info('Duplicate sentry comment already exists; skipping repeat comment.');
+              return;
+            }
+
+            const list = candidates
+              .map((c) => `- #${c.number} ${c.title}`)
+              .join('\n');
+
+            const body = [
+              marker,
+              'Potential duplicate or related open issues detected for triage:',
+              '',
+              list,
+              '',
+              'Please choose one canonical issue and close superseded duplicates with a cross-link.',
+              'If this issue is distinct, add a short comment explaining why.',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: currentNumber,
+              body,
+            });
+
+            core.info(`Posted duplicate suggestion with ${candidates.length} candidate(s).`);

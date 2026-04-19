@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: code-server
+
+bases:
+  - ../../base
+
+replicas:
+  - name: code-server
+    count: 3
+  - name: agent-api
+    count: 5
+  - name: embeddings
+    count: 3
+  - name: redis
+    count: 3
+
+patchesJson6902:
+  - target:
+      group: autoscaling
+      version: v2
+      kind: HorizontalPodAutoscaler
+      name: agent-api-hpa
+    patch: |-
+      - op: replace
+        path: /spec/maxReplicas
+        value: 20
+
+commonLabels:
+  environment: production
+  managed-by: kustomize
+  slo-target: "99.95%"
+
+commonAnnotations:
+  environment: "production"
+  slo-target: "99.95%"
+  cost-tracking: "enabled"
+
+commonAnnotations:
+  environment: "production"
+  slo-target: "99.95%"
+  cost-tracking: "enabled"

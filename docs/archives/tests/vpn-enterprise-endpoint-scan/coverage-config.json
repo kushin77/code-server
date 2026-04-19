@@ -1,0 +1,70 @@
+{
+  "slo_targets": {
+    "route_coverage": {
+      "target": 0.95,
+      "alert_threshold": 0.90,
+      "regression_threshold": 0.05,
+      "label": "Route Coverage",
+      "unit": "percentage"
+    },
+    "interaction_coverage": {
+      "target": 0.80,
+      "alert_threshold": 0.70,
+      "regression_threshold": 0.05,
+      "label": "Interaction Coverage",
+      "unit": "percentage"
+    },
+    "api_contract_pass_rate": {
+      "target": 0.90,
+      "alert_threshold": 0.80,
+      "regression_threshold": 0.05,
+      "label": "API Contract Pass Rate",
+      "unit": "percentage"
+    },
+    "p99_latency_ms": {
+      "target": 1000,
+      "alert_threshold": 1500,
+      "regression_threshold": 0.20,
+      "label": "P99 Latency (ms)",
+      "unit": "ms",
+      "lower_is_better": true
+    }
+  },
+  "schedule": {
+    "daily_report": "0 8 * * *",
+    "weekly_trend": "0 8 * * 1"
+  },
+  "retention": {
+    "history_days": 90,
+    "baseline_window_days": 7
+  },
+  "endpoints": {
+    "health_endpoints": [
+      "http://192.168.168.31/health",
+      "http://192.168.168.31:9090/-/healthy",
+      "http://192.168.168.31:3000/api/health",
+      "http://192.168.168.31:9093/-/healthy",
+      "http://192.168.168.31:16686/"
+    ],
+    "auth_endpoints": [
+      "http://192.168.168.31/oauth2/sign_in",
+      "http://192.168.168.31/oauth2/sign_out",
+      "http://192.168.168.31/oauth2/auth"
+    ],
+    "ide_endpoints": [
+      "http://192.168.168.31/",
+      "http://192.168.168.31/api/v0/applications"
+    ],
+    "monitoring_endpoints": [
+      "http://192.168.168.31:9090/api/v1/status/config",
+      "http://192.168.168.31:3000/api/dashboards/home",
+      "http://192.168.168.31:9093/api/v2/status"
+    ]
+  },
+  "ci": {
+    "fail_on_violation": true,
+    "fail_on_regression": false,
+    "max_workflow_duration_ms": 300000,
+    "artifact_retention_days": 30
+  }
+}

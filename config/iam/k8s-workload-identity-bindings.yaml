@@ -1,0 +1,329 @@
+---
+# Phase 2.1: Workload Identity ServiceAccount Bindings for Production
+# All services exchanging tokens via OIDC issuer (oidc.kushnir.cloud)
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  labels:
+    workload-identity: enabled
+
+---
+# ServiceAccount: code-server (IDE)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: code-server-sa
+  namespace: default
+  labels:
+    app: code-server
+    workload: ide
+    audience: code-server
+  annotations:
+    oidc.kushnir.cloud/token-audience: "code-server"
+    oidc.kushnir.cloud/token-lifetime: "3600"
+
+---
+# ServiceAccount: PostgreSQL (Database)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgresql-sa
+  namespace: default
+  labels:
+    app: postgresql
+    workload: database
+    audience: postgresql
+  annotations:
+    oidc.kushnir.cloud/token-audience: "postgresql"
+    oidc.kushnir.cloud/token-lifetime: "7200"
+
+---
+# ServiceAccount: Redis (Cache)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: redis-sa
+  namespace: default
+  labels:
+    app: redis
+    workload: cache
+    audience: redis
+  annotations:
+    oidc.kushnir.cloud/token-audience: "redis"
+    oidc.kushnir.cloud/token-lifetime: "3600"
+
+---
+# ServiceAccount: Prometheus (Metrics)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-sa
+  namespace: default
+  labels:
+    app: prometheus
+    workload: monitoring
+    audience: prometheus
+  annotations:
+    oidc.kushnir.cloud/token-audience: "prometheus"
+    oidc.kushnir.cloud/token-lifetime: "300"
+
+---
+# ServiceAccount: Grafana (Dashboards)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana-sa
+  namespace: default
+  labels:
+    app: grafana
+    workload: monitoring
+    audience: grafana
+  annotations:
+    oidc.kushnir.cloud/token-audience: "grafana"
+    oidc.kushnir.cloud/token-lifetime: "3600"
+
+---
+# ServiceAccount: Ollama (GPU Inference)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ollama-sa
+  namespace: default
+  labels:
+    app: ollama
+    workload: ai
+    audience: ollama
+  annotations:
+    oidc.kushnir.cloud/token-audience: "ollama"
+    oidc.kushnir.cloud/token-lifetime: "3600"
+
+---
+# ServiceAccount: AlertManager (Alerting)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alertmanager-sa
+  namespace: default
+  labels:
+    app: alertmanager
+    workload: alerting
+    audience: alertmanager
+  annotations:
+    oidc.kushnir.cloud/token-audience: "alertmanager"
+    oidc.kushnir.cloud/token-lifetime: "3600"
+
+---
+# ServiceAccount: Jaeger (Tracing)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jaeger-sa
+  namespace: default
+  labels:
+    app: jaeger
+    workload: observability
+    audience: jaeger
+  annotations:
+    oidc.kushnir.cloud/token-audience: "jaeger"
+    oidc.kushnir.cloud/token-lifetime: "3600"
+
+---
+# ClusterRole: Workload Identity Token Request
+# Allows ServiceAccounts to request OIDC tokens
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: workload-identity-token-requestor
+  labels:
+    app: workload-identity
+spec:
+  rules:
+    # Allow requesting tokens from OIDC issuer
+    - apiGroups: ["authentication.k8s.io"]
+      resources: ["tokenreviews"]
+      verbs: ["create"]
+    # Read own ServiceAccount metadata
+    - apiGroups: [""]
+      resources: ["serviceaccounts"]
+      verbs: ["get"]
+    # Read secrets (for future token cache)
+    - apiGroups: [""]
+      resources: ["secrets"]
+      verbs: ["get", "create", "update"]
+      resourceNames: ["workload-identity-cache"]
+
+---
+# ClusterRoleBinding: Bind all workload ServiceAccounts to token requestor role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: workload-identity-token-requestors
+  labels:
+    app: workload-identity
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: workload-identity-token-requestor
+subjects:
+  - kind: ServiceAccount
+    name: code-server-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: postgresql-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: redis-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: prometheus-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: grafana-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: ollama-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: alertmanager-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: jaeger-sa
+    namespace: default
+
+---
+# ConfigMap: Workload Identity Mapping
+# Maps ServiceAccounts to OIDC audiences and token lifetimes
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workload-identity-mapping
+  namespace: default
+  labels:
+    app: workload-identity
+data:
+  mapping.json: |
+    {
+      "workloads": [
+        {
+          "name": "code-server",
+          "serviceAccount": "code-server-sa",
+          "audience": "code-server",
+          "tokenLifetime": 3600,
+          "description": "Code-Server IDE + authentication gateway"
+        },
+        {
+          "name": "postgresql",
+          "serviceAccount": "postgresql-sa",
+          "audience": "postgresql",
+          "tokenLifetime": 7200,
+          "description": "PostgreSQL database - longer-lived tokens for connections"
+        },
+        {
+          "name": "redis",
+          "serviceAccount": "redis-sa",
+          "audience": "redis",
+          "tokenLifetime": 3600,
+          "description": "Redis cache - short-lived for security"
+        },
+        {
+          "name": "prometheus",
+          "serviceAccount": "prometheus-sa",
+          "audience": "prometheus",
+          "tokenLifetime": 300,
+          "description": "Prometheus metrics - very short-lived for scraping"
+        },
+        {
+          "name": "grafana",
+          "serviceAccount": "grafana-sa",
+          "audience": "grafana",
+          "tokenLifetime": 3600,
+          "description": "Grafana dashboards - standard lifetime"
+        },
+        {
+          "name": "ollama",
+          "serviceAccount": "ollama-sa",
+          "audience": "ollama",
+          "tokenLifetime": 3600,
+          "description": "Ollama GPU inference - standard lifetime"
+        },
+        {
+          "name": "alertmanager",
+          "serviceAccount": "alertmanager-sa",
+          "audience": "alertmanager",
+          "tokenLifetime": 3600,
+          "description": "AlertManager - alert routing"
+        },
+        {
+          "name": "jaeger",
+          "serviceAccount": "jaeger-sa",
+          "audience": "jaeger",
+          "tokenLifetime": 3600,
+          "description": "Jaeger distributed tracing"
+        }
+      ],
+      "issuer": "https://oidc.kushnir.cloud",
+      "jwksUri": "https://oidc.kushnir.cloud/.well-known/jwks.json",
+      "tokenEndpoint": "https://oidc.kushnir.cloud/token",
+      "discoveryEndpoint": "https://oidc.kushnir.cloud/.well-known/openid-configuration"
+    }
+
+---
+# Secret Template: OIDC Token Cache
+# Created per ServiceAccount for token caching (optional optimization)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: workload-identity-cache
+  namespace: default
+  labels:
+    app: workload-identity
+type: Opaque
+data:
+  # Placeholder - populated at runtime with tokens
+  tokens: e30= # base64-encoded empty JSON object {}
+
+---
+# ConfigMap: Token Validation Library
+# Shared JWT validation configuration for all services
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oidc-token-validation-config
+  namespace: default
+  labels:
+    app: token-validation
+data:
+  config.json: |
+    {
+      "issuer": "https://oidc.kushnir.cloud",
+      "jwksUri": "https://oidc.kushnir.cloud/.well-known/jwks.json",
+      "audience": "auto-detect-from-service",
+      "algorithms": ["EdDSA"],
+      "claimsValidation": {
+        "iss": "https://oidc.kushnir.cloud",
+        "aud": "required",
+        "exp": "required",
+        "iat": "required",
+        "jti": "required",
+        "sub": "required"
+      },
+      "customClaims": {
+        "namespace": "optional",
+        "pod": "optional",
+        "node": "optional",
+        "workload-type": "optional"
+      },
+      "tokenCache": {
+        "enabled": true,
+        "ttl": 300,
+        "storage": "kubernetes-secret"
+      },
+      "auditLogging": {
+        "enabled": true,
+        "destination": "postgresql",
+        "log-level": "info"
+      }
+    }
+

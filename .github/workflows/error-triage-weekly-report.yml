@@ -1,0 +1,46 @@
+name: Error Triage Weekly Report
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  generate-report:
+    name: Generate Weekly Error Triage Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Generate weekly report
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/triage/generate-weekly-error-triage-report.sh
+          scripts/triage/generate-weekly-error-triage-report.sh kushin77/code-server
+
+      - name: Upload report artifacts
+        uses: actions/upload-artifact@5d5d22fc38ceea83b5bc9c7ff5a5109b73852e9f  # v4.3.1
+        with:
+          name: error-triage-weekly-report
+          path: .github/reports/error-triage/
+
+      - name: Post weekly report to issue #378
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPORT_FILE=$(find .github/reports/error-triage -name 'error_triage_report_*.md' | sort | tail -1)
+          gh issue comment 378 --repo kushin77/code-server --body-file "$REPORT_FILE"
+
+      - name: Append summary
+        run: |
+          REPORT_FILE=$(find .github/reports/error-triage -name 'error_triage_report_*.md' | sort | tail -1)
+          cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"

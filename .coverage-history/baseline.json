@@ -1,0 +1,10 @@
+{
+  "initialized_at": "2026-04-16T00:00:00.000Z",
+  "note": "Initial baseline — no historical data. First run will establish baseline.",
+  "baseline_metrics": {
+    "route_coverage": 0.95,
+    "interaction_coverage": 0.80,
+    "api_contract_pass_rate": 0.90,
+    "p99_latency_ms": 800
+  }
+}

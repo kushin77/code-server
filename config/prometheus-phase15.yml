@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    phase: '15'
+    environment: 'production'
+    monitor: 'code-server-phase15'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  # Phase 14 Code Server
+  - job_name: 'code-server'
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Phase 14 Redis Monitoring
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter-phase15:9121']
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  # Phase 15 Prometheus Self-Monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  # Phase 15 Locust Load Testing
+  - job_name: 'locust'
+    static_configs:
+      - targets: ['locust-phase15:8089']
+    scrape_interval: 30s
+    scrape_timeout: 10s

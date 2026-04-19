@@ -1,0 +1,36 @@
+{
+  "schema_version": "1",
+  "policy_version": "1.0.0",
+  "policy_date": "2026-04-22",
+  "generated_by": "scripts/policy/generate-policy-version.sh",
+  "components": {
+    "settings": {
+      "file": "config/code-server/settings.json",
+      "sha256": "64e2122fb2e66afbff2c02b584c3149c62f1fad3ac88219e4c0fe86adc983ee8",
+      "tier_model": "T1-immutable/T2-recommended/T3-user"
+    },
+    "extension_manifest": {
+      "file": "config/code-server/extensions/extensions-approved.json",
+      "sha256": "569047293e6828bc9ab63550cd44787a2d4eec6c61ff39ae4e86a2cbd2537f4c"
+    },
+    "role_profiles": {
+      "files": [
+        "config/role-settings/admin-profile.json",
+        "config/role-settings/developer-profile.json",
+        "config/role-settings/viewer-profile.json",
+        "config/role-settings/auditor-profile.json"
+      ]
+    }
+  },
+  "enforcement": {
+    "tier1_settings_immutable": true,
+    "gallery_blocked": true,
+    "manifest_signature_required": true,
+    "policy_loader_startup_hook": "scripts/policy/policy-loader.sh"
+  },
+  "audit": {
+    "policy_authority": "@kushnir",
+    "change_requires_pr": true,
+    "changelog_file": "docs/POLICY-CHANGELOG.md"
+  }
+}

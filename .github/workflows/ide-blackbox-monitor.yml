@@ -1,0 +1,24 @@
+name: IDE Blackbox Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  blackbox-check:
+    name: Probe ide.kushnir.cloud continuity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run IDE blackbox monitor
+        shell: bash
+        env:
+          IDE_BASE_URL: https://ide.kushnir.cloud
+          REQUIRE_LB_COOKIE: "1"
+        run: bash scripts/ops/ide-blackbox-monitor.sh

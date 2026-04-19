@@ -1,0 +1,43 @@
+name: Autopilot Setup-State Reconciler
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/ops/reconcile-setup-state.sh'
+      - 'scripts/ci/check-autopilot-setup-drift.sh'
+      - 'scripts/ci/validate-autopilot-setup-state-reconciler.sh'
+      - 'docs/ops/AUTOPILOT-SETUP-STATE-RCA.md'
+      - 'docs/ops/AUTOPILOT-SETUP-STATE-RUNBOOK.md'
+      - 'docs/ops/AUTOPILOT-SETUP-STATE-REGRESSION-MATRIX.md'
+      - 'docs/status/AUTOPILOT-SETUP-STATE-RCA-PROOF-2026-04-18.md'
+      - 'docs/status/SETUP-STATE-RECONCILER-PROOF-2026-04-18.md'
+      - '.github/workflows/autopilot-setup-state-reconciler.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/ops/reconcile-setup-state.sh'
+      - 'scripts/ci/check-autopilot-setup-drift.sh'
+      - 'scripts/ci/validate-autopilot-setup-state-reconciler.sh'
+      - 'docs/ops/AUTOPILOT-SETUP-STATE-RCA.md'
+      - 'docs/ops/AUTOPILOT-SETUP-STATE-RUNBOOK.md'
+      - 'docs/ops/AUTOPILOT-SETUP-STATE-REGRESSION-MATRIX.md'
+      - 'docs/status/AUTOPILOT-SETUP-STATE-RCA-PROOF-2026-04-18.md'
+      - 'docs/status/SETUP-STATE-RECONCILER-PROOF-2026-04-18.md'
+      - '.github/workflows/autopilot-setup-state-reconciler.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-reconciler:
+    name: Validate setup-state reconciler contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate reconciler and drift guard
+        shell: bash
+        run: bash scripts/ci/validate-autopilot-setup-state-reconciler.sh

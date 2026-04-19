@@ -1,0 +1,33 @@
+name: E2E Playwright Kit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/ci/setup-e2e-playwright.sh'
+      - 'scripts/ci/validate-e2e-playwright-kit.sh'
+      - 'docs/ops/E2E-BROWSER-AUTOMATION-RUNBOOK.md'
+      - '.github/workflows/e2e-playwright-kit.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/ci/setup-e2e-playwright.sh'
+      - 'scripts/ci/validate-e2e-playwright-kit.sh'
+      - 'docs/ops/E2E-BROWSER-AUTOMATION-RUNBOOK.md'
+      - '.github/workflows/e2e-playwright-kit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-kit:
+    name: Validate deterministic Playwright kit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate Playwright kit scaffold
+        shell: bash
+        run: bash scripts/ci/validate-e2e-playwright-kit.sh

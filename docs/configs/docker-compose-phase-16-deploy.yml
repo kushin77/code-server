@@ -1,0 +1,122 @@
+version: '3.9'
+
+services:
+  # Phase 16: PostgreSQL Primary (HA-Ready)
+  postgres-primary:
+    image: postgres:15-alpine
+    container_name: postgres-primary-ha
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: code_server_db
+      POSTGRES_USER: db_admin
+      POSTGRES_PASSWORD: SecureHashPassword123!
+      POSTGRES_INITDB_ARGS: "-c max_connections=500 -c wal_level=replica -c max_wal_senders=10 -c max_replication_slots=10"
+    volumes:
+      - postgres-primary-ha:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U db_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Phase 16: PostgreSQL Replica 1
+  postgres-replica-1:
+    image: postgres:15-alpine
+    container_name: postgres-replica-1-ha
+    ports:
+      - "5433:5432"
+    environment:
+      PGUSER: replicator
+      PGPASSWORD: ReplicatorPass123!
+      POSTGRES_INITDB_ARGS: "-c max_connections=500"
+    volumes:
+      - postgres-replica-1-ha:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U replicator -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - postgres-primary
+    restart: unless-stopped
+
+  # Phase 16: PostgreSQL Replica 2
+  postgres-replica-2:
+    image: postgres:15-alpine
+    container_name: postgres-replica-2-ha
+    ports:
+      - "5434:5432"
+    environment:
+      PGUSER: replicator
+      PGPASSWORD: ReplicatorPass123!
+      POSTGRES_INITDB_ARGS: "-c max_connections=500"
+    volumes:
+      - postgres-replica-2-ha:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U replicator -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - postgres-primary
+    restart: unless-stopped
+
+  # Phase 16: pgBouncer Connection Pooling
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer-pool
+    ports:
+      - "6432:6432"
+    environment:
+      DATABASE_URL: "postgres://db_admin:SecureHashPassword123!@postgres-primary-ha:5432/code_server_db"
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 25
+    volumes:
+      - pgbouncer-config:/etc/pgbouncer
+    depends_on:
+      - postgres-primary
+    healthcheck:
+      test: ["CMD", "psql", "-U", "db_admin", "-d", "pgbouncer", "-h", "localhost", "-c", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Phase 16: HAProxy Load Balancer
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: haproxy-lb
+    ports:
+      - "80:80"
+      - "443:443"
+      - "5435:5432"
+      - "8404:8404"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - postgres-primary
+      - postgres-replica-1
+      - postgres-replica-2
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8404/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres-primary-ha:
+    driver: local
+  postgres-replica-1-ha:
+    driver: local
+  postgres-replica-2-ha:
+    driver: local
+  pgbouncer-config:
+    driver: local
+
+networks:
+  default:
+    name: phase-16-network

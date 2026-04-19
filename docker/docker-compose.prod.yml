@@ -1,0 +1,70 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Production Overrides for docker-compose.yml
+# 
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# Changes for production environment:
+#   - Full TLS termination via Caddy with ACME (Let's Encrypt)
+#   - oauth2-proxy enabled for all traffic
+#   - Higher resource limits and stricter health checks
+#   - Enable log rotation and monitoring
+#   - All ports behind reverse proxy (internal network only)
+# ════════════════════════════════════════════════════════════════════════════
+
+version: "3.9"
+
+services:
+  code-server:
+    # Production: never expose internally, route via reverse proxy
+    expose:
+      - "8080"
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: '2.0'
+        reservations:
+          memory: 512m
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  ollama:
+    # Production: full GPU resource allocation
+    deploy:
+      resources:
+        limits:
+          memory: 32g
+        reservations:
+          memory: 8g
+
+  oauth2-proxy:
+    # Production: oauth2-proxy is enabled (default)
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4180/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  caddy:
+    # Production: full TLS with ACME, both ports exposed to public
+    image: caddy:2.7.6-alpine
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    volumes:
+      - ./docker/configs/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy-config:/config
+      - caddy-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s

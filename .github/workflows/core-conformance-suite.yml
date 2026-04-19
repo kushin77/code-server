@@ -1,0 +1,47 @@
+name: Core Conformance Suite
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  core-conformance:
+    name: Core Domain Conformance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run core conformance suite
+        env:
+          REPORT_DIR: .github/reports/conformance
+        run: bash scripts/ci/run-core-conformance-suite.sh
+
+      - name: Upload core conformance artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: core-conformance-report
+          path: .github/reports/conformance
+
+      - name: Publish step summary
+        if: always()
+        run: |
+          if [[ -f .github/reports/conformance/core-conformance-summary.md ]]; then
+            cat .github/reports/conformance/core-conformance-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Core conformance summary not generated" >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -1,0 +1,297 @@
+version: '3.9'
+
+# Phase 20-A1: Global Orchestration Framework
+# ✅ Immutable, Idempotent Docker Compose Configuration
+
+services:
+  # ========================================
+  # Global Orchestration Engine
+  # ========================================
+  global-orchestrator:
+    image: python:3.11-slim
+    container_name: phase-20-a1-orchestrator
+    hostname: orchestrator.phase-20-a1
+    
+    # ✅ Command: Run immutable orchestration engine
+    command: |
+      bash -c '
+        pip install --no-cache-dir prometheus-client pyyaml dataclasses-json requests &&
+        python /app/phase_20_global_orchestration.py
+      '
+    
+    # ✅ Immutable volume mounts
+    volumes:
+      - ./scripts/phase_20_global_orchestration.py:/app/phase_20_global_orchestration.py:ro
+      - ./phase-20-a1-config.yml:/app/config.yml:ro
+      - phase-20-a1-orchestrator-logs:/var/log/orchestrator:rw
+    
+    # ✅ Environment: Immutable configuration
+    environment:
+      - PHASE=phase-20-a1
+      - COMPONENT=global-orchestration-framework
+      - ENVIRONMENT=staging
+      - LOG_LEVEL=INFO
+      - METRICS_PORT=9205
+      - API_PORT=8000
+      - HEALTH_PORT=8001
+      - METRICS_ENABLED=true
+      - HEALTH_CHECK_INTERVAL=60
+      - FAILOVER_TIMEOUT=30
+      - REGION_COUNT=3
+      
+      # Regional configuration (immutable)
+      - REGION_PRIMARY_HOST=192.168.168.31
+      - REGION_PRIMARY_PORT=22
+      - REGION_PRIMARY_PRIORITY=100
+      - REGION_SECONDARY_HOST=192.168.168.32
+      - REGION_SECONDARY_PORT=22
+      - REGION_SECONDARY_PRIORITY=50
+      - REGION_TERTIARY_HOST=192.168.168.33
+      - REGION_TERTIARY_PORT=22
+      - REGION_TERTIARY_PRIORITY=25
+    
+    # ✅ Ports: API, Metrics, Health
+    ports:
+      - "8000:8000"   # API
+      - "9205:9205"   # Prometheus metrics
+      - "8001:8001"   # Health check
+    
+    # ✅ Network
+    networks:
+      - phase-20-a1-net
+    
+    # ✅ Immutable restart policy
+    restart_policy:
+      condition: unless-stopped
+      delay: 5s
+      max_attempts: 3
+      window: 120s
+    
+    # ✅ Resource limits (immutable)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    
+    # ✅ Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    
+    # ✅ Logging configuration (immutable)
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "phase=20-a1,component=orchestrator,environment=staging"
+    
+    # ✅ Security context
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    
+    security_opt:
+      - no-new-privileges:true
+
+  # ========================================
+  # Prometheus Metrics Collection
+  # ========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: phase-20-a1-prometheus
+    hostname: prometheus.phase-20-a1
+    
+    # ✅ Immutable configuration
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--log.level=info'
+    
+    # ✅ Immutable configuration volumes
+    volumes:
+      - ./phase-20-a1-prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - phase-20-a1-prometheus-data:/prometheus:rw
+    
+    # ✅ Ports
+    ports:
+      - "9090:9090"
+    
+    # ✅ Network
+    networks:
+      - phase-20-a1-net
+    
+    # ✅ Restart policy
+    restart_policy:
+      condition: unless-stopped
+      delay: 5s
+      max_attempts: 3
+      window: 120s
+    
+    # ✅ Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    
+    # ✅ Health check
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    
+    # ✅ Logging (immutable)
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "phase=20-a1,component=prometheus,environment=staging"
+    
+    # ✅ Security context
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - DAC_READ_SEARCH
+    
+    security_opt:
+      - no-new-privileges:true
+
+  # ========================================
+  # Grafana Visualization & Dashboards
+  # ========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: phase-20-a1-grafana
+    hostname: grafana.phase-20-a1
+    
+    # ✅ Immutable environment
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=changeme_12345
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_INSTALL_PLUGINS=
+      - GF_LOG_LEVEL=info
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    
+    # ✅ Immutable volumes
+    volumes:
+      - phase-20-a1-grafana-data:/var/lib/grafana:rw
+      - ./dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    
+    # ✅ Ports
+    ports:
+      - "3000:3000"
+    
+    # ✅ Network
+    networks:
+      - phase-20-a1-net
+    
+    # ✅ Restart policy (immutable)
+    restart_policy:
+      condition: unless-stopped
+      delay: 5s
+      max_attempts: 3
+      window: 120s
+    
+    # ✅ Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.125'
+          memory: 256M
+    
+    # ✅ Health check
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # ✅ Logging (immutable)
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "phase=20-a1,component=grafana,environment=staging"
+    
+    # ✅ Security context
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - SYS_ADMIN  # For some Grafana features
+    
+    security_opt:
+      - no-new-privileges:true
+
+# ========================================
+# Networks - Immutable
+# ========================================
+networks:
+  phase-20-a1-net:
+    name: phase-20-a1-net
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.20.0.0/16
+          gateway: 10.20.0.1
+    driver_opts:
+      # ✅ Immutable network options
+      "com.docker.network.bridge.name": "br-phase20a1"
+      "com.docker.network.bridge.enable_ip_masquerade": "true"
+
+# ========================================
+# Volumes - Immutable mount points
+# ========================================
+volumes:
+  phase-20-a1-orchestrator-logs:
+    name: phase-20-a1-orchestrator-logs
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /var/lib/phase-20-a1/orchestrator-logs
+  
+  phase-20-a1-prometheus-data:
+    name: phase-20-a1-prometheus-data
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /var/lib/phase-20-a1/prometheus
+  
+  phase-20-a1-grafana-data:
+    name: phase-20-a1-grafana-data
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /var/lib/phase-20-a1/grafana

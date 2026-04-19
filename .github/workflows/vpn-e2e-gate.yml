@@ -1,0 +1,45 @@
+name: VPN-only E2E Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      warn_only:
+        description: "Warn instead of failing when VPN context is not detected"
+        required: false
+        default: false
+        type: boolean
+  pull_request:
+    paths:
+      - 'scripts/ci/check-vpn-gate.sh'
+      - '.github/workflows/vpn-e2e-gate.yml'
+      - 'scripts/ci/setup-e2e-playwright.sh'
+      - 'config/e2e-service-account-profile.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/ci/check-vpn-gate.sh'
+      - '.github/workflows/vpn-e2e-gate.yml'
+      - 'scripts/ci/setup-e2e-playwright.sh'
+      - 'config/e2e-service-account-profile.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  vpn-gate:
+    name: Verify VPN-only E2E context
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Check VPN gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.warn_only }}" == "true" ]]; then
+            bash scripts/ci/check-vpn-gate.sh --warn-only
+          else
+            bash scripts/ci/check-vpn-gate.sh
+          fi

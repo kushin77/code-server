@@ -1,0 +1,367 @@
+---
+# Phase 12.3: Geographic Routing and Ingress Configuration
+# Implements geo-DNS routing and regional load balancing
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: phase-12
+  labels:
+    phase: "12"
+    type: "multi-region"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: geo-routing-config
+  namespace: phase-12
+spec:
+  geo-routing.yaml: |
+    version: "1.0"
+    routing_policy: "geographic"
+    
+    regions:
+      - name: "us-west-2"
+        domain: "api.us-west.multi-region.example.com"
+        cidr: "10.0.0.0/16"
+        priority: 1
+        weight: 50
+        latency_target_ms: 50
+        
+      - name: "eu-west-1"
+        domain: "api.eu-west.multi-region.example.com"
+        cidr: "10.1.0.0/16"
+        priority: 2
+        weight: 30
+        latency_target_ms: 80
+        
+      - name: "ap-south-1"
+        domain: "api.ap-south.multi-region.example.com"
+        cidr: "10.2.0.0/16"
+        priority: 3
+        weight: 20
+        latency_target_ms: 120
+    
+    geo_location_rules:
+      "North America":
+        region: "us-west-2"
+        countries: ["US", "CA", "MX"]
+        
+      "Europe":
+        region: "eu-west-1"
+        countries: ["GB", "DE", "FR", "IE"]
+        
+      "Asia Pacific":
+        region: "ap-south-1"
+        countries: ["IN", "SG", "AU"]
+        
+      "Default":
+        region: "us-west-2"
+    
+    failover_rules:
+      - primary: "us-west-2"
+        secondary: "eu-west-1"
+        tertiary: "ap-south-1"
+        
+      - primary: "eu-west-1"
+        secondary: "ap-south-1"
+        tertiary: "us-west-2"
+        
+      - primary: "ap-south-1"
+        secondary: "us-west-2"
+        tertiary: "eu-west-1"
+    
+    health_check:
+      enabled: true
+      path: "/health"
+      port: 8080
+      interval_seconds: 10
+      timeout_seconds: 5
+      unhealthy_threshold: 3
+      healthy_threshold: 2
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: multi-region-ingress
+  namespace: phase-12
+  labels:
+    app: multi-region-api
+spec:
+  type: LoadBalancer
+  selector:
+    app: app-server
+  ports:
+    - port: 443
+      targetPort: 8080
+      protocol: TCP
+      name: https
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multi-region-ingress
+  namespace: phase-12
+  annotations:
+    kubernetes.io/ingress.class: "cloud"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  tls:
+    - hosts:
+        - "api.multi-region.example.com"
+        - "api.us-west.multi-region.example.com"
+        - "api.eu-west.multi-region.example.com"
+        - "api.ap-south.multi-region.example.com"
+      secretName: multi-region-tls
+  rules:
+    - host: "api.multi-region.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: multi-region-ingress
+                port:
+                  number: 8080
+    
+    - host: "api.us-west.multi-region.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app-server-us-west
+                port:
+                  number: 8080
+
+    - host: "api.eu-west.multi-region.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app-server-eu-west
+                port:
+                  number: 8080
+
+    - host: "api.ap-south.multi-region.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app-server-ap-south
+                port:
+                  number: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-server-us-west
+  namespace: phase-12
+  annotations:
+    region: "us-west-2"
+    topology.kubernetes.io/region: "us-west-2"
+spec:
+  selector:
+    app: app-server
+    region: us-west
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-server-eu-west
+  namespace: phase-12
+  annotations:
+    region: "eu-west-1"
+    topology.kubernetes.io/region: "eu-west-1"
+spec:
+  selector:
+    app: app-server
+    region: eu-west
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-server-ap-south
+  namespace: phase-12
+  annotations:
+    region: "ap-south-1"
+    topology.kubernetes.io/region: "ap-south-1"
+spec:
+  selector:
+    app: app-server
+    region: ap-south
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: policy/v1
+kind: NetworkPolicy
+metadata:
+  name: multi-region-network-policy
+  namespace: phase-12
+spec:
+  podSelector:
+    matchLabels:
+      app: app-server
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              phase: "12"
+        - podSelector:
+            matchLabels:
+              app: ingress
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              phase: "12"
+        - podSelector:
+            matchLabels:
+              app: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              phase: "12"
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app: crdt-engine
+      ports:
+        - protocol: TCP
+          port: 8080
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 443
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app-server-hpa
+  namespace: phase-12
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app-server
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: geo-routing-cache
+  namespace: phase-12
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: geo-routing-alerts
+  namespace: phase-12
+spec:
+  groups:
+    - name: geo-routing.rules
+      interval: 30s
+      rules:
+        - alert: RegionalEndpointDown
+          expr: |
+            route53_health_check_status{endpoint=~"us-west|eu-west|ap-south"} == 0
+          for: 5m
+          annotations:
+            summary: "Regional endpoint {{ $labels.endpoint }} is down"
+            description: "Endpoint {{ $labels.endpoint }} has failed health checks"
+        
+        - alert: HighLatencyDetected
+          expr: |
+            histogram_quantile(0.99, http_request_duration_seconds{region=~"us-west|eu-west|ap-south"}) > 1
+          for: 5m
+          annotations:
+            summary: "High latency detected in {{ $labels.region }}"
+            description: "P99 latency exceeded 1s in region {{ $labels.region }}"

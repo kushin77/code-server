@@ -1,0 +1,79 @@
+# Code Ownership — Enforce Review Requirements
+# 
+# Require specialized review for high-risk domains.
+# No self-merging for critical paths.
+#
+# Format: <path> <@owner-or-team>
+# Multiple owners: list space-separated
+
+# ==================== CRITICAL: No Self-Merge ====================
+
+# Default — all code changes need primary maintainer review
+# Multiple code owners to prevent bottlenecks and enforce independent review
+* @kushin77 @PureBlissAK
+
+# ==================== INFRASTRUCTURE (IaC, Terraform) ====================
+
+# Core infrastructure — critical security and scaling implications
+/terraform/ @kushin77
+/infra/ @kushin77
+main.tf @kushin77
+variables.tf @kushin77
+*.tfvars @kushin77
+terraform.tfstate* @kushin77
+
+# ==================== SECURITY & SECRETS ====================
+
+# Security policies, secrets management, authentication
+/.github/workflows/security.yml @kushin77
+/policies/ @kushin77
+/scripts/fetch-gsm-secrets.sh @kushin77
+oauth2-proxy.cfg @kushin77
+code-server-config.yaml @kushin77
+
+# ==================== CI/CD & AUTOMATION ====================
+
+# Deployment and automation pipelines — no manual intervention
+/.github/workflows/ @kushin77
+/.github/CODEOWNERS @kushin77
+Makefile @kushin77
+/scripts/ @kushin77
+
+# Docker & Container Configuration
+Dockerfile* @kushin77
+docker-compose.yml @kushin77
+/caddy/ @kushin77
+Caddyfile* @kushin77
+
+# ==================== DEPLOYMENT & OPERATIONS ====================
+
+# Production configuration and deployment
+/config/ @kushin77
+DEPLOYMENT.md @kushin77
+RUNBOOKS.md @kushin77
+deploy-iac.* @kushin77
+
+# ==================== DOCUMENTATION ====================
+
+# Architecture and decisions — inform whole team
+/docs/ @kushin77
+/docs/adr/ @kushin77
+ARCHITECTURE.md @kushin77
+CONTRIBUTING.md @kushin77
+README.md @kushin77
+
+# ==================== CONFIGURATION ====================
+
+# VS Code and workspace configuration
+settings.json @kushin77
+code-server-config.yaml @kushin77
+
+# ==================== POLICY: Code Review Requirements ====================
+#
+# MANDATORY:
+# - All security-related changes require principal review
+# - All IaC changes require validation and review
+# - All CI/CD pipeline changes require scrutiny
+# - Self-reviews of code you wrote do NOT count
+#
+# If you wrote it, someone else approves it.

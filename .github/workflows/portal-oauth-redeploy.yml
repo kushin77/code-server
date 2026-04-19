@@ -1,0 +1,158 @@
+name: Portal OAuth Redeploy
+
+# Issue #692: Production portal OAuth callback redeploy execution path
+# Syncs docker-compose.yml to production host and redeploysvservices with split redirect URLs
+# Apex (kushnir.cloud) vs. IDE (ide.kushnir.cloud) share cookie domain but use distinct OAuth callbacks
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry-run only (no docker compose changes)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: portal-oauth-redeploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  redeploy-portal-oauth:
+    name: Redeploy portal OAuth routing
+    runs-on: [self-hosted, onprem, portal-oauth-redeploy]
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Resolve canonical WIF provider
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT }}
+          GCP_WIF_PROVIDER_RAW: ${{ secrets.GCP_WIF_PROVIDER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          default_provider="projects/${GCP_PROJECT_ID}/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          provider="${GCP_WIF_PROVIDER_RAW:-$default_provider}"
+          provider="${provider#"${provider%%[![:space:]]*}"}"
+          provider="${provider%"${provider##*[![:space:]]}"}"
+          provider="${provider#//iam.googleapis.com/}"
+          provider="${provider#https://iam.googleapis.com/}"
+          provider="${provider#iam.googleapis.com/}"
+          if [[ ! "$provider" =~ ^projects/[0-9]+/locations/global/workloadIdentityPools/[^/]+/providers/[^/]+$ ]]; then
+            echo "GCP_WIF_PROVIDER is not a canonical numeric provider resource; using ${default_provider}" >&2
+            provider="$default_provider"
+          fi
+          if [[ -z "$provider" ]]; then
+            echo "GCP_WIF_PROVIDER resolved to an empty provider" >&2
+            exit 1
+          fi
+          echo "GCP_WIF_PROVIDER_RESOLVED=$provider" >> "$GITHUB_ENV"
+
+      - name: Prefer host env file on on-prem runner
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          host_env="/home/akushnir/code-server-enterprise/.env"
+          if [[ -f "$host_env" ]]; then
+            cp "$host_env" .env
+            chmod 600 .env
+            echo "DEPLOY_ENV_CREATED=false" >> "$GITHUB_ENV"
+            echo "DEPLOY_ENV_SOURCE=host" >> "$GITHUB_ENV"
+            echo "Using host env fallback from on-prem runner"
+          fi
+
+      - name: Authenticate to GCP via Workload Identity
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER_RESOLVED }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: Setup gcloud CLI
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      - name: Bootstrap ephemeral env file from GSM
+        if: ${{ !inputs.dry_run && !hashFiles('.env') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/fetch-gsm-secrets.sh --non-interactive > .env
+          chmod 600 .env
+          echo "DEPLOY_ENV_CREATED=true" >> "$GITHUB_ENV"
+          echo "DEPLOY_ENV_SOURCE=gsm" >> "$GITHUB_ENV"
+
+      - name: Detect existing env file
+        if: ${{ !inputs.dry_run && hashFiles('.env') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "DEPLOY_ENV_CREATED=false" >> "$GITHUB_ENV"
+          echo "DEPLOY_ENV_SOURCE=existing" >> "$GITHUB_ENV"
+
+      - name: Validate callback split in source compose
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qF 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"' docker-compose.yml
+          grep -qF 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"' docker-compose.yml
+
+      - name: Dry-run portal OAuth redeploy
+        if: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run --local
+
+      - name: Redeploy portal services
+        if: ${{ !inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/deploy/redeploy-portal-oauth-routing.sh --local
+
+      - name: Verify live redirects
+        if: ${{ !inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          apex_location="$(curl -skI 'https://kushnir.cloud/oauth2/start?rd=%2F' | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^location:/ {print $0}')"
+          ide_location="$(curl -skI 'https://ide.kushnir.cloud/oauth2/start?rd=%2F' | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^location:/ {print $0}')"
+          echo "$apex_location"
+          echo "$ide_location"
+          echo "$apex_location" | grep -qi 'redirect_uri=https%3A%2F%2Fkushnir.cloud%2Foauth2%2Fcallback'
+          echo "$ide_location" | grep -qi 'redirect_uri=https%3A%2F%2Fide.kushnir.cloud%2Foauth2%2Fcallback'
+
+      - name: Summarize deployment mode
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "## Portal OAuth Redeploy"
+            echo "- Runner: self-hosted"
+            echo "- Execution: scripts/deploy/redeploy-portal-oauth-routing.sh --local"
+            if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+              echo "- Mode: dry-run"
+            else
+              echo "- Mode: apply"
+              echo "- Env bootstrap: ${DEPLOY_ENV_SOURCE:-n/a}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cleanup ephemeral env file
+        if: always() && env.DEPLOY_ENV_CREATED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .env

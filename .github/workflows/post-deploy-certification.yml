@@ -1,0 +1,131 @@
+name: Post-Deploy Certification
+
+on:
+  pull_request:
+    types: [closed]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  reopen-linked-issues:
+    name: Reopen linked issues until certification is complete
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reopen linked issues for non-trivial changes
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || "";
+            const marker = "<!-- post-deploy-certification -->";
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const nonTrivial = files.some((f) => {
+              const p = f.filename.toLowerCase();
+              return !(
+                p.startsWith("docs/") ||
+                p.endsWith(".md") ||
+                p.startsWith(".github/issue_template/")
+              );
+            });
+
+            if (!nonTrivial) {
+              core.info("Docs-only or trivial change detected; skipping post-deploy certification reopen path.");
+              return;
+            }
+
+            const issueNumbers = [...body.matchAll(/(?:closes|fixes|resolves)\s+#(\d+)/ig)].map((m) => Number(m[1]));
+            if (issueNumbers.length === 0) {
+              core.info("No linked issues found in PR body.");
+              return;
+            }
+
+            for (const issue_number of [...new Set(issueNumbers)]) {
+              const issue = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+              });
+
+              const commentBody = [
+                marker,
+                "## Post-Deploy Certification Required",
+                "",
+                `Merged PR: #${pr.number}`,
+                "",
+                "Complete this checklist in a new issue comment using the same marker before closing the issue:",
+                "- [ ] 1-hour post-deploy monitoring completed",
+                "- [ ] SLA/SLO target verified against Phase 1 target",
+                "- [ ] Error budget impact reviewed",
+                "- [ ] Rollback was not required, or rollback drill/result documented",
+                "- [ ] Linked PR and telemetry evidence attached",
+              ].join("\n");
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                body: commentBody,
+              });
+
+              if (issue.data.state === "closed") {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number,
+                  state: "open",
+                });
+              }
+            }
+
+  close-certified-issues:
+    name: Auto-close certified issues
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close issue when certification checklist is complete
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = context.payload.comment.body || "";
+            const marker = "<!-- post-deploy-certification -->";
+            if (!body.includes(marker)) {
+              core.info("Certification marker not present; skipping.");
+              return;
+            }
+
+            const requiredChecks = [
+              /- \[x\] 1-hour post-deploy monitoring completed/i,
+              /- \[x\] SLA\/SLO target verified against Phase 1 target/i,
+              /- \[x\] Error budget impact reviewed/i,
+              /- \[x\] Rollback was not required, or rollback drill\/result documented/i,
+              /- \[x\] Linked PR and telemetry evidence attached/i,
+            ];
+
+            const incomplete = requiredChecks.filter((pattern) => !pattern.test(body));
+            if (incomplete.length > 0) {
+              core.info("Certification marker found, but checklist is incomplete; leaving issue open.");
+              return;
+            }
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: "closed",
+              state_reason: "completed",
+            });

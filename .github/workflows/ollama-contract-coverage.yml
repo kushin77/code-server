@@ -1,0 +1,33 @@
+name: Ollama Integration Contract
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'config/ollama-integration-contract.yml'
+      - 'scripts/ci/validate-ollama-integration-contract.sh'
+      - 'docs/ops/OLLAMA-INTEGRATION-CONTRACT-RUNBOOK.md'
+      - '.github/workflows/ollama-contract-coverage.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/ollama-integration-contract.yml'
+      - 'scripts/ci/validate-ollama-integration-contract.sh'
+      - 'docs/ops/OLLAMA-INTEGRATION-CONTRACT-RUNBOOK.md'
+      - '.github/workflows/ollama-contract-coverage.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-contract:
+    name: Validate Ollama integration contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate contract and release handshake
+        shell: bash
+        run: bash scripts/ci/validate-ollama-integration-contract.sh

@@ -1,0 +1,113 @@
+repos:
+  - repo: local
+    hooks:
+      - id: mandatory-redeploy
+        name: mandatory-redeploy
+        entry: bash ./scripts/mandatory-redeploy.sh
+        language: system
+        pass_filenames: false
+        # Only run manually or on local push — requires Docker and Linux environment
+        stages: [manual]
+
+      # Phase 2.3: Custom hook - verify scripts source common libraries
+      - id: verify-scripts-source-common
+        name: Verify scripts source _common libraries
+        entry: >-
+          bash -c '[[ -d scripts/_common ]] &&
+          for f in scripts/{deploy,backup,validate,test}.sh; do
+          [[ -f "$f" ]] && ! grep -q "source.*_common" "$f" &&
+          echo "ERROR: $f missing _common source"; done'
+        language: system
+        files: '^scripts/(deploy|backup|validate|test)\.sh$'
+        pass_filenames: false
+        stages: [commit]
+
+      # Phase 2.3: Custom hook - verify metadata headers (GOV-002 #297 — all active scripts)
+      - id: verify-metadata-headers
+        name: Verify GOV-002 metadata on active scripts
+        entry: bash scripts/ci/check-metadata-headers.sh
+        language: system
+        files: '^scripts/.*\.sh$'
+        pass_filenames: false
+        stages: [commit]
+
+      # Phase 3: Block hardcoded IPs — use $DEPLOY_HOST from _common/config.sh
+      - id: no-hardcoded-ips
+        name: No hardcoded IP addresses in scripts
+        entry: bash -c '
+          files=$(grep -rlE "192\.168\.168\.\(31\|30\)|:-[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" scripts/ 2>/dev/null \
+            | grep -v "_common/" | grep -v "_archive/" | grep -v "scripts/lib/" | grep -v "config\.sh" | grep "\.sh$")
+          if [[ -n "$files" ]]; then
+            echo "GOVERNANCE: Hardcoded IP — use \$DEPLOY_HOST from _common/config.sh:"
+            echo "$files" | sed "s/^/  /"; exit 1
+          fi
+        '
+        language: system
+        files: '^scripts/.*\.sh$'
+        pass_filenames: false
+        stages: [commit]
+
+      # #399: Block Windows-specific content (PowerShell, CRLF, Windows paths)
+      - id: no-windows-content
+        name: "Linux mandate: block Windows-specific content in scripts"
+        language: script
+        entry: scripts/ci/check-no-windows-content.sh
+        files: '\.(sh|bash|py|tf|yml|yaml)$'
+        exclude: |
+          (?x)^(
+            apps/extensions/.*node_modules/|
+            \.archived/
+          )
+        pass_filenames: true
+        stages: [commit]
+
+      # #306: Block known credential literals in active scripts
+      - id: no-hardcoded-credentials
+        name: "Governance: block hardcoded credential literals"
+        language: script
+        entry: scripts/ci/check-no-hardcoded-credentials.sh
+        files: '^scripts/.*\.sh$'
+        pass_filenames: false
+        stages: [commit]
+
+  # Phase 2.3: Bash script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.7
+    hooks:
+      - id: shellcheck
+        name: Bash script lint (shellcheck)
+        args: ['--severity=warning']
+        exclude: |
+          (?x)^(
+            archived/|
+            phase-\d|
+            gpu-
+          )$
+
+  # Phase 2.3: YAML linting for docker-compose, Caddyfile
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        name: YAML lint (yamllint)
+        args: [--config-data, '{extends: default, rules: {line-length: {max: 120}}}']
+        files: '\.(yaml|yml)$'
+        exclude: 'archived/|docs/|kubernetes/'
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        # These are valid multi-document YAML files (Kubernetes manifests)
+        exclude: 'scripts/nas-ingress\.yaml|kubernetes/phase-12/routing/geo-routing-config\.yaml'
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.74.0
+    hooks:
+      - id: terraform_fmt
+        # Only run when terraform is available locally — not enforced in CI
+        stages: [manual]
+      - id: terraform_validate
+        stages: [manual]

@@ -1,0 +1,343 @@
+---
+# k8s/workload-federation.yaml
+# P1 #388 Phase 2: Kubernetes Workload Federation Setup
+# Enables services to securely request JWT tokens using Kubernetes ServiceAccounts
+
+---
+# Token Microservice Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: token-microservice
+  namespace: default
+  labels:
+    app: token-microservice
+    component: iam
+spec:
+  replicas: 2  # High availability
+  selector:
+    matchLabels:
+      app: token-microservice
+  template:
+    metadata:
+      labels:
+        app: token-microservice
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: token-microservice
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsReadOnlyRootFilesystem: true
+      
+      initContainers:
+      # Load secrets from Vault init container
+      - name: vault-init
+        image: hashicorp/vault:1.15.0
+        volumeMounts:
+        - name: secrets
+          mountPath: /vault/secrets
+        env:
+        - name: VAULT_ADDR
+          value: "http://vault:8200"
+        - name: VAULT_ROLE
+          value: "token-microservice"
+        command:
+        - sh
+        - -c
+        - |
+          vault write -method=POST auth/jwt/login role=token-microservice jwt=$KUBERNETES_SA_TOKEN
+          vault kv get -format=json secret/token-microservice > /vault/secrets/config.json
+      
+      containers:
+      - name: token-microservice
+        image: python:3.11-slim
+        imagePullPolicy: IfNotPresent
+        
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        
+        # Ports
+        ports:
+        - name: http
+          containerPort: 8888
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        
+        # Environment
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: OIDC_ISSUER
+          value: "https://oidc.kushnir.cloud"
+        - name: PLATFORM_NAME
+          value: "kushnir-platform"
+        - name: TOKEN_TTL_MINUTES
+          value: "15"
+        - name: REFRESH_WINDOW_MINUTES
+          value: "5"
+        - name: LOG_LEVEL
+          value: "INFO"
+        
+        # Load service account secrets as env vars
+        envFrom:
+        - secretRef:
+            name: service-account-secrets
+        
+        # Volumes
+        volumeMounts:
+        - name: vault-secrets
+          mountPath: /etc/token-microservice
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: var-run
+          mountPath: /var/run
+        
+        # Startup probe (allow time to initialize)
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          failureThreshold: 30
+          periodSeconds: 10
+        
+        # Readiness probe
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+        
+        # Liveness probe
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+        
+        # Resource limits
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+      
+      volumes:
+      - name: vault-secrets
+        secret:
+          secretName: token-microservice-keys
+          defaultMode: 0400
+      - name: tmp
+        emptyDir: {}
+      - name: var-run
+        emptyDir: {}
+      
+      # Pod disruption budget for HA
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - token-microservice
+              topologyKey: kubernetes.io/hostname
+
+---
+# Service exposure
+apiVersion: v1
+kind: Service
+metadata:
+  name: token-microservice
+  namespace: default
+  labels:
+    app: token-microservice
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8888
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app: token-microservice
+
+---
+# ServiceAccount for token microservice
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: token-microservice
+  namespace: default
+
+---
+# ClusterRole: token-microservice can read its secrets and configmaps
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: token-microservice
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+  resourceNames: ["service-account-secrets", "token-microservice-keys"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+  selector:
+    matchLabels:
+      component: "iam"
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: token-microservice
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: token-microservice
+subjects:
+- kind: ServiceAccount
+  name: token-microservice
+  namespace: default
+
+---
+# PodDisruptionBudget for high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: token-microservice-pdb
+  namespace: default
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: token-microservice
+
+---
+# HorizontalPodAutoscaler (optional, for load-based scaling)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: token-microservice-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: token-microservice
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# NetworkPolicy: restrict access to token microservice
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: token-microservice-netpol
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: token-microservice
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          requires-tokens: "true"
+    ports:
+    - protocol: TCP
+      port: 8888
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 53  # DNS
+    - protocol: UDP
+      port: 53
+  - to:
+    - podSelector:
+        matchLabels:
+          app: vault
+    ports:
+    - protocol: TCP
+      port: 8200  # Vault
+
+---
+# ConfigMap: service-to-service authentication policy
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-policy
+  namespace: default
+data:
+  policy.yaml: |
+    version: 1
+    policies:
+    - source: code-server
+      targets:
+      - postgresql
+      - redis
+      - ollama
+      scopes: [read:secrets, write:config]
+    
+    - source: grafana
+      targets:
+      - prometheus
+      - loki
+      - jaeger
+      scopes: [read:metrics, read:logs, read:traces]
+    
+    - source: prometheus
+      targets:
+      - code-server
+      - alertmanager
+      scopes: [read:metrics]
+    
+    - source: alertmanager
+      targets:
+      - prometheus
+      scopes: [read:alerts]

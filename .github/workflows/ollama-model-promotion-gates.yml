@@ -1,0 +1,37 @@
+name: Ollama Model Promotion Gates
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'config/ollama-model-promotion-gates.yml'
+      - 'scripts/ci/validate-ollama-model-promotion-gates.sh'
+      - 'docs/AI-MODEL-PROMOTION-GATES-630.md'
+      - 'docs/ops/OLLAMA-MODEL-PROMOTION-GATES-RUNBOOK.md'
+      - 'docs/status/OLLAMA-MODEL-PROMOTION-GATES-PROOF-2026-04-18.md'
+      - '.github/workflows/ollama-model-promotion-gates.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/ollama-model-promotion-gates.yml'
+      - 'scripts/ci/validate-ollama-model-promotion-gates.sh'
+      - 'docs/AI-MODEL-PROMOTION-GATES-630.md'
+      - 'docs/ops/OLLAMA-MODEL-PROMOTION-GATES-RUNBOOK.md'
+      - 'docs/status/OLLAMA-MODEL-PROMOTION-GATES-PROOF-2026-04-18.md'
+      - '.github/workflows/ollama-model-promotion-gates.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-gates:
+    name: Validate Ollama model promotion gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate gate contract and policy
+        shell: bash
+        run: bash scripts/ci/validate-ollama-model-promotion-gates.sh

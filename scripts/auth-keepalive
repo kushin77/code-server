@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+# @file        scripts/auth-keepalive
+# @module      auth/lifecycle
+# @description Managed auth token keepalive daemon — single-instance guard, idle tiers, and health command.
+#
+# Usage:
+#   auth-keepalive start   — start daemon (single-instance, background)
+#   auth-keepalive stop    — stop running daemon
+#   auth-keepalive restart — safe restart (stop + start)
+#   auth-keepalive health  — print status: running state, last refresh ts, idle countdown
+#   auth-keepalive status  — exit 0 if running, exit 1 if stopped
+
+set -euo pipefail
+
+PIDFILE="${AUTH_KEEPALIVE_PIDFILE:-/tmp/auth-keepalive.pid}"
+LOGFILE="${AUTH_KEEPALIVE_LOGFILE:-/tmp/auth-keepalive.log}"
+STATEFILE="${AUTH_KEEPALIVE_STATEFILE:-/tmp/auth-keepalive.state}"
+
+# ── Refresh cadence by idle tier ──────────────────────────────────────────────
+ACTIVE_INTERVAL="${AUTH_KEEPALIVE_ACTIVE_INTERVAL:-300}"      # 5 min (active use)
+IDLE_INTERVAL="${AUTH_KEEPALIVE_IDLE_INTERVAL:-900}"           # 15 min (idle)
+BACKGROUND_INTERVAL="${AUTH_KEEPALIVE_BACKGROUND_INTERVAL:-1800}" # 30 min (background/unattended)
+
+log() { echo "[auth-keepalive] $(date -u +%Y-%m-%dT%H:%M:%SZ) $*" | tee -a "$LOGFILE"; }
+
+# ── Detect idle tier (heuristic: check last terminal activity time) ────────────
+current_tier() {
+  local idle_secs=0
+  if command -v who >/dev/null 2>&1; then
+    # seconds since most recent login activity
+    idle_secs=$(who -u 2>/dev/null | awk '{print $NF}' | sed 's/old/9999/' | \
+      awk -F: 'BEGIN{m=9999} {s=$1*60+$2; if(s<m)m=s} END{print m+0}' 2>/dev/null || echo 0)
+  fi
+  if   (( idle_secs < 300  )); then echo "active"
+  elif (( idle_secs < 1800 )); then echo "idle"
+  else                              echo "background"
+  fi
+}
+
+interval_for_tier() {
+  case "$1" in
+    active)     echo "$ACTIVE_INTERVAL" ;;
+    idle)       echo "$IDLE_INTERVAL" ;;
+    background) echo "$BACKGROUND_INTERVAL" ;;
+    *)          echo "$ACTIVE_INTERVAL" ;;
+  esac
+}
+
+refresh_token() {
+  local project="${GSM_PROJECT:-gcp-eiq}"
+  local secret_name="${GSM_SECRET_NAME:-github-token}"
+  local refreshed=false
+
+  # Try GSM-backed refresh via git-credential-gsm
+  if command -v git-credential-gsm >/dev/null 2>&1; then
+    if git-credential-gsm get <<< $'protocol=https\nhost=github.com' >/dev/null 2>&1; then
+      refreshed=true
+    fi
+  fi
+
+  # Fall back to gcloud token refresh
+  if [[ "$refreshed" == "false" ]] && command -v gcloud >/dev/null 2>&1; then
+    if CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet auth print-access-token \
+        --project="$project" >/dev/null 2>&1; then
+      refreshed=true
+    fi
+  fi
+
+  if [[ "$refreshed" == "true" ]]; then
+    echo "last_refresh=$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$STATEFILE"
+    echo "last_refresh_epoch=$(date +%s)" >> "$STATEFILE"
+    return 0
+  else
+    log "WARNING: token refresh failed"
+    return 1
+  fi
+}
+
+daemon_loop() {
+  log "daemon started (pid=$$, pidfile=$PIDFILE)"
+  echo $$ > "$PIDFILE"
+  trap 'log "daemon stopping"; rm -f "$PIDFILE"; exit 0' TERM INT
+
+  while true; do
+    local tier
+    tier=$(current_tier)
+    local interval
+    interval=$(interval_for_tier "$tier")
+
+    refresh_token && log "token refreshed (tier=$tier, next_in=${interval}s)" \
+                  || log "refresh failed (tier=$tier)"
+
+    sleep "$interval" &
+    wait $! || true   # allow SIGTERM to interrupt sleep
+  done
+}
+
+cmd_start() {
+  if [[ -f "$PIDFILE" ]]; then
+    local existing_pid
+    existing_pid=$(cat "$PIDFILE")
+    if kill -0 "$existing_pid" 2>/dev/null; then
+      echo "[auth-keepalive] already running (pid=$existing_pid)"
+      return 0
+    else
+      echo "[auth-keepalive] stale pidfile removed (pid=$existing_pid)"
+      rm -f "$PIDFILE"
+    fi
+  fi
+
+  # Launch daemon in background; detach from terminal
+  nohup bash "$0" _loop >> "$LOGFILE" 2>&1 &
+  disown $!
+  sleep 0.3
+  if [[ -f "$PIDFILE" ]]; then
+    echo "[auth-keepalive] started (pid=$(cat "$PIDFILE"))"
+  else
+    echo "[auth-keepalive] WARNING: daemon may not have started — check $LOGFILE"
+    return 1
+  fi
+}
+
+cmd_stop() {
+  if [[ ! -f "$PIDFILE" ]]; then
+    echo "[auth-keepalive] not running (no pidfile)"
+    return 0
+  fi
+  local pid
+  pid=$(cat "$PIDFILE")
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -TERM "$pid"
+    echo "[auth-keepalive] stopped (pid=$pid)"
+    rm -f "$PIDFILE"
+  else
+    echo "[auth-keepalive] stale pidfile removed (pid=$pid)"
+    rm -f "$PIDFILE"
+  fi
+}
+
+cmd_health() {
+  echo "=== auth-keepalive health ==="
+  if [[ -f "$PIDFILE" ]]; then
+    local pid
+    pid=$(cat "$PIDFILE")
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "state:   running (pid=$pid)"
+    else
+      echo "state:   STALE pidfile (pid=$pid not running)"
+    fi
+  else
+    echo "state:   stopped"
+  fi
+
+  if [[ -f "$STATEFILE" ]]; then
+    local last_refresh last_epoch now interval_left tier
+    last_refresh=$(grep "^last_refresh=" "$STATEFILE" | cut -d= -f2-)
+    last_epoch=$(grep "^last_refresh_epoch=" "$STATEFILE" | cut -d= -f2-)
+    now=$(date +%s)
+    tier=$(current_tier)
+    interval=$(interval_for_tier "$tier")
+    interval_left=$(( interval - (now - last_epoch) ))
+    echo "last_refresh: $last_refresh"
+    echo "idle_tier:    $tier (refresh_interval=${interval}s)"
+    echo "next_refresh_in: ${interval_left}s"
+  else
+    echo "last_refresh: unknown (daemon not yet refreshed, or statefile missing)"
+  fi
+}
+
+cmd_status() {
+  if [[ -f "$PIDFILE" ]]; then
+    local pid
+    pid=$(cat "$PIDFILE")
+    if kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# ── Dispatch ──────────────────────────────────────────────────────────────────
+case "${1:-help}" in
+  start)   cmd_start ;;
+  stop)    cmd_stop ;;
+  restart) cmd_stop; sleep 0.5; cmd_start ;;
+  health)  cmd_health ;;
+  status)  cmd_status && echo "running" || echo "stopped" ;;
+  _loop)   daemon_loop ;;
+  help|--help|-h)
+    echo "Usage: auth-keepalive {start|stop|restart|health|status}"
+    ;;
+  *)
+    echo "[auth-keepalive] unknown command: ${1}" >&2; exit 1 ;;
+esac

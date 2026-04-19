@@ -323,18 +323,30 @@ check_domain_drift() {
   log_section "Domain Drift Check"
 
   local domain_value
+  local expected_domain
+  local apex_domain
   domain_value=$(remote "cd ${TARGET_REPO} && if [[ -f .env ]]; then sed -n 's/^DOMAIN=//p' .env | tail -n1; fi" || true)
+  expected_domain="${DOMAIN:-ide.kushnir.cloud}"
+  apex_domain="${expected_domain#*.}"
 
   if [[ -z "${domain_value}" ]]; then
     log_warn "DOMAIN is not set in ${TARGET_REPO}/.env"
     return 0
   fi
 
-  if [[ "${domain_value}" != "kushnir.cloud" ]]; then
-    log_warn "DOMAIN drift detected: .env DOMAIN=${domain_value} (expected kushnir.cloud)"
-    log_warn "Current compose pins critical portal/auth domains, but updating .env reduces future overlap risk"
+  if [[ "${domain_value}" == "${expected_domain}" || "${domain_value}" == "${apex_domain}" ]]; then
+    log_success "DOMAIN is aligned for dual-domain routing: ${domain_value}"
+    return 0
+  fi
+
+  if [[ "${expected_domain}" == *.*.* ]]; then
+    log_warn "DOMAIN drift detected: .env DOMAIN=${domain_value} (expected ${expected_domain} or ${apex_domain})"
   else
-    log_success "DOMAIN is aligned: ${domain_value}"
+    log_warn "DOMAIN drift detected: .env DOMAIN=${domain_value} (expected ${expected_domain})"
+  fi
+
+  if [[ "${domain_value}" != "${expected_domain}" ]]; then
+    log_warn "Current compose pins critical portal/auth domains, but updating .env reduces future overlap risk"
   fi
 }
 

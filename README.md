@@ -130,7 +130,7 @@ See [ARCHITECTURE.md](docs/status/ARCHITECTURE.md),
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and
+See [CONTRIBUTING.md](docs/status/CONTRIBUTING.md) and
 [GitHub Issues](https://github.com/kushin77/code-server/issues).
 
 ## Governance SSOT

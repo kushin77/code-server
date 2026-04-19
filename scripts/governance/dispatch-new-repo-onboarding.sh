@@ -84,10 +84,33 @@ fi
 cutoff_iso="$(date -u -d "-${WINDOW_MINUTES} minutes" +%Y-%m-%dT%H:%M:%SZ)"
 control_repo_name="${CONTROL_REPO#*/}"
 
-if ! repo_rows="$("$GH_CLI" api "orgs/${ORG}/repos" --paginate --jq '.[] | [(.name // ""), (.created_at // ""), (.archived|tostring), (.disabled|tostring)] | @tsv' 2>/tmp/dispatch-repos.err)"; then
+_list_repos() {
+  local api_path="$1"
+  "$GH_CLI" api "$api_path" --paginate --jq '.[] | [(.name // ""), (.created_at // ""), (.archived|tostring), (.disabled|tostring)] | @tsv'
+}
+
+repo_rows=""
+if ! repo_rows="$(_list_repos "orgs/${ORG}/repos" 2>/tmp/dispatch-repos.err)"; then
   err_msg="$(cat /tmp/dispatch-repos.err 2>/dev/null || true)"
   rm -f /tmp/dispatch-repos.err
-  log_fatal "Unable to list repos for org '${ORG}'. Ensure gh auth is configured (GH_TOKEN/GITHUB_TOKEN or gh auth login). Details: ${err_msg:-unknown error}"
+  if echo "$err_msg" | grep -qiE "404|Not Found"; then
+    log_info "'${ORG}' is not a GitHub org or org API unavailable (404) — retrying as user account"
+    if ! repo_rows="$(_list_repos "users/${ORG}/repos" 2>/tmp/dispatch-repos.err)"; then
+      err_msg2="$(cat /tmp/dispatch-repos.err 2>/dev/null || true)"
+      rm -f /tmp/dispatch-repos.err
+      if [[ "$DRY_RUN" == "true" ]]; then
+        log_warn "Unable to list repos for user '${ORG}' in dry-run mode. No-op summary. Details: ${err_msg2:-unknown error}"
+        repo_rows=""
+      else
+        log_fatal "Unable to list repos for user '${ORG}'. Ensure gh auth is configured. Details: ${err_msg2:-unknown error}"
+      fi
+    fi
+  elif [[ "$DRY_RUN" == "true" ]]; then
+    log_warn "Unable to list repos for org '${ORG}' in dry-run mode. No-op summary. Details: ${err_msg:-unknown error}"
+    repo_rows=""
+  else
+    log_fatal "Unable to list repos for org '${ORG}'. Ensure gh auth is configured (GH_TOKEN/GITHUB_TOKEN or gh auth login). Details: ${err_msg:-unknown error}"
+  fi
 fi
 rm -f /tmp/dispatch-repos.err
 

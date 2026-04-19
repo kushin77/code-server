@@ -79,7 +79,7 @@ Run this queue before any P2/P3 work.
 1. **P0 critical gate status**: #702 closed; retain fail-closed evidence and monitor for regressions.
 2. **P1 policy authority foundations**: #700 -> #701 -> #704.
 3. **P1 runtime enforcement path**: #705 -> #708 (with #703 completion evidence retained).
-4. **P1 control-plane enablement**: #706 -> #707 -> #742.
+4. **P1 control-plane enablement**: #706 -> #742 (with repository onboarding baseline retained as completed evidence).
 5. **P1 portal delivery children**: #743 -> #744 -> #745 -> #746 -> #747 -> #748.
 6. **P1 extension-governance status**: Stream E closure evidence retained (extension-governance closure stream completed).
 
@@ -101,7 +101,7 @@ Priority debug rule:
 
 ### Stream C: Control Plane Productization
 8. **#706 (EPIC)**: Governance admin center (Backstage + Appsmith).
-9. **#707 (EPIC)**: Repository onboarding and continuous compliance.
+9. **COMPLETED**: Repository onboarding and continuous compliance baseline delivered; retain closure evidence and continue monitoring.
 10. **#742 (EPIC)**: Open-source control-plane adoption stream.
 
 ### Stream D: Portal Control-Plane Delivery (execute under the Stream C parent epic)
@@ -133,7 +133,7 @@ Priority debug rule:
 1. **Single authority first**: execute #700 and #704 before any new governance feature work.
 2. **Enforcement second**: land #701 and keep #702 closure evidence/regression checks in place for fail-closed coverage.
 3. **Runtime policy third**: execute #705 and #708 with #703 closure evidence retained for baseline traceability.
-4. **Control-plane apps fourth**: execute #706 and #707, then implement #742 through #743-#748 in order.
+4. **Control-plane apps fourth**: execute #706, then implement #742 through #743-#748 in order (keep onboarding closure evidence attached).
 5. **Extension governance fifth**: maintain stream closure evidence and monitor regressions.
 6. **UX last**: execute #717 through #727 only after Stream A-E contracts are stable.
 

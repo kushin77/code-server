@@ -18,7 +18,10 @@ jobs:
       - name: Check PR description for Phase 1 gate
         id: check-phase-1
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          BODY=$(cat <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          )
           TITLE="${{ github.event.pull_request.title }}"
           
           # Check if this is a trivial change
@@ -97,7 +100,10 @@ jobs:
       - name: Check for Phase 1 approvals
         id: check-approvals
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          BODY=$(cat <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          )
           
           # Check for architecture owner approval
           if echo "$BODY" | grep -q "Architecture Owner.*@"; then

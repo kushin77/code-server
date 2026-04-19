@@ -895,6 +895,17 @@ op: ollama-pull-models  # Ollama pull
 # CODE QUALITY & LIBRARY GOVERNANCE
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Regenerate policy-version.json SHA hashes (run after editing config/code-server/)
+policy-version:
+	@bash scripts/policy/generate-policy-version.sh
+	@echo "✅ policy-version.json updated — commit config/code-server/policy-version.json"
+
+# Validate policy-version.json hashes match actual files (same check as CI)
+policy-version-check:
+	@bash scripts/ci/validate-policy-version.sh
+
+
+
 # Verify all active scripts source _common/init.sh (not inline log_info definitions)
 lib-check:
 	@echo "════════════════════════════════════════════════════════════"

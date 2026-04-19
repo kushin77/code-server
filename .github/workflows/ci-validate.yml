@@ -341,7 +341,34 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Validate waiver registry against schema
-        run: bash scripts/governance/validate-waiver-registry.sh
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/waiver-report
+          exit_code=0
+          bash scripts/governance/validate-waiver-registry.sh \
+            --registry config/governance-waivers.json \
+            --report /tmp/waiver-report/report.json \
+            --events /tmp/waiver-report/events.jsonl \
+            --expired /tmp/waiver-report/expired.json || exit_code=$?
+          # Exit code 2 = expired active waivers; treat as blocking
+          if [[ "$exit_code" -eq 2 ]]; then
+            echo "::error::Expired active waivers detected — revoke or renew before merging"
+            jq . /tmp/waiver-report/expired.json
+            exit 1
+          elif [[ "$exit_code" -eq 3 ]]; then
+            echo "::error::Invalid waiver entries detected"
+            jq . /tmp/waiver-report/report.json
+            exit 1
+          fi
+          echo "✅ Waiver registry validation passed"
+
+      - name: Upload waiver audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: waiver-audit-report
+          path: /tmp/waiver-report/
+          retention-days: 90
 
   # ── P2 #704: Policy SSOT guard ───────────────────────────────────────────
   policy-ssot-guard:
@@ -353,3 +380,14 @@ jobs:
       - name: Check policy SSOT (no duplicate normative sections)
         # P2 advisory: duplicate policy is tech debt, not a blocking security violation
         run: bash scripts/ci/check-policy-ssot.sh || echo "::warning::P2-advisory: policy SSOT violations found \u2014 resolve before next release"
+  # ── P1 #703: Policy version integrity guard ──────────────────────────────
+  policy-version-integrity:
+    name: Policy runtime — version hash integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Validate policy-version.json SHA256 hashes
+        # P1 blocking: if settings.json or extensions-approved.json changed without
+        # updating policy-version.json, this detects the drift and blocks the merge.
+        run: bash scripts/ci/validate-policy-version.sh

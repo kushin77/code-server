@@ -31,6 +31,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
 
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
       - name: Run policy SSOT checker
         id: ssot
         continue-on-error: true
@@ -62,6 +67,31 @@ jobs:
               exit 1
             fi
           fi
+
+      - name: Enforce governance approval for policy changes
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          changed_governance_files=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- docs/governance || true)
+          if [[ -z "$changed_governance_files" ]]; then
+            echo "No governance policy files changed; approval gate skipped"
+            exit 0
+          fi
+
+          reviews_json=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews")
+          approvals=$(printf '%s' "$reviews_json" | jq '[.[] | select(.state == "APPROVED")] | length')
+
+          if [[ "$approvals" -lt 1 ]]; then
+            echo "Governance policy changes require at least one approved review"
+            echo "Changed files:"
+            echo "$changed_governance_files"
+            exit 1
+          fi
+
+          echo "Governance approval gate satisfied with $approvals approval(s)"
 
       - name: Report summary
         if: always()

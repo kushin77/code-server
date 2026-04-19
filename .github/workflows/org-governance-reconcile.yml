@@ -32,6 +32,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
 
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
       - name: Resolve target repo
         id: target
         run: |

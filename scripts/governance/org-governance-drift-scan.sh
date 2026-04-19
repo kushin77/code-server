@@ -16,6 +16,7 @@ ORG=""
 BASELINE_FILE=""
 REPORT_FILE=""
 NOW_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+WAIVER_REPO="${GOVERNANCE_WAIVER_REPO:-}"
 
 usage() {
   cat <<'EOF'
@@ -61,8 +62,21 @@ if [[ -z "$ORG" || -z "$BASELINE_FILE" || -z "$REPORT_FILE" ]]; then
   exit 1
 fi
 
+if [[ -z "$WAIVER_REPO" ]]; then
+  WAIVER_REPO="${ORG}/code-server"
+fi
+
 require_command "gh" "GitHub CLI is required"
 require_command "jq" "jq is required"
+
+GH_BIN="gh"
+if ! command -v "$GH_BIN" >/dev/null 2>&1; then
+  if command -v gh.exe >/dev/null 2>&1; then
+    GH_BIN="gh.exe"
+  else
+    log_fatal "GitHub CLI is required: gh (or gh.exe) not found"
+  fi
+fi
 
 if [[ ! -f "$BASELINE_FILE" ]]; then
   log_error "Baseline file not found: $BASELINE_FILE"
@@ -74,7 +88,68 @@ required_reviews="$(jq -r '.required_approving_review_count' "$BASELINE_FILE")"
 require_enforce_admins="$(jq -r '.enforce_admins' "$BASELINE_FILE")"
 require_conv_resolution="$(jq -r '.required_conversation_resolution' "$BASELINE_FILE")"
 
-repos="$(gh api orgs/"$ORG"/repos --paginate --jq '.[].name' 2>/dev/null || true)"
+is_blank_approval_field() {
+  local value="$1"
+  local compact="${value//[[:space:]]/}"
+  local trimmed="$value"
+  trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
+  trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+  [[ -z "$compact" || "$trimmed" == \<*\> || "$trimmed" =~ ^[Tt][Bb][Dd]$ || "$trimmed" =~ ^[Pp]ending$ ]]
+}
+
+has_valid_waiver_exception() {
+  local repo="$1"
+  local exception_json
+  local waiver_issue
+  local expires_at
+  local issue_json
+  local state
+  local labels
+  local body
+  local approved_by
+  local approval_date
+  local approval_signature
+
+  exception_json="$(jq -c --arg repo "$repo" '.exceptions[]? | select(.repo == $repo)' "$BASELINE_FILE" | head -n 1)"
+  [[ -z "$exception_json" ]] && return 1
+
+  waiver_issue="$(jq -r '.waiver_issue // 0' <<<"$exception_json")"
+  expires_at="$(jq -r '.expires_at // ""' <<<"$exception_json")"
+
+  if [[ "$waiver_issue" -le 0 || -z "$expires_at" || "$expires_at" < "$NOW_UTC" ]]; then
+    return 1
+  fi
+
+  issue_json="$("$GH_BIN" api repos/"$WAIVER_REPO"/issues/"$waiver_issue" 2>/dev/null || true)"
+  [[ -z "$issue_json" ]] && return 1
+
+  state="$(jq -r '.state // ""' <<<"$issue_json")"
+  labels="$(jq -r '[.labels[].name] | join(",")' <<<"$issue_json")"
+  body="$(jq -r '.body // ""' <<<"$issue_json")"
+  approved_by="$(printf '%s\n' "$body" | awk 'index($0, "- Approved by: ") == 1 { print substr($0, 16); exit }')"
+  approval_date="$(printf '%s\n' "$body" | awk 'index($0, "- Approval date (YYYY-MM-DD): ") == 1 { print substr($0, 31); exit }')"
+  approval_signature="$(printf '%s\n' "$body" | awk 'index($0, "- Approval signature (sha256:<64-hex>): ") == 1 { print substr($0, 42); exit }')"
+
+  if [[ "$state" != "open" ]]; then
+    return 1
+  fi
+
+  if [[ ",$labels," != *",waiver,"* || ",$labels," != *",governance,"* ]]; then
+    return 1
+  fi
+
+  if is_blank_approval_field "$approved_by" || is_blank_approval_field "$approval_date"; then
+    return 1
+  fi
+
+  if [[ ! "$approval_signature" =~ ^sha256:[a-fA-F0-9]{64}$ ]]; then
+    return 1
+  fi
+
+  return 0
+}
+
+repos="$("$GH_BIN" api orgs/"$ORG"/repos --paginate --jq '.[].name' 2>/dev/null || true)"
 if [[ -z "$repos" ]]; then
   log_error "No repositories found or missing org access for $ORG"
   exit 1
@@ -88,20 +163,24 @@ trap 'rm -f "$tmp_noncompliant" "$tmp_compliant" "$tmp_exceptions"' EXIT
 while IFS= read -r repo; do
   [[ -z "$repo" ]] && continue
 
-  if jq -e --arg repo "$repo" --arg now "$NOW_UTC" '.exceptions[]? | select(.repo == $repo and .waiver_issue > 0 and .expires_at > $now)' "$BASELINE_FILE" >/dev/null; then
+  if jq -e --arg repo "$repo" '.exceptions[]? | select(.repo == $repo)' "$BASELINE_FILE" >/dev/null; then
     waiver_issue="$(jq -r --arg repo "$repo" '.exceptions[] | select(.repo == $repo) | .waiver_issue' "$BASELINE_FILE")"
     expires_at="$(jq -r --arg repo "$repo" '.exceptions[] | select(.repo == $repo) | .expires_at' "$BASELINE_FILE")"
-    jq -n --arg repo "$repo" --arg waiver_issue "$waiver_issue" --arg expires_at "$expires_at" '{repo:$repo,waiver_issue:($waiver_issue|tonumber),expires_at:$expires_at}' >> "$tmp_exceptions"
+    if has_valid_waiver_exception "$repo"; then
+      jq -n --arg repo "$repo" --arg waiver_issue "$waiver_issue" --arg expires_at "$expires_at" '{repo:$repo,waiver_issue:($waiver_issue|tonumber),expires_at:$expires_at}' >> "$tmp_exceptions"
+      continue
+    fi
+    jq -n --arg repo "$repo" --arg waiver_issue "$waiver_issue" --arg expires_at "$expires_at" '{repo:$repo,reasons:[{invalid_waiver_exception:{waiver_issue:($waiver_issue|tonumber),expires_at:$expires_at,requirements:"open+approved+signed+labeled"}}]}' >> "$tmp_noncompliant"
     continue
   fi
 
-  default_branch="$(gh api repos/"$ORG"/"$repo" --jq '.default_branch' 2>/dev/null || true)"
+  default_branch="$("$GH_BIN" api repos/"$ORG"/"$repo" --jq '.default_branch' 2>/dev/null || true)"
   if [[ -z "$default_branch" || "$default_branch" == "null" ]]; then
     jq -n --arg repo "$repo" '{repo:$repo,reasons:["unable_to_read_default_branch"]}' >> "$tmp_noncompliant"
     continue
   fi
 
-  protection_json="$(gh api repos/"$ORG"/"$repo"/branches/"$default_branch"/protection 2>/dev/null || true)"
+  protection_json="$("$GH_BIN" api repos/"$ORG"/"$repo"/branches/"$default_branch"/protection 2>/dev/null || true)"
   if [[ -z "$protection_json" ]]; then
     jq -n --arg repo "$repo" --arg branch "$default_branch" '{repo:$repo,branch:$branch,reasons:["missing_branch_protection"]}' >> "$tmp_noncompliant"
     continue

@@ -1,0 +1,67 @@
+name: Governance Weekly Report
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  publish-weekly-governance-report:
+    name: Publish weekly governance report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Generate governance metrics and report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/governance/generate-monthly-report.sh
+          bash scripts/governance/generate-monthly-report.sh "${{ github.repository }}"
+          REPORT_FILE=$(ls -1 .github/reports/governance/governance_report_*.md | tail -n 1)
+          METRICS_FILE=$(ls -1 .github/reports/governance/governance_metrics_*.prom | tail -n 1)
+          {
+            echo "## Weekly Governance Report"
+            echo
+            cat "$REPORT_FILE"
+            echo
+            echo "### Metrics"
+            echo
+            echo '```prometheus'
+            cat "$METRICS_FILE"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload governance report artifacts
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        with:
+          name: governance-weekly-report
+          path: |
+            .github/reports/governance/governance_report_*.md
+            .github/reports/governance/governance_metrics_*.prom
+          if-no-files-found: error
+
+      - name: Post report to governance epic
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPORT_FILE=$(ls -1 .github/reports/governance/governance_report_*.md | tail -n 1)
+          gh issue comment 707 --repo "${{ github.repository }}" --body-file "$REPORT_FILE"

@@ -1,0 +1,61 @@
+name: Org Repo Onboarding Dispatch
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      window_minutes:
+        description: Lookback window for newly created repositories
+        required: false
+        default: '15'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch-onboarding-events:
+    name: Dispatch onboarding reconcile events
+    runs-on: ubuntu-latest
+    env:
+      GOVERNANCE_ORG: kushin77
+      CONTROL_REPO: kushin77/code-server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq gh
+
+      - name: Dispatch onboarding events for newly created repositories
+        env:
+          GH_TOKEN: ${{ secrets.ORG_GOVERNANCE_TOKEN }}
+          ORG_GOV_TOKEN: ${{ secrets.ORG_GOVERNANCE_TOKEN }}
+        run: |
+          if [[ -z "${ORG_GOV_TOKEN:-}" ]]; then
+            echo "ORG_GOVERNANCE_TOKEN is required"
+            exit 1
+          fi
+
+          window='15'
+          if [[ -n "${{ inputs.window_minutes }}" ]]; then
+            window='${{ inputs.window_minutes }}'
+          fi
+
+          chmod +x scripts/governance/dispatch-new-repo-onboarding.sh
+          bash scripts/governance/dispatch-new-repo-onboarding.sh \
+            --org "$GOVERNANCE_ORG" \
+            --control-repo "$CONTROL_REPO" \
+            --window-minutes "$window"
+
+      - name: Publish summary
+        if: always()
+        run: |
+          echo "## Org Repo Onboarding Dispatch" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Organization: $GOVERNANCE_ORG" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Control repo: $CONTROL_REPO" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Trigger: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"

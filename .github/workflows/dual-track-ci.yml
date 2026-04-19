@@ -162,7 +162,7 @@ jobs:
       - name: Install upstream with our overrides
         run: |
           cd "$UPSTREAM_DIR"
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
 
       - name: Build upstream (with our extensions)
         run: |

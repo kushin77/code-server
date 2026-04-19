@@ -49,6 +49,9 @@ Last Updated: 2026-04-18
 - Core domain-managed client enhancement stream is now consolidated under:
    - #751 EPIC (runtime transformation)
    - #752-#760 child implementation issues
+- Redeploy preflight hardening completed and validated on production host:
+   - commit `2ac5232f`: NAS export subpath gate (fail-fast before compose)
+   - commit `05cf1cf0`: dual-domain drift check alignment (`ide` + apex-aware)
 - Overlap cleanup completed for superseded issues:
    - #738 -> superseded by #759
    - #739 -> superseded by #756
@@ -73,8 +76,23 @@ Last Updated: 2026-04-18
 9. **#707 (EPIC)**: Repository onboarding and continuous compliance.
 10. **#742 (EPIC)**: Open-source control-plane adoption stream.
 
-### Stream D: Multi-Repo UX (execute after governance stabilizes)
-11. **#717 (EPIC)** with child features:
+### Stream D: Portal Control-Plane Delivery (execute under the Stream C parent epic)
+11. **#743**: Windows-DC to portal capability mapping and ownership matrix.
+12. **#744**: Backstage as primary portal control-plane UX.
+13. **#745**: Appsmith operator revoke + break-glass console.
+14. **#746**: Identity authority standardization (Keycloak/Auth + group claims).
+15. **#747**: OPA centralized policy decision point integration.
+16. **#748**: Vault adoption for policy-signing keys and secret lifecycle.
+
+### Stream E: Extension Governance and Conformance
+17. **#735 (EPIC)**: Portal-only extension governance for thin-client IDE.
+18. **#736**: Disable extension recommendations across role profiles.
+19. **#737**: Lock extension recommendation keys as immutable enterprise policy.
+20. **#759**: Harden extension supply chain and remove unmanaged marketplace paths.
+21. **#760**: Core conformance suite for domain-managed client behavior.
+
+### Stream F: Multi-Repo UX (execute after governance contracts stabilize)
+22. **#717 (EPIC)** with child features:
    - #718 instant repo switcher
    - #719 multi-repo home view
    - #720 session persistence and safe restore
@@ -85,8 +103,9 @@ Last Updated: 2026-04-18
 1. **Single authority first**: execute #700 and #704 before any new governance feature work.
 2. **Enforcement second**: land #701 then #702 so merge gates and branch rules enforce SSOT.
 3. **Runtime policy third**: execute #703 with #705 and #708 in that order.
-4. **Control-plane apps fourth**: execute #706 and #707, then align #742 on the same contracts.
-5. **UX last**: execute #717 and children (#718-#721) only after Stream A-C contracts are stable.
+4. **Control-plane apps fourth**: execute #706 and #707, then implement #742 through #743-#748 in order.
+5. **Extension governance fifth**: execute #735 with #736/#737 first, then #759/#760.
+6. **UX last**: execute #717 and children (#718-#721) only after Stream A-E contracts are stable.
 
 ### Debug/Triage Rule Set
 
@@ -137,5 +156,7 @@ Run overlap/staleness backlog guard:
 - Stream A done when #700/#704/#701/#702 are implemented with no policy-source duplication.
 - Stream B done when #703/#705/#708 enforce fail-closed decisions with auditable exceptions.
 - Stream C done when #706/#707/#742 use Stream A-B contracts without redefining schema/policy paths.
-- Stream D done when #717/#718/#719/#720/#721 ship without introducing alternate state stores or policy models.
+- Stream D done when #743/#744/#745/#746/#747/#748 are integrated without introducing a second policy authority.
+- Stream E done when #735/#736/#737/#759/#760 enforce portal-only extension policy with conformance evidence.
+- Stream F done when #717/#718/#719/#720/#721 ship without introducing alternate state stores or policy models.
 - No new loose root files are introduced in active branches.

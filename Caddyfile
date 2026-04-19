@@ -1,5 +1,6 @@
 {
     email {$ACME_EMAIL:admin@kushnir.cloud}
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
 }
 
 ide.kushnir.cloud, ide.kushnir.cloud:443 {

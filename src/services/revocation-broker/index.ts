@@ -38,6 +38,7 @@ export class RevocationBroker implements IRevocationBroker {
   private config: RevocationBrokerConfig
   private revocations: Map<string, RevocationEntry> = new Map() // revocationId → entry
   private cache: Map<string, RevocationCheckResult> = new Map() // targetId:scope → result
+  private cacheTimestamps: Map<string, number> = new Map() // targetId:scope → cachedAt
   private auditLog: RevocationAuditEvent[] = []
   private stats: RevocationStats = {
     totalRevocations: 0,
@@ -161,7 +162,12 @@ export class RevocationBroker implements IRevocationBroker {
     // Check cache
     if (this.config.cacheEnabled && options.atTimestamp === undefined) {
       const cached = this.cache.get(cacheKey)
-      if (cached && Date.now() - (cached.entry?.revokedAt || 0) < this.config.cacheTtlSeconds * 1000) {
+      const cachedAt = this.cacheTimestamps.get(cacheKey)
+      if (
+        cached &&
+        cachedAt !== undefined &&
+        Date.now() - cachedAt < this.config.cacheTtlSeconds * 1000
+      ) {
         return cached
       }
     }
@@ -207,6 +213,7 @@ export class RevocationBroker implements IRevocationBroker {
     // Cache result
     if (this.config.cacheEnabled && options.atTimestamp === undefined) {
       this.cache.set(cacheKey, result)
+      this.cacheTimestamps.set(cacheKey, Date.now())
     }
 
     return result
@@ -502,6 +509,7 @@ export class RevocationBroker implements IRevocationBroker {
   private invalidateCacheForTarget(targetId: string, scope: RevocationScope): void {
     const cacheKey = `${targetId}:${scope}`
     this.cache.delete(cacheKey)
+    this.cacheTimestamps.delete(cacheKey)
   }
 
   private recordAuditEvent(event: RevocationAuditEvent): void {

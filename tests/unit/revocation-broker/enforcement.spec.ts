@@ -378,17 +378,13 @@ describe("RevocationBroker - Strict Enforcement Tests", () => {
       const targetId = "cache-test-user@example.com"
       const scope = RevocationScope.USER
 
-      // First check (cache miss)
-      const start1 = performance.now()
-      await broker.checkRevocation({ targetId, scope })
-      const time1 = performance.now() - start1
+      // First check seeds cache.
+      const first = await broker.checkRevocation({ targetId, scope })
 
-      // Second check (cache hit)
-      const start2 = performance.now()
-      await broker.checkRevocation({ targetId, scope })
-      const time2 = performance.now() - start2
+      // Second check should hit cache and return same computed snapshot.
+      const second = await broker.checkRevocation({ targetId, scope })
 
-      expect(time2).toBeLessThanOrEqual(time1) // Cached should be faster or same
+      expect(second).toStrictEqual(first)
     })
 
     it("should invalidate cache when revocation is applied", async () => {

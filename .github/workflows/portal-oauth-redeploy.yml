@@ -71,14 +71,14 @@ jobs:
 
       - name: Authenticate to GCP via Workload Identity
         if: ${{ !inputs.dry_run && !hashFiles('.env') }}
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed
         with:
           workload_identity_provider: ${{ env.GCP_WIF_PROVIDER_RESOLVED }}
           service_account: ${{ secrets.GCP_SA }}
 
       - name: Setup gcloud CLI
         if: ${{ !inputs.dry_run && !hashFiles('.env') }}
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
 

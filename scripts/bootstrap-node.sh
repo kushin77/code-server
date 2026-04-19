@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# @file        scripts/bootstrap-node.sh
+# @module      operations/bootstrap
+# @description Bare-metal node bootstrap for primary/replica deployment nodes
+#
 ################################################################################
 # bootstrap-node.sh
 #
@@ -48,17 +52,12 @@ REPO_DIR="/opt/code-server"
 
 # Bootstrap stages
 BOOTSTRAP_STAGES=(
-    "validate-prerequisites"
-    "install-docker"
-    "clone-repository"
-    "load-inventory"
-    "configure-os"
-    "generate-certificates"
-    "register-dns"
-    "deploy-services"
-    "configure-replication"
-    "configure-keepalived"
-    "verify-health"
+    "validate_prerequisites"
+    "install_docker"
+    "clone_repository"
+    "load_inventory"
+    "deploy_services"
+    "verify_health"
 )
 
 # =============================================================================
@@ -120,7 +119,8 @@ validate_prerequisites() {
     fi
     
     # Check disk space
-    local available_gb=$(df /opt 2>/dev/null | awk 'NR==2 {print $4/1024/1024}' || echo 0)
+    local available_gb
+    available_gb=$(df /opt 2>/dev/null | awk 'NR==2 {print $4/1024/1024}' || echo 0)
     local required_gb=100
     
     if (( $(echo "$available_gb < $required_gb" | bc -l) )); then
@@ -310,6 +310,10 @@ main() {
     log_info "  Role: $ROLE"
     log_info "  Environment: $ENVIRONMENT"
     log_info "  Dry-run: $DRY_RUN"
+
+    if [[ "$VERBOSE" == true ]]; then
+        log_info "  Verbose: enabled"
+    fi
     
     local exit_code=0
     

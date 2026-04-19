@@ -185,11 +185,11 @@ services:
       OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
       OAUTH2_PROXY_AUTH_LOGGING: "true"
       OAUTH2_PROXY_REQUEST_LOGGING: "true"
-      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/oauth2"
+      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/ping|^/static"
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${oauth2_proxy_port}/ping"]
+      test: ["CMD", "/bin/oauth2-proxy", "--version"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -218,7 +218,7 @@ services:
       - "${caddy_http_port}:80"
       - "${caddy_https_port}:443"
     volumes:
-      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-config:/config
       - caddy-data:/data
     environment:

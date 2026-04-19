@@ -57,8 +57,8 @@ COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
 ## Local Development
 
 ```bash
-# Dev overlay — bypasses oauth2-proxy, exposes db ports
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# Dev overlay — start the core stack locally, then apply the documented development overlay if needed
+docker compose up -d
 ```
 
 ## Deployment
@@ -124,13 +124,13 @@ docker compose up -d --force-recreate code-server
 
 ## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md),
+See [ARCHITECTURE.md](docs/status/ARCHITECTURE.md),
 [ADR index](docs/adr/README.md), and
 [Cloudflare tunnel ADR](docs/adr/006-cloudflare-tunnel-architecture.md).
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and
+See [CONTRIBUTING.md](docs/status/CONTRIBUTING.md) and
 [GitHub Issues](https://github.com/kushin77/code-server/issues).
 
 ## Governance SSOT
@@ -142,4 +142,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and
 
 ## Monorepo Workspace
 
-- staged pnpm workspace plan: [docs/governance/elite-best-practices/monorepo-pnpm/MONOREPO-PNPM-PLAN.md](docs/governance/elite-best-practices/monorepo-pnpm/MONOREPO-PNPM-PLAN.md)
+- staged pnpm workspace plan: [docs/governance/elite-best-practices/monorepo/MONOREPO-PNPM-PLAN.md](docs/governance/elite-best-practices/monorepo/MONOREPO-PNPM-PLAN.md)

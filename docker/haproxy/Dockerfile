@@ -1,5 +1,7 @@
 FROM haproxy:2.8-alpine
 
+USER root
+
 RUN mkdir -p /usr/local/etc/haproxy/errors /run/haproxy && \
     chown -R haproxy:haproxy /run/haproxy
 
@@ -7,6 +9,8 @@ RUN mkdir -p /usr/local/etc/haproxy/errors /run/haproxy && \
 # but alpine variant might not have them in same place.
 # Using standard HTTP error pages.
 COPY config/haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+
+USER haproxy
 
 EXPOSE 80 443 8404
 

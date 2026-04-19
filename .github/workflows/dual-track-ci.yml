@@ -40,7 +40,7 @@ jobs:
     
     steps:
       - name: Checkout our fork with enhancement branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
@@ -52,18 +52,18 @@ jobs:
           echo "Upstream baseline: $(git rev-parse upstream/main | cut -c1-12)"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
           version: 9.15.4
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
 
       - name: Install dependencies (our fork, with our enhancements)
-        run: pnpm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build all apps (our features enabled)
         run: pnpm build
@@ -90,7 +90,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
           name: enhancement-track-results-${{ matrix.node-version }}
           path: test-results/
@@ -113,6 +113,8 @@ jobs:
   upstream-track:
     name: Upstream Compatibility Track
     runs-on: self-hosted
+    env:
+      UPSTREAM_DIR: /tmp/upstream-main-${{ matrix.node-version }}
     strategy:
       matrix:
         node-version: [18.x, 20.x]
@@ -120,19 +122,20 @@ jobs:
     steps:
       - name: Fetch latest upstream/main
         run: |
-          git clone --depth=1 https://github.com/coder/code-server.git /tmp/upstream-main
-          cd /tmp/upstream-main
+          rm -rf "$UPSTREAM_DIR"
+          git clone --depth=1 https://github.com/coder/code-server.git "$UPSTREAM_DIR"
+          cd "$UPSTREAM_DIR"
           echo "Upstream commit: $(git rev-parse HEAD | cut -c1-12)"
 
       - name: Checkout our fork (for test definitions + our overrides)
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           path: ./our-fork
           fetch-depth: 1
 
       - name: Merge our control-plane overrides onto upstream
         run: |
-          cd /tmp/upstream-main
+          cd "$UPSTREAM_DIR"
           
           # Copy our critical overrides (non-conflicting files)
           # - Extensions system
@@ -147,29 +150,29 @@ jobs:
           echo "Upstream with our overrides prepared"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
           version: 9.15.4
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ matrix.node-version }}
 
       - name: Install upstream with our overrides
         run: |
-          cd /tmp/upstream-main
-          pnpm ci
+          cd "$UPSTREAM_DIR"
+          pnpm install --no-frozen-lockfile
 
       - name: Build upstream (with our extensions)
         run: |
-          cd /tmp/upstream-main
+          cd "$UPSTREAM_DIR"
           pnpm build
 
       - name: Run contract tests against upstream
         # Contract tests validate that critical workflows still work
         run: |
-          cd /tmp/upstream-main
+          cd "$UPSTREAM_DIR"
           
           # Copy contract tests from our fork
           cp -r ../our-fork/pnpm-workspace.yaml . 2>/dev/null || true
@@ -194,12 +197,12 @@ jobs:
 
       - name: Upload contract test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
           name: upstream-track-results-${{ matrix.node-version }}
           path: |
-            /tmp/upstream-main/test-results/
-            /tmp/upstream-main/contract-summary.txt
+            ${{ env.UPSTREAM_DIR }}/test-results/
+            ${{ env.UPSTREAM_DIR }}/contract-summary.txt
           retention-days: 7
         continue-on-error: true
 
@@ -208,12 +211,12 @@ jobs:
         run: |
           echo "## Upstream Compatibility Track Results" >> $GITHUB_STEP_SUMMARY
           echo "- Node.js: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Latest upstream commit: $(cd /tmp/upstream-main && git rev-parse HEAD | cut -c1-12)" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest upstream commit: $(cd \"$UPSTREAM_DIR\" && git rev-parse HEAD | cut -c1-12)" >> $GITHUB_STEP_SUMMARY
           
           # Show contract test results
-          if [ -f /tmp/upstream-main/contract-summary.txt ]; then
+          if [ -f "$UPSTREAM_DIR/contract-summary.txt" ]; then
             echo "- Contract tests:" >> $GITHUB_STEP_SUMMARY
-            cat /tmp/upstream-main/contract-summary.txt | sed 's/^/  / ' >> $GITHUB_STEP_SUMMARY
+            cat "$UPSTREAM_DIR/contract-summary.txt" | sed 's/^/  / ' >> $GITHUB_STEP_SUMMARY
           fi
 
   # ============================================================================
@@ -228,7 +231,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Analyze results
         run: |
@@ -263,7 +266,7 @@ jobs:
 
       - name: Add PR comment with decision
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
         with:
           script: |
             const fs = require('fs');

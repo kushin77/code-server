@@ -20,7 +20,7 @@ phase_14_canary_percentage = 10
 # ──────────────────────────────────────────────────────────────────────────────
 
 production_primary_host = "192.168.168.31" # New primary (code-server-31)
-production_standby_host = "192.168.168.30" # Rollback target (code-server-30)
+production_standby_host = "192.168.168.42" # Replica/standby target (code-server-42)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SERVICE LEVEL OBJECTIVE TARGETS (Phase 13 Baseline + Buffer)
@@ -42,7 +42,7 @@ enable_auto_rollback = true # Automatic rollback on SLO breach
 #
 # Before applying, verify:
 #   1. Phase 13 Day 2 load test PASSING (all SLOs met for 24h)
-#   2. Standby host (192.168.168.30) healthy and in sync
+#   2. Standby host (192.168.168.42) healthy and in sync
 #   3. Team sign-offs complete (PO, DevOps, Performance, Ops)
 #   4. Rollback procedures tested and verified
 #   5. On-call engineer monitoring capacity confirmed
@@ -57,4 +57,5 @@ enable_auto_rollback = true # Automatic rollback on SLO breach
 #
 # Total Duration: ~3-4 hours active + 24-hour observation = ~1.5 days
 
-oauth2_proxy_cookie_secret = "72ZO5wAvWDtiygXQYZEu5WlUEjvjrilD"
+# NOTE: Do not commit secret values in tfvars.
+# Provide oauth2_proxy_cookie_secret at apply time from GSM or secure environment.

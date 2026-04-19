@@ -291,25 +291,25 @@ jobs:
               title: '🔴 CRITICAL: Production Redeploy Failed — Golden Rule Violated',
               body: `## Incident Report
 
-**Golden Rule Status**: 🔴 FAILED
+            **Golden Rule Status**: 🔴 FAILED
 
-The mandatory post-merge production redeploy has failed.
+            The mandatory post-merge production redeploy has failed.
 
-**Details**:
-- Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-- Commit: ${{ github.sha }}
-- Branch: ${{ github.ref_name }}
-- Triggered by: ${{ github.actor }}
+            **Details**:
+            - Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Triggered by: ${{ github.actor }}
 
-**Impact**: Production may be running stale code. Previous deployment may still be active.
+            **Impact**: Production may be running stale code. Previous deployment may still be active.
 
-**Required Actions**:
-1. [ ] Investigate workflow logs for root cause
-2. [ ] Manually verify production health
-3. [ ] Manually trigger redeploy if necessary
-4. [ ] Update status once resolved
+            **Required Actions**:
+            1. [ ] Investigate workflow logs for root cause
+            2. [ ] Manually verify production health
+            3. [ ] Manually trigger redeploy if necessary
+            4. [ ] Update status once resolved
 
-**Golden Rule Reminder**: After every successful merge to main, code MUST be redeployed to production automatically. No exceptions.`,
+            **Golden Rule Reminder**: After every successful merge to main, code MUST be redeployed to production automatically. No exceptions.`,
               labels: ['P0', 'production', 'golden-rule-violation'],
               assignees: ['@kushin77']  // Assign to ops/infra team
             });

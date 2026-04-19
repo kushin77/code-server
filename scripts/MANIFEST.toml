@@ -3,6 +3,18 @@
 # Status: active | deprecated | historical | experimental
 
 [[script]]
+file     = "_template.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "admin-dev-tools-add.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "apply-governance.sh"
 category = "uncategorized"
 status   = "active"
@@ -93,6 +105,18 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "configure-audit-logging-phase4.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-google-oauth-uris.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "configure-oidc-phase1.sh"
 category = "uncategorized"
 status   = "active"
@@ -105,7 +129,25 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "configure-rbac-enforcement-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "configure-workload-federation-phase1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "configure-workload-federation-phase2.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-code-server-image.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -135,16 +177,34 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "deploy.sh"
+file     = "deploy-oidc-issuer-phase2-1.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
-file     = "deploy/redeploy-portal-oauth-routing.sh"
-category = "deployment"
+file     = "deploy-oidc-issuer-phase2-v2.sh"
+category = "uncategorized"
 status   = "active"
-purpose  = "idempotently redeploy portal oauth routing on the primary host"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-rbac-enforcement-docker-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-rbac-enforcement-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "deployment-validation-31.sh"
@@ -177,6 +237,12 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "e2e-test-suite.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "enforce-governance.sh"
 category = "uncategorized"
 status   = "active"
@@ -184,12 +250,18 @@ purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "error-triage-engine.sh"
-category = "operations"
+category = "uncategorized"
 status   = "active"
-purpose  = "Automated error pattern detection and GitHub issue creation for recurring errors"
+purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "fetch-gsm-secrets.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "fix-metadata-headers.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -255,13 +327,31 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "memory-budget-guard.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "memory-monitor.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "monitor-disk-space.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "nas-mount-31.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "nas-workspace-health.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -297,6 +387,12 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "phase-2-sanity-check.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "phase-22-batch-4-5-automation.sh"
 category = "uncategorized"
 status   = "active"
@@ -304,6 +400,18 @@ purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "phase-23-deploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-7c-disaster-recovery-test.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "phase-7e-chaos-testing.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -375,7 +483,25 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "setup-cloudflare-access.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "setup-cloudflare-tunnel.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "setup-git-credentials.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "setup-vault-secrets.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -388,6 +514,12 @@ purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "tier-2-master-orchestrator.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-config-ssot.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -411,6 +543,30 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "validate-oauth-config.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-oidc-issuer-phase2-1.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-rbac-enforcement-docker-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "validate-rbac-enforcement-phase3.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "validate-topology.sh"
 category = "uncategorized"
 status   = "active"
@@ -418,6 +574,12 @@ purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "validate.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "vpn-endpoint-testing.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -451,55 +613,4 @@ file     = "vscode-memory-dashboard.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
-
-[[script]]
-file     = "configure-rbac-enforcement-phase3.sh"
-category = "P1 #388 Phase 3"
-status   = "active"
-purpose  = "Generate RBAC enforcement configuration (Caddyfile JWT middleware, policies, audit logging)"
-
-[[script]]
-file     = "vpn-endpoint-testing.sh"
-category = "operations"
-status   = "active"
-purpose  = "Test VPN endpoint connectivity and service health"
-
-# ════════════════════════════════════════════════════════════════════════════
-# Dockerfile Registry — OCI image build targets
-# ════════════════════════════════════════════════════════════════════════════
-
-[[dockerfile]]
-file        = "Dockerfile"
-category    = "ci-runner"
-status      = "active"
-base        = "ubuntu:22.04"
-purpose     = "CI pre-commit runner for linting, shellcheck, and governance hooks"
-
-[[dockerfile]]
-file        = "Dockerfile.caddy"
-category    = "proxy"
-status      = "active"
-base        = "caddy:2.9.1"
-purpose     = "Caddy v2 reverse proxy and TLS termination for on-prem stack"
-
-[[dockerfile]]
-file        = "Dockerfile.code-server"
-category    = "ide"
-status      = "active"
-base        = "codercom/code-server:${CODE_SERVER_VERSION}"
-purpose     = "Production VS Code server with Copilot extensions and enterprise auth patches"
-
-[[dockerfile]]
-file        = "Dockerfile.ssh-proxy"
-category    = "proxy"
-status      = "active"
-base        = "python:3.11-slim"
-purpose     = "SSH proxy service with comprehensive audit logging"
-
-[[dockerfile]]
-file        = "Dockerfile.token-microservice"
-category    = "auth"
-status      = "active"
-base        = "python:3.11-slim"
-purpose     = "JWT token microservice for service-to-service authentication (P1 #388 Phase 2)"
 

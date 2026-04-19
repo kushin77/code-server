@@ -1,3 +1,7 @@
+# DEPRECATED: Windows PowerShell script retained for historical reference only.
+# Use Linux-native automation paths under scripts/operations and scripts/health.
+# See CONTRIBUTING.md#windows-policy and issue #398.
+#
 # Phase 2 Sanity Check (PowerShell)
 # Validates Phase 2 session-broker integration
 

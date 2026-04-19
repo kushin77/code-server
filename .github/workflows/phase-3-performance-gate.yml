@@ -18,7 +18,10 @@ jobs:
       - name: Check PR for Phase 3 completion
         id: check-phase-3
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          BODY=$(cat <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          )
           
           # Check if this is a trivial change (skip Phase 3)
           if echo "$BODY" | grep -q "^\- \[x\] Documentation change only" || \
@@ -92,7 +95,10 @@ jobs:
       - name: Check for Phase 3 operational readiness items
         id: check-operational
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          BODY=$(cat <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          )
           
           # Check for deployment strategy documented
           if echo "$BODY" | grep -q "Deployment strategy:"; then

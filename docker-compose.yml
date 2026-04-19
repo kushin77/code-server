@@ -184,8 +184,8 @@ services:
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
       OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
-      OAUTH2_PROXY_COOKIE_DOMAINS: "ide.kushnir.cloud,.ide.kushnir.cloud"
-      OAUTH2_PROXY_WHITELIST_DOMAINS: "ide.kushnir.cloud,.ide.kushnir.cloud"
+      OAUTH2_PROXY_COOKIE_DOMAINS: "${IDE_DOMAIN:-ide.kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: "${IDE_DOMAIN:-ide.kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
       OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
       OAUTH2_PROXY_COOKIE_REFRESH: "15m"
       OAUTH2_PROXY_REVERSE_PROXY: "true"
@@ -205,7 +205,7 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:4180/ping || exit 1"]
+      test: ["CMD", "/bin/oauth2-proxy", "--version"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -219,10 +219,10 @@ services:
         max-file: "3"
 
   # ────────────────────────────────────────────────────────────────────────────
-  # oauth2-proxy-portal — Google OIDC gate for kushnir.cloud portal (via Appsmith)
+  # oauth2-proxy-portal — Google OIDC gate for portal domain (via Appsmith)
   # Issue #688: Split OAuth callback — enables separate redirect URLs for apex vs. IDE
   # Redeploy: pnpm redeploy:portal-oauth OR manually trigger portal-oauth-redeploy.yml
-  # Callback: https://kushnir.cloud/oauth2/callback (different from IDE: https://ide.kushnir.cloud/oauth2/callback)
+  # Callback: https://${DOMAIN}/oauth2/callback (different from IDE: https://${IDE_DOMAIN}/oauth2/callback)
   # ────────────────────────────────────────────────────────────────────────────
   oauth2-proxy-portal:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
@@ -237,8 +237,8 @@ services:
     environment:
       # Portal uses the same Google OAuth app as IDE
       # IMPORTANT: Both redirect URIs must be registered in Google Cloud Console OAuth app:
-      #   - https://ide.kushnir.cloud/oauth2/callback (IDE)
-      #   - https://kushnir.cloud/oauth2/callback (Portal)
+      #   - https://${IDE_DOMAIN}/oauth2/callback (IDE)
+      #   - https://${DOMAIN}/oauth2/callback (Portal)
       OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
       OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
@@ -247,7 +247,7 @@ services:
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
       OAUTH2_PROXY_OIDC_AUDIENCE: "${GOOGLE_CLIENT_ID}"
       OAUTH2_PROXY_SCOPE: "openid profile email"
-      OAUTH2_PROXY_REDIRECT_URL: "https://kushnir.cloud/oauth2/callback"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
       # Allow any Google domain to complete OAuth; authenticated-emails-file remains the real gate.
       # This prevents Google from returning org_internal 403 before our explicit allowlist is checked.
@@ -259,8 +259,8 @@ services:
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
       OAUTH2_PROXY_COOKIE_SAMESITE: "none"
-      OAUTH2_PROXY_COOKIE_DOMAINS: "kushnir.cloud,.kushnir.cloud"
-      OAUTH2_PROXY_WHITELIST_DOMAINS: "kushnir.cloud,.kushnir.cloud"
+      OAUTH2_PROXY_COOKIE_DOMAINS: "${DOMAIN:-kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: "${DOMAIN:-kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
       OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
       OAUTH2_PROXY_COOKIE_REFRESH: "15m"
       OAUTH2_PROXY_REVERSE_PROXY: "true"
@@ -272,6 +272,9 @@ services:
       OAUTH2_PROXY_PROMPT: "select_account"
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
       OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      # Appsmith redirects static assets when upstream Host is kushnir.cloud over internal HTTP.
+      # Keep public host at edge, but present upstream host as appsmith:80 to avoid self-redirect loops.
+      OAUTH2_PROXY_PASS_HOST_HEADER: "false"
       OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
       OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
       OAUTH2_PROXY_AUTH_LOGGING: "true"
@@ -280,7 +283,7 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:4181/ping || exit 1"]
+      test: ["CMD", "/bin/oauth2-proxy", "--version"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -312,7 +315,7 @@ services:
     user: "0:0"
     environment:
       - LOG_LEVEL=${SESSION_BROKER_LOG_LEVEL:-info}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:-codeserver-local}@postgres:5432/${POSTGRES_DB:-codeserver}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-codeserver}
       - CODE_SERVER_IMAGE_ID=code-server-enterprise:dev
       - SESSION_CPU_LIMIT=${SESSION_CPU_LIMIT:-2.0}
       - SESSION_MEMORY_LIMIT=${SESSION_MEMORY_LIMIT:-4g}
@@ -357,7 +360,7 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     environment:
-      - DOMAIN=kushnir.cloud
+      - DOMAIN=${DOMAIN:-kushnir.cloud}
       - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}
       - ACME_AGREE=true
     healthcheck:
@@ -389,7 +392,7 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-codeserver}
       - POSTGRES_USER=${POSTGRES_USER:-codeserver}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-codeserver-local}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -429,7 +432,7 @@ services:
       - DATABASES_HOST=postgres
       - DATABASES_PORT=5432
       - DATABASES_USER=${POSTGRES_USER:-codeserver}
-      - DATABASES_PASSWORD=${POSTGRES_PASSWORD:-codeserver-local}
+      - DATABASES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       - DATABASES_DBNAME=${POSTGRES_DB:-codeserver}
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=500
@@ -587,7 +590,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set}
       - GF_SECURITY_ADMIN_USER=admin
       - GF_AUTH_ANONYMOUS_ENABLED=false
       - GF_SERVER_ROOT_URL=http://${DEPLOY_HOST:-localhost}:3000
@@ -681,7 +684,7 @@ services:
 
 
   # appsmith - Admin portal (Appsmith CE), profile: portal
-  # kushnir.cloud routes here via Caddy
+  # Routes via Caddy using ${DOMAIN:-kushnir.cloud}
   appsmith:
     image: appsmith/appsmith-ce:v1.47
     container_name: appsmith
@@ -694,8 +697,8 @@ services:
       - APPSMITH_FORM_LOGIN_DISABLED=true
       - APPSMITH_OAUTH2_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - APPSMITH_BASE_URL=https://kushnir.cloud
-      - APPSMITH_CUSTOM_DOMAIN=kushnir.cloud
+      - APPSMITH_BASE_URL=https://${DOMAIN:-kushnir.cloud}
+      - APPSMITH_CUSTOM_DOMAIN=${DOMAIN:-kushnir.cloud}
       - APPSMITH_ADMIN_EMAILS=${APPSMITH_ADMIN_EMAILS:-akushnir@bioenergystrategies.com}
     expose:
       - "80"

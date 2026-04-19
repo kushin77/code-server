@@ -385,7 +385,7 @@ jobs:
 
       - name: Upload waiver audit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
           name: waiver-audit-report
           path: /tmp/waiver-report/
@@ -400,7 +400,9 @@ jobs:
 
       - name: Check policy SSOT (no duplicate normative sections)
         # P2 advisory: duplicate policy is tech debt, not a blocking security violation
-        run: bash scripts/ci/check-policy-ssot.sh || echo "::warning::P2-advisory: policy SSOT violations found \u2014 resolve before next release"
+        run: |
+          bash scripts/ci/check-policy-ssot.sh || \
+            echo "::warning::P2-advisory: policy SSOT violations found - resolve before next release"
   # ── P1 #703: Policy version integrity guard ──────────────────────────────
   policy-version-integrity:
     name: Policy runtime — version hash integrity

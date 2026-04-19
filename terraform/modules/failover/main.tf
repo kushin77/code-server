@@ -182,7 +182,7 @@ resource "kubernetes_stateful_set" "postgres" {
 
           env {
             name  = "POSTGRES_PASSWORD"
-            value = "change-me-in-production"
+            value = var.postgres_password
           }
 
           env {
@@ -325,7 +325,7 @@ resource "kubernetes_cron_job_v1" "postgres_backup" {
 
               env {
                 name  = "PGPASSWORD"
-                value = "change-me-in-production"
+                value = var.postgres_password
               }
 
               command = [

@@ -29,6 +29,7 @@ declare -a SSOT_FILES=(
 
 # Directory prefixes to skip for domain/IP checks (config definitions, not scripts)
 declare -a SKIP_DIRS=(
+    "docs/configs/"
     "config/"
     "docker/configs/"
     "environments/"

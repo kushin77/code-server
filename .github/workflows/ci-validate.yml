@@ -385,7 +385,7 @@ jobs:
 
       - name: Upload waiver audit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
           name: waiver-audit-report
           path: /tmp/waiver-report/

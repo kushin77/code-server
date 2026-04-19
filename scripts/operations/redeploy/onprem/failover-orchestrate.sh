@@ -41,6 +41,7 @@ LOCK_HOST=""
 INGRESS_PROBE_ATTEMPTS="${INGRESS_PROBE_ATTEMPTS:-8}"
 INGRESS_PROBE_DELAY="${INGRESS_PROBE_DELAY:-2}"
 INGRESS_PROBE_CONSECUTIVE_OK="${INGRESS_PROBE_CONSECUTIVE_OK:-2}"
+VIP_IP="${VIP_IP:-192.168.168.30}"
 
 usage() {
   cat <<'EOF'
@@ -226,6 +227,67 @@ replica_ingress_health() {
   return 1
 }
 
+host_has_vip() {
+  local host="$1"
+  if [[ "$host" == "$PRIMARY_HOST" ]]; then
+    run_primary_cmd "ip -4 -br a | grep -q '${VIP_IP}'"
+  else
+    run_replica_cmd "ip -4 -br a | grep -q '${VIP_IP}'"
+  fi
+}
+
+current_vip_owner() {
+  if host_has_vip "$PRIMARY_HOST" >/dev/null 2>&1; then
+    echo "$PRIMARY_HOST"
+    return 0
+  fi
+  if host_has_vip "$REPLICA_HOST" >/dev/null 2>&1; then
+    echo "$REPLICA_HOST"
+    return 0
+  fi
+  echo "none"
+}
+
+set_keepalived_state() {
+  local host="$1"
+  local action="$2"
+
+  if [[ "$host" == "$PRIMARY_HOST" ]]; then
+    run_primary_cmd "docker ${action} keepalived >/dev/null 2>&1 || true"
+  else
+    run_replica_cmd "docker ${action} keepalived >/dev/null 2>&1 || true"
+  fi
+}
+
+enforce_vip_owner() {
+  local expected_host="$1"
+  local current_owner
+  local i
+
+  current_owner="$(current_vip_owner)"
+  if [[ "$current_owner" == "$expected_host" ]]; then
+    return 0
+  fi
+
+  if [[ "$expected_host" == "$REPLICA_HOST" ]]; then
+    set_keepalived_state "$PRIMARY_HOST" stop
+    set_keepalived_state "$REPLICA_HOST" start
+  else
+    set_keepalived_state "$REPLICA_HOST" stop
+    set_keepalived_state "$PRIMARY_HOST" start
+  fi
+
+  for i in $(seq 1 20); do
+    current_owner="$(current_vip_owner)"
+    if [[ "$current_owner" == "$expected_host" ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  log_fatal "VIP owner did not converge to ${expected_host}; current owner is ${current_owner}"
+}
+
 acquire_lock() {
   run_primary_cmd "set -euo pipefail; if mkdir '${LOCK_DIR}' 2>/dev/null; then printf '%s\\n' '$$' > '${LOCK_DIR}/owner.pid'; echo LOCK_OK; else echo LOCK_BUSY; exit 2; fi"
   LOCK_HOST="$PRIMARY_HOST"
@@ -339,13 +401,21 @@ assert_post_cycle_state() {
   primary_health >/dev/null || log_fatal "Post-cycle integrity check failed: primary health is not healthy"
   replica_health >/dev/null || log_fatal "Post-cycle integrity check failed: replica health is not healthy"
   replica_ingress_health >/dev/null || log_fatal "Post-cycle integrity check failed: replica ingress check failed"
+  local vip_owner
+  vip_owner="$(current_vip_owner)"
+  if [[ "$vip_owner" != "$expected_active_host" ]]; then
+    log_fatal "Post-cycle integrity check failed: VIP owner '${vip_owner}' != expected '${expected_active_host}'"
+  fi
 }
 
 status_report() {
   log_section "Failover Status"
   local active_marker
+  local vip_owner
   active_marker="$(run_primary_cmd "cat ${ACTIVE_HOST_STATE_FILE} 2>/dev/null || echo ${PRIMARY_HOST}")"
+  vip_owner="$(current_vip_owner)"
   log_info "Active host marker: ${active_marker}"
+  log_info "VIP owner: ${vip_owner}"
   log_info "Primary health: $(primary_health)"
   log_info "Replica health: $(replica_health)"
   log_info "Replica ingress check: $(replica_ingress_health || true)"
@@ -356,6 +426,7 @@ promote_replica() {
   run_replica_promote
   replica_health >/dev/null
   write_active_host_marker "$REPLICA_HOST" >/dev/null
+  enforce_vip_owner "$REPLICA_HOST"
   assert_post_cycle_state "$REPLICA_HOST"
   log_success "Replica promotion gates passed and active marker updated"
 }
@@ -369,6 +440,7 @@ failback_primary() {
     primary_health >/dev/null
   fi
   write_active_host_marker "$PRIMARY_HOST" >/dev/null
+  enforce_vip_owner "$PRIMARY_HOST"
   assert_post_cycle_state "$PRIMARY_HOST"
   log_success "Primary failback gates passed and active marker updated"
 }

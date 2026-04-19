@@ -358,10 +358,7 @@ jobs:
             p0_shellcheck_violation_blocks)
               sudo apt-get update
               sudo apt-get install -y shellcheck
-              cat > /tmp/p0-shellcheck-synthetic.sh <<'EOF'
-              #!/usr/bin/env bash
-              echo ${UNQUOTED}
-              EOF
+              printf '%s\n' '#!/usr/bin/env bash' 'echo ${UNQUOTED}' > /tmp/p0-shellcheck-synthetic.sh
               set +e
               shellcheck /tmp/p0-shellcheck-synthetic.sh
               rc=$?
@@ -373,14 +370,13 @@ jobs:
               ;;
 
             p0_failopen_guard_detects_violation)
-              cat > /tmp/fail-open-synthetic.yml <<'EOF'
-              jobs:
-                sample:
-                  steps:
-                    - name: "[P0] Synthetic step"
-                      continue-on-error: true
-                      run: echo fail-open
-              EOF
+              printf '%s\n' \
+                'jobs:' \
+                '  sample:' \
+                '    steps:' \
+                '      - name: "[P0] Synthetic step"' \
+                '        continue-on-error: true' \
+                '        run: echo fail-open' > /tmp/fail-open-synthetic.yml
               set +e
               awk '
                 /- name: "\[P0\]/ { in_p0=1; step=$0; next }

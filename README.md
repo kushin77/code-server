@@ -57,8 +57,8 @@ COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
 ## Local Development
 
 ```bash
-# Dev overlay — bypasses oauth2-proxy, exposes db ports
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# Dev overlay — start the core stack locally, then apply the documented development overlay if needed
+docker compose up -d
 ```
 
 ## Deployment

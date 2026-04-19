@@ -123,6 +123,8 @@ store_secrets() {
   local oauth_cookie_secret="${OAUTH2_PROXY_COOKIE_SECRET:?OAUTH2_PROXY_COOKIE_SECRET required}"
   local grafana_password="${GRAFANA_PASSWORD:?GRAFANA_PASSWORD required}"
   local github_token="${GITHUB_TOKEN:?GITHUB_TOKEN required}"
+  local redis_password="${REDIS_PASSWORD:?REDIS_PASSWORD required}"
+  local kong_database_password="${KONG_DATABASE_PASSWORD:?KONG_DATABASE_PASSWORD required}"
   
   # Store PostgreSQL credentials
   vault kv put secret/code-server/postgres \
@@ -149,6 +151,16 @@ store_secrets() {
   vault kv put secret/code-server/grafana \
     admin_password="$grafana_password"
   log_success "✓ Grafana credentials stored"
+
+  # Store Redis credentials
+  vault kv put secret/code-server/redis \
+    password="$redis_password"
+  log_success "✓ Redis password stored"
+
+  # Store Kong database credentials
+  vault kv put secret/code-server/kong \
+    password="$kong_database_password"
+  log_success "✓ Kong database password stored"
   
   # Store GitHub token
   vault kv put secret/code-server/github \
@@ -229,6 +241,16 @@ validate_vault() {
     return 1
   }
 
+  vault kv get secret/code-server/redis >/dev/null || {
+    log_error "Redis secrets not found"
+    return 1
+  }
+
+  vault kv get secret/code-server/kong >/dev/null || {
+    log_error "Kong database secrets not found"
+    return 1
+  }
+
   vault kv get secret/code-server/github >/dev/null || {
     log_error "GitHub token secret not found"
     return 1
@@ -255,6 +277,9 @@ rotate_secrets() {
     database="code_server"
   
   log_success "✓ PostgreSQL password rotated"
+
+  # Redis and Kong database passwords are rotated separately once dependent
+  # services have rotation-aware restart hooks.
   
   # TODO: Update password in database
   # docker exec postgres psql -U postgres -c "ALTER USER code_server WITH PASSWORD '$new_password';"

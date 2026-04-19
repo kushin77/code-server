@@ -212,11 +212,27 @@ GOOGLE_CLIENT_ID=$${var.google_client_id}
 GOOGLE_CLIENT_SECRET=$${var.google_client_secret}
 OAUTH2_PROXY_COOKIE_SECRET=$${var.oauth2_proxy_cookie_secret}
 
+# Application/data passwords
+POSTGRES_PASSWORD=$${var.postgres_password}
+GRAFANA_PASSWORD=$${var.grafana_admin_password}
+REDIS_PASSWORD=$${var.redis_password}
+
 # Domain routing
 DOMAIN=$${var.domain}
 
 # GitHub token (optional, for higher rate limits)
 GITHUB_TOKEN=$${var.github_token}
+
+# Terraform input passthrough for downstream tooling and re-apply workflows
+TF_VAR_code_server_password=$${var.code_server_password}
+TF_VAR_google_client_id=$${var.google_client_id}
+TF_VAR_google_client_secret=$${var.google_client_secret}
+TF_VAR_oauth2_proxy_cookie_secret=$${var.oauth2_proxy_cookie_secret}
+TF_VAR_github_token=$${var.github_token}
+TF_VAR_postgres_password=$${var.postgres_password}
+TF_VAR_grafana_admin_password=$${var.grafana_admin_password}
+TF_VAR_redis_password=$${var.redis_password}
+TF_VAR_kong_database_password=$${var.kong_database_password}
 
 # Workspace volume mount
 WORKSPACE_PATH=$${local.storage.workspace_dir}

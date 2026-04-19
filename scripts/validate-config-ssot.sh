@@ -23,6 +23,12 @@ source "$SCRIPT_DIR/_common/init.sh"
 FIX_MODE=false
 EXIT_CODE=0
 
+EXPECTED_POSTGRES_DB="${EXPECTED_POSTGRES_DB:-code_server}"
+EXPECTED_POSTGRES_USER="${EXPECTED_POSTGRES_USER:-code_server}"
+EXPECTED_NAS_HOST="${EXPECTED_NAS_HOST:-192.168.168.56}"
+EXPECTED_DEPLOY_HOST="${EXPECTED_DEPLOY_HOST:-192.168.168.31}"
+EXPECTED_STANDBY_HOST="${EXPECTED_STANDBY_HOST:-192.168.168.42}"
+
 [[ "${1:-}" == "--fix" ]] && FIX_MODE=true
 [[ "${1:-}" == "--check-only" ]] && FIX_MODE=false
 
@@ -74,9 +80,28 @@ check_config_conflict() {
 load_env_file() {
   local env_file="$1"
   if [[ -f "$env_file" ]]; then
-    set -a  # export all variables
-    source "$env_file"
-    set +a
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line%$'\r'}"
+      [[ -z "$line" ]] && continue
+      [[ "$line" =~ ^[[:space:]]*# ]] && continue
+      [[ "$line" != *=* ]] && continue
+
+      local key="${line%%=*}"
+      local value="${line#*=}"
+
+      key="$(echo "$key" | xargs)"
+      value="${value#\"}"
+      value="${value%\"}"
+      value="${value#\'}"
+      value="${value%\'}"
+
+      if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+        if readonly -p 2>/dev/null | grep -q "[[:space:]]$key="; then
+          continue
+        fi
+        export "$key=$value"
+      fi
+    done < "$env_file"
     log_info "Loaded: $env_file"
   else
     log_warn "Not found: $env_file"
@@ -100,19 +125,28 @@ log_info "Validating 16 configuration conflicts..."
 log_info ""
 
 # 1. Database Configuration
-if [[ "${POSTGRES_DB:-}" != "code_server" ]]; then
-  log_error "INVALID DATABASE NAME: ${POSTGRES_DB} (expected: code_server)"
+if [[ "${POSTGRES_DB:-}" != "$EXPECTED_POSTGRES_DB" ]]; then
+  log_error "INVALID DATABASE NAME: ${POSTGRES_DB:-<unset>} (expected: $EXPECTED_POSTGRES_DB)"
   EXIT_CODE=1
 fi
 
-if [[ "${POSTGRES_USER:-}" != "code_server" ]]; then
-  log_error "INVALID POSTGRES USER: ${POSTGRES_USER} (expected: code_server)"
+if [[ "${POSTGRES_USER:-}" != "$EXPECTED_POSTGRES_USER" ]]; then
+  log_error "INVALID POSTGRES USER: ${POSTGRES_USER:-<unset>} (expected: $EXPECTED_POSTGRES_USER)"
   EXIT_CODE=1
 fi
 
 # 2. NAS Configuration
-if [[ "${NAS_HOST:-}" != "192.168.168.56" ]]; then
-  log_warn "NAS_HOST is ${NAS_HOST} (expected: 192.168.168.56) — if intentional, OK"
+if [[ "${NAS_HOST:-}" != "$EXPECTED_NAS_HOST" ]]; then
+  log_warn "NAS_HOST is ${NAS_HOST:-<unset>} (expected: $EXPECTED_NAS_HOST) — if intentional, OK"
+fi
+
+# 2b. Host Topology Configuration
+if [[ -n "${DEPLOY_HOST:-}" && "${DEPLOY_HOST}" != "$EXPECTED_DEPLOY_HOST" ]]; then
+  log_warn "DEPLOY_HOST is ${DEPLOY_HOST} (expected: $EXPECTED_DEPLOY_HOST)"
+fi
+
+if [[ -n "${STANDBY_HOST:-}" && "${STANDBY_HOST}" != "$EXPECTED_STANDBY_HOST" ]]; then
+  log_warn "STANDBY_HOST is ${STANDBY_HOST} (expected: $EXPECTED_STANDBY_HOST)"
 fi
 
 # 3. Image Version Checks
@@ -138,12 +172,40 @@ if grep -R -nE "192\.168\.168\.(10|11|12)" scripts --include='*.sh' 2>/dev/null 
   log_warn "Found hardcoded IPs in scripts (should use env vars)"
 fi
 
-# 6. Secret Checks (these should NOT be in .env files)
-if grep -qE "POSTGRES_PASSWORD=|CODE_SERVER_PASSWORD=|GOOGLE_CLIENT_SECRET=|GITHUB_TOKEN=" .env 2>/dev/null || true; then
-  log_error "SECURITY ISSUE: Secrets found in .env file"
-  log_error "  Move to Vault (on-prem) or GSM (production)"
-  EXIT_CODE=1
-fi
+# 6. Secret Checks (these should NOT be in tracked .env files)
+detect_real_secret_values() {
+  local file_path="$1"
+  [[ ! -f "$file_path" ]] && return 0
+
+  while IFS= read -r secret_line; do
+    local key_name="${secret_line%%=*}"
+    local value="${secret_line#*=}"
+    value="$(echo "$value" | xargs)"
+
+    # Ignore secret reference metadata keys (identifier names, not secret values)
+    if [[ "$key_name" =~ (_SECRET_NAME|_TOKEN_NAME|_KEY_NAME|_PROJECT|_PATH)$ ]]; then
+      continue
+    fi
+
+    # Allowed placeholder styles and variable references
+    if [[ -z "$value" ]] || [[ "$value" =~ ^(REDACTED|YOUR-|CHANGEME|example|placeholder) ]] || [[ "$value" =~ ^\$\{[A-Z0-9_]+\}$ ]]; then
+      continue
+    fi
+
+    # Allow legacy test defaults only in defaults/template files
+    if [[ "$file_path" =~ \.env\.(defaults|template)$ ]] && [[ "$value" =~ ^(postgres|minioadmin|0123456789abcdef0123456789abcdef)$ ]]; then
+      continue
+    fi
+
+    log_error "SECURITY ISSUE: Possible real secret value in $file_path:$secret_line"
+    EXIT_CODE=1
+  done < <(grep -nE '^[A-Z0-9_]*(PASSWORD|SECRET|TOKEN|KEY)[A-Z0-9_]*=' "$file_path" 2>/dev/null || true)
+}
+
+detect_real_secret_values ".env"
+detect_real_secret_values ".env.production"
+detect_real_secret_values ".env.defaults"
+detect_real_secret_values ".env.template"
 
 # ════════════════════════════════════════════════════════════════════════════
 # Summary

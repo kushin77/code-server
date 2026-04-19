@@ -46,6 +46,7 @@ jobs:
 
           allowlisted_new_root_files=(
             ".env.example"
+            ".env.template"
             ".npmrc"
             ".gitleaks.toml"
             ".gitignore"
@@ -115,7 +116,7 @@ jobs:
           is_scripts_depth_exempt() {
             local path="$1"
             case "$path" in
-              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/*-entrypoint.ps1|scripts/dev/start-work-from-issue.sh|scripts/ops/triage-issues-autonomous.sh|scripts/ci/detect-duplicate-helpers.sh|scripts/ci/check-pnpm-lockfile.sh|scripts/deploy/redeploy-portal-oauth-routing.sh)
+              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/*-entrypoint.ps1|scripts/dev/start-work-from-issue.sh|scripts/ops/triage-issues-autonomous.sh|scripts/ci/detect-duplicate-helpers.sh|scripts/ci/check-pnpm-lockfile.sh|scripts/deploy/redeploy-portal-oauth-routing.sh|scripts/setup-cloudflare-access.sh)
                 return 0
                 ;;
               *)

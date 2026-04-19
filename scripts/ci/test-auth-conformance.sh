@@ -168,6 +168,16 @@ else
   record "repo-switch: auth-keepalive health command exits 0" "fail" "auth-keepalive not found"
 fi
 
+# ── Category 5: Extension governance conformance ─────────────────────────────
+echo ""
+echo "[5] Extension governance conformance"
+
+if bash scripts/ci/lint-role-profiles.sh >/tmp/role-profile-lint.log 2>&1; then
+  record "extension-governance: role profile recommendation policy lint" "pass"
+else
+  record "extension-governance: role profile recommendation policy lint" "fail" "$(tail -n 20 /tmp/role-profile-lint.log 2>/dev/null || echo 'lint output unavailable')"
+fi
+
 # ── Report ────────────────────────────────────────────────────────────────────
 echo ""
 echo "═══════════════════════════════════════════════════════════════"

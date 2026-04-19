@@ -1,0 +1,80 @@
+name: Org Governance Reconcile
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: Optional single repository name
+        required: false
+        type: string
+  repository_dispatch:
+    types: [repo-onboarded]
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile-org-baseline:
+    name: Reconcile org governance baseline
+    runs-on: ubuntu-latest
+    env:
+      GOVERNANCE_ORG: kushin77
+      BASELINE_FILE: config/github-org-ruleset-baseline.json
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Resolve target repo
+        id: target
+        run: |
+          target_repo=''
+          if [[ -n "${{ inputs.target_repo }}" ]]; then
+            target_repo='${{ inputs.target_repo }}'
+          elif [[ -n "${{ github.event.client_payload.repo }}" ]]; then
+            target_repo='${{ github.event.client_payload.repo }}'
+          fi
+          echo "repo=$target_repo" >> "$GITHUB_OUTPUT"
+
+      - name: Reconcile baseline for org or target repo
+        env:
+          GH_TOKEN: ${{ secrets.ORG_GOVERNANCE_TOKEN }}
+          ORG_GOV_TOKEN: ${{ secrets.ORG_GOVERNANCE_TOKEN }}
+        run: |
+          if [[ -z "${ORG_GOV_TOKEN:-}" ]]; then
+            echo "ORG_GOVERNANCE_TOKEN is required"
+            exit 1
+          fi
+
+          chmod +x scripts/governance/reconcile-org-rulesets.sh
+
+          if [[ -n "${{ steps.target.outputs.repo }}" ]]; then
+            bash scripts/governance/reconcile-org-rulesets.sh \
+              --org "$GOVERNANCE_ORG" \
+              --baseline "$BASELINE_FILE" \
+              --repo "${{ steps.target.outputs.repo }}"
+          else
+            bash scripts/governance/reconcile-org-rulesets.sh \
+              --org "$GOVERNANCE_ORG" \
+              --baseline "$BASELINE_FILE"
+          fi
+
+      - name: Publish summary
+        if: always()
+        run: |
+          echo "## Org Governance Reconcile" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Org: $GOVERNANCE_ORG" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Baseline: $BASELINE_FILE" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "${{ steps.target.outputs.repo }}" ]]; then
+            echo "- Mode: onboarding reconcile" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Target repo: ${{ steps.target.outputs.repo }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Mode: full org reconcile" >> "$GITHUB_STEP_SUMMARY"
+          fi

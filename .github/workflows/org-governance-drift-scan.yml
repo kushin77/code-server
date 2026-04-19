@@ -1,0 +1,110 @@
+name: Org Governance Drift Scan
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan-org-governance-drift:
+    name: Scan Org Governance Drift
+    runs-on: ubuntu-latest
+    env:
+      GOVERNANCE_ORG: kushin77
+      BASELINE_FILE: config/github-org-ruleset-baseline.json
+      REPORT_FILE: org-governance-drift-report.json
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Authenticate gh CLI for org-level read
+        env:
+          ORG_GOV_TOKEN: ${{ secrets.ORG_GOVERNANCE_TOKEN }}
+          GH_TOKEN: ${{ secrets.ORG_GOVERNANCE_TOKEN }}
+        run: |
+          if [[ -z "${ORG_GOV_TOKEN:-}" ]]; then
+            echo "ORG_GOVERNANCE_TOKEN is not configured; cannot perform org-level drift scan."
+            exit 1
+          fi
+          gh auth status
+
+      - name: Run drift scan
+        id: drift
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.ORG_GOVERNANCE_TOKEN }}
+        run: |
+          set +e
+          bash scripts/governance/org-governance-drift-scan.sh \
+            --org "$GOVERNANCE_ORG" \
+            --baseline "$BASELINE_FILE" \
+            --report "$REPORT_FILE"
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          if [[ -f "$REPORT_FILE" ]]; then
+            noncompliant_count=$(jq -r '.summary.noncompliant_count' "$REPORT_FILE")
+          else
+            noncompliant_count=0
+          fi
+          echo "noncompliant_count=$noncompliant_count" >> "$GITHUB_OUTPUT"
+
+      - name: Upload drift report artifact
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        with:
+          name: org-governance-drift-report
+          path: org-governance-drift-report.json
+          if-no-files-found: warn
+
+      - name: Create or update drift issue
+        if: steps.drift.outputs.noncompliant_count != '0'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('org-governance-drift-report.json', 'utf8'));
+            const title = `P1: Org governance drift detected (${report.summary.noncompliant_count} repos)`;
+            const marker = '<!-- org-governance-drift -->';
+            const body = `${marker}\n\nGenerated: ${report.generated_at}\nOrganization: ${report.organization}\nBaseline: ${report.baseline_file}\n\nSummary:\n- Compliant: ${report.summary.compliant_count}\n- Noncompliant: ${report.summary.noncompliant_count}\n- Exceptions: ${report.summary.exception_count}\n\nTop noncompliant repos:\n${report.noncompliant.slice(0, 20).map((r) => `- ${r.repo} (${r.branch || 'n/a'})`).join('\n')}\n\nSee workflow artifact: org-governance-drift-report`;
+
+            const { owner, repo } = context.repo;
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            const existing = issues.find((i) => i.title.startsWith('P1: Org governance drift detected'));
+            if (existing) {
+              await github.rest.issues.update({ owner, repo, issue_number: existing.number, body });
+            } else {
+              await github.rest.issues.create({ owner, repo, title, body, labels: ['P1', 'governance', 'compliance'] });
+            }
+
+      - name: Fail run on drift or runtime error
+        run: |
+          rc='${{ steps.drift.outputs.exit_code }}'
+          if [[ "$rc" != "0" ]]; then
+            echo "Drift scan exit code: $rc"
+            exit 1
+          fi
+
+      - name: Report summary
+        if: always()
+        run: |
+          echo "## Org Governance Drift Scan" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Exit code: ${{ steps.drift.outputs.exit_code }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Noncompliant repos: ${{ steps.drift.outputs.noncompliant_count }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Baseline: $BASELINE_FILE" >> "$GITHUB_STEP_SUMMARY"

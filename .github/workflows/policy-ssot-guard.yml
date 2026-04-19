@@ -1,0 +1,82 @@
+name: Policy SSOT Guard
+
+on:
+  pull_request:
+    paths:
+      - docs/governance/**
+      - scripts/ci/check-policy-ssot.sh
+      - .github/workflows/policy-ssot-guard.yml
+  push:
+    branches: [main]
+    paths:
+      - docs/governance/**
+      - scripts/ci/check-policy-ssot.sh
+      - .github/workflows/policy-ssot-guard.yml
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  policy-ssot-check:
+    name: Policy SSOT duplicate and contradiction check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Run policy SSOT checker
+        id: ssot
+        continue-on-error: true
+        run: |
+          set +e
+          bash scripts/ci/check-policy-ssot.sh policy-ssot-report.json
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+
+      - name: Upload SSOT report
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        with:
+          name: policy-ssot-report
+          path: policy-ssot-report.json
+          if-no-files-found: warn
+
+      - name: Enforce changelog update for governance policy changes
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          changed_governance_files=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- docs/governance | grep -v '^docs/governance/CHANGELOG.md$' || true)
+          if [[ -n "$changed_governance_files" ]]; then
+            if ! git diff --name-only "origin/${{ github.base_ref }}"...HEAD -- docs/governance/CHANGELOG.md | grep -q 'docs/governance/CHANGELOG.md'; then
+              echo "Governance policy files changed without changelog update"
+              echo "$changed_governance_files"
+              exit 1
+            fi
+          fi
+
+      - name: Report summary
+        if: always()
+        run: |
+          echo "## Policy SSOT Guard" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Checker exit code: ${{ steps.ssot.outputs.exit_code }}" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f policy-ssot-report.json ]]; then
+            echo "- Duplicate statements: $(jq -r '.summary.duplicate_statements' policy-ssot-report.json)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Contradictions: $(jq -r '.summary.contradictions' policy-ssot-report.json)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail when SSOT violations exist
+        run: |
+          rc='${{ steps.ssot.outputs.exit_code }}'
+          if [[ "$rc" != "0" ]]; then
+            echo "Policy SSOT violations detected"
+            exit 1
+          fi

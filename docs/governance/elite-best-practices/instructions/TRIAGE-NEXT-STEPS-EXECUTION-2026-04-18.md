@@ -58,6 +58,14 @@ Last Updated: 2026-04-19
    - CI regression root cause from run `24617562996` isolated (jq fallback misread explicit `false` as missing)
    - commit `c2bbb35f`: key-presence parsing fix in `scripts/ci/lint-role-profiles.sh`
    - CI verification: Security run `24617607483` reports `Auth/Policy Conformance Suite` completed/success
+- Failover/load-balancing hardening follow-up landed and was re-validated (2026-04-19 UTC):
+   - commit `f22cd841`: persistent Caddy `/data` + `/config` volumes for stable TLS/runtime state
+   - commit `34f1f984`: failover orchestration enforces VIP-owner convergence during promote/failback
+   - evidence snapshots:
+      - `/tmp/code-server-failover-evidence/failover-20260419T005433Z.json` (baseline status)
+      - `/tmp/code-server-failover-evidence/failover-20260419T005458Z.json` (promote: marker + VIP owner converge to `.42`)
+      - `/tmp/code-server-failover-evidence/failover-20260419T005516Z.json` (failback: marker + VIP owner converge to `.31`)
+   - ingress/auth probe reliability validated: 10/10 successful VIP checks
 - Overlap cleanup completed for superseded issues:
    - #738 -> superseded by #759
    - #739 -> superseded by #756

@@ -19,6 +19,8 @@ E2E_USER_PASSWORD="${E2E_USER_PASSWORD:-}"
 E2E_OAUTH_TOKEN="${E2E_OAUTH_TOKEN:-}"
 OUTPUT_FILE="${OUTPUT_FILE:-/tmp/playwright-storage-state.json}"
 HEADLESS="${HEADLESS:-true}"
+MANUAL_AUTH="${MANUAL_AUTH:-0}"
+MAX_WAIT_SECONDS="${MAX_WAIT_SECONDS:-240}"
 
 usage() {
   cat <<'EOF'
@@ -32,6 +34,8 @@ Environment variables:
   E2E_OAUTH_TOKEN         OAuth token for E2E account (alternative to email/password)
   OUTPUT_FILE             Where to save storage state JSON (default: /tmp/playwright-storage-state.json)
   HEADLESS                Run in headless mode (default: true)
+  MANUAL_AUTH             Set to 1 to complete login manually in headed browser (default: 0)
+  MAX_WAIT_SECONDS        Max wait for manual auth completion (default: 240)
 
 Example (password-based):
   E2E_USER_EMAIL=e2e@example.com \
@@ -50,8 +54,12 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 # Validate inputs
-if [[ -z "$E2E_OAUTH_TOKEN" && ( -z "$E2E_USER_EMAIL" || -z "$E2E_USER_PASSWORD" ) ]]; then
+if [[ "$MANUAL_AUTH" != "1" && -z "$E2E_OAUTH_TOKEN" && ( -z "$E2E_USER_EMAIL" || -z "$E2E_USER_PASSWORD" ) ]]; then
   log_fatal "Either E2E_OAUTH_TOKEN or both E2E_USER_EMAIL and E2E_USER_PASSWORD must be set"
+fi
+
+if [[ "$MANUAL_AUTH" == "1" ]]; then
+  HEADLESS="false"
 fi
 
 # Ensure Node.js and Playwright are available
@@ -75,6 +83,8 @@ async function captureStorageState() {
   const oauthToken = process.env.E2E_OAUTH_TOKEN || '';
   const outputFile = process.env.OUTPUT_FILE || '/tmp/playwright-storage-state.json';
   const headless = process.env.HEADLESS !== 'false';
+  const manualAuth = process.env.MANUAL_AUTH === '1';
+  const maxWaitSeconds = Number(process.env.MAX_WAIT_SECONDS || '240');
 
   const browser = await chromium.launch({ headless });
   const context = await browser.newContext();
@@ -90,7 +100,19 @@ async function captureStorageState() {
     // Check if we're at OAuth login or already authenticated
     const isAtLoginFlow = currentUrl.includes('oauth2') || currentUrl.includes('accounts.google.com');
 
-    if (isAtLoginFlow && userEmail && userPassword) {
+    if (manualAuth) {
+      console.log(`[capture] Manual auth mode enabled. Complete Google login in browser window within ${maxWaitSeconds}s.`);
+      await page.waitForFunction(
+        (target) => {
+          const url = window.location.href;
+          const onTargetHost = url.startsWith(target);
+          const stillInAuthFlow = url.includes('accounts.google.com') || url.includes('/oauth2/') || url.includes('/login/oauth2/');
+          return onTargetHost && !stillInAuthFlow;
+        },
+        targetUrl,
+        { timeout: maxWaitSeconds * 1000 }
+      );
+    } else if (isAtLoginFlow && userEmail && userPassword) {
       console.log(`[capture] Authenticating with email: ${userEmail}`);
       
       // This is a simplified password auth flow; adjust selectors based on actual OAuth form
@@ -147,6 +169,8 @@ log_info "Compiling and running capture script"
   export E2E_OAUTH_TOKEN
   export OUTPUT_FILE
   export HEADLESS
+  export MANUAL_AUTH
+  export MAX_WAIT_SECONDS
 
   node "$CAPTURE_SCRIPT"
 )

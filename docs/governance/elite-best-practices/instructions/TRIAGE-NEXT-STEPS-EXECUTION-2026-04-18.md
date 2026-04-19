@@ -72,6 +72,20 @@ Last Updated: 2026-04-19
    - #741 -> superseded by #757
    - #749 -> superseded by #758
 
+## Immediate Priority Focus (P0/P1 Only)
+
+Run this queue before any P2/P3 work.
+
+1. **P0 critical gate**: #702 (fail-closed governance pipeline).
+2. **P1 policy authority foundations**: #700 -> #701 -> #704.
+3. **P1 runtime enforcement path**: #703 -> #705 -> #708.
+4. **P1 control-plane enablement**: #706 -> #707 -> #742.
+5. **P1 portal delivery children**: #743 -> #744 -> #745 -> #746 -> #747 -> #748.
+6. **P1 extension-governance closure path**: #735 -> #759.
+
+Priority debug rule:
+- Any failing CI/conformance result tied to #702, #701, #703, #705, #708, #735, or #759 preempts lower-priority implementation work until green.
+
 ## Issue-Mapped Next Steps (Open Backlog)
 
 ### Stream A: Governance Foundations (dedupe first)

@@ -197,6 +197,9 @@ services:
       OAUTH2_PROXY_PROMPT: "select_account"
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
       OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      # Appsmith redirects static assets when upstream Host is kushnir.cloud over internal HTTP.
+      # Keep public host at edge, but present upstream host as appsmith:80 to avoid self-redirect loops.
+      OAUTH2_PROXY_PASS_HOST_HEADER: "false"
       OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
       OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
       OAUTH2_PROXY_AUTH_LOGGING: "true"

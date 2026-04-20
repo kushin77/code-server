@@ -55,11 +55,11 @@ COPY --from=builder /workspace/apps/session-broker/dist ./dist
 COPY --from=builder /workspace/apps/session-broker/node_modules ./node_modules
 COPY --from=builder /workspace/apps/session-broker/package*.json ./
 
-# Set permissions
-RUN chown -R session-broker:session-broker /app
+# Set permissions using numeric IDs (more reliable than usernames)
+RUN chown -R 1000:999 /app
 
 # Switch to non-root user
-USER session-broker
+USER 1000
 
 # Expose port
 EXPOSE 5000

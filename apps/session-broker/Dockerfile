@@ -48,13 +48,17 @@ RUN useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true && \
 
 WORKDIR /app
 
-# Copy built application from builder
+# Copy built application, package.json, and workspace files
 COPY --from=builder /workspace/apps/session-broker/dist ./dist
 COPY --from=builder /workspace/apps/session-broker/package.json ./package.json
+COPY --from=builder /workspace/pnpm-lock.yaml /pnpm-lock.yaml
+COPY --from=builder /workspace/.npmrc /.npmrc
 
-# Install production dependencies in the runtime stage
-# This ensures all dependencies are resolved correctly in isolation
-RUN npm install --omit=dev --no-save && npm cache clean --force
+# Install production dependencies using pnpm
+# We need pnpm because package.json has catalog: references
+RUN npm install -g pnpm@9.15.4 && \
+    pnpm install --prod --frozen-lockfile && \
+    pnpm cache delete
 
 # Set permissions using numeric IDs (more reliable than usernames)
 RUN chown -R 1000:999 /app

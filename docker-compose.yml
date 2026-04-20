@@ -416,7 +416,6 @@ services:
       start_period: 15s
     depends_on:
       - oauth2-proxy
-      - session-broker
     logging:
       driver: json-file
       options:

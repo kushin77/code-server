@@ -9,15 +9,16 @@ FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391
 
 WORKDIR /build
 
-# Copy package files
-COPY package*.json pnpm-lock.yaml ./
+# Copy package files from repo root
+COPY pnpm-lock.yaml ./
+COPY apps/session-broker/package*.json ./
 
 # Install dependencies (including dev for TypeScript build)
 RUN npm install -g pnpm@9.15.4 && pnpm install
 
 # Copy source and compile
-COPY tsconfig.json ./
-COPY src ./src
+COPY apps/session-broker/tsconfig.json ./
+COPY apps/session-broker/src ./src
 RUN npm run build && npm prune --omit=dev
 
 # ════════════════════════════════════════════════════════════════════════════

@@ -29,6 +29,26 @@ scrape_configs:
     static_configs:
       - targets: ['code-server:8080']
 
+  - job_name: 'oauth2-proxy'
+    static_configs:
+      - targets: ['oauth2-proxy:4180']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    metric_relabel_configs:
+      - source_labels: [user]
+        regex: 'qa@kushnir\.cloud'
+        action: drop
+
+  - job_name: 'oauth2-proxy-portal'
+    static_configs:
+      - targets: ['oauth2-proxy-portal:4181']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    metric_relabel_configs:
+      - source_labels: [user]
+        regex: 'qa@kushnir\.cloud'
+        action: drop
+
   - job_name: 'caddy'
     static_configs:
       - targets: ['caddy:2019']

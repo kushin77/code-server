@@ -19,9 +19,6 @@ describe("WorkspaceContextHubService", () => {
     service = new WorkspaceContextHubService();
   });
 
-});
-
-/*
   it("records audit events for launch attempts", () => {
     const provenance = createProvenance();
   });
@@ -694,4 +691,3 @@ describe("WorkspaceContextHubService", () => {
     expect(auditEvents.some((event) => event.eventType === "workspace_state_imported")).toBe(true);
   });
 });
-*/

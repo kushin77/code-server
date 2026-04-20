@@ -17,6 +17,45 @@ DRY_RUN="${DRY_RUN:-1}"
 APPLY_CLEANUP="${APPLY_CLEANUP:-0}"
 VERBOSE="${VERBOSE:-0}"
 
+usage() {
+    cat <<'EOF'
+Usage: bash scripts/ops/docker-storage-hygiene.sh [--dry-run|--apply] [--verbose]
+
+Modes:
+  --dry-run   Scan and report only (default)
+  --apply     Perform cleanup actions
+  --verbose   Print protected/in-use detail lines
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry-run)
+            DRY_RUN=1
+            APPLY_CLEANUP=0
+            shift
+            ;;
+        --apply)
+            DRY_RUN=0
+            APPLY_CLEANUP=1
+            shift
+            ;;
+        --verbose)
+            VERBOSE=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
 # Retention policy (in days)
 IMAGE_RETENTION_DAYS="${IMAGE_RETENTION_DAYS:-7}"
 CONTAINER_RETENTION_DAYS="${CONTAINER_RETENTION_DAYS:-3}"
@@ -59,7 +98,7 @@ cleanup_images() {
     
     local cutoff_date=$(date -d "$IMAGE_RETENTION_DAYS days ago" +%s 2>/dev/null || echo "0")
     
-    docker images --format "table {{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}" | tail -n +2 | while read -r image_id repo tag created_at size; do
+    while read -r image_id repo tag created_at size; do
         ((TOTAL_IMAGES_SCANNED++))
         
         # Skip protected images
@@ -67,7 +106,7 @@ cleanup_images() {
             if [ "$VERBOSE" -eq 1 ]; then
                 log_action "  [PROTECTED] $repo:$tag (ID: ${image_id:0:12})"
             fi
-            return 0
+            continue
         fi
         
         # Check if image is dangling (untagged)
@@ -88,19 +127,19 @@ cleanup_images() {
                 log_action "    → [DRY-RUN] Would delete: $image_id"
             fi
         fi
-    done
+    done < <(docker images --format "{{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}\t{{.Size}}")
 }
 
 cleanup_containers() {
     log_action "Scanning for exited/unhealthy containers..."
     
-    docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.CreatedAt}}" | tail -n +2 | while read -r container_id name status created_at; do
+    while read -r container_id name status created_at; do
         # Skip protected containers
         if is_protected "$name" "$PROTECTED_CONTAINERS"; then
             if [ "$VERBOSE" -eq 1 ]; then
                 log_action "  [PROTECTED] $name (ID: ${container_id:0:12})"
             fi
-            return 0
+            continue
         fi
         
         # Check if exited or unhealthy
@@ -115,19 +154,19 @@ cleanup_containers() {
                 log_action "    → [DRY-RUN] Would delete: $name"
             fi
         fi
-    done
+    done < <(docker ps -a --format "{{.ID}}\t{{.Names}}\t{{.Status}}\t{{.CreatedAt}}")
 }
 
 cleanup_volumes() {
     log_action "Scanning for orphaned volumes..."
     
-    docker volume ls --format "table {{.Name}}\t{{.Driver}}\t{{.Mountpoint}}" | tail -n +2 | while read -r volume_name driver mountpoint; do
+    while read -r volume_name driver mountpoint; do
         # Skip protected volumes
         if is_protected "$volume_name" "$PROTECTED_VOLUMES"; then
             if [ "$VERBOSE" -eq 1 ]; then
                 log_action "  [PROTECTED] $volume_name"
             fi
-            return 0
+            continue
         fi
         
         # Check if volume is in use by any container
@@ -144,7 +183,7 @@ cleanup_volumes() {
                 log_action "    → [DRY-RUN] Would delete: $volume_name"
             fi
         fi
-    done
+    done < <(docker volume ls --format "{{.Name}}\t{{.Driver}}\t{{.Mountpoint}}")
 }
 
 cleanup_build_cache() {
@@ -194,29 +233,48 @@ generate_report() {
 }
 
 save_metrics() {
+    local mode
+    local history_file
+    mode="$([ "$APPLY_CLEANUP" -eq 1 ] && echo 'apply' || echo 'dry-run')"
+
     cat > "$METRICS_FILE" <<EOF
 {
-  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "retention_policy": {
-    "image_days": $IMAGE_RETENTION_DAYS,
-    "container_days": $CONTAINER_RETENTION_DAYS,
-    "volume_days": $VOLUME_RETENTION_DAYS,
-    "log_days": $LOG_RETENTION_DAYS,
-    "build_cache_days": $BUILD_CACHE_RETENTION_DAYS
-  },
-  "scan_results": {
-    "total_images_scanned": $TOTAL_IMAGES_SCANNED,
-    "orphaned_images": $ORPHANED_IMAGES_FOUND,
-    "orphaned_containers": $ORPHANED_CONTAINERS_FOUND,
-    "orphaned_volumes": $ORPHANED_VOLUMES_FOUND
-  },
-  "storage_metrics": {
-    "space_reclaimed_mb": $SPACE_RECLAIMED_MB
-  },
-  "mode": "$([ "$APPLY_CLEANUP" -eq 1 ] && echo 'apply' || echo 'dry-run')"
+    "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+    "retention_policy": {
+        "image_days": $IMAGE_RETENTION_DAYS,
+        "container_days": $CONTAINER_RETENTION_DAYS,
+        "volume_days": $VOLUME_RETENTION_DAYS,
+        "log_days": $LOG_RETENTION_DAYS,
+        "build_cache_days": $BUILD_CACHE_RETENTION_DAYS
+    },
+    "scan_results": {
+        "total_images_scanned": $TOTAL_IMAGES_SCANNED,
+        "orphaned_images": $ORPHANED_IMAGES_FOUND,
+        "orphaned_containers": $ORPHANED_CONTAINERS_FOUND,
+        "orphaned_volumes": $ORPHANED_VOLUMES_FOUND
+    },
+    "storage_metrics": {
+        "space_reclaimed_mb": $SPACE_RECLAIMED_MB
+    },
+    "mode": "$mode"
 }
 EOF
-    log_action "Metrics saved to: $METRICS_FILE"
+        log_action "Metrics saved to: $METRICS_FILE"
+
+        history_file="${METRICS_FILE%.json}.history.jsonl"
+        if command -v jq >/dev/null 2>&1; then
+        jq -c . "$METRICS_FILE" >> "$history_file"
+        else
+        python3 - "$METRICS_FILE" >> "$history_file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], 'r', encoding='utf-8') as f:
+        payload = json.load(f)
+print(json.dumps(payload, separators=(',', ':')))
+PY
+        fi
+        log_action "Metrics history appended to: $history_file"
 }
 
 main() {
@@ -226,8 +284,23 @@ main() {
     
     # Check docker availability
     if ! command -v docker &> /dev/null; then
-        log_action "ERROR: Docker not found. Exiting."
-        exit 1
+        log_action "WARN: Docker not found; scan skipped on this host."
+        generate_report
+        save_metrics
+        if [ "$APPLY_CLEANUP" -eq 1 ]; then
+            exit 1
+        fi
+        exit 0
+    fi
+
+    if ! docker info >/dev/null 2>&1; then
+        log_action "WARN: Docker daemon unavailable; scan skipped on this host."
+        generate_report
+        save_metrics
+        if [ "$APPLY_CLEANUP" -eq 1 ]; then
+            exit 1
+        fi
+        exit 0
     fi
     
     # Run cleanup jobs

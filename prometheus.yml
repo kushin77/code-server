@@ -121,4 +121,3 @@ scrape_configs:
       - source_labels: [__name__]
         regex: 'redis_(info|command_calls|command_duration|connected_clients|evicted_keys|expired_keys|maxmemory|memory|used_memory|keyspace|db|slaves|replication|sentinel|master)'
         action: keep
-    scrape_interval: 30s

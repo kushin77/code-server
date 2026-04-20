@@ -1,29 +1,5 @@
-# Multi-stage Dockerfile for session-broker service
+# Single-stage Dockerfile for session-broker service
 # Per-user/per-session isolation broker for code-server (#752)
-
-# ════════════════════════════════════════════════════════════════════════════
-# Stage 1: Build
-# ════════════════════════════════════════════════════════════════════════════
-
-FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391b8e61cc6a AS builder
-
-WORKDIR /workspace
-
-# Copy workspace root configuration
-COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc package.json ./
-
-# Copy the session-broker package specifically  
-COPY apps/session-broker ./apps/session-broker
-
-# Install dependencies using pnpm with workspace context
-RUN npm install -g pnpm@9.15.4 && \
-    pnpm install --frozen-lockfile && \
-    cd apps/session-broker && \
-    pnpm run build
-
-# ════════════════════════════════════════════════════════════════════════════
-# Stage 2: Runtime
-# ════════════════════════════════════════════════════════════════════════════
 
 FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391b8e61cc6a
 
@@ -41,24 +17,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -g 999 docker 2>/dev/null || true
 
 # Create non-root user for service
-# UID 1000: standard non-root application user
-# GID 999: docker group (matches host docker daemon group)
 RUN useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true && \
     usermod -aG docker session-broker 2>/dev/null || true
 
+WORKDIR /workspace
+
+# Copy entire workspace
+COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc package.json ./
+COPY apps/session-broker ./apps/session-broker
+
+# Install dependencies and build
+RUN npm install -g pnpm@9.15.4 && \
+    pnpm install --frozen-lockfile && \
+    cd apps/session-broker && \
+    pnpm run build
+
+# Setup final app directory
 WORKDIR /app
+RUN cp -r /workspace/apps/session-broker/dist . && \
+    cp /workspace/apps/session-broker/package.json . && \
+    mkdir -p node_modules && \
+    # Copy pnpm's store
+    cp -r /workspace/node_modules/.pnpm node_modules/ 2>/dev/null || true && \
+    # Manually copy each dependency
+    for dep in express cookie-parser dockerode pg uuid winston joi axios redis; do \
+      [ -d "/workspace/node_modules/$dep" ] && cp -r "/workspace/node_modules/$dep" node_modules/; \
+    done && \
+    # Copy package.json file if exists
+    [ -f "/workspace/node_modules/package.json" ] && cp "/workspace/node_modules/package.json" node_modules/ || true
 
-# Copy built application from builder
-COPY --from=builder /workspace/apps/session-broker/dist ./dist
-COPY --from=builder /workspace/apps/session-broker/package.json ./package.json
-
-# Copy ALL node_modules from the build stage (this includes all workspace dependencies)
-COPY --from=builder /workspace/node_modules /tmp/workspace_modules
-
-# Copy session-broker specific dependencies if they exist, otherwise use workspace modules
-RUN cp -r /tmp/workspace_modules/* ./node_modules/ 2>/dev/null || true || mkdir -p node_modules
-
-# Set permissions using numeric IDs (more reliable than usernames)
+# Fix permissions
 RUN chown -R 1000:999 /app
 
 # Switch to non-root user

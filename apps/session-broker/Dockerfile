@@ -10,10 +10,10 @@ FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391
 WORKDIR /build
 
 # Copy package files
-COPY package*.json ./
+COPY package*.json pnpm-lock.yaml ./
 
 # Install dependencies (including dev for TypeScript build)
-RUN npm ci
+RUN npm install -g pnpm@9.15.4 && pnpm install
 
 # Copy source and compile
 COPY tsconfig.json ./

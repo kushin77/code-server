@@ -17,6 +17,9 @@ describe('setupGracefulShutdown', () => {
     // Reset process mocks
     vi.clearAllMocks();
 
+    // Mock process.on for signal handlers
+    vi.spyOn(process, 'on').mockReturnValue(process as any);
+
     mockLogger = {
       info: vi.fn(),
       warn: vi.fn(),

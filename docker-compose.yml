@@ -166,7 +166,6 @@ services:
       - "${OAUTH2_PROXY_HOST_BIND:-127.0.0.1}:4180:4180"
     expose:
       - "4180"
-    user: "0:0"
     environment:
       OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_IDE_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID}}"
       OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_IDE_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET}}"
@@ -238,7 +237,6 @@ services:
       - net-app
     expose:
       - "4181"
-    user: "0:0"
     environment:
       # Portal uses the same Google OAuth app as IDE
       # IMPORTANT: Both redirect URIs must be registered in Google Cloud Console OAuth app:
@@ -321,13 +319,11 @@ services:
       - net-data
     expose:
       - "5000"
-    user: "0:0"
     environment:
       - LOG_LEVEL=${SESSION_BROKER_LOG_LEVEL:-info}
       - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-codeserver}
       - DOCKER_SOCKET=${DOCKER_SOCKET:-unix:///var/run/docker.sock}
       - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:?CODE_SERVER_IMAGE_ID must be set}
-      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
       - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
       - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}

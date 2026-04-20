@@ -36,8 +36,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for service
+# Create non-root user for service and add to docker group for socket access
 RUN useradd -m -u 10001 session-broker
+# Ensure docker group exists (may be created by volume mount) and add user to it
+RUN groupadd -g 999 docker 2>/dev/null || true && \
+    usermod -aG docker session-broker
 
 WORKDIR /app
 

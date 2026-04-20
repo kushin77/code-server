@@ -330,7 +330,8 @@ services:
       - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
       - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
       - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}
-      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://:${REDIS_PASSWORD}@redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster}
       - REDIS_SENTINEL_DB=${REDIS_SENTINEL_DB:-1}
       - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
       - SESSION_PROXY_HOST=${SESSION_PROXY_HOST:?SESSION_PROXY_HOST must be set}

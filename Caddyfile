@@ -71,18 +71,39 @@
     # Default: ALL traffic proxied through session-broker (handles auth + routing to container)
     # Session broker validates oauth2 session cookie, creates/retrieves user's isolated session,
     # and routes to the corresponding code-server container.
+    # 
+    # HA Configuration: Dual upstreams for failover
+    # Primary: session-broker on primary host (.31, default: localhost:5000)
+    # Replica: session-broker on replica host (.42, default: replica-host:5000)
+    # Health checks: <30 sec detection, automatic failover to replica on primary failure
+    # Sticky routing: Cookie-based LB within each upstream to maintain session affinity
     reverse_proxy session-broker:5000 {
         header_up Host {$IDE_DOMAIN:ide.kushnir.cloud}
         header_up X-Forwarded-Host {host}
         header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}
         header_up X-Session-Id {http.request.cookie._code_server_session_id}
+        # Dual upstreams: primary + replica for automatic failover
+        # Primary upstream (.31, default localhost): active under normal conditions
+        upstreams {
+            primary_host:5000
+        }
+        # Replica upstream (.42, default replica-host): standby, activated on primary failure
+        # Set via REPLICA_HOST env var; falls back to replica-host if not set
+        upstreams {
+            {$REPLICA_HOST:replica-host}:5000
+        }
         # Sticky load balancing for WebSocket IDE traffic within a user's session.
-        lb_policy cookie ide_session_lb secret734
+        lb_policy cookie ide_session_lb {$IDE_SESSION_LB_SECRET:secret734}
+        # Health checks: fast detection (<30 sec) of primary failure
         health_uri /health
-        health_interval 30s
+        health_interval 10s
         health_timeout 5s
+        # Mark upstream down after 2 consecutive health check failures (<20 sec)
+        health_fails 2
+        # Auto-recovery: retry failed upstream every 30s
         fail_duration 30s
+        # Connection attempt timeout
         lb_try_duration 5s
     }
 }
@@ -182,6 +203,9 @@ kushnir.cloud {
 
         # oauth2-proxy-portal control plane endpoints
         handle @oauth2 {
+            # HA Configuration: oauth2-proxy-portal dual upstreams for failover
+            # Primary: oauth2-proxy-portal on primary host (.31, default localhost:4181)
+            # Replica: oauth2-proxy-portal on replica host (.42, default replica-host:4181)
             reverse_proxy oauth2-proxy-portal:4181 {
                 # Use canonical domain for oauth2-proxy, not the VIP
                 # This prevents redirect loops when requests arrive via VIP (192.168.168.30)
@@ -190,6 +214,20 @@ kushnir.cloud {
                 header_up X-Forwarded-Proto https
                 header_up X-Real-IP {remote_host}
                 header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
+                # Dual upstreams for automatic failover on oauth2-proxy-portal
+                upstreams {
+                    primary_host:4181
+                }
+                upstreams {
+                    {$REPLICA_HOST:replica-host}:4181
+                }
+                # Health checks: fast detection (<30 sec) of primary failure
+                health_uri /health
+                health_interval 10s
+                health_timeout 5s
+                health_fails 2
+                fail_duration 30s
+                lb_try_duration 5s
             }
         }
 
@@ -198,12 +236,27 @@ kushnir.cloud {
 
         # Root is SSO protected via oauth2-proxy-portal (Appsmith admin backend).
         # Use canonical domain for oauth2-proxy, not the VIP
+        # HA Configuration: Dual upstreams for automatic failover
         reverse_proxy oauth2-proxy-portal:4181 {
             header_up Host {$DOMAIN:kushnir.cloud}
             header_up X-Forwarded-Host {host}
             header_up X-Forwarded-Proto https
             header_up X-Real-IP {remote_host}
             header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
+            # Dual upstreams for automatic failover
+            upstreams {
+                primary_host:4181
+            }
+            upstreams {
+                {$REPLICA_HOST:replica-host}:4181
+            }
+            # Health checks: fast detection (<30 sec) of primary failure
+            health_uri /health
+            health_interval 10s
+            health_timeout 5s
+            health_fails 2
+            fail_duration 30s
+            lb_try_duration 5s
         }
     }
 }

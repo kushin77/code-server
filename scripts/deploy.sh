@@ -71,6 +71,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
+TF_DIR="$PROJECT_DIR/terraform"
 
 # Bootstrap: single entrypoint loads config, logging, utils, error-handler, docker, ssh
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -94,7 +95,7 @@ echo "════════════════════════�
 # Step 1: Terraform init + apply (generates docker-compose.yml with versions)
 echo ""
 echo "Step 1: Generating infrastructure config (Terraform)..."
-if terraform init && terraform apply -auto-approve; then
+if terraform -chdir="$TF_DIR" init && terraform -chdir="$TF_DIR" apply -auto-approve; then
   echo "✅ Terraform apply completed"
 else
   echo "❌ FATAL: Terraform apply failed"

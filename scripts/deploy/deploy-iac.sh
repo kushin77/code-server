@@ -15,6 +15,7 @@ DEPLOY_SSH_USER="${DEPLOY_SSH_USER:-akushnir}"
 DEPLOY_SSH_KEY="${DEPLOY_SSH_KEY:-/home/akushnir/.ssh/id_ed25519}"
 DEPLOY_SSH_PORT="${DEPLOY_SSH_PORT:-22}"
 IS_REMOTE=false
+TF_DIR="${PROJECT_DIR}/terraform"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -126,8 +127,7 @@ install_terraform() {
 init_terraform() {
     log_info "Initializing Terraform..."
 
-    cd "${PROJECT_DIR}"
-    terraform init -upgrade
+    terraform -chdir="${TF_DIR}" init -upgrade
 
     log_success "✓ Terraform initialized"
 }
@@ -136,8 +136,7 @@ init_terraform() {
 validate_terraform() {
     log INFO "Validating Terraform configuration..."
 
-    cd "${PROJECT_DIR}"
-    terraform validate
+    terraform -chdir="${TF_DIR}" validate
 
     log SUCCESS "✓ Terraform configuration is valid"
 }
@@ -146,8 +145,7 @@ validate_terraform() {
 plan_deployment() {
     log INFO "Planning deployment..."
 
-    cd "${PROJECT_DIR}"
-    terraform plan -out=tfplan
+    terraform -chdir="${TF_DIR}" plan -out=tfplan
 
     log SUCCESS "✓ Deployment plan created"
 }
@@ -156,8 +154,7 @@ plan_deployment() {
 apply_deployment() {
     log INFO "Applying Terraform configuration..."
 
-    cd "${PROJECT_DIR}"
-    terraform apply -auto-approve tfplan
+    terraform -chdir="${TF_DIR}" apply -auto-approve tfplan
 
     log SUCCESS "✓ Deployment applied"
 }
@@ -166,14 +163,12 @@ apply_deployment() {
 output_details() {
     log INFO "Retrieving access details..."
 
-    cd "${PROJECT_DIR}"
-
     log SUCCESS "=========================================="
     log SUCCESS "Code-Server Enterprise Deployment Complete"
     log SUCCESS "=========================================="
 
-    terraform output -raw code_server_url 2>/dev/null
-    log SUCCESS "Password: $(terraform output -raw code_server_password 2>/dev/null || echo 'See .tfstate')"
+    terraform -chdir="${TF_DIR}" output -raw code_server_url 2>/dev/null
+    log SUCCESS "Password: $(terraform -chdir="${TF_DIR}" output -raw code_server_password 2>/dev/null || echo 'See .tfstate')"
 
     log INFO ""
     log INFO "Next steps:"
@@ -187,8 +182,7 @@ output_details() {
 # Cleanup function
 cleanup() {
     log WARN "Cleaning up..."
-    cd "${PROJECT_DIR}"
-    rm -f tfplan
+    rm -f "${TF_DIR}/tfplan"
     log SUCCESS "Cleanup complete"
 }
 

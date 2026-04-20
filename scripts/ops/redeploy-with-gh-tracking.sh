@@ -161,7 +161,7 @@ stage_terraform() {
   
   update_issue "🔨 Terraform validation in progress" "Validating Terraform configuration and generating plan..."
   
-  local tf_cmd="cd ~/code-server-enterprise && terraform validate && terraform plan -out=/tmp/tfplan"
+  local tf_cmd="cd ~/code-server-enterprise/terraform && terraform validate && terraform plan -out=/tmp/tfplan"
   
   if [[ $DRY_RUN -eq 0 ]]; then
     if ssh "${DEPLOY_USER}@${PRIMARY_HOST}" "$tf_cmd"; then
@@ -172,7 +172,7 @@ stage_terraform() {
     
     update_issue "🚀 Applying Terraform changes" "Executing terraform apply..."
     
-    local apply_cmd="cd ~/code-server-enterprise && terraform apply -auto-approve /tmp/tfplan"
+    local apply_cmd="cd ~/code-server-enterprise/terraform && terraform apply -auto-approve /tmp/tfplan"
     if [[ $TERRAFORM_AUTO_APPROVE -eq 1 ]]; then
       if ssh "${DEPLOY_USER}@${PRIMARY_HOST}" "$apply_cmd"; then
         log_info "Terraform apply completed successfully"

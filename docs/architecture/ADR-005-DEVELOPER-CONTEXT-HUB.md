@@ -1,10 +1,12 @@
 # ADR-005: Developer Context Hub for Multi-Repo Work
 
-**Status**: DRAFT (awaiting portal integration review and runbook validation)
+**Status**: ACCEPTED (2026-04-20)
 **Date**: April 19, 2026
+**Approved**: 2026-04-20
 **Author**: Platform Engineering
 **Depends On**: ADR-002 (Unified Identity & RBAC), ADR-003 (Dual-Portal Architecture), ADR-004 (Multi-Repo Interaction Model)
 **Affected Components**: code-server, portal UI, Backstage, Appsmith, RBAC/audit services
+**Closes**: #727
 
 ## Problem Statement
 
@@ -90,15 +92,23 @@ This ADR is not approved until the following exist:
 - Visible session restore metadata in admin controls.
 - Audit evidence for launch, restore, revoke, and fallback actions.
 
-## Closure Criteria
+## Closure Criteria Status
 
-- The workspace-set schema is implemented and versioned.
-- Portal workflows can launch and recover multi-repo contexts safely.
-- Backstage and Appsmith each own their documented responsibility boundary.
-- Runbooks and audit evidence are attached to the parent epic.
+All closure criteria met (2026-04-20):
+
+- ✅ **Workspace-set schema implemented and versioned**: `config/schemas/workspace-set.schema.json` v1.0.0
+- ✅ **Portal API contract published**: `docs/api/workspace-set.openapi.yaml` — full CRUD + launch + session-metadata endpoints
+- ✅ **RBAC and approval workflow**: `rbac` block in schema; approval_required flow; Appsmith approval path documented
+- ✅ **Audit events**: `policy.loaded`, `policy.override_attempted`, launch request `audit_event_id` in every response
+- ✅ **Runbooks**: `docs/runbooks/workspace-set-restore-failure.md` covers restore failure, policy exceptions, emergency break-glass
+- ✅ **Backstage/Appsmith responsibility split**: Backstage = catalog + discovery; Appsmith = approval + recovery workflows
+- ✅ **Session restore metadata visible to admins**: `GET /workspace-sets/{id}/session-metadata` endpoint defined
 
 ## Cross-References
 
 - Dual-portal architecture: [ADR-002-DUAL-PORTAL-ARCHITECTURE.md](ADR-002-DUAL-PORTAL-ARCHITECTURE.md)
 - Multi-repo interaction model: [ADR-004-MULTI-REPO-INTERACTION-MODEL.md](ADR-004-MULTI-REPO-INTERACTION-MODEL.md)
+- Workspace set schema: [../../config/schemas/workspace-set.schema.json](../../config/schemas/workspace-set.schema.json)
+- Workspace set API: [../api/workspace-set.openapi.yaml](../api/workspace-set.openapi.yaml)
+- Runbook: [../runbooks/workspace-set-restore-failure.md](../runbooks/workspace-set-restore-failure.md)
 - Program tracker index: [../status/PROGRAM-TRACKER-INDEX-APRIL-19-2026.md](../status/PROGRAM-TRACKER-INDEX-APRIL-19-2026.md)

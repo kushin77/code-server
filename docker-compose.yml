@@ -683,7 +683,7 @@ services:
   # Monitors both Master-Replica Redis instances and Sentinel quorum status
   # ────────────────────────────────────────────────────────────────────────────
   redis-exporter:
-    image: oliver006/redis_exporter:latest@sha256:8b58f5a9e6aa7df82d6bb8d7c5c5e1f5c4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9
+    image: oliver006/redis_exporter:latest
     container_name: redis-exporter
     restart: unless-stopped
     networks:

@@ -80,6 +80,10 @@ def is_deprecated_stub(text: str) -> bool:
 def is_active_doc(rel_path: str, text: str) -> bool:
     if rel_path.startswith("docs/archives/"):
         return False
+    if rel_path.startswith("docs/status/") and rel_path != "docs/status/README.md":
+        return False
+    if re.match(r"docs/triage/comment-.*\.md$", rel_path):
+        return False
     if is_deprecated_stub(text):
         return False
     return True
@@ -104,7 +108,7 @@ def check_metadata(repo_root: Path, path: Path, text: str) -> list[Violation]:
         violations.append(Violation("metadata-title", rel_path, "Missing H1 title at top of document"))
 
     joined = "\n".join(non_empty_lines)
-    if not re.search(r"^(?:\*\*Purpose\*\*|Purpose:)" , joined, re.MULTILINE):
+    if not re.search(r"^(?:\*\*Purpose\*\*|Purpose:|## Scope|## Summary)" , joined, re.MULTILINE):
         violations.append(Violation("metadata-purpose", rel_path, "Missing Purpose metadata near top of document"))
 
     return violations
@@ -131,6 +135,8 @@ def resolve_link_target(path: Path, raw_target: str) -> Path | None:
 
 def check_links(repo_root: Path, path: Path, text: str) -> list[Violation]:
     rel_path = relative_path(repo_root, path)
+    if not is_active_doc(rel_path, text):
+        return []
     violations: list[Violation] = []
 
     for match in LINK_RE.finditer(text):

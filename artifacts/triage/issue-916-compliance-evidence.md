@@ -1,27 +1,40 @@
-Issue #916 compliance evidence
+# Issue #916 Compliance Evidence Query
 
-Validated implementation surface:
-- Backend enforces approved session data profiles at launch time.
-- Session responses carry `dataProfile` and `dataProfileValidated`.
-- Frontend launch form only accepts approved profiles (`synthetic`, `masked`, `redacted`).
-- Session status/details render the validated profile state.
+Generated at (UTC): 2026-04-20T01:03:49.167013+00:00
 
-Focused validation:
-- session-broker tests: 7/7 passed
-- frontend tests: 10/10 passed
+## Query used for compliance validation
+```sql
+SELECT
+  session_id,
+  username,
+  data_profile,
+  data_profile_validated,
+  status,
+  created_at
+FROM sessions
+WHERE status IN ('running', 'queued')
+  AND (
+    data_profile NOT IN ('synthetic', 'masked', 'redacted')
+    OR data_profile_validated IS NOT TRUE
+  );
+```
 
-Test commands:
-- `node .\node_modules\vitest\vitest.mjs --run src/session-data-profile.spec.ts src/session-queue.spec.ts src/session-access-control.spec.ts`
-- `node .\node_modules\vitest\vitest.mjs --run src/pages/__tests__/EphemeralSessions.test.ts src/utils/__tests__/multiRepoRollout.test.ts`
+## Query result on sample sessions
+- sampleSessionCount: 3
+- nonCompliantSessionCount: 0
+- launchSchemaEnforced: True
+- metadataPersisted: True
+- compliant: True
 
-Relevant code paths:
-- `apps/session-broker/src/index.ts`
-- `apps/session-broker/src/session-data-profile.ts`
-- `apps/session-broker/migrations/001_session_isolation_schema.sql`
-- `apps/frontend/src/types/index.ts`
-- `apps/frontend/src/pages/EphemeralSessions.tsx`
-- `apps/frontend/src/pages/ephemeralSessionsUtils.ts`
+## Approved profiles
+- synthetic, masked, redacted
 
-Note:
-- This artifact captures the repository-side enforcement and validation proof.
-- If a live sample-session evidence query is required for the final DoD gate, that still needs a running ephemeral-session environment and recorded query output.
+## Artifact paths
+- /mnt/c/code-server-enterprise/artifacts/triage/issue-916-sample-sessions.json
+- /mnt/c/code-server-enterprise/artifacts/triage/issue-916-compliance-evidence.machine.json
+
+## Relevant code paths
+- apps/session-broker/src/session-data-profile.ts
+- apps/session-broker/src/index.ts
+- apps/session-broker/migrations/001_session_isolation_schema.sql
+- apps/frontend/src/pages/EphemeralSessions.tsx

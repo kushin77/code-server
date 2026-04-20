@@ -260,40 +260,61 @@ dashboard: status
 # ─────────────────────────────────────────────────────────────────────────────
 # Bypass Cloudflare tunnel, OAuth2 proxy, and Caddy for direct development
 
-# ✅ SSH directly to .31 node (no tunnel/proxy)
+# ✅ SSH directly to primary node (no tunnel/proxy)
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 ssh-31:
-	@echo "🔌 Connecting directly to 192.168.168.31..."
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "🔌 Connecting directly to $$DEPLOY_HOST..."; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST
 
-# ✅ Check .31 node status (direct SSH)
+# ✅ Check primary node status (direct SSH)
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 status-31:
-	@echo "📊 Host 31 Status (192.168.168.31):"
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 'hostname && uptime && echo ""; echo "🐳 Docker:"; docker ps -n 5 --format="table {{.Names}}\t{{.Status}}" || echo "Docker not available"; echo ""; echo "💾 Disk:"; df -h / | tail -1'
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "📊 Primary host ($$DEPLOY_HOST) Status:"; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST 'hostname && uptime && echo ""; echo "🐳 Docker:"; docker ps -n 5 --format="table {{.Names}}\t{{.Status}}" || echo "Docker not available"; echo ""; echo "💾 Disk:"; df -h / | tail -1'
 
-# ✅ Open interactive code-server shell on .31
+# ✅ Open interactive shell on primary node
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 shell-31:
-	@echo "📝 Shell on 192.168.168.31:"
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 "bash -l"
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "📝 Shell on $$DEPLOY_HOST:"; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST "bash -l"
 
-# ✅ Deploy directly to .31 (skip containers/tunnel)
+# ✅ Deploy directly to primary node (skip containers/tunnel)
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 deploy-31:
-	@echo "🚀 Direct deployment to 192.168.168.31..."
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 'cd /home/akushnir/code-server-enterprise && make deploy && make status'
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "🚀 Direct deployment to $$DEPLOY_HOST..."; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST 'cd /home/$${DEPLOY_USER}/code-server-enterprise && make deploy && make status'
 
-# ✅ Stream logs from .31 node services
+# ✅ Stream logs from primary node services
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 logs-31:
-	@echo "📋 Streaming logs from 192.168.168.31..."
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 'docker compose logs -f'
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "📋 Streaming logs from $$DEPLOY_HOST..."; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST 'docker compose logs -f'
 
-# ✅ Run shell commands on .31 (usage: make cmd-31 CMD="your command")
+# ✅ Run shell commands on primary node (usage: make cmd-31 CMD="your command")
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 cmd-31:
 	@if [ -z "$(CMD)" ]; then echo "Usage: make cmd-31 CMD='your command'"; exit 1; fi
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 '$(CMD)'
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST '$(CMD)'
 
-# ✅ PHASE 13 - Execute Day 1 tasks directly on .31
+# ✅ PHASE 13 - Execute Day 1 tasks directly on primary node
+# Uses DEPLOY_HOST env var (default: 192.168.168.31), DEPLOY_USER (default: akushnir), and SSH key from ~/.ssh/
 phase-13-day1:
-	@echo "🚀 PHASE 13 DAY 1: Executing on 192.168.168.31 (direct SSH)..."
-	@bash scripts/phase-13-day1-remote.sh 192.168.168.31 akushnir ~/.ssh/akushnir-31
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "🚀 PHASE 13 DAY 1: Executing on $$DEPLOY_HOST (direct SSH)..."; \
+	bash scripts/phase-13-day1-remote.sh $$DEPLOY_HOST $$DEPLOY_USER ~/.ssh/$${DEPLOY_USER}-primary
 
 # ✅ PHASE 13 - Execute Day 1 tasks locally (requires local infrastructure)
 phase-13-day1-local:

@@ -88,13 +88,13 @@ else
 fi
 
 if [[ ${#violations[@]} -gt 0 ]]; then
-  log_error "Windows-content violations:"
+  printf '[ERROR] Windows-content violations:\n' >&2
   for v in "${violations[@]}"; do
-    log_error "  $v"
+    printf '[ERROR]   %s\n' "$v" >&2
   done
-  log_error ""
-  log_error "This is a Linux-only repository. All scripts must use bash/POSIX, LF line endings,"
-  log_error "and Linux-native paths. See issue #399."
+  printf '[ERROR]\n' >&2
+  printf '[ERROR] This is a Linux-only repository. All scripts must use bash/POSIX, LF line endings,\n' >&2
+  printf '[ERROR] and Linux-native paths. See issue #399.\n' >&2
   exit 1
 fi
 

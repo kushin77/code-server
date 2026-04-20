@@ -1,5 +1,8 @@
 # Tenant-Aware Profile Hierarchy - Implementation Guide
 
+Purpose:
+- Document the implemented tenant-aware profile hierarchy and policy merge rules for issue #753.
+
 **Issue**: #753  
 **Module**: `src/services/tenant-profile-manager/`  
 **Status**: ✅ Implementation Complete  

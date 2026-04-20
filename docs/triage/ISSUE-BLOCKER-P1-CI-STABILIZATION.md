@@ -1,3 +1,8 @@
+# Issue Blocker: P1 CI Stabilization
+
+Purpose:
+- Track the active CI stabilization blocker for branch `feat/671-issue-671` and link the required remediation work to issues #671 and #687.
+
 ## Summary
 The active branch feat/671-issue-671 has a repeated CI failure cluster after monorepo refactor work. This blocks autonomous merge and downstream deployment confidence.
 
@@ -33,3 +38,7 @@ Produce a deterministic CI baseline where required gates pass on feat/671-issue-
 - 24597129112 Enforce Repository Structure
 - 24597129123 CI - Unit & Integration Tests
 - 24597129201 CI Validate
+
+## References
+- Primary branch issue: #671
+- CI stabilization blocker: #687

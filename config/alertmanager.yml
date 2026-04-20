@@ -1,112 +1,20 @@
 global:
   resolve_timeout: 5m
-  slack_api_url: ${SLACK_WEBHOOK_URL}
-  pagerduty_url: https://events.pagerduty.com/v2/enqueue
 
+# Simplified routing - just send all alerts to null receiver
+# In production, configure Slack, PagerDuty, etc. via environment variables
 route:
-  receiver: default-team
   group_by: ['alertname', 'cluster', 'service']
   group_wait: 30s
   group_interval: 5m
-  repeat_interval: 4h
-
-  routes:
-    - match:
-        severity: critical
-        component: auth-path
-      receiver: pagerduty-critical
-      group_wait: 5m
-
-    - match:
-        severity: critical
-      receiver: pagerduty-critical
-      group_wait: 0s
-      group_interval: 5m
-      repeat_interval: 1h
-      continue: false
-
-    - match:
-        severity: high
-      receiver: slack-critical
-      group_wait: 30s
-      group_interval: 5m
-      repeat_interval: 4h
-      continue: false
-
-    - match:
-        severity: medium
-      receiver: slack-warnings
-      group_wait: 5m
-      group_interval: 10m
-      repeat_interval: 12h
-      continue: false
-
-    - match:
-        severity: low
-      receiver: email-digest
-      group_wait: 1h
-      group_interval: 1h
-      repeat_interval: 24h
-      continue: false
-
-inhibit_rules:
-  - source_match:
-      severity: 'critical'
-    target_match:
-      severity: 'warning'
-    equal: ['alertname', 'cluster', 'service']
-
-  - source_match:
-      severity: 'high'
-    target_match:
-      severity: 'low'
-    equal: ['alertname', 'cluster', 'service']
+  repeat_interval: 1h
+  receiver: 'null'
 
 receivers:
-  - name: 'default'
-    slack_configs:
-      - channel: '#alerts-general'
-        title: 'Alert: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
-        send_resolved: true
+  - name: 'null'
 
-  - name: default-team
-    slack_configs:
-      - channel: '#alerts-general'
-        title: 'Alert: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
-        send_resolved: true
-
-  - name: pagerduty-critical
-    slack_configs:
-      - channel: '#alerts-critical'
-        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
-        send_resolved: true
-    pagerduty_configs:
-      - service_key: ${PAGERDUTY_KEY}
-        description: '{{ .GroupLabels.alertname }}'
-
-  - name: slack-critical
-    slack_configs:
-      - channel: '#alerts-critical'
-        title: '⚠️ HIGH: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
-        send_resolved: true
-
-  - name: slack-warnings
-    slack_configs:
-      - channel: '#alerts'
-        title: 'ℹ️ MEDIUM: {{ .GroupLabels.alertname }}'
-        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
-        send_resolved: false
-
-  - name: email-digest
-    email_configs:
-      - to: ${ALERT_EMAIL}
-        from: alertmanager@kushnir.cloud
-        smarthost: smtp.gmail.com:587
-        auth_username: ${SMTP_USER}
-        auth_password: ${SMTP_PASSWORD}
-        headers:
-          Subject: '[AlertManager] Daily Digest'
+# Inhibition rules for alert grouping
+inhibit_rules:
+  # Don't send resolve notifications
+  - match:
+      severity: 'info'

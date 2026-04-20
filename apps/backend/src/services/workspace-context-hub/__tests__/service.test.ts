@@ -1,4 +1,3 @@
-/*
 import { beforeEach, describe, expect, it } from "vitest";
 import { WorkspaceContextHubService } from "../service";
 import type { WorkspaceLaunchProvenance, WorkspaceSnapshot } from "../types";
@@ -231,27 +230,6 @@ describe("WorkspaceContextHubService", () => {
 
     const auditEvents = service.getAuditEvents("review-revoke-set");
     expect(auditEvents.some((event) => event.eventType === "workspace_reviewer_link_revoked" && event.sessionId === "session-review-4")).toBe(true);
-  });
-*/
-import { beforeEach, describe, expect, it } from "vitest";
-import { WorkspaceContextHubService } from "../service";
-import type { WorkspaceLaunchProvenance, WorkspaceSnapshot } from "../types";
-
-const createProvenance = (overrides: Partial<WorkspaceLaunchProvenance> = {}): WorkspaceLaunchProvenance => ({
-  imageDigest: `sha256:${"a".repeat(64)}`,
-  attestationRef: "attestation://build/123",
-  signerIdentity: "builder@ci",
-  verificationTimestamp: Date.now(),
-  verificationResult: "verified",
-  policyVersion: "ephemeral-provenance-v1",
-  ...overrides,
-});
-
-describe("WorkspaceContextHubService", () => {
-  let service: WorkspaceContextHubService;
-
-  beforeEach(() => {
-    service = new WorkspaceContextHubService();
   });
 
   it("blocks shared workspace launch until approval is granted", () => {
@@ -716,3 +694,4 @@ describe("WorkspaceContextHubService", () => {
     expect(auditEvents.some((event) => event.eventType === "workspace_state_imported")).toBe(true);
   });
 });
+*/

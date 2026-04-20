@@ -104,7 +104,7 @@
             {$REPLICA_HOST:replica-host}:5000
         }
         # Sticky load balancing for WebSocket IDE traffic within a user's session.
-        lb_policy cookie ide_session_lb {$IDE_SESSION_LB_SECRET:secret734}
+        lb_policy cookie ide_session_lb {$IDE_SESSION_LB_SECRET}
         # Health checks: fast detection (<30 sec) of primary failure
         health_uri /health
         health_interval 10s
@@ -176,7 +176,7 @@
             {$REPLICA_HOST:replica-host}:5000
         }
         # Sticky load balancing with environment variable secret
-        lb_policy cookie ide_session_lb {$IDE_SESSION_LB_SECRET:secret734}
+        lb_policy cookie ide_session_lb {$IDE_SESSION_LB_SECRET}
         health_uri /health
         health_interval 10s
         health_timeout 5s

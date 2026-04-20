@@ -86,8 +86,8 @@
 
    # Store all secrets
    vault kv put secret/code-server \
-     google_client_secret="<redacted>" \
-     github_token="<redacted>" \
+   google_client_secret="<redacted>" \
+   github_token="<redacted>" \
      godaddy_key="dLNwwPhSqgPi_GzsqG6rLxd7VWqn8uMGfFe" \
      # ... etc
    ```

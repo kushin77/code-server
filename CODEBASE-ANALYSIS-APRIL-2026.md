@@ -94,7 +94,7 @@ GODADDY_SECRET=HGjgCRM25EjnUpqeYkt54F
 #### 1.5 GitHub Personal Access Token
 **Location**: [.env](.env) — Line 16  
 **Type**: GitHub PAT (Full Repo Access)  
-**Current Value**: `<redacted>`  
+**Current Value**: `<redacted>`
 **Severity**: P0 CRITICAL  
 **Impact**: Full repository access, CI/CD hijacking  
 **Remediation**:

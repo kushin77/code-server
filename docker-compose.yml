@@ -313,7 +313,7 @@ services:
     build:
       context: apps/session-broker
       dockerfile: Dockerfile
-    image: session-broker@sha256:683cca5a6c4710ba65b86403e2686030f0d3e2f4fd34f8ea44368dc2cb3148a6
+    image: ghcr.io/kushin77/session-broker@sha256:683cca5a6c4710ba65b86403e2686030f0d3e2f4fd34f8ea44368dc2cb3148a6
     container_name: session-broker
     restart: unless-stopped
     networks:

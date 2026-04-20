@@ -1,0 +1,29 @@
+{
+  "site": [
+    {
+      "@name": "127.0.0.1:1",
+      "@host": "127.0.0.1",
+      "alerts": [
+        {
+          "pluginid": "dast-target-unreachable",
+          "alert": "DAST target unreachable",
+          "desc": "Unable to reach http://127.0.0.1:1/: <urlopen error [Errno 111] Connection refused>",
+          "solution": "Verify the target URL and network access before rerunning the scan.",
+          "riskcode": "3",
+          "riskdesc": "High",
+          "confidence": "High",
+          "instances": [
+            {
+              "uri": "http://127.0.0.1:1/",
+              "line": 0,
+              "method": "GET",
+              "param": "",
+              "evidence": "<urlopen error [Errno 111] Connection refused>"
+            }
+          ],
+          "severity": "P1"
+        }
+      ]
+    }
+  ]
+}

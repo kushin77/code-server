@@ -23,7 +23,7 @@ jobs:
     outputs:
       report_summary: ${{ steps.scan.outputs.summary }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Run storage hygiene scan (dry-run)
         id: scan
@@ -38,7 +38,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Upload storage hygiene report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
         if: always()
         with:
           name: docker-storage-hygiene-report
@@ -46,22 +46,22 @@ jobs:
           retention-days: 90
 
       - name: Upload storage metrics
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
         if: hashFiles('artifacts/metrics/docker-storage-metrics.json') != ''
         with:
           name: docker-storage-metrics
           path: artifacts/metrics/docker-storage-metrics.json
-          retention-days: 365  # Keep metrics for trend analysis
+          retention-days: 90  # Keep metrics within the GitHub Free artifact ceiling
 
   analyze-trends:
     name: Analyze Storage Trends
     needs: storage-hygiene-scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Download latest metrics
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
           name: docker-storage-metrics
           path: /tmp/metrics
@@ -81,10 +81,10 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Download scan report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
           name: docker-storage-hygiene-report
           path: /tmp/reports
@@ -141,7 +141,7 @@ jobs:
           cat /tmp/summary.md
 
       - name: Comment on issue #896
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           script: |
             const fs = require('fs');
@@ -160,10 +160,10 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Download metrics
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         if: hashFiles('artifacts/metrics/docker-storage-metrics.json') != ''
         with:
           name: docker-storage-metrics
@@ -200,7 +200,7 @@ jobs:
     name: Cleanup Old Test Artifacts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Remove artifacts older than 90 days
         run: |

@@ -329,6 +329,11 @@ services:
       - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:?CODE_SERVER_IMAGE_ID must be set}
       - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
+      - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
+      - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}
+      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster}
+      - REDIS_SENTINEL_DB=${REDIS_SENTINEL_DB:-1}
+      - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
       - SESSION_PROXY_HOST=${SESSION_PROXY_HOST:?SESSION_PROXY_HOST must be set}
       - DEV_SESSION_DOMAIN=${DEV_SESSION_DOMAIN:-dev.kushnir.cloud}
       - SESSION_PUBLIC_BASE_URL=${SESSION_PUBLIC_BASE_URL:-https://dev.kushnir.cloud}
@@ -347,6 +352,13 @@ services:
       - SESSION_PROVENANCE_POLICY_VERSION=${SESSION_PROVENANCE_POLICY_VERSION:-v1.0.0}
       - SESSION_PROVENANCE_FRESHNESS_HOURS=${SESSION_PROVENANCE_FRESHNESS_HOURS:-24}
       - SESSION_PROVENANCE_VERIFICATION_RESULT=${SESSION_PROVENANCE_VERIFICATION_RESULT:-verified}
+      # Redis-backed session state for HA failover (#961 session-broker horizontal scaling)
+      - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
+      - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-false}
+      - REDIS_SENTINEL_URLS=redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379
+      - REDIS_SENTINEL_DB=1
+      - SESSION_REDIS_TTL_SECONDS=${SESSION_REDIS_TTL_SECONDS:-86400}
+      - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
     volumes:
       - /mnt/nas/code-server-sessions:/mnt/nas/code-server-sessions:rw
     healthcheck:
@@ -545,7 +557,10 @@ services:
       - net-app
     expose:
       - "26379"
-    command: redis-sentinel /etc/redis-sentinel/sentinel.conf --port 26379
+    environment:
+      PRIMARY_HOST: ${PRIMARY_HOST:-192.168.168.31}
+    command: >
+      sh -ec 'MASTER_HOST="$${PRIMARY_HOST:-192.168.168.31}"; sed "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
     volumes:
       - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
       - redis-sentinel-1-data:/data
@@ -600,7 +615,10 @@ services:
       - net-app
     expose:
       - "26379"
-    command: redis-sentinel /etc/redis-sentinel/sentinel.conf --port 26379
+    environment:
+      PRIMARY_HOST: ${PRIMARY_HOST:-192.168.168.31}
+    command: >
+      sh -ec 'MASTER_HOST="$${PRIMARY_HOST:-192.168.168.31}"; sed "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
     volumes:
       - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
       - redis-sentinel-arbiter-data:/data

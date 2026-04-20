@@ -23,10 +23,6 @@ RUN npm install -g pnpm@9.15.4 && \
     pnpm run build && \
     pnpm prune --omit=dev
 
-# Now prepare the final compiled output
-WORKDIR /build
-COPY --from=0 /workspace/apps/session-broker/dist ./dist
-
 # ════════════════════════════════════════════════════════════════════════════
 # Stage 2: Runtime
 # ════════════════════════════════════════════════════════════════════════════
@@ -54,9 +50,9 @@ RUN groupadd -g 999 docker 2>/dev/null || true && \
 WORKDIR /app
 
 # Copy built application from builder
-COPY --from=builder /build/dist ./dist
-COPY --from=builder /build/node_modules ./node_modules
-COPY --from=builder /build/package*.json ./
+COPY --from=builder /workspace/apps/session-broker/dist ./dist
+COPY --from=builder /workspace/apps/session-broker/node_modules ./node_modules
+COPY --from=builder /workspace/apps/session-broker/package*.json ./
 
 # Set permissions
 RUN chown -R session-broker:session-broker /app

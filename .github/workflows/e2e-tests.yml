@@ -7,11 +7,15 @@ on:
     paths:
       - 'apps/**'
       - 'tests/e2e/**'
+      - 'config/grafana/dashboards/qa-metrics.json'
+      - 'scripts/ci/export-e2e-metrics.sh'
       - '.github/workflows/e2e-tests.yml'
   pull_request:
     paths:
       - 'apps/**'
       - 'tests/e2e/**'
+      - 'config/grafana/dashboards/qa-metrics.json'
+      - 'scripts/ci/export-e2e-metrics.sh'
   schedule:
     # Run daily at 2 AM UTC on primary host only
     - cron: '0 2 * * *'
@@ -30,6 +34,7 @@ permissions:
   contents: read
   checks: write
   pull-requests: write
+  issues: write
 
 env:
   PLAYWRIGHT_BROWSERS_PATH: /tmp/pw-browsers
@@ -89,8 +94,7 @@ jobs:
         run: |
           pnpm exec playwright test \
             tests/e2e/specs/oauth-login.spec.ts \
-            --shard=${{ matrix.shard }}/2 \
-            --reporter=html,github
+            --shard=${{ matrix.shard }}/2
         env:
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'qa@kushnir.cloud' }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
@@ -102,7 +106,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: oauth-login-tests-shard-${{ matrix.shard }}
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 30
 
   appsmith-portal-tests:
@@ -137,8 +143,7 @@ jobs:
         run: |
           pnpm exec playwright test \
             tests/e2e/specs/appsmith-portal.spec.ts \
-            --shard=${{ matrix.shard }}/3 \
-            --reporter=html,github
+            --shard=${{ matrix.shard }}/3
         env:
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'qa@kushnir.cloud' }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
@@ -150,7 +155,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: appsmith-portal-tests-shard-${{ matrix.shard }}
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 30
 
   ide-launch-tests:
@@ -185,8 +192,7 @@ jobs:
         run: |
           pnpm exec playwright test \
             tests/e2e/specs/ide-launch.spec.ts \
-            --shard=${{ matrix.shard }}/2 \
-            --reporter=html,github
+            --shard=${{ matrix.shard }}/2
         env:
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'qa@kushnir.cloud' }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
@@ -198,7 +204,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ide-launch-tests-shard-${{ matrix.shard }}
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 30
 
   e2e-test-summary:
@@ -211,6 +219,66 @@ jobs:
 
       - name: Download all test results
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+
+      - name: Aggregate QA metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci/export-e2e-metrics.sh .
+        env:
+          E2E_METRICS_JSON_PATH: e2e-metrics.json
+          E2E_METRICS_MD_PATH: e2e-metrics.md
+          E2E_METRICS_PROM_PATH: e2e-metrics.prom
+
+      - name: Publish QA metrics summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat e2e-metrics.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment QA metrics on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('e2e-metrics.md', 'utf8');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
+
+      - name: Upload QA metrics artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: e2e-qa-metrics
+          path: |
+            e2e-metrics.json
+            e2e-metrics.md
+            e2e-metrics.prom
+          retention-days: 30
+
+      - name: Enforce QA metrics gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed_tests=$(jq -r '.failed' e2e-metrics.json)
+          pass_rate=$(jq -r '.passRate' e2e-metrics.json)
+
+          if [[ "${failed_tests}" -gt 0 ]]; then
+            echo "QA gate blocked: ${failed_tests} failed test(s) detected."
+            exit 1
+          fi
+
+          if (( $(printf '%.0f' "${pass_rate}") < 95 )); then
+            echo "QA gate blocked: pass rate ${pass_rate}% is below the 95% threshold."
+            exit 1
+          fi
+
+          echo "QA gate passed: ${pass_rate}% pass rate with zero failures."
 
       - name: Consolidate test results
         run: |
@@ -257,3 +325,17 @@ jobs:
         run: |
           echo "E2E tests failed. Review artifact results above."
           exit 1
+
+  e2e-gate:
+    name: E2E Gate
+    needs: [e2e-test-summary]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check summary result
+        run: |
+          if [ "${{ needs.e2e-test-summary.result }}" != "success" ]; then
+            echo "E2E summary failed - blocking merge"
+            exit 1
+          fi
+          echo "E2E summary passed - merge allowed"

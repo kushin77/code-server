@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-04-20T20:03:29Z",
+  "dry_run": 1,
+  "checks": {
+    "docker_compose_config": null,
+    "caddyfile_syntax": null,
+    "env_schema_validation": null,
+    "hardcoded_secrets": null,
+    "hardcoded_ips": null
+  },
+  "summary": {
+    "total_checks": 5,
+    "passed": 0,
+    "failed": 0,
+    "errors": []
+  }
+}

@@ -14,6 +14,8 @@ export default defineConfig({
     ['list'],
     ['html', { outputFolder: '../artifacts/playwright-report', open: 'never' }],
     ['json', { outputFile: '../artifacts/playwright-results.json' }],
+    ['junit', { outputFile: '../artifacts/playwright-junit.xml' }],
+    ['github'],
   ],
   use: {
     baseURL,

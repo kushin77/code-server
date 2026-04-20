@@ -154,6 +154,33 @@ const readBooleanEnv = (name: string, fallback: string): boolean => {
 
 const readCsvEnv = (name: string, fallback: string): string[] => parseDelimitedValues(process.env[name] ?? fallback);
 
+interface RateLimitState {
+  windowStartedAt: number;
+  count: number;
+}
+
+const SESSION_CREATE_RATE_LIMIT_WINDOW_MS = 60_000;
+const SESSION_CREATE_RATE_LIMIT_MAX = 5;
+const sessionCreateRateLimitState = new Map<string, RateLimitState>();
+
+const enforceSessionCreateRateLimit = (identity: string): { allowed: boolean; retryAfterSeconds?: number } => {
+  const now = Date.now();
+  const state = sessionCreateRateLimitState.get(identity);
+
+  if (!state || now - state.windowStartedAt >= SESSION_CREATE_RATE_LIMIT_WINDOW_MS) {
+    sessionCreateRateLimitState.set(identity, { windowStartedAt: now, count: 1 });
+    return { allowed: true };
+  }
+
+  if (state.count >= SESSION_CREATE_RATE_LIMIT_MAX) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((SESSION_CREATE_RATE_LIMIT_WINDOW_MS - (now - state.windowStartedAt)) / 1000));
+    return { allowed: false, retryAfterSeconds };
+  }
+
+  state.count += 1;
+  return { allowed: true };
+};
+
 const validateRuntimeConfig = (): RuntimeConfig => {
   const sessionPublicDomain = process.env.DEV_SESSION_DOMAIN?.trim() || 'dev.kushnir.cloud';
   const config: RuntimeConfig = {
@@ -161,7 +188,7 @@ const validateRuntimeConfig = (): RuntimeConfig => {
     dockerSocket: readRequiredEnv('DOCKER_SOCKET'),
     databaseUrl: readRequiredEnv('DATABASE_URL'),
     codeServerImageId: readRequiredEnv('CODE_SERVER_IMAGE_ID'),
-    sessionProxyHost: process.env.SESSION_PROXY_HOST?.trim() || process.env.DEPLOY_HOST?.trim() || '127.0.0.1',
+    sessionProxyHost: readRequiredEnv('SESSION_PROXY_HOST'),
     provenanceManifest: buildSessionProvenanceManifest({
       provenanceImageDigest: readRequiredEnv('CODE_SERVER_IMAGE_ID'),
       provenanceAttestationRef: process.env.SESSION_PROVENANCE_ATTESTATION_REF?.trim() || 'rekor://attestations/session-broker@v1',
@@ -211,6 +238,12 @@ const validateRuntimeConfig = (): RuntimeConfig => {
 };
 
 const runtimeConfig = validateRuntimeConfig();
+
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.error('Unhandled promise rejection in session-broker', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+  });
+});
 
 const getSessionContainerUrl = (sessionPort: number): string => `http://${runtimeConfig.sessionProxyHost}:${sessionPort}`;
 
@@ -2372,6 +2405,19 @@ app.post('/sessions', async (req: Request, res: Response) => {
   const authUser = requireAuthUser(req, res);
   if (!authUser) {
     return;
+  }
+
+  const rateLimitKey = authUser.email || req.ip;
+  const rateLimitDecision = enforceSessionCreateRateLimit(rateLimitKey);
+  if (!rateLimitDecision.allowed) {
+    if (typeof rateLimitDecision.retryAfterSeconds === 'number') {
+      res.setHeader('Retry-After', String(rateLimitDecision.retryAfterSeconds));
+    }
+
+    return res.status(429).json({
+      error: 'Too many session creation attempts, retry after 60 seconds',
+      retryAfterSeconds: rateLimitDecision.retryAfterSeconds ?? 60,
+    });
   }
 
   const provenanceSchema = Joi.object({

@@ -313,7 +313,7 @@ services:
     build:
       context: apps/session-broker
       dockerfile: Dockerfile
-    image: session-broker:dev
+    image: session-broker@sha256:683cca5a6c4710ba65b86403e2686030f0d3e2f4fd34f8ea44368dc2cb3148a6
     container_name: session-broker
     restart: unless-stopped
     networks:
@@ -329,7 +329,7 @@ services:
       - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:?CODE_SERVER_IMAGE_ID must be set}
       - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
-      - DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}
+      - SESSION_PROXY_HOST=${SESSION_PROXY_HOST:?SESSION_PROXY_HOST must be set}
       - DEV_SESSION_DOMAIN=${DEV_SESSION_DOMAIN:-dev.kushnir.cloud}
       - SESSION_PUBLIC_BASE_URL=${SESSION_PUBLIC_BASE_URL:-https://dev.kushnir.cloud}
       - SESSION_CPU_LIMIT=${SESSION_CPU_LIMIT:-2.0}

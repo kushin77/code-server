@@ -85,7 +85,7 @@ const createMockRedisClient = () => {
 };
 
 describe('RedisSessionStore', () => {
-  let store: RedisSessionStore;
+  let store: RedisSessionStore | null = null;
   let mockRedis: ReturnType<typeof createMockRedisClient>;
 
   beforeAll(async () => {

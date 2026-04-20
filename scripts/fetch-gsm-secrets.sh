@@ -238,6 +238,27 @@ if [[ -n "${GITHUB_TOKEN:-}" ]]; then
     export GH_TOKEN="$GITHUB_TOKEN"
 fi
 
+# E2E testing credentials (QA user authentication for Playwright/Puppeteer tests)
+# These are optional and only needed when running E2E test suites
+if ! fetch_first_available_secret "E2E_USER_EMAIL" \
+    "qa-user-email" \
+    "prod-qa-user-email"; then
+    echo "WARN: No E2E_USER_EMAIL found in GSM (E2E tests will be skipped)" >&2
+fi
+
+if ! fetch_first_available_secret "E2E_USER_PASSWORD" \
+    "qa-user-password" \
+    "prod-qa-user-password"; then
+    if [[ -n "${E2E_USER_EMAIL:-}" ]]; then
+        echo "WARN: E2E_USER_EMAIL is set but E2E_USER_PASSWORD not found in GSM" >&2
+    fi
+fi
+
+# E2E OAuth token (optional, for faster test setup without re-authenticating)
+fetch_gsm_secret_optional "qa-oauth-token" "E2E_USER_OAUTH_TOKEN" || \
+    fetch_gsm_secret_optional "prod-qa-oauth-token" "E2E_USER_OAUTH_TOKEN" || \
+    true
+
 # Fill Terraform inputs expected by root/module variables.
 export TF_VAR_code_server_password="${TF_VAR_code_server_password:-$CODE_SERVER_PASSWORD}"
 export TF_VAR_google_client_id="${TF_VAR_google_client_id:-$GOOGLE_CLIENT_ID}"

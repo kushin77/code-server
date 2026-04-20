@@ -99,7 +99,6 @@ export class TemplateManager {
         name,
         topic,
         preset: template.joinRule === "public" ? "public_chat" : "private_chat",
-        join_rules: template.joinRule,
         power_level_content_override: {
           users: template.powerLevels.users || {},
           events: template.powerLevels.events || {},
@@ -108,6 +107,11 @@ export class TemplateManager {
           users_default: template.powerLevels.usersDefault ?? 0,
         },
         initial_state: [
+          {
+            type: "m.room.join_rules",
+            state_key: "",
+            content: { join_rule: template.joinRule },
+          },
           // Retention policy
           {
             type: "m.room.retention",

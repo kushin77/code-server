@@ -2,6 +2,7 @@ packages:
   - apps/backend
   - apps/frontend
   - apps/session-broker
+  - apps/matrix-admin-bot
   - apps/extensions/*
   - tests/e2e
 
@@ -15,5 +16,6 @@ catalog:
   "@typescript-eslint/parser": ^8.58.2
   "eslint": ^8.56.0
   "@playwright/test": ^1.59.1
+  "pino": ^8.20.0
 
 onlyBuiltDependencies: []

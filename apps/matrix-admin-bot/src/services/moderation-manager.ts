@@ -152,7 +152,16 @@ export class ModerationManager {
    */
   async banUser(roomId: string, userId: string, reason?: string): Promise<void> {
     try {
-      await this.client.ban(roomId, userId, reason);
+      // Use state event API to ban - send membership state event with "ban" membership
+      await this.client.sendStateEvent(
+        roomId,
+        "m.room.member",
+        userId,
+        {
+          membership: "ban",
+          reason: reason || undefined,
+        }
+      );
     } catch (error) {
       console.error("Failed to ban user:", error);
       throw error;
@@ -164,7 +173,16 @@ export class ModerationManager {
    */
   async kickUser(roomId: string, userId: string, reason?: string): Promise<void> {
     try {
-      await this.client.kick(roomId, userId, reason);
+      // Use state event API to kick - send membership state event with "leave" membership
+      await this.client.sendStateEvent(
+        roomId,
+        "m.room.member",
+        userId,
+        {
+          membership: "leave",
+          reason: reason || undefined,
+        }
+      );
     } catch (error) {
       console.error("Failed to kick user:", error);
       throw error;

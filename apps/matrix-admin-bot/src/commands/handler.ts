@@ -152,8 +152,16 @@ async function handleArchiveRoom(context: CommandContext, args: string[]): Promi
   context.logger.info({ targetRoomId, sender: context.sender }, "Archiving room");
 
   try {
-    // Get room info
-    const roomName = await context.client.getRoomName(targetRoomId).catch(() => targetRoomId);
+    // Get room info - use state event lookup instead
+    let roomName = targetRoomId;
+    try {
+      const stateEvent = await (context.client as any).getRoomState(targetRoomId, "m.room.name", "");
+      if (stateEvent && stateEvent.name) {
+        roomName = stateEvent.name;
+      }
+    } catch {
+      // If we can't get room name, use room ID
+    }
 
     // Set join rule to "knock" to prevent new joins
     await context.client.sendStateEvent(
@@ -265,7 +273,7 @@ async function handleListMembers(context: CommandContext, args: string[]): Promi
     const members = await context.client.getRoomMembers(targetRoomId);
     const memberList = members
       .slice(0, 20) // Show first 20
-      .map((m) => `  • ${m.user_id}`)
+      .map((m) => `  • ${(m as any).state_key || (m as any).user_id || m}`)
       .join("\n");
 
     const more = members.length > 20 ? `\n... and ${members.length - 20} more` : "";

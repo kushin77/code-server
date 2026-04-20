@@ -92,7 +92,7 @@ export class RetentionManager {
         CREATE INDEX IF NOT EXISTS idx_retention_room ON audit.retention_policies(room_id);
       `);
     } catch (error) {
-      if (!error instanceof Error || !error.message.includes("already exists")) {
+      if (!(error instanceof Error) || !error.message.includes("already exists")) {
         throw error;
       }
     }

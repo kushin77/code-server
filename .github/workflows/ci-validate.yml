@@ -8,6 +8,7 @@ on:
 # Ref: #390 — least-privilege permissions
 permissions:
   contents: read
+  issues: read
 
 jobs:
   pre-commit:
@@ -76,6 +77,63 @@ jobs:
           else
             echo "✅ Zero log_info() governance violations"
           fi
+
+  service-registry:
+    name: Governance — service registry SSOT
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Validate service registry against docker-compose topology
+        run: bash scripts/ci/validate-service-registry.sh
+
+      - name: Validate service registry health script syntax
+        run: bash -n scripts/ci/validate-service-registry-health.sh
+
+  test-matrix:
+    name: Governance — test matrix enforcement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Validate test matrix SSOT and PR test linkage
+        run: bash scripts/ci/validate-test-matrix.sh
+
+      - name: Backend coverage gate
+        run: pnpm --dir apps/backend test:coverage
+
+      - name: Frontend coverage gate
+        run: pnpm --dir apps/frontend test:coverage
+
+  backlog-triage:
+    name: Governance — open backlog triage validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install GitHub CLI
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gh
+
+      - name: Validate open backlog triage SSOT
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/ci/validate-triage-open-backlog.sh
 
   readme-docs-integrity:
     name: README docs integrity (markdown + local links)
@@ -174,6 +232,133 @@ jobs:
 
       - name: Detect hardcoded config values (IPs, domains, ports)
         run: bash scripts/ci/detect-config-drift.sh
+
+  config-ssot-report:
+    name: Governance — config SSOT report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Generate canonical config SSOT report
+        run: bash scripts/ci/generate-config-ssot-report.sh
+
+  documentation-gap-sync:
+    name: Governance — documentation gap sync
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Verify documentation gaps remain synced to issue tracking
+        run: bash scripts/ci/sync-documentation-gaps.sh --check-only
+
+  api-specification:
+    name: Governance — API specification SSOT
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Validate checked-in OpenAPI 3.1 specifications
+        run: bash scripts/ci/validate-api-specification.sh
+
+  test-matrix:
+    name: Governance — test matrix enforcement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Validate matrix updates for production-facing changes
+        run: bash scripts/ci/validate-test-matrix.sh
+
+  terraform-backend-hardening:
+    name: Governance — terraform backend hardening
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Verify remote backend locking and encryption controls
+        run: bash scripts/ci/check-terraform-backend-hardening.sh
+
+  image-immutability:
+    name: Governance — pinned image tags only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Block floating image tags in active manifests
+        run: bash scripts/ci/check-image-immutability.sh
+
+  script-error-handling-consistency:
+    name: Governance — script error-handling baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Enforce strict mode and init sourcing on critical scripts
+        run: bash scripts/ci/check-error-handling-consistency.sh --strict
+
+  authenticated-e2e:
+    name: E2E — authenticated session persistence (seeded storage state)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: 22
+
+      - name: Decode authenticated storage state
+        shell: bash
+        env:
+          PLAYWRIGHT_STORAGE_STATE_B64: ${{ secrets.PLAYWRIGHT_STORAGE_STATE_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PLAYWRIGHT_STORAGE_STATE_B64:-}" ]]; then
+            echo "::error::PLAYWRIGHT_STORAGE_STATE_B64 secret is not set" >&2
+            exit 1
+          fi
+
+          mkdir -p /tmp/e2e-auth
+          if [[ "${PLAYWRIGHT_STORAGE_STATE_B64#\{}" != "$PLAYWRIGHT_STORAGE_STATE_B64" ]]; then
+            printf '%s' "$PLAYWRIGHT_STORAGE_STATE_B64" > /tmp/e2e-auth/storage-state.json
+          else
+            if ! printf '%s' "$PLAYWRIGHT_STORAGE_STATE_B64" | tr -d '\r\n\t ' | base64 -d > /tmp/e2e-auth/storage-state.json 2>/tmp/e2e-auth/decode.err; then
+              echo "::error::Failed to decode PLAYWRIGHT_STORAGE_STATE_B64 as base64" >&2
+              cat /tmp/e2e-auth/decode.err >&2
+              exit 1
+            fi
+          fi
+
+          test -s /tmp/e2e-auth/storage-state.json
+          node -e "JSON.parse(require('fs').readFileSync('/tmp/e2e-auth/storage-state.json', 'utf8'));"
+
+      - name: Set up Playwright kit
+        run: bash scripts/ci/setup-e2e-playwright.sh
+
+      - name: Run authenticated Appsmith login E2E
+        env:
+          PORTAL_BASE_URL: https://kushnir.cloud
+          IDE_BASE_URL: https://ide.kushnir.cloud
+          PLAYWRIGHT_STORAGE_STATE: /tmp/e2e-auth/storage-state.json
+          REQUIRE_VPN: 1
+          REQUIRE_QA_STORAGE_STATE: 1
+          REQUIRE_SINGLE_LOGIN: 1
+        run: bash scripts/ci/run-kushnir-cloud-appsmith-login-e2e.sh
+
+  duplicate-helper-detection:
+    name: Governance — duplicate helper detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Detect duplicated helper implementations
+        run: bash scripts/ci/detect-duplicate-helpers.sh
 
   role-profile-policy-lint:
     name: Governance — role profile recommendation policy
@@ -385,7 +570,7 @@ jobs:
 
       - name: Upload waiver audit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
         with:
           name: waiver-audit-report
           path: /tmp/waiver-report/
@@ -400,7 +585,9 @@ jobs:
 
       - name: Check policy SSOT (no duplicate normative sections)
         # P2 advisory: duplicate policy is tech debt, not a blocking security violation
-        run: bash scripts/ci/check-policy-ssot.sh || echo "::warning::P2-advisory: policy SSOT violations found \u2014 resolve before next release"
+        run: |
+          bash scripts/ci/check-policy-ssot.sh || \
+            echo "::warning::P2-advisory: policy SSOT violations found - resolve before next release"
   # ── P1 #703: Policy version integrity guard ──────────────────────────────
   policy-version-integrity:
     name: Policy runtime — version hash integrity

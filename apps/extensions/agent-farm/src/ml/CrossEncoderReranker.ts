@@ -19,7 +19,7 @@ export class CrossEncoderReranker {
     return results.map((result, index) => ({
       id: result.id,
       content: result.content,
-      score: 1.0 - (index * 0.1), // Simple score decay
+      score: Math.max(0, 1.0 - (index * 0.1) + (this.calculateSimilarity(query, result.content) * 0.1)),
       metadata: {},
     }));
   }
@@ -28,7 +28,14 @@ export class CrossEncoderReranker {
    * Calculate semantic similarity score
    */
   private calculateSimilarity(query: string, document: string): number {
-    // Stub: Would use cross-encoder model in production
-    return 0.5;
+    const queryTerms = new Set(query.toLowerCase().split(/\s+/).filter(Boolean));
+    const documentTerms = document.toLowerCase().split(/\s+/).filter(Boolean);
+
+    if (queryTerms.size === 0 || documentTerms.length === 0) {
+      return 0;
+    }
+
+    const overlap = documentTerms.filter((term) => queryTerms.has(term)).length;
+    return overlap / queryTerms.size;
   }
 }

@@ -29,6 +29,33 @@
 
   "packageRules": [
     {
+      "description": "Approved Docker images — digest pinning allowed for the runtime surface",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "ubuntu",
+        "node",
+        "python",
+        "caddy",
+        "codercom/code-server",
+        "ollama/ollama",
+        "quay.io/oauth2-proxy/oauth2-proxy",
+        "postgres",
+        "redis",
+        "alpine",
+        "prom/prometheus",
+        "grafana/grafana",
+        "prom/alertmanager",
+        "jaegertracing/all-in-one",
+        "appsmith/appsmith-ce",
+        "haproxy",
+        "edoburu/pgbouncer"
+      ],
+      "pinDigests": true,
+      "automerge": false,
+      "labels": ["dependencies", "docker", "supply-chain"]
+    },
+
+    {
       "description": "GitHub Actions — pin to commit SHA on update (supply-chain security)",
       "matchManagers": ["github-actions"],
       "pinDigests": true,

@@ -51,7 +51,7 @@ variable "bastion_ssh_key_path" {
 # ============================================================================
 
 variable "nas_primary_endpoint" {
-  description = "NAS Primary IP address or hostname (e.g., 192.168.168.50)"
+  description = "NAS Primary IP address or hostname (e.g., 192.168.168.56)"
   type        = string
   validation {
     condition     = length(var.nas_primary_endpoint) > 0
@@ -75,7 +75,7 @@ variable "nas_primary_mount_point" {
 }
 
 variable "nas_backup_endpoint" {
-  description = "NAS Backup IP address or hostname (e.g., 192.168.168.51)"
+  description = "NAS Backup IP address or hostname (e.g., 192.168.168.56)"
   type        = string
   validation {
     condition     = length(var.nas_backup_endpoint) > 0
@@ -211,9 +211,20 @@ variable "docker_compose_version" {
 # ============================================================================
 
 variable "ollama_models" {
-  description = "List of Ollama models to document in deployment"
+  description = "List of Ollama models to pull (pinned versions for reproducibility). Use quantized versions (q4_K_M, q5_K_M) to reduce memory footprint."
   type        = list(string)
-  default     = ["llama2:70b-chat", "codegemma:latest", "mistral:latest"]
+  default = [
+    "llama2:70b-chat-q4_K_M",      # Stable, quantized for performance
+    "codegemma:7b-instruct-q4_K_M",# Google's code model
+    "mistral:7b-instruct-q4_K_M"   # Fast inference
+  ]
+  
+  validation {
+    condition = alltrue([
+      for model in var.ollama_models : can(regex("^[a-z0-9-]+:[a-z0-9._-]+$", model))
+    ])
+    error_message = "Each model must be in format 'name:version' (e.g., llama2:70b-chat-q4_K_M)"
+  }
 }
 
 variable "ollama_num_gpu" {

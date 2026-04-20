@@ -269,7 +269,7 @@ resource "kubernetes_deployment" "vault" {
             for_each = local.vault_is_dev ? [1] : []
             content {
               name  = "VAULT_DEV_ROOT_TOKEN_ID"
-              value = "dev-root-token"
+              value = var.vault_dev_root_token
             }
           }
 

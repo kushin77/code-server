@@ -54,7 +54,7 @@ If `GCP_PROJECT` is not numeric, treat the secret contract as incomplete and fix
 
 - [Portal OAuth blocker note](../triage/ISSUE-BLOCKER-P0-OAUTH-REDEPLOY.md)
 - [Autonomous execution playbook](../triage/AUTONOMOUS-EXECUTION-PLAYBOOK-2026-04-18.md)
-- [Open issue status](../status/AUTONOMOUS-OPEN-ISSUE-STATUS-2026-04-18.md)
+- [Status index](../status/README.md)
 - [Portal 502 follow-up issue](../triage/ISSUE-BLOCKER-P0-OAUTH-REDEPLOY.md)
 - [Portal OAuth redeploy workflow](../../.github/workflows/portal-oauth-redeploy.yml)
 - [GSM bootstrap script](../../scripts/fetch-gsm-secrets.sh)

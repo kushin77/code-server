@@ -196,7 +196,7 @@ describe('Phase 7: Advanced Observability', () => {
 
     it('should export trace as JSON', () => {
       const traceId = 'trace-export';
-      const span = tracer.startTrace(traceId);
+      tracer.startTrace(traceId);
 
       const json = tracer.exportTrace(traceId);
       const parsed = JSON.parse(json);
@@ -374,7 +374,6 @@ describe('Phase 7: Advanced Observability', () => {
         done();
       });
 
-      const metrics = agent.getComponents().metrics;
       const anomalies = agent.getComponents().anomalies;
 
       // Establish baseline
@@ -473,7 +472,6 @@ describe('Phase 7: Advanced Observability', () => {
 
     it('should track request from start to finish', () => {
       const tracer = agent.getComponents().tracing;
-      const metrics = agent.getComponents().metrics;
 
       // Start request trace
       const traceId = 'req-001';
@@ -504,7 +502,6 @@ describe('Phase 7: Advanced Observability', () => {
     });
 
     it('should correlate metrics, traces, and alerts', () => {
-      const metrics = agent.getComponents().metrics;
       const tracer = agent.getComponents().tracing;
       const alertManager = agent.getComponents().alerts;
 

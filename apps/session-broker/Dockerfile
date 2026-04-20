@@ -5,7 +5,7 @@
 # Stage 1: Build
 # ════════════════════════════════════════════════════════════════════════════
 
-FROM node:22-slim AS builder
+FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391b8e61cc6a AS builder
 
 WORKDIR /build
 
@@ -24,7 +24,7 @@ RUN npm run build && npm prune --omit=dev
 # Stage 2: Runtime
 # ════════════════════════════════════════════════════════════════════════════
 
-FROM node:22-slim
+FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391b8e61cc6a
 
 LABEL maintainer="kushnir@bioenergystrategies.com"
 LABEL description="Session broker for per-user/per-session code-server isolation"

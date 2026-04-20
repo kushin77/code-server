@@ -1,0 +1,33 @@
+name: CI — Deprecated Script Shims Guard
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/common-functions.sh'
+      - 'scripts/logging.sh'
+      - 'scripts/code-server-entrypoint.sh'
+      - 'scripts/git-credential-gsm'
+      - 'scripts/ops/drift-detect.sh'
+      - 'scripts/ci/check-deprecated-script-shims.sh'
+      - '.github/workflows/deprecated-script-shims-guard.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/common-functions.sh'
+      - 'scripts/logging.sh'
+      - 'scripts/code-server-entrypoint.sh'
+      - 'scripts/git-credential-gsm'
+      - 'scripts/ops/drift-detect.sh'
+      - 'scripts/ci/check-deprecated-script-shims.sh'
+      - '.github/workflows/deprecated-script-shims-guard.yml'
+
+jobs:
+  deprecated-script-shims-guard:
+    runs-on: ubuntu-latest
+    name: Verify Deprecated Script Shims (Archive Pointers Only)
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      
+      - name: Run deprecated script shim guard
+        run: bash scripts/ci/check-deprecated-script-shims.sh
+        shell: bash

@@ -25,6 +25,14 @@ import {
   ResolverOptions,
   RecommendationPolicy,
 } from "./types"
+import {
+  computeProfileTemplateBundleChecksum,
+  createProfileTemplateBundleManifest,
+  getTemplateBundleFilePath,
+  loadProfileTemplateBundle,
+  type ProfileTemplateBundle,
+  type ProfileTemplateBundleManifest,
+} from "./template-bundles"
 
 /**
  * TenantProfileManager enforces tenant-aware profile hierarchy with immutable policy overlays.
@@ -40,12 +48,14 @@ import {
  */
 export class TenantProfileManager {
   private profileBasePath: string
+  private templateBundleBasePath: string
   private immutableKeys: Map<string, ImmutableKeyPolicy> = new Map()
   private profileCache: Map<string, MergedProfile> = new Map()
   private cacheRefreshTtlMs: number = 30000 // 30 second TTL
 
-  constructor(basePath: string = "~/.code-server/profiles") {
+  constructor(basePath: string = "~/.code-server/profiles", templateBundleBasePath: string = "config/profile-template-bundles") {
     this.profileBasePath = this.expandPath(basePath)
+    this.templateBundleBasePath = this.expandPath(templateBundleBasePath)
     this.initializeImmutableKeyRegistry()
   }
 
@@ -78,7 +88,7 @@ export class TenantProfileManager {
    * Main entry point: Merge all profile levels for a given namespace.
    */
   async mergeProfiles(options: ResolverOptions & ProfileMergeOptions): Promise<MergedProfile> {
-    const cacheKey = this.getCacheKey(options.namespace)
+    const cacheKey = this.getCacheKey(options.namespace, options)
     const cached = this.profileCache.get(cacheKey)
 
     // Return cached if available and fresh
@@ -88,6 +98,7 @@ export class TenantProfileManager {
 
     const merged = new Map<string, ProfileSetting>()
     const appliedHierarchy: ProfileLevel[] = []
+    const driftBaseline = new Map<string, ProfileSetting>()
 
     // Load profiles in hierarchy order (lowest to highest precedence)
     const levels = [
@@ -104,6 +115,13 @@ export class TenantProfileManager {
       // Skip user preferences if not included
       if (level === ProfileLevel.USER_PREFERENCES && !options.includeUserPreferences) {
         continue
+      }
+
+      if (level === ProfileLevel.USER_PREFERENCES) {
+        driftBaseline.clear()
+        for (const [key, setting] of merged.entries()) {
+          driftBaseline.set(key, setting)
+        }
       }
 
       const levelSettings = await this.loadProfileLevel(level, options.namespace, options.roles)
@@ -153,7 +171,7 @@ export class TenantProfileManager {
     let driftDetails: string[] = []
 
     if (options.detectDrift) {
-      const driftResult = await this.detectDrift(options.namespace, merged)
+      const driftResult = await this.detectDrift(options.namespace, driftBaseline.size > 0 ? driftBaseline : merged)
       driftDetected = driftResult.drifted
       driftDetails = Array.from(driftResult.driftDetails.entries()).map(
         ([key, detail]) => `${key}: expected ${JSON.stringify(detail.expectedValue)} but got ${JSON.stringify(detail.actualValue)}`,
@@ -203,7 +221,9 @@ export class TenantProfileManager {
           const roleFile = path.join(this.profileBasePath, `role-${role}.json`)
           try {
             const roleSettings = JSON.parse(await fs.promises.readFile(roleFile, "utf-8"))
-            Object.assign(allRoleSettings, roleSettings)
+            for (const [key, value] of Object.entries(roleSettings)) {
+              allRoleSettings[key] = this.normalizeLoadedSetting(key, value)
+            }
           } catch (e) {
             // Role policy may not exist
           }
@@ -229,7 +249,14 @@ export class TenantProfileManager {
 
     try {
       const content = await fs.promises.readFile(profileFile, "utf-8")
-      return JSON.parse(content)
+      const parsed = JSON.parse(content)
+      const normalized: Record<string, any> = {}
+
+      for (const [key, value] of Object.entries(parsed)) {
+        normalized[key] = this.normalizeLoadedSetting(key, value)
+      }
+
+      return normalized
     } catch (e) {
       // Profile file may not exist - return empty
       return {}
@@ -343,6 +370,103 @@ export class TenantProfileManager {
         error: `Failed to write profile: ${(e as Error).message}`,
       }
     }
+  }
+
+  /**
+   * Load a versioned template bundle from the canonical bundle directory.
+   */
+  async loadTemplateBundle(bundleId: string): Promise<ProfileTemplateBundle> {
+    const bundlePath = getTemplateBundleFilePath(this.templateBundleBasePath, bundleId)
+    return loadProfileTemplateBundle(bundlePath)
+  }
+
+  /**
+   * Seed a namespace from a versioned template bundle.
+   */
+  async seedProfileFromTemplateBundle(
+    namespace: ProfileNamespace,
+    bundleId: string,
+    correlationId: string,
+    force: boolean = false,
+  ): Promise<ProfileMigrationResult> {
+    const bundle = await this.loadTemplateBundle(bundleId)
+    const bundleManifestPath = path.join(namespace.asPath(), "template-bundle-manifest.json")
+    const starterPackPath = path.join(namespace.asPath(), "starter-pack.json")
+    const exceptionPolicyPath = path.join(namespace.asPath(), "exception-policy.json")
+
+    await fs.promises.mkdir(namespace.asPath(), { recursive: true })
+
+    const bundleChecksum = computeProfileTemplateBundleChecksum(bundle)
+    const existingManifest = await this.readTemplateBundleManifest(bundleManifestPath)
+    if (!force && existingManifest && existingManifest.bundleChecksum === bundleChecksum) {
+      return {
+        success: true,
+        migratedSettings: 0,
+        skippedSettings: bundle.entries.length,
+        errors: [],
+        correlationId,
+      }
+    }
+
+    const errors: MigrationError[] = []
+    let migratedSettings = 0
+    let skippedSettings = 0
+
+    for (const entry of bundle.entries) {
+      const result = await this.applySetting(namespace, entry.level, entry.key, entry.value, correlationId)
+
+      if (result.success) {
+        migratedSettings++
+      } else {
+        errors.push({
+          key: entry.key,
+          reason: result.error || "Unknown error",
+          severity: "error",
+        })
+        skippedSettings++
+      }
+    }
+
+    const manifest: ProfileTemplateBundleManifest = createProfileTemplateBundleManifest(bundle, correlationId)
+    await fs.promises.writeFile(bundleManifestPath, JSON.stringify(manifest, null, 2), "utf-8")
+    await fs.promises.writeFile(starterPackPath, JSON.stringify(bundle.starterPack, null, 2), "utf-8")
+    await fs.promises.writeFile(exceptionPolicyPath, JSON.stringify(bundle.exceptionPolicy, null, 2), "utf-8")
+
+    this.invalidateCache(namespace)
+
+    return {
+      success: errors.filter((entry) => entry.severity === "error").length === 0,
+      migratedSettings,
+      skippedSettings,
+      errors,
+      correlationId,
+    }
+  }
+
+  /**
+   * Synchronize a namespace with the latest version of a template bundle.
+   */
+  async syncProfileFromTemplateBundle(
+    namespace: ProfileNamespace,
+    bundleId: string,
+    correlationId: string,
+    force: boolean = false,
+  ): Promise<ProfileMigrationResult> {
+    const bundle = await this.loadTemplateBundle(bundleId)
+    const bundleManifestPath = path.join(namespace.asPath(), "template-bundle-manifest.json")
+    const existingManifest = await this.readTemplateBundleManifest(bundleManifestPath)
+
+    if (!force && existingManifest && existingManifest.bundleChecksum === computeProfileTemplateBundleChecksum(bundle)) {
+      return {
+        success: true,
+        migratedSettings: 0,
+        skippedSettings: bundle.entries.length,
+        errors: [],
+        correlationId,
+      }
+    }
+
+    return this.seedProfileFromTemplateBundle(namespace, bundleId, correlationId, force)
   }
 
   /**
@@ -507,16 +631,39 @@ export class TenantProfileManager {
   /**
    * Generate cache key for merged profile.
    */
-  private getCacheKey(namespace: ProfileNamespace): string {
-    return namespace.asPrefix()
+  private getCacheKey(namespace: ProfileNamespace, options?: Partial<ResolverOptions & ProfileMergeOptions>): string {
+    return [
+      namespace.asPrefix(),
+      options?.includeUserPreferences ? "user-prefs=1" : "user-prefs=0",
+      options?.enforceImmutability ? "immutable=1" : "immutable=0",
+      options?.detectDrift ? "drift=1" : "drift=0",
+      options?.auditLog ? "audit=1" : "audit=0",
+      options?.workspaceId || "workspace=default",
+      (options?.roles || []).slice().sort().join(","),
+    ].join("|")
   }
 
   /**
    * Invalidate cache for a namespace.
    */
   private invalidateCache(namespace: ProfileNamespace): void {
-    const key = this.getCacheKey(namespace)
-    this.profileCache.delete(key)
+    for (const key of this.profileCache.keys()) {
+      if (key.startsWith(namespace.asPrefix())) {
+        this.profileCache.delete(key)
+      }
+    }
+  }
+
+  /**
+   * Read the current template bundle manifest if present.
+   */
+  private async readTemplateBundleManifest(manifestPath: string): Promise<ProfileTemplateBundleManifest | null> {
+    try {
+      const content = await fs.promises.readFile(manifestPath, "utf-8")
+      return JSON.parse(content) as ProfileTemplateBundleManifest
+    } catch (error) {
+      return null
+    }
   }
 
   /**
@@ -534,11 +681,27 @@ export class TenantProfileManager {
    */
   private sanitizeFileName(name: string): string {
     return name
-      .replace(/\//g, "_")
-      .replace(/\\/g, "_")
-      .replace(/\.\./g, "")
-      .replace(/^\./, "")
+      .replace(/[^a-zA-Z0-9_-]+/g, "_")
+      .replace(/^_+|_+$/g, "")
       .toLowerCase()
+  }
+
+  /**
+   * Normalize loaded profile data so raw JSON and wrapped setting records both work.
+   */
+  private normalizeLoadedSetting(key: string, value: any): { value: any; immutable: boolean; description?: string } {
+    if (value && typeof value === "object" && "value" in value) {
+      return {
+        value: value.value,
+        immutable: Boolean(value.immutable),
+        description: value.description,
+      }
+    }
+
+    return {
+      value,
+      immutable: this.isImmutableKey(key),
+    }
   }
 
   /**
@@ -569,11 +732,12 @@ export class TenantProfileManager {
 /**
  * Factory function to create a TenantProfileManager instance.
  */
-export function createTenantProfileManager(basePath?: string): TenantProfileManager {
-  return new TenantProfileManager(basePath)
+export function createTenantProfileManager(basePath?: string, templateBundleBasePath?: string): TenantProfileManager {
+  return new TenantProfileManager(basePath, templateBundleBasePath)
 }
 
 /**
  * Export all types for convenience.
  */
 export * from "./types"
+export * from "./template-bundles"

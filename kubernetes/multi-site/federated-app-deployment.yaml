@@ -9,6 +9,9 @@ metadata:
   labels:
     federation: enabled
     monitoring: prometheus
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
 
 ---
 # Service for clients in same region (strongly consistent read)

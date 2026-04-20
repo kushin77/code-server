@@ -9,6 +9,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 _log()  { echo "[e2e-setup] $*"; }
 _warn() { echo "[e2e-setup] WARN: $*" >&2; }
 
@@ -19,14 +22,39 @@ ARTIFACT_DIR="${E2E_ARTIFACT_DIR:-$E2E_DIR/artifacts}"
 FIXTURE_DIR="${E2E_FIXTURE_DIR:-$E2E_DIR/fixtures}"
 SKIP_NPM_INSTALL="${E2E_SKIP_NPM_INSTALL:-0}"
 
-# ── Check for Node.js ─────────────────────────────────────────────────────────
-if ! command -v node >/dev/null 2>&1; then
-  echo "[e2e-setup] ERROR: Node.js not found — required for Playwright" >&2
-  exit 1
-fi
+resolve_node_command() {
+  local candidate
+  local -a candidates=(
+    node
+    node.exe
+    "/mnt/c/Program Files/nodejs/node.exe"
+    "/mnt/c/Program Files/nodejs/node"
+  )
 
-NODE_VER=$(node --version)
-_log "Node.js: $NODE_VER"
+  for candidate in "${candidates[@]}"; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      command -v "$candidate"
+      return 0
+    fi
+
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+NODE_CMD="$(resolve_node_command || true)"
+
+# ── Check for Node.js ─────────────────────────────────────────────────────────
+if [[ -z "$NODE_CMD" ]]; then
+  _warn "Node.js is not visible in this shell; Playwright will rely on npx in PATH. (Linux-native mandate enforced per #885)"
+else
+  NODE_VER="$("$NODE_CMD" --version)"
+  _log "Node.js: $NODE_VER"
+fi
 
 # ── VPN gate check (production E2E only) ─────────────────────────────────────
 if [[ "${REQUIRE_VPN:-1}" == "1" ]]; then

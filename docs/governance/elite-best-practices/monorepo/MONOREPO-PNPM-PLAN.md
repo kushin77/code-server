@@ -12,12 +12,15 @@ Implementation Mode: staged. Root workspace files are introduced only in dedicat
 
 - `backend`
 - `frontend`
+- `session-broker`
 - `extensions/*`
+- `tests/e2e`
 
 ## Rules
 
 - Use single lockfile at repo root (`pnpm-lock.yaml`)
-- Use `workspace:*` for internal package version links
+- Use `workspace:^` for internal package version links
+- Put shared external versions in `catalog:` entries in `pnpm-workspace.yaml`
 - Keep shared scripts in root workspace and reuse from package scripts
 
 ## Bootstrapping

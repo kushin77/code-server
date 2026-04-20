@@ -18,7 +18,7 @@ set -euo pipefail
 
 DEBUG="${DEBUG:-0}"
 SCRIPT_NAME="${0##*/}"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ERROR_HANDLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ERROR HANDLING
@@ -131,9 +131,19 @@ validate_exit() {
     local expected_code=$1
     shift
     local cmd="$@"
-    
+
+    local errexit_was_set=0
+    case "$-" in
+        *e*) errexit_was_set=1 ;;
+    esac
+
+    set +e
     "$@" > /dev/null 2>&1
     local actual_code=$?
+
+    if [[ "$errexit_was_set" -eq 1 ]]; then
+        set -e
+    fi
     
     if [ "$actual_code" != "$expected_code" ]; then
         log_error "Command '$cmd' returned $actual_code, expected $expected_code"
@@ -197,7 +207,7 @@ with_context() {
 # EXPORT
 # ─────────────────────────────────────────────────────────────────────────────
 
-export DEBUG SCRIPT_NAME SCRIPT_DIR
+export DEBUG SCRIPT_NAME ERROR_HANDLER_DIR
 export -f enable_debug disable_debug print_debug
 export -f assert_success assert_failure assert_equal assert_not_empty assert_file
 export -f validate_exit check_exit

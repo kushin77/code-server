@@ -10,6 +10,11 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  security-events: write
+
+env:
+  TRUFFLEHOG_VERSION: "3.76.3"
 
 env:
   COST_CATEGORY: "ci-security"
@@ -28,13 +33,29 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
-        with:
-          node-version: 18
-
-      - name: Install dependencies
+      - name: Install TruffleHog CLI
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
+          if ! pip install truffleHog==${TRUFFLEHOG_VERSION}; then
+            echo "⚠ truffleHog==${TRUFFLEHOG_VERSION} not available on pip; continuing (route step will skip if no output file is created)"
+          fi
+
+      - name: TruffleHog Secret Scan
+        run: |
+          trufflehog filesystem . --only-verified --json 2>&1 | tee trufflehog-output.json
+          if grep -q '"verified": true' trufflehog-output.json; then
+            echo "Verified secrets detected"
+            exit 1
+          fi
+
+      - name: Route TruffleHog findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f trufflehog-output.json ]; then
+            bash scripts/ops/security-scan-triage.sh --tool trufflehog --secret-jsonl trufflehog-output.json --repo "${GH_REPO}"
+          fi
           elif [ -f package.json ]; then
             npm install
           else
@@ -43,8 +64,21 @@ jobs:
         timeout-minutes: 10
 
       - name: Audit dependencies
-        run: npm audit --audit-level=moderate || true
+        run: |
+          if [ -f package-lock.json ] || [ -f package.json ]; then
+            npm audit --json > npm-audit.json || true
+          fi
         continue-on-error: true
+
+      - name: Route dependency findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f npm-audit.json ]; then
+            bash scripts/ops/security-scan-triage.sh --tool npm-audit --npm-audit npm-audit.json --repo "${GH_REPO}"
+          fi
 
       - name: Snyk scan
         uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04  # master (pinned)
@@ -59,10 +93,6 @@ jobs:
   sast-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
-    permissions:
-      contents: read
-      security-events: write
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
@@ -85,6 +115,16 @@ jobs:
           sarif_file: semgrep.sarif
           category: semgrep
         continue-on-error: true
+
+      - name: Route Semgrep findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f semgrep.sarif ]; then
+            bash scripts/ops/security-scan-triage.sh --tool semgrep --sarif semgrep.sarif --repo "${GH_REPO}"
+          fi
 
       - name: Cleanup
         if: always()
@@ -114,6 +154,16 @@ jobs:
           category: trivy
         continue-on-error: true
 
+      - name: Route Trivy findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f trivy-results.sarif ]; then
+            bash scripts/ops/security-scan-triage.sh --tool trivy --sarif trivy-results.sarif --repo "${GH_REPO}"
+          fi
+
       - name: Cleanup
         if: always()
         run: docker system prune -af 2>/dev/null || true
@@ -140,8 +190,40 @@ jobs:
         if: always()
         run: docker system prune -af 2>/dev/null || true
 
+  dast-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Run DAST scan
+        env:
+          PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
+          IDE_BASE_URL: ${{ vars.IDE_BASE_URL }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          bash scripts/ops/dast-scan.sh --output-json artifacts/triage/dast-zap-report.json --output-md artifacts/triage/dast-zap-report.md
+
+      - name: Route DAST findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f artifacts/triage/dast-zap-report.json ]; then
+            bash scripts/ops/security-scan-triage.sh --tool zap --zap-json artifacts/triage/dast-zap-report.json --repo "${GH_REPO}"
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: docker system prune -af 2>/dev/null || true
+
   report-metrics:
-    needs: [dependency-check, sast-scan, container-scan, secret-scan]
+    needs: [dependency-check, sast-scan, container-scan, secret-scan, dast-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -154,3 +236,4 @@ jobs:
           echo "::notice::SAST Scan: ${{ needs.sast-scan.result }}"
           echo "::notice::Container Scan: ${{ needs.container-scan.result }}"
           echo "::notice::Secret Scan: ${{ needs.secret-scan.result }}"
+          echo "::notice::DAST Scan: ${{ needs.dast-scan.result }}"

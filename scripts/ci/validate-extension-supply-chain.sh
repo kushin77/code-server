@@ -23,6 +23,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 APPROVED_MANIFEST="$REPO_ROOT/config/code-server/extensions/extensions-approved.json"
 BLOCKED_MANIFEST="$REPO_ROOT/config/code-server/extensions/extensions-blocked.json"

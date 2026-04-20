@@ -15,6 +15,18 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary'],
+      thresholds: {
+        lines: 45,
+        functions: 45,
+        branches: 35,
+        statements: 45,
+      },
+    },
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,

@@ -10,8 +10,8 @@
     "test:ai-quality": "vitest run src/services/ai/__tests__/indexing-quality.test.ts src/services/ai/__tests__/indexing.test.ts --reporter=verbose"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^1.6.0",
-    "typescript": "^5.4.0",
-    "vitest": "^1.6.0"
+    "@vitest/coverage-v8": "^4.1.4",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

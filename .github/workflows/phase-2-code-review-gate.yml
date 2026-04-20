@@ -18,7 +18,10 @@ jobs:
       - name: Check PR for Phase 2 completion
         id: check-phase-2
         run: |
-          BODY="${{ github.event.pull_request.body }}"
+          BODY=$(cat <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          )
 
           if echo "$BODY" | grep -q "^\- \[x\] Documentation change only" || \
              echo "$BODY" | grep -q "^\- \[x\] Dependency security patch" || \

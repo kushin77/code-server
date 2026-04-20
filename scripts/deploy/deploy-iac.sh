@@ -1,12 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        scripts/deploy/deploy-iac.sh
+# @module      deployment/iac
+# @description Deploys infrastructure using Terraform from local or remote hosts
+#
+
 set -euo pipefail
 
 # Script directory and canonical initialization
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
-# Deployment target (default: 192.168.168.32)
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.32}"
+: "${DEPLOY_HOST:?DEPLOY_HOST must be set by scripts/_common/config.sh or the environment}"
 DEPLOY_SSH_USER="${DEPLOY_SSH_USER:-akushnir}"
 DEPLOY_SSH_KEY="${DEPLOY_SSH_KEY:-/home/akushnir/.ssh/id_ed25519}"
 DEPLOY_SSH_PORT="${DEPLOY_SSH_PORT:-22}"

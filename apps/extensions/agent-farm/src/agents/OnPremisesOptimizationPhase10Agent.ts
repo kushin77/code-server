@@ -4,9 +4,9 @@
  */
 
 import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';
-import { EdgeOptimizationEngine, EdgeProfile, CachePolicy, CompressionStrategy } from '../ml/EdgeOptimizationEngine';
+import { EdgeOptimizationEngine, CachePolicy, CompressionStrategy } from '../ml/EdgeOptimizationEngine';
 import { OfflineSyncManager, OfflineOperation } from '../ml/OfflineSyncManager';
-import { ResourceConstraintManager, ResourceQuota, WorkloadPriority } from '../ml/ResourceConstraintManager';
+import { ResourceConstraintManager } from '../ml/ResourceConstraintManager';
 import { DistributedOperationOrchestrator, DistributedWorkflow } from '../ml/DistributedOperationOrchestrator';
 
 export interface OnPremisesDeploymentConfig {
@@ -41,6 +41,7 @@ export class OnPremisesOptimizationPhase10Agent extends Agent {
 
   constructor(context: any, config: OnPremisesDeploymentConfig) {
     super();
+    void context;
     this.deploymentConfig = config;
     this.edgeEngine = new EdgeOptimizationEngine();
     this.syncManager = new OfflineSyncManager();
@@ -132,6 +133,7 @@ export class OnPremisesOptimizationPhase10Agent extends Agent {
   scheduleWorkload(workloadId: string): { nodeId: string; status: 'scheduled' | 'failed' } | undefined {
     // Get all edge nodes and try to allocate
     const edgeStats = this.edgeEngine.getEdgeNodeStats();
+    void edgeStats;
 
     const edgeProfiles = (this.edgeEngine as any).edgeProfiles as Map<string, any>;
     for (const [nodeId] of edgeProfiles) {
@@ -167,7 +169,7 @@ export class OnPremisesOptimizationPhase10Agent extends Agent {
 
     let syncedCount = 0;
     let failedCount = 0;
-    let conflictCount = 0;
+    const conflictCount = 0;
 
     batch.operations.forEach((op) => {
       // Simulate sync (in reality would send to server)
@@ -195,6 +197,7 @@ export class OnPremisesOptimizationPhase10Agent extends Agent {
     operationType: 'map' | 'reduce' | 'aggregate' | 'broadcast' | 'scatter-gather',
     input: any
   ): DistributedWorkflow {
+    void input;
     const workflow = this.distributedOrchestrator.createWorkflow(name, [
       { name: operationType, operationType, tasks: [] },
     ]);
@@ -320,6 +323,7 @@ export class OnPremisesOptimizationPhase10Agent extends Agent {
    * Implement abstract analyze method
    */
   async analyze(context: CodeContext): Promise<AgentOutput> {
+    void context;
     this.log('Analyzing on-premises deployment');
     const status = this.getDeploymentStatus();
     return this.formatOutput(
@@ -339,6 +343,8 @@ export class OnPremisesOptimizationPhase10Agent extends Agent {
     context: MultiAgentContext,
     previousResults: AgentOutput[]
   ): Promise<void> {
+    void context;
+    void previousResults;
     this.log('Coordinating on-premises deployment with other agents');
     // Stub implementation for multi-agent coordination
   }

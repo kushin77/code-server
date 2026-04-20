@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: "Production Runbook"
     url: "https://github.com/kushin77/code-server/blob/main/memories/repo/deployment-runbook.md"
-    about: "Deployment and recovery procedures for 192.168.168.31"
+    about: "Deployment and recovery procedures for the on-prem primary host"
   - name: "Architecture Decisions (ADRs)"
     url: "https://github.com/kushin77/code-server/blob/main/docs/adr/"
     about: "Review past architectural decisions before proposing changes"

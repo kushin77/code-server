@@ -12,7 +12,7 @@ cd "${REPO_ROOT}"
 
 # Source logging if available
 if [[ -f "scripts/_common/init.sh" ]]; then
-    source "scripts/_common/init.sh" 2>/dev/null || true
+    source "$SCRIPT_DIR/../_common/init.sh" 2>/dev/null || true
 fi
 
 log_info() { echo "[INFO] $*"; }
@@ -46,7 +46,6 @@ while IFS= read -r func; do
         | grep -v "scripts/_common/" \
         | grep -v "scripts/lib/" \
         | grep -v "scripts/_archive/" \
-        | grep -v "scripts/logging.sh" \
         | grep -v "scripts/ci/detect-duplicate-helpers.sh" \
         || true)
 

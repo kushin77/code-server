@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# File: scripts/ci/check-no-windows-content.sh
-# Ref: #399 — CI-ENFORCEMENT: block Windows-specific content from Linux-only repo
-# Part of: pre-commit (no-windows-content) and CI workflow (linux-mandate)
+# @file        scripts/ci/check-no-windows-content.sh
+# @module      ci/content
+# @description Block Windows-specific content from Linux-only repository files
 #
-# Usage: called by pre-commit with filenames as args, OR standalone:
-#   bash scripts/ci/check-no-windows-content.sh <file...>
-#   bash scripts/ci/check-no-windows-content.sh  # scan all tracked files
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # ── patterns ──────────────────────────────────────────────────────────────────
 # PowerShell indicators (not node_modules stub files)
@@ -30,10 +30,6 @@ WIN_PATH_PATTERNS=(
 )
 
 # CRLF: checked separately via git
-
-# ── helpers ───────────────────────────────────────────────────────────────────
-RED='\033[0;31m'
-NC='\033[0m'
 
 fail=0
 violations=()
@@ -70,10 +66,13 @@ check_file() {
     fi
   done
 
-  # CRLF check
-  if file "$f" 2>/dev/null | grep -q 'CRLF'; then
-    violations+=("$f: CRLF line endings — run: git add --renormalize .")
-    fail=1
+  # CRLF check (tracked content): inspect git blob/index to avoid false positives
+  # from local checkout conversion (e.g., core.autocrlf on Windows).
+  if git cat-file -e ":$f" 2>/dev/null; then
+    if git show ":$f" | LC_ALL=C grep -q $'\r'; then
+      violations+=("$f: CRLF line endings in tracked content")
+      fail=1
+    fi
   fi
 }
 
@@ -92,15 +91,15 @@ else
 fi
 
 if [[ ${#violations[@]} -gt 0 ]]; then
-  echo -e "${RED}✗ Windows-content violations:${NC}"
+  printf '[ERROR] Windows-content violations:\n' >&2
   for v in "${violations[@]}"; do
-    echo "  $v"
+    printf '[ERROR]   %s\n' "$v" >&2
   done
-  echo ""
-  echo "This is a Linux-only repository. All scripts must use bash/POSIX, LF line endings,"
-  echo "and Linux-native paths. See issue #399."
+  printf '[ERROR]\n' >&2
+  printf '[ERROR] This is a Linux-only repository. All scripts must use bash/POSIX, LF line endings,\n' >&2
+  printf '[ERROR] and Linux-native paths. See issue #399.\n' >&2
   exit 1
 fi
 
-echo "✅ No Windows-specific content detected"
+log_info "No Windows-specific content detected"
 exit 0

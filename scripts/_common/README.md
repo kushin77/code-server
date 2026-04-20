@@ -172,10 +172,10 @@ assert_http_ok "http://localhost:8080/" 200   # HTTP endpoint check
 
 | File | Replacement |
 |---|---|
-| `scripts/logging.sh` | `_common/logging.sh` (via `init.sh`) |
-| `scripts/common-functions.sh` | `_common/utils.sh + error-handler.sh` (via `init.sh`) |
+| `scripts/logging.sh` | Retired to archived marker stub. Use `_common/init.sh` which loads `_common/logging.sh`. |
+| `scripts/common-functions.sh` | Retired to archived marker stub. Use `_common/init.sh` which loads canonical helpers. |
 
-Both files now emit a deprecation warning at source time and forward to the correct implementation.
+Both compatibility shims are archived marker stubs and must not regain executable logic.
 
 
 ## Files

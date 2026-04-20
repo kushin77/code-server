@@ -12,14 +12,22 @@
     "install:workspace": "pnpm install",
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
+    "test:bats": "bash scripts/ci/run-shell-library-bats.sh",
+    "test:bats:coverage": "bash scripts/ci/run-shell-library-bats.sh --coverage",
     "lint": "pnpm -r --if-present lint",
     "type-check": "pnpm -r --if-present type-check",
     "ci:lockfile": "pnpm install --frozen-lockfile --ignore-scripts",
     "validate:lockfile": "bash scripts/ci/check-pnpm-lockfile.sh",
     "validate:monorepo": "bash scripts/ci/validate-monorepo-target.sh",
+    "validate:docs": "python3 scripts/ci/validate-docs-governance.py",
+    "test:boundaries": "bash scripts/ci/validate-monorepo-target.sh",
     "validate:issues": "python3 scripts/ops/issue_execution_manifest.py validate",
     "issues:queue": "python3 scripts/ops/issue_execution_manifest.py queue",
+    "test:e2e:appsmith-login": "bash scripts/ci/run-kushnir-cloud-appsmith-login-e2e.sh",
     "redeploy:portal-oauth": "bash scripts/deploy/redeploy-portal-oauth-routing.sh",
     "redeploy:portal-oauth:dry-run": "bash scripts/deploy/redeploy-portal-oauth-routing.sh --dry-run"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:"
   }
 }

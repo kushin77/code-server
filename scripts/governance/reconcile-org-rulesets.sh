@@ -7,10 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../_common/init.sh" || {
-  echo "FATAL: Cannot load _common/init.sh from $SCRIPT_DIR" >&2
-  exit 1
-}
+source "$SCRIPT_DIR/../_common/init.sh"
 
 ORG=""
 BASELINE_FILE=""
@@ -198,7 +195,7 @@ while IFS= read -r repo; do
     --argjson conv "$conv_resolution" \
     '{
       required_status_checks: { strict: true, contexts: $checks },
-      required_pull_request_reviews: { required_approving_review_count: $reviews, dismiss_stale_reviews: true, require_code_owner_reviews: false },
+      required_pull_request_reviews: { required_approving_review_count: $reviews, dismiss_stale_reviews: true, require_code_owner_reviews: true },
       enforce_admins: $enforce,
       allow_force_pushes: false,
       allow_deletions: false,

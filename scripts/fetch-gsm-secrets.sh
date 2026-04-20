@@ -53,6 +53,17 @@ parse_args() {
     done
 }
 
+fetch_or_generate_secret() {
+    local var_name="$1"
+    local format="$2"
+    local length="$3"
+    shift 3
+
+    if ! fetch_first_available_secret "$var_name" "$@"; then
+        ensure_secret_value "$var_name" "$format" "$length"
+    fi
+}
+
 ensure_gcloud_auth_noninteractive() {
     if gcloud auth list --filter=status:ACTIVE --format='value(account)' | grep -q '.'; then
         return 0
@@ -120,6 +131,38 @@ fetch_first_available_secret() {
     return 1
 }
 
+generate_secret_value() {
+    local format="$1"
+    local length="$2"
+
+    case "$format" in
+        hex)
+            openssl rand -hex "$length"
+            ;;
+        base64)
+            openssl rand -base64 "$length"
+            ;;
+        *)
+            echo "ERROR: Unsupported secret format: $format" >&2
+            return 1
+            ;;
+    esac
+}
+
+ensure_secret_value() {
+    local var_name="$1"
+    local format="$2"
+    local length="$3"
+
+    if [[ -z "${!var_name:-}" ]]; then
+        local generated_value
+        generated_value="$(generate_secret_value "$format" "$length")"
+        printf -v "$var_name" '%s' "$generated_value"
+        export "$var_name"
+        echo "WARN: ${var_name} was not present; generated a local fallback" >&2
+    fi
+}
+
 parse_args "$@"
 
 if [[ "$SHOW_HELP" == "true" ]]; then
@@ -132,6 +175,8 @@ fi
 
 echo "Fetching secrets from GSM project=${GSM_PROJECT}..." >&2
 
+require_command gcloud "gcloud is required to fetch GSM secrets"
+
 if [[ "$NON_INTERACTIVE" == "true" ]]; then
     if ! ensure_gcloud_auth_noninteractive; then
         if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -140,6 +185,8 @@ if [[ "$NON_INTERACTIVE" == "true" ]]; then
         return 1
     fi
 fi
+
+require_command openssl "openssl is required to generate local fallback secrets"
 
 # GoDaddy API credentials (DNS management)
 fetch_gsm_secret "prod-godaddy-api-key"    GODADDY_KEY
@@ -151,6 +198,28 @@ fetch_gsm_secret "prod-portal-google-oauth-client-secret" GOOGLE_CLIENT_SECRET
 
 # oauth2-proxy cookie secre
 fetch_gsm_secret "prod-portal-oauth2-cookie-secret" OAUTH2_PROXY_COOKIE_SECRET
+
+# Application and data-layer secrets: prefer GSM, fall back to local generation
+# only when GSM is unavailable (local dev / bootstrap gaps).
+fetch_or_generate_secret "CODE_SERVER_PASSWORD" base64 24 \
+    "${GSM_CODE_SERVER_PASSWORD_SECRET:-prod-code-server-password}" \
+    "prod-code-server-admin-password"
+
+fetch_or_generate_secret "POSTGRES_PASSWORD" hex 16 \
+    "${GSM_POSTGRES_PASSWORD_SECRET:-prod-postgres-password}" \
+    "prod-code-server-postgres-password"
+
+fetch_or_generate_secret "GRAFANA_PASSWORD" hex 16 \
+    "${GSM_GRAFANA_PASSWORD_SECRET:-prod-grafana-password}" \
+    "prod-code-server-grafana-password"
+
+fetch_or_generate_secret "REDIS_PASSWORD" hex 16 \
+    "${GSM_REDIS_PASSWORD_SECRET:-prod-redis-password}" \
+    "prod-code-server-redis-password"
+
+fetch_or_generate_secret "KONG_DATABASE_PASSWORD" hex 16 \
+    "${GSM_KONG_DATABASE_PASSWORD_SECRET:-prod-kong-database-password}" \
+    "prod-code-server-kong-database-password"
 
 # GitHub PAT (optional): default auth token for GitHub API/gh CLI calls.
 # Canonical secret is github-token. GSM_GITHUB_TOKEN_SECRET is legacy fallback.
@@ -169,6 +238,17 @@ if [[ -n "${GITHUB_TOKEN:-}" ]]; then
     export GH_TOKEN="$GITHUB_TOKEN"
 fi
 
+# Fill Terraform inputs expected by root/module variables.
+export TF_VAR_code_server_password="${TF_VAR_code_server_password:-$CODE_SERVER_PASSWORD}"
+export TF_VAR_google_client_id="${TF_VAR_google_client_id:-$GOOGLE_CLIENT_ID}"
+export TF_VAR_google_client_secret="${TF_VAR_google_client_secret:-$GOOGLE_CLIENT_SECRET}"
+export TF_VAR_oauth2_proxy_cookie_secret="${TF_VAR_oauth2_proxy_cookie_secret:-$OAUTH2_PROXY_COOKIE_SECRET}"
+export TF_VAR_github_token="${TF_VAR_github_token:-$GITHUB_TOKEN}"
+export TF_VAR_grafana_admin_password="${TF_VAR_grafana_admin_password:-$GRAFANA_PASSWORD}"
+export TF_VAR_postgres_password="${TF_VAR_postgres_password:-$POSTGRES_PASSWORD}"
+export TF_VAR_redis_password="${TF_VAR_redis_password:-$REDIS_PASSWORD}"
+export TF_VAR_kong_database_password="${TF_VAR_kong_database_password:-$KONG_DATABASE_PASSWORD}"
+
 echo "All secrets fetched successfully." >&2
 
 # Output env file format when not sourced
@@ -183,6 +263,19 @@ GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
 OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
 GITHUB_TOKEN=${GITHUB_TOKEN:-}
 CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-}
+REDIS_PASSWORD=${REDIS_PASSWORD:-}
+KONG_DATABASE_PASSWORD=${KONG_DATABASE_PASSWORD:-}
+TF_VAR_code_server_password=${TF_VAR_code_server_password:-}
+TF_VAR_google_client_id=${TF_VAR_google_client_id:-}
+TF_VAR_google_client_secret=${TF_VAR_google_client_secret:-}
+TF_VAR_oauth2_proxy_cookie_secret=${TF_VAR_oauth2_proxy_cookie_secret:-}
+TF_VAR_github_token=${TF_VAR_github_token:-}
+TF_VAR_grafana_admin_password=${TF_VAR_grafana_admin_password:-}
+TF_VAR_postgres_password=${TF_VAR_postgres_password:-}
+TF_VAR_redis_password=${TF_VAR_redis_password:-}
+TF_VAR_kong_database_password=${TF_VAR_kong_database_password:-}
 ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS:-*}
 WORKSPACE_PATH=${WORKSPACE_PATH:-/mnt/nas-56/kushin77/applications/code-server-enterprise}
 CODER_DATA_PATH=${CODER_DATA_PATH:-/mnt/nas-56/code-server}

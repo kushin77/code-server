@@ -1,5 +1,8 @@
 # Autonomous Execution Playbook (2026-04-18)
 
+Purpose:
+- Provide the canonical active issue handoff and execution order for the `feat/671-issue-671` agent lane.
+
 ## Scope
 This playbook is the canonical handoff for parallel agents working from branch `feat/671-issue-671`.
 

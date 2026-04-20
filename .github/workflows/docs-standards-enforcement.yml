@@ -1,0 +1,222 @@
+name: Documentation Standards Enforcement
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs-standards-enforcement.yml'
+      - 'scripts/ci/check-docs-*.sh'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+  schedule:
+    # Weekly check on Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
+
+jobs:
+  check-metadata:
+    name: Validate Documentation Metadata
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yq
+
+      - name: Run metadata validation
+        run: bash scripts/ci/check-docs-metadata.sh
+        continue-on-error: true
+
+      - name: Upload metadata report
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
+        if: always()
+        with:
+          name: docs-metadata-report
+          path: artifacts/triage/docs-metadata-validation.log
+          retention-days: 90
+
+  check-links:
+    name: Check for Broken Links
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run link validation
+        run: bash scripts/ci/check-docs-broken-links.sh
+        continue-on-error: true
+
+      - name: Upload links report
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
+        if: always()
+        with:
+          name: docs-broken-links-report
+          path: artifacts/triage/docs-broken-links.log
+          retention-days: 90
+
+  check-duplicates:
+    name: Detect Duplicate Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run duplicate detection
+        run: bash scripts/ci/check-docs-duplicates.sh
+        continue-on-error: true
+
+      - name: Upload duplicates report
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
+        if: always()
+        with:
+          name: docs-duplicates-report
+          path: artifacts/triage/docs-duplicates-report.log
+          retention-days: 90
+
+  generate-summary:
+    name: Generate Docs Standards Summary
+    needs: [check-metadata, check-links, check-duplicates]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Download all reports
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          path: /tmp/docs-reports
+
+      - name: Generate summary
+        run: |
+          cat > /tmp/docs-summary.md <<'SUMMARY'
+          ## 📚 Documentation Standards Check
+
+          This PR has been scanned for documentation compliance with standards defined in `docs/STANDARDS.md`.
+
+          ### Checklist
+
+          - [ ] All docs have required frontmatter (title, description, owner, last_review_date, status)
+          - [ ] No broken internal links detected
+          - [ ] No orphaned documentation
+          - [ ] No obvious duplicates
+
+          ### Validation Reports
+
+          - **Metadata Report**: See artifacts
+          - **Broken Links Report**: See artifacts
+          - **Duplicates Report**: See artifacts
+
+          ### Action Items
+
+          If validation failed:
+          1. Review report in artifacts
+          2. Fix issues in your PR
+          3. Commit changes and push
+          4. CI will re-run automatically
+
+          For questions, see: [docs/STANDARDS.md](../blob/main/docs/STANDARDS.md)
+          SUMMARY
+
+          cat /tmp/docs-summary.md
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('/tmp/docs-summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  enforce-on-pr:
+    name: Enforce Standards on PR
+    needs: [check-metadata, check-links]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Download reports
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          path: /tmp/docs-reports
+
+      - name: Check for critical failures
+        run: |
+          # Fail if metadata validation failed
+          if [ -f "/tmp/docs-reports/docs-metadata-report/docs-metadata-validation.log" ]; then
+            if grep -q "^❌ FAILED" "/tmp/docs-reports/docs-metadata-report/docs-metadata-validation.log"; then
+              echo "❌ Documentation metadata validation failed"
+              cat "/tmp/docs-reports/docs-metadata-report/docs-metadata-validation.log"
+              exit 1
+            fi
+          fi
+          
+          # Fail if broken links detected
+          if [ -f "/tmp/docs-reports/docs-broken-links-report/docs-broken-links.log" ]; then
+            if grep -q "^❌ FAILED" "/tmp/docs-reports/docs-broken-links-report/docs-broken-links.log"; then
+              echo "❌ Broken links detected in documentation"
+              cat "/tmp/docs-reports/docs-broken-links-report/docs-broken-links.log"
+              exit 1
+            fi
+          fi
+
+  create-stale-issues:
+    name: Create Issues for Stale Docs
+    needs: [check-metadata]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yq
+
+      - name: Scan for stale documents
+        run: |
+          mkdir -p artifacts/triage
+          bash scripts/ci/check-docs-metadata.sh 2>&1 | grep "\[WARN\].*days old" > /tmp/stale-docs.txt || true
+
+      - name: Create issues for stale docs
+        if: hashFiles('/tmp/stale-docs.txt') != ''
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const staledocs = fs.readFileSync('/tmp/stale-docs.txt', 'utf8');
+            
+            if (staledocs.length > 0) {
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '📚 Documentation Needs Review - Scheduled Stale Doc Scan',
+                body: `## Stale Documentation Detected\n\nThe following documents exceed 90 days without review:\n\n${staledocs}\n\nPlease review and update the last_review_date in the document frontmatter.`,
+                labels: ['documentation', 'maintenance']
+              });
+            }

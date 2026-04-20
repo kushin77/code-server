@@ -145,7 +145,7 @@ apply_branch_protection() {
   "required_pull_request_reviews": {
     "required_approving_review_count": $required_reviews,
     "dismiss_stale_reviews": $dismiss_stale,
-    "require_code_owner_review": false
+        "require_code_owner_reviews": true
   },
   "enforce_admins": $enforce_admins,
   "allow_deletion": $allow_deletions,

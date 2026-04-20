@@ -1,3 +1,8 @@
+# Issue Blocker: P0 OAuth Redeploy
+
+Purpose:
+- Track the live production OAuth redeploy blocker and the linked remediation path for issues #692, #695, and #709.
+
 ## Summary
 Production apex OAuth is now blocked in the GCP/GSM bootstrap phase, not in the compose helper or SSH transport.
 

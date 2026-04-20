@@ -262,3 +262,18 @@ dashboard:
       targets:
         - expr: 'nas_fs_avail bytes'
           legendFormat: "Free {{mount_path}}"
+
+    # PostgreSQL Cache Hit Ratio
+    - title: "PostgreSQL Cache Hit Ratio"
+      type: "stat"
+      gridPos: {x: 0, y: 20, w: 12, h: 6}
+      targets:
+        - expr: '100 * sum(rate(pg_stat_database_blks_hit{datname!~"template.*"}[5m])) / clamp_min(sum(rate(pg_stat_database_blks_hit{datname!~"template.*"}[5m])) + sum(rate(pg_stat_database_blks_read{datname!~"template.*"}[5m])), 1)'
+          legendFormat: "Cache hit %"
+      options:
+        thresholds:
+          mode: "percentage"
+          steps:
+            - {color: "red", value: 0}
+            - {color: "yellow", value: 80}
+            - {color: "green", value: 90}

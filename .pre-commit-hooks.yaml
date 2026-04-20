@@ -13,10 +13,8 @@
     fail=0
     for f in scripts/*.sh; do
       [[ -f "$f" ]] || continue
-      # Skip the _common libs and deprecated shims themselves
+      # Skip the _common libs
       [[ "$f" == scripts/_common/* ]] && continue
-      [[ "$f" == "scripts/logging.sh" ]] && continue
-      [[ "$f" == "scripts/common-functions.sh" ]] && continue
       # Skip archived phase scripts
       [[ "$f" == *"/phase-"* ]] && continue
       # Flag: inline log_info() definition (should use _common)
@@ -115,8 +113,6 @@
     for f in scripts/*.sh; do
       [[ -f "$f" ]] || continue
       [[ "$f" == *"_common"* ]] && continue
-      [[ "$f" == "scripts/logging.sh" ]] && continue
-      [[ "$f" == "scripts/common-functions.sh" ]] && continue
       if ! grep -qE "set -euo pipefail|source.*_common/init" "$f" 2>/dev/null; then
         echo "AUDIT: $f — missing set -euo pipefail or _common/init.sh source"
       fi

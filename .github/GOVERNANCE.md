@@ -66,9 +66,9 @@ main:
     - lint (required)
     - unit-tests (required)
     - security-scan (required)
-  required_approvals: 1
+  required_approvals: 2
   dismiss_stale_reviews: true
-  require_code_owner_review: false
+  require_code_owner_review: true
   restrict_dismissals: true
   allow_force_pushes: false
   allow_deletions: false

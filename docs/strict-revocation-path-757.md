@@ -1,5 +1,8 @@
 # Issue #757: Implement Strict Revocation Path with p95 Propagation SLO
 
+Purpose:
+- Document the implemented strict revocation path design, constraints, and runtime expectations for issue #757.
+
 **Status**: ✅ Implementation Complete  
 **Commit**: `[pending - will be created during integration]`  
 **Parent Epic**: #751 (Core code-server transformation)  

@@ -8,20 +8,23 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 WARN_ONLY="${1:-}"
 VIOLATIONS=0
 
 warn_or_fail() {
   local msg="$1"
   if [[ "$WARN_ONLY" == "--warn-only" ]]; then
-    echo "[root-hygiene] WARN: $msg"
+    log_warn "$msg"
   else
-    echo "[root-hygiene] FAIL: $msg" >&2
+    log_error "$msg"
     VIOLATIONS=$(( VIOLATIONS + 1 ))
   fi
 }
 
-pass() { echo "[root-hygiene] OK:   $1"; }
+pass() { log_info "$1"; }
 
 # ── Allowed root entries ───────────────────────────────────────────────────────
 # Every file/directory at root must be in this set.
@@ -93,8 +96,8 @@ declare -a BLOCKED_PATTERNS=(
 )
 
 # ── Check blocked patterns ────────────────────────────────────────────────────
-echo ""
-echo "[root-hygiene] Checking for blocked root-level file patterns..."
+log_info ""
+log_info "Checking for blocked root-level file patterns..."
 for pattern in "${BLOCKED_PATTERNS[@]}"; do
   while IFS= read -r -d '' f; do
     name=$(basename "$f")
@@ -103,8 +106,8 @@ for pattern in "${BLOCKED_PATTERNS[@]}"; do
 done
 
 # ── Check for unexpected root-level files ────────────────────────────────────
-echo ""
-echo "[root-hygiene] Checking for unexpected root-level entries..."
+log_info ""
+log_info "Checking for unexpected root-level entries..."
 
 # Build lookup set from ALLOWED_ROOT_ENTRIES
 declare -A allowed_set
@@ -116,7 +119,7 @@ while IFS= read -r -d '' entry; do
   name=$(basename "$entry")
   # Skip hidden files not explicitly allowed (warn only)
   if [[ "$name" == .* && -z "${allowed_set[$name]:-}" ]]; then
-    echo "[root-hygiene] INFO: hidden entry $name (review if intentional)"
+    log_info "hidden entry $name (review if intentional)"
     continue
   fi
   if [[ -z "${allowed_set[$name]:-}" ]]; then
@@ -125,12 +128,12 @@ while IFS= read -r -d '' entry; do
 done < <(find . -maxdepth 1 \( -type f -o -type d \) ! -name '.' -print0 2>/dev/null)
 
 # ── Summary ────────────────────────────────────────────────────────────────────
-echo ""
+log_info ""
 if (( VIOLATIONS > 0 )); then
-  echo "[root-hygiene] FAIL: $VIOLATIONS violation(s) found."
-  echo "[root-hygiene] Move status reports and draft files to docs/ — root is for entrypoints only."
+  log_error "$VIOLATIONS violation(s) found."
+  log_error "Move status reports and draft files to docs/ — root is for entrypoints only."
   exit 1
 else
-  echo "[root-hygiene] PASS: root is clean."
+  log_info "root is clean."
   exit 0
 fi

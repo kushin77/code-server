@@ -172,7 +172,6 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
       const breaker = createCircuitBreaker('test', { failureThreshold: 5, resetTimeout: 30000 });
       
       await breaker.execute(() => Promise.resolve('ok'));
-      const afterSuccess = Date.now();
 
       try {
         await breaker.execute(() => Promise.reject(new Error('Fail')));
@@ -609,8 +608,8 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
     it('should track active chaos tests', () => {
       const engineer = createChaosEngineer();
 
-      const test1 = engineer.startChaosTest('Test 1', 'latency', ['service-1'], 30000, 0.5);
-      const test2 = engineer.startChaosTest('Test 2', 'failure', ['service-2'], 30000, 0.3);
+      engineer.startChaosTest('Test 1', 'latency', ['service-1'], 30000, 0.5);
+      engineer.startChaosTest('Test 2', 'failure', ['service-2'], 30000, 0.3);
 
       const activeTests = engineer.getActiveChaosTests();
       expect(activeTests.length).toBeGreaterThanOrEqual(2);
@@ -1454,7 +1453,7 @@ describe('Phase 11: Advanced Resilience & HA/DR', () => {
 
       for (let i = 0; i < 100; i++) {
         const start = Date.now();
-        const metrics = breaker.getMetrics();
+        breaker.getMetrics();
         const end = Date.now();
 
         measurements.push(end - start);
@@ -1649,7 +1648,7 @@ function createFailoverManager(serviceName: string, config: any, primaryReplica:
     manualFailover: jest.fn(function(targetReplicaId: string, reason?: string) {
       const oldPrimary = this.primaryReplica;
       this.primaryReplica = targetReplicaId;
-      this.failoverHistory.push({ timestamp: Date.now(), trigger: 'manual' as const, fromReplica: oldPrimary, toReplica: targetReplicaId });
+      this.failoverHistory.push({ timestamp: Date.now(), trigger: 'manual' as const, fromReplica: oldPrimary, toReplica: targetReplicaId, reason });
       return true;
     }),
     getReplicas: jest.fn(function() { return Array.from(this.replicas.values()); }),

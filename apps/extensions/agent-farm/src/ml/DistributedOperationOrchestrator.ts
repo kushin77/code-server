@@ -137,6 +137,7 @@ export class DistributedOperationOrchestrator {
     }
 
     const stage = workflow.stages[stageIndex];
+  void stage;
     const reduceTaskId = `reduce-${Date.now()}`;
     const startTime = Date.now();
 
@@ -170,6 +171,7 @@ export class DistributedOperationOrchestrator {
   executeBroadcast(workflowId: string, stageIndex: number, data: any, sourceNodeId: string, targetNodeIds: string[]): TaskResult[] {
     const results: TaskResult[] = [];
     const startTime = Date.now();
+    void sourceNodeId;
 
     targetNodeIds.forEach((nodeId) => {
       const result: TaskResult = {
@@ -177,7 +179,7 @@ export class DistributedOperationOrchestrator {
         nodeId,
         status: 'success',
         output: data,
-        duration: 0,
+        duration: Date.now() - startTime,
         timestamp: Date.now(),
       };
 

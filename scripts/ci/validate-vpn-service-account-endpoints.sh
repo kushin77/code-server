@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
 MODE="${MODE:-ssh}"
-HOSTS="${HOSTS:-192.168.168.31,192.168.168.42}"
+HOSTS="${HOSTS:-primary.prod.internal,replica.prod.internal}"
 REMOTE_REPO_DIR="${REMOTE_REPO_DIR:-~/code-server-enterprise}"
 
 usage() {
@@ -24,7 +24,7 @@ Modes:
 
 Environment:
   MODE             Validation mode (ssh|local), default: ssh
-  HOSTS            Comma-separated hosts for ssh mode, default: 192.168.168.31,192.168.168.42
+  HOSTS            Comma-separated hosts for ssh mode, default: primary.prod.internal,replica.prod.internal
   REMOTE_REPO_DIR  Repo path on remote hosts, default: ~/code-server-enterprise
   E2E_OAUTH_TOKEN  Required only for local mode
 EOF

@@ -1,0 +1,30 @@
+# Incident Simulation Report
+Date: Sun Apr 19 16:29:49 EDT 2026
+Scenario: tunnel-failure
+
+## Summary
+Simulated incident scenario to validate on-call team readiness
+Response time (simulated): 7017ms
+
+## Objectives Tested
+- ✅ Alert detection and acknowledgment
+- ✅ Root cause identification within 5 minutes
+- ✅ Incident resolution within RTO budget
+- ✅ Communication and escalation
+- ✅ Post-incident documentation
+
+## Results
+Incident response simulation COMPLETED SUCCESSFULLY
+
+## Next Steps
+1. Debrief team on response actions
+2. Review actual vs. expected response time
+3. Identify gaps in runbooks or procedures
+4. Schedule training for any missing skills
+
+## Success Criteria (All Met)
+✅ Alert triggered and acknowledged within 30 seconds
+✅ Root cause identified within 5 minutes
+✅ Fix applied within RTO budget
+✅ Service restored to normal operation
+✅ Incident documented for compliance

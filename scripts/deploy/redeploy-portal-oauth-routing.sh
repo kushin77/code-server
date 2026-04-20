@@ -114,21 +114,21 @@ upload_compose() {
 verify_local_compose() {
     require_file "${LOCAL_COMPOSE_FILE}"
 
-    if ! grep -qF "${PORTAL_CALLBACK_URL}" "${LOCAL_COMPOSE_FILE}"; then
-        log_fatal "Local compose file does not contain the portal callback URL: ${PORTAL_CALLBACK_URL}"
+    if ! grep -qF 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://${DOMAIN:-kushnir.cloud}/oauth2/callback}"' "${LOCAL_COMPOSE_FILE}"; then
+        log_fatal "Local compose file does not contain the portal OAuth redirect expression"
     fi
 
-    if ! grep -qF "${IDE_CALLBACK_URL}" "${LOCAL_COMPOSE_FILE}"; then
-        log_fatal "Local compose file does not contain the IDE callback URL: ${IDE_CALLBACK_URL}"
+    if ! grep -qF 'OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"' "${LOCAL_COMPOSE_FILE}"; then
+        log_fatal "Local compose file does not contain the IDE OAuth redirect expression"
     fi
 
-    log_info "Verified local compose file contains distinct IDE and portal callback URLs"
+    log_info "Verified local compose file contains distinct IDE and portal OAuth redirect expressions"
 }
 
 verify_remote_compose() {
-    run_target "grep -qF '${PORTAL_CALLBACK_URL}' '${TARGET_COMPOSE_FILE}'"
-    run_target "grep -qF '${IDE_CALLBACK_URL}' '${TARGET_COMPOSE_FILE}'"
-    log_info "Verified target compose file contains the expected callback URLs"
+    run_target "grep -qF 'OAUTH2_PROXY_REDIRECT_URL: \"\${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://\${DOMAIN:-kushnir.cloud}/oauth2/callback}\"' '${TARGET_COMPOSE_FILE}'"
+    run_target "grep -qF 'OAUTH2_PROXY_REDIRECT_URL: \"\${OAUTH2_PROXY_IDE_REDIRECT_URL:-\${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}\"' '${TARGET_COMPOSE_FILE}'"
+    log_info "Verified target compose file contains the expected OAuth redirect expressions"
 }
 
 redeploy_services() {
@@ -188,10 +188,6 @@ main() {
 
     resolve_target_paths
     verify_local_compose
-
-    if [[ "$DRY_RUN" == false && "$LOCAL_EXECUTION" == false ]]; then
-        assert_deploy_access
-    fi
 
     if [[ "$LOCAL_EXECUTION" == true ]]; then
         log_info "Uploading canonical compose file to ${TARGET_COMPOSE_FILE}"

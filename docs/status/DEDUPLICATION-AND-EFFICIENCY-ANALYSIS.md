@@ -71,14 +71,12 @@ Create [scripts/_common/bootstrap.sh](scripts/_common/bootstrap.sh) with:
 | System | Location | Status | Usage |
 |--------|----------|--------|-------|
 | `log_info`, `log_error`, `log_fatal` | [scripts/_common/logging.sh](scripts/_common/logging.sh) | ✅ CANONICAL | 15+ scripts |
-| `write_error`, `die` | [scripts/common-functions.sh](scripts/common-functions.sh#L57) | ⚠️ DEPRECATED | 7 scripts |
+| `write_error`, `die` | [scripts/common-functions.sh](scripts/common-functions.sh#L57) | ⚠️ DEPRECATED | 0 active scripts |
 | `log_info` (local) | [scripts/configure-audit-logging-phase4.sh](scripts/configure-audit-logging-phase4.sh#L24) | ❌ CUSTOM | 2 scripts |
 | `echo "ERROR:"` | [scripts/automated-deployment-orchestration.sh](scripts/automated-deployment-orchestration.sh#L93) | ❌ INLINE | 12+ scripts |
 
 **Scripts Still Using Deprecated `common-functions.sh`**:
-- [scripts/ci/admin-merge.sh](scripts/ci/admin-merge.sh#L26)
-- [scripts/ci/ci-merge-automation.sh](scripts/ci/ci-merge-automation.sh#L24)
-- [scripts/apply-governance.sh](scripts/apply-governance.sh#L28-29) (has fallback)
+- None on the active script surface. The remaining references are the deprecated shim itself and the CI guard that checks for it.
 
 **Scripts Using Inline Error Messages** (custom implementations):
 - [scripts/automated-deployment-orchestration.sh](scripts/automated-deployment-orchestration.sh#L93-102) — 10 inline `echo "ERROR:"`
@@ -89,20 +87,15 @@ Create [scripts/_common/bootstrap.sh](scripts/_common/bootstrap.sh) with:
 **Impact**:
 - Inconsistent log formatting across scripts
 - No structured JSON logging in half of scripts (required for Loki)
-- Deprecation warning on every `common-functions.sh` execution
 - 15+ scripts not getting PII scrubbing or error fingerprinting
 
 **Recommended Fixes**:
-1. **Migrate deprecated `common-functions.sh` users to `_common/init.sh`**:
-   - [scripts/ci/admin-merge.sh](scripts/ci/admin-merge.sh#L26) → ✅ 5 min
-   - [scripts/ci/ci-merge-automation.sh](scripts/ci/ci-merge-automation.sh#L24) → ✅ 5 min
-
-2. **Replace inline `echo "ERROR:"` with `log_error`**:
+1. **Replace inline `echo "ERROR:"` with `log_error`**:
    - [scripts/automated-deployment-orchestration.sh](scripts/automated-deployment-orchestration.sh#L93) — 10 occurrences → 30 min
    - [scripts/automated-iac-validation.sh](scripts/automated-iac-validation.sh#L235) — 5 occurrences → 20 min
    - [scripts/audit-logging.sh](scripts/audit-logging.sh#L115) — 2 occurrences → 10 min
 
-3. **Create migration script** [scripts/dev/migrate-logging.sh](scripts/dev/migrate-logging.sh):
+2. **Create migration script** [scripts/dev/migrate-logging.sh](scripts/dev/migrate-logging.sh):
    - Auto-detect & migrate `echo "ERROR:"` → `log_error`
    - Auto-migrate `write_error` → `log_error`
    - Generate report of converted files

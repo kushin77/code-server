@@ -19,8 +19,21 @@ SSOT:
 - [ADR-002-DUAL-PORTAL-ARCHITECTURE.md](ADR-002-DUAL-PORTAL-ARCHITECTURE.md)
 - [TEMPLATE.md](TEMPLATE.md)
 
+## Bridge Aliases for Numbered Backfill
+
+- [ADR-0000-template.md](ADR-0000-template.md)
+- [ADR-0001-containerized-deployment.md](ADR-0001-containerized-deployment.md)
+- [ADR-0002-oauth2-authentication.md](ADR-0002-oauth2-authentication.md)
+- [ADR-0003-terraform-infrastructure.md](ADR-0003-terraform-infrastructure.md)
+- [ADR-0004-configuration-consolidation-patterns.md](ADR-0004-configuration-consolidation-patterns.md)
+- [ADR-0005-composition-inheritance.md](ADR-0005-composition-inheritance.md)
+- [ADR-0006-cloudflare-tunnel-architecture.md](ADR-0006-cloudflare-tunnel-architecture.md)
+- [ADR-0007-dual-portal-architecture.md](ADR-0007-dual-portal-architecture.md)
+- [ADR-0008-portal-platform-appsmith-vs-backstage.md](ADR-0008-portal-platform-appsmith-vs-backstage.md)
+
 ## Notes
 
 - These files are the current ADR set retained for historical and architectural reference.
 - New architectural decisions should land here using the canonical ADR naming convention from [../structure/README.md](../structure/README.md).
 - Prefer one ADR per decision; when a decision changes, supersede instead of overwriting history.
+- The bridge aliases above exist to satisfy issue-facing numbered references and CI checks without duplicating the canonical decision content.

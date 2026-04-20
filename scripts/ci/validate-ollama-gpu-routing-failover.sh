@@ -32,8 +32,8 @@ require_file "$POLICY_FILE"
 require_file "$OPS_FILE"
 require_file "$ISSUE_FILE"
 
-require_literal "$CONTRACT_FILE" 'host: "192.168.168.42"' 'primary GPU host'
-require_literal "$CONTRACT_FILE" 'host: "192.168.168.31"' 'fallback CPU host'
+require_literal "$CONTRACT_FILE" 'host: "replica.prod.internal"' 'primary GPU host'
+require_literal "$CONTRACT_FILE" 'host: "primary.prod.internal"' 'fallback CPU host'
 require_literal "$CONTRACT_FILE" 'strategy: "health-primary-fallback"' 'routing strategy'
 require_literal "$CONTRACT_FILE" 'health_check_path: "/api/version"' 'health check path'
 require_literal "$CONTRACT_FILE" 'failover_threshold_ms: 5000' 'failover threshold'
@@ -46,18 +46,18 @@ require_literal "$CONTRACT_FILE" 'codellama: 4' 'codellama concurrency'
 require_literal "$CONTRACT_FILE" 'mistral: 4' 'mistral concurrency'
 require_literal "$CONTRACT_FILE" 'llama3: 2' 'llama3 concurrency'
 
-require_literal "$POLICY_FILE" 'Primary endpoint: `http://192.168.168.42:11434`' 'primary endpoint policy'
-require_literal "$POLICY_FILE" 'Fallback endpoint: `http://192.168.168.31:11434`' 'fallback endpoint policy'
+require_literal "$POLICY_FILE" 'Primary endpoint: `http://replica.prod.internal:11434`' 'primary endpoint policy'
+require_literal "$POLICY_FILE" 'Fallback endpoint: `http://primary.prod.internal:11434`' 'fallback endpoint policy'
 require_literal "$POLICY_FILE" 'health-primary-fallback' 'routing strategy text'
 require_literal "$POLICY_FILE" 'Failover rules:' 'failover rules section'
-require_literal "$POLICY_FILE" 'GPU memory pressure threshold: 85 percent on `.42`' 'GPU pressure threshold policy'
+require_literal "$POLICY_FILE" 'GPU memory pressure threshold: 85 percent on `replica.prod.internal`' 'GPU pressure threshold policy'
 require_literal "$POLICY_FILE" 'Roll back when error rate, latency regression, or safety incidents cross thresholds.' 'rollback threshold policy'
 
-require_literal "$OPS_FILE" 'Verify `.42` health' 'replica health check'
+require_literal "$OPS_FILE" 'Verify `replica.prod.internal` health' 'replica health check'
 require_literal "$OPS_FILE" 'Verify readiness' 'replica readiness check'
-require_literal "$OPS_FILE" 'If `.42` is unhealthy' 'fallback activation note'
+require_literal "$OPS_FILE" 'If `replica.prod.internal` is unhealthy' 'fallback activation note'
 require_literal "$OPS_FILE" 'Failover drill:' 'failover drill section'
-require_literal "$OPS_FILE" 'Restore `.42` and verify automatic failback' 'automatic failback guidance'
+require_literal "$OPS_FILE" 'Restore `replica.prod.internal` and verify automatic failback' 'automatic failback guidance'
 
 require_literal "$ISSUE_FILE" 'GPU detection implemented' 'GPU detection evidence'
 require_literal "$ISSUE_FILE" 'Failover routing tested (10/10 success)' 'failover test evidence'
@@ -68,8 +68,8 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 cat > "$TMP_DIR/gpu-routing-evidence.json" <<'EOF'
 {
-  "primary_host": "192.168.168.42",
-  "fallback_host": "192.168.168.31",
+  "primary_host": "replica.prod.internal",
+  "fallback_host": "primary.prod.internal",
   "routing_strategy": "health-primary-fallback",
   "failover_threshold_ms": 5000,
   "failback_after_seconds": 120,
@@ -99,7 +99,7 @@ if missing:
     print('Missing evidence keys: ' + ', '.join(missing), file=sys.stderr)
     sys.exit(1)
 
-if evidence['primary_host'] != '192.168.168.42' or evidence['fallback_host'] != '192.168.168.31':
+if evidence['primary_host'] != 'replica.prod.internal' or evidence['fallback_host'] != 'primary.prod.internal':
     print('Endpoint evidence mismatch', file=sys.stderr)
     sys.exit(1)
 

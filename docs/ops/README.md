@@ -1,12 +1,25 @@
 # Ops
 
-Purpose:
-- Runbooks, operational procedures, recovery steps, and operator notes.
+Purpose: canonical runbook directory for production operations, recovery, and readiness.
 
 SSOT:
 - [../structure/README.md](../structure/README.md)
+- [OPERATIONS-INDEX.md](OPERATIONS-INDEX.md)
+- [../COMPLIANCE-CHECKLIST.md](../COMPLIANCE-CHECKLIST.md)
+- [../slos/README.md](../slos/README.md)
 
 Top-level docs:
+- [BRANCH-POLICY.md](BRANCH-POLICY.md)
+- [DEPLOYMENT-CHECKLIST.md](DEPLOYMENT-CHECKLIST.md)
+- [../NAS-ARCHITECTURE.md](../NAS-ARCHITECTURE.md)
+- [DISASTER-RECOVERY-PLAN.md](DISASTER-RECOVERY-PLAN.md)
+- [EDGE-ACCESS-BASELINE.md](EDGE-ACCESS-BASELINE.md)
+- [INCIDENT-RESPONSE-PLAYBOOK.md](INCIDENT-RESPONSE-PLAYBOOK.md)
+- [OPS-COMPLIANCE-CHECKLIST.md](OPS-COMPLIANCE-CHECKLIST.md)
+- [SECRETS-ROTATION-SCHEDULE.md](SECRETS-ROTATION-SCHEDULE.md)
+- [EXTERNAL-BROWSER-QA-SMOKE-TESTS.md](EXTERNAL-BROWSER-QA-SMOKE-TESTS.md)
+- [../ephemeral-workspace-lifecycle-755.md](../ephemeral-workspace-lifecycle-755.md)
+- [SESSION-FINOPS-GUARDRAILS.md](SESSION-FINOPS-GUARDRAILS.md)
 - [AUTHENTICATED-FAILOVER-CONTINUITY-733.md](AUTHENTICATED-FAILOVER-CONTINUITY-733.md)
 - [AUTOPILOT-SETUP-STATE-RCA.md](AUTOPILOT-SETUP-STATE-RCA.md)
 - [AUTOPILOT-SETUP-STATE-REGRESSION-MATRIX.md](AUTOPILOT-SETUP-STATE-REGRESSION-MATRIX.md)
@@ -24,3 +37,6 @@ Top-level docs:
 Notes:
 - Proofs and execution summaries belong in [../status/README.md](../status/README.md).
 - Issue blockers and remediation notes belong in [../triage/README.md](../triage/README.md).
+- Security controls baseline is documented in [../SECURITY-HARDENING-GUIDE.md](../SECURITY-HARDENING-GUIDE.md).
+- Platform-level SLO targets are documented in [../slos/README.md](../slos/README.md).
+- NAS contract: host `192.168.168.56`, export `/export`, mount `/mnt/nas`, protocol `nfs4`.

@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-04-19T12:53:23.577707+00:00",
+  "registry": "config/governance-policy-domains.json",
+  "policy_index": "docs/governance/POLICY-INDEX.md",
+  "summary": {
+    "domain_count": 7,
+    "error_count": 0,
+    "warning_count": 0
+  },
+  "errors": [],
+  "warnings": []
+}

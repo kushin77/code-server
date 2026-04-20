@@ -1,7 +1,7 @@
 # Dockerfile.token-microservice
 # P1 #388 Phase 2: Token Microservice Container Image
 
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:ad65166ad2583036804a3f772ec8f1cad733cf77d631c6840ab1ea9231b6b350
 
 # OCI labels
 LABEL org.opencontainers.image.title="code-server-enterprise-token-microservice"

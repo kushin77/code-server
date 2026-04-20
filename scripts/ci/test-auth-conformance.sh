@@ -15,6 +15,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 REPORT="${1:-}"
 REPORT_FILE="${REPORT_FILE:-/tmp/auth-conformance-report.json}"
 [[ "$REPORT" == "--report" ]] && REPORT_FILE="${2:-$REPORT_FILE}"

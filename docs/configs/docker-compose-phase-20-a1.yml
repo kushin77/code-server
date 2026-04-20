@@ -40,13 +40,13 @@ services:
       - REGION_COUNT=3
       
       # Regional configuration (immutable)
-      - REGION_PRIMARY_HOST=192.168.168.31
+      - REGION_PRIMARY_HOST=primary.prod.internal
       - REGION_PRIMARY_PORT=22
       - REGION_PRIMARY_PRIORITY=100
-      - REGION_SECONDARY_HOST=192.168.168.32
+      - REGION_SECONDARY_HOST=replica.prod.internal
       - REGION_SECONDARY_PORT=22
       - REGION_SECONDARY_PRIORITY=50
-      - REGION_TERTIARY_HOST=192.168.168.33
+      - REGION_TERTIARY_HOST=tertiary.prod.internal
       - REGION_TERTIARY_PORT=22
       - REGION_TERTIARY_PRIORITY=25
     

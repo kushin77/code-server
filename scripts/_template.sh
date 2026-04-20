@@ -37,10 +37,7 @@ set -euo pipefail
 
 # Get directory of this script and source the canonical initialization module
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || {
-    echo "FATAL: Cannot load _common/init.sh from $SCRIPT_DIR" >&2
-    exit 1
-}
+source "$SCRIPT_DIR/_common/init.sh"
 
 # Canonical name for this script (used in logging/metrics)
 SCRIPT_NAME="$(basename "$0")"

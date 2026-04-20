@@ -79,6 +79,149 @@ groups:
           severity: medium
           page: "false"
 
+  - name: slo_service
+    interval: 5m
+    rules:
+      - record: slo:availability:ratio_5m:class_a
+        expr: |
+          avg by (job) (
+            avg_over_time(up{job="caddy"}[5m])
+          )
+
+      - record: slo:availability:ratio_1h:class_a
+        expr: |
+          avg by (job) (
+            avg_over_time(up{job="caddy"}[1h])
+          )
+
+      - record: slo:availability:ratio_6h:class_a
+        expr: |
+          avg by (job) (
+            avg_over_time(up{job="caddy"}[6h])
+          )
+
+      - record: slo:availability:ratio_30d:class_a
+        expr: |
+          avg by (job) (
+            avg_over_time(up{job="caddy"}[30d])
+          )
+
+      - record: slo:availability:ratio_5m:class_b
+        expr: |
+          avg by (job) (
+            avg_over_time(up{job=~"code-server|oauth2-proxy|postgres|redis|session-broker|token-microservice"}[5m])
+          )
+
+      - record: slo:availability:ratio_1h:class_b
+        expr: |
+          avg by (job) (
+            avg_over_time(up{job=~"code-server|oauth2-proxy|postgres|redis|session-broker|token-microservice"}[1h])
+          )
+
+      - record: slo:availability:ratio_6h:class_b
+        expr: |
+          avg by (job) (
+            avg_over_time(up{job=~"code-server|oauth2-proxy|postgres|redis|session-broker|token-microservice"}[6h])
+          )
+
+      - record: slo:availability:ratio_30d:class_b
+        expr: |
+          avg by (job) (
+            avg_over_time(up{job=~"code-server|oauth2-proxy|postgres|redis|session-broker|token-microservice"}[30d])
+          )
+
+      - record: slo:http_request_latency:p99_5m
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (job, le) (
+              rate(http_request_duration_seconds_bucket{job=~"code-server|oauth2-proxy|session-broker|token-microservice"}[5m])
+            )
+          )
+
+      - record: slo:http_request_latency:p99_1h
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (job, le) (
+              rate(http_request_duration_seconds_bucket{job=~"code-server|oauth2-proxy|session-broker|token-microservice"}[1h])
+            )
+          )
+
+      - record: slo:error_budget:remaining:class_a
+        expr: |
+          clamp_min(1 - ((1 - slo:availability:ratio_30d:class_a) / 0.0005), 0)
+
+      - record: slo:error_budget:remaining:class_b
+        expr: |
+          clamp_min(1 - ((1 - slo:availability:ratio_30d:class_b) / 0.001), 0)
+
+      - alert: SLOAvailabilityBurnRateWarningClassA
+        expr: |
+          ((1 - slo:availability:ratio_5m:class_a) / 0.0005 > 6)
+          and
+          ((1 - slo:availability:ratio_1h:class_a) / 0.0005 > 3)
+        for: 5m
+        labels:
+          severity: warning
+          slo: availability
+          class: a
+        annotations:
+          summary: "Class A availability budget is burning quickly"
+          description: "Caddy is burning its 99.95% availability budget faster than policy allows."
+
+      - alert: SLOAvailabilityBurnRateCriticalClassA
+        expr: |
+          ((1 - slo:availability:ratio_5m:class_a) / 0.0005 > 14.4)
+          and
+          ((1 - slo:availability:ratio_1h:class_a) / 0.0005 > 6)
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+          class: a
+        annotations:
+          summary: "Class A availability burn rate is critical"
+          description: "Caddy is consuming its monthly error budget too quickly and should page on-call."
+
+      - alert: SLOAvailabilityBurnRateWarningClassB
+        expr: |
+          ((1 - slo:availability:ratio_5m:class_b) / 0.001 > 6)
+          and
+          ((1 - slo:availability:ratio_1h:class_b) / 0.001 > 3)
+        for: 5m
+        labels:
+          severity: warning
+          slo: availability
+          class: b
+        annotations:
+          summary: "Class B availability budget is burning quickly"
+          description: "A core production service is burning its 99.9% availability budget faster than policy allows."
+
+      - alert: SLOAvailabilityBurnRateCriticalClassB
+        expr: |
+          ((1 - slo:availability:ratio_5m:class_b) / 0.001 > 14.4)
+          and
+          ((1 - slo:availability:ratio_1h:class_b) / 0.001 > 6)
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+          class: b
+        annotations:
+          summary: "Class B availability burn rate is critical"
+          description: "A core production service is consuming its monthly error budget too quickly."
+
+      - alert: SLOHttpP99LatencyWarning
+        expr: slo:http_request_latency:p99_5m > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          slo: latency
+        annotations:
+          summary: "HTTP request P99 latency exceeds 800ms"
+          description: "The request path is outside the latency target defined in docs/SLO.md."
+
   # ── #374: Missing operational alert gaps ─────────────────────────────────
   - name: backup
     interval: 5m

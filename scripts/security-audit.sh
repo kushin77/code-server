@@ -47,12 +47,24 @@ echo ""
 # ============================================================================
 log_info "SECTION 1: Zero-Trust Architecture"
 
-# Test: Direct SSH access ENABLED (direct .31 node development)
+# Test: SSH must remain available, but only through an approved private or proxied path
 echo "Testing SSH Access..."
-if nc -zv localhost 22 2>/dev/null || [ $? -eq 0 ]; then
-  test_result "SSH Port Open (direct access enabled)" "PASS" "SSH available for direct .31 development"
+if grep -qE '^\s*Port\s+22\s*$' /etc/ssh/sshd_config 2>/dev/null; then
+  test_result "Direct SSH Exposure (port 22)" "FAIL" "Direct SSH exposure detected on port 22"
 else
-  test_result "SSH Port Open (direct access enabled)" "WARN" "SSH port 22 not accessible (tunnel fallback)"
+  test_result "Direct SSH Exposure (port 22)" "PASS" "Port 22 is not configured in sshd_config"
+fi
+
+if nc -z localhost 22 >/dev/null 2>&1; then
+  test_result "SSH Port Open (local service reachable)" "FAIL" "Direct SSH exposure detected on port 22"
+else
+  test_result "SSH Port Open (local service reachable)" "PASS" "SSH service on port 22 is not reachable locally"
+fi
+
+if nc -z localhost 2222 >/dev/null 2>&1; then
+  test_result "SSH Proxy Port Open" "PASS" "SSH proxy is available on 2222"
+else
+  test_result "SSH Proxy Port Open" "FAIL" "SSH proxy not reachable on 2222"
 fi
 
 # Test: Cloudflare tunnel is running
@@ -61,6 +73,17 @@ if pgrep -f "cloudflared" > /dev/null; then
   test_result "Cloudflare Tunnel Running" "PASS"
 else
   test_result "Cloudflare Tunnel Running" "FAIL" "cloudflared process not found"
+fi
+
+# Test: Edge access baseline is documented and pinned in repo config
+echo "Checking Edge Access Baseline..."
+if [ -f "$SCRIPT_DIR/../docs/ops/EDGE-ACCESS-BASELINE.md" ] && \
+   grep -q '^listen_port = 2222$' "$SCRIPT_DIR/../config/ssh-proxy.conf" && \
+   grep -q '^password_enabled = false  # Disable password auth for security$' "$SCRIPT_DIR/../config/ssh-proxy.conf" && \
+   grep -q '^permit_root_login = "no"$' "$SCRIPT_DIR/../config/ssh-proxy.conf"; then
+  test_result "Edge Access Baseline Pinned" "PASS"
+else
+  test_result "Edge Access Baseline Pinned" "FAIL" "Missing baseline doc or SSH proxy hardening contract"
 fi
 
 # Test: SSH proxy server is running

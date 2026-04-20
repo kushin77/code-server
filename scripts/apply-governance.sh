@@ -24,10 +24,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-# Source common functions
-if [[ -f "$SCRIPT_DIR/common-functions.sh" ]]; then
-    source "$SCRIPT_DIR/common-functions.sh"
-fi
+require_github_cli() {
+    require_command "gh"
+    bootstrap_github_auth || true
+    if ! gh api user --jq '.login' >/dev/null 2>&1; then
+        log_fatal "GitHub auth unavailable. Set GH_TOKEN/GITHUB_TOKEN (prefer GSM) or run: gh auth login"
+    fi
+}
 
 # Parse arguments
 OWNER=""
@@ -69,34 +72,34 @@ while [[ $# -gt 0 ]]; do
         -n|--dry-run) DRY_RUN=true; shift ;;
         -v|--verbose) VERBOSE=true; shift ;;
         -h|--help) usage ;;
-        *) die "Unknown option: $1" ;;
+        *) log_fatal "Unknown option: $1" ;;
     esac
 done
 
 if [[ -z "$OWNER" ]]; then
-    die "Error: --owner is required"
+    log_fatal "Error: --owner is required"
 fi
 
 # Require GitHub CLI
 require_github_cli
 
-write_section "GitHub Governance Framework Applicator"
+log_section "GitHub Governance Framework Applicator"
 
 # Get repository list
-write_info "Repository Owner: $OWNER"
+log_info "Repository Owner: $OWNER"
 
 if $ALL_REPOS; then
-    write_info "Fetching all repositories for $OWNER..."
+    log_info "Fetching all repositories for $OWNER..."
     mapfile -t REPOS < <(gh repo list "$OWNER" --json name --jq '.[].name')
-    write_info "Found ${#REPOS[@]} repositories"
+    log_info "Found ${#REPOS[@]} repositories"
 else
     if [[ ${#REPOS[@]} -eq 0 ]]; then
-        die "No repositories specified. Use -r or --all-repos"
+        log_fatal "No repositories specified. Use -r or --all-repos"
     fi
-    write_info "Target repositories: ${REPOS[*]}"
+    log_info "Target repositories: ${REPOS[*]}"
 fi
 
-write_info ""
+echo ""
 
 # Process statistics
 processed=0
@@ -106,17 +109,17 @@ failed=0
 # Process each repository
 for repo in "${REPOS[@]}"; do
     ((processed++))
-    write_info "[$processed/${#REPOS[@]}] Processing $OWNER/$repo..."
+    log_info "[$processed/${#REPOS[@]}] Processing $OWNER/$repo..."
     
     if $VERBOSE; then
-        write_info "  Getting repository info..."
+        log_info "  Getting repository info..."
     fi
     
     # Get repository info
     repo_info=""
     repo_info=$(gh api repos/"$OWNER"/"$repo" \
         --jq '{name: .name, default_branch: .default_branch, is_private: .private}' 2>/dev/null) || {
-        write_error "Failed to fetch repository info for $OWNER/$repo"
+        log_error "Failed to fetch repository info for $OWNER/$repo" || true
         ((failed++))
         continue
     }
@@ -125,8 +128,8 @@ for repo in "${REPOS[@]}"; do
     default_branch=$(echo "$repo_info" | jq -r '.default_branch')
     
     if $VERBOSE; then
-        write_info "  Default branch: $default_branch"
-        write_info "  Applying branch protection rules..."
+        log_info "  Default branch: $default_branch"
+        log_info "  Applying branch protection rules..."
     fi
     
     # Create protection payload
@@ -138,9 +141,9 @@ for repo in "${REPOS[@]}"; do
     "contexts": ["lint", "unit-tests", "security-scan"]
   },
   "required_pull_request_reviews": {
-    "required_approving_review_count": 1,
+        "required_approving_review_count": 2,
     "dismiss_stale_reviews": true,
-    "require_code_owner_reviews": false
+        "require_code_owner_reviews": true
   },
   "enforce_admins": true,
   "allow_force_pushes": false,
@@ -151,7 +154,7 @@ EOF
 )
     
     if $DRY_RUN; then
-        write_warning "[DRY RUN] Would apply branch protection for $default_branch"
+        log_warn "[DRY RUN] Would apply branch protection for $default_branch"
         if $VERBOSE; then
             echo "$protection_payload" | jq '.'
         fi
@@ -159,16 +162,16 @@ EOF
         if gh api -X PUT repos/"$OWNER"/"$repo"/branches/"$default_branch"/protection \
             --input <(echo "$protection_payload") 2>/dev/null; then
             if $VERBOSE; then
-                write_info "  Branch protection applied"
+                log_info "  Branch protection applied"
             fi
         else
-            write_warning "  Branch protection partially applied (may have existing config)"
+            log_warn "  Branch protection partially applied (may have existing config)"
         fi
     fi
     
     # Check workflows
     if $VERBOSE; then
-        write_info "  Checking workflows..."
+        log_info "  Checking workflows..."
     fi
     
     workflow_count=0
@@ -176,14 +179,14 @@ EOF
         --jq '.[].name | select(. != null)' 2>/dev/null | wc -l || echo 0)
     
     if [[ $workflow_count -eq 0 ]]; then
-        write_warning "  No workflows found in .github/workflows"
+        log_warn "  No workflows found in .github/workflows"
     else
         if $VERBOSE; then
-            write_info "  Found $workflow_count workflows"
+            log_info "  Found $workflow_count workflows"
         fi
     fi
     
-    write_success "$OWNER/$repo governance rules applied"
+    log_success "$OWNER/$repo governance rules applied"
     ((successful++))
     
     # Delay to avoid rate limiting (GitHub: 5000 req/hour)
@@ -191,15 +194,15 @@ EOF
 done
 
 # Summary
-write_section "Governance Application Complete"
-write_info "Processed: $processed"
-write_info "Successful: $successful"
-write_info "Failed: $failed"
+log_section "Governance Application Complete"
+log_info "Processed: $processed"
+log_info "Successful: $successful"
+log_info "Failed: $failed"
 
 if [[ $failed -gt 0 ]]; then
-    write_warning "⚠️  Review failures above and retry as needed"
+    log_warn "Review failures above and retry as needed"
     exit 1
 else
-    write_success "✅ All repositories processed successfully"
+    log_success "All repositories processed successfully"
     exit 0
 fi

@@ -134,12 +134,6 @@ describe('GitOpsOrchestrator', () => {
 
   describe('Multi-Target Deployment', () => {
     it('should support multiple deployment targets', async () => {
-      const targets = [
-        { cluster: 'us-east-1', namespace: 'production' },
-        { cluster: 'eu-west-1', namespace: 'production' },
-        { cluster: 'ap-southeast-1', namespace: 'production' },
-      ];
-
       expect(orchestrator.supportsMultiTarget()).toBe(true);
       expect(orchestrator.getTargets().length).toBeGreaterThanOrEqual(0);
     });

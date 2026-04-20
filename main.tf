@@ -1,3 +1,9 @@
+# DEPRECATED: Root-level Terraform mirror — canonical IaC is in terraform/
+# This file is a read-only mirror maintained for legacy tooling compatibility.
+# DO NOT MAKE CHANGES HERE. All edits go to terraform/main.tf.
+# Tracked by: #802 (retire deprecated references)
+# Canonical target: terraform/main.tf
+
 terraform {
   required_version = ">= 1.0"
   required_providers {

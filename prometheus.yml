@@ -13,11 +13,7 @@ alerting:
 
 rule_files:
   - /etc/prometheus/alert-rules.yml
-  - /etc/prometheus/alert-rules-audit-phase4.yml
   - /etc/prometheus/prometheus-rules-phase-23.yml
-  - /etc/prometheus/alerts-phase-23.yml
-  - /etc/prometheus/prometheus-rules-slo-phase-8.yml
-  - /etc/prometheus/prometheus-rules-alerts-operational.yml
 
 scrape_configs:
   - job_name: 'prometheus'
@@ -58,6 +54,18 @@ scrape_configs:
   - job_name: 'redis'
     static_configs:
       - targets: ['redis:6379']
+
+  - job_name: 'redis-sentinel-1'
+    static_configs:
+      - targets: ['redis-sentinel-1:26379']
+        labels:
+          instance: redis-sentinel-1
+
+  - job_name: 'redis-sentinel-arbiter'
+    static_configs:
+      - targets: ['redis-sentinel-arbiter:26379']
+        labels:
+          instance: redis-sentinel-arbiter
 
   - job_name: 'postgres'
     static_configs:

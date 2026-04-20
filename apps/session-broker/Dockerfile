@@ -48,10 +48,13 @@ RUN useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true && \
 
 WORKDIR /app
 
-# Copy built application and node_modules from builder workspace tree
+# Copy built application from builder
 COPY --from=builder /workspace/apps/session-broker/dist ./dist
 COPY --from=builder /workspace/apps/session-broker/package.json ./package.json
-COPY --from=builder /workspace/node_modules ./node_modules
+
+# Install production dependencies in the runtime stage
+# This ensures all dependencies are resolved correctly in isolation
+RUN npm install --omit=dev --no-save && npm cache clean --force
 
 # Set permissions using numeric IDs (more reliable than usernames)
 RUN chown -R 1000:999 /app

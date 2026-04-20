@@ -21,7 +21,7 @@ RUN npm install -g pnpm@9.15.4 && \
     cd apps/session-broker && \
     pnpm install && \
     pnpm run build && \
-    pnpm prune --omit=dev
+    pnpm prune --prod
 
 # ════════════════════════════════════════════════════════════════════════════
 # Stage 2: Runtime

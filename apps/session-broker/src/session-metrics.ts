@@ -34,6 +34,12 @@ export interface SessionBrokerMetricsSnapshot {
   teams: UsageSummaryRow[];
   statusCounts: Record<string, number>;
   telemetry: SessionBrokerTelemetrySnapshot;
+  redis?: {
+    connected: boolean;
+    sessionCount: number;
+    memoryUsageBytes: number;
+    latencyMs?: number;
+  };
 }
 
 export interface SessionBrokerTelemetryState {
@@ -180,6 +186,27 @@ export const renderSessionBrokerPrometheusMetrics = (snapshot: SessionBrokerMetr
   lines.push('# HELP session_broker_metrics_generated_at_epoch_seconds Unix timestamp when the metrics snapshot was generated.');
   lines.push('# TYPE session_broker_metrics_generated_at_epoch_seconds gauge');
   lines.push(`session_broker_metrics_generated_at_epoch_seconds ${Date.parse(snapshot.generatedAt) / 1000}`);
+
+  // Redis metrics
+  if (snapshot.redis) {
+    lines.push('# HELP session_broker_redis_connected Redis connection status (1=connected, 0=disconnected).');
+    lines.push('# TYPE session_broker_redis_connected gauge');
+    lines.push(`session_broker_redis_connected ${snapshot.redis.connected ? 1 : 0}`);
+
+    lines.push('# HELP session_broker_redis_session_count Number of sessions persisted in Redis.');
+    lines.push('# TYPE session_broker_redis_session_count gauge');
+    lines.push(`session_broker_redis_session_count ${snapshot.redis.sessionCount}`);
+
+    lines.push('# HELP session_broker_redis_memory_usage_bytes Estimated memory usage of Redis session store in bytes.');
+    lines.push('# TYPE session_broker_redis_memory_usage_bytes gauge');
+    lines.push(`session_broker_redis_memory_usage_bytes ${snapshot.redis.memoryUsageBytes}`);
+
+    if (snapshot.redis.latencyMs !== undefined) {
+      lines.push('# HELP session_broker_redis_latency_ms Recent Redis command latency in milliseconds.');
+      lines.push('# TYPE session_broker_redis_latency_ms gauge');
+      lines.push(`session_broker_redis_latency_ms ${snapshot.redis.latencyMs}`);
+    }
+  }
 
   return `${lines.join('\n')}\n`;
 };

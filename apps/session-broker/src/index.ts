@@ -86,6 +86,7 @@ import {
   type ShadowReplayReport,
   type ShadowReplayTrace,
 } from './session-shadow-replay.js';
+import RedisSessionStore from './redis-session-store.js';
 
 interface RuntimeConfig {
   logLevel: string;
@@ -400,16 +401,46 @@ class SessionManager {
   private deletionManifests: Map<string, SessionDeletionManifest> = new Map();
   private shadowReplayArtifacts: Map<string, SessionShadowReplayArtifact> = new Map();
   private nextPort: number = 8081; // Start at 8081 (8080 is primary)
+  private redisStore?: RedisSessionStore;
+  private useRedis: boolean = false;
 
   constructor(runtimeConfig: RuntimeConfig) {
     this.runtimeConfig = runtimeConfig;
     const socketPath = runtimeConfig.dockerSocket.replace('unix://', '');
     this.docker = new Docker({ socketPath });
     this.db = new PgPool({ connectionString: runtimeConfig.databaseUrl });
+    
+    // Check if Redis is available (optional feature flag)
+    this.useRedis = process.env.SESSION_USE_REDIS === 'true' || process.env.SESSION_USE_REDIS === '1';
+    
     logger.info('SessionManager initialized', {
       socketPath,
       codeServerImageId: runtimeConfig.codeServerImageId,
+      redisEnabled: this.useRedis,
     });
+  }
+
+  /**
+   * Initialize Redis session store if enabled
+   */
+  async initializeRedisStore(): Promise<void> {
+    if (!this.useRedis) {
+      logger.info('Redis session store disabled (SESSION_USE_REDIS not set)');
+      return;
+    }
+
+    try {
+      this.redisStore = new RedisSessionStore();
+      await this.redisStore.connect();
+      logger.info('Redis session store initialized successfully');
+    } catch (error) {
+      logger.error('Failed to initialize Redis session store', { error });
+      if (process.env.SESSION_REDIS_REQUIRED === 'true') {
+        throw error;
+      }
+      // Continue with in-memory fallback if Redis is optional
+      this.useRedis = false;
+    }
   }
 
   private recordSessionEvent(event: Omit<SessionAuditEvent, 'eventId' | 'timestamp' | 'eventHash'> & { timestamp?: number }): SessionAuditEvent {
@@ -429,10 +460,27 @@ class SessionManager {
       session.auditTrail.push(storedEvent);
     }
 
+    // Store in Redis if enabled
+    if (this.useRedis && this.redisStore) {
+      this.redisStore.storeAuditEvent(event.sessionId, storedEvent).catch((error) => {
+        logger.error('Failed to store audit event in Redis', { sessionId: event.sessionId, error });
+      });
+    }
+
     return storedEvent;
   }
 
   getSessionEvents(sessionId: string): SessionAuditEvent[] {
+    // Try Redis first if enabled
+    if (this.useRedis && this.redisStore) {
+      try {
+        // Note: This should ideally be async, but keeping sync interface for compatibility
+        logger.warn('Redis store async operation called from sync context', { sessionId });
+      } catch (error) {
+        logger.error('Error accessing Redis for session events', { sessionId, error });
+      }
+    }
+    
     const events = this.sessionEvents.get(sessionId) ?? [];
     return [...events];
   }
@@ -1361,6 +1409,16 @@ class SessionManager {
       this.getSessionStatusCounts(),
     ]);
 
+    // Collect Redis metrics if available
+    let redisMetrics: any;
+    if (this.redisStore) {
+      try {
+        redisMetrics = await this.redisStore.getMetrics();
+      } catch (error) {
+        logger.warn('Failed to gather Redis metrics', { error: String(error) });
+      }
+    }
+
     return {
       generatedAt: new Date().toISOString(),
       policy: {
@@ -1383,6 +1441,7 @@ class SessionManager {
         reaperLastRunAt: sessionBrokerTelemetry.reaperLastRunAt,
         reaperLastSuccessAt: sessionBrokerTelemetry.reaperLastSuccessAt,
       },
+      redis: redisMetrics,
     };
   }
 
@@ -2396,10 +2455,107 @@ app.get('/usage/summary', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /oauth2/callback (Phase 2 Integration)
- * Hook called by oauth2-proxy on successful authentication
- * Creates a session immediately upon successful auth (for earlier session bootstrap)
+ * GET /sessions
+ * List all active sessions (for debugging, metrics, and operator access)
+ * Scope: Authenticated operators and system components
  */
+app.get('/sessions', async (req: BrokerRequest, res: Response) => {
+  try {
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    // Authorization check: only operators and admins can view all sessions
+    const viewDecision = authorizeSessionView(authUser, undefined);
+    if (!viewDecision.allowed) {
+      return res.status(viewDecision.statusCode).json({
+        error: viewDecision.reason,
+        code: viewDecision.policyCode,
+      });
+    }
+
+    // Get all sessions (from Redis if enabled, otherwise from memory)
+    let sessions: any[] = [];
+    if (manager['useRedis'] && manager['redisStore']) {
+      try {
+        const redisSessions = await manager['redisStore'].getAllSessions();
+        sessions = redisSessions as any[];
+      } catch (error) {
+        logger.error('Failed to retrieve sessions from Redis', { error });
+        // Fallback to in-memory sessions
+        sessions = Array.from(manager['sessions'].values());
+      }
+    } else {
+      sessions = Array.from(manager['sessions'].values());
+    }
+
+    // Filter and sanitize for response
+    const response = {
+      sessionCount: sessions.length,
+      sessions: sessions.map((s) => ({
+        id: s.sessionId,
+        userId: s.userId,
+        containerId: s.containerId,
+        status: s.status,
+        createdAt: s.createdAt,
+        lastActivity: s.lastActivity,
+      })),
+    };
+
+    res.json(response);
+  } catch (error) {
+    logger.error('Failed to list sessions', { error: String(error) });
+    res.status(500).json({ error: 'Failed to list sessions' });
+  }
+});
+
+/**
+ * GET /sessions/:sessionId/redis
+ * Query raw Redis entry for a specific session (operator only, troubleshooting)
+ */
+app.get('/sessions/:sessionId/redis', async (req: BrokerRequest, res: Response) => {
+  try {
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    // Authorization check: only operators can view raw Redis entries
+    if (!authUser.roles.includes('operator') && !authUser.roles.includes('admin')) {
+      return res.status(403).json({
+        error: 'Only operators and admins can view Redis entries',
+      });
+    }
+
+    const { sessionId } = req.params;
+    const sessionIdValidation = sessionIdSchema.validate(sessionId);
+    if (sessionIdValidation.error) {
+      return res.status(400).json({ error: sessionIdValidation.error.message });
+    }
+
+    if (!manager['useRedis'] || !manager['redisStore']) {
+      return res.status(503).json({
+        error: 'Redis session store is not enabled',
+      });
+    }
+
+    const sessionData = await manager['redisStore'].getSession(sessionId);
+    if (!sessionData) {
+      return res.status(404).json({ error: 'Session not found in Redis' });
+    }
+
+    res.json({
+      sessionId,
+      data: sessionData,
+      source: 'redis-sentinel',
+    });
+  } catch (error) {
+    logger.error('Failed to query Redis session', { error: String(error) });
+    res.status(500).json({ error: 'Failed to query session' });
+  }
+});
+
 app.post('/oauth2/callback', async (req: Request, res: Response) => {
   try {
     // Extract and validate user info from oauth2-proxy headers.
@@ -3283,8 +3439,19 @@ app.all('*', async (req: Request, res: Response) => {
 // ────────────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   logger.info(`Session broker listening on port ${PORT}`);
+  
+  // Initialize Redis session store if enabled
+  try {
+    await manager.initializeRedisStore();
+  } catch (error) {
+    logger.error('Redis store initialization failed', { error: String(error) });
+    if (process.env.SESSION_REDIS_REQUIRED === 'true') {
+      process.exit(1);
+    }
+  }
+  
   void manager.reapExpiredSessions().catch((error) => {
     logger.error('Initial stale-session sweep failed', { error: String(error) });
   });

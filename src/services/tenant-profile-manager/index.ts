@@ -88,7 +88,7 @@ export class TenantProfileManager {
    * Main entry point: Merge all profile levels for a given namespace.
    */
   async mergeProfiles(options: ResolverOptions & ProfileMergeOptions): Promise<MergedProfile> {
-    const cacheKey = this.getCacheKey(options.namespace)
+    const cacheKey = this.getCacheKey(options.namespace, options)
     const cached = this.profileCache.get(cacheKey)
 
     // Return cached if available and fresh
@@ -98,6 +98,7 @@ export class TenantProfileManager {
 
     const merged = new Map<string, ProfileSetting>()
     const appliedHierarchy: ProfileLevel[] = []
+    const driftBaseline = new Map<string, ProfileSetting>()
 
     // Load profiles in hierarchy order (lowest to highest precedence)
     const levels = [
@@ -114,6 +115,13 @@ export class TenantProfileManager {
       // Skip user preferences if not included
       if (level === ProfileLevel.USER_PREFERENCES && !options.includeUserPreferences) {
         continue
+      }
+
+      if (level === ProfileLevel.USER_PREFERENCES) {
+        driftBaseline.clear()
+        for (const [key, setting] of merged.entries()) {
+          driftBaseline.set(key, setting)
+        }
       }
 
       const levelSettings = await this.loadProfileLevel(level, options.namespace, options.roles)
@@ -163,7 +171,7 @@ export class TenantProfileManager {
     let driftDetails: string[] = []
 
     if (options.detectDrift) {
-      const driftResult = await this.detectDrift(options.namespace, merged)
+      const driftResult = await this.detectDrift(options.namespace, driftBaseline.size > 0 ? driftBaseline : merged)
       driftDetected = driftResult.drifted
       driftDetails = Array.from(driftResult.driftDetails.entries()).map(
         ([key, detail]) => `${key}: expected ${JSON.stringify(detail.expectedValue)} but got ${JSON.stringify(detail.actualValue)}`,
@@ -213,7 +221,9 @@ export class TenantProfileManager {
           const roleFile = path.join(this.profileBasePath, `role-${role}.json`)
           try {
             const roleSettings = JSON.parse(await fs.promises.readFile(roleFile, "utf-8"))
-            Object.assign(allRoleSettings, roleSettings)
+            for (const [key, value] of Object.entries(roleSettings)) {
+              allRoleSettings[key] = this.normalizeLoadedSetting(key, value)
+            }
           } catch (e) {
             // Role policy may not exist
           }
@@ -239,7 +249,14 @@ export class TenantProfileManager {
 
     try {
       const content = await fs.promises.readFile(profileFile, "utf-8")
-      return JSON.parse(content)
+      const parsed = JSON.parse(content)
+      const normalized: Record<string, any> = {}
+
+      for (const [key, value] of Object.entries(parsed)) {
+        normalized[key] = this.normalizeLoadedSetting(key, value)
+      }
+
+      return normalized
     } catch (e) {
       // Profile file may not exist - return empty
       return {}
@@ -614,16 +631,27 @@ export class TenantProfileManager {
   /**
    * Generate cache key for merged profile.
    */
-  private getCacheKey(namespace: ProfileNamespace): string {
-    return namespace.asPrefix()
+  private getCacheKey(namespace: ProfileNamespace, options?: Partial<ResolverOptions & ProfileMergeOptions>): string {
+    return [
+      namespace.asPrefix(),
+      options?.includeUserPreferences ? "user-prefs=1" : "user-prefs=0",
+      options?.enforceImmutability ? "immutable=1" : "immutable=0",
+      options?.detectDrift ? "drift=1" : "drift=0",
+      options?.auditLog ? "audit=1" : "audit=0",
+      options?.workspaceId || "workspace=default",
+      (options?.roles || []).slice().sort().join(","),
+    ].join("|")
   }
 
   /**
    * Invalidate cache for a namespace.
    */
   private invalidateCache(namespace: ProfileNamespace): void {
-    const key = this.getCacheKey(namespace)
-    this.profileCache.delete(key)
+    for (const key of this.profileCache.keys()) {
+      if (key.startsWith(namespace.asPrefix())) {
+        this.profileCache.delete(key)
+      }
+    }
   }
 
   /**
@@ -653,11 +681,27 @@ export class TenantProfileManager {
    */
   private sanitizeFileName(name: string): string {
     return name
-      .replace(/\//g, "_")
-      .replace(/\\/g, "_")
-      .replace(/\.\./g, "")
-      .replace(/^\./, "")
+      .replace(/[^a-zA-Z0-9_-]+/g, "_")
+      .replace(/^_+|_+$/g, "")
       .toLowerCase()
+  }
+
+  /**
+   * Normalize loaded profile data so raw JSON and wrapped setting records both work.
+   */
+  private normalizeLoadedSetting(key: string, value: any): { value: any; immutable: boolean; description?: string } {
+    if (value && typeof value === "object" && "value" in value) {
+      return {
+        value: value.value,
+        immutable: Boolean(value.immutable),
+        description: value.description,
+      }
+    }
+
+    return {
+      value,
+      immutable: this.isImmutableKey(key),
+    }
   }
 
   /**

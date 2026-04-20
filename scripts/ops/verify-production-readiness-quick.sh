@@ -43,29 +43,32 @@ log_section "PRODUCTION READINESS VERIFICATION"
 log_section "1. KEY DELIVERABLES"
 
 verify_check
-test -f "PRODUCTION-READINESS-FINAL-INTEGRATION-GUIDE.md" && \
-  log_pass "PRODUCTION-READINESS-FINAL-INTEGRATION-GUIDE.md" || \
-  log_fail "PRODUCTION-READINESS-FINAL-INTEGRATION-GUIDE.md missing"
-
-verify_check
-test -f "E2E-TEST-EXECUTION-GUIDE.md" && \
-  log_pass "E2E-TEST-EXECUTION-GUIDE.md" || \
+if test -f "E2E-TEST-EXECUTION-GUIDE.md"; then
+  log_pass "E2E-TEST-EXECUTION-GUIDE.md"
+else
   log_fail "E2E-TEST-EXECUTION-GUIDE.md missing"
+fi
 
 verify_check
-test -f "PRODUCTION-DEPLOYMENT-CHECKLIST.md" && \
-  log_pass "PRODUCTION-DEPLOYMENT-CHECKLIST.md" || \
+if test -f "PRODUCTION-DEPLOYMENT-CHECKLIST.md"; then
+  log_pass "PRODUCTION-DEPLOYMENT-CHECKLIST.md"
+else
   log_fail "PRODUCTION-DEPLOYMENT-CHECKLIST.md missing"
+fi
 
 verify_check
-test -f "scripts/ops/create-qa-user-automated.sh" && \
-  log_pass "create-qa-user-automated.sh" || \
+if test -f "scripts/ops/create-qa-user-automated.sh"; then
+  log_pass "create-qa-user-automated.sh"
+else
   log_fail "create-qa-user-automated.sh missing"
+fi
 
 verify_check
-test -f "scripts/ops/rotate-qa-credentials.py" && \
-  log_pass "rotate-qa-credentials.py" || \
+if test -f "scripts/ops/rotate-qa-credentials.py"; then
+  log_pass "rotate-qa-credentials.py"
+else
   log_fail "rotate-qa-credentials.py missing"
+fi
 
 log_section "2. INFRASTRUCTURE CONFIG"
 

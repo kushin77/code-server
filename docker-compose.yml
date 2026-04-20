@@ -964,6 +964,9 @@ volumes:
   caddy-data:
     driver: local
 
+  jaeger-data:
+    driver: local
+
   session-broker-sessions:
     driver: local
 

@@ -313,7 +313,7 @@ services:
     build:
       context: .
       dockerfile: apps/session-broker/Dockerfile
-    image: ghcr.io/kushin77/session-broker@sha256:683cca5a6c4710ba65b86403e2686030f0d3e2f4fd34f8ea44368dc2cb3148a6
+    image: ghcr.io/kushin77/session-broker:latest
     container_name: session-broker
     restart: unless-stopped
     user: "1000"  # session-broker user (non-root, requires docker socket access for container spawning)

@@ -251,7 +251,86 @@ graph LR
 
 ---
 
-## 7. Referenced Configuration Files
+## 7. CSRF Cookie Resilience During Failover
+
+### The Problem
+CSRF tokens are HMAC-signed using `OAUTH2_PROXY_COOKIE_SECRET`. If the primary host (.31) and replica host (.42) use different secrets, a CSRF token issued by .31 becomes invalid when the user's request is routed to .42 during failover.
+
+### The Solution
+Both hosts **must use the identical `OAUTH2_PROXY_COOKIE_SECRET`** sourced from Google Secret Manager (GSM). This enables seamless CSRF validation across hosts.
+
+### CSRF Cookie Lifecycle During Failover
+
+| Step | Action | Host | CSRF Cookie Status |
+|------|--------|------|-------------------|
+| 1 | User initiates login | Client | None |
+| 2 | Cloudflare routes to primary .31 | Caddy (.31) | N/A |
+| 3 | oauth2-proxy-portal issues CSRF token (signed with GSM secret) | .31 | ✅ Created (HMAC-signed) |
+| 4 | User submits form with CSRF token | Client → Caddy | ✅ Attached to request |
+| **5** | **Primary .31 fails (health check timeout)** | **Cloudflare** | **N/A (failover trigger)** |
+| **6** | **Cloudflare detects .31 unreachable, routes to .42** | **CF → .42** | **Token still valid** |
+| 7 | oauth2-proxy-portal validates CSRF token using **same GSM secret** | .42 | ✅ Validated (same HMAC key) |
+| 8 | User continues seamlessly (no re-auth loop) | .42 | ✅ Session replication (Redis Sentinel) |
+
+**Result**: User's CSRF token remains valid across the failover. No redirect loop. No forced re-authentication.
+
+### Configuration Guarantees
+
+**docker-compose.yml**:
+```yaml
+oauth2-proxy:
+  environment:
+    OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"  # ← GSM-sourced env var
+    OAUTH2_PROXY_CSRF_COOKIE_NAME: "_oauth2_proxy_ide_csrf"
+    OAUTH2_PROXY_CSRF_TRUSTED_HOSTS: "${IDE_DOMAIN:-ide.kushnir.cloud},.${COOKIE_DOMAIN:-.kushnir.cloud}"
+
+oauth2-proxy-portal:
+  environment:
+    OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"  # ← Same GSM secret
+    OAUTH2_PROXY_CSRF_COOKIE_NAME: "_oauth2_proxy_portal_csrf"
+    OAUTH2_PROXY_CSRF_TRUSTED_HOSTS: "${DOMAIN:-kushnir.cloud},.${COOKIE_DOMAIN:-.kushnir.cloud}"
+```
+
+**Key Points**:
+- ✅ `OAUTH2_PROXY_COOKIE_SECRET` is **parameterized** (not hardcoded)
+- ✅ Both proxy instances source from **GSM** (same secret value on both hosts)
+- ✅ CSRF trusted hosts are also **parameterized** (using env vars, not hardcoded domains)
+- ✅ No hardcoded secrets in `Caddyfile` or config files
+- ✅ Secrets rotated periodically via GSM update (no manual secret replacement needed)
+
+### Testing & Verification
+
+**Dry-run validation** (no side effects):
+```bash
+DRY_RUN=1 bash scripts/ops/validate-csrf-resilience.sh
+```
+
+**Full validation** (requires SSH access to both hosts):
+```bash
+bash scripts/ops/validate-csrf-resilience.sh
+```
+
+**What the validation checks**:
+1. Both hosts have identical `OAUTH2_PROXY_COOKIE_SECRET` ✓
+2. Caddyfile contains no hardcoded secrets ✓
+3. docker-compose uses env vars for CSRF config ✓
+4. oauth2-proxy health checks pass ✓
+5. /oauth2/auth endpoint properly validates CSRF tokens ✓
+
+### Failure Recovery
+
+If a user's in-flight CSRF token becomes invalid (host mismatch):
+1. oauth2-proxy returns 403 Forbidden
+2. User's browser receives CSRF validation error
+3. User clicks "Back" and retries
+4. Caddy (now on replica) serves request with fresh CSRF token
+5. User completes OAuth flow and gains access
+
+**Note**: This is a rare failure case. Under normal failover (all secrets synced), users experience transparent session continuation.
+
+---
+
+## 8. Referenced Configuration Files
 
 ### Caddyfile (net-edge boundary)
 - **Location**: `./Caddyfile` (root)
@@ -291,7 +370,7 @@ graph LR
 
 ---
 
-## 8. Acceptance & Signoff
+## 9. Acceptance & Signoff
 
 This contract becomes binding when:
 - [ ] Reviewed and approved by infrastructure team

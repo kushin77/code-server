@@ -747,6 +747,7 @@ services:
       - ./prometheus-rules-phase-23.yml:/etc/prometheus/prometheus-rules-phase-23.yml:ro
       - ./prometheus-rules-alerts-operational.yml:/etc/prometheus/prometheus-rules-alerts-operational.yml:ro
       - ./prometheus-rules-slo-phase-8.yml:/etc/prometheus/prometheus-rules-slo-phase-8.yml:ro
+      - ./prometheus-rules-matrix-alerts.yml:/etc/prometheus/prometheus-rules-matrix-alerts.yml:ro
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - ./alerts-phase-23.yml:/etc/prometheus/alerts-phase-23.yml:ro
       - prometheus-data:/prometheus

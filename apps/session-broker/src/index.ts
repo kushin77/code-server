@@ -2408,7 +2408,7 @@ app.post('/sessions', async (req: Request, res: Response) => {
     return;
   }
 
-  const rateLimitKey = authUser.email || req.ip;
+  const rateLimitKey = authUser.email || req.ip || 'anonymous';
   const rateLimitDecision = enforceSessionCreateRateLimit(rateLimitKey);
   if (!rateLimitDecision.allowed) {
     if (typeof rateLimitDecision.retryAfterSeconds === 'number') {

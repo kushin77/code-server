@@ -4,12 +4,6 @@
 
 ### Recommended: Use Helper Scripts
 
-#### Windows
-```cmd
-run.bat status
-```
-*First run will auto-create virtual environment*
-
 #### Mac/Linux / Deployment Host
 ```bash
 bash run.sh status
@@ -17,13 +11,6 @@ bash run.sh status
 *First run will auto-create virtual environment*
 
 ### Manual Setup
-
-#### Windows
-```cmd
-python -m venv venv
-venv\Scripts\activate.bat
-pip install -r requirements.txt
-```
 
 #### Mac/Linux
 ```bash
@@ -78,18 +65,12 @@ ANTHROPIC_API_KEY=sk-ant-your-actual-key
 
 Check that everything is configured:
 ```bash
-# Windows
-run.bat status
-
 # Mac/Linux or Deployment Host
 bash run.sh status
 ```
 
 Try a simple search (you need Gmail credentials first):
 ```bash
-# Windows
-run.bat search "is:unread"
-
 # Mac/Linux or Deployment Host
 bash run.sh search "is:unread"
 ```

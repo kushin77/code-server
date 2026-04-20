@@ -96,7 +96,7 @@ Repository underwent comprehensive deduplication audit (see [DEDUPLICATION-AND-E
 **Configuration Sources**: NEVER hardcode values
 - ❌ Avoid: `DEPLOY_HOST="192.168.168.31"`, `DOMAIN="kushnir.cloud"` in scripts
 - ✅ Use: `DEPLOY_HOST="${DEPLOY_HOST}"` (loads from .env via init.sh → config.sh)
-- Master config SSOT: `.env.template` (deployment config), `terraform/variables.tf` (IaC config)
+- Master config SSOT: `.env.schema.json` (env var schema), `CONFIG-SSOT-MASTER.md` (precedence map), `terraform/variables.tf` (IaC config)
 
 **Credential Defaults**: GSM is the default secret source; service accounts own machine-to-machine API access; SSH keys are limited to remote host login and transport.
 

@@ -23,7 +23,7 @@ ide.kushnir.cloud, ide.kushnir.cloud:443 {
         not path /health /healthz /ping /oauth2 /oauth2/*
         not header Cookie *_oauth2_proxy_portal=*
     }
-    redir @no_portal_access https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/ 302
+    redir @no_portal_access https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://{$PORTAL_DOMAIN:kushnir.cloud}/ 302
 
     # Logout handler: clean up session before sign out
     @logout path /logout /signout
@@ -112,19 +112,19 @@ kushnir.cloud {
         handle @auth_reset {
             header Clear-Site-Data "\"cache\", \"cookies\", \"storage\""
             header Content-Type "text/html; charset=utf-8"
-            header Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=.ide.kushnir.cloud; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            respond "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"1;url=https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/\"><title>Auth Reset</title></head><body>Auth reset complete. Redirecting to login... <a href=\"https://kushnir.cloud/oauth2/start?rd=https://kushnir.cloud/\">Continue</a></body></html>" 200
+            header Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain={$PORTAL_DOMAIN:kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=.{$PORTAL_DOMAIN:kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain={$PORTAL_DOMAIN:kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=.{$PORTAL_DOMAIN:kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain={$IDE_DOMAIN:ide.kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=.{$IDE_DOMAIN:ide.kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain={$IDE_DOMAIN:ide.kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=.{$IDE_DOMAIN:ide.kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+            respond "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"1;url=https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://{$PORTAL_DOMAIN:kushnir.cloud}/\"><title>Auth Reset</title></head><body>Auth reset complete. Redirecting to login... <a href=\"https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://{$PORTAL_DOMAIN:kushnir.cloud}/\">Continue</a></body></html>" 200
         }
 
         # Unified sign-out endpoint: clear oauth2 session and return to root.
-        redir @logout /oauth2/sign_out?rd=https://kushnir.cloud/ 302
+        redir @logout /oauth2/sign_out?rd=https://{$PORTAL_DOMAIN:kushnir.cloud}/ 302
 
         # oauth2-proxy-portal control plane endpoints
         handle @oauth2 {

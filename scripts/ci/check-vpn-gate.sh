@@ -9,6 +9,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 WARN_ONLY="${1:-}"
 VPN_ALLOWED_CIDRS="${VPN_ALLOWED_CIDRS:-10.0.0.0/8 192.168.0.0/16 172.16.0.0/12}"
 REQUIRE_VPN="${REQUIRE_VPN:-1}"

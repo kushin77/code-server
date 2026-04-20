@@ -5,7 +5,7 @@ This repository standardizes AI access for code-server as a startup-injected wor
 Policy:
 - The admin portal is the source of truth for AI entitlement and quota tier.
 - code-server injects the active AI profile at startup.
-- The primary AI endpoint is 192.168.168.42 and the automatic fallback is 192.168.168.31.
+- The primary AI endpoint is `http://replica.prod.internal:11434` and the automatic fallback is `http://primary.prod.internal:11434`.
 - No user-entered API key or token is required in the IDE.
 - Model access is deny-by-default unless the workspace policy maps the user to a profile.
 

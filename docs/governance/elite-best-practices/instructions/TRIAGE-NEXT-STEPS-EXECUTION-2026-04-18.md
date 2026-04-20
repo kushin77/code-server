@@ -137,6 +137,27 @@ Priority debug rule:
 5. **Extension governance fifth**: maintain stream closure evidence and monitor regressions.
 6. **UX last**: execute #717 through #727 only after Stream A-E contracts are stable.
 
+## AC Boundary Contract (Overlap Reduction)
+
+Canonical overlap-control artifacts:
+- `config/governance-epic-ac-boundaries.json`
+- `scripts/ci/validate-epic-ac-overlap.sh`
+- `scripts/ci/validate-governance-issue-ac-text-overlap.sh`
+
+Boundary rule:
+- Each open epic owns unique acceptance capabilities.
+- Cross-epic capability reuse is blocked unless explicitly listed in `allow_shared_capabilities`.
+
+Current shared exceptions (intentional):
+- `evidence-package`
+- `rollback-execution`
+
+Validation command:
+- `bash scripts/ci/validate-epic-ac-overlap.sh`
+- `bash scripts/ci/validate-governance-issue-ac-text-overlap.sh`
+
+If overlap validator fails, fix capability ownership map before adding or editing epic AC text.
+
 ### Debug/Triage Rule Set
 
 - Keep one active epic stream in progress at a time unless a dependency requires parallel work.
@@ -170,6 +191,8 @@ Run compose hardening baseline guard:
 Run overlap/staleness backlog guard:
 
 - `bash scripts/ci/validate-triage-open-backlog.sh`
+- `bash scripts/ci/validate-epic-ac-overlap.sh`
+- `bash scripts/ci/validate-governance-issue-ac-text-overlap.sh`
 
 ## Bootstrap Reference
 

@@ -7,10 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../_common/init.sh" || {
-  echo "FATAL: Cannot load _common/init.sh from $SCRIPT_DIR" >&2
-  exit 1
-}
+source "$SCRIPT_DIR/../_common/init.sh"
 
 ORG=""
 BASELINE_FILE=""
@@ -87,6 +84,7 @@ required_checks_json="$(jq -c '.required_status_checks' "$BASELINE_FILE")"
 required_reviews="$(jq -r '.required_approving_review_count' "$BASELINE_FILE")"
 require_enforce_admins="$(jq -r '.enforce_admins' "$BASELINE_FILE")"
 require_conv_resolution="$(jq -r '.required_conversation_resolution' "$BASELINE_FILE")"
+require_code_owner_reviews="$(jq -r '.required_pull_request_reviews.require_code_owner_review // false' "$BASELINE_FILE")"
 
 is_blank_approval_field() {
   local value="$1"
@@ -190,6 +188,7 @@ while IFS= read -r repo; do
   missing_checks="$(jq -n --argjson have "$actual_checks_json" --argjson want "$required_checks_json" '$want - $have')"
 
   actual_reviews="$(jq -r '.required_pull_request_reviews.required_approving_review_count // 0' <<<"$protection_json")"
+  actual_code_owner_reviews="$(jq -r '.required_pull_request_reviews.require_code_owner_reviews // false' <<<"$protection_json")"
   actual_enforce_admins="$(jq -r '.enforce_admins.enabled // false' <<<"$protection_json")"
   actual_conv_resolution="$(jq -r '.required_conversation_resolution.enabled // false' <<<"$protection_json")"
 
@@ -200,6 +199,10 @@ while IFS= read -r repo; do
 
   if [[ "$actual_reviews" != "$required_reviews" ]]; then
     reasons="$(jq -n --argjson reasons "$reasons" --arg expected "$required_reviews" --arg actual "$actual_reviews" '$reasons + [{required_reviews:{expected:($expected|tonumber),actual:($actual|tonumber)}}]')"
+  fi
+
+  if [[ "$actual_code_owner_reviews" != "$require_code_owner_reviews" ]]; then
+    reasons="$(jq -n --argjson reasons "$reasons" --arg expected "$require_code_owner_reviews" --arg actual "$actual_code_owner_reviews" '$reasons + [{code_owner_reviews:{expected:($expected=="true"),actual:($actual=="true")}}]')"
   fi
 
   if [[ "$actual_enforce_admins" != "$require_enforce_admins" ]]; then

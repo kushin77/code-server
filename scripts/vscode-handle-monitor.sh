@@ -48,13 +48,11 @@ count_proc_full() {
 
 bash_count=$(count_proc bash)
 sh_count=$(count_proc "^sh$")
-pwsh_count=$(count_proc pwsh)
 node_count=$(count_proc node)
-total_shells=$((bash_count + sh_count + pwsh_count))
+total_shells=$((bash_count + sh_count))
 
 echo -e "  bash:     ${bash_count}"
 echo -e "  sh:       ${sh_count}"
-echo -e "  pwsh:     ${pwsh_count}"
 echo -e "  node:     ${node_count}"
 echo ""
 

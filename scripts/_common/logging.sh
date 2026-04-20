@@ -29,6 +29,23 @@ LOG_LEVEL="${LOG_LEVEL:-1}"
 LOG_NO_COLOR="${LOG_NO_COLOR:-0}"
 LOG_FILE="${LOG_FILE:-}"
 
+_log_level_normalized="$(printf '%s' "$LOG_LEVEL" | tr -d '\r' | tr '[:upper:]' '[:lower:]' | xargs)"
+
+case "${_log_level_normalized}" in
+    debug) LOG_LEVEL=0 ;;
+    info) LOG_LEVEL=1 ;;
+    warn|warning) LOG_LEVEL=2 ;;
+    error) LOG_LEVEL=3 ;;
+    fatal) LOG_LEVEL=4 ;;
+    *) LOG_LEVEL="${_log_level_normalized}" ;;
+esac
+
+if ! [[ "$LOG_LEVEL" =~ ^[0-4]$ ]]; then
+    LOG_LEVEL=1
+fi
+
+unset _log_level_normalized
+
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPER FUNCTIONS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -75,13 +92,30 @@ _log() {
     local level=$1
     shift
     local msg="$*"
+    local min_level="${LOG_LEVEL:-1}"
+    local min_level_normalized
+    min_level_normalized="$(printf '%s' "$min_level" | tr -d '\r' | tr '[:upper:]' '[:lower:]' | xargs)"
+
+    case "$min_level_normalized" in
+        debug) min_level=0 ;;
+        info) min_level=1 ;;
+        warn|warning) min_level=2 ;;
+        error) min_level=3 ;;
+        fatal) min_level=4 ;;
+        *) min_level="$min_level_normalized" ;;
+    esac
+
+    if ! [[ "$min_level" =~ ^[0-4]$ ]]; then
+        min_level=1
+    fi
+
     local level_name
     level_name=$(_level_name "$level")
     local timestamp
     timestamp=$(_timestamp)
 
     # Only log if level meets minimum threshold
-    if [ "$level" -lt "$LOG_LEVEL" ]; then
+    if [ "$level" -lt "$min_level" ]; then
         return 0
     fi
 

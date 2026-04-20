@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# File: scripts/ci/check-no-windows-content.sh
-# Ref: #399 — CI-ENFORCEMENT: block Windows-specific content from Linux-only repo
-# Part of: pre-commit (no-windows-content) and CI workflow (linux-mandate)
+# @file        scripts/ci/check-no-windows-content.sh
+# @module      ci/content
+# @description Block Windows-specific content from Linux-only repository files
 #
-# Usage: called by pre-commit with filenames as args, OR standalone:
-#   bash scripts/ci/check-no-windows-content.sh <file...>
-#   bash scripts/ci/check-no-windows-content.sh  # scan all tracked files
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # ── patterns ──────────────────────────────────────────────────────────────────
 # PowerShell indicators (not node_modules stub files)
@@ -30,10 +30,6 @@ WIN_PATH_PATTERNS=(
 )
 
 # CRLF: checked separately via git
-
-# ── helpers ───────────────────────────────────────────────────────────────────
-RED='\033[0;31m'
-NC='\033[0m'
 
 fail=0
 violations=()
@@ -92,15 +88,15 @@ else
 fi
 
 if [[ ${#violations[@]} -gt 0 ]]; then
-  echo -e "${RED}✗ Windows-content violations:${NC}"
+  log_error "Windows-content violations:"
   for v in "${violations[@]}"; do
-    echo "  $v"
+    log_error "  $v"
   done
-  echo ""
-  echo "This is a Linux-only repository. All scripts must use bash/POSIX, LF line endings,"
-  echo "and Linux-native paths. See issue #399."
+  log_error ""
+  log_error "This is a Linux-only repository. All scripts must use bash/POSIX, LF line endings,"
+  log_error "and Linux-native paths. See issue #399."
   exit 1
 fi
 
-echo "✅ No Windows-specific content detected"
+log_info "No Windows-specific content detected"
 exit 0

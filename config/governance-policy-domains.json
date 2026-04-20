@@ -1,0 +1,54 @@
+{
+  "version": "2026-04-19",
+  "domains": [
+    {
+      "id": "security",
+      "name": "Security governance",
+      "canonical_source": "docs/governance/POLICY.md",
+      "primary_owner": "Security Engineering",
+      "secondary_owner": "Platform Engineering"
+    },
+    {
+      "id": "quality",
+      "name": "Code quality governance",
+      "canonical_source": "docs/governance/POLICY.md",
+      "primary_owner": "Platform Engineering",
+      "secondary_owner": "Repository Owners"
+    },
+    {
+      "id": "ci",
+      "name": "CI policy enforcement",
+      "canonical_source": ".github/workflows/governance-enforcement.yml",
+      "primary_owner": "Platform Engineering",
+      "secondary_owner": "Security Engineering"
+    },
+    {
+      "id": "infra",
+      "name": "Infrastructure governance",
+      "canonical_source": "docs/governance/P0-ENFORCEMENT-SLA-AND-OWNERSHIP.md",
+      "primary_owner": "Platform Engineering",
+      "secondary_owner": "Infrastructure Team"
+    },
+    {
+      "id": "dedup",
+      "name": "Deduplication policy",
+      "canonical_source": "docs/governance/GLOBAL-DEDUP-GOVERNANCE.md",
+      "primary_owner": "Platform Engineering",
+      "secondary_owner": "Repository Owners"
+    },
+    {
+      "id": "waiver-lifecycle",
+      "name": "Waiver lifecycle",
+      "canonical_source": "docs/governance/WAIVERS.md",
+      "primary_owner": "Security Engineering",
+      "secondary_owner": "Repository Owners"
+    },
+    {
+      "id": "waiver-request",
+      "name": "Waiver request format",
+      "canonical_source": "docs/governance/WAIVER-REQUEST.md",
+      "primary_owner": "Repository Owners",
+      "secondary_owner": "Security Engineering"
+    }
+  ]
+}

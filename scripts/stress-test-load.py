@@ -8,21 +8,52 @@ import subprocess
 import json
 import time
 import sys
+import os
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 import requests
 from statistics import mean, stdev, median
 
-HOST = "192.168.168.31"
-ENDPOINT = f"http://localhost:3000/health"
-SSH_CMD = f"ssh -o StrictHostKeyChecking=no akushnir@{HOST}"
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+HOST = os.environ.get("STRESS_HOST", "192.168.168.31")
+ENDPOINT = os.environ.get("STRESS_ENDPOINT", f"http://{HOST}:3000/health")
+CONCURRENCY_LEVELS = [int(value) for value in os.environ.get("STRESS_CONCURRENCY_LEVELS", "5,10,25,50").split(",") if value.strip()]
+REQUEST_MULTIPLIER = int(os.environ.get("STRESS_REQUEST_MULTIPLIER", "20"))
+HTTP_DURATION_SEC = int(os.environ.get("STRESS_HTTP_DURATION_SEC", "30"))
+CPU_LOAD_DURATION_SEC = int(os.environ.get("STRESS_CPU_LOAD_DURATION_SEC", "15"))
+MEMORY_SIZES_MB = [int(value) for value in os.environ.get("STRESS_MEMORY_SIZES_MB", "50,100,200").split(",") if value.strip()]
+SSH_KEY_CANDIDATES = []
+if os.environ.get("STRESS_SSH_KEY"):
+    SSH_KEY_CANDIDATES.append(Path(os.environ["STRESS_SSH_KEY"]).expanduser())
+SSH_KEY_CANDIDATES.extend([
+    Path(os.path.expanduser("~/.ssh/id_rsa")),
+    Path(os.path.expanduser("~/.ssh/id_ed25519_roundrobin")),
+    Path(os.path.expanduser("~/.ssh/id_ed25519_elevatediq")),
+])
+SSH_KEY = next((candidate for candidate in SSH_KEY_CANDIDATES if candidate.is_file()), None)
+
+if SSH_KEY is None:
+    raise SystemExit("Missing SSH key for stress test: set STRESS_SSH_KEY or add a key to ~/.ssh")
+
+SSH_CMD = [
+    "ssh",
+    "-i",
+    str(SSH_KEY),
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "StrictHostKeyChecking=no",
+    f"akushnir@{HOST}",
+]
 
 def ssh_exec(cmd):
     """Execute command on remote host"""
     try:
         result = subprocess.run(
-            f"{SSH_CMD} \"{cmd}\"",
-            shell=True,
+            SSH_CMD + [cmd],
             capture_output=True,
             text=True,
             timeout=30
@@ -51,7 +82,7 @@ def get_baseline():
 
 def http_load_test(concurrent_users, total_requests, duration_sec=None):
     """Load test with concurrent HTTP requests"""
-    print(f"\n→ Testing {concurrent_users} concurrent users, {total_requests} total requests...")
+    print(f"\nTesting {concurrent_users} concurrent users, {total_requests} total requests...")
     
     start_time = time.time()
     results = []
@@ -115,15 +146,15 @@ def cpu_load_test():
     baseline = ssh_exec("top -bn1 | grep 'Cpu(s)'")
     print(baseline)
     
-    print("\nApplying CPU load (30 seconds)...")
-    ssh_exec("nohup bash -c 'for i in $(seq 1 $(nproc)); do (timeout 30 bash -c \"while true; do echo \\$((13**99)) > /dev/null; done\") & done; wait' > /dev/null 2>&1 &")
+    print(f"\nApplying CPU load ({CPU_LOAD_DURATION_SEC} seconds)...")
+    ssh_exec(f"nohup bash -c 'for i in $(seq 1 $(nproc)); do (timeout {CPU_LOAD_DURATION_SEC} bash -c \"while true; do echo \\\\$((13**99)) > /dev/null; done\") & done; wait' > /dev/null 2>&1 &")
     
     time.sleep(5)
     print("CPU under load:")
     loaded = ssh_exec("top -bn1 | grep 'Cpu(s)'")
     print(loaded)
     
-    time.sleep(30)
+    time.sleep(CPU_LOAD_DURATION_SEC)
     print("CPU after load:")
     after = ssh_exec("top -bn1 | grep 'Cpu(s)'")
     print(after)
@@ -136,21 +167,22 @@ def memory_load_test():
     print(f"Baseline: {baseline}")
     
     print("Testing memory allocation (various sizes)...")
-    cmd = """python3 -c "
-import numpy as np
+    sizes = ", ".join(str(size) for size in MEMORY_SIZES_MB)
+    cmd = f"""python3 - <<'PY'
 import time
-sizes = [50, 100, 200, 400]
-for size in sizes:
+
+sizes_mb = [{sizes}]
+chunks = []
+
+for size_mb in sizes_mb:
     try:
-        arr = np.random.rand(size, size)
-        mem_mb = arr.nbytes / 1024 / 1024
-        print(f'Created {size}x{size} array ({mem_mb:.1f}MB) - OK')
+        chunks.append(bytearray(size_mb * 1024 * 1024))
+        print(f'Allocated {{size_mb}}MB - OK')
         time.sleep(1)
-        del arr
-    except Exception as e:
-        print(f'Failed at {size}x{size}: {e}')
+    except MemoryError as exc:
+        print(f'Failed at {{size_mb}}MB: {{exc}}')
         break
-"
+PY
 """
     result = ssh_exec(cmd)
     print(result)
@@ -204,8 +236,8 @@ def main():
     # HTTP Load Tests (increasing concurrency)
     print("\n=== TEST: HTTP LOAD TEST ===")
     load_results = []
-    for concurrent in [5, 10, 25, 50, 100]:
-        result = http_load_test(concurrent, concurrent * 20, duration_sec=30)
+    for concurrent in CONCURRENCY_LEVELS:
+        result = http_load_test(concurrent, concurrent * REQUEST_MULTIPLIER, duration_sec=HTTP_DURATION_SEC)
         load_results.append(result)
         time.sleep(2)
     
@@ -242,14 +274,14 @@ def main():
         max_concurrent = max([r['users'] for r in load_results if r])
         peak_throughput = max([r['throughput'] for r in load_results if r])
         
-        print(f"\n✓ Tested up to {max_concurrent} concurrent users")
-        print(f"✓ Peak throughput: {peak_throughput} req/s")
-        print(f"✓ Server appears stable under load")
+        print(f"\nOK Tested up to {max_concurrent} concurrent users")
+        print(f"OK Peak throughput: {peak_throughput} req/s")
+        print(f"OK Server appears stable under load")
         
         # Find breaking point
         for i, result in enumerate(load_results):
             if result and result['success_rate'] < 99:
-                print(f"\n⚠ Performance degradation at {result['users']} concurrent users:")
+                print(f"\nWARNING Performance degradation at {result['users']} concurrent users:")
                 print(f"  - Success rate: {result['success_rate']:.1f}%")
                 print(f"  - p99 latency: {result['latency_p99']}ms")
     

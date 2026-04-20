@@ -7,9 +7,10 @@ import { CodeAnalyzer } from './code-analyzer';
 let ollamaClient: OllamaClient;
 let repositoryIndexer: RepositoryIndexer;
 let codeAnalyzer: CodeAnalyzer;
+let activeChatParticipant: vscode.Disposable | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
-  console.log('🚀 Ollama Chat extension activating...');
+  console.log('Ollama Chat extension activating...');
 
   const config = vscode.workspace.getConfiguration('ollama');
   const endpoint = config.get<string>('endpoint') || 'http://localhost:11434';
@@ -21,7 +22,8 @@ export async function activate(context: vscode.ExtensionContext) {
   codeAnalyzer = new CodeAnalyzer(ollamaClient, repositoryIndexer);
 
   // Register chat participant
-  const chatParticipant = vscode.chat.createChatParticipant('ollama.chat', handleChatRequest);
+  activeChatParticipant = vscode.chat.createChatParticipant('ollama.chat', handleChatRequest);
+  const chatParticipant = activeChatParticipant;
   chatParticipant.iconPath = new vscode.ThemeIcon('lightbulb');
   chatParticipant.helpItems = [
     { label: 'analyze', description: 'Analyze current file' },
@@ -39,8 +41,13 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('ollama.listModels', listAvailableModels),
     vscode.commands.registerCommand('ollama.indexRepository', indexRepository),
     vscode.commands.registerCommand('ollama.analyzeFile', analyzeCurrentFile),
-    vscode.commands.registerCommand('ollama.generateCode', generateCode)
+    vscode.commands.registerCommand('ollama.generateCode', generateCode),
+    vscode.commands.registerCommand('ollama.generateTests', generateTests),
+    vscode.commands.registerCommand('ollama.refactorCode', refactorCurrentFile),
+    vscode.commands.registerCommand('ollama.generateDocumentation', documentCurrentFile)
   );
+
+  context.subscriptions.push(chatParticipant);
 
   // Auto-index repository if enabled
   const autoIndex = config.get<boolean>('indexRepositoryOnStartup');
@@ -75,15 +82,13 @@ async function handleChatRequest(
   const prompt = request.prompt;
   
   try {
+    if (token.isCancellationRequested) {
+      return { metadata: { command: 'ollama.chat' } };
+    }
+
     stream.progress('🤖 Analyzing request...');
 
-    // Determine intent
-    let intent = 'general';
-    if (prompt.includes('test') || prompt.includes('spec')) intent = 'test';
-    else if (prompt.includes('document') || prompt.includes('doc')) intent = 'document';
-    else if (prompt.includes('refactor')) intent = 'refactor';
-    else if (prompt.includes('explain') || prompt.includes('what')) intent = 'explain';
-    else if (prompt.includes('generate') || prompt.includes('create')) intent = 'generate';
+    const intent = inferIntent(prompt);
 
     // Get repository context
     const repoContext = await repositoryIndexer.getRelevantContext(prompt);
@@ -97,6 +102,9 @@ async function handleChatRequest(
     // Stream response from Ollama
     const responseStream = await ollamaClient.generateWithStream(augmentedPrompt);
     for await (const chunk of responseStream) {
+      if (token.isCancellationRequested) {
+        break;
+      }
       stream.markdown(chunk);
     }
 
@@ -112,13 +120,25 @@ async function handleChatRequest(
   }
 }
 
+function inferIntent(prompt: string): string {
+  const normalized = prompt.toLowerCase();
+
+  if (normalized.includes('test') || normalized.includes('spec')) return 'test';
+  if (normalized.includes('document') || normalized.includes('doc')) return 'document';
+  if (normalized.includes('refactor')) return 'refactor';
+  if (normalized.includes('explain') || normalized.includes('what')) return 'explain';
+  if (normalized.includes('generate') || normalized.includes('create')) return 'generate';
+
+  return 'general';
+}
+
 function buildAugmentedPrompt(
   userPrompt: string,
   intent: string,
   repoContext: string,
   fileContext: string
 ): string {
-  let systemPrompt = `You are an elite software engineer with FAANG-level expertise. You have deep knowledge of the codebase and provide:
+  let systemPrompt = `You are an expert software engineer with deep knowledge of this codebase. Provide:
 - Production-grade code and analysis
 - Architectural insights at scale
 - Security-hardened implementations
@@ -141,6 +161,8 @@ User request: ${userPrompt}`;
     systemPrompt += '\n\nIdentify FAANG-level improvements and provide concrete refactoring guidance.';
   } else if (intent === 'explain') {
     systemPrompt += '\n\nExplain the code clearly and concisely, highlighting key design decisions.';
+  } else if (intent === 'generate') {
+    systemPrompt += '\n\nReturn only the implementation and keep the output immediately usable.';
   }
 
   return systemPrompt;
@@ -209,6 +231,55 @@ async function generateCode() {
   }
 }
 
+async function generateTests() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showWarningMessage('No file open');
+    return;
+  }
+
+  try {
+    const tests = await codeAnalyzer.generateTests(editor.document);
+    await vscode.env.clipboard.writeText(tests);
+    vscode.window.showInformationMessage('Generated tests copied to clipboard.');
+  } catch (error) {
+    vscode.window.showErrorMessage(`Error generating tests: ${(error as Error).message}`);
+  }
+}
+
+async function refactorCurrentFile() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showWarningMessage('No file open');
+    return;
+  }
+
+  try {
+    const refactor = await codeAnalyzer.refactorCode(editor.document);
+    await vscode.env.clipboard.writeText(refactor);
+    vscode.window.showInformationMessage('Refactor guidance copied to clipboard.');
+  } catch (error) {
+    vscode.window.showErrorMessage(`Error refactoring file: ${(error as Error).message}`);
+  }
+}
+
+async function documentCurrentFile() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showWarningMessage('No file open');
+    return;
+  }
+
+  try {
+    const docs = await codeAnalyzer.generateDocumentation(editor.document);
+    await vscode.env.clipboard.writeText(docs);
+    vscode.window.showInformationMessage('Documentation draft copied to clipboard.');
+  } catch (error) {
+    vscode.window.showErrorMessage(`Error generating documentation: ${(error as Error).message}`);
+  }
+}
+
 export function deactivate() {
+  activeChatParticipant?.dispose();
   console.log('Ollama Chat extension deactivated');
 }

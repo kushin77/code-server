@@ -38,10 +38,7 @@ if command -v free &>/dev/null; then
     NR==3 { printf "  %-10s %8s %8s\n", "Swap:", $2, $3 }
   '
 else
-  # Windows fallback
-  powershell.exe -NoProfile -Command \
-    "Get-CimInstance Win32_OperatingSystem | Select-Object @{N='TotalGB';E={[math]::Round(\$_.TotalVisibleMemorySize/1MB,1)}},@{N='FreeGB';E={[math]::Round(\$_.FreePhysicalMemory/1MB,1)}} | Format-Table" \
-    2>/dev/null || echo "  (memory info unavailable)"
+  echo "  (memory info unavailable on this host)"
 fi
 echo ""
 

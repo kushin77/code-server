@@ -1,0 +1,23 @@
+name: E2E Smoke Suite
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/e2e-test-suite.sh'
+      - '.github/workflows/e2e-smoke-suite.yml'
+      - 'docs/ops/EXTERNAL-BROWSER-QA-SMOKE-TESTS.md'
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-smoke:
+    name: Execute deterministic E2E smoke suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run E2E suite in simulation mode
+        run: bash scripts/e2e-test-suite.sh --simulation --run all

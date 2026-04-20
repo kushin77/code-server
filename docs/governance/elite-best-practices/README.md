@@ -10,7 +10,7 @@ Last Updated: 2026-04-18
 ## Scope
 
 - On-prem deployment target: `akushnir@192.168.168.31` (primary) / `akushnir@192.168.168.42` (replica)
-- Shared state: NAS `192.168.168.56` — NFSv4 exports for workspace, profile, ollama, postgres backups
+- Shared state: NAS `192.168.168.56` — NFSv4 exports for workspace, profile, profile backups, ollama, postgres backups
 - VIP failover: `192.168.168.30` via Keepalived VRRP (module wired in `terraform/main.tf`)
 - Deployment method: Infrastructure as Code + deterministic compose workflows
 - Session model: concurrent-agent safe, ephemeral runtime artifacts only
@@ -50,10 +50,11 @@ VIP: 192.168.168.30 (Keepalived VRRP)
        │               │
        └───────────────┘
              NAS: 192.168.168.56 (NFSv4)
-             /export/code-server/workspace
-             /export/code-server/profile
-             /export/ollama
-             /export/postgres/backups
+             /mnt/nas/code-server/workspace
+             /mnt/nas/code-server/profile
+             /mnt/nas/code-server/profile-backups
+             /mnt/nas/ollama
+             /mnt/nas/postgres-backups
 ```
 
 Failover SLA: ~2 seconds (advert_int=1, fall=2)

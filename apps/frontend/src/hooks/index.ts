@@ -315,3 +315,100 @@ export const useSessions = () => {
     revokeSession,
   }
 }
+
+/**
+ * useEphemeralSessions Hook
+ * Handles session-broker lifecycle actions for launch, status, cancel, and destroy
+ */
+export const useEphemeralSessions = () => {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [session, setSession] = useState<types.EphemeralSession | null>(null)
+  const [status, setStatus] = useState<types.EphemeralSessionStatus | null>(null)
+
+  const launchSession = async (request: types.EphemeralSessionLaunchRequest) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const result = await rbacAPI.launchSession(request)
+      setSession(result)
+      return result
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to launch session'
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchSessionStatus = async (sessionId: string) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const result = await rbacAPI.getSessionStatus(sessionId)
+      setStatus(result)
+      return result
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch session status'
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const cancelSession = async (sessionId: string) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      await rbacAPI.cancelSession(sessionId)
+      setStatus((current) =>
+        current && current.sessionId === sessionId
+          ? { ...current, state: 'teardown_pending', active: false, terminal: false, nextActions: ['destroy'] }
+          : current
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to cancel session'
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const destroySession = async (sessionId: string) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      await rbacAPI.destroySession(sessionId)
+      setSession((current) => (current?.sessionId === sessionId ? null : current))
+      setStatus((current) =>
+        current && current.sessionId === sessionId
+          ? { ...current, state: 'destroyed', active: false, terminal: true, nextActions: [] }
+          : current
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to destroy session'
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return {
+    session,
+    status,
+    isLoading,
+    error,
+    launchSession,
+    fetchSessionStatus,
+    cancelSession,
+    destroySession,
+  }
+}

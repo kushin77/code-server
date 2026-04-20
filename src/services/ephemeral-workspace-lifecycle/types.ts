@@ -4,28 +4,26 @@
 // @description Ephemeral workspace container lifecycle types
 //
 
-import { AccessLevel } from "../shared-workspace-acl"
-
 /**
  * Workspace state machine
  */
 export enum WorkspaceLifecycleState {
   // Creation states
-  REQUESTED = "requested",          // Initial request
-  PROVISIONING = "provisioning",    // Creating container
-  SNAPSHOT_RESTORING = "snapshot_restoring", // Restoring from snapshot
+  REQUESTED = "requested",
+  PROVISIONING = "provisioning",
+  SNAPSHOT_RESTORING = "snapshot_restoring",
 
   // Active states
-  READY = "ready",                  // Container ready, waiting for connection
-  CONNECTED = "connected",          // User connected
-  IDLE = "idle",                    // User inactive
+  READY = "ready",
+  CONNECTED = "connected",
+  IDLE = "idle",
 
   // Cleanup states
-  PAUSING = "pausing",              // Preparing to pause
-  PAUSED = "paused",                // Paused (snapshot created)
-  TERMINATING = "terminating",      // Shutting down
-  TERMINATED = "terminated",        // Cleaned up
-  FAILED = "failed",                // Creation/operation failed
+  PAUSING = "pausing",
+  PAUSED = "paused",
+  TERMINATING = "terminating",
+  TERMINATED = "terminated",
+  FAILED = "failed",
 }
 
 /**
@@ -41,6 +39,7 @@ export enum WorkspaceLifecycleEventType {
   WORKSPACE_TERMINATED = "workspace_terminated",
   WORKSPACE_EXPIRED = "workspace_expired",
   WORKSPACE_FAILED = "workspace_failed",
+  WORKSPACE_HARD_DELETED = "workspace_hard_deleted",
   SNAPSHOT_CREATED = "snapshot_created",
   SNAPSHOT_RESTORED = "snapshot_restored",
   CLEANUP_INITIATED = "cleanup_initiated",
@@ -55,11 +54,11 @@ export interface WorkspaceLifecycleEvent {
   eventType: WorkspaceLifecycleEventType
   workspaceId: string
   sessionId: string
-  actor: string                    // Who triggered (user or system)
-  action: string                   // Human-readable action
-  reason?: string                  // Why (TTL, manual, error)
-  details?: Record<string, any>    // Additional context
-  correlationId: string            // Trace correlation
+  actor: string
+  action: string
+  reason?: string
+  details?: Record<string, any>
+  correlationId: string
 }
 
 /**
@@ -69,54 +68,46 @@ export interface WorkspaceSnapshot {
   snapshotId: string
   workspaceId: string
   sessionId: string
-  containerImageId: string         // Docker image ID of frozen state
+  containerImageId: string
   createdAt: number
-  sizeBytes: number                // Snapshot storage size
+  sizeBytes: number
   reason: "user_pause" | "auto_pause" | "emergency" | "backup"
-  retentionDays: number            // How long to keep
-  expiresAt: number                // Cleanup deadline
+  retentionDays: number
+  expiresAt: number
 }
 
 /**
  * Workspace resource quotas
  */
 export interface WorkspaceResourceQuota {
-  cpuLimit: string                 // "1.0", "2.0", etc.
-  memoryLimit: string              // "2g", "4g", etc.
-  storageLimit: string             // "10g", "100g", etc.
-  maxProcesses: number             // ulimit -p
-  maxOpenFiles: number             // ulimit -n
+  cpuLimit: string
+  memoryLimit: string
+  storageLimit: string
+  maxProcesses: number
+  maxOpenFiles: number
 }
 
 /**
  * Workspace lifecycle configuration
  */
 export interface WorkspaceLifecycleConfig {
-  // TTL management
-  defaultTtlSeconds: number        // Default 3600 (1 hour)
-  maxTtlSeconds: number            // Max 86400 (24 hours)
-  minTtlSeconds: number            // Min 600 (10 minutes)
-
-  // Idle behavior
-  idleTimeoutSeconds: number       // Auto-pause after idle
-  idleWarningSeconds: number       // Warn before pause
-
-  // Cleanup
-  cleanupDelaySeconds: number      // Wait before cleanup after termination
-  cleanupRetryCount: number        // Retry cleanup on failure
-
-  // Snapshots
-  autoSnapshotOnPause: boolean     // Auto-create snapshot when pausing
-  snapshotRetentionDays: number    // Keep snapshots for N days
-  maxSnapshotsPerWorkspace: number // Limit snapshots
-
-  // Resource enforcement
+  defaultTtlSeconds: number
+  maxTtlSeconds: number
+  minTtlSeconds: number
+  idleTimeoutSeconds: number
+  idleWarningSeconds: number
+  cleanupDelaySeconds: number
+  cleanupRetryCount: number
+  autoSnapshotOnPause: boolean
+  snapshotRetentionDays: number
+  maxSnapshotsPerWorkspace: number
   quotas: WorkspaceResourceQuota
-  monitoringIntervalSeconds: number // Check resource usage every N seconds
-
-  // Emergency cleanup
-  emergencyCleanupSloMs: number    // 30s target for emergency cleanup
-  cascadeCleanupAclRevoke: boolean // Auto-revoke ACL on cleanup
+  monitoringIntervalSeconds: number
+  emergencyCleanupSloMs: number
+  cascadeCleanupAclRevoke: boolean
+  evidenceSchemaVersion: string
+  evidenceRetentionDays: number
+  evidenceSigningSalt: string
 }
 
 /**
@@ -129,32 +120,20 @@ export interface WorkspaceLifecycleContext {
   containerName: string
   containerPort: number
   state: WorkspaceLifecycleState
-
-  // Lifecycle tracking
   createdAt: number
-  expiresAt: number                // TTL deadline
+  expiresAt: number
   terminatedAt?: number
-
-  // Connection tracking
-  connectedAt?: number             // When user connected
-  lastActivityAt: number           // Keep-alive timestamp
-  connectionCount: number          // How many times connected
-
-  // Snapshots
+  connectedAt?: number
+  lastActivityAt: number
+  connectionCount: number
   lastSnapshotId?: string
   snapshotIds: string[]
-
-  // Cleanup
   cleanupStartedAt?: number
   cleanupCompletedAt?: number
-  cleanupError?: string            // Error during cleanup if any
-
-  // Resource usage
+  cleanupError?: string
   cpuPercent: number
   memoryBytes: number
   storageBytes: number
-
-  // Audit trail
   eventLog: WorkspaceLifecycleEvent[]
 }
 
@@ -178,18 +157,18 @@ export interface IdleDetectionResult {
   isIdle: boolean
   idleDurationSeconds: number
   lastActivityAt: number
-  warningIssued: boolean           // Already warned user?
-  escalatedToPause: boolean        // Paused from idle
+  warningIssued: boolean
+  escalatedToPause: boolean
 }
 
 /**
  * TTL status check result
  */
 export interface TtlCheckResult {
-  expiredCount: number             // How many workspaces expired
-  expiringCount: number            // How many expiring soon
-  cleanupScheduledCount: number    // Scheduled for cleanup
-  cleanupCompletedCount: number    // Cleanup finished
+  expiredCount: number
+  expiringCount: number
+  cleanupScheduledCount: number
+  cleanupCompletedCount: number
 }
 
 /**
@@ -199,8 +178,8 @@ export interface WorkspaceCascadeCleanupEvent {
   workspaceId: string
   sessionId: string
   action: "revoke_all_acl" | "revoke_shared_access"
-  actor: string                    // system or user
-  reason: string                   // "workspace_terminated", "user_deleted"
+  actor: string
+  reason: string
   correlationId: string
 }
 
@@ -209,7 +188,7 @@ export interface WorkspaceCascadeCleanupEvent {
  */
 export interface WorkspaceLifecycleStats {
   totalWorkspaces: number
-  activeWorkspaces: number         // ready, connected, idle
+  activeWorkspaces: number
   pausedWorkspaces: number
   terminatedWorkspaces: number
   failedWorkspaces: number
@@ -217,6 +196,137 @@ export interface WorkspaceLifecycleStats {
   avgLifespanMinutes: number
   snapshotCount: number
   snapshotUsageBytes: number
+}
+
+/**
+ * Hard-delete proof artifact for a session/workspace.
+ */
+export interface WorkspaceDeletionProof {
+  workspaceId: string
+  sessionId: string
+  actor: string
+  reason: string
+  deletedAt: number
+  correlationId: string
+  checksum: string
+  cleanupCompletedAt?: number
+  snapshotIds: string[]
+  residualResourcesCleared: boolean
+}
+
+/**
+ * Residual resource audit result.
+ */
+export interface WorkspaceResidualAudit {
+  workspaceId: string
+  sessionId: string
+  residualWorkspacePresent: boolean
+  residualSnapshotCount: number
+  proofRecorded: boolean
+  proofChecksum?: string
+  lastCleanupCompletedAt?: number
+}
+
+/**
+ * Hard-delete reconciliation result.
+ */
+export interface WorkspaceHardDeleteResult {
+  success: boolean
+  workspaceId: string
+  sessionId: string
+  state?: WorkspaceLifecycleState
+  proof?: WorkspaceDeletionProof
+  error?: string
+  correlationId: string
+}
+
+/**
+ * Headless test execution outcome associated with a session teardown.
+ */
+export interface WorkspaceHeadlessTestOutcome {
+  suite: string
+  status: "passed" | "failed" | "skipped"
+  durationSeconds: number
+  artifactPaths: string[]
+}
+
+/**
+ * Evidence fingerprint material captured for integrity and traceability.
+ */
+export interface WorkspaceEvidenceFingerprint {
+  key: string
+  value: string
+}
+
+/**
+ * Immutable evidence manifest for compliance review.
+ */
+export interface WorkspaceEvidenceManifest {
+  schemaVersion: string
+  sessionId: string
+  workspaceId: string
+  generatedAt: number
+  teardownOutcome: "success" | "failed"
+  policyVersion: string
+  lifecycleEventCount: number
+  checksums: {
+    eventLog: string
+    testOutcomes: string
+    fingerprints: string
+    deletionProof: string
+    manifest: string
+  }
+  manifestSignature: string
+}
+
+/**
+ * Full evidence pack retained and retrievable by session ID.
+ */
+export interface WorkspaceEvidencePack {
+  sessionId: string
+  workspaceId: string
+  createdAt: number
+  expiresAt: number
+  teardownOutcome: "success" | "failed"
+  policyVersion: string
+  lifecycleEvents: WorkspaceLifecycleEvent[]
+  testOutcomes: WorkspaceHeadlessTestOutcome[]
+  fingerprints: WorkspaceEvidenceFingerprint[]
+  deletionProof?: WorkspaceDeletionProof
+  failureReason?: string
+  manifest: WorkspaceEvidenceManifest
+}
+
+/**
+ * Operator-facing evidence export payload.
+ */
+export interface WorkspaceEvidenceExport {
+  sessionId: string
+  workspaceId: string
+  teardownOutcome: "success" | "failed"
+  createdAt: number
+  expiresAt: number
+  manifestChecksum: string
+  manifestSignature: string
+  eventCount: number
+  testOutcomeSummary: {
+    passed: number
+    failed: number
+    skipped: number
+  }
+  artifactPaths: string[]
+}
+
+/**
+ * Manifest verification result for an evidence pack.
+ */
+export interface WorkspaceEvidenceVerificationResult {
+  valid: boolean
+  sessionId: string
+  expectedChecksum: string
+  actualChecksum: string
+  expectedSignature: string
+  actualSignature: string
 }
 
 /**

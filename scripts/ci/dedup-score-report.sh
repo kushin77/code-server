@@ -6,8 +6,10 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Metrics
 TOTAL_CHECKS=0
@@ -27,15 +29,15 @@ check_logging_patterns() {
     [[ ! -f "$file" ]] && continue
     
     if grep -E 'echo\s+"(ERROR|WARN|INFO|DEBUG):' "$file" &>/dev/null; then
-      ((violations++))
+      ((violations+=1))
       DUPLICATE_PATTERNS+=("$file: uses echo instead of log_* helpers")
       REFACTORING_CANDIDATES+=("$file: replace echo logging with canonical log_* calls")
     fi
-  done < <(find "$SCRIPT_DIR" -type f -name "*.sh" ! -path "*/ci/*" ! -path "*/test/*" 2>/dev/null || true)
+  done < <(find "$SCRIPTS_DIR" -type f -name "*.sh" ! -path "*/ci/*" ! -path "*/test/*" 2>/dev/null || true)
   
-  ((TOTAL_CHECKS++))
+  ((TOTAL_CHECKS+=1))
   if [[ $violations -eq 0 ]]; then
-    ((CHECKS_PASSED++))
+    ((CHECKS_PASSED+=1))
   else
     SCORE=$((SCORE - 20))
   fi
@@ -55,15 +57,15 @@ check_error_handling() {
     
     if grep -E '(exit\s+1|return\s+1)\s*$' "$file" &>/dev/null && \
        ! grep -q "die\|log_fatal" "$file"; then
-      ((violations++))
+      ((violations+=1))
       DUPLICATE_PATTERNS+=("$file: uses direct exit/return instead of die")
       REFACTORING_CANDIDATES+=("$file: replace direct exit 1 with die function")
     fi
-  done < <(find "$SCRIPT_DIR" -type f -name "*.sh" ! -path "*/ci/*" ! -path "*/test/*" 2>/dev/null || true)
+  done < <(find "$SCRIPTS_DIR" -type f -name "*.sh" ! -path "*/ci/*" ! -path "*/test/*" 2>/dev/null || true)
   
-  ((TOTAL_CHECKS++))
+  ((TOTAL_CHECKS+=1))
   if [[ $violations -eq 0 ]]; then
-    ((CHECKS_PASSED++))
+    ((CHECKS_PASSED+=1))
   else
     SCORE=$((SCORE - 15))
   fi
@@ -83,15 +85,15 @@ check_variable_validation() {
     
     if grep -E '\[\s*-z\s+"\$' "$file" &>/dev/null && \
        ! grep -q "require_var" "$file"; then
-      ((violations++))
+      ((violations+=1))
       DUPLICATE_PATTERNS+=("$file: uses manual [ -z ] instead of require_var")
       REFACTORING_CANDIDATES+=("$file: replace manual [ -z ] checks with require_var")
     fi
-  done < <(find "$SCRIPT_DIR" -type f -name "*.sh" ! -path "*/ci/*" ! -path "*/test/*" 2>/dev/null || true)
+  done < <(find "$SCRIPTS_DIR" -type f -name "*.sh" ! -path "*/ci/*" ! -path "*/test/*" 2>/dev/null || true)
   
-  ((TOTAL_CHECKS++))
+  ((TOTAL_CHECKS+=1))
   if [[ $violations -eq 0 ]]; then
-    ((CHECKS_PASSED++))
+    ((CHECKS_PASSED+=1))
   else
     SCORE=$((SCORE - 10))
   fi
@@ -111,21 +113,21 @@ check_compose_patterns() {
     
     # Look for hardcoded ports that should be parameterized
     if grep -E 'ports:\s*"[0-9]+:' "$file" &>/dev/null; then
-      ((violations++))
+      ((violations+=1))
       DUPLICATE_PATTERNS+=("$file: hardcoded ports found")
       REFACTORING_CANDIDATES+=("$file: parameterize ports using \${VAR:-default} syntax")
     fi
     
     # Look for hardcoded environment values
     if grep -E '(DOMAIN|HOST|PORT)=[-0-9.a-z]+' "$file" | grep -v '\${' &>/dev/null; then
-      ((violations++))
+      ((violations+=1))
       DUPLICATE_PATTERNS+=("$file: hardcoded domain/host/port values")
     fi
   done < <(find "$REPO_ROOT" -name "docker-compose*.yml" -o -name "*compose*.yaml" 2>/dev/null || true)
   
-  ((TOTAL_CHECKS++))
+  ((TOTAL_CHECKS+=1))
   if [[ $violations -eq 0 ]]; then
-    ((CHECKS_PASSED++))
+    ((CHECKS_PASSED+=1))
   else
     SCORE=$((SCORE - 15))
   fi
@@ -148,16 +150,16 @@ check_duplicate_functions() {
     
     # Extract function names
     grep -E '^[a-z_]+\s*\(\)\s*\{' "$file" | sed 's/^\([a-z_]*\).*/\1/' >> "$temp_funcs" 2>/dev/null || true
-  done < <(find "$SCRIPT_DIR" -type f -name "*.sh" ! -path "*/ci/*" ! -path "*/test/*" 2>/dev/null || true)
+  done < <(find "$SCRIPTS_DIR" -type f -name "*.sh" ! -path "*/ci/*" ! -path "*/test/*" 2>/dev/null || true)
   
   # Check for duplicates
   if [[ -f "$temp_funcs" ]]; then
     violations=$(sort "$temp_funcs" | uniq -d | wc -l || echo 0)
   fi
   
-  ((TOTAL_CHECKS++))
+  ((TOTAL_CHECKS+=1))
   if [[ $violations -eq 0 ]]; then
-    ((CHECKS_PASSED++))
+    ((CHECKS_PASSED+=1))
   else
     SCORE=$((SCORE - 25))
     DUPLICATE_PATTERNS+=("$violations duplicate function names found across scripts")

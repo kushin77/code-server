@@ -80,7 +80,7 @@ services:
   # ollama — Local LLM engine (privacy-first, no cloud dependency)
   # ────────────────────────────────────────────────────────────────────────────
   ollama:
-    image: ollama/ollama:0.1.27
+    image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
     container_name: ollama
     restart: unless-stopped
     # ✅ GPU ACCELERATION - Uncomment this line if NVIDIA GPU detected on host
@@ -128,7 +128,7 @@ services:
   # ollama-init — One-shot model puller (restarts on failure, exits on success)
   # ────────────────────────────────────────────────────────────────────────────
   ollama-init:
-    image: ollama/ollama:0.1.27
+    image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
     container_name: ollama-init
     networks:
       - enterprise
@@ -156,7 +156,7 @@ services:
   # oauth2-proxy — Google OIDC authentication gate
   # ────────────────────────────────────────────────────────────────────────────
   oauth2-proxy:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:e797b3934eb8d7cb2756b67e59be2ef29c18c2b45da763f540ece66d843cec85
     container_name: oauth2-proxy
     restart: unless-stopped
     networks:
@@ -225,7 +225,7 @@ services:
   # Callback: https://${DOMAIN}/oauth2/callback (different from IDE: https://${IDE_DOMAIN}/oauth2/callback)
   # ────────────────────────────────────────────────────────────────────────────
   oauth2-proxy-portal:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0@sha256:3da33b9670c67bd782277f99acadf7026f75b9507bfba2088eb2d497266ef7fc
     container_name: oauth2-proxy-portal
     profiles: [portal]
     restart: unless-stopped
@@ -247,7 +247,7 @@ services:
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
       OAUTH2_PROXY_OIDC_AUDIENCE: "${GOOGLE_CLIENT_ID}"
       OAUTH2_PROXY_SCOPE: "openid profile email"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://${DOMAIN:-kushnir.cloud}/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
       # Allow any Google domain to complete OAuth; authenticated-emails-file remains the real gate.
       # This prevents Google from returning org_internal 403 before our explicit allowlist is checked.
@@ -316,13 +316,18 @@ services:
     environment:
       - LOG_LEVEL=${SESSION_BROKER_LOG_LEVEL:-info}
       - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-codeserver}
-      - CODE_SERVER_IMAGE_ID=code-server-enterprise:dev
+      - DOCKER_SOCKET=${DOCKER_SOCKET:-unix:///var/run/docker.sock}
+      - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:-code-server-enterprise:dev}
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SESSION_CPU_LIMIT=${SESSION_CPU_LIMIT:-2.0}
       - SESSION_MEMORY_LIMIT=${SESSION_MEMORY_LIMIT:-4g}
       - SESSION_STORAGE_LIMIT=${SESSION_STORAGE_LIMIT:-50g}
-      - DOCKER_SOCKET=/var/run/docker.sock
+      - SESSION_MAX_CONCURRENT_PER_USER=${SESSION_MAX_CONCURRENT_PER_USER:-1}
+      - SESSION_MAX_CONCURRENT_PER_TEAM=${SESSION_MAX_CONCURRENT_PER_TEAM:-3}
+      - SESSION_MAX_RUNTIME_SECONDS=${SESSION_MAX_RUNTIME_SECONDS:-28800}
+      - SESSION_MAX_INACTIVITY_SECONDS=${SESSION_MAX_INACTIVITY_SECONDS:-7200}
+      - SESSION_USAGE_WINDOW_HOURS=${SESSION_USAGE_WINDOW_HOURS:-24}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:rw
       - session-broker-sessions:/var/lib/code-server-sessions:rw
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
@@ -346,7 +351,7 @@ services:
   # Healthcheck uses the caddy binary to avoid endpoint/probe-tool mismatches.
   # ────────────────────────────────────────────────────────────────────────────
   caddy:
-    image: caddy:2.7.6
+    image: caddy:2.7.6@sha256:7b51768d110708c44179dc299884e9ee73d243a37abccce2dc796abc36371a38
     container_name: caddy
     restart: unless-stopped
     networks:
@@ -382,7 +387,7 @@ services:
   # postgres — Persistent relational database (PostgreSQL 15)
   # ────────────────────────────────────────────────────────────────────────────
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15-alpine@sha256:895f54361a7eada8e612efef7a8c5e80ba657c013cc9b4146b513c43ab901902
     container_name: postgres
     restart: unless-stopped
     networks:
@@ -468,7 +473,7 @@ services:
   # redis — In-memory cache (session store, rate limiting)
   # ────────────────────────────────────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
     container_name: redis
     restart: unless-stopped
     networks:
@@ -504,7 +509,7 @@ services:
   # code-server-profile-backup — periodic backup of user profile state
   # ────────────────────────────────────────────────────────────────────────────
   code-server-profile-backup:
-    image: alpine:3.20
+    image: alpine:3.20@sha256:c64c687cbea9300178b30c95835354e34c4e4febc4badfe27102879de0483b5e
     container_name: code-server-profile-backup
     restart: unless-stopped
     networks:
@@ -539,7 +544,7 @@ services:
   # prometheus — Metrics collection and alerting engine
   # ────────────────────────────────────────────────────────────────────────────
   prometheus:
-    image: prom/prometheus:v2.48.0
+    image: prom/prometheus:v2.48.0@sha256:13f40c0279df792517b456ae6427dd6344685e9b1478fb9de8e4dc418727668f
     container_name: prometheus
     restart: unless-stopped
     networks:
@@ -582,7 +587,7 @@ services:
   # grafana — Observability dashboards
   # ────────────────────────────────────────────────────────────────────────────
   grafana:
-    image: grafana/grafana:10.2.3
+    image: grafana/grafana:10.2.3@sha256:1c2ca5868432ae258711afa5c18f8ae61a6c725bec2586b186e5cd0adbf31496
     container_name: grafana
     restart: unless-stopped
     networks:
@@ -621,7 +626,7 @@ services:
   # alertmanager — Alert routing and silencing
   # ────────────────────────────────────────────────────────────────────────────
   alertmanager:
-    image: prom/alertmanager:v0.26.0
+    image: prom/alertmanager:v0.26.0@sha256:b97390a5b2b52cf4dd66098a091ac0575d18fbf35acf2501fb0f180e3488ad15
     container_name: alertmanager
     restart: unless-stopped
     networks:
@@ -654,7 +659,7 @@ services:
   # jaeger — Distributed tracing backend
   # ────────────────────────────────────────────────────────────────────────────
   jaeger:
-    image: jaegertracing/all-in-one:1.50
+    image: jaegertracing/all-in-one:1.50@sha256:93ff440dbda3f3654e54f21a8fe71fc7c4a85f75a54e840006351b4dffbec6a5
     container_name: jaeger
     restart: unless-stopped
     networks:
@@ -686,7 +691,7 @@ services:
   # appsmith - Admin portal (Appsmith CE), profile: portal
   # Routes via Caddy using ${DOMAIN:-kushnir.cloud}
   appsmith:
-    image: appsmith/appsmith-ce:v1.47
+    image: appsmith/appsmith-ce:v1.47@sha256:99e57374fcd1c756ca447551a92a79d3e80cf53a963fa612abea23cec2f7adf8
     container_name: appsmith
     profiles: [portal]
     restart: unless-stopped
@@ -741,21 +746,21 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/code-server/workspace"
 
   code-server-profile:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/code-server/profile"
 
   code-server-profile-backups:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/code-server/profile-backups"
 
   # ✅ NAS-backed: ollama models persist across failover
@@ -763,7 +768,7 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/ollama"
 
   # ✅ NAS-backed: postgres backups/PITR persist across failover
@@ -771,7 +776,7 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: "addr=${NAS_HOST:-192.168.168.56},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/postgres/backups"
 
   # ── Local-only (NFS locking incompatible with these engines) ─────────────

@@ -36,7 +36,7 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x, 22.x]
     
     steps:
       - name: Checkout our fork with enhancement branch
@@ -55,6 +55,7 @@ jobs:
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
           version: 9.15.4
+          dest: ${{ runner.temp }}/setup-pnpm/${{ github.run_id }}/${{ github.job }}/${{ matrix.node-version }}
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -86,7 +87,6 @@ jobs:
 
       - name: Run boundary compliance check
         run: pnpm test:boundaries
-        continue-on-error: true  # Warn, don't block
 
       - name: Upload test results
         if: always()
@@ -114,10 +114,10 @@ jobs:
     name: Upstream Compatibility Track
     runs-on: self-hosted
     env:
-      UPSTREAM_DIR: /tmp/upstream-main-${{ matrix.node-version }}
+      UPSTREAM_DIR: /tmp/upstream-main/${{ github.run_id }}/${{ github.job }}/${{ matrix.node-version }}
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x, 22.x]
     
     steps:
       - name: Fetch latest upstream/main
@@ -153,6 +153,7 @@ jobs:
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
           version: 9.15.4
+          dest: ${{ runner.temp }}/setup-pnpm/${{ github.run_id }}/${{ github.job }}/${{ matrix.node-version }}
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020

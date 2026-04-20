@@ -12,6 +12,15 @@ CREATE TABLE IF NOT EXISTS sessions (
   user_id UUID NOT NULL,
   username VARCHAR(32) NOT NULL,
   email VARCHAR(255) NOT NULL,
+  data_profile VARCHAR(16) NOT NULL DEFAULT 'synthetic'
+    CHECK (data_profile IN ('synthetic', 'masked', 'redacted')),
+  data_profile_validated BOOLEAN NOT NULL DEFAULT true,
+  queue_lane VARCHAR(16) NOT NULL DEFAULT 'standard'
+    CHECK (queue_lane IN ('fast', 'standard')),
+  queue_reason TEXT,
+  queue_position INT,
+  queue_enqueued_at TIMESTAMP,
+  queue_estimated_wait_seconds INT,
   
   -- Docker container mapping
   container_id VARCHAR(64),
@@ -23,7 +32,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expires_at TIMESTAMP NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'creating'
-    CHECK (status IN ('creating', 'running', 'paused', 'terminated')),
+    CHECK (status IN ('creating', 'queued', 'running', 'paused', 'terminated')),
   last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
   -- Resource quotas (JSON)
@@ -36,6 +45,34 @@ CREATE TABLE IF NOT EXISTS sessions (
   -- Indexes for common queries
   CONSTRAINT session_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS data_profile VARCHAR(16) NOT NULL DEFAULT 'synthetic';
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS data_profile_validated BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS queue_lane VARCHAR(16) NOT NULL DEFAULT 'standard';
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS queue_reason TEXT;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS queue_position INT;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS queue_enqueued_at TIMESTAMP;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS queue_estimated_wait_seconds INT;
+
+ALTER TABLE IF EXISTS sessions
+  DROP CONSTRAINT IF EXISTS sessions_status_check;
+
+ALTER TABLE IF EXISTS sessions
+  ADD CONSTRAINT sessions_status_check
+  CHECK (status IN ('creating', 'queued', 'running', 'paused', 'terminated'));
 
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_sessions_username ON sessions(username);
@@ -129,6 +166,13 @@ SELECT
   s.user_id,
   s.username,
   s.email,
+  s.data_profile,
+  s.data_profile_validated,
+  s.queue_lane,
+  s.queue_reason,
+  s.queue_position,
+  s.queue_enqueued_at,
+  s.queue_estimated_wait_seconds,
   s.status,
   s.container_name,
   s.container_port,

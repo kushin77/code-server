@@ -1,15 +1,15 @@
 # Ollama Routing Policy
 
 Routing standard:
-- Primary endpoint: `http://192.168.168.42:11434`
-- Fallback endpoint: `http://192.168.168.31:11434`
+- Primary endpoint: `http://replica.prod.internal:11434`
+- Fallback endpoint: `http://primary.prod.internal:11434`
 - Strategy: health-primary-fallback with automatic failback after recovery
 
 Health policy:
 - Liveness: `GET /api/version`
 - Readiness: `GET /api/tags`
 - Warm-state checks: required models must remain loaded or loadable on the active endpoint
-- GPU memory pressure threshold: 85 percent on `.42`
+- GPU memory pressure threshold: 85 percent on `replica.prod.internal`
 
 Failover rules:
 - Trigger on health failure, timeout beyond policy threshold, or GPU pressure breach.

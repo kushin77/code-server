@@ -51,7 +51,7 @@ variable "bastion_ssh_key_path" {
 # ============================================================================
 
 variable "nas_primary_endpoint" {
-  description = "NAS Primary IP address or hostname (e.g., 192.168.168.50)"
+  description = "NAS Primary IP address or hostname (e.g., 192.168.168.56)"
   type        = string
   validation {
     condition     = length(var.nas_primary_endpoint) > 0
@@ -75,7 +75,7 @@ variable "nas_primary_mount_point" {
 }
 
 variable "nas_backup_endpoint" {
-  description = "NAS Backup IP address or hostname (e.g., 192.168.168.51)"
+  description = "NAS Backup IP address or hostname (e.g., 192.168.168.56)"
   type        = string
   validation {
     condition     = length(var.nas_backup_endpoint) > 0

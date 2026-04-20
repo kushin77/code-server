@@ -631,21 +631,10 @@ teardown:
 # LATENCY OPTIMIZATION (Issue #182)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ✅ Install terminal output optimizer service
+# RETIRED: terminal output optimizer systemd unit is archived.
 latency-optimizer-install:
-	@echo "📦 Installing Terminal Output Optimizer..."
-	@if [ -f services/terminal-output-optimizer.py ]; then \
-		echo "  ✓ Installing Python service"; \
-		pip install -r requirements-optimizer.txt 2>/dev/null || echo "  (skipping pip - check requirements)"; \
-		echo "  ✓ Copying systemd service"; \
-		sudo cp config/systemd/terminal-output-optimizer.service /etc/systemd/system/; \
-		sudo systemctl daemon-reload; \
-		echo "✅ Terminal Output Optimizer installed"; \
-		echo "   Run: make latency-services-start"; \
-	else \
-		echo "❌ Service file not found: services/terminal-output-optimizer.py"; \
-		exit 1; \
-	fi
+	@echo "⚠️  Retired latency optimizer systemd unit"
+	@echo "Use: make latency-monitor-install"
 
 # ✅ Install latency monitor service
 latency-monitor-install:
@@ -666,19 +655,15 @@ latency-monitor-install:
 # ✅ Start latency optimization services
 latency-services-start:
 	@echo "🚀 Starting latency optimization services..."
-	@echo "  • Terminal Output Optimizer (port 8081)..."
-	@sudo systemctl start terminal-output-optimizer.service 2>/dev/null || echo "    (requires systemd setup)"
 	@echo "  • Latency Monitor (port 8082)..."
 	@sudo systemctl start latency-monitor.service 2>/dev/null || echo "    (requires systemd setup)"
 	@echo "  • Enabling auto-start..."
-	@sudo systemctl enable terminal-output-optimizer.service 2>/dev/null || true
 	@sudo systemctl enable latency-monitor.service 2>/dev/null || true
 	@echo "✅ Services started"
 
 # ✅ Stop latency optimization services
 latency-services-stop:
 	@echo "⏹️  Stopping latency optimization services..."
-	@sudo systemctl stop terminal-output-optimizer.service 2>/dev/null || true
 	@sudo systemctl stop latency-monitor.service 2>/dev/null || true
 	@echo "✅ Services stopped"
 
@@ -688,7 +673,6 @@ latency-dashboard:
 	@echo "===================================="
 	@echo ""
 	@echo "🔧 Services:"
-	@systemctl status terminal-output-optimizer.service 2>/dev/null | grep "Active" || echo "  Terminal Optimizer: Not installed"
 	@systemctl status latency-monitor.service 2>/dev/null | grep "Active" || echo "  Latency Monitor: Not installed"
 	@echo ""
 	@echo "📈 Performance Metrics:"
@@ -697,7 +681,6 @@ latency-dashboard:
 	@echo "  Compression ratio: $(curl -s http://localhost:8082/metrics/compression 2>/dev/null || echo 'N/A')"
 	@echo ""
 	@echo "📁 Logs:"
-	@echo "  Optimizer: /var/log/terminal-output-optimizer.log"
 	@echo "  Monitor: /var/log/latency-monitor.log"
 
 # ✅ Generate latency report
@@ -903,6 +886,24 @@ policy-version:
 # Validate policy-version.json hashes match actual files (same check as CI)
 policy-version-check:
 	@bash scripts/ci/validate-policy-version.sh
+
+# Build a canary OPA policy bundle artifact + signed manifest
+policy-bundle-build:
+	@bash scripts/governance/build-policy-bundle.sh --version 1.0.0 --channel canary
+
+# Verify signed policy bundle manifest against distribution catalog
+policy-bundle-verify:
+	@bash scripts/governance/verify-policy-bundle.sh --manifest artifacts/policy-bundles/policy-bundle-1.0.0-canary.manifest.json
+
+# Normalize policy runtime decisions into queryable JSONL + summary
+policy-decision-log-export:
+	@mkdir -p artifacts/policy-logs
+	@printf '{"timestamp":"2026-04-18T12:00:00Z","decision":"allow","policy_domain":"security","actor":"make"}\n' > artifacts/policy-logs/synthetic.log
+	@printf 'POLICY_DECISION deny policy=compliance actor=user@example.com\n' >> artifacts/policy-logs/synthetic.log
+	@bash scripts/governance/export-policy-decision-log.sh \
+		--input artifacts/policy-logs/synthetic.log \
+		--out-jsonl artifacts/policy-logs/decision-log.jsonl \
+		--out-summary artifacts/policy-logs/summary.json
 
 
 

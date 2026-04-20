@@ -29,7 +29,7 @@ orchestration:
 regions:
   primary:
     name: us-east-1
-    host: 192.168.168.31
+    host: primary.prod.internal
     port: 22
     priority: 100
     weight: 1.0
@@ -58,7 +58,7 @@ regions:
 
   secondary:
     name: us-west-2
-    host: 192.168.168.32
+    host: replica.prod.internal
     port: 22
     priority: 50
     weight: 0.75
@@ -85,7 +85,7 @@ regions:
 
   tertiary:
     name: eu-west-1
-    host: 192.168.168.33
+    host: tertiary.prod.internal
     port: 22
     priority: 25
     weight: 0.5

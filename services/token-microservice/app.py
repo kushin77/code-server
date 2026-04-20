@@ -9,19 +9,85 @@ from datetime import datetime, timedelta, timezone
 import jwt
 import json
 import logging
-from typing import Dict, Tuple, Optional
+import sys
+from typing import Dict, Tuple, Optional, Literal
 import os
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 import hashlib
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-# Configuration
-FLASK_DEBUG = os.getenv("FLASK_DEBUG", False)
-TOKEN_TTL_MINUTES = int(os.getenv("TOKEN_TTL_MINUTES", 15))
-REFRESH_WINDOW_MINUTES = int(os.getenv("REFRESH_WINDOW_MINUTES", 5))
-OIDC_ISSUER = os.getenv("OIDC_ISSUER", "https://oidc.kushnir.cloud")
-PLATFORM_NAME = os.getenv("PLATFORM_NAME", "kushnir-platform")
+class RuntimeConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    FLASK_DEBUG: bool = False
+    TOKEN_TTL_MINUTES: int = Field(default=15, ge=1)
+    REFRESH_WINDOW_MINUTES: int = Field(default=5, ge=0)
+    OIDC_ISSUER: str = Field(default="https://oidc.kushnir.cloud", min_length=1)
+    PLATFORM_NAME: str = Field(default="kushnir-platform", min_length=1)
+    CODE_SERVER_SECRET: str = Field(min_length=1)
+    POSTGRESQL_SECRET: str | None = None
+    REDIS_SECRET: str | None = None
+    GRAFANA_SECRET: str | None = None
+    PROMETHEUS_SECRET: str | None = None
+    OLLAMA_SECRET: str | None = None
+
+
+class TokenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    grant_type: Literal["client_credentials"]
+    client_id: str = Field(min_length=1)
+    client_secret: str = Field(min_length=1)
+    scope: str = ""
+
+
+class ValidateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1)
+    audience: str | None = None
+
+
+class RevokeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1)
+
+
+def load_runtime_config() -> RuntimeConfig:
+    raw_config = {
+        field_name: os.getenv(field_name)
+        for field_name in RuntimeConfig.model_fields
+    }
+
+    try:
+        return RuntimeConfig.model_validate(raw_config)
+    except ValidationError as error:
+        print(f"Token microservice startup validation failed: {error}", file=sys.stderr)
+        raise SystemExit(1) from error
+
+
+def parse_json_request(model_cls):
+    payload = request.get_json(silent=True)
+
+    if payload is None:
+        return None, ({"error": "invalid_json"}, 400)
+
+    try:
+        return model_cls.model_validate(payload), None
+    except ValidationError as error:
+        logger.warning("Request validation failed for %s: %s", model_cls.__name__, error)
+        return None, ({"error": "invalid_request"}, 400)
+
+
+# Configuration defaults are overwritten with validated runtime values in main().
+FLASK_DEBUG = False
+TOKEN_TTL_MINUTES = 15
+REFRESH_WINDOW_MINUTES = 5
+OIDC_ISSUER = "https://oidc.kushnir.cloud"
+PLATFORM_NAME = "kushnir-platform"
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -84,7 +150,14 @@ class KeyManager:
             }]
         }
 
-key_manager = KeyManager()
+key_manager: KeyManager | None = None
+
+
+def get_key_manager() -> KeyManager:
+    if key_manager is None:
+        raise RuntimeError("Token microservice key manager has not been initialized")
+
+    return key_manager
 
 # ════════════════════════════════════════════════════════════════════════════
 # Service Account Management
@@ -129,7 +202,7 @@ def create_jwt_token(client_id: str, scopes: list) -> str:
     
     token = jwt.encode(
         token_data,
-        key_manager.private_key,
+        get_key_manager().private_key,
         algorithm="RS256"
     )
     
@@ -145,7 +218,7 @@ def verify_jwt_token(token: str, audience: str) -> Optional[Dict]:
     try:
         decoded = jwt.decode(
             token,
-            key_manager.public_key,
+            get_key_manager().public_key,
             algorithms=["RS256"],
             audience=audience,
             issuer=OIDC_ISSUER
@@ -183,18 +256,16 @@ def issue_token() -> Tuple[Dict, int]:
         "scope": "read:secrets write:config"
     }
     """
-    data = request.get_json() or {}
-    
-    # Validate request
-    if data.get("grant_type") != "client_credentials":
+    data, error_response = parse_json_request(TokenRequest)
+    if error_response:
+        return error_response
+
+    if data.grant_type != "client_credentials":
         return {"error": "unsupported_grant_type"}, 400
-    
-    client_id = data.get("client_id")
-    client_secret = data.get("client_secret")
-    scopes = data.get("scope", "").split()
-    
-    if not client_id or not client_secret:
-        return {"error": "invalid_client"}, 401
+
+    client_id = data.client_id
+    client_secret = data.client_secret
+    scopes = data.scope.split()
     
     # Verify client credentials
     if client_id not in _service_accounts:
@@ -235,12 +306,12 @@ def validate_token() -> Tuple[Dict, int]:
         "claims": {...}
     }
     """
-    data = request.get_json() or {}
-    token = data.get("token")
-    audience = data.get("audience", PLATFORM_NAME)
-    
-    if not token:
-        return {"error": "missing_token"}, 400
+    data, error_response = parse_json_request(ValidateRequest)
+    if error_response:
+        return error_response
+
+    token = data.token
+    audience = data.audience or PLATFORM_NAME
     
     decoded = verify_jwt_token(token, audience)
     
@@ -258,7 +329,7 @@ def validate_token() -> Tuple[Dict, int]:
 @app.route("/jwks", methods=["GET"])
 def get_jwks() -> Tuple[Dict, int]:
     """Get JWKS (JSON Web Key Set) for public key verification"""
-    return key_manager.get_jwks(), 200
+    return get_key_manager().get_jwks(), 200
 
 @app.route("/revoke", methods=["POST"])
 def revoke_token() -> Tuple[Dict, int]:
@@ -270,11 +341,11 @@ def revoke_token() -> Tuple[Dict, int]:
         "token": "eyJ..."
     }
     """
-    data = request.get_json() or {}
-    token = data.get("token")
-    
-    if not token:
-        return {"error": "missing_token"}, 400
+    data, error_response = parse_json_request(RevokeRequest)
+    if error_response:
+        return error_response
+
+    token = data.token
     
     _revoked_tokens.add(token)
     logger.info(f"Revoked token: {token[:20]}...")
@@ -294,20 +365,30 @@ def health_check() -> Tuple[Dict, int]:
 # Bootstrap
 # ════════════════════════════════════════════════════════════════════════════
 
-def bootstrap_service_accounts():
+def apply_runtime_config(config: RuntimeConfig) -> None:
+    global FLASK_DEBUG, TOKEN_TTL_MINUTES, REFRESH_WINDOW_MINUTES, OIDC_ISSUER, PLATFORM_NAME
+
+    FLASK_DEBUG = config.FLASK_DEBUG
+    TOKEN_TTL_MINUTES = config.TOKEN_TTL_MINUTES
+    REFRESH_WINDOW_MINUTES = config.REFRESH_WINDOW_MINUTES
+    OIDC_ISSUER = config.OIDC_ISSUER
+    PLATFORM_NAME = config.PLATFORM_NAME
+
+
+def bootstrap_service_accounts(config: RuntimeConfig):
     """Register known service accounts"""
     services = [
-        ("code-server", "code-server", os.getenv("CODE_SERVER_SECRET"), 
+        ("code-server", "code-server", config.CODE_SERVER_SECRET,
          ["read:secrets", "write:config"], ["postgresql", "redis", "ollama"]),
-        ("postgresql", "postgresql", os.getenv("POSTGRESQL_SECRET"),
+        ("postgresql", "postgresql", config.POSTGRESQL_SECRET,
          ["read:pg_identity"], ["code-server", "grafana"]),
-        ("redis", "redis", os.getenv("REDIS_SECRET"),
+        ("redis", "redis", config.REDIS_SECRET,
          ["read:cache"], ["code-server"]),
-        ("grafana", "grafana", os.getenv("GRAFANA_SECRET"),
+        ("grafana", "grafana", config.GRAFANA_SECRET,
          ["read:metrics"], ["prometheus", "loki"]),
-        ("prometheus", "prometheus", os.getenv("PROMETHEUS_SECRET"),
+        ("prometheus", "prometheus", config.PROMETHEUS_SECRET,
          ["read:metrics"], ["code-server"]),
-        ("ollama", "ollama", os.getenv("OLLAMA_SECRET"),
+        ("ollama", "ollama", config.OLLAMA_SECRET,
          ["read:models"], ["code-server"]),
     ]
     
@@ -316,5 +397,8 @@ def bootstrap_service_accounts():
             register_service_account(service_name, client_id, secret, scopes, targets)
 
 if __name__ == "__main__":
-    bootstrap_service_accounts()
+    runtime_config = load_runtime_config()
+    apply_runtime_config(runtime_config)
+    key_manager = KeyManager()
+    bootstrap_service_accounts(runtime_config)
     app.run(host="0.0.0.0", port=8888, debug=FLASK_DEBUG)

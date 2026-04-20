@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck source=scripts/_common/init.sh
-source "$ROOT_DIR/scripts/_common/init.sh"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 usage() {
   cat <<'EOF'

@@ -1,4 +1,4 @@
-FROM haproxy:2.8-alpine
+FROM haproxy:2.8-alpine@sha256:b6c7693f0fdab1d6d8695270212b82826c1d424c87a550d05525f1ac82f91937
 
 USER root
 

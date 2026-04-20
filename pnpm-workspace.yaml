@@ -1,6 +1,19 @@
 packages:
   - apps/backend
   - apps/frontend
+  - apps/session-broker
   - apps/extensions/*
+  - tests/e2e
+
+catalog:
+  "typescript": ^5.4.0
+  "@types/node": ^20.10.6
+  "axios": ^1.7.9
+  "vitest": ^4.1.4
+  "@types/vscode": ^1.85.0
+  "@typescript-eslint/eslint-plugin": ^8.58.2
+  "@typescript-eslint/parser": ^8.58.2
+  "eslint": ^8.56.0
+  "@playwright/test": ^1.59.1
 
 onlyBuiltDependencies: []

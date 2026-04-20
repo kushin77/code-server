@@ -26,4 +26,4 @@ jobs:
         run: corepack enable
 
       - name: Enforce Frozen Lockfile
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: bash scripts/ci/check-pnpm-lockfile.sh

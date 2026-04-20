@@ -37,7 +37,7 @@ variable "replica_host" {
 }
 
 variable "nas_host" {
-  description = "NAS primary IP for shared volume storage (code-server profiles, workspace data). Backup: 192.168.168.50"
+  description = "Shared NAS host for shared volume storage, backups, and workspace data (canonical on-prem NAS: 192.168.168.56)"
   type        = string
   default     = "192.168.168.56"
   

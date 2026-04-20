@@ -8,6 +8,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 POLICY_DIR="$REPO_ROOT/config/code-server"
 POLICY_VERSION_FILE="$POLICY_DIR/policy-version.json"
 

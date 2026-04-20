@@ -54,6 +54,18 @@
       {
         "command": "ollama.generateCode",
         "title": "Ollama: Generate Code"
+      },
+      {
+        "command": "ollama.generateTests",
+        "title": "Ollama: Generate Tests"
+      },
+      {
+        "command": "ollama.refactorCode",
+        "title": "Ollama: Refactor Current File"
+      },
+      {
+        "command": "ollama.generateDocumentation",
+        "title": "Ollama: Generate Documentation"
       }
     ],
     "configuration": {
@@ -97,12 +109,12 @@
     "watch": "npm run esbuild-watch"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/vscode": "^1.80.0",
+    "@types/node": "catalog:",
+    "@types/vscode": "catalog:",
     "esbuild": "^0.25.0",
-    "typescript": "^5.0.0"
+    "typescript": "catalog:"
   },
   "dependencies": {
-    "axios": "^1.7.9"
+    "axios": "catalog:"
   }
 }

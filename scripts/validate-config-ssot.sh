@@ -25,9 +25,12 @@ EXIT_CODE=0
 
 EXPECTED_POSTGRES_DB="${EXPECTED_POSTGRES_DB:-code_server}"
 EXPECTED_POSTGRES_USER="${EXPECTED_POSTGRES_USER:-code_server}"
-EXPECTED_NAS_HOST="${EXPECTED_NAS_HOST:-192.168.168.56}"
-EXPECTED_DEPLOY_HOST="${EXPECTED_DEPLOY_HOST:-192.168.168.31}"
-EXPECTED_STANDBY_HOST="${EXPECTED_STANDBY_HOST:-192.168.168.42}"
+EXPECTED_NAS_HOST="${EXPECTED_NAS_HOST:-$NAS_HOST}"
+EXPECTED_NAS_MOUNT_POINT="${EXPECTED_NAS_MOUNT_POINT:-$NAS_MOUNT_POINT}"
+EXPECTED_NAS_EXPORT_PATH="${EXPECTED_NAS_EXPORT_PATH:-$NAS_EXPORT_PATH}"
+EXPECTED_NFS_VERSION="${EXPECTED_NFS_VERSION:-$NFS_VERSION}"
+EXPECTED_DEPLOY_HOST="${EXPECTED_DEPLOY_HOST:-primary.prod.internal}"
+EXPECTED_STANDBY_HOST="${EXPECTED_STANDBY_HOST:-replica.prod.internal}"
 
 [[ "${1:-}" == "--fix" ]] && FIX_MODE=true
 [[ "${1:-}" == "--check-only" ]] && FIX_MODE=false
@@ -121,7 +124,7 @@ load_env_file .env
 # ════════════════════════════════════════════════════════════════════════════
 
 log_info ""
-log_info "Validating 16 configuration conflicts..."
+log_info "Validating configuration conflicts..."
 log_info ""
 
 # 1. Database Configuration
@@ -137,7 +140,23 @@ fi
 
 # 2. NAS Configuration
 if [[ "${NAS_HOST:-}" != "$EXPECTED_NAS_HOST" ]]; then
-  log_warn "NAS_HOST is ${NAS_HOST:-<unset>} (expected: $EXPECTED_NAS_HOST) — if intentional, OK"
+  log_error "NAS_HOST is ${NAS_HOST:-<unset>} (expected: $EXPECTED_NAS_HOST)"
+  EXIT_CODE=1
+fi
+
+if [[ "${NAS_MOUNT_POINT:-}" != "$EXPECTED_NAS_MOUNT_POINT" ]]; then
+  log_error "NAS_MOUNT_POINT is ${NAS_MOUNT_POINT:-<unset>} (expected: $EXPECTED_NAS_MOUNT_POINT)"
+  EXIT_CODE=1
+fi
+
+if [[ "${NAS_EXPORT_PATH:-}" != "$EXPECTED_NAS_EXPORT_PATH" ]]; then
+  log_error "NAS_EXPORT_PATH is ${NAS_EXPORT_PATH:-<unset>} (expected: $EXPECTED_NAS_EXPORT_PATH)"
+  EXIT_CODE=1
+fi
+
+if [[ "${NFS_VERSION:-}" != "$EXPECTED_NFS_VERSION" ]]; then
+  log_error "NFS_VERSION is ${NFS_VERSION:-<unset>} (expected: $EXPECTED_NFS_VERSION)"
+  EXIT_CODE=1
 fi
 
 # 2b. Host Topology Configuration
@@ -214,7 +233,7 @@ detect_real_secret_values ".env.template"
 log_info ""
 if [[ $EXIT_CODE -eq 0 ]]; then
   log_success "✓ Configuration SSOT validation PASSED"
-  log_info "  All 16 configuration conflicts resolved"
+  log_info "  All configuration conflicts resolved"
   log_info "  Ready for deployment"
 else
   log_error "✗ Configuration SSOT validation FAILED"

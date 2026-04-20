@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  security-events: write
 
 env:
   COST_CATEGORY: "ci-security"
@@ -43,8 +45,21 @@ jobs:
         timeout-minutes: 10
 
       - name: Audit dependencies
-        run: npm audit --audit-level=moderate || true
+        run: |
+          if [ -f package-lock.json ] || [ -f package.json ]; then
+            npm audit --json > npm-audit.json || true
+          fi
         continue-on-error: true
+
+      - name: Route dependency findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f npm-audit.json ]; then
+            bash scripts/ops/security-scan-triage.sh --tool npm-audit --npm-audit npm-audit.json --repo "${GH_REPO}"
+          fi
 
       - name: Snyk scan
         uses: snyk/actions/node@9adf32b1121593767fc3c057af55b55db032dc04  # master (pinned)
@@ -59,10 +74,6 @@ jobs:
   sast-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
-    permissions:
-      contents: read
-      security-events: write
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
@@ -85,6 +96,16 @@ jobs:
           sarif_file: semgrep.sarif
           category: semgrep
         continue-on-error: true
+
+      - name: Route Semgrep findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f semgrep.sarif ]; then
+            bash scripts/ops/security-scan-triage.sh --tool semgrep --sarif semgrep.sarif --repo "${GH_REPO}"
+          fi
 
       - name: Cleanup
         if: always()
@@ -113,6 +134,16 @@ jobs:
           sarif_file: trivy-results.sarif
           category: trivy
         continue-on-error: true
+
+      - name: Route Trivy findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f trivy-results.sarif ]; then
+            bash scripts/ops/security-scan-triage.sh --tool trivy --sarif trivy-results.sarif --repo "${GH_REPO}"
+          fi
 
       - name: Cleanup
         if: always()

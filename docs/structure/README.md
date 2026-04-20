@@ -28,14 +28,24 @@ Purpose:
 - `docs/elite-best-practices/README.md` is the mirrored best-practices landing page.
 - `docs/adr/README.md`, `docs/ai/README.md`, `docs/archives/README.md`, `docs/ops/README.md`, `docs/status/README.md`, and `docs/triage/README.md` are the canonical folder indexes for their respective areas.
 - This file is the canonical index for structure, naming, and doc placement rules.
+- `docs/SHARED-LIBRARIES.md` is a mandatory index for reusable surfaces under `scripts/_common/`, `scripts/lib/`, and `src/services/`; any new shared module/helper must update this catalog in the same change.
 - Use issue-linked bridge docs only when a migration is in progress.
 
 ## Meta
 
 - New markdown files must include a clear title and a one-line purpose.
+- Active docs must keep title and purpose metadata near the top of the file.
 - Status and proof documents should include a date in the filename when they are time-bound.
 - Operator evidence should reference the issue number or workflow run when possible.
+- Unchecked action items in active docs must link to a GitHub issue in the same document.
 - Root-level markdown files are legacy migration artifacts and should not be added for new work.
+
+## Validation
+
+- `scripts/ci/validate-docs-governance.py` is the repo-wide docs governance gate.
+- The gate validates active docs for title/purpose metadata, local markdown links, and issue-linked actionable items.
+- The same gate emits duplicate-candidate and stale-doc reports under `artifacts/triage/`.
+- `.github/workflows/docs-governance.yml` runs the gate on docs changes and on a weekly schedule.
 
 ## Structure
 

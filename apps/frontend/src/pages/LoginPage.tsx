@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button, Input, Alert, Spinner } from '@/components/Common'
 import { useLogin } from '@/hooks'
 import { useAuthStore } from '@/store'
@@ -14,6 +14,14 @@ interface MFAState {
   mfaRequired: boolean
   mfaToken?: string
   totpCode: string
+}
+
+interface RedirectLocationState {
+  from?: {
+    pathname: string
+    search?: string
+    hash?: string
+  }
 }
 
 /**
@@ -31,7 +39,19 @@ interface MFAState {
  */
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login, verifyMFA, isLoading, error: hookError, mfaRequired } = useLogin()
+
+  const redirectPath = (() => {
+    const state = location.state as RedirectLocationState | null
+    const from = state?.from
+
+    if (!from?.pathname) {
+      return '/'
+    }
+
+    return `${from.pathname}${from.search ?? ''}${from.hash ?? ''}` || '/'
+  })()
 
   // Form state
   const [formData, setFormData] = useState<LoginFormData>({
@@ -108,7 +128,7 @@ export const LoginPage: React.FC = () => {
       } else {
         // MFA not required: login successful
         // Token already stored in Zustand by useLogin hook
-        navigate('/')
+        navigate(redirectPath, { replace: true })
       }
     } catch (err) {
       // Error already set in hook
@@ -144,7 +164,7 @@ export const LoginPage: React.FC = () => {
       await verifyMFA(mfaState.mfaToken, mfaState.totpCode)
 
       // Token stored by hook: navigate to dashboard
-      navigate('/')
+      navigate(redirectPath, { replace: true })
     } catch (err) {
       setLocalError('Invalid TOTP code. Please try again.')
       console.error('MFA verification failed:', err)
@@ -246,9 +266,13 @@ export const LoginPage: React.FC = () => {
               </div>
 
               {/* Help Text */}
-              <div className="mt-6 text-center text-sm text-gray-600">
-                <p>Having trouble signing in?</p>
-                <p className="text-sky-600 hover:text-sky-700 cursor-pointer">Contact support</p>
+              <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm text-gray-700">
+                <p className="font-semibold text-gray-800">If you were redirected here from a protected page</p>
+                <p className="mt-2 text-gray-600">
+                  Sign in once and we will return you to the page you requested. If the browser keeps bouncing back
+                  here, clear the site data for this domain, close the tab, and try again.
+                </p>
+                <p className="mt-3 text-sky-700">If recovery still fails, use the browser smoke-test runbook or contact support.</p>
               </div>
             </>
           ) : (

@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.TEST_BASE_URL || 'https://kushnir.cloud';
+const parsedWorkers = Number.parseInt(process.env.PLAYWRIGHT_WORKERS || (process.env.SCALE_PROFILE === '100x' ? '4' : '1'), 10);
 
 export default defineConfig({
   testDir: './specs',
@@ -8,7 +9,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: 1,
+  workers: Number.isFinite(parsedWorkers) && parsedWorkers > 0 ? parsedWorkers : 1,
   reporter: [
     ['list'],
     ['html', { outputFolder: '../artifacts/playwright-report', open: 'never' }],

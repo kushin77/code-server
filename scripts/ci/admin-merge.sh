@@ -97,7 +97,7 @@ temp_protection=$(echo "$original_protection" | jq '{
   required_status_checks: .required_status_checks,
   required_pull_request_reviews: {
     dismiss_stale_reviews: false,
-    require_code_owner_reviews: false,
+        require_code_owner_reviews: true,
     required_approving_review_count: 0
   },
   enforce_admins: false

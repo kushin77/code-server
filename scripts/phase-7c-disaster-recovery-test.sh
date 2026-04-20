@@ -7,11 +7,14 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
-PRIMARY_HOST="${DEPLOY_HOST:-192.168.168.31}"
-REPLICA_HOST="192.168.168.42"
+PRIMARY_HOST="${DEPLOY_HOST}"
+REPLICA_HOST="${STANDBY_HOST}"
 LOG_FILE="/tmp/phase-7c-dr-test-$(date +%Y%m%d-%H%M%S).log"
 PASS=0
 FAIL=0
@@ -22,18 +25,7 @@ PG_RTO_TARGET=15    # seconds
 REDIS_RTO_TARGET=8  # seconds
 RPO_TARGET=3600     # 1 hour in seconds (actual: near-zero with streaming)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Shared helpers (sourced only if available on the current host)
-# ─────────────────────────────────────────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[[ -f "$SCRIPT_DIR/_common/logging.sh" ]] && source "$SCRIPT_DIR/_common/logging.sh"
-
-# Fallback logging if shared lib not available
-if ! declare -f log_info >/dev/null 2>&1; then
-  log_info()  { echo "[INFO]  $*" | tee -a "$LOG_FILE"; }
-  log_warn()  { echo "[WARN]  $*" | tee -a "$LOG_FILE"; }
-  log_error() { echo "[ERROR] $*" | tee -a "$LOG_FILE"; }
-fi
+# Shared init already provides logging and config defaults.
 
 pass() {
   PASS=$((PASS + 1))
@@ -93,7 +85,7 @@ redis_exec() {
 MY_IP=$(hostname -I | awk '{print $1}')
 if [[ "$MY_IP" != "$PRIMARY_HOST" ]]; then
   log_error "This script must run directly on the primary host ($PRIMARY_HOST). Current IP: $MY_IP"
-  log_error "Run: ssh akushnir@$PRIMARY_HOST 'cd code-server-enterprise && bash scripts/phase-7c-disaster-recovery-test.sh'"
+  log_error "Run: ssh ${DEPLOY_USER}@$PRIMARY_HOST 'cd code-server-enterprise && bash scripts/phase-7c-disaster-recovery-test.sh'"
   exit 1
 fi
 
@@ -119,8 +111,8 @@ fi
 
 # T2: Replica is reachable
 log_info "T2: Replica reachability..."
-if ssh -o ConnectTimeout=5 -o BatchMode=yes "akushnir@$REPLICA_HOST" "docker ps --format '{{.Names}}' 2>/dev/null | wc -l" >/dev/null 2>&1; then
-  REPLICA_CONTAINERS=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "akushnir@$REPLICA_HOST" "docker ps --format '{{.Names}}' 2>/dev/null | wc -l")
+if ssh -o ConnectTimeout=5 -o BatchMode=yes "${DEPLOY_USER}@$REPLICA_HOST" "docker ps --format '{{.Names}}' 2>/dev/null | wc -l" >/dev/null 2>&1; then
+  REPLICA_CONTAINERS=$(ssh -o ConnectTimeout=5 -o BatchMode=yes "${DEPLOY_USER}@$REPLICA_HOST" "docker ps --format '{{.Names}}' 2>/dev/null | wc -l")
   pass "T2: Replica reachable ($REPLICA_CONTAINERS containers visible)"
 else
   fail "T2: Replica ($REPLICA_HOST) not reachable via SSH"
@@ -179,7 +171,7 @@ fi
 
 # T6: PostgreSQL recovery-from-replica validation
 log_info "T6: Verify marker visible on replica..."
-if ssh -o ConnectTimeout=5 -o BatchMode=yes "akushnir@$REPLICA_HOST" \
+if ssh -o ConnectTimeout=5 -o BatchMode=yes "${DEPLOY_USER}@$REPLICA_HOST" \
   "docker exec -e PGPASSWORD='$PG_PASSWORD' postgres psql -U '${PG_USER:-postgres}' -d '${PG_DB:-postgres}' -c \"SELECT marker FROM dr_markers WHERE marker='$MARKER';\" -t 2>/dev/null | grep -q '$MARKER'" 2>/dev/null; then
   pass "T6: DR marker replicated to replica (zero RPO confirmed)"
 else

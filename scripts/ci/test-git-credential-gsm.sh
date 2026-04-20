@@ -8,7 +8,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-source "${REPO_ROOT}/scripts/_common/init.sh"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 HELPER="${REPO_ROOT}/scripts/git-credential-gsm"
 

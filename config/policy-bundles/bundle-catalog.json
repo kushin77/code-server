@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "updated_at": "2026-04-18T00:00:00Z",
+  "channels": {
+    "stable": {
+      "version": "1.0.0",
+      "bundle_manifest": "artifacts/policy-bundles/policy-bundle-1.0.0-stable.manifest.json"
+    },
+    "canary": {
+      "version": "1.0.0",
+      "bundle_manifest": "artifacts/policy-bundles/policy-bundle-1.0.0-canary.manifest.json"
+    },
+    "rollback": {
+      "version": "1.0.0",
+      "bundle_manifest": "artifacts/policy-bundles/policy-bundle-1.0.0-stable.manifest.json"
+    }
+  }
+}

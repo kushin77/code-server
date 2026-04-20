@@ -1,0 +1,63 @@
+name: Policy Bundle Governance
+
+on:
+  pull_request:
+    paths:
+      - 'opa/policies/**'
+      - 'scripts/governance/build-policy-bundle.sh'
+      - 'scripts/governance/verify-policy-bundle.sh'
+      - 'scripts/governance/export-policy-decision-log.sh'
+      - 'config/policy-bundles/**'
+  workflow_dispatch:
+
+jobs:
+  bundle-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Build canary bundle
+        run: |
+          VERSION=$(python3 - <<'PY'
+          import json
+          with open('config/policy-bundles/bundle-catalog.json', 'r', encoding='utf-8') as f:
+              data = json.load(f)
+          print(data.get('channels', {}).get('canary', {}).get('version', '1.0.0'))
+          PY
+          )
+          bash scripts/governance/build-policy-bundle.sh \
+            --version "$VERSION" \
+            --channel canary
+
+      - name: Verify bundle integrity
+        run: |
+          VERSION=$(python3 - <<'PY'
+          import json
+          with open('config/policy-bundles/bundle-catalog.json', 'r', encoding='utf-8') as f:
+              data = json.load(f)
+          print(data.get('channels', {}).get('canary', {}).get('version', '1.0.0'))
+          PY
+          )
+          bash scripts/governance/verify-policy-bundle.sh \
+            --manifest "artifacts/policy-bundles/policy-bundle-${VERSION}-canary.manifest.json"
+
+      - name: Export synthetic decision logs
+        run: |
+          mkdir -p artifacts/policy-logs
+          cat > artifacts/policy-logs/synthetic.log <<'EOF'
+          {"timestamp":"2026-04-18T12:00:00Z","decision":"allow","policy_domain":"security","actor":"bot"}
+          POLICY_DECISION deny policy=compliance actor=user@example.com
+          EOF
+          bash scripts/governance/export-policy-decision-log.sh \
+            --input artifacts/policy-logs/synthetic.log \
+            --out-jsonl artifacts/policy-logs/decision-log.jsonl \
+            --out-summary artifacts/policy-logs/summary.json
+
+      - name: Upload bundle artifacts
+        uses: actions/upload-artifact@5d5d22fc38ceea83b5bc9c7ff5a5109b73852e9f
+        with:
+          name: policy-bundle-governance-artifacts
+          path: |
+            artifacts/policy-bundles/**
+            artifacts/policy-logs/**

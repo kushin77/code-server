@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # @file        scripts/validate-env.sh
 # @module      testing
-# @description validate env — on-prem code-server
+# @description validate env - on-prem code-server
 # @owner       platform
 # @status      active
 # ════════════════════════════════════════════════════════════════════════════════════════════
-# scripts/validate-env.sh — Environment Variable Validation
+# scripts/validate-env.sh - Environment Variable Validation
 # ════════════════════════════════════════════════════════════════════════════════════════════
 #
 # Purpose: Validate that all required environment variables are set and in correct format
@@ -19,227 +19,246 @@
 #   bash scripts/validate-env.sh --verbose (show all variables)
 # ════════════════════════════════════════════════════════════════════════════════════════════
 
-set -e
-
-# Source common library for log_info, log_error, etc.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-# Configuration
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 SCHEMA_FILE="${REPO_ROOT}/.env.schema.json"
 VERBOSE=false
 STRICT=false
+ALLOW_PLACEHOLDERS=false
 
-# Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --verbose) VERBOSE=true; shift ;;
-    --strict) STRICT=true; shift ;;
-    *) echo "Unknown option: $1"; exit 2 ;;
+    --verbose)
+      VERBOSE=true
+      shift
+      ;;
+    --strict)
+      STRICT=true
+      shift
+      ;;
+    --allow-placeholders)
+      ALLOW_PLACEHOLDERS=true
+      shift
+      ;;
+    *)
+      log_fatal "Unknown option: $1"
+      ;;
   esac
 done
 
-# ─────────────────────────────────────────────────────────────────────────────────────────────
-# Local helper functions (append to common library)
-# ─────────────────────────────────────────────────────────────────────────────────────────────
+require_command jq
+require_file "$SCHEMA_FILE"
 
-log_success() {
-  echo -e "${GREEN}✓${NC} $1"
-}
+passed=0
+failed=0
+skipped=0
 
-# Check if jq is installed
-check_jq() {
-  if ! command -v jq &> /dev/null; then
-    log_error "jq not found. Install via: apt install jq"
-    exit 2
+emit_error() {
+  if ! log_error "$*"; then
+    :
   fi
 }
 
-# ─────────────────────────────────────────────────────────────────────────────────────────────
-# Validation logic
-# ─────────────────────────────────────────────────────────────────────────────────────────────
+load_env_file() {
+  local env_file="$1"
 
-validate_env() {
-  local failed=0
-  local passed=0
-  local skipped=0
-
-  echo ""
-  log_info "Validating environment variables (source: .env.schema.json)"
-  echo ""
-
-  # Check if schema file exists
-  if [[ ! -f "$SCHEMA_FILE" ]]; then
-    log_error "Schema file not found: $SCHEMA_FILE"
-    exit 2
-  fi
-
-  # Check if jq is installed
-  check_jq
-
-  # Extract required variables from schema
-  local required_vars=$(jq -r '.groups[].variables[].required as $req | select($req == true) | inputs' "$SCHEMA_FILE" 2>/dev/null || true)
-  
-  # Simple fallback: manually list required variables (until jq parsing is perfected)
-  local required=(
-    "DEPLOYMENT_ENV"
-    "APEX_DOMAIN"
-    "PRIMARY_HOST_IP"
-    "GOOGLE_CLIENT_ID"
-    "GOOGLE_CLIENT_SECRET"
-    "OAUTH2_PROXY_COOKIE_SECRET"
-    "POSTGRES_PASSWORD"
-  )
-
-  # Load environment from files (in priority order)
-  set -a
-  [[ -f "$REPO_ROOT/.env.defaults" ]] && source "$REPO_ROOT/.env.defaults" || log_warn "Missing .env.defaults"
-  [[ -f "$REPO_ROOT/.env.${DEPLOYMENT_ENV}" ]] && source "$REPO_ROOT/.env.${DEPLOYMENT_ENV}" || log_warn "Missing .env.${DEPLOYMENT_ENV}"
-  [[ -f "$HOME/.code-server/.env" ]] && source "$HOME/.code-server/.env" || true
-  set +a
-
-  echo "Loaded environment: DEPLOYMENT_ENV=$DEPLOYMENT_ENV"
-  echo ""
-
-  # Validate required variables
-  log_info "Checking required variables..."
-  for var in "${required[@]}"; do
-    local value="${!var:-}"
-    
-    if [[ -z "$value" ]]; then
-      log_error "$var: MISSING (required)"
-      ((failed++))
-    elif [[ "$value" == "YOUR-"* ]] || [[ "$value" == *"HERE"* ]]; then
-      log_error "$var: NOT SET (placeholder value detected)"
-      ((failed++))
-    else
-      [[ "$VERBOSE" == "true" ]] && log_success "$var: SET (${#value} chars)"
-      ((passed++))
-    fi
-  done
-
-  echo ""
-  log_info "Format validation..."
-
-  # Validate format of specific variables
-  validate_ipv4 "PRIMARY_HOST_IP" "$PRIMARY_HOST_IP"
-  validate_domain "APEX_DOMAIN" "$APEX_DOMAIN"
-  validate_hex_length "OAUTH2_PROXY_COOKIE_SECRET" "$OAUTH2_PROXY_COOKIE_SECRET" 32
-  validate_deployment_env "DEPLOYMENT_ENV" "$DEPLOYMENT_ENV"
-
-  echo ""
-  log_info "Checking secret variables..."
-
-  # Warn about secrets in plain text
-  local secret_vars=(
-    "GOOGLE_CLIENT_SECRET"
-    "OAUTH2_PROXY_COOKIE_SECRET"
-    "POSTGRES_PASSWORD"
-    "MINIO_SECRET_KEY"
-    "GITHUB_TOKEN"
-  )
-
-  for var in "${secret_vars[@]}"; do
-    local value="${!var:-}"
-    if [[ -n "$value" ]] && [[ "$value" != "YOUR-"* ]]; then
-      log_warn "$var: Plain text secret (should be in Vault for production)"
-    fi
-  done
-
-  echo ""
-  echo "─────────────────────────────────────────────────────────────────────────────────────────"
-  log_info "Validation Summary"
-  echo "─────────────────────────────────────────────────────────────────────────────────────────"
-  echo "Passed:  $passed"
-  echo "Failed:  $failed"
-  echo "Skipped: $skipped"
-  echo ""
-
-  if [[ $failed -gt 0 ]]; then
-    log_error "Validation FAILED. Please fix the errors above."
-    exit 1
+  if [[ -f "$env_file" ]]; then
+    set +u
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file"
+    set +a
+    set -u
+    log_info "Loaded env file: $(basename "$env_file")"
   else
-    log_success "Validation PASSED. All required variables are set."
-    exit 0
+    log_warn "Missing env file: $(basename "$env_file")"
   fi
 }
 
-# ─────────────────────────────────────────────────────────────────────────────────────────────
-# Validation helper functions
-# ─────────────────────────────────────────────────────────────────────────────────────────────
-
-validate_ipv4() {
-  local var_name=$1
-  local value=$2
-  
-  if [[ -z "$value" ]]; then
-    return 0  # Skip if not set (may be required separately)
-  fi
-
-  if [[ $value =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-    log_success "$var_name: Valid IPv4 ($value)"
-  else
-    log_error "$var_name: Invalid IPv4 format ($value)"
-    ((failed++))
-  fi
+schema_var_rows() {
+  jq -r '
+    .groups[].variables
+    | to_entries[]
+    | [
+        .key,
+        ((.value.required // false) | tostring),
+        (.value.type // ""),
+        (.value.format // ""),
+        (.value.validation // ""),
+        ((.value.enum // []) | join("|")),
+        ((.value.secret // false) | tostring)
+      ]
+    | @tsv
+  ' "$SCHEMA_FILE"
 }
 
-validate_domain() {
-  local var_name=$1
-  local value=$2
-  
-  if [[ -z "$value" ]] || [[ "$value" == "localhost" ]]; then
-    return 0  # localhost is valid for dev
-  fi
+is_placeholder_value() {
+  local value="$1"
 
-  if [[ $value =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$ ]]; then
-    log_success "$var_name: Valid domain ($value)"
-  else
-    log_error "$var_name: Invalid domain format ($value)"
-    ((failed++))
-  fi
+  [[ "$value" == "YOUR-"* ]] || [[ "$value" == *"HERE"* ]] || [[ "$value" == "changeme" ]]
 }
 
-validate_hex_length() {
-  local var_name=$1
-  local value=$2
-  local expected_length=$3
-  
-  if [[ -z "$value" ]]; then
-    return 0
-  fi
+validate_format() {
+  local var_name="$1"
+  local value="$2"
+  local var_type="$3"
+  local var_format="$4"
+  local validation_rule="$5"
+  local enum_values="$6"
 
-  local actual_length=${#value}
-  if [[ $actual_length -eq $expected_length ]] && [[ $value =~ ^[a-fA-F0-9]+$ ]]; then
-    log_success "$var_name: Valid hex ($actual_length chars)"
-  else
-    log_error "$var_name: Expected $expected_length hex chars, got $actual_length ($value)"
-    ((failed++))
-  fi
-}
-
-validate_deployment_env() {
-  local var_name=$1
-  local value=$2
-  
-  if [[ -z "$value" ]]; then
-    return 0
-  fi
-
-  case "$value" in
-    dev|staging|production|onprem)
-      log_success "$var_name: Valid environment ($value)"
+  case "$var_type" in
+    integer)
+      if ! [[ "$value" =~ ^-?[0-9]+$ ]]; then
+        emit_error "$var_name: expected integer, got '$value'"
+        ((failed+=1))
+        return 1
+      fi
       ;;
-    *)
-      log_error "$var_name: Invalid environment ($value). Must be one of: dev, staging, production, onprem"
-      ((failed++))
+    boolean)
+      if ! [[ "$value" =~ ^(true|false)$ ]]; then
+        emit_error "$var_name: expected boolean true/false, got '$value'"
+        ((failed+=1))
+        return 1
+      fi
       ;;
   esac
+
+  if [[ -n "$enum_values" ]]; then
+    local allowed=false
+    local enum_value
+    IFS='|' read -r -a enum_list <<< "$enum_values"
+    for enum_value in "${enum_list[@]}"; do
+      if [[ "$value" == "$enum_value" ]]; then
+        allowed=true
+        break
+      fi
+    done
+
+    if [[ "$allowed" != "true" ]]; then
+      emit_error "$var_name: invalid value '$value' (expected one of: $enum_values)"
+      ((failed+=1))
+      return 1
+    fi
+  fi
+
+  case "$var_format" in
+    ipv4)
+      if ! [[ "$value" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+        emit_error "$var_name: invalid IPv4 format '$value'"
+        ((failed+=1))
+        return 1
+      fi
+      ;;
+    domain)
+      if [[ "$value" != "localhost" ]] && ! [[ "$value" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$ ]]; then
+        emit_error "$var_name: invalid domain format '$value'"
+        ((failed+=1))
+        return 1
+      fi
+      ;;
+    url)
+      if ! [[ "$value" =~ ^https?://[^[:space:]]+$ ]]; then
+        emit_error "$var_name: invalid URL format '$value'"
+        ((failed+=1))
+        return 1
+      fi
+      ;;
+    hex)
+      if ! [[ "$value" =~ ^[a-fA-F0-9]+$ ]]; then
+        emit_error "$var_name: expected hex characters only, got '$value'"
+        ((failed+=1))
+        return 1
+      fi
+      ;;
+  esac
+
+  if [[ -n "$validation_rule" ]]; then
+    if [[ "$validation_rule" =~ ^length==([0-9]+)$ ]]; then
+      local expected_length="${BASH_REMATCH[1]}"
+      if [[ ${#value} -ne $expected_length ]]; then
+        emit_error "$var_name: expected length $expected_length, got ${#value}"
+        ((failed+=1))
+        return 1
+      fi
+    fi
+  fi
+
+  return 0
 }
 
-# ─────────────────────────────────────────────────────────────────────────────────────────────
-# Main
-# ─────────────────────────────────────────────────────────────────────────────────────────────
+validate_env() {
+  log_info "Validating environment variables against .env.schema.json"
+
+  load_env_file "$REPO_ROOT/.env.defaults"
+
+  local deployment_env="${DEPLOYMENT_ENV:-dev}"
+  load_env_file "$REPO_ROOT/.env.${deployment_env}"
+  load_env_file "$HOME/.code-server/.env"
+
+  export DEPLOYMENT_ENV="${DEPLOYMENT_ENV:-$deployment_env}"
+  log_info "Effective deployment environment: $DEPLOYMENT_ENV"
+
+  local var_name required var_type var_format validation_rule enum_values secret
+  while IFS=$'\t' read -r var_name required var_type var_format validation_rule enum_values secret; do
+    local value="${!var_name:-}"
+
+    if [[ -z "$value" ]]; then
+      if [[ "$required" == "true" ]]; then
+        emit_error "$var_name: missing required variable"
+        ((failed+=1))
+      elif [[ "$STRICT" == "true" ]]; then
+        log_warn "$var_name: not set"
+        ((skipped+=1))
+      else
+        ((skipped+=1))
+      fi
+      continue
+    fi
+
+    if is_placeholder_value "$value"; then
+      if [[ "$ALLOW_PLACEHOLDERS" == "true" ]]; then
+        log_warn "$var_name: placeholder value accepted for preflight gating"
+        if [[ "$VERBOSE" == "true" ]]; then
+          log_info "$var_name: placeholder (${#value} chars)"
+        fi
+        ((passed+=1))
+        continue
+      fi
+
+      emit_error "$var_name: placeholder value detected"
+      ((failed+=1))
+      continue
+    fi
+
+    if ! validate_format "$var_name" "$value" "$var_type" "$var_format" "$validation_rule" "$enum_values"; then
+      continue
+    fi
+
+    if [[ "$secret" == "true" ]]; then
+      log_warn "$var_name: secret value is present in the runtime environment"
+    fi
+
+    if [[ "$VERBOSE" == "true" ]]; then
+      log_info "$var_name: set (${#value} chars)"
+    fi
+
+    ((passed+=1))
+  done < <(schema_var_rows)
+
+  echo ""
+  log_info "Validation summary"
+  log_info "Passed:  $passed"
+  log_info "Failed:  $failed"
+  log_info "Skipped: $skipped"
+
+  if [[ $failed -gt 0 ]]; then
+    emit_error "Validation failed"
+    exit 1
+  fi
+
+  log_info "Validation passed"
+}
 
 validate_env

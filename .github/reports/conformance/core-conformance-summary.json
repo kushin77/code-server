@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-04-19T01:18:47.021401+00:00",
+  "generated_at": "2026-04-19T02:05:56.218009+00:00",
   "suites": [
     {
       "name": "auth-policy-conformance",
       "report": ".github/reports/conformance/auth-conformance-report.json",
       "exit_code": 0,
-      "total": 10,
-      "passed": 10,
+      "total": 11,
+      "passed": 11,
       "failed": 0,
       "status": "pass"
     },
@@ -14,14 +14,23 @@
       "name": "core-unit-conformance",
       "report": ".github/reports/conformance/core-conformance-vitest.json",
       "exit_code": 0,
-      "total": 124,
-      "passed": 124,
+      "total": 131,
+      "passed": 131,
+      "failed": 0,
+      "status": "pass"
+    },
+    {
+      "name": "waiver-registry-conformance",
+      "report": ".github/reports/conformance/waiver-registry-validation.json",
+      "exit_code": 0,
+      "total": 1,
+      "passed": 1,
       "failed": 0,
       "status": "pass"
     }
   ],
-  "total": 134,
-  "passed": 134,
+  "total": 143,
+  "passed": 143,
   "failed": 0,
   "overall_status": "pass"
 }

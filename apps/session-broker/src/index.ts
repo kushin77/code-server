@@ -7,6 +7,9 @@
 //
 
 import express, { Request, Response, NextFunction } from 'express';
+import * as crypto from 'node:crypto';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import Docker from 'dockerode';
 import { Pool as PgPool } from 'pg';
@@ -14,13 +17,157 @@ import winston from 'winston';
 import Joi from 'joi';
 import axios from 'axios';
 import cookieParser from 'cookie-parser';
+import {
+  APPROVED_SESSION_DATA_PROFILES,
+  DEFAULT_SESSION_DATA_PROFILE,
+  normalizeSessionDataProfile,
+  type SessionDataProfile,
+} from './session-data-profile.js';
+import {
+  DEFAULT_SESSION_QUEUE_LANE,
+  estimateQueueWaitSeconds,
+  normalizeSessionQueueLane,
+  type SessionQueueLane,
+} from './session-queue.js';
+import {
+  ACTIVE_SESSION_STATES,
+  computeSessionAuditEventHash,
+  createSessionAuditEvent,
+  TERMINAL_SESSION_STATES,
+  ensureCorrelationId,
+  isTransitionAllowed,
+  type SessionAuditEvent,
+  type SessionLifecycleState,
+} from './session-policy.js';
+import {
+  authorizeBreakGlassTermination,
+  authorizeSessionApproval,
+  authorizeSessionLaunch,
+  authorizeSessionTermination,
+  authorizeSessionView,
+  buildSessionBrokerPolicyMatrix,
+  buildSessionBrokerPrincipal,
+  DEFAULT_SESSION_BROKER_CONFIG,
+  evaluateSessionPublication,
+  isSessionApprovalPending,
+  parseDelimitedValues,
+  type SessionBrokerAccessConfig,
+  type SessionBrokerPrincipal,
+} from './session-access-control.js';
+
+interface RuntimeConfig {
+  logLevel: string;
+  dockerSocket: string;
+  databaseUrl: string;
+  codeServerImageId: string;
+  sessionStorageRoot: string;
+  sessionApprovalRequired: boolean;
+  sessionCpuLimit: string;
+  sessionMemoryLimit: string;
+  sessionStorageLimit: string;
+  sessionMaxConcurrentPerUser: number;
+  sessionMaxConcurrentPerTeam: number;
+  sessionMaxRuntimeSeconds: number;
+  sessionMaxInactivitySeconds: number;
+  sessionUsageWindowHours: number;
+  codeServerPassword: string;
+  adminGroups: string[];
+  operatorGroups: string[];
+  approverGroups: string[];
+  auditorGroups: string[];
+  breakGlassGroups: string[];
+}
+
+class SessionPolicyError extends Error {
+  readonly statusCode: number;
+  readonly policyCode: string;
+
+  constructor(statusCode: number, policyCode: string, message: string) {
+    super(message);
+    this.statusCode = statusCode;
+    this.policyCode = policyCode;
+  }
+}
+
+const readRequiredEnv = (name: string): string => {
+  const value = process.env[name];
+
+  if (!value || value.trim() === '') {
+    throw new Error(`[session-broker] Missing required environment variable: ${name}`);
+  }
+
+  return value.trim();
+};
+
+const readPositiveIntegerEnv = (name: string, fallback: string): number => {
+  const value = process.env[name] ?? fallback;
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`[session-broker] ${name} must be a positive integer`);
+  }
+
+  return parsed;
+};
+
+const readBooleanEnv = (name: string, fallback: string): boolean => {
+  const value = (process.env[name] ?? fallback).trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(value);
+};
+
+const readCsvEnv = (name: string, fallback: string): string[] => parseDelimitedValues(process.env[name] ?? fallback);
+
+const validateRuntimeConfig = (): RuntimeConfig => {
+  const config: RuntimeConfig = {
+    logLevel: process.env.LOG_LEVEL || 'info',
+    dockerSocket: readRequiredEnv('DOCKER_SOCKET'),
+    databaseUrl: readRequiredEnv('DATABASE_URL'),
+    codeServerImageId: readRequiredEnv('CODE_SERVER_IMAGE_ID'),
+    sessionStorageRoot: process.env.SESSIONS_ROOT?.trim() || '/var/lib/code-server-sessions',
+    sessionApprovalRequired: readBooleanEnv('SESSION_APPROVAL_REQUIRED', 'false'),
+    sessionCpuLimit: readRequiredEnv('SESSION_CPU_LIMIT'),
+    sessionMemoryLimit: readRequiredEnv('SESSION_MEMORY_LIMIT'),
+    sessionStorageLimit: readRequiredEnv('SESSION_STORAGE_LIMIT'),
+    sessionMaxConcurrentPerUser: readPositiveIntegerEnv('SESSION_MAX_CONCURRENT_PER_USER', '1'),
+    sessionMaxConcurrentPerTeam: readPositiveIntegerEnv('SESSION_MAX_CONCURRENT_PER_TEAM', '3'),
+    sessionMaxRuntimeSeconds: readPositiveIntegerEnv('SESSION_MAX_RUNTIME_SECONDS', '28800'),
+    sessionMaxInactivitySeconds: readPositiveIntegerEnv('SESSION_MAX_INACTIVITY_SECONDS', '7200'),
+    sessionUsageWindowHours: readPositiveIntegerEnv('SESSION_USAGE_WINDOW_HOURS', '24'),
+    codeServerPassword: readRequiredEnv('CODE_SERVER_PASSWORD'),
+    adminGroups: readCsvEnv('SESSION_ADMIN_GROUPS', DEFAULT_SESSION_BROKER_CONFIG.adminGroups.join(',')),
+    operatorGroups: readCsvEnv('SESSION_OPERATOR_GROUPS', DEFAULT_SESSION_BROKER_CONFIG.operatorGroups.join(',')),
+    approverGroups: readCsvEnv('SESSION_APPROVER_GROUPS', DEFAULT_SESSION_BROKER_CONFIG.approverGroups.join(',')),
+    auditorGroups: readCsvEnv('SESSION_AUDITOR_GROUPS', DEFAULT_SESSION_BROKER_CONFIG.auditorGroups.join(',')),
+    breakGlassGroups: readCsvEnv('SESSION_BREAK_GLASS_GROUPS', DEFAULT_SESSION_BROKER_CONFIG.breakGlassGroups.join(',')),
+  };
+
+  if (!/^postgres(?:ql)?:\/\//.test(config.databaseUrl)) {
+    throw new Error('[session-broker] DATABASE_URL must be a PostgreSQL connection string');
+  }
+
+  if (!/^\d+(?:\.\d+)?$/.test(config.sessionCpuLimit)) {
+    throw new Error('[session-broker] SESSION_CPU_LIMIT must be a numeric CPU quota');
+  }
+
+  if (!/^\d+[kKmMgG]$/.test(config.sessionMemoryLimit)) {
+    throw new Error('[session-broker] SESSION_MEMORY_LIMIT must use k, m, or g units');
+  }
+
+  if (!/^\d+[kKmMgG]$/.test(config.sessionStorageLimit)) {
+    throw new Error('[session-broker] SESSION_STORAGE_LIMIT must use k, m, or g units');
+  }
+
+  return config;
+};
+
+const runtimeConfig = validateRuntimeConfig();
 
 // ────────────────────────────────────────────────────────────────────────────
 // Logging Setup
 // ────────────────────────────────────────────────────────────────────────────
 
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: runtimeConfig.logLevel,
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -38,8 +185,16 @@ const logger = winston.createLogger({
 interface SessionContext {
   sessionId: string;
   userId: string;
+  teamId: string;
   username: string;
   email: string;
+  dataProfile: SessionDataProfile;
+  dataProfileValidated: boolean;
+  queueLane?: SessionQueueLane;
+  queueReason?: string;
+  queuePosition?: number;
+  queueEnqueuedAt?: Date;
+  queueEstimatedWaitSeconds?: number;
   containerName: string;
   containerId?: string;
   containerPort: number;
@@ -51,8 +206,30 @@ interface SessionContext {
     memoryLimit: string;   // e.g., "4g"
     storageLimit: string;  // e.g., "50g"
   };
-  status: 'creating' | 'running' | 'paused' | 'terminated';
+  status: SessionLifecycleState;
   lastActivity: Date;
+  auditTrail: SessionAuditEvent[];
+}
+
+interface SessionDeletionManifest {
+  sessionId: string;
+  actor: string;
+  reason: string;
+  correlationId: string;
+  createdAt: string;
+  status: 'completed' | 'partial';
+  resourcesBefore: {
+    containerId?: string;
+    containerName: string;
+    storageRoot: string;
+    workspacePath: string;
+    profilePath: string;
+    sessionRecordPresent: boolean;
+  };
+  resourcesRemoved: string[];
+  resourcesRemaining: string[];
+  checksum: string;
+  errors: string[];
 }
 
 interface ContainerConfig {
@@ -65,6 +242,16 @@ interface ContainerConfig {
   env: { [key: string]: string };
 }
 
+interface UsageSummaryRow {
+  teamId: string;
+  activeSessions: number;
+  createdSessions: number;
+  failedSessions: number;
+  totalRuntimeSeconds: number;
+  estimatedCpuHours: number;
+  lastActivityAt: Date | null;
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Session Manager Class
 // ────────────────────────────────────────────────────────────────────────────
@@ -72,97 +259,749 @@ interface ContainerConfig {
 class SessionManager {
   private docker: Docker;
   private db: PgPool;
+  private readonly runtimeConfig: RuntimeConfig;
   private sessions: Map<string, SessionContext> = new Map();
+  private sessionEvents: Map<string, SessionAuditEvent[]> = new Map();
+  private sessionEventHashes: Map<string, string> = new Map();
+  private deletionManifests: Map<string, SessionDeletionManifest> = new Map();
   private nextPort: number = 8081; // Start at 8081 (8080 is primary)
 
-  constructor(dockerSocket: string, dbUrl: string) {
-    const socketPath = dockerSocket.replace('unix://', '');
+  constructor(runtimeConfig: RuntimeConfig) {
+    this.runtimeConfig = runtimeConfig;
+    const socketPath = runtimeConfig.dockerSocket.replace('unix://', '');
     this.docker = new Docker({ socketPath });
-    this.db = new PgPool({ connectionString: dbUrl });
-    logger.info('SessionManager initialized', { socketPath, dbUrl });
+    this.db = new PgPool({ connectionString: runtimeConfig.databaseUrl });
+    logger.info('SessionManager initialized', {
+      socketPath,
+      codeServerImageId: runtimeConfig.codeServerImageId,
+    });
+  }
+
+  private recordSessionEvent(event: Omit<SessionAuditEvent, 'eventId' | 'timestamp' | 'eventHash'> & { timestamp?: number }): SessionAuditEvent {
+    const previousEventHash = this.sessionEventHashes.get(event.sessionId);
+    const storedEvent = createSessionAuditEvent({
+      ...event,
+      previousEventHash,
+    });
+
+    const trail = this.sessionEvents.get(storedEvent.sessionId) ?? [];
+    trail.push(storedEvent);
+    this.sessionEvents.set(event.sessionId, trail);
+    this.sessionEventHashes.set(storedEvent.sessionId, storedEvent.eventHash);
+
+    const session = this.sessions.get(event.sessionId);
+    if (session) {
+      session.auditTrail.push(storedEvent);
+    }
+
+    return storedEvent;
+  }
+
+  getSessionEvents(sessionId: string): SessionAuditEvent[] {
+    const events = this.sessionEvents.get(sessionId) ?? [];
+    return [...events];
+  }
+
+  getDeletionManifest(sessionId: string): SessionDeletionManifest | undefined {
+    return this.deletionManifests.get(sessionId);
+  }
+
+  getApprovalStatus(session: SessionContext): 'not_required' | 'pending' | 'approved' {
+    if (!this.runtimeConfig.sessionApprovalRequired) {
+      return 'not_required';
+    }
+
+    if (session.status === 'testing') {
+      return 'pending';
+    }
+
+    return 'approved';
+  }
+
+  private async getQueuedSessions(): Promise<SessionContext[]> {
+    const result = await this.db.query(
+      `SELECT *
+       FROM sessions
+       WHERE status = 'queued'
+       ORDER BY CASE WHEN queue_lane = 'fast' THEN 0 ELSE 1 END,
+                COALESCE(queue_position, 0) ASC,
+                created_at ASC`,
+      []
+    );
+
+    return result.rows.map((row: any) => this.dbRowToSession(row));
+  }
+
+  private async getQueueState(sessionId: string): Promise<{
+    queuePosition: number;
+    estimatedWaitSeconds: number;
+    queueLane: SessionQueueLane;
+  } | null> {
+    const queuedSessions = await this.getQueuedSessions();
+    const index = queuedSessions.findIndex((session) => session.sessionId === sessionId);
+
+    if (index < 0) {
+      return null;
+    }
+
+    const session = queuedSessions[index];
+    const queueLane = session.queueLane ?? DEFAULT_SESSION_QUEUE_LANE;
+
+    return {
+      queuePosition: index + 1,
+      estimatedWaitSeconds: estimateQueueWaitSeconds(index + 1, queueLane),
+      queueLane,
+    };
+  }
+
+  private async getQueuePositionForLane(queueLane: SessionQueueLane): Promise<number> {
+    const queuedSessions = await this.getQueuedSessions();
+    const nextSession = {
+      sessionId: '__pending__',
+      queueLane,
+      queuedAt: Date.now(),
+      sequence: queuedSessions.length + 1,
+    };
+
+    return [...queuedSessions.map((session, index) => ({
+      sessionId: session.sessionId,
+      queueLane: session.queueLane ?? DEFAULT_SESSION_QUEUE_LANE,
+      queuedAt: session.queueEnqueuedAt?.getTime() ?? session.createdAt.getTime(),
+      sequence: index + 1,
+    })), nextSession]
+      .sort((left, right) => {
+        if (left.queueLane !== right.queueLane) {
+          return left.queueLane === 'fast' ? -1 : 1;
+        }
+
+        if (left.queuedAt !== right.queuedAt) {
+          return left.queuedAt - right.queuedAt;
+        }
+
+        return left.sequence - right.sequence;
+      })
+      .findIndex((entry) => entry.sessionId === '__pending__') + 1;
+  }
+
+  private async buildQueuedSession(
+    userId: string,
+    username: string,
+    email: string,
+    ttlSeconds: number,
+    teamId: string | undefined,
+    correlationId: string,
+    dataProfile: SessionDataProfile,
+    queueLane: SessionQueueLane,
+  ): Promise<SessionContext> {
+    const resolvedTeamId = this.resolveTeamId(email, teamId);
+    const sessionId = uuidv4();
+    const containerName = `code-server-${username}-${sessionId.substring(0, 8)}`;
+    const containerPort = this.nextPort++;
+    const queuePosition = await this.getQueuePositionForLane(queueLane);
+
+    const session: SessionContext = {
+      sessionId,
+      userId,
+      teamId: resolvedTeamId,
+      username,
+      email,
+      dataProfile,
+      dataProfileValidated: true,
+      queueLane,
+      queueReason: `queued because ${queueLane === 'fast' ? 'fast lane' : 'standard lane'} capacity was exhausted`,
+      queuePosition,
+      queueEnqueuedAt: new Date(),
+      queueEstimatedWaitSeconds: estimateQueueWaitSeconds(queuePosition, queueLane),
+      containerName,
+      containerPort,
+      baseImageId: this.runtimeConfig.codeServerImageId,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + ttlSeconds * 1000),
+      quotas: {
+        cpuLimit: this.runtimeConfig.sessionCpuLimit,
+        memoryLimit: this.runtimeConfig.sessionMemoryLimit,
+        storageLimit: this.runtimeConfig.sessionStorageLimit,
+      },
+      status: 'queued',
+      lastActivity: new Date(),
+      auditTrail: [],
+    };
+
+    this.recordSessionEvent(createSessionAuditEvent({
+      sessionId,
+      actor: userId,
+      action: 'create',
+      fromStatus: 'requested',
+      toStatus: 'queued',
+      reason: session.queueReason,
+      correlationId,
+      details: {
+        teamId: resolvedTeamId,
+        queueLane,
+        queuePosition,
+        estimatedWaitSeconds: session.queueEstimatedWaitSeconds,
+      },
+    }));
+
+    await this.persistSession(session);
+    this.sessions.set(sessionId, session);
+
+    return session;
+  }
+
+  private async provisionSession(session: SessionContext, correlationId?: string): Promise<SessionContext> {
+    const resolvedCorrelationId = ensureCorrelationId(correlationId);
+
+    if (session.status === 'queued') {
+      this.transitionSession(session, 'provisioning', 'queue slot available', resolvedCorrelationId);
+    } else {
+      this.transitionSession(session, 'provisioning', 'creating container', resolvedCorrelationId);
+    }
+
+    const containerConfig = this.buildContainerConfig(session);
+
+    const container = await this.docker.createContainer({
+      name: session.containerName,
+      Hostname: containerConfig.hostname,
+      Image: containerConfig.image,
+      Env: Object.entries(containerConfig.env).map(([k, v]) => `${k}=${v}`),
+      ExposedPorts: {
+        '8080/tcp': {}
+      },
+      HostConfig: {
+        PortBindings: {
+          '8080/tcp': [{ HostPort: String(session.containerPort) }]
+        },
+        Binds: Object.entries(containerConfig.volumes).map(
+          ([target, src]) => `${src.bind}:${target}:${src.ro ? 'ro' : 'rw'}`
+        ),
+        CpuQuota: parseInt(containerConfig.cpuLimit.replace(/^(\d+)\..*$/, '$1000000'), 10),
+        Memory: this.parseMemory(containerConfig.memoryLimit)
+      }
+    });
+
+    session.containerId = container.id;
+
+    await container.start();
+    this.transitionSession(session, 'ready', 'container started', resolvedCorrelationId);
+
+    if (this.runtimeConfig.sessionApprovalRequired) {
+      this.transitionSession(session, 'testing', 'awaiting approval gate', resolvedCorrelationId);
+    }
+
+    await this.persistSession(session);
+    this.sessions.set(session.sessionId, session);
+    this.recordSessionEvent(createSessionAuditEvent({
+      sessionId: session.sessionId,
+      actor: session.userId,
+      action: 'create',
+      fromStatus: 'requested',
+      toStatus: session.status,
+      reason: session.queueLane ? 'queued session launched' : 'session created',
+      correlationId: resolvedCorrelationId,
+      details: {
+        teamId: session.teamId,
+        containerPort: session.containerPort,
+        queueLane: session.queueLane,
+      },
+    }));
+
+    logger.info('Session created successfully', {
+      sessionId: session.sessionId,
+      containerId: container.id.substring(0, 12),
+      containerName: session.containerName,
+      containerPort: session.containerPort,
+      expiresAt: session.expiresAt,
+      queueLane: session.queueLane,
+    });
+
+    return session;
+  }
+
+  private async processQueuedSessions(triggerCorrelationId?: string): Promise<number> {
+    const queuedSessions = await this.getQueuedSessions();
+    if (queuedSessions.length === 0) {
+      return 0;
+    }
+
+    let launched = 0;
+    for (const queuedSession of queuedSessions) {
+      const counts = await this.getSessionCountsForPolicy(queuedSession.userId, queuedSession.teamId);
+
+      if (counts.userCount >= this.runtimeConfig.sessionMaxConcurrentPerUser) {
+        continue;
+      }
+
+      if (counts.teamCount >= this.runtimeConfig.sessionMaxConcurrentPerTeam) {
+        continue;
+      }
+
+      try {
+        await this.provisionSession(queuedSession, triggerCorrelationId);
+        launched += 1;
+      } catch (error) {
+        logger.warn('Failed to launch queued session', {
+          sessionId: queuedSession.sessionId,
+          error: String(error),
+        });
+      }
+    }
+
+    return launched;
+  }
+
+  verifyAuditIntegrity(sessionId: string): { valid: boolean; eventCount: number; lastEventHash?: string; reason?: string } {
+    const events = this.sessionEvents.get(sessionId) ?? [];
+    let previousEventHash: string | undefined;
+
+    for (const event of events) {
+      const expectedHash = computeSessionAuditEventHash({
+        ...event,
+        previousEventHash,
+      });
+
+      if (event.eventHash !== expectedHash) {
+        return {
+          valid: false,
+          eventCount: events.length,
+          lastEventHash: previousEventHash,
+          reason: `audit hash mismatch for event ${event.eventId}`,
+        };
+      }
+
+      previousEventHash = event.eventHash;
+    }
+
+    return {
+      valid: true,
+      eventCount: events.length,
+      lastEventHash: previousEventHash,
+    };
+  }
+
+  async approveSession(sessionId: string, approver: SessionBrokerPrincipal, correlationId?: string): Promise<SessionContext> {
+    const session = await this.getSession(sessionId);
+
+    if (!session) {
+      throw new SessionPolicyError(404, 'session_not_found', 'Session not found');
+    }
+
+    const approvalDecision = authorizeSessionApproval(approver);
+    if (!approvalDecision.allowed) {
+      throw new SessionPolicyError(approvalDecision.statusCode, approvalDecision.policyCode, approvalDecision.reason);
+    }
+
+    if (!isSessionApprovalPending(session.status, this.runtimeConfig.sessionApprovalRequired)) {
+      throw new SessionPolicyError(409, 'approval_not_pending', 'Session does not require approval');
+    }
+
+    const resolvedCorrelationId = ensureCorrelationId(correlationId);
+    this.transitionSession(session, 'ready', 'approval granted', resolvedCorrelationId);
+    this.recordSessionEvent(createSessionAuditEvent({
+      sessionId,
+      actor: approver.userId,
+      action: 'approve',
+      fromStatus: 'testing',
+      toStatus: 'ready',
+      reason: 'approval granted',
+      correlationId: resolvedCorrelationId,
+      details: {
+        approver: approver.username,
+        approverEmail: approver.email,
+      },
+    }));
+
+    await this.persistSession(session);
+    return session;
+  }
+
+  private getSessionStoragePaths(sessionId: string): { storageRoot: string; workspacePath: string; profilePath: string } {
+    const storageRoot = path.join(this.runtimeConfig.sessionStorageRoot, sessionId);
+    return {
+      storageRoot,
+      workspacePath: path.join(storageRoot, 'workspace'),
+      profilePath: path.join(storageRoot, 'profile'),
+    };
+  }
+
+  private async sessionPathExists(targetPath: string): Promise<boolean> {
+    try {
+      await fs.access(targetPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async removeSessionStorage(sessionId: string): Promise<string[]> {
+    const { storageRoot, workspacePath, profilePath } = this.getSessionStoragePaths(sessionId);
+    const removed: string[] = [];
+
+    if (await this.sessionPathExists(workspacePath)) {
+      removed.push(workspacePath);
+    }
+
+    if (await this.sessionPathExists(profilePath)) {
+      removed.push(profilePath);
+    }
+
+    if (await this.sessionPathExists(storageRoot)) {
+      await fs.rm(storageRoot, { recursive: true, force: true });
+      removed.push(storageRoot);
+    }
+
+    return removed;
+  }
+
+  private async buildDeletionManifest(
+    session: SessionContext,
+    actor: string,
+    reason: string,
+    correlationId: string,
+    cleanupErrors: string[] = []
+  ): Promise<SessionDeletionManifest> {
+    const { storageRoot, workspacePath, profilePath } = this.getSessionStoragePaths(session.sessionId);
+    const resourcesRemoved: string[] = [];
+    const resourcesRemaining: string[] = [];
+
+    for (const resourcePath of [workspacePath, profilePath, storageRoot]) {
+      if (await this.sessionPathExists(resourcePath)) {
+        resourcesRemaining.push(resourcePath);
+      } else {
+        resourcesRemoved.push(resourcePath);
+      }
+    }
+
+    if (session.containerId) {
+      resourcesRemoved.push(`container:${session.containerId}`);
+    }
+
+    const manifest = {
+      sessionId: session.sessionId,
+      actor,
+      reason,
+      correlationId,
+      createdAt: new Date().toISOString(),
+      status: cleanupErrors.length > 0 ? 'partial' : 'completed',
+      resourcesBefore: {
+        containerId: session.containerId,
+        containerName: session.containerName,
+        storageRoot,
+        workspacePath,
+        profilePath,
+        sessionRecordPresent: true,
+      },
+      resourcesRemoved,
+      resourcesRemaining,
+      errors: cleanupErrors,
+    } satisfies Omit<SessionDeletionManifest, 'checksum'>;
+
+    const checksumSource = JSON.stringify(manifest);
+    const checksum = crypto.createHash('sha256').update(checksumSource).digest('hex');
+
+    return {
+      ...manifest,
+      checksum,
+    };
+  }
+
+  private cleanupSessionContainer(containerId: string | undefined): Promise<void> {
+    if (!containerId) {
+      return Promise.resolve();
+    }
+
+    const container = this.docker.getContainer(containerId);
+    return container
+      .remove({ v: true, force: true })
+      .catch((cleanupError: unknown) => {
+        logger.warn('Partial session cleanup failed', { containerId, error: String(cleanupError) });
+      });
+  }
+
+  private isActiveStatus(status: SessionLifecycleState): boolean {
+    return ACTIVE_SESSION_STATES.includes(status);
+  }
+
+  private resolveTeamId(email: string, teamId?: string): string {
+    if (teamId && teamId.trim() !== '') {
+      return teamId.trim().toLowerCase();
+    }
+
+    const domain = email.split('@')[1]?.trim().toLowerCase();
+    return domain || 'default-team';
+  }
+
+  private parseCpuQuota(cpuLimit: string): number {
+    const parsed = Number.parseFloat(cpuLimit);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  }
+
+  private getUsageWindowCutoff(windowHours: number): Date {
+    return new Date(Date.now() - windowHours * 60 * 60 * 1000);
+  }
+
+  private async getSessionCountsForPolicy(userId: string, teamId: string): Promise<{ userCount: number; teamCount: number }> {
+    const userResult = await this.db.query(
+      'SELECT COUNT(*)::int AS count FROM sessions WHERE user_id = $1 AND status = ANY($2::text[])',
+      [userId, ACTIVE_SESSION_STATES]
+    );
+
+    const teamResult = await this.db.query(
+      `SELECT COUNT(*)::int AS count
+       FROM sessions
+       WHERE LOWER(SPLIT_PART(email, '@', 2)) = $1
+         AND status = ANY($2::text[])`,
+      [teamId, ACTIVE_SESSION_STATES]
+    );
+
+    return {
+      userCount: Number(userResult.rows[0]?.count ?? 0),
+      teamCount: Number(teamResult.rows[0]?.count ?? 0),
+    };
+  }
+
+  private async enforceLaunchPolicy(
+    userId: string,
+    email: string,
+    ttlSeconds: number,
+    dataProfile: string,
+  ): Promise<SessionDataProfile> {
+    if (ttlSeconds > this.runtimeConfig.sessionMaxRuntimeSeconds) {
+      throw new SessionPolicyError(
+        422,
+        'runtime_ttl_exceeded',
+        `Requested TTL ${ttlSeconds}s exceeds max runtime policy ${this.runtimeConfig.sessionMaxRuntimeSeconds}s`
+      );
+    }
+
+    const approvedDataProfile = normalizeSessionDataProfile(dataProfile);
+    if (!approvedDataProfile) {
+      throw new SessionPolicyError(
+        422,
+        'data_profile_not_approved',
+        `Requested data profile must be one of: ${APPROVED_SESSION_DATA_PROFILES.join(', ')}`,
+      );
+    }
+
+    return approvedDataProfile;
+  }
+
+  private normalizeStatus(status: string | undefined): SessionLifecycleState {
+    if (!status) {
+      return 'failed';
+    }
+
+    if (status === 'creating') {
+      return 'requested';
+    }
+
+    if (status === 'queued') {
+      return 'queued';
+    }
+
+    if (status === 'running') {
+      return 'ready';
+    }
+
+    if (status === 'paused') {
+      return 'testing';
+    }
+
+    if (status === 'terminated') {
+      return 'destroyed';
+    }
+
+    if (ACTIVE_SESSION_STATES.includes(status as SessionLifecycleState) || TERMINAL_SESSION_STATES.includes(status as SessionLifecycleState)) {
+      return status as SessionLifecycleState;
+    }
+
+    return 'failed';
+  }
+
+  private transitionSession(
+    session: SessionContext,
+    nextStatus: SessionLifecycleState,
+    reason: string,
+    correlationId?: string,
+  ): SessionContext {
+    const previousStatus = session.status;
+
+    if (previousStatus === nextStatus) {
+      return session;
+    }
+
+    if (!isTransitionAllowed(previousStatus, nextStatus)) {
+      const policyError = new SessionPolicyError(
+        409,
+        'invalid_transition',
+        `Invalid lifecycle transition from ${previousStatus} to ${nextStatus}`
+      );
+
+      this.recordSessionEvent(createSessionAuditEvent({
+        sessionId: session.sessionId,
+        actor: 'system',
+        action: 'deny',
+        fromStatus: previousStatus,
+        toStatus: nextStatus,
+        reason: policyError.message,
+        correlationId: ensureCorrelationId(correlationId),
+        details: { reason },
+      }));
+
+      throw policyError;
+    }
+
+    logger.info('Session lifecycle transition', {
+      sessionId: session.sessionId,
+      userId: session.userId,
+      from: previousStatus,
+      to: nextStatus,
+      reason,
+    });
+
+    session.status = nextStatus;
+
+    this.recordSessionEvent(createSessionAuditEvent({
+      sessionId: session.sessionId,
+      actor: 'system',
+      action: 'transition',
+      fromStatus: previousStatus,
+      toStatus: nextStatus,
+      reason,
+      correlationId: ensureCorrelationId(correlationId),
+    }));
+
+    return session;
   }
 
   /**
    * Create isolated session for authenticated user
    */
-  async createSession(userId: string, username: string, email: string, ttlSeconds: number = 28800): Promise<SessionContext> {
+  async createSession(
+    userId: string,
+    username: string,
+    email: string,
+    ttlSeconds: number = 28800,
+    teamId?: string,
+    correlationId?: string,
+    dataProfile: SessionDataProfile = DEFAULT_SESSION_DATA_PROFILE,
+    priorityLane: SessionQueueLane = DEFAULT_SESSION_QUEUE_LANE,
+  ): Promise<SessionContext> {
+    const approvedDataProfile = await this.enforceLaunchPolicy(userId, email, ttlSeconds, dataProfile);
+
+    const existingSession = await this.getUserActiveSession(userId);
+    if (existingSession) {
+      logger.info('Returning existing active session', {
+        userId,
+        sessionId: existingSession.sessionId,
+        status: existingSession.status,
+      });
+
+      return existingSession;
+    }
+
+    const resolvedTeamId = this.resolveTeamId(email, teamId);
+    const resolvedCorrelationId = ensureCorrelationId(correlationId);
+    const existingQueuedSession = await this.getUserQueuedSession(userId);
+    if (existingQueuedSession) {
+      logger.info('Returning existing queued session', {
+        userId,
+        sessionId: existingQueuedSession.sessionId,
+        queueLane: existingQueuedSession.queueLane,
+        queuePosition: existingQueuedSession.queuePosition,
+      });
+
+      return existingQueuedSession;
+    }
+
+    const counts = await this.getSessionCountsForPolicy(userId, resolvedTeamId);
+    const shouldQueue = counts.userCount >= this.runtimeConfig.sessionMaxConcurrentPerUser || counts.teamCount >= this.runtimeConfig.sessionMaxConcurrentPerTeam;
+
+    if (shouldQueue) {
+      const queuedSession = await this.buildQueuedSession(
+        userId,
+        username,
+        email,
+        ttlSeconds,
+        teamId,
+        resolvedCorrelationId,
+        approvedDataProfile,
+        normalizeSessionQueueLane(priorityLane),
+      );
+
+      logger.info('Session queued due to quota pressure', {
+        sessionId: queuedSession.sessionId,
+        userId,
+        teamId: resolvedTeamId,
+        queueLane: queuedSession.queueLane,
+        queuePosition: queuedSession.queuePosition,
+        estimatedWaitSeconds: queuedSession.queueEstimatedWaitSeconds,
+      });
+
+      return queuedSession;
+    }
+
     const sessionId = uuidv4();
     const containerName = `code-server-${username}-${sessionId.substring(0, 8)}`;
     const containerPort = this.nextPort++;
 
-    logger.info('Creating session', { sessionId, userId, username, containerPort });
+    logger.info('Creating session', { sessionId, userId, username, containerPort, queueLane: normalizeSessionQueueLane(priorityLane) });
 
     const session: SessionContext = {
       sessionId,
       userId,
+      teamId: resolvedTeamId,
       username,
       email,
+      dataProfile: approvedDataProfile,
+      dataProfileValidated: true,
       containerName,
       containerPort,
-      baseImageId: process.env.CODE_SERVER_IMAGE_ID || 'code-server-enterprise:dev',
+      baseImageId: this.runtimeConfig.codeServerImageId,
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + ttlSeconds * 1000),
       quotas: {
-        cpuLimit: process.env.SESSION_CPU_LIMIT || '2.0',
-        memoryLimit: process.env.SESSION_MEMORY_LIMIT || '4g',
-        storageLimit: process.env.SESSION_STORAGE_LIMIT || '50g'
+        cpuLimit: this.runtimeConfig.sessionCpuLimit,
+        memoryLimit: this.runtimeConfig.sessionMemoryLimit,
+        storageLimit: this.runtimeConfig.sessionStorageLimit,
       },
-      status: 'creating',
-      lastActivity: new Date()
+      status: 'requested',
+      lastActivity: new Date(),
+      auditTrail: [],
     };
 
     try {
-      // Create container configuration
-      const containerConfig = this.buildContainerConfig(session);
-
-      // Create Docker container
-      const container = await this.docker.createContainer({
-        name: containerName,
-        Hostname: containerConfig.hostname,
-        Image: containerConfig.image,
-        Env: Object.entries(containerConfig.env).map(([k, v]) => `${k}=${v}`),
-        ExposedPorts: {
-          '8080/tcp': {}
-        },
-        HostConfig: {
-          PortBindings: {
-            '8080/tcp': [{ HostPort: String(containerPort) }]
-          },
-          Binds: Object.entries(containerConfig.volumes).map(
-            ([target, src]) => `${src.bind}:${target}:${src.ro ? 'ro' : 'rw'}`
-          ),
-          CpuQuota: parseInt(containerConfig.cpuLimit.replace(/^(\d+)\..*$/, '$1000000'), 10),
-          Memory: this.parseMemory(containerConfig.memoryLimit)
-        }
-      });
-
-      const containerId = container.id;
-      session.containerId = containerId;
-
-      // Start container
-      await container.start();
-      session.status = 'running';
-
-      // Persist to database
-      await this.persistSession(session);
-
-      // Store in memory
-      this.sessions.set(sessionId, session);
-
-      logger.info('Session created successfully', {
-        sessionId,
-        containerId: containerId.substring(0, 12),
-        containerName,
-        containerPort,
-        expiresAt: session.expiresAt
-      });
-
-      return session;
+      return await this.provisionSession(session, resolvedCorrelationId);
     } catch (error) {
-      logger.error('Failed to create session', { sessionId, error: String(error) });
-      session.status = 'terminated';
+      logger.error('Failed to create session', { sessionId: session.sessionId, error: String(error) });
+      if (session) {
+        try {
+          this.transitionSession(session, 'failed', 'session creation failed', resolvedCorrelationId);
+        } catch (transitionError) {
+          logger.warn('Failed to mark session as failed', {
+            sessionId: session.sessionId,
+            error: String(transitionError),
+          });
+        }
+
+        await this.cleanupSessionContainer(session.containerId);
+        await this.persistSession(session);
+      }
       throw new Error(`Session creation failed: ${error}`);
     }
+  }
+
+  async launchSession(
+    userId: string,
+    username: string,
+    email: string,
+    ttlSeconds: number = 28800,
+    teamId?: string,
+    correlationId?: string,
+    dataProfile: SessionDataProfile = DEFAULT_SESSION_DATA_PROFILE,
+    priorityLane: SessionQueueLane = DEFAULT_SESSION_QUEUE_LANE,
+  ): Promise<SessionContext> {
+    return this.createSession(userId, username, email, ttlSeconds, teamId, correlationId, dataProfile, priorityLane);
   }
 
   /**
@@ -179,8 +1018,8 @@ class SessionManager {
     // Load from database
     try {
       const result = await this.db.query(
-        'SELECT * FROM sessions WHERE session_id = $1 AND status != $2',
-        [sessionId, 'terminated']
+        'SELECT * FROM sessions WHERE session_id = $1',
+        [sessionId]
       );
       if (result.rows.length > 0) {
         const dbSession = this.dbRowToSession(result.rows[0]);
@@ -201,10 +1040,10 @@ class SessionManager {
     try {
       const result = await this.db.query(
         `SELECT * FROM sessions 
-         WHERE user_id = $1 AND status = $2
+         WHERE user_id = $1 AND status = ANY($2::text[])
          ORDER BY last_activity DESC 
          LIMIT 1`,
-        [userId, 'running']
+        [userId, ACTIVE_SESSION_STATES]
       );
       if (result.rows.length > 0) {
         const dbSession = this.dbRowToSession(result.rows[0]);
@@ -217,32 +1056,240 @@ class SessionManager {
     return null;
   }
 
+  async getUserQueuedSession(userId: string): Promise<SessionContext | null> {
+    try {
+      const result = await this.db.query(
+        `SELECT * FROM sessions
+         WHERE user_id = $1 AND status = 'queued'
+         ORDER BY queue_enqueued_at ASC NULLS LAST, created_at ASC
+         LIMIT 1`,
+        [userId]
+      );
+      if (result.rows.length > 0) {
+        const dbSession = this.dbRowToSession(result.rows[0]);
+        this.sessions.set(dbSession.sessionId, dbSession);
+        return dbSession;
+      }
+    } catch (error) {
+      logger.error('Failed to get queued session', { userId, error: String(error) });
+    }
+    return null;
+  }
+
+  async getUsageSummary(windowHours: number = this.runtimeConfig.sessionUsageWindowHours): Promise<UsageSummaryRow[]> {
+    const cutoff = this.getUsageWindowCutoff(windowHours);
+    const result = await this.db.query(
+      `SELECT
+         LOWER(SPLIT_PART(email, '@', 2)) AS team_id,
+         COUNT(*) FILTER (WHERE status = ANY($2::text[]))::int AS active_sessions,
+         COUNT(*)::int AS created_sessions,
+         COUNT(*) FILTER (WHERE status = 'failed')::int AS failed_sessions,
+         COALESCE(SUM(EXTRACT(EPOCH FROM (LEAST(COALESCE(expires_at, NOW()), NOW()) - created_at))), 0)::bigint AS total_runtime_seconds,
+         MAX(last_activity) AS last_activity_at
+       FROM sessions
+       WHERE created_at >= $1
+       GROUP BY team_id
+       ORDER BY created_sessions DESC, team_id ASC`,
+      [cutoff, ACTIVE_SESSION_STATES]
+    );
+
+    return result.rows.map((row: any) => ({
+      teamId: row.team_id || 'default-team',
+      activeSessions: Number(row.active_sessions ?? 0),
+      createdSessions: Number(row.created_sessions ?? 0),
+      failedSessions: Number(row.failed_sessions ?? 0),
+      totalRuntimeSeconds: Number(row.total_runtime_seconds ?? 0),
+      estimatedCpuHours: Number(((Number(row.total_runtime_seconds ?? 0) / 3600) * this.parseCpuQuota(this.runtimeConfig.sessionCpuLimit)).toFixed(2)),
+      lastActivityAt: row.last_activity_at ? new Date(row.last_activity_at) : null,
+    }));
+  }
+
+  private async getActiveSessionsForReap(): Promise<SessionContext[]> {
+    const result = await this.db.query(
+      'SELECT * FROM sessions WHERE status = ANY($1::text[]) ORDER BY last_activity ASC',
+      [ACTIVE_SESSION_STATES]
+    );
+
+    return result.rows.map((row: any) => this.dbRowToSession(row));
+  }
+
+  async reapExpiredSessions(): Promise<number> {
+    const now = Date.now();
+    const sessions = await this.getActiveSessionsForReap();
+    let reaped = 0;
+
+    for (const session of sessions) {
+      const runtimeAgeSeconds = Math.floor((now - session.createdAt.getTime()) / 1000);
+      const inactivityAgeSeconds = Math.floor((now - session.lastActivity.getTime()) / 1000);
+      const expiredByRuntime = runtimeAgeSeconds >= this.runtimeConfig.sessionMaxRuntimeSeconds;
+      const expiredByInactivity = inactivityAgeSeconds >= this.runtimeConfig.sessionMaxInactivitySeconds;
+      const expiredByTtl = session.expiresAt.getTime() <= now;
+
+      if (!expiredByRuntime && !expiredByInactivity && !expiredByTtl) {
+        continue;
+      }
+
+      logger.warn('Reaping stale session', {
+        sessionId: session.sessionId,
+        userId: session.userId,
+        teamId: session.teamId,
+        expiredByRuntime,
+        expiredByInactivity,
+        expiredByTtl,
+        runtimeAgeSeconds,
+        inactivityAgeSeconds,
+      });
+
+      try {
+        await this.terminateSession(session.sessionId, `ttl-reap-${session.sessionId}`);
+        reaped += 1;
+      } catch (error) {
+        logger.error('Failed to reap stale session', { sessionId: session.sessionId, error: String(error) });
+      }
+    }
+
+    return reaped;
+  }
+
+  async sweepResidualSessionStorage(): Promise<number> {
+    let cleaned = 0;
+
+    try {
+      const entries = await fs.readdir(this.runtimeConfig.sessionStorageRoot, { withFileTypes: true });
+
+      for (const entry of entries) {
+        if (!entry.isDirectory()) {
+          continue;
+        }
+
+        const sessionId = entry.name;
+        const session = await this.getSession(sessionId);
+
+        if (session && this.isActiveStatus(session.status)) {
+          continue;
+        }
+
+        const sessionRoot = path.join(this.runtimeConfig.sessionStorageRoot, sessionId);
+        try {
+          await fs.rm(sessionRoot, { recursive: true, force: true });
+          cleaned += 1;
+
+          if (session) {
+            const manifest = await this.buildDeletionManifest(
+              session,
+              'system',
+              'residual_storage_gc',
+              `storage-gc-${sessionId}`,
+              []
+            );
+            this.deletionManifests.set(sessionId, manifest);
+          }
+
+          logger.info('Residual session storage cleaned', {
+            sessionId,
+            sessionStatus: session?.status || 'unknown',
+            sessionRoot,
+          });
+        } catch (error) {
+          logger.warn('Residual session storage cleanup failed', {
+            sessionId,
+            sessionRoot,
+            error: String(error),
+          });
+        }
+      }
+    } catch (error) {
+      logger.warn('Residual storage sweep unavailable', {
+        storageRoot: this.runtimeConfig.sessionStorageRoot,
+        error: String(error),
+      });
+    }
+
+    return cleaned;
+  }
+
   /**
    * Terminate session and clean up container
    */
-  async terminateSession(sessionId: string): Promise<void> {
+  async terminateSession(sessionId: string, correlationId?: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      logger.warn('Session not found for termination', { sessionId });
+      const dbSession = await this.getSession(sessionId);
+      if (!dbSession) {
+        logger.warn('Session not found for termination', { sessionId });
+        return;
+      }
+
+      this.sessions.set(sessionId, dbSession);
+      return this.terminateSession(sessionId, `db-reload-${sessionId}`);
+    }
+
+    if (TERMINAL_SESSION_STATES.includes(session.status)) {
+      logger.info('Session already terminated', { sessionId, status: session.status });
       return;
     }
 
     logger.info('Terminating session', { sessionId, containerId: session.containerId });
 
     try {
+      this.transitionSession(session, 'teardown_pending', 'termination requested', correlationId);
+      const cleanupErrors: string[] = [];
+
       if (session.containerId) {
         const container = this.docker.getContainer(session.containerId);
         
         // Stop container
-        await container.stop({ t: 10 });
+        try {
+          await container.stop({ t: 10 });
+        } catch (error) {
+          cleanupErrors.push(`container stop failed: ${String(error)}`);
+          logger.warn('Container stop failed during teardown', { sessionId, error: String(error) });
+        }
 
         // Remove container
-        await container.remove({ v: true });
+        try {
+          await container.remove({ v: true });
+        } catch (error) {
+          cleanupErrors.push(`container remove failed: ${String(error)}`);
+          logger.warn('Container remove failed during teardown', { sessionId, error: String(error) });
+        }
       }
 
-      session.status = 'terminated';
+      try {
+        const removedPaths = await this.removeSessionStorage(sessionId);
+        if (removedPaths.length === 0) {
+          cleanupErrors.push('session storage already absent');
+        }
+      } catch (error) {
+        cleanupErrors.push(`storage cleanup failed: ${String(error)}`);
+        logger.warn('Session storage cleanup failed during teardown', { sessionId, error: String(error) });
+      }
+
+      this.transitionSession(session, 'destroyed', 'container removed', correlationId);
+      const manifest = await this.buildDeletionManifest(
+        session,
+        'system',
+        'manual_or_automatic_teardown',
+        ensureCorrelationId(correlationId),
+        cleanupErrors
+      );
+      this.deletionManifests.set(sessionId, manifest);
       await this.persistSession(session);
       this.sessions.delete(sessionId);
+      await this.processQueuedSessions(correlationId);
+      this.recordSessionEvent(createSessionAuditEvent({
+        sessionId,
+        actor: 'system',
+        action: 'terminate',
+        fromStatus: 'teardown_pending',
+        toStatus: 'destroyed',
+        reason: cleanupErrors.length > 0 ? 'container removed with cleanup warnings' : 'container removed',
+        correlationId: ensureCorrelationId(correlationId),
+        details: {
+          cleanupErrors,
+          manifestChecksum: manifest.checksum,
+        },
+      }));
 
       logger.info('Session terminated successfully', { sessionId });
     } catch (error) {
@@ -257,8 +1304,8 @@ class SessionManager {
   async listUserSessions(userId: string): Promise<SessionContext[]> {
     try {
       const result = await this.db.query(
-        'SELECT * FROM sessions WHERE user_id = $1 AND status = $2 ORDER BY created_at DESC',
-        [userId, 'running']
+        'SELECT * FROM sessions WHERE user_id = $1 AND status = ANY($2::text[]) ORDER BY created_at DESC',
+        [userId, ACTIVE_SESSION_STATES]
       );
       return result.rows.map((row: any) => this.dbRowToSession(row));
     } catch (error) {
@@ -283,7 +1330,7 @@ class SessionManager {
   // ────────────────────────────────────────────────────────────────────────
 
   private buildContainerConfig(session: SessionContext): ContainerConfig {
-    const homeDir = `/home/${session.username}`;
+    const { workspacePath, profilePath } = this.getSessionStoragePaths(session.sessionId);
     return {
       image: session.baseImageId,
       hostname: session.containerName,
@@ -292,17 +1339,19 @@ class SessionManager {
       portMapping: { host: session.containerPort, container: 8080 },
       volumes: {
         '/home/coder/workspace': {
-          bind: `/sessions/${session.sessionId}/workspace`,
+          bind: workspacePath,
           ro: false
         },
         '/home/coder/.local/share/code-server': {
-          bind: `/sessions/${session.sessionId}/profile`,
+          bind: profilePath,
           ro: false
         }
       },
       env: {
-        PASSWORD: process.env.CODE_SERVER_PASSWORD || 'changeme',
-        SUDO_PASSWORD: process.env.CODE_SERVER_PASSWORD || 'changeme',
+        PASSWORD: this.runtimeConfig.codeServerPassword,
+        SUDO_PASSWORD: this.runtimeConfig.codeServerPassword,
+        SESSION_DATA_PROFILE: session.dataProfile,
+        SESSION_DATA_PROFILE_VALIDATED: String(session.dataProfileValidated),
         SERVICE_URL: 'https://open-vsx.org/vscode/gallery',
         ITEM_URL: 'https://open-vsx.org/vscode/item',
         CS_DISABLE_FILE_DOWNLOADS: 'false',
@@ -333,16 +1382,23 @@ class SessionManager {
   private async persistSession(session: SessionContext): Promise<void> {
     try {
       await this.db.query(
-        `INSERT INTO sessions (session_id, user_id, username, email, container_id, container_name, 
+        `INSERT INTO sessions (session_id, user_id, username, email, data_profile, data_profile_validated, queue_lane, queue_reason, queue_position, queue_enqueued_at, queue_estimated_wait_seconds, container_id, container_name, 
          container_port, created_at, expires_at, status, last_activity, quotas, base_image_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
          ON CONFLICT (session_id) DO UPDATE SET
-         status = $10, last_activity = $11, container_id = $5`,
+         status = $17, last_activity = $18, container_id = $12, data_profile = $5, data_profile_validated = $6, queue_lane = $7, queue_reason = $8, queue_position = $9, queue_enqueued_at = $10, queue_estimated_wait_seconds = $11, quotas = $19, base_image_id = $20, expires_at = $16`,
         [
           session.sessionId,
           session.userId,
           session.username,
           session.email,
+          session.dataProfile,
+          session.dataProfileValidated,
+          session.queueLane ?? DEFAULT_SESSION_QUEUE_LANE,
+          session.queueReason ?? null,
+          session.queuePosition ?? null,
+          session.queueEnqueuedAt ?? null,
+          session.queueEstimatedWaitSeconds ?? null,
           session.containerId || null,
           session.containerName,
           session.containerPort,
@@ -360,11 +1416,20 @@ class SessionManager {
   }
 
   private dbRowToSession(row: any): SessionContext {
+    const status = this.normalizeStatus(row.status);
     return {
       sessionId: row.session_id,
       userId: row.user_id,
+      teamId: this.resolveTeamId(row.email),
       username: row.username,
       email: row.email,
+      dataProfile: normalizeSessionDataProfile(row.data_profile) ?? DEFAULT_SESSION_DATA_PROFILE,
+      dataProfileValidated: row.data_profile_validated ?? true,
+      queueLane: normalizeSessionQueueLane(row.queue_lane),
+      queueReason: row.queue_reason ?? undefined,
+      queuePosition: row.queue_position ?? undefined,
+      queueEnqueuedAt: row.queue_enqueued_at ? new Date(row.queue_enqueued_at) : undefined,
+      queueEstimatedWaitSeconds: row.queue_estimated_wait_seconds ?? undefined,
       containerName: row.container_name,
       containerId: row.container_id,
       containerPort: row.container_port,
@@ -372,8 +1437,9 @@ class SessionManager {
       createdAt: new Date(row.created_at),
       expiresAt: new Date(row.expires_at),
       quotas: row.quotas || {},
-      status: row.status as SessionContext['status'],
-      lastActivity: new Date(row.last_activity)
+      status,
+      lastActivity: new Date(row.last_activity),
+      auditTrail: [],
     };
   }
 }
@@ -383,10 +1449,7 @@ class SessionManager {
 // ────────────────────────────────────────────────────────────────────────────
 
 const app = express();
-const manager = new SessionManager(
-  process.env.DOCKER_SOCKET || 'unix:///var/run/docker.sock',
-  process.env.DATABASE_URL || 'postgres://localhost/code-server'
-);
+const manager = new SessionManager(runtimeConfig);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -395,28 +1458,60 @@ app.use(cookieParser());
 // Authentication Middleware (Phase 2 Integration)
 // ────────────────────────────────────────────────────────────────────────────
 
-interface AuthUser {
-  userId: string;
-  username: string;
-  email: string;
-}
+type AuthUser = SessionBrokerPrincipal;
 
-type BrokerRequest = Request & { authUser?: AuthUser };
+type BrokerRequest = Request & { authUser?: AuthUser; correlationId?: string };
+
+const authCallbackSchema = Joi.object({
+  email: Joi.string().email().required(),
+  username: Joi.string().trim().min(1).max(128).required()
+});
+
+const sessionIdSchema = Joi.string().uuid().required();
+
+const userIdSchema = Joi.string().trim().min(1).max(128).required();
 
 const getAuthUser = (req: Request): AuthUser | null => {
   // Check for X-Auth-Request headers set by oauth2-proxy
   const email = req.headers['x-auth-request-email'] as string;
   const user = req.headers['x-auth-request-user'] as string;
+  const preferredUsername = (req.headers['x-auth-request-preferred-username'] as string) || user;
+  const rawGroups = req.headers['x-auth-request-groups'];
 
   if (!email || !user) {
     return null;
   }
 
-  return {
+  return buildSessionBrokerPrincipal({
     userId: user || email.split('@')[0],
-    username: user || email.split('@')[0],
-    email: email
-  };
+    username: preferredUsername || email.split('@')[0],
+    email,
+    groups: Array.isArray(rawGroups) ? rawGroups.join(',') : rawGroups,
+  }, {
+    adminGroups: runtimeConfig.adminGroups,
+    operatorGroups: runtimeConfig.operatorGroups,
+    approverGroups: runtimeConfig.approverGroups,
+    auditorGroups: runtimeConfig.auditorGroups,
+    breakGlassGroups: runtimeConfig.breakGlassGroups,
+  });
+};
+
+const requireAuthUser = (req: Request, res: Response): AuthUser | null => {
+  const authUser = (req as BrokerRequest).authUser;
+
+  if (!authUser) {
+    res.status(401).json({ error: 'Authentication required' });
+    return null;
+  }
+
+  return authUser;
+};
+
+const denyLifecycleAction = (res: Response, decision: { statusCode: number; reason: string; policyCode: string }): void => {
+  res.status(decision.statusCode).json({
+    error: decision.reason,
+    policyCode: decision.policyCode,
+  });
 };
 
 // Middleware: Check auth and extract user info
@@ -430,7 +1525,24 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   if (authUser) {
     (req as BrokerRequest).authUser = authUser;
   }
+
+  const rawCorrelationId = req.headers['x-correlation-id'];
+  const correlationId = Array.isArray(rawCorrelationId) ? rawCorrelationId[0] : rawCorrelationId;
+  (req as BrokerRequest).correlationId = ensureCorrelationId(correlationId);
   next();
+});
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path === '/health' || req.path.startsWith('/oauth2') || req.path === '/ping') {
+    return next();
+  }
+
+  const authUser = (req as BrokerRequest).authUser;
+  if (!authUser) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  return next();
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -461,6 +1573,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       logEntry.sessionId = sessionId;
     }
 
+    const correlationId = (req as BrokerRequest).correlationId;
+    if (correlationId) {
+      logEntry.correlationId = correlationId;
+    }
+
     // Log different levels based on status code
     if (res.statusCode >= 500) {
       logger.error('Activity: Server Error', logEntry);
@@ -482,11 +1599,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
  * Create new isolated session for authenticated user
  */
 app.post('/sessions', async (req: Request, res: Response) => {
+  const authUser = requireAuthUser(req, res);
+  if (!authUser) {
+    return;
+  }
+
   const schema = Joi.object({
     userId: Joi.string().uuid().required(),
     username: Joi.string().alphanum().min(3).max(32).required(),
     email: Joi.string().email().required(),
-    ttlSeconds: Joi.number().min(3600).max(86400).default(28800)
+    ttlSeconds: Joi.number().min(3600).max(86400).default(28800),
+    teamId: Joi.string().trim().min(1).max(128).optional(),
+    dataProfile: Joi.string().valid(...APPROVED_SESSION_DATA_PROFILES).required(),
+    priorityLane: Joi.string().valid('fast', 'standard').default('standard'),
   });
 
   const { error, value } = schema.validate(req.body);
@@ -495,22 +1620,90 @@ app.post('/sessions', async (req: Request, res: Response) => {
   }
 
   try {
-    const session = await manager.createSession(
-      value.userId,
-      value.username,
-      value.email,
-      value.ttlSeconds
+    const targetUserId = value.userId === authUser.userId ? authUser.userId : value.userId;
+    const launchDecision = authorizeSessionLaunch(authUser, targetUserId);
+
+    if (!launchDecision.allowed) {
+      return denyLifecycleAction(res, launchDecision);
+    }
+
+    const effectiveUsername = targetUserId === authUser.userId ? authUser.username : value.username;
+    const effectiveEmail = targetUserId === authUser.userId ? authUser.email : value.email;
+    const correlationId = (req as BrokerRequest).correlationId;
+    const session = await manager.launchSession(
+      targetUserId,
+      effectiveUsername,
+      effectiveEmail,
+      value.ttlSeconds,
+      value.teamId,
+      correlationId,
+      value.dataProfile,
+      value.priorityLane
     );
-    res.status(201).json({
+    res.status(session.status === 'queued' ? 202 : 201).json({
       sessionId: session.sessionId,
       containerPort: session.containerPort,
       containerName: session.containerName,
       url: `http://localhost:${session.containerPort}`,
-      expiresAt: session.expiresAt
+      expiresAt: session.expiresAt,
+      status: session.status,
+      teamId: session.teamId,
+      dataProfile: session.dataProfile,
+      dataProfileValidated: session.dataProfileValidated,
+      queue: session.status === 'queued' ? {
+        lane: session.queueLane ?? DEFAULT_SESSION_QUEUE_LANE,
+        position: session.queuePosition ?? null,
+        estimatedWaitSeconds: session.queueEstimatedWaitSeconds ?? null,
+        reason: session.queueReason ?? null,
+        enqueuedAt: session.queueEnqueuedAt ?? null,
+      } : null,
     });
   } catch (error) {
+    if (error instanceof SessionPolicyError) {
+      logger.warn('Session launch denied by policy', {
+        policyCode: error.policyCode,
+        message: error.message,
+        userId: value.userId,
+        email: value.email,
+      });
+
+      return res.status(error.statusCode).json({
+        error: error.message,
+        policyCode: error.policyCode,
+      });
+    }
+
     logger.error('Session creation API error', { error: String(error) });
     res.status(500).json({ error: 'Failed to create session' });
+  }
+});
+
+/**
+ * GET /usage/summary
+ * Provide usage telemetry for dashboards and FinOps review.
+ */
+app.get('/usage/summary', async (req: Request, res: Response) => {
+  try {
+    const requestedWindow = typeof req.query.windowHours === 'string' ? Number.parseInt(req.query.windowHours, 10) : runtimeConfig.sessionUsageWindowHours;
+
+    if (!Number.isInteger(requestedWindow) || requestedWindow < 1) {
+      return res.status(400).json({ error: 'Invalid windowHours' });
+    }
+
+    const teams = await manager.getUsageSummary(requestedWindow);
+    res.json({
+      windowHours: requestedWindow,
+      policy: {
+        maxConcurrentPerUser: runtimeConfig.sessionMaxConcurrentPerUser,
+        maxConcurrentPerTeam: runtimeConfig.sessionMaxConcurrentPerTeam,
+        maxRuntimeSeconds: runtimeConfig.sessionMaxRuntimeSeconds,
+        maxInactivitySeconds: runtimeConfig.sessionMaxInactivitySeconds,
+      },
+      teams,
+    });
+  } catch (error) {
+    logger.error('Usage summary error', { error: String(error) });
+    res.status(500).json({ error: 'Failed to retrieve usage summary' });
   }
 });
 
@@ -521,22 +1714,42 @@ app.post('/sessions', async (req: Request, res: Response) => {
  */
 app.post('/oauth2/callback', async (req: Request, res: Response) => {
   try {
-    // Extract user info from oauth2-proxy headers (should be set by oauth2-proxy on successful auth)
-    const email = req.headers['x-auth-request-email'] as string;
-    const username = req.headers['x-auth-request-user'] as string;
+    // Extract and validate user info from oauth2-proxy headers.
+    const authUser = getAuthUser(req);
 
-    if (!email || !username) {
-      logger.warn('oauth2 callback missing auth headers');
+    if (!authUser) {
+      logger.warn('oauth2 callback missing auth identity');
+      return res.status(400).json({ error: 'Missing authentication headers' });
+    }
+
+    (req as BrokerRequest).authUser = authUser;
+
+    const { error, value } = authCallbackSchema.validate({
+      email: req.headers['x-auth-request-email'],
+      username: req.headers['x-auth-request-user']
+    });
+
+    if (error) {
+      logger.warn('oauth2 callback validation failed', { error: error.message });
       return res.status(400).json({ error: 'Missing authentication headers' });
     }
 
     // Create session for the newly authenticated user
-    const userId = username || email.split('@')[0];
+    const userId = authUser.userId;
+    const correlationId = (req as BrokerRequest).correlationId;
     let session = await manager.getUserActiveSession(userId);
 
     if (!session) {
-      logger.info('Creating session on oauth2 callback', { userId, email });
-      session = await manager.createSession(userId, username, email, 86400);
+      logger.info('Creating session on oauth2 callback', { userId, email: authUser.email });
+      session = await manager.createSession(
+        userId,
+        authUser.username,
+        authUser.email,
+        86400,
+        undefined,
+        correlationId,
+        DEFAULT_SESSION_DATA_PROFILE,
+      );
     } else {
       logger.info('Session already exists for user', { userId, sessionId: session.sessionId });
     }
@@ -544,7 +1757,23 @@ app.post('/oauth2/callback', async (req: Request, res: Response) => {
     res.json({
       sessionId: session.sessionId,
       containerPort: session.containerPort,
-      url: `http://localhost:${session.containerPort}`
+      url: evaluateSessionPublication(session.status, runtimeConfig.sessionApprovalRequired).allowed
+        ? `http://localhost:${session.containerPort}`
+        : null,
+      status: session.status,
+      dataProfile: session.dataProfile,
+      dataProfileValidated: session.dataProfileValidated,
+      queue: session.status === 'queued' ? {
+        lane: session.queueLane ?? DEFAULT_SESSION_QUEUE_LANE,
+        position: session.queuePosition ?? null,
+        estimatedWaitSeconds: session.queueEstimatedWaitSeconds ?? null,
+        reason: session.queueReason ?? null,
+        enqueuedAt: session.queueEnqueuedAt ?? null,
+      } : null,
+      approval: {
+        required: runtimeConfig.sessionApprovalRequired,
+        state: isSessionApprovalPending(session.status, runtimeConfig.sessionApprovalRequired) ? 'pending' : 'approved',
+      },
     });
   } catch (error) {
     logger.error('OAuth2 callback error', { error: String(error) });
@@ -559,12 +1788,33 @@ app.post('/oauth2/callback', async (req: Request, res: Response) => {
  */
 app.post('/oauth2/logout', async (req: Request, res: Response) => {
   try {
+    const authUser = (req as BrokerRequest).authUser;
     const rawSessionId = req.body?.sessionId ?? req.headers['x-session-id'];
     const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
     
+    const { error } = sessionIdSchema.validate(sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Missing session ID' });
+    }
+
     if (sessionId) {
+      const session = await manager.getSession(sessionId);
+
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const terminationDecision = authorizeSessionTermination(authUser, session.userId);
+      if (!terminationDecision.allowed) {
+        return denyLifecycleAction(res, terminationDecision);
+      }
+
       logger.info('Terminating session on logout', { sessionId });
-      await manager.terminateSession(sessionId);
+      await manager.terminateSession(sessionId, (req as BrokerRequest).correlationId);
     }
 
     res.status(204).send();
@@ -580,22 +1830,180 @@ app.post('/oauth2/logout', async (req: Request, res: Response) => {
  */
 app.get('/sessions/:sessionId', async (req: Request, res: Response) => {
   try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
     const session = await manager.getSession(req.params.sessionId);
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
     }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const viewDecision = authorizeSessionView(authUser, session.userId);
+    if (!viewDecision.allowed) {
+      return denyLifecycleAction(res, viewDecision);
+    }
+
     res.json({
       sessionId: session.sessionId,
       status: session.status,
       containerPort: session.containerPort,
       containerName: session.containerName,
-      url: `http://localhost:${session.containerPort}`,
+      url: evaluateSessionPublication(session.status, runtimeConfig.sessionApprovalRequired).allowed
+        ? `http://localhost:${session.containerPort}`
+        : null,
       expiresAt: session.expiresAt,
       lastActivity: session.lastActivity,
-      quotas: session.quotas
+      quotas: session.quotas,
+      dataProfile: session.dataProfile,
+      dataProfileValidated: session.dataProfileValidated,
+      queue: session.status === 'queued' ? {
+        lane: session.queueLane ?? DEFAULT_SESSION_QUEUE_LANE,
+        position: session.queuePosition ?? null,
+        estimatedWaitSeconds: session.queueEstimatedWaitSeconds ?? null,
+        reason: session.queueReason ?? null,
+        enqueuedAt: session.queueEnqueuedAt ?? null,
+      } : null,
+      lifecycle: {
+        state: session.status,
+        active: ACTIVE_SESSION_STATES.includes(session.status),
+        terminal: TERMINAL_SESSION_STATES.includes(session.status),
+        approval: isSessionApprovalPending(session.status, runtimeConfig.sessionApprovalRequired) ? 'pending' : 'approved',
+      }
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve session' });
+  }
+});
+
+/**
+ * GET /sessions/:sessionId/status
+ * Retrieve session lifecycle status
+ */
+app.get('/sessions/:sessionId/status', async (req: Request, res: Response) => {
+  try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const viewDecision = authorizeSessionView(authUser, session.userId);
+    if (!viewDecision.allowed) {
+      return denyLifecycleAction(res, viewDecision);
+    }
+
+    res.json({
+      sessionId: session.sessionId,
+      state: session.status,
+      active: ACTIVE_SESSION_STATES.includes(session.status),
+      terminal: TERMINAL_SESSION_STATES.includes(session.status),
+      containerPort: session.containerPort,
+      containerName: session.containerName,
+      expiresAt: session.expiresAt,
+      lastActivity: session.lastActivity,
+      dataProfile: session.dataProfile,
+      dataProfileValidated: session.dataProfileValidated,
+      queue: session.status === 'queued' ? {
+        lane: session.queueLane ?? DEFAULT_SESSION_QUEUE_LANE,
+        position: session.queuePosition ?? null,
+        estimatedWaitSeconds: session.queueEstimatedWaitSeconds ?? null,
+        reason: session.queueReason ?? null,
+        enqueuedAt: session.queueEnqueuedAt ?? null,
+      } : null,
+      nextActions: session.status === 'destroyed' ? [] : ['cancel', 'destroy'],
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve session status' });
+  }
+});
+
+/**
+ * POST /sessions/:sessionId/cancel
+ * Request deterministic teardown for a session
+ */
+app.post('/sessions/:sessionId/cancel', async (req: Request, res: Response) => {
+  try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const terminationDecision = authorizeSessionTermination(authUser, session.userId);
+    if (!terminationDecision.allowed) {
+      return denyLifecycleAction(res, terminationDecision);
+    }
+
+    await manager.terminateSession(req.params.sessionId, (req as BrokerRequest).correlationId);
+    res.status(202).json({
+      sessionId: req.params.sessionId,
+      state: 'destroyed',
+      message: 'Session teardown requested',
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to cancel session' });
+  }
+});
+
+/**
+ * POST /sessions/:sessionId/destroy
+ * Force session destruction (alias for cancel/destroy contract)
+ */
+app.post('/sessions/:sessionId/destroy', async (req: Request, res: Response) => {
+  try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const terminationDecision = authorizeSessionTermination(authUser, session.userId);
+    if (!terminationDecision.allowed) {
+      return denyLifecycleAction(res, terminationDecision);
+    }
+
+    await manager.terminateSession(req.params.sessionId, (req as BrokerRequest).correlationId);
+    res.status(202).json({
+      sessionId: req.params.sessionId,
+      state: 'destroyed',
+      message: 'Session destruction requested',
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to destroy session' });
   }
 });
 
@@ -605,7 +2013,27 @@ app.get('/sessions/:sessionId', async (req: Request, res: Response) => {
  */
 app.delete('/sessions/:sessionId', async (req: Request, res: Response) => {
   try {
-    await manager.terminateSession(req.params.sessionId);
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const terminationDecision = authorizeSessionTermination(authUser, session.userId);
+    if (!terminationDecision.allowed) {
+      return denyLifecycleAction(res, terminationDecision);
+    }
+
+    await manager.terminateSession(req.params.sessionId, (req as BrokerRequest).correlationId);
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to terminate session' });
@@ -618,6 +2046,21 @@ app.delete('/sessions/:sessionId', async (req: Request, res: Response) => {
  */
 app.get('/users/:userId/sessions', async (req: Request, res: Response) => {
   try {
+    const { error } = userIdSchema.validate(req.params.userId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const viewDecision = authorizeSessionView(authUser, req.params.userId);
+    if (!viewDecision.allowed) {
+      return denyLifecycleAction(res, viewDecision);
+    }
+
     const sessions = await manager.listUserSessions(req.params.userId);
     res.json({
       userId: req.params.userId,
@@ -627,7 +2070,9 @@ app.get('/users/:userId/sessions', async (req: Request, res: Response) => {
         containerPort: s.containerPort,
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,
-        lastActivity: s.lastActivity
+        lastActivity: s.lastActivity,
+        dataProfile: s.dataProfile,
+        dataProfileValidated: s.dataProfileValidated,
       }))
     });
   } catch (error) {
@@ -641,10 +2086,218 @@ app.get('/users/:userId/sessions', async (req: Request, res: Response) => {
  */
 app.put('/sessions/:sessionId/activity', async (req: Request, res: Response) => {
   try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const viewDecision = authorizeSessionView(authUser, session.userId);
+    if (!viewDecision.allowed) {
+      return denyLifecycleAction(res, viewDecision);
+    }
+
     await manager.updateActivity(req.params.sessionId);
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to update activity' });
+  }
+});
+
+/**
+ * GET /sessions/:sessionId/events
+ * Retrieve the audit trail for a session lifecycle.
+ */
+app.get('/sessions/:sessionId/events', async (req: Request, res: Response) => {
+  try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const evidenceDecision = authorizeSessionView(authUser, session.userId);
+    if (!evidenceDecision.allowed) {
+      return denyLifecycleAction(res, evidenceDecision);
+    }
+
+    res.json({
+      sessionId: session.sessionId,
+      events: manager.getSessionEvents(req.params.sessionId),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve session audit trail' });
+  }
+});
+
+/**
+ * GET /sessions/:sessionId/deletion
+ * Retrieve the deletion manifest for a session.
+ */
+app.get('/sessions/:sessionId/deletion', async (req: Request, res: Response) => {
+  try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const manifest = manager.getDeletionManifest(req.params.sessionId);
+    if (!manifest) {
+      return res.status(404).json({ error: 'Deletion manifest not found' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const evidenceDecision = authorizeSessionView(authUser, session.userId);
+    if (!evidenceDecision.allowed) {
+      return denyLifecycleAction(res, evidenceDecision);
+    }
+
+    res.json(manifest);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve deletion manifest' });
+  }
+});
+
+/**
+ * GET /sessions/:sessionId/approval
+ * Retrieve approval and audit status for a session.
+ */
+app.get('/sessions/:sessionId/approval', async (req: Request, res: Response) => {
+  try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const evidenceDecision = authorizeSessionView(authUser, session.userId);
+    if (!evidenceDecision.allowed) {
+      return denyLifecycleAction(res, evidenceDecision);
+    }
+
+    const integrity = manager.verifyAuditIntegrity(req.params.sessionId);
+    const publication = evaluateSessionPublication(session.status, runtimeConfig.sessionApprovalRequired);
+
+    res.json({
+      sessionId: session.sessionId,
+      approvalRequired: runtimeConfig.sessionApprovalRequired,
+      approvalPending: isSessionApprovalPending(session.status, runtimeConfig.sessionApprovalRequired),
+      publicationAllowed: publication.allowed,
+      publicationPolicyCode: publication.policyCode,
+      policyMatrix: buildSessionBrokerPolicyMatrix(),
+      audit: integrity,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve approval state' });
+  }
+});
+
+/**
+ * POST /sessions/:sessionId/approve
+ * Approve publication of a pending session.
+ */
+app.post('/sessions/:sessionId/approve', async (req: Request, res: Response) => {
+  try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const approvalDecision = authorizeSessionApproval(authUser);
+    if (!approvalDecision.allowed) {
+      return denyLifecycleAction(res, approvalDecision);
+    }
+
+    const session = await manager.approveSession(req.params.sessionId, authUser, (req as BrokerRequest).correlationId);
+    res.status(200).json({
+      sessionId: session.sessionId,
+      status: session.status,
+      approval: 'approved',
+      publication: evaluateSessionPublication(session.status, runtimeConfig.sessionApprovalRequired),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to approve session' });
+  }
+});
+
+/**
+ * POST /sessions/:sessionId/break-glass
+ * Emergency termination path with explicit reason code.
+ */
+app.post('/sessions/:sessionId/break-glass', async (req: Request, res: Response) => {
+  try {
+    const { error } = sessionIdSchema.validate(req.params.sessionId);
+    if (error) {
+      return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    const session = await manager.getSession(req.params.sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const authUser = requireAuthUser(req, res);
+    if (!authUser) {
+      return;
+    }
+
+    const reasonCode = typeof req.body?.reasonCode === 'string' ? req.body.reasonCode : '';
+    const breakGlassDecision = authorizeBreakGlassTermination(authUser, session.userId, reasonCode);
+    if (!breakGlassDecision.allowed) {
+      return denyLifecycleAction(res, breakGlassDecision);
+    }
+
+    await manager.terminateSession(req.params.sessionId, (req as BrokerRequest).correlationId);
+    res.status(202).json({
+      sessionId: req.params.sessionId,
+      state: 'destroyed',
+      policyCode: 'break_glass_allowed',
+      reasonCode,
+      message: 'Break-glass termination requested',
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to execute break-glass termination' });
   }
 });
 
@@ -667,8 +2320,10 @@ app.all('*', async (req: Request, res: Response) => {
     // Redirect unauthenticated requests to oauth2-proxy
     if (!authUser) {
       logger.warn('Unauthenticated request', { path: req.path, ip: req.ip });
-      // oauth2-proxy will handle the redirect to /oauth2/start
-      return res.redirect('/oauth2/start');
+      const forwardedProto = (req.get('x-forwarded-proto') || req.protocol).split(',')[0].trim();
+      const returnUrl = `${forwardedProto}://${req.get('host')}${req.originalUrl}`;
+      // Preserve the original destination so oauth2-proxy can return users to the requested page.
+      return res.redirect(`/oauth2/start?rd=${encodeURIComponent(returnUrl)}`);
     }
 
     logger.info('Authenticated request', {
@@ -687,8 +2342,22 @@ app.all('*', async (req: Request, res: Response) => {
         authUser.userId,
         authUser.username,
         authUser.email,
-        86400 // 24 hour TTL
+        86400, // 24 hour TTL
+        undefined,
+        (req as BrokerRequest).correlationId,
+        DEFAULT_SESSION_DATA_PROFILE,
       );
+    }
+
+    const publicationDecision = evaluateSessionPublication(session.status, runtimeConfig.sessionApprovalRequired);
+    if (!publicationDecision.allowed) {
+      return res.status(publicationDecision.statusCode).json({
+        error: publicationDecision.reason,
+        policyCode: publicationDecision.policyCode,
+        sessionId: session.sessionId,
+        approvalRequired: runtimeConfig.sessionApprovalRequired,
+        approvalPending: isSessionApprovalPending(session.status, runtimeConfig.sessionApprovalRequired),
+      });
     }
 
     // Update last activity
@@ -749,4 +2418,22 @@ app.all('*', async (req: Request, res: Response) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   logger.info(`Session broker listening on port ${PORT}`);
+  void manager.reapExpiredSessions().catch((error) => {
+    logger.error('Initial stale-session sweep failed', { error: String(error) });
+  });
+  void manager.sweepResidualSessionStorage().catch((error) => {
+    logger.error('Initial residual-storage sweep failed', { error: String(error) });
+  });
+
+  const sweepIntervalMs = Math.max(30000, Math.floor(runtimeConfig.sessionMaxInactivitySeconds * 250));
+  const sweepTimer = setInterval(() => {
+    void manager.reapExpiredSessions().catch((error) => {
+      logger.error('Scheduled stale-session sweep failed', { error: String(error) });
+    });
+    void manager.sweepResidualSessionStorage().catch((error) => {
+      logger.error('Scheduled residual-storage sweep failed', { error: String(error) });
+    });
+  }, sweepIntervalMs);
+
+  sweepTimer.unref?.();
 });

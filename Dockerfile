@@ -2,7 +2,7 @@
 # @description CI pre-commit runner — linting, shellcheck, and governance hooks
 # @module      ci-runner
 
-FROM ubuntu:22.04
+FROM ubuntu:22.04@sha256:14be402d3f1eeeb5e7da73d3260322c68e7b51c88388f53e88eb21d6450bd520
 
 LABEL org.opencontainers.image.title="code-server-enterprise-ci-runner"
 LABEL org.opencontainers.image.description="CI pre-commit runner for linting, shellcheck, and governance hooks"

@@ -16,7 +16,18 @@ import {
   TtlCheckResult,
   WorkspaceCascadeCleanupEvent,
   WorkspaceLifecycleStats,
+  WorkspaceDeletionProof,
+  WorkspaceResidualAudit,
+  WorkspaceHardDeleteResult,
+  WorkspaceEvidencePack,
+  WorkspaceEvidenceManifest,
+  WorkspaceEvidenceFingerprint,
+  WorkspaceHeadlessTestOutcome,
+  WorkspaceEvidenceExport,
+  WorkspaceEvidenceVerificationResult,
 } from "./types"
+
+import * as crypto from "crypto"
 
 export {
   WorkspaceLifecycleState,
@@ -30,6 +41,15 @@ export {
   TtlCheckResult,
   WorkspaceCascadeCleanupEvent,
   WorkspaceLifecycleStats,
+  WorkspaceDeletionProof,
+  WorkspaceResidualAudit,
+  WorkspaceHardDeleteResult,
+  WorkspaceEvidencePack,
+  WorkspaceEvidenceManifest,
+  WorkspaceEvidenceFingerprint,
+  WorkspaceHeadlessTestOutcome,
+  WorkspaceEvidenceExport,
+  WorkspaceEvidenceVerificationResult,
 } from "./types"
 
 /**
@@ -50,6 +70,8 @@ export {
 export class EphemeralWorkspaceLifecycleManager {
   private workspaces: Map<string, WorkspaceLifecycleContext>
   private snapshots: Map<string, WorkspaceSnapshot>
+  private deletionProofs: Map<string, WorkspaceDeletionProof>
+  private evidencePacks: Map<string, WorkspaceEvidencePack>
   private config: WorkspaceLifecycleConfig
   private monitoringInterval?: NodeJS.Timeout
   private cascadeCleanupCallbacks: Set<(event: WorkspaceCascadeCleanupEvent) => Promise<void>>
@@ -58,7 +80,153 @@ export class EphemeralWorkspaceLifecycleManager {
     this.config = config
     this.workspaces = new Map()
     this.snapshots = new Map()
+    this.deletionProofs = new Map()
+    this.evidencePacks = new Map()
     this.cascadeCleanupCallbacks = new Set()
+  }
+
+  private computeDeletionChecksum(payload: Record<string, any>): string {
+    return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex")
+  }
+
+  private computeEvidenceChecksum(payload: Record<string, any>): string {
+    return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex")
+  }
+
+  private computeManifestSignature(payload: {
+    schemaVersion: string
+    sessionId: string
+    workspaceId: string
+    generatedAt: number
+    manifestChecksum: string
+  }): string {
+    return crypto
+      .createHash("sha256")
+      .update(`${payload.schemaVersion}:${payload.sessionId}:${payload.workspaceId}:${payload.generatedAt}:${payload.manifestChecksum}:${this.config.evidenceSigningSalt}`)
+      .digest("hex")
+  }
+
+  private createDefaultFingerprintSet(context: WorkspaceLifecycleContext): WorkspaceEvidenceFingerprint[] {
+    return [
+      { key: "container_name", value: context.containerName },
+      { key: "container_port", value: String(context.containerPort) },
+      { key: "user_id", value: context.userId },
+      { key: "workspace_state", value: context.state },
+    ]
+  }
+
+  private createDefaultTestOutcome(teardownOutcome: "success" | "failed"): WorkspaceHeadlessTestOutcome[] {
+    return [
+      {
+        suite: "ephemeral-lifecycle-teardown",
+        status: teardownOutcome === "success" ? "passed" : "failed",
+        durationSeconds: 0,
+        artifactPaths: ["artifacts/ephemeral-workspace-evidence"],
+      },
+    ]
+  }
+
+  private buildEvidenceManifest(params: {
+    schemaVersion: string
+    sessionId: string
+    workspaceId: string
+    generatedAt: number
+    teardownOutcome: "success" | "failed"
+    policyVersion: string
+    lifecycleEvents: WorkspaceLifecycleEvent[]
+    testOutcomes: WorkspaceHeadlessTestOutcome[]
+    fingerprints: WorkspaceEvidenceFingerprint[]
+    deletionProof?: WorkspaceDeletionProof
+  }): WorkspaceEvidenceManifest {
+    const eventLogChecksum = this.computeEvidenceChecksum({ lifecycleEvents: params.lifecycleEvents })
+    const testOutcomeChecksum = this.computeEvidenceChecksum({ testOutcomes: params.testOutcomes })
+    const fingerprintChecksum = this.computeEvidenceChecksum({ fingerprints: params.fingerprints })
+    const deletionProofChecksum = this.computeEvidenceChecksum({ deletionProof: params.deletionProof || null })
+
+    const manifestChecksum = this.computeEvidenceChecksum({
+      schemaVersion: params.schemaVersion,
+      sessionId: params.sessionId,
+      workspaceId: params.workspaceId,
+      generatedAt: params.generatedAt,
+      teardownOutcome: params.teardownOutcome,
+      policyVersion: params.policyVersion,
+      lifecycleEventCount: params.lifecycleEvents.length,
+      eventLogChecksum,
+      testOutcomeChecksum,
+      fingerprintChecksum,
+      deletionProofChecksum,
+    })
+
+    return {
+      schemaVersion: params.schemaVersion,
+      sessionId: params.sessionId,
+      workspaceId: params.workspaceId,
+      generatedAt: params.generatedAt,
+      teardownOutcome: params.teardownOutcome,
+      policyVersion: params.policyVersion,
+      lifecycleEventCount: params.lifecycleEvents.length,
+      checksums: {
+        eventLog: eventLogChecksum,
+        testOutcomes: testOutcomeChecksum,
+        fingerprints: fingerprintChecksum,
+        deletionProof: deletionProofChecksum,
+        manifest: manifestChecksum,
+      },
+      manifestSignature: this.computeManifestSignature({
+        schemaVersion: params.schemaVersion,
+        sessionId: params.sessionId,
+        workspaceId: params.workspaceId,
+        generatedAt: params.generatedAt,
+        manifestChecksum,
+      }),
+    }
+  }
+
+  private emitEvidencePack(params: {
+    context: WorkspaceLifecycleContext
+    teardownOutcome: "success" | "failed"
+    deletionProof?: WorkspaceDeletionProof
+    failureReason?: string
+    policyVersion?: string
+    testOutcomes?: WorkspaceHeadlessTestOutcome[]
+    fingerprints?: WorkspaceEvidenceFingerprint[]
+  }): WorkspaceEvidencePack {
+    const generatedAt = Date.now() / 1000
+    const policyVersion = params.policyVersion || this.config.evidenceSchemaVersion
+    const testOutcomes = params.testOutcomes || this.createDefaultTestOutcome(params.teardownOutcome)
+    const fingerprints = params.fingerprints || this.createDefaultFingerprintSet(params.context)
+
+    const lifecycleEvents = [...params.context.eventLog]
+    const manifest = this.buildEvidenceManifest({
+      schemaVersion: this.config.evidenceSchemaVersion,
+      sessionId: params.context.sessionId,
+      workspaceId: params.context.workspaceId,
+      generatedAt,
+      teardownOutcome: params.teardownOutcome,
+      policyVersion,
+      lifecycleEvents,
+      testOutcomes,
+      fingerprints,
+      deletionProof: params.deletionProof,
+    })
+
+    const evidencePack: WorkspaceEvidencePack = {
+      sessionId: params.context.sessionId,
+      workspaceId: params.context.workspaceId,
+      createdAt: generatedAt,
+      expiresAt: generatedAt + this.config.evidenceRetentionDays * 86400,
+      teardownOutcome: params.teardownOutcome,
+      policyVersion,
+      lifecycleEvents,
+      testOutcomes,
+      fingerprints,
+      deletionProof: params.deletionProof,
+      failureReason: params.failureReason,
+      manifest,
+    }
+
+    this.evidencePacks.set(evidencePack.sessionId, evidencePack)
+    return evidencePack
   }
 
   /**
@@ -470,7 +638,10 @@ export class EphemeralWorkspaceLifecycleManager {
       // Schedule cleanup
       setTimeout(
         async () => {
-          await this.cleanupWorkspace(workspaceId, "system", correlationId)
+          const cleanupResult = await this.cleanupWorkspace(workspaceId, "system", correlationId)
+          if (cleanupResult.success) {
+            await this.hardDeleteWorkspace(workspaceId, "system", "termination_gc", correlationId)
+          }
         },
         this.config.cleanupDelaySeconds * 1000
       )
@@ -560,7 +731,6 @@ export class EphemeralWorkspaceLifecycleManager {
         correlationId,
       })
 
-      // Keep in map for audit trail (don't delete)
       return {
         success: true,
         operation: "cleanup",
@@ -582,6 +752,238 @@ export class EphemeralWorkspaceLifecycleManager {
         correlationId,
       }
     }
+  }
+
+  /**
+   * Mark a workspace as failed and emit a teardown evidence pack for auditability.
+   */
+  markWorkspaceFailed(
+    workspaceId: string,
+    actor: string,
+    reason: string,
+    correlationId: string
+  ): LifecycleOperationResult {
+    const context = this.workspaces.get(workspaceId)
+    if (!context) {
+      return {
+        success: false,
+        operation: "cleanup",
+        workspaceId,
+        error: "workspace_not_found",
+        correlationId,
+      }
+    }
+
+    const now = Date.now() / 1000
+    context.state = WorkspaceLifecycleState.FAILED
+    context.cleanupError = reason
+
+    this.recordEvent({
+      timestamp: now,
+      eventType: WorkspaceLifecycleEventType.WORKSPACE_FAILED,
+      workspaceId,
+      sessionId: context.sessionId,
+      actor,
+      action: "Workspace marked failed",
+      reason,
+      correlationId,
+    })
+
+    this.emitEvidencePack({
+      context,
+      teardownOutcome: "failed",
+      failureReason: reason,
+    })
+
+    return {
+      success: true,
+      operation: "cleanup",
+      workspaceId,
+      state: context.state,
+      reason,
+      correlationId,
+    }
+  }
+
+  /**
+   * Hard delete a workspace after cleanup and retain only deletion proof.
+   */
+  async hardDeleteWorkspace(
+    workspaceId: string,
+    actor: string,
+    reason: string,
+    correlationId: string
+  ): Promise<WorkspaceHardDeleteResult> {
+    const context = this.workspaces.get(workspaceId)
+    if (!context) {
+      const proof = this.deletionProofs.get(workspaceId)
+      return {
+        success: false,
+        workspaceId,
+        sessionId: proof?.sessionId || "unknown",
+        error: "workspace_not_found",
+        correlationId,
+      }
+    }
+
+    try {
+      if (context.cleanupCompletedAt === undefined) {
+        await this.cleanupWorkspace(workspaceId, actor, correlationId)
+      }
+
+      const deletedAt = Date.now() / 1000
+      const proof: WorkspaceDeletionProof = {
+        workspaceId,
+        sessionId: context.sessionId,
+        actor,
+        reason,
+        deletedAt,
+        correlationId,
+        cleanupCompletedAt: context.cleanupCompletedAt,
+        snapshotIds: [...context.snapshotIds],
+        residualResourcesCleared: context.snapshotIds.length === 0,
+        checksum: this.computeDeletionChecksum({
+          workspaceId,
+          sessionId: context.sessionId,
+          userId: context.userId,
+          containerName: context.containerName,
+          containerPort: context.containerPort,
+          createdAt: context.createdAt,
+          terminatedAt: context.terminatedAt,
+          cleanupCompletedAt: context.cleanupCompletedAt,
+          snapshotIds: context.snapshotIds,
+          eventCount: context.eventLog.length,
+        }),
+      }
+
+      this.deletionProofs.set(context.sessionId, proof)
+      this.recordEvent({
+        timestamp: deletedAt,
+        eventType: WorkspaceLifecycleEventType.WORKSPACE_HARD_DELETED,
+        workspaceId,
+        sessionId: context.sessionId,
+        actor,
+        action: "Hard delete completed",
+        reason,
+        details: {
+          checksum: proof.checksum,
+          snapshotIds: proof.snapshotIds,
+        },
+        correlationId,
+      })
+
+      this.emitEvidencePack({
+        context,
+        teardownOutcome: "success",
+        deletionProof: proof,
+      })
+
+      this.workspaces.delete(workspaceId)
+
+      return {
+        success: true,
+        workspaceId,
+        sessionId: context.sessionId,
+        state: WorkspaceLifecycleState.TERMINATED,
+        proof,
+        correlationId,
+      }
+    } catch (error) {
+      return {
+        success: false,
+        workspaceId,
+        sessionId: context.sessionId,
+        error: String(error),
+        correlationId,
+      }
+    }
+  }
+
+  /**
+   * Retrieve evidence pack by session ID.
+   */
+  getEvidencePackBySessionId(sessionId: string): WorkspaceEvidencePack | undefined {
+    return this.evidencePacks.get(sessionId)
+  }
+
+  /**
+   * Export a session evidence summary for operators and compliance reviewers.
+   */
+  exportEvidenceBySessionId(sessionId: string): WorkspaceEvidenceExport | undefined {
+    const pack = this.evidencePacks.get(sessionId)
+    if (!pack) {
+      return undefined
+    }
+
+    const passed = pack.testOutcomes.filter((outcome) => outcome.status === "passed").length
+    const failed = pack.testOutcomes.filter((outcome) => outcome.status === "failed").length
+    const skipped = pack.testOutcomes.filter((outcome) => outcome.status === "skipped").length
+    const artifactPaths = [...new Set(pack.testOutcomes.flatMap((outcome) => outcome.artifactPaths))]
+
+    return {
+      sessionId: pack.sessionId,
+      workspaceId: pack.workspaceId,
+      teardownOutcome: pack.teardownOutcome,
+      createdAt: pack.createdAt,
+      expiresAt: pack.expiresAt,
+      manifestChecksum: pack.manifest.checksums.manifest,
+      manifestSignature: pack.manifest.manifestSignature,
+      eventCount: pack.lifecycleEvents.length,
+      testOutcomeSummary: {
+        passed,
+        failed,
+        skipped,
+      },
+      artifactPaths,
+    }
+  }
+
+  /**
+   * Verify integrity of an evidence manifest by recalculating checksum and signature.
+   */
+  verifyEvidenceManifest(sessionId: string): WorkspaceEvidenceVerificationResult | undefined {
+    const pack = this.evidencePacks.get(sessionId)
+    if (!pack) {
+      return undefined
+    }
+
+    const rebuilt = this.buildEvidenceManifest({
+      schemaVersion: pack.manifest.schemaVersion,
+      sessionId: pack.sessionId,
+      workspaceId: pack.workspaceId,
+      generatedAt: pack.manifest.generatedAt,
+      teardownOutcome: pack.teardownOutcome,
+      policyVersion: pack.policyVersion,
+      lifecycleEvents: pack.lifecycleEvents,
+      testOutcomes: pack.testOutcomes,
+      fingerprints: pack.fingerprints,
+      deletionProof: pack.deletionProof,
+    })
+
+    return {
+      valid:
+        rebuilt.checksums.manifest === pack.manifest.checksums.manifest &&
+        rebuilt.manifestSignature === pack.manifest.manifestSignature,
+      sessionId,
+      expectedChecksum: pack.manifest.checksums.manifest,
+      actualChecksum: rebuilt.checksums.manifest,
+      expectedSignature: pack.manifest.manifestSignature,
+      actualSignature: rebuilt.manifestSignature,
+    }
+  }
+
+  /**
+   * Purge evidence packs past retention deadline.
+   */
+  enforceEvidenceRetention(nowSeconds = Date.now() / 1000): number {
+    let purgedCount = 0
+    for (const [sessionId, pack] of this.evidencePacks.entries()) {
+      if (pack.expiresAt <= nowSeconds) {
+        this.evidencePacks.delete(sessionId)
+        purgedCount++
+      }
+    }
+    return purgedCount
   }
 
   /**
@@ -648,6 +1050,71 @@ export class EphemeralWorkspaceLifecycleManager {
   }
 
   /**
+   * Reconcile terminated workspaces and force hard deletion when cleanup is complete.
+   */
+  async reconcileHardDeletes(): Promise<WorkspaceHardDeleteResult[]> {
+    const results: WorkspaceHardDeleteResult[] = []
+
+    for (const [workspaceId, context] of this.workspaces.entries()) {
+      if (context.state !== WorkspaceLifecycleState.TERMINATED || !context.cleanupCompletedAt) {
+        continue
+      }
+
+      const proof = this.deletionProofs.get(context.sessionId)
+      if (proof) {
+        continue
+      }
+
+      const result = await this.hardDeleteWorkspace(workspaceId, "system", "hard_delete_reconcile", `reconcile-${Date.now()}`)
+      results.push(result)
+    }
+
+    return results
+  }
+
+  /**
+   * Retrieve deletion proof by session ID.
+   */
+  getDeletionProofBySessionId(sessionId: string): WorkspaceDeletionProof | undefined {
+    return this.deletionProofs.get(sessionId)
+  }
+
+  /**
+   * Audit residual resources for a specific session or all sessions.
+   */
+  auditResidualResources(sessionId?: string): WorkspaceResidualAudit[] {
+    const audits: WorkspaceResidualAudit[] = []
+    const contexts = Array.from(this.workspaces.values()).filter((context) => !sessionId || context.sessionId === sessionId)
+    const proof = sessionId ? this.deletionProofs.get(sessionId) : undefined
+
+    for (const context of contexts) {
+      audits.push({
+        workspaceId: context.workspaceId,
+        sessionId: context.sessionId,
+        residualWorkspacePresent: true,
+        residualSnapshotCount: context.snapshotIds.length,
+        proofRecorded: this.deletionProofs.has(context.sessionId),
+        proofChecksum: this.deletionProofs.get(context.sessionId)?.checksum,
+        lastCleanupCompletedAt: context.cleanupCompletedAt,
+      })
+    }
+
+    if (sessionId && !contexts.some((context) => context.sessionId === sessionId) && proof) {
+      audits.push({
+        workspaceId: proof.workspaceId,
+        sessionId: proof.sessionId,
+        residualWorkspacePresent: false,
+        residualSnapshotCount: 0,
+        proofRecorded: true,
+        proofChecksum: proof.checksum,
+        lastCleanupCompletedAt: proof.cleanupCompletedAt,
+      })
+    }
+
+    return audits
+  }
+
+  /**
    * Start background monitoring loop
    */
   startMonitoring(): void {
@@ -662,6 +1129,12 @@ export class EphemeralWorkspaceLifecycleManager {
 
         // Check for TTL expiry
         await this.checkTtlExpiry()
+
+        // Reconcile any terminated workspaces that still need hard deletion
+        await this.reconcileHardDeletes()
+
+        // Enforce evidence retention for compliance artifacts
+        this.enforceEvidenceRetention()
       } catch (error) {
         console.error(`Monitoring error: ${error}`)
       }
@@ -786,6 +1259,9 @@ export function createEphemeralWorkspaceLifecycleManager(
     monitoringIntervalSeconds: 60,
     emergencyCleanupSloMs: 30000,
     cascadeCleanupAclRevoke: true,
+    evidenceSchemaVersion: "ephemeral-evidence-v1",
+    evidenceRetentionDays: 30,
+    evidenceSigningSalt: "ephemeral-evidence-default-salt",
   }
 
   return new EphemeralWorkspaceLifecycleManager({

@@ -949,3 +949,7 @@ volumes:
 
   appsmith-data:
     driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/appsmith"

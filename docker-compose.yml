@@ -679,6 +679,50 @@ services:
         max-file: "3"
 
   # ────────────────────────────────────────────────────────────────────────────
+  # redis-exporter — Prometheus exporter for Redis and Sentinel metrics
+  # Monitors both Master-Replica Redis instances and Sentinel quorum status
+  # ────────────────────────────────────────────────────────────────────────────
+  redis-exporter:
+    image: oliver006/redis_exporter:latest@sha256:8b58f5a9e6aa7df82d6bb8d7c5c5e1f5c4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9
+    container_name: redis-exporter
+    restart: unless-stopped
+    networks:
+      - net-management
+      - net-data
+    expose:
+      - "9121"
+    environment:
+      # Primary Redis instance
+      REDIS_ADDR: "redis-master:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      # Sentinel configuration
+      REDIS_SENTINEL_ADDR: "redis-sentinel-1:26379,redis-sentinel-arbiter:26379"
+      REDIS_SENTINEL_MASTER: "mymaster"
+      # Metrics configuration
+      NAMESPACE: redis
+      CHECK_KEYS: "session:*,audit:*,deletion:*,replay:*"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9121/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - redis
+      - redis-sentinel-1
+      - redis-sentinel-arbiter
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "3m"
+        max-file: "2"
+
+  # ────────────────────────────────────────────────────────────────────────────
   # prometheus — Metrics collection and alerting engine
   # ────────────────────────────────────────────────────────────────────────────
   prometheus:

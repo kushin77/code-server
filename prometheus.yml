@@ -98,4 +98,19 @@ scrape_configs:
       - targets: ['session-broker:5000']
         labels:
           instance: session-broker
+
+  # Redis exporter for both Master-Replica and Sentinel metrics (#995)
+  - job_name: 'redis-exporter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          instance: redis-sentinel-exporter
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      # Keep only essential Redis metrics
+      - source_labels: [__name__]
+        regex: 'redis_(info|command_calls|command_duration|connected_clients|evicted_keys|expired_keys|maxmemory|memory|used_memory|keyspace|db|slaves|replication|sentinel|master)'
+        action: keep
     scrape_interval: 30s

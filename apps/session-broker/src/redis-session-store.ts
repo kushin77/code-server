@@ -24,19 +24,22 @@ const SESSION_REDIS_NAMESPACE = process.env.SESSION_REDIS_NAMESPACE || 'session-
 export interface SessionContext {
   sessionId: string;
   userId: string;
-  containerId: string;
-  containerPort: number;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-  expiresAt: Date;
-  teamId?: string;
+  teamId: string;
   username: string;
   email: string;
   dataProfile: string;
+  dataProfileValidated?: boolean;
   provenance?: any;
-  deletionRecord?: any;
-  auditTrail: SessionAuditEvent[];
+  containerName?: string;
+  containerId?: string;
+  containerPort: number;
+  baseImageId?: string;
+  createdAt: Date;
+  expiresAt: Date;
+  quotas?: any;
+  status: string;
+  lastActivity?: Date;
+  auditTrail?: SessionAuditEvent[];
   [key: string]: any;
 }
 
@@ -149,7 +152,7 @@ export class RedisSessionStore {
       const serialized = JSON.stringify({
         ...context,
         createdAt: context.createdAt instanceof Date ? context.createdAt.getTime() : context.createdAt,
-        updatedAt: context.updatedAt instanceof Date ? context.updatedAt.getTime() : context.updatedAt,
+        lastActivity: context.lastActivity instanceof Date ? context.lastActivity.getTime() : context.lastActivity,
         expiresAt: context.expiresAt instanceof Date ? context.expiresAt.getTime() : context.expiresAt,
       });
 
@@ -178,10 +181,10 @@ export class RedisSessionStore {
       if (!data) return null;
 
       const context = JSON.parse(data);
-      // Convert timestamps back to Date objects
-      context.createdAt = new Date(context.createdAt);
-      context.updatedAt = new Date(context.updatedAt);
-      context.expiresAt = new Date(context.expiresAt);
+      // Convert timestamps back to Date objects if they're numbers
+      if (typeof context.createdAt === 'number') context.createdAt = new Date(context.createdAt);
+      if (typeof context.lastActivity === 'number') context.lastActivity = new Date(context.lastActivity);
+      if (typeof context.expiresAt === 'number') context.expiresAt = new Date(context.expiresAt);
 
       return context as SessionContext;
     } catch (error: any) {

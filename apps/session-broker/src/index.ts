@@ -1298,6 +1298,23 @@ class SessionManager {
       return session;
     }
 
+    // Try Redis if enabled
+    if (this.useRedis && this.redisStore) {
+      try {
+        const redisSession = await this.redisStore.getSession(sessionId);
+        if (redisSession) {
+          // Cache in memory for fast subsequent access (cast to proper SessionContext type)
+          const typedSession = redisSession as any as SessionContext;
+          this.sessions.set(sessionId, typedSession);
+          typedSession.lastActivity = new Date();
+          return typedSession;
+        }
+      } catch (error) {
+        logger.warn('Failed to retrieve session from Redis', { sessionId, error: String(error) });
+        // Fall through to database query
+      }
+    }
+
     // Load from database
     try {
       const result = await this.db.query(
@@ -1307,6 +1324,14 @@ class SessionManager {
       if (result.rows.length > 0) {
         const dbSession = this.dbRowToSession(result.rows[0]);
         this.sessions.set(sessionId, dbSession);
+        
+        // Also store in Redis for failover if enabled
+        if (this.useRedis && this.redisStore) {
+          this.redisStore.storeSession(sessionId, dbSession as any).catch((error) => {
+            logger.warn('Failed to store session in Redis', { sessionId, error: String(error) });
+          });
+        }
+        
         return dbSession;
       }
     } catch (error) {
@@ -1763,6 +1788,14 @@ class SessionManager {
     this.transitionSession(session, 'destroyed', 'quarantine purged', ensureCorrelationId(correlationId));
     await this.persistSession(session);
     this.sessions.delete(sessionId);
+    
+    // Also delete from Redis if enabled
+    if (this.useRedis && this.redisStore) {
+      this.redisStore.deleteSession(sessionId, session.userId).catch((error) => {
+        logger.warn('Failed to delete session from Redis', { sessionId, error: String(error) });
+      });
+    }
+    
     sessionBrokerTelemetry.purgeOperationsTotal += 1;
     this.recordSessionEvent(createSessionAuditEvent({
       sessionId,
@@ -2074,6 +2107,13 @@ class SessionManager {
           session.baseImageId
         ]
       );
+
+      // Also persist to Redis if enabled (for cross-host failover)
+      if (this.useRedis && this.redisStore) {
+        this.redisStore.storeSession(session.sessionId, session).catch((error) => {
+          logger.warn('Failed to store session in Redis', { sessionId: session.sessionId, error: String(error) });
+        });
+      }
     } catch (error) {
       logger.error('Failed to persist session', { sessionId: session.sessionId, error: String(error) });
     }

@@ -5,9 +5,8 @@
 
 set -euo pipefail
 
-# Source common initialization
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh"
+# Source common initialization (in container: /usr/local/bin/_common)
+source /usr/local/bin/_common/init.sh
 
 # Initialize logging
 log_info "Starting code-server initialization"

@@ -129,13 +129,13 @@ COPY config/code-server/policy-version.json /etc/code-server/policy-version.json
 COPY config/code-server/extensions/extensions-approved.json /etc/code-server/extensions/extensions-approved.json
 
 # Preinstall the Team Hub collaboration extension from the workspace package.
-COPY apps/extensions/team-hub /tmp/team-hub
-COPY pnpm-lock.yaml /tmp/team-hub/
-RUN cd /tmp/team-hub \
+COPY pnpm-workspace.yaml pnpm-lock.yaml /app/
+COPY apps/extensions/team-hub /app/apps/extensions/team-hub
+RUN cd /app/apps/extensions/team-hub \
   && npm install -g pnpm@9.15.4 \
-  && pnpm install \
+  && pnpm install --frozen-lockfile \
   && pnpm run build \
-  && code-server --install-extension /tmp/team-hub
+  && code-server --install-extension /app/apps/extensions/team-hub
 
 
 USER coder

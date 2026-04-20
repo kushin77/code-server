@@ -133,7 +133,7 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml /app/
 COPY apps/extensions/team-hub /app/apps/extensions/team-hub
 RUN cd /app/apps/extensions/team-hub \
   && npm install -g pnpm@9.15.4 \
-  && pnpm install --frozen-lockfile \
+  && pnpm install \
   && pnpm run build \
   && code-server --install-extension /app/apps/extensions/team-hub
 

@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
-  "policy_version": "1.0.0",
-  "policy_date": "2026-04-22",
+  "policy_version": "1.0.1",
+  "policy_date": "2026-04-20",
   "generated_by": "scripts/policy/generate-policy-version.sh",
   "components": {
     "settings": {
@@ -11,7 +11,7 @@
     },
     "extension_manifest": {
       "file": "config/code-server/extensions/extensions-approved.json",
-      "sha256": "569047293e6828bc9ab63550cd44787a2d4eec6c61ff39ae4e86a2cbd2537f4c"
+      "sha256": "3233dc2665f6cafbfc76e100c89ed80c5a4dd87b295827f2e6db0b73e0e92327"
     },
     "role_profiles": {
       "files": [

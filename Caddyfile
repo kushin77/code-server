@@ -37,7 +37,7 @@
         reverse_proxy session-broker:5000 {
             header_up X-Session-Id {http.request.cookie._code_server_session_id}
             upstreams {
-                primary_host:5000
+                {$PRIMARY_HOST:192.168.168.31}:5000
             }
             upstreams {
                 {$REPLICA_HOST:replica-host}:5000
@@ -108,7 +108,7 @@
         # Dual upstreams: primary + replica for automatic failover
         # Primary upstream (.31, default localhost): active under normal conditions
         upstreams {
-            primary_host:5000
+            {$PRIMARY_HOST:192.168.168.31}:5000
         }
         # Replica upstream (.42, default replica-host): standby, activated on primary failure
         # Set via REPLICA_HOST env var; falls back to replica-host if not set
@@ -152,7 +152,7 @@
         reverse_proxy session-broker:5000 {
             header_up X-Session-Id {http.request.cookie._code_server_session_id}
             upstreams {
-                primary_host:5000
+                {$PRIMARY_HOST:192.168.168.31}:5000
             }
             upstreams {
                 {$REPLICA_HOST:replica-host}:5000
@@ -182,7 +182,7 @@
         header_up X-Session-Id {http.request.cookie._code_server_session_id}
         # Dual upstreams for failover
         upstreams {
-            primary_host:5000
+                {$PRIMARY_HOST:192.168.168.31}:5000
         }
         upstreams {
             {$REPLICA_HOST:replica-host}:5000
@@ -256,7 +256,7 @@ kushnir.cloud {
                 header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
                 # Dual upstreams for automatic failover on oauth2-proxy-portal
                 upstreams {
-                    primary_host:4181
+                    {$PRIMARY_HOST:192.168.168.31}:4181
                 }
                 upstreams {
                     {$REPLICA_HOST:replica-host}:4181
@@ -290,7 +290,7 @@ kushnir.cloud {
             header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
             # Dual upstreams for automatic failover
             upstreams {
-                primary_host:4181
+                {$PRIMARY_HOST:192.168.168.31}:4181
             }
             upstreams {
                 {$REPLICA_HOST:replica-host}:4181

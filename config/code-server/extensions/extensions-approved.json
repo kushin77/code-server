@@ -1,8 +1,8 @@
 {
   "policy_version": "1.0.0",
-  "policy_date": "2026-04-19",
+  "policy_date": "2026-04-20",
   "manifest_algorithm": "sha256",
-  "manifest_signature": "d15b5be828e9811cfcf00ec2ae91dd41c354514fe7f1705de6067b6807c9319c",
+  "manifest_signature": "8c7e3fbca697f7bcc292d768c0f128d445514768bcc5a35946b5ca49886bff76",
   "signature_note": "SHA256 of JSON.stringify(extensions, sorted-keys). Recompute with scripts/ci/validate-extension-supply-chain.sh --sign",
   "extensions": [
     {
@@ -18,6 +18,14 @@
       "version": "0.42.3",
       "tier": "T1-Core",
       "reason": "AI chat and inline chat \u2014 enterprise licensed, pre-installed",
+      "pre_installed": true,
+      "user_can_uninstall": false
+    },
+    {
+      "id": "kushnir.team-hub",
+      "version": "0.1.0",
+      "tier": "T1-Core",
+      "reason": "Team Hub collaboration sidebar for presence and same-file awareness",
       "pre_installed": true,
       "user_can_uninstall": false
     },

@@ -118,6 +118,13 @@ COPY config/code-server/ai/ /etc/code-server/ai/
 COPY config/code-server/policy-version.json /etc/code-server/policy-version.json
 COPY config/code-server/extensions/extensions-approved.json /etc/code-server/extensions/extensions-approved.json
 
+# Preinstall the Team Hub collaboration extension from the workspace package.
+COPY apps/extensions/team-hub /tmp/team-hub
+RUN cd /tmp/team-hub \
+  && npm install \
+  && npm run build \
+  && code-server --install-extension /tmp/team-hub
+
 
 USER coder
 

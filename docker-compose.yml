@@ -361,6 +361,8 @@ services:
       - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
     volumes:
       - /mnt/nas/code-server-sessions:/mnt/nas/code-server-sessions:rw
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
       interval: 30s

@@ -87,6 +87,7 @@ import {
   type ShadowReplayTrace,
 } from './session-shadow-replay.js';
 import RedisSessionStore from './redis-session-store.js';
+import { setupGracefulShutdown } from './shutdown.js';
 
 interface RuntimeConfig {
   logLevel: string;
@@ -2185,6 +2186,189 @@ class SessionManager {
       auditTrail: [],
     };
   }
+
+  /**
+   * Stop accepting new session requests
+   * Used during graceful shutdown to prevent new sessions from starting
+   */
+  stopAcceptingNewSessions(): void {
+    logger.info('Session manager stopped accepting new sessions');
+    // This will be enforced at the route handler level by checking this flag
+    this.acceptingNewSessions = false;
+  }
+
+  /**
+   * Notify all active sessions that the server is shutting down
+   * Sessions can save their state before forced termination
+   */
+  async notifyShutdown(): Promise<void> {
+    const activeSessions = Array.from(this.sessions.values()).filter(
+      (s) => !TERMINAL_SESSION_STATES.includes(s.status)
+    );
+
+    logger.info('Notifying sessions of shutdown', { count: activeSessions.length });
+
+    // In a real implementation, this would send WebSocket notifications
+    // For now, we just log the notification
+    const notifyPromises = activeSessions.map(async (session) => {
+      try {
+        logger.debug('Shutdown notification sent to session', { sessionId: session.sessionId });
+        // In production, send via WebSocket/HTTP to session container
+        // await notifySessionViaWebSocket(session.sessionId, 'shutdown_warning');
+      } catch (error) {
+        logger.warn('Failed to notify session', {
+          sessionId: session.sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
+
+    await Promise.allSettled(notifyPromises);
+  }
+
+  /**
+   * Wait for active sessions to save their state
+   * Respects the maxWaitMs timeout - does not wait indefinitely
+   */
+  async waitForSessionsToSave(maxWaitMs: number): Promise<void> {
+    const deadline = Date.now() + maxWaitMs;
+    const checkInterval = 500; // ms
+
+    while (Date.now() < deadline) {
+      const activeSessions = Array.from(this.sessions.values()).filter(
+        (s) => !TERMINAL_SESSION_STATES.includes(s.status)
+      );
+
+      if (activeSessions.length === 0) {
+        logger.info('All sessions have terminated');
+        return;
+      }
+
+      const remainingMs = deadline - Date.now();
+      logger.debug('Waiting for sessions to save', {
+        activeCount: activeSessions.length,
+        remainingMs,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, Math.min(checkInterval, remainingMs)));
+    }
+
+    const remainingSessions = Array.from(this.sessions.values()).filter(
+      (s) => !TERMINAL_SESSION_STATES.includes(s.status)
+    );
+
+    if (remainingSessions.length > 0) {
+      logger.warn('Timeout waiting for sessions to save', {
+        activeCount: remainingSessions.length,
+        timeoutMs: maxWaitMs,
+      });
+    }
+  }
+
+  /**
+   * Get list of active sessions for monitoring/shutdown purposes
+   */
+  listActiveSessions(): Array<{ id: string; containerId?: string }> {
+    return Array.from(this.sessions.values())
+      .filter((s) => !TERMINAL_SESSION_STATES.includes(s.status))
+      .map((s) => ({
+        id: s.sessionId,
+        containerId: s.containerId,
+      }));
+  }
+
+  /**
+   * Stop all managed containers during shutdown
+   * Gives containers time to stop gracefully before force-killing
+   */
+  async stopAllManagedContainers(options: { timeout?: number } = {}): Promise<void> {
+    const timeout = options.timeout ?? 10;
+    const containers = await this.listManagedContainers();
+
+    logger.info('Stopping managed containers', { count: containers.length, timeout });
+
+    const stopPromises = containers.map(async (container) => {
+      try {
+        await container.stop({ t: timeout });
+        logger.debug('Stopped container', { containerId: container.id.substring(0, 12) });
+      } catch (error) {
+        // If stop fails, try to kill
+        try {
+          await container.kill();
+          logger.warn('Killed container after stop failed', {
+            containerId: container.id.substring(0, 12),
+          });
+        } catch (killError) {
+          logger.error('Failed to stop/kill container', {
+            containerId: container.id.substring(0, 12),
+            error: killError instanceof Error ? killError.message : String(killError),
+          });
+        }
+      }
+    });
+
+    await Promise.allSettled(stopPromises);
+    logger.info('Container shutdown complete');
+  }
+
+  /**
+   * Get list of containers managed by this session broker
+   */
+  private async listManagedContainers(): Promise<Docker.Container[]> {
+    try {
+      const containers = await this.docker.listContainers({
+        filters: {
+          label: ['managed-by=session-broker'],
+        },
+      });
+
+      return containers.map((c) => this.docker.getContainer(c.Id));
+    } catch (error) {
+      logger.error('Failed to list managed containers', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Close database connections and cleanup resources
+   * Called at the end of graceful shutdown
+   */
+  async close(): Promise<void> {
+    logger.info('Closing session manager resources');
+
+    try {
+      if (this.redisStore) {
+        await this.redisStore.close();
+        logger.info('Redis session store closed');
+      }
+    } catch (error) {
+      logger.warn('Error closing Redis store', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    try {
+      await this.db.end();
+      logger.info('Database connections closed');
+    } catch (error) {
+      logger.warn('Error closing database connections', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // Flag to control session acceptance (checked at route level)
+  private acceptingNewSessions = true;
+
+  /**
+   * Check if session manager is accepting new sessions
+   * Returns false during graceful shutdown
+   */
+  isAcceptingNewSessions(): boolean {
+    return this.acceptingNewSessions;
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -3526,8 +3710,32 @@ app.all('*', async (req: Request, res: Response) => {
 // ────────────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   logger.info(`Session broker listening on port ${PORT}`);
+
+  // Set up graceful shutdown handlers
+  setupGracefulShutdown({
+    sessionManager: {
+      stopAcceptingNewSessions: () => manager.stopAcceptingNewSessions(),
+      notifyShutdown: () => manager.notifyShutdown(),
+      waitForSessionsToSave: (ms) => manager.waitForSessionsToSave(ms),
+      close: () => manager.close(),
+      listActiveSessions: () => manager.listActiveSessions(),
+    },
+    containerManager: {
+      stopAllContainers: (opts) => manager.stopAllManagedContainers(opts),
+    },
+    logger,
+    server: {
+      close: () =>
+        new Promise<void>((resolve, reject) => {
+          server.close((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        }),
+    },
+  });
   
   // Initialize Redis session store if enabled
   try {

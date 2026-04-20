@@ -104,9 +104,9 @@ describe('RedisSessionStore', () => {
   });
 
   afterAll(async () => {
-    if (store) {
+    if (store !== null) {
       try {
-        await store.close();
+        await (store as RedisSessionStore).close();
       } catch {
         // Ignore cleanup errors in tests
       }

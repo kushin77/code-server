@@ -554,6 +554,143 @@ groups:
         labels:
           severity: critical
         annotations:
+          summary: "CRITICAL: PostgreSQL replication is completely broken"
+          description: "Replica is no longer replicating from primary. Data may be diverging."
+          runbook: "docs/runbooks/PHASE-8-AVAILABILITY-RUNBOOK.md"
+
+  # ── #1011: Matrix Collaboration Hub Observability ──────────────────────────
+  - name: matrix-synapse
+    interval: 30s
+    rules:
+      # Synapse homeserver is down
+      - alert: SynapseDown
+        expr: up{job="synapse"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          component: matrix-core
+        annotations:
+          summary: "Synapse homeserver is down"
+          description: "Matrix homeserver at {{ $labels.instance }} is not responding to health checks."
+          runbook: "docs/runbooks/matrix-synapse-recovery.md"
+
+      # High response latency on homeserver
+      - alert: SynapseHighLatency
+        expr: synapse_http_requests_duration_seconds{quantile="0.99"} > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          component: matrix-core
+        annotations:
+          summary: "Synapse p99 latency exceeds 500ms ({{ $value | humanizeDuration }})"
+          description: "Matrix operations are slow. Check database performance and replication lag."
+
+      # Database connection pool exhaustion
+      - alert: SynapseDatabaseConnectionPoolLow
+        expr: (synapse_database_available_connections / clamp_min(synapse_database_pool_size, 1)) < 0.2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          component: matrix-core
+        annotations:
+          summary: "Synapse database connections: {{ $value | humanizePercentage }} available"
+          description: "Database connection pool is running low. Check for slow queries or leaks."
+
+      # Federation queue backlog building up
+      - alert: SynapseFederationQueueBacklog
+        expr: increase(synapse_federation_queue_size{direction="outbound"}[5m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          component: matrix-federation
+        annotations:
+          summary: "Synapse federation queue backlog growing ({{ $value }} events backed up)"
+          description: "Outbound federation is falling behind. May indicate network issues or slow remote homeservers."
+
+  - name: matrix-bridges
+    interval: 30s
+    rules:
+      # Bridge connectivity down
+      - alert: MatrixBridgeDown
+        expr: up{job=~"slack-bridge|teams-bridge|google-chat-bridge"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+          component: matrix-bridges
+        annotations:
+          summary: "Matrix bridge {{ $labels.job }} is down"
+          description: "Bridge to {{ $labels.job }} is not responding. Users cannot send messages to external systems."
+          runbook: "docs/runbooks/matrix-bridge-recovery.md"
+
+      # Bridge message backlog (unable to deliver messages)
+      - alert: MatrixBridgeMessageQueueBacklog
+        expr: matrix_bridge_queue_depth{job=~"slack-bridge|teams-bridge|google-chat-bridge"} > 100
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          component: matrix-bridges
+        annotations:
+          summary: "Bridge {{ $labels.job }} has {{ $value }} messages queued"
+          description: "Bridge message delivery is slow. Check bridge logs and destination system connectivity."
+
+      # Bridge sync latency
+      - alert: MatrixBridgeSyncLatencyHigh
+        expr: matrix_bridge_sync_duration_seconds{quantile="0.95"} > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          component: matrix-bridges
+        annotations:
+          summary: "Bridge {{ $labels.job }} sync takes {{ $value | humanizeDuration }}"
+          description: "Bridge is slow to sync messages. May indicate destination system latency."
+
+  - name: matrix-presence
+    interval: 15s
+    rules:
+      # Presence sidecar down
+      - alert: PresenceSidecarDown
+        expr: up{job="presence-sidecar"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+          component: matrix-presence
+        annotations:
+          summary: "Presence sidecar is down"
+          description: "Real-time collaboration presence tracking is offline. Users cannot see each other's cursors/edits."
+          runbook: "docs/runbooks/matrix-presence-recovery.md"
+
+      # Presence update latency too high
+      - alert: PresenceUpdateLatencyHigh
+        expr: presence_update_latency{quantile="0.50"} > 500
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+          component: matrix-presence
+        annotations:
+          summary: "Presence update latency is {{ $value | humanizeDuration }} (p50)"
+          description: "Real-time collaboration updates are slow. Users may see stale presence info."
+
+      # Presence sync falling behind
+      - alert: PresenceSyncFalling
+        expr: increase(presence_sync_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+          component: matrix-presence
+        annotations:
+          summary: "Presence sync errors: {{ $value }} in last 5m"
+          description: "Presence sidecar is failing to keep up with sync. May indicate high load or network issues.
+        annotations:
           summary: "PostgreSQL replication is BROKEN on replica — standby not receiving WAL"
           description: "Run: select * from pg_stat_replication; on primary to diagnose."
 

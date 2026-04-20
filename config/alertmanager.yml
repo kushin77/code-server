@@ -13,6 +13,12 @@ route:
   routes:
     - match:
         severity: critical
+        component: auth-path
+      receiver: pagerduty-critical
+      group_wait: 5m
+
+    - match:
+        severity: critical
       receiver: pagerduty-critical
       group_wait: 0s
       group_interval: 5m

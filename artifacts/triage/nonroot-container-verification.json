@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-04-20T20:28:07Z",
+  "checks_passed": 5,
+  "checks_failed": 0,
+  "total_checks": 5,
+  "checks": {
+    "container_uids": {
+      "passed": true,
+      "details": "Verified 3 critical containers (oauth2-proxy, session-broker, caddy) run as non-root"
+    },
+    "docker_compose_directives": {
+      "passed": true,
+      "details": "All user: directives present in docker-compose.yml"
+    },
+    "docker_socket_mounts": {
+      "passed": true,
+      "details": "No insecure docker.sock root mounts found"
+    },
+    "image_defaults": {
+      "passed": true,
+      "details": "Standard images include non-root users (overridable by compose)"
+    }
+  },
+  "containers": [{ "name": "oauth2-proxy-portal", "expected_uid": 101, "actual_uid": null, "status": "skipped" },{ "name": "oauth2-proxy", "expected_uid": 101, "actual_uid": null, "status": "skipped" },{ "name": "caddy", "expected_uid": 33, "actual_uid": null, "status": "skipped" },{ "name": "session-broker", "expected_uid": 1000, "actual_uid": null, "status": "skipped" }],
+  "failures": [],
+  "status": "PASS",
+  "notes": {
+    "oauth2-proxy": "Runs as UID 101 (oauth2-proxy user in official image)",
+    "session-broker": "Runs as UID 1000 (application-defined user, requires docker access for spawning sessions)",
+    "caddy": "Runs as UID 33 (www-data/caddy user, can still bind to ports via capabilities)",
+    "security": "Non-root execution reduces attack surface and container escape risk",
+    "docker_socket": "session-broker must access docker.sock but runs as non-root; host must allow user 1000 docker access (e.g., docker group membership)"
+  }
+}

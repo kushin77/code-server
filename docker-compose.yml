@@ -180,7 +180,7 @@ services:
       OAUTH2_PROXY_EMAIL_DOMAINS: "*"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
-      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://redis:6379"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
@@ -256,7 +256,7 @@ services:
       OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_PORTAL_EMAIL_DOMAINS:-*}"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
-      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://redis:6379"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_portal"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
@@ -488,7 +488,9 @@ services:
         max-file: "3"
 
   # ────────────────────────────────────────────────────────────────────────────
-  # redis — In-memory cache (session store, rate limiting)
+  # redis — In-memory cache (session store, rate limiting) — HA Master
+  # HA Setup: Redis Sentinel with 3 nodes for automatic failover
+  # Master runs on this host (.31), replica on .42, arbiter on either
   # ────────────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
@@ -502,8 +504,10 @@ services:
       redis-server
       --maxmemory 512mb
       --maxmemory-policy allkeys-lru
-      --save 60 1
+      --appendonly yes
+      --appendfsync everysec
       --loglevel warning
+      --save 60 1
     volumes:
       - redis-data:/data
     healthcheck:
@@ -522,6 +526,96 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-sentinel-1 — First Sentinel node (primary host .31)
+  # Monitors Redis master and coordinates failover
+  # ────────────────────────────────────────────────────────────────────────────
+  redis-sentinel-1:
+    image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
+    container_name: redis-sentinel-1
+    restart: unless-stopped
+    networks:
+      - net-app
+    expose:
+      - "26379"
+    command: redis-sentinel /etc/redis-sentinel/sentinel.conf --port 26379
+    volumes:
+      - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
+      - redis-sentinel-1-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-sentinel-2 — Second Sentinel node (replica host .42)
+  # Deployed via separate docker-compose override on replica host
+  # Placeholder here for reference; actual deployment on .42 via SSH
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-sentinel-2:
+  #   image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
+  #   container_name: redis-sentinel-2
+  #   restart: unless-stopped
+  #   networks:
+  #     - net-app
+  #   expose:
+  #     - "26379"
+  #   command: redis-sentinel /etc/redis-sentinel/sentinel.conf --port 26379
+  #   volumes:
+  #     - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
+  #     - redis-sentinel-2-data:/data
+  #   depends_on:
+  #     - redis
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-sentinel-arbiter — Lightweight arbiter (can run on .31 or .42)
+  # Breaks ties if one sentinel is down; uses minimal resources
+  # ────────────────────────────────────────────────────────────────────────────
+  redis-sentinel-arbiter:
+    image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
+    container_name: redis-sentinel-arbiter
+    restart: unless-stopped
+    networks:
+      - net-app
+    expose:
+      - "26379"
+    command: redis-sentinel /etc/redis-sentinel/sentinel.conf --port 26379
+    volumes:
+      - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
+      - redis-sentinel-arbiter-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.125"
+    logging:
+      driver: json-file
+      options:
+        max-size: "3m"
+        max-file: "2"
 
   # ────────────────────────────────────────────────────────────────────────────
   # code-server-profile-backup — periodic backup of user profile state
@@ -834,6 +928,12 @@ volumes:
   postgres-data:
     driver: local
   redis-data:
+    driver: local
+  redis-sentinel-1-data:
+    driver: local
+  redis-sentinel-2-data:
+    driver: local
+  redis-sentinel-arbiter-data:
     driver: local
   prometheus-data:
     driver: local

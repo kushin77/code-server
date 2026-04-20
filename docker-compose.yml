@@ -841,7 +841,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.50@sha256:93ff440dbda3f3654e54f21a8fe71fc7c4a85f75a54e840006351b4dffbec6a5
     container_name: jaeger
-    restart: unless-stopped
+    restart: no
     # jaeger receives OTLP traces from app tier; net-app needed for ingest
     networks:
       - net-management
@@ -849,12 +849,12 @@ services:
     ports:
       - "16686:16686"
     volumes:
-      - jaeger-data:/badger
+      - jaeger-data:/jaeger/data
     environment:
       - COLLECTOR_OTLP_ENABLED=true
       - SPAN_STORAGE_TYPE=badger
       - BADGER_EPHEMERAL=false
-      - BADGER_DIRECTORY=/badger
+      - BADGER_DIRECTORY=/jaeger/data
       - MEMORY_MAX_TRACES=50000
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:16686/ || exit 1"]

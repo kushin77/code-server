@@ -383,6 +383,20 @@ export class RedisSessionStore {
       throw error;
     }
   }
+
+  // Cleanup and close connection
+  async close(): Promise<void> {
+    if (this.client) {
+      try {
+        await this.client.quit();
+        this.connected = false;
+        logger.info('Redis session store closed');
+      } catch (error: any) {
+        logger.error('Error closing Redis connection', { error: error.message });
+        throw error;
+      }
+    }
+  }
 }
 
 export default RedisSessionStore;

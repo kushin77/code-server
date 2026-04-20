@@ -107,7 +107,6 @@ interface RuntimeConfig {
   sessionUsageWindowHours: number;
   sessionDeletionQuarantineHours: number;
   sessionPublicBaseUrl: string;
-  codeServerPassword: string;
   adminGroups: string[];
   operatorGroups: string[];
   approverGroups: string[];
@@ -210,7 +209,6 @@ const validateRuntimeConfig = (): RuntimeConfig => {
     sessionUsageWindowHours: readPositiveIntegerEnv('SESSION_USAGE_WINDOW_HOURS', '24'),
     sessionDeletionQuarantineHours: readPositiveIntegerEnv('SESSION_DELETION_QUARANTINE_HOURS', '24'),
     sessionPublicBaseUrl: process.env.SESSION_PUBLIC_BASE_URL?.trim() || `https://${sessionPublicDomain}`,
-    codeServerPassword: readRequiredEnv('CODE_SERVER_PASSWORD'),
     adminGroups: readCsvEnv('SESSION_ADMIN_GROUPS', DEFAULT_SESSION_BROKER_CONFIG.adminGroups.join(',')),
     operatorGroups: readCsvEnv('SESSION_OPERATOR_GROUPS', DEFAULT_SESSION_BROKER_CONFIG.operatorGroups.join(',')),
     approverGroups: readCsvEnv('SESSION_APPROVER_GROUPS', DEFAULT_SESSION_BROKER_CONFIG.approverGroups.join(',')),
@@ -343,6 +341,7 @@ interface SessionContext {
   dataProfile: SessionDataProfile;
   dataProfileValidated: boolean;
   provenance: SessionProvenanceManifest;
+  codeServerPassword?: string; // Per-session unique password (32-byte hex, generated at launch)
   queueLane?: SessionQueueLane;
   queueReason?: string;
   queuePosition?: number;
@@ -1247,6 +1246,7 @@ class SessionManager {
     const sessionId = uuidv4();
     const containerName = `code-server-${username}-${sessionId.substring(0, 8)}`;
     const containerPort = this.nextPort++;
+    const codeServerPassword = crypto.randomBytes(32).toString('hex'); // 64-char hex = 32-byte entropy
 
     logger.info('Creating session', { sessionId, userId, username, containerPort, queueLane: normalizeSessionQueueLane(priorityLane) });
 
@@ -1270,6 +1270,7 @@ class SessionManager {
         },
         provenanceInput,
       ),
+      codeServerPassword,
       containerName,
       containerPort,
       baseImageId: this.runtimeConfig.codeServerImageId,
@@ -2060,8 +2061,8 @@ class SessionManager {
         }
       },
       env: {
-        PASSWORD: this.runtimeConfig.codeServerPassword,
-        SUDO_PASSWORD: this.runtimeConfig.codeServerPassword,
+        PASSWORD: session.codeServerPassword || crypto.randomBytes(32).toString('hex'),
+        SUDO_PASSWORD: session.codeServerPassword || crypto.randomBytes(32).toString('hex'),
         SESSION_DATA_PROFILE: session.dataProfile,
         SESSION_DATA_PROFILE_VALIDATED: String(session.dataProfileValidated),
         SESSION_PROVENANCE_MANIFEST_VERSION: session.provenance.manifestVersion,

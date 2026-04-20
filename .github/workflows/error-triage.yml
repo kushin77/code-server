@@ -1,9 +1,9 @@
 name: Error Triage — Automated Issue Creation & Root Cause Analysis
 
 on:
-  # Run every 5 minutes
+  # Run every 15 minutes to reduce GitHub Actions minute burn while preserving triage coverage
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *'
   
   # Manual trigger
   workflow_dispatch:
@@ -12,6 +12,10 @@ on:
         description: 'Run in dry-run mode (no issues created)'
         required: false
         default: 'true'
+      seed_patterns:
+        description: 'Optional seeded triage lines (format: "<count> <message>") for controlled evidence runs'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -106,10 +110,19 @@ jobs:
           
           LOKI_ENDPOINT="${{ secrets.LOKI_ENDPOINT || 'http://localhost:3100' }}"
           
-          # Query error-level logs from all jobs
+          # Query generic error-level logs from all jobs
           ERROR_QUERY='{level=~"ERROR|FATAL"}'
+
+          # Query Cloudflare/edge signals (includes tunnel, TLS, WAF, and access denials)
+          CLOUDFLARE_QUERY='{job=~"cloudflared|caddy|oauth2-proxy"} |~ "(?i)(cloudflare|edge|waf|tunnel|origin|access denied|device posture|zero trust|tls|certificate|handshake|forbidden|unauthorized|ray id)"'
+
+          # Query Kubernetes/container signals (runtime, scheduling, health, image pull)
+          KUBERNETES_QUERY='{job=~"kubelet|kubernetes|containerd|docker|cadvisor"} |~ "(?i)(crashloopbackoff|back-off restarting failed container|failed scheduling|evicted|readiness probe failed|liveness probe failed|imagepullbackoff|errimagepull|oomkilled|seccomp|apparmor|admission denied)"'
+
+          # Query Falco runtime anomaly signals
+          FALCO_QUERY='{job=~"falco|falco-sidekick"} |~ "(?i)(falco|priority|rule|shell spawned in container|privileged container|sensitive file|unexpected network connection|terminal shell in container|write below /etc|known bad binary|contact k8s api server from container)"'
           
-          # Make request (with error handling for unreachable service)
+          # Make generic request (with error handling for unreachable service)
           RESPONSE=$(curl -s -m 10 \
             "${LOKI_ENDPOINT}/loki/api/v1/query_range" \
             --data-urlencode "query=${ERROR_QUERY}" \
@@ -117,10 +130,43 @@ jobs:
             --data-urlencode "end=$(date +%s)000000000" \
             --data-urlencode "limit=1000" \
             2>/dev/null || echo '{"status":"error","data":{"result":[]}}')
+
+          # Make Cloudflare-focused request
+          CLOUDFLARE_RESPONSE=$(curl -s -m 10 \
+            "${LOKI_ENDPOINT}/loki/api/v1/query_range" \
+            --data-urlencode "query=${CLOUDFLARE_QUERY}" \
+            --data-urlencode "start=$(($(date +%s) - 300))000000000" \
+            --data-urlencode "end=$(date +%s)000000000" \
+            --data-urlencode "limit=1000" \
+            2>/dev/null || echo '{"status":"error","data":{"result":[]}}')
+
+          # Make Kubernetes-focused request
+          KUBERNETES_RESPONSE=$(curl -s -m 10 \
+            "${LOKI_ENDPOINT}/loki/api/v1/query_range" \
+            --data-urlencode "query=${KUBERNETES_QUERY}" \
+            --data-urlencode "start=$(($(date +%s) - 300))000000000" \
+            --data-urlencode "end=$(date +%s)000000000" \
+            --data-urlencode "limit=1000" \
+            2>/dev/null || echo '{"status":"error","data":{"result":[]}}')
+
+          # Make Falco-focused request
+          FALCO_RESPONSE=$(curl -s -m 10 \
+            "${LOKI_ENDPOINT}/loki/api/v1/query_range" \
+            --data-urlencode "query=${FALCO_QUERY}" \
+            --data-urlencode "start=$(($(date +%s) - 300))000000000" \
+            --data-urlencode "end=$(date +%s)000000000" \
+            --data-urlencode "limit=1000" \
+            2>/dev/null || echo '{"status":"error","data":{"result":[]}}')
           
-          # Extract patterns and counts
-          PATTERNS=$(echo "${RESPONSE}" | jq -r '.data.result[] | .values[] | .[1]' 2>/dev/null | \
-            grep -oE '(ERROR|FATAL).*$' | sort | uniq -c | sort -rn | head -20 || echo "")
+          # Extract patterns and counts from both channels
+          PATTERNS=$( \
+            { \
+              echo "${RESPONSE}" | jq -r '.data.result[] | .values[] | .[1]' 2>/dev/null | grep -oE '(ERROR|FATAL).*$' || true; \
+              echo "${CLOUDFLARE_RESPONSE}" | jq -r '.data.result[] | .values[] | .[1]' 2>/dev/null || true; \
+              echo "${KUBERNETES_RESPONSE}" | jq -r '.data.result[] | .values[] | .[1]' 2>/dev/null || true; \
+              echo "${FALCO_RESPONSE}" | jq -r '.data.result[] | .values[] | .[1]' 2>/dev/null || true; \
+            } | sed '/^$/d' | sort | uniq -c | sort -rn | head -30 \
+          )
           
           if [[ -n "${PATTERNS}" ]]; then
             echo "patterns<<EOF" >> $GITHUB_OUTPUT
@@ -129,6 +175,25 @@ jobs:
             echo "Found $(echo "${PATTERNS}" | wc -l) error patterns"
           else
             echo "No significant error patterns detected"
+            PATTERNS=""
+          fi
+
+          SEED_PATTERNS=$(printf '%s' "${{ github.event.inputs.seed_patterns || '' }}" | sed '/^\s*$/d' || true)
+          if [[ -n "${SEED_PATTERNS}" ]]; then
+            echo "Applying seeded triage patterns from workflow_dispatch input"
+            if [[ -n "${PATTERNS}" ]]; then
+              PATTERNS="${PATTERNS}
+${SEED_PATTERNS}"
+            else
+              PATTERNS="${SEED_PATTERNS}"
+            fi
+          fi
+
+          if [[ -n "${PATTERNS}" ]]; then
+            echo "patterns<<EOF" >> $GITHUB_OUTPUT
+            echo "${PATTERNS}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
             echo "patterns=" >> $GITHUB_OUTPUT
           fi
           
@@ -197,6 +262,160 @@ jobs:
               | tr '[:upper:]' '[:lower:]' \
               | sed -E 's/[0-9a-f]{8,}/<hex>/g; s/[0-9]{2,}/<num>/g; s/[[:space:]]+/ /g; s/^ //; s/ $//'
           }
+
+          classify_source() {
+            local msg
+            msg=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+            if [[ "$msg" =~ cloudflare|cloudflared|waf|ray[[:space:]]id|zero[[:space:]]trust|device[[:space:]]posture|edge|origin|tunnel ]]; then
+              echo "cloudflare"
+            elif [[ "$msg" =~ falco|falco-sidekick|priority|terminal[[:space:]]shell|privileged[[:space:]]container|sensitive[[:space:]]file|known[[:space:]]bad[[:space:]]binary|k8s[[:space:]]api[[:space:]]server ]]; then
+              echo "falco"
+            elif [[ "$msg" =~ kube|kubernetes|pod|container|crashloop|imagepull|readiness|liveness|node ]]; then
+              echo "kubernetes"
+            elif [[ "$msg" =~ playwright|puppeteer|jest|e2e|integration[[:space:]]test|unit[[:space:]]test ]]; then
+              echo "test"
+            else
+              echo "generic"
+            fi
+          }
+
+          classify_severity() {
+            local msg source
+            msg=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+            source="$2"
+
+            if [[ "$source" == "cloudflare" ]]; then
+              if [[ "$msg" =~ tunnel[[:space:]](down|inactive|disconnect)|origin[[:space:]](unreachable|down)|tls|certificate[[:space:]](expired|invalid)|waf[[:space:]](blocked|violation)|forbidden|unauthorized|access[[:space:]]denied ]]; then
+                echo "P1"
+                return
+              fi
+              echo "P2"
+              return
+            fi
+
+            if [[ "$source" == "kubernetes" ]]; then
+              if [[ "$msg" =~ crashloopbackoff|failed[[:space:]]scheduling|imagepullbackoff|errimagepull|oomkilled|admission[[:space:]]denied ]]; then
+                echo "P1"
+                return
+              fi
+              echo "P2"
+              return
+            fi
+
+            if [[ "$source" == "falco" ]]; then
+              if [[ "$msg" =~ terminal[[:space:]]shell[[:space:]]in[[:space:]]container|privileged[[:space:]]container|known[[:space:]]bad[[:space:]]binary|write[[:space:]]below[[:space:]]/etc|k8s[[:space:]]api[[:space:]]server[[:space:]]from[[:space:]]container ]]; then
+                echo "P1"
+                return
+              fi
+              echo "P2"
+              return
+            fi
+
+            if [[ "$msg" =~ panic|fatal|oom|out[[:space:]]of[[:space:]]memory ]]; then
+              echo "P0"
+            elif [[ "$msg" =~ error|failed|timeout|refused|unauthorized|forbidden ]]; then
+              echo "P1"
+            else
+              echo "P2"
+            fi
+          }
+
+          remediation_hint() {
+            local source
+            source="$1"
+            if [[ "$source" == "cloudflare" ]]; then
+              cat <<'EOF'
+1. Validate Cloudflare tunnel status and connector health.
+2. Confirm origin reachability and TLS certificate chain validity.
+3. Review Access policy, device posture, and WAF/rate-limit events.
+4. Correlate Ray ID / request identifier with edge and origin logs.
+EOF
+              return
+            fi
+
+            if [[ "$source" == "kubernetes" ]]; then
+              cat <<'EOF'
+1. Identify affected namespace/pod/container and validate recent rollout deltas.
+2. Classify signal type (runtime, scheduling, health, image-pull, runtime-policy) and check corresponding control plane events.
+3. Compare with last-known-good image/tag and deployment state.
+4. Apply fix, redeploy safely, and attach recovery evidence.
+EOF
+              return
+            fi
+
+            if [[ "$source" == "falco" ]]; then
+              cat <<'EOF'
+1. Validate Falco rule name/priority and confirm whether the trigger indicates active exploitation behavior.
+2. Isolate impacted workload, collect container process/network evidence, and preserve relevant forensic logs.
+3. Contain by restricting workload access and rolling back unsafe deployment/runtime changes.
+4. Link remediation PR/runbook and record whether rule tuning is required.
+EOF
+              return
+            fi
+
+            cat <<'EOF'
+1. Investigate error pattern and identify root cause.
+2. Implement fix in the affected component.
+3. Add regression coverage to prevent recurrence.
+4. Link the implementing PR and update issue state.
+EOF
+          }
+
+          extract_correlation_id() {
+            local msg
+            msg="$1"
+            if [[ "$msg" =~ [Rr]ay[[:space:]]?[Ii][Dd][:=][[:space:]]?([A-Za-z0-9_-]+) ]]; then
+              echo "${BASH_REMATCH[1]}"
+              return
+            fi
+            if [[ "$msg" =~ request[[:space:]_-]?id[=:][[:space:]]?([A-Za-z0-9_-]+) ]]; then
+              echo "${BASH_REMATCH[1]}"
+              return
+            fi
+            echo "n/a"
+          }
+
+          classify_k8s_signal() {
+            local msg
+            msg=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+            if [[ "$msg" =~ crashloopbackoff|back-off[[:space:]]restarting|oomkilled ]]; then
+              echo "runtime"
+            elif [[ "$msg" =~ failed[[:space:]]scheduling|evicted ]]; then
+              echo "scheduling"
+            elif [[ "$msg" =~ readiness[[:space:]]probe[[:space:]]failed|liveness[[:space:]]probe[[:space:]]failed ]]; then
+              echo "health"
+            elif [[ "$msg" =~ imagepullbackoff|errimagepull ]]; then
+              echo "image-pull"
+            elif [[ "$msg" =~ seccomp|apparmor|admission[[:space:]]denied ]]; then
+              echo "runtime-policy"
+            else
+              echo "unclassified"
+            fi
+          }
+
+          extract_k8s_context() {
+            local msg namespace pod container service
+            msg="$1"
+            namespace="unknown"
+            pod="unknown"
+            container="unknown"
+            service="unknown"
+
+            if [[ "$msg" =~ namespace[=:][[:space:]]?([A-Za-z0-9._-]+) ]]; then
+              namespace="${BASH_REMATCH[1]}"
+            fi
+            if [[ "$msg" =~ pod[=:][[:space:]]?([A-Za-z0-9._-]+) ]]; then
+              pod="${BASH_REMATCH[1]}"
+            fi
+            if [[ "$msg" =~ container[=:][[:space:]]?([A-Za-z0-9._-]+) ]]; then
+              container="${BASH_REMATCH[1]}"
+            fi
+            if [[ "$msg" =~ service[=:][[:space:]]?([A-Za-z0-9._-]+) ]]; then
+              service="${BASH_REMATCH[1]}"
+            fi
+
+            printf '%s|%s|%s|%s' "$namespace" "$service" "$pod" "$container"
+          }
           
           # Process each error pattern
           while IFS= read -r line; do
@@ -210,24 +429,59 @@ jobs:
               NORMALIZED_MSG=$(normalize_pattern "$ERROR_MSG")
               PATTERN_HASH=$(printf '%s' "$NORMALIZED_MSG" | sha256sum | awk '{print $1}')
               MARKER="<!-- error-triage-fingerprint:${PATTERN_HASH} -->"
+              SOURCE_CLASS=$(classify_source "$ERROR_MSG")
+              SEVERITY=$(classify_severity "$ERROR_MSG" "$SOURCE_CLASS")
+              CORRELATION_ID=$(extract_correlation_id "$ERROR_MSG")
+              SOURCE_LABEL="source:${SOURCE_CLASS}"
+              K8S_SIGNAL_CLASS="n/a"
+              K8S_NAMESPACE="n/a"
+              K8S_SERVICE="n/a"
+              K8S_POD="n/a"
+              K8S_CONTAINER="n/a"
+              LAST_KNOWN_GOOD="unknown"
+
+              if [[ "$SOURCE_CLASS" == "kubernetes" ]]; then
+                K8S_SIGNAL_CLASS=$(classify_k8s_signal "$ERROR_MSG")
+                IFS='|' read -r K8S_NAMESPACE K8S_SERVICE K8S_POD K8S_CONTAINER <<< "$(extract_k8s_context "$ERROR_MSG")"
+              fi
+
+              if [[ "$ERROR_MSG" =~ image[=:][[:space:]]?([A-Za-z0-9._/:@-]+) ]]; then
+                LAST_KNOWN_GOOD="${BASH_REMATCH[1]}"
+              fi
+
+              EXTRA_LABELS="${SOURCE_LABEL}"
+              if [[ "$SOURCE_CLASS" == "kubernetes" ]]; then
+                EXTRA_LABELS="${EXTRA_LABELS},k8s:${K8S_SIGNAL_CLASS}"
+              fi
               TITLE="[AUTO-TRIAGE] ${ERROR_MSG:0:100}"
               BODY=$(cat <<EOF
           ${MARKER}
           ## Automated Error Triage Report
           
-          **Severity**: P1 (Automated Detection)
+          **Severity**: ${SEVERITY} (Automated Detection)
+          **Source Class**: ${SOURCE_CLASS}
           **Detected**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
           **Occurrence Count**: ${COUNT}
           **Fingerprint**: ${PATTERN_HASH}
+          **Correlation ID**: ${CORRELATION_ID}
+          **Kubernetes Signal Class**: ${K8S_SIGNAL_CLASS}
           
           ### Error Pattern
           \`\`\`
           ${ERROR_MSG}
           \`\`\`
+
+          ### Workload Context
+          - **Namespace**: ${K8S_NAMESPACE}
+          - **Service**: ${K8S_SERVICE}
+          - **Pod**: ${K8S_POD}
+          - **Container**: ${K8S_CONTAINER}
+          - **Last Known Good**: ${LAST_KNOWN_GOOD}
           
           ### Detection Metadata
           - **System**: Automated Error Triage Engine (GitHub Actions)
           - **Source**: Loki Log Aggregation
+          - **Source Classifier**: ${SOURCE_CLASS}
           - **Threshold**: Triggered at ${COUNT}+ occurrences
           - **Time Range**: Last 5 minutes
           - **Down Services**: ${DOWN_SERVICES:-none}
@@ -241,12 +495,10 @@ jobs:
           ### Runbook References
           - docs/runbooks/error-rate-high.md
           - config/error-triage-config.yml
+          - docs/runbooks/cloudflare-failure-response.md
           
           ### Next Steps
-          1. Investigate error pattern and identify root cause
-          2. Implement fix in appropriate component
-          3. Add regression test to prevent recurrence
-          4. Link PR to this issue and mark as resolved
+          $(remediation_hint "${SOURCE_CLASS}")
           
           ---
           **Auto-generated by Error Triage Engine** | [Configuration](./config/error-triage-config.yml)
@@ -256,29 +508,48 @@ jobs:
               if [[ "${DRY_RUN}" == "true" ]]; then
                 echo "[DRY-RUN] Would triage fingerprint ${PATTERN_HASH}: ${TITLE}"
               else
-                EXISTING=$(gh issue list --label error-triage --state open --limit 200 --json number,body 2>/dev/null \
-                  | jq -r --arg marker "$MARKER" '.[] | select(.body | contains($marker)) | .number' \
+                MATCH_JSON=$(gh issue list --label error-triage --state all --limit 300 --json number,body,state 2>/dev/null \
+                  | jq -c --arg marker "$MARKER" '.[] | select(.body | contains($marker))' \
                   | head -1)
 
-                if [[ -n "$EXISTING" ]]; then
+                if [[ -n "$MATCH_JSON" ]]; then
+                  EXISTING=$(echo "$MATCH_JSON" | jq -r '.number')
+                  EXISTING_STATE=$(echo "$MATCH_JSON" | jq -r '.state')
+
+                  if [[ "$EXISTING_STATE" == "CLOSED" ]]; then
+                    gh issue reopen "$EXISTING" >/dev/null 2>&1 || true
+                  fi
+
                   UPDATE_BODY=$(cat <<EOF
           ## Additional Error Occurrence
 
           ${MARKER}
+            - **Source Class**: ${SOURCE_CLASS}
+            - **Severity**: ${SEVERITY}
+            - **Kubernetes Signal Class**: ${K8S_SIGNAL_CLASS}
           - **Detected**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
           - **Occurrence Count In Current Window**: ${COUNT}
+            - **Correlation ID**: ${CORRELATION_ID}
+            - **Namespace/Service/Pod/Container**: ${K8S_NAMESPACE}/${K8S_SERVICE}/${K8S_POD}/${K8S_CONTAINER}
+            - **Last Known Good**: ${LAST_KNOWN_GOOD}
           - **RCA Correlated**: ${RCA_CORRELATED:-false}
           - **Down Services Snapshot**: ${DOWN_SERVICES:-none}
           EOF
                   )
 
+                  if [[ "$EXISTING_STATE" == "CLOSED" ]]; then
+                    UPDATE_BODY="## Reopened: Error Recurrence Detected
+
+${UPDATE_BODY}"
+                  fi
+
                   gh issue comment "$EXISTING" --body "$UPDATE_BODY" >/dev/null 2>&1 && ((ISSUES_UPDATED++))
-                  echo "Updated existing issue #${EXISTING} for fingerprint ${PATTERN_HASH}"
+                  echo "Updated existing issue #${EXISTING} for fingerprint ${PATTERN_HASH} (prior state: ${EXISTING_STATE})"
                 else
                   CREATED=$(gh issue create \
                     --title "${TITLE}" \
                     --body "${BODY}" \
-                    --label "error-triage,P1,automated" \
+                    --label "error-triage,${SEVERITY},automated,${EXTRA_LABELS}" \
                     --assignee "kushin77" 2>/dev/null || echo "")
 
                   if [[ -n "$CREATED" ]]; then
@@ -311,6 +582,44 @@ jobs:
           echo "  - Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           
           echo "::endgroup::"
+
+      - name: Auto-close stale fingerprint issues
+        id: autoclose
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          AUTO_CLOSE_DAYS: '7'
+        run: |
+          echo "::group::Auto-close stale issues"
+
+          CLOSED_COUNT=0
+          CUTOFF_EPOCH=$(date -u -d "-${AUTO_CLOSE_DAYS} days" +%s)
+
+          MATCHING=$(gh issue list --label error-triage --state open --limit 300 --json number,title,updatedAt,body 2>/dev/null \
+            | jq -r --argjson cutoff "$CUTOFF_EPOCH" '.[]
+                | select((.body // "") | contains("error-triage-fingerprint:"))
+                | . + {updatedEpoch: ((.updatedAt | fromdateiso8601) // 0)}
+                | select(.updatedEpoch <= $cutoff)
+                | .number')
+
+          if [[ -z "$MATCHING" ]]; then
+            echo "No stale fingerprinted issues to auto-close"
+          else
+            while IFS= read -r ISSUE_NUMBER; do
+              [[ -z "$ISSUE_NUMBER" ]] && continue
+              if [[ "$DRY_RUN" == "true" ]]; then
+                echo "[DRY-RUN] Would auto-close stale triage issue #${ISSUE_NUMBER}"
+                continue
+              fi
+              gh issue close "$ISSUE_NUMBER" --comment "Auto-closing after ${AUTO_CLOSE_DAYS} days with no recurrence updates. Reoccurrence will automatically reopen this fingerprinted issue." >/dev/null 2>&1 || true
+              CLOSED_COUNT=$((CLOSED_COUNT + 1))
+            done <<< "$MATCHING"
+          fi
+
+          echo "issues_closed=${CLOSED_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "Auto-closed ${CLOSED_COUNT} stale fingerprinted issues"
+          echo "::endgroup::"
       
       - name: Post summary
         if: always()
@@ -325,6 +634,7 @@ jobs:
           | Root Cause Analysis | ${{ steps.rca.outputs.has_rca || 'No correlation' }} |
           | Issues Created | ${{ steps.issue-creation.outputs.issues_created || 0 }} |
           | Issues Updated | ${{ steps.issue-creation.outputs.issues_updated || 0 }} |
+          | Issues Auto-closed | ${{ steps.autoclose.outputs.issues_closed || 0 }} |
           | Dry Run Mode | ${{ github.event.inputs.dry_run || 'false' }} |
           
           **Execution Time**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')

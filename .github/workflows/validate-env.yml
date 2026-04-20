@@ -59,6 +59,50 @@ jobs:
             echo "❌ CRITICAL: Schema file not found (.env.schema.json)"
             exit 1
           fi
+
+      - name: "Lint schema completeness"
+        run: |
+          echo "═════════════════════════════════════════════════════════"
+          echo "Schema Completeness"
+          echo "═════════════════════════════════════════════════════════"
+          echo ""
+
+          jq -e '
+            [
+              .groups[].variables
+              | to_entries[]
+              | select(
+                  (.value.type == null)
+                  or (.value.description == null)
+                )
+            ]
+            | length == 0
+          ' .env.schema.json >/dev/null || {
+            echo "❌ Schema entries are missing required metadata (type/description)"
+            exit 1
+          }
+
+          jq -e '
+            [
+              .groups[].variables
+              | to_entries[]
+              | select((.value.secret == true) and (.value.vault_path == null))
+            ]
+            | length == 0
+          ' .env.schema.json >/dev/null || {
+            echo "❌ Secret schema entries must declare vault_path"
+            exit 1
+          }
+
+          SCHEMA_REQUIRED=$(jq -r '.groups[].variables | to_entries[] | select(.value.required == true) | .key' .env.schema.json | sort -u)
+          DECLARED_REQUIRED=$(jq -r '.validation.required_variables[]' .env.schema.json | sort -u)
+
+          if ! diff -u <(printf '%s\n' "$DECLARED_REQUIRED") <(printf '%s\n' "$SCHEMA_REQUIRED"); then
+            echo "❌ validation.required_variables does not match schema required flags"
+            exit 1
+          fi
+
+          echo "✓ Schema completeness checks passed"
       
       - name: "Validate required environment variables"
         if: steps.check_script.outputs.script_exists == 'true'
@@ -96,6 +140,7 @@ jobs:
           export GOOGLE_CLIENT_ID=test-client-id
           export GOOGLE_CLIENT_SECRET=test-client-secret
           export OAUTH2_PROXY_COOKIE_SECRET=0123456789abcdef0123456789abcdef
+          export CODE_SERVER_PASSWORD=test-password
           export POSTGRES_PASSWORD=test-password
           
           # Run validation

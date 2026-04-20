@@ -57,7 +57,7 @@ check_present "$TEMPLATE_COMPOSE" 'CODE_SERVER_PASSWORD:\?CODE_SERVER_PASSWORD m
 
 # ── NAS-backed volume invariants ──────────────────────────────────────────────
 # Ensure key stateful volumes use NFS and the workspace is not a host bind-mount
-check_present "$BASE_COMPOSE" 'NAS_HOST.*192\.168\.168\.56|addr=.*192\.168\.168\.56' 'NAS host .56 referenced in volume driver_opts'
+check_present "$BASE_COMPOSE" 'NAS_HOST:\?NAS_HOST must be set|addr=\$\{NAS_HOST:\?NAS_HOST must be set\}' 'NAS host guard referenced in volume driver_opts'
 check_present "$BASE_COMPOSE" 'type: nfs' 'NFS volume type declared'
 check_absent "$BASE_COMPOSE" '^\s*- \./workspace:' 'host-local workspace bind-mount (must use NFS volume)'
 

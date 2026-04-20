@@ -38,17 +38,28 @@ check_symlink_target() {
     local path="$1"
     local target="$2"
 
-    if [[ ! -L "$ROOT_DIR/$path" ]]; then
-        log_error "Missing required compatibility symlink: $path"
+    if [[ -L "$ROOT_DIR/$path" ]]; then
+        local actual_target
+        actual_target="$(readlink "$ROOT_DIR/$path")"
+        if [[ "$actual_target" != "$target" ]]; then
+            log_error "Symlink $path points to $actual_target (expected $target)"
+            return 1
+        fi
+        return 0
+    fi
+
+    if [[ -f "$ROOT_DIR/$path" ]]; then
+        local pointer_target
+        pointer_target="$(tr -d '\r\n' < "$ROOT_DIR/$path")"
+        if [[ "$pointer_target" == "$target" ]]; then
+            return 0
+        fi
+        log_error "Compatibility pointer file $path contains $pointer_target (expected $target)"
         return 1
     fi
 
-    local actual_target
-    actual_target="$(readlink "$ROOT_DIR/$path")"
-    if [[ "$actual_target" != "$target" ]]; then
-        log_error "Symlink $path points to $actual_target (expected $target)"
-        return 1
-    fi
+    log_error "Missing required compatibility shim: $path"
+    return 1
 }
 
 log_info "Validating monorepo target architecture contract"

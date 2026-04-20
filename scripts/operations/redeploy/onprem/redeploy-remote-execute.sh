@@ -225,7 +225,7 @@ resolve_remote_compose_bin() {
 run_remote_preflight() {
   log_section "Remote Preflight"
 
-  local preflight_cmd="cd ${TARGET_REPO} && bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host"
+  local preflight_cmd="cd ${TARGET_REPO} && bash scripts/ops/preflight.sh"
   if [[ "$FIX_STALE_LOGS" == "true" ]]; then
     preflight_cmd+=" --fix-stale-logs"
   fi

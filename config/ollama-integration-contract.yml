@@ -11,12 +11,12 @@ updated: "2026-04-18"
 # ── Endpoint configuration ────────────────────────────────────────────────────
 endpoints:
   primary:
-    host: "192.168.168.42"
+    host: "replica.prod.internal"
     port: 11434
     gpu: true
     description: "GPU-backed replica — primary inference pool"
   fallback:
-    host: "192.168.168.31"
+    host: "primary.prod.internal"
     port: 11434
     gpu: false
     description: "CPU fallback — primary deploy host"

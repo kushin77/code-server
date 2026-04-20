@@ -1,0 +1,1335 @@
+{
+  "generated_at": "2026-04-20T00:02:51+00:00",
+  "portal_base_url": "https://kushnir.cloud",
+  "ide_base_url": "https://ide.kushnir.cloud",
+  "static_asset_path": "/static/css/main.c5955fd3.css",
+  "oauth_start_path": "/oauth2/start?rd=%2F",
+  "request_count": 50,
+  "throttle_limit": 10,
+  "summary": {
+    "total_requests": 200,
+    "success_statuses": {
+      "portal-root": {
+        "403": 50
+      },
+      "ide-root": {
+        "200": 50
+      },
+      "static-css": {
+        "200": 50
+      },
+      "oauth-start": {
+        "200": 50
+      }
+    }
+  },
+  "reports": [
+    {
+      "name": "portal-root",
+      "url": "https://kushnir.cloud/",
+      "request_count": 50,
+      "status_counts": {
+        "403": 50
+      },
+      "average_seconds": 0.083,
+      "min_seconds": 0.039,
+      "max_seconds": 0.161,
+      "results": [
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.116,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.058,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.105,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.065,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.083,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.064,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.068,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.119,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.082,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.066,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.081,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.079,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.091,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.049,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.073,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.083,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.079,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.073,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.066,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.075,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.102,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.052,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.107,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.108,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.086,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.1,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.079,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.084,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.085,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.079,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.083,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.061,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.161,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.065,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.069,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.072,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.065,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.065,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.067,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.094,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.134,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.102,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.079,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.073,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.119,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.097,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.072,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.07,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.081,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.039,
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ],
+      "errors": [
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden"
+      ]
+    },
+    {
+      "name": "ide-root",
+      "url": "https://ide.kushnir.cloud/",
+      "request_count": 50,
+      "status_counts": {
+        "200": 50
+      },
+      "average_seconds": 0.323,
+      "min_seconds": 0.246,
+      "max_seconds": 1.32,
+      "results": [
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.316,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.327,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.308,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.331,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.335,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.32,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.328,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.312,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.317,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.322,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.337,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.36,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.341,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.365,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.339,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.315,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.327,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.312,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.312,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.353,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.281,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.298,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.314,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.291,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.301,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.302,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.307,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.333,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.274,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.306,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 1.32,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.266,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.321,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.3,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.288,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.249,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.29,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.291,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.246,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.271,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.259,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.271,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.278,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.277,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.285,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.264,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.269,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.282,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.276,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.249,
+          "error": null
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "static-css",
+      "url": "https://kushnir.cloud/static/css/main.c5955fd3.css",
+      "request_count": 50,
+      "status_counts": {
+        "200": 50
+      },
+      "average_seconds": 0.068,
+      "min_seconds": 0.028,
+      "max_seconds": 1.065,
+      "results": [
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.044,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.054,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.053,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.05,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.058,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.033,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.059,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.05,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.058,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.049,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.036,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.036,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.034,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.038,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.043,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.044,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.076,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.045,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.056,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.068,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.062,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.039,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.066,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.058,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.028,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.057,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.051,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.03,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.059,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.047,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.046,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 1.065,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.049,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.049,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.036,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.035,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.063,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.044,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.032,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.032,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.037,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.065,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.044,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.044,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.054,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.049,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.056,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.051,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.038,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.04,
+          "error": null
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "oauth-start",
+      "url": "https://ide.kushnir.cloud/oauth2/start?rd=%2F",
+      "request_count": 50,
+      "status_counts": {
+        "200": 50
+      },
+      "average_seconds": 0.276,
+      "min_seconds": 0.215,
+      "max_seconds": 1.283,
+      "results": [
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.238,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.242,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.269,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.233,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.277,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.24,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.232,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.242,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.242,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.234,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.269,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.26,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.281,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.237,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.271,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.263,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.257,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.244,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.305,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.267,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.255,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.276,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 1.283,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.304,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.265,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.242,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.256,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.282,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.248,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.236,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.23,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.279,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.272,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.243,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.255,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.263,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.242,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.255,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.281,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.259,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.28,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.23,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.279,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.261,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.301,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.215,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.231,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.222,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.223,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.228,
+          "error": null
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

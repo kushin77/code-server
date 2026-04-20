@@ -278,3 +278,179 @@ resource "kubernetes_cluster_role_binding" "external_dns" {
 resource "cloudflare_zone_dnssec" "main" {
   zone_id = var.cloudflare_zone_id
 }
+
+# Edge hardening: enforce HTTPS, modern TLS, and security posture defaults
+resource "cloudflare_zone_setting" "always_use_https" {
+  zone_id    = var.cloudflare_zone_id
+  setting_id = "always_use_https"
+  value      = "on"
+}
+
+resource "cloudflare_zone_setting" "automatic_https_rewrites" {
+  zone_id    = var.cloudflare_zone_id
+  setting_id = "automatic_https_rewrites"
+  value      = "on"
+}
+
+resource "cloudflare_zone_setting" "min_tls_version" {
+  zone_id    = var.cloudflare_zone_id
+  setting_id = "min_tls_version"
+  value      = "1.2"
+}
+
+resource "cloudflare_zone_setting" "tls_1_3" {
+  zone_id    = var.cloudflare_zone_id
+  setting_id = "tls_1_3"
+  value      = "on"
+}
+
+resource "cloudflare_zone_setting" "ssl" {
+  zone_id    = var.cloudflare_zone_id
+  setting_id = "ssl"
+  value      = "strict"
+}
+
+resource "cloudflare_zone_setting" "security_level" {
+  zone_id    = var.cloudflare_zone_id
+  setting_id = "security_level"
+  value      = "high"
+}
+
+resource "cloudflare_zone_setting" "browser_check" {
+  zone_id    = var.cloudflare_zone_id
+  setting_id = "browser_check"
+  value      = "on"
+}
+
+# Bot protections: enable Cloudflare bot controls on the zone
+resource "cloudflare_bot_management" "main" {
+  zone_id                   = var.cloudflare_zone_id
+  ai_bots_protection        = "block"
+  bm_cookie_enabled         = true
+  cf_robots_variant         = "policy_only"
+  crawler_protection        = "enabled"
+  enable_js                 = true
+  fight_mode                = true
+  is_robots_txt_managed     = true
+  sbfm_definitely_automated = "block"
+  sbfm_likely_automated     = "managed_challenge"
+  sbfm_static_resource_protection = true
+  sbfm_verified_bots        = "allow"
+}
+
+# WAF custom rules: block common scanner behavior and path traversal attempts
+resource "cloudflare_ruleset" "custom_waf" {
+  zone_id     = var.cloudflare_zone_id
+  name        = "code-server-enterprise custom WAF"
+  phase       = "http_request_firewall_custom"
+  kind        = "zone"
+  description = "Free-tier WAF rules for scanner blocking and suspicious request patterns"
+
+  rules = [
+    {
+      ref         = "block-path-traversal"
+      description = "Block path traversal attempts"
+      expression  = "http.request.uri.path contains \"../\" or http.request.uri.path contains \"..%2F\" or http.request.uri.path contains \"..%2f\""
+      action      = "block"
+      enabled     = true
+    },
+    {
+      ref         = "challenge-suspicious-user-agents"
+      description = "Challenge common automated scanners"
+      expression  = "lower(http.user_agent) contains \"sqlmap\" or lower(http.user_agent) contains \"nikto\" or lower(http.user_agent) contains \"nuclei\" or lower(http.user_agent) contains \"dirbuster\""
+      action      = "managed_challenge"
+      enabled     = true
+    },
+    {
+      ref         = "challenge-suspicious-post-bodies"
+      description = "Challenge suspicious XML-like POST bodies"
+      expression  = "http.request.method eq \"POST\" and (http.request.body.raw contains \"<!DOCTYPE\" or http.request.body.raw contains \"<script\" or http.request.body.raw contains \"<?xml\")"
+      action      = "managed_challenge"
+      enabled     = true
+    }
+  ]
+}
+
+# Rate limiting: /api for public API traffic and /auth for OAuth endpoints
+resource "cloudflare_rate_limit" "api" {
+  zone_id    = var.cloudflare_zone_id
+  threshold  = 100
+  period     = 60
+  description = "Rate limit /api at 100 requests per minute per IP"
+
+  action = {
+    mode    = "ban"
+    timeout = 300
+  }
+
+  match = {
+    request = {
+      methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+      schemes = ["HTTP", "HTTPS"]
+      url     = "${var.apex_domain}/api/*"
+    }
+  }
+}
+
+resource "cloudflare_rate_limit" "auth" {
+  zone_id    = var.cloudflare_zone_id
+  threshold  = 20
+  period     = 60
+  description = "Rate limit /auth and oauth2 endpoints at 20 requests per minute per IP"
+
+  action = {
+    mode    = "ban"
+    timeout = 300
+  }
+
+  match = {
+    request = {
+      methods = ["GET", "POST", "OPTIONS"]
+      schemes = ["HTTP", "HTTPS"]
+      url     = "${var.apex_domain}/auth/*"
+    }
+  }
+}
+
+# Response header hardening via transform rules
+resource "cloudflare_ruleset" "security_headers" {
+  zone_id     = var.cloudflare_zone_id
+  name        = "code-server-enterprise security headers"
+  phase       = "http_response_headers_transform"
+  kind        = "zone"
+  description = "Set security response headers when the origin omits them"
+
+  rules = [
+    {
+      ref         = "set-security-headers"
+      description = "Apply security headers on all responses"
+      expression  = "true"
+      action      = "rewrite"
+      enabled     = true
+      action_parameters = {
+        headers = {
+          "Strict-Transport-Security" = {
+            operation = "set"
+            value     = "max-age=63072000; includeSubDomains; preload"
+          }
+          "X-Content-Type-Options" = {
+            operation = "set"
+            value     = "nosniff"
+          }
+          "X-Frame-Options" = {
+            operation = "set"
+            value     = "SAMEORIGIN"
+          }
+          "Referrer-Policy" = {
+            operation = "set"
+            value     = "strict-origin-when-cross-origin"
+          }
+          "Permissions-Policy" = {
+            operation = "set"
+            value     = "geolocation=(), microphone=(), camera=()"
+          }
+        }
+      }
+    }
+  ]
+}

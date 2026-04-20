@@ -11,11 +11,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Source logging utilities
-source "$SCRIPT_DIR/../_common/logging.sh" || {
-  echo "ERROR: Cannot source logging utilities" >&2
+# Source canonical init utilities
+if ! source "$SCRIPT_DIR/../_common/init.sh"; then
+  printf 'ERROR: Cannot source canonical init utilities\n' >&2
   exit 1
-}
+fi
 
 log_info "Starting canonical helper registry validation (Phase 2)"
 

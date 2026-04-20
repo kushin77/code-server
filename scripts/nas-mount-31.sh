@@ -22,17 +22,20 @@ LOG_FILE="${LOG_DIR}/nas-mount-${TIMESTAMP}.log"
 DRY_RUN=false
 ACTION="${1:-all}"
 
-# NAS Configuration — use env vars with production defaults
-NAS_PRIMARY="${NAS_PRIMARY:-192.168.168.10}"
-NAS_SECONDARY="${NAS_SECONDARY:-192.168.168.11}"
-NAS_ARCHIVE="${NAS_ARCHIVE:-192.168.168.12}"
+# NAS Configuration — resolved from shared config/env
+: "${NAS_HOST:?NAS_HOST must be set}"
+: "${NAS_MOUNT_POINT:?NAS_MOUNT_POINT must be set}"
+: "${NAS_EXPORT_PATH:?NAS_EXPORT_PATH must be set}"
+: "${NFS_VERSION:?NFS_VERSION must be set}"
+NAS_BACKUP_HOST="${NAS_BACKUP_HOST:-$NAS_HOST}"
+NAS_BACKUP_PATH="${NAS_BACKUP_PATH:-$NAS_EXPORT_PATH/backups/models}"
 
-# Mount Points
+# Mount Points (all use same NAS host)
 MOUNTS=(
-  "models:${NAS_PRIMARY}:/export/models:/mnt/models:nfs4"
-  "data:${NAS_PRIMARY}:/export/data:/mnt/data:nfs4"
-  "backups:${NAS_SECONDARY}:/export/backups:/mnt/backups:nfs3"
-  "archive:${NAS_ARCHIVE}:/export/archive:/mnt/archive:nfs4"
+  "workspace:${NAS_HOST}:${NAS_EXPORT_PATH}/workspace:${NAS_MOUNT_POINT}/workspace:${NFS_VERSION}"
+  "models:${NAS_HOST}:${NAS_EXPORT_PATH}/models:${NAS_MOUNT_POINT}/models:${NFS_VERSION}"
+  "data:${NAS_HOST}:${NAS_EXPORT_PATH}/data:${NAS_MOUNT_POINT}/data:${NFS_VERSION}"
+  "backups:${NAS_HOST}:${NAS_EXPORT_PATH}/backups:${NAS_MOUNT_POINT}/backups:${NFS_VERSION}"
 )
 
 mkdir -p "$LOG_DIR"
@@ -53,21 +56,19 @@ validate_prerequisites() {
     fi
   fi
   
-  # Check network connectivity
-  for nas in "$NAS_PRIMARY" "$NAS_SECONDARY" "$NAS_ARCHIVE"; do
-    if ping -c 1 -W 2 "$nas" &> /dev/null; then
-      log_success "NAS $nas reachable"
-    else
-      log_error "NAS $nas unreachable"
-      failed=$((failed + 1))
-    fi
-  done
-  
-  # Check NFS services
-  if rpcinfo -p "$NAS_PRIMARY" 2>/dev/null | grep -q nfs; then
-    log_success "NFS service active on primary NAS"
+  # Check network connectivity for the canonical NAS host only
+  if ping -c 1 -W 2 "$NAS_HOST" &> /dev/null; then
+    log_success "NAS $NAS_HOST reachable"
   else
-    log_error "NFS service not responding on primary NAS"
+    log_error "NAS $NAS_HOST unreachable"
+    failed=$((failed + 1))
+  fi
+
+  # Check NFS service on the canonical NAS host
+  if rpcinfo -p "$NAS_HOST" 2>/dev/null | grep -q nfs; then
+    log_success "NFS service active on NAS host"
+  else
+    log_error "NFS service not responding on NAS host"
     failed=$((failed + 1))
   fi
   
@@ -203,7 +204,11 @@ setup_backup_automation() {
 
 BACKUP_LOG="/var/log/nas-backup.log"
 MODELS_SOURCE="/mnt/models"
-BACKUP_DEST="${NAS_SECONDARY:-192.168.168.11}:/export/backups/models"
+: "${NAS_HOST:?NAS_HOST must be set}"
+: "${NAS_EXPORT_PATH:?NAS_EXPORT_PATH must be set}"
+NAS_BACKUP_HOST="${NAS_BACKUP_HOST:-$NAS_HOST}"
+NAS_BACKUP_PATH="${NAS_BACKUP_PATH:-$NAS_EXPORT_PATH/backups/models}"
+BACKUP_DEST="${NAS_BACKUP_HOST}:${NAS_BACKUP_PATH}"
 
 log() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] $@" | tee -a "$BACKUP_LOG"
@@ -234,7 +239,11 @@ BACKUP_SCRIPT
 
 BACKUP_LOG="/var/log/nas-backup.log"
 MODELS_SOURCE="/mnt/models"
-BACKUP_DEST="${NAS_SECONDARY:-192.168.168.11}:/export/backups/models"
+: "${NAS_HOST:?NAS_HOST must be set}"
+: "${NAS_EXPORT_PATH:?NAS_EXPORT_PATH must be set}"
+NAS_BACKUP_HOST="${NAS_BACKUP_HOST:-$NAS_HOST}"
+NAS_BACKUP_PATH="${NAS_BACKUP_PATH:-$NAS_EXPORT_PATH/backups/models}"
+BACKUP_DEST="${NAS_BACKUP_HOST}:${NAS_BACKUP_PATH}"
 
 log() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] $@" | tee -a "$BACKUP_LOG"
@@ -331,7 +340,7 @@ troubleshoot_nas_issues() {
   nfsstat 2>/dev/null | head -20 | tee -a "$LOG_FILE" || echo "(nfsstat not available)" | tee -a "$LOG_FILE"
   
   log_info "Network Connectivity:"
-  for nas in "$NAS_PRIMARY" "$NAS_SECONDARY"; do
+  for nas in "$NAS_HOST" "$NAS_BACKUP_HOST"; do
     echo "  Pinging $nas:" | tee -a "$LOG_FILE"
     ping -c 3 "$nas" 2>&1 | tail -1 | tee -a "$LOG_FILE"
   done

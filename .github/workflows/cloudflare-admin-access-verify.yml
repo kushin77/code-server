@@ -1,0 +1,98 @@
+name: Cloudflare Admin Access Verify
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verify-admin-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify admin endpoints are blocked/challenged
+        id: verify
+        env:
+          ADMIN_BASE_URL: ${{ vars.ADMIN_BASE_URL || vars.IDE_BASE_URL || '' }}
+          APEX_DOMAIN: ${{ vars.APEX_DOMAIN || 'kushnir.cloud' }}
+        run: |
+          bash scripts/ci/verify-cloudflare-admin-access.sh
+
+      - name: Upload admin access report
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344e62e32a76ebc27f8506e98e1  # v4.3.3
+        with:
+          name: cloudflare-admin-access-verify
+          path: artifacts/triage/cloudflare-admin-access-verify.md
+          retention-days: 30
+
+      - name: Route failure to issue
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- cloudflare-admin-access-verify -->';
+            const title = '[AUTO-TRIAGE] Cloudflare admin access verification failed';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            let report = '(report unavailable)';
+
+            if (fs.existsSync('artifacts/triage/cloudflare-admin-access-verify.md')) {
+              report = fs.readFileSync('artifacts/triage/cloudflare-admin-access-verify.md', 'utf8').slice(0, 6000);
+              if (report.length >= 6000) report += '\n... (truncated)';
+            }
+
+            const body = `${marker}
+            ## Cloudflare Admin Access Verification Failure
+
+            - Workflow: ${context.workflow}
+            - Run: ${runUrl}
+            - Detected: ${new Date().toISOString()}
+
+            ### Verification Report
+            ${report}
+
+            ### Immediate Actions
+            1. Confirm all admin endpoints remain blocked/challenged for unauthenticated requests.
+            2. Validate Cloudflare Access policy binding and edge enforcement.
+            3. Confirm oauth2-proxy/Caddy fallback did not become the only active control.
+            4. Update #876 with root cause and mitigation evidence.
+            `;
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security,cloudflare',
+              per_page: 100,
+            });
+
+            const match = existing.data.find((issue) => issue.body && issue.body.includes(marker));
+
+            if (match) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: match.number,
+                body,
+              });
+              core.info(`Updated existing Cloudflare admin access issue #${match.number}`);
+            } else {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['security', 'cloudflare', 'P1', 'automated'],
+              });
+              core.info(`Created Cloudflare admin access issue #${created.data.number}`);
+            }

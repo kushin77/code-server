@@ -1,0 +1,210 @@
+name: Storage Hygiene Reports and Metrics
+
+on:
+  schedule:
+    # Weekly cleanup report - same schedule as other ops tasks (Monday 2 AM UTC)
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    inputs:
+      apply_cleanup:
+        description: 'Apply cleanup (destructive) instead of dry-run'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  storage-hygiene-scan:
+    name: Docker Storage Hygiene Scan
+    runs-on: ubuntu-latest
+    outputs:
+      report_summary: ${{ steps.scan.outputs.summary }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run storage hygiene scan (dry-run)
+        id: scan
+        run: |
+          mkdir -p artifacts/metrics artifacts/triage
+          DRY_RUN=1 APPLY_CLEANUP=0 bash scripts/ops/docker-storage-hygiene.sh
+          
+          # Extract summary for output
+          SUMMARY=$(grep -A 15 "Storage Hygiene Report" artifacts/triage/docker-storage-hygiene-report.log | tail -10)
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload storage hygiene report
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
+        if: always()
+        with:
+          name: docker-storage-hygiene-report
+          path: artifacts/triage/docker-storage-hygiene-report.log
+          retention-days: 90
+
+      - name: Upload storage metrics
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808  # v4.3.3
+        if: hashFiles('artifacts/metrics/docker-storage-metrics.json') != ''
+        with:
+          name: docker-storage-metrics
+          path: artifacts/metrics/docker-storage-metrics.json
+          retention-days: 90  # Keep metrics within the GitHub Free artifact ceiling
+
+  analyze-trends:
+    name: Analyze Storage Trends
+    needs: storage-hygiene-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Download latest metrics
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: docker-storage-metrics
+          path: /tmp/metrics
+
+      - name: Analyze trends
+        run: |
+          if [ -f "/tmp/metrics/docker-storage-metrics.json" ]; then
+            echo "## Storage Metrics (Latest)"
+            cat /tmp/metrics/docker-storage-metrics.json | jq '.'
+          else
+            echo "No metrics available yet"
+          fi
+
+  report-findings:
+    name: Report Storage Hygiene Findings
+    needs: storage-hygiene-scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Download scan report
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: docker-storage-hygiene-report
+          path: /tmp/reports
+
+      - name: Generate summary comment
+        id: comment
+        run: |
+          REPORT_CONTENT=$(cat /tmp/reports/docker-storage-hygiene-report.log)
+          
+          # Create markdown summary
+          cat > /tmp/summary.md <<'SUMMARY'
+          ## 🧹 Weekly Docker Storage Hygiene Report
+          
+          Automated scan performed Monday 2 AM UTC
+          
+          ### Summary
+          SUMMARY
+          
+          # Extract key metrics
+          grep "Orphaned images found:" /tmp/reports/docker-storage-hygiene-report.log >> /tmp/summary.md || echo "- Images: 0 orphaned" >> /tmp/summary.md
+          grep "Orphaned containers:" /tmp/reports/docker-storage-hygiene-report.log >> /tmp/summary.md || echo "- Containers: 0 exited" >> /tmp/summary.md
+          grep "Orphaned volumes:" /tmp/reports/docker-storage-hygiene-report.log >> /tmp/summary.md || echo "- Volumes: 0 unused" >> /tmp/summary.md
+          grep "space reclaimed:" /tmp/reports/docker-storage-hygiene-report.log >> /tmp/summary.md || echo "- Space: 0 MB reclaimed" >> /tmp/summary.md
+          
+          cat >> /tmp/summary.md <<'SUMMARY'
+          
+          ### Details
+          
+          **Mode**: Dry-run (safe, no deletions)
+          
+          See full report in artifacts for:
+          - Protected vs. orphaned assets
+          - Line-by-line deletion decisions
+          - Retention policy applied
+          - Timestamp of scan
+          
+          ### Policy
+          
+          - **Images**: 7 days (protected: code-server, caddy, postgres, redis, prometheus, grafana, ubuntu, alpine)
+          - **Containers**: 3 days (protected: code-server, caddy, oauth2-proxy, postgres, redis, prometheus, grafana)
+          - **Volumes**: 7 days (protected: postgres-data, redis-data)
+          - **Build cache**: 14 days
+          - **Logs**: 30 days (managed by Docker daemon)
+          
+          See [docs/STORAGE-HYGIENE-POLICY.md](../blob/main/docs/STORAGE-HYGIENE-POLICY.md) for details.
+          
+          **To apply cleanup** (if confirmed safe):
+          ```bash
+          APPLY_CLEANUP=1 bash scripts/ops/docker-storage-hygiene.sh
+          ```
+          
+          SUMMARY
+          
+          cat /tmp/summary.md
+
+      - name: Comment on issue #896
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('/tmp/summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: 896,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  estimate-cleanup-impact:
+    name: Estimate Cleanup Impact
+    needs: storage-hygiene-scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Download metrics
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        if: hashFiles('artifacts/metrics/docker-storage-metrics.json') != ''
+        with:
+          name: docker-storage-metrics
+          path: /tmp/metrics
+
+      - name: Create impact analysis
+        run: |
+          if [ -f "/tmp/metrics/docker-storage-metrics.json" ]; then
+            echo "## Storage Cleanup Impact Analysis"
+            echo ""
+            echo "### Metrics"
+            cat /tmp/metrics/docker-storage-metrics.json | jq '{
+              timestamp: .timestamp,
+              orphaned_images: .scan_results.orphaned_images,
+              orphaned_containers: .scan_results.orphaned_containers,
+              orphaned_volumes: .scan_results.orphaned_volumes,
+              space_reclaimed_mb: .storage_metrics.space_reclaimed_mb
+            }'
+            echo ""
+            echo "### Interpretation"
+            SPACE=$(cat /tmp/metrics/docker-storage-metrics.json | jq '.storage_metrics.space_reclaimed_mb')
+            if [ "$SPACE" -gt 1024 ]; then
+              echo "✅ Good cleanup opportunity: ${SPACE}MB orphaned objects found"
+            elif [ "$SPACE" -gt 0 ]; then
+              echo "⚠️ Moderate cleanup available: ${SPACE}MB orphaned objects"
+            else
+              echo "✅ System is clean: No orphaned objects detected"
+            fi
+          else
+            echo "No metrics available yet"
+          fi
+
+  cleanup-old-artifacts:
+    name: Cleanup Old Test Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Remove artifacts older than 90 days
+        run: |
+          echo "Note: GitHub automatically removes artifacts after retention period"
+          echo "Current retention: 90 days for reports, 365 days for metrics"
+          echo "Manual cleanup via GitHub CLI:"
+          echo "  gh run list --repo kushin77/code-server | grep 'docker-storage' | awk '{print \$1}' | xargs -I {} gh run view {} --json artifacts"

@@ -40,6 +40,15 @@ scrape_configs:
     scrape_interval: 30s
     scrape_timeout: 10s
 
+  # Session broker metrics
+  - job_name: 'session-broker'
+    scheme: http
+    static_configs:
+      - targets: ['session-broker:5000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
   # Ollama metrics
   - job_name: 'ollama'
     static_configs:

@@ -56,6 +56,7 @@ export class MetricsAggregator extends EventEmitter {
     type: 'counter' | 'gauge' | 'histogram' | 'summary',
     help: string
   ): void {
+    void help;
     if (!this.metrics.has(name)) {
       this.metrics.set(name, []);
       this.logger.info(`Registered metric: ${name} (${type})`);
@@ -474,7 +475,7 @@ export class AlertManager extends EventEmitter {
    * Evaluate all rules against metrics
    */
   evaluateRules(metrics: Record<string, number>): void {
-    for (const [ruleName, rule] of this.rules.entries()) {
+    for (const [, rule] of this.rules.entries()) {
       this.evaluateRule(rule, metrics);
     }
   }
@@ -540,7 +541,7 @@ export class AlertManager extends EventEmitter {
   }> {
     const now = Date.now();
     return Array.from(this.activeAlerts.entries())
-      .filter(([_, alert]) => !alert.resolvedAt)
+      .filter(([, alert]) => !alert.resolvedAt)
       .map(([alertId, alert]) => ({
         alertId,
         firedAt: alert.timestamp,

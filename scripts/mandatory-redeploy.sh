@@ -19,37 +19,32 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 cd "$REPO_ROOT"
 
-# Source common functions
-if [[ -f "$SCRIPT_DIR/common-functions.sh" ]]; then
-    source "$SCRIPT_DIR/common-functions.sh"
-fi
-
 # Configuration
 DOCKER_CONTEXT="${DOCKER_CONTEXT:-default}"
 BUILD_TIMEOUT=600  # 10 minutes
 HEALTH_CHECK_TIMEOUT=180  # 3 minutes
 SERVICES=("code-server" "oauth2-proxy" "caddy")
 
-write_section "MANDATORY REDEPLOY ORCHESTRATION"
+log_section "MANDATORY REDEPLOY ORCHESTRATION"
 
 # Step 1: Build code-server image
-write_info "Building code-server image..."
+log_info "Building code-server image..."
 if ! docker compose build code-server; then
-    write_error "Failed to build code-server image"
+    log_error "Failed to build code-server image" || true
     exit 1
 fi
-write_success "code-server image built successfully"
+log_success "code-server image built successfully"
 
 # Step 2: Recreate compose stack
-write_info "Recreating compose stack..."
+log_info "Recreating compose stack..."
 if ! docker compose up -d --force-recreate code-server oauth2-proxy caddy; then
-    write_error "Failed to recreate stack"
+    log_error "Failed to recreate stack" || true
     exit 1
 fi
-write_success "Stack recreated"
+log_success "Stack recreated"
 
 # Step 3: Wait for services to be healthy
-write_info "Waiting for services to become healthy..."
+log_info "Waiting for services to become healthy..."
 wait_for_health() {
     local elapsed=0
     while (( elapsed < HEALTH_CHECK_TIMEOUT )); do
@@ -66,7 +61,7 @@ wait_for_health() {
         done
         
         if $all_healthy; then
-            write_success "All services are healthy"
+            log_success "All services are healthy"
             docker compose ps
             return 0
         fi
@@ -75,7 +70,7 @@ wait_for_health() {
         elapsed=$((elapsed + 5))
     done
 
-    write_error "Timeout waiting for services to become healthy"
+    log_error "Timeout waiting for services to become healthy" || true
     return 1
 }
 

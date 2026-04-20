@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 CONTRACT_FILE="${CONTRACT_FILE:-config/ollama-integration-contract.yml}"
 
 require_line() {
@@ -25,8 +28,8 @@ echo "[ollama-contract] validating $CONTRACT_FILE"
 
 require_line 'version: "1"' 'contract version'
 require_line 'contract_id: "code-server-ollama-v1"' 'contract identifier'
-require_line 'host: "192.168.168.42"' 'primary GPU endpoint'
-require_line 'host: "192.168.168.31"' 'fallback CPU endpoint'
+require_line 'host: "replica.prod.internal"' 'primary GPU endpoint'
+require_line 'host: "primary.prod.internal"' 'fallback CPU endpoint'
 require_line 'strategy: "health-primary-fallback"' 'routing strategy'
 require_line 'health_check_path: "/api/version"' 'health check path'
 require_line 'default:' 'default compatibility matrix entry'

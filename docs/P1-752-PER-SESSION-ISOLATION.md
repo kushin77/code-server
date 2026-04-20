@@ -258,7 +258,8 @@ curl -X POST http://session-broker:3000/sessions \
     "userId": "550e8400-e29b-41d4-a716-446655440000",
     "username": "alice",
     "email": "alice@example.com",
-    "ttlSeconds": 28800
+    "ttlSeconds": 28800,
+    "dataProfile": "synthetic"
   }'
 
 # Response:
@@ -267,7 +268,9 @@ curl -X POST http://session-broker:3000/sessions \
   "containerPort": 8081,
   "containerName": "code-server-alice-a7f89d12",
   "url": "http://localhost:8081",
-  "expiresAt": "2026-04-18T05:24:53.000Z"
+  "expiresAt": "2026-04-18T05:24:53.000Z",
+  "dataProfile": "synthetic",
+  "dataProfileValidated": true
 }
 ```
 

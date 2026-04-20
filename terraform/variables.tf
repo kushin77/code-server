@@ -19,9 +19,13 @@ variable "code_server_password" {
 }
 
 variable "domain" {
-  description = "Root domain for deployment (used by oauth2-proxy for OIDC redirect)"
+  description = "Root domain for deployment (e.g., kushnir.cloud). OAuth2 callbacks are derived from this domain and IDE_DOMAIN."
   type        = string
-  default     = "ide.kushnir.cloud"
+  default     = "kushnir.cloud"
+  validation {
+    condition     = can(regex("^[a-z0-9.-]+\\.[a-z]{2,}$", var.domain))
+    error_message = "domain must be a valid FQDN (e.g., kushnir.cloud)"
+  }
 }
 
 variable "config_dir" {
@@ -47,6 +51,17 @@ variable "google_client_secret" {
   type        = string
   sensitive   = true
   default     = ""
+}
+
+variable "redis_password" {
+  description = "Redis authentication password (from GSM or vault-backed env)"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.redis_password) >= 12
+    error_message = "redis_password must be at least 12 characters."
+  }
 }
 
 variable "oauth2_proxy_cookie_secret" {

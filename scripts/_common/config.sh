@@ -36,8 +36,13 @@ readonly DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 readonly DEPLOY_DIR="${DEPLOY_DIR:-/home/akushnir/code-server-enterprise}"
 
 # Standby / replica host
-readonly STANDBY_HOST="${STANDBY_HOST:-192.168.168.30}"
+readonly STANDBY_HOST="${STANDBY_HOST:-192.168.168.42}"
 readonly STANDBY_USER="${STANDBY_USER:-akushnir}"
+readonly VIP_HOST="${VIP_HOST:-192.168.168.30}"
+readonly NAS_HOST="${NAS_HOST:-192.168.168.56}"
+readonly NAS_MOUNT_POINT="${NAS_MOUNT_POINT:-/mnt/nas}"
+readonly NAS_EXPORT_PATH="${NAS_EXPORT_PATH:-/export}"
+readonly NFS_VERSION="${NFS_VERSION:-nfs4}"
 
 # Region host list (optional overrides for additional regions)
 readonly REGION_HOST_3="${REGION_HOST_3:-}"
@@ -117,3 +122,31 @@ readonly SSH_CONNECT_TIMEOUT="${SSH_CONNECT_TIMEOUT:-10}"
 readonly BACKUP_DIR="${BACKUP_DIR:-/home/akushnir/.backups/code-server}"
 readonly LOG_DIR="${LOG_DIR:-/home/akushnir/.logs/code-server}"
 readonly CONFIG_DIR="${CONFIG_DIR:-/home/akushnir/.config/code-server}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ENVIRONMENT HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+load_env() {
+	local env_file="$1"
+
+	if [[ ! -f "$env_file" ]]; then
+		echo "ERROR: Environment file not found: $env_file" >&2
+		return 1
+	fi
+
+	set -a
+	# shellcheck disable=SC1090
+	source "$env_file"
+	set +a
+}
+
+export_vars() {
+	local var_name
+
+	for var_name in "$@"; do
+		export "$var_name"
+	done
+}
+
+export -f load_env export_vars

@@ -10,7 +10,7 @@
 #   1. Validate Dockerfile syntax
 #   2. Build new image with timestamp tag
 #   3. Update docker-compose to reference new image
-#   4. Deploy to 192.168.168.31 (or optionally to 192.168.168.42 replica)
+#   4. Deploy to the configured primary host (or optionally to the standby replica)
 #   5. Health check and verification
 #
 # USAGE:
@@ -18,7 +18,7 @@
 #
 # OPTIONS:
 #   --skip-build      Use existing image (no rebuild)
-#   --replica         Also deploy to 192.168.168.42 replica
+#   --replica         Also deploy to the configured standby replica
 #   --dry-run         Preview changes without deployment
 #   --no-verify       Skip post-deployment health checks
 #   --image <tag>     Specific image tag (default: timestamp)
@@ -36,8 +36,6 @@ source "$SCRIPT_DIR/_common/init.sh"
 DOCKERFILE_PATH="${SCRIPT_DIR}/../Dockerfile.code-server"
 IMAGE_NAME="code-server-enterprise"
 IMAGE_TAG="${IMAGE_TAG:-$(date +%Y%m%d-%H%M%S)}"
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 DOCKER_COMPOSE_FILE="${SCRIPT_DIR}/../docker-compose.yml"
 
 # Flags
@@ -259,7 +257,7 @@ show_summary() {
     
     log_info "Image:            $IMAGE_NAME:$IMAGE_TAG"
     log_info "Primary host:     $DEPLOY_HOST"
-    [ "$DEPLOY_REPLICA" = "true" ] && log_info "Replica host:     192.168.168.42"
+    [ "$DEPLOY_REPLICA" = "true" ] && log_info "Replica host:     $STANDBY_HOST"
     log_info "Mode:             $([ "$DRY_RUN" = "true" ] && echo "DRY-RUN" || echo "LIVE")"
     log_info ""
     log_info "Next steps:"
@@ -302,8 +300,8 @@ main() {
     if [ "$DEPLOY_REPLICA" = "true" ]; then
         log_info ""
         log_info "Also deploying to replica host..."
-        deploy_to_host "192.168.168.42"
-        verify_deployment "192.168.168.42"
+        deploy_to_host "$STANDBY_HOST"
+        verify_deployment "$STANDBY_HOST"
     fi
     
     show_summary
@@ -317,7 +315,7 @@ Build, update, and deploy the code-server container image to on-prem hosts.
 
 OPTIONS:
   --skip-build      Skip Docker image build (use existing image)
-  --replica         Also deploy to replica host (192.168.168.42)
+    --replica         Also deploy to the configured standby replica
   --dry-run         Preview changes without actual deployment
   --no-verify       Skip post-deployment health checks
   --image <tag>     Use specific image tag (default: auto-timestamp)

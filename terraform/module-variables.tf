@@ -3,6 +3,29 @@
 # These variables are specific to module configuration and should override defaults in module calls
 
 ################################
+# CLOUDFLARE ACCESS VARIABLES (#876)
+################################
+
+variable "allowed_emails" {
+  description = "List of email addresses permitted to access admin endpoints via Cloudflare Access"
+  type        = list(string)
+  default     = []
+}
+
+variable "cloudflare_warp_device_posture_id" {
+  description = "Cloudflare WARP device posture integration ID. Enforce WARP enrollment check on admin access. Leave empty to skip posture check."
+  type        = string
+  sensitive   = false
+  default     = ""
+}
+
+variable "cloudflare_logpush_r2_bucket" {
+  description = "Cloudflare R2 bucket name for Access audit log Logpush. Leave empty to skip Logpush configuration."
+  type        = string
+  default     = ""
+}
+
+################################
 # CLOUDFLARE & DNS VARIABLES
 ################################
 

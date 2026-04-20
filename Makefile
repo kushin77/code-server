@@ -260,40 +260,61 @@ dashboard: status
 # ─────────────────────────────────────────────────────────────────────────────
 # Bypass Cloudflare tunnel, OAuth2 proxy, and Caddy for direct development
 
-# ✅ SSH directly to .31 node (no tunnel/proxy)
+# ✅ SSH directly to primary node (no tunnel/proxy)
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 ssh-31:
-	@echo "🔌 Connecting directly to 192.168.168.31..."
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "🔌 Connecting directly to $$DEPLOY_HOST..."; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST
 
-# ✅ Check .31 node status (direct SSH)
+# ✅ Check primary node status (direct SSH)
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 status-31:
-	@echo "📊 Host 31 Status (192.168.168.31):"
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 'hostname && uptime && echo ""; echo "🐳 Docker:"; docker ps -n 5 --format="table {{.Names}}\t{{.Status}}" || echo "Docker not available"; echo ""; echo "💾 Disk:"; df -h / | tail -1'
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "📊 Primary host ($$DEPLOY_HOST) Status:"; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST 'hostname && uptime && echo ""; echo "🐳 Docker:"; docker ps -n 5 --format="table {{.Names}}\t{{.Status}}" || echo "Docker not available"; echo ""; echo "💾 Disk:"; df -h / | tail -1'
 
-# ✅ Open interactive code-server shell on .31
+# ✅ Open interactive shell on primary node
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 shell-31:
-	@echo "📝 Shell on 192.168.168.31:"
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 "bash -l"
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "📝 Shell on $$DEPLOY_HOST:"; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST "bash -l"
 
-# ✅ Deploy directly to .31 (skip containers/tunnel)
+# ✅ Deploy directly to primary node (skip containers/tunnel)
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 deploy-31:
-	@echo "🚀 Direct deployment to 192.168.168.31..."
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 'cd /home/akushnir/code-server-enterprise && make deploy && make status'
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "🚀 Direct deployment to $$DEPLOY_HOST..."; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST 'cd /home/$${DEPLOY_USER}/code-server-enterprise && make deploy && make status'
 
-# ✅ Stream logs from .31 node services
+# ✅ Stream logs from primary node services
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 logs-31:
-	@echo "📋 Streaming logs from 192.168.168.31..."
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 'docker compose logs -f'
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "📋 Streaming logs from $$DEPLOY_HOST..."; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST 'docker compose logs -f'
 
-# ✅ Run shell commands on .31 (usage: make cmd-31 CMD="your command")
+# ✅ Run shell commands on primary node (usage: make cmd-31 CMD="your command")
+# Uses DEPLOY_HOST env var (default: 192.168.168.31) and DEPLOY_USER (default: akushnir)
 cmd-31:
 	@if [ -z "$(CMD)" ]; then echo "Usage: make cmd-31 CMD='your command'"; exit 1; fi
-	@ssh -i ~/.ssh/akushnir-31 akushnir@192.168.168.31 '$(CMD)'
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	ssh -i ~/.ssh/$${DEPLOY_USER}-primary $${DEPLOY_USER}@$$DEPLOY_HOST '$(CMD)'
 
-# ✅ PHASE 13 - Execute Day 1 tasks directly on .31
+# ✅ PHASE 13 - Execute Day 1 tasks directly on primary node
+# Uses DEPLOY_HOST env var (default: 192.168.168.31), DEPLOY_USER (default: akushnir), and SSH key from ~/.ssh/
 phase-13-day1:
-	@echo "🚀 PHASE 13 DAY 1: Executing on 192.168.168.31 (direct SSH)..."
-	@bash scripts/phase-13-day1-remote.sh 192.168.168.31 akushnir ~/.ssh/akushnir-31
+	@DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}; \
+	DEPLOY_USER=${DEPLOY_USER:-akushnir}; \
+	echo "🚀 PHASE 13 DAY 1: Executing on $$DEPLOY_HOST (direct SSH)..."; \
+	bash scripts/phase-13-day1-remote.sh $$DEPLOY_HOST $$DEPLOY_USER ~/.ssh/$${DEPLOY_USER}-primary
 
 # ✅ PHASE 13 - Execute Day 1 tasks locally (requires local infrastructure)
 phase-13-day1-local:
@@ -631,21 +652,10 @@ teardown:
 # LATENCY OPTIMIZATION (Issue #182)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ✅ Install terminal output optimizer service
+# RETIRED: terminal output optimizer systemd unit is archived.
 latency-optimizer-install:
-	@echo "📦 Installing Terminal Output Optimizer..."
-	@if [ -f services/terminal-output-optimizer.py ]; then \
-		echo "  ✓ Installing Python service"; \
-		pip install -r requirements-optimizer.txt 2>/dev/null || echo "  (skipping pip - check requirements)"; \
-		echo "  ✓ Copying systemd service"; \
-		sudo cp config/systemd/terminal-output-optimizer.service /etc/systemd/system/; \
-		sudo systemctl daemon-reload; \
-		echo "✅ Terminal Output Optimizer installed"; \
-		echo "   Run: make latency-services-start"; \
-	else \
-		echo "❌ Service file not found: services/terminal-output-optimizer.py"; \
-		exit 1; \
-	fi
+	@echo "⚠️  Retired latency optimizer systemd unit"
+	@echo "Use: make latency-monitor-install"
 
 # ✅ Install latency monitor service
 latency-monitor-install:
@@ -666,19 +676,15 @@ latency-monitor-install:
 # ✅ Start latency optimization services
 latency-services-start:
 	@echo "🚀 Starting latency optimization services..."
-	@echo "  • Terminal Output Optimizer (port 8081)..."
-	@sudo systemctl start terminal-output-optimizer.service 2>/dev/null || echo "    (requires systemd setup)"
 	@echo "  • Latency Monitor (port 8082)..."
 	@sudo systemctl start latency-monitor.service 2>/dev/null || echo "    (requires systemd setup)"
 	@echo "  • Enabling auto-start..."
-	@sudo systemctl enable terminal-output-optimizer.service 2>/dev/null || true
 	@sudo systemctl enable latency-monitor.service 2>/dev/null || true
 	@echo "✅ Services started"
 
 # ✅ Stop latency optimization services
 latency-services-stop:
 	@echo "⏹️  Stopping latency optimization services..."
-	@sudo systemctl stop terminal-output-optimizer.service 2>/dev/null || true
 	@sudo systemctl stop latency-monitor.service 2>/dev/null || true
 	@echo "✅ Services stopped"
 
@@ -688,7 +694,6 @@ latency-dashboard:
 	@echo "===================================="
 	@echo ""
 	@echo "🔧 Services:"
-	@systemctl status terminal-output-optimizer.service 2>/dev/null | grep "Active" || echo "  Terminal Optimizer: Not installed"
 	@systemctl status latency-monitor.service 2>/dev/null | grep "Active" || echo "  Latency Monitor: Not installed"
 	@echo ""
 	@echo "📈 Performance Metrics:"
@@ -697,7 +702,6 @@ latency-dashboard:
 	@echo "  Compression ratio: $(curl -s http://localhost:8082/metrics/compression 2>/dev/null || echo 'N/A')"
 	@echo ""
 	@echo "📁 Logs:"
-	@echo "  Optimizer: /var/log/terminal-output-optimizer.log"
 	@echo "  Monitor: /var/log/latency-monitor.log"
 
 # ✅ Generate latency report
@@ -903,6 +907,24 @@ policy-version:
 # Validate policy-version.json hashes match actual files (same check as CI)
 policy-version-check:
 	@bash scripts/ci/validate-policy-version.sh
+
+# Build a canary OPA policy bundle artifact + signed manifest
+policy-bundle-build:
+	@bash scripts/governance/build-policy-bundle.sh --version 1.0.0 --channel canary
+
+# Verify signed policy bundle manifest against distribution catalog
+policy-bundle-verify:
+	@bash scripts/governance/verify-policy-bundle.sh --manifest artifacts/policy-bundles/policy-bundle-1.0.0-canary.manifest.json
+
+# Normalize policy runtime decisions into queryable JSONL + summary
+policy-decision-log-export:
+	@mkdir -p artifacts/policy-logs
+	@printf '{"timestamp":"2026-04-18T12:00:00Z","decision":"allow","policy_domain":"security","actor":"make"}\n' > artifacts/policy-logs/synthetic.log
+	@printf 'POLICY_DECISION deny policy=compliance actor=user@example.com\n' >> artifacts/policy-logs/synthetic.log
+	@bash scripts/governance/export-policy-decision-log.sh \
+		--input artifacts/policy-logs/synthetic.log \
+		--out-jsonl artifacts/policy-logs/decision-log.jsonl \
+		--out-summary artifacts/policy-logs/summary.json
 
 
 

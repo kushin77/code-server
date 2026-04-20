@@ -1,0 +1,671 @@
+{
+  "config": {
+    "configFile": "C:\\code-server-enterprise\\tests\\e2e\\playwright.config.ts",
+    "rootDir": "C:/code-server-enterprise/tests/e2e/specs",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/code-server-enterprise/tests/e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/code-server-enterprise/tests/e2e/specs",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "../artifacts/playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "../artifacts/playwright-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "kushnir-cloud-appsmith-login.spec.ts",
+      "file": "kushnir-cloud-appsmith-login.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "kushnir.cloud Appsmith login path",
+          "file": "kushnir-cloud-appsmith-login.spec.ts",
+          "line": 77,
+          "column": 6,
+          "specs": [
+            {
+              "title": "portal static css is served as text/css",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 74,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.345Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-45033b019325dee838db",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 78,
+              "column": 7
+            },
+            {
+              "title": "unauthenticated root redirects to oauth2 start endpoint",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 13,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.432Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-59b358d33e2152a80a0d",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 85,
+              "column": 7
+            },
+            {
+              "title": "oauth2 start endpoint emits redirect with rd parameter preserved",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.453Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-ebde2ba72016fa53c7ac",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 97,
+              "column": 7
+            },
+            {
+              "title": "logout endpoint redirects through oauth2 sign out with return URL",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.478Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-bec3db4b26aef53f342d",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 107,
+              "column": 7
+            },
+            {
+              "title": "interactive login starts from kushnir.cloud and reaches the auth provider",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 19,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.503Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-71e942cec3c4ebb68349",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 116,
+              "column": 7
+            },
+            {
+              "title": "portal oauth start resolves to expected google redirect_uri contract",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 12,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.529Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-01e5b32d3e5f30219fba",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 138,
+              "column": 7
+            },
+            {
+              "title": "ide oauth start resolves to expected google redirect_uri contract",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 36,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.550Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-e253c0ef0f12e955dbdf",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 153,
+              "column": 7
+            },
+            {
+              "title": "appsmith GitHub button emits redirect_uri for kushnir.cloud host",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Appsmith login page is fail-closed in this environment (status 403)",
+                      "location": {
+                        "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                        "line": 179,
+                        "column": 12
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 15,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.592Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Appsmith login page is fail-closed in this environment (status 403)",
+                          "location": {
+                            "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                            "line": 179,
+                            "column": 12
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-327b9871088d4c1abafd",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 168,
+              "column": 7
+            },
+            {
+              "title": "auth reset response includes cookie/site-data clearing headers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 12,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.614Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-98de8cdaaa54f16a4a92",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 204,
+              "column": 7
+            },
+            {
+              "title": "single-login sentinel detects appsmith secondary auth when strict mode is enabled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "Set REQUIRE_SINGLE_LOGIN=1 to enforce no secondary Appsmith login",
+                      "location": {
+                        "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                        "line": 218,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 190,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.634Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "Set REQUIRE_SINGLE_LOGIN=1 to enforce no secondary Appsmith login",
+                          "location": {
+                            "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                            "line": 218,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-abbe4d58269e5114450a",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 217,
+              "column": 7
+            },
+            {
+              "title": "auth reset clears cookies and responds with redirect helper html",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.915Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-462593fd6b0f2530cc3d",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 245,
+              "column": 7
+            },
+            {
+              "title": "authenticated portal session (QA storage state) loads without oauth redirect",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "PLAYWRIGHT_STORAGE_STATE is required for QA-authenticated flow",
+                      "location": {
+                        "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                        "line": 256,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.932Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "PLAYWRIGHT_STORAGE_STATE is required for QA-authenticated flow",
+                          "location": {
+                            "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                            "line": 256,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-77f9eaf21edac485cf63",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 255,
+              "column": 7
+            },
+            {
+              "title": "authenticated user can open portal and logout back to auth gate",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "PLAYWRIGHT_STORAGE_STATE is required for full login->portal->logout flow",
+                      "location": {
+                        "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                        "line": 282,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 1,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.938Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "PLAYWRIGHT_STORAGE_STATE is required for full login->portal->logout flow",
+                          "location": {
+                            "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                            "line": 282,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-335c18af2d7f3073f591",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 281,
+              "column": 7
+            },
+            {
+              "title": "authenticated IDE session (QA storage state) loads without oauth redirect loop",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "PLAYWRIGHT_STORAGE_STATE is required for QA-authenticated flow",
+                      "location": {
+                        "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                        "line": 305,
+                        "column": 10
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-04-20T00:17:51.952Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "description": "PLAYWRIGHT_STORAGE_STATE is required for QA-authenticated flow",
+                          "location": {
+                            "file": "C:\\code-server-enterprise\\tests\\e2e\\specs\\kushnir-cloud-appsmith-login.spec.ts",
+                            "line": 305,
+                            "column": 10
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9ada6ef3e9019bcdd423-7d9e30f94c4ccfe40c14",
+              "file": "kushnir-cloud-appsmith-login.spec.ts",
+              "line": 304,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-04-20T00:17:50.795Z",
+    "duration": 1235.5189999999998,
+    "expected": 9,
+    "skipped": 5,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

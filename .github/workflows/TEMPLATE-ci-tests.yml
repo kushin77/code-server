@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 env:
   COST_CATEGORY: "ci-tests"
@@ -64,6 +65,19 @@ jobs:
       - name: Run unit tests
         run: corepack pnpm --filter ./apps/backend test:coverage
         timeout-minutes: 15
+
+      - name: Route unit test failures to issues
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash scripts/ops/test-failure-triage.sh \
+            --tool vitest \
+            --suite "unit-tests-node-${{ matrix.node-version }}" \
+            --workflow "${{ github.workflow }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --repo "${{ github.repository }}" \
+            --exit-code 1
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
@@ -142,6 +156,19 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
           REDIS_URL: redis://localhost:6379
+
+      - name: Route integration test failures to issues
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash scripts/ops/test-failure-triage.sh \
+            --tool integration \
+            --suite "backend-integration" \
+            --workflow "${{ github.workflow }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --repo "${{ github.repository }}" \
+            --exit-code 1
 
       - name: Report metrics
         if: always()

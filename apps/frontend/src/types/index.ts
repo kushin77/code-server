@@ -95,6 +95,86 @@ export interface Session {
   lastActivityAt: Date
 }
 
+export type SessionLifecycleState = 'requested' | 'queued' | 'provisioning' | 'ready' | 'testing' | 'teardown_pending' | 'destroyed' | 'failed'
+
+export type SessionQueueLane = 'fast' | 'standard'
+
+export type SessionDataProfile = 'synthetic' | 'masked' | 'redacted'
+
+export type SessionProvenanceVerificationResult = 'verified' | 'failed'
+
+export interface SessionProvenanceManifest {
+  imageDigest: string
+  attestationRef: string
+  signerIdentity: string
+  verificationTimestamp: Date
+  verificationResult: SessionProvenanceVerificationResult
+  policyVersion: string
+  sessionFingerprint?: string
+}
+
+export interface EphemeralSession {
+  sessionId: string
+  userId: string
+  username: string
+  email: string
+  dataProfile: SessionDataProfile
+  dataProfileValidated: boolean
+  provenance?: SessionProvenanceManifest | null
+  queueLane?: SessionQueueLane | null
+  queuePosition?: number | null
+  queueEstimatedWaitSeconds?: number | null
+  queueReason?: string | null
+  queueEnqueuedAt?: Date | null
+  queue?: SessionQueueSummary | null
+  containerName: string
+  containerPort: number
+  url?: string | null
+  status: SessionLifecycleState
+  createdAt: Date
+  expiresAt: Date
+  lastActivity: Date
+  quotas: {
+    cpuLimit: string
+    memoryLimit: string
+    storageLimit: string
+  }
+}
+
+export interface EphemeralSessionLaunchRequest {
+  userId: string
+  username: string
+  email: string
+  dataProfile: SessionDataProfile
+  provenance?: SessionProvenanceManifest
+  priorityLane?: SessionQueueLane
+  ttlSeconds?: number
+}
+
+export interface SessionQueueSummary {
+  lane: SessionQueueLane
+  position: number | null
+  estimatedWaitSeconds: number | null
+  reason: string | null
+  enqueuedAt: Date | null
+}
+
+export interface EphemeralSessionStatus {
+  sessionId: string
+  state: SessionLifecycleState
+  active: boolean
+  terminal: boolean
+  dataProfile: SessionDataProfile
+  dataProfileValidated: boolean
+  provenance?: SessionProvenanceManifest | null
+  queue?: SessionQueueSummary | null
+  containerPort: number
+  containerName: string
+  expiresAt: Date
+  lastActivity: Date
+  nextActions: Array<'cancel' | 'destroy'>
+}
+
 export interface AuditLog {
   id: string
   eventType: string

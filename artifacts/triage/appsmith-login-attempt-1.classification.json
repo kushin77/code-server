@@ -1,0 +1,19 @@
+{
+  "classification": "unknown",
+  "recommendRerun": false,
+  "logFile": "artifacts/triage/appsmith-login-attempt-1.log",
+  "signaturesFile": "config/test-flake-signatures.json",
+  "policy": {
+    "rerunLimit": 1,
+    "rerunOn": [
+      "flake"
+    ]
+  },
+  "matchedSignatures": [],
+  "summary": {
+    "matchedFlakeCount": 0,
+    "matchedNonFlakeCount": 0,
+    "rerunLimit": 1
+  },
+  "generatedAt": "2026-04-20T00:17:52+00:00"
+}

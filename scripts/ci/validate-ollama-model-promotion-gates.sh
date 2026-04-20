@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 GATES_FILE="${GATES_FILE:-config/ollama-model-promotion-gates.yml}"
 POLICY_FILE="${POLICY_FILE:-docs/AI-MODEL-PROMOTION-GATES-630.md}"
 

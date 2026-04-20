@@ -1,0 +1,74 @@
+# Falco Helm values — production configuration
+# Implements: https://github.com/kushin77/code-server/issues/873
+#
+# Usage:
+#   helm repo add falcosecurity https://falcosecurity.github.io/charts
+#   helm repo update
+#   helm install falco falcosecurity/falco \
+#     --namespace falco --create-namespace \
+#     --values kubernetes/security/falco-values.yaml
+
+# Use eBPF driver — no kernel module required (safer in containerized envs)
+driver:
+  kind: ebpf
+
+falco:
+  # Enable gRPC for falcosidekick integration
+  grpc:
+    enabled: true
+    bind_address: "0.0.0.0:5060"
+    threadiness: 8
+  grpcOutput:
+    enabled: true
+
+  # Output to falcosidekick (AlertManager forwarding)
+  jsonOutput: true
+  jsonIncludeOutputProperty: true
+  logLevel: info
+
+  # Custom rules are mounted from ConfigMap
+  rulesFile:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/custom-rules/custom-rules.yaml
+
+# Mount custom rules ConfigMap
+extraVolumes:
+  - name: custom-rules
+    configMap:
+      name: falco-custom-rules
+
+extraVolumeMounts:
+  - name: custom-rules
+    mountPath: /etc/falco/custom-rules
+    readOnly: true
+
+# Alert to falcosidekick
+falcosidekick:
+  enabled: true
+  replicaCount: 1
+  config:
+    alertmanager:
+      hostport: "http://alertmanager.monitoring.svc.cluster.local:9093"
+      minimumpriority: warning
+      checkcert: false
+
+# DaemonSet — one pod per node
+controller:
+  kind: daemonset
+
+# Resource limits
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+# Tolerate all taints so Falco runs on every node (including control-plane)
+tolerations:
+  - effect: NoSchedule
+    operator: Exists
+  - effect: NoExecute
+    operator: Exists

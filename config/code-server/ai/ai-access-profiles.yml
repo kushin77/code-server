@@ -9,8 +9,8 @@ deny_by_default: true
 
 profiles:
   standard-developer:
-    primary_endpoint: "http://192.168.168.42:11434"
-    fallback_endpoint: "http://192.168.168.31:11434"
+    primary_endpoint: "http://replica.prod.internal:11434"
+    fallback_endpoint: "http://primary.prod.internal:11434"
     allowed_models_csv: "codellama:7b,mistral"
     default_model: "codellama:7b"
     quota_tier: "standard"
@@ -18,8 +18,8 @@ profiles:
     max_output_tokens: 2048
 
   power-user:
-    primary_endpoint: "http://192.168.168.42:11434"
-    fallback_endpoint: "http://192.168.168.31:11434"
+    primary_endpoint: "http://replica.prod.internal:11434"
+    fallback_endpoint: "http://primary.prod.internal:11434"
     allowed_models_csv: "codellama:7b,mistral,llama3"
     default_model: "llama3"
     quota_tier: "power"
@@ -27,8 +27,8 @@ profiles:
     max_output_tokens: 4096
 
   platform-admin:
-    primary_endpoint: "http://192.168.168.42:11434"
-    fallback_endpoint: "http://192.168.168.31:11434"
+    primary_endpoint: "http://replica.prod.internal:11434"
+    fallback_endpoint: "http://primary.prod.internal:11434"
     allowed_models_csv: "codellama:7b,mistral,llama3"
     default_model: "llama3"
     quota_tier: "admin"

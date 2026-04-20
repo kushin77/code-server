@@ -38,7 +38,7 @@ require_file "$ISSUE_FILE"
 
 require_literal "$ACCESS_FILE" 'The admin portal is the source of truth for AI entitlement and quota tier.' 'portal source of truth'
 require_literal "$ACCESS_FILE" 'code-server injects the active AI profile at startup.' 'startup injection policy'
-require_literal "$ACCESS_FILE" 'The primary AI endpoint is 192.168.168.42 and the automatic fallback is 192.168.168.31.' 'endpoint fallback policy'
+require_literal "$ACCESS_FILE" 'The primary AI endpoint is `http://replica.prod.internal:11434` and the automatic fallback is `http://primary.prod.internal:11434`.' 'endpoint fallback policy'
 require_literal "$ACCESS_FILE" 'No user-entered API key or token is required in the IDE.' 'no token policy'
 require_literal "$ACCESS_FILE" 'Model access is deny-by-default unless the workspace policy maps the user to a profile.' 'deny-by-default policy'
 require_literal "$ACCESS_FILE" 'Persistence rule:' 'persistence rule section'
@@ -47,8 +47,8 @@ require_literal "$ACCESS_FILE" 'scripts/ci/validate-secretsless-ai-access.sh' 'v
 
 require_literal "$PROFILE_FILE" 'default_profile: "standard-developer"' 'default profile'
 require_literal "$PROFILE_FILE" 'deny_by_default: true' 'deny by default profile policy'
-require_literal "$PROFILE_FILE" 'primary_endpoint: "http://192.168.168.42:11434"' 'primary endpoint profile'
-require_literal "$PROFILE_FILE" 'fallback_endpoint: "http://192.168.168.31:11434"' 'fallback endpoint profile'
+require_literal "$PROFILE_FILE" 'primary_endpoint: "http://replica.prod.internal:11434"' 'primary endpoint profile'
+require_literal "$PROFILE_FILE" 'fallback_endpoint: "http://primary.prod.internal:11434"' 'fallback endpoint profile'
 require_literal "$PROFILE_FILE" 'allowed_models_csv: "codellama:7b,mistral"' 'standard allowed models'
 require_literal "$PROFILE_FILE" 'default_model: "codellama:7b"' 'default model'
 require_literal "$PROFILE_FILE" 'quota_tier: "standard"' 'standard quota tier'
@@ -99,8 +99,8 @@ cat > "$TMP_DIR/secretsless-ai-evidence.json" <<'EOF'
 {
   "default_profile": "standard-developer",
   "deny_by_default": true,
-  "primary_endpoint": "http://192.168.168.42:11434",
-  "fallback_endpoint": "http://192.168.168.31:11434",
+  "primary_endpoint": "http://replica.prod.internal:11434",
+  "fallback_endpoint": "http://primary.prod.internal:11434",
   "quota_tiers": ["none", "standard", "power", "admin"],
   "audit_events": ["grant", "revoke", "override", "denial"]
 }
@@ -130,7 +130,7 @@ if evidence['default_profile'] != 'standard-developer' or evidence['deny_by_defa
     print('Profile policy mismatch', file=sys.stderr)
     sys.exit(1)
 
-if evidence['primary_endpoint'] != 'http://192.168.168.42:11434' or evidence['fallback_endpoint'] != 'http://192.168.168.31:11434':
+if evidence['primary_endpoint'] != 'http://replica.prod.internal:11434' or evidence['fallback_endpoint'] != 'http://primary.prod.internal:11434':
     print('Endpoint mismatch', file=sys.stderr)
     sys.exit(1)
 

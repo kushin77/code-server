@@ -8,11 +8,6 @@ All components deployed and tested successfully on **April 16, 2026**.
 
 ## 🎯 What's Deployed
 
-### Local Location (Windows)
-```
-c:\code-server-enterprise\scripts\gmail-agent\
-```
-
 ### Remote Location (Production Host)
 ```
 ssh akushnir@192.168.168.31
@@ -46,14 +41,6 @@ ssh akushnir@192.168.168.31
 ---
 
 ## 🚀 Quick Commands
-
-### From Local Windows
-```powershell
-cd c:\code-server-enterprise\scripts\gmail-agent
-run.bat status
-run.bat search "is:unread" --summarize
-run.bat chat
-```
 
 ### From Production Host
 ```bash

@@ -178,19 +178,28 @@ _run_cleanup_handlers() {
 # FILE OPERATIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
+declare -ag _MK_TEMP_DIRS=()
+
+_cleanup_mktemp_dirs() {
+    local temp_dir
+    for temp_dir in "${_MK_TEMP_DIRS[@]}"; do
+        if [[ -n "$temp_dir" && -d "$temp_dir" ]]; then
+            rm -rf "$temp_dir"
+            log_debug "Cleaned up temporary directory: $temp_dir"
+        fi
+    done
+}
+
 # Create temporary directory and register cleanup
 mktemp_dir() {
     local temp_dir
     temp_dir=$(mktemp -d)
     log_debug "Created temporary directory: $temp_dir"
-    
-    _cleanup_tempdir() {
-        if [ -d "$temp_dir" ]; then
-            rm -rf "$temp_dir"
-            log_debug "Cleaned up temporary directory: $temp_dir"
-        fi
-    }
-    add_cleanup _cleanup_tempdir
+
+    _MK_TEMP_DIRS+=("$temp_dir")
+    if [[ " ${_CLEANUP_HANDLERS[*]:-} " != *" _cleanup_mktemp_dirs "* ]]; then
+        add_cleanup _cleanup_mktemp_dirs
+    fi
     
     echo "$temp_dir"
 }

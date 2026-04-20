@@ -22,6 +22,7 @@ assert_deploy_access   # SSH connectivity to production host
 
 # Script metadata
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+PREFLIGHT_GUARD="${PREFLIGHT_GUARD:-$REPO_ROOT/scripts/ops/preflight.sh}"
 LOG_DIR="${REPO_ROOT}/logs/deployments"
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
 export LOG_FILE="${LOG_DIR}/redeploy_${TIMESTAMP}.log"
@@ -485,6 +486,12 @@ main() {
 
     # Validation
     validate_target || return 1
+
+    if [[ -f "$PREFLIGHT_GUARD" ]]; then
+        bash "$PREFLIGHT_GUARD" --local-only || return 1
+    else
+        log_warn "Preflight guard not executable: ${PREFLIGHT_GUARD}"
+    fi
 
     # Pre-flight checks
     check_git_state || return 1

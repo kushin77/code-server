@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Validate waiver issue template fields
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        env:
+          PRIMARY_HOST: ${{ vars.DEPLOY_HOST || 'primary.prod.internal' }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -70,6 +72,8 @@ jobs:
 
             const isBlank = (value) => !value || /^<.*>$/.test(value) || /^(tbd|pending)$/i.test(value);
 
+            const primaryHost = process.env.PRIMARY_HOST || 'primary.prod.internal';
+            const escapedPrimaryHost = primaryHost.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const fields = [
               ["Requested by", extract(/^- Requested by:\s*(.*)$/m)],
               ["PR/Issue", extract(/^- PR\/Issue:\s*(.*)$/m)],
@@ -82,7 +86,7 @@ jobs:
               ["Owner for remediation", extract(/^- Owner for remediation:\s*(.*)$/m)],
               ["Security impact", extract(/^- Security impact:\s*(.*)$/m)],
               ["Compensating controls", extract(/^- Compensating controls:\s*(.*)$/m)],
-              ["On-prem impact on 192.168.168.31", extract(/^- On-prem impact on 192\.168\.168\.31:\s*(.*)$/m)],
+              ["On-prem impact on " + primaryHost, extract(new RegExp(`^- On-prem impact on ${escapedPrimaryHost}:\\s*(.*)$`, 'm'))],
             ];
 
             const approvalFields = [
@@ -175,6 +179,7 @@ jobs:
         run: |
           bash -n scripts/governance/generate-waiver-report.sh
           bash -n scripts/governance/validate-waiver-registry.sh
+          bash -n scripts/governance/generate-waiver-inventory.sh
 
       - name: Validate centralized waiver registry
         id: registry
@@ -204,6 +209,13 @@ jobs:
         run: |
           chmod +x scripts/governance/generate-waiver-report.sh
           scripts/governance/generate-waiver-report.sh "${{ github.repository }}" 380
+
+          chmod +x scripts/governance/generate-waiver-inventory.sh
+          scripts/governance/generate-waiver-inventory.sh \
+            --registry config/governance-waivers.json \
+            --output-json .github/reports/governance/waiver_inventory_admin.json \
+            --output-md .github/reports/governance/waiver_inventory_admin.md
+
           REPORT_FILE=$(ls -1 .github/reports/governance/governance_waiver_report_*.md | tail -n 1)
           METRICS_FILE=$(ls -1 .github/reports/governance/governance_waiver_metrics_*.prom | tail -n 1)
           {
@@ -223,6 +235,14 @@ jobs:
               cat .github/reports/governance/waiver_registry_validation.json
             else
               echo "Registry validation report not found"
+            fi
+            echo
+            echo "### Waiver Inventory (Admin View)"
+            echo
+            if [[ -f .github/reports/governance/waiver_inventory_admin.md ]]; then
+              cat .github/reports/governance/waiver_inventory_admin.md
+            else
+              echo "Waiver inventory report not found"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -272,6 +292,8 @@ jobs:
             .github/reports/governance/waiver_registry_validation.json
             .github/reports/governance/waiver_expired_active.json
             .github/reports/governance/waiver_audit_events.jsonl
+            .github/reports/governance/waiver_inventory_admin.json
+            .github/reports/governance/waiver_inventory_admin.md
 
       - name: Post waiver audit to canonical governance issue
         env:

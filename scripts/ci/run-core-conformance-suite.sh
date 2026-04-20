@@ -6,6 +6,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
 REPORT_DIR="${REPORT_DIR:-.github/reports/conformance}"
 AUTH_REPORT="${AUTH_REPORT:-$REPORT_DIR/auth-conformance-report.json}"
 VITEST_REPORT="${VITEST_REPORT:-$REPORT_DIR/core-conformance-vitest.json}"
@@ -21,16 +24,17 @@ auth_exit=0
 vitest_exit=0
 waiver_exit=0
 
-echo "[core-conformance] running auth/policy conformance"
+log_info "running auth/policy conformance"
 set +e
 bash scripts/ci/test-auth-conformance.sh --report "$AUTH_REPORT"
 auth_exit=$?
 set -e
 
-echo "[core-conformance] running unit conformance matrix"
+log_info "running unit conformance matrix"
 set +e
 npx vitest run \
   tests/unit/policy-bundle-verifier/conformance.spec.ts \
+    tests/unit/opa-policy-service/conformance.spec.ts \
   tests/unit/session-bootstrap-enforcer/bootstrap.spec.ts \
   tests/unit/revocation-broker/enforcement.spec.ts \
   tests/unit/shared-workspace-acl/conformance.spec.ts \
@@ -40,7 +44,7 @@ npx vitest run \
 vitest_exit=$?
 set -e
 
-echo "[core-conformance] running waiver registry conformance"
+log_info "running waiver registry conformance"
 set +e
 if command -v jq >/dev/null 2>&1; then
   bash scripts/governance/validate-waiver-registry.sh \
@@ -50,7 +54,7 @@ if command -v jq >/dev/null 2>&1; then
     --expired "$WAIVER_EXPIRED"
   waiver_exit=$?
 else
-  echo "[core-conformance] jq not available — waiver registry check skipped (not a CI failure)"
+  log_warn "jq not available — waiver registry check skipped (not a CI failure)"
   waiver_exit=0
   # Write a minimal skip-report so the Python summarizer has a valid file
   printf '{"summary":{"total_waivers":0,"invalid_count":0,"expired_active_count":0},"skipped":true}' > "$WAIVER_REPORT"
@@ -58,9 +62,9 @@ fi
 set -e
 # exit 2 = expired active waivers (CI block); exit 3 = invalid registry (CI block)
 if [[ "$waiver_exit" -ne 0 ]]; then
-  echo "[core-conformance] waiver registry check FAILED (exit $waiver_exit)"
+  log_error "waiver registry check FAILED (exit $waiver_exit)"
 else
-  echo "[core-conformance] waiver registry check PASSED"
+  log_info "waiver registry check PASSED"
 fi
 
 python3 - <<'PY' "$AUTH_REPORT" "$VITEST_REPORT" "$WAIVER_REPORT" "$SUMMARY_REPORT" "$MARKDOWN_REPORT" "$auth_exit" "$vitest_exit" "$waiver_exit"
@@ -189,8 +193,8 @@ PY
 cat "$MARKDOWN_REPORT"
 
 if [[ "$auth_exit" -ne 0 || "$vitest_exit" -ne 0 || "$waiver_exit" -ne 0 ]]; then
-  echo "[core-conformance] failed"
+  log_error "conformance suite FAILED"
   exit 1
 fi
 
-echo "[core-conformance] passed"
+log_info "conformance suite PASSED"

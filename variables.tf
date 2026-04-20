@@ -1,3 +1,6 @@
+// DEPRECATED: Root-level Terraform mirror — canonical IaC is in terraform/
+// DO NOT MAKE CHANGES HERE. All edits go to terraform/variables.tf.
+// Tracked by: #802 (retire deprecated references) | Canonical target: terraform/variables.tf
 // ════════════════════════════════════════════════════════════════════════════
 // IaC Deployment Variables — All infrastructure config flows through here
 // These are the ONLY configuration inputs; everything else is derived

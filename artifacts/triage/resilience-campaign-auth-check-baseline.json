@@ -1,0 +1,210 @@
+{
+  "generated_at": "2026-04-20T00:03:12+00:00",
+  "portal_base_url": "https://kushnir.cloud",
+  "ide_base_url": "https://ide.kushnir.cloud",
+  "static_asset_path": "/static/css/main.c5955fd3.css",
+  "oauth_start_path": "/oauth2/start?rd=%2F",
+  "request_count": 5,
+  "throttle_limit": 5,
+  "summary": {
+    "total_requests": 20,
+    "success_statuses": {
+      "portal-root": {
+        "403": 5
+      },
+      "ide-root": {
+        "200": 5
+      },
+      "static-css": {
+        "200": 5
+      },
+      "oauth-start": {
+        "200": 5
+      }
+    }
+  },
+  "reports": [
+    {
+      "name": "portal-root",
+      "url": "https://kushnir.cloud/",
+      "request_count": 5,
+      "status_counts": {
+        "403": 5
+      },
+      "average_seconds": 0.23,
+      "min_seconds": 0.023,
+      "max_seconds": 1.051,
+      "results": [
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.027,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.023,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.024,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 1.051,
+          "error": "HTTP Error 403: Forbidden"
+        },
+        {
+          "status": 403,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.025,
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ],
+      "errors": [
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden",
+        "HTTP Error 403: Forbidden"
+      ]
+    },
+    {
+      "name": "ide-root",
+      "url": "https://ide.kushnir.cloud/",
+      "request_count": 5,
+      "status_counts": {
+        "200": 5
+      },
+      "average_seconds": 0.286,
+      "min_seconds": 0.263,
+      "max_seconds": 0.3,
+      "results": [
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.297,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.281,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.263,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.3,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.288,
+          "error": null
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "static-css",
+      "url": "https://kushnir.cloud/static/css/main.c5955fd3.css",
+      "request_count": 5,
+      "status_counts": {
+        "200": 5
+      },
+      "average_seconds": 0.033,
+      "min_seconds": 0.024,
+      "max_seconds": 0.042,
+      "results": [
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.027,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.024,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.036,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.042,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/css; charset=utf-8",
+          "seconds": 0.037,
+          "error": null
+        }
+      ],
+      "errors": []
+    },
+    {
+      "name": "oauth-start",
+      "url": "https://ide.kushnir.cloud/oauth2/start?rd=%2F",
+      "request_count": 5,
+      "status_counts": {
+        "200": 5
+      },
+      "average_seconds": 0.268,
+      "min_seconds": 0.253,
+      "max_seconds": 0.291,
+      "results": [
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.271,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.265,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.291,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.253,
+          "error": null
+        },
+        {
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "seconds": 0.26,
+          "error": null
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

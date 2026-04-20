@@ -5,7 +5,7 @@
  * @module service-worker/registration
  */
 
-import { storeSessionExpiry, getSessionExpiry, isSessionValid } from './session-indexeddb-store';
+import { storeSessionExpiry, getSessionExpiry } from './session-indexeddb-store';
 
 // Types
 export interface ServiceWorkerHealth {

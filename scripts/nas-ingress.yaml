@@ -1,5 +1,5 @@
-# NAS k8s ingress: SSL passthrough for ide.kushnir.cloud → Windows PC (192.168.168.174:443)
-# Apply on NAS: kubectl apply -f nas-ingress.yaml
+# NAS k8s ingress template: SSL passthrough for ide.kushnir.cloud → ${IDE_WINDOWS_BACKEND_HOST}:443
+# Render and apply: bash scripts/render-nas-ingress.sh --apply
 #
 # Requires nginx-ingress with --enable-ssl-passthrough
 # Check: kubectl -n ingress-nginx get deploy ingress-nginx-controller -o jsonpath='{.spec.template.spec.containers[0].args}' | tr , '\n' | grep ssl-passthrough
@@ -12,22 +12,11 @@ metadata:
   name: ide-windows-backend
   namespace: default
 spec:
+  type: ExternalName
+  externalName: ${IDE_WINDOWS_BACKEND_HOST}
   ports:
     - port: 443
-      targetPort: 443
       protocol: TCP
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: ide-windows-backend
-  namespace: default
-subsets:
-  - addresses:
-      - ip: 192.168.168.174
-    ports:
-      - port: 443
-        protocol: TCP
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

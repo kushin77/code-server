@@ -129,6 +129,8 @@ export class ChaosEngineer {
    */
   private injectLatency(service: string, maxDelay: number): void {
     // In real implementation: intercept service calls, add delay
+    void service;
+    void maxDelay;
   }
 
   /**
@@ -136,6 +138,8 @@ export class ChaosEngineer {
    */
   private injectPartialPartition(service: string, intensity: number): void {
     // In real implementation: drop percentage of packets equal to intensity
+    void service;
+    void intensity;
   }
 
   /**
@@ -143,6 +147,8 @@ export class ChaosEngineer {
    */
   private injectCascadingFailure(services: string[], intensity: number): void {
     // In real implementation: trigger failures in dependent services
+    void services;
+    void intensity;
   }
 
   /**

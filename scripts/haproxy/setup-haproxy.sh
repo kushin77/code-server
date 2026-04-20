@@ -1,19 +1,19 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+# @file        scripts/haproxy/setup-haproxy.sh
+# @module      operations/load-balancing
+# @description Automate HAProxy deployment for code-server failover
+#
 
-# setup-haproxy.sh - Automate HAProxy deployment for code-server failover
-# Part of Phase 7d-002: Load Balancer & Replica Configuration
+set -euo pipefail
 
-# Metadata
-# Path: scripts/haproxy/setup-haproxy.sh
-# Version: 1.0.0 (Phase 7d)
-# Description: Installs or updates HAProxy configuration for High Availability
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 HAPROXY_CFG_SOURCE="config/haproxy.cfg"
 HAPROXY_DOCKER_PATH="docker/haproxy/Dockerfile"
-PRIMARY_IP="192.168.168.31"
-REPLICA_IP="192.168.168.42"
+PRIMARY_HOST="${DEPLOY_HOST}"
+REPLICA_HOST="${STANDBY_HOST}"
 
 # Validation
 if [[ ! -f "$HAPROXY_CFG_SOURCE" ]]; then
@@ -22,8 +22,8 @@ if [[ ! -f "$HAPROXY_CFG_SOURCE" ]]; then
 fi
 
 echo "--- HAProxy Setup: Phase 7d-002 ---"
-echo "Primary: $PRIMARY_IP"
-echo "Replica: $REPLICA_IP"
+echo "Primary: $PRIMARY_HOST"
+echo "Replica: $REPLICA_HOST"
 
 # Detection
 if command -v docker &> /dev/null; then
@@ -42,4 +42,4 @@ fi
 
 echo "--- Setup Complete ---"
 echo "Next steps: Deploy via terraform or docker-compose to production host."
-echo "Production Host: ssh akushnir@192.168.168.31"
+echo "Production Host: ssh ${DEPLOY_USER}@$PRIMARY_HOST"

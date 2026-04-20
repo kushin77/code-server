@@ -11,20 +11,20 @@ SSOT:
 ## Bridge Entry Points
 
 - [docs/README.md](../README.md) -> canonical docs index
-- [docs/GOVERNANCE.md](../GOVERNANCE.md) -> [elite-best-practices/repo-rules/README.md](../elite-best-practices/repo-rules/README.md)
+- [docs/GOVERNANCE.md](../GOVERNANCE.md) -> [governance/elite-best-practices/README.md](../governance/elite-best-practices/README.md)
 
 ## Canonical Targets
 
-### [elite-best-practices/monorepo/README.md](../elite-best-practices/monorepo/README.md)
+### [governance/elite-best-practices/README.md](../governance/elite-best-practices/README.md)
 - [MONOREPO-REFACTOR-IMPLEMENTATION-671.md](../MONOREPO-REFACTOR-IMPLEMENTATION-671.md)
 
-### [elite-best-practices/pnpm/README.md](../elite-best-practices/pnpm/README.md)
+### [governance/elite-best-practices/README.md](../governance/elite-best-practices/README.md)
 - [PNPM-WORKSPACE-CI-MIGRATION-672.md](../PNPM-WORKSPACE-CI-MIGRATION-672.md)
 
-### [elite-best-practices/instructions/README.md](../elite-best-practices/instructions/README.md)
+### [governance/elite-best-practices/README.md](../governance/elite-best-practices/README.md)
 - [SCRIPT-WRITING-GUIDE.md](../SCRIPT-WRITING-GUIDE.md)
 
-### [elite-best-practices/repo-rules/README.md](../elite-best-practices/repo-rules/README.md)
+### [governance/elite-best-practices/README.md](../governance/elite-best-practices/README.md)
 - [DEDUPLICATION-POLICY.md](../DEDUPLICATION-POLICY.md)
 - [DEDUPLICATION-POLICY-PHASE2-IMPLEMENTATION.md](../DEDUPLICATION-POLICY-PHASE2-IMPLEMENTATION.md)
 - [ENTERPRISE_ENGINEERING_GUIDE.md](../ENTERPRISE_ENGINEERING_GUIDE.md)
@@ -32,7 +32,7 @@ SSOT:
 - [P2-426-REPOSITORY-HYGIENE.md](../P2-426-REPOSITORY-HYGIENE.md)
 - [RELEASE-TRAIN-POLICIES.md](../RELEASE-TRAIN-POLICIES.md)
 
-### [elite-best-practices/structure/README.md](../elite-best-practices/structure/README.md)
+### [governance/elite-best-practices/README.md](../governance/elite-best-practices/README.md)
 - [EXTENSION-BOUNDARIES.md](../EXTENSION-BOUNDARIES.md)
 - [FILE-ORGANIZATION-GUIDE.md](../FILE-ORGANIZATION-GUIDE.md)
 

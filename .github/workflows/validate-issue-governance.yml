@@ -7,7 +7,7 @@ on:
       - .github/workflows/validate-issue-governance.yml
       - AGENT-EXEC-QUICKSTART.md
       - AGENT-TRIAGE-APRIL-18-2026.md
-      - AUTONOMOUS-OPEN-ISSUE-STATUS-2026-04-18.md
+      - docs/status/README.md
       - config/issues/**
       - package.json
       - scripts/ci/validate-issue-linkage.sh
@@ -21,7 +21,7 @@ on:
       - .github/workflows/validate-issue-governance.yml
       - AGENT-EXEC-QUICKSTART.md
       - AGENT-TRIAGE-APRIL-18-2026.md
-      - AUTONOMOUS-OPEN-ISSUE-STATUS-2026-04-18.md
+      - docs/status/README.md
       - config/issues/**
       - package.json
       - scripts/ci/validate-issue-linkage.sh

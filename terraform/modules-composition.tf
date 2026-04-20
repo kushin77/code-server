@@ -110,6 +110,22 @@ module "dns" {
 }
 
 ################################
+# MODULE: Cloudflare Access (Zero-Trust admin endpoint protection — #876)
+################################
+module "cloudflare_access" {
+  source = "./modules/cloudflare-access"
+
+  cloudflare_account_id  = var.cloudflare_account_id
+  apex_domain            = var.apex_domain
+  allowed_emails         = var.allowed_emails
+  google_client_id       = var.google_client_id
+  google_client_secret   = var.google_client_secret
+  deploy_host_ip         = var.primary_ip
+  warp_device_posture_id = var.cloudflare_warp_device_posture_id
+  logpush_r2_bucket      = var.cloudflare_logpush_r2_bucket
+}
+
+################################
 # MODULE 5: Failover (Patroni, PostgreSQL, HA/DR)
 ################################
 module "failover" {

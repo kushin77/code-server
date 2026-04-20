@@ -31,9 +31,11 @@ PRECHECK_SSH_TIMEOUT="${PRECHECK_SSH_TIMEOUT:-8}"
 PRECHECK_COMMAND_TIMEOUT="${PRECHECK_COMMAND_TIMEOUT:-90}"
 FIX_STALE_LOGS="false"
 MAX_LOG_TAIL_AGE_SEC="${MAX_LOG_TAIL_AGE_SEC:-3600}"
-NAS_HOST_DEFAULT="${NAS_HOST:-192.168.168.56}"
-NAS_EXPORT_PATH_DEFAULT="${NAS_EXPORT_PATH:-/export}"
+NAS_HOST_DEFAULT="${NAS_HOST:-}"
+NAS_EXPORT_PATH_DEFAULT="${NAS_EXPORT_PATH:-}"
 NAS_SSH_USER="${NAS_SSH_USER:-}"
+PRIMARY_HOST_DEFAULT="${PRIMARY_HOST:-${DEPLOY_HOST:-192.168.168.31}}"
+REPLICA_HOST_DEFAULT="${REPLICA_HOST:-192.168.168.42}"
 
 usage() {
   cat <<'EOF'
@@ -268,6 +270,10 @@ check_nas_export_paths() {
 
   resolved_nas_host="${env_nas_host:-${NAS_HOST_DEFAULT}}"
   resolved_export_path="${env_export_path:-${NAS_EXPORT_PATH_DEFAULT}}"
+  if [[ -z "${resolved_nas_host}" || -z "${resolved_export_path}" ]]; then
+    log_error "NAS topology is not fully configured in env or shared config"
+    return 1
+  fi
   nas_user="${NAS_SSH_USER:-${TARGET_USER}}"
 
   required_suffixes=(
@@ -350,6 +356,59 @@ check_domain_drift() {
   fi
 }
 
+check_port_ownership() {
+  log_section "Port Ownership Check"
+
+  local host_role="primary"
+  local port_snapshot
+  local conflict_lines=""
+
+  if [[ "${TARGET_HOST}" == "${REPLICA_HOST_DEFAULT}" ]]; then
+    host_role="replica"
+  elif [[ "${TARGET_HOST}" != "${PRIMARY_HOST_DEFAULT}" ]]; then
+    host_role="custom"
+  fi
+
+  if ! port_snapshot=$(remote "docker ps --format '{{.Names}}\t{{.Ports}}'" 2>/dev/null); then
+    log_error "Unable to inspect container port ownership on ${TARGET_HOST}"
+    return 1
+  fi
+
+  while IFS=$'\t' read -r container_name container_ports; do
+    [[ -z "${container_name}" ]] && continue
+
+    case "${host_role}" in
+      primary)
+        for reserved_port in 80 443 2019; do
+          if [[ "${container_ports}" == *":${reserved_port}->"* && "${container_name}" != "caddy" ]]; then
+            conflict_lines+="${container_name}|${reserved_port}|${container_ports}"
+            conflict_lines+=$'\n'
+          fi
+        done
+        ;;
+      replica|custom)
+        for reserved_port in 80 443 2019; do
+          if [[ "${container_ports}" == *":${reserved_port}->"* ]]; then
+            conflict_lines+="${container_name}|${reserved_port}|${container_ports}"
+            conflict_lines+=$'\n'
+          fi
+        done
+        ;;
+    esac
+  done <<< "${port_snapshot}"
+
+  if [[ -n "${conflict_lines}" ]]; then
+    log_error "Reserved port collision detected on ${TARGET_HOST} (${host_role})"
+    while IFS='|' read -r container_name reserved_port container_ports; do
+      [[ -z "${container_name}" ]] && continue
+      log_error "${container_name} is binding host port ${reserved_port}: ${container_ports}"
+    done <<< "${conflict_lines}"
+    return 1
+  fi
+
+  log_success "No reserved port collisions detected on ${TARGET_HOST} (${host_role})"
+}
+
 cleanup_stale_log_tails() {
   if [[ "${FIX_STALE_LOGS}" != "true" ]]; then
     return 0
@@ -382,6 +441,7 @@ main() {
   emit_remote_fingerprint
   check_redeploy_safety
   check_nas_export_paths
+  check_port_ownership
   check_domain_drift
   cleanup_stale_log_tails
   log_success "On-prem redeploy preflight completed"

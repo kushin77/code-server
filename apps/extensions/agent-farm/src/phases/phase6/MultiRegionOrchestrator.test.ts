@@ -262,7 +262,7 @@ describe('MultiRegionOrchestrator', () => {
     });
 
     it('should keep other regions running during rollback', async () => {
-      const before = await orchestrator.getRegionalHealth();
+      await orchestrator.getRegionalHealth();
 
       await orchestrator.rollbackRegion('us-east-1');
 

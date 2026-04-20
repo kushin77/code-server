@@ -1,32 +1,39 @@
-#!/bin/bash
-# Fix script to completely disable GitHub auth and extensions for clean code-server
+#!/usr/bin/env bash
+# @file        scripts/ci/fix-github-auth.sh
+# @module      ci/auth
+# @description disable GitHub auth and extensions for a clean code-server profile
+#
 
-set -e
+set -euo pipefail
 
-echo "🔧 Applying GitHub auth & extension fix..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
+: "${CODE_SERVER_PASSWORD:?Set CODE_SERVER_PASSWORD before running}"
+
+log_info "Applying GitHub auth and extension fix..."
 
 # 1. Stop code-server
-echo "  Stopping code-server..."
+log_info "Stopping code-server..."
 pkill -f 'code-server --bind' || true
-sleep 2
 
 # 2. Update config
-echo "  Updating config.yaml..."
+log_info "Updating config.yaml..."
 mkdir -p ~/.config/code-server
-cat > ~/.config/code-server/config.yaml << 'YAML'
+cat > ~/.config/code-server/config.yaml << YAML
 bind-addr: 0.0.0.0:8080
 auth: password
-password: 9c3f04d4307e07167125fdc5
+password: "${CODE_SERVER_PASSWORD}"
 cert: false
 YAML
 
 # 3. Remove all extensions
-echo "  Removing all extensions..."
+log_info "Removing all extensions..."
 rm -rf ~/.local/share/code-server/extensions
 mkdir -p ~/.local/share/code-server/extensions
 
 # 4. Create clean settings
-echo "  Creating clean settings.json..."
+log_info "Creating clean settings.json..."
 python3 << 'PYEOF'
 import json
 import os
@@ -68,16 +75,14 @@ with open(os.path.expanduser("~/.local/share/code-server/User/settings.json"), "
 PYEOF
 
 # 5. Restart code-server
-echo "  Restarting code-server..."
+log_info "Restarting code-server..."
 nohup ~/code-server/bin/code-server --bind-addr 0.0.0.0:8080 > /tmp/code-server.log 2>&1 &
 
-sleep 5
-
 # 6. Verify
-echo ""
-echo "✅ Fix applied!"
-echo ""
-echo "Code-server status:"
+log_info ""
+log_info "Fix applied."
+log_info ""
+log_info "Code-server status:"
 ps aux | grep 'code-server' | grep -v grep | head -1 || echo "  Process starting..."
 echo ""
 echo "Access: http://172.26.236.99:8080"

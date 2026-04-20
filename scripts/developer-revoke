@@ -111,10 +111,11 @@ log "Updating developer database..."
 
 # Create temporary file with updated status
 TEMP_CSV="${DEVELOPERS_CSV}.tmp"
-awk -F',' -v email="$EMAIL" -v OFS=',' '
+REVOCATION_TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+awk -F',' -v email="$EMAIL" -v revoked_at="$REVOCATION_TIMESTAMP" -v reason="$REASON" -v OFS=',' '
     $1 == email {
         $6 = "revoked"
-        $10 = "'$(date '+%Y-%m-%d %H:%M:%S')' - '"$REASON"'"
+        $10 = revoked_at " - " reason
     }
     { print }
 ' "$DEVELOPERS_CSV" > "$TEMP_CSV"

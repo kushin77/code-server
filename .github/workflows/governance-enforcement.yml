@@ -22,6 +22,7 @@ permissions:
   contents: read
   pull-requests: write
   checks: write
+  issues: write
 
 env:
   GOVERNANCE_MANIFEST: config/governance-manifest.yml
@@ -218,6 +219,16 @@ jobs:
             exit 1
           fi
           echo "✓ No verified secrets found"
+
+      - name: Route TruffleHog findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f /tmp/trufflehog-output.json ]; then
+            bash scripts/ops/security-scan-triage.sh --tool trufflehog --secret-jsonl /tmp/trufflehog-output.json --repo "${GH_REPO}"
+          fi
       
       - name: "[P1] Vulnerability Scanning (Trivy)"
         continue-on-error: true
@@ -358,10 +369,7 @@ jobs:
             p0_shellcheck_violation_blocks)
               sudo apt-get update
               sudo apt-get install -y shellcheck
-              cat > /tmp/p0-shellcheck-synthetic.sh <<'EOF'
-              #!/usr/bin/env bash
-              echo ${UNQUOTED}
-              EOF
+              printf '%s\n' '#!/usr/bin/env bash' 'echo ${UNQUOTED}' > /tmp/p0-shellcheck-synthetic.sh
               set +e
               shellcheck /tmp/p0-shellcheck-synthetic.sh
               rc=$?
@@ -373,14 +381,13 @@ jobs:
               ;;
 
             p0_failopen_guard_detects_violation)
-              cat > /tmp/fail-open-synthetic.yml <<'EOF'
-              jobs:
-                sample:
-                  steps:
-                    - name: "[P0] Synthetic step"
-                      continue-on-error: true
-                      run: echo fail-open
-              EOF
+              printf '%s\n' \
+                'jobs:' \
+                '  sample:' \
+                '    steps:' \
+                '      - name: "[P0] Synthetic step"' \
+                '        continue-on-error: true' \
+                '        run: echo fail-open' > /tmp/fail-open-synthetic.yml
               set +e
               awk '
                 /- name: "\[P0\]/ { in_p0=1; step=$0; next }

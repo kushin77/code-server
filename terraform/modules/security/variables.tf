@@ -30,6 +30,18 @@ variable "vault_mode" {
   }
 }
 
+variable "vault_dev_root_token" {
+  description = "Root token for Vault dev mode (SECURITY: only for local dev, never commit production tokens)"
+  type        = string
+  sensitive   = true
+  default     = "dev-root-token-change-me"
+  
+  validation {
+    condition     = length(var.vault_dev_root_token) >= 10
+    error_message = "vault_dev_root_token must be at least 10 characters"
+  }
+}
+
 variable "vault_storage_size" {
   description = "Vault persistent volume size"
   type        = string

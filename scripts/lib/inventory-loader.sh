@@ -22,6 +22,7 @@ set -euo pipefail
 # =============================================================================
 
 INVENTORY_FILE="${PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/environments/production/hosts.yml"
+INVENTORY_PYTHON_BIN="${INVENTORY_PYTHON_BIN:-python3}"
 INVENTORY_LOADED=false
 declare -gA INVENTORY_CACHE
 
@@ -40,59 +41,56 @@ inventory_load_production() {
         return 1
     fi
 
-    # Use Python to parse YAML (more reliable than yq)
-    local python_script=$(cat <<'PYTHON_EOF'
+    local python_output
+
+    # Execute Python to parse YAML and emit shell-safe VAR=value lines.
+    if ! python_output=$($INVENTORY_PYTHON_BIN - "$INVENTORY_FILE" <<'PYTHON_EOF'
 import sys
 import yaml
 
 try:
     with open(sys.argv[1], 'r') as f:
         data = yaml.safe_load(f)
-        
-    # Export host information
+
     hosts = data.get('hosts', {})
-    
-    # Primary host
+
     if 'primary' in hosts:
         primary = hosts['primary']
         print(f"PRIMARY_IP={primary['ip']}")
         print(f"PRIMARY_FQDN={primary['fqdn']}")
         print(f"PRIMARY_SSH_USER={primary['ssh_user']}")
         print(f"PRIMARY_SSH_PORT={primary['ssh_port']}")
-    
-    # Replica host
+
     if 'replica' in hosts:
         replica = hosts['replica']
         print(f"REPLICA_IP={replica['ip']}")
         print(f"REPLICA_FQDN={replica['fqdn']}")
         print(f"REPLICA_SSH_USER={replica['ssh_user']}")
         print(f"REPLICA_SSH_PORT={replica['ssh_port']}")
-    
-    # VIP (virtual IP)
+
     if 'vip' in data:
         vip = data['vip']
         print(f"VIP_IP={vip['ip']}")
         print(f"VIP_FQDN={vip['fqdn']}")
-        
-    # Cluster info
+
     print(f"CLUSTER_NAME={data.get('cluster_name', 'code-server-enterprise')}")
     print(f"DOMAIN_INTERNAL={data.get('domain_internal', 'prod.internal')}")
     print(f"DOMAIN_EXTERNAL={data.get('domain_external', 'kushnir.cloud')}")
-    
+
 except Exception as e:
     print(f"ERROR parsing inventory: {e}", file=sys.stderr)
     sys.exit(1)
 PYTHON_EOF
-    )
-
-    # Execute Python to parse YAML
-    if ! eval "python3" <<< "$python_script $INVENTORY_FILE" | while IFS= read -r line; do
-        export "$line"
-        INVENTORY_CACHE["${line%=*}"]="${line#*=}"
-    done; then
+    ); then
         >&2 echo "ERROR: Failed to parse inventory file"
         return 1
     fi
+
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        export "$line"
+        INVENTORY_CACHE["${line%=*}"]="${line#*=}"
+    done <<< "$python_output"
 
     INVENTORY_LOADED=true
     return 0

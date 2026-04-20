@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 
-VALID_CLASS = {"program", "epic", "gate", "implementation", "tracker", "unblock"}
+VALID_CLASS = {"program", "epic", "gate", "implementation", "tracker", "unblock", "fix", "foundation", "governance"}
 VALID_PRIORITY = {"P0", "P1", "P2", "P3", "Persistent"}
 VALID_STATUS = {"open", "partial", "closed", "persistent"}
 VALID_BRANCH_TYPE = {"feat", "fix", "docs", "refactor", "ci", "ops", "chore"}

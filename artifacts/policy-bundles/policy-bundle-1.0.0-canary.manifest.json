@@ -1,0 +1,26 @@
+{
+  "bundle_id": "pb-20260419-162254",
+  "version": "1.0.0",
+  "channel": "canary",
+  "generated_at": "2026-04-19T16:22:54Z",
+  "expires_at": "2026-04-26T16:22:54Z",
+  "archive": "artifacts/policy-bundles/policy-bundle-1.0.0-canary.tar.gz",
+  "archive_sha256": "f4de4beb5d51f98753169740bd6cfe3b557ffaece9861a91610897c047deae61",
+  "signed_by": "policy-signing-v1",
+  "key_version": 1,
+  "policies": [
+    {
+      "path": "best-practices.rego",
+      "sha256": "6931435278ad0296b1a10b0796e51893db2427f952a8f54d947c83c96b0d9661"
+    },
+    {
+      "path": "compliance.rego",
+      "sha256": "277344372f62a2f2c6775f22214bebd2b3b16287ad30904fa667c4a07325c82f"
+    },
+    {
+      "path": "security.rego",
+      "sha256": "79f5792be4c254a2d55e7d39fac0246bb2fafc9239bb34240c2d4f57d83e751f"
+    }
+  ],
+  "signature": "sha256:c13df1a7b6f0a0519e5cc5b32c9c773edd872a9ff7c0ff58c5d5af7e2894b473"
+}

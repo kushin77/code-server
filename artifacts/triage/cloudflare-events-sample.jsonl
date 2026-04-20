@@ -1,0 +1,6 @@
+{"timestamp":"2026-04-19T19:58:01Z","event_type":"tls_handshake_failed","host":"ide.kushnir.cloud","service":"edge","message":"TLS handshake failed: certificate expired","ray_id":"a1"}
+{"timestamp":"2026-04-19T19:58:22Z","event_type":"waf_block","host":"kushnir.cloud","service":"waf","message":"Managed challenge block rule 100173","ray_id":"b1"}
+{"timestamp":"2026-04-19T19:58:40Z","event_type":"waf_block","host":"kushnir.cloud","service":"waf","message":"Managed challenge block rule 100173","ray_id":"b2"}
+{"timestamp":"2026-04-19T19:59:00Z","event_type":"waf_block","host":"kushnir.cloud","service":"waf","message":"Managed challenge block rule 100173","ray_id":"b3"}
+{"timestamp":"2026-04-19T19:59:14Z","event_type":"tunnel_origin_unreachable","host":"ide.kushnir.cloud","service":"tunnel","message":"Origin unreachable dial tcp 127.0.0.1:8080: connection refused","ray_id":"c1"}
+{"timestamp":"2026-04-19T19:59:35Z","event_type":"access_denied","host":"ide.kushnir.cloud","service":"access","message":"Zero Trust access denied due to device posture mismatch","ray_id":"d1"}

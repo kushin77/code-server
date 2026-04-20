@@ -1,0 +1,10 @@
+{
+  "generated_at": "2026-04-19T02:01:17Z",
+  "input": "artifacts/policy-logs/synthetic.log",
+  "output": "artifacts/policy-logs/decision-log.jsonl",
+  "summary": {
+    "total": 2,
+    "allow": 1,
+    "deny": 1
+  }
+}

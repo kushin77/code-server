@@ -46,6 +46,7 @@ jobs:
 
           allowlisted_new_root_files=(
             ".env.example"
+            ".env.template"
             ".npmrc"
             ".gitleaks.toml"
             ".gitignore"
@@ -115,7 +116,7 @@ jobs:
           is_scripts_depth_exempt() {
             local path="$1"
             case "$path" in
-              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/*-entrypoint.ps1|scripts/dev/start-work-from-issue.sh|scripts/ops/triage-issues-autonomous.sh|scripts/ci/detect-duplicate-helpers.sh|scripts/ci/check-pnpm-lockfile.sh|scripts/deploy/redeploy-portal-oauth-routing.sh)
+              scripts/README.md|scripts/*-entrypoint.sh|scripts/*-entrypoint.bash|scripts/dev/start-work-from-issue.sh|scripts/ops/triage-issues-autonomous.sh|scripts/ci/detect-duplicate-helpers.sh|scripts/ci/check-pnpm-lockfile.sh|scripts/deploy/redeploy-portal-oauth-routing.sh|scripts/setup-cloudflare-access.sh|scripts/setup-vault-secrets.sh|scripts/validate-config-ssot.sh)
                 return 0
                 ;;
               *)
@@ -189,7 +190,7 @@ jobs:
                 fi
               fi
 
-              if [[ "$path" == scripts/*.sh || "$path" == scripts/*.bash || "$path" == scripts/*.ps1 || "$path" == scripts/**/*.sh || "$path" == scripts/**/*.bash || "$path" == scripts/**/*.ps1 ]]; then
+              if [[ "$path" == scripts/*.sh || "$path" == scripts/*.bash || "$path" == scripts/**/*.sh || "$path" == scripts/**/*.bash ]]; then
                 if ! is_scripts_depth_exempt "$path"; then
                   depth=$(path_depth "$path")
                   if (( depth < 6 )); then

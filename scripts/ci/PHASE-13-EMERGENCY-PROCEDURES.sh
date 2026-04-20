@@ -1,24 +1,26 @@
-#!/bin/bash
-# PHASE 13 DAY 2 - EMERGENCY PROCEDURES & ESCALATION GUIDE
-# Use during 24-hour load test if issues arise
-# Contact: DevOps Lead (Primary), VP Engineering (Escalation)
+#!/usr/bin/env bash
+# @file        scripts/ci/PHASE-13-EMERGENCY-PROCEDURES.sh
+# @module      ci/reference
+# @description reference emergency procedures and escalation commands for phase 13 load-test response
+#
 
-# ============================================================================
-# QUICK STATUS COMMANDS (Run anytime during 24-hour window)
-# ============================================================================
+set -euo pipefail
 
-echo "=== PHASE 13 EMERGENCY REFERENCE GUIDE ==="
-echo ""
-echo "Quick Status Commands:"
-echo "  # Check container health"
-echo "  docker ps --format 'table {{.Names}}\t{{.Status}}'"
-echo ""
-echo "  # Monitor SLOs in real-time"
-echo "  tail -f /tmp/phase-13-monitoring.log"
-echo ""
-echo "  # Check system resources"
-echo "  free -h && df -h /"
-echo ""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
+log_info "=== PHASE 13 EMERGENCY REFERENCE GUIDE ==="
+log_info ""
+log_info "Quick Status Commands:"
+log_info "  # Check container health"
+log_info "  docker ps --format 'table {{.Names}}\t{{.Status}}'"
+log_info ""
+log_info "  # Monitor SLOs in real-time"
+log_info "  tail -f /tmp/phase-13-monitoring.log"
+log_info ""
+log_info "  # Check system resources"
+log_info "  free -h && df -h /"
+log_info ""
 
 # ============================================================================
 # SCENARIO 1: CONTAINER FAILURE
@@ -26,25 +28,25 @@ echo ""
 
 handle_container_failure() {
   local container=$1
-  echo "🔴 SCENARIO 1: CONTAINER FAILURE ($container)"
-  echo ""
-  echo "Step 1: Stop the failing container"
-  echo "  docker stop $container"
-  echo ""
-  echo "Step 2: Check container logs for errors"
-  echo "  docker logs $container --tail 100"
-  echo ""
-  echo "Step 3: Restart the container"
-  echo "  docker restart $container"
-  echo ""
-  echo "Step 4: Verify restart was successful"
-  echo "  docker ps --filter name=$container"
-  echo ""
-  echo "Step 5: If restart fails, escalate to Platform Manager"
-  echo "  → Contact VP Engineering if unable to recover in 5 min"
-  echo "  → Document error in Phase 13 incident log"
-  echo ""
-  echo "Escalation Path: DevOps → Platform Manager → VP Engineering"
+  log_info "SCENARIO 1: CONTAINER FAILURE ($container)"
+  log_info ""
+  log_info "Step 1: Stop the failing container"
+  log_info "  docker stop $container"
+  log_info ""
+  log_info "Step 2: Check container logs for errors"
+  log_info "  docker logs $container --tail 100"
+  log_info ""
+  log_info "Step 3: Restart the container"
+  log_info "  docker restart $container"
+  log_info ""
+  log_info "Step 4: Verify restart was successful"
+  log_info "  docker ps --filter name=$container"
+  log_info ""
+  log_info "Step 5: If restart fails, escalate to Platform Manager"
+  log_info "  -> Contact VP Engineering if unable to recover in 5 min"
+  log_info "  -> Document error in Phase 13 incident log"
+  log_info ""
+  log_info "Escalation Path: DevOps -> Platform Manager -> VP Engineering"
 }
 
 # ============================================================================

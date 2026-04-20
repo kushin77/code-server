@@ -149,6 +149,40 @@ This will:
 2. During the 60-second wait, execute the failover promotion command
 3. Validate that the session survives the actual failover
 
+## On-Prem Certification Drill Commands (#926)
+
+Use the deterministic failover orchestrator for the controlled drill and rollback path:
+
+```bash
+# 1) Baseline status (before drill)
+bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action status
+
+# 2) Controlled promotion to replica (.42)
+bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action promote
+
+# 3) Continuity probes during failover window (unauth and auth as needed)
+CONTINUITY_MODE=unauth FAILOVER_WAIT_MS=45000 TEST_BASE_URL=https://ide.kushnir.cloud \
+  bash scripts/ci/run-playwright-failover-continuity.sh
+
+# 4) Rollback path: controlled failback to primary (.31)
+bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action failback
+
+# 5) Post-failback status verification
+bash scripts/operations/redeploy/onprem/failover-orchestrate.sh --action status
+```
+
+Expected deterministic outcome:
+- Promotion sets active host marker and VIP ownership to `.42`.
+- Failback restores active host marker and VIP ownership to `.31`.
+- Continuity checks remain reachable across the transition window.
+
+Evidence locations:
+- `artifacts/triage/failover-continuity-20260419.md`
+- `artifacts/triage/resilience-campaign-failover-continuity.log`
+- `artifacts/triage/resilience-campaign-authenticated-smoke.log`
+- `artifacts/triage/primary-restart-2026-04-19.log`
+- `artifacts/triage/secondary-restart-2026-04-19.log`
+
 ## Configuration
 
 ### Environment Variables

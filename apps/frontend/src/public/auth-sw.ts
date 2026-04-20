@@ -13,8 +13,6 @@ type SessionMessage =
   | { type: 'SESSION_REFRESH_START' }
   | { type: 'SESSION_REFRESH_FAILED'; reason: string };
 
-type CacheStrategy = 'network-first' | 'cache-first' | 'stale-while-revalidate';
-
 // Configuration constants
 const REFRESH_ENDPOINT = '/api/auth/refresh';
 const REFRESH_TIMEOUT_MS = 5000; // Max time to wait for refresh before returning error

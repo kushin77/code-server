@@ -198,6 +198,34 @@ class RBACAPIClient {
   // ============= Session Methods =============
 
   /**
+   * Launch an ephemeral session
+   */
+  async launchSession(request: types.EphemeralSessionLaunchRequest): Promise<types.EphemeralSession> {
+    return this.post<types.EphemeralSession>('/sessions', request)
+  }
+
+  /**
+   * Inspect an ephemeral session lifecycle state
+   */
+  async getSessionStatus(sessionId: string): Promise<types.EphemeralSessionStatus> {
+    return this.get<types.EphemeralSessionStatus>(`/sessions/${sessionId}/status`)
+  }
+
+  /**
+   * Cancel an ephemeral session before teardown completes
+   */
+  async cancelSession(sessionId: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/sessions/${sessionId}/cancel`, {})
+  }
+
+  /**
+   * Destroy an ephemeral session immediately
+   */
+  async destroySession(sessionId: string): Promise<{ success: boolean }> {
+    return this.post<{ success: boolean }>(`/sessions/${sessionId}/destroy`, {})
+  }
+
+  /**
    * Get active sessions
    */
   async getSessions(): Promise<types.Session[]> {

@@ -271,7 +271,7 @@ export class EdgeOptimizationEngine {
   /**
    * Get cache statistics
    */
-  getCacheStats(nodeId: string): {
+  getCacheStats(): {
     cacheSize: number;
     entryCount: number;
     comrpessedEntries: number;

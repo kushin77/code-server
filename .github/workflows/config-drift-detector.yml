@@ -6,9 +6,14 @@ on:
       - main
     types: [opened, synchronize, reopened]
     paths:
+      - 'CONFIG-SSOT-MASTER.md'
+      - '.env.defaults'
+      - '.env.example'
+      - '.env.schema.json'
       - '.env.template'
+      - 'docs/**'
       - 'environments/production/hosts.yml'
-      - 'terraform/variables.tf'
+      - 'terraform/**'
       - 'docker-compose*.yml'
       - 'Caddyfile'
       - 'config/**'
@@ -54,7 +59,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ⚠️ Configuration Drift Detected\n\n\`\`\`\n${driftLog}\n\`\`\`\n\n### How to Fix\n\n1. **For hardcoded IPs**: Replace with DNS names or environment variable references\n   - Primary: Use \`primary.prod.internal\` or \$DEPLOY_HOST env var\n   - Replica: Use \`replica.prod.internal\` or \$REPLICA_HOST env var\n   - VIP: Use \`vip.prod.internal\` or \$VIP_HOST env var\n\n2. **For hardcoded domains**: Add to \`.env.template\` and reference via variable\n   - Example: \`DOMAIN=kushnir.cloud\` in .env.template\n\n3. **For environment variables**: Document in \`.env.template\` as SSOT\n\n4. **For Terraform variables**: Ensure alignment with \`.env.template\`\n\nSee \`environments/production/hosts.yml\` and \`.env.template\` as configuration SSOT.\n`
+              body: `## ⚠️ Configuration Drift Detected\n\n\`\`\`\n${driftLog}\n\`\`\`\n\n### How to Fix\n\n1. **For hardcoded IPs**: Replace with DNS names or environment variable references\n   - Primary: Use \`primary.prod.internal\` or \$DEPLOY_HOST env var\n   - Replica: Use \`replica.prod.internal\` or \$REPLICA_HOST env var\n   - VIP: Use \`vip.prod.internal\` or \$VIP_HOST env var\n\n2. **For hardcoded domains**: Add to the canonical config docs and reference via variables\n   - Example: \`DOMAIN=kushnir.cloud\` in the config precedence model\n\n3. **For environment variables**: Document them in \`CONFIG-SSOT-MASTER.md\` and keep \`.env.schema.json\` as the authoritative validation schema\n\n4. **For Terraform variables**: Ensure alignment with \`CONFIG-SSOT-MASTER.md\` and \`terraform/variables.tf\`\n\nSee \`CONFIG-SSOT-MASTER.md\`, \`environments/production/hosts.yml\`, and \`.env.schema.json\` as the configuration reference set.\n`
             });
 
       - name: Report drift detection

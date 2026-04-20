@@ -16,7 +16,7 @@ import {
 class MockIDBDatabase {
   stores: Record<string, Record<string, any>> = {};
 
-  transaction(name: string, mode: string) {
+  transaction(name: string) {
     const store = this.stores[name] || (this.stores[name] = {});
     return {
       objectStore: () => ({
@@ -48,7 +48,7 @@ describe('session-indexeddb-store', () => {
     mockDB = new MockIDBDatabase();
     // Mock indexedDB global
     global.indexedDB = {
-      open: vi.fn((name: string, version: number) => {
+      open: vi.fn(() => {
         return {
           result: mockDB,
           onerror: null,
@@ -221,7 +221,7 @@ describe('session-indexeddb-store', () => {
     it('should handle store + clear concurrently', async () => {
       const expiry = Date.now() + 15 * 60 * 1000;
 
-      const [storeResult, clearResult] = await Promise.all([
+      await Promise.all([
         storeSessionExpiry(expiry),
         clearSessionExpiry(),
       ]);

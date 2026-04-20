@@ -393,7 +393,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "2019:2019"
+      - "127.0.0.1:2019:2019"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -429,8 +429,6 @@ services:
     restart: unless-stopped
     networks:
       - net-data
-    ports:
-      - "5433:5432"
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-codeserver}
       - POSTGRES_USER=${POSTGRES_USER:-codeserver}
@@ -692,15 +690,12 @@ services:
       - net-app
       - net-edge
       - net-data
-    ports:
-      - "9090:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=30d"
       - "--web.console.libraries=/usr/share/prometheus/console_libraries"
       - "--web.console.templates=/usr/share/prometheus/consoles"
-      - "--web.enable-lifecycle"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules-phase-23.yml:/etc/prometheus/prometheus-rules-phase-23.yml:ro
@@ -735,13 +730,11 @@ services:
     restart: unless-stopped
     networks:
       - net-management
-    ports:
-      - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set}
       - GF_SECURITY_ADMIN_USER=admin
       - GF_AUTH_ANONYMOUS_ENABLED=false
-      - GF_SERVER_ROOT_URL=http://${DEPLOY_HOST:-localhost}:3000
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN:-kushnir.cloud}
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
       - grafana-data:/var/lib/grafana
@@ -774,8 +767,6 @@ services:
     restart: unless-stopped
     networks:
       - net-management
-    ports:
-      - "9093:9093"
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"

@@ -1,6 +1,9 @@
 {
     email {$ACME_EMAIL:admin@kushnir.cloud}
     acme_ca https://acme-v02.api.letsencrypt.org/directory
+    admin localhost:2019 {
+        origins localhost
+    }
 }
 
 {$IDE_DOMAIN:ide.kushnir.cloud}, {$IDE_DOMAIN:ide.kushnir.cloud}:443 {
@@ -308,5 +311,95 @@ kushnir.cloud {
                 response_header_timeout 30s
             }
         }
+    }
+}
+
+grafana.{$DOMAIN:kushnir.cloud}, grafana.{$DOMAIN:kushnir.cloud}:443 {
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+        -Server
+    }
+
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    @no_portal_access {
+        not path /health /healthz /ping /oauth2 /oauth2/*
+        not header Cookie *_oauth2_proxy_portal=*
+    }
+    redir @no_portal_access https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://grafana.{$DOMAIN:kushnir.cloud}/ 302
+
+    reverse_proxy grafana:3000 {
+        header_up Host grafana.{$DOMAIN:kushnir.cloud}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+prometheus.{$DOMAIN:kushnir.cloud}, prometheus.{$DOMAIN:kushnir.cloud}:443 {
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+        -Server
+    }
+
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    @no_portal_access {
+        not path /health /healthz /ping /oauth2 /oauth2/*
+        not header Cookie *_oauth2_proxy_portal=*
+    }
+    redir @no_portal_access https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://prometheus.{$DOMAIN:kushnir.cloud}/ 302
+
+    reverse_proxy prometheus:9090 {
+        header_up Host prometheus.{$DOMAIN:kushnir.cloud}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+alertmanager.{$DOMAIN:kushnir.cloud}, alertmanager.{$DOMAIN:kushnir.cloud}:443 {
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+        -Server
+    }
+
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    @no_portal_access {
+        not path /health /healthz /ping /oauth2 /oauth2/*
+        not header Cookie *_oauth2_proxy_portal=*
+    }
+    redir @no_portal_access https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://alertmanager.{$DOMAIN:kushnir.cloud}/ 302
+
+    reverse_proxy alertmanager:9093 {
+        header_up Host alertmanager.{$DOMAIN:kushnir.cloud}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
     }
 }

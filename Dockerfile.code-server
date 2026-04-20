@@ -22,8 +22,13 @@ LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.dev-tools="python3 node go rust java typescript bash git curl wget docker"
 
 # Version pinning for all extensions — set at build time, baked into image
-ARG COPILOT_VERSION=1.299.0
-ARG COPILOT_CHAT_VERSION=0.43.2026040705
+ARG RUSTUP_INIT_SHA256=4ACC9ACC76D5079515B46346A485974457B5A79893CFB01112423C89AEB5AA10
+ARG COPILOT_VERSION=1.295.0
+ARG COPILOT_VSIX_URL=https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/1.295.0/vspackage
+ARG COPILOT_VSIX_SHA256=667FA2A11C6F1E552C89C9D90BE0E14E0C8A4EDFB31D75E5C56CD603D19F8BEF
+ARG COPILOT_CHAT_VERSION=0.42.3
+ARG COPILOT_CHAT_VSIX_URL=https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot-chat/0.42.3/vspackage
+ARG COPILOT_CHAT_VSIX_SHA256=6E455FC0F1504AE4CC70812811AFCCF757E84990BED07E044855C5C030C385B7
 
 # ════════════════════════════════════════════════════════════════════════════
 # DEVELOPMENT ENVIRONMENT — Install all required developer tools
@@ -51,9 +56,12 @@ RUN npm install -g typescript@5.4.5 eslint@9.3.0 prettier@3.3.0 jest@29.7.0
 # Optional: Install Rust (best-effort, non-blocking)
 # hadolint ignore=DL4006
 RUN mkdir -p /opt/dev-tools && chmod -R 777 /opt/dev-tools && \
-    (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
-     cp -r /root/.cargo /usr/local/cargo && chmod -R 755 /usr/local/cargo) || \
-    echo "[build] SKIP: Rust installation failed (optional)"
+  curl -fL -o /tmp/rustup-init "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init" && \
+  echo "${RUSTUP_INIT_SHA256}  /tmp/rustup-init" | sha256sum -c - && \
+  chmod +x /tmp/rustup-init && \
+  /tmp/rustup-init -y --default-toolchain stable --no-modify-path && \
+  cp -r /root/.cargo /usr/local/cargo && chmod -R 755 /usr/local/cargo && \
+  rm -f /tmp/rustup-init
 
 # Pre-warm package manager caches
 RUN mkdir -p /usr/local/npm-cache /root/.npm && chmod -R 777 /usr/local/npm-cache
@@ -95,13 +103,15 @@ RUN EXTHOST=/usr/lib/code-server/lib/vscode/out/vs/workbench/api/node/extensionH
 # hadolint ignore=DL4006
 RUN mkdir -p /opt/vsix \
     && (curl -fL -o /tmp/github-copilot.vsix.gz \
-      "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot/1.295.0/vspackage" \
+      "${COPILOT_VSIX_URL}" \
+    && echo "${COPILOT_VSIX_SHA256}  /tmp/github-copilot.vsix.gz" | sha256sum -c - \
     && gzip -dc /tmp/github-copilot.vsix.gz > /opt/vsix/github-copilot.vsix && test -s /opt/vsix/github-copilot.vsix \
-    && echo "[build] Cached github.copilot v1.295.0" || echo "[build] SKIP: Could not cache github.copilot") \
+    && echo "[build] Cached github.copilot v${COPILOT_VERSION}" || echo "[build] SKIP: Could not cache github.copilot") \
     && (curl -fL -o /tmp/github-copilot-chat.vsix.gz \
-      "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/GitHub/vsextensions/copilot-chat/0.42.3/vspackage" \
+      "${COPILOT_CHAT_VSIX_URL}" \
+    && echo "${COPILOT_CHAT_VSIX_SHA256}  /tmp/github-copilot-chat.vsix.gz" | sha256sum -c - \
     && gzip -dc /tmp/github-copilot-chat.vsix.gz > /opt/vsix/github-copilot-chat.vsix && test -s /opt/vsix/github-copilot-chat.vsix \
-    && echo "[build] Cached github.copilot-chat v0.42.3" || echo "[build] SKIP: Could not cache github.copilot-chat"); \
+    && echo "[build] Cached github.copilot-chat v${COPILOT_CHAT_VERSION}" || echo "[build] SKIP: Could not cache github.copilot-chat"); \
     rm -f /tmp/github-copilot.vsix.gz /tmp/github-copilot-chat.vsix.gz || true
 
 RUN mkdir -p /usr/local/lib/code-server /etc/code-server/ai /etc/code-server/extensions

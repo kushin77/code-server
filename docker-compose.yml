@@ -180,7 +180,7 @@ services:
       OAUTH2_PROXY_EMAIL_DOMAINS: "*"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
-      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis-sentinel://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
@@ -259,7 +259,7 @@ services:
       OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_PORTAL_EMAIL_DOMAINS:-*}"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
-      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis-sentinel://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_portal"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
@@ -354,8 +354,8 @@ services:
       - SESSION_PROVENANCE_VERIFICATION_RESULT=${SESSION_PROVENANCE_VERIFICATION_RESULT:-verified}
       # Redis-backed session state for HA failover (#961 session-broker horizontal scaling)
       - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
-      - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-false}
-      - REDIS_SENTINEL_URLS=redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379
+      - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}
+      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster}
       - REDIS_SENTINEL_DB=1
       - SESSION_REDIS_TTL_SECONDS=${SESSION_REDIS_TTL_SECONDS:-86400}
       - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
@@ -526,10 +526,11 @@ services:
       --appendfsync everysec
       --loglevel warning
       --save 60 1
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5

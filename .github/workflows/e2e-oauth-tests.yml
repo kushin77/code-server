@@ -1,0 +1,267 @@
+name: E2E Tests - OAuth Login Flow
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  pull_request:
+    paths:
+      - 'tests/e2e/**'
+      - 'apps/**'
+      - 'scripts/fetch-gsm-secrets.sh'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  oauth-login-e2e:
+    name: OAuth Login E2E Tests
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: e2e-testing
+      url: https://kushnir.cloud
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Fetch QA credentials from Google Secret Manager
+        id: secrets
+        run: |
+          echo "::add-mask::$(gcloud secrets versions access latest --secret=qa-user-email)"
+          echo "qa-user-email=$(gcloud secrets versions access latest --secret=qa-user-email)" >> $GITHUB_OUTPUT
+          
+          echo "::add-mask::$(gcloud secrets versions access latest --secret=qa-user-password)"
+          echo "qa-user-password=$(gcloud secrets versions access latest --secret=qa-user-password)" >> $GITHUB_OUTPUT
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      
+      - name: Cache pnpm modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      
+      - name: Run OAuth login E2E tests
+        run: pnpm test:e2e oauth-login
+        env:
+          PORTAL_BASE_URL: https://kushnir.cloud
+          IDE_BASE_URL: https://ide.kushnir.cloud
+          E2E_USER_EMAIL: ${{ steps.secrets.outputs.qa-user-email }}
+          E2E_USER_PASSWORD: ${{ steps.secrets.outputs.qa-user-password }}
+      
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: oauth-login-test-report
+          path: tests/e2e/test-results/
+          retention-days: 30
+      
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: oauth-login-playwright-report
+          path: tests/artifacts/playwright-report/
+          retention-days: 30
+      
+      - name: Post test results to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'tests/e2e/test-results/summary.json';
+            
+            if (fs.existsSync(reportPath)) {
+              const summary = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              
+              let message = `## E2E OAuth Login Tests\n\n`;
+              message += `✅ Passed: ${summary.passed}\n`;
+              message += `❌ Failed: ${summary.failed}\n`;
+              message += `⏭️ Skipped: ${summary.skipped}\n`;
+              message += `⏱️ Duration: ${summary.duration}ms\n\n`;
+              message += `[View full report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
+
+  appsmith-portal-e2e:
+    name: Appsmith Portal E2E Tests
+    runs-on: ubuntu-latest
+    needs: oauth-login-e2e
+    if: success()
+    
+    environment:
+      name: e2e-testing
+      url: https://kushnir.cloud
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Fetch QA credentials from Google Secret Manager
+        id: secrets
+        run: |
+          echo "qa-user-email=$(gcloud secrets versions access latest --secret=qa-user-email)" >> $GITHUB_OUTPUT
+          echo "qa-user-password=$(gcloud secrets versions access latest --secret=qa-user-password)" >> $GITHUB_OUTPUT
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      
+      - name: Run Appsmith portal E2E tests
+        run: pnpm test:e2e appsmith-portal
+        env:
+          PORTAL_BASE_URL: https://kushnir.cloud
+          IDE_BASE_URL: https://ide.kushnir.cloud
+          E2E_USER_EMAIL: ${{ steps.secrets.outputs.qa-user-email }}
+          E2E_USER_PASSWORD: ${{ steps.secrets.outputs.qa-user-password }}
+      
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: appsmith-portal-test-report
+          path: tests/e2e/test-results/
+          retention-days: 30
+
+  ide-operations-e2e:
+    name: IDE Operations E2E Tests
+    runs-on: ubuntu-latest
+    needs: appsmith-portal-e2e
+    if: success()
+    
+    environment:
+      name: e2e-testing
+      url: https://ide.kushnir.cloud
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Fetch QA credentials from Google Secret Manager
+        id: secrets
+        run: |
+          echo "qa-user-email=$(gcloud secrets versions access latest --secret=qa-user-email)" >> $GITHUB_OUTPUT
+          echo "qa-user-password=$(gcloud secrets versions access latest --secret=qa-user-password)" >> $GITHUB_OUTPUT
+        env:
+          CLOUDSDK_CORE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      
+      - name: Run IDE operations E2E tests
+        run: pnpm test:e2e ide-operations
+        env:
+          PORTAL_BASE_URL: https://kushnir.cloud
+          IDE_BASE_URL: https://ide.kushnir.cloud
+          E2E_USER_EMAIL: ${{ steps.secrets.outputs.qa-user-email }}
+          E2E_USER_PASSWORD: ${{ steps.secrets.outputs.qa-user-password }}
+      
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ide-operations-test-report
+          path: tests/e2e/test-results/
+          retention-days: 30
+
+  summary:
+    name: E2E Test Summary
+    runs-on: ubuntu-latest
+    needs: [oauth-login-e2e, appsmith-portal-e2e, ide-operations-e2e]
+    if: always()
+    
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.oauth-login-e2e.result }}" == "failure" ]] || \
+             [[ "${{ needs.appsmith-portal-e2e.result }}" == "failure" ]] || \
+             [[ "${{ needs.ide-operations-e2e.result }}" == "failure" ]]; then
+            echo "❌ Some E2E tests failed"
+            exit 1
+          else
+            echo "✅ All E2E tests passed"
+          fi

@@ -124,10 +124,10 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
-    "@types/vscode": "catalog:",
+    "@types/node": "^20.10.6",
+    "@types/vscode": "^1.85.0",
     "esbuild": "^0.25.0",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.4"
   }
 }

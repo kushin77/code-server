@@ -16,6 +16,8 @@ TERRAFORM_AUTO_APPROVE="${TERRAFORM_AUTO_APPROVE:-0}"
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-300}"
 DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+GITHUB_ISSUE_NUMBER="${GITHUB_ISSUE_NUMBER:-}"
+DEPLOYMENT_ID="$(date +%Y%m%d-%H%M%S)-$$"
 
 # State
 PREFLIGHT_PASSED=0
@@ -28,6 +30,21 @@ log_stage() {
     log_info "========== $1 =========="
 }
 
+update_gh_issue() {
+    local status="$1"
+    local message="$2"
+    
+    [[ -z "$GITHUB_ISSUE_NUMBER" ]] && return 0
+    [[ $DRY_RUN -eq 1 ]] && { log_info "[GitHub] $status: $message"; return 0; }
+    
+    gh issue comment "$GITHUB_ISSUE_NUMBER" --repo kushin77/code-server --body "**[$status]** $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+
+$message
+
+---
+*Deployment ID: $DEPLOYMENT_ID*" 2>/dev/null || log_warn "Failed to update issue #$GITHUB_ISSUE_NUMBER"
+}
+
 require_var DEPLOY_HOST "Deployment host IP"
 require_var DEPLOY_USER "Deployment user"
 
@@ -37,9 +54,14 @@ main() {
     log_info "Dry-run mode: $([ "$DRY_RUN" -eq 1 ] && echo 'YES (no changes)' || echo 'NO (will apply changes)')"
     echo ""
     
+    update_gh_issue "🚀 DEPLOYMENT_STARTING" "Deployment ID: **$DEPLOYMENT_ID**
+Target: **$DEPLOY_USER@$DEPLOY_HOST**
+Mode: $([ $DRY_RUN -eq 1 ] && echo 'DRY-RUN' || echo 'APPLY')"
+    
     # === Step 1: Preflight Checks ===
     if [ "$SKIP_PREFLIGHT" -eq 0 ]; then
         log_stage "STEP 1: Preflight Checks"
+        update_gh_issue "⏳ PREFLIGHT_CHECKS" "Verifying SSH connectivity, Docker daemon, disk space..."
         
         # Check connectivity
         log_info "Checking SSH connectivity to $DEPLOY_HOST..."
@@ -48,6 +70,7 @@ main() {
             PREFLIGHT_PASSED=1
         else
             log_error "❌ Cannot reach $DEPLOY_USER@$DEPLOY_HOST"
+            update_gh_issue "❌ PREFLIGHT_FAILED" "SSH connectivity failed to $DEPLOY_HOST"
             exit 1
         fi
         
@@ -57,6 +80,7 @@ main() {
             log_info "✅ Docker daemon is running"
         else
             log_error "❌ Docker daemon not accessible"
+            update_gh_issue "❌ PREFLIGHT_FAILED" "Docker daemon not responding on $DEPLOY_HOST"
             exit 1
         fi
         
@@ -77,6 +101,7 @@ main() {
             log_warn "⚠️ Terraform state not found (fresh deployment?)"
         fi
         
+        update_gh_issue "✅ PREFLIGHT_PASSED" "All preflight checks successful. Proceeding to backup."
         echo ""
     else
         log_warn "⚠️ Preflight checks skipped"
@@ -86,6 +111,7 @@ main() {
     # === Step 2: Create Backup ===
     if [ "$SKIP_BACKUP" -eq 0 ] && [ "$PREFLIGHT_PASSED" -eq 1 ]; then
         log_stage "STEP 2: Create Backup"
+        update_gh_issue "📦 BACKUP_STARTING" "Creating backup of current state, docker volumes, and configuration..."
         
         log_info "Creating backup of current state..."
         if [ "$DRY_RUN" -eq 1 ]; then
@@ -105,6 +131,7 @@ main() {
             BACKUP_CREATED=1
         fi
         
+        update_gh_issue "✅ BACKUP_COMPLETE" "Backup created successfully. Proceeding to Terraform."
         echo ""
     else
         log_warn "⚠️ Backup skipped"
@@ -114,6 +141,7 @@ main() {
     # === Step 3: Apply Infrastructure Code ===
     if [ "$BACKUP_CREATED" -eq 1 ]; then
         log_stage "STEP 3: Apply Terraform Infrastructure"
+        update_gh_issue "🔨 TERRAFORM_VALIDATING" "Validating Terraform configuration and generating plan..."
         
         log_info "Running terraform validate..."
         if [ "$DRY_RUN" -eq 1 ]; then
@@ -124,6 +152,7 @@ main() {
                 log_info "✅ Terraform configuration is valid"
             else
                 log_error "❌ Terraform validation failed"
+                update_gh_issue "❌ TERRAFORM_FAILED" "Terraform validation failed. Check logs on $DEPLOY_HOST"
                 exit 1
             fi
             cd "${SCRIPT_DIR}" || exit 1
@@ -138,16 +167,20 @@ main() {
                 log_info "✅ Terraform plan created"
             else
                 log_error "❌ Terraform plan failed"
+                update_gh_issue "❌ TERRAFORM_PLAN_FAILED" "Terraform plan generation failed"
                 exit 1
             fi
             
             if [ "$TERRAFORM_AUTO_APPROVE" -eq 1 ]; then
                 log_info "Applying Terraform (auto-approved)..."
+                update_gh_issue "🚀 TERRAFORM_APPLYING" "Applying Terraform changes to infrastructure..."
                 if terraform apply -auto-approve tfplan &>/dev/null; then
                     log_info "✅ Terraform applied successfully"
                     TERRAFORM_APPLIED=1
+                    update_gh_issue "✅ TERRAFORM_COMPLETE" "Infrastructure provisioned successfully"
                 else
                     log_error "❌ Terraform apply failed"
+                    update_gh_issue "❌ TERRAFORM_APPLY_FAILED" "Terraform apply failed"
                     exit 1
                 fi
             else
@@ -164,17 +197,22 @@ main() {
     # === Step 4: Deploy Docker Stack ===
     if [ "$TERRAFORM_APPLIED" -eq 1 ]; then
         log_stage "STEP 4: Deploy Docker Services"
+        update_gh_issue "🐳 DOCKER_DEPLOYING" "Starting Docker Compose services on $DEPLOY_HOST..."
         
         log_info "Deploying services to $DEPLOY_HOST..."
         if [ "$DRY_RUN" -eq 1 ]; then
             log_info "[DRY-RUN] Would run: docker compose up -d"
-        else
-            ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd ~/code-server-enterprise && docker compose up -d" || {
-                log_error "❌ Docker compose up failed"
-                exit 1
-            }
-            log_info "✅ Docker services started"
             DOCKER_DEPLOYED=1
+        else
+            if ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd ~/code-server-enterprise && docker compose up -d" &>/dev/null; then
+                log_info "✅ Docker services started"
+                DOCKER_DEPLOYED=1
+                update_gh_issue "✅ DOCKER_DEPLOYED" "Docker services deployed successfully"
+            else
+                log_error "❌ Docker compose up failed"
+                update_gh_issue "❌ DOCKER_DEPLOY_FAILED" "Docker compose failed on $DEPLOY_HOST"
+                exit 1
+            fi
         fi
         
         echo ""
@@ -183,6 +221,7 @@ main() {
     # === Step 5: Health Check ===
     if [ "$DOCKER_DEPLOYED" -eq 1 ] || [ "$DRY_RUN" -eq 1 ]; then
         log_stage "STEP 5: Health Verification"
+        update_gh_issue "🏥 HEALTH_CHECKS" "Verifying service health and connectivity..."
         
         log_info "Waiting for services to stabilize (max ${HEALTH_CHECK_TIMEOUT}s)..."
         
@@ -215,6 +254,7 @@ main() {
             fi
             
             HEALTH_CHECK_PASSED=1
+            update_gh_issue "✅ HEALTH_VERIFIED" "All services verified as healthy"
         fi
         
         echo ""
@@ -238,9 +278,29 @@ main() {
         log_info "  Grafana:     http://$DEPLOY_HOST:3000 (configured credentials)"
         log_info "  Prometheus:  http://$DEPLOY_HOST:9090"
         log_info ""
+        
+        update_gh_issue "✅ DEPLOYMENT_SUCCESS" "Redeploy completed successfully on **$DEPLOY_HOST**
+
+**Deployment ID**: $DEPLOYMENT_ID
+
+**Summary**:
+- Preflight checks: ✅
+- Backup: ✅
+- Infrastructure (Terraform): ✅
+- Docker services: ✅
+- Health verification: ✅
+
+**Access**:
+- Code-server: http://$DEPLOY_HOST:8080
+- Grafana: http://$DEPLOY_HOST:3000
+- Prometheus: http://$DEPLOY_HOST:9090
+
+All services operational."
+        
         exit 0
     else
         log_error "❌ Redeploy sequence incomplete or health checks failed"
+        update_gh_issue "❌ DEPLOYMENT_FAILED" "Redeploy sequence failed or health checks did not pass. Check logs for details."
         exit 1
     fi
 }

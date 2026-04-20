@@ -381,6 +381,9 @@ services:
       - caddy-config:/config
     environment:
       - DOMAIN=${DOMAIN:-kushnir.cloud}
+      - IDE_DOMAIN=${IDE_DOMAIN:-ide.kushnir.cloud}
+      - PORTAL_DOMAIN=${PORTAL_DOMAIN:-kushnir.cloud}
+      - DEV_SESSION_DOMAIN=${DEV_SESSION_DOMAIN:-dev.kushnir.cloud}
       - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}
       - ACME_AGREE=true
     healthcheck:

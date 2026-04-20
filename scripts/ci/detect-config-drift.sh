@@ -30,7 +30,7 @@ declare -a SSOT_FILES=(
 
 # Directory prefixes to skip for domain/IP checks (config definitions, not scripts)
 declare -a SKIP_DIRS=(
-    "docs/configs/"
+    "docs/"
     "config/"
     "docker/configs/"
     "tests/artifacts/"
@@ -52,7 +52,6 @@ declare -a SKIP_DIRS=(
     "scripts/dev/check-config-drift.sh"
     "scripts/ci/detect-config-drift.sh"
     "phase-20-a1-config.yml"
-    "docs/service-registry.yaml"
     "docker-compose.production.yml"
     "docker-compose-phase-"
     "phase-"

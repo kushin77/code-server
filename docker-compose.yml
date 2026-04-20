@@ -186,6 +186,9 @@ services:
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
       OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
       OAUTH2_PROXY_COOKIE_DOMAINS: "${IDE_DOMAIN:-ide.kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
+      # CSRF protection: shared secret across both hosts enables validation during failover
+      OAUTH2_PROXY_CSRF_COOKIE_NAME: "_oauth2_proxy_ide_csrf"
+      OAUTH2_PROXY_CSRF_TRUSTED_HOSTS: "${IDE_DOMAIN:-ide.kushnir.cloud},.${COOKIE_DOMAIN:-.kushnir.cloud}"
       OAUTH2_PROXY_WHITELIST_DOMAINS: "${IDE_DOMAIN:-ide.kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
       OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
       OAUTH2_PROXY_COOKIE_REFRESH: "15m"
@@ -262,6 +265,9 @@ services:
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
       OAUTH2_PROXY_COOKIE_SAMESITE: "none"
       OAUTH2_PROXY_COOKIE_DOMAINS: "${DOMAIN:-kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
+      # CSRF protection: shared secret across both hosts enables validation during failover
+      OAUTH2_PROXY_CSRF_COOKIE_NAME: "_oauth2_proxy_portal_csrf"
+      OAUTH2_PROXY_CSRF_TRUSTED_HOSTS: "${DOMAIN:-kushnir.cloud},.${COOKIE_DOMAIN:-.kushnir.cloud}"
       OAUTH2_PROXY_WHITELIST_DOMAINS: "${DOMAIN:-kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
       OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
       OAUTH2_PROXY_COOKIE_REFRESH: "15m"

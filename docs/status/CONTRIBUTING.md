@@ -1010,39 +1010,29 @@ OAUTH2_PROXY_CLIENT_SECRET=${CLIENT_SECRET}
 
 ### 6. Script Function Libraries
 
-**Pattern**: Consolidate common operations into reusable shell/PowerShell libraries.
+**Pattern**: Consolidate common operations into reusable bash libraries.
 
-**Bash Library** (`scripts/logging.sh`):
+**Bash Library** (`scripts/_common/logging.sh`):
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 # Structured logging with timestamps and colors
-log() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO] $1"; }
+log_info() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO] $1"; }
 log_error() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1" >&2; }
 log_success() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [SUCCESS] $1"; }
 ```
 
-**PowerShell Library** (`scripts/common-functions.ps1`):
-```powershell
-function Get-PRCheckStatus {
-    # Unified PR status retrieval via GitHub CLI
-}
-
-function Merge-PullRequest {
-    # Unified PR merge with validation
-}
-```
-
 **Usage**:
 ```bash
-#!/bin/bash
-source scripts/logging.sh
-log "Deployment starting..."
+#!/usr/bin/env bash
+source scripts/_common/init.sh  # includes logging.sh
+log_info "Deployment starting..."
 ```
 
 **Benefits**:
 - 50% reduction in duplicate logging code
 - Consistent error handling across scripts
 - Easy to update formatting/behavior globally
+- Linux-native mandate enforced (#885)
 
 ---
 

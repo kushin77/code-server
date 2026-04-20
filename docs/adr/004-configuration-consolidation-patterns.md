@@ -284,9 +284,9 @@ oauth2-proxy:
 
 ### 6. Script Function Libraries
 
-**Pattern**: Consolidate common operations into reusable shell/PowerShell libraries.
+**Pattern**: Consolidate common operations into reusable bash libraries.
 
-**Bash Library** (`scripts/logging.sh`):
+**Bash Library** (`scripts/_common/logging.sh`):
 ```bash
 #!/usr/bin/env bash
 # Structured logging with timestamps, colors, file output
@@ -301,21 +301,12 @@ run_command "echo test"        # Run with logging
 verify_command_exists "docker" # Check prerequisites
 ```
 
-**PowerShell Library** (`scripts/common-functions.ps1`):
-```powershell
-# GitHub operations consolidated
-. scripts/common-functions.ps1
-
-Write-Success "PR merged"
-Write-Error-Colored "Deploy failed"
-$status = Get-PRCheckStatus -PRNumber 123
-```
-
 **Benefits**:
 - **50% code reduction**: Logging/error handling unified
 - **Consistency**: All scripts format output identically
 - **Maintainability**: Update formatting globally
 - **Professionalism**: Structured logging across all automation
+- **Linux-native mandate enforced**: Bash only, no PowerShell dependencies (#885)
 
 ## Consequences
 

@@ -9,31 +9,32 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
-# Git Bash on Windows may not inherit Node.js PATH from PowerShell.
-if ! command -v node >/dev/null 2>&1; then
-  if [[ -x "/c/Program Files/nodejs/node.exe" ]]; then
-    node() { "/c/Program Files/nodejs/node.exe" "$@"; }
-    npx() { cmd.exe //c npx "$@"; }
-  elif [[ -x "/mnt/c/Program Files/nodejs/node.exe" ]]; then
-    node() { "/mnt/c/Program Files/nodejs/node.exe" "$@"; }
-    npx() { cmd.exe //c npx "$@"; }
-  fi
-fi
-
 PORTAL_BASE_URL="${PORTAL_BASE_URL:-https://kushnir.cloud}"
 IDE_BASE_URL="${IDE_BASE_URL:-https://ide.kushnir.cloud}"
-APPSMITH_EXPECTED_REDIRECT_URI="${APPSMITH_EXPECTED_REDIRECT_URI:-${PORTAL_BASE_URL}/login/oauth2/code/google}"
+APPSMITH_EXPECTED_REDIRECT_URI="${APPSMITH_EXPECTED_REDIRECT_URI:-${PORTAL_BASE_URL}/login/oauth2/code/github}"
 TEST_SPEC="${TEST_SPEC:-tests/e2e/specs/kushnir-cloud-appsmith-login.spec.ts}"
 E2E_DIR="${E2E_DIR:-tests/e2e}"
 REQUIRE_VPN="${REQUIRE_VPN:-1}"
 REQUIRE_QA_STORAGE_STATE="${REQUIRE_QA_STORAGE_STATE:-1}"
 REQUIRE_SINGLE_LOGIN="${REQUIRE_SINGLE_LOGIN:-1}"
+DETERMINISTIC_E2E_RUNNER="$SCRIPT_DIR/run-deterministic-e2e-suite.sh"
 
-require_command "node" "node is required"
-require_command "npx" "npx is required"
 require_dir "$E2E_DIR"
 require_file "$TEST_SPEC"
 require_file "$E2E_DIR/playwright.config.ts"
+
+run_playwright_tests() {
+  local npx_cmd
+
+  npx_cmd="$(command -v npx 2>/dev/null || command -v npx.cmd 2>/dev/null || command -v npx.exe 2>/dev/null || true)"
+
+  if [[ -n "$npx_cmd" ]]; then
+    env PORTAL_BASE_URL="$PORTAL_BASE_URL" IDE_BASE_URL="$IDE_BASE_URL" APPSMITH_EXPECTED_REDIRECT_URI="$APPSMITH_EXPECTED_REDIRECT_URI" REQUIRE_SINGLE_LOGIN="$REQUIRE_SINGLE_LOGIN" TEST_BASE_URL="$PORTAL_BASE_URL" E2E_FLAKE_OUTPUT_DIR="${E2E_FLAKE_OUTPUT_DIR:-artifacts/triage}" "$DETERMINISTIC_E2E_RUNNER" --suite-name "appsmith-login" --output-dir "${E2E_FLAKE_OUTPUT_DIR:-artifacts/triage}" -- "$npx_cmd" playwright test --config "$E2E_DIR/playwright.config.ts" "$TEST_SPEC"
+    return 0
+  fi
+
+  log_fatal "npx is not available. Ensure Node.js 18+ is installed or WSL Node.js is configured in PATH. (Linux-native mandate enforced—PowerShell fallback removed per #885)"
+}
 
 if [[ "$REQUIRE_VPN" == "1" ]]; then
   if [[ -f "scripts/ci/check-vpn-gate.sh" ]]; then
@@ -54,6 +55,6 @@ log_info "IDE: $IDE_BASE_URL"
 log_info "Appsmith expected redirect URI: $APPSMITH_EXPECTED_REDIRECT_URI"
 log_info "Require single-login sentinel: $REQUIRE_SINGLE_LOGIN"
 
-env PORTAL_BASE_URL="$PORTAL_BASE_URL" IDE_BASE_URL="$IDE_BASE_URL" APPSMITH_EXPECTED_REDIRECT_URI="$APPSMITH_EXPECTED_REDIRECT_URI" REQUIRE_SINGLE_LOGIN="$REQUIRE_SINGLE_LOGIN" TEST_BASE_URL="$PORTAL_BASE_URL" npx playwright test --config "$E2E_DIR/playwright.config.ts" "$TEST_SPEC"
+run_playwright_tests
 
 log_info "kushnir.cloud Appsmith login E2E finished"

@@ -66,10 +66,13 @@ check_file() {
     fi
   done
 
-  # CRLF check
-  if file "$f" 2>/dev/null | grep -q 'CRLF'; then
-    violations+=("$f: CRLF line endings — run: git add --renormalize .")
-    fail=1
+  # CRLF check (tracked content): inspect git blob/index to avoid false positives
+  # from local checkout conversion (e.g., core.autocrlf on Windows).
+  if git cat-file -e ":$f" 2>/dev/null; then
+    if git show ":$f" | LC_ALL=C grep -q $'\r'; then
+      violations+=("$f: CRLF line endings in tracked content")
+      fail=1
+    fi
   fi
 }
 

@@ -21,12 +21,11 @@ set -euo pipefail
 retry() {
     local max_attempts=$1
     shift
-    local cmd="$@"
     local attempt=1
     local delay=1
     
     while [ $attempt -le "$max_attempts" ]; do
-        if eval "$cmd"; then
+        if "$@"; then
             return 0
         fi
         
@@ -39,7 +38,7 @@ retry() {
         attempt=$((attempt + 1))
     done
     
-    log_error "Command failed after $max_attempts attempts: $cmd"
+    log_error "Command failed after $max_attempts attempts: $*"
     return 1
 }
 

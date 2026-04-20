@@ -48,12 +48,11 @@ main() {
     else
         if timeout 10 bash -c "curl -sf http://$PRIMARY_HOST:8080/healthz >/dev/null 2>&1"; then
             log_warn "⚠️ Primary appears to be UP (unexpected)"
-            log_info "To force failover anyway, use: FORCE_FAILOVER=1 bash scripts/ops/failover-promote.sh"
-            read -p "Continue anyway? (y/n): " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                log_info "Failover cancelled"
-                exit 0
+            if [ "${FORCE_FAILOVER:-0}" -eq 1 ]; then
+                log_warn "FORCE_FAILOVER=1: Continuing despite primary being up"
+            else
+                log_error "To force failover, use: FORCE_FAILOVER=1 bash scripts/ops/failover-promote.sh"
+                exit 1
             fi
         else
             log_info "✅ Primary is unreachable (as expected)"

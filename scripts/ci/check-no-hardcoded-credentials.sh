@@ -11,7 +11,8 @@ cd "$ROOT_DIR"
 
 source "$SCRIPT_DIR/../_common/init.sh"
 
-PATTERN='password=secret|replication_user_pwd|admin123|changeme-enterprise-pwd|changeme-sudo-pwd|CODE_SERVER_PASSWORD=\$\{CODE_SERVER_PASSWORD:-change-me\}'
+# Expanded pattern to catch common credential patterns
+PATTERN='(password|passwd|pwd|secret|token|key|credential)\\s*[=:]\\s*[\"'\'']?[^\"'\''\\s]+(admin|test|demo|secret|password|123|change-?me|placeholder|todo|fixme|xxx|dummy|fake)|(api[_-]?key|access[_-]?key|secret[_-]?key|auth[_-]?token)\\s*[=:]|CODE_SERVER_PASSWORD=\\$\\{CODE_SERVER_PASSWORD:-[^}]+\\}|REDIS_PASSWORD=\\$\\{REDIS_PASSWORD:-[^}]+\\}'
 
 matches=$(grep -RInE "$PATTERN" scripts \
   --include='*.sh' \

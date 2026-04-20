@@ -209,11 +209,11 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "/bin/oauth2-proxy", "--version"]
-      interval: 30s
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4180/ping || exit 1"]
+      interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 30s
     depends_on:
       - code-server
     logging:
@@ -291,11 +291,11 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD", "/bin/oauth2-proxy", "--version"]
-      interval: 30s
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4181/ping || exit 1"]
+      interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 30s
     depends_on:
       appsmith:
         condition: service_started

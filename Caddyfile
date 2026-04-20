@@ -62,6 +62,18 @@
             header_up X-Forwarded-Proto https
             header_up X-Real-IP {remote_host}
             header_down X-LB-Upstream {http.reverse_proxy.upstream.address}
+            # Passive health checks prevent auth-request pileups when oauth2-proxy is unhealthy.
+            health_uri /ping
+            health_interval 15s
+            health_timeout 5s
+            health_fails 2
+            fail_duration 30s
+            lb_try_duration 5s
+            transport http {
+                keepalive 30s
+                keepalive_idle_conns 100
+                response_header_timeout 30s
+            }
         }
     }
 
@@ -250,12 +262,17 @@ kushnir.cloud {
                     {$REPLICA_HOST:replica-host}:4181
                 }
                 # Health checks: fast detection (<30 sec) of primary failure
-                health_uri /health
+                health_uri /ping
                 health_interval 10s
                 health_timeout 5s
                 health_fails 2
                 fail_duration 30s
                 lb_try_duration 5s
+                transport http {
+                    keepalive 30s
+                    keepalive_idle_conns 100
+                    response_header_timeout 30s
+                }
             }
         }
 
@@ -279,12 +296,17 @@ kushnir.cloud {
                 {$REPLICA_HOST:replica-host}:4181
             }
             # Health checks: fast detection (<30 sec) of primary failure
-            health_uri /health
+            health_uri /ping
             health_interval 10s
             health_timeout 5s
             health_fails 2
             fail_duration 30s
             lb_try_duration 5s
+            transport http {
+                keepalive 30s
+                keepalive_idle_conns 100
+                response_header_timeout 30s
+            }
         }
     }
 }

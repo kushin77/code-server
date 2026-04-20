@@ -56,8 +56,9 @@ COPY --from=builder /workspace/.npmrc /.npmrc
 
 # Install production dependencies using pnpm
 # We need pnpm because package.json has catalog: references
+# Use --no-frozen-lockfile since we're in a clean runtime image
 RUN npm install -g pnpm@9.15.4 && \
-    pnpm install --prod --frozen-lockfile && \
+    pnpm install --prod --no-frozen-lockfile && \
     pnpm cache delete
 
 # Set permissions using numeric IDs (more reliable than usernames)

@@ -90,3 +90,12 @@ scrape_configs:
       - targets: ['jaeger:14269']
         labels:
           instance: jaeger-backend
+
+  # Session broker metrics (#995)
+  - job_name: 'session-broker'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['session-broker:5000']
+        labels:
+          instance: session-broker
+    scrape_interval: 30s

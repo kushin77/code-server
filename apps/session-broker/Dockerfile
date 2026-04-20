@@ -7,22 +7,25 @@
 
 FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391b8e61cc6a AS builder
 
+WORKDIR /workspace
+
+# Copy workspace root configuration
+COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+
+# Copy the session-broker package specifically  
+COPY apps/session-broker ./apps/session-broker
+
+# Install dependencies using pnpm with workspace context
+# pnpm needs to be at workspace root to resolve catalog entries
+RUN npm install -g pnpm@9.15.4 && \
+    cd apps/session-broker && \
+    pnpm install && \
+    pnpm run build && \
+    pnpm prune --omit=dev
+
+# Now prepare the final compiled output
 WORKDIR /build
-
-# Copy workspace configuration for pnpm catalog resolution
-COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./ 
-
-# Copy package files
-COPY apps/session-broker/package*.json ./
-
-# Install dependencies (including dev for TypeScript build)
-# Note: .npmrc and pnpm-workspace.yaml must be in build root for pnpm catalog to resolve
-RUN npm install -g pnpm@9.15.4 && pnpm install
-
-# Copy source and compile
-COPY apps/session-broker/tsconfig.json ./
-COPY apps/session-broker/src ./src
-RUN npm run build && npm prune --omit=dev
+COPY --from=0 /workspace/apps/session-broker/dist ./dist
 
 # ════════════════════════════════════════════════════════════════════════════
 # Stage 2: Runtime

@@ -167,6 +167,56 @@ groups:
           team: platform
           component: auth-path
 
+      # Redis Sentinel Monitoring (#995)
+      - alert: RedisSentinelMasterSwitch
+        expr: changes(redis_sentinel_master_switch_total[5m]) > 0
+        for: 1m
+        annotations:
+          summary: "Redis Sentinel performed master switch"
+          description: "Redis Sentinel on {{ $labels.instance }} has triggered a master failover in the last 5 minutes"
+          runbook: "https://github.com/kushin77/code-server/issues/995"
+        labels:
+          severity: warning
+          team: platform
+          component: data-store
+
+      - alert: RedisSentinelQuorumLost
+        expr: redis_sentinel_sentinels < 2
+        for: 1m
+        annotations:
+          summary: "Redis Sentinel quorum lost"
+          description: "Redis Sentinel quorum is insufficient. Current count: {{ $value }} (minimum: 2)"
+          runbook: "https://github.com/kushin77/code-server/issues/995"
+        labels:
+          severity: critical
+          team: platform
+          component: data-store
+
+      - alert: RedisReplicaLag
+        expr: redis_connected_slaves == 0
+        for: 2m
+        annotations:
+          summary: "Redis has no connected replicas"
+          description: "Redis master on {{ $labels.instance }} has no connected slave replicas"
+          runbook: "https://github.com/kushin77/code-server/issues/995"
+        labels:
+          severity: warning
+          team: platform
+          component: data-store
+
+      - alert: RedisHighMemoryUsage
+        expr: |
+          (redis_memory_used_bytes / clamp_min(redis_memory_max_bytes, 1)) > 0.9
+        for: 5m
+        annotations:
+          summary: "Redis memory usage is above 90%"
+          description: "Redis on {{ $labels.instance }} is using {{ humanize $value }}% of max memory"
+          runbook: "https://github.com/kushin77/code-server/issues/995"
+        labels:
+          severity: warning
+          team: platform
+          component: data-store
+
       # Caddy Upstream 5xx Spike
       - alert: CaddyUpstream5xxSpike
         expr: |

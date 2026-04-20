@@ -33,8 +33,18 @@
         # Rewrite logout path before proxying to session-broker endpoint.
         rewrite * /oauth2/logout
         # Extract session ID from cookie and pass it to session-broker logout.
+        # Use dual upstreams for availability during failover
         reverse_proxy session-broker:5000 {
             header_up X-Session-Id {http.request.cookie._code_server_session_id}
+            upstreams {
+                primary_host:5000
+            }
+            upstreams {
+                {$REPLICA_HOST:replica-host}:5000
+            }
+            health_uri /health
+            health_interval 10s
+            health_fails 2
         }
     }
 
@@ -129,6 +139,15 @@
         rewrite * /oauth2/logout
         reverse_proxy session-broker:5000 {
             header_up X-Session-Id {http.request.cookie._code_server_session_id}
+            upstreams {
+                primary_host:5000
+            }
+            upstreams {
+                {$REPLICA_HOST:replica-host}:5000
+            }
+            health_uri /health
+            health_interval 10s
+            health_fails 2
         }
     }
 
@@ -149,10 +168,19 @@
         header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}
         header_up X-Session-Id {http.request.cookie._code_server_session_id}
-        lb_policy cookie ide_session_lb secret734
+        # Dual upstreams for failover
+        upstreams {
+            primary_host:5000
+        }
+        upstreams {
+            {$REPLICA_HOST:replica-host}:5000
+        }
+        # Sticky load balancing with environment variable secret
+        lb_policy cookie ide_session_lb {$IDE_SESSION_LB_SECRET:secret734}
         health_uri /health
-        health_interval 30s
+        health_interval 10s
         health_timeout 5s
+        health_fails 2
         fail_duration 30s
         lb_try_duration 5s
     }

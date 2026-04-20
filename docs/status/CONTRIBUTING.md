@@ -35,6 +35,23 @@ AI must:
 
 Every PR must satisfy these non-negotiable gates:
 
+### Linux-Native File Format Policy
+- [ ] Text files use LF line endings only (no CRLF)
+- [ ] `.gitattributes` normalization rules are respected
+- [ ] Linux-native content guard passes before PR submission
+
+Run this guard locally before opening a PR:
+
+```bash
+bash scripts/ci/check-no-windows-content.sh
+```
+
+If you introduce CRLF on Windows, normalize before commit:
+
+```bash
+git add --renormalize .
+```
+
 ### 🏗️ Architecture
 - [ ] Horizontal scalability validated
 - [ ] Stateless where possible

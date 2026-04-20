@@ -10,7 +10,7 @@ FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391
 WORKDIR /workspace
 
 # Copy workspace root configuration
-COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc package.json ./
 
 # Copy the session-broker package specifically  
 COPY apps/session-broker ./apps/session-broker
@@ -18,10 +18,9 @@ COPY apps/session-broker ./apps/session-broker
 # Install dependencies using pnpm with workspace context
 # pnpm needs to be at workspace root to resolve catalog entries
 RUN npm install -g pnpm@9.15.4 && \
+    pnpm install --frozen-lockfile && \
     cd apps/session-broker && \
-    pnpm install && \
-    pnpm run build && \
-    pnpm prune --prod
+    pnpm run build
 
 # ════════════════════════════════════════════════════════════════════════════
 # Stage 2: Runtime
@@ -50,10 +49,10 @@ RUN useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true && \
 
 WORKDIR /app
 
-# Copy built application from builder
+# Copy built application and full node_modules tree from builder
 COPY --from=builder /workspace/apps/session-broker/dist ./dist
 COPY --from=builder /workspace/apps/session-broker/node_modules ./node_modules
-COPY --from=builder /workspace/apps/session-broker/package*.json ./
+COPY --from=builder /workspace/apps/session-broker/package.json ./package.json
 
 # Set permissions using numeric IDs (more reliable than usernames)
 RUN chown -R 1000:999 /app

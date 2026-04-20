@@ -159,6 +159,7 @@ services:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:e797b3934eb8d7cb2756b67e59be2ef29c18c2b45da763f540ece66d843cec85
     container_name: oauth2-proxy
     restart: unless-stopped
+    user: "101"  # oauth2-proxy user (non-root)
     networks:
       - net-edge
       - net-app
@@ -232,6 +233,7 @@ services:
     container_name: oauth2-proxy-portal
     profiles: [portal]
     restart: unless-stopped
+    user: "101"  # oauth2-proxy user (non-root)
     networks:
       - net-edge
       - net-app
@@ -314,6 +316,7 @@ services:
     image: ghcr.io/kushin77/session-broker@sha256:683cca5a6c4710ba65b86403e2686030f0d3e2f4fd34f8ea44368dc2cb3148a6
     container_name: session-broker
     restart: unless-stopped
+    user: "1000"  # session-broker user (non-root, requires docker socket access for container spawning)
     networks:
       - net-app
       - net-data
@@ -382,6 +385,7 @@ services:
     image: caddy:2.7.6@sha256:7b51768d110708c44179dc299884e9ee73d243a37abccce2dc796abc36371a38
     container_name: caddy
     restart: unless-stopped
+    user: "33"  # caddy user (non-root, can still bind to ports via capabilities)
     networks:
       - net-edge
       - net-app

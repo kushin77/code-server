@@ -2,16 +2,23 @@ import crypto from "crypto";
 import {
   WorkspaceAuditEvent,
   WorkspaceLaunchMetadata,
+  WorkspaceLaunchProvenance,
   WorkspaceLaunchRequest,
   WorkspaceLaunchPreview,
   WorkspaceLaunchResult,
+  WorkspaceContextHubStateSnapshot,
   WorkspaceRepositoryDescriptor,
+  WorkspaceReviewerAccessGrant,
+  WorkspaceReviewerPermission,
   WorkspaceSetDefinition,
   WorkspaceSnapshot,
   WorkspaceTerminalSnapshot,
-} from "./types";
+} from "./types.js";
 
 const SENSITIVE_KEY_PATTERN = /(token|secret|password|passwd|private|key|credential)/i;
+const PROVENANCE_POLICY_VERSION = "ephemeral-provenance-v1";
+const PROVENANCE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const PROVENANCE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 /**
  * In-memory workspace context service for multi-repo launch and restore flows.
@@ -22,6 +29,9 @@ const SENSITIVE_KEY_PATTERN = /(token|secret|password|passwd|private|key|credent
  */
 export class WorkspaceContextHubService {
   private readonly workspaceSets = new Map<string, WorkspaceSetDefinition>();
+  private readonly reviewerAccessGrants = new Map<string, WorkspaceReviewerAccessGrant>();
+  private readonly reviewerAccessTokenIndex = new Map<string, string>();
+  private readonly restoreMetadataByCorrelationId = new Map<string, WorkspaceLaunchMetadata>();
   private readonly auditEvents: WorkspaceAuditEvent[] = [];
 
   registerWorkspaceSet(
@@ -55,6 +65,41 @@ export class WorkspaceContextHubService {
     });
 
     return nextSet;
+  }
+
+  exportStateSnapshot(): WorkspaceContextHubStateSnapshot {
+    return {
+      version: "workspace-context-hub-state/v1",
+      exportedAt: Date.now(),
+      workspaceSets: [...this.workspaceSets.values()].sort((left, right) => right.updatedAt - left.updatedAt),
+    };
+  }
+
+  importStateSnapshot(snapshot: WorkspaceContextHubStateSnapshot, actor: string, correlationId: string): number {
+    if (snapshot.version !== "workspace-context-hub-state/v1") {
+      throw new Error(`Unsupported workspace context hub snapshot version: ${snapshot.version}`);
+    }
+
+    let importedCount = 0;
+    for (const workspaceSet of snapshot.workspaceSets) {
+      this.workspaceSets.set(workspaceSet.id, workspaceSet);
+      importedCount += 1;
+    }
+
+    this.recordAuditEvent({
+      eventType: "workspace_state_imported",
+      actor,
+      workspaceSetId: snapshot.workspaceSets[0]?.id ?? "workspace-context-hub",
+      correlationId,
+      reason: `imported ${importedCount} workspace set records`,
+      details: {
+        importedCount,
+        version: snapshot.version,
+        exportedAt: snapshot.exportedAt,
+      },
+    });
+
+    return importedCount;
   }
 
   previewWorkspaceLaunch(request: WorkspaceLaunchRequest, snapshot?: WorkspaceSnapshot): WorkspaceLaunchPreview {
@@ -155,6 +200,7 @@ export class WorkspaceContextHubService {
     }
 
     const { workspaceSet, sanitized, restoreMetadata, activeRepoId } = decision;
+    this.restoreMetadataByCorrelationId.set(request.correlationId, restoreMetadata);
 
     if ((sanitized?.redactedFields.length ?? 0) > 0 || (sanitized?.blockedTerminalReplayCount ?? 0) > 0) {
       this.recordAuditEvent({
@@ -183,6 +229,8 @@ export class WorkspaceContextHubService {
         activeRepoId,
         repositoryCount: workspaceSet.repositories.length,
         blockedTerminalReplayCount: restoreMetadata.blockedTerminalReplayCount,
+        sessionFingerprint: restoreMetadata.sessionFingerprint,
+        provenance: restoreMetadata.provenance,
       },
     });
 
@@ -199,10 +247,190 @@ export class WorkspaceContextHubService {
     return this.workspaceSets.get(workspaceSetId);
   }
 
+  listWorkspaceSetsForActor(actor: string, includeOwned: boolean = true): WorkspaceSetDefinition[] {
+    const normalizedActor = actor.trim().toLowerCase();
+
+    return [...this.workspaceSets.values()]
+      .filter((workspaceSet) => {
+        const ownerMatch = workspaceSet.owner.toLowerCase() === normalizedActor;
+        if (ownerMatch) {
+          return includeOwned;
+        }
+
+        if (!workspaceSet.shared) {
+          return false;
+        }
+
+        const principals = new Set((workspaceSet.allowedPrincipals ?? []).map((principal) => principal.toLowerCase()));
+        if (principals.size === 0) {
+          return true;
+        }
+
+        return principals.has(normalizedActor);
+      })
+      .sort((left, right) => right.updatedAt - left.updatedAt);
+  }
+
+  getRestoreMetadataByCorrelationId(correlationId: string): WorkspaceLaunchMetadata | undefined {
+    return this.restoreMetadataByCorrelationId.get(correlationId);
+  }
+
   getAuditEvents(workspaceSetId?: string): WorkspaceAuditEvent[] {
     return workspaceSetId
       ? this.auditEvents.filter((event) => event.workspaceSetId === workspaceSetId)
       : [...this.auditEvents];
+  }
+
+  issueReviewerAccessLink(params: {
+    actor: string;
+    workspaceSetId: string;
+    sessionId: string;
+    reviewer: string;
+    permission: WorkspaceReviewerPermission;
+    correlationId: string;
+    ttlMs?: number;
+    oneTimeUse?: boolean;
+  }): { token: string; grant: WorkspaceReviewerAccessGrant } {
+    const workspaceSet = this.requireWorkspaceSet(params.workspaceSetId);
+    const issuedAt = Date.now();
+    const expiresAt = issuedAt + Math.max(1, params.ttlMs ?? 60 * 60 * 1000);
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = this.hashReviewerToken(token);
+
+    const grant: WorkspaceReviewerAccessGrant = {
+      grantId: crypto.randomUUID(),
+      workspaceSetId: workspaceSet.id,
+      sessionId: params.sessionId,
+      reviewer: params.reviewer,
+      permission: params.permission,
+      issuedBy: params.actor,
+      issuedAt,
+      expiresAt,
+      oneTimeUse: params.oneTimeUse ?? true,
+      tokenHash,
+    };
+
+    this.reviewerAccessGrants.set(grant.grantId, grant);
+    this.reviewerAccessTokenIndex.set(tokenHash, grant.grantId);
+    this.recordAuditEvent({
+      eventType: "workspace_reviewer_link_issued",
+      actor: params.actor,
+      workspaceSetId: workspaceSet.id,
+      sessionId: params.sessionId,
+      correlationId: params.correlationId,
+      reason: `issued ${params.permission} reviewer link for ${params.reviewer}`,
+      details: {
+        grantId: grant.grantId,
+        reviewer: params.reviewer,
+        permission: params.permission,
+        expiresAt,
+        oneTimeUse: grant.oneTimeUse,
+      },
+    });
+
+    return { token, grant };
+  }
+
+  resolveReviewerAccessLink(
+    token: string,
+    sessionId: string,
+    requiredPermission: WorkspaceReviewerPermission = "view-only",
+    correlationId: string = `reviewer-access-${sessionId}`,
+  ): WorkspaceReviewerAccessGrant | undefined {
+    const grantId = this.reviewerAccessTokenIndex.get(this.hashReviewerToken(token));
+    if (!grantId) {
+      return undefined;
+    }
+
+    const grant = this.reviewerAccessGrants.get(grantId);
+    if (!grant || grant.sessionId !== sessionId) {
+      return undefined;
+    }
+
+    if (this.isReviewerAccessInvalid(grant, requiredPermission)) {
+      return undefined;
+    }
+
+    const consumedAt = Date.now();
+    if (grant.oneTimeUse) {
+      const updated = {
+        ...grant,
+        consumedAt,
+      };
+      this.reviewerAccessGrants.set(grant.grantId, updated);
+      this.recordAuditEvent({
+        eventType: "workspace_reviewer_link_consumed",
+        actor: grant.reviewer,
+        workspaceSetId: grant.workspaceSetId,
+        sessionId: grant.sessionId,
+        correlationId,
+        reason: `reviewer link consumed for ${grant.reviewer}`,
+        details: {
+          grantId: grant.grantId,
+          permission: grant.permission,
+          oneTimeUse: true,
+        },
+      });
+
+      return updated;
+    }
+
+    this.recordAuditEvent({
+      eventType: "workspace_reviewer_link_consumed",
+      actor: grant.reviewer,
+      workspaceSetId: grant.workspaceSetId,
+      sessionId: grant.sessionId,
+      correlationId,
+      reason: `reviewer link consumed for ${grant.reviewer}`,
+      details: {
+        grantId: grant.grantId,
+        permission: grant.permission,
+        oneTimeUse: false,
+      },
+    });
+
+    return grant;
+  }
+
+  revokeReviewerAccessLink(
+    grantId: string,
+    actor: string,
+    correlationId: string,
+    reason: string = "manual revocation",
+  ): WorkspaceReviewerAccessGrant {
+    const grant = this.reviewerAccessGrants.get(grantId);
+    if (!grant) {
+      throw new Error(`Reviewer access grant not found: ${grantId}`);
+    }
+
+    const updated: WorkspaceReviewerAccessGrant = {
+      ...grant,
+      revokedAt: Date.now(),
+      revokedReason: reason,
+    };
+
+    this.reviewerAccessGrants.set(grantId, updated);
+    this.reviewerAccessTokenIndex.delete(grant.tokenHash);
+    this.recordAuditEvent({
+      eventType: "workspace_reviewer_link_revoked",
+      actor,
+      workspaceSetId: grant.workspaceSetId,
+      sessionId: grant.sessionId,
+      correlationId,
+      reason: `reviewer link revoked: ${reason}`,
+      details: {
+        grantId,
+        reviewer: grant.reviewer,
+        permission: grant.permission,
+      },
+    });
+
+    return updated;
+  }
+
+  getReviewerAccessGrants(workspaceSetId?: string): WorkspaceReviewerAccessGrant[] {
+    const grants = [...this.reviewerAccessGrants.values()];
+    return workspaceSetId ? grants.filter((grant) => grant.workspaceSetId === workspaceSetId) : grants;
   }
 
   private evaluateLaunchDecision(request: WorkspaceLaunchRequest, snapshot?: WorkspaceSnapshot): {
@@ -237,9 +465,13 @@ export class WorkspaceContextHubService {
       };
     }
 
+    const provenanceError = this.validateLaunchProvenance(request.provenance);
     const authorizationError = this.validateLaunchAuthorization(workspaceSet, request);
     const sanitized = snapshot ? this.sanitizeSnapshot(workspaceSet, snapshot, request) : undefined;
     const activeRepoId = request.targetRepoId || snapshot?.activeRepoId || workspaceSet.repositories[0]?.repoId || "";
+    const sessionFingerprint = request.provenance
+      ? this.computeSessionFingerprint(workspaceSet, activeRepoId, request.provenance, snapshot)
+      : undefined;
     const restoreMetadata: WorkspaceLaunchMetadata = {
       workspaceSetId: workspaceSet.id,
       owner: workspaceSet.owner,
@@ -249,21 +481,87 @@ export class WorkspaceContextHubService {
       blockedTerminalReplayCount: sanitized?.blockedTerminalReplayCount ?? 0,
       redactedFields: sanitized?.redactedFields ?? [],
       requiresConfirmation: sanitized?.requiresConfirmation ?? false,
+      sessionFingerprint,
+      provenance: request.provenance,
       generatedAt: Date.now(),
     };
 
     return {
       workspaceSet,
-      reason: authorizationError,
+      reason: provenanceError ?? authorizationError,
       sanitized,
       restoreMetadata,
       activeRepoId,
     };
   }
 
+  private validateLaunchProvenance(provenance?: WorkspaceLaunchProvenance): string | undefined {
+    if (!provenance) {
+      return "Launch requires a provenance attestation";
+    }
+
+    if (provenance.verificationResult !== "verified") {
+      return "Provenance attestation must be verified before launch";
+    }
+
+    if (!/^sha256:[a-f0-9]{64}$/.test(provenance.imageDigest)) {
+      return `Invalid provenance image digest ${provenance.imageDigest}`;
+    }
+
+    if (!provenance.attestationRef.trim()) {
+      return "Provenance attestation reference is required";
+    }
+
+    if (!provenance.signerIdentity.trim()) {
+      return "Provenance signer identity is required";
+    }
+
+    if (provenance.policyVersion !== PROVENANCE_POLICY_VERSION) {
+      return `Unsupported provenance policy version ${provenance.policyVersion}`;
+    }
+
+    const now = Date.now();
+    if (provenance.verificationTimestamp > now + PROVENANCE_CLOCK_SKEW_MS) {
+      return "Provenance verification timestamp is in the future";
+    }
+
+    if (now - provenance.verificationTimestamp > PROVENANCE_MAX_AGE_MS) {
+      return "Provenance attestation is stale";
+    }
+
+    return undefined;
+  }
+
+  private computeSessionFingerprint(
+    workspaceSet: WorkspaceSetDefinition,
+    activeRepoId: string,
+    provenance: WorkspaceLaunchProvenance,
+    snapshot?: WorkspaceSnapshot,
+  ): string {
+    const manifest = {
+      workspaceSetId: workspaceSet.id,
+      owner: workspaceSet.owner,
+      org: workspaceSet.org,
+      activeRepoId,
+      repositoryIds: [...workspaceSet.repositories].map((repo) => repo.repoId).sort(),
+      openFiles: [...(snapshot?.openFiles ?? [])].sort(),
+      terminalCount: snapshot?.terminals.length ?? 0,
+      provenance: {
+        imageDigest: provenance.imageDigest,
+        attestationRef: provenance.attestationRef,
+        signerIdentity: provenance.signerIdentity,
+        verificationTimestamp: provenance.verificationTimestamp,
+        verificationResult: provenance.verificationResult,
+        policyVersion: provenance.policyVersion,
+      },
+    };
+
+    return `sha256:${crypto.createHash("sha256").update(JSON.stringify(manifest)).digest("hex")}`;
+  }
+
   private validateLaunchAuthorization(workspaceSet: WorkspaceSetDefinition, request: WorkspaceLaunchRequest): string | undefined {
     const targetRepoId = request.targetRepoId;
-    if (targetRepoId && !workspaceSet.repositories.some((repo) => repo.repoId === targetRepoId)) {
+    if (targetRepoId && !workspaceSet.repositories.some((repo: WorkspaceRepositoryDescriptor) => repo.repoId === targetRepoId)) {
       return `Repository ${targetRepoId} is not part of workspace set ${workspaceSet.id}`;
     }
 
@@ -279,6 +577,35 @@ export class WorkspaceContextHubService {
     }
 
     return undefined;
+  }
+
+  private hashReviewerToken(token: string): string {
+    return crypto.createHash("sha256").update(token).digest("hex");
+  }
+
+  private isReviewerAccessInvalid(
+    grant: WorkspaceReviewerAccessGrant,
+    requiredPermission: WorkspaceReviewerPermission,
+    now: number = Date.now(),
+  ): boolean {
+    const permissionRank: Record<WorkspaceReviewerPermission, number> = {
+      "view-only": 0,
+      "approve-only": 1,
+    };
+
+    if (grant.revokedAt) {
+      return true;
+    }
+
+    if (grant.expiresAt <= now) {
+      return true;
+    }
+
+    if (grant.oneTimeUse && grant.consumedAt) {
+      return true;
+    }
+
+    return permissionRank[grant.permission] < permissionRank[requiredPermission];
   }
 
   private sanitizeSnapshot(
@@ -430,4 +757,4 @@ export function createWorkspaceContextHubService(): WorkspaceContextHubService {
   return new WorkspaceContextHubService();
 }
 
-export type { WorkspaceAccessMode, WorkspaceAuditEvent, WorkspaceLaunchMetadata, WorkspaceLaunchRequest, WorkspaceLaunchResult, WorkspaceRepositoryDescriptor, WorkspaceSetDefinition, WorkspaceSnapshot, WorkspaceTerminalSnapshot } from "./types";
+export type { WorkspaceAccessMode, WorkspaceAuditEvent, WorkspaceLaunchMetadata, WorkspaceLaunchProvenance, WorkspaceLaunchRequest, WorkspaceLaunchResult, WorkspaceProvenanceVerificationResult, WorkspaceRepositoryDescriptor, WorkspaceSetDefinition, WorkspaceSnapshot, WorkspaceTerminalSnapshot } from "./types.js";

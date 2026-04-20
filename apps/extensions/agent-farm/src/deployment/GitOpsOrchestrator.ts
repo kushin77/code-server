@@ -259,7 +259,7 @@ export class GitOpsOrchestrator {
 
       // Apply kustomization if specified
       if (target.kustomization) {
-        const kustomized = await this.applyKustomization(manifests, target.kustomization);
+        await this.applyKustomization(manifests, target.kustomization);
         resources.push({
           group: '',
           kind: 'Kustomization',
@@ -272,7 +272,7 @@ export class GitOpsOrchestrator {
 
       // Apply Helm release if specified
       if (target.helmRelease) {
-        const helmApplied = await this.applyHelmRelease(manifests, target.helmRelease, target);
+        await this.applyHelmRelease(manifests, target.helmRelease, target);
         resources.push({
           group: 'helm.fluxcd.io',
           kind: 'HelmRelease',
@@ -323,7 +323,7 @@ export class GitOpsOrchestrator {
   private async applyKustomization(manifests: string, kustomizationPath: string): Promise<void> {
     console.log(`Applying kustomization: ${kustomizationPath}`);
     try {
-      const buildTime = Date.now() + Math.random() * 5000; // Simulate build time
+      void (Date.now() + Math.random() * 5000); // Simulate build time
       // In real implementation, would run: kustomize build <path> | kubectl apply
     } catch (error) {
       throw new Error(`Kustomization failed: ${error}`);
@@ -395,6 +395,7 @@ export class GitOpsOrchestrator {
    * Prune resources no longer in Git
    */
   private async pruneResources(target: DeploymentTarget, revision: string): Promise<void> {
+    void revision;
     console.log(`Pruning resources for target: ${target.name}`);
     try {
       // In real implementation, would identify and delete resources not in current Git state
@@ -429,6 +430,7 @@ export class GitOpsOrchestrator {
     const totalUnknown = 0;
 
     for (const cluster of uniqueLusters) {
+      void cluster;
       // In real implementation, would query cluster API
       // For simulation:
       totalHealthy += Math.floor(Math.random() * 5) + 5;
@@ -436,7 +438,6 @@ export class GitOpsOrchestrator {
       totalDegraded += Math.random() > 0.95 ? 1 : 0;
     }
 
-    const totalResources = totalHealthy + totalProgressing + totalDegraded + totalUnknown;
     const status =
       totalDegraded > 0 ? HealthStatus.DEGRADED : totalProgressing > 0 ? HealthStatus.PROGRESSING : HealthStatus.HEALTHY;
 

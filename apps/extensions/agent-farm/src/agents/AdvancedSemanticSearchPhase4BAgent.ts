@@ -39,7 +39,7 @@ export class AdvancedSemanticSearchPhase4BAgent extends Agent {
         recommendations.push(`Identified query intent: ${codeQuery.type}`);
 
         // 2. Expand query with synonyms and patterns
-        const expandedQueries = await this.expandQueryTerms(codeQuery, context.content);
+        const expandedQueries = await this.expandQueryTerms(codeQuery);
         recommendations.push(
           `Expanded query to ${expandedQueries.expandedTerms.length} related terms`
         );
@@ -143,8 +143,7 @@ export class AdvancedSemanticSearchPhase4BAgent extends Agent {
    * Expand query with synonyms and patterns
    */
   private async expandQueryTerms(
-    intent: any,
-    content: string
+    intent: any
   ): Promise<ExpandedQuery> {
     const query = intent.keywords.join(' ');
     return this.queryUnderstanding.expandQuery(query);
@@ -154,44 +153,59 @@ export class AdvancedSemanticSearchPhase4BAgent extends Agent {
    * Analyze code using multiple modalities
    */
   private analyzeCodeModalities(code: string) {
+    return {
+      code: this.buildCodeMetrics(code),
+      tests: this.buildTestMetrics(code),
+      documentation: this.buildDocumentationMetrics(code),
+      patterns: this.buildPatternMetrics(code),
+    };
+  }
+
+  private buildCodeMetrics(code: string) {
     const lines = code.split('\n').length;
     const functions = (code.match(/function|const.*=.*=>|\w+\s*\(/g) || []).length;
     const classes = (code.match(/class\s+\w+/g) || []).length;
-    const hasTests = code.includes('test') || code.includes('describe');
-    const hasComments = code.includes('//') || code.includes('/*');
-    const commentLines = code.split('\n').filter((l) => l.trim().startsWith('//'))
-      .length;
-    const commentDensity = (commentLines / lines) * 100;
 
     return {
-      code: {
-        lines,
-        complexity: Math.min(functions / 5, 1), // Normalized
-        coverage: hasTests ? 0.6 : 0.2,
-        functions,
-        classes,
-      },
-      tests: {
-        hasTests,
-        testCount: (code.match(/test\(|it\(/g) || []).length,
-        testCoverage: hasTests ? 0.6 : 0,
-        mockUsage: (code.match(/mock|spy|stub/gi) || []).length,
-      },
-      documentation: {
-        hasDocstring: code.includes('/**') || code.includes('"""'),
-        hasComments,
-        commentDensity,
-        apiDocumented: code.includes('export') && hasComments,
-      },
-      patterns: {
-        asyncPatterns: (code.match(/async|await|Promise/g) || []).length,
-        errorHandling: code.includes('catch') || code.includes('try'),
-        performanceOptimization: code.includes('memo') ||
-          code.includes('cache') ||
-          code.includes('pool'),
-        securityChecks: code.includes('validate') || code.includes('sanitize'),
-        codeSmells: [],
-      },
+      lines,
+      complexity: Math.min(functions / 5, 1),
+      coverage: code.includes('test') || code.includes('describe') ? 0.6 : 0.2,
+      functions,
+      classes,
+    };
+  }
+
+  private buildTestMetrics(code: string) {
+    const hasTests = code.includes('test') || code.includes('describe');
+
+    return {
+      hasTests,
+      testCount: (code.match(/test\(|it\(/g) || []).length,
+      testCoverage: hasTests ? 0.6 : 0,
+      mockUsage: (code.match(/mock|spy|stub/gi) || []).length,
+    };
+  }
+
+  private buildDocumentationMetrics(code: string) {
+    const hasComments = code.includes('//') || code.includes('/*');
+    const commentLines = code.split('\n').filter((l) => l.trim().startsWith('//')).length;
+
+    return {
+      hasDocstring: code.includes('/**') || code.includes('"""'),
+      hasComments,
+      commentDensity: (commentLines / code.split('\n').length) * 100,
+      apiDocumented: code.includes('export') && hasComments,
+    };
+  }
+
+  private buildPatternMetrics(code: string) {
+    return {
+      asyncPatterns: (code.match(/async|await|Promise/g) || []).length,
+      errorHandling: code.includes('catch') || code.includes('try'),
+      performanceOptimization:
+        code.includes('memo') || code.includes('cache') || code.includes('pool'),
+      securityChecks: code.includes('validate') || code.includes('sanitize'),
+      codeSmells: [],
     };
   }
 
@@ -201,29 +215,45 @@ export class AdvancedSemanticSearchPhase4BAgent extends Agent {
   private detectCodePatterns(code: string): string[] {
     const patterns: string[] = [];
 
+    this.addAsyncPattern(code, patterns);
+    this.addIterationPattern(code, patterns);
+    this.addErrorPattern(code, patterns);
+    this.addMemoPattern(code, patterns);
+    this.addTypePattern(code, patterns);
+
+    return patterns;
+  }
+
+  private addAsyncPattern(code: string, patterns: string[]): void {
     if (code.includes('async') && code.includes('await')) {
       patterns.push('Async/await pattern (properly used)');
     }
+  }
 
+  private addIterationPattern(code: string, patterns: string[]): void {
     const iterationMatches = code.match(/for\s*\(\s*let|for\s*\(\s*const|forEach|map|filter/g);
     if ((iterationMatches?.length ?? 0) > 2) {
       patterns.push('Heavy iteration usage (potential for optimization)');
     }
+  }
 
+  private addErrorPattern(code: string, patterns: string[]): void {
     if (code.includes('new Error') || code.includes('throw')) {
       patterns.push('Explicit error handling');
     }
+  }
 
+  private addMemoPattern(code: string, patterns: string[]): void {
     const memoMatches = code.match(/const\s+\w+\s*=\s*memo|useMemo|useCallback|lru|memoize/g);
     if ((memoMatches?.length ?? 0) > 0) {
       patterns.push('Memoization pattern detected');
     }
+  }
 
+  private addTypePattern(code: string, patterns: string[]): void {
     if (code.includes('export') && code.includes('interface')) {
       patterns.push('Well-typed exports (TypeScript)');
     }
-
-    return patterns;
   }
 
   /**

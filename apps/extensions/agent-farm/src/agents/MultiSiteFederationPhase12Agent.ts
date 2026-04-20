@@ -6,9 +6,6 @@
 import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';
 import {
   GeographicRouter,
-  GeographicRegion,
-  GlobalLoadBalancer,
-  MultiRegionReplicator,
   GeographicRegistry,
   MultiSiteFederationOrchestrator,
   FederationConfig,
@@ -41,7 +38,7 @@ export class MultiSiteFederationPhase12Agent extends Agent {
 
   constructor(context: any, config: FederationConfig) {
     super();
-
+    void context;
 
     this.registry = new GeographicRegistry();
     this.router = new GeographicRouter();
@@ -120,6 +117,7 @@ export class MultiSiteFederationPhase12Agent extends Agent {
    * Implement abstract analyze method
    */
   async analyze(context: CodeContext): Promise<AgentOutput> {
+    void context;
     this.log('Analyzing multi-site federation configuration');
     const status = this.getFederationStatus();
     return this.formatOutput(
@@ -139,6 +137,8 @@ export class MultiSiteFederationPhase12Agent extends Agent {
     context: MultiAgentContext,
     previousResults: AgentOutput[]
   ): Promise<void> {
+    void context;
+    void previousResults;
     this.log('Coordinating with other agents');
     // Stub implementation for multi-agent coordination
   }

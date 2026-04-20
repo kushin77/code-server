@@ -36,6 +36,11 @@ describe('resolveMultiRepoRollout', () => {
       mode: 'off',
       enabled: false,
       cohort: 'control',
+      capabilities: {
+        tabs: false,
+        switcher: false,
+        persistence: false,
+      },
       reason: 'multi-repo navigation rollout is disabled',
     })
   })
@@ -51,6 +56,11 @@ describe('resolveMultiRepoRollout', () => {
       mode: 'off',
       enabled: false,
       cohort: 'control',
+      capabilities: {
+        tabs: false,
+        switcher: false,
+        persistence: false,
+      },
       reason: 'multi-repo navigation mode is not configured',
     })
   })
@@ -64,6 +74,11 @@ describe('resolveMultiRepoRollout', () => {
       mode: 'off',
       enabled: false,
       cohort: 'control',
+      capabilities: {
+        tabs: false,
+        switcher: false,
+        persistence: false,
+      },
       reason: "invalid multi-repo navigation mode 'banana'",
     })
   })
@@ -78,6 +93,11 @@ describe('resolveMultiRepoRollout', () => {
       mode: 'on',
       enabled: true,
       cohort: 'full',
+      capabilities: {
+        tabs: true,
+        switcher: true,
+        persistence: true,
+      },
       reason: 'multi-repo navigation is fully enabled',
     })
   })
@@ -92,6 +112,11 @@ describe('resolveMultiRepoRollout', () => {
       mode: 'pilot',
       enabled: false,
       cohort: 'control',
+      capabilities: {
+        tabs: false,
+        switcher: false,
+        persistence: false,
+      },
       reason: 'pilot mode requires a user identity for stable assignment',
     })
   })
@@ -110,6 +135,11 @@ describe('resolveMultiRepoRollout', () => {
       mode: 'pilot',
       enabled: true,
       cohort: 'pilot',
+      capabilities: {
+        tabs: true,
+        switcher: true,
+        persistence: true,
+      },
       reason: 'user assigned to pilot cohort (100% rollout)',
     })
   })
@@ -124,6 +154,11 @@ describe('resolveMultiRepoRollout', () => {
       mode: 'pilot',
       enabled: false,
       cohort: 'control',
+      capabilities: {
+        tabs: true,
+        switcher: true,
+        persistence: true,
+      },
       reason: 'user assigned to control cohort (0% rollout)',
     })
   })
@@ -144,5 +179,25 @@ describe('resolveMultiRepoRollout', () => {
     })
 
     expect(resolveMultiRepoRollout('user-42').reason).toContain('(25% rollout)')
+  })
+
+  it('applies cohort capability overrides from remote config', async () => {
+    const { resolveMultiRepoRollout } = await loadRolloutModule({
+      VITE_MULTI_REPO_NAVIGATION_MODE: 'pilot',
+      VITE_MULTI_REPO_PILOT_PERCENTAGE: '100',
+      VITE_MULTI_REPO_REMOTE_CONFIG: JSON.stringify({
+        defaultCapabilities: { tabs: true, switcher: true, persistence: true },
+        cohortCapabilities: {
+          pilot: { persistence: false },
+          control: { tabs: false, switcher: false, persistence: false },
+        },
+      }),
+    })
+
+    expect(resolveMultiRepoRollout('user-42').capabilities).toEqual({
+      tabs: true,
+      switcher: true,
+      persistence: false,
+    })
   })
 })

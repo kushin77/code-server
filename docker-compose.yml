@@ -30,7 +30,7 @@ services:
     restart: unless-stopped
     user: "1000"
     networks:
-      - enterprise
+      - net-app
     expose:
       - "8080"
     environment:
@@ -86,7 +86,7 @@ services:
     # ✅ GPU ACCELERATION - Uncomment this line if NVIDIA GPU detected on host
     # runtime: nvidia
     networks:
-      - enterprise
+      - net-app
     expose:
       - "11434"
     environment:
@@ -131,7 +131,7 @@ services:
     image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
     container_name: ollama-init
     networks:
-      - enterprise
+      - net-app
     environment:
       - OLLAMA_HOST=ollama:11434
     volumes:
@@ -160,7 +160,8 @@ services:
     container_name: oauth2-proxy
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-edge
+      - net-app
     ports:
       - "${OAUTH2_PROXY_HOST_BIND:-127.0.0.1}:4180:4180"
     expose:
@@ -230,7 +231,8 @@ services:
     profiles: [portal]
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-edge
+      - net-app
     expose:
       - "4181"
     user: "0:0"
@@ -309,7 +311,8 @@ services:
     container_name: session-broker
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-app
+      - net-data
     expose:
       - "5000"
     user: "0:0"
@@ -317,18 +320,29 @@ services:
       - LOG_LEVEL=${SESSION_BROKER_LOG_LEVEL:-info}
       - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-codeserver}
       - DOCKER_SOCKET=${DOCKER_SOCKET:-unix:///var/run/docker.sock}
-      - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:-code-server-enterprise:dev}
+      - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:?CODE_SERVER_IMAGE_ID must be set}
       - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
+      - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
+      - DEPLOY_HOST=${DEPLOY_HOST:-192.168.168.31}
+      - DEV_SESSION_DOMAIN=${DEV_SESSION_DOMAIN:-dev.kushnir.cloud}
+      - SESSION_PUBLIC_BASE_URL=${SESSION_PUBLIC_BASE_URL:-https://dev.kushnir.cloud}
       - SESSION_CPU_LIMIT=${SESSION_CPU_LIMIT:-2.0}
       - SESSION_MEMORY_LIMIT=${SESSION_MEMORY_LIMIT:-4g}
       - SESSION_STORAGE_LIMIT=${SESSION_STORAGE_LIMIT:-50g}
       - SESSION_MAX_CONCURRENT_PER_USER=${SESSION_MAX_CONCURRENT_PER_USER:-1}
       - SESSION_MAX_CONCURRENT_PER_TEAM=${SESSION_MAX_CONCURRENT_PER_TEAM:-3}
-      - SESSION_MAX_RUNTIME_SECONDS=${SESSION_MAX_RUNTIME_SECONDS:-28800}
+      - SESSION_MAX_RUNTIME_SECONDS=${SESSION_MAX_RUNTIME_SECONDS:-86400}
       - SESSION_MAX_INACTIVITY_SECONDS=${SESSION_MAX_INACTIVITY_SECONDS:-7200}
       - SESSION_USAGE_WINDOW_HOURS=${SESSION_USAGE_WINDOW_HOURS:-24}
+      - SESSION_DELETION_QUARANTINE_HOURS=${SESSION_DELETION_QUARANTINE_HOURS:-24}
+      - SESSION_PROVENANCE_ATTESTATION_REF=${SESSION_PROVENANCE_ATTESTATION_REF:-rekor://attestations/session-broker@v1}
+      - SESSION_PROVENANCE_SIGNER_IDENTITY=${SESSION_PROVENANCE_SIGNER_IDENTITY:-github.com/kushin77/code-server/.github/workflows/verified-build.yml}
+      - SESSION_PROVENANCE_VERIFIED_AT=${SESSION_PROVENANCE_VERIFIED_AT:?SESSION_PROVENANCE_VERIFIED_AT must be set}
+      - SESSION_PROVENANCE_POLICY_VERSION=${SESSION_PROVENANCE_POLICY_VERSION:-v1.0.0}
+      - SESSION_PROVENANCE_FRESHNESS_HOURS=${SESSION_PROVENANCE_FRESHNESS_HOURS:-24}
+      - SESSION_PROVENANCE_VERIFICATION_RESULT=${SESSION_PROVENANCE_VERIFICATION_RESULT:-verified}
     volumes:
-      - session-broker-sessions:/var/lib/code-server-sessions:rw
+      - /mnt/nas/code-server-sessions:/mnt/nas/code-server-sessions:rw
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
       interval: 30s
@@ -355,7 +369,8 @@ services:
     container_name: caddy
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-edge
+      - net-app
     ports:
       - "80:80"
       - "443:443"
@@ -391,7 +406,7 @@ services:
     container_name: postgres
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-data
     ports:
       - "5433:5432"
     environment:
@@ -430,7 +445,7 @@ services:
     container_name: pgbouncer
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-data
     expose:
       - "6432"
     environment:
@@ -477,7 +492,7 @@ services:
     container_name: redis
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-app
     expose:
       - "6379"
     command: >
@@ -513,7 +528,7 @@ services:
     container_name: code-server-profile-backup
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-app
     depends_on:
       - code-server
     volumes:
@@ -547,8 +562,13 @@ services:
     image: prom/prometheus:v2.48.0@sha256:13f40c0279df792517b456ae6427dd6344685e9b1478fb9de8e4dc418727668f
     container_name: prometheus
     restart: unless-stopped
+    # prometheus is on all tiers: pull-only metrics scraping across edge/app/data
+    # does not expose external ports; net-edge + net-data access is read-only scrape only
     networks:
-      - enterprise
+      - net-management
+      - net-app
+      - net-edge
+      - net-data
     ports:
       - "9090:9090"
     command:
@@ -591,7 +611,7 @@ services:
     container_name: grafana
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-management
     ports:
       - "3000:3000"
     environment:
@@ -630,7 +650,7 @@ services:
     container_name: alertmanager
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-management
     ports:
       - "9093:9093"
     command:
@@ -662,8 +682,10 @@ services:
     image: jaegertracing/all-in-one:1.50@sha256:93ff440dbda3f3654e54f21a8fe71fc7c4a85f75a54e840006351b4dffbec6a5
     container_name: jaeger
     restart: unless-stopped
+    # jaeger receives OTLP traces from app tier; net-app needed for ingest
     networks:
-      - enterprise
+      - net-management
+      - net-app
     ports:
       - "16686:16686"
     environment:
@@ -696,7 +718,7 @@ services:
     profiles: [portal]
     restart: unless-stopped
     networks:
-      - enterprise
+      - net-app
     environment:
       - APPSMITH_SIGNUP_DISABLED=true
       - APPSMITH_FORM_LOGIN_DISABLED=true
@@ -725,12 +747,38 @@ services:
 # Networks
 # ════════════════════════════════════════════════════════════════════════════
 networks:
-  enterprise:
-    name: enterprise
+  # ── Edge tier: internet-facing proxies (caddy, oauth2-proxy) ────────────
+  net-edge:
+    name: net-edge
     driver: bridge
     ipam:
       config:
-        - subnet: 172.28.0.0/16
+        - subnet: 172.28.1.0/24
+
+  # ── Application tier: code execution, session management, AI, Redis ─────
+  net-app:
+    name: net-app
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.2.0/24
+
+  # ── Data tier: Postgres, pgbouncer — no external routes ─────────────────
+  # INVARIANT: No service is attached to both net-edge and net-data (#887)
+  net-data:
+    name: net-data
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.3.0/24
+
+  # ── Management tier: observability — internal access only ────────────────
+  net-management:
+    name: net-management
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.4.0/24
 
 # ════════════════════════════════════════════════════════════════════════════
 # Volumes — All named, all persisted. No anonymous volumes.

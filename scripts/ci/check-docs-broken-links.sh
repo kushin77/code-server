@@ -31,7 +31,7 @@ check_internal_link() {
         return 0
     fi
     
-    ((CHECKED_LINKS++))
+    ((CHECKED_LINKS+=1))
     
     # Resolve relative path
     local doc_dir=$(dirname "$doc_file")
@@ -48,7 +48,7 @@ check_internal_link() {
         echo "        Link: [$link_text]($target_path)"
         echo "        Resolved to: $file_only (not found)"
         echo ""
-        ((BROKEN_LINKS++))
+        ((BROKEN_LINKS+=1))
         return 1
     fi
     
@@ -60,17 +60,18 @@ check_doc_links() {
     local line_num=0
     
     while IFS= read -r line; do
-        ((line_num++))
+        ((line_num+=1))
         
         # Find markdown links: [text](path)
         while [[ "$line" =~ \[([^\]]+)\]\(([^\)]+)\) ]]; do
             local link_text="${BASH_REMATCH[1]}"
             local target_path="${BASH_REMATCH[2]}"
+            local matched="${BASH_REMATCH[0]}"
             
             check_internal_link "$doc_file" "$link_text" "$target_path" "$line_num" || true
             
             # Remove this match and continue searching for more on same line
-            line="${line#*\](*\)}"
+            line="${line#*"$matched"}"
         done
     done < "$doc_file"
 }

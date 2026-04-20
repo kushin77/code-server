@@ -25,6 +25,14 @@ import {
   ResolverOptions,
   RecommendationPolicy,
 } from "./types"
+import {
+  computeProfileTemplateBundleChecksum,
+  createProfileTemplateBundleManifest,
+  getTemplateBundleFilePath,
+  loadProfileTemplateBundle,
+  type ProfileTemplateBundle,
+  type ProfileTemplateBundleManifest,
+} from "./template-bundles"
 
 /**
  * TenantProfileManager enforces tenant-aware profile hierarchy with immutable policy overlays.
@@ -40,12 +48,14 @@ import {
  */
 export class TenantProfileManager {
   private profileBasePath: string
+  private templateBundleBasePath: string
   private immutableKeys: Map<string, ImmutableKeyPolicy> = new Map()
   private profileCache: Map<string, MergedProfile> = new Map()
   private cacheRefreshTtlMs: number = 30000 // 30 second TTL
 
-  constructor(basePath: string = "~/.code-server/profiles") {
+  constructor(basePath: string = "~/.code-server/profiles", templateBundleBasePath: string = "config/profile-template-bundles") {
     this.profileBasePath = this.expandPath(basePath)
+    this.templateBundleBasePath = this.expandPath(templateBundleBasePath)
     this.initializeImmutableKeyRegistry()
   }
 
@@ -346,6 +356,103 @@ export class TenantProfileManager {
   }
 
   /**
+   * Load a versioned template bundle from the canonical bundle directory.
+   */
+  async loadTemplateBundle(bundleId: string): Promise<ProfileTemplateBundle> {
+    const bundlePath = getTemplateBundleFilePath(this.templateBundleBasePath, bundleId)
+    return loadProfileTemplateBundle(bundlePath)
+  }
+
+  /**
+   * Seed a namespace from a versioned template bundle.
+   */
+  async seedProfileFromTemplateBundle(
+    namespace: ProfileNamespace,
+    bundleId: string,
+    correlationId: string,
+    force: boolean = false,
+  ): Promise<ProfileMigrationResult> {
+    const bundle = await this.loadTemplateBundle(bundleId)
+    const bundleManifestPath = path.join(namespace.asPath(), "template-bundle-manifest.json")
+    const starterPackPath = path.join(namespace.asPath(), "starter-pack.json")
+    const exceptionPolicyPath = path.join(namespace.asPath(), "exception-policy.json")
+
+    await fs.promises.mkdir(namespace.asPath(), { recursive: true })
+
+    const bundleChecksum = computeProfileTemplateBundleChecksum(bundle)
+    const existingManifest = await this.readTemplateBundleManifest(bundleManifestPath)
+    if (!force && existingManifest && existingManifest.bundleChecksum === bundleChecksum) {
+      return {
+        success: true,
+        migratedSettings: 0,
+        skippedSettings: bundle.entries.length,
+        errors: [],
+        correlationId,
+      }
+    }
+
+    const errors: MigrationError[] = []
+    let migratedSettings = 0
+    let skippedSettings = 0
+
+    for (const entry of bundle.entries) {
+      const result = await this.applySetting(namespace, entry.level, entry.key, entry.value, correlationId)
+
+      if (result.success) {
+        migratedSettings++
+      } else {
+        errors.push({
+          key: entry.key,
+          reason: result.error || "Unknown error",
+          severity: "error",
+        })
+        skippedSettings++
+      }
+    }
+
+    const manifest: ProfileTemplateBundleManifest = createProfileTemplateBundleManifest(bundle, correlationId)
+    await fs.promises.writeFile(bundleManifestPath, JSON.stringify(manifest, null, 2), "utf-8")
+    await fs.promises.writeFile(starterPackPath, JSON.stringify(bundle.starterPack, null, 2), "utf-8")
+    await fs.promises.writeFile(exceptionPolicyPath, JSON.stringify(bundle.exceptionPolicy, null, 2), "utf-8")
+
+    this.invalidateCache(namespace)
+
+    return {
+      success: errors.filter((entry) => entry.severity === "error").length === 0,
+      migratedSettings,
+      skippedSettings,
+      errors,
+      correlationId,
+    }
+  }
+
+  /**
+   * Synchronize a namespace with the latest version of a template bundle.
+   */
+  async syncProfileFromTemplateBundle(
+    namespace: ProfileNamespace,
+    bundleId: string,
+    correlationId: string,
+    force: boolean = false,
+  ): Promise<ProfileMigrationResult> {
+    const bundle = await this.loadTemplateBundle(bundleId)
+    const bundleManifestPath = path.join(namespace.asPath(), "template-bundle-manifest.json")
+    const existingManifest = await this.readTemplateBundleManifest(bundleManifestPath)
+
+    if (!force && existingManifest && existingManifest.bundleChecksum === computeProfileTemplateBundleChecksum(bundle)) {
+      return {
+        success: true,
+        migratedSettings: 0,
+        skippedSettings: bundle.entries.length,
+        errors: [],
+        correlationId,
+      }
+    }
+
+    return this.seedProfileFromTemplateBundle(namespace, bundleId, correlationId, force)
+  }
+
+  /**
    * Migrate legacy profiles to tenant-aware structure.
    */
   async migrateProfiles(
@@ -520,6 +627,18 @@ export class TenantProfileManager {
   }
 
   /**
+   * Read the current template bundle manifest if present.
+   */
+  private async readTemplateBundleManifest(manifestPath: string): Promise<ProfileTemplateBundleManifest | null> {
+    try {
+      const content = await fs.promises.readFile(manifestPath, "utf-8")
+      return JSON.parse(content) as ProfileTemplateBundleManifest
+    } catch (error) {
+      return null
+    }
+  }
+
+  /**
    * Expand home directory paths.
    */
   private expandPath(filePath: string): string {
@@ -569,11 +688,12 @@ export class TenantProfileManager {
 /**
  * Factory function to create a TenantProfileManager instance.
  */
-export function createTenantProfileManager(basePath?: string): TenantProfileManager {
-  return new TenantProfileManager(basePath)
+export function createTenantProfileManager(basePath?: string, templateBundleBasePath?: string): TenantProfileManager {
+  return new TenantProfileManager(basePath, templateBundleBasePath)
 }
 
 /**
  * Export all types for convenience.
  */
 export * from "./types"
+export * from "./template-bundles"

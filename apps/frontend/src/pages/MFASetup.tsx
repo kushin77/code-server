@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode.react'
 import { Button, Input, Alert, Card, Spinner } from '@/components/Common'
@@ -44,10 +44,6 @@ export const MFASetup: React.FC = () => {
   const [secretCopied, setSecretCopied] = useState(false)
   const [codesCopied, setCodesCopied] = useState(false)
 
-  /**
-   * Step 1: Initiate MFA setup
-   * Generate secret and QR code
-   */
   const handleStartSetup = async () => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }))
 

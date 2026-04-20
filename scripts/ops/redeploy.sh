@@ -235,7 +235,7 @@ main() {
         log_info ""
         log_info "Access services at:"
         log_info "  Code-server: http://$DEPLOY_HOST:8080"
-        log_info "  Grafana:     http://$DEPLOY_HOST:3000 (admin/admin123)"
+        log_info "  Grafana:     http://$DEPLOY_HOST:3000 (configured credentials)"
         log_info "  Prometheus:  http://$DEPLOY_HOST:9090"
         log_info ""
         exit 0

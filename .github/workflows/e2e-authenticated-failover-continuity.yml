@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   continuity-auth:
@@ -132,3 +133,26 @@ jobs:
           name: playwright-report
           path: tests/e2e/artifacts/html/
           retention-days: 7
+
+      - name: Route E2E test failures to issues
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPORT_PATH="tests/artifacts/playwright-results.json"
+          args=(
+            --tool playwright
+            --suite authenticated-failover-continuity
+            --workflow "${{ github.workflow }}"
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --repo "${{ github.repository }}"
+            --exit-code 1
+          )
+
+          if [[ -f "$REPORT_PATH" ]]; then
+            args+=(--playwright-json "$REPORT_PATH")
+          fi
+
+          bash scripts/ops/test-failure-triage.sh "${args[@]}"

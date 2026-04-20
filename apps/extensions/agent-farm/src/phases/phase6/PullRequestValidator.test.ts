@@ -384,7 +384,7 @@ describe('PullRequestValidator', () => {
       validator.addCustomRule({
         name: 'require-owner-label',
         stage: 'Manifest Validation',
-        validate: async (pr) => ({
+        validate: async () => ({
           passed: true,
           message: 'Custom validation passed',
         }),

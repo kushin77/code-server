@@ -50,15 +50,15 @@ log_info "SECTION 1: Zero-Trust Architecture"
 # Test: SSH must remain available, but only through an approved private or proxied path
 echo "Testing SSH Access..."
 if grep -qE '^\s*Port\s+22\s*$' /etc/ssh/sshd_config 2>/dev/null; then
-  test_result "SSH Service Configured" "PASS" "SSH remains enabled for VS Code and admin access"
+  test_result "Direct SSH Exposure (port 22)" "FAIL" "Direct SSH exposure detected on port 22"
 else
-  test_result "SSH Service Configured" "FAIL" "SSH is not configured on port 22"
+  test_result "Direct SSH Exposure (port 22)" "PASS" "Port 22 is not configured in sshd_config"
 fi
 
 if nc -z localhost 22 >/dev/null 2>&1; then
-  test_result "SSH Port Open (local service reachable)" "PASS" "Local SSH service is reachable for approved private access"
+  test_result "SSH Port Open (local service reachable)" "FAIL" "Direct SSH exposure detected on port 22"
 else
-  test_result "SSH Port Open (local service reachable)" "FAIL" "SSH service on port 22 is not reachable locally"
+  test_result "SSH Port Open (local service reachable)" "PASS" "SSH service on port 22 is not reachable locally"
 fi
 
 if nc -z localhost 2222 >/dev/null 2>&1; then

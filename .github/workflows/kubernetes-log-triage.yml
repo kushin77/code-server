@@ -1,0 +1,64 @@
+name: Kubernetes Log Triage
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run without creating/updating issues'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage-kubernetes:
+    name: Classify Kubernetes signals and route issues
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Prepare Kubernetes event payload
+        id: payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/triage
+
+          if [[ -n "${KUBERNETES_LOG_EVENTS_B64:-}" ]]; then
+            printf '%s' "${KUBERNETES_LOG_EVENTS_B64}" | base64 --decode > artifacts/triage/kubernetes-events.jsonl
+            echo "has_payload=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No KUBERNETES_LOG_EVENTS_B64 secret provided; skipping triage run"
+            echo "has_payload=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          KUBERNETES_LOG_EVENTS_B64: ${{ secrets.KUBERNETES_LOG_EVENTS_B64 }}
+
+      - name: Route Kubernetes failures to issues
+        if: steps.payload.outputs.has_payload == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          args=(
+            --kubernetes-jsonl artifacts/triage/kubernetes-events.jsonl
+            --repo "$GH_REPO"
+            --window-minutes 15
+            --sustained-threshold 3
+          )
+
+          if [[ "$DRY_RUN_INPUT" == "true" ]]; then
+            args+=(--dry-run)
+          fi
+
+          bash scripts/ops/kubernetes-log-triage.sh "${args[@]}"

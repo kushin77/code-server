@@ -11,23 +11,33 @@ source "$SCRIPT_DIR/../_common/init.sh"
 
 REPORT_FILE="${REPORT_FILE:-artifacts/security/secrets-rotation-report.json}"
 MAX_AGE_DAYS="${MAX_AGE_DAYS:-90}"
+REQUIRE_READY_STATUS="${REQUIRE_READY_STATUS:-true}"
 
 if [[ ! -f "$REPORT_FILE" ]]; then
   log_fatal "Missing rotation report: $REPORT_FILE"
 fi
 
 ts=""
+status=""
+missing_count=""
 if command -v jq >/dev/null 2>&1; then
   ts="$(jq -r '.timestamp_utc // empty' "$REPORT_FILE")"
+  status="$(jq -r '.status // empty' "$REPORT_FILE")"
+  missing_count="$(jq -r '.missing_reference_count // empty' "$REPORT_FILE")"
 elif command -v python3 >/dev/null 2>&1; then
-  ts="$(REPORT_FILE="$REPORT_FILE" python3 - <<'PY'
+  parsed="$(REPORT_FILE="$REPORT_FILE" python3 - <<'PY'
 import json
 import os
 from pathlib import Path
 data = json.loads(Path(os.environ["REPORT_FILE"]).read_text(encoding="utf-8"))
 print(data.get("timestamp_utc", ""))
+print(data.get("status", ""))
+print(data.get("missing_reference_count", ""))
 PY
 )"
+  ts="$(printf '%s\n' "$parsed" | sed -n '1p')"
+  status="$(printf '%s\n' "$parsed" | sed -n '2p')"
+  missing_count="$(printf '%s\n' "$parsed" | sed -n '3p')"
 else
   log_fatal "Neither jq nor python3 is available to parse $REPORT_FILE"
 fi
@@ -49,4 +59,17 @@ if (( age_days > MAX_AGE_DAYS )); then
   log_fatal "Secrets rotation evidence is stale: ${age_days}d > ${MAX_AGE_DAYS}d"
 fi
 
+if [[ "$REQUIRE_READY_STATUS" == "true" ]]; then
+  if [[ "$status" != "ready" && "$status" != "complete" ]]; then
+    log_fatal "Secrets rotation report status is not ready/complete: ${status:-empty}"
+  fi
+
+  if [[ -z "$missing_count" || "$missing_count" != "0" ]]; then
+    log_fatal "Secrets rotation report has missing references: ${missing_count:-empty}"
+  fi
+fi
+
 log_info "Secrets rotation evidence age is within SLA: ${age_days}d <= ${MAX_AGE_DAYS}d"
+if [[ "$REQUIRE_READY_STATUS" == "true" ]]; then
+  log_info "Secrets rotation report status is healthy: status=$status missing_reference_count=$missing_count"
+fi

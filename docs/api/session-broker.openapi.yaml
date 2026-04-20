@@ -214,11 +214,54 @@ components:
           minimum: 3600
           maximum: 86400
           default: 28800
+        provenance:
+          $ref: '#/components/schemas/SessionProvenanceManifest'
       required:
         - userId
         - username
         - email
         - dataProfile
+        - provenance
+    SessionProvenanceManifest:
+      type: object
+      additionalProperties: false
+      properties:
+        manifestVersion:
+          type: string
+          enum: [v1]
+        imageDigest:
+          type: string
+          pattern: '^sha256:[a-f0-9]{64}$'
+        attestationRef:
+          type: string
+          minLength: 1
+        signerIdentity:
+          type: string
+          minLength: 1
+        verifiedAt:
+          type: string
+          format: date-time
+        verificationResult:
+          type: string
+          enum: [verified, rejected]
+        policyVersion:
+          type: string
+          minLength: 1
+        freshnessHours:
+          type: integer
+          minimum: 1
+        sessionFingerprint:
+          type: string
+          pattern: '^sha256:[a-f0-9]{64}$'
+      required:
+        - manifestVersion
+        - imageDigest
+        - attestationRef
+        - signerIdentity
+        - verifiedAt
+        - verificationResult
+        - policyVersion
+        - freshnessHours
     SessionCreateResponse:
       type: object
       additionalProperties: false
@@ -235,9 +278,13 @@ components:
           type: string
         url:
           type: string
+        publicUrl:
+          type: string
         expiresAt:
           type: string
           format: date-time
+        provenance:
+          $ref: '#/components/schemas/SessionProvenanceManifest'
       required:
         - sessionId
         - dataProfile
@@ -245,7 +292,9 @@ components:
         - containerPort
         - containerName
         - url
+        - publicUrl
         - expiresAt
+        - provenance
     SessionCallbackResponse:
       type: object
       additionalProperties: false
@@ -260,12 +309,18 @@ components:
           type: integer
         url:
           type: string
+        publicUrl:
+          type: string
+        provenance:
+          $ref: '#/components/schemas/SessionProvenanceManifest'
       required:
         - sessionId
         - dataProfile
         - dataProfileValidated
         - containerPort
         - url
+        - publicUrl
+        - provenance
     LogoutRequest:
       type: object
       additionalProperties: false
@@ -292,6 +347,8 @@ components:
           type: string
         url:
           type: string
+        publicUrl:
+          type: string
         expiresAt:
           type: string
           format: date-time
@@ -302,6 +359,8 @@ components:
           type: object
           additionalProperties:
             type: string
+        provenance:
+          $ref: '#/components/schemas/SessionProvenanceManifest'
       required:
         - sessionId
         - dataProfile
@@ -310,9 +369,11 @@ components:
         - containerPort
         - containerName
         - url
+        - publicUrl
         - expiresAt
         - lastActivity
         - quotas
+        - provenance
     UserSessionsResponse:
       type: object
       additionalProperties: false
@@ -336,6 +397,8 @@ components:
                 enum: [creating, running, paused, terminated]
               containerPort:
                 type: integer
+              publicUrl:
+                type: string
               createdAt:
                 type: string
                 format: date-time
@@ -345,15 +408,19 @@ components:
               lastActivity:
                 type: string
                 format: date-time
+              provenance:
+                $ref: '#/components/schemas/SessionProvenanceManifest'
             required:
               - sessionId
               - dataProfile
               - dataProfileValidated
               - status
               - containerPort
+              - publicUrl
               - createdAt
               - expiresAt
               - lastActivity
+              - provenance
       required:
         - userId
         - sessions

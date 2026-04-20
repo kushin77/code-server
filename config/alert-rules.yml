@@ -57,6 +57,42 @@ groups:
           summary: "Service {{ $labels.job }} is down"
           description: "{{ $labels.instance }} has been unreachable for 2 minutes"
 
+      # Session broker quota pressure
+      - alert: SessionBrokerQuotaPressure
+        expr: max by (team_id) (session_broker_team_active_sessions) / session_broker_policy_max_concurrent_per_team > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+          component: session-broker
+        annotations:
+          summary: "Session broker quota pressure for {{ $labels.team_id }}"
+          description: "Active sessions are at least 80% of the team quota for 10 minutes. Review the FinOps dashboard before raising limits."
+
+      # Session broker launch denial burst
+      - alert: SessionBrokerQuotaDenialBurst
+        expr: increase(session_broker_launch_denials_total_all[10m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+          component: session-broker
+        annotations:
+          summary: "Session broker quota denial burst detected"
+          description: "More than five launch denials were recorded in 10 minutes. Check team demand and session limits."
+
+      # Session broker reaper stalled
+      - alert: SessionBrokerReaperStalled
+        expr: session_broker_reaper_last_success_epoch_seconds > 0 and (time() - session_broker_reaper_last_success_epoch_seconds) > 1800
+        for: 10m
+        labels:
+          severity: critical
+          team: platform
+          component: session-broker
+        annotations:
+          summary: "Session broker stale-session reaper has stalled"
+          description: "The stale-session reaper has not reported a successful run for 30 minutes."
+
       # Disk space
       - alert: LowDiskSpace
         expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes) < 0.1

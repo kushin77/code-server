@@ -44,6 +44,8 @@ export class CodeAgent extends Agent {
     context: MultiAgentContext,
     previousResults: AgentOutput[]
   ): Promise<void> {
+    void context;
+    void previousResults;
     this.log('Coordinating with other agents...');
     // Implementation for multi-agent coordination
   }

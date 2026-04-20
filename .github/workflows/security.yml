@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   security-scans:
-    name: TruffleHog + Gitleaks
+    name: TruffleHog + Gitleaks + DAST
     uses: ./.github/workflows/TEMPLATE-security-scans.yml
 
   credential-helper-hardening:

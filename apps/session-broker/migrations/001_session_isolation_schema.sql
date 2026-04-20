@@ -15,6 +15,14 @@ CREATE TABLE IF NOT EXISTS sessions (
   data_profile VARCHAR(16) NOT NULL DEFAULT 'synthetic'
     CHECK (data_profile IN ('synthetic', 'masked', 'redacted')),
   data_profile_validated BOOLEAN NOT NULL DEFAULT true,
+  provenance_manifest JSONB,
+  provenance_verified BOOLEAN NOT NULL DEFAULT false,
+  provenance_image_digest VARCHAR(255),
+  provenance_attestation_ref TEXT,
+  provenance_signer_identity VARCHAR(255),
+  provenance_verified_at TIMESTAMP,
+  provenance_policy_version VARCHAR(64),
+  deletion_manifest JSONB,
   queue_lane VARCHAR(16) NOT NULL DEFAULT 'standard'
     CHECK (queue_lane IN ('fast', 'standard')),
   queue_reason TEXT,
@@ -31,8 +39,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   -- Lifecycle
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expires_at TIMESTAMP NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'creating'
-    CHECK (status IN ('creating', 'queued', 'running', 'paused', 'terminated')),
+  status VARCHAR(20) NOT NULL DEFAULT 'requested'
+    CHECK (status IN ('creating', 'requested', 'queued', 'provisioning', 'ready', 'testing', 'teardown_pending', 'destroyed', 'failed', 'running', 'paused', 'terminated')),
   last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   
   -- Resource quotas (JSON)
@@ -40,10 +48,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   
   -- Metadata
   created_by_ip INET,
-  created_by_user_agent TEXT,
-  
-  -- Indexes for common queries
-  CONSTRAINT session_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  created_by_user_agent TEXT
 );
 
 ALTER TABLE IF EXISTS sessions
@@ -51,6 +56,30 @@ ALTER TABLE IF EXISTS sessions
 
 ALTER TABLE IF EXISTS sessions
   ADD COLUMN IF NOT EXISTS data_profile_validated BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS provenance_manifest JSONB;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS provenance_verified BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS provenance_image_digest VARCHAR(255);
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS provenance_attestation_ref TEXT;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS provenance_signer_identity VARCHAR(255);
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS provenance_verified_at TIMESTAMP;
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS provenance_policy_version VARCHAR(64);
+
+ALTER TABLE IF EXISTS sessions
+  ADD COLUMN IF NOT EXISTS deletion_manifest JSONB;
 
 ALTER TABLE IF EXISTS sessions
   ADD COLUMN IF NOT EXISTS queue_lane VARCHAR(16) NOT NULL DEFAULT 'standard';
@@ -72,7 +101,7 @@ ALTER TABLE IF EXISTS sessions
 
 ALTER TABLE IF EXISTS sessions
   ADD CONSTRAINT sessions_status_check
-  CHECK (status IN ('creating', 'queued', 'running', 'paused', 'terminated'));
+  CHECK (status IN ('creating', 'requested', 'queued', 'provisioning', 'ready', 'testing', 'teardown_pending', 'destroyed', 'failed', 'running', 'paused', 'terminated'));
 
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX idx_sessions_username ON sessions(username);
@@ -152,7 +181,7 @@ CREATE TABLE IF NOT EXISTS session_policies (
   
   -- Metadata
   reason TEXT,
-  applied_by UUID REFERENCES users(id)
+  applied_by UUID
 );
 
 CREATE INDEX idx_policies_session ON session_policies(session_id);
@@ -168,6 +197,12 @@ SELECT
   s.email,
   s.data_profile,
   s.data_profile_validated,
+  s.provenance_verified,
+  s.provenance_policy_version,
+  s.provenance_image_digest,
+  s.provenance_attestation_ref,
+  s.provenance_signer_identity,
+  s.provenance_verified_at,
   s.queue_lane,
   s.queue_reason,
   s.queue_position,

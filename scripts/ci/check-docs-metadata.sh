@@ -27,21 +27,25 @@ validate_doc() {
     local doc_relative="${doc_path#${DOCS_DIR}/}"
     local has_error=0
     
-    ((TOTAL_DOCS++))
+    ((TOTAL_DOCS+=1))
     
     # Check if file starts with ---
     if ! head -n 1 "$doc_path" | grep -q '^---$'; then
         echo "[ERROR] Missing frontmatter block in: $doc_relative"
-        ((METADATA_ERRORS++))
+        ((METADATA_ERRORS+=1))
         ((has_error=1))
+        ((DOCS_WITH_ERRORS+=1))
+        return
     fi
     
     # Extract frontmatter section (between first --- and second ---)
-    local frontmatter_end=$(awk '/^---$/{ count++; if(count==2) print NR; exit }' "$doc_path" 2>/dev/null || echo "0")
+    local frontmatter_end
+    frontmatter_end=$(awk '/^---$/{ count++; if(count==2) print NR; exit }' "$doc_path" 2>/dev/null || true)
+    frontmatter_end="${frontmatter_end:-0}"
     
     if [ "$frontmatter_end" -eq 0 ]; then
         echo "[ERROR] No closing --- in frontmatter: $doc_relative"
-        ((METADATA_ERRORS++))
+        ((METADATA_ERRORS+=1))
         ((has_error=1))
         return
     fi
@@ -53,7 +57,7 @@ validate_doc() {
     for field in "${required_fields[@]}"; do
         if ! echo "$frontmatter" | grep -q "^${field}:"; then
             echo "[ERROR] Missing required field '$field' in: $doc_relative"
-            ((METADATA_ERRORS++))
+            ((METADATA_ERRORS+=1))
             ((has_error=1))
         fi
     done
@@ -63,7 +67,7 @@ validate_doc() {
         local status=$(echo "$frontmatter" | grep "^status:" | head -1 | sed 's/^status:[[:space:]]*//')
         if ! echo "$status" | grep -qE '^(active|draft|archived)'; then
             echo "[ERROR] Invalid status '$status' (must be: active|draft|archived) in: $doc_relative"
-            ((METADATA_ERRORS++))
+            ((METADATA_ERRORS+=1))
             ((has_error=1))
         fi
     fi
@@ -73,7 +77,7 @@ validate_doc() {
         local date=$(echo "$frontmatter" | grep "^last_review_date:" | head -1 | sed 's/^last_review_date:[[:space:]]*//;s/#.*//')
         if ! echo "$date" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}'; then
             echo "[ERROR] Invalid date format '$date' (use YYYY-MM-DD) in: $doc_relative"
-            ((METADATA_ERRORS++))
+            ((METADATA_ERRORS+=1))
             ((has_error=1))
         else
             # Check if > 90 days old
@@ -88,7 +92,7 @@ validate_doc() {
     fi
     
     if [ "$has_error" -eq 1 ]; then
-        ((DOCS_WITH_ERRORS++))
+        ((DOCS_WITH_ERRORS+=1))
     fi
 }
 

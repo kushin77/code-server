@@ -101,6 +101,18 @@ export type SessionQueueLane = 'fast' | 'standard'
 
 export type SessionDataProfile = 'synthetic' | 'masked' | 'redacted'
 
+export type SessionProvenanceVerificationResult = 'verified' | 'failed'
+
+export interface SessionProvenanceManifest {
+  imageDigest: string
+  attestationRef: string
+  signerIdentity: string
+  verificationTimestamp: Date
+  verificationResult: SessionProvenanceVerificationResult
+  policyVersion: string
+  sessionFingerprint?: string
+}
+
 export interface EphemeralSession {
   sessionId: string
   userId: string
@@ -108,6 +120,7 @@ export interface EphemeralSession {
   email: string
   dataProfile: SessionDataProfile
   dataProfileValidated: boolean
+  provenance?: SessionProvenanceManifest | null
   queueLane?: SessionQueueLane | null
   queuePosition?: number | null
   queueEstimatedWaitSeconds?: number | null
@@ -133,6 +146,7 @@ export interface EphemeralSessionLaunchRequest {
   username: string
   email: string
   dataProfile: SessionDataProfile
+  provenance?: SessionProvenanceManifest
   priorityLane?: SessionQueueLane
   ttlSeconds?: number
 }
@@ -152,6 +166,7 @@ export interface EphemeralSessionStatus {
   terminal: boolean
   dataProfile: SessionDataProfile
   dataProfileValidated: boolean
+  provenance?: SessionProvenanceManifest | null
   queue?: SessionQueueSummary | null
   containerPort: number
   containerName: string

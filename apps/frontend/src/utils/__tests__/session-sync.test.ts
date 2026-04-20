@@ -16,7 +16,6 @@ import {
   getMetrics,
   resetMetrics,
   type SessionSyncConfig,
-  type SessionMessage,
 } from "../session-sync";
 
 // Mock BroadcastChannel
@@ -245,14 +244,12 @@ describe("Session Sync - Multi-tab Synchronization", () => {
 
     test("Multiple tabs register and leader is lowest ID", () => {
       initSessionSync();
-      const tab1Id = getTabId();
       expect(isLeader()).toBe(true);
 
       destroySessionSync();
 
       // Simulate another tab with a different ID
       initSessionSync();
-      const tab2Id = getTabId();
 
       // The tab with lexicographically smaller ID is leader
       const tabs = getKnownTabs();

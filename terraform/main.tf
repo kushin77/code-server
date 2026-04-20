@@ -428,26 +428,5 @@ module "keepalived" {
   health_check_timeout  = 3
   vrrp_interval         = 1
 
-  inventory = {
-    vip = {
-      ip   = "192.168.168.30"
-      fqdn = "code-server.kushnir.local"
-    }
-    hosts = {
-      primary = {
-        ip       = "192.168.168.31"
-        fqdn     = "code-server-31.kushnir.local"
-        ssh_user = "akushnir"
-        ssh_port = 22
-        roles    = ["code-server", "prometheus", "grafana"]
-      }
-      replica = {
-        ip       = "192.168.168.42"
-        fqdn     = "code-server-42.kushnir.local"
-        ssh_user = "akushnir"
-        ssh_port = 22
-        roles    = ["code-server", "prometheus", "grafana"]
-      }
-    }
-  }
+  inventory = var.inventory
 }

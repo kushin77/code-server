@@ -40,6 +40,8 @@ export enum WorkspaceLifecycleEventType {
   WORKSPACE_EXPIRED = "workspace_expired",
   WORKSPACE_FAILED = "workspace_failed",
   WORKSPACE_HARD_DELETED = "workspace_hard_deleted",
+  WORKSPACE_HEADLESS_TESTS_STARTED = "workspace_headless_tests_started",
+  WORKSPACE_HEADLESS_TESTS_COMPLETED = "workspace_headless_tests_completed",
   SNAPSHOT_CREATED = "snapshot_created",
   SNAPSHOT_RESTORED = "snapshot_restored",
   CLEANUP_INITIATED = "cleanup_initiated",
@@ -108,6 +110,10 @@ export interface WorkspaceLifecycleConfig {
   evidenceSchemaVersion: string
   evidenceRetentionDays: number
   evidenceSigningSalt: string
+  readyTestTimeoutSeconds?: number
+  readyTestTrigger?: (
+    context: WorkspaceLifecycleContext
+  ) => Promise<WorkspaceHeadlessTestOutcome[]> | WorkspaceHeadlessTestOutcome[]
 }
 
 /**
@@ -249,6 +255,57 @@ export interface WorkspaceHeadlessTestOutcome {
   durationSeconds: number
   artifactPaths: string[]
 }
+
+/**
+ * Ready-state test execution report.
+ */
+export interface WorkspaceReadyTestReport {
+  sessionId: string
+  workspaceId: string
+  status: "running" | "passed" | "failed"
+  startedAt: number
+  completedAt?: number
+  durationSeconds?: number
+  testOutcomes: WorkspaceHeadlessTestOutcome[]
+  artifactPaths: string[]
+  correlationId: string
+  failureReason?: string
+}
+
+/**
+ * Live progress evidence summary surfaced during lifecycle execution.
+ */
+export interface WorkspaceLiveProgressEvidence {
+  teardownOutcome: "success" | "failed"
+  manifestChecksum: string
+  manifestSignature: string
+  artifactPaths: string[]
+}
+
+/**
+ * Live lifecycle status exposed to callers without shell access.
+ */
+export interface WorkspaceLiveProgressUpdate {
+  sessionId: string
+  workspaceId: string
+  state: WorkspaceLifecycleState
+  status: "running" | "passed" | "failed"
+  timestamp: number
+  eventType: WorkspaceLifecycleEventType
+  action: string
+  reason?: string
+  details?: Record<string, any>
+  correlationId: string
+  evidence?: WorkspaceLiveProgressEvidence
+  testReport?: WorkspaceReadyTestReport
+}
+
+/**
+ * Callback for live lifecycle progress updates.
+ */
+export type WorkspaceLiveProgressListener = (
+  update: WorkspaceLiveProgressUpdate
+) => void | Promise<void>
 
 /**
  * Evidence fingerprint material captured for integrity and traceability.

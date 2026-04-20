@@ -16,7 +16,7 @@ export interface SessionAuditEvent {
   timestamp: number
   sessionId: string
   actor: string
-  action: 'create' | 'transition' | 'terminate' | 'cleanup' | 'deny' | 'approve' | 'break_glass' | 'publish'
+  action: 'create' | 'transition' | 'terminate' | 'cleanup' | 'deny' | 'approve' | 'break_glass' | 'publish' | 'shadow_replay'
   fromStatus?: SessionLifecycleState
   toStatus?: SessionLifecycleState
   reason?: string

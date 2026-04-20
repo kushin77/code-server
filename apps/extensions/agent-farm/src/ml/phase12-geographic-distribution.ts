@@ -131,7 +131,7 @@ export class GlobalLoadBalancer {
     };
   }
 
-  selectRegion(userLocationLatLng: [number, number], clientRegion?: string): string {
+  selectRegion(userLocationLatLng: [number, number]): string {
     switch (this.strategy.type) {
       case 'round-robin':
         return this.roundRobin();
@@ -472,7 +472,6 @@ export class MultiSiteFederationOrchestrator {
 
   getFederationStatus(): FederationStatus {
     const topology = this.registry.getTopology();
-    const lbMetrics = this.loadBalancer.getMetrics();
     const consistencyLatency = this.replicator.getEventualConsistencyLatency(this.config.primaryRegion);
 
     // Simulate p50/p95/p99 latencies

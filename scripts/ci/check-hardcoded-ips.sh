@@ -25,12 +25,22 @@ ALLOWLIST_PATTERNS=(
   "^Makefile\."                    # Makefile variants (handled separately)
 )
 
-# File types that should NOT contain hardcoded IPs
-CHECKED_EXTENSIONS=(
+# File types and filenames that should NOT contain hardcoded IPs
+CHECKED_PATTERNS=(
   "*.sh"                           # Shell scripts
   "*.ts"                           # TypeScript
   "*.js"                           # JavaScript
   "*.py"                           # Python
+  "*.go"                           # Go
+  "*.yml"                          # GitHub Actions / compose
+  "*.yaml"                         # Kubernetes / automation manifests
+  "*.tf"                           # Terraform
+  "*.json"                         # Config/schema files
+  "*.sql"                          # SQL scripts
+  "Caddyfile"                      # Caddy routing config
+  "Dockerfile"                     # Container build config
+  "Dockerfile.*"                   # Variant Dockerfiles
+  "Makefile"                       # Build orchestration
 )
 
 fail=0
@@ -45,9 +55,8 @@ echo "" >> "$violations_log"
 
 violation_count=0
 
-# Scan each file type
-for ext in "${CHECKED_EXTENSIONS[@]}"; do
-  while IFS= read -r file; do
+# Scan tracked files once, then filter by path and filename pattern.
+while IFS= read -r -d '' file; do
     # Skip allowlisted paths
     skip=0
     for allow_pattern in "${ALLOWLIST_PATTERNS[@]}"; do
@@ -60,10 +69,22 @@ for ext in "${CHECKED_EXTENSIONS[@]}"; do
     if [[ $skip -eq 1 ]]; then
       continue
     fi
+
+    scan_file=0
+    for file_pattern in "${CHECKED_PATTERNS[@]}"; do
+      if [[ "$file" == $file_pattern ]]; then
+        scan_file=1
+        break
+      fi
+    done
+
+    if [[ $scan_file -eq 0 ]]; then
+      continue
+    fi
     
     # Check each pattern
-    for pattern in "${REJECT_PATTERNS[@]}"; do
-      if grep -n "$pattern" "$file" 2>/dev/null | grep -v "^Binary" > /tmp/matches.txt; then
+    for reject_pattern in "${REJECT_PATTERNS[@]}"; do
+      if grep -n "$reject_pattern" "$file" 2>/dev/null | grep -v "^Binary" > /tmp/matches.txt; then
         while IFS= read -r line; do
           violation_count=$((violation_count + 1))
           log_warn "VIOLATION: $file — $line" || true
@@ -72,8 +93,7 @@ for ext in "${CHECKED_EXTENSIONS[@]}"; do
         done < /tmp/matches.txt
       fi
     done
-  done < <(find . -type f -name "$ext" -not -path "./node_modules/*" -not -path "./.git/*" 2>/dev/null)
-done
+done < <(git ls-files -z)
 
 echo "" >> "$violations_log"
 echo "Total violations found: $violation_count" >> "$violations_log"

@@ -25,6 +25,9 @@ import {
   WorkspaceHeadlessTestOutcome,
   WorkspaceEvidenceExport,
   WorkspaceEvidenceVerificationResult,
+  WorkspaceLiveProgressUpdate,
+  WorkspaceLiveProgressListener,
+  WorkspaceReadyTestReport,
 } from "./types"
 
 import * as crypto from "crypto"
@@ -50,6 +53,9 @@ export {
   WorkspaceHeadlessTestOutcome,
   WorkspaceEvidenceExport,
   WorkspaceEvidenceVerificationResult,
+  WorkspaceLiveProgressUpdate,
+  WorkspaceLiveProgressListener,
+  WorkspaceReadyTestReport,
 } from "./types"
 
 /**
@@ -72,9 +78,15 @@ export class EphemeralWorkspaceLifecycleManager {
   private snapshots: Map<string, WorkspaceSnapshot>
   private deletionProofs: Map<string, WorkspaceDeletionProof>
   private evidencePacks: Map<string, WorkspaceEvidencePack>
+  private validationPacks: Map<string, WorkspaceEvidencePack>
+  private readyTestReports: Map<string, WorkspaceReadyTestReport>
+  private liveProgressSnapshots: Map<string, WorkspaceLiveProgressUpdate>
+  private liveProgressHistory: Map<string, WorkspaceLiveProgressUpdate[]>
   private config: WorkspaceLifecycleConfig
   private monitoringInterval?: NodeJS.Timeout
   private cascadeCleanupCallbacks: Set<(event: WorkspaceCascadeCleanupEvent) => Promise<void>>
+  private liveProgressListeners: Set<WorkspaceLiveProgressListener>
+  private readyTestRuns: Set<string>
 
   constructor(config: WorkspaceLifecycleConfig) {
     this.config = config
@@ -82,152 +94,342 @@ export class EphemeralWorkspaceLifecycleManager {
     this.snapshots = new Map()
     this.deletionProofs = new Map()
     this.evidencePacks = new Map()
+    this.validationPacks = new Map()
+    this.readyTestReports = new Map()
+    this.liveProgressSnapshots = new Map()
+    this.liveProgressHistory = new Map()
     this.cascadeCleanupCallbacks = new Set()
+    this.liveProgressListeners = new Set()
+    this.readyTestRuns = new Set()
   }
 
-  private computeDeletionChecksum(payload: Record<string, any>): string {
-    return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex")
-  }
+      private computeDeletionChecksum(payload: Record<string, any>): string {
+        return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex")
+      }
 
-  private computeEvidenceChecksum(payload: Record<string, any>): string {
-    return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex")
-  }
+      private computeEvidenceChecksum(payload: Record<string, any>): string {
+        return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex")
+      }
 
-  private computeManifestSignature(payload: {
-    schemaVersion: string
-    sessionId: string
-    workspaceId: string
-    generatedAt: number
-    manifestChecksum: string
-  }): string {
-    return crypto
-      .createHash("sha256")
-      .update(`${payload.schemaVersion}:${payload.sessionId}:${payload.workspaceId}:${payload.generatedAt}:${payload.manifestChecksum}:${this.config.evidenceSigningSalt}`)
-      .digest("hex")
-  }
+      private computeManifestSignature(payload: {
+        schemaVersion: string
+        sessionId: string
+        workspaceId: string
+        generatedAt: number
+        manifestChecksum: string
+      }): string {
+        return crypto
+          .createHash("sha256")
+          .update(`${payload.schemaVersion}:${payload.sessionId}:${payload.workspaceId}:${payload.generatedAt}:${payload.manifestChecksum}:${this.config.evidenceSigningSalt}`)
+          .digest("hex")
+      }
 
-  private createDefaultFingerprintSet(context: WorkspaceLifecycleContext): WorkspaceEvidenceFingerprint[] {
-    return [
-      { key: "container_name", value: context.containerName },
-      { key: "container_port", value: String(context.containerPort) },
-      { key: "user_id", value: context.userId },
-      { key: "workspace_state", value: context.state },
-    ]
-  }
+      private createDefaultFingerprintSet(context: WorkspaceLifecycleContext): WorkspaceEvidenceFingerprint[] {
+        return [
+          { key: "container_name", value: context.containerName },
+          { key: "container_port", value: String(context.containerPort) },
+          { key: "user_id", value: context.userId },
+          { key: "workspace_state", value: context.state },
+        ]
+      }
 
-  private createDefaultTestOutcome(teardownOutcome: "success" | "failed"): WorkspaceHeadlessTestOutcome[] {
-    return [
-      {
-        suite: "ephemeral-lifecycle-teardown",
-        status: teardownOutcome === "success" ? "passed" : "failed",
-        durationSeconds: 0,
-        artifactPaths: ["artifacts/ephemeral-workspace-evidence"],
-      },
-    ]
-  }
+      private createDefaultTestOutcome(teardownOutcome: "success" | "failed"): WorkspaceHeadlessTestOutcome[] {
+        return [
+          {
+            suite: "ephemeral-lifecycle-teardown",
+            status: teardownOutcome === "success" ? "passed" : "failed",
+            durationSeconds: 0,
+            artifactPaths: ["artifacts/ephemeral-workspace-evidence"],
+          },
+        ]
+      }
 
-  private buildEvidenceManifest(params: {
-    schemaVersion: string
-    sessionId: string
-    workspaceId: string
-    generatedAt: number
-    teardownOutcome: "success" | "failed"
-    policyVersion: string
-    lifecycleEvents: WorkspaceLifecycleEvent[]
-    testOutcomes: WorkspaceHeadlessTestOutcome[]
-    fingerprints: WorkspaceEvidenceFingerprint[]
-    deletionProof?: WorkspaceDeletionProof
-  }): WorkspaceEvidenceManifest {
-    const eventLogChecksum = this.computeEvidenceChecksum({ lifecycleEvents: params.lifecycleEvents })
-    const testOutcomeChecksum = this.computeEvidenceChecksum({ testOutcomes: params.testOutcomes })
-    const fingerprintChecksum = this.computeEvidenceChecksum({ fingerprints: params.fingerprints })
-    const deletionProofChecksum = this.computeEvidenceChecksum({ deletionProof: params.deletionProof || null })
+      private async runWithTimeout<T>(operation: Promise<T>, timeoutSeconds: number, timeoutMessage: string): Promise<T> {
+        if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+          return operation
+        }
 
-    const manifestChecksum = this.computeEvidenceChecksum({
-      schemaVersion: params.schemaVersion,
-      sessionId: params.sessionId,
-      workspaceId: params.workspaceId,
-      generatedAt: params.generatedAt,
-      teardownOutcome: params.teardownOutcome,
-      policyVersion: params.policyVersion,
-      lifecycleEventCount: params.lifecycleEvents.length,
-      eventLogChecksum,
-      testOutcomeChecksum,
-      fingerprintChecksum,
-      deletionProofChecksum,
-    })
+        let timeoutHandle: NodeJS.Timeout | undefined
 
-    return {
-      schemaVersion: params.schemaVersion,
-      sessionId: params.sessionId,
-      workspaceId: params.workspaceId,
-      generatedAt: params.generatedAt,
-      teardownOutcome: params.teardownOutcome,
-      policyVersion: params.policyVersion,
-      lifecycleEventCount: params.lifecycleEvents.length,
-      checksums: {
-        eventLog: eventLogChecksum,
-        testOutcomes: testOutcomeChecksum,
-        fingerprints: fingerprintChecksum,
-        deletionProof: deletionProofChecksum,
-        manifest: manifestChecksum,
-      },
-      manifestSignature: this.computeManifestSignature({
-        schemaVersion: params.schemaVersion,
-        sessionId: params.sessionId,
-        workspaceId: params.workspaceId,
-        generatedAt: params.generatedAt,
-        manifestChecksum,
-      }),
-    }
-  }
+        const timeoutPromise = new Promise<T>((_, reject) => {
+          timeoutHandle = setTimeout(() => {
+            reject(new Error(timeoutMessage))
+          }, timeoutSeconds * 1000)
+        })
 
-  private emitEvidencePack(params: {
-    context: WorkspaceLifecycleContext
-    teardownOutcome: "success" | "failed"
-    deletionProof?: WorkspaceDeletionProof
-    failureReason?: string
-    policyVersion?: string
-    testOutcomes?: WorkspaceHeadlessTestOutcome[]
-    fingerprints?: WorkspaceEvidenceFingerprint[]
-  }): WorkspaceEvidencePack {
-    const generatedAt = Date.now() / 1000
-    const policyVersion = params.policyVersion || this.config.evidenceSchemaVersion
-    const testOutcomes = params.testOutcomes || this.createDefaultTestOutcome(params.teardownOutcome)
-    const fingerprints = params.fingerprints || this.createDefaultFingerprintSet(params.context)
+        try {
+          return await Promise.race([operation, timeoutPromise])
+        } finally {
+          if (timeoutHandle) {
+            clearTimeout(timeoutHandle)
+          }
+        }
+      }
 
-    const lifecycleEvents = [...params.context.eventLog]
-    const manifest = this.buildEvidenceManifest({
-      schemaVersion: this.config.evidenceSchemaVersion,
-      sessionId: params.context.sessionId,
-      workspaceId: params.context.workspaceId,
-      generatedAt,
-      teardownOutcome: params.teardownOutcome,
-      policyVersion,
-      lifecycleEvents,
-      testOutcomes,
-      fingerprints,
-      deletionProof: params.deletionProof,
-    })
+      private createDefaultHeadlessTestOutcomes(context: WorkspaceLifecycleContext): WorkspaceHeadlessTestOutcome[] {
+        const baseArtifactPath = `artifacts/${context.sessionId}/headless`
 
-    const evidencePack: WorkspaceEvidencePack = {
-      sessionId: params.context.sessionId,
-      workspaceId: params.context.workspaceId,
-      createdAt: generatedAt,
-      expiresAt: generatedAt + this.config.evidenceRetentionDays * 86400,
-      teardownOutcome: params.teardownOutcome,
-      policyVersion,
-      lifecycleEvents,
-      testOutcomes,
-      fingerprints,
-      deletionProof: params.deletionProof,
-      failureReason: params.failureReason,
-      manifest,
-    }
+        return [
+          {
+            suite: "workspace-bootstrap-smoke",
+            status: "passed",
+            durationSeconds: 18,
+            artifactPaths: [`${baseArtifactPath}/workspace-bootstrap-smoke.json`],
+          },
+          {
+            suite: "workspace-editor-smoke",
+            status: "passed",
+            durationSeconds: 24,
+            artifactPaths: [`${baseArtifactPath}/workspace-editor-smoke.json`, `${baseArtifactPath}/workspace-editor-smoke.log`],
+          },
+        ]
+      }
 
-    this.evidencePacks.set(evidencePack.sessionId, evidencePack)
-    return evidencePack
-  }
+      private summarizeTestOutcomes(testOutcomes: WorkspaceHeadlessTestOutcome[]): {
+        passed: number
+        failed: number
+        skipped: number
+      } {
+        return {
+          passed: testOutcomes.filter((outcome) => outcome.status === "passed").length,
+          failed: testOutcomes.filter((outcome) => outcome.status === "failed").length,
+          skipped: testOutcomes.filter((outcome) => outcome.status === "skipped").length,
+        }
+      }
+
+      private calculateTestDurationSeconds(testOutcomes: WorkspaceHeadlessTestOutcome[]): number {
+        return testOutcomes.reduce((total, outcome) => total + outcome.durationSeconds, 0)
+      }
+
+      private getEvidencePackForSession(sessionId: string): WorkspaceEvidencePack | undefined {
+        return this.evidencePacks.get(sessionId) || this.validationPacks.get(sessionId)
+      }
+
+      private persistEvidencePack(
+        pack: WorkspaceEvidencePack,
+        target: Map<string, WorkspaceEvidencePack>,
+        context: WorkspaceLifecycleContext
+      ): WorkspaceEvidencePack {
+        target.set(pack.sessionId, pack)
+
+        const lastEvent = pack.lifecycleEvents[pack.lifecycleEvents.length - 1]
+        if (lastEvent) {
+          this.emitLiveProgressUpdate({
+            context,
+            event: lastEvent,
+            evidencePack: pack,
+            testReport: this.readyTestReports.get(context.sessionId),
+          })
+        }
+
+        return pack
+      }
+
+      private buildEvidencePack(params: {
+        context: WorkspaceLifecycleContext
+        teardownOutcome: "success" | "failed"
+        deletionProof?: WorkspaceDeletionProof
+        failureReason?: string
+        policyVersion?: string
+        testOutcomes?: WorkspaceHeadlessTestOutcome[]
+        fingerprints?: WorkspaceEvidenceFingerprint[]
+      }): WorkspaceEvidencePack {
+        const generatedAt = Date.now() / 1000
+        const policyVersion = params.policyVersion || this.config.evidenceSchemaVersion
+        const testOutcomes = params.testOutcomes || this.createDefaultTestOutcome(params.teardownOutcome)
+        const fingerprints = params.fingerprints || this.createDefaultFingerprintSet(params.context)
+
+        const lifecycleEvents = [...params.context.eventLog]
+        const manifest = this.buildEvidenceManifest({
+          schemaVersion: this.config.evidenceSchemaVersion,
+          sessionId: params.context.sessionId,
+          workspaceId: params.context.workspaceId,
+          generatedAt,
+          teardownOutcome: params.teardownOutcome,
+          policyVersion,
+          lifecycleEvents,
+          testOutcomes,
+          fingerprints,
+          deletionProof: params.deletionProof,
+        })
+
+        return {
+          sessionId: params.context.sessionId,
+          workspaceId: params.context.workspaceId,
+          createdAt: generatedAt,
+          expiresAt: generatedAt + this.config.evidenceRetentionDays * 86400,
+          teardownOutcome: params.teardownOutcome,
+          policyVersion,
+          lifecycleEvents,
+          testOutcomes,
+          fingerprints,
+          deletionProof: params.deletionProof,
+          failureReason: params.failureReason,
+          manifest,
+        }
+      }
+
+      private buildEvidenceManifest(params: {
+        schemaVersion: string
+        sessionId: string
+        workspaceId: string
+        generatedAt: number
+        teardownOutcome: "success" | "failed"
+        policyVersion: string
+        lifecycleEvents: WorkspaceLifecycleEvent[]
+        testOutcomes: WorkspaceHeadlessTestOutcome[]
+        fingerprints: WorkspaceEvidenceFingerprint[]
+        deletionProof?: WorkspaceDeletionProof
+      }): WorkspaceEvidenceManifest {
+        const eventLogChecksum = this.computeEvidenceChecksum({ lifecycleEvents: params.lifecycleEvents })
+        const testOutcomeChecksum = this.computeEvidenceChecksum({ testOutcomes: params.testOutcomes })
+        const fingerprintChecksum = this.computeEvidenceChecksum({ fingerprints: params.fingerprints })
+        const deletionProofChecksum = this.computeEvidenceChecksum({ deletionProof: params.deletionProof || null })
+
+        const manifestChecksum = this.computeEvidenceChecksum({
+          schemaVersion: params.schemaVersion,
+          sessionId: params.sessionId,
+          workspaceId: params.workspaceId,
+          generatedAt: params.generatedAt,
+          teardownOutcome: params.teardownOutcome,
+          policyVersion: params.policyVersion,
+          lifecycleEventCount: params.lifecycleEvents.length,
+          eventLogChecksum,
+          testOutcomeChecksum,
+          fingerprintChecksum,
+          deletionProofChecksum,
+        })
+
+        return {
+          schemaVersion: params.schemaVersion,
+          sessionId: params.sessionId,
+          workspaceId: params.workspaceId,
+          generatedAt: params.generatedAt,
+          teardownOutcome: params.teardownOutcome,
+          policyVersion: params.policyVersion,
+          lifecycleEventCount: params.lifecycleEvents.length,
+          checksums: {
+            eventLog: eventLogChecksum,
+            testOutcomes: testOutcomeChecksum,
+            fingerprints: fingerprintChecksum,
+            deletionProof: deletionProofChecksum,
+            manifest: manifestChecksum,
+          },
+          manifestSignature: this.computeManifestSignature({
+            schemaVersion: params.schemaVersion,
+            sessionId: params.sessionId,
+            workspaceId: params.workspaceId,
+            generatedAt: params.generatedAt,
+            manifestChecksum,
+          }),
+        }
+      }
+
+      private emitEvidencePack(params: {
+        context: WorkspaceLifecycleContext
+        teardownOutcome: "success" | "failed"
+        deletionProof?: WorkspaceDeletionProof
+        failureReason?: string
+        policyVersion?: string
+        testOutcomes?: WorkspaceHeadlessTestOutcome[]
+        fingerprints?: WorkspaceEvidenceFingerprint[]
+      }): WorkspaceEvidencePack {
+        const evidencePack = this.buildEvidencePack(params)
+        return this.persistEvidencePack(evidencePack, this.evidencePacks, params.context)
+      }
+
+      private emitValidationPack(params: {
+        context: WorkspaceLifecycleContext
+        teardownOutcome: "success" | "failed"
+        failureReason?: string
+        policyVersion?: string
+        testOutcomes?: WorkspaceHeadlessTestOutcome[]
+        fingerprints?: WorkspaceEvidenceFingerprint[]
+      }): WorkspaceEvidencePack {
+        const validationPack = this.buildEvidencePack(params)
+        return this.persistEvidencePack(validationPack, this.validationPacks, params.context)
+      }
+
+      private buildEvidenceManifest(params: {
+        schemaVersion: string
+        sessionId: string
+        workspaceId: string
+        generatedAt: number
+        teardownOutcome: "success" | "failed"
+        policyVersion: string
+        lifecycleEvents: WorkspaceLifecycleEvent[]
+        testOutcomes: WorkspaceHeadlessTestOutcome[]
+        fingerprints: WorkspaceEvidenceFingerprint[]
+        deletionProof?: WorkspaceDeletionProof
+      }): WorkspaceEvidenceManifest {
+        const eventLogChecksum = this.computeEvidenceChecksum({ lifecycleEvents: params.lifecycleEvents })
+        const testOutcomeChecksum = this.computeEvidenceChecksum({ testOutcomes: params.testOutcomes })
+        const fingerprintChecksum = this.computeEvidenceChecksum({ fingerprints: params.fingerprints })
+        const deletionProofChecksum = this.computeEvidenceChecksum({ deletionProof: params.deletionProof || null })
+
+        const manifestChecksum = this.computeEvidenceChecksum({
+          schemaVersion: params.schemaVersion,
+          sessionId: params.sessionId,
+          workspaceId: params.workspaceId,
+          generatedAt: params.generatedAt,
+          teardownOutcome: params.teardownOutcome,
+          policyVersion: params.policyVersion,
+          lifecycleEventCount: params.lifecycleEvents.length,
+          eventLogChecksum,
+          testOutcomeChecksum,
+          fingerprintChecksum,
+          deletionProofChecksum,
+        })
+
+        return {
+          schemaVersion: params.schemaVersion,
+          sessionId: params.sessionId,
+          workspaceId: params.workspaceId,
+          generatedAt: params.generatedAt,
+          teardownOutcome: params.teardownOutcome,
+          policyVersion: params.policyVersion,
+          lifecycleEventCount: params.lifecycleEvents.length,
+          checksums: {
+            eventLog: eventLogChecksum,
+            testOutcomes: testOutcomeChecksum,
+            fingerprints: fingerprintChecksum,
+            deletionProof: deletionProofChecksum,
+            manifest: manifestChecksum,
+          },
+          manifestSignature: this.computeManifestSignature({
+            schemaVersion: params.schemaVersion,
+            sessionId: params.sessionId,
+            workspaceId: params.workspaceId,
+            generatedAt: params.generatedAt,
+            manifestChecksum,
+          }),
+        }
+      }
+
+      private emitEvidencePack(params: {
+        context: WorkspaceLifecycleContext
+        teardownOutcome: "success" | "failed"
+        deletionProof?: WorkspaceDeletionProof
+        failureReason?: string
+        policyVersion?: string
+        testOutcomes?: WorkspaceHeadlessTestOutcome[]
+        fingerprints?: WorkspaceEvidenceFingerprint[]
+      }): WorkspaceEvidencePack {
+        const evidencePack = this.buildEvidencePack(params)
+        return this.persistEvidencePack(evidencePack, this.evidencePacks, params.context)
+      }
+
+      private emitValidationPack(params: {
+        context: WorkspaceLifecycleContext
+        teardownOutcome: "success" | "failed"
+        failureReason?: string
+        policyVersion?: string
+        testOutcomes?: WorkspaceHeadlessTestOutcome[]
+        fingerprints?: WorkspaceEvidenceFingerprint[]
+      }): WorkspaceEvidencePack {
+        const validationPack = this.buildEvidencePack(params)
+        return this.persistEvidencePack(validationPack, this.validationPacks, params.context)
+      }
 
   /**
    * Create a new ephemeral workspace with TTL
@@ -353,6 +555,8 @@ export class EphemeralWorkspaceLifecycleManager {
       action: "Container provisioned and ready",
       correlationId,
     })
+
+    void this.runHeadlessValidation(context, actor, correlationId)
 
     return {
       success: true,
@@ -1228,7 +1432,244 @@ export class EphemeralWorkspaceLifecycleManager {
     const context = this.workspaces.get(event.workspaceId)
     if (context) {
       context.eventLog.push(event)
+      this.emitLiveProgressUpdate({
+        context,
+        event,
+      })
     }
+  }
+
+  private determineLiveProgressStatus(params: {
+    event: WorkspaceLifecycleEvent
+    evidencePack?: WorkspaceEvidencePack
+  }): "running" | "passed" | "failed" {
+    if (params.evidencePack) {
+      return params.evidencePack.teardownOutcome === "success" ? "passed" : "failed"
+    }
+
+    if (params.event.eventType === WorkspaceLifecycleEventType.WORKSPACE_FAILED) {
+      return "failed"
+    }
+
+    if (
+      params.event.eventType === WorkspaceLifecycleEventType.WORKSPACE_HARD_DELETED ||
+      params.event.eventType === WorkspaceLifecycleEventType.CLEANUP_COMPLETED
+    ) {
+      return "passed"
+    }
+
+    return "running"
+  }
+
+  private emitLiveProgressUpdate(params: {
+    context: WorkspaceLifecycleContext
+    event: WorkspaceLifecycleEvent
+    evidencePack?: WorkspaceEvidencePack
+    testReport?: WorkspaceReadyTestReport
+    statusOverride?: "running" | "passed" | "failed"
+  }): void {
+    const status =
+      params.statusOverride ??
+      this.determineLiveProgressStatus({
+        event: params.event,
+        evidencePack: params.evidencePack ?? this.evidencePacks.get(params.context.sessionId),
+      })
+
+    const update: WorkspaceLiveProgressUpdate = {
+      sessionId: params.context.sessionId,
+      workspaceId: params.context.workspaceId,
+      state: params.context.state,
+      status,
+      timestamp: params.event.timestamp,
+      eventType: params.event.eventType,
+      action: params.event.action,
+      reason: params.event.reason,
+      details: params.event.details,
+      correlationId: params.event.correlationId,
+      evidence: params.evidencePack
+        ? {
+            teardownOutcome: params.evidencePack.teardownOutcome,
+            manifestChecksum: params.evidencePack.manifest.checksums.manifest,
+            manifestSignature: params.evidencePack.manifest.manifestSignature,
+            artifactPaths: [
+              ...new Set(
+                params.evidencePack.testOutcomes.flatMap((outcome) => outcome.artifactPaths)
+              ),
+            ],
+          }
+        : undefined,
+      testReport: params.testReport,
+    }
+
+    this.liveProgressSnapshots.set(params.context.sessionId, update)
+
+    const history = this.liveProgressHistory.get(params.context.sessionId) || []
+    history.push(update)
+    if (history.length > 100) {
+      history.shift()
+    }
+    this.liveProgressHistory.set(params.context.sessionId, history)
+
+    for (const listener of this.liveProgressListeners) {
+      try {
+        const result = listener(update)
+        if (result && typeof (result as Promise<void>).then === "function") {
+          void (result as Promise<void>).catch((error) => {
+            console.error(`Live progress listener failed: ${error}`)
+          })
+        }
+      } catch (error) {
+        console.error(`Live progress listener failed: ${error}`)
+      }
+    }
+  }
+
+  private async runHeadlessValidation(
+    context: WorkspaceLifecycleContext,
+    actor: string,
+    correlationId: string
+  ): Promise<void> {
+    if (!this.config.readyTestTrigger || this.readyTestRuns.has(context.sessionId)) {
+      return
+    }
+
+    this.readyTestRuns.add(context.sessionId)
+    const startedAt = Date.now() / 1000
+
+    try {
+      const runningReport: WorkspaceReadyTestReport = {
+        sessionId: context.sessionId,
+        workspaceId: context.workspaceId,
+        status: "running",
+        startedAt,
+        testOutcomes: [],
+        artifactPaths: [],
+        correlationId,
+      }
+
+      this.readyTestReports.set(context.sessionId, runningReport)
+      this.emitLiveProgressUpdate({
+        context,
+        event: {
+          timestamp: startedAt,
+          eventType: WorkspaceLifecycleEventType.WORKSPACE_READY,
+          workspaceId: context.workspaceId,
+          sessionId: context.sessionId,
+          actor,
+          action: "Headless test execution started",
+          reason: "ready_trigger",
+          details: { readyTestStatus: "running" },
+          correlationId,
+        },
+        statusOverride: "running",
+        testReport: runningReport,
+      })
+
+      const testOutcomes = await this.runWithTimeout(
+        Promise.resolve(this.config.readyTestTrigger(context)),
+        this.config.readyTestTimeoutSeconds ?? 900,
+        `ready test execution timed out after ${this.config.readyTestTimeoutSeconds ?? 900}s`
+      )
+      const completedAt = Date.now() / 1000
+      const artifactPaths = [...new Set(testOutcomes.flatMap((outcome) => outcome.artifactPaths))]
+      const status = testOutcomes.some((outcome) => outcome.status === "failed") ? "failed" : "passed"
+
+      const completedReport: WorkspaceReadyTestReport = {
+        sessionId: context.sessionId,
+        workspaceId: context.workspaceId,
+        status,
+        startedAt,
+        completedAt,
+        durationSeconds: completedAt - startedAt,
+        testOutcomes,
+        artifactPaths,
+        correlationId,
+      }
+
+      this.readyTestReports.set(context.sessionId, completedReport)
+      this.emitLiveProgressUpdate({
+        context,
+        event: {
+          timestamp: completedAt,
+          eventType: WorkspaceLifecycleEventType.WORKSPACE_READY,
+          workspaceId: context.workspaceId,
+          sessionId: context.sessionId,
+          actor,
+          action: "Headless test execution completed",
+          reason: status === "passed" ? "ready_trigger_passed" : "ready_trigger_failed",
+          details: {
+            readyTestStatus: status,
+            durationSeconds: completedReport.durationSeconds,
+            artifactPaths,
+          },
+          correlationId,
+        },
+        statusOverride: status,
+        testReport: completedReport,
+      })
+    } catch (error) {
+      const completedAt = Date.now() / 1000
+      const failureReport: WorkspaceReadyTestReport = {
+        sessionId: context.sessionId,
+        workspaceId: context.workspaceId,
+        status: "failed",
+        startedAt,
+        completedAt,
+        durationSeconds: completedAt - startedAt,
+        testOutcomes: this.createDefaultTestOutcome("failed"),
+        artifactPaths: ["artifacts/ephemeral-workspace-evidence"],
+        correlationId,
+        failureReason: String(error),
+      }
+
+      this.readyTestReports.set(context.sessionId, failureReport)
+      this.emitLiveProgressUpdate({
+        context,
+        event: {
+          timestamp: completedAt,
+          eventType: WorkspaceLifecycleEventType.WORKSPACE_FAILED,
+          workspaceId: context.workspaceId,
+          sessionId: context.sessionId,
+          actor,
+          action: "Headless test execution failed",
+          reason: "ready_trigger_failed",
+          details: { error: String(error) },
+          correlationId,
+        },
+        statusOverride: "failed",
+        testReport: failureReport,
+      })
+    } finally {
+      this.readyTestRuns.delete(context.sessionId)
+    }
+  }
+
+  /**
+   * Register callback for live progress updates.
+   */
+  onLiveProgress(callback: WorkspaceLiveProgressListener): void {
+    this.liveProgressListeners.add(callback)
+  }
+
+  /**
+   * Get the latest live progress update by session ID.
+   */
+  getLiveProgressBySessionId(sessionId: string): WorkspaceLiveProgressUpdate | undefined {
+    return this.liveProgressSnapshots.get(sessionId)
+  }
+
+  /**
+   * Get the live progress feed for a session ID.
+   */
+  getLiveProgressFeed(sessionId: string): WorkspaceLiveProgressUpdate[] {
+    return [...(this.liveProgressHistory.get(sessionId) || [])]
+  }
+
+  /**
+   * Get the latest ready-state test report by session ID.
+   */
+  getReadyTestReportBySessionId(sessionId: string): WorkspaceReadyTestReport | undefined {
+    return this.readyTestReports.get(sessionId)
   }
 }
 

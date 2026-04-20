@@ -6,6 +6,13 @@
 
 import { describe, it, beforeEach, afterEach, expect, vi } from "vitest"
 import { TenantProfileManager, createTenantProfileManager } from "../../../src/services/tenant-profile-manager"
+import {
+  computeProfileTemplateBundleChecksum,
+  createProfileTemplateBundleManifest,
+  getTemplateBundleFilePath,
+  loadProfileTemplateBundle,
+  validateProfileTemplateBundle,
+} from "../../../src/services/tenant-profile-manager/template-bundles"
 import { ProfileLevel, LockedPolicyKey } from "../../../src/services/tenant-profile-manager/types"
 import * as fs from "fs"
 import * as path from "path"
@@ -600,6 +607,124 @@ describe("TenantProfileManager - Hierarchy and Immutable Policy Tests", () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("immutable")
+    })
+  })
+
+  describe("9. Template Bundle Seeding", () => {
+    it("should seed and sync a versioned baseline bundle", async () => {
+      const bundleDir = path.join(os.tmpdir(), `template-bundle-${Date.now()}`)
+      const profileDir = path.join(os.tmpdir(), `template-profile-${Date.now()}`)
+      await fs.promises.mkdir(bundleDir, { recursive: true })
+      await fs.promises.mkdir(profileDir, { recursive: true })
+
+      try {
+        const bundle = {
+          bundleId: "hardened-baseline-v1",
+          version: "1.0.0",
+          description: "Hardened baseline profile bundle for user projects",
+          owner: "platform",
+          createdAt: 1744934400000,
+          updatedAt: 1744934400000,
+          entries: [
+            {
+              level: ProfileLevel.GLOBAL_POLICY,
+              key: "extensions.ignoreRecommendations",
+              value: true,
+              immutable: true,
+            },
+            {
+              level: ProfileLevel.TEAM_POLICY,
+              key: "governance.ciChecks",
+              value: ["secrets-scan", "lint", "test", "sast-baseline"],
+            },
+            {
+              level: ProfileLevel.WORKSPACE_SETTINGS,
+              key: "workspace.templateBundleId",
+              value: "hardened-baseline-v1",
+            },
+          ],
+          starterPack: {
+            docs: ["docs/STANDARDS.md"],
+            ciChecks: ["scripts/ci/check-docs-metadata.sh"],
+            ssotLinks: [".env.schema.json"],
+          },
+          exceptionPolicy: {
+            policyReference: "docs/ops/PROFILE-TEMPLATE-BUNDLE.md",
+            issueTrackingRequired: true,
+            approvalRequired: true,
+            exceptionIssuePrefix: "template-exception",
+          },
+        }
+
+        const bundlePath = getTemplateBundleFilePath(bundleDir, bundle.bundleId)
+        await fs.promises.writeFile(bundlePath, JSON.stringify(bundle, null, 2), "utf-8")
+
+        const loadedBundle = await loadProfileTemplateBundle(bundlePath)
+        expect(computeProfileTemplateBundleChecksum(loadedBundle)).toMatch(/^sha256:[a-f0-9]{64}$/i)
+
+        const manifest = createProfileTemplateBundleManifest(loadedBundle, "corr-template")
+        expect(manifest.entryCount).toBe(3)
+        expect(manifest.starterPack.docs).toContain("docs/STANDARDS.md")
+
+        const manager = new TenantProfileManager(profileDir, bundleDir)
+        const namespace = manager.getNamespace("kushin77", "alice@example.com", "project-1")
+
+        const seedResult = await manager.seedProfileFromTemplateBundle(namespace, "hardened-baseline-v1", "corr-seed")
+        expect(seedResult.success).toBe(true)
+        expect(seedResult.migratedSettings).toBe(3)
+
+        const syncResult = await manager.syncProfileFromTemplateBundle(namespace, "hardened-baseline-v1", "corr-sync")
+        expect(syncResult.success).toBe(true)
+        expect(syncResult.skippedSettings).toBeGreaterThanOrEqual(1)
+
+        const merged = await manager.mergeProfiles({
+          namespace,
+          roles: ["developer"],
+          org: "kushin77",
+          includeUserPreferences: false,
+          enforceImmutability: true,
+          detectDrift: false,
+          auditLog: false,
+          correlationId: "corr-merge",
+        })
+
+        expect(merged.settings.get("extensions.ignoreRecommendations")?.value).toBe(true)
+        expect(merged.settings.get("governance.ciChecks")?.value).toEqual(["secrets-scan", "lint", "test", "sast-baseline"])
+        expect(merged.settings.get("workspace.templateBundleId")?.value).toBe("hardened-baseline-v1")
+
+        const manifestPath = path.join(namespace.asPath(), "template-bundle-manifest.json")
+        const starterPackPath = path.join(namespace.asPath(), "starter-pack.json")
+        const exceptionPolicyPath = path.join(namespace.asPath(), "exception-policy.json")
+
+        expect(fs.existsSync(manifestPath)).toBe(true)
+        expect(fs.existsSync(starterPackPath)).toBe(true)
+        expect(fs.existsSync(exceptionPolicyPath)).toBe(true)
+
+        const manifestContent = JSON.parse(await fs.promises.readFile(manifestPath, "utf-8"))
+        expect(manifestContent.bundleId).toBe("hardened-baseline-v1")
+      } finally {
+        await fs.promises.rm(bundleDir, { recursive: true, force: true })
+        await fs.promises.rm(profileDir, { recursive: true, force: true })
+      }
+    })
+
+    it("should reject malformed bundle metadata", () => {
+      expect(() => validateProfileTemplateBundle({
+        bundleId: "",
+        version: "1.0.0",
+        description: "broken",
+        owner: "platform",
+        createdAt: 0,
+        updatedAt: 0,
+        entries: [],
+        starterPack: { docs: [], ciChecks: [], ssotLinks: [] },
+        exceptionPolicy: {
+          policyReference: "docs/ops/PROFILE-TEMPLATE-BUNDLE.md",
+          issueTrackingRequired: true,
+          approvalRequired: true,
+          exceptionIssuePrefix: "template-exception",
+        },
+      } as any)).toThrow("Template bundle id is required")
     })
   })
 })

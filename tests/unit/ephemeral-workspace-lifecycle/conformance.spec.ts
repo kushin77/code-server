@@ -10,6 +10,7 @@ import {
   EphemeralWorkspaceLifecycleManager,
   WorkspaceLifecycleState,
   WorkspaceLifecycleEventType,
+  WorkspaceLiveProgressUpdate,
 } from "../../../src/services/ephemeral-workspace-lifecycle"
 
 describe("EphemeralWorkspaceLifecycleManager - Conformance Tests", () => {
@@ -588,7 +589,122 @@ describe("EphemeralWorkspaceLifecycleManager - Conformance Tests", () => {
     })
   })
 
-  describe("11. Multiple Workspaces Concurrently", () => {
+  describe("11. Live Progress Stream", () => {
+    it("should emit live progress updates and surface evidence metadata", async () => {
+      const updates: WorkspaceLiveProgressUpdate[] = []
+      const readyTriggerCalls: string[] = []
+      const orchestrationManager = createEphemeralWorkspaceLifecycleManager({
+        readyTestTrigger: async (context) => {
+          readyTriggerCalls.push(context.sessionId)
+          return [
+            {
+              suite: "headless-validation",
+              status: "passed",
+              durationSeconds: 7,
+              artifactPaths: [
+                "artifacts/e2e-results.json",
+                "artifacts/playwright-report/index.html",
+              ],
+            },
+          ]
+        },
+      })
+
+      orchestrationManager.onLiveProgress((update) => {
+        updates.push(update)
+      })
+
+      await orchestrationManager.createWorkspace({
+        workspaceId: "live-progress-test",
+        sessionId: "session-live",
+        userId,
+        containerName: "live-progress-test",
+        containerPort: 8092,
+        actor: "alice@example.com",
+        correlationId: "live-1",
+      })
+
+      await orchestrationManager.markReady("live-progress-test", "alice@example.com", "live-2")
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(readyTriggerCalls).toContain("session-live")
+
+      const readyReport = orchestrationManager.getReadyTestReportBySessionId("session-live")
+      expect(readyReport).toBeDefined()
+      expect(readyReport?.status).toBe("passed")
+      expect(readyReport?.artifactPaths).toContain("artifacts/e2e-results.json")
+
+      const updateAfterReady = orchestrationManager.getLiveProgressBySessionId("session-live")
+      expect(updateAfterReady?.testReport?.status).toBe("passed")
+
+      await orchestrationManager.recordConnection("live-progress-test", "alice@example.com", "live-3")
+
+      const updateBeforeDelete = orchestrationManager.getLiveProgressBySessionId("session-live")
+      expect(updateBeforeDelete?.status).toBe("running")
+      expect(updateBeforeDelete?.state).toBe(WorkspaceLifecycleState.CONNECTED)
+
+      await orchestrationManager.hardDeleteWorkspace(
+        "live-progress-test",
+        "system",
+        "manual_gc",
+        "live-4"
+      )
+
+      const finalUpdate = orchestrationManager.getLiveProgressBySessionId("session-live")
+      expect(finalUpdate).toBeDefined()
+      expect(finalUpdate?.status).toBe("passed")
+      expect(finalUpdate?.evidence?.manifestChecksum).toBeDefined()
+      expect(finalUpdate?.evidence?.manifestSignature).toBeDefined()
+      expect(finalUpdate?.evidence?.artifactPaths.length).toBeGreaterThan(0)
+      expect(finalUpdate?.testReport?.status).toBe("passed")
+
+      expect(
+        updates.some((update) => update.eventType === WorkspaceLifecycleEventType.WORKSPACE_READY)
+      ).toBe(true)
+      expect(
+        updates.some((update) => update.eventType === WorkspaceLifecycleEventType.WORKSPACE_CONNECTED)
+      ).toBe(true)
+      expect(
+        updates.some((update) => update.eventType === WorkspaceLifecycleEventType.WORKSPACE_HARD_DELETED)
+      ).toBe(true)
+      expect(
+        updates.some((update) => update.testReport?.artifactPaths.includes("artifacts/e2e-results.json"))
+      ).toBe(true)
+      expect(orchestrationManager.getLiveProgressFeed("session-live").length).toBeGreaterThanOrEqual(5)
+    })
+  })
+
+  describe("12. Ready Trigger Timeout", () => {
+    it("should fail closed when headless tests hang past the timeout", async () => {
+      const orchestrationManager = createEphemeralWorkspaceLifecycleManager({
+        readyTestTimeoutSeconds: 0.01,
+        readyTestTrigger: async () => new Promise(() => {}),
+      })
+
+      await orchestrationManager.createWorkspace({
+        workspaceId: "timeout-test",
+        sessionId: "session-timeout",
+        userId,
+        containerName: "timeout-test",
+        containerPort: 8093,
+        actor: "alice@example.com",
+        correlationId: "timeout-1",
+      })
+
+      await orchestrationManager.markReady("timeout-test", "alice@example.com", "timeout-2")
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      const readyReport = orchestrationManager.getReadyTestReportBySessionId("session-timeout")
+      expect(readyReport?.status).toBe("failed")
+      expect(readyReport?.failureReason).toContain("timed out")
+
+      const latestUpdate = orchestrationManager.getLiveProgressBySessionId("session-timeout")
+      expect(latestUpdate?.status).toBe("failed")
+      expect(latestUpdate?.eventType).toBe(WorkspaceLifecycleEventType.WORKSPACE_FAILED)
+    })
+  })
+
+  describe("13. Multiple Workspaces Concurrently", () => {
     it("should handle multiple workspaces independently", async () => {
       const promises = []
 

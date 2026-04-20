@@ -6,7 +6,36 @@ import { MFASetup } from '@/pages/MFASetup'
 import { AdminControlsPage } from '@/pages/AdminControlsPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { EphemeralSessionsPage } from '@/pages/EphemeralSessions'
+import { RepoHomeView } from '@/pages/RepoHomeView'
+import {
+  assessMultiRepoPolicyConformance,
+  buildMultiRepoPolicyAuditRecord,
+  resolveMultiRepoPolicy,
+  serializeMultiRepoPolicy,
+} from '@/utils/multiRepoPolicy'
 import { resolveMultiRepoRollout } from '@/utils/multiRepoRollout'
+import {
+  buildRepoCardActions,
+  createDefaultRepoHomeSnapshot,
+  readRepoHomeSnapshot,
+  RepoCardActionId,
+  RepoHomeSnapshot,
+  refreshRepoHomeSnapshot,
+  writeRepoHomeSnapshot,
+} from '@/utils/repoHomeData'
+import {
+  buildSafeWorkspaceRestorePlan,
+  clearWorkspaceSessionSnapshot,
+  createWorkspaceSessionSnapshot,
+  DEFAULT_RESTORE_PREFERENCES,
+  readWorkspaceRestorePreferences,
+  readWorkspaceSessionSnapshot,
+  scheduleWorkspaceSessionPersist,
+  WorkspaceRestorePreferences,
+  WorkspaceSessionSnapshot,
+  writeWorkspaceRestorePreferences,
+  writeWorkspaceSessionSnapshot,
+} from '@/utils/workspaceSessionPersistence'
 
 type WorkspaceTab = {
   id: string
@@ -34,32 +63,6 @@ type WorkspaceState = {
   activeRepoId: string
   recentRepoIds: string[]
 }
-
-type WorkspaceSessionSnapshot = {
-  activeRepoId: string
-  recentRepoIds: string[]
-  savedAt: number
-}
-
-type WorkspacePolicy = {
-  label: string
-  canSwitchWorkspace: boolean
-  canUseQuickSwitcher: boolean
-  canRestoreSession: boolean
-  canPinWorkspace: boolean
-  maxRecentWorkspaces: number
-}
-
-const DEFAULT_POLICY: WorkspacePolicy = {
-  label: 'Read-only',
-  canSwitchWorkspace: false,
-  canUseQuickSwitcher: false,
-  canRestoreSession: false,
-  canPinWorkspace: false,
-  maxRecentWorkspaces: 1,
-}
-
-const SESSION_SNAPSHOT_KEY = 'workspace-session:snapshot'
 
 function scoreWorkspace(query: string, workspace: WorkspaceTab): number {
   const normalizedQuery = query.trim().toLowerCase()
@@ -108,102 +111,6 @@ function readStoredWorkspaceTabs(): WorkspaceState {
   }
 }
 
-function readStoredWorkspaceSession(): WorkspaceSessionSnapshot | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  try {
-    const rawSnapshot = window.localStorage.getItem(SESSION_SNAPSHOT_KEY)
-    if (!rawSnapshot) {
-      return null
-    }
-
-    const parsedSnapshot = JSON.parse(rawSnapshot) as Partial<WorkspaceSessionSnapshot>
-    if (
-      typeof parsedSnapshot.activeRepoId !== 'string' ||
-      !Array.isArray(parsedSnapshot.recentRepoIds) ||
-      typeof parsedSnapshot.savedAt !== 'number'
-    ) {
-      return null
-    }
-
-    return {
-      activeRepoId: parsedSnapshot.activeRepoId,
-      recentRepoIds: parsedSnapshot.recentRepoIds.filter((recentRepoId): recentRepoId is string => typeof recentRepoId === 'string'),
-      savedAt: parsedSnapshot.savedAt,
-    }
-  } catch {
-    return null
-  }
-}
-
-function saveWorkspaceSession(snapshot: WorkspaceSessionSnapshot): void {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  window.localStorage.setItem(SESSION_SNAPSHOT_KEY, JSON.stringify(snapshot))
-}
-
-function clearWorkspaceSession(): void {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  window.localStorage.removeItem(SESSION_SNAPSHOT_KEY)
-}
-
-function deriveWorkspacePolicy(roleIds: string[]): WorkspacePolicy {
-  const normalizedRoles = new Set(roleIds.map((roleId) => roleId.toLowerCase()))
-
-  if (normalizedRoles.has('admin')) {
-    return {
-      label: 'Admin',
-      canSwitchWorkspace: true,
-      canUseQuickSwitcher: true,
-      canRestoreSession: true,
-      canPinWorkspace: true,
-      maxRecentWorkspaces: 3,
-    }
-  }
-
-  if (normalizedRoles.has('developer')) {
-    return {
-      label: 'Developer',
-      canSwitchWorkspace: true,
-      canUseQuickSwitcher: true,
-      canRestoreSession: true,
-      canPinWorkspace: false,
-      maxRecentWorkspaces: 3,
-    }
-  }
-
-  if (normalizedRoles.has('reviewer')) {
-    return {
-      label: 'Reviewer',
-      canSwitchWorkspace: true,
-      canUseQuickSwitcher: true,
-      canRestoreSession: false,
-      canPinWorkspace: false,
-      maxRecentWorkspaces: 2,
-    }
-  }
-
-  if (normalizedRoles.has('auditor')) {
-    return {
-      label: 'Auditor',
-      canSwitchWorkspace: false,
-      canUseQuickSwitcher: false,
-      canRestoreSession: false,
-      canPinWorkspace: false,
-      maxRecentWorkspaces: 1,
-    }
-  }
-
-  return DEFAULT_POLICY
-}
-
 const getWorkspaceById = (workspaceId: string): WorkspaceTab | undefined =>
   ALL_WORKSPACES.find((workspace) => workspace.id === workspaceId)
 
@@ -211,12 +118,45 @@ function useWorkspaceState() {
   const [{ activeRepoId, recentRepoIds }, setWorkspaceState] = useState<WorkspaceState>(readStoredWorkspaceTabs)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [switcherQuery, setSwitcherQuery] = useState('')
-  const [sessionSnapshot, setSessionSnapshot] = useState<WorkspaceSessionSnapshot | null>(readStoredWorkspaceSession)
+  const [sessionSnapshot, setSessionSnapshot] = useState<WorkspaceSessionSnapshot | null>(() =>
+    readWorkspaceSessionSnapshot(typeof window === 'undefined' ? undefined : window.localStorage)
+  )
+  const [restorePreferences, setRestorePreferences] = useState<WorkspaceRestorePreferences>(() =>
+    readWorkspaceRestorePreferences(typeof window === 'undefined' ? undefined : window.localStorage)
+  )
   const [restoreNotice, setRestoreNotice] = useState<string | null>(null)
+  const [actionNotice, setActionNotice] = useState<string | null>(null)
+  const [repoHomeSnapshot, setRepoHomeSnapshot] = useState<RepoHomeSnapshot>(() => {
+    if (typeof window === 'undefined') {
+      return createDefaultRepoHomeSnapshot()
+    }
+
+    return readRepoHomeSnapshot(window.localStorage) ?? createDefaultRepoHomeSnapshot()
+  })
   const { user } = useAuthStore()
-  const workspacePolicy = useMemo(() => deriveWorkspacePolicy(user?.roles.map((role) => role.roleId) ?? []), [user])
+  const workspacePolicy = useMemo(() => resolveMultiRepoPolicy(user?.roles.map((role) => role.roleId) ?? []), [user])
   const rolloutDecision = useMemo(() => resolveMultiRepoRollout(user?.id ?? null), [user?.id])
-  const multiRepoNavigationEnabled = workspacePolicy.canSwitchWorkspace && rolloutDecision.enabled
+  const multiRepoTabsEnabled = workspacePolicy.canSwitchWorkspace && rolloutDecision.enabled && rolloutDecision.capabilities.tabs
+  const multiRepoSwitcherEnabled =
+    workspacePolicy.canUseQuickSwitcher && rolloutDecision.enabled && rolloutDecision.capabilities.switcher
+  const multiRepoPersistenceEnabled =
+    workspacePolicy.canRestoreSession && rolloutDecision.enabled && rolloutDecision.capabilities.persistence
+  const policyReport = useMemo(
+    () =>
+      assessMultiRepoPolicyConformance(workspacePolicy, {
+        recentRepoIds,
+        requestedCapabilities: {
+          tabs: multiRepoTabsEnabled,
+          switcher: multiRepoSwitcherEnabled,
+          persistence: multiRepoPersistenceEnabled,
+        },
+      }),
+    [multiRepoPersistenceEnabled, multiRepoSwitcherEnabled, multiRepoTabsEnabled, recentRepoIds, workspacePolicy]
+  )
+  const repoCardIndex = useMemo(
+    () => new Map(repoHomeSnapshot.cards.map((card) => [card.id, card] as const)),
+    [repoHomeSnapshot.cards]
+  )
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -225,8 +165,57 @@ function useWorkspaceState() {
 
     window.localStorage.setItem(WORKSPACE_STORAGE_KEY, activeRepoId)
     window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(recentRepoIds))
-    saveWorkspaceSession({ activeRepoId, recentRepoIds, savedAt: Date.now() })
+    scheduleWorkspaceSessionPersist(() => {
+      writeWorkspaceSessionSnapshot(
+        window.localStorage,
+        createWorkspaceSessionSnapshot({
+          activeRepoId,
+          recentRepoIds,
+          branchRef: (repoCardIndex.get(activeRepoId)?.status.branch ?? getWorkspaceById(activeRepoId)?.branch ?? 'main'),
+        })
+      )
+    })
   }, [activeRepoId, recentRepoIds])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    writeWorkspaceRestorePreferences(window.localStorage, restorePreferences)
+  }, [restorePreferences])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem('workspace-tabs:policy-definition', serializeMultiRepoPolicy(workspacePolicy))
+    window.localStorage.setItem(
+      'workspace-tabs:policy-audit',
+      JSON.stringify(buildMultiRepoPolicyAuditRecord(workspacePolicy, policyReport))
+    )
+  }, [policyReport, workspacePolicy])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    writeRepoHomeSnapshot(window.localStorage, repoHomeSnapshot)
+  }, [repoHomeSnapshot])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const refreshHandle = window.setInterval(() => {
+      setRepoHomeSnapshot((currentSnapshot) => refreshRepoHomeSnapshot(currentSnapshot, Date.now()))
+    }, repoHomeSnapshot.refreshIntervalMs)
+
+    return () => window.clearInterval(refreshHandle)
+  }, [repoHomeSnapshot.refreshIntervalMs])
 
   const visibleRecentWorkspaces = useMemo(() => {
     return recentRepoIds
@@ -253,6 +242,7 @@ function useWorkspaceState() {
   }, [switcherQuery])
 
   const activeWorkspace = getWorkspaceById(activeRepoId) ?? PINNED_WORKSPACES[0]
+  const activeRepoCard = repoCardIndex.get(activeRepoId)
 
   useEffect(() => {
     if (!sessionSnapshot) {
@@ -261,14 +251,14 @@ function useWorkspaceState() {
 
     if (!getWorkspaceById(sessionSnapshot.activeRepoId)) {
       setRestoreNotice('Saved workspace session was invalid and has been discarded')
-      clearWorkspaceSession()
+      clearWorkspaceSessionSnapshot(typeof window === 'undefined' ? undefined : window.localStorage)
       setSessionSnapshot(null)
     }
   }, [sessionSnapshot])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!multiRepoNavigationEnabled) {
+      if (!multiRepoSwitcherEnabled) {
         return
       }
 
@@ -284,7 +274,7 @@ function useWorkspaceState() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [multiRepoNavigationEnabled])
+  }, [multiRepoSwitcherEnabled])
 
   const selectWorkspace = (workspaceId: string) => {
     const selectedWorkspace = getWorkspaceById(workspaceId)
@@ -292,7 +282,7 @@ function useWorkspaceState() {
       return
     }
 
-    if (!multiRepoNavigationEnabled) {
+    if (!multiRepoTabsEnabled) {
       setRestoreNotice(`Pilot ${rolloutDecision.cohort} does not allow workspace switching (${rolloutDecision.reason})`)
       return
     }
@@ -309,45 +299,109 @@ function useWorkspaceState() {
     })
     setSwitcherOpen(false)
     setSwitcherQuery('')
+    setActionNotice(null)
     setRestoreNotice(`Restored ${selectedWorkspace.label} from the saved workspace session`)
   }
 
+  const performRepoAction = (workspaceId: string, actionId: RepoCardActionId) => {
+    const targetCard = repoCardIndex.get(workspaceId)
+    if (!targetCard) {
+      return
+    }
+
+    const action = buildRepoCardActions(targetCard, workspacePolicy, activeRepoId).find((candidate) => candidate.id === actionId)
+    if (!action) {
+      return
+    }
+
+    if (action.disabled) {
+      setActionNotice(action.reason ?? 'This action is currently unavailable')
+      return
+    }
+
+    switch (actionId) {
+      case 'open':
+      case 'switch':
+        selectWorkspace(workspaceId)
+        setActionNotice(`${actionId === 'open' ? 'Opened' : 'Switched to'} ${targetCard.label}`)
+        return
+      case 'pull':
+        setActionNotice(`Pull queued for ${targetCard.label}. Continue from branch ${targetCard.status.branch} in the active terminal.`)
+        return
+      case 'pullRequests':
+        window.open(targetCard.links.pullRequests, '_blank', 'noopener,noreferrer')
+        setActionNotice(`Opened pull requests for ${targetCard.label}`)
+        return
+      case 'issues':
+        window.open(targetCard.links.issues, '_blank', 'noopener,noreferrer')
+        setActionNotice(`Opened issues for ${targetCard.label}`)
+        return
+      case 'runbook':
+        window.open(targetCard.links.runbook, '_blank', 'noopener,noreferrer')
+        setActionNotice(`Opened the runbook for ${targetCard.label}`)
+        return
+      default:
+        return
+    }
+  }
+
   const restoreSavedSession = () => {
-    const savedSession = readStoredWorkspaceSession()
+    const savedSession = readWorkspaceSessionSnapshot(typeof window === 'undefined' ? undefined : window.localStorage)
     if (!savedSession) {
       setRestoreNotice('No saved workspace session was found')
       return
     }
 
-    if (!workspacePolicy.canRestoreSession) {
-      setRestoreNotice(`Policy ${workspacePolicy.label} does not allow session restore`)
+    if (!multiRepoPersistenceEnabled) {
+      setRestoreNotice(`Pilot ${rolloutDecision.cohort} does not allow session restore (${rolloutDecision.reason})`)
       return
     }
 
     const restoredWorkspace = getWorkspaceById(savedSession.activeRepoId)
     if (!restoredWorkspace) {
       setRestoreNotice('Saved workspace session was invalid and could not be restored')
-      clearWorkspaceSession()
+      clearWorkspaceSessionSnapshot(typeof window === 'undefined' ? undefined : window.localStorage)
       setSessionSnapshot(null)
       return
     }
 
-    const nextRecentRepoIds = savedSession.recentRepoIds
+    const restorePlan = buildSafeWorkspaceRestorePlan(savedSession, restorePreferences, false)
+
+    const nextRecentRepoIds = restorePlan.recentRepoIds
       .filter((workspaceId) => !PINNED_WORKSPACES.some((workspace) => workspace.id === workspaceId))
       .slice(0, workspacePolicy.maxRecentWorkspaces)
 
     setWorkspaceState({
-      activeRepoId: savedSession.activeRepoId,
+      activeRepoId: restorePlan.activeRepoId,
       recentRepoIds: nextRecentRepoIds,
     })
     setSessionSnapshot(savedSession)
-    setRestoreNotice(`Restored the saved session for ${restoredWorkspace.label}`)
+    setActionNotice(null)
+    const disabledModules = Object.entries(restorePreferences)
+      .filter(([, enabled]) => !enabled)
+      .map(([moduleName]) => moduleName)
+
+    setRestoreNotice(
+      disabledModules.length > 0
+        ? `Restored ${restoredWorkspace.label} with partial modules disabled: ${disabledModules.join(', ')}`
+        : `Restored the saved session for ${restoredWorkspace.label}`
+    )
   }
 
   const forgetSavedSession = () => {
-    clearWorkspaceSession()
+    clearWorkspaceSessionSnapshot(typeof window === 'undefined' ? undefined : window.localStorage)
     setSessionSnapshot(null)
     setRestoreNotice('Saved workspace session cleared')
+  }
+
+  const setRestorePreference = (moduleName: keyof WorkspaceRestorePreferences, enabled: boolean) => {
+    if (moduleName === 'terminals' && enabled) {
+      setRestoreNotice('Unsafe terminal replay is blocked by default in pilot mode')
+      setRestorePreferences((currentPreferences) => ({ ...currentPreferences, terminals: false }))
+      return
+    }
+
+    setRestorePreferences((currentPreferences) => ({ ...currentPreferences, [moduleName]: enabled }))
   }
 
   return {
@@ -360,157 +414,28 @@ function useWorkspaceState() {
     visibleRecentWorkspaces,
     switcherResults,
     activeWorkspace,
+    activeRepoCard,
     sessionSnapshot,
     restoreNotice,
+    actionNotice,
+    repoHomeSnapshot,
     selectWorkspace,
+    performRepoAction,
     restoreSavedSession,
     forgetSavedSession,
+    restorePreferences,
+    setRestorePreference,
     workspacePolicy,
+    policyReport,
     rolloutDecision,
-    multiRepoNavigationEnabled,
+    multiRepoNavigationEnabled: multiRepoTabsEnabled,
+    multiRepoTabsEnabled,
+    multiRepoSwitcherEnabled,
+    multiRepoPersistenceEnabled,
   }
 }
 
-type WorkspaceStateHandle = ReturnType<typeof useWorkspaceState>
-
-const RepoHomeView: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ workspaceState }) => {
-  const {
-    activeWorkspace,
-    visibleRecentWorkspaces,
-    selectWorkspace,
-    setSwitcherOpen,
-    sessionSnapshot,
-    restoreNotice,
-    restoreSavedSession,
-    forgetSavedSession,
-    workspacePolicy,
-    rolloutDecision,
-    multiRepoNavigationEnabled,
-  } = workspaceState
-  const allWorkspaceCards = useMemo(() => [...PINNED_WORKSPACES, ...visibleRecentWorkspaces], [visibleRecentWorkspaces])
-
-  return (
-    <section className="mx-auto max-w-7xl px-4 py-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-100">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">Multi-repo home</p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">Repo cards and jump actions</h2>
-            <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              The home surface shows pinned workspaces, recent workspaces, and one-click actions to switch, inspect, or reopen the active repo.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-sky-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Active workspace</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900">{activeWorkspace.label}</p>
-              <p className="text-sm text-slate-600">Branch: {activeWorkspace.branch}</p>
-            </div>
-            <div className="rounded-2xl bg-emerald-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Jump actions</p>
-              <p className="mt-1 text-sm text-slate-700">Open, switch, or revisit recent repos from one surface.</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          {allWorkspaceCards.map((workspace) => {
-            const isActive = workspace.id === activeWorkspace.id
-            return (
-              <article
-                key={workspace.id}
-                className={`rounded-2xl border p-4 transition ${
-                  isActive ? 'border-sky-500 bg-sky-50 shadow-sm' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{workspace.label}</p>
-                    <p className="text-xs text-slate-500">{workspace.id}</p>
-                  </div>
-                  <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    {workspace.pinned ? 'Pinned' : 'Recent'}
-                  </span>
-                </div>
-                <div className="mt-3 space-y-2 text-sm text-slate-600">
-                  <p>Branch: {workspace.branch}</p>
-                  <p>Status: {isActive ? 'Active' : 'Ready'}</p>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => selectWorkspace(workspace.id)}
-                    disabled={!multiRepoNavigationEnabled}
-                    className="rounded-full bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Switch
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => multiRepoNavigationEnabled && setSwitcherOpen(true)}
-                    disabled={!multiRepoNavigationEnabled}
-                    className="rounded-full border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Jump via search
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-        </div>
-
-        <div className="mt-6 rounded-2xl border border-dashed border-sky-200 bg-sky-50 px-4 py-4">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">Rollout pilot</p>
-              <p className="mt-1 text-sm text-slate-700">
-                Mode: <span className="font-semibold text-slate-900">{rolloutDecision.mode}</span> · Cohort: <span className="font-semibold text-slate-900">{rolloutDecision.cohort}</span>
-              </p>
-              <p className="text-xs text-slate-500">{rolloutDecision.reason}</p>
-            </div>
-            <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
-              Multi-repo nav: {multiRepoNavigationEnabled ? 'enabled' : 'pilot only'}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Session restore</p>
-              <p className="mt-1 text-sm text-slate-700">
-                Saved snapshot {sessionSnapshot ? `from ${new Date(sessionSnapshot.savedAt).toLocaleString()}` : 'not available'}
-              </p>
-              <p className="text-xs text-slate-500">
-                The app stores the active repo and recent repos locally and falls back to defaults if the snapshot is missing or corrupted.
-              </p>
-              {restoreNotice ? <p className="mt-2 text-sm font-medium text-emerald-700">{restoreNotice}</p> : null}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={restoreSavedSession}
-                disabled={!workspacePolicy.canRestoreSession || !multiRepoNavigationEnabled}
-                className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Restore session
-              </button>
-              <button
-                type="button"
-                onClick={forgetSavedSession}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-              >
-                Clear snapshot
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
+export type WorkspaceStateHandle = ReturnType<typeof useWorkspaceState>
 
 const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ workspaceState }) => {
   const {
@@ -524,6 +449,8 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
     activeWorkspace,
     selectWorkspace,
     workspacePolicy,
+    multiRepoTabsEnabled,
+    multiRepoSwitcherEnabled,
   } = workspaceState
 
   return (
@@ -542,7 +469,7 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
           <button
             type="button"
             onClick={() => setSwitcherOpen(true)}
-            disabled={!workspacePolicy.canUseQuickSwitcher}
+            disabled={!multiRepoSwitcherEnabled}
             className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-400 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span>Quick switcher</span>
@@ -557,7 +484,7 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
                 key={workspace.id}
                 type="button"
                 onClick={() => selectWorkspace(workspace.id)}
-                disabled={!workspacePolicy.canSwitchWorkspace}
+                disabled={!multiRepoTabsEnabled}
                 className={`rounded-full border px-3 py-2 text-sm font-medium transition ${
                   workspace.id === activeRepoId
                     ? 'border-sky-600 bg-sky-600 text-white shadow-sm'
@@ -580,6 +507,7 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
                   key={workspace.id}
                   type="button"
                   onClick={() => selectWorkspace(workspace.id)}
+                    disabled={!multiRepoTabsEnabled}
                   className={`rounded-full border px-3 py-2 text-sm transition ${
                     workspace.id === activeRepoId
                       ? 'border-emerald-600 bg-emerald-600 text-white'
@@ -637,7 +565,7 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
                     key={workspace.id}
                     type="button"
                     onClick={() => selectWorkspace(workspace.id)}
-                    disabled={!workspacePolicy.canSwitchWorkspace}
+                    disabled={!multiRepoSwitcherEnabled}
                     className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
                       workspace.id === activeRepoId
                         ? 'border-sky-500 bg-sky-50'

@@ -166,13 +166,10 @@ describe('auth-sw-register', () => {
   });
 
   describe('message handling from SW', () => {
-    let messageHandler: ((event: string, handler: (e: MessageEvent) => void) => void) | undefined;
-
     beforeEach(async () => {
       mockNavigatorSW.addEventListener = vi.fn((event, handler) => {
-        if (event === 'message') {
-          messageHandler = handler;
-        }
+        void event;
+        void handler;
       });
 
       await registerAuthServiceWorker();

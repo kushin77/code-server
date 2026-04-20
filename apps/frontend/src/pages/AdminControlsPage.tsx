@@ -21,6 +21,7 @@ interface PolicyControl {
   owner: string
   lastChangedAt: string | null
   lastChangedBy: string | null
+
 }
 
 interface PolicyApprovalRequest {

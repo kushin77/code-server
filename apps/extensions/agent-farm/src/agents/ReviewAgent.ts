@@ -5,6 +5,7 @@ export class ReviewAgent extends Agent {
   readonly domain = 'Code Quality & Best Practices';
 
   async analyze(context: CodeContext): Promise<AgentOutput> {
+    void context;
     this.log('Performing code review...');
 
     const recommendations: string[] = [];
@@ -57,6 +58,8 @@ export class ReviewAgent extends Agent {
     context: MultiAgentContext,
     previousResults: AgentOutput[]
   ): Promise<void> {
+    void context;
+    void previousResults;
     this.log('Reviewing code quality issues from other agents...');
     // Implementation for multi-agent coordination
   }

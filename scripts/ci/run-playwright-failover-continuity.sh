@@ -12,7 +12,10 @@ source "$SCRIPT_DIR/../_common/init.sh"
 E2E_DIR="${E2E_DIR:-tests/e2e}"
 PLAYWRIGHT_STORAGE_STATE="${PLAYWRIGHT_STORAGE_STATE:-}"
 FAILOVER_WAIT_MS="${FAILOVER_WAIT_MS:-45000}"
-TEST_BASE_URL="${TEST_BASE_URL:-https://ide.kushnir.cloud}"
+APEX_DOMAIN="${APEX_DOMAIN:-localhost}"
+IDE_DOMAIN="${IDE_DOMAIN:-ide.${APEX_DOMAIN}}"
+TEST_BASE_URL="${TEST_BASE_URL:-https://${IDE_DOMAIN}}"
+EXPECTED_BASE_HOST="${EXPECTED_BASE_HOST:-${IDE_DOMAIN}}"
 FAILOVER_TRIGGER_CMD="${FAILOVER_TRIGGER_CMD:-}"
 CONTINUITY_MODE="${CONTINUITY_MODE:-auth}"
 DETERMINISTIC_E2E_RUNNER="$SCRIPT_DIR/run-deterministic-e2e-suite.sh"
@@ -97,18 +100,19 @@ cat > "$E2E_DIR/specs/failover-session-continuity.spec.ts" << 'EOF'
 import { test, expect } from '@playwright/test';
 
 const waitMs = Number(process.env.FAILOVER_WAIT_MS || '45000');
+const expectedBaseHost = process.env.EXPECTED_BASE_HOST || '';
 
 test('unauthenticated continuity across failover window', async ({ page }) => {
   const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(response).not.toBeNull();
   expect([200, 301, 302, 303, 307, 308, 401, 403]).toContain(response?.status() || 0);
-  expect(page.url()).toMatch(/kushnir\.cloud/);
+  expect(page.url()).toContain(expectedBaseHost);
 
   await page.waitForTimeout(waitMs);
   const reloadResponse = await page.reload({ waitUntil: 'domcontentloaded' });
   expect(reloadResponse).not.toBeNull();
   expect([200, 301, 302, 303, 307, 308, 401, 403]).toContain(reloadResponse?.status() || 0);
-  expect(page.url()).toMatch(/kushnir\.cloud/);
+  expect(page.url()).toContain(expectedBaseHost);
 });
 EOF
 fi
@@ -123,6 +127,7 @@ if [[ -n "$NPX_CMD" ]]; then
   (
     cd "$E2E_DIR"
     TEST_BASE_URL="$TEST_BASE_URL" \
+    EXPECTED_BASE_HOST="$EXPECTED_BASE_HOST" \
     FAILOVER_WAIT_MS="$FAILOVER_WAIT_MS" \
     CONTINUITY_MODE="$CONTINUITY_MODE" \
     PLAYWRIGHT_STORAGE_STATE="$PLAYWRIGHT_STORAGE_STATE" \

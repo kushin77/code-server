@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   issues: write
+  id-token: write
 
 jobs:
   terraform-drift-detection:
@@ -23,6 +24,22 @@ jobs:
         with:
           terraform_version: ~1.5
 
+      - name: Validate OIDC role configuration
+        run: |
+          if [[ -z "${TF_STATE_ROLE_ARN}" ]]; then
+            echo "::error::Missing TF_STATE_ROLE_ARN (set repository variable or secret)."
+            exit 1
+          fi
+        env:
+          TF_STATE_ROLE_ARN: ${{ vars.TF_STATE_ROLE_ARN || secrets.TF_STATE_ROLE_ARN }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+        with:
+          role-to-assume: ${{ vars.TF_STATE_ROLE_ARN || secrets.TF_STATE_ROLE_ARN }}
+          aws-region: ${{ vars.TF_STATE_AWS_REGION || 'us-east-1' }}
+          role-session-name: terraform-drift-detection
+
       - name: Terraform Format Check
         id: fmt
         run: |
@@ -35,10 +52,6 @@ jobs:
         run: |
           cd terraform
           terraform init
-        env:
-          # Provide S3-compatible backend credentials if needed
-          AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
         continue-on-error: true
 
       - name: Terraform Validate
@@ -56,9 +69,6 @@ jobs:
           EXIT_CODE=${EXIT_CODE:-$?}
           echo "terraform_exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
           echo "Has changes: $([ $EXIT_CODE -eq 2 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
         continue-on-error: true
 
       - name: Generate Plan Summary

@@ -44,6 +44,7 @@ export class ResiliencePhase11Agent extends Agent {
 
   constructor(context: any) {
     super();
+    void context;
     this.chaosEngineer = new ChaosEngineer();
   }
 
@@ -270,6 +271,7 @@ export class ResiliencePhase11Agent extends Agent {
    * Implement abstract analyze method
    */
   async analyze(context: CodeContext): Promise<AgentOutput> {
+    void context;
     this.log('Analyzing system resilience');
     const status = this.getResilienceStatus();
     return this.formatOutput(
@@ -289,6 +291,8 @@ export class ResiliencePhase11Agent extends Agent {
     context: MultiAgentContext,
     previousResults: AgentOutput[]
   ): Promise<void> {
+    void context;
+    void previousResults;
     this.log('Coordinating resilience monitoring with other agents');
     // Stub implementation for multi-agent coordination
   }

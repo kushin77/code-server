@@ -27,6 +27,9 @@ sources:
       postgres: '{job="postgres", level=~"ERROR|FATAL"}'
       redis: '{job="redis", level=~"ERROR|FATAL"}'
       caddy: '{job="caddy", level=~"ERROR|FATAL"}'
+      cloudflared: '{job=~"cloudflared|caddy|oauth2-proxy"} |~ "(?i)(cloudflare|edge|waf|tunnel|origin|access denied|device posture|zero trust|tls|certificate|handshake|ray id)"'
+      kubernetes: '{job=~"kubelet|kubernetes|containerd|docker|cadvisor"} |~ "(?i)(crashloopbackoff|back-off restarting failed container|failed scheduling|evicted|readiness probe failed|liveness probe failed|imagepullbackoff|errimagepull|oomkilled|seccomp|apparmor|admission denied)"'
+      falco: '{job=~"falco|falco-sidekick"} |~ "(?i)(falco|priority|rule|shell spawned in container|privileged container|sensitive file|unexpected network connection|terminal shell in container|write below /etc|known bad binary|contact k8s api server from container)"'
       prometheus: '{job="prometheus", level=~"ERROR|FATAL"}'
       loki: '{job="loki", level=~"ERROR|FATAL"}'
       oauth2_proxy: '{job="oauth2-proxy", level=~"ERROR|FATAL"}'
@@ -70,6 +73,27 @@ github:
       labels:
         - "error-triage"
         - "infrastructure"
+        - "{severity}"
+
+    cloudflare:
+      labels:
+        - "error-triage"
+        - "source:cloudflare"
+        - "infrastructure"
+        - "{severity}"
+
+    kubernetes:
+      labels:
+        - "error-triage"
+        - "source:kubernetes"
+        - "infrastructure"
+        - "{severity}"
+
+    falco:
+      labels:
+        - "error-triage"
+        - "source:falco"
+        - "security"
         - "{severity}"
     
     application:

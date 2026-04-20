@@ -128,6 +128,11 @@ Security audit and compliance verification:
 
 - `security-audit.sh` - Run security audit checks ✅ ACTIVE
 - `audit-logging.sh` - Configure audit logging ✅ ACTIVE
+- `route-security-audit-events.sh` - Export audit logs and route security findings ✅ ACTIVE
+- `dast-scan.sh` - Run lightweight DAST checks and emit ZAP-compatible JSON ✅ ACTIVE
+- `cloudflare-log-triage.sh` - Classify Cloudflare edge/auth/TLS/WAF/tunnel signals into deduplicated issues ✅ ACTIVE
+- `kubernetes-log-triage.sh` - Classify Kubernetes runtime/scheduling/health/image-pull/runtime-policy signals into deduplicated issues ✅ ACTIVE
+- `test-failure-triage.sh` - Route failed unit/integration/E2E results into deduplicated GitHub issues ✅ ACTIVE
 - `audit-compliance-report.sh` - Generate compliance report (✅ ACTIVE, requires credentials)
 - `CRASH_VULNERABILITY_SCAN.md` - Vulnerability scan procedures (documentation)
 - `CRASH_QUICK_REFERENCE.md` - Quick reference for incident handling (documentation)

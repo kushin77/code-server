@@ -37,6 +37,7 @@ export class QueryUnderstanding {
 
   private extractEntities(query: string): string[] {
     // Stub: Extract code entities (functions, classes, files)
+    void query
     return [];
   }
 

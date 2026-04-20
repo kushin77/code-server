@@ -88,27 +88,7 @@ export class ResourceConstraintManager {
 
     if (!quota || !usage || !workload) return undefined;
 
-    // Check if resources are available
-    const cpuAvailable = quota.cpuLimit - usage.cpuUsed >= workload.estimatedCpu;
-    const memoryAvailable = quota.memoryLimit - usage.memoryUsed >= workload.estimatedMemory;
-    const storageAvailable = quota.storageLimit - usage.storageUsed >= workload.estimatedStorage;
-    const networkAvailable = quota.networkLimit - usage.networkUsed >= workload.estimatedNetworkUsage;
-    const txnAvailable = quota.concurrentTransactions - usage.activeTransactions >= 1;
-
-    let canAllocate = true;
-
-    // Priority-based resource contention handling
-    if (workload.priority === 'critical') {
-      // Critical workloads can preempt others (simplified: just check minimum)
-      canAllocate = cpuAvailable || memoryAvailable;
-    } else if (workload.priority === 'high') {
-      canAllocate = cpuAvailable && memoryAvailable && txnAvailable;
-    } else if (workload.priority === 'medium') {
-      canAllocate = cpuAvailable && memoryAvailable && storageAvailable && txnAvailable;
-    } else {
-      // Low priority: all resources must be available
-      canAllocate = cpuAvailable && memoryAvailable && storageAvailable && networkAvailable && txnAvailable;
-    }
+    const canAllocate = this.canAllocateWorkload(quota, usage, workload);
 
     if (!canAllocate) {
       return undefined;
@@ -136,6 +116,86 @@ export class ResourceConstraintManager {
 
     this.allocations.set(`${workloadId}-${nodeId}`, allocation);
     return allocation;
+  }
+
+  private canAllocateWorkload(
+    quota: ResourceQuota,
+    usage: ResourceUsage,
+    workload: WorkloadPriority
+  ): boolean {
+    const capacity = this.getCapacitySnapshot(quota, usage, workload);
+
+    switch (workload.priority) {
+      case 'critical':
+        return this.canAllocateCritical(capacity);
+      case 'high':
+        return this.canAllocateHigh(capacity);
+      case 'medium':
+        return this.canAllocateMedium(capacity);
+      case 'low':
+      default:
+        return this.canAllocateLow(capacity);
+    }
+  }
+
+  private getCapacitySnapshot(
+    quota: ResourceQuota,
+    usage: ResourceUsage,
+    workload: WorkloadPriority
+  ): {
+    cpuAvailable: boolean;
+    memoryAvailable: boolean;
+    storageAvailable: boolean;
+    networkAvailable: boolean;
+    txnAvailable: boolean;
+  } {
+    return {
+      cpuAvailable: quota.cpuLimit - usage.cpuUsed >= workload.estimatedCpu,
+      memoryAvailable: quota.memoryLimit - usage.memoryUsed >= workload.estimatedMemory,
+      storageAvailable: quota.storageLimit - usage.storageUsed >= workload.estimatedStorage,
+      networkAvailable: quota.networkLimit - usage.networkUsed >= workload.estimatedNetworkUsage,
+      txnAvailable: quota.concurrentTransactions - usage.activeTransactions >= 1,
+    };
+  }
+
+  private canAllocateCritical(capacity: {
+    cpuAvailable: boolean;
+    memoryAvailable: boolean;
+  }): boolean {
+    return capacity.cpuAvailable || capacity.memoryAvailable;
+  }
+
+  private canAllocateHigh(capacity: {
+    cpuAvailable: boolean;
+    memoryAvailable: boolean;
+    txnAvailable: boolean;
+  }): boolean {
+    return capacity.cpuAvailable && capacity.memoryAvailable && capacity.txnAvailable;
+  }
+
+  private canAllocateMedium(capacity: {
+    cpuAvailable: boolean;
+    memoryAvailable: boolean;
+    storageAvailable: boolean;
+    txnAvailable: boolean;
+  }): boolean {
+    return capacity.cpuAvailable && capacity.memoryAvailable && capacity.storageAvailable && capacity.txnAvailable;
+  }
+
+  private canAllocateLow(capacity: {
+    cpuAvailable: boolean;
+    memoryAvailable: boolean;
+    storageAvailable: boolean;
+    networkAvailable: boolean;
+    txnAvailable: boolean;
+  }): boolean {
+    return (
+      capacity.cpuAvailable &&
+      capacity.memoryAvailable &&
+      capacity.storageAvailable &&
+      capacity.networkAvailable &&
+      capacity.txnAvailable
+    );
   }
 
   /**

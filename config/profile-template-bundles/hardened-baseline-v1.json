@@ -1,0 +1,87 @@
+{
+  "bundleId": "hardened-baseline-v1",
+  "version": "1.0.0",
+  "description": "Hardened baseline profile bundle for user projects created from the code-server profile.",
+  "owner": "platform",
+  "createdAt": 1744934400000,
+  "updatedAt": 1744934400000,
+  "entries": [
+    {
+      "level": 5,
+      "key": "extensions.ignoreRecommendations",
+      "value": true,
+      "immutable": true,
+      "description": "Do not allow projects to re-enable extension recommendations by default."
+    },
+    {
+      "level": 5,
+      "key": "extensions.recommendations",
+      "value": ["ms-vscode.vscode-typescript-next", "ms-azuretools.vscode-docker"],
+      "immutable": true,
+      "description": "Safe starter extension recommendations for project bootstrap."
+    },
+    {
+      "level": 3,
+      "key": "governance.ciChecks",
+      "value": ["secrets-scan", "lint", "test", "sast-baseline"],
+      "description": "Inherited CI checks required for every seeded project."
+    },
+    {
+      "level": 3,
+      "key": "governance.ssotLinks",
+      "value": [".env.schema.json", "CONFIG-SSOT-MASTER.md", "docs/STANDARDS.md"],
+      "description": "Single source of truth links that should remain visible in seeded projects."
+    },
+    {
+      "level": 2,
+      "key": "workspace.templateBundleVersion",
+      "value": "1.0.0",
+      "description": "Version tag recorded inside each seeded workspace."
+    },
+    {
+      "level": 2,
+      "key": "workspace.templateBundleId",
+      "value": "hardened-baseline-v1",
+      "description": "Bundle id recorded inside each seeded workspace."
+    },
+    {
+      "level": 2,
+      "key": "workspace.starterDocs",
+      "value": [
+        "docs/STANDARDS.md",
+        "docs/ops/SESSION-FINOPS-GUARDRAILS.md",
+        "docs/security/session-provenance-contract.md"
+      ],
+      "description": "Docs/instruction starter pack that follows each new seeded project."
+    },
+    {
+      "level": 2,
+      "key": "workspace.exceptionPolicy",
+      "value": "docs/ops/PROFILE-TEMPLATE-BUNDLE.md",
+      "description": "Reference document for how template exceptions are handled."
+    }
+  ],
+  "starterPack": {
+    "docs": [
+      "docs/STANDARDS.md",
+      "docs/ops/SESSION-FINOPS-GUARDRAILS.md",
+      "docs/security/session-provenance-contract.md"
+    ],
+    "ciChecks": [
+      "scripts/ci/check-docs-metadata.sh",
+      "scripts/ci/check-hardcoded-ips.sh",
+      "scripts/ci/detect-config-drift.sh"
+    ],
+    "ssotLinks": [
+      ".env.schema.json",
+      "CONFIG-SSOT-MASTER.md",
+      "docs/STANDARDS.md"
+    ]
+  },
+  "exceptionPolicy": {
+    "policyReference": "docs/ops/PROFILE-TEMPLATE-BUNDLE.md",
+    "issueTrackingRequired": true,
+    "approvalRequired": true,
+    "exceptionIssuePrefix": "template-exception"
+  }
+}

@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Button, Input, Alert, Spinner } from '@/components/Common'
+import { Button, Input, Alert } from '@/components/Common'
 import { useLogin } from '@/hooks'
-import { useAuthStore } from '@/store'
 
 interface LoginFormData {
   email: string
@@ -40,7 +39,7 @@ interface RedirectLocationState {
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, verifyMFA, isLoading, error: hookError, mfaRequired } = useLogin()
+  const { login, verifyMFA, isLoading, error: hookError } = useLogin()
 
   const redirectPath = (() => {
     const state = location.state as RedirectLocationState | null

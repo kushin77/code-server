@@ -27,6 +27,7 @@ This document defines the canonical internal DNS naming scheme and enforcement p
 | Code-server IDE | `code-server.svc.internal` | 8080 | HTTP/WS |
 | OAuth2 Proxy | `oauth2-proxy.svc.internal` | 4180 | HTTP |
 | Caddy (Reverse Proxy) | `caddy.svc.internal` | 80, 443 | HTTP/HTTPS |
+| Windows IDE backend | `windows-ide.prod.internal` | `192.168.168.174` | HTTPS passthrough target behind NAS ingress |
 | Prometheus | `prometheus.svc.internal` | 9090 | HTTP |
 | Grafana | `grafana.svc.internal` | 3000 | HTTP |
 | AlertManager | `alertmanager.svc.internal` | 9093 | HTTP |
@@ -140,6 +141,7 @@ DEPLOY_HOST_SUFFIX=31                   # IP suffix for SSH key naming
 REPLICA_HOST=192.168.168.42             # Standby/failover host
 VIP_HOST=192.168.168.30                 # Virtual IP (if VRRP active)
 NAS_HOST=192.168.168.56                 # NAS mount point
+IDE_WINDOWS_BACKEND_HOST=windows-ide.prod.internal  # DNS name for the Windows IDE backend ingress target
 
 # Domain references
 DOMAIN=kushnir.cloud                    # Apex domain

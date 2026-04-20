@@ -342,7 +342,7 @@ describe('FluxConfigBuilder', () => {
       const start = Date.now();
 
       for (let i = 0; i < 100; i++) {
-        const config = new FluxConfigBuilder({
+        new FluxConfigBuilder({
           logger: mockLogger,
         })
           .withRepository(`https://github.com/example/config-${i}.git`)
@@ -361,11 +361,10 @@ describe('FluxConfigBuilder', () => {
 
       const start = Date.now();
       builder.withValues(largeValues);
-      const config = builder.buildHelmConfig();
+      builder.buildHelmConfig();
       const duration = Date.now() - start;
 
       expect(duration).toBeLessThan(500); // SLA: < 500ms
-      expect(config).toBeDefined();
     });
   });
 

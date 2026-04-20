@@ -479,9 +479,9 @@ export class SharedWorkspaceAclBroker {
   private createAcl(workspaceId: string, owner: string, reason?: string): WorkspaceAcl {
     return {
       workspaceId,
-      workspaceName: workspaceId, // TODO: Get from workspace metadata
+      workspaceName: workspaceId, // TODO #867: hydrate from workspace metadata service
       owner,
-      org: this.extractOrg(owner), // TODO: Get from session
+      org: this.extractOrg(owner), // TODO #867: derive org from session/assertion context
       aclVersion: "1.0",
       entries: new Map(),
       createdAt: Date.now(),
@@ -597,7 +597,7 @@ export class SharedWorkspaceAclBroker {
    * Extract organization from email/principal ID.
    */
   private extractOrg(principalId: string): string {
-    // TODO: Get org from session/assertion instead
+    // TODO #867: source org from session/assertion instead of fallback default
     return "default-org"
   }
 

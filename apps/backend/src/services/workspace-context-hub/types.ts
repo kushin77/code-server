@@ -4,6 +4,35 @@
 
 export type WorkspaceAccessMode = "read" | "write" | "admin";
 
+export type WorkspaceReviewerPermission = "view-only" | "approve-only";
+
+export type WorkspaceProvenanceVerificationResult = "verified" | "failed";
+
+export interface WorkspaceLaunchProvenance {
+  imageDigest: string;
+  attestationRef: string;
+  signerIdentity: string;
+  verificationTimestamp: number;
+  verificationResult: WorkspaceProvenanceVerificationResult;
+  policyVersion: string;
+}
+
+export interface WorkspaceReviewerAccessGrant {
+  grantId: string;
+  workspaceSetId: string;
+  sessionId: string;
+  reviewer: string;
+  permission: WorkspaceReviewerPermission;
+  issuedBy: string;
+  issuedAt: number;
+  expiresAt: number;
+  oneTimeUse: boolean;
+  tokenHash: string;
+  revokedAt?: number;
+  consumedAt?: number;
+  revokedReason?: string;
+}
+
 export interface WorkspaceRepositoryDescriptor {
   repoId: string;
   branch?: string;
@@ -50,6 +79,7 @@ export interface WorkspaceLaunchRequest {
   targetRepoId?: string;
   correlationId: string;
   confirmCrossRepoReplay?: boolean;
+  provenance?: WorkspaceLaunchProvenance;
 }
 
 export interface WorkspaceLaunchMetadata {
@@ -61,6 +91,8 @@ export interface WorkspaceLaunchMetadata {
   blockedTerminalReplayCount: number;
   redactedFields: string[];
   requiresConfirmation: boolean;
+  sessionFingerprint?: string;
+  provenance?: WorkspaceLaunchProvenance;
   generatedAt: number;
 }
 
@@ -80,11 +112,17 @@ export interface WorkspaceAuditEvent {
   eventType:
     | "workspace_set_registered"
     | "workspace_set_approved"
+    | "workspace_state_imported"
     | "workspace_launch_allowed"
     | "workspace_launch_denied"
-    | "workspace_snapshot_redacted";
+    | "workspace_snapshot_redacted"
+    | "workspace_reviewer_link_issued"
+    | "workspace_reviewer_link_consumed"
+    | "workspace_reviewer_link_revoked"
+    | "workspace_reviewer_link_denied";
   actor: string;
   workspaceSetId: string;
+  sessionId?: string;
   targetRepoId?: string;
   correlationId: string;
   timestamp: number;
@@ -99,4 +137,10 @@ export interface WorkspaceLaunchResult {
   sanitizedSnapshot?: WorkspaceSnapshot;
   restoreMetadata?: WorkspaceLaunchMetadata;
   auditEvent: WorkspaceAuditEvent;
+}
+
+export interface WorkspaceContextHubStateSnapshot {
+  version: "workspace-context-hub-state/v1";
+  exportedAt: number;
+  workspaceSets: WorkspaceSetDefinition[];
 }

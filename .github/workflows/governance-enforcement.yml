@@ -22,6 +22,7 @@ permissions:
   contents: read
   pull-requests: write
   checks: write
+  issues: write
 
 env:
   GOVERNANCE_MANIFEST: config/governance-manifest.yml
@@ -218,6 +219,16 @@ jobs:
             exit 1
           fi
           echo "✓ No verified secrets found"
+
+      - name: Route TruffleHog findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f /tmp/trufflehog-output.json ]; then
+            bash scripts/ops/security-scan-triage.sh --tool trufflehog --secret-jsonl /tmp/trufflehog-output.json --repo "${GH_REPO}"
+          fi
       
       - name: "[P1] Vulnerability Scanning (Trivy)"
         continue-on-error: true

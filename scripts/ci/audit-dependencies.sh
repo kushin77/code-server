@@ -26,10 +26,13 @@ log_success() { echo -e "${GREEN}[OK]${NC} $*"; }
 
 # Initialize report
 init_report() {
-    cat > "${REPORT_FILE}" <<'EOF'
+    local now_utc
+    now_utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+    cat > "${REPORT_FILE}" <<EOF
 # Dependency Health Audit Report
 
-**Generated**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+**Generated**: ${now_utc}
 
 ## Summary
 
@@ -54,9 +57,9 @@ This report documents:
 
 EOF
 
-    cat > "${REPORT_JSON}" <<'EOF'
+        cat > "${REPORT_JSON}" <<EOF
 {
-  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+    "timestamp": "${now_utc}",
   "summary": {
     "cve_critical": 0,
     "cve_high": 0,
@@ -145,7 +148,9 @@ audit_containers() {
             fi
             echo "\`\`\`"
             echo ""
-        done < <(find "${SCRIPT_DIR}" -name "Dockerfile*" -type f)
+        done < <(find "${SCRIPT_DIR}" -type f -name "Dockerfile*" \
+            -not -path "*/node_modules/*" \
+            -not -path "*/.git/*")
     } >> "${REPORT_FILE}"
 }
 
@@ -195,7 +200,11 @@ audit_outdated() {
         echo ""
         echo "\`\`\`"
         if command -v npm &> /dev/null; then
-            npm outdated --json 2>&1 | jq . || npm outdated || true
+            if command -v jq &> /dev/null; then
+                npm outdated --json 2>&1 | jq . || npm outdated || true
+            else
+                npm outdated || true
+            fi
         else
             echo "[SKIPPED] npm not available"
         fi
@@ -248,7 +257,31 @@ main() {
     echo ""
     log_info "Summary Statistics:"
     if [ -f "${AUDIT_DIR}/pnpm-audit.json" ]; then
-        cve_count=$(jq '.metadata.vulnerabilities | length' "${AUDIT_DIR}/pnpm-audit.json" 2>/dev/null || echo "?")
+        if command -v jq &> /dev/null; then
+            cve_count=$(jq '.metadata.vulnerabilities // .vulnerabilities // {} | to_entries | length' "${AUDIT_DIR}/pnpm-audit.json" 2>/dev/null || echo "?")
+        elif command -v python3 &> /dev/null; then
+            cve_count=$(python3 - "${AUDIT_DIR}/pnpm-audit.json" <<'PY'
+import json
+import sys
+
+try:
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    vulns = data.get('metadata', {}).get('vulnerabilities')
+    if isinstance(vulns, dict):
+        print(len(vulns))
+    elif isinstance(vulns, list):
+        print(len(vulns))
+    else:
+        alt = data.get('vulnerabilities', {})
+        print(len(alt) if isinstance(alt, (dict, list)) else '?')
+except Exception:
+    print('?')
+PY
+)
+        else
+            cve_count="?"
+        fi
         log_warn "  CVE Vulnerabilities Found: ${cve_count}"
     fi
 }

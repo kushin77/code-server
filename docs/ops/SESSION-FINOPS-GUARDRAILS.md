@@ -16,11 +16,13 @@ This runbook defines the operational policy for ephemeral session quotas, runtim
 - Launch requests are denied with HTTP 422 when the requested TTL exceeds the runtime policy.
 - The broker automatically reaps stale sessions that exceed runtime or inactivity limits.
 - Usage summaries are available from `GET /usage/summary?windowHours=24`.
+- Prometheus scrapes broker telemetry from `GET /metrics` for quota pressure, reaper health, and usage trends.
 
 ## Usage Review
 
 - Review `teams` output from the usage summary endpoint for active session counts, failed sessions, and estimated CPU hours.
 - Investigate spikes in failed sessions or rapid growth in estimated CPU hours before raising quota limits.
+- Use the `Session FinOps Guardrails` Grafana dashboard for current quota utilization, launch denials, reaper staleness, and team usage trends.
 
 ## Recommended Alert Thresholds
 
@@ -28,6 +30,7 @@ This runbook defines the operational policy for ephemeral session quotas, runtim
 - Critical: any quota-denied launch burst above 5 events in 10 minutes.
 - Warning: stale-session reaper failure or no reaper activity for 30 minutes.
 - Critical: sessions exceeding runtime policy for more than 5 minutes.
+- The Prometheus alert rules mirror these thresholds and page on sustained pressure or stalled cleanup.
 
 ## Tuning Guidance
 

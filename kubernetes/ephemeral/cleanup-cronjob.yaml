@@ -1,0 +1,129 @@
+# CronJob for automated ephemeral route cleanup
+# Runs hourly to:
+# 1. Delete routes that have exceeded their TTL
+# 2. Reap orphaned routes (routes without corresponding active pods)
+# 3. Verify cleanup completeness and report any anomalies
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ephemeral-route-cleanup
+  namespace: ephemeral-sessions
+  labels:
+    app.kubernetes.io/name: ephemeral-route-cleanup
+    app.kubernetes.io/managed-by: session-orchestrator
+spec:
+  # Run hourly at the top of the hour
+  schedule: "0 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: ephemeral-route-cleanup
+        spec:
+          serviceAccountName: route-manager
+          restartPolicy: OnFailure
+          
+          containers:
+            - name: cleanup
+              image: bitnami/kubectl:1.28
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  
+                  NAMESPACE="ephemeral-sessions"
+                  NOW=$(date +%s)
+                  CLEANUP_LOG="/tmp/cleanup-$(date +%Y%m%d-%H%M%S).log"
+                  
+                  {
+                    echo "=== Ephemeral Route Cleanup Run ==="
+                    echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                    echo "Namespace: $NAMESPACE"
+                    echo ""
+                    
+                    # Phase 1: Delete expired Ingress resources
+                    echo "=== Phase 1: Deleting expired routes ==="
+                    DELETED_COUNT=0
+                    
+                    kubectl get ingress -n "$NAMESPACE" -o json 2>/dev/null | \
+                      jq -r '.items[] | 
+                        select(.metadata.creationTimestamp | fromdateiso8601 < now - 3600) |
+                        .metadata.name' | while read -r ingress; do
+                      
+                      SESSION_ID=$(echo "$ingress" | sed 's/^eph-//')
+                      
+                      # Verify pod is actually gone before deleting route
+                      if ! kubectl get pod "code-server-$SESSION_ID" -n "$NAMESPACE" &>/dev/null; then
+                        echo "Deleting expired route: $ingress (session: eph-$SESSION_ID)"
+                        kubectl delete ingress "$ingress" -n "$NAMESPACE" 2>&1 || true
+                        kubectl delete svc "code-server-eph-$SESSION_ID" -n "$NAMESPACE" 2>&1 || true
+                        kubectl delete secret "eph-$SESSION_ID-auth" -n "$NAMESPACE" 2>&1 || true
+                        kubectl delete configmap "eph-$SESSION_ID-config" -n "$NAMESPACE" 2>&1 || true
+                        ((DELETED_COUNT++)) || true
+                      else
+                        echo "Skipping: pod still exists for $ingress"
+                      fi
+                    done
+                    
+                    echo "Deleted routes: $DELETED_COUNT"
+                    echo ""
+                    
+                    # Phase 2: Detect and report orphaned routes
+                    echo "=== Phase 2: Detecting orphaned routes ==="
+                    ORPHANED_COUNT=0
+                    
+                    kubectl get ingress -n "$NAMESPACE" -o json 2>/dev/null | \
+                      jq -r '.items[].metadata.name' | while read -r ingress; do
+                      
+                      SESSION_ID=$(echo "$ingress" | sed 's/^eph-//')
+                      
+                      # Check if corresponding pod exists
+                      if ! kubectl get pod "code-server-$SESSION_ID" -n "$NAMESPACE" &>/dev/null; then
+                        echo "WARNING: Orphaned route detected: $ingress"
+                        echo "  Pod does not exist: code-server-$SESSION_ID"
+                        kubectl describe ingress "$ingress" -n "$NAMESPACE" | \
+                          sed 's/^/  /' >> "$CLEANUP_LOG" 2>&1 || true
+                        ((ORPHANED_COUNT++)) || true
+                      fi
+                    done
+                    
+                    echo "Orphaned routes detected: $ORPHANED_COUNT"
+                    
+                    if [ "$ORPHANED_COUNT" -gt 0 ]; then
+                      echo "⚠️  ACTION REQUIRED: Review orphaned routes above and investigate"
+                    fi
+                    echo ""
+                    
+                    # Phase 3: Summary statistics
+                    echo "=== Phase 3: Summary ==="
+                    echo "Total Ingress resources: $(kubectl get ingress -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l)"
+                    echo "Total Services: $(kubectl get svc -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l)"
+                    echo "Total Pods (active sessions): $(kubectl get pod -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l)"
+                    echo ""
+                    echo "Cleanup completed at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                    echo "Log saved to: $CLEANUP_LOG"
+                    
+                  } | tee "$CLEANUP_LOG"
+                  
+                  # Upload cleanup log as artifact (if using artifact storage)
+                  # kubectl create configmap cleanup-log-$(date +%Y%m%d-%H%M%S) \
+                  #   --from-file="$CLEANUP_LOG" -n "$NAMESPACE" || true
+
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+
+---
+# RBAC for cleanup job (already defined in namespace-and-rbac.yaml, but included here for reference)
+# The cleanup job runs under the 'route-manager' ServiceAccount

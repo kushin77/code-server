@@ -1,7 +1,38 @@
 # Deprecated Reference Retirement - April 19, 2026
 
-Status: Active
+Status: Complete (2026-04-20)
 Scope: Retire active-path references to archived or deprecated components and duplicate implementation trails.
+
+## Retirement Status (Updated 2026-04-20)
+
+All retirement targets addressed. Closure criteria met.
+
+| File / Pattern | Status | Canonical Target | Action Taken |
+|---|---|---|---|
+| `scripts/common-functions.sh` | ✅ ARCHIVED | `scripts/_common/` | `# ARCHIVED` + `# DO NOT USE` marker; enforced by `scripts/ci/check-deprecated-script-shims.sh` |
+| `scripts/logging.sh` | ✅ ARCHIVED | `scripts/_common/logging.sh` | `# ARCHIVED` marker; enforced by deprecated shim checker |
+| `main.tf` (root) | ✅ DEPRECATED | `terraform/main.tf` | Deprecation notice added 2026-04-20; `# DO NOT MAKE CHANGES HERE` |
+| `variables.tf` (root) | ✅ DEPRECATED | `terraform/variables.tf` | Deprecation notice added 2026-04-20; `# DO NOT MAKE CHANGES HERE` |
+| `Caddyfile.clean` | ✅ FROZEN | `Caddyfile` | Read-only snapshot; CI `check-root-hygiene.sh` enforces known-good list |
+| `Caddyfile.known-good` | ✅ FROZEN | `Caddyfile` | Known-good rollback snapshot; CI enforces |
+| `Caddyfile.tpl` | ✅ FROZEN | `Caddyfile` | Terraform template snapshot; CI `enforce-global-dedup.sh` enforces |
+| `docker-compose.yml.remote` | ✅ FROZEN | `docker-compose.yml` | Remote-target variant; read-only reference |
+| `docker-compose.socket-override.yml` | ✅ FROZEN | `docker-compose.yml` | Override for Docker socket; CI enforces canonical compose usage |
+| Legacy docs bridges (root-level `.md`) | ✅ ARCHIVED | `docs/` structure | All root-level bridge docs have canonical replacements; bridges archived or stubbed |
+| `scripts/dev/refactor-phase2-task1.sh` | ✅ READ-ONLY | `scripts/_common/` | Refactoring artifact; not in active execution path |
+
+### CI Enforcement in Place
+
+- `scripts/ci/check-deprecated-script-shims.sh` — validates archived shim markers
+- `scripts/ci/check-root-hygiene.sh` — validates known Caddyfile/compose variant allowlist
+- `scripts/ci/enforce-global-dedup.sh` — blocks new duplicate file additions
+- `.github/workflows/code-smell-governance.yml` — CI gate on all PRs
+
+### Closure Criteria — All Met
+
+- ✅ Every remaining legacy reference has a canonical target (see table above)
+- ✅ No active-path docs point at deprecated implementations without a stub or redirect
+- ✅ The retirement list is complete and time-bound (all items resolved 2026-04-20)
 
 ## Purpose
 

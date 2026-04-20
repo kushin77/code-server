@@ -19,11 +19,7 @@ COPY apps/session-broker ./apps/session-broker
 RUN npm install -g pnpm@9.15.4 && \
     pnpm install --frozen-lockfile && \
     cd apps/session-broker && \
-    pnpm run build && \
-    # Create a production-only dependencies list
-    cd /workspace/apps/session-broker && \
-    mkdir -p dist_deps && \
-    pnpm list --json --depth 0 | jq -r '.[]' > /tmp/deps.txt
+    pnpm run build
 
 # ════════════════════════════════════════════════════════════════════════════
 # Stage 2: Runtime

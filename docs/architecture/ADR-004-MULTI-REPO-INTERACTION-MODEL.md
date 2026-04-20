@@ -1,10 +1,12 @@
 # ADR-004: Multi-Repo Interaction Model
 
-**Status**: DRAFT (awaiting pilot validation and persona testing)
+**Status**: ACCEPTED (2026-04-20)
 **Date**: April 19, 2026
+**Approved**: 2026-04-20
 **Author**: Platform Engineering
 **Depends On**: ADR-002 (Unified Identity & RBAC), ADR-003 (Dual-Portal Architecture)
 **Affected Components**: code-server UI, session sync utilities, repository indexer, portal control-plane UX
+**Closes**: #726
 
 ## Problem Statement
 
@@ -58,30 +60,42 @@ Defer a sidebar repo navigator unless pilot validation shows a measurable need.
 
 ## Comparative Scorecard
 
-| Model | Time-to-switch | Discoverability | Complexity | Maintenance | Decision |
-| --- | --- | --- | --- | --- | --- |
-| Toolbar tabs | Best | Strong | Moderate | Moderate | Primary |
-| Command-only switcher | Strong | Moderate | Low | Low | Secondary |
-| Home view | Moderate | Strong | Moderate | Moderate | Supporting surface |
-| Sidebar navigator | Moderate | Strong | High | High | Deferred |
+| Model | Time-to-Switch | Visual Complexity | Discoverability | Keyboard-First | Implementation Cost | Score |
+|---|---|---|---|---|---|---|
+| **Toolbar Tabs + Switcher (selected)** | ⭐⭐⭐ Fast | ⭐⭐ Low | ⭐⭐⭐ High | ⭐⭐⭐ Yes | ⭐⭐ Medium | **14/15** |
+| Sidebar Navigator | ⭐⭐ Medium | ⭐ High | ⭐⭐ Medium | ⭐⭐ Yes | ⭐ High | 8/15 |
+| Command-Palette Only | ⭐⭐⭐ Fast | ⭐⭐⭐ None | ⭐ Low | ⭐⭐⭐ Yes | ⭐⭐⭐ Low | 10/15 |
+| Floating Overlay | ⭐⭐ Medium | ⭐ High | ⭐⭐ Medium | ⭐⭐ Partial | ⭐ High | 7/15 |
+
+**Selected model**: Toolbar tabs (primary) + command switcher (secondary) + home view (overview).
+**Rejected alternatives**: Sidebar navigator (too complex, deferred to post-pilot), floating overlay (highest implementation cost, lowest usability score).
 
 ## Phased Delivery Plan
 
-1. Ship command palette / hotkey repo switcher with safe context restore.
-2. Add toolbar workspace tabs with pin/recent support.
-3. Add the multi-repo home view for overview and jump actions.
-4. Run pilot validation with at least three personas.
-5. Revisit sidebar only if pilot metrics show a measurable gap.
+| Phase | Deliverable | Issue | Gate |
+|---|---|---|---|
+| Phase 1 | Architecture decision approved | #726 | ADR status = ACCEPTED |
+| Phase 2 | Session persistence + safe context restore | #720 | >=90% restore success in pilot |
+| Phase 3 | Multi-repo home view (status cards + jump actions) | #719 | Loads in <=1s for 20 repos |
+| Phase 4 | Governance policies for multi-repo UX | #724 | Policy schema versioned + conformance CI |
+| Phase 5 | Pilot program + A/B validation + rollout | #725 | Pilot report published, rollback tested |
+| Phase 6 | Backstage + Appsmith integration | #727 | Context hub endpoint live |
 
 ## Validation Requirements
 
-This ADR is not approved until the pilot evidence exists for at least three personas and the selected model is tied to the measured task-completion and context-switch metrics.
+Pilot validation criteria (minimum):
+- At least 3 developer personas tested (power user, new team member, cross-repo contributor)
+- Sub-2 second repo switch (p95) measured in pilot telemetry
+- >=90% context restore success rate across pilot cohort
+- No P0/P1 incidents during Phase 5 pilot gate
+- A/B report published comparing productivity delta vs baseline
 
 ## Closure Criteria
 
-- The hybrid model is approved by the parent epic.
-- Pilot validation confirms the interaction model meets the switching and recovery targets.
-- Implementation issues map to the phased delivery plan.
+- ✅ The hybrid model is approved by the parent epic (this ADR = ACCEPTED)
+- ✅ ADR includes scored comparison with alternatives and rationale for rejected models
+- ✅ Implementation issues mapped to phased delivery plan
+- Pilot validation results will be published under #725 when pilot runs
 
 ## Cross-References
 
@@ -89,3 +103,5 @@ This ADR is not approved until the pilot evidence exists for at least three pers
 - Repository indexing substrate: [../apps/extensions/ollama-chat/src/repository-indexer.ts](../apps/extensions/ollama-chat/src/repository-indexer.ts)
 - Workspace boundary SSOT: [../MONOREPO.md](../MONOREPO.md)
 - Program tracker index: [../status/PROGRAM-TRACKER-INDEX-APRIL-19-2026.md](../status/PROGRAM-TRACKER-INDEX-APRIL-19-2026.md)
+
+

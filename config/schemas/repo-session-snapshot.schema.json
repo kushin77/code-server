@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kushnir.cloud/schemas/repo-session-snapshot/v1",
+  "version": "1.0.0",
+  "description": "Schema for per-repository session context snapshots. Closes #720.",
+  "type": "object",
+  "required": ["schema_version", "repo_identity", "captured_at", "restore_version"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for migration support."
+    },
+    "restore_version": {
+      "type": "string",
+      "description": "Monotonically increasing restore version (timestamp-based, e.g. '2026-04-20T14:32:00Z')."
+    },
+    "repo_identity": {
+      "type": "object",
+      "required": ["canonical_path"],
+      "properties": {
+        "canonical_path": {
+          "type": "string",
+          "description": "Canonical absolute path to the repository root."
+        },
+        "remote_url": {
+          "type": "string",
+          "description": "Git remote origin URL (used for cross-machine identity matching)."
+        },
+        "repo_id": {
+          "type": "string",
+          "description": "Optional stable repo ID (e.g., from a central registry)."
+        }
+      }
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the snapshot was taken."
+    },
+    "branch": {
+      "type": "string",
+      "description": "Active git branch/ref at snapshot time."
+    },
+    "dirty_state": {
+      "type": "boolean",
+      "description": "Whether the working tree had uncommitted changes at snapshot time."
+    },
+    "editor_state": {
+      "type": "object",
+      "description": "Open editor tabs and groups.",
+      "properties": {
+        "open_files": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Repo-relative paths of open files."
+        },
+        "active_file": {
+          "type": "string",
+          "description": "Repo-relative path of the active editor file."
+        },
+        "editor_groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "group_id": {"type": "integer"},
+              "files": {"type": "array", "items": {"type": "string"}},
+              "active_file": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "terminal_descriptors": {
+      "type": "array",
+      "description": "Terminal session metadata (command history NOT stored unless terminal_replay_enabled=true in policy).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "terminal_id": {"type": "string"},
+          "cwd": {"type": "string", "description": "Repo-relative current working directory."},
+          "title": {"type": "string"},
+          "last_exit_code": {"type": "integer"}
+        }
+      }
+    },
+    "task_descriptors": {
+      "type": "array",
+      "description": "VS Code task references (label only — not re-executed on restore without user confirmation).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {"type": "string"},
+          "type": {"type": "string"},
+          "is_running": {"type": "boolean"}
+        }
+      }
+    },
+    "debug_configs": {
+      "type": "array",
+      "description": "Debug launch configuration names last active.",
+      "items": {"type": "string"}
+    },
+    "restore_metadata": {
+      "type": "object",
+      "properties": {
+        "restore_attempted_at": {"type": "string", "format": "date-time"},
+        "restore_success": {"type": "boolean"},
+        "restore_fallback_used": {"type": "boolean"},
+        "restore_errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "resource": {"type": "string"},
+              "error": {"type": "string"},
+              "recovery_action": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "snapshot_size_bytes": {
+      "type": "integer",
+      "description": "Size of this snapshot in bytes (used for enforcement of snapshot_retention_limit_mb policy)."
+    }
+  }
+}

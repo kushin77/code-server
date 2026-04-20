@@ -39,12 +39,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for service and add to docker group for socket access
+# Ensure docker group exists for /var/run/docker.sock access
+RUN groupadd -g 999 docker 2>/dev/null || true
+
+# Create non-root user for service
 # UID 1000: standard non-root application user
 # GID 999: docker group (matches host docker daemon group)
-RUN useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true
-# Ensure docker group exists and add user to it for /var/run/docker.sock access
-RUN groupadd -g 999 docker 2>/dev/null || true && \
+RUN useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true && \
     usermod -aG docker session-broker 2>/dev/null || true
 
 WORKDIR /app

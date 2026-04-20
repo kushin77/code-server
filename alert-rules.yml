@@ -2,6 +2,185 @@ groups:
   - name: alerts
     interval: 30s
     rules:
+      # Auth path observability
+      - alert: OAuth2ProxyHighErrorRate
+        expr: |
+          sum(rate(oauth2_proxy_requests_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(oauth2_proxy_requests_total[5m])), 1)
+          > 0.05
+        for: 5m
+        annotations:
+          summary: "oauth2-proxy is returning 5xx errors"
+          description: "oauth2-proxy 5xx error rate is above 5% for 5 minutes. Check the IDE auth path and oauth2-proxy logs."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      - alert: OAuth2ProxyUnauthorizedSpike
+        expr: |
+          sum(rate(oauth2_proxy_requests_total{status=~"401|403"}[5m])) > 5
+        for: 2m
+        annotations:
+          summary: "oauth2-proxy unauthorized responses are spiking"
+          description: "oauth2-proxy is returning a sustained spike of 401/403 responses, which can indicate CSRF or session cookie failures."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      - alert: PortalAuthPathGatewayErrorRateHigh
+        expr: |
+          sum(rate(caddy_http_requests_total{status=~"5..", path=~".*/oauth2/.*"}[5m]))
+          /
+          clamp_min(sum(rate(caddy_http_requests_total{path=~".*/oauth2/.*"}[5m])), 1)
+          > 0.05
+        for: 5m
+        annotations:
+          summary: "Portal/auth gateway 5xx rate is elevated"
+          description: "The OAuth portal/auth gateway is returning 5xx responses above 5% for 5 minutes. Appsmith or the proxy path may be unhealthy."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      - alert: PortalAuthPathUnavailable
+        expr: up{job="oauth2-proxy-portal"} == 0
+        for: 2m
+        annotations:
+          summary: "Portal auth proxy is down"
+          description: "oauth2-proxy-portal has not been reachable for 2 minutes. Portal login flow is unavailable."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      - alert: SessionBrokerUnavailable
+        expr: up{job="session-broker"} == 0
+        for: 2m
+        annotations:
+          summary: "Session broker is down"
+          description: "The session broker scrape target is unavailable, so IDE session routing may fail."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      - alert: SessionBrokerLaunchDenialBurst
+        expr: increase(session_broker_launch_denials_total_all[10m]) > 5
+        for: 5m
+        annotations:
+          summary: "Session broker launch denials are bursting"
+          description: "More than five launch denials were recorded in 10 minutes. Check auth load, quota settings, and container capacity."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      - alert: OAuth2ProxyResponseLatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(oauth2_proxy_response_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 10m
+        annotations:
+          summary: "oauth2-proxy p95 latency is above 1s"
+          description: "The OAuth proxy is responding slowly, which increases auth-failure risk."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      # Appsmith Container Health
+      - alert: AppsmithContainerUnhealthy
+        expr: up{job="appsmith"} == 0
+        for: 2m
+        annotations:
+          summary: "Appsmith container is not healthy"
+          description: "Appsmith healthcheck has been failing for 2 minutes. Portal access is degraded."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      # Session Broker Error Rates
+      - alert: SessionBrokerCreateErrorsHigh
+        expr: |
+          sum(rate(session_broker_create_errors_total[5m])) > 0.016
+        for: 5m
+        annotations:
+          summary: "Session broker create errors elevated (>1 error/min)"
+          description: "Session creation is failing at elevated rate. Check auth load and quota."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: high
+          team: platform
+          component: auth-path
+
+      - alert: SessionBrokerLookupErrorsHigh
+        expr: |
+          sum(rate(session_broker_lookup_errors_total[5m])) > 0.033
+        for: 5m
+        annotations:
+          summary: "Session broker lookup errors elevated (>2 errors/min)"
+          description: "Session lookups are failing, users may be unable to access existing sessions."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: high
+          team: platform
+          component: auth-path
+
+      # Redis Sentinel Health
+      - alert: RedisActiveMasterSwitch
+        expr: |
+          changes(redis_master_repl_offset[5m]) < 0
+        for: 30s
+        annotations:
+          summary: "Redis master failover detected"
+          description: "Redis Sentinel has promoted a replica to master. Check replication status and verify session data."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: warning
+          team: platform
+          component: auth-path
+
+      - alert: RedisConnectedClientsDropped
+        expr: |
+          redis_connected_clients == 0
+        for: 1m
+        annotations:
+          summary: "Redis has no connected clients"
+          description: "Redis shows zero connected clients. Session store may be unavailable."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
+      # Caddy Upstream 5xx Spike
+      - alert: CaddyUpstream5xxSpike
+        expr: |
+          sum(rate(caddy_http_requests_total{status=~"502|503|504"}[5m])) > 0.167
+        for: 2m
+        annotations:
+          summary: "Caddy upstream errors spiking (>10 errors/min)"
+          description: "Caddy is returning 502/503/504 errors indicating upstream failure. Check session-broker and appsmith health."
+          runbook: "https://github.com/kushin77/code-server/issues/965"
+        labels:
+          severity: critical
+          team: platform
+          component: auth-path
+
       # P1: Database Failover Detected
       - alert: DatabaseFailoverDetected
         expr: pg_replication_lag_seconds > 60
@@ -70,7 +249,11 @@ groups:
 
       # P3: Disk Space Low
       - alert: DiskSpaceLow
-        expr: disk_free_bytes / disk_total_bytes < 0.1
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat",mountpoint="/"}
+          /
+          node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat",mountpoint="/"}
+          < 0.1
         for: 10m
         annotations:
           summary: "Disk space running low (<10%)"

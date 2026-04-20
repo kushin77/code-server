@@ -19,7 +19,11 @@ COPY apps/session-broker ./apps/session-broker
 RUN npm install -g pnpm@9.15.4 && \
     pnpm install --frozen-lockfile && \
     cd apps/session-broker && \
-    pnpm run build
+    pnpm run build && \
+    # Create a production-only dependencies list
+    cd /workspace/apps/session-broker && \
+    mkdir -p dist_deps && \
+    pnpm list --json --depth 0 | jq -r '.[]' > /tmp/deps.txt
 
 # ════════════════════════════════════════════════════════════════════════════
 # Stage 2: Runtime
@@ -48,18 +52,20 @@ RUN useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true && \
 
 WORKDIR /app
 
-# Copy built application, package.json, and workspace files
+# Copy built application from builder
 COPY --from=builder /workspace/apps/session-broker/dist ./dist
 COPY --from=builder /workspace/apps/session-broker/package.json ./package.json
-COPY --from=builder /workspace/pnpm-lock.yaml /pnpm-lock.yaml
-COPY --from=builder /workspace/.npmrc /.npmrc
 
-# Install production dependencies using pnpm
-# We need pnpm because package.json has catalog: references
-# Use --no-frozen-lockfile since we're in a clean runtime image
-RUN npm install -g pnpm@9.15.4 && \
-    pnpm install --prod --no-frozen-lockfile && \
-    pnpm cache delete
+# Copy ALL node_modules from the build stage (this includes all workspace dependencies)
+COPY --from=builder /workspace/node_modules /tmp/workspace_modules
+# Copy session-broker specific dependencies
+COPY --from=builder /workspace/apps/session-broker/node_modules ./node_modules 2>/dev/null || true
+
+# If session-broker node_modules was empty, we need to link from workspace
+RUN if [ ! -f "node_modules/express/package.json" ]; then \
+      cp -r /tmp/workspace_modules/* ./node_modules/ 2>/dev/null || true; \
+    fi && \
+    rm -rf /tmp/workspace_modules
 
 # Set permissions using numeric IDs (more reliable than usernames)
 RUN chown -R 1000:999 /app

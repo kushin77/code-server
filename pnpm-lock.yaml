@@ -112,19 +112,19 @@ importers:
   apps/extensions/team-hub:
     devDependencies:
       '@types/node':
-        specifier: ^20.10.6
+        specifier: 'catalog:'
         version: 20.19.39
       '@types/vscode':
-        specifier: ^1.85.0
+        specifier: 'catalog:'
         version: 1.116.0
       esbuild:
         specifier: ^0.25.0
         version: 0.25.12
       typescript:
-        specifier: ^5.4.0
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
-        specifier: ^4.1.4
+        specifier: 'catalog:'
         version: 4.1.4(@types/node@20.19.39)(@vitest/coverage-v8@4.1.4)(jiti@1.21.7)(jsdom@26.1.0)(terser@5.46.1)
 
   apps/frontend:

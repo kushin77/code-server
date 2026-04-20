@@ -54,14 +54,9 @@ COPY --from=builder /workspace/apps/session-broker/package.json ./package.json
 
 # Copy ALL node_modules from the build stage (this includes all workspace dependencies)
 COPY --from=builder /workspace/node_modules /tmp/workspace_modules
-# Copy session-broker specific dependencies
-COPY --from=builder /workspace/apps/session-broker/node_modules ./node_modules 2>/dev/null || true
 
-# If session-broker node_modules was empty, we need to link from workspace
-RUN if [ ! -f "node_modules/express/package.json" ]; then \
-      cp -r /tmp/workspace_modules/* ./node_modules/ 2>/dev/null || true; \
-    fi && \
-    rm -rf /tmp/workspace_modules
+# Copy session-broker specific dependencies if they exist, otherwise use workspace modules
+RUN cp -r /tmp/workspace_modules/* ./node_modules/ 2>/dev/null || true || mkdir -p node_modules
 
 # Set permissions using numeric IDs (more reliable than usernames)
 RUN chown -R 1000:999 /app

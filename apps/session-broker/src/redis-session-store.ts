@@ -101,6 +101,11 @@ export class RedisSessionStore {
   async connect(): Promise<void> {
     try {
       const sentinels = this.parseSentinelUrls();
+      const redisPassword = process.env.REDIS_PASSWORD;
+
+      if (!redisPassword) {
+        throw new Error('REDIS_PASSWORD environment variable is required for secure Redis access');
+      }
       
       // Create Redis client with Sentinel configuration
       this.client = createClient({
@@ -115,6 +120,7 @@ export class RedisSessionStore {
             return delay;
           },
         } as any,
+        password: redisPassword,
         sentinels: sentinels as any,
         sentinelName: 'mymaster',
         db: REDIS_SENTINEL_DB,

@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # @file        apps/presence-sidecar/src/index.ts
 # @module      collaboration/presence-sidecar
 # @description Real-time team presence tracking WebSocket service

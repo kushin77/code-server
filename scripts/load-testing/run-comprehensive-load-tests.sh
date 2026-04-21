@@ -50,6 +50,8 @@ declare -a TESTS=(
   "oauth-flow|OAuth Login Flow|run-oauth-flow-load-test.sh"
   "jwt-token|JWT Token Acquisition|run-jwt-token-load-test.sh"
   "websocket|WebSocket Connections|run-websocket-load-test.sh"
+  "session|Session Creation & Management|run-session-creation-load-test.sh"
+  "api-endpoint|API Endpoint (with Auth)|run-api-endpoint-load-test.sh"
 )
 
 # Tracking arrays

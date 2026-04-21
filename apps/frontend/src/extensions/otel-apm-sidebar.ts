@@ -25,16 +25,16 @@ export class OtelApmSidebarProvider implements vscode.TreeDataProvider<ApmTreeIt
   private refreshHandle: ReturnType<typeof setInterval> | null = null;
 
   constructor(private readonly context: vscode.ExtensionContext) {
-    const config = vscode.workspace.getConfiguration('otelApm');
+    const config = vscode.workspace.getConfiguration('otelApm')
     this.client = new OtelApmClient(
-      config.get<string>('jaegerBaseUrl', 'http://localhost:16686'),
-      config.get<string>('prometheusBaseUrl', 'http://localhost:9090')
-    );
+      (config.get('jaegerBaseUrl') as string | undefined) || 'http://localhost:16686',
+      (config.get('prometheusBaseUrl') as string | undefined) || 'http://localhost:9090'
+    )
 
-    void this.refresh();
+    void this.refresh()
     this.refreshHandle = setInterval(() => {
-      void this.refresh();
-    }, config.get<number>('refreshInterval', 30000));
+      void this.refresh()
+    }, ((config.get('refreshInterval') as number | undefined) || 30000))
   }
 
   async refresh(): Promise<void> {

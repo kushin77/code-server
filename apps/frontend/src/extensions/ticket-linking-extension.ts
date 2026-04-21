@@ -159,39 +159,39 @@ async function configureCredentials(): Promise<void> {
     {
       placeHolder: 'Select ticket system to configure',
     }
-  );
+  )
 
-  if (!selected || selected === 'Cancel') return;
+  if (!selected || selected === 'Cancel') return
 
-  const systemName = selected.toLowerCase();
-  const keyName = `${systemName}ApiKey`;
+  const systemName = selected.toLowerCase()
+  const keyName = `${systemName}ApiKey`
 
   const apiKey = await vscode.window.showInputBox({
     prompt: `Enter ${selected} API Key (stored in workspace settings)`,
     password: true,
-    validateInput: (value) => {
-      if (!value) return `${selected} API Key cannot be empty`;
-      return null;
+    validateInput: (value: string) => {
+      if (!value) return `${selected} API Key cannot be empty`
+      return null
     },
-  });
+  })
 
   if (apiKey) {
-    const config = vscode.workspace.getConfiguration('ticketLinking');
-    await config.update(keyName, apiKey, vscode.ConfigurationTarget.Workspace);
+    const config = vscode.workspace.getConfiguration('ticketLinking')
+    await config.update(keyName, apiKey, vscode.ConfigurationTarget.Workspace)
 
     // Reinitialize detector with new credentials
     const newCredentials = new Map([
-      ['linear', config.get<string>('linearApiKey') || ''],
-      ['jira', config.get<string>('jiraApiKey') || ''],
-      ['github', config.get<string>('githubToken') || ''],
-    ]);
+      ['linear', (config.get('linearApiKey') as string | undefined) || ''],
+      ['jira', (config.get('jiraApiKey') as string | undefined) || ''],
+      ['github', (config.get('githubToken') as string | undefined) || ''],
+    ])
     const { default: TicketDetector } = await import(
       '../../../backend/src/services/ticket-linking/ticket-detector'
-    );
-    detector = new TicketDetector(newCredentials);
+    )
+    detector = new TicketDetector(newCredentials)
 
-    vscode.window.showInformationMessage(`${selected} credentials configured`);
-    await refreshTickets();
+    vscode.window.showInformationMessage(`${selected} credentials configured`)
+    await refreshTickets()
   }
 }
 

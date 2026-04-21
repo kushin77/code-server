@@ -58,43 +58,43 @@ export class CICDStatusSidebarProvider implements vscode.TreeDataProvider<CICDTr
   private _onDidChangeTreeData = new vscode.EventEmitter<CICDTreeItem | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private config: CICDConfig | null = null;
-  private apiClient: AxiosInstance | null = null;
-  private pipelines: Pipeline[] = [];
-  private refreshInterval: NodeJS.Timer | null = null;
-  private currentBranch: string = 'main';
+  private config: CICDConfig | null = null
+  private apiClient: AxiosInstance | null = null
+  private pipelines: Pipeline[] = []
+  private refreshInterval: NodeJS.Timeout | null = null
+  private currentBranch: string = 'main'
 
   constructor(private _context: vscode.ExtensionContext) {
     // Reserved for future use (workspace state, storage, etc.)
-    this.loadConfig();
-    this.initializeApiClient();
-    this.setupRefreshInterval();
-    this.watchBranchChanges();
+    this.loadConfig()
+    this.initializeApiClient()
+    this.setupRefreshInterval()
+    this.watchBranchChanges()
   }
 
   /**
    * Load CI/CD configuration from workspace settings
    */
   private loadConfig(): void {
-    const config = vscode.workspace.getConfiguration('cicd');
+    const config = vscode.workspace.getConfiguration('cicd')
 
     this.config = {
-      provider: config.get('provider', 'github'),
-      token: config.get('token', ''),
-      owner: config.get('owner', ''),
-      repo: config.get('repo', ''),
-      baseUrl: config.get('baseUrl'),
-    };
+      provider: (config.get('provider') as string) || 'github',
+      token: (config.get('token') as string) || '',
+      owner: (config.get('owner') as string) || '',
+      repo: (config.get('repo') as string) || '',
+      baseUrl: config.get('baseUrl') as string | undefined,
+    }
 
     if (!this.config.token) {
-      vscode.window.showWarningMessage(
+      void vscode.window.showWarningMessage(
         'CI/CD Status: Configure CICD_TOKEN in settings',
         'Settings'
       ).then((selected: string | undefined) => {
         if (selected === 'Settings') {
-          vscode.commands.executeCommand('workbench.action.openSettings', 'cicd');
+          void vscode.commands.executeCommand('workbench.action.openSettings', 'cicd')
         }
-      });
+      })
     }
   }
 
@@ -138,11 +138,11 @@ export class CICDStatusSidebarProvider implements vscode.TreeDataProvider<CICDTr
    * Setup auto-refresh interval
    */
   private setupRefreshInterval(): void {
-    const interval = vscode.workspace.getConfiguration('cicd').get('refreshInterval', 30000);
+    const interval = (vscode.workspace.getConfiguration('cicd').get('refreshInterval') as number | undefined) || 30000
 
     this.refreshInterval = setInterval(() => {
-      this.refresh();
-    }, interval);
+      void this.refresh()
+    }, interval)
   }
 
   /**

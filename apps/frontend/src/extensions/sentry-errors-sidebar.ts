@@ -27,73 +27,73 @@ interface SentryError {
  * - Direct links to Sentry
  */
 export class SentryErrorsSidebarProvider implements vscode.TreeDataProvider<SentryTreeItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<SentryTreeItem | undefined>();
-  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData = new vscode.EventEmitter<SentryTreeItem | undefined>()
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event
 
-  private apiClient: AxiosInstance | null = null;
-  private errors: SentryError[] = [];
-  private refreshInterval: NodeJS.Timer | null = null;
+  private apiClient: AxiosInstance | null = null
+  private errors: SentryError[] = []
+  private refreshInterval: NodeJS.Timeout | null = null
 
   constructor(private context: vscode.ExtensionContext) {
-    this.loadConfig();
-    this.setupRefreshInterval();
+    this.loadConfig()
+    this.setupRefreshInterval()
   }
 
   private loadConfig(): void {
-    const config = vscode.workspace.getConfiguration('sentry');
-    const token = config.get<string>('token', '');
-    const organization = config.get<string>('organization', '');
-    const project = config.get<string>('project', '');
+    const config = vscode.workspace.getConfiguration('sentry')
+    const token = (config.get('token') as string | undefined) || ''
+    const organization = (config.get('organization') as string | undefined) || ''
+    const project = (config.get('project') as string | undefined) || ''
 
     if (!token) {
-      vscode.window.showWarningMessage(
+      void vscode.window.showWarningMessage(
         'Sentry Error Monitor: Configure SENTRY_TOKEN in settings',
         'Settings'
-      ).then((selected) => {
+      ).then((selected: string | undefined) => {
         if (selected === 'Settings') {
-          vscode.commands.executeCommand('workbench.action.openSettings', 'sentry');
+          void vscode.commands.executeCommand('workbench.action.openSettings', 'sentry')
         }
-      });
-      return;
+      })
+      return
     }
 
     this.apiClient = axios.create({
       baseURL: 'https://sentry.io/api/0',
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}` },
       timeout: 5000,
-    });
+    })
 
-    this.loadErrors();
+    void this.loadErrors()
   }
 
   private async loadErrors(): Promise<void> {
-    if (!this.apiClient) return;
+    if (!this.apiClient) return
 
     try {
-      const config = vscode.workspace.getConfiguration('sentry');
-      const organization = config.get<string>('organization', '');
-      const project = config.get<string>('project', '');
+      const config = vscode.workspace.getConfiguration('sentry')
+      const organization = (config.get('organization') as string | undefined) || ''
+      const project = (config.get('project') as string | undefined) || ''
 
       const response = await this.apiClient.get(
         `/projects/${organization}/${project}/issues/`,
         { params: { query: 'is:unresolved', limit: 20 } }
-      );
+      )
 
-      this.errors = response.data;
-      this._onDidChangeTreeData.fire(undefined);
+      this.errors = response.data
+      this._onDidChangeTreeData.fire(undefined)
     } catch (error) {
       vscode.window.showErrorMessage(
         `Failed to load Sentry errors: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      )
     }
   }
 
   private setupRefreshInterval(): void {
-    const interval = vscode.workspace.getConfiguration('sentry').get('refreshInterval', 60000);
+    const interval = ((vscode.workspace.getConfiguration('sentry').get('refreshInterval') as number | undefined) || 60000)
 
     this.refreshInterval = setInterval(() => {
-      this.loadErrors();
-    }, interval);
+      void this.loadErrors()
+    }, interval)
   }
 
   getTreeItem(element: SentryTreeItem): vscode.TreeItem {

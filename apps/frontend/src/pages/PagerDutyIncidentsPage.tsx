@@ -2,16 +2,14 @@
 // @module      pages/pagerduty-incidents
 // @description PagerDuty Incidents dashboard page component
 
-import React, { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
 
 import { AlertTriangle, CheckCircle, Clock, ExternalLink, RefreshCw } from '@/common/lucide-react'
 
-import { useExtensionMountProfiler, measureAsyncExtensionProfiler } from '@/common/performance'
+import { measureAsyncExtensionProfiler } from '@/common/performance'
 import { ErrorBoundary } from '@/common/error-boundary'
 
 import {
-  createPagerDutyApiClient,
   fetchPagerDutyIncidents,
   type IncidentStats,
   type PagerDutyIncident,
@@ -42,8 +40,6 @@ const URGENCY_ICON = {
 }
 
 export function PagerDutyIncidentsPage() {
-  const pageProfiler = useExtensionMountProfiler('PagerDutyIncidentsPage')
-
   const [incidents, setIncidents] = useState<PagerDutyIncident[]>([])
   const [stats, setStats] = useState<IncidentStats>({
     triggered: 0,

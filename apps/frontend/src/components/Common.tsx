@@ -9,27 +9,42 @@ import React from 'react'
  * Button component
  */
 export const Button: React.FC<{
-  children: React.ReactNode
+  children?: React.ReactNode
+  label?: string
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
   className?: string
   variant?: 'primary' | 'secondary' | 'danger'
-}> = ({ children, onClick, type = 'button', disabled = false, className = '', variant = 'primary' }) => {
+  fullWidth?: boolean
+  flex?: boolean
+}> = ({
+  children,
+  label,
+  onClick,
+  type = 'button',
+  disabled = false,
+  className = '',
+  variant = 'primary',
+  fullWidth = false,
+  flex = false,
+}) => {
   const variantClass = {
     primary: 'bg-blue-500 text-white hover:bg-blue-600',
     secondary: 'bg-gray-300 text-gray-900 hover:bg-gray-400',
     danger: 'bg-red-500 text-white hover:bg-red-600',
   }[variant]
 
+  const content = children || label
+
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`px-4 py-2 rounded font-medium transition-colors ${variantClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+      className={`px-4 py-2 rounded font-medium transition-colors ${variantClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${fullWidth ? 'w-full' : ''} ${flex ? 'flex-1' : ''} ${className}`}
     >
-      {children}
+      {content}
     </button>
   )
 }

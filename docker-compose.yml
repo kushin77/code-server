@@ -276,7 +276,7 @@ services:
       - ./config/iam:/etc/oauth2-proxy:ro
     
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4182/.well-known/openid-configuration || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4182/ping || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

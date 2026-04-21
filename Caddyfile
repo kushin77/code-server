@@ -2,6 +2,7 @@
 # Caddy 2.7.6 — direct TLS termination with existing Let's Encrypt certs
 # Certs stored in enterprise_caddy-data volume (valid until 2026-07-19)
 # NOTE: Caddy must run as root (user 0) to access root-owned cert files.
+# OIDC issuer routes removed until custom issuer service is deployed (#1029).
 
 ide.kushnir.cloud {
     encode gzip
@@ -19,26 +20,6 @@ ide.kushnir.cloud {
     # ────────────────────────────────────────────────────────────────────────────
     @health path /health /healthz /ping
     respond @health "OK" 200
-
-    # ────────────────────────────────────────────────────────────────────────────
-    # OIDC Discovery Endpoints (public, no auth)
-    # ────────────────────────────────────────────────────────────────────────────
-    @oidc_discovery path /.well-known/openid-configuration /.well-known/jwks.json
-    reverse_proxy @oidc_discovery oauth2-oidc-issuer:4182 {
-        header_up Host ide.kushnir.cloud
-        header_up X-Forwarded-Proto https
-        header_up X-Real-IP {remote_host}
-    }
-
-    # ────────────────────────────────────────────────────────────────────────────
-    # Token Issuance Endpoint (OIDC issuer, public with credentials)
-    # ────────────────────────────────────────────────────────────────────────────
-    @token_endpoint path /oauth2/token
-    reverse_proxy @token_endpoint oauth2-oidc-issuer:4182 {
-        header_up Host ide.kushnir.cloud
-        header_up X-Forwarded-Proto https
-        header_up X-Real-IP {remote_host}
-    }
 
     # ────────────────────────────────────────────────────────────────────────────
     # OAuth2-Proxy Authentication Gate (default — all other traffic)

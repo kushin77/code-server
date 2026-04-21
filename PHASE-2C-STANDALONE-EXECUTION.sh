@@ -113,13 +113,13 @@ phase_2c_1_gsm_provisioning() {
   log_info "Provisioning GSM secrets in project: $GCP_PROJECT"
   
   # Session-Broker secret
-  local sb_secret=$(python3 -c "import secrets, string; print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32)))")
+  local sb_secret; sb_secret=$(python3 -c "import secrets, string; print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32)))")
   
   # Backend secret
-  local backend_secret=$(python3 -c "import secrets, string; print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32)))")
+  local backend_secret; backend_secret=$(python3 -c "import secrets, string; print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(32)))")
   
   # LB session cookie (64 hex chars = 32 bytes)
-  local lb_secret=$(openssl rand -hex 32)
+  local lb_secret; lb_secret=$(openssl rand -hex 32)
   
   log_info "Creating GSM secrets..."
   
@@ -267,7 +267,7 @@ phase_2c_4_token_test() {
   fi
   
   log_info "Testing token acquisition..."
-  local token=$(curl -s -X POST \
+  local token; token=$(curl -s -X POST \
     http://localhost:6969/oauth2/token \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "grant_type=client_credentials&client_id=${OIDC_CLIENT_ID:-test}&client_secret=${OIDC_CLIENT_SECRET:-test}&audience=api" 2>/dev/null | jq -r '.access_token // empty' 2>/dev/null)
@@ -300,12 +300,12 @@ phase_2c_5_s2s_test() {
   log_info "Testing service-to-service authentication with bearer token..."
   
   # Try to reach session-broker health endpoint
-  local response=$(curl -s -w "\n%{http_code}" -X GET \
+  local response; response=$(curl -s -w "\n%{http_code}" -X GET \
     http://localhost:7777/health \
     -H "Authorization: Bearer dummy-token" 2>/dev/null)
   
-  local http_code=$(echo "$response" | tail -1)
-  local body=$(echo "$response" | head -1)
+  local http_code; http_code=$(echo "$response" | tail -1)
+  local body; body=$(echo "$response" | head -1)
   
   if [[ "$http_code" == "200" ]]; then
     log_success "Session-broker responding (HTTP 200)"

@@ -74,8 +74,8 @@ check_healthcheck_uses_auth() {
 check_oauth2proxy_uses_auth() {
     log_stage "CHECK 4: oauth2-proxy services use authenticated Redis connection"
     
-    local oauth2_count=$(grep -c 'oauth2-proxy' "${REPO_ROOT}/docker-compose.yml" || true)
-    local authenticated_count=$(grep -c 'OAUTH2_PROXY_REDIS_CONNECTION_URL.*:\${REDIS_PASSWORD' "${REPO_ROOT}/docker-compose.yml" || true)
+    local oauth2_count; oauth2_count=$(grep -c 'oauth2-proxy' "${REPO_ROOT}/docker-compose.yml" || true)
+    local authenticated_count; authenticated_count=$(grep -c 'OAUTH2_PROXY_REDIS_CONNECTION_URL.*:\${REDIS_PASSWORD' "${REPO_ROOT}/docker-compose.yml" || true)
     
     if [ "$authenticated_count" -lt 2 ]; then
         log_error "❌ Not all oauth2-proxy services use authenticated Redis connection"

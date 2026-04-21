@@ -199,6 +199,9 @@ Cache hit target: ${CACHE_HIT_TARGET_PCT}%
 Cache hit measured: ${cache_hit_pct}%
 NAS primary mount: ${primary_mount_up}
 NAS export mount: ${export_mount_up}
+Coder home writable: ${coder_home_writable}
+Ollama writable: ${ollama_writable}
+Deploy reduction: ${deployment_reduction_summary}
 EOF
 
   gh issue create \

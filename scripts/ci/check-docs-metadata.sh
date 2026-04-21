@@ -52,7 +52,7 @@ validate_doc() {
         return
     fi
     
-    local frontmatter=$(sed -n '2,'$((frontmatter_end-1))'p' "$doc_path")
+    local frontmatter; frontmatter=$(sed -n '2,'$((frontmatter_end-1))'p' "$doc_path")
     
     # Check required fields using grep (fallback if yq unavailable)
     local required_fields=("title" "description" "owner" "last_review_date" "status")
@@ -66,7 +66,7 @@ validate_doc() {
     
     # Validate status field
     if echo "$frontmatter" | grep -q "^status:"; then
-        local status=$(echo "$frontmatter" | grep "^status:" | head -1 | sed 's/^status:[[:space:]]*//')
+        local status; status=$(echo "$frontmatter" | grep "^status:" | head -1 | sed 's/^status:[[:space:]]*//')
         if ! echo "$status" | grep -qE '^(active|draft|archived)'; then
             echo "[ERROR] Invalid status '$status' (must be: active|draft|archived) in: $doc_relative"
             ((METADATA_ERRORS+=1))
@@ -76,15 +76,15 @@ validate_doc() {
     
     # Validate date format
     if echo "$frontmatter" | grep -q "^last_review_date:"; then
-        local date=$(echo "$frontmatter" | grep "^last_review_date:" | head -1 | sed 's/^last_review_date:[[:space:]]*//;s/#.*//')
+        local date; date=$(echo "$frontmatter" | grep "^last_review_date:" | head -1 | sed 's/^last_review_date:[[:space:]]*//;s/#.*//')
         if ! echo "$date" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}'; then
             echo "[ERROR] Invalid date format '$date' (use YYYY-MM-DD) in: $doc_relative"
             ((METADATA_ERRORS+=1))
             ((has_error=1))
         else
             # Check if > 90 days old
-            local doc_date_epoch=$(date -d "$date" +%s 2>/dev/null || echo "0")
-            local now_epoch=$(date +%s)
+            local doc_date_epoch; doc_date_epoch=$(date -d "$date" +%s 2>/dev/null || echo "0")
+            local now_epoch; now_epoch=$(date +%s)
             local age_days=$(( (now_epoch - doc_date_epoch) / 86400 ))
             
             if [ "$age_days" -gt 90 ]; then

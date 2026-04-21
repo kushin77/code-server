@@ -32,7 +32,6 @@ REQUIRED_SCRIPTS=(
     "MONITOR-ISSUE-983.sh"
 )
 
-SCRIPTS_OK=1
 for script in "${REQUIRED_SCRIPTS[@]}"; do
     if [ -f "$SCRIPT_DIR/$script" ] && [ -x "$SCRIPT_DIR/$script" ]; then
         echo -e "    ${GREEN}✓${NC} $script (executable)"
@@ -40,7 +39,6 @@ for script in "${REQUIRED_SCRIPTS[@]}"; do
     else
         echo -e "    ${RED}✗${NC} $script (missing or not executable)"
         ((ISSUES++))
-        SCRIPTS_OK=0
     fi
 done
 
@@ -48,7 +46,6 @@ done
 echo ""
 echo -e "${BLUE}[2]${NC} Checking core services..."
 SERVICES=("code-server" "postgres" "redis" "caddy")
-SERVICES_OK=1
 
 for service in "${SERVICES[@]}"; do
     if docker ps | grep -q "$service"; then
@@ -57,7 +54,6 @@ for service in "${SERVICES[@]}"; do
     else
         echo -e "    ${RED}✗${NC} $service (not running)"
         ((ISSUES++))
-        SERVICES_OK=0
     fi
 done
 
@@ -98,7 +94,6 @@ CONFIG_FILES=(
     "terraform/main.tf"
 )
 
-CONFIG_OK=1
 for file in "${CONFIG_FILES[@]}"; do
     if [ -f "$SCRIPT_DIR/$file" ]; then
         echo -e "    ${GREEN}✓${NC} $file"
@@ -106,7 +101,6 @@ for file in "${CONFIG_FILES[@]}"; do
     else
         echo -e "    ${RED}✗${NC} $file (missing)"
         ((ISSUES++))
-        CONFIG_OK=0
     fi
 done
 
@@ -120,7 +114,6 @@ DOCS=(
     "E2E-TESTS-EXECUTION-FRAMEWORK.md"
 )
 
-DOCS_OK=1
 for doc in "${DOCS[@]}"; do
     if [ -f "$SCRIPT_DIR/$doc" ]; then
         echo -e "    ${GREEN}✓${NC} $doc"

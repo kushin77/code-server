@@ -244,7 +244,7 @@ fi
 echo ""
 
 log_check "E2E test files present"
-if ls scripts/e2e/**/*.spec.ts 2>/dev/null | grep -q "oauth\|login"; then
+if find scripts/e2e -name "*.spec.ts" 2>/dev/null | grep -q "oauth\|login"; then
   log_pass "E2E test files found"
 else
   log_warn "E2E test files not found in expected location"

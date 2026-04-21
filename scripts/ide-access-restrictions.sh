@@ -38,7 +38,6 @@ readonly RESTRICTED_COMMANDS=(
 
 # Color codes for output
 RED='\033[0;31m'
-GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
 # Allowed file operations (whitelist)
@@ -56,13 +55,13 @@ readonly AUDIT_LOG="/var/log/ide-access-audit.log"
 log_access() {
     local cmd="$1"
     local status="$2"
-    local timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+    local timestamp; timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
     echo "${timestamp} | ${USER} | ${PRIMARY_IP} | ${cmd} | ${status}" >> "${AUDIT_LOG}" 2>/dev/null || true
 }
 
 is_restricted_command() {
     local cmd="$1"
-    local base_cmd=$(basename "$cmd" 2>/dev/null || echo "$cmd")
+    local base_cmd; base_cmd=$(basename "$cmd" 2>/dev/null || echo "$cmd")
     
     for restricted in "${RESTRICTED_COMMANDS[@]}"; do
         if [[ "$base_cmd" == "$restricted" ]] || [[ "$base_cmd" == "${restricted%% *}" ]]; then
@@ -75,7 +74,7 @@ is_restricted_command() {
 
 is_allowed_path() {
     local path="$1"
-    local abs_path=$(cd "$path" 2>/dev/null && pwd || echo "$path")
+    local abs_path; abs_path=$(cd "$path" 2>/dev/null && pwd || echo "$path")
     
     for allowed in "${ALLOWED_PATHS[@]}"; do
         if [[ "$abs_path" == "$allowed" ]] || [[ "$abs_path" == "$allowed"/* ]]; then
@@ -149,7 +148,7 @@ trap_cmd() {
     fi
     
     # Check first token (the actual command)
-    local first_token=$(echo "$cmd" | awk '{print $1}')
+    local first_token; first_token=$(echo "$cmd" | awk '{print $1}')
     
     # Skip if it's a builtin or legitimate operation
     case "$first_token" in

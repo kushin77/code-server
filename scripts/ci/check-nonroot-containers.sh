@@ -25,7 +25,7 @@ log_stage() {
 check_oauth2proxy_in_compose() {
     log_stage "CHECK 1: oauth2-proxy services don't have user: \"0:0\""
     
-    local count=$(grep -c 'user: "0:0"' "${REPO_ROOT}/docker-compose.yml" || echo 0)
+    local count; count=$(grep -c 'user: "0:0"' "${REPO_ROOT}/docker-compose.yml" || echo 0)
     
     if [ "$count" -gt 0 ]; then
         log_error "❌ Found $count instances of user: \"0:0\" in docker-compose.yml"
@@ -39,9 +39,6 @@ check_oauth2proxy_in_compose() {
 
 check_oauth2proxy_user_removed() {
     log_stage "CHECK 2: oauth2-proxy removed root user override"
-    
-    # Count oauth2-proxy services
-    local oauth2_count=$(grep -c "oauth2-proxy:" "${REPO_ROOT}/docker-compose.yml" || echo 0)
     
     # They should not have user: "0:0" anymore
     if grep -A 10 "oauth2-proxy:" "${REPO_ROOT}/docker-compose.yml" | grep -q 'user: "0:0"'; then

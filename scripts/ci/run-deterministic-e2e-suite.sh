@@ -160,7 +160,6 @@ while :; do
 done
 
 if [[ "$final_status" == "failed" && "$attempt_count" -gt 0 ]]; then
-  last_attempt_log="$OUTPUT_DIR/${SUITE_NAME}-attempt-${attempt_count}.log"
   last_classification_file="$OUTPUT_DIR/${SUITE_NAME}-attempt-${attempt_count}.classification.json"
   if [[ -f "$last_classification_file" ]]; then
     final_classification=$(python3 - "$last_classification_file" <<'PY'

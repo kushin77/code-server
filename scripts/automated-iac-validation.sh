@@ -309,7 +309,7 @@ cat > "$AUDIT_FILE" << EOF
 ### Configuration Files
 - [PASS] \`docker-compose.yml\` - Service orchestration
 - [PASS] \`Caddyfile\` - Reverse proxy with automatic HTTPS
-- [WARN]️ \`.env.template\` - Configuration template (recommended)
+- [WARN] \`.env.template\` - Configuration template (recommended)
 
 ### Documentation
 - [PASS] \`PRODUCTION-DEPLOYMENT-IAC.md\` - Complete IaC deployment guide

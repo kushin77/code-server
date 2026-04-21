@@ -39,13 +39,14 @@ deploy_phase_16_a() {
     start_time=$(date +%s)
     
     log "Creating PostgreSQL primary container..."
+    local pg_primary_pass
+    pg_primary_pass=$(openssl rand -base64 32)
     docker run -d \
         --name postgres-ha-primary \
         --network phase13-net \
         -e POSTGRES_DB=code_server_db \
         -e POSTGRES_USER=db_admin \
-        # shellcheck disable=SC2046
-        -e POSTGRES_PASSWORD=$(openssl rand -base64 32) \
+        -e POSTGRES_PASSWORD="${pg_primary_pass}" \
         -e POSTGRES_INITDB_ARGS="-c max_wal_senders=10 -c max_replication_slots=10 -c wal_level=replica" \
         -p 5432:5432 \
         -v /var/lib/postgresql/primary:/var/lib/postgresql/data \
@@ -71,12 +72,13 @@ deploy_phase_16_a() {
     
     log "Creating PostgreSQL replica containers..."
     for i in {1..2}; do
+        local pg_replica_pass
+        pg_replica_pass=$(openssl rand -base64 32)
         docker run -d \
             --name postgres-ha-replica-${i} \
             --network phase13-net \
             -e PGUSER=replication_user \
-            # shellcheck disable=SC2046
-            -e PGPASSWORD=$(openssl rand -base64 32) \
+            -e PGPASSWORD="${pg_replica_pass}" \
             -e PGMASTER=postgres-ha-primary \
             -e PGPORT=5432 \
             -p $((5432 + i)):5432 \
@@ -272,13 +274,14 @@ deploy_phase_17() {
     start_time=$(date +%s)
     
     log "Creating pglogical replicator containers..."
+    local pg_logical_pass
+    pg_logical_pass=$(openssl rand -base64 32)
     docker run -d \
         --name pglogical-replicator-primary \
         --network phase13-net \
         -e POSTGRES_DB=code_server_db \
         -e POSTGRES_USER=replication_user \
-        # shellcheck disable=SC2046
-        -e POSTGRES_PASSWORD=$(openssl rand -base64 32) \
+        -e POSTGRES_PASSWORD="${pg_logical_pass}" \
         -e PGLOGICAL_ENABLED=true \
         -p 5434:5432 \
         -v /var/lib/postgresql/pglogical-primary:/var/lib/postgresql/data \

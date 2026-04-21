@@ -212,7 +212,6 @@ main() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --dry-run) dry_run=true; shift ;;
-            # shellcheck disable=SC2034
             --fix-allowlist) fix_allowlist=true; shift ;;
             *) >&2 echo "Unknown option: $1"; exit 1 ;;
         esac

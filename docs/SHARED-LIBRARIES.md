@@ -42,6 +42,7 @@ These reusable operational helpers are shared across CI, governance, and deploym
 | `scripts/lib/inventory-loader.sh` | Platform Engineering | Load production topology from inventory YAML and expose query helpers | Inputs: `environments/production/hosts.yml`. Outputs: exported host/domain variables and lookup functions. | Source in scripts that need host/IP/FQDN values instead of hardcoding topology values. | Active |
 | `scripts/lib/merge-settings.js` | Platform Engineering | Merge enterprise and user code-server settings while preserving locked policy keys | Inputs: enterprise settings, user settings. Outputs: merged settings JSON with enforced locked keys. | Invoke from IDE policy/bootstrap workflows to produce effective settings payloads. | Active |
 | `scripts/lib/policy-bundle.sh` | Platform Engineering | Fetch/cache policy bundle and enforce fail-safe revocation checks | Inputs: policy portal URL, user context, cache TTL. Outputs: cached bundle, revocation decision, exit-on-revoked behavior. | Source in session/bootstrap flows and call `policy_bundle_load` + `policy_bundle_assert_not_revoked`. | Active |
+| `scripts/lib/task-completion-framework.sh` | Platform Engineering | Provide structured task lifecycle helpers (start, complete, fail, report) for long-running ops scripts | Inputs: task name, phase context. Outputs: timestamped status log and aggregated completion summary. | Source in operational scripts that track multi-step task progress. | Active |
 
 ## Service Module Catalog
 

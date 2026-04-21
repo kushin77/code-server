@@ -116,7 +116,7 @@ if [[ "$USER" == "developer" ]] || [[ "$USER" == *"dev"* ]]; then
     # Verify we're in a safe directory
     if ! [[ "$PWD" == "/home/developer"* ]] && \
        ! [[ "$PWD" == "/tmp"* ]] && \
-       ! [[ "$PWD" == "/var/tmp"* ]]; then || exit 1
+       ! [[ "$PWD" == "/var/tmp"* ]]; then
         cd /home/developer || cd ~ || cd /tmp
     fi
     

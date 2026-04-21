@@ -1,0 +1,241 @@
+# Phase 5: Kubernetes ServiceAccount Workload Identity Integration
+# Enables ServiceAccounts to authenticate using OIDC tokens
+# Workloads can request tokens via projected volumes and use them for API authentication
+
+---
+# ServiceAccount: Code-Server Workload (with Workload Identity)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: code-server
+  namespace: prod
+  labels:
+    app: code-server
+    iam-role: workload/viewer
+    workload-identity: enabled
+---
+
+# ServiceAccount: Prometheus (with Workload Identity)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+    iam-role: workload/viewer
+    workload-identity: enabled
+---
+
+# ServiceAccount: Grafana (with Workload Identity)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+    iam-role: workload/operator
+    workload-identity: enabled
+---
+
+# ClusterRole: Workload Identity Token Request
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: workload-identity-token-request
+  labels:
+    app.kubernetes.io/name: workload-identity
+spec:
+  rules:
+  # Allow requesting service account tokens
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    verbs: ["create"]
+  # Allow reading own service account
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get"]
+  # Allow reading OIDC issuer configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["oidc-issuer-config"]
+    verbs: ["get"]
+---
+
+# ClusterRoleBinding: Bind all service accounts to workload identity token request
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: workload-identity-token-request
+  labels:
+    app.kubernetes.io/name: workload-identity
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: workload-identity-token-request
+subjects:
+- kind: Group
+  name: system:serviceaccounts
+  apiGroup: rbac.authorization.k8s.io
+---
+
+# Role: Code-Server Workload Permissions (Viewer)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: code-server-viewer
+  namespace: prod
+  labels:
+    app: code-server
+    iam-role: workload/viewer
+rules:
+# Allow reading pods and deployments
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+# Allow reading configmaps and secrets (within namespace)
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list"]
+---
+
+# RoleBinding: Bind Code-Server ServiceAccount to Viewer Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: code-server-viewer
+  namespace: prod
+  labels:
+    app: code-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: code-server-viewer
+subjects:
+- kind: ServiceAccount
+  name: code-server
+  namespace: prod
+---
+
+# Role: Prometheus Workload Permissions (Viewer)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-viewer
+  namespace: monitoring
+  labels:
+    app: prometheus
+    iam-role: workload/viewer
+rules:
+# Allow reading all resources in monitoring namespace (for scraping metrics)
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets"]
+  verbs: ["get", "list"]
+---
+
+# RoleBinding: Bind Prometheus ServiceAccount to Viewer Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-viewer
+  namespace: monitoring
+  labels:
+    app: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-viewer
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+
+# Role: Grafana Workload Permissions (Operator)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: grafana-operator
+  namespace: monitoring
+  labels:
+    app: grafana
+    iam-role: workload/operator
+rules:
+# Allow managing grafana datasources and dashboards
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  resourceNames: ["grafana-provisioning"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+  resourceNames: ["grafana-datasources"]
+---
+
+# RoleBinding: Bind Grafana ServiceAccount to Operator Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grafana-operator
+  namespace: monitoring
+  labels:
+    app: grafana
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: grafana-operator
+subjects:
+- kind: ServiceAccount
+  name: grafana
+  namespace: monitoring
+---
+
+# NetworkPolicy: Restrict traffic to OIDC issuer
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: oidc-issuer-access
+  namespace: oidc-system
+spec:
+  podSelector:
+    matchLabels:
+      app: oidc-issuer
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+
+# NetworkPolicy: Allow all pods to access OIDC issuer for token requests
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-oidc-issuer-access
+  namespace: prod
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: oidc-system
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53

@@ -125,7 +125,8 @@ test_primary_csrf_cookies() {
   
   # Test portal CSRF cookie
   log_info "Testing portal CSRF cookie on ${PRIMARY_HOST}..."
-  local portal_response=$(
+  local portal_response
+  portal_response=$(
     timeout "${CURL_TIMEOUT}" curl -sv -L \
       --connect-timeout 5 \
       "http://${PRIMARY_HOST}:${OAUTH2_PORTAL_PORT}/oauth2/start" 2>&1 || true
@@ -139,7 +140,8 @@ test_primary_csrf_cookies() {
   
   # Test IDE CSRF cookie
   log_info "Testing IDE CSRF cookie on ${PRIMARY_HOST}..."
-  local ide_response=$(
+  local ide_response
+  ide_response=$(
     timeout "${CURL_TIMEOUT}" curl -sv -L \
       --connect-timeout 5 \
       "http://${PRIMARY_HOST}:${OAUTH2_IDE_PORT}/oauth2/start" 2>&1 || true
@@ -196,7 +198,8 @@ test_auth_endpoint_csrf_validation() {
   
   # Attempt auth without CSRF cookie (should fail with 403 or redirect)
   log_info "Testing /oauth2/auth without CSRF token..."
-  local response=$(
+  local response
+  response=$(
     timeout "${CURL_TIMEOUT}" curl -sI -w "\n%{http_code}" \
       -H "Cookie: _oauth2_proxy_portal=" \
       "http://${PRIMARY_HOST}:${OAUTH2_PORTAL_PORT}/oauth2/auth" 2>/dev/null || echo "000"
@@ -223,7 +226,8 @@ test_oauth2_startup_config() {
   fi
   
   # Check logs for CSRF trusted hosts configuration
-  local portal_logs=$(
+  local portal_logs
+  portal_logs=$(
     timeout 10 ssh "${SSH_USER}@${PRIMARY_HOST}" \
       "docker logs oauth2-proxy-portal 2>&1 | head -50" 2>/dev/null || echo ""
   )

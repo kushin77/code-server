@@ -36,7 +36,8 @@ check_internal_link() {
     ((CHECKED_LINKS+=1))
     
     # Resolve relative path
-    local doc_dir=$(dirname "$doc_file")
+    local doc_dir
+    doc_dir=$(dirname "$doc_file")
     local resolved_path="${doc_dir}/${target_path}"
     
     # Remove anchors for file existence check

@@ -19,6 +19,7 @@ APEX_DOMAIN="${APEX_DOMAIN:-${DOMAIN#*.}}"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+# shellcheck disable=SC2034
 BLUE='\033[0;34m'
 NC='\033[0m'
 
@@ -80,7 +81,8 @@ test_audit_table() {
   echo ""
   log_info "=== Test 2: PostgreSQL Audit Table ==="
 
-  local postgres_container=$(docker-compose ps -q postgresql 2>/dev/null || echo "")
+  local postgres_container
+  postgres_container=$(docker-compose ps -q postgresql 2>/dev/null || echo "")
   
   if [[ -z "$postgres_container" ]]; then
     log_fail "PostgreSQL container not running"
@@ -215,7 +217,8 @@ test_audit_logging() {
   echo ""
   log_info "=== Test 6: Audit Log Recording ==="
 
-  local postgres_container=$(docker-compose ps -q postgresql 2>/dev/null || echo "")
+  local postgres_container
+  postgres_container=$(docker-compose ps -q postgresql 2>/dev/null || echo "")
   
   if [[ -z "$postgres_container" ]]; then
     log_warning "PostgreSQL not running - cannot verify audit logs"
@@ -223,7 +226,8 @@ test_audit_logging() {
   fi
 
   # Check if any audit entries exist
-  local audit_count=$(docker exec "$postgres_container" psql -U postgres -d postgres -c "SELECT COUNT(*) FROM rbac_audit_log;" 2>/dev/null | tail -1 | tr -d ' ')
+  local audit_count
+  audit_count=$(docker exec "$postgres_container" psql -U postgres -d postgres -c "SELECT COUNT(*) FROM rbac_audit_log;" 2>/dev/null | tail -1 | tr -d ' ')
   
   if [[ "$audit_count" -gt 0 ]]; then
     log_success "Audit log has $audit_count entries"
@@ -232,7 +236,8 @@ test_audit_logging() {
   fi
 
   # Check for both allowed and denied entries
-  local denied_count=$(docker exec "$postgres_container" psql -U postgres -d postgres -c "SELECT COUNT(*) FROM rbac_audit_log WHERE allowed = false;" 2>/dev/null | tail -1 | tr -d ' ')
+  local denied_count
+  denied_count=$(docker exec "$postgres_container" psql -U postgres -d postgres -c "SELECT COUNT(*) FROM rbac_audit_log WHERE allowed = false;" 2>/dev/null | tail -1 | tr -d ' ')
   
   if [[ "$denied_count" -gt 0 ]]; then
     log_success "Audit log has $denied_count denied access entries"
@@ -264,7 +269,8 @@ test_rate_limiting() {
 
   # Check for rate limit configuration file
   if [[ -f "$PROJECT_ROOT/.env.phase3" ]]; then
-    local rate_limit_count=$(grep -c "RATE_LIMIT" "$PROJECT_ROOT/.env.phase3" || echo "0")
+    local rate_limit_count
+    rate_limit_count=$(grep -c "RATE_LIMIT" "$PROJECT_ROOT/.env.phase3" || echo "0")
     if [[ "$rate_limit_count" -gt 0 ]]; then
       log_success "Rate limiting configuration file exists ($rate_limit_count settings)"
     else
@@ -287,7 +293,8 @@ test_authorization_matrix() {
     log_success "Authorization matrix document exists"
     
     # Count entries
-    local entry_count=$(grep -c "^|" "$PROJECT_ROOT/config/rbac/service-authorization-matrix.md" || echo "0")
+    local entry_count
+    entry_count=$(grep -c "^|" "$PROJECT_ROOT/config/rbac/service-authorization-matrix.md" || echo "0")
     echo "  Service pairs defined: $((entry_count - 2))"  # -2 for header rows
   else
     log_fail "Authorization matrix document not found"

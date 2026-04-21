@@ -144,6 +144,7 @@ log_success "✓ Environment variables set"
 
 log_info "Part 3: Running E2E tests with GSM credentials..."
 
+# shellcheck disable=SC2034
 test_count=0
 test_passed=0
 test_failed=0

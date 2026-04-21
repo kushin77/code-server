@@ -106,7 +106,8 @@ check_service_health() {
     log_info "Checking services on ${host}..."
     
     for service in "${services[@]}"; do
-      local status=$(ssh "${DEPLOY_USER}@${host}" "docker ps --filter name=${service} --format '{{.State}}' 2>/dev/null | head -1" || echo "error")
+      local status
+      status=$(ssh "${DEPLOY_USER}@${host}" "docker ps --filter name=${service} --format '{{.State}}' 2>/dev/null | head -1" || echo "error")
       
       if [[ "$status" == "running" ]]; then
         log_info "  ✅ ${service} is running"
@@ -136,7 +137,8 @@ check_load_balancing() {
   # Verify both backends are configured
   log_info "Verifying both hosts are configured as backends..."
   
-  local caddy_config=$(ssh "${DEPLOY_USER}@${PRIMARY_HOST}" "cat Caddyfile 2>/dev/null | grep -E '(reverse_proxy|upstream)' || echo 'not_found'" || echo "error")
+  local caddy_config
+  caddy_config=$(ssh "${DEPLOY_USER}@${PRIMARY_HOST}" "cat Caddyfile 2>/dev/null | grep -E '(reverse_proxy|upstream)' || echo 'not_found'" || echo "error")
   
   if echo "$caddy_config" | grep -q "192.168.168"; then
     log_info "✅ Both hosts appear in load-balancer config"
@@ -154,8 +156,10 @@ check_db_replication() {
   
   log_info "Checking PostgreSQL replication from primary to replica..."
   
-  local primary_lsn=$(ssh "${DEPLOY_USER}@${PRIMARY_HOST}" "docker exec postgres psql -U postgres -tc \"SELECT pg_current_wal_lsn();\" 2>/dev/null | xargs" || echo "unknown")
-  local replica_lsn=$(ssh "${DEPLOY_USER}@${REPLICA_HOST}" "docker exec postgres psql -U postgres -tc \"SELECT pg_last_wal_receive_lsn();\" 2>/dev/null | xargs" || echo "unknown")
+  local primary_lsn
+  primary_lsn=$(ssh "${DEPLOY_USER}@${PRIMARY_HOST}" "docker exec postgres psql -U postgres -tc \"SELECT pg_current_wal_lsn();\" 2>/dev/null | xargs" || echo "unknown")
+  local replica_lsn
+  replica_lsn=$(ssh "${DEPLOY_USER}@${REPLICA_HOST}" "docker exec postgres psql -U postgres -tc \"SELECT pg_last_wal_receive_lsn();\" 2>/dev/null | xargs" || echo "unknown")
   
   if [[ "$primary_lsn" != "unknown" && "$replica_lsn" != "unknown" ]]; then
     if [[ "$primary_lsn" == "$replica_lsn" ]]; then

@@ -277,6 +277,7 @@ enforce_vip_owner() {
     set_keepalived_state "$PRIMARY_HOST" start
   fi
 
+  # shellcheck disable=SC2034
   for i in $(seq 1 20); do
     current_owner="$(current_vip_owner)"
     if [[ "$current_owner" == "$expected_host" ]]; then

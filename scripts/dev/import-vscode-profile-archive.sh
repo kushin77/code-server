@@ -8,6 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
+# shellcheck disable=SC2034
 SCRIPT_NAME="$(basename "$0")"
 
 usage() {

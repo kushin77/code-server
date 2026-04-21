@@ -76,8 +76,10 @@ fi
 # ============================================================================
 log_info "Check 2: Validating runbook links in alert annotations..."
 
+# shellcheck disable=SC2034
 RUNBOOK_URL="https://github.com/kushin77/code-server/issues/965"
 ALERTS_WITH_RUNBOOK=$(grep -c "runbook.*965" "$ALERT_RULES_FILE" || true)
+# shellcheck disable=SC2034
 TOTAL_ALERTS=$(grep -c "alert:" "$ALERT_RULES_FILE" || true)
 
 if [ "$ALERTS_WITH_RUNBOOK" -gt 0 ]; then

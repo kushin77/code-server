@@ -21,6 +21,7 @@ NODE_CMD=""
 if command -v node >/dev/null 2>&1; then
     NODE_CMD="node"
 elif command -v node.exe >/dev/null 2>&1; then
+    # shellcheck disable=SC2034
     NODE_CMD="node.exe"
 else
     log_fatal "node or node.exe is required for pnpm workspace validation"

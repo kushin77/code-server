@@ -17,7 +17,9 @@ set -euo pipefail
 WORKSPACE_DOMAIN="${WORKSPACE_DOMAIN:-kushnir.cloud}"
 GCP_PROJECT="${GCP_PROJECT:-kushin77-ops}"
 QA_USER_EMAIL="qa@${WORKSPACE_DOMAIN}"
+# shellcheck disable=SC2034
 QA_USER_FIRST_NAME="QA"
+# shellcheck disable=SC2034
 QA_USER_LAST_NAME="Automation"
 SERVICE_ACCOUNT_JSON="${SERVICE_ACCOUNT_JSON:-}"
 

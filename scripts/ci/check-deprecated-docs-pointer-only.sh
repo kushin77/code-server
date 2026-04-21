@@ -30,7 +30,8 @@ check_deprecated_docs_pointer_only() {
     fi
     
     # Check file size - redirect pointers should be small
-    local size=$(wc -c < "$doc" 2>/dev/null || echo 0)
+    local size
+    size=$(wc -c < "$doc" 2>/dev/null || echo 0)
     if [[ $size -gt $MAX_REDIRECT_SIZE ]]; then
       log_error "[$doc] File too large ($size bytes) - contains content, not redirect pointer"
       failed=$((failed + 1))

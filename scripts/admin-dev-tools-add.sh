@@ -45,6 +45,7 @@ IMAGE_TAG="$(date +%Y%m%d-%H%M%S)"
 BACKUP_FILE="${DOCKERFILE_PATH}.backup.${IMAGE_TAG}"
 
 # Admin-only check
+# shellcheck disable=SC2034
 REQUIRED_ROLES=("admin" "platform" "infrastructure")
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -59,6 +60,7 @@ log_section() {
 
 verify_admin_access() {
     local user="${SUDO_USER:-$USER}"
+    # shellcheck disable=SC2034
     local is_admin=false
     
     # Check if running as root or sudo

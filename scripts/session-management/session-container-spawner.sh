@@ -67,8 +67,11 @@ create_session_container() {
   log_step "Creating Docker container with isolation"
   
   # Calculate resource limits for Docker
+  # shellcheck disable=SC2034
   local cpu_quota=$(($(echo "$CPU_LIMIT" | cut -d. -f1) * 100000))
-  local memory_bytes=$(parse_memory_to_bytes "$MEMORY_LIMIT")
+  local memory_bytes
+  # shellcheck disable=SC2034
+  memory_bytes=$(parse_memory_to_bytes "$MEMORY_LIMIT")
   
   # Build docker run command
   docker run \
@@ -208,6 +211,7 @@ cleanup_on_error() {
     docker stop "$CONTAINER_NAME" 2>/dev/null || true
     docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
   fi
+  # shellcheck disable=SC2115
   
   # Clean up directories
   rm -rf "$SESSIONS_ROOT/$SESSION_ID" || true

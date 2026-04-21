@@ -96,7 +96,9 @@ is_protected() {
 cleanup_images() {
     log_action "Scanning for orphaned/stale Docker images..."
     
-    local cutoff_date=$(date -d "$IMAGE_RETENTION_DAYS days ago" +%s 2>/dev/null || echo "0")
+    local cutoff_date
+    # shellcheck disable=SC2034
+    cutoff_date=$(date -d "$IMAGE_RETENTION_DAYS days ago" +%s 2>/dev/null || echo "0")
     
     while read -r image_id repo tag created_at size; do
         ((TOTAL_IMAGES_SCANNED++))
@@ -115,7 +117,8 @@ cleanup_images() {
             ((ORPHANED_IMAGES_FOUND++))
             
             # Extract size in MB
-            local size_mb=$(echo "$size" | grep -oE '[0-9]+' | head -1)
+            local size_mb
+            size_mb=$(echo "$size" | grep -oE '[0-9]+' | head -1)
             if [[ ! -z "$size_mb" ]]; then
                 ((SPACE_RECLAIMED_MB += size_mb))
             fi
@@ -133,6 +136,7 @@ cleanup_images() {
 cleanup_containers() {
     log_action "Scanning for exited/unhealthy containers..."
     
+    # shellcheck disable=SC2034
     while read -r container_id name status created_at; do
         # Skip protected containers
         if is_protected "$name" "$PROTECTED_CONTAINERS"; then
@@ -160,6 +164,7 @@ cleanup_containers() {
 cleanup_volumes() {
     log_action "Scanning for orphaned volumes..."
     
+    # shellcheck disable=SC2034
     while read -r volume_name driver mountpoint; do
         # Skip protected volumes
         if is_protected "$volume_name" "$PROTECTED_VOLUMES"; then
@@ -170,7 +175,8 @@ cleanup_volumes() {
         fi
         
         # Check if volume is in use by any container
-        local in_use=$(docker ps -a --format '{{.Mounts}}' | grep -c "$volume_name" 2>/dev/null || echo "0")
+        local in_use
+        in_use=$(docker ps -a --format '{{.Mounts}}' | grep -c "$volume_name" 2>/dev/null || echo "0")
         
         if [ "$in_use" -eq 0 ]; then
             log_action "  [ORPHANED] Volume: $volume_name (driver: $driver)"

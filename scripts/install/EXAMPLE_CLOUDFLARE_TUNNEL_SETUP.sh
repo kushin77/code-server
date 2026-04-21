@@ -96,6 +96,7 @@ if [ -f "$TUNNEL_CONFIG" ]; then
 else
     echo "  ⚠️  Tunnel credentials not found at $TUNNEL_CONFIG"
     echo "  This file should have been created by 'cloudflared tunnel create'"
+    # shellcheck disable=SC2010
     ls -la "$CLOUDFLARE_CONFIG_DIR/" | grep -E "\.json|\.pem"
 fi
 

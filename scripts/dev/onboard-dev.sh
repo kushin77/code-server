@@ -67,7 +67,8 @@ heading() {
 }
 
 elapsed_time() {
-    local end=$(date +%s)
+    local end
+    end=$(date +%s)
     local duration=$((end - SCRIPT_START))
     echo "Duration: $(($duration / 60))m $(($duration % 60))s"
 }

@@ -26,6 +26,7 @@ mkdir -p "$LOG_DIR"
 
 # Execute with optional dry-run
 execute() {
+  # shellcheck disable=SC2124
   local cmd="$@"
   log_info "Executing: $cmd"
   
@@ -183,6 +184,7 @@ troubleshoot_gpu_issues() {
   log_info "Collecting diagnostic information..."
   
   # GPU diagnostics
+  # shellcheck disable=SC2046
   log_info "GPU Hardware Status:"
   lspci -v -s $(lspci | grep -i nvidia | cut -d: -f1 | head -1) 2>/dev/null | head -10 | tee -a "$LOG_FILE"
   

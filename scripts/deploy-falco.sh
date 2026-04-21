@@ -89,6 +89,7 @@ echo -e "${GREEN}✓ Installed Falco ${FALCO_VERSION}${NC}"
 echo -e "\n${BLUE}[4] Building Falco eBPF probe...${NC}"
 
 # Install kernel headers (required for eBPF build)
+# shellcheck disable=SC2046
 apt-get install -y -qq linux-headers-$(uname -r)
 
 # Build eBPF probe

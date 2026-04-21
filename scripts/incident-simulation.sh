@@ -23,13 +23,19 @@ TRACKER_ISSUE_NUMBER="${TRACKER_ISSUE_NUMBER:-}"
 GH_BIN="${GH_BIN:-$(command -v gh 2>/dev/null || command -v gh.exe 2>/dev/null || true)}"
 
 # Color codes
+# shellcheck disable=SC2034
 RED='\033[0;31m'
+# shellcheck disable=SC2034
 GREEN='\033[0;32m'
+# shellcheck disable=SC2034
 YELLOW='\033[1;33m'
+# shellcheck disable=SC2034
 BLUE='\033[0;34m'
+# shellcheck disable=SC2034
 NC='\033[0m'
 
 # Incident tracking
+# shellcheck disable=SC2034
 INCIDENT_START=$(date +%s%N)
 INCIDENT_DETECTED_TIME=0
 INCIDENT_RESOLVED_TIME=0

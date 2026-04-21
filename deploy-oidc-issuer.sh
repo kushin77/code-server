@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /home/akushnir/code-server-enterprise
+cd /home/akushnir/code-server-enterprise || exit 1
 
 # Start oauth2-oidc-issuer
 docker run -d \

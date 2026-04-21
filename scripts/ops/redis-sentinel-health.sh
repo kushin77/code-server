@@ -85,20 +85,24 @@ check_redis_master() {
     return 2
   fi
   
-  local role=$(echo "$info" | grep "^role:" | cut -d: -f2 | tr -d '\r')
+  local role
+  role=$(echo "$info" | grep "^role:" | cut -d: -f2 | tr -d '\r')
   if [[ "$role" != "master" ]]; then
     log_critical "Redis role is '$role' (expected 'master')"
     return 2
   fi
   log_check 0 "Redis role is master"
   
-  local version=$(echo "$info" | grep "^redis_version:" | cut -d: -f2 | tr -d '\r')
+  local version
+  version=$(echo "$info" | grep "^redis_version:" | cut -d: -f2 | tr -d '\r')
   log_info "  Redis version: $version"
   
-  local connected_clients=$(redis_cli_cmd "$REDIS_HOST" "$REDIS_PORT" info clients | grep "^connected_clients:" | cut -d: -f2 | tr -d '\r')
+  local connected_clients
+  connected_clients=$(redis_cli_cmd "$REDIS_HOST" "$REDIS_PORT" info clients | grep "^connected_clients:" | cut -d: -f2 | tr -d '\r')
   log_info "  Connected clients: $connected_clients"
   
-  local used_memory=$(redis_cli_cmd "$REDIS_HOST" "$REDIS_PORT" info memory | grep "^used_memory_human:" | cut -d: -f2 | tr -d '\r')
+  local used_memory
+  used_memory=$(redis_cli_cmd "$REDIS_HOST" "$REDIS_PORT" info memory | grep "^used_memory_human:" | cut -d: -f2 | tr -d '\r')
   log_info "  Used memory: $used_memory"
   
   return 0
@@ -125,7 +129,8 @@ check_sentinel_nodes() {
     if [[ $VERBOSE -eq 1 ]]; then
       local info
       if info=$(redis_cli_cmd "$host" "$port" info server 2>/dev/null); then
-        local version=$(echo "$info" | grep "^redis_version:" | cut -d: -f2 | tr -d '\r')
+        local version
+        version=$(echo "$info" | grep "^redis_version:" | cut -d: -f2 | tr -d '\r')
         log_info "    Version: $version"
       fi
     fi
@@ -177,7 +182,8 @@ check_sentinel_master_info() {
     local port="${sentinel_addr#*:}"
     
     if replicas=$(redis_cli_cmd "$host" "$port" SENTINEL replicas mymaster 2>/dev/null); then
-      local replica_count=$(echo "$replicas" | wc -l)
+      local replica_count
+      replica_count=$(echo "$replicas" | wc -l)
       log_info "  Replicas tracked by $host: $(($replica_count / 2))"
     fi
   done
@@ -194,8 +200,10 @@ check_persistence() {
     return 1
   fi
   
-  local rdb_last_save=$(echo "$info" | grep "^rdb_last_save_time:" | cut -d: -f2 | tr -d '\r')
-  local aof_enabled=$(echo "$info" | grep "^aof_enabled:" | cut -d: -f2 | tr -d '\r')
+  local rdb_last_save
+  rdb_last_save=$(echo "$info" | grep "^rdb_last_save_time:" | cut -d: -f2 | tr -d '\r')
+  local aof_enabled
+  aof_enabled=$(echo "$info" | grep "^aof_enabled:" | cut -d: -f2 | tr -d '\r')
   
   log_info "  AOF enabled: $aof_enabled"
   if [[ "$aof_enabled" == "0" ]]; then
@@ -217,7 +225,8 @@ check_oauth2_proxy_connections() {
     return 1
   fi
   
-  local oauth_clients=$(echo "$client_list" | grep -c "oauth2" || true)
+  local oauth_clients
+  oauth_clients=$(echo "$client_list" | grep -c "oauth2" || true)
   if [[ $oauth_clients -gt 0 ]]; then
     log_check 0 "oauth2-proxy clients connected: $oauth_clients"
   else

@@ -21,6 +21,7 @@ GCP_PROJECT_ID="${GCP_PROJECT_ID:-kushin77-ops}"
 QA_EMAIL="${QA_EMAIL:-qa@kushnir.cloud}"
 CI_SERVICE_ACCOUNT_EMAIL="${CI_SERVICE_ACCOUNT_EMAIL:-github-actions@kushin77-ops.iam.gserviceaccount.com}"
 TERRAFORM_DIR="terraform"
+# shellcheck disable=SC2034
 STATE_FILE="terraform.tfstate"
 
 # ============================================================================

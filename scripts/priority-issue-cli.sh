@@ -129,7 +129,8 @@ create_issue() {
     fi
     
     # Build JSON payload
-    local json_labels=$(printf '%s\n' "${all_labels[@]}" | jq -R -s -c 'split("\n")[:-1]')
+    local json_labels
+    json_labels=$(printf '%s\n' "${all_labels[@]}" | jq -R -s -c 'split("\n")[:-1]')
     
     local payload="{
         \"title\": $(echo "$title" | jq -R .),
@@ -144,11 +145,14 @@ create_issue() {
     
     echo "Creating issue with priority $priority..."
     
-    local response=$(api_call POST "/repos/$REPO/issues" "$payload")
-    local issue_number=$(echo "$response" | jq -r '.number // empty')
+    local response
+    response=$(api_call POST "/repos/$REPO/issues" "$payload")
+    local issue_number
+    issue_number=$(echo "$response" | jq -r '.number // empty')
     
     if [[ -n "$issue_number" ]]; then
-        local url=$(echo "$response" | jq -r '.html_url')
+        local url
+        url=$(echo "$response" | jq -r '.html_url')
         echo -e "${GREEN}✅ Issue #$issue_number created${NC}"
         echo "   Priority: $priority"
         echo "   Title: $title"
@@ -175,13 +179,18 @@ list_issues() {
     echo "=================================="
     
     # Search issues
-    local response=$(api_call GET "/search/issues?q=$(echo "$query" | jq -sRr @uri)&sort=created&order=desc&per_page=$count")
+    local response
+    response=$(api_call GET "/search/issues?q=$(echo "$query" | jq -sRr @uri)&sort=created&order=desc&per_page=$count")
     
     # Parse and display by priority
-    local p0s=$(echo "$response" | jq '.items[] | select(.labels[] | select(.name == "P0"))')
-    local p1s=$(echo "$response" | jq '.items[] | select(.labels[] | select(.name == "P1"))')
-    local p2s=$(echo "$response" | jq '.items[] | select(.labels[] | select(.name == "P2"))')
-    local p3s=$(echo "$response" | jq '.items[] | select(.labels[] | select(.name == "P3"))')
+    local p0s
+    p0s=$(echo "$response" | jq '.items[] | select(.labels[] | select(.name == "P0"))')
+    local p1s
+    p1s=$(echo "$response" | jq '.items[] | select(.labels[] | select(.name == "P1"))')
+    local p2s
+    p2s=$(echo "$response" | jq '.items[] | select(.labels[] | select(.name == "P2"))')
+    local p3s
+    p3s=$(echo "$response" | jq '.items[] | select(.labels[] | select(.name == "P3"))')
     
     if [[ -n "$p0s" ]]; then
         echo -e "\n${RED}🔴 P0 (Critical)${NC}"
@@ -218,13 +227,18 @@ get_next_issue() {
     # Check P0 first
     for priority in P0 P1 P2 P3; do
         local query="repo:$REPO is:issue is:open label:$priority"
-        local response=$(api_call GET "/search/issues?q=$(echo "$query" | jq -sRr @uri)&sort=created&order=asc&per_page=1")
-        local issue=$(echo "$response" | jq '.items[0] // empty')
+        local response
+        response=$(api_call GET "/search/issues?q=$(echo "$query" | jq -sRr @uri)&sort=created&order=asc&per_page=1")
+        local issue
+        issue=$(echo "$response" | jq '.items[0] // empty')
         
         if [[ -n "$issue" ]]; then
-            local num=$(echo "$issue" | jq -r '.number')
-            local title=$(echo "$issue" | jq -r '.title')
-            local url=$(echo "$issue" | jq -r '.html_url')
+            local num
+            num=$(echo "$issue" | jq -r '.number')
+            local title
+            title=$(echo "$issue" | jq -r '.title')
+            local url
+            url=$(echo "$issue" | jq -r '.html_url')
             
             echo -e "${CYAN}Next Issue (Priority: $priority)${NC}"
             echo "  #$num: $title"
@@ -248,8 +262,10 @@ set_priority() {
     echo "Setting priority for issue #$issue_num to $new_priority..."
     
     # Get current issue
-    local issue=$(api_call GET "/repos/$REPO/issues/$issue_num")
-    local current_labels=$(echo "$issue" | jq -r '.labels[].name')
+    local issue
+    issue=$(api_call GET "/repos/$REPO/issues/$issue_num")
+    local current_labels
+    current_labels=$(echo "$issue" | jq -r '.labels[].name')
     
     # Remove old priority labels
     local new_labels=()
@@ -263,7 +279,8 @@ set_priority() {
     new_labels+=("$new_priority")
     
     # Update issue
-    local payload=$(printf '%s\n' "${new_labels[@]}" | jq -R . | jq -s .)
+    local payload
+    payload=$(printf '%s\n' "${new_labels[@]}" | jq -R . | jq -s .)
     payload=$(echo "{\"labels\": $payload}" | jq .)
     
     api_call PATCH "/repos/$REPO/issues/$issue_num" "$payload" > /dev/null
@@ -277,13 +294,15 @@ priority_stats() {
     
     for priority in P0 P1 P2 P3; do
         local query="repo:$REPO is:issue is:open label:$priority"
-        local count=$(api_call GET "/search/issues?q=$(echo "$query" | jq -sRr @uri)" | jq '.total_count')
+        local count
+        count=$(api_call GET "/search/issues?q=$(echo "$query" | jq -sRr @uri)" | jq '.total_count')
         echo "$priority: $count issues"
     done
     
     # Unprioritized
     local query="repo:$REPO is:issue is:open label:needs-priority"
-    local uncount=$(api_call GET "/search/issues?q=$(echo "$query" | jq -sRr @uri)" | jq '.total_count')
+    local uncount
+    uncount=$(api_call GET "/search/issues?q=$(echo "$query" | jq -sRr @uri)" | jq '.total_count')
     echo "Unprioritized: $uncount issues ⚠️"
 }
 

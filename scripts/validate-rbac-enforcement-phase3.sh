@@ -50,7 +50,8 @@ test_role_definitions() {
     if kubectl get role "$role" -n "$RBAC_NAMESPACE" &>/dev/null; then
       log_success "Role '$role' exists"
       # Get rule count
-      local rule_count=$(kubectl get role "$role" -n "$RBAC_NAMESPACE" -o jsonpath='{.rules | length}')
+      local rule_count
+      rule_count=$(kubectl get role "$role" -n "$RBAC_NAMESPACE" -o jsonpath='{.rules | length}')
       echo "  Rules: $rule_count"
     else
       log_fail "Role '$role' not found"
@@ -72,7 +73,8 @@ test_role_bindings() {
     if kubectl get rolebinding "$binding" -n "$RBAC_NAMESPACE" &>/dev/null; then
       log_success "RoleBinding '$binding' exists"
       # Get subject count
-      local subject_count=$(kubectl get rolebinding "$binding" -n "$RBAC_NAMESPACE" -o jsonpath='{.subjects | length}')
+      local subject_count
+      subject_count=$(kubectl get rolebinding "$binding" -n "$RBAC_NAMESPACE" -o jsonpath='{.subjects | length}')
       echo "  Subjects: $subject_count"
     else
       log_fail "RoleBinding '$binding' not found"
@@ -122,7 +124,8 @@ test_cluster_role_bindings() {
 
   if kubectl get clusterrolebinding service-cross-namespace-binding &>/dev/null; then
     log_success "ClusterRoleBinding 'service-cross-namespace-binding' exists"
-    local subject_count=$(kubectl get clusterrolebinding service-cross-namespace-binding -o jsonpath='{.subjects | length}')
+    local subject_count
+    subject_count=$(kubectl get clusterrolebinding service-cross-namespace-binding -o jsonpath='{.subjects | length}')
     echo "  Subjects: $subject_count"
   else
     log_fail "ClusterRoleBinding 'service-cross-namespace-binding' not found"
@@ -240,7 +243,8 @@ test_service_policies() {
   log_info "=== Test 8: Service-to-Service Authorization Policies ==="
 
   # Get the policy ConfigMap
-  local policies=$(kubectl get configmap service-authorization-policies -n "$RBAC_NAMESPACE" -o jsonpath='{.data.policies\.json}' 2>/dev/null || echo "")
+  local policies
+  policies=$(kubectl get configmap service-authorization-policies -n "$RBAC_NAMESPACE" -o jsonpath='{.data.policies\.json}' 2>/dev/null || echo "")
   
   if [[ -n "$policies" ]]; then
     # Check for code-server policy
@@ -273,7 +277,8 @@ test_audit_logging() {
   log_info "=== Test 9: RBAC Audit Logging ==="
 
   # Check if PostgreSQL has audit table
-  local postgres_pod=$(kubectl get pods -l app=postgresql -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+  local postgres_pod
+  postgres_pod=$(kubectl get pods -l app=postgresql -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
   
   if [[ -n "$postgres_pod" ]]; then
     if kubectl exec "$postgres_pod" -- psql -U postgres -d postgres -c "SELECT * FROM rbac_audit_log LIMIT 1;" &>/dev/null; then
@@ -295,7 +300,8 @@ test_overall_health() {
   log_info "=== Test 10: Overall RBAC Health ==="
 
   # Check total role count
-  local role_count=$(kubectl get roles -n "$RBAC_NAMESPACE" -l phase=3 -o jsonpath='{.items | length}')
+  local role_count
+  role_count=$(kubectl get roles -n "$RBAC_NAMESPACE" -l phase=3 -o jsonpath='{.items | length}')
   if [[ "$role_count" -ge 8 ]]; then
     log_success "All 8 roles deployed"
   else
@@ -303,7 +309,8 @@ test_overall_health() {
   fi
 
   # Check total rolebinding count
-  local binding_count=$(kubectl get rolebindings -n "$RBAC_NAMESPACE" -l phase=3 -o jsonpath='{.items | length}')
+  local binding_count
+  binding_count=$(kubectl get rolebindings -n "$RBAC_NAMESPACE" -l phase=3 -o jsonpath='{.items | length}')
   if [[ "$binding_count" -ge 8 ]]; then
     log_success "All 8 role bindings deployed"
   else

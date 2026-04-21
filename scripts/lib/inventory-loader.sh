@@ -88,7 +88,9 @@ PYTHON_EOF
 
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
+        # shellcheck disable=SC2163
         export "$line"
+        # shellcheck disable=SC2034
         INVENTORY_CACHE["${line%=*}"]="${line#*=}"
     done <<< "$python_output"
 
@@ -208,9 +210,12 @@ export_inventory_vars() {
 get_ssh_command() {
     local host="${1:?Host name required (primary|replica)}"
     
-    local ip=$(get_host_ip "$host")
-    local user=$(get_ssh_user "$host")
-    local port=$(get_ssh_port "$host")
+    local ip
+    ip=$(get_host_ip "$host")
+    local user
+    user=$(get_ssh_user "$host")
+    local port
+    port=$(get_ssh_port "$host")
     
     echo "ssh -p $port ${user}@${ip}"
 }
@@ -220,7 +225,8 @@ ssh_to_host() {
     local host="${1:?Host name required}"
     local cmd="${2:?Command required}"
     
-    local ssh_cmd=$(get_ssh_command "$host")
+    local ssh_cmd
+    ssh_cmd=$(get_ssh_command "$host")
     eval "$ssh_cmd \"$cmd\""
 }
 
@@ -233,8 +239,11 @@ validate_inventory() {
     echo "Validating inventory..."
     
     for host in primary replica; do
-        local ip=$(get_host_ip "$host")
-        local fqdn=$(get_host_fqdn "$host")
+        local ip
+        ip=$(get_host_ip "$host")
+        local fqdn
+        # shellcheck disable=SC2034
+        fqdn=$(get_host_fqdn "$host")
         
         if ping -c 1 -W 2 "$ip" >/dev/null 2>&1; then
             echo "✓ $host ($ip) reachable"
@@ -245,7 +254,8 @@ validate_inventory() {
     done
     
     # Validate VIP
-    local vip=$(get_vip_ip)
+    local vip
+    vip=$(get_vip_ip)
     if ping -c 1 -W 2 "$vip" >/dev/null 2>&1; then
         echo "✓ VIP ($vip) reachable"
     else

@@ -56,6 +56,7 @@ log_section() {
 }
 
 verify_admin_access() {
+    # shellcheck disable=SC2034
     local user="${SUDO_USER:-$USER}"
     
     if [ "${EUID:-$(id -u)}" -ne 0 ] && [ -z "${SUDO_USER:-}" ]; then

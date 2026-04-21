@@ -22,6 +22,7 @@ usage() {
   exit 0
 }
 
+# shellcheck disable=SC2120
 cmd_list() {
   local file="${1:-$LOCAL_EMAILS_FILE}"
   if [[ ! -f "$file" ]]; then

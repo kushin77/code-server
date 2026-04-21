@@ -8,11 +8,14 @@
 # Purpose: Internal API service that other services call for data/commands
 # Credentials stored in: projects/gcp-eiq/secrets/service-account-api-server
 
+# shellcheck disable=SC2034
 SERVICE_ACCOUNT_API_SERVER_ID="api-server@code-server-enterprise.iam.gserviceaccount.com"
 SERVICE_ACCOUNT_API_SERVER_SECRET="$(gsm_get_secret service-account-api-server/client-secret)"
 
 # OAuth2 client credentials for token acquisition
+# shellcheck disable=SC2034
 OAUTH2_CREDENTIAL_API_SERVER_CLIENT_ID="api-server-service-account"
+# shellcheck disable=SC2034
 OAUTH2_CREDENTIAL_API_SERVER_CLIENT_SECRET="${SERVICE_ACCOUNT_API_SERVER_SECRET}"
 
 # =============================================================================
@@ -21,10 +24,13 @@ OAUTH2_CREDENTIAL_API_SERVER_CLIENT_SECRET="${SERVICE_ACCOUNT_API_SERVER_SECRET}
 # Purpose: code-server as a client calling internal APIs
 # Credentials stored in: projects/gcp-eiq/secrets/service-account-code-server-internal
 
+# shellcheck disable=SC2034
 SERVICE_ACCOUNT_CODE_SERVER_INTERNAL_ID="code-server-internal@code-server-enterprise.iam.gserviceaccount.com"
 SERVICE_ACCOUNT_CODE_SERVER_INTERNAL_SECRET="$(gsm_get_secret service-account-code-server-internal/client-secret)"
 
+# shellcheck disable=SC2034
 OAUTH2_CREDENTIAL_CODE_SERVER_CLIENT_ID="code-server-internal-service-account"
+# shellcheck disable=SC2034
 OAUTH2_CREDENTIAL_CODE_SERVER_CLIENT_SECRET="${SERVICE_ACCOUNT_CODE_SERVER_INTERNAL_SECRET}"
 
 # =============================================================================
@@ -33,15 +39,20 @@ OAUTH2_CREDENTIAL_CODE_SERVER_CLIENT_SECRET="${SERVICE_ACCOUNT_CODE_SERVER_INTER
 # Purpose: GitHub Actions workflows authenticate and trigger deployments
 # Credentials stored in: projects/gcp-eiq/secrets/service-account-github-actions
 
+# shellcheck disable=SC2034
 SERVICE_ACCOUNT_GITHUB_ACTIONS_ID="github-actions@code-server-enterprise.iam.gserviceaccount.com"
 SERVICE_ACCOUNT_GITHUB_ACTIONS_SECRET="$(gsm_get_secret service-account-github-actions/client-secret)"
 
+# shellcheck disable=SC2034
 OAUTH2_CREDENTIAL_GITHUB_ACTIONS_CLIENT_ID="github-actions-service-account"
+# shellcheck disable=SC2034
 OAUTH2_CREDENTIAL_GITHUB_ACTIONS_CLIENT_SECRET="${SERVICE_ACCOUNT_GITHUB_ACTIONS_SECRET}"
 
 # GitHub Actions can also use native OIDC federation (preferred)
 # See: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
+# shellcheck disable=SC2034
 GITHUB_ACTIONS_OIDC_ISSUER="https://ide.kushnir.cloud"
+# shellcheck disable=SC2034
 GITHUB_ACTIONS_OIDC_SUBJECT_PREFIX="repo:kushin77/code-server"
 
 # =============================================================================
@@ -50,8 +61,11 @@ GITHUB_ACTIONS_OIDC_SUBJECT_PREFIX="repo:kushin77/code-server"
 # Purpose: Kubernetes pods authenticate to code-server-enterprise services
 # ServiceAccounts get automatic token mount, but need OIDC federation setup
 
+# shellcheck disable=SC2034
 KUBERNETES_OIDC_ISSUER="https://ide.kushnir.cloud"
+# shellcheck disable=SC2034
 KUBERNETES_SERVICEACCOUNT_NAMESPACE="default"
+# shellcheck disable=SC2034
 KUBERNETES_SERVICEACCOUNT_NAMES="code-server-operator,deployment-service,monitoring-agent"
 
 # =============================================================================

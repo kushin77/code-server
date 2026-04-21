@@ -37,6 +37,7 @@ emit_metrics() {
 
     # Get disk stats for root and /home
     df -B1 / /home 2>/dev/null | tail -n +2 | while read -r filesystem size used available percent mountpoint; do
+      # shellcheck disable=SC2034
       size_num="${size%B}"
       used_num="${used%B}"
       avail_num="${available%B}"

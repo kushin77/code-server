@@ -64,6 +64,7 @@ mkdir -p "$(dirname "$TEST_RESULTS")"
 
     # Test 5: Verify required dependencies are referenced
     echo "[TEST 5] Required dependencies check"
+    # shellcheck disable=SC2034
     DEPS_OK=1
     for cmd in git terraform docker aws; do
         if grep -q "$cmd" "$ORCHESTRATOR"; then

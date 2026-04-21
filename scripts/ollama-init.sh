@@ -96,7 +96,8 @@ build_repo_index() {
   
   # Check if index is already current (idempotent)
   if [ -n "$current_hash" ] && [ -f "$index_hash_file" ]; then
-    local stored_hash=$(cat "$index_hash_file" 2>/dev/null || echo "")
+    local stored_hash
+    stored_hash=$(cat "$index_hash_file" 2>/dev/null || echo "")
     if [ "$stored_hash" = "$current_hash" ] && [ -f "$index_file" ]; then
       log "✅ Repository index already current (skipping rebuild)"
       return 0

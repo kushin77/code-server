@@ -10,6 +10,7 @@ HEALTH_STATUS="HEALTHY"
 check_http() {
   local name=$1
   local url=$2
+  # shellcheck disable=SC2034
   local expected=${3:-200}
   
   if ! curl -sfL --max-time 5 "$url" > /dev/null; then

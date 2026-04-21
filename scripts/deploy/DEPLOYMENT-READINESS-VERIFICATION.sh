@@ -16,7 +16,9 @@ REPORT_FILE="${SCRIPT_DIR}/DEPLOYMENT-READINESS-REPORT-${TIMESTAMP}.md"
 
 # Colors
 GREEN='\033[0;32m'
+# shellcheck disable=SC2034
 RED='\033[0;31m'
+# shellcheck disable=SC2034
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'

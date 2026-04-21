@@ -72,7 +72,8 @@ build_exclude_args() {
 
 # Scan for hardcoded IPs
 scan_hardcoded_ips() {
-    local exclude_args=$(build_exclude_args)
+    local exclude_args
+    exclude_args=$(build_exclude_args)
     local violations=()
     
     echo "🔍 Scanning for hardcoded IPs outside inventory..."
@@ -211,6 +212,7 @@ main() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --dry-run) dry_run=true; shift ;;
+            # shellcheck disable=SC2034
             --fix-allowlist) fix_allowlist=true; shift ;;
             *) >&2 echo "Unknown option: $1"; exit 1 ;;
         esac

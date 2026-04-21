@@ -170,7 +170,8 @@ step_fix_session_broker() {
         "Getting image digest..."
     
     if [ "$EXECUTE" = true ]; then
-        local digest=$(ssh -o ConnectTimeout=5 "${PRIMARY_USER}@${PRIMARY_HOST}" \
+        local digest
+        digest=$(ssh -o ConnectTimeout=5 "${PRIMARY_USER}@${PRIMARY_HOST}" \
             "cd ${PRIMARY_PATH} && docker images code-server-enterprise:dev --digests --quiet | head -1")
         
         if [ -z "$digest" ]; then

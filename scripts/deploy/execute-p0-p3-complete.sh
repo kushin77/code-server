@@ -24,7 +24,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
 LOG_FILE="/tmp/p0-p3-orchestrator-$(date +%Y%m%d-%H%M%S).log"
+# shellcheck disable=SC2034
 PHASE_TIMEOUT=300  # 5 minutes per phase
+# shellcheck disable=SC2034
 STABILITY_CHECK_INTERVAL=10  # Check every 10 seconds
 
 # Functions

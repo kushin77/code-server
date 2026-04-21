@@ -98,6 +98,7 @@ fetch_gsm_secret() {
         return 1
     }
     printf -v "$var_name" '%s' "$value"
+    # shellcheck disable=SC2163
     export "$var_name"
     echo "export ${var_name}=<redacted>" >&2
 }
@@ -112,6 +113,7 @@ fetch_gsm_secret_optional() {
         --project="$GSM_PROJECT" 2>/dev/null) || return 1
 
     printf -v "$var_name" '%s' "$value"
+    # shellcheck disable=SC2163
     export "$var_name"
     echo "export ${var_name}=<redacted> (from $secret_id)" >&2
     return 0
@@ -158,6 +160,7 @@ ensure_secret_value() {
         local generated_value
         generated_value="$(generate_secret_value "$format" "$length")"
         printf -v "$var_name" '%s' "$generated_value"
+        # shellcheck disable=SC2163
         export "$var_name"
         echo "WARN: ${var_name} was not present; generated a local fallback" >&2
     fi

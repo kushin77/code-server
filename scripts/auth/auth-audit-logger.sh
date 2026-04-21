@@ -59,7 +59,8 @@ log_auth_event() {
   fi
   
   # Build audit record
-  local timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+  local timestamp
+  timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
   local source_ip="${REMOTE_ADDR:-localhost}"
   local user_agent="${HTTP_USER_AGENT:-unknown}"
   
@@ -67,7 +68,8 @@ log_auth_event() {
   local user_groups="${AUTH_USER_GROUPS:-}"
   
   # Merge extra fields
-  local audit_record=$(cat <<EOF
+  local audit_record
+  audit_record=$(cat <<EOF
 {
   "timestamp": "$timestamp",
   "event": "$event_type",
@@ -133,7 +135,8 @@ query_auth_events() {
     return 1
   fi
   
-  local start_time=$(date -u -d "$hours_back hours ago" +'%Y-%m-%dT%H:%M:%SZ')
+  local start_time
+  start_time=$(date -u -d "$hours_back hours ago" +'%Y-%m-%dT%H:%M:%SZ')
   
   # Query Cloud Logging for events
   gcloud logging read \
@@ -167,7 +170,8 @@ EOF
   
   # For each event type, query and add to report
   for event_type in "${AUDIT_EVENT_TYPES[@]}"; do
-    local count=$(query_auth_events "$event_type" "$hours_back" 1000 2>/dev/null | jq 'length' || echo 0)
+    local count
+    count=$(query_auth_events "$event_type" "$hours_back" 1000 2>/dev/null | jq 'length' || echo 0)
     echo "    {\"event_type\": \"$event_type\", \"count\": $count}," >> "$report_file"
   done
   

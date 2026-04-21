@@ -57,6 +57,7 @@ main() {
         else
             log_info "✅ Primary is unreachable (as expected)"
         fi
+        # shellcheck disable=SC2034
         PRIMARY_CHECKED=1
     fi
     

@@ -7,6 +7,7 @@ set -e
 SERVICE=$1
 RESTART_COUNT_FILE="/tmp/${SERVICE}_restart_count"
 MAX_RESTARTS=3
+# shellcheck disable=SC2034
 COOLDOWN=60 # Seconds between restart attempts
 
 if [[ -z "$SERVICE" ]]; then

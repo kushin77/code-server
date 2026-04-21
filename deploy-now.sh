@@ -6,6 +6,7 @@ cd code-server-enterprise-ops
 # Load production environment
 echo "Loading production environment..."
 if [ -f .env.production ]; then
+  # shellcheck disable=SC2046
   export $(cat .env.production | grep -v '^#' | xargs)
   echo "✓ Production environment loaded"
 fi

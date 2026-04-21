@@ -25,6 +25,7 @@ VPN_CHECK_REASON=""
 # Colors for output
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
+# shellcheck disable=SC2034
 readonly YELLOW='\033[1;33m'
 readonly NC='\033[0m' # No Color
 

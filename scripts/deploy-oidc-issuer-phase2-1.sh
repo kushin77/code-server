@@ -179,7 +179,8 @@ test_oidc_issuer_health() {
   log_info "Testing OIDC issuer health..."
 
   # Get OIDC issuer pod
-  local oidc_pod=$(kubectl get pods -n "$OIDC_NAMESPACE" -l app=oidc-issuer -o jsonpath='{.items[0].metadata.name}')
+  local oidc_pod
+  oidc_pod=$(kubectl get pods -n "$OIDC_NAMESPACE" -l app=oidc-issuer -o jsonpath='{.items[0].metadata.name}')
   
   if [[ -z "$oidc_pod" ]]; then
     log_error "No OIDC issuer pods found"
@@ -220,7 +221,8 @@ test_service_integration() {
 
   # Test from code-server pod
   log_info "Testing token request from code-server..."
-  local code_server_pod=$(kubectl get pods -l app=code-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "none")
+  local code_server_pod
+  code_server_pod=$(kubectl get pods -l app=code-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "none")
   
   if [[ "$code_server_pod" != "none" ]]; then
     if kubectl exec "$code_server_pod" -- curl -s "http://${OIDC_ISSUER_SERVICE}/health" &>/dev/null; then
@@ -241,7 +243,8 @@ setup_audit_logging() {
   log_info "Setting up audit logging for OIDC token issuance..."
 
   # Create audit log table in PostgreSQL (if available)
-  local postgres_pod=$(kubectl get pods -l app=postgresql -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "none")
+  local postgres_pod
+  postgres_pod=$(kubectl get pods -l app=postgresql -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "none")
   
   if [[ "$postgres_pod" != "none" ]]; then
     log_info "Creating audit logging table in PostgreSQL..."
@@ -275,7 +278,8 @@ setup_prometheus_metrics() {
   log_info "Configuring Prometheus metrics scraping for OIDC issuer..."
 
   # ServiceMonitor should already be in k8s-oidc-issuer-production.yaml
-  local service_monitor=$(kubectl get servicemonitor -n "$OIDC_NAMESPACE" oidc-issuer-monitor 2>/dev/null || echo "none")
+  local service_monitor
+  service_monitor=$(kubectl get servicemonitor -n "$OIDC_NAMESPACE" oidc-issuer-monitor 2>/dev/null || echo "none")
   
   if [[ "$service_monitor" != "none" ]]; then
     log_success "ServiceMonitor already configured"

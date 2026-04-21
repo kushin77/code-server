@@ -26,6 +26,7 @@ readonly LOG_DIR="${LOG_DIR:-./logs}"
 readonly REPORT_DIR="${REPORT_DIR:-./reports}"
 
 # Phase definitions
+# shellcheck disable=SC2034
 declare -A PHASE_EFFORT=(
     [13]="24h"      # Phase 13: Load testing + validation
     [14]="4h"       # Phase 14: Canary deployment
@@ -33,6 +34,7 @@ declare -A PHASE_EFFORT=(
     [16]="16h"      # Phase 16: Advanced features
 )
 
+# shellcheck disable=SC2034
 declare -A PHASE_SLO=(
     [13]="99.9% uptime, p99<100ms, error<0.1%"
     [14]="99.95% uptime, p99<95ms, error<0.05%"
@@ -66,7 +68,8 @@ log() {
     local level="$1"
     shift
     local msg="$*"
-    local timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+    local timestamp
+    timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
     
     local color=""
     case "$level" in
@@ -179,9 +182,12 @@ EOF
     local error_target=0.1
     local uptime_target=99.9
     
-    local p99_actual=$(curl -s http://monitoring:3000/api/metrics/p99 | jq '.value // 0')
-    local error_actual=$(curl -s http://monitoring:3000/api/metrics/error_rate | jq '.value // 0')
-    local uptime_actual=$(curl -s http://monitoring:3000/api/metrics/uptime | jq '.value // 0')
+    local p99_actual
+    p99_actual=$(curl -s http://monitoring:3000/api/metrics/p99 | jq '.value // 0')
+    local error_actual
+    error_actual=$(curl -s http://monitoring:3000/api/metrics/error_rate | jq '.value // 0')
+    local uptime_actual
+    uptime_actual=$(curl -s http://monitoring:3000/api/metrics/uptime | jq '.value // 0')
     
     echo "  p99 latency:    ${p99_actual}ms (target: ${p99_target}ms) $(test $p99_actual -le $p99_target && echo '✓' || echo '✗')"
     echo "  error rate:     ${error_actual}% (target: <${error_target}%) $(test ${error_actual%.*} -le ${error_target%.*} && echo '✓' || echo '✗')"
@@ -213,8 +219,10 @@ CANARY METRICS:
 EOF
     
     # Check canary health
-    local canary_error_rate=$(curl -s http://monitoring:3000/api/canary/error_rate | jq '.value // 0')
-    local canary_latency=$(curl -s http://monitoring:3000/api/canary/p99 | jq '.value // 0')
+    local canary_error_rate
+    canary_error_rate=$(curl -s http://monitoring:3000/api/canary/error_rate | jq '.value // 0')
+    local canary_latency
+    canary_latency=$(curl -s http://monitoring:3000/api/canary/p99 | jq '.value // 0')
     
     echo "  Canary error rate:  ${canary_error_rate}% (must be <0.5%)"
     echo "  Canary p99:         ${canary_latency}ms (must be <120ms)"
@@ -241,8 +249,10 @@ OPTIMIZATION TARGETS:
 EOF
     
     # Check performance improvements
-    local cache_hit_rate=$(curl -s http://monitoring:3000/api/cache/hit_rate | jq '.value // 0')
-    local db_query_time=$(curl -s http://monitoring:3000/api/db/avg_query_time | jq '.value // 0')
+    local cache_hit_rate
+    cache_hit_rate=$(curl -s http://monitoring:3000/api/cache/hit_rate | jq '.value // 0')
+    local db_query_time
+    db_query_time=$(curl -s http://monitoring:3000/api/db/avg_query_time | jq '.value // 0')
     
     echo "  Cache hit rate:     ${cache_hit_rate}% (target: >80%)"
     echo "  Avg DB query time:  ${db_query_time}ms (target: <10ms)"
@@ -282,7 +292,8 @@ EOF
     # Timeline entries
     for phase_num in 13 14 15; do
         if [[ -f "$REPORT_DIR/phase-${phase_num}-completion.txt" ]]; then
-            local completion_time=$(cat "$REPORT_DIR/phase-${phase_num}-completion.txt")
+            local completion_time
+            completion_time=$(cat "$REPORT_DIR/phase-${phase_num}-completion.txt")
             echo "- Phase $phase_num: Completed $completion_time" >> "$report_file"
         fi
     done
@@ -378,7 +389,8 @@ run_operations_sequence() {
     done
     
     # Generate final report
-    local report=$(generate_report)
+    local report
+    report=$(generate_report)
     log "OK" "Operations sequence complete. Report: $report"
     echo "$report"
 }

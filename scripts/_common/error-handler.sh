@@ -69,6 +69,7 @@ disable_debug() {
 # Print debug information
 print_debug() {
     if [ "$DEBUG" == "1" ]; then
+        # shellcheck disable=SC2124
         local msg="$@"
         log_debug "[DEBUG] $msg"
     fi
@@ -130,6 +131,7 @@ assert_file() {
 validate_exit() {
     local expected_code=$1
     shift
+    # shellcheck disable=SC2124
     local cmd="$@"
 
     local errexit_was_set=0

@@ -15,6 +15,7 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 
 DOCKER_HOST="${DOCKER_HOST:-${DEPLOY_HOST}}"
 APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
+# shellcheck disable=SC2034
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 
 # Color output
@@ -156,7 +157,8 @@ EOF
 create_audit_table() {
   log_info "Creating PostgreSQL audit logging table..."
 
-  local postgres_container=$(docker-compose ps -q postgresql 2>/dev/null || echo "")
+  local postgres_container
+  postgres_container=$(docker-compose ps -q postgresql 2>/dev/null || echo "")
   
   if [[ -z "$postgres_container" ]]; then
     log_warning "PostgreSQL container not running - cannot create audit table"
@@ -165,7 +167,8 @@ create_audit_table() {
   fi
 
   # SQL script to create audit table
-  local sql_script=$(cat <<'AUDIT_SQL'
+  local sql_script
+  sql_script=$(cat <<'AUDIT_SQL'
 CREATE TABLE IF NOT EXISTS rbac_audit_log (
   id SERIAL PRIMARY KEY,
   timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -287,7 +290,8 @@ validate_rbac_config() {
   fi
 
   # Test 2: Verify audit table exists
-  local postgres_container=$(docker-compose ps -q postgresql 2>/dev/null || echo "")
+  local postgres_container
+  postgres_container=$(docker-compose ps -q postgresql 2>/dev/null || echo "")
   if [[ -n "$postgres_container" ]]; then
     if docker exec "$postgres_container" psql -U postgres -d postgres -c "SELECT * FROM rbac_audit_log LIMIT 0;" 2>/dev/null; then
       log_success "Audit table exists and is queryable"

@@ -78,7 +78,8 @@ export_appsmith_api() {
     return 1
   fi
   
-  local file_size=$(stat -f%z "$export_file" 2>/dev/null || stat -c%s "$export_file")
+  local file_size
+  file_size=$(stat -f%z "$export_file" 2>/dev/null || stat -c%s "$export_file")
   if [[ $file_size -lt 100 ]]; then
     log_error "API export file too small ($file_size bytes), likely error"
     rm -f "$export_file"
@@ -93,7 +94,8 @@ export_appsmith_api() {
 snapshot_appsmith_volume() {
   log_info "Creating volume snapshot..."
   
-  local timestamp=$(date +%Y%m%d-%H%M%S)
+  local timestamp
+  timestamp=$(date +%Y%m%d-%H%M%S)
   local snapshot_file="$BACKUP_DIR/appsmith-snapshot-$timestamp.tar.gz"
   
   # Source: appsmith-stacks volume (typically at /var/lib/docker/volumes/appsmith-data/_data)
@@ -115,7 +117,8 @@ snapshot_appsmith_volume() {
     return 2
   fi
   
-  local file_size=$(stat -f%z "$snapshot_file" 2>/dev/null || stat -c%s "$snapshot_file")
+  local file_size
+  file_size=$(stat -f%z "$snapshot_file" 2>/dev/null || stat -c%s "$snapshot_file")
   log_info "  ✓ Snapshot created: $(basename "$snapshot_file") ($file_size bytes)"
   
   return 0
@@ -124,7 +127,8 @@ snapshot_appsmith_volume() {
 rotate_old_backups() {
   log_info "Rotating old backups (keep last $BACKUP_RETENTION)..."
   
-  local snapshot_count=$(ls -1 "$BACKUP_DIR"/appsmith-snapshot-*.tar.gz 2>/dev/null | wc -l)
+  local snapshot_count
+  snapshot_count=$(ls -1 "$BACKUP_DIR"/appsmith-snapshot-*.tar.gz 2>/dev/null | wc -l)
   
   if [[ $snapshot_count -le $BACKUP_RETENTION ]]; then
     log_info "  Snapshots: $snapshot_count (no rotation needed)"

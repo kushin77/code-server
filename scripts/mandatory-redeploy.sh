@@ -21,6 +21,7 @@ cd "$REPO_ROOT"
 
 # Configuration
 DOCKER_CONTEXT="${DOCKER_CONTEXT:-default}"
+# shellcheck disable=SC2034
 BUILD_TIMEOUT=600  # 10 minutes
 HEALTH_CHECK_TIMEOUT=180  # 3 minutes
 SERVICES=("code-server" "oauth2-proxy" "caddy")

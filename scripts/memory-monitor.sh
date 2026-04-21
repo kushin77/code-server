@@ -20,14 +20,16 @@ LOG_FILE="/tmp/memory-monitor.log"
 alert() {
     local severity=$1
     local message=$2
-    local timestamp=$(date -u "+%Y-%m-%d %H:%M:%S UTC")
+    local timestamp
+    timestamp=$(date -u "+%Y-%m-%d %H:%M:%S UTC")
     echo "[$timestamp] [$severity] $message" | tee -a "$LOG_FILE"
 }
 
 # Function to check VS Code memory
 check_vscode_memory() {
     if command -v ps &> /dev/null; then
-        local used_pct=$(ps aux | grep -i code | grep -v grep | awk '{sum+=$6} END {print int(sum/1024*100/$(nproc))}' 2>/dev/null || echo "0")
+        local used_pct
+        used_pct=$(ps aux | grep -i code | grep -v grep | awk '{sum+=$6} END {print int(sum/1024*100/$(nproc))}' 2>/dev/null || echo "0")
         
         if [ "$used_pct" -gt "$MEMORY_THRESHOLD_PCT" ]; then
             alert "WARN" "VS Code memory usage high: $used_pct% (threshold: $MEMORY_THRESHOLD_PCT%)"
@@ -43,10 +45,12 @@ check_vscode_memory() {
 # Function to check Docker container memory
 check_docker_memory() {
     if command -v docker &> /dev/null; then
-        local containers=$(docker ps --format "{{.Names}}")
+        local containers
+        containers=$(docker ps --format "{{.Names}}")
         
         for container in $containers; do
-            local mem_usage=$(docker stats --no-stream $container 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
+            local mem_usage
+            mem_usage=$(docker stats --no-stream $container 2>/dev/null | tail -1 | awk '{print $4}' | tr -d '%')
             
             if [ "$mem_usage" -gt "$MEMORY_THRESHOLD_PCT" ]; then
                 alert "WARN" "Docker container [$container] memory high: $mem_usage%"
@@ -62,7 +66,8 @@ check_docker_memory() {
 
 # Function to check for zombie processes
 check_zombie_processes() {
-    local zombie_count=$(ps aux | awk '$8 ~ /Z/ {count++} END {print count+0}')
+    local zombie_count
+    zombie_count=$(ps aux | awk '$8 ~ /Z/ {count++} END {print count+0}')
     
     if [ "$zombie_count" -gt 0 ]; then
         alert "WARN" "Found $zombie_count zombie processes - may indicate crashes"

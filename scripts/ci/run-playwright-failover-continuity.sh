@@ -41,6 +41,7 @@ resolve_node_command() {
   return 1
 }
 
+# shellcheck disable=SC2034
 NODE_CMD="$(resolve_node_command || true)"
 
 resolve_npx_command() {

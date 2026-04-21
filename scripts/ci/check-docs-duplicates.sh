@@ -20,6 +20,7 @@ check_for_duplicates() {
     echo ""
     
     # Create hash map of file contents
+    # shellcheck disable=SC2034
     declare -A content_hashes
     declare -A file_by_hash
     
@@ -32,7 +33,8 @@ check_for_duplicates() {
         fi
         
         # Calculate hash of file content (skip frontmatter)
-        local hash=$(sed -n '/^---$/,/^---$/!p' "$doc_file" 2>/dev/null | sha256sum | cut -d' ' -f1)
+        local hash
+        hash=$(sed -n '/^---$/,/^---$/!p' "$doc_file" 2>/dev/null | sha256sum | cut -d' ' -f1)
         
         # Check if we've seen this content before
         if [ -n "${file_by_hash[$hash]:-}" ]; then
@@ -58,11 +60,13 @@ check_for_orphaned_archives() {
         # Check if it's just a pointer (content mentions "Deprecated" or "See")
         if grep -q "^\[>" "$archive_file" 2>/dev/null; then
             # Extract the link target
-            local target=$(grep -oP '(?<=\]\().*?(?=\))' "$archive_file" | head -1)
+            local target
+            target=$(grep -oP '(?<=\]\().*?(?=\))' "$archive_file" | head -1)
             
             if [ -n "$target" ]; then
                 # Resolve target path
-                local archive_dir=$(dirname "$archive_file")
+                local archive_dir
+                archive_dir=$(dirname "$archive_file")
                 local resolved_target="${archive_dir}/${target}"
                 
                 # Check if target exists

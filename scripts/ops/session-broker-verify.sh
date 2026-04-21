@@ -164,7 +164,8 @@ verify_redis_backed_state() {
     # Try to list sessions from Redis
     local session_list
     if session_list=$(redis_list_sessions 2>/dev/null); then
-      local count=$(echo "$session_list" | wc -l)
+      local count
+      count=$(echo "$session_list" | wc -l)
       log_info "  ✓ Redis session store contains $count sessions"
       return 0
     else

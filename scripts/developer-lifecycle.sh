@@ -48,7 +48,8 @@ acquire_lock() {
 
 # Initialize database
 init_db() {
-    local db_dir=$(dirname "$DB_FILE")
+    local db_dir
+    db_dir=$(dirname "$DB_FILE")
     
     if [[ ! -d "$db_dir" ]]; then
         sudo mkdir -p "$db_dir"
@@ -105,7 +106,8 @@ log_audit() {
         sudo chmod 600 "$AUDIT_LOG"
     fi
     
-    local timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+    local timestamp
+    timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
     echo "${timestamp} | ${action} | ${username} | ${actor} | ${result} | ${details}" | sudo tee -a "$AUDIT_LOG" > /dev/null
 }
 
@@ -144,7 +146,8 @@ grant_access() {
         echo -e "${YELLOW}⚠ Developer already exists, updating access${NC}"
     fi
     
-    local grant_date=$(date -u +'%Y-%m-%d')
+    local grant_date
+    grant_date=$(date -u +'%Y-%m-%d')
     
     # Create OS user if not exists
     if ! id "$username" &>/dev/null; then
@@ -157,7 +160,8 @@ grant_access() {
         }
         
         # Set strong password (auto-generated, stored securely)
-        local temp_password=$(openssl rand -base64 24)
+        local temp_password
+        temp_password=$(openssl rand -base64 24)
         echo "$username:$temp_password" | sudo chpasswd
         
         # Disable password login (SSH key only)
@@ -165,7 +169,9 @@ grant_access() {
     fi
     
     # Grant Cloudflare Access token
-    local cf_token=$(generate_cloudflare_token "$username" "$email" "$expiration_date")
+    local cf_token
+    # shellcheck disable=SC2034
+    cf_token=$(generate_cloudflare_token "$username" "$email" "$expiration_date")
     
     # Store in database
     init_db
@@ -280,12 +286,14 @@ SQL
 
 # Automatic expiration check (run periodically via cron)
 check_expirations() {
-    local today=$(date -u +'%Y-%m-%d')
+    local today
+    today=$(date -u +'%Y-%m-%d')
     
     init_db
     
     # Find expired developers
-    local expired=$(sqlite3 "$DB_FILE" "SELECT username, email FROM developers WHERE status = 'active' AND expiration_date < '$today';")
+    local expired
+    expired=$(sqlite3 "$DB_FILE" "SELECT username, email FROM developers WHERE status = 'active' AND expiration_date < '$today';")
     
     if [[ -z "$expired" ]]; then
         echo "No expirations to process"
@@ -293,8 +301,10 @@ check_expirations() {
     fi
     
     while IFS= read -r line; do
-        local username=$(echo "$line" | cut -d'|' -f1)
-        local email=$(echo "$line" | cut -d'|' -f2)
+        local username
+        username=$(echo "$line" | cut -d'|' -f1)
+        local email
+        email=$(echo "$line" | cut -d'|' -f2)
         
         echo "Auto-expiring: $username"
         revoke_access "$username" "Expiration date reached"

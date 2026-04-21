@@ -70,7 +70,8 @@ update_issue() {
     return 0
   fi
   
-  local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local timestamp
+  timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   local body="**[${timestamp}]** ${status}
 
 ${message}
@@ -113,7 +114,8 @@ stage_preflight() {
   
   # Check disk space
   log_info "Checking disk space on ${PRIMARY_HOST}..."
-  local available=$(ssh "${DEPLOY_USER}@${PRIMARY_HOST}" "df /home | awk 'NR==2 {print \$4}'")
+  local available
+  available=$(ssh "${DEPLOY_USER}@${PRIMARY_HOST}" "df /home | awk 'NR==2 {print \$4}'")
   if [[ $available -lt 5242880 ]]; then  # 5GB in KB
     log_fatal "Insufficient disk space: ${available}KB available"
   fi
@@ -255,7 +257,8 @@ stage_health_checks() {
   done
   
   if [[ ${#failed_services[@]} -gt 0 ]]; then
-    local failed_list=$(IFS=', '; echo "${failed_services[*]}")
+    local failed_list
+    failed_list=$(IFS=', '; echo "${failed_services[*]}")
     update_issue "⚠️  Health checks: Some services unhealthy" "Failed services: ${failed_list}. Review logs on ${PRIMARY_HOST}"
     log_warn "Some services failed health checks: ${failed_list}"
   else
@@ -310,7 +313,8 @@ stage_public_endpoint() {
 # ─────────────────────────────────────────────────────────────────────────────
 
 check_timeout() {
-  local current_time=$(date +%s)
+  local current_time
+  current_time=$(date +%s)
   local elapsed=$((current_time - START_TIME))
   
   if [[ $elapsed -gt $DEPLOY_TIMEOUT ]]; then
@@ -359,7 +363,8 @@ main() {
   stage_public_endpoint
   check_timeout
   
-  local end_time=$(date +%s)
+  local end_time
+  end_time=$(date +%s)
   local total_duration=$((end_time - START_TIME))
   
   update_issue "✅ DEPLOYMENT COMPLETE" "All stages completed successfully!

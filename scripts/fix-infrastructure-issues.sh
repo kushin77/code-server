@@ -78,6 +78,7 @@ fi
 log_info ""
 log_info "✓ Checking container user configurations..."
 services=("caddy" "code-server" "postgresql" "redis" "grafana" "prometheus")
+# shellcheck disable=SC2034
 all_good=1
 for service in "${services[@]}"; do
     if grep -q "^  $service:" "${SCRIPT_DIR}/docker-compose.yml"; then

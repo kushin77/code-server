@@ -8,6 +8,7 @@ set -euo pipefail
 
 # Import shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
@@ -86,7 +87,8 @@ check_token_issuance() {
   local token_url="${OIDC_ISSUER_URL%/}/oauth2/token"
   
   # Request token using session-broker credentials
-  local response=$(curl -s -X POST "$token_url" \
+  local response
+  response=$(curl -s -X POST "$token_url" \
     -d "grant_type=client_credentials" \
     -d "client_id=$SERVICE_CLIENT_SESSION_BROKER_ID" \
     -d "client_secret=$SERVICE_CLIENT_SESSION_BROKER_SECRET" \

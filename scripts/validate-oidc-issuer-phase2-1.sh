@@ -15,7 +15,9 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 
 OIDC_NAMESPACE="oidc-issuer"
 OIDC_ISSUER_HOST="${OIDC_ISSUER_HOST:-oidc.${DOMAIN}}"
+# shellcheck disable=SC2034
 OIDC_ISSUER_URL="https://${OIDC_ISSUER_HOST}"
+# shellcheck disable=SC2034
 OIDC_ISSUER_SERVICE="oidc-issuer.oidc-issuer.svc.cluster.local:8888"
 APEX_DOMAIN="${APEX_DOMAIN:-${DOMAIN#*.}}"
 
@@ -23,9 +25,11 @@ APEX_DOMAIN="${APEX_DOMAIN:-${DOMAIN#*.}}"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+# shellcheck disable=SC2034
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# shellcheck disable=SC2034
 TEST_RESULTS=0
 TEST_PASSED=0
 TEST_FAILED=0
@@ -67,8 +71,10 @@ test_k8s_deployment_health() {
   fi
 
   # Check ready replicas
-  local ready=$(kubectl get deployment -n "$OIDC_NAMESPACE" oidc-issuer -o jsonpath='{.status.readyReplicas}')
-  local desired=$(kubectl get deployment -n "$OIDC_NAMESPACE" oidc-issuer -o jsonpath='{.spec.replicas}')
+  local ready
+  ready=$(kubectl get deployment -n "$OIDC_NAMESPACE" oidc-issuer -o jsonpath='{.status.readyReplicas}')
+  local desired
+  desired=$(kubectl get deployment -n "$OIDC_NAMESPACE" oidc-issuer -o jsonpath='{.spec.replicas}')
 
   if [[ "$ready" -eq "$desired" && "$ready" -gt 0 ]]; then
     log_success "OIDC issuer: $ready/$desired replicas ready"
@@ -84,7 +90,8 @@ test_k8s_deployment_health() {
   fi
 
   # Check pods running
-  local running_pods=$(kubectl get pods -n "$OIDC_NAMESPACE" -l app=oidc-issuer -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}')
+  local running_pods
+  running_pods=$(kubectl get pods -n "$OIDC_NAMESPACE" -l app=oidc-issuer -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}')
   if [[ -n "$running_pods" ]]; then
     log_success "OIDC issuer pods running:"
     echo "$running_pods" | while read -r pod phase; do
@@ -108,7 +115,8 @@ test_oidc_endpoints() {
   log_info "=== Test 2: OIDC Endpoint Connectivity (Internal) ==="
 
   # Get first OIDC issuer pod
-  local oidc_pod=$(kubectl get pods -n "$OIDC_NAMESPACE" -l app=oidc-issuer -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  local oidc_pod
+  oidc_pod=$(kubectl get pods -n "$OIDC_NAMESPACE" -l app=oidc-issuer -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
   if [[ -z "$oidc_pod" ]]; then
     log_fail "No OIDC issuer pod found"
     return 1
@@ -241,7 +249,8 @@ test_logs() {
   log_info "=== Test 6: Pod Logs Analysis ==="
 
   # Get pod logs and check for errors
-  local oidc_pod=$(kubectl get pods -n "$OIDC_NAMESPACE" -l app=oidc-issuer -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  local oidc_pod
+  oidc_pod=$(kubectl get pods -n "$OIDC_NAMESPACE" -l app=oidc-issuer -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
   
   if [[ -z "$oidc_pod" ]]; then
     log_fail "Cannot check logs - no pod found"
@@ -249,7 +258,8 @@ test_logs() {
   fi
 
   # Check for fatal errors
-  local error_count=$(kubectl logs -n "$OIDC_NAMESPACE" "$oidc_pod" 2>/dev/null | grep -c "error\|fatal\|panic" || echo "0")
+  local error_count
+  error_count=$(kubectl logs -n "$OIDC_NAMESPACE" "$oidc_pod" 2>/dev/null | grep -c "error\|fatal\|panic" || echo "0")
   if [[ "$error_count" -eq 0 ]]; then
     log_success "No critical errors in OIDC issuer logs"
   else
@@ -334,7 +344,8 @@ test_high_availability() {
   fi
 
   # Check pod anti-affinity (optional but good practice)
-  local pod_spec=$(kubectl get deployment -n "$OIDC_NAMESPACE" oidc-issuer -o jsonpath='{.spec.template.spec.affinity}')
+  local pod_spec
+  pod_spec=$(kubectl get deployment -n "$OIDC_NAMESPACE" oidc-issuer -o jsonpath='{.spec.template.spec.affinity}')
   if [[ "$pod_spec" == *"podAntiAffinity"* ]]; then
     log_success "Pod anti-affinity configured"
   else

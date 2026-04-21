@@ -85,6 +85,7 @@ parse_args() {
                 shift
                 ;;
             -v|--verbose)
+                # shellcheck disable=SC2034
                 VERBOSE=true
                 shift
                 ;;
@@ -350,7 +351,8 @@ notify_slack() {
         color="danger"
     fi
 
-    local message=$(cat <<EOF
+    local message
+    message=$(cat <<EOF
 {
   "text": "${status_emoji} Auto-Deployment to ${TARGET}: ${status_text}",
   "attachments": [

@@ -92,6 +92,7 @@ if [[ "$USER" == "developer" ]] || [[ "$USER" == *"dev"* ]]; then
         # Warn before timeout
         if [ -n "$BASH" ] || [ -n "$ZSH" ]; then
             # Set TMOUT to trigger timeout alarm
+            # shellcheck disable=SC2034
             TMOUT_WARNING=$((DEVELOPER_SESSION_TIMEOUT - 300))  # 5 min before
         fi
     fi
@@ -115,7 +116,7 @@ if [[ "$USER" == "developer" ]] || [[ "$USER" == *"dev"* ]]; then
     # Verify we're in a safe directory
     if ! [[ "$PWD" == "/home/developer"* ]] && \
        ! [[ "$PWD" == "/tmp"* ]] && \
-       ! [[ "$PWD" == "/var/tmp"* ]]; then
+       ! [[ "$PWD" == "/var/tmp"* ]]; then || exit 1
         cd /home/developer || cd ~ || cd /tmp
     fi
     

@@ -90,6 +90,7 @@ function mark_dod_complete() {
     return 1
   fi
 
+  # shellcheck disable=SC2034
   local prev="${_DOD_COMPLETION[$id]}"
   _DOD_COMPLETION["$id"]="completed"
   _DOD_TIMESTAMPS["${id}:completed"]="$(date +%s)"
@@ -156,6 +157,7 @@ function _dod_duration() {
 function _dod_parse_field() {
   local value="$1"
   local idx="${2:-0}"
+  # shellcheck disable=SC2034
   local i=0
   local IFS='|'
   local parts

@@ -100,6 +100,7 @@ count_missing_headers() {
   local script_path
   local header
 
+  # shellcheck disable=SC2034
   while IFS=$'\t' read -r rel_path purpose; do
     script_path="${REPO_ROOT}/scripts/${rel_path}"
 

@@ -133,6 +133,7 @@ restore_snapshot() {
   
   # Clear existing volume (keep pre-restore backup)
   if [[ -d "$volume_path" ]]; then
+    # shellcheck disable=SC2115
     if ! rm -rf "$volume_path"/* > /dev/null 2>&1; then
       log_error "Failed to clear current volume"
       return 2

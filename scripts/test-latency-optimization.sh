@@ -81,7 +81,8 @@ check_url() {
   local url=$1
   local expected_status=${2:-200}
   
-  local status=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+  local status
+  status=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
   
   if [[ "$status" == "$expected_status" ]]; then
     return 0
@@ -102,8 +103,10 @@ calculate_percentile() {
   local percentile=$2
   
   # Simple percentile calculation (would need awk/python for production)
-  local sorted=$(echo "$values" | tr ' ' '\n' | sort -n)
-  local count=$(echo "$sorted" | wc -l)
+  local sorted
+  sorted=$(echo "$values" | tr ' ' '\n' | sort -n)
+  local count
+  count=$(echo "$sorted" | wc -l)
   local index=$((count * percentile / 100))
   
   echo "$sorted" | sed -n "${index}p"
@@ -160,7 +163,8 @@ test_terminal_optimizer() {
   
   # Test 1: Check configuration
   echo "Retrieving optimizer configuration..."
-  local config=$(curl -s "$endpoint/config" 2>/dev/null || echo "{}")
+  local config
+  config=$(curl -s "$endpoint/config" 2>/dev/null || echo "{}")
   if echo "$config" | grep -q "batch_timeout"; then
     log_success "Terminal Optimizer configuration retrieved successfully"
     if [[ "$DETAILED_OUTPUT" == true ]]; then
@@ -172,7 +176,8 @@ test_terminal_optimizer() {
   
   # Test 2: Create a test session
   echo "Creating test optimizer session..."
-  local session_response=$(curl -s -X POST "$endpoint/sessions/start" \
+  local session_response
+  session_response=$(curl -s -X POST "$endpoint/sessions/start" \
     -H "Content-Type: application/json" \
     -d '{
       "session_id": "test-session-'"$(date +%s)"'",
@@ -203,10 +208,12 @@ test_terminal_optimizer() {
   
   # Test 4: Retrieve metrics
   echo "Retrieving optimizer metrics..."
-  local metrics=$(curl -s "$endpoint/metrics" 2>/dev/null || echo "{}")
+  local metrics
+  metrics=$(curl -s "$endpoint/metrics" 2>/dev/null || echo "{}")
   if echo "$metrics" | grep -q "compression_ratio"; then
     log_success "Terminal Optimizer metrics retrieved"
-    local ratio=$(echo "$metrics" | jq -r '.compression_ratio // "N/A"')
+    local ratio
+    ratio=$(echo "$metrics" | jq -r '.compression_ratio // "N/A"')
     log_info "Compression ratio: $ratio (target: >0.4)"
     if [[ "$DETAILED_OUTPUT" == true ]]; then
       echo "$metrics" | jq .
@@ -253,15 +260,22 @@ test_latency_monitor() {
   
   # Test 3: Retrieve statistics
   echo "Retrieving latency statistics..."
-  local stats=$(curl -s "$endpoint/statistics?latency_type=keystroke" 2>/dev/null || echo "{}")
+  local stats
+  stats=$(curl -s "$endpoint/statistics?latency_type=keystroke" 2>/dev/null || echo "{}")
   
   if echo "$stats" | grep -q "p99"; then
     log_success "Latency statistics retrieved"
     
     # Extract key percentiles
-    local p50=$(echo "$stats" | jq -r '.p50 // "N/A"')
-    local p95=$(echo "$stats" | jq -r '.p95 // "N/A"')
-    local p99=$(echo "$stats" | jq -r '.p99 // "N/A"')
+    local p50
+    # shellcheck disable=SC2034
+    p50=$(echo "$stats" | jq -r '.p50 // "N/A"')
+    local p95
+    # shellcheck disable=SC2034
+    p95=$(echo "$stats" | jq -r '.p95 // "N/A"')
+    local p99
+    # shellcheck disable=SC2154
+    p99=$(echo "$stats" | jq -r '.p99 // "N/A"')
     
     log_info "Latency statistics: p50=$p50ms, p95=$p95ms, p99=$p99ms"
     
@@ -281,8 +295,10 @@ test_latency_monitor() {
   
   # Test 4: Check for anomalies
   echo "Checking for latency anomalies..."
-  local anomalies=$(curl -s "$endpoint/anomalies?threshold=3sigma" 2>/dev/null || echo "[]")
-  local anomaly_count=$(echo "$anomalies" | jq 'length // 0')
+  local anomalies
+  anomalies=$(curl -s "$endpoint/anomalies?threshold=3sigma" 2>/dev/null || echo "[]")
+  local anomaly_count
+  anomaly_count=$(echo "$anomalies" | jq 'length // 0')
   
   if [[ $anomaly_count -eq 0 ]]; then
     log_success "No anomalies detected (normal distribution)"
@@ -309,17 +325,21 @@ test_cloudflare_compression() {
   
   # Test 1: Check compression header
   echo "Testing compression header..."
-  local response=$(curl -s -I -H "Accept-Encoding: gzip" "$CLOUDFLARE_URL" 2>/dev/null || echo "")
+  local response
+  response=$(curl -s -I -H "Accept-Encoding: gzip" "$CLOUDFLARE_URL" 2>/dev/null || echo "")
   
   if echo "$response" | grep -qi "content-encoding: gzip"; then
     log_success "Cloudflare compression is enabled (gzip)"
     
     # Calculate compression ratio
-    local uncompressed_size=$(curl -s "$CLOUDFLARE_URL" -H "Accept-Encoding: identity" 2>/dev/null | wc -c)
-    local compressed_size=$(curl -s "$CLOUDFLARE_URL" -H "Accept-Encoding: gzip" 2>/dev/null | wc -c)
+    local uncompressed_size
+    uncompressed_size=$(curl -s "$CLOUDFLARE_URL" -H "Accept-Encoding: identity" 2>/dev/null | wc -c)
+    local compressed_size
+    compressed_size=$(curl -s "$CLOUDFLARE_URL" -H "Accept-Encoding: gzip" 2>/dev/null | wc -c)
     
     if [[ $uncompressed_size -gt 0 ]]; then
-      local ratio=$(echo "scale=2; $compressed_size / $uncompressed_size" | bc -l)
+      local ratio
+      ratio=$(echo "scale=2; $compressed_size / $uncompressed_size" | bc -l)
       log_info "Compression ratio: ${ratio} (target: <0.6)"
       
       if (( $(echo "$ratio < 0.6" | bc -l) )); then
@@ -334,9 +354,12 @@ test_cloudflare_compression() {
   
   # Test 2: Check performance metrics
   echo "Checking Cloudflare performance metrics..."
-  local perf=$(curl -s -w "\n%{time_total},%{size_download}" -o /dev/null "$CLOUDFLARE_URL" 2>/dev/null || echo "0,0")
-  local time_total=$(echo "$perf" | cut -d',' -f1)
-  local size=$(echo "$perf" | cut -d',' -f2)
+  local perf
+  perf=$(curl -s -w "\n%{time_total},%{size_download}" -o /dev/null "$CLOUDFLARE_URL" 2>/dev/null || echo "0,0")
+  local time_total
+  time_total=$(echo "$perf" | cut -d',' -f1)
+  local size
+  size=$(echo "$perf" | cut -d',' -f2)
   
   log_info "Response time: ${time_total}s, Size: ${size} bytes"
   
@@ -359,7 +382,8 @@ test_end_to_end_integration() {
   local flow_success=true
   
   # Create session
-  local session=$(curl -s -X POST "http://$TERMINAL_OPTIMIZER_HOST:$TERMINAL_OPTIMIZER_PORT/sessions/start" \
+  local session
+  session=$(curl -s -X POST "http://$TERMINAL_OPTIMIZER_HOST:$TERMINAL_OPTIMIZER_PORT/sessions/start" \
     -H "Content-Type: application/json" \
     -d '{"session_id":"e2e-test","compression":true}' 2>/dev/null || echo "{}")
   
@@ -411,7 +435,8 @@ test_stress_performance() {
   local endpoint="http://$LATENCY_MONITOR_HOST:$LATENCY_MONITOR_PORT"
   
   echo "Submitting $STRESS_ITERATIONS measurements under load..."
-  local start_time=$(date +%s%N)
+  local start_time
+  start_time=$(date +%s%N)
   local submitted=0
   
   for i in $(seq 1 "$STRESS_ITERATIONS"); do
@@ -432,9 +457,12 @@ test_stress_performance() {
     fi
   done
   
-  local end_time=$(date +%s%N)
-  local duration=$(echo "scale=2; ($end_time - $start_time) / 1000000000" | bc -l)
-  local throughput=$(echo "scale=2; $submitted / $duration" | bc -l)
+  local end_time
+  end_time=$(date +%s%N)
+  local duration
+  duration=$(echo "scale=2; ($end_time - $start_time) / 1000000000" | bc -l)
+  local throughput
+  throughput=$(echo "scale=2; $submitted / $duration" | bc -l)
   
   log_info "Stress test completed: $submitted measurements in ${duration}s"
   log_info "Throughput: $throughput measurements/second"
@@ -447,7 +475,8 @@ test_stress_performance() {
   
   # Check database is still responsive
   sleep 2
-  local stats=$(curl -s "$endpoint/statistics?latency_type=keystroke" 2>/dev/null || echo "{}")
+  local stats
+  stats=$(curl -s "$endpoint/statistics?latency_type=keystroke" 2>/dev/null || echo "{}")
   if echo "$stats" | grep -q "p99"; then
     log_success "Database still responsive after stress test"
   else

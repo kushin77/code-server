@@ -145,6 +145,7 @@ export_vars() {
 	local var_name
 
 	for var_name in "$@"; do
+		# shellcheck disable=SC2163
 		export "$var_name"
 	done
 }

@@ -28,6 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+# shellcheck disable=SC2034
 LOG_FILE="${PROJECT_ROOT}/logs/container-hardening.log"
 
 mkdir -p "${PROJECT_ROOT}/logs"
@@ -569,7 +570,8 @@ harden_container() {
   log_info "Hardening container: ${container_name}..."
   
   # Get container ID
-  local container_id=$(docker ps --filter "name=${container_name}" -q | head -1)
+  local container_id
+  container_id=$(docker ps --filter "name=${container_name}" -q | head -1)
   
   if [[ -z "${container_id}" ]]; then
     log_warn "  ✗ Container ${container_name} not found (not running?)"
@@ -603,7 +605,8 @@ verify_hardening() {
     log_info "Checking ${container_name}..."
     
     # Get container ID
-    local container_id=$(docker ps --filter "name=${container_name}" -q | head -1)
+    local container_id
+    container_id=$(docker ps --filter "name=${container_name}" -q | head -1)
     
     if [[ -z "${container_id}" ]]; then
       log_warn "  ✗ Container not running"
@@ -612,7 +615,8 @@ verify_hardening() {
     fi
     
     # Check read-only root filesystem
-    local read_only=$(docker inspect "${container_id}" --format '{{ .HostConfig.ReadonlyRootfs }}')
+    local read_only
+    read_only=$(docker inspect "${container_id}" --format '{{ .HostConfig.ReadonlyRootfs }}')
     if [[ "${read_only}" == "true" ]]; then
       log_info "  ✓ Read-only filesystem enabled"
       ((verified++))
@@ -628,7 +632,8 @@ verify_hardening() {
     fi
     
     # Check resource limits
-    local memory_limit=$(docker inspect "${container_id}" --format '{{ .HostConfig.Memory }}')
+    local memory_limit
+    memory_limit=$(docker inspect "${container_id}" --format '{{ .HostConfig.Memory }}')
     if [[ -n "${memory_limit}" && "${memory_limit}" != "0" ]]; then
       log_info "  ✓ Memory limit set: ${memory_limit} bytes"
       ((verified++))
@@ -638,6 +643,7 @@ verify_hardening() {
   log_info "════════════════════════════════════════════════════════════════════════════════"
   log_info "Verification results: ${verified} passed, ${failed} failed"
   log_info "════════════════════════════════════════════════════════════════════════════════"
+  # shellcheck disable=SC2046
   
   return $([[ $failed -eq 0 ]] && echo 0 || echo 1)
 }

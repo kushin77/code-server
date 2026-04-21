@@ -51,6 +51,7 @@ log_info "NFS mount verified: $NAS_MOUNT_PATH"
 # Create temp directory for test files
 TEST_DIR="$NAS_MOUNT_PATH/.benchmark-$$"
 mkdir -p "$TEST_DIR"
+# shellcheck disable=SC2064
 trap "rm -rf '$TEST_DIR'" EXIT
 
 # ─────────────────────────────────────────────────────────────────────────────

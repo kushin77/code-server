@@ -10,8 +10,10 @@ source "$SCRIPT_DIR/_common/init.sh"
 
 # Configuration
 REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+# shellcheck disable=SC2034
 IPERF3_VERSION="3.14"
 TEST_DURATION=30  # seconds
+# shellcheck disable=SC2034
 NUM_STREAMS=4
 OUTPUT_DIR="artifacts/triage"
 

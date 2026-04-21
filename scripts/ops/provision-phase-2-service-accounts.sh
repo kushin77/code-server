@@ -64,15 +64,18 @@ provision_service_accounts() {
   log_info "Provisioning Phase 2 JWT service account credentials..."
   
   # Session-Broker Service Account
-  local session_broker_secret=$(generate_random_secret 32)
+  local session_broker_secret
+  session_broker_secret=$(generate_random_secret 32)
   create_or_update_secret "service-client-session-broker-secret" "$session_broker_secret"
   
   # Backend Service Account
-  local backend_secret=$(generate_random_secret 32)
+  local backend_secret
+  backend_secret=$(generate_random_secret 32)
   create_or_update_secret "service-client-backend-secret" "$backend_secret"
   
   # Load Balancer Session Cookie Secret (64 hex chars = 32 bytes)
-  local lb_secret=$(openssl rand -hex 32)
+  local lb_secret
+  lb_secret=$(openssl rand -hex 32)
   create_or_update_secret "ide-session-lb-secret" "$lb_secret"
   
   log_info "✓ Phase 2 service account secrets provisioned"
@@ -88,7 +91,9 @@ provision_oidc_signing_key() {
   fi
   
   # Generate RSA 2048-bit key pair
-  local temp_dir=$(mktemp -d)
+  local temp_dir
+  temp_dir=$(mktemp -d)
+  # shellcheck disable=SC2064
   trap "rm -rf $temp_dir" EXIT
   
   local private_key_file="$temp_dir/private_key.pem"
@@ -98,7 +103,8 @@ provision_oidc_signing_key() {
   openssl genrsa -out "$private_key_file" 2048 > /dev/null 2>&1
   openssl rsa -in "$private_key_file" -pubout -out "$public_key_file" > /dev/null 2>&1
   
-  local private_key=$(cat "$private_key_file")
+  local private_key
+  private_key=$(cat "$private_key_file")
   
   if [[ "$DRY_RUN" == "1" ]]; then
     log_info "[DRY_RUN] Would create secret oidc-issuer-signing-key"

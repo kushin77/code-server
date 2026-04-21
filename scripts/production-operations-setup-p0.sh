@@ -19,13 +19,21 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 # Configuration (IaC)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# shellcheck disable=SC2034
 ENVIRONMENT="production"
+# shellcheck disable=SC2034
 MONITORING_NAMESPACE="monitoring"
+# shellcheck disable=SC2034
 PROMETHEUS_HOST="${DEPLOY_HOST}"
+# shellcheck disable=SC2034
 PROMETHEUS_PORT="${PORT_PROMETHEUS}"
+# shellcheck disable=SC2034
 GRAFANA_HOST="${DEPLOY_HOST}"
+# shellcheck disable=SC2034
 GRAFANA_PORT="${PORT_GRAFANA}"
+# shellcheck disable=SC2034
 LOKI_HOST="${DEPLOY_HOST}"
+# shellcheck disable=SC2034
 LOKI_PORT="3100"
 
 # ─────────────────────────────────────────────────────────────────────────────

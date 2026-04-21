@@ -21,13 +21,15 @@ LOG_FILE="/tmp/docker-health-monitor.log"
 # Function to check if container is running
 check_container_status() {
     local container=$1
-    local status=$(docker inspect $container --format='{{.State.Running}}' 2>/dev/null || echo "false")
+    local status
+    status=$(docker inspect $container --format='{{.State.Running}}' 2>/dev/null || echo "false")
     
     if [ "$status" = "false" ]; then
         log_warn "Container [$container] is NOT running"
         
         # Check restart count
-        local restart_count=$(docker inspect $container --format='{{.RestartCount}}' 2>/dev/null || echo "0")
+        local restart_count
+        restart_count=$(docker inspect $container --format='{{.RestartCount}}' 2>/dev/null || echo "0")
         if [ "$restart_count" -gt "$RESTART_THRESHOLD" ]; then
             log_error "Container [$container] restarted $restart_count times - potential crash loop"
         fi
@@ -42,7 +44,8 @@ check_container_status() {
 # Function to check container health status
 check_container_health() {
     local container=$1
-    local health=$(docker inspect $container --format='{{.State.Health.Status}}' 2>/dev/null || echo "none")
+    local health
+    health=$(docker inspect $container --format='{{.State.Health.Status}}' 2>/dev/null || echo "none")
     
     case $health in
         "healthy")
@@ -69,7 +72,8 @@ check_container_resources() {
     local container=$1
     
     if command -v docker &> /dev/null && docker stats --no-stream "$container" &>/dev/null 2>&1; then
-        local stats=$(docker stats --no-stream $container --format "table {{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" 2>/dev/null || echo "N/A")
+        local stats
+        stats=$(docker stats --no-stream $container --format "table {{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" 2>/dev/null || echo "N/A")
         log_debug "Container [$container] resources: $stats"
     fi
 }
@@ -77,7 +81,8 @@ check_container_resources() {
 # Function to check logs for errors
 check_container_logs() {
     local container=$1
-    local error_count=$(docker logs $container 2>/dev/null | grep -iE "error|exception|fatal|crash" | wc -l || echo "0")
+    local error_count
+    error_count=$(docker logs $container 2>/dev/null | grep -iE "error|exception|fatal|crash" | wc -l || echo "0")
     
     if [ "$error_count" -gt 0 ]; then
         log_warn "Container [$container] has $error_count error entries in logs"
@@ -95,7 +100,8 @@ main() {
     log_info "Docker Health Monitor started"
     
     # Get list of containers
-    local containers=$(docker ps -a --format "{{.Names}}" || echo "")
+    local containers
+    containers=$(docker ps -a --format "{{.Names}}" || echo "")
     
     if [ -z "$containers" ]; then
         log_warn "No Docker containers found"

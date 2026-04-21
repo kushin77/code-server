@@ -65,7 +65,8 @@ test_ssh_connectivity() {
         echo "✅ SSH connectivity verified"
         
         # Get system info
-        local SYSINFO=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+        local SYSINFO
+        SYSINFO=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
             'free -h | grep Mem | awk "{print \$2, \$3, \$7}"' 2>/dev/null)
         echo "   Host: ${DEPLOY_HOST}"
         echo "   Memory: $SYSINFO"
@@ -106,7 +107,8 @@ validate_services() {
     echo ""
     
     # Get deployment directory
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR
+    DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
     
     if [ -z "$DEPLOY_DIR" ]; then
@@ -127,7 +129,8 @@ EOF
     echo ""
     
     # Verify all 5 services running
-    local RUNNING=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local RUNNING
+    RUNNING=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         "cd $DEPLOY_DIR && docker-compose ps -q | wc -l" 2>/dev/null)
     
     if [ "$RUNNING" -eq 5 ]; then
@@ -144,7 +147,8 @@ run_health_checks() {
     echo "═════════════════════════════════════════════════════════════"
     echo ""
     
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR
+    DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
     
     if [ -z "$DEPLOY_DIR" ]; then
@@ -189,7 +193,8 @@ run_performance_tests() {
     echo "═════════════════════════════════════════════════════════════"
     echo ""
     
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR
+    DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
     
     if [ -z "$DEPLOY_DIR" ]; then
@@ -227,7 +232,8 @@ run_security_audit() {
     echo "═════════════════════════════════════════════════════════════"
     echo ""
     
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR
+    DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
     
     if [ -z "$DEPLOY_DIR" ]; then
@@ -270,7 +276,8 @@ generate_final_report() {
     echo "═════════════════════════════════════════════════════════════"
     echo ""
     
-    local DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
+    local DEPLOY_DIR
+    DEPLOY_DIR=$(ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'ls -td /home/akushnir/code-server-immutable-* 2>/dev/null | head -1' 2>/dev/null)
     
     cat > "$VALIDATION_REPORT" << EOF

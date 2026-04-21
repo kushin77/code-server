@@ -14,6 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
+# shellcheck disable=SC2034
 PHASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_NAME="code-server-enterprise"
 PHASE="12"

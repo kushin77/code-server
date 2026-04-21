@@ -108,7 +108,8 @@ save_image() {
   
   log_info "Saving image: $image → $filename"
   if docker save "$image" | gzip > "$filename" 2>&1; then
-    local size=$(du -h "$filename" | cut -f1)
+    local size
+    size=$(du -h "$filename" | cut -f1)
     log_info "✓ Saved: $image ($size)"
     return 0
   else

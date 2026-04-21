@@ -11,6 +11,7 @@
 
 set -euo pipefail
 
+# shellcheck disable=SC2034
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 RED='\033[0;31m'
 GREEN='\033[0;32m'

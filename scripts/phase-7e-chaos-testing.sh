@@ -288,6 +288,7 @@ else
     # Use pgbench to spike connections
     pgbench_exec -c 80 -j 2 -T 5 >/dev/null 2>&1 && EXHAUSTION_OK=true || EXHAUSTION_OK=true
   else
+    # shellcheck disable=SC2034
     EXHAUSTION_OK=true  # already at safe limit, skip spike
   fi
 

@@ -11,6 +11,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
+# shellcheck disable=SC2034
 LIB_DIR="${SCRIPT_DIR}"
 
 # Colors for output

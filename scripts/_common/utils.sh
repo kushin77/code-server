@@ -309,7 +309,8 @@ docker_wait_healthy() {
     log_info "Waiting for container to be healthy: $container"
     
     while [ $elapsed -lt "$timeout" ]; do
-        local health=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
+        local health
+        health=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
         
         if [ "$health" == "healthy" ]; then
             log_success "Container is healthy: $container"

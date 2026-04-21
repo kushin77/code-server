@@ -70,6 +70,7 @@ bash "$SCRIPT_DIR/setup-e2e-playwright.sh"
 
 # Create a temporary capture script inside E2E_DIR so local node_modules are visible
 CAPTURE_SCRIPT="$(cd "$E2E_DIR" && mktemp "$PWD/capture.XXXXXX.mjs")"
+# shellcheck disable=SC2064
 trap "rm -f $CAPTURE_SCRIPT" EXIT
 
 log_info "Generating Playwright capture script"

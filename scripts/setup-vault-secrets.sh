@@ -188,11 +188,13 @@ enable_approle() {
     policies="code-server"
   
   # Get RoleID (like username)
-  local role_id=$(vault read -field=role_id auth/approle/role/code-server/role-id)
+  local role_id
+  role_id=$(vault read -field=role_id auth/approle/role/code-server/role-id)
   
   # Generate SecretID (like password, rotatable)
   vault write -f auth/approle/role/code-server/secret-id
-  local secret_id=$(vault read -field=secret_id auth/approle/role/code-server/secret-id)
+  local secret_id
+  secret_id=$(vault read -field=secret_id auth/approle/role/code-server/secret-id)
   
   log_success "AppRole created for code-server"
   log_info "Role ID: $role_id"
@@ -268,7 +270,8 @@ rotate_secrets() {
   log_warn "IMPORTANT: Rotate secrets quarterly for security compliance"
   
   # Update password in Vault
-  local new_password=$(openssl rand -base64 32)
+  local new_password
+  new_password=$(openssl rand -base64 32)
   vault kv put secret/code-server/postgres \
     password="$new_password" \
     username="code_server" \

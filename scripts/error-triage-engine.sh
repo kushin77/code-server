@@ -34,6 +34,7 @@ source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/ini
 
 LOG_DIR="${PROJECT_ROOT}/logs"
 TRIAGE_DB="${PROJECT_ROOT}/var/error-triage.db"
+# shellcheck disable=SC2034
 TRIAGE_CONFIG="${PROJECT_ROOT}/config/error-triage-config.yml"
 GITHUB_REPO="${GITHUB_REPO:-kushin77/code-server}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
@@ -65,6 +66,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --severity)
+      # shellcheck disable=SC2034
       ERROR_SEVERITY_FILTER="$2"
       shift 2
       ;;
@@ -85,6 +87,7 @@ done
 
 # Query Loki for recent errors
 query_loki_errors() {
+  # shellcheck disable=SC2034
   local time_range="${1:-1h}"  # Default: last 1 hour
   local query='{job=~".+", level="ERROR|FATAL"}'
   
@@ -140,7 +143,8 @@ cluster_similar_errors() {
 # Check if similar issue already exists
 issue_exists() {
   local error_pattern="$1"
-  local title=$(echo "${error_pattern}" | cut -d' ' -f2- | cut -c1-100)
+  local title
+  title=$(echo "${error_pattern}" | cut -d' ' -f2- | cut -c1-100)
   
   if [[ -z "${GITHUB_TOKEN}" ]]; then
     log_warn "GITHUB_TOKEN not set, skipping issue existence check"
@@ -184,7 +188,8 @@ create_triage_issue() {
   
   # Build issue body
   local title="[AUTO-TRIAGE] ${error_pattern:0:100}"
-  local body=$(cat <<EOF
+  local body
+  body=$(cat <<EOF
 ## Automated Error Triage Report
 
 **Severity**: P1 (Automated Detection)
@@ -403,6 +408,7 @@ run_triage_check() {
   
   # Create issues for high-priority patterns
   log_info "Creating GitHub issues for high-priority error patterns..."
+  # shellcheck disable=SC2034
   get_high_priority_patterns | while IFS='|' read -r id hash message count issue_num status; do
     if [[ -z "${issue_num}" ]] || [[ "${issue_num}" == "NULL" ]]; then
       log_info "Creating issue for pattern: ${message:0:80}"

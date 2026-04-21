@@ -127,8 +127,10 @@ check_caddyfile_syntax() {
         log_info "caddy command not available - running basic syntax checks..."
         
         # Check for unclosed braces
-        local open_braces=$(grep -o '{' "$caddyfile" | wc -l)
-        local close_braces=$(grep -o '}' "$caddyfile" | wc -l)
+        local open_braces
+        open_braces=$(grep -o '{' "$caddyfile" | wc -l)
+        local close_braces
+        close_braces=$(grep -o '}' "$caddyfile" | wc -l)
         
         if [ "$open_braces" -ne "$close_braces" ]; then
             log_error "✗ Caddyfile: brace mismatch (open: $open_braces, close: $close_braces)"
@@ -178,7 +180,8 @@ check_env_schema() {
         return 0
     fi
     
-    local required_vars=$(jq -r '.groups[].variables | to_entries[] | select(.value.required == true) | .key' "$schema_file" | sort -u)
+    local required_vars
+    required_vars=$(jq -r '.groups[].variables | to_entries[] | select(.value.required == true) | .key' "$schema_file" | sort -u)
     local missing_vars=()
     
     while IFS= read -r var; do
@@ -223,7 +226,8 @@ check_hardcoded_secrets() {
     for pattern in "${secret_patterns[@]}"; do
         # Search in modified/staged files (if running in CI)
         if git -C "$PROJECT_ROOT" status --short &>/dev/null; then
-            local files=$(git -C "$PROJECT_ROOT" status --short | awk '{print $2}' | grep -v '^.')
+            local files
+            files=$(git -C "$PROJECT_ROOT" status --short | awk '{print $2}' | grep -v '^.')
         else
             local files="docker-compose.yml Caddyfile .env.schema.json"
         fi
@@ -270,7 +274,8 @@ check_hardcoded_ips() {
     else
         # Fallback: basic check
         local ip_pattern='\b([0-9]{1,3}\.){3}[0-9]{1,3}\b'
-        local files_with_ips=$(grep -rE "$ip_pattern" "$PROJECT_ROOT" \
+        local files_with_ips
+        files_with_ips=$(grep -rE "$ip_pattern" "$PROJECT_ROOT" \
             --include="*.yml" --include="*.yaml" --include="Caddyfile" \
             --exclude-dir=node_modules --exclude-dir=.git \
             2>/dev/null | wc -l)

@@ -185,7 +185,8 @@ test_failover() {
   fi
   log_info "  Original master restarted"
   
-  local role=$(redis_cli "$ORIGINAL_MASTER_HOST" "$ORIGINAL_MASTER_PORT" info replication | grep "^role:" | cut -d: -f2 | tr -d '\r')
+  local role
+  role=$(redis_cli "$ORIGINAL_MASTER_HOST" "$ORIGINAL_MASTER_PORT" info replication | grep "^role:" | cut -d: -f2 | tr -d '\r')
   if [[ "$role" == "slave" || "$role" == "replica" ]]; then
     log_info "  ✓ Original master now replica (role: $role)"
   else

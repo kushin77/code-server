@@ -114,12 +114,15 @@ audit_log_event() {
     require_var "event_type" "Audit event type required"
     require_var "developer_id" "Developer ID required"
     
-    local timestamp=$(get_iso_timestamp)
-    local hostname=$(hostname)
+    local timestamp
+    timestamp=$(get_iso_timestamp)
+    local hostname
+    hostname=$(hostname)
     local session_id="${SESSION_ID:-${SSH_SESSION_ID:-unknown}}"
     
     # Build JSON event
-    local json_event=$(cat <<EOF
+    local json_event
+    json_event=$(cat <<EOF
 {
   "timestamp": "$timestamp",
   "event_type": "$event_type",
@@ -375,6 +378,7 @@ audit_rate_limit_exceeded() {
 
 audit_security_alert() {
     local developer_id="${1:-$(get_developer_id)}"
+    # shellcheck disable=SC2034
     local alert_type="$2"
     local details_json="${3:-{}}"
     

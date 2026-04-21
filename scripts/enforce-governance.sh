@@ -123,20 +123,28 @@ apply_branch_protection() {
     local owner="$1"
     local repo="$2"
     local branch="$3"
+    # shellcheck disable=SC2034
     local config="$4"
     
     log "Applying protection to $owner/$repo/$branch..."
     
     # Extract protection settings from config
-    local required_contexts=$(yq -r ".branches.$branch.protection.required_status_checks.contexts[]?" "$CONFIG_FILE" | jq -R -s -c 'split("\n")[:-1]')
-    local required_reviews=$(yq -r ".branches.$branch.protection.required_pull_request_reviews.required_approving_review_count" "$CONFIG_FILE")
-    local dismiss_stale=$(yq -r ".branches.$branch.protection.required_pull_request_reviews.dismiss_stale_reviews" "$CONFIG_FILE")
-    local enforce_admins=$(yq -r ".branches.$branch.protection.enforce_admins" "$CONFIG_FILE")
-    local allow_deletions=$(yq -r ".branches.$branch.protection.allow_deletions" "$CONFIG_FILE")
-    local allow_force_pushes=$(yq -r ".branches.$branch.protection.allow_force_pushes" "$CONFIG_FILE")
+    local required_contexts
+    required_contexts=$(yq -r ".branches.$branch.protection.required_status_checks.contexts[]?" "$CONFIG_FILE" | jq -R -s -c 'split("\n")[:-1]')
+    local required_reviews
+    required_reviews=$(yq -r ".branches.$branch.protection.required_pull_request_reviews.required_approving_review_count" "$CONFIG_FILE")
+    local dismiss_stale
+    dismiss_stale=$(yq -r ".branches.$branch.protection.required_pull_request_reviews.dismiss_stale_reviews" "$CONFIG_FILE")
+    local enforce_admins
+    enforce_admins=$(yq -r ".branches.$branch.protection.enforce_admins" "$CONFIG_FILE")
+    local allow_deletions
+    allow_deletions=$(yq -r ".branches.$branch.protection.allow_deletions" "$CONFIG_FILE")
+    local allow_force_pushes
+    allow_force_pushes=$(yq -r ".branches.$branch.protection.allow_force_pushes" "$CONFIG_FILE")
     
     # Build API payload
-    local payload=$(cat <<EOF
+    local payload
+    payload=$(cat <<EOF
 {
   "required_status_checks": {
     "strict": true,
@@ -176,7 +184,8 @@ validate_workflows() {
     log "Validating workflows in $owner/$repo..."
     
     # Get all workflow files
-    local workflows=$(gh api "repos/$owner/$repo/contents/.github/workflows" --jq ".[].name" 2>/dev/null || echo "")
+    local workflows
+    workflows=$(gh api "repos/$owner/$repo/contents/.github/workflows" --jq ".[].name" 2>/dev/null || echo "")
     
     if [[ -z "$workflows" ]]; then
         warning "No workflows found in $owner/$repo"
@@ -189,7 +198,8 @@ validate_workflows() {
         verbose "Checking workflow: $workflow"
         
         # Get workflow content
-        local content=$(gh api "repos/$owner/$repo/contents/.github/workflows/$workflow" --jq '.content | @base64d')
+        local content
+        content=$(gh api "repos/$owner/$repo/contents/.github/workflows/$workflow" --jq '.content | @base64d')
         
         # Check for timeout-minutes
         if ! echo "$content" | grep -q "timeout-minutes"; then
@@ -233,7 +243,8 @@ track_workflow_costs() {
     log "Tracking workflow costs for $owner/$repo..."
     
     # Get recent workflow runs
-    local runs=$(gh api "repos/$owner/$repo/actions/runs" \
+    local runs
+    runs=$(gh api "repos/$owner/$repo/actions/runs" \
         -F per_page=100 \
         --jq '.workflow_runs[] | select(.updated_at > (now - 7*24*60*60 | todate)) | {id: .id, name: .name, status: .status, conclusion: .conclusion, run_number: .run_number}')
     
@@ -243,9 +254,12 @@ track_workflow_costs() {
     fi
     
     # Count runs by category
-    local total_runs=$(echo "$runs" | jq -s 'length')
-    local failed_runs=$(echo "$runs" | jq -s '[.[] | select(.conclusion == "failure")] | length')
-    local success_rate=$(echo "scale=2; ($total_runs - $failed_runs) * 100 / $total_runs" | bc)
+    local total_runs
+    total_runs=$(echo "$runs" | jq -s 'length')
+    local failed_runs
+    failed_runs=$(echo "$runs" | jq -s '[.[] | select(.conclusion == "failure")] | length')
+    local success_rate
+    success_rate=$(echo "scale=2; ($total_runs - $failed_runs) * 100 / $total_runs" | bc)
     
     log "Cost Summary for $owner/$repo (last 7 days):"
     echo "  Total runs: $total_runs"
@@ -267,7 +281,8 @@ disable_inactive_workflows() {
     log "Checking for inactive workflows in $owner/$repo (>$days_threshold days)..."
     
     # Get all workflows
-    local workflows=$(gh api "repos/$owner/$repo/actions/workflows" --jq '.workflows[].id' 2>/dev/null || echo "")
+    local workflows
+    workflows=$(gh api "repos/$owner/$repo/actions/workflows" --jq '.workflows[].id' 2>/dev/null || echo "")
     
     if [[ -z "$workflows" ]]; then
         verbose "No workflows found"
@@ -276,15 +291,18 @@ disable_inactive_workflows() {
     
     while read -r workflow_id; do
         # Get last run date
-        local last_run=$(gh api "repos/$owner/$repo/actions/workflows/$workflow_id/runs" \
+        local last_run
+        last_run=$(gh api "repos/$owner/$repo/actions/workflows/$workflow_id/runs" \
             -F per_page=1 \
             --jq '.workflow_runs[0].updated_at | fromdate' 2>/dev/null || echo 0)
         
-        local current_time=$(date +%s)
+        local current_time
+        current_time=$(date +%s)
         local days_inactive=$(( ($current_time - $last_run) / 86400 ))
         
         if [[ $days_inactive -gt $days_threshold ]]; then
-            local workflow_name=$(gh api "repos/$owner/$repo/actions/workflows/$workflow_id" --jq '.name')
+            local workflow_name
+            workflow_name=$(gh api "repos/$owner/$repo/actions/workflows/$workflow_id" --jq '.name')
             warning "Workflow inactive for $days_inactive days: $workflow_name"
             
             if [[ "$DRY_RUN" == "true" ]]; then
@@ -329,7 +347,8 @@ main() {
     local owner="${GH_OWNER:-kushin77}"
     
     log "Fetching repositories for $owner..."
-    local repos=$(gh api "users/$owner/repos" --jq '.[].name' | head -20)
+    local repos
+    repos=$(gh api "users/$owner/repos" --jq '.[].name' | head -20)
     
     if [[ -z "$repos" ]]; then
         error "No repositories found for $owner"
@@ -346,7 +365,8 @@ main() {
         log "Processing $owner/$repo..."
         
         # Get default branch
-        local default_branch=$(gh api "repos/$owner/$repo" --jq '.default_branch')
+        local default_branch
+        default_branch=$(gh api "repos/$owner/$repo" --jq '.default_branch')
         
         # Apply branch protections
         apply_branch_protection "$owner" "$repo" "$default_branch" "$CONFIG_FILE"

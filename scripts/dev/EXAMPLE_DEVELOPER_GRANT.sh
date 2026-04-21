@@ -13,7 +13,9 @@ set -e
 
 DEVELOPERS_DB="${HOME}/.code-server-developers/developers.csv"
 REVOCATION_LOG="${HOME}/.code-server-developers/revocation.log"
+# shellcheck disable=SC2034
 CF_API_TOKEN="${CLOUDFLARE_API_TOKEN}"
+# shellcheck disable=SC2034
 CF_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID}"
 
 # ============================================================================

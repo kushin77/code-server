@@ -133,6 +133,7 @@ check_caddyfile_uses_var() {
     # Check if Caddyfile uses the variable (properly)
     if grep -q '{\$IDE_SESSION_LB_SECRET}' "${REPO_ROOT}/Caddyfile" 2>/dev/null; then
         log_info "  ✅ Found {\$IDE_SESSION_LB_SECRET} in Caddyfile"
+        # shellcheck disable=SC2034
         caddy_uses_var=1
     else
         log_error "  ❌ Caddyfile does not use {\$IDE_SESSION_LB_SECRET} variable"

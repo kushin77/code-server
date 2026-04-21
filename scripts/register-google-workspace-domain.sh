@@ -54,7 +54,8 @@ add_txt_record() {
         return 0
     fi
     
-    local payload=$(cat <<EOF
+    local payload
+    payload=$(cat <<EOF
 [
   {
     "name": "@",

@@ -28,6 +28,7 @@ PAGERDUTY_KEY="${PAGERDUTY_INT_KEY:-}"
 DRY_RUN="${1:-}"
 
 DRIFT_REPORT_FILE="/tmp/policy-drift-report-$(date +%Y%m%d_%H%M%S).json"
+# shellcheck disable=SC2034
 LAST_BASELINE_HASH=""
 
 # ============================================================================
@@ -111,7 +112,8 @@ check_policy_config_drift() {
   fi
   
   # Calculate current hash
-  local current_hash=$(sha256sum "$policy_file" | awk '{print $1}')
+  local current_hash
+  current_hash=$(sha256sum "$policy_file" | awk '{print $1}')
   
   # Get committed version hash
   local committed_hash

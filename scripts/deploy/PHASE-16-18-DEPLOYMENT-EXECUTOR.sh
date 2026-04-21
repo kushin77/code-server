@@ -35,7 +35,8 @@ error() {
 deploy_phase_16_a() {
     log "=== PHASE 16-A: DATABASE HA DEPLOYMENT ==="
     
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     
     log "Creating PostgreSQL primary container..."
     docker run -d \
@@ -43,6 +44,7 @@ deploy_phase_16_a() {
         --network phase13-net \
         -e POSTGRES_DB=code_server_db \
         -e POSTGRES_USER=db_admin \
+        # shellcheck disable=SC2046
         -e POSTGRES_PASSWORD=$(openssl rand -base64 32) \
         -e POSTGRES_INITDB_ARGS="-c max_wal_senders=10 -c max_replication_slots=10 -c wal_level=replica" \
         -p 5432:5432 \
@@ -73,6 +75,7 @@ deploy_phase_16_a() {
             --name postgres-ha-replica-${i} \
             --network phase13-net \
             -e PGUSER=replication_user \
+            # shellcheck disable=SC2046
             -e PGPASSWORD=$(openssl rand -base64 32) \
             -e PGMASTER=postgres-ha-primary \
             -e PGPORT=5432 \
@@ -107,7 +110,8 @@ deploy_phase_16_a() {
         --restart=unless-stopped \
         patroni:3.0.2-alpine
     
-    local end_time=$(date +%s)
+    local end_time
+    end_time=$(date +%s)
     local duration=$((end_time - start_time))
     
     success "Phase 16-A completed in ${duration} seconds"
@@ -121,7 +125,8 @@ deploy_phase_16_a() {
 deploy_phase_16_b() {
     log "=== PHASE 16-B: LOAD BALANCING DEPLOYMENT ==="
     
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     
     log "Creating HAProxy primary load balancer..."
     docker run -d \
@@ -181,7 +186,8 @@ deploy_phase_16_b() {
         --restart=unless-stopped \
         arcts/keepalived:2.2.7
     
-    local end_time=$(date +%s)
+    local end_time
+    end_time=$(date +%s)
     local duration=$((end_time - start_time))
     
     success "Phase 16-B completed in ${duration} seconds"
@@ -195,7 +201,8 @@ deploy_phase_16_b() {
 deploy_phase_18() {
     log "=== PHASE 18: SECURITY HARDENING DEPLOYMENT ==="
     
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     
     log "Creating Consul service registry cluster..."
     for i in {1..3}; do
@@ -246,7 +253,8 @@ deploy_phase_18() {
         -out /etc/tls/certs/server.crt \
         -subj "/C=US/ST=CA/L=San Francisco/O=Code Server/CN=code-server" 2>/dev/null || true
     
-    local end_time=$(date +%s)
+    local end_time
+    end_time=$(date +%s)
     local duration=$((end_time - start_time))
     
     success "Phase 18 completed in ${duration} seconds"
@@ -260,7 +268,8 @@ deploy_phase_18() {
 deploy_phase_17() {
     log "=== PHASE 17: MULTI-REGION REPLICATION DEPLOYMENT ==="
     
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     
     log "Creating pglogical replicator containers..."
     docker run -d \
@@ -268,6 +277,7 @@ deploy_phase_17() {
         --network phase13-net \
         -e POSTGRES_DB=code_server_db \
         -e POSTGRES_USER=replication_user \
+        # shellcheck disable=SC2046
         -e POSTGRES_PASSWORD=$(openssl rand -base64 32) \
         -e PGLOGICAL_ENABLED=true \
         -p 5434:5432 \
@@ -285,7 +295,8 @@ deploy_phase_17() {
         --restart=unless-stopped \
         alpine:latest sleep infinity
     
-    local end_time=$(date +%s)
+    local end_time
+    end_time=$(date +%s)
     local duration=$((end_time - start_time))
     
     success "Phase 17 completed in ${duration} seconds"

@@ -14,7 +14,9 @@ SCRIPT_NAME="$(basename "$0")"
 
 readonly LOCAL_COMPOSE_FILE="${PROJECT_DIR}/docker-compose.yml"
 readonly REMOTE_COMPOSE_FILE="${DOCKER_COMPOSE_FILE}"
+# shellcheck disable=SC2034
 readonly PORTAL_CALLBACK_URL="${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://kushnir.cloud/oauth2/callback}"
+# shellcheck disable=SC2034
 readonly IDE_CALLBACK_URL="${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"
 readonly PORTAL_SERVICES=(oauth2-proxy-portal caddy appsmith)
 
@@ -155,6 +157,7 @@ wait_for_target_service() {
     local service_name="$1"
     local attempt
 
+    # shellcheck disable=SC2034
     for attempt in $(seq 1 12); do
         if run_target "docker inspect --format '{{.State.Running}}' '${service_name}' 2>/dev/null | grep -q true"; then
             log_info "Service is running: ${service_name}"

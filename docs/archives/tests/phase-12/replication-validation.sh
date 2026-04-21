@@ -13,6 +13,7 @@ REGIONS=(
 
 DB_USER="replication"
 DB_NAME="postgres"
+# shellcheck disable=SC2034
 TEST_TIMEOUT=30
 
 # Colors
@@ -75,7 +76,8 @@ test_replication_slots() {
         log_pass "Replication slots exist on primary"
         
         # Check slot count
-        local slot_count=$(psql -h "$primary_endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "$slots_query" | grep -c . || echo 0)
+        local slot_count
+        slot_count=$(psql -h "$primary_endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "$slots_query" | grep -c . || echo 0)
         if [ "$slot_count" -ge 2 ]; then
             log_pass "Found $slot_count replication slots (expected >= 2)"
         else
@@ -113,7 +115,8 @@ test_subscriptions() {
         local sub_query="SELECT subname, subenabled, subconninfo FROM pg_subscription;"
         
         if psql -h "$endpoint" -U "$DB_USER" -d "$DB_NAME" -c "$sub_query" &>/dev/null; then
-            local sub_count=$(psql -h "$endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "$sub_query" | grep -c . || echo 0)
+            local sub_count
+            sub_count=$(psql -h "$endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "$sub_query" | grep -c . || echo 0)
             if [ "$sub_count" -gt 0 ]; then
                 log_pass "Found $sub_count subscription(s) on $region"
             else
@@ -168,7 +171,8 @@ EOF
     sleep 5
     
     # Read from secondary (EU-West)
-    local result=$(psql -h "$secondary_endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "SELECT value FROM crdt.crdt_counters WHERE key = '$test_key' LIMIT 1;" 2>/dev/null || echo "")
+    local result
+    result=$(psql -h "$secondary_endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "SELECT value FROM crdt.crdt_counters WHERE key = '$test_key' LIMIT 1;" 2>/dev/null || echo "")
     
     if [ "$result" = " 42" ]; then
         log_pass "Data replicated to secondary (EU-West)"
@@ -177,7 +181,8 @@ EOF
     fi
     
     # Read from tertiary (AP-South)
-    local result=$(psql -h "postgres.ap-south.multi-region.example.com" -U "$DB_USER" -d "$DB_NAME" -tc "SELECT value FROM crdt.crdt_counters WHERE key = '$test_key' LIMIT 1;" 2>/dev/null || echo "")
+    local result
+    result=$(psql -h "postgres.ap-south.multi-region.example.com" -U "$DB_USER" -d "$DB_NAME" -tc "SELECT value FROM crdt.crdt_counters WHERE key = '$test_key' LIMIT 1;" 2>/dev/null || echo "")
     
     if [ "$result" = " 42" ]; then
         log_pass "Data replicated to tertiary (AP-South)"
@@ -198,7 +203,8 @@ test_replication_lag() {
         # Query replication lag
         local lag_query="SELECT now() - pg_last_xact_replay_timestamp() AS replication_lag;"
         
-        local lag=$(psql -h "$endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "$lag_query" 2>/dev/null | grep -oE '[0-9]+' | head -1 || echo "unknown")
+        local lag
+        lag=$(psql -h "$endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "$lag_query" 2>/dev/null | grep -oE '[0-9]+' | head -1 || echo "unknown")
         
         if [ "$lag" != "unknown" ]; then
             if [ "$lag" -lt 5 ]; then
@@ -242,7 +248,8 @@ EOF
     # Check if conflict resolved consistently
     sleep 5
     
-    local primary_value=$(psql -h "$primary_endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "SELECT COUNT(*) FROM crdt.crdt_registers WHERE key = '$test_key';" 2>/dev/null || echo "0")
+    local primary_value
+    primary_value=$(psql -h "$primary_endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "SELECT COUNT(*) FROM crdt.crdt_registers WHERE key = '$test_key';" 2>/dev/null || echo "0")
     
     if [ "$primary_value" = " 2" ]; then
         log_pass "Conflict resolution maintained separate replicas (expected behavior)"
@@ -280,7 +287,8 @@ EOF
     # Check active elements
     sleep 2
     
-    local active_count=$(psql -h "$primary_endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "SELECT COUNT(*) FROM crdt.crdt_sets WHERE key = '$test_key' AND is_added = true;" 2>/dev/null | grep -o '[0-9]*')
+    local active_count
+    active_count=$(psql -h "$primary_endpoint" -U "$DB_USER" -d "$DB_NAME" -tc "SELECT COUNT(*) FROM crdt.crdt_sets WHERE key = '$test_key' AND is_added = true;" 2>/dev/null | grep -o '[0-9]*')
     
     if [ "$active_count" = "2" ]; then
         log_pass "OR-Set active elements: 2 (expected)"

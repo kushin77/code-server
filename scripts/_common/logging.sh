@@ -20,6 +20,7 @@ set -euo pipefail
 readonly COLOR_RED='\033[0;31m'
 readonly COLOR_YELLOW='\033[0;33m'
 readonly COLOR_GREEN='\033[0;32m'
+# shellcheck disable=SC2034
 readonly COLOR_BLUE='\033[0;34m'
 readonly COLOR_GRAY='\033[0;37m'
 readonly COLOR_RESET='\033[0m'
@@ -183,6 +184,7 @@ log_fatal() {
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Log a command before executing it
+# shellcheck disable=SC2124
 log_exec() {
     local cmd="$@"
     log_info "Executing: $cmd"
@@ -197,6 +199,7 @@ log_var() {
 }
 
 # Log section header
+# shellcheck disable=SC2124
 log_section() {
     local title="$@"
     echo ""

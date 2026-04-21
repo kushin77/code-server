@@ -33,6 +33,7 @@ EXPECTED_DEPLOY_HOST="${EXPECTED_DEPLOY_HOST:-primary.prod.internal}"
 EXPECTED_STANDBY_HOST="${EXPECTED_STANDBY_HOST:-replica.prod.internal}"
 
 [[ "${1:-}" == "--fix" ]] && FIX_MODE=true
+# shellcheck disable=SC2034
 [[ "${1:-}" == "--check-only" ]] && FIX_MODE=false
 
 # ════════════════════════════════════════════════════════════════════════════

@@ -67,7 +67,8 @@ test_services_running() {
   )
   
   for service in "${required_services[@]}"; do
-    local status=$(docker-compose -f docker-compose-air-gapped.yml ps --services --filter "status=running" | grep -c "$service" || true)
+    local status
+    status=$(docker-compose -f docker-compose-air-gapped.yml ps --services --filter "status=running" | grep -c "$service" || true)
     
     if [[ $status -eq 1 ]]; then
       test_pass "Service running: $service"
@@ -85,7 +86,9 @@ test_network_isolation() {
   log_info "=== Network Isolation Checks ==="
   
   # Check that internal network is marked as internal
-  local internal_net=$(docker network inspect -f '{{.Internal}}' $(docker network ls -q -f name=net-internal) 2>/dev/null || echo "false")
+  local internal_net
+  # shellcheck disable=SC2046
+  internal_net=$(docker network inspect -f '{{.Internal}}' $(docker network ls -q -f name=net-internal) 2>/dev/null || echo "false")
   
   if [[ "$internal_net" == "true" ]]; then
     test_pass "Internal network is isolated (no external routing)"
@@ -94,7 +97,9 @@ test_network_isolation() {
   fi
   
   # Verify no default gateway on internal network
-  local gw=$(docker network inspect -f '{{index .IPAM.Config 0 | .Gateway}}' $(docker network ls -q -f name=net-internal) 2>/dev/null || echo "")
+  local gw
+  # shellcheck disable=SC2046
+  gw=$(docker network inspect -f '{{index .IPAM.Config 0 | .Gateway}}' $(docker network ls -q -f name=net-internal) 2>/dev/null || echo "")
   
   if [[ -z "$gw" ]] || [[ "$gw" == "<nil>" ]]; then
     test_pass "Internal network has no default gateway (proper isolation)"
@@ -128,7 +133,8 @@ test_federation_disabled() {
   fi
   
   # Test: Federation endpoint returns 404
-  local fed_status=$(curl -s -o /dev/null -w "%{http_code}" https://localhost:8448/.well-known/matrix/server 2>/dev/null || echo "000")
+  local fed_status
+  fed_status=$(curl -s -o /dev/null -w "%{http_code}" https://localhost:8448/.well-known/matrix/server 2>/dev/null || echo "000")
   
   if [[ "$fed_status" == "404" ]] || [[ "$fed_status" == "000" ]]; then
     test_pass "Federation endpoint disabled (404 or unreachable)"
@@ -174,7 +180,8 @@ test_internal_dns() {
   log_info "=== Internal DNS Checks ==="
   
   # Test internal DNS from container
-  local dns_test=$(docker run --rm --network net-app alpine:latest nslookup synapse 2>/dev/null | grep -c "Address:" || true)
+  local dns_test
+  dns_test=$(docker run --rm --network net-app alpine:latest nslookup synapse 2>/dev/null | grep -c "Address:" || true)
   
   if [[ $dns_test -gt 0 ]]; then
     test_pass "Internal DNS resolves container names"
@@ -199,7 +206,8 @@ test_no_external_network() {
   
   # Check firewall rules (if iptables is available)
   if command -v iptables &>/dev/null; then
-    local outbound_deny=$(iptables -L -n | grep -c "net-internal.*DROP" || true)
+    local outbound_deny
+    outbound_deny=$(iptables -L -n | grep -c "net-internal.*DROP" || true)
     
     if [[ $outbound_deny -gt 0 ]]; then
       test_pass "Firewall rules block net-internal outbound"
@@ -238,7 +246,8 @@ test_service_health() {
   
   for check in "${health_checks[@]}"; do
     IFS='|' read -r url service <<< "$check"
-    local status=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+    local status
+    status=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
     
     if [[ "$status" == "200" ]] || [[ "$status" == "204" ]]; then
       test_pass "Service healthy: $service (HTTP $status)"

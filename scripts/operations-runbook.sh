@@ -69,6 +69,7 @@ LOG_FILE="${LOG_DIR}/operations_${TIMESTAMP}.log"
 log() {
     local level=$1
     shift
+    # shellcheck disable=SC2124
     local message="$@"
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] [${level}] ${message}" | tee -a "${LOG_FILE}"
 }
@@ -154,6 +155,7 @@ failover_region() {
 
 database_bdr_recovery() {
     local failed_region=$1
+    # shellcheck disable=SC2034
     local source_region=$2
     
     log "CRITICAL" "Starting database recovery for ${failed_region}"
@@ -226,7 +228,8 @@ scale_region() {
     
     # Step 4: Verify scaling
     log "INFO" "Step 4: Verifying scaling operation"
-    local final_count=$(kubectl get nodes -l cloud.google.com/gke-nodepool=node-pool-${region} --no-headers | wc -l)
+    local final_count
+    final_count=$(kubectl get nodes -l cloud.google.com/gke-nodepool=node-pool-${region} --no-headers | wc -l)
     
     if [ ${final_count} -ge ${new_node_count} ]; then
         log "INFO" "Scaling completed successfully (${final_count} nodes)"

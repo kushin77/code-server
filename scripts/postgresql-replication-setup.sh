@@ -165,9 +165,12 @@ create_subscription() {
     log_info "Creating subscription: ${subscription}"
     
     # Extract source connection details
-    local source_user=$(echo "$source_conn_string" | grep -oP '(?<=user=)[^ ]+' || echo "postgres")
-    local source_password=$(echo "$source_conn_string" | grep -oP '(?<=password=)[^ ]+' || echo "")
-    local source_dbname=$(echo "$source_conn_string" | grep -oP '(?<=dbname=)[^ ]+' || echo "postgres")
+    local source_user
+    source_user=$(echo "$source_conn_string" | grep -oP '(?<=user=)[^ ]+' || echo "postgres")
+    local source_password
+    source_password=$(echo "$source_conn_string" | grep -oP '(?<=password=)[^ ]+' || echo "")
+    local source_dbname
+    source_dbname=$(echo "$source_conn_string" | grep -oP '(?<=dbname=)[^ ]+' || echo "postgres")
     
     # Build connection string for source
     local source_dsn="postgresql://${source_user}:${source_password}@${source_region}:5432/${source_dbname}"

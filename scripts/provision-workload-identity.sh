@@ -116,7 +116,8 @@ provision_workload_identities() {
     log_info "Provisioning workload: ${name} (${service_name}:${port})"
     
     # Generate token
-    local token=$(generate_token 32)
+    local token
+    token=$(generate_token 32)
     
     # Add to .env
     echo "WORKLOAD_TOKEN_${name^^}=${token}" >> "${ENV_FILE}"
@@ -143,6 +144,7 @@ setup_audit_schema() {
   log_info "════════════════════════════════════════════════════════════════════════════════"
   
   local pg_user="${POSTGRES_USER:-postgres}"
+  # shellcheck disable=SC2034
   local pg_password="${POSTGRES_PASSWORD:-}"
   local pg_host="${POSTGRES_HOST:-postgres}"
   local pg_port="${POSTGRES_PORT:-5432}"
@@ -168,7 +170,8 @@ setup_audit_schema() {
   fi
   
   # Create audit schema
-  local audit_schema_sql=$(cat <<'EOF'
+  local audit_schema_sql
+  audit_schema_sql=$(cat <<'EOF'
 -- Audit Events Table
 CREATE TABLE IF NOT EXISTS audit_events (
   id BIGSERIAL PRIMARY KEY,
@@ -298,7 +301,8 @@ verify_provisioning() {
   
   # Verify audit schema
   log_info "Verifying audit schema..."
-  local audit_table_count=$(docker exec postgres psql \
+  local audit_table_count
+  audit_table_count=$(docker exec postgres psql \
     -h localhost \
     -U "${POSTGRES_USER:-postgres}" \
     -d "${POSTGRES_DB:-code_server}" \
@@ -347,7 +351,8 @@ deploy() {
     fi
     
     # Get container ID
-    local container_id=$(docker ps --filter "label=com.docker.compose.service=${service_name}" -q | head -1)
+    local container_id
+    container_id=$(docker ps --filter "label=com.docker.compose.service=${service_name}" -q | head -1)
     
     if [[ -z "${container_id}" ]]; then
       log_warn "Container for ${service_name} not found (not running?)"

@@ -69,8 +69,11 @@ collect_nas_metrics() {
 
   primary_mount_up="$(metric_value "nas_workspace_mount_up" "primary" "/mnt/nas-56" || true)"
   export_mount_up="$(metric_value "nas_workspace_mount_up" "export" "/mnt/nas-export" || true)"
+  # shellcheck disable=SC2034
   primary_used_percent="$(metric_value "nas_workspace_used_percent" "primary" "/mnt/nas-56" || true)"
+  # shellcheck disable=SC2034
   export_used_percent="$(metric_value "nas_workspace_used_percent" "export" "/mnt/nas-export" || true)"
+  # shellcheck disable=SC2034
   workspace_writable="$(metric_value "nas_workspace_path_writable" "workspace" "/mnt/nas-56/kushin77/applications/code-server-enterprise" || true)"
   coder_home_writable="$(metric_value "nas_workspace_path_writable" "coder_home" "/mnt/nas-56/code-server" || true)"
   ollama_writable="$(metric_value "nas_workspace_path_writable" "ollama" "/mnt/nas-56/ollama" || true)"

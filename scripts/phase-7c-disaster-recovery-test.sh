@@ -278,6 +278,7 @@ fi
 
 # T13: code-server HTTP endpoint responds
 log_info "T13: code-server HTTP health check..."
+# shellcheck disable=SC2034
 for i in $(seq 1 15); do
   sleep 2
   HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:8080/healthz" 2>/dev/null || echo 0)

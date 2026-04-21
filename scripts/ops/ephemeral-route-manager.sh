@@ -120,16 +120,20 @@ cmd_create_route() {
   fi
   
   # Verify pod is running
-  local pod_status=$($KUBECTL get pod "$pod_name" -n "$NAMESPACE" \
+  local pod_status
+  pod_status=$($KUBECTL get pod "$pod_name" -n "$NAMESPACE" \
     -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown")
   
   if [[ "$pod_status" != "Running" ]]; then
     log_warn "Pod status is $pod_status (not Running yet). Route creation may fail."
   fi
   
-  local creation_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  local expiry_time=$(date -u -d "+$ttl_seconds seconds" +%Y-%m-%dT%H:%M:%SZ)
-  local auth_token=$(openssl rand -hex 32)
+  local creation_time
+  creation_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  local expiry_time
+  expiry_time=$(date -u -d "+$ttl_seconds seconds" +%Y-%m-%dT%H:%M:%SZ)
+  local auth_token
+  auth_token=$(openssl rand -hex 32)
   local auth_secret="${session_id}-auth"
   
   # Create auth secret
@@ -390,7 +394,8 @@ cmd_reap_orphaned() {
   $KUBECTL get ingress -n "$NAMESPACE" -o json | jq -r '.items[].metadata.name' | \
     while read -r ingress; do
     
-    local session_id=$(echo "$ingress" | sed 's/^eph-//')
+    local session_id
+    session_id=$(echo "$ingress" | sed 's/^eph-//')
     local pod_name="code-server-eph-${session_id}"
     
     if ! $KUBECTL get pod "$pod_name" -n "$NAMESPACE" &>/dev/null; then

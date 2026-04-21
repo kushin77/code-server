@@ -39,7 +39,9 @@ DEPLOY_START=$(date +%s)
 log() {
   local message=$1
   local level=${2:-INFO}
-  local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+  local timestamp
+  # shellcheck disable=SC2034
+  timestamp=$(date '+%Y-%m-%d %H:%M:%S')
   
   case $level in
     INFO)
@@ -58,6 +60,7 @@ log() {
 }
 
 phase_banner() {
+  # shellcheck disable=SC2034
   local phase_num=$1
   local phase_name=$2
   
@@ -315,7 +318,8 @@ validate_incident_response() {
 generate_p0_report() {
   phase_banner "Reporting" "Generate P0 Deployment Report"
   
-  local deploy_end=$(date +%s)
+  local deploy_end
+  deploy_end=$(date +%s)
   local deploy_duration=$((deploy_end - DEPLOY_START))
   local deploy_minutes=$((deploy_duration / 60))
   local deploy_seconds=$((deploy_duration % 60))
@@ -486,7 +490,8 @@ main() {
   echo ""
   
   # Success
-  local deploy_end=$(date +%s)
+  local deploy_end
+  deploy_end=$(date +%s)
   local deploy_duration=$((deploy_end - DEPLOY_START))
   local deploy_minutes=$((deploy_duration / 60))
   local deploy_seconds=$((deploy_duration % 60))

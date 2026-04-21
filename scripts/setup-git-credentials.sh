@@ -55,6 +55,7 @@ log "gcloud auth OK ($(gcloud config get-value account 2>/dev/null))"
 # ── 3. Ensure GSM secret exists ───────────────────────────────────────────────
 log "Checking GSM secret ${GSM_PROJECT}/${GSM_SECRET_NAME}..."
 EXISTING_TOKEN=""
+# shellcheck disable=SC2034
 if EXISTING_TOKEN=$(CLOUDSDK_CORE_DISABLE_PROMPTS=1 gcloud --quiet \
         secrets versions access latest \
         --secret="$GSM_SECRET_NAME" \

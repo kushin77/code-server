@@ -102,6 +102,7 @@ authenticate_and_get_session_token() {
   
   # Login attempt
   local login_response
+  # shellcheck disable=SC2034
   login_response=$(curl $CURL_OPTS -c "$cookie_jar" -b "$cookie_jar" \
     -X POST "$login_url" \
     -d "username=${TEST_USERNAME}&password=${TEST_PASSWORD}" \

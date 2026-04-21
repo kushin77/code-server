@@ -64,11 +64,13 @@ deploy_rbac_manifests() {
   log_success "RBAC enforcement manifests deployed"
 
   # Verify all roles deployed
-  local role_count=$(kubectl get role -n "$RBAC_NAMESPACE" -l phase=3 -o jsonpath='{.items | length}')
+  local role_count
+  role_count=$(kubectl get role -n "$RBAC_NAMESPACE" -l phase=3 -o jsonpath='{.items | length}')
   log_success "Deployed $role_count roles"
 
   # Verify all role bindings deployed
-  local binding_count=$(kubectl get rolebinding -n "$RBAC_NAMESPACE" -l phase=3 -o jsonpath='{.items | length}')
+  local binding_count
+  binding_count=$(kubectl get rolebinding -n "$RBAC_NAMESPACE" -l phase=3 -o jsonpath='{.items | length}')
   log_success "Deployed $binding_count role bindings"
 }
 
@@ -131,7 +133,8 @@ test_rbac_enforcement() {
 
   # Test 3: Verify service accounts have bindings
   log_info "Test 3: Verifying service account permissions..."
-  local sa_count=$(kubectl get rolebindings -n "$RBAC_NAMESPACE" -o jsonpath='{.items[*].subjects[*].name}' | tr ' ' '\n' | grep -c "sa" || echo "0")
+  local sa_count
+  sa_count=$(kubectl get rolebindings -n "$RBAC_NAMESPACE" -o jsonpath='{.items[*].subjects[*].name}' | tr ' ' '\n' | grep -c "sa" || echo "0")
   log_success "Service accounts bound: $sa_count"
 
   # Test 4: Check for RBAC policy audit config
@@ -160,7 +163,8 @@ verify_rbac_in_production() {
   log_info "Verifying RBAC in production environment..."
 
   # Test from code-server pod
-  local code_server_pod=$(kubectl get pods -l app=code-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+  local code_server_pod
+  code_server_pod=$(kubectl get pods -l app=code-server -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
   
   if [[ -n "$code_server_pod" ]]; then
     log_info "Testing code-server pod permissions..."
@@ -184,7 +188,8 @@ setup_rbac_audit_logging() {
   log_info "Setting up RBAC audit logging..."
 
   # Create audit log table in PostgreSQL
-  local postgres_pod=$(kubectl get pods -l app=postgresql -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+  local postgres_pod
+  postgres_pod=$(kubectl get pods -l app=postgresql -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
   
   if [[ -n "$postgres_pod" ]]; then
     log_info "Creating RBAC audit table in PostgreSQL..."

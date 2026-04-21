@@ -50,7 +50,8 @@ main() {
   local failed=0
   
   for image_file in "${images[@]}"; do
-    local image_name=$(basename "$image_file")
+    local image_name
+    image_name=$(basename "$image_file")
     
     log_info "Loading: $image_name"
     

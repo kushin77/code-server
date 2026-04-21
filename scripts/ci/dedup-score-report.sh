@@ -142,7 +142,9 @@ check_duplicate_functions() {
   echo "[5/5] Checking for duplicate function definitions..."
   
   local violations=0
-  local temp_funcs=$(mktemp)
+  local temp_funcs
+  temp_funcs=$(mktemp)
+  # shellcheck disable=SC2064
   trap "rm -f $temp_funcs" EXIT
   
   while IFS= read -r file; do

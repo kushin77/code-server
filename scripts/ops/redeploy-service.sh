@@ -57,7 +57,8 @@ health_check_service() {
     log_info "Health checking service: $svc (timeout: ${timeout}s)"
     
     while [ $elapsed -lt "$timeout" ]; do
-        local status=$(ssh "$DEPLOY_USER@$DEPLOY_HOST" \
+        local status
+        status=$(ssh "$DEPLOY_USER@$DEPLOY_HOST" \
             "docker compose ps --format '{{.Names}}:{{.Status}}' 2>/dev/null | grep '^${svc}:' | cut -d: -f2" 2>/dev/null || echo "")
         
         if [[ "$status" == *"running"* ]] || [[ "$status" == *"Up"* ]]; then

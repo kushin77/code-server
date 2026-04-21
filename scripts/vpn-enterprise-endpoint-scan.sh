@@ -24,6 +24,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Enterprise endpoints
+# shellcheck disable=SC2034
 ENDPOINTS=(
     "${DEPLOY_HOST}:${PORT_CODE_SERVER}"    # Code-Server (Primary)
     "${DEPLOY_HOST}:4180"    # OAuth2-Proxy
@@ -35,6 +36,7 @@ ENDPOINTS=(
     "${DEPLOY_HOST}:6379"    # Redis
 )
 
+# shellcheck disable=SC2034
 ENDPOINTS_REPLICA=(
     "${REPLICA_HOST:-192.168.168.42}:${PORT_CODE_SERVER}"    # Code-Server (Replica)
 )

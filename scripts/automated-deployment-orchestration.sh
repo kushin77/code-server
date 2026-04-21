@@ -407,7 +407,8 @@ EOF
 
 # Main execution flow
 main() {
-    local START_TIME=$(date +%s)
+    local START_TIME
+    START_TIME=$(date +%s)
     
     # Execute all steps
     validate_environment || exit 1
@@ -419,7 +420,8 @@ main() {
     validate_deployment || exit 1
     generate_summary
     
-    local END_TIME=$(date +%s)
+    local END_TIME
+    END_TIME=$(date +%s)
     local DURATION=$((END_TIME - START_TIME))
     
     echo "╔════════════════════════════════════════════════════════════╗"

@@ -8,6 +8,7 @@
 # Usage: bash scripts/ops/entitlement-sync.sh [--user <email>] [--dry-run]
 
 set -euo pipefail
+# shellcheck disable=SC2034
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 _log()  { echo "[entitlement-sync] $*"; }
@@ -26,6 +27,7 @@ ENTITLEMENT_MAP["kushin77/*"]="github-token"
 
 # ── Detect GitHub access ──────────────────────────────────────────────────────
 detect_github_teams() {
+  # shellcheck disable=SC2034
   local user="${1:-}"
   if [[ -z "$GH_TOKEN" ]]; then
     _warn "GH_TOKEN not set — cannot detect GitHub team membership"
@@ -101,6 +103,7 @@ main() {
 
     # Check if any accessible repo matches this pattern
     local matches=false
+    # shellcheck disable=SC2053
     while IFS= read -r repo; do
       # Use glob-style match
       if [[ "$repo" == $pattern ]]; then
@@ -109,6 +112,7 @@ main() {
       fi
     done <<< "$repos"
 
+    # shellcheck disable=SC2053
     # Always provision for current repo if pattern matches
     local current_repo="${GITHUB_REPOSITORY:-kushin77/code-server}"
     if [[ "$current_repo" == $pattern ]]; then

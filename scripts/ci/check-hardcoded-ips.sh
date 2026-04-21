@@ -72,6 +72,7 @@ while IFS= read -r -d '' file; do
 
     scan_file=0
     for file_pattern in "${CHECKED_PATTERNS[@]}"; do
+      # shellcheck disable=SC2053
       if [[ "$file" == $file_pattern ]]; then
         scan_file=1
         break

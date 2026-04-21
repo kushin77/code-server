@@ -55,6 +55,7 @@ main() {
         fi
         
         log_info "✅ Found backup: $latest_backup"
+        # shellcheck disable=SC2034
         BACKUP_FOUND=1
     fi
     

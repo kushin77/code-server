@@ -54,6 +54,7 @@ caddy_is_running() {
 }
 
 get_upstream_health() {
+  # shellcheck disable=SC2034
   local upstream=$1
   
   if ! caddy_is_running; then

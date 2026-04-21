@@ -71,6 +71,7 @@ check_file() {
   if git cat-file -e ":$f" 2>/dev/null; then
     if git show ":$f" | LC_ALL=C grep -q $'\r'; then
       violations+=("$f: CRLF line endings in tracked content")
+      # shellcheck disable=SC2034
       fail=1
     fi
   fi

@@ -160,13 +160,22 @@ This document provides a complete index of all GitHub issues created to track ou
 - **P3** (Nice-to-have): 1 issue
   - API Documentation: 1
 
-### Total Effort Summary
+- **Backlog/Future** (Post Phase 2/3/4): 90+ collaboration feature issues
+  - 8 major epics (Collab-1 through Collab-8)
+  - 90+ individual feature stories
+
+### Total Effort Summary (Core Work - Phases 1-4)
 - **Critical Path (P0/P1)**: ~95-140 hours
 - **High Priority (P2)**: ~90-120 hours
 - **Nice-to-have (P3)**: ~12-16 hours
-- **Total**: ~195-275 hours (5-7 weeks for single engineer)
+- **Core Work Total**: ~195-275 hours (5-7 weeks for single engineer)
 
-### By Category
+### Collaboration Features Roadmap (Future)
+- **Total Effort**: ~615-915 hours (12-18 weeks)
+- **Status**: Post-Phase 2/3/4 backlog
+- **Issues**: 90+ features across 8 epics
+
+### By Category (Core Work Only)
 | Category | Issues | Effort | Priority |
 |----------|--------|--------|----------|
 | Security/Compliance | 4 | 30-45h | P1 |
@@ -174,7 +183,8 @@ This document provides a complete index of all GitHub issues created to track ou
 | Code Quality | 2 | 14-20h | P1/P2 |
 | Testing/QA | 2 | 26-34h | P2 |
 | Documentation | 2 | 12-16h | P2/P3 |
-| **TOTAL** | **16** | **130-195h** | Mixed |
+| **CORE TOTAL** | **16** | **130-195h** | Mixed |
+| **Collaboration (Future)** | **90+** | **615-915h** | P3/Backlog |
 
 ---
 
@@ -204,6 +214,114 @@ This document provides a complete index of all GitHub issues created to track ou
 
 ---
 
+## Collaboration Features Roadmap (Future Phases)
+
+The following 90+ issues represent the full product roadmap for collaborative IDE features:
+
+### EPIC [Collab-1]: Real-Time Co-Editing Engine - CRDT-based concurrent file editing (#1071)
+- #1072: Cursor & selection presence broadcast in shared editor
+- #1073: Collaborative undo/redo history tree with per-user attribution
+- #1074: Document conflict resolution UI with 3-way merge visualization
+- #1076: Session hand-off protocol - transfer live coding session to another user
+- #1077: Workspace forking - branch current state for exploratory work
+- #1078: File advisory lock system for binary assets
+- #1079: Live 'what changed while you were away' workspace diff
+- #1080: Shared clipboard with cross-user paste history
+- #1081: Collaborative breakpoint & debug session sharing
+- **Status**: Roadmap | **Effort**: ~80-120 hours total
+
+### EPIC [Collab-2]: Inline Code Comment Threads - GitHub PR-style on live code (#1082)
+- #1083: Voice channel integration embedded in IDE sidebar
+- #1084: Screen share + annotation overlay within IDE
+- #1086: Async video message recording attached to code locations
+- #1087: Shared AI Copilot context - team sees same conversation thread
+- #1088: @mention system linking team members to code locations
+- #1089: Code review request flow embedded in IDE
+- #1090: Thread-per-function: persistent discussion tied to code sections
+- #1091: Meeting mode - focus indicator + automatic DND during calendar events
+- #1092: Async standup bot - AI-generated summaries from code activity
+- **Status**: Roadmap | **Effort**: ~70-100 hours total
+
+### EPIC [Collab-3]: AI Conflict Prediction & Resolution (#1093)
+- #1094: AI-powered pair programming co-pilot with context awareness
+- #1095: 'Who knows this code' expertise heatmap from git history
+- #1096: Collaborative prompt library - shared team prompts for AI
+- #1097: LLM knowledge extraction from past sessions into team wiki
+- #1098: AI code review router - auto-assign to optimal reviewer
+- #1099: AI debugging co-pilot with shared debug session state
+- #1100: Automated test generation from pair session activity
+- #1101: Semantic code search shared across team - unified knowledge base
+- **Status**: Roadmap | **Effort**: ~60-90 hours total
+
+### EPIC [Collab-4]: Rich Presence System - real-time team activity awareness (#1103)
+- #1104: Focus/flow state detection with DND propagation
+- #1105: Time zone overlay on team member presence cards
+- #1106: Availability calendar integration (Google Cal/Outlook)
+- #1107: Live team activity feed - stream of significant coding events
+- #1108: Notification routing - IDE alerts to Slack/Matrix based on context
+- #1109: 'Borrow a brain' async help request queue
+- #1110: Code ownership graph visualization
+- #1111: Team health dashboard - coding velocity, flow time, collaboration metrics
+- #1112: Workspace map - visual overview of all active sessions and file locations
+- **Status**: Roadmap | **Effort**: ~75-110 hours total
+
+### EPIC [Collab-5]: Session Recording & Playback for onboarding and review (#1113)
+- #1114: Workspace templates with pinned extensions, settings, and configurations
+- #1115: Workspace hibernation and fast wake on demand (< 5 seconds)
+- #1116: Per-project resource quotas with cgroup enforcement
+- #1117: Guest sessions - scoped read-only access with time limits
+- #1118: Session cost tracking per user and project for chargeback
+- #1119: Hot workspace switching with state preservation < 200 ms
+- #1120: PR preview environments auto-provisioned on branch push
+- #1121: Persistent session snapshots with full restore
+- #1122: One-click environment reproducibility with devcontainer helpers
+- **Status**: Roadmap | **Effort**: ~85-125 hours total
+
+### EPIC [Collab-6]: Zero-Trust Network Access layer for workspace connectivity (#1123)
+- #1124: Code egress DLP - detect and block credential/PII leakage
+- #1125: Workspace isolation with gVisor for untrusted code execution
+- #1126: SOC2-grade immutable audit log for all file operations
+- #1127: End-to-end encryption for all collaboration messages
+- #1128: Git commit signing enforcement with Sigstore/Gitsign
+- #1129: IP allowlist per workspace with violation alerting
+- #1130: Ephemeral short-lived credentials per workspace session
+- #1131: Workspace forensics mode - immutable session recording for incident response
+- #1132: Collaborative security code review with SAST inline annotations
+- **Status**: Roadmap | **Effort**: ~90-140 hours total
+
+### EPIC [Collab-7]: Universal keyboard shortcut manager with team-shared profiles (#1133)
+- #1134: Private org extension registry with version pinning
+- #1135: Smart workspace auto-configuration from repo manifest
+- #1136: Integrated API explorer with live request builder and history
+- #1047: Database browser embedded in IDE with shared query history
+- #1048: Integrated API explorer with live request builder and history
+- #1049: Database browser embedded in IDE with shared query history
+- #1050: IDE performance profiler showing per-extension overhead
+- #1051: Dependency impact graph - visualize change blast radius
+- #1052: Customizable status bar tiles with team metrics
+- #1053: Multi-root workspace manager with per-project profiles
+- **Status**: Roadmap | **Effort**: ~70-105 hours total
+
+### EPIC [Collab-8]: Distributed tracing for all collaboration events end-to-end (#1057)
+- #1058: SLO/SLA dashboard for collaboration sync guarantee < 100 ms
+- #1059: Real-time WebSocket connection health monitoring
+- #1060: User journey funnel analytics for collaboration onboarding
+- #1061: Collaboration session replay in Grafana - full event timeline
+- #1062: Capacity planning dashboard for session growth forecasting
+- #1063: Anomaly detection for unusual access patterns in sessions
+- #1064: DORA metrics dashboard for engineering velocity
+- #1065: Synthetic monitoring for collaboration features with alerting
+- **Status**: Roadmap | **Effort**: ~65-100 hours total
+
+### Collaboration Features Summary
+- **Total Epics**: 8 (Collab-1 through Collab-8)
+- **Total Feature Issues**: 90+
+- **Total Effort**: ~615-915 hours (12-18 weeks for 1 FTE)
+- **Status**: Roadmap/Backlog (Post Phase 2/3/4 delivery)
+- **Priority**: P3 (Future phase after core infrastructure stabilization)
+
+---
+
 ## Related Existing Issues
 
 These newly created issues relate to and depend on existing work:
@@ -230,6 +348,9 @@ These newly created issues relate to and depend on existing work:
 - #793: Security Hardening (P1)
   - Compliance: #1054
   - Security: #1051, #1045
+
+### Collaboration Features Epics (Backlog)
+- #1071-#1082-#1093-#1103-#1113-#1123-#1133-#1057: Full collaboration roadmap (90+ feature issues)
 
 ---
 

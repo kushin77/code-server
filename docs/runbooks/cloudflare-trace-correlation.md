@@ -1,5 +1,7 @@
 # Runbook: Cloudflare-to-Container Trace Correlation
 
+**Purpose**: Runbook: Cloudflare-to-Container Trace Correlation runbook — operational procedure for cloudflare trace correlation response.
+
 ## Purpose
 Map an end-user Cloudflare request (identified by `CF-Ray` header) through the full
 stack to the originating container span in Jaeger. Enables on-call to move from

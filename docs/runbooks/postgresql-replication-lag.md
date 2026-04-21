@@ -1,5 +1,7 @@
 # Runbook: PostgreSQL Replication Lag (PostgreSQLReplicationLag)
 
+**Purpose**: Runbook: PostgreSQL Replication Lag (PostgreSQLReplicationLag) runbook — operational procedure for postgresql replication lag response.
+
 **Alert**: `PostgreSQLReplicationLag` (> 100MB) | `PostgreSQLReplicationLagCritical` (> 500MB) | `PostgreSQLReplicationDown` (no slots)  
 **Severity**: WARNING / CRITICAL  
 **Component**: Database replication  

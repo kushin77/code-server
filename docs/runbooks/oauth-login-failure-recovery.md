@@ -1,5 +1,7 @@
 # OAuth Login Failure Recovery Runbook
 
+**Purpose**: OAuth Login Failure Recovery Runbook runbook — operational procedure for oauth login failure recovery response.
+
 ---
 
 **Title**: OAuth Login Failure Recovery Runbook  

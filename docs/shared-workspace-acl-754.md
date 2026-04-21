@@ -1,5 +1,7 @@
 # Shared Workspace ACL Broker - Implementation Guide
 
+**Purpose**: Shared Workspace ACL Broker - Implementation Guide runbook — operational procedure for shared workspace acl 754 response.
+
 **Issue**: #754  
 **Module**: `src/services/shared-workspace-acl/`  
 **Status**: ✅ Implementation Complete  

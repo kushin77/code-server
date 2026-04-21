@@ -1,5 +1,7 @@
 # QA Coverage Phase 2 Runbook
 
+**Purpose**: QA Coverage Phase 2 Runbook runbook — operational procedure for qa coverage phase 2 response.
+
 ## Overview
 
 This runbook covers QA Coverage Gate Phase 2 — VPN integration and continuous SLO validation for `code-server` on-prem deployment.

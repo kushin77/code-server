@@ -1,3 +1,7 @@
+# VPN-Gated E2E Testing Framework
+
+**Purpose**: VPN-Gated E2E Testing Framework runbook — operational procedure for vpn gated e2e testing response.
+
 ---
 title: VPN-Gated E2E Testing Framework
 description: Architecture, setup, and execution guide for VPN-gated Playwright E2E tests

@@ -1,5 +1,7 @@
 # Runbook: Error Rate High Response
 
+**Purpose**: Runbook: Error Rate High Response runbook — operational procedure for error rate high response.
+
 **Alert**: ErrorRateHigh  
 **Severity**: WARNING  
 **SLA**: Root cause analysis within 20 minutes  
@@ -100,3 +102,5 @@ docker logs -f code-server | grep -i error
 **Status**: Ready for production deployment  
 **Last Updated**: April 16, 2026  
 **Runbook Owner**: Engineering Team
+
+<!-- Runbook tracking: #1674 -->

@@ -1,3 +1,7 @@
+# Ephemeral Shadow Replay Runbook
+
+**Purpose**: Ephemeral Shadow Replay Runbook runbook — operational procedure for ephemeral shadow replay runbook response.
+
 ---
 title: Ephemeral Shadow Replay Runbook
 description: Execute read-safe shadow traffic replay against an active ephemeral session and interpret evidence bundle output.

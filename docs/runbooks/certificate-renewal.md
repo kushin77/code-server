@@ -1,5 +1,7 @@
 # Runbook: TLS Certificate Expiration (CertificateExpiration)
 
+**Purpose**: Runbook: TLS Certificate Expiration (CertificateExpiration) runbook — operational procedure for certificate renewal response.
+
 **Alert**: `CertificateExpirationWarning` (< 30 days) | `CertificateExpirationCritical` (< 7 days)  
 **Severity**: WARNING / CRITICAL  
 **Component**: TLS certificate management  

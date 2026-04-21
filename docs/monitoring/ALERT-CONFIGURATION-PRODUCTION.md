@@ -1,5 +1,7 @@
 # Alert Configuration: Production-Ready Alerts for Monitoring Gaps
 
+**Purpose**: Alert Configuration: Production-Ready Alerts for Monitoring Gaps runbook — operational procedure for ALERT CONFIGURATION PRODUCTION response.
+
 **Status**: Ready for production deployment  
 **Alerts**: 10 critical + operational alerts  
 **Runbooks**: 6 detailed remediation guides  
@@ -100,7 +102,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: 5xx error rate > 5% for > 5 minutes  
-**Action**: See [Runbook: Error Rate High](docs/runbooks/error-rate-high.md)  
+**Action**: See [Runbook: Error Rate High](../runbooks/error-rate-high.md)  
 
 ### 3. Resource Exhaustion Alerts
 

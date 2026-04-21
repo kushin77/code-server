@@ -1,5 +1,7 @@
 # Session Bootstrap Enforcement - Implementation Guide
 
+**Purpose**: Session Bootstrap Enforcement - Implementation Guide runbook — operational procedure for session bootstrap enforcement 756 response.
+
 **Issue**: #756  
 **Module**: `src/services/session-bootstrap-enforcer/`  
 **Status**: ✅ Implementation Complete  

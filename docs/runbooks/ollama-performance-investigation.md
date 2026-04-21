@@ -1,5 +1,7 @@
 # Runbook: Ollama Latency Spike (OllamaLatencySpike)
 
+**Purpose**: Runbook: Ollama Latency Spike (OllamaLatencySpike) runbook — operational procedure for ollama performance investigation response.
+
 **Alert**: `OllamaLatencySpike` (p95 > 5s) | `OllamaLatencyCritical` (p95 > 15s) | `OllamaServiceDown` (health check fails)  
 **Severity**: WARNING / CRITICAL  
 **Component**: LLM inference engine  

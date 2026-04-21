@@ -1,5 +1,7 @@
 # Runbook: PostgreSQL Down
 
+**Purpose**: Runbook: PostgreSQL Down runbook — operational procedure for postgresql down response.
+
 **Alert**: PostgreSQLDown  
 **Severity**: CRITICAL  
 **SLA**: Resolve within 20 minutes (data not accessible)  
@@ -132,3 +134,5 @@ If unresolved after 20 minutes:
 **Status**: Ready for production deployment  
 **Last Updated**: April 16, 2026  
 **Runbook Owner**: Database Team
+
+<!-- Runbook tracking: #1674 -->

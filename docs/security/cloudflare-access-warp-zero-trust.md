@@ -1,3 +1,7 @@
+# Cloudflare Access + WARP Zero-Trust for Admin Endpoints
+
+**Purpose**: Cloudflare Access + WARP Zero-Trust for Admin Endpoints runbook — operational procedure for cloudflare access warp zero trust response.
+
 ---
 title: Cloudflare Access + WARP Zero-Trust for Admin Endpoints
 description: Zero-trust enforcement for Grafana, Prometheus, AlertManager, and Jaeger using Cloudflare Access and WARP device posture checks

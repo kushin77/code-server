@@ -1,5 +1,7 @@
 # Runbook: High Latency Response
 
+**Purpose**: Runbook: High Latency Response runbook — operational procedure for high latency response.
+
 **Alert**: HighLatency  
 **Severity**: WARNING  
 **SLA**: Root cause analysis within 30 minutes  
@@ -104,3 +106,5 @@ docker-compose up -d code-server
 **Status**: Ready for production deployment  
 **Last Updated**: April 16, 2026  
 **Runbook Owner**: Performance Team
+
+<!-- Runbook tracking: #1674 -->

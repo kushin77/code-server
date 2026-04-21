@@ -1,5 +1,7 @@
 # Runbook: Workspace Set Restore Failure and Policy Exception
 
+**Purpose**: Runbook: Workspace Set Restore Failure and Policy Exception runbook — operational procedure for workspace set restore failure response.
+
 **Severity**: P1 (restore failure impacting developers) / P2 (policy exception request)  
 **Owner**: Developer Platform / Security Operations  
 **Date**: 2026-04-20  

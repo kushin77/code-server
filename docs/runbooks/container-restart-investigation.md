@@ -1,5 +1,7 @@
 # Runbook: Container Restart Storm (ContainerRestartStorm)
 
+**Purpose**: Runbook: Container Restart Storm (ContainerRestartStorm) runbook — operational procedure for container restart investigation response.
+
 **Alert**: `ContainerRestartStorm` (> 0.1/sec) | `ContainerRestartStormCritical` (> 1/sec)  
 **Severity**: WARNING / CRITICAL  
 **Component**: Container orchestration  

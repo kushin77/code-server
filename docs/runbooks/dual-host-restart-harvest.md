@@ -1,5 +1,7 @@
 # Runbook: Dual-Host Restart and Log Harvest
 
+**Purpose**: Runbook: Dual-Host Restart and Log Harvest runbook — operational procedure for dual host restart harvest response.
+
 **Related Issues**: #892, #905
 
 ## Purpose

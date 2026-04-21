@@ -1,3 +1,7 @@
+# Session Provenance Contract
+
+**Purpose**: Session Provenance Contract runbook — operational procedure for SESSION PROVENANCE CONTRACT response.
+
 ---
 title: Session Provenance Contract
 description: Versioned provenance contract for session-broker launch gating and metadata persistence.

@@ -1,5 +1,7 @@
 # Runbook: Disk Space Approaching Capacity (DiskSpaceWarning)
 
+**Purpose**: Runbook: Disk Space Approaching Capacity (DiskSpaceWarning) runbook — operational procedure for disk space cleanup response.
+
 **Alert**: `DiskSpaceWarning` (< 10% free) | `DiskSpaceCritical` (< 5% free)  
 **Severity**: WARNING / CRITICAL  
 **Component**: File system  

@@ -1,5 +1,7 @@
 # Runbook: Code-Server Down
 
+**Purpose**: Runbook: Code-Server Down runbook — operational procedure for code server down response.
+
 **Alert**: CodeServerDown  
 **Severity**: CRITICAL  
 **SLA**: Resolve within 15 minutes  
@@ -131,3 +133,5 @@ If unresolved after 15 minutes:
 **Status**: Ready for production deployment  
 **Last Updated**: April 16, 2026  
 **Runbook Owner**: Platform Team
+
+<!-- Runbook tracking: #1674 -->

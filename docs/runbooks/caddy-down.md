@@ -1,5 +1,7 @@
 # Runbook: Caddy Reverse Proxy Down
 
+**Purpose**: Runbook: Caddy Reverse Proxy Down runbook — operational procedure for caddy down response.
+
 **Alert**: CaddyDown  
 **Severity**: CRITICAL  
 **SLA**: Resolve within 10 minutes (external access blocked)  
@@ -121,3 +123,5 @@ If unresolved after 10 minutes:
 **Status**: Ready for production deployment  
 **Last Updated**: April 16, 2026  
 **Runbook Owner**: Infrastructure Team
+
+<!-- Runbook tracking: #1674 -->

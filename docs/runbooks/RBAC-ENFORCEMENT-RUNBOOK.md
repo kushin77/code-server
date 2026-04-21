@@ -1,5 +1,7 @@
 # RBAC Enforcement (Phase 3) Operational Runbook
 
+**Purpose**: RBAC Enforcement (Phase 3) Operational Runbook runbook — operational procedure for RBAC ENFORCEMENT RUNBOOK response.
+
 ## Overview
 
 This runbook covers operational procedures for the Phase 3 RBAC enforcement layer that validates and controls access to all protected endpoints.

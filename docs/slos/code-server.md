@@ -1,5 +1,7 @@
 # Code-Server SLOs
 
+**Purpose**: Code-Server SLOs runbook — operational procedure for code server response.
+
 ## Overview
 
 Code-server is the **developer IDE platform** for enterprise development. It impacts developer productivity and must be highly available and performant.
@@ -164,3 +166,5 @@ alert_code_server_down:
 
 - **Primary Owner**: @kushin77
 - **Slack Channel**: #code-server-incidents
+
+<!-- Runbook tracking: #1674 -->

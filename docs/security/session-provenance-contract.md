@@ -1,5 +1,7 @@
 # Session Provenance Contract
 
+**Purpose**: Session Provenance Contract runbook — operational procedure for session provenance contract response.
+
 ## Purpose
 
 This contract defines the minimum provenance data required before a session broker may launch a code-server session. The launch path fails closed unless the image is digest-pinned and the provenance record is present, verified, and fresh.

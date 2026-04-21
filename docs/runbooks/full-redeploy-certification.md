@@ -1,5 +1,7 @@
 # Runbook: Full Redeploy Certification
 
+**Purpose**: Runbook: Full Redeploy Certification runbook — operational procedure for full redeploy certification response.
+
 **Related Issue**: #902
 
 ## Purpose

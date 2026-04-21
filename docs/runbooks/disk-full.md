@@ -1,5 +1,7 @@
 # Runbook: Disk Space Critical
 
+**Purpose**: Runbook: Disk Space Critical runbook — operational procedure for disk full response.
+
 **Alert**: DiskSpaceRunningOut  
 **Severity**: WARNING  
 **SLA**: Resolve within 30 minutes  
@@ -117,3 +119,5 @@ find /data/backups -mtime +7 -exec \
 **Status**: Ready for production deployment  
 **Last Updated**: April 16, 2026  
 **Runbook Owner**: Infrastructure Team
+
+<!-- Runbook tracking: #1674 -->

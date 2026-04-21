@@ -1,5 +1,7 @@
 # Runbook: Backup Job Failures (BackupJobFailed)
 
+**Purpose**: Runbook: Backup Job Failures (BackupJobFailed) runbook — operational procedure for backup recovery response.
+
 **Alert**: `BackupJobFailed` (Severity: CRITICAL)  
 **Component**: Backup system  
 **Related Issue**: #569

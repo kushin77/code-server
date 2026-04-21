@@ -1,5 +1,7 @@
 # Threat Model
 
+**Purpose**: Threat Model runbook — operational procedure for THREAT MODEL 2026 04 19 response.
+
 This document captures the current red-team view of the repository on 2026-04-19. It is intentionally scoped to the live platform surfaces that matter for auth, ingress, secrets, CI/CD, and admin operations.
 
 ## Objective

@@ -1,8 +1,8 @@
 {
     email {$ACME_EMAIL:admin@kushnir.cloud}
-    acme_ca https://acme-v02.api.letsencrypt.org/directory
-    # Force internal self-signed certificates for on-prem testing
-    local_certs
+    # On-prem testing: use self-signed certificates
+    # Comment back in to use Let's Encrypt in production:
+    # acme_ca https://acme-v02.api.letsencrypt.org/directory
     admin localhost:2019 {
         origins localhost
     }

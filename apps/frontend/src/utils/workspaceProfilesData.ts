@@ -8,8 +8,9 @@ export interface WorkspaceDebuggerProfile {
   request: string
   cwd: string
   program: string
-  args?: string[]
   runtimeExecutable?: string
+  args?: string[]
+  config?: Record<string, unknown>
   env?: Record<string, string>
 }
 
@@ -23,21 +24,21 @@ export interface WorkspaceTerminalProfile {
 export interface WorkspaceRoot {
   path: string
   label?: string
-  settings?: Record<string, any>
-  debugger?: WorkspaceDebuggerProfile
-  terminal?: WorkspaceTerminalProfile
-  enabledExtensions?: string[]
+  settings: Record<string, unknown>
+  debugger: WorkspaceDebuggerProfile
+  terminal: WorkspaceTerminalProfile
+  enabledExtensions: string[]
 }
 
 export interface WorkspaceProfile {
   id: string
   name: string
-  workspaceLabel?: string
-  description?: string
+  workspaceLabel: string
+  description: string
   root: string
-  workspaceId?: string
-  roots?: WorkspaceRoot[]
-  mergeOrder?: number[]
+  workspaceId: string
+  roots: WorkspaceRoot[]
+  mergeOrder: number[]
   settings: Record<string, unknown>
 }
 
@@ -51,6 +52,10 @@ export interface WorkspaceProfileSnapshot {
 }
 
 type WorkspaceProfileManifest = WorkspaceProfile
+type StoredWorkspaceTabs = {
+  activeRepoId: string
+  recentRepoIds: string[]
+}
 
 const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
   'portal-main': {
@@ -88,10 +93,7 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
           name: 'Frontend terminal',
           shell: 'pnpm',
           cwd: 'apps/frontend',
-          env: {
-            NODE_ENV: 'development',
-            VITE_APP_NAME: 'portal',
-          },
+          env: { NODE_ENV: 'development', VITE_APP_NAME: 'portal' },
         },
         enabledExtensions: ['dbaeumer.vscode-eslint', 'bradlc.vscode-tailwindcss', 'ms-vscode.vscode-typescript-next'],
       },
@@ -114,9 +116,7 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
           name: 'Backend terminal',
           shell: 'pnpm',
           cwd: 'apps/backend',
-          env: {
-            NODE_ENV: 'development',
-          },
+          env: { NODE_ENV: 'development' },
         },
         enabledExtensions: ['esbenp.prettier-vscode', 'ms-azuretools.vscode-docker'],
       },
@@ -130,18 +130,12 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
     root: 'docs',
     workspaceId: 'docs-review',
     mergeOrder: [1, 2, 3, 4, 5],
-    settings: {
-      'files.autoSave': 'off',
-      'editor.wordWrap': 'on',
-    },
+    settings: { 'files.autoSave': 'off', 'editor.wordWrap': 'on' },
     roots: [
       {
         path: 'docs',
         label: 'Docs root',
-        settings: {
-          'editor.defaultFormatter': 'esbenp.prettier-vscode',
-          'markdown.preview.breaks': true,
-        },
+        settings: { 'editor.defaultFormatter': 'esbenp.prettier-vscode', 'markdown.preview.breaks': true },
         debugger: {
           name: 'Docs preview',
           type: 'pwa-node',
@@ -150,11 +144,7 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
           program: 'docs/scripts/preview.ts',
           runtimeExecutable: 'node',
         },
-        terminal: {
-          name: 'Docs terminal',
-          shell: 'pnpm',
-          cwd: 'docs',
-        },
+        terminal: { name: 'Docs terminal', shell: 'pnpm', cwd: 'docs' },
         enabledExtensions: ['yzhang.markdown-all-in-one', 'bierner.markdown-mermaid'],
       },
     ],
@@ -167,18 +157,12 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
     root: 'scripts',
     workspaceId: 'ops-control',
     mergeOrder: [1, 2, 3, 4, 5],
-    settings: {
-      'files.autoSave': 'off',
-      'terminal.integrated.defaultProfile.windows': 'PowerShell',
-    },
+    settings: { 'files.autoSave': 'off', 'terminal.integrated.defaultProfile.windows': 'PowerShell' },
     roots: [
       {
         path: 'scripts',
         label: 'Operations root',
-        settings: {
-          'editor.defaultFormatter': 'esbenp.prettier-vscode',
-          'files.exclude': ['**/node_modules', '**/dist'],
-        },
+        settings: { 'editor.defaultFormatter': 'esbenp.prettier-vscode', 'files.exclude': ['**/node_modules', '**/dist'] },
         debugger: {
           name: 'Ops automation',
           type: 'node',
@@ -187,14 +171,7 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
           program: 'scripts/ops/run-resilience-campaign.sh',
           runtimeExecutable: 'node',
         },
-        terminal: {
-          name: 'Ops terminal',
-          shell: 'bash',
-          cwd: 'scripts',
-          env: {
-            CI: 'true',
-          },
-        },
+        terminal: { name: 'Ops terminal', shell: 'bash', cwd: 'scripts', env: { CI: 'true' } },
         enabledExtensions: ['timonwong.shellcheck', 'ms-vscode.powershell'],
       },
     ],
@@ -207,18 +184,12 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
     root: 'apps/frontend',
     workspaceId: 'dev-sandbox',
     mergeOrder: [1, 2, 3, 4, 5],
-    settings: {
-      'workbench.startupEditor': 'readme',
-      'editor.formatOnSave': true,
-    },
+    settings: { 'workbench.startupEditor': 'readme', 'editor.formatOnSave': true },
     roots: [
       {
         path: 'apps/frontend',
         label: 'Frontend root',
-        settings: {
-          'editor.defaultFormatter': 'dbaeumer.vscode-eslint',
-          'typescript.tsdk': 'node_modules/typescript/lib',
-        },
+        settings: { 'editor.defaultFormatter': 'dbaeumer.vscode-eslint', 'typescript.tsdk': 'node_modules/typescript/lib' },
         debugger: {
           name: 'Sandbox preview',
           type: 'pwa-node',
@@ -227,11 +198,7 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
           program: 'apps/frontend/src/main.tsx',
           runtimeExecutable: 'node',
         },
-        terminal: {
-          name: 'Sandbox terminal',
-          shell: 'pnpm',
-          cwd: 'apps/frontend',
-        },
+        terminal: { name: 'Sandbox terminal', shell: 'pnpm', cwd: 'apps/frontend' },
         enabledExtensions: ['dbaeumer.vscode-eslint', 'bradlc.vscode-tailwindcss'],
       },
     ],
@@ -244,18 +211,12 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
     root: 'apps/backend',
     workspaceId: 'security-lab',
     mergeOrder: [1, 2, 3, 4, 5],
-    settings: {
-      'workbench.startupEditor': 'none',
-      'files.exclude': ['**/.secrets', '**/dist', '**/coverage'],
-    },
+    settings: { 'workbench.startupEditor': 'none', 'files.exclude': ['**/.secrets', '**/dist', '**/coverage'] },
     roots: [
       {
         path: 'apps/backend',
         label: 'Security root',
-        settings: {
-          'editor.defaultFormatter': 'esbenp.prettier-vscode',
-          'terminal.integrated.shellIntegration.enabled': false,
-        },
+        settings: { 'editor.defaultFormatter': 'esbenp.prettier-vscode', 'terminal.integrated.shellIntegration.enabled': false },
         debugger: {
           name: 'Security server',
           type: 'node',
@@ -264,11 +225,7 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
           program: 'apps/backend/src/index.ts',
           runtimeExecutable: 'node',
         },
-        terminal: {
-          name: 'Security terminal',
-          shell: 'bash',
-          cwd: 'apps/backend',
-        },
+        terminal: { name: 'Security terminal', shell: 'bash', cwd: 'apps/backend' },
         enabledExtensions: ['timonwong.shellcheck', 'gruntfuggly.todo-tree'],
       },
     ],
@@ -278,22 +235,18 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
 function cloneWorkspaceRoot(root: WorkspaceRoot): WorkspaceRoot {
   return {
     ...root,
-    settings: root.settings ? { ...root.settings } : undefined,
-    debugger: root.debugger
-      ? {
-          ...root.debugger,
-          args: root.debugger.args ? [...root.debugger.args] : undefined,
-          env: root.debugger.env ? { ...root.debugger.env } : undefined,
-          config: root.debugger.config ? { ...root.debugger.config } : undefined,
-        }
-      : undefined,
-    terminal: root.terminal
-      ? {
-          ...root.terminal,
-          env: root.terminal.env ? { ...root.terminal.env } : undefined,
-        }
-      : undefined,
-    enabledExtensions: root.enabledExtensions ? [...root.enabledExtensions] : undefined,
+    settings: { ...root.settings },
+    debugger: {
+      ...root.debugger,
+      args: root.debugger.args ? [...root.debugger.args] : undefined,
+      env: root.debugger.env ? { ...root.debugger.env } : undefined,
+      config: root.debugger.config ? { ...root.debugger.config } : undefined,
+    },
+    terminal: {
+      ...root.terminal,
+      env: root.terminal.env ? { ...root.terminal.env } : undefined,
+    },
+    enabledExtensions: [...root.enabledExtensions],
   }
 }
 
@@ -301,8 +254,8 @@ function cloneWorkspaceProfile(profile: WorkspaceProfile): WorkspaceProfile {
   return {
     ...profile,
     settings: { ...profile.settings },
-    mergeOrder: profile.mergeOrder ? [...profile.mergeOrder] : undefined,
-    roots: profile.roots?.map((root) => cloneWorkspaceRoot(root)),
+    mergeOrder: [...profile.mergeOrder],
+    roots: profile.roots.map((root) => cloneWorkspaceRoot(root)),
   }
 }
 
@@ -310,9 +263,7 @@ function createFallbackRoot(workspaceId: string): WorkspaceRoot {
   return {
     path: workspaceId,
     label: 'Workspace root',
-    settings: {
-      'workbench.startupEditor': 'welcomePage',
-    },
+    settings: { 'workbench.startupEditor': 'welcomePage' },
     debugger: {
       name: 'Workspace debugger',
       type: 'pwa-node',
@@ -321,27 +272,27 @@ function createFallbackRoot(workspaceId: string): WorkspaceRoot {
       program: 'src/index.ts',
       runtimeExecutable: 'node',
     },
-    terminal: {
-      name: 'Workspace terminal',
-      shell: 'pnpm',
-      cwd: workspaceId,
-    },
+    terminal: { name: 'Workspace terminal', shell: 'pnpm', cwd: workspaceId },
     enabledExtensions: [],
   }
+}
+
+function getWorkspaceProfileManifest(workspaceId: string): WorkspaceProfileManifest | undefined {
+  return WORKSPACE_PROFILE_MANIFESTS[workspaceId]
 }
 
 function createWorkspaceJson(profile: WorkspaceProfile, activeRoot: WorkspaceRoot): string {
   return JSON.stringify(
     {
       schema_version: 1,
-      id: profile.workspaceId ?? profile.id,
+      id: profile.workspaceId,
       name: profile.name,
-      workspace_label: profile.workspaceLabel ?? profile.name,
+      workspace_label: profile.workspaceLabel,
       description: profile.description,
       primary_root: profile.root,
       selected_root: activeRoot.path,
-      merge_order: profile.mergeOrder ?? [1, 2, 3, 4, 5],
-      roots: profile.roots?.map((root) => ({
+      merge_order: profile.mergeOrder,
+      roots: profile.roots.map((root) => ({
         path: root.path,
         label: root.label,
         settings: root.settings,
@@ -356,20 +307,13 @@ function createWorkspaceJson(profile: WorkspaceProfile, activeRoot: WorkspaceRoo
   )
 }
 
-function getWorkspaceProfileManifest(workspaceId: string): WorkspaceProfileManifest | undefined {
-  return WORKSPACE_PROFILE_MANIFESTS[workspaceId]
-}
-
-/**
- * Build a snapshot of workspace profiles
- */
 export function buildWorkspaceProfileSnapshot(root: string, selectedRoot?: string): WorkspaceProfileSnapshot {
   const profile = getWorkspaceProfileManifest(root)
   const activeRoot = resolveWorkspaceRootProfile(root, selectedRoot)
 
   return {
     profiles: profile ? [cloneWorkspaceProfile(profile)] : [],
-    activeProfileId: profile?.workspaceId ?? profile?.id ?? root,
+    activeProfileId: profile?.workspaceId ?? root,
     lastUpdated: Date.now(),
     workspaceJson: profile
       ? createWorkspaceJson(profile, activeRoot)
@@ -384,29 +328,19 @@ export function buildWorkspaceProfileSnapshot(root: string, selectedRoot?: strin
           null,
           2,
         ),
-    workspaceLabel: profile?.workspaceLabel ?? profile?.name ?? root,
+    workspaceLabel: profile?.workspaceLabel ?? root,
     mergeOrder: profile?.mergeOrder ?? [1, 2, 3, 4, 5],
   }
 }
 
-/**
- * Get workspace profile by ID
- */
 export function getWorkspaceProfile(id: string): WorkspaceProfile | null {
   const profile = getWorkspaceProfileManifest(id)
   return profile ? cloneWorkspaceProfile(profile) : null
 }
 
-/**
- * Resolve workspace root profile
- */
 export function resolveWorkspaceRootProfile(root: string, selectedPath?: string): WorkspaceRoot {
   const profile = getWorkspaceProfileManifest(root)
-  const roots = profile?.roots?.map((entry) => cloneWorkspaceRoot(entry)) ?? []
-
-  if (roots.length === 0) {
-    return createFallbackRoot(root)
-  }
+  const roots = profile?.roots.map((entry) => cloneWorkspaceRoot(entry)) ?? []
 
   if (selectedPath) {
     const selectedRoot = roots.find((entry) => entry.path === selectedPath)
@@ -416,4 +350,60 @@ export function resolveWorkspaceRootProfile(root: string, selectedPath?: string)
   }
 
   return roots[0] ?? createFallbackRoot(root)
+}
+
+export function readStoredWorkspaceTabs(storage: Storage | undefined): StoredWorkspaceTabs {
+  if (!storage) {
+    return { activeRepoId: 'portal-main', recentRepoIds: ['dev-sandbox', 'security-lab'] }
+  }
+
+  try {
+    const activeRepoId = storage.getItem('workspace-tabs:active-repo') || 'portal-main'
+    const recentRepoIds = JSON.parse(storage.getItem('workspace-tabs:recent-repos') || '[]') as string[]
+
+    return {
+      activeRepoId,
+      recentRepoIds: Array.isArray(recentRepoIds) ? recentRepoIds : ['dev-sandbox', 'security-lab'],
+    }
+  } catch {
+    return { activeRepoId: 'portal-main', recentRepoIds: ['dev-sandbox', 'security-lab'] }
+  }
+}
+
+export function writeStoredWorkspaceTabs(storage: Storage | undefined, workspaceState: StoredWorkspaceTabs): void {
+  if (!storage) {
+    return
+  }
+
+  storage.setItem('workspace-tabs:active-repo', workspaceState.activeRepoId)
+  storage.setItem('workspace-tabs:recent-repos', JSON.stringify(workspaceState.recentRepoIds))
+}
+
+export function buildRecentWorkspaceIds(activeRepoId: string, recentRepoIds: string[], maxCount = 2): string[] {
+  return [activeRepoId, ...recentRepoIds.filter((workspaceId) => workspaceId !== activeRepoId)].slice(0, maxCount)
+}
+
+export function getSuggestedWorkspaceId(roleIds: string[]): string {
+  const normalizedRoleIds = roleIds.map((roleId) => roleId.toLowerCase())
+  if (normalizedRoleIds.includes('admin') || normalizedRoleIds.includes('auditor')) {
+    return 'ops-control'
+  }
+  if (normalizedRoleIds.includes('developer')) {
+    return 'dev-sandbox'
+  }
+  if (normalizedRoleIds.includes('reviewer')) {
+    return 'docs-review'
+  }
+  if (normalizedRoleIds.includes('viewer')) {
+    return 'portal-main'
+  }
+  return 'portal-main'
+}
+
+export function notifyWorkspaceTabsChanged(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.dispatchEvent(new Event('workspace-tabs:changed'))
 }

@@ -16,7 +16,7 @@
 services:
 
   # ────────────────────────────────────────────────────────────────────────────
-  # code-server (Kushnir.cloud KC IDE) — VS Code in the browser
+  # code-server — VS Code in the browser
   # Custom enterprise image with comprehensive development tools pre-installed
   # All dependencies baked into image for immutable, reproducible deployments
   # Users never need to manually install packages (admin-only via IaC)
@@ -180,7 +180,7 @@ services:
       OAUTH2_PROXY_EMAIL_DOMAINS: "*"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
-      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://:${REDIS_PASSWORD:-}@redis:6379/0"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
@@ -250,7 +250,7 @@ services:
       OAUTH2_PROXY_OIDC_AUDIENCE: "code-server,api,github-actions,kubernetes"
       
       # JWT Token Configuration
-      OAUTH2_PROXY_JWT_ISSUERS: "${OIDC_JWT_ISSUER_URL:-https://ide.${APEX_DOMAIN:-kushnir.cloud}}"
+      OAUTH2_PROXY_JWT_ISSUERS: "https://ide.kushnir.cloud"
       OAUTH2_PROXY_JWT_KEY: "${OIDC_ISSUER_SIGNING_KEY}"
       OAUTH2_PROXY_JWT_SIGNING_METHOD: "RS256"
       OAUTH2_PROXY_JWT_CLAIMS: "sub,aud,iss,iat,exp,email,groups,actor,repository"
@@ -328,7 +328,7 @@ services:
       OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_PORTAL_EMAIL_DOMAINS:-*}"
       OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
       OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
-      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://:${REDIS_PASSWORD:-}@redis:6379/0"
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_portal"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
@@ -544,11 +544,6 @@ services:
     expose:
       - "6432"
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=${POSTGRES_USER:-codeserver}
-      - DB_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
-      - DB_NAME=${POSTGRES_DB:-codeserver}
       - DATABASES_HOST=postgres
       - DATABASES_PORT=5432
       - DATABASES_USER=${POSTGRES_USER:-codeserver}
@@ -763,7 +758,7 @@ services:
   # Monitors both Master-Replica Redis instances and Sentinel quorum status
   # ────────────────────────────────────────────────────────────────────────────
   redis-exporter:
-    image: oliver006/redis_exporter:v1.62.0@sha256:c5a968ba5f30bab5e12181cceb89c4ed37cb4fe4d85490b5b66c7cfe4750b5e8
+    image: oliver006/redis_exporter:latest
     container_name: redis-exporter
     restart: unless-stopped
     networks:

@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /home/akushnir/code-server-enterprise || exit 1
+cd /home/akushnir/code-server-enterprise
 
 # Load configuration
 source <(grep -E '^(OAUTH2_PROXY_COOKIE_SECRET|GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET)=' .env)

@@ -16,7 +16,7 @@ export interface ServiceWorkerHealth {
 }
 
 interface AuthServiceWorkerMessage {
-  type: 'SESSION_REFRESHED' | 'SESSION_EXPIRED' | 'SESSION_REFRESH_START' | 'SESSION_REFRESH_FAILED' | 'GET_SESSION_EXPIRY' | 'SESSION_EXPIRY_UPDATED'
+  type: string
   expiry?: number
   reason?: string
 }
@@ -125,6 +125,11 @@ function setupMessageHandlers(): void {
 
     switch (data.type) {
       case 'SESSION_REFRESHED':
+        if (typeof data.expiry !== 'number') {
+          console.warn('[auth-sw-register] SW notified: session refreshed without expiry')
+          break
+        }
+
         console.info('[auth-sw-register] SW notified: session refreshed', {
           newExpiry: new Date(data.expiry).toISOString(),
         })
@@ -155,7 +160,7 @@ function setupMessageHandlers(): void {
       case 'GET_SESSION_EXPIRY': {
         // SW asking for expiry via IndexedDB
         const expiry = await getSessionExpiry();
-        event.ports[0].postMessage({ type: 'SESSION_EXPIRY_RESPONSE', expiry });
+        event.ports[0]?.postMessage({ type: 'SESSION_EXPIRY_RESPONSE', expiry })
         break;
       }
     }

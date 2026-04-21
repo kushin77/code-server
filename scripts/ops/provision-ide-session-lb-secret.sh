@@ -16,7 +16,7 @@ source "$SCRIPT_DIR/../_common/init.sh"
 GCP_PROJECT="${GCP_PROJECT:-gcp-eiq}"
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
 REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+SSH_USER="${DEPLOY_USER:-akushnir}"
 
 SECRET_NAME="ide-session-lb-secret"
 SECRET_BITS=128  # 32 hex characters = 128 bits
@@ -69,19 +69,19 @@ fetch_and_deploy_secret() {
     
     if [[ "$DRY_RUN" == "1" ]]; then
         log_info "[DRY-RUN] Would deploy to $host:"
-        log_info "[DRY-RUN] ssh $DEPLOY_USER@$host 'echo IDE_SESSION_LB_SECRET=... >> .env'"
+        log_info "[DRY-RUN] ssh $SSH_USER@$host 'echo IDE_SESSION_LB_SECRET=... >> .env'"
         return 0
     fi
     
     # Create backup of .env on remote host
     log_info "Creating backup of .env on $host..."
-    ssh -o BatchMode=yes "$DEPLOY_USER@$host" \
+    ssh -o BatchMode=yes "$SSH_USER@$host" \
         "cd ~/code-server-enterprise && cp .env .env.backup.$(date +%s)" \
         2>&1 | log_debug
     
     # Update .env with new secret (ensure variable is set)
     log_info "Updating IDE_SESSION_LB_SECRET on $host..."
-    ssh -o BatchMode=yes "$DEPLOY_USER@$host" \
+    ssh -o BatchMode=yes "$SSH_USER@$host" \
         "cd ~/code-server-enterprise && \
         if grep -q '^IDE_SESSION_LB_SECRET=' .env; then \
             sed -i 's/^IDE_SESSION_LB_SECRET=.*/IDE_SESSION_LB_SECRET=$secret_value/' .env; \
@@ -105,14 +105,14 @@ test_sticky_sessions() {
     
     # Reload Caddy configuration
     log_info "Reloading Caddy on $host..."
-    ssh -o BatchMode=yes "$DEPLOY_USER@$host" \
+    ssh -o BatchMode=yes "$SSH_USER@$host" \
         "cd ~/code-server-enterprise && \
         docker-compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile" \
         2>&1 | log_debug
     
     # Verify Caddy is operational
     log_info "Verifying Caddy health on $host..."
-    ssh -o BatchMode=yes "$DEPLOY_USER@$host" \
+    ssh -o BatchMode=yes "$SSH_USER@$host" \
         "curl -sf https://$host/health || curl -sk https://$host/health" \
         2>&1 | log_debug
     
@@ -189,7 +189,7 @@ main() {
     log_info "  GCP Project: $GCP_PROJECT"
     log_info "  Primary Host: $PRIMARY_HOST"
     log_info "  Replica Host: $REPLICA_HOST"
-    log_info "  Deploy User: $DEPLOY_USER"
+    log_info "  Deploy User: $SSH_USER"
     log_info ""
     
     # Step 1: Generate new secret

@@ -99,7 +99,7 @@ export function PagerDutyIncidentsPage(): React.ReactElement {
   }, [])
 
   const loadIncidents = useCallback(
-    async (currentConfig: PagerDutyPageConfig, status?: 'triggered' | 'acknowledged' | 'resolved') => {
+    async (currentConfig: PagerDutyPageConfig, status?: 'triggered' | 'acknowledged' | 'resolved' | 'all') => {
       return measureAsyncExtensionProfiler(
         {
           id: 'pagerduty-incidents',
@@ -113,7 +113,7 @@ export function PagerDutyIncidentsPage(): React.ReactElement {
             setError(null)
             const result = await fetchPagerDutyIncidents(
               currentConfig,
-              status && status !== 'all' ? status : undefined
+              status && status !== 'all' ? (status as 'triggered' | 'acknowledged' | 'resolved') : undefined
             )
             setIncidents(sortIncidents(result.incidents))
             setLastUpdatedAt(Date.now())

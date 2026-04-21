@@ -1,0 +1,21 @@
+# Trivy Security Scan Suppressions
+# CVE-2023-28155: Server-Side Request Forgery in Request Package
+# Risk Assessment: LOW RISK
+#
+# Context:
+# - The 'request' package (v2.88.2) is used by matrix-bot-sdk for HTTP requests to Matrix homeservers
+# - Matrix homeservers are trusted infrastructure components
+# - The bot only connects to pre-configured, trusted Matrix servers
+# - No user-controlled URLs are passed to the request library
+# - The SSRF vulnerability requires attacker control of request URLs, which is not possible in this deployment
+#
+# Mitigation:
+# - Matrix homeserver URLs are configured in infrastructure (not user-controlled)
+# - All Matrix traffic uses HTTPS with certificate validation
+# - Bot runs in isolated container with network restrictions
+#
+# TODO: Migrate matrix-admin-bot to use matrix-js-sdk directly or a modern Matrix bot SDK
+# that doesn't depend on the deprecated 'request' package.
+#
+# Suppression expires: 2027-04-21 (1 year from issue creation)
+CVE-2023-28155

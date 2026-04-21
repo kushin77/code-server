@@ -3,7 +3,7 @@
 **Status**: Canonical branding source of truth
 **Owner**: Platform Engineering
 **Last Updated**: 2026-04-21
-**Depends On**: [#1187](../)
+**Depends On**: #1187
 
 ## Purpose
 
@@ -75,13 +75,13 @@ When `code-server` appears in active text or code:
 1. Classify it as upstream, historical, or project-owned.
 2. Keep upstream and historical references unchanged.
 3. Replace project-owned references with approved brand terms.
-4. If the match is ambiguous, document the rationale in the replacement matrix issue: [#1186](../#1186).
+4. If the match is ambiguous, document the rationale in the replacement matrix issue: #1186.
 
 ## Relationship To Other Issues
 
-- [#1186](../#1186) provides the replacement matrix and exception catalog.
-- [#1184](../#1184) uses this SSOT to update active code and configuration.
-- [#1185](../#1185) uses this SSOT to update documentation, comments, tests, and archives.
+- #1186 provides the replacement matrix and exception catalog.
+- #1184 uses this SSOT to update active code and configuration.
+- #1185 uses this SSOT to update documentation, comments, tests, and archives.
 
 ## Migration Note
 

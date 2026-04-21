@@ -95,7 +95,7 @@ REDIS_PASSWORD=$(generate_secret 16)
 
 echo "Generating .env.production..."
 cat > "$ENV_FILE" << EOF
-# Code-Server Enterprise - Production Configuration
+# Kushnir.cloud (KC) - Production Configuration
 # Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 # Source: automated-env-generator.sh (IaC)
 # THIS FILE IS AUTO-GENERATED - DO NOT EDIT MANUALLY

@@ -21,10 +21,10 @@ terraform {
 }
 
 # ════════════════════════════════════════════════════════════════════════════
-# SINGLE SOURCE OF TRUTH FOR ALL INFRASTRUCTURE
+# SINGLE SOURCE OF TRUTH FOR KUSHNIR.CLOUD (KC) INFRASTRUCTURE
 # 
 # This Terraform configuration is the authoritative IaC definition for the
-# code-server enterprise deployment. All versions, configuration, and state
+# Kushnir.cloud (KC) deployment. All versions, configuration, and state
 # flow through Terraform for reproducibility and idempotency.
 #
 # DEPLOYMENT WORKFLOW (Idempotent):

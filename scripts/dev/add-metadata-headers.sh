@@ -92,7 +92,7 @@ derive_description() {
   local name
   name="$(basename "$file" .sh)"
   # Convert kebab-case to sentence
-  echo "${name//-/ }" | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}' | sed 's/$/ - on-prem code-server enterprise/'
+  echo "${name//-/ }" | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}' | sed 's/$/ - on-prem Kushnir.cloud (KC)/'
 }
 
 # Add header to a single file

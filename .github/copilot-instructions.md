@@ -1,6 +1,8 @@
 # Copilot Instructions for kushin77/code-server
 
 ## ✅ Kushnir.cloud / KC Branding (April 21, 2026)
+Canonical reference: [docs/BRANDING-SSOT.md](docs/BRANDING-SSOT.md)
+
 **Active public brand**: Kushnir.cloud (KC)  
 **Domain**: kushnir.cloud (apex), ide.kushnir.cloud (IDE subdomain)  
 **Internal shorthand**: KC (example: KC IDE, KC infrastructure)  

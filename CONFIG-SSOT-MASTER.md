@@ -10,6 +10,8 @@
 
 All configuration items MUST declare a single authoritative source. This document maps every config item to its SSOT location.
 
+Branding vocabulary and naming rules are governed by [docs/BRANDING-SSOT.md](docs/BRANDING-SSOT.md) and should be treated as the companion policy to this config master.
+
 **Hierarchy (in order of precedence):**
 1. Runtime environment variables (docker-compose env_file, .env, exported vars)
 2. `terraform/variables.tf` (IaC parameters)

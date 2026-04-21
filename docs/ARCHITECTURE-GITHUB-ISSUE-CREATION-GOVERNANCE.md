@@ -1,4 +1,4 @@
-# GitHub Issue Creation - Architecture & Integration with Code-Server Enterprise
+# GitHub Issue Creation - Architecture & Integration with Kushnir.cloud (KC)
 
 **Date**: April 22, 2026  
 **Document**: System architecture, governance integration, deployment strategy  

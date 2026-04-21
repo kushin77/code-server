@@ -18,7 +18,7 @@ REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
 APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
 IDE_DOMAIN="${IDE_DOMAIN:-ide.${APEX_DOMAIN}}"
 PORTAL_DOMAIN="${PORTAL_DOMAIN:-${APEX_DOMAIN}}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+SSH_USER="${DEPLOY_USER:-akushnir}"
 
 # Test thresholds
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
@@ -69,12 +69,12 @@ record_timing() {
 ensure_ssh_connectivity() {
   log_info "Verifying SSH connectivity to both hosts..."
   
-  if ! ssh -o ConnectTimeout=5 "$DEPLOY_USER@$PRIMARY_HOST" "echo OK" > /dev/null 2>&1; then
+  if ! ssh -o ConnectTimeout=5 "$SSH_USER@$PRIMARY_HOST" "echo OK" > /dev/null 2>&1; then
     log_fatal "SSH connectivity failed to PRIMARY_HOST ($PRIMARY_HOST)"
   fi
   log_success "✓ SSH connectivity to primary"
   
-  if ! ssh -o ConnectTimeout=5 "$DEPLOY_USER@$REPLICA_HOST" "echo OK" > /dev/null 2>&1; then
+  if ! ssh -o ConnectTimeout=5 "$SSH_USER@$REPLICA_HOST" "echo OK" > /dev/null 2>&1; then
     log_fatal "SSH connectivity failed to REPLICA_HOST ($REPLICA_HOST)"
   fi
   log_success "✓ SSH connectivity to replica"
@@ -110,7 +110,7 @@ run_preflight_checks() {
   # Check 1: Primary services healthy
   log_info "Check 1: Primary services health..."
   local primary_start=$(date +%s%N)
-  local primary_services=$(ssh "$DEPLOY_USER@$PRIMARY_HOST" "docker-compose ps --format json 2>/dev/null | jq -r 'select(.State == \"running\") | .Service' | wc -l")
+  local primary_services=$(ssh "$SSH_USER@$PRIMARY_HOST" "docker-compose ps --format json 2>/dev/null | jq -r 'select(.State == \"running\") | .Service' | wc -l")
   record_timing "preflight" $(elapsed_ms $primary_start) "primary_services_check"
   
   if [[ $primary_services -lt 10 ]]; then
@@ -123,7 +123,7 @@ run_preflight_checks() {
   # Check 2: Replica services healthy
   log_info "Check 2: Replica services health..."
   local replica_start=$(date +%s%N)
-  local replica_services=$(ssh "$DEPLOY_USER@$REPLICA_HOST" "docker-compose ps --format json 2>/dev/null | jq -r 'select(.State == \"running\") | .Service' | wc -l")
+  local replica_services=$(ssh "$SSH_USER@$REPLICA_HOST" "docker-compose ps --format json 2>/dev/null | jq -r 'select(.State == \"running\") | .Service' | wc -l")
   record_timing "preflight" $(elapsed_ms $replica_start) "replica_services_check"
   
   if [[ $replica_services -lt 8 ]]; then
@@ -203,7 +203,7 @@ run_failover_scenario() {
     log_info "Stopping IDE (code-server) on primary..."
     local stop_start=$(date +%s%N)
     
-    ssh "$DEPLOY_USER@$PRIMARY_HOST" "docker-compose stop code-server" || {
+    ssh "$SSH_USER@$PRIMARY_HOST" "docker-compose stop code-server" || {
       log_error "Failed to stop code-server on primary"
       EXIT_CODE=1
       return 1

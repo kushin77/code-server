@@ -9,7 +9,17 @@
     "test:coverage": "vitest run --coverage",
     "test:ai-quality": "vitest run src/services/ai/__tests__/indexing-quality.test.ts src/services/ai/__tests__/indexing.test.ts --reporter=verbose"
   },
+  "dependencies": {
+    "express": "catalog:",
+    "ioredis": "^5.3.2",
+    "jose": "catalog:",
+    "pg": "catalog:",
+    "pino": "catalog:"
+  },
   "devDependencies": {
+    "@types/express": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "@vitest/coverage-v8": "^4.1.4",
     "typescript": "catalog:",
     "vitest": "catalog:"

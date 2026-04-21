@@ -3,7 +3,7 @@
 // @description Service for managing role assignments and role lookups with caching
 
 import { getLogger } from '../../lib/logger';
-import { Redis } from 'redis';
+import { Redis } from 'ioredis';
 import { Database } from '../../db';
 
 interface RoleAssignment {
@@ -72,7 +72,7 @@ export class RoleManager {
         roles,
         expiresAt: Date.now() + ROLE_CACHE_TTL_MINUTES * 60 * 1000,
       };
-      await this.redis.setEx(
+      await this.redis.setex(
         cacheKey,
         ROLE_CACHE_TTL_MINUTES * 60,
         JSON.stringify(cacheValue)

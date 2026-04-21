@@ -743,3 +743,109 @@ groups:
         annotations:
           summary: "GPU memory {{ $value | humanizePercentage }} used — Ollama may OOM soon"
           description: "Run: nvidia-smi to inspect GPU state. Consider unloading unused models."
+
+  - name: jwt-auth
+    interval: 30s
+    rules:
+      # Phase 2 — JWT service-to-service authentication
+
+      # Validation error rate elevated
+      - alert: JWTValidationErrorRateHigh
+        expr: >
+          sum(rate(jwt_validation_errors_total[5m])) /
+          (sum(rate(jwt_validations_total[5m])) + 0.001) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JWT validation error rate > 5% over last 5 minutes"
+          description: >
+            Error rate is {{ $value | humanizePercentage }}.
+            Check service logs for expired tokens, signature failures, or JWKS fetch errors.
+            Run: docker logs backend | grep 'jwt'
+
+      # Validation error rate critical
+      - alert: JWTValidationErrorRateCritical
+        expr: >
+          sum(rate(jwt_validation_errors_total[5m])) /
+          (sum(rate(jwt_validations_total[5m])) + 0.001) > 0.20
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "JWT validation error rate > 20% — service-to-service auth degraded"
+          description: >
+            Error rate is {{ $value | humanizePercentage }}.
+            Possible causes: OIDC issuer unreachable, JWKS key rotation mismatch, clock skew.
+            Immediate check: curl http://oauth2-oidc-issuer:4182/.well-known/jwks.json
+
+      # JWKS fetch failures
+      - alert: JWTJwksFetchErrors
+        expr: sum(rate(jwt_jwks_fetch_errors_total[5m])) > 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JWKS endpoint fetch errors detected"
+          description: >
+            JWKS fetch is failing — JWT validators cannot refresh public keys.
+            Check OIDC issuer health: curl http://oauth2-oidc-issuer:4182/.well-known/openid-configuration
+            If issuer is down, token validation will fail after JWKS cache TTL expires (1 hour).
+
+      # JWKS cache hit rate low
+      - alert: JWTJwksCacheHitRateLow
+        expr: >
+          sum(rate(jwt_jwks_cache_hits_total[10m])) /
+          (sum(rate(jwt_jwks_cache_hits_total[10m])) + sum(rate(jwt_jwks_cache_misses_total[10m])) + 0.001)
+          < 0.70
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JWKS cache hit rate below 70% — excessive OIDC issuer load"
+          description: >
+            Cache hit rate is {{ $value | humanizePercentage }}.
+            This may indicate Redis connectivity issues or excessive cache invalidation.
+            Check Redis health and jwt-redis-cache configuration.
+
+      # Token TTL low — imminent forced refresh
+      - alert: JWTTokenTTLLow
+        expr: jwt_token_ttl_seconds < 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Service JWT token TTL below 2 minutes — refresh should already be in progress"
+          description: >
+            Remaining TTL is {{ $value }}s. The token client should proactively refresh at 5-minute mark.
+            If this persists, token refresh is failing. Check: docker logs backend | grep 'token refresh'
+
+      # Token acquisition errors
+      - alert: JWTTokenAcquisitionErrors
+        expr: sum(rate(jwt_token_errors_total[5m])) > 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JWT token acquisition errors from OIDC issuer"
+          description: >
+            Error rate: {{ $value }} req/s.
+            Services cannot acquire bearer tokens for outbound calls.
+            Check OIDC issuer credentials and service account configuration.
+
+      # High validation latency
+      - alert: JWTValidationLatencyHigh
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(jwt_validator_duration_ms_bucket[5m])) by (le)
+          ) > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JWT validation p95 latency > 500ms"
+          description: >
+            p95 validation latency is {{ $value }}ms.
+            High latency may indicate JWKS cache misses causing network round-trips to the OIDC issuer.
+            Check JWKS cache hit rate and Redis connectivity.
+

@@ -200,6 +200,21 @@ scrape_configs:
         regex: 'presence_(users_active|users_editing|same_file_pairs|update_latency|updates_total|sync_duration)'
         action: keep
 
+  # JWT service-to-service auth metrics (Phase 2 - OIDC issuer + validator)
+  - job_name: 'jwt-auth'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['backend:3001']
+        labels:
+          instance: backend
+          service: jwt-auth
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'jwt_(validations_total|validation_errors_total|validator_duration_ms.*|jwks_cache_hits_total|jwks_cache_misses_total|jwks_fetch_total|jwks_fetch_errors_total|token_issued_total|token_refresh_total|token_errors_total|token_ttl_seconds|active_validations)'
+        action: keep
+
   # Element Call / LiveKit metrics (optional, only if enabled)
   - job_name: 'element-call'
     metrics_path: /metrics

@@ -8,6 +8,7 @@
 export { JwtValidator, type JwtClaims, type CachedKey } from './jwt-validator';
 export { JwtTokenClient, type TokenResponse } from './jwt-token-client';
 export { JwtRedisCache } from './jwt-redis-cache';
+export { jwtMetrics, metricsHandler, renderMetrics } from './jwt-metrics';
 
 /**
  * Create a complete service-to-service auth stack

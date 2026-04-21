@@ -129,7 +129,7 @@ jobs:
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           
           EXIT_CODE=0
-          for script in $(find . -name "*.sh" -type f ! -path './archived/**' ! -path './.git/**'); do
+          for script in $(find . -name "*.sh" -type f ! -path './archived/**' ! -path './scripts/_archive/**' ! -path './.git/**'); do
             echo "Checking: $script"
             if ! shellcheck -x "$script" 2>&1; then
               EXIT_CODE=1

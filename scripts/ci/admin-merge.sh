@@ -68,7 +68,6 @@ write_section "Admin Merge Override for PR #$PR_NUMBER"
 # Step 1: Verify PR exists and is open
 write_info "Verifying PR #$PR_NUMBER status in $REPO..."
 
-local pr_state
 pr_state=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json state --jq '.state' 2>/dev/null) || \
     die "PR #$PR_NUMBER not found in $REPO"
 
@@ -82,7 +81,6 @@ write_success "PR #$PR_NUMBER is OPEN"
 write_info ""
 write_info "Reading current main branch protection..."
 
-local original_protection
 original_protection=$(gh api repos/"$owner"/"$repo_name"/branches/main/protection --jq '.' 2>/dev/null) || \
     die "Failed to read branch protection"
 
@@ -92,7 +90,6 @@ write_success "Protection rules saved"
 write_info ""
 write_info "Temporarily adjusting branch protection (disabling admin enforcement)..."
 
-local temp_protection
 temp_protection=$(echo "$original_protection" | jq '{
   required_status_checks: .required_status_checks,
   required_pull_request_reviews: {
@@ -149,7 +146,6 @@ fi
 write_info ""
 write_info "Confirming merge operation..."
 
-local merged_state
 merged_state=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json merged --jq '.merged' 2>/dev/null)
 
 if [[ "$merged_state" == "true" ]]; then

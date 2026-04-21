@@ -209,7 +209,7 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4180/ping || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4180/ping || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -355,7 +355,7 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4181/ping || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4181/ping || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

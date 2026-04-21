@@ -15,11 +15,11 @@
   "dependencies": {
     "matrix-bot-sdk": "^0.7.1",
     "pino": "catalog:",
-    "pg": "^8.11.3"
+    "pg": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/pg": "^8.11.2",
+    "@types/pg": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

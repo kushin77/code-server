@@ -111,7 +111,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/vscode": "catalog:",
-    "esbuild": "^0.25.0",
+    "esbuild": "catalog:",
     "typescript": "catalog:"
   },
   "dependencies": {

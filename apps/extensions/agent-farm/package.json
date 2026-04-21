@@ -114,7 +114,7 @@
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
     "eslint": "catalog:",
-    "jest": "^29.5.0",
+    "jest": "catalog:",
     "ts-jest": "^29.1.0",
     "typescript": "catalog:",
     "webpack": "^5.94.0",

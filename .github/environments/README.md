@@ -1,4 +1,4 @@
-# E2E Testing Environment Configuration
+# E2E Testing Environment Configuration (Kushnir.cloud / KC)
 
 This directory contains GitHub Actions environment setup for E2E testing.
 

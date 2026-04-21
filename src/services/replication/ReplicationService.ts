@@ -421,11 +421,15 @@ export class ReplicationService extends EventEmitter {
    */
   private async startPeriodicSync(): Promise<void> {
     this.syncIntervalHandle = setInterval(
-      () => this.syncWithAll(),
+      () => {
+        this.syncProtocol.compactOperationLog();
+        void this.syncWithAll();
+      },
       this.config.syncIntervalMs
     );
 
     // Initial sync
+    this.syncProtocol.compactOperationLog();
     await this.syncWithAll();
   }
 

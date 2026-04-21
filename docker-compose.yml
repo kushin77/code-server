@@ -16,7 +16,7 @@
 services:
 
   # ────────────────────────────────────────────────────────────────────────────
-  # code-server — VS Code in the browser
+  # code-server (Kushnir.cloud KC IDE) — VS Code in the browser
   # Custom enterprise image with comprehensive development tools pre-installed
   # All dependencies baked into image for immutable, reproducible deployments
   # Users never need to manually install packages (admin-only via IaC)

@@ -1,4 +1,4 @@
-# #963 Redeploy-as-Standard — PHASE 1-4 COMPLETE
+# #963 Redeploy-as-Standard for Kushnir.cloud (KC) — PHASE 1-4 COMPLETE
 
 **Status**: ✅ **COMPLETE** | **Date**: April 23, 2026 | **Deployment Ready**: YES
 
@@ -6,10 +6,10 @@
 
 ## Executive Summary
 
-**#963 Redeploy-as-Standard** has been fully implemented across all 4 phases. The production system now has:
+**#963 Redeploy-as-Standard** has been fully implemented across all 4 phases. The Kushnir.cloud production system now has:
 
 1. ✅ **Pre-deployment validation gates** (docker-compose, Caddyfile, env, secrets)
-2. ✅ **Partial service redeploy** capability (code-server, caddy, oauth2-proxy, portal, monitoring)
+2. ✅ **Partial service redeploy** capability (KC IDE, caddy, oauth2-proxy, portal, monitoring)
 3. ✅ **Atomic portal redeploy** with zero-downtime (rolling strategy: replica first → primary)
 4. ✅ **CI/CD workflow** with manual dispatch (full, partial, portal, service modes)
 
@@ -77,7 +77,7 @@
 **Capability**: Redeploy individual services without full IaC re-apply.
 
 **Supported Services**:
-- code-server (IDE container)
+- KC IDE (KC IDE container)
 - caddy (reverse proxy)
 - oauth2-proxy (authentication)
 - portal (Appsmith management interface)

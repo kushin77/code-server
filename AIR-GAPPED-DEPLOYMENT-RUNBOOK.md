@@ -1,6 +1,6 @@
 # Air-Gapped Deployment Runbook - Issue #1013
 
-**Objective**: Deploy code-server + Matrix on isolated infrastructure with zero external network dependencies
+**Objective**: Deploy Kushnir.cloud (KC) IDE + Matrix on isolated infrastructure with zero external network dependencies
 
 **Owner**: DevOps / Platform team  
 **Time Estimate**: 2-4 hours (depending on image transfer method)  

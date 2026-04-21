@@ -1,4 +1,14 @@
 # Copilot Instructions for kushin77/code-server
+
+## ✅ Kushnir.cloud / KC Branding (April 21, 2026)
+**Active public brand**: Kushnir.cloud (KC)  
+**Domain**: kushnir.cloud (apex), ide.kushnir.cloud (IDE subdomain)  
+**Internal shorthand**: KC (example: KC IDE, KC infrastructure)  
+**Upstream exception**: Keep "code-server" only for codercom/code-server image references and third-party protocol names.  
+**Issue tracker**: See #1187 (rebrand parent) for rollout details.
+
+---
+
 ## Code Governance Rules (Copilot Enforcement)
 
 ### Rule 1 — No Duplication

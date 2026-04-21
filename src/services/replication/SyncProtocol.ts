@@ -22,6 +22,8 @@ export interface SyncProtocolConfig {
   maxClockSkewMs: number;
   enableCompression: boolean;
   compressionThreshold: number; // Bytes
+  operationLogRetentionMs?: number;
+  operationLogMaxSize?: number;
 }
 
 export class SyncProtocol {
@@ -30,11 +32,17 @@ export class SyncProtocol {
   private operationLog: Map<string, CRDTOperation> = new Map();
   private knownOperations: Map<string, Set<string>> = new Map(); // replicaId -> operationIds
   private syncTimestamps: Map<string, number> = new Map(); // replicaId -> timestamp
-  private readonly logSize = 100000;
+  private readonly logSize: number;
+  private readonly logRetentionMs: number;
+  private lastCompactionAt = 0;
+  private totalCompactions = 0;
+  private totalPrunedOperations = 0;
 
   constructor(config: SyncProtocolConfig) {
     this.config = config;
     this.vectorClock = new VectorClock(config.replicaId);
+    this.logSize = config.operationLogMaxSize ?? 100000;
+    this.logRetentionMs = config.operationLogRetentionMs ?? 7 * 24 * 60 * 60 * 1000;
   }
 
   /**
@@ -56,7 +64,7 @@ export class SyncProtocol {
 
     // Log the operation
     this.operationLog.set(fullOperation.operationId, fullOperation);
-    this.trimOperationLog();
+    this.compactOperationLog();
 
     // Track known operations
     if (!this.knownOperations.has(this.config.replicaId)) {
@@ -101,7 +109,7 @@ export class SyncProtocol {
 
       // Log the operation
       this.operationLog.set(operation.operationId, operation);
-      this.trimOperationLog();
+      this.compactOperationLog();
 
       // Track the operation
       if (!this.knownOperations.has(operation.replicaId)) {
@@ -318,21 +326,80 @@ export class SyncProtocol {
   }
 
   /**
-   * Trim operation log to prevent unbounded growth
+   * Compact operation log to prevent unbounded growth.
+   *
+   * Performs two cleanup passes:
+   * - Time-based GC: removes operations older than the retention window
+   * - Size-based GC: evicts the oldest remaining entries if the log is still too large
+   *
+   * Returns a summary so operators can observe how much data was reclaimed.
    */
-  private trimOperationLog(): void {
+  compactOperationLog(): {
+    removed: number;
+    expired: number;
+    overflow: number;
+    retained: number;
+  } {
+    const now = Date.now();
+    const cutoffTime = now - this.logRetentionMs;
+    let expired = 0;
+    let overflow = 0;
+
+    for (const [operationId, operation] of this.operationLog.entries()) {
+      if (operation.timestamp < cutoffTime) {
+        this.operationLog.delete(operationId);
+        this.pruneKnownOperation(operation.replicaId, operationId);
+        expired++;
+      }
+    }
+
     if (this.operationLog.size > this.logSize) {
-      // Remove oldest operations (keep order by iterating in insertion order)
+      const overflowCount = this.operationLog.size - this.logSize;
       let removed = 0;
-      for (const [opId] of this.operationLog) {
-        if (removed < this.logSize * 0.1) {
-          // Remove oldest 10%
-          this.operationLog.delete(opId);
-          removed++;
-        } else {
+
+      // Remove the oldest remaining entries first, preserving the newest history.
+      for (const [operationId, operation] of this.operationLog.entries()) {
+        if (removed >= overflowCount) {
           break;
         }
+
+        this.operationLog.delete(operationId);
+        this.pruneKnownOperation(operation.replicaId, operationId);
+        removed++;
       }
+
+      overflow = removed;
+    }
+
+    const removed = expired + overflow;
+    if (removed > 0) {
+      this.lastCompactionAt = now;
+      this.totalCompactions++;
+      this.totalPrunedOperations += removed;
+    }
+
+    return {
+      removed,
+      expired,
+      overflow,
+      retained: this.operationLog.size,
+    };
+  }
+
+  /**
+   * Remove an operation ID from the per-replica known-operation index.
+   */
+  private pruneKnownOperation(replicaId: string, operationId: string): void {
+    const knownOps = this.knownOperations.get(replicaId);
+
+    if (!knownOps) {
+      return;
+    }
+
+    knownOps.delete(operationId);
+
+    if (knownOps.size === 0) {
+      this.knownOperations.delete(replicaId);
     }
   }
 
@@ -342,11 +409,21 @@ export class SyncProtocol {
   getSyncStats(): {
     knownReplicasCount: number;
     operationLogSize: number;
+    operationLogRetentionMs: number;
+    operationLogMaxSize: number;
+    lastCompactionAt: number;
+    totalCompactions: number;
+    totalPrunedOperations: number;
     lastSyncTimes: Map<string, number>;
   } {
     return {
       knownReplicasCount: this.knownOperations.size,
       operationLogSize: this.operationLog.size,
+      operationLogRetentionMs: this.logRetentionMs,
+      operationLogMaxSize: this.logSize,
+      lastCompactionAt: this.lastCompactionAt,
+      totalCompactions: this.totalCompactions,
+      totalPrunedOperations: this.totalPrunedOperations,
       lastSyncTimes: new Map(this.syncTimestamps),
     };
   }

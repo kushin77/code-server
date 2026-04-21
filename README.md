@@ -1,4 +1,4 @@
-# code-server — On-Premises VSCode Server
+# Kushnir.cloud (KC) — On-Premises VSCode Server
 
 Production-grade self-hosted VSCode in the browser with enterprise
 security, monitoring, and high availability.
@@ -25,7 +25,7 @@ COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
 ## Run Mode Matrix
 
 - IDE-only: `docker compose up -d`
-  Includes code-server, oauth2-proxy, caddy, postgres, and redis.
+  Includes KC IDE, oauth2-proxy, caddy, postgres, and redis.
 - IDE + AI: `COMPOSE_PROFILES=ai docker compose up -d`
   Includes IDE-only plus ollama.
 - IDE + Observability:
@@ -40,7 +40,7 @@ COMPOSE_PROFILES=monitoring,tracing,ai docker compose up -d
 
 | Service | Port | Profile | Notes |
 |---------|------|---------|-------|
-| code-server | 8080 | core | VS Code in browser |
+| code-server (KC IDE) | 8080 | core | VS Code in browser |
 | oauth2-proxy | 4180 | core | Authentication gateway |
 | caddy (TLS) | 80/443 | core | Reverse proxy |
 | postgres | 5432 | core | Session/audit DB |
@@ -68,7 +68,7 @@ All deployments run **on the production host** (not locally):
 
 ```bash
 ssh akushnir@192.168.168.31
-cd code-server-enterprise
+cd code-server-enterprise  # KC infrastructure repo
 docker compose up -d
 ```
 

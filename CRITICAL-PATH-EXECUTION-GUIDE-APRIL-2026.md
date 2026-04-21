@@ -1,6 +1,6 @@
-# Critical Path Execution Guide - April 2026
+# Critical Path Execution Guide - April 2026 (Kushnir.cloud / KC)
 
-**Status**: Production deployment framework complete. Blocked on Issue #983 (external dependency - Google Workspace admin action).
+**Status**: Kushnir.cloud IDE deployment framework complete. Blocked on Issue #983 (external dependency - Google Workspace admin action).
 
 **Timeline to Production**: 2-3 hours after Issue #983 completion.
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # @file        scripts/logging.sh
 # @module      legacy/deprecated
 # @description DEPRECATED - legacy logging shim. Use scripts/_common/logging.sh via init.sh instead.

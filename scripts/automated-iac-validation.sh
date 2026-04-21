@@ -202,7 +202,7 @@ echo ""
 # Test 10: Check for credential security
 echo "TEST 10: Credentials are generated, not hardcoded"
 HARDCODED_SECRETS=$(grep -r "password\|secret\|token" "$PARENT_DIR/docker-compose.yml" "$PARENT_DIR/Caddyfile" | \
-    grep -v "\\${" | grep -v "#" | grep -v "PLACEHOLDER" | wc -l)
+    grep -v '\${' | grep -v '#' | grep -v 'PLACEHOLDER' | wc -l)
 
 if [ "$HARDCODED_SECRETS" -eq 0 ]; then
     echo "  ✓ PASS: No hardcoded credentials found"
@@ -365,7 +365,7 @@ echo ""
 
 # Exit with appropriate code
 if [ "$FAIL_COUNT" -eq 0 ]; then
-    echo "✅ IaC AUDIT PASSED - All systems automated"
+    echo "[PASS] IaC AUDIT PASSED - All systems automated"
     exit 0
 else
     echo "[FAIL] IaC AUDIT FAILED - $FAIL_COUNT test(s) failed"

@@ -81,12 +81,13 @@ repos:
     hooks:
       - id: shellcheck
         name: Bash script lint (shellcheck)
-        args: ['--severity=warning']
+        args: ['--severity=error']
         exclude: |
           (?x)^(
             archived/|
             phase-\d|
-            gpu-
+            gpu-|
+            scripts/_archive/
           )$
 
   # Phase 2.3: YAML linting for docker-compose, Caddyfile

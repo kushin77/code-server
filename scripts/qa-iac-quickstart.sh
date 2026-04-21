@@ -1,4 +1,9 @@
 #!/bin/bash
+# @file        scripts/qa-iac-quickstart.sh
+# @module      qa
+# @description Quick start for QA Credentials IaC deployment
+# @owner       platform
+# @status      active
 # Quick start for QA Credentials IaC deployment
 # Run this to deploy the immutable, idempotent infrastructure
 

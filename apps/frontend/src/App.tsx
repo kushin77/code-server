@@ -113,7 +113,6 @@ function readStoredWorkspaceTabs(): WorkspaceState {
 const getWorkspaceById = (workspaceId: string): WorkspaceTab | undefined =>
   ALL_WORKSPACES.find((workspace) => workspace.id === workspaceId)
 
-// eslint-disable-next-line complexity -- #1023 Refactor to extract separate hooks (useWorkspaceStorage, useWorkspacePolicy, useSessionRestoration, useWorkspaceActions)
 function useWorkspaceState() {
   const [{ activeRepoId, recentRepoIds }, setWorkspaceState] = useState<WorkspaceState>(readStoredWorkspaceTabs)
   const [switcherOpen, setSwitcherOpen] = useState(false)

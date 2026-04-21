@@ -6,6 +6,7 @@ import { Orchestrator } from './orchestrator/Orchestrator';
 
 let orchestrator: Orchestrator;
 
+/** @ts-prune-ignore - Required export for VS Code extension activation */
 export async function activate(context: vscode.ExtensionContext) {
   console.log('Agent Farm extension is activating...');
 
@@ -131,6 +132,7 @@ function generateResultsHTML(results: AgentOutput[]): string {
   return html;
 }
 
+/** @ts-prune-ignore - Required export for VS Code extension deactivation */
 export function deactivate() {
   console.log('Agent Farm extension deactivated');
 }

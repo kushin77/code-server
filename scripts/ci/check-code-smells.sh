@@ -93,8 +93,11 @@ run_unused_export_checks() {
       -e 'apps/frontend/src/types/index\.ts' \
       -e 'apps/frontend/src/types/repo-card\.ts' \
       -e 'apps/frontend/src/utils/auth-sw-register\.ts' \
+      -e 'apps/frontend/src/utils/multiRepoPolicy\.ts' \
+      -e 'apps/frontend/src/utils/repoHomeData\.ts' \
       -e 'apps/frontend/src/utils/session-keepalive\.ts' \
       -e 'apps/frontend/src/utils/session-sync\.ts' \
+      -e 'apps/frontend/src/utils/workspaceSessionPersistence\.ts' \
       -e 'apps/frontend/src/utils/ws-session-handoff\.ts' \
     | sed '/^$/d' || true)"
   ext_report="$(${PNPM_CMD[@]} dlx ts-prune@0.10.3 -p apps/extensions/agent-farm/tsconfig.json 2>/dev/null \

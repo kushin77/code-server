@@ -301,6 +301,7 @@ export interface PaginationParams {
   limit: number
 }
 
+/** @ts-prune-ignore - API contract type for filter configuration */
 export interface FilterConfig {
   page?: number
   limit?: number
@@ -312,6 +313,7 @@ export interface FilterConfig {
 
 // ============= API Health Check =============
 
+/** @ts-prune-ignore - API contract type for health check response */
 export interface HealthCheckResponse {
   status: 'ok' | 'error'
   timestamp: string
@@ -319,6 +321,7 @@ export interface HealthCheckResponse {
 
 // ============= List Response Types =============
 
+/** @ts-prune-ignore - API contract type for list responses */
 export interface ListResponse<T> {
   data: T[]
   total: number

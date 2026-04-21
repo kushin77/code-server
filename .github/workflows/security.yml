@@ -99,4 +99,4 @@ jobs:
         with:
           name: sbom-${{ github.sha }}
           path: artifacts/sbom.cyclonedx.json
-          retention-days: 365
+          retention-days: 90

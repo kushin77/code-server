@@ -323,41 +323,33 @@ jobs:
             local source
             source="$1"
             if [[ "$source" == "cloudflare" ]]; then
-              cat <<'EOF'
-1. Validate Cloudflare tunnel status and connector health.
-2. Confirm origin reachability and TLS certificate chain validity.
-3. Review Access policy, device posture, and WAF/rate-limit events.
-4. Correlate Ray ID / request identifier with edge and origin logs.
-EOF
+              echo '1. Validate Cloudflare tunnel status and connector health.'
+              echo '2. Confirm origin reachability and TLS certificate chain validity.'
+              echo '3. Review Access policy, device posture, and WAF/rate-limit events.'
+              echo '4. Correlate Ray ID / request identifier with edge and origin logs.'
               return
             fi
 
             if [[ "$source" == "kubernetes" ]]; then
-              cat <<'EOF'
-1. Identify affected namespace/pod/container and validate recent rollout deltas.
-2. Classify signal type (runtime, scheduling, health, image-pull, runtime-policy) and check corresponding control plane events.
-3. Compare with last-known-good image/tag and deployment state.
-4. Apply fix, redeploy safely, and attach recovery evidence.
-EOF
+              echo '1. Identify affected namespace/pod/container and validate recent rollout deltas.'
+              echo '2. Classify signal type (runtime, scheduling, health, image-pull, runtime-policy) and check corresponding control plane events.'
+              echo '3. Compare with last-known-good image/tag and deployment state.'
+              echo '4. Apply fix, redeploy safely, and attach recovery evidence.'
               return
             fi
 
             if [[ "$source" == "falco" ]]; then
-              cat <<'EOF'
-1. Validate Falco rule name/priority and confirm whether the trigger indicates active exploitation behavior.
-2. Isolate impacted workload, collect container process/network evidence, and preserve relevant forensic logs.
-3. Contain by restricting workload access and rolling back unsafe deployment/runtime changes.
-4. Link remediation PR/runbook and record whether rule tuning is required.
-EOF
+              echo '1. Validate Falco rule name/priority and confirm whether the trigger indicates active exploitation behavior.'
+              echo '2. Isolate impacted workload, collect container process/network evidence, and preserve relevant forensic logs.'
+              echo '3. Contain by restricting workload access and rolling back unsafe deployment/runtime changes.'
+              echo '4. Link remediation PR/runbook and record whether rule tuning is required.'
               return
             fi
 
-            cat <<'EOF'
-1. Investigate error pattern and identify root cause.
-2. Implement fix in the affected component.
-3. Add regression coverage to prevent recurrence.
-4. Link the implementing PR and update issue state.
-EOF
+            echo '1. Investigate error pattern and identify root cause.'
+            echo '2. Implement fix in the affected component.'
+            echo '3. Add regression coverage to prevent recurrence.'
+            echo '4. Link the implementing PR and update issue state.'
           }
 
           extract_correlation_id() {
@@ -537,9 +529,7 @@ EOF
                   )
 
                   if [[ "$EXISTING_STATE" == "CLOSED" ]]; then
-                    UPDATE_BODY="## Reopened: Error Recurrence Detected
-
-${UPDATE_BODY}"
+                    UPDATE_BODY="## Reopened: Error Recurrence Detected"$'\n\n'"${UPDATE_BODY}"
                   fi
 
                   gh issue comment "$EXISTING" --body "$UPDATE_BODY" >/dev/null 2>&1 && ((ISSUES_UPDATED++))

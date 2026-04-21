@@ -52,6 +52,10 @@ services:
       - RUST_BACKTRACE=1
     volumes:
       - code-server-workspace:/home/coder/workspace
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/code-server.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/code-server.key:/etc/ssl/certs/server.key:ro
       - code-server-profile:/home/coder/.local/share/code-server
       - ./config/code-server/settings.json:/etc/code-server/settings.json:ro
     # Snap Docker on primary host denies exec with no-new-privileges+cap_drop under user 1000.
@@ -398,6 +402,10 @@ services:
       - DOCKER_SOCKET=${DOCKER_SOCKET:-unix:///var/run/docker.sock}
       - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:?CODE_SERVER_IMAGE_ID must be set}
       - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/session-broker.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/session-broker.key:/etc/ssl/certs/server.key:ro
       - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
       - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}
       - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
@@ -435,6 +443,10 @@ services:
       - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
     volumes:
       - /mnt/nas/code-server-sessions:/mnt/nas/code-server-sessions:rw
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/session-broker.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/session-broker.key:/etc/ssl/certs/server.key:ro
     stop_grace_period: 30s
     stop_signal: SIGTERM
     healthcheck:
@@ -473,6 +485,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/caddy.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/caddy.key:/etc/ssl/certs/server.key:ro
     environment:
       - DOMAIN=${DOMAIN:-kushnir.cloud}
       - IDE_DOMAIN=${IDE_DOMAIN:-ide.kushnir.cloud}
@@ -512,6 +528,10 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - postgres-backup:/var/lib/postgresql/backup
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/postgres.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/postgres.key:/etc/ssl/certs/server.key:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codeserver} -d ${POSTGRES_DB:-codeserver}"]
       interval: 10s
@@ -608,6 +628,10 @@ services:
       --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
     volumes:
       - redis-data:/data
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/redis.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/redis.key:/etc/ssl/certs/server.key:ro
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -1019,14 +1043,30 @@ networks:
 # ════════════════════════════════════════════════════════════════════════════
 # Volumes — All named, all persisted. No anonymous volumes.
 # NAS-backed volumes (code-server-workspace, code-server-profile, code-server-profile-backups,
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/code-server.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/code-server.key:/etc/ssl/certs/server.key:ro
 # ollama-data, postgres-backup) mount NFS from NAS_HOST (192.168.168.56).
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/postgres.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/postgres.key:/etc/ssl/certs/server.key:ro
 # Both .31 and .42 mount the same NFS exports — no rsync replication needed.
 # DB engine volumes (postgres-data, redis-data, prometheus-data, grafana-data, caddy-*)
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/redis.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/redis.key:/etc/ssl/certs/server.key:ro
 # stay driver:local — NFS causes locking issues with those engines.
 # ════════════════════════════════════════════════════════════════════════════
 volumes:
   # ── NAS-backed (shared across .31 and .42 via NFS) ───────────────────────
   code-server-workspace:
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/code-server.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/code-server.key:/etc/ssl/certs/server.key:ro
     driver: local
     driver_opts:
       type: nfs
@@ -1057,6 +1097,10 @@ volumes:
 
   # ✅ NAS-backed: postgres backups/PITR persist across failover
   postgres-backup:
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/postgres.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/postgres.key:/etc/ssl/certs/server.key:ro
     driver: local
     driver_opts:
       type: nfs
@@ -1067,6 +1111,10 @@ volumes:
   postgres-data:
     driver: local
   redis-data:
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/redis.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/redis.key:/etc/ssl/certs/server.key:ro
     driver: local
   redis-sentinel-1-data:
     driver: local
@@ -1079,7 +1127,15 @@ volumes:
   grafana-data:
     driver: local
   caddy-config:
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/caddy.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/caddy.key:/etc/ssl/certs/server.key:ro
     name: enterprise_caddy-config
+      # Zero-trust mTLS certificates
+      - $HOME/.ssl/certs/zero-trust/ca.crt:/etc/ssl/certs/ca.crt:ro
+      - $HOME/.ssl/certs/zero-trust/caddy.crt:/etc/ssl/certs/server.crt:ro
+      - $HOME/.ssl/certs/zero-trust/caddy.key:/etc/ssl/certs/server.key:ro
     external: true
   caddy-data:
     name: enterprise_caddy-data

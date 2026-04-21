@@ -115,7 +115,7 @@ describe('jwtAuth()', () => {
     mw(req, res, next);
     await vi.waitFor(() => expect(next).toHaveBeenCalledOnce());
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test code requires casting to attach custom jwt property
     expect((req as any).jwt).toMatchObject({ claims: validClaims, token: 'valid.token.here' });
   });
 
@@ -155,7 +155,7 @@ describe('jwtAuth()', () => {
 describe('requireJwt()', () => {
   it('calls next() when claims are present', () => {
     const mw = requireJwt();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test code requires casting to attach custom jwt property
     const req = makeReq() as any;
     req.jwt = { claims: validClaims, token: 'tok' };
     const { res } = makeRes();
@@ -185,7 +185,7 @@ describe('requireJwt()', () => {
 describe('requireGroups()', () => {
   it('calls next() when subject is in a required group', () => {
     const mw = requireGroups(['platform']);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test code requires casting to attach custom jwt property
     const req = makeReq() as any;
     req.jwt = { claims: validClaims, token: 'tok' };
     const { res } = makeRes();
@@ -198,7 +198,7 @@ describe('requireGroups()', () => {
 
   it('returns 403 when subject is not in any required group', () => {
     const mw = requireGroups(['admin']);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test code requires casting to attach custom jwt property
     const req = makeReq() as any;
     req.jwt = { claims: validClaims, token: 'tok' };
     const { res, status, json } = makeRes();
@@ -228,7 +228,7 @@ describe('requireGroups()', () => {
 describe('requireClaim()', () => {
   it('calls next() when claim is present', () => {
     const mw = requireClaim('sub');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test code requires casting to attach custom jwt property
     const req = makeReq() as any;
     req.jwt = { claims: validClaims, token: 'tok' };
     const { res } = makeRes();
@@ -241,7 +241,7 @@ describe('requireClaim()', () => {
 
   it('returns 403 when expected claim value does not match', () => {
     const mw = requireClaim('sub', 'wrong-service');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test code requires casting to attach custom jwt property
     const req = makeReq() as any;
     req.jwt = { claims: validClaims, token: 'tok' };
     const { res, status } = makeRes();
@@ -255,7 +255,7 @@ describe('requireClaim()', () => {
 
   it('calls next() when claim value matches expected', () => {
     const mw = requireClaim('sub', 'code-server-internal');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test code requires casting to attach custom jwt property
     const req = makeReq() as any;
     req.jwt = { claims: validClaims, token: 'tok' };
     const { res } = makeRes();
@@ -273,7 +273,7 @@ describe('logJwt()', () => {
   it('calls next() and logs claims when present', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const mw = logJwt();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test code requires casting to attach custom jwt property
     const req = makeReq() as any;
     req.jwt = { claims: validClaims, token: 'tok' };
     const { res } = makeRes();

@@ -6,14 +6,15 @@
 export { CircuitBreaker } from '../../ml/CircuitBreaker';
 export type { CircuitBreakerConfig, CircuitBreakerMetrics, CircuitState } from '../../ml/CircuitBreaker';
 
-export { FailoverManager } from '../../ml/FailoverManager';
-export type {
-  FailoverConfig,
-  FailoverStrategy,
-  FailoverTrigger,
-  FailoverEvent,
-  ReplicaHealth,
-} from '../../ml/FailoverManager';
+// TODO: Enable FailoverManager exports once actually integrated with other phases
+// export { FailoverManager } from '../../ml/FailoverManager';
+// export type {
+//   FailoverConfig,
+//   FailoverStrategy,
+//   FailoverTrigger,
+//   FailoverEvent,
+//   ReplicaHealth,
+// } from '../../ml/FailoverManager';
 
 export { ChaosEngineer } from '../../ml/ChaosEngineer';
 export type { ChaosTest, ChaosTestMetrics, ChaosScenario } from '../../ml/ChaosEngineer';

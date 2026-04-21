@@ -106,7 +106,7 @@ validate_dependencies() {
     missing=1
   fi
 
-  if [[ $missing -eq 1 ]]; then
+  if [[ "$missing" -eq 1 ]]; then
     exit 1
   fi
 
@@ -125,7 +125,7 @@ validate_test_file() {
 # Display configuration
 display_config() {
   echo -e "${BLUE}[INFO]${NC} Configuration:"
-  echo "  Mode:           $([ $DRY_RUN -eq 1 ] && echo 'DRY RUN' || echo 'EXECUTE')"
+  echo "  Mode:           $([ "$DRY_RUN" -eq 1 ] && echo 'DRY RUN' || echo 'EXECUTE')"
   echo "  Scenario:       $SCENARIO"
   echo "  Virtual Users:  $VUS"
   echo "  Duration:       $DURATION"
@@ -148,7 +148,7 @@ run_load_test() {
   export BASE_URL
   export WS_URL
 
-  if [[ $DRY_RUN -eq 1 ]]; then
+  if [[ "$DRY_RUN" -eq 1 ]]; then
     echo -e "${YELLOW}[DRY RUN]${NC} Validating test configuration (no actual load)"
     k6 run "$TEST_FILE" \
       --vus 1 \
@@ -172,7 +172,7 @@ run_load_test() {
   echo -e "${BLUE}[INFO]${NC} Report saved to: $report_file"
 
   # Parse and display results
-  if [[ $DRY_RUN -eq 0 ]]; then
+  if [[ "$DRY_RUN" -eq 0 ]]; then
     display_results "$report_file"
   fi
 }

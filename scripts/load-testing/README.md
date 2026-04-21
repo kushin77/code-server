@@ -158,6 +158,65 @@ DRY_RUN=0 API_ENDPOINT=https://ide.kushnir.cloud/api/v1 ./run-api-endpoint-load-
 - JWT authentication overhead
 - RBAC authorization checks
 - Permission enforcement correctness
+
+### 6. Collaboration Platform Load Test with SLO Validation
+
+Validates real-time collaboration features with comprehensive SLO monitoring.
+
+**Files**:
+- `collaboration-platform-load-test.js` — k6 load test script with SLO validation
+- `run-collaboration-platform-load-test.sh` — Command-line runner
+
+**Features**:
+- Real-time collaborative editing with conflict detection
+- Presence awareness and cursor tracking
+- WebSocket stability and message delivery
+- Session recovery and resilience
+- Comprehensive SLO threshold validation
+
+**SLO Thresholds** (FAANG-level quality targets):
+- Collaboration Latency P99: < 200ms
+- Collaboration Latency P95: < 100ms
+- Message Delivery Success: > 99.9%
+- Presence Sync P95: < 100ms
+- Edit Conflict Rate: < 10%
+- WebSocket Health Success: > 99.8%
+- Connection Establishment P95: < 500ms
+
+**Scenarios**:
+- **light**: 10 VUS, 5 min duration
+- **moderate**: 20 VUS, 10 min duration (default)
+- **stress**: 50-100 VUS, 15+ min duration
+
+**Run**:
+```bash
+# Dry run (validate configuration only)
+./run-collaboration-platform-load-test.sh --dry-run
+
+# Execute moderate load test
+./run-collaboration-platform-load-test.sh --execute --scenario moderate
+
+# Stress test with custom VUs
+./run-collaboration-platform-load-test.sh --execute --scenario stress --vus 100
+
+# Custom configuration
+./run-collaboration-platform-load-test.sh --execute \
+  --scenario moderate \
+  --duration 15m \
+  --vus 30 \
+  --url https://staging.kushnir.cloud \
+  --ws-url wss://staging.kushnir.cloud/ws
+```
+
+**Validates**:
+- Collaborative editing latency under load
+- Edit conflict detection and resolution
+- Presence synchronization within SLO bounds
+- WebSocket connection reliability
+- Message delivery success rates
+- Session recovery after network failures
+- Performance at various VU levels
+- Real-time metrics collection for SLO monitoring
 - Error handling with unauthorized requests
 - Unauthorized access denial
 

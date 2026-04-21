@@ -2,7 +2,7 @@
   "policy_version": "1.0.0",
   "policy_date": "2026-04-20",
   "manifest_algorithm": "sha256",
-  "manifest_signature": "8c7e3fbca697f7bcc292d768c0f128d445514768bcc5a35946b5ca49886bff76",
+  "manifest_signature": "06869262afbb075fa8889e43e90ca3063dc3004943a59ea024dbd74947fb22f9",
   "signature_note": "SHA256 of JSON.stringify(extensions, sorted-keys). Recompute with scripts/ci/validate-extension-supply-chain.sh --sign",
   "extensions": [
     {

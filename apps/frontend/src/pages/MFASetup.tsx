@@ -244,7 +244,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                 </Card>
               </div>
 
-              {error && <Alert type="error">{error}</Alert>}
+              {state.error && <Alert type="error">{state.error}</Alert>}
 
               <div className="flex gap-4">
                 <Button
@@ -334,7 +334,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                 Enter the 6-digit code from your authenticator app to verify the setup:
               </p>
 
-              {error && <Alert type="error">{error}</Alert>}
+              {state.error && <Alert type="error">{state.error}</Alert>}
 
               <form onSubmit={handleVerifyTOTP} className="space-y-4">
                 <Input

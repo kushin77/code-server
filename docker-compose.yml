@@ -246,7 +246,7 @@ services:
       
       # OIDC Issuer Mode - self-issued tokens
       OAUTH2_PROXY_PROVIDER: "oidc"
-      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://ide.kushnir.cloud"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
       OAUTH2_PROXY_OIDC_AUDIENCE: "code-server,api,github-actions,kubernetes"
       
       # JWT Token Configuration

@@ -9,15 +9,6 @@
 # - Email forwarding from QA account to distribution group
 #
 
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
 variable "gcp_project_id" {
   description = "GCP project ID"
   type        = string

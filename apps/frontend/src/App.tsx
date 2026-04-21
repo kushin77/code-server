@@ -27,6 +27,7 @@ import {
   writeStoredWorkspaceTabs,
   type WorkspaceState,
   type WorkspaceTab,
+  type WorkspaceTabsState,
 } from '@/utils/workspaceCatalog'
 import {
   assessMultiRepoPolicyConformance,
@@ -58,9 +59,10 @@ import {
 } from '@/utils/workspaceSessionPersistence'
 
 function useWorkspaceState() {
-  const [{ activeRepoId, recentRepoIds }, setWorkspaceState] = useState<WorkspaceState>(() =>
-    readStoredWorkspaceTabsFromStorage(typeof window === 'undefined' ? undefined : window.localStorage)
-  )
+  const [{ activeRepoId, recentRepoIds }, setWorkspaceState] = useState<WorkspaceTabsState>(() => {
+    const stored = readStoredWorkspaceTabsFromStorage(typeof window === 'undefined' ? undefined : window.localStorage)
+    return stored || { activeRepoId: 'portal-main', recentRepoIds: [] }
+  })
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [switcherQuery, setSwitcherQuery] = useState('')
   const [sessionSnapshot, setSessionSnapshot] = useState<WorkspaceSessionSnapshot | null>(() =>

@@ -15,7 +15,7 @@
     "ioredis": "catalog:",
     "jose": "catalog:",
     "pg": "catalog:",
-    "uuid": "^9.0.1",
+    "uuid": "catalog:",
     "pino": "catalog:"
   },
   "devDependencies": {

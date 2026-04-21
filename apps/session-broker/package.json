@@ -17,7 +17,7 @@
     "dockerode": "^4.0.9",
     "jose": "catalog:",
     "pg": "catalog:",
-    "uuid": "^9.0.1",
+    "uuid": "catalog:",
     "winston": "^3.11.0",
     "joi": "^17.11.0",
     "axios": "catalog:",
@@ -29,7 +29,7 @@
     "@types/express": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
-    "@types/uuid": "^10.0.0",
+    "@types/uuid": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "ts-node": "catalog:"

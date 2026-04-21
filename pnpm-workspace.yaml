@@ -28,5 +28,7 @@ catalog:
   "@types/express": ^4.17.21
   "ts-node": ^10.9.2
   "ioredis": ^5.3.2
+  "uuid": ^9.0.1
+  "@types/uuid": ^10.0.0
 
 onlyBuiltDependencies: []

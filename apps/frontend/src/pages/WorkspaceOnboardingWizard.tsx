@@ -196,13 +196,14 @@ export function WorkspaceOnboardingWizard() {
     }))
 
     const maxRecentCount = currentTabs.recentRepoIds.length || DEFAULT_RECENT_WORKSPACES.length
+    const recentIds = buildRecentWorkspaceIds(workspaceId, currentTabs.recentRepoIds, maxRecentCount)
     writeStoredWorkspaceTabs(typeof window === 'undefined' ? undefined : window.localStorage, {
       activeRepoId: workspaceId,
-      recentRepoIds: buildRecentWorkspaceIds(workspaceId, currentTabs.recentRepoIds, maxRecentCount),
+      recentRepoIds: recentIds,
     })
     notifyWorkspaceTabsChanged({
       activeRepoId: selectedWorkspace.id,
-      recentRepoIds: nextRecentRepoIds,
+      recentRepoIds: recentIds,
     })
   }
 

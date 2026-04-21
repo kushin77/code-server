@@ -87,28 +87,28 @@ run_unused_export_checks() {
   local ext_report=""
   frontend_report="$(${PNPM_CMD[@]} dlx ts-prune@0.10.3 -p apps/frontend/tsconfig.json 2>/dev/null \
     | grep -Ev \
-      -e 'apps/frontend/src/App\.tsx' \
-      -e 'apps/frontend/src/hooks/index\.ts' \
-      -e 'apps/frontend/src/store/index\.ts' \
-      -e 'apps/frontend/src/types/index\.ts' \
-      -e 'apps/frontend/src/types/repo-card\.ts' \
-      -e 'apps/frontend/src/utils/auth-sw-register\.ts' \
-      -e 'apps/frontend/src/utils/multiRepoPolicy\.ts' \
-      -e 'apps/frontend/src/utils/repoHomeData\.ts' \
-      -e 'apps/frontend/src/utils/session-keepalive\.ts' \
-      -e 'apps/frontend/src/utils/session-sync\.ts' \
-      -e 'apps/frontend/src/utils/workspaceSessionPersistence\.ts' \
-      -e 'apps/frontend/src/utils/ws-session-handoff\.ts' \
+      -e '\\apps\\frontend\\src\\App\.tsx' \
+      -e '\\apps\\frontend\\src\\hooks\\index\.ts' \
+      -e '\\apps\\frontend\\src\\store\\index\.ts' \
+      -e '\\apps\\frontend\\src\\types\\index\.ts' \
+      -e '\\apps\\frontend\\src\\types\\repo-card\.ts' \
+      -e '\\apps\\frontend\\src\\utils\\auth-sw-register\.ts' \
+      -e '\\apps\\frontend\\src\\utils\\multiRepoPolicy\.ts' \
+      -e '\\apps\\frontend\\src\\utils\\repoHomeData\.ts' \
+      -e '\\apps\\frontend\\src\\utils\\session-keepalive\.ts' \
+      -e '\\apps\\frontend\\src\\utils\\session-sync\.ts' \
+      -e '\\apps\\frontend\\src\\utils\\workspaceSessionPersistence\.ts' \
+      -e '\\apps\\frontend\\src\\utils\\ws-session-handoff\.ts' \
     | sed '/^$/d' || true)"
   ext_report="$(${PNPM_CMD[@]} dlx ts-prune@0.10.3 -p apps/extensions/agent-farm/tsconfig.json 2>/dev/null \
     | grep -Ev \
-      -e 'apps/extensions/agent-farm/src/extension\.ts' \
-      -e 'apps/extensions/agent-farm/src/types\.ts' \
-      -e 'apps/extensions/agent-farm/src/agents/' \
-      -e 'apps/extensions/agent-farm/src/deployment/GitOpsOrchestrator\.ts' \
-      -e 'apps/extensions/agent-farm/src/ml/' \
-      -e 'apps/extensions/agent-farm/src/phases/phase[0-9]+/index\.ts' \
-      -e 'apps/extensions/agent-farm/src/phases/phase7/Phase7ObservabilityAgent\.ts' \
+      -e '\\apps\\extensions\\agent-farm\\src\\extension\.ts' \
+      -e '\\apps\\extensions\\agent-farm\\src\\types\.ts' \
+      -e '\\apps\\extensions\\agent-farm\\src\\agents\\' \
+      -e '\\apps\\extensions\\agent-farm\\src\\deployment\\GitOpsOrchestrator\.ts' \
+      -e '\\apps\\extensions\\agent-farm\\src\\ml\\' \
+      -e '\\apps\\extensions\\agent-farm\\src\\phases\\phase[0-9]+\\index\.ts' \
+      -e '\\apps\\extensions\\agent-farm\\src\\phases\\phase7\\Phase7ObservabilityAgent\.ts' \
     | sed '/^$/d' || true)"
 
   if [[ -n "$frontend_report" ]]; then

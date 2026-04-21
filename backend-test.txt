@@ -1,0 +1,123 @@
+npm warn Unknown project config "package-manager-strict". This will stop working in the next major version of npm.
+npm warn Unknown project config "shared-workspace-lockfile". This will stop working in the next major version of npm.
+npm warn Unknown project config "prefer-frozen-lockfile". This will stop working in the next major version of npm.
+npm warn Unknown project config "save-workspace-protocol". This will stop working in the next major version of npm.
+npm warn Unknown project config "strict-peer-dependencies". This will stop working in the next major version of npm.
+npm warn Unknown project config "auto-install-peers". This will stop working in the next major version of npm.
+npm warn Unknown project config "shamefully-hoist". This will stop working in the next major version of npm.
+
+> code-server-backend@1.0.0 test C:\code-server-enterprise\apps\backend
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.4 [39m[90mC:/code-server-enterprise/apps/backend[39m
+
+ [32mΓ£ô[39m src/lib/__tests__/logger.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32mΓ£ô[39m src/services/auth/__tests__/jwt-validator.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+{"timestamp":"2026-04-21T21:28:18.277Z","level":"info","message":"Assigned role 'admin' to service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.279Z","level":"info","message":"Assigned role 'developer' to service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.279Z","level":"info","message":"Assigned roles [admin, developer] to user user-123","service":"RoleManager","userId":"user-123","roles":["admin","developer"]}
+{"timestamp":"2026-04-21T21:28:18.299Z","level":"info","message":"Assigned role 'developer' to service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.299Z","level":"info","message":"Assigned roles [developer] to user user-123","service":"RoleManager","userId":"user-123","roles":["developer"],"expiresIn":7200}
+{"timestamp":"2026-04-21T21:28:18.300Z","level":"info","message":"Assigned role 'admin' to service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.300Z","level":"info","message":"Assigned role 'developer' to service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.300Z","level":"info","message":"Assigned roles [admin, developer] to user user-123","service":"RoleManager","userId":"user-123","roles":["admin","developer"]}
+{"timestamp":"2026-04-21T21:28:18.308Z","level":"info","message":"Revoked role 'admin' from service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.309Z","level":"info","message":"Revoked role 'admin' from service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.286Z","level":"error","message":"Audit write failed (non-critical)","service":"AuditService","error":"[object Object]","errorFingerprint":"c1d44ff0"}
+{"timestamp":"2026-04-21T21:28:18.305Z","level":"error","message":"Failed to get roles for user user-123","service":"RoleManager","error":"[object Object]","errorFingerprint":"c1d44ff0"}
+{"timestamp":"2026-04-21T21:28:18.307Z","level":"warn","message":"Role cache lookup failed for user-123: Error: Redis error","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.307Z","level":"error","message":"Failed to get roles for user user-123","service":"RoleManager","error":"[object Object]","errorFingerprint":"c1d44ff0"}
+{"timestamp":"2026-04-21T21:28:18.303Z","level":"warn","message":"User user@example.com unauthorized for roles admin","service":"RequireRole","userId":"user-123","userRoles":["user"],"requiredRoles":["admin"]}
+{"timestamp":"2026-04-21T21:28:18.315Z","level":"info","message":"Revoked role 'admin' from service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.315Z","level":"info","message":"Revoked role 'developer' from service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.315Z","level":"info","message":"Cleared all roles for user user-123","service":"RoleManager","userId":"user-123"}
+{"timestamp":"2026-04-21T21:28:18.314Z","level":"warn","message":"User user@example.com has no assigned roles","service":"RequireRole","userId":"user-123"}
+ [32mΓ£ô[39m src/services/ai/__tests__/indexing.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+{"timestamp":"2026-04-21T21:28:18.315Z","level":"warn","message":"Unauthenticated request to protected route","service":"RequireRole"}
+{"timestamp":"2026-04-21T21:28:18.318Z","level":"error","message":"Role authorization check failed","service":"RequireRole","error":"[object Object]","errorFingerprint":"c1d44ff0"}
+{"timestamp":"2026-04-21T21:28:18.321Z","level":"error","message":"Failed to attach roles","service":"RequireRole","error":"[object Object]","errorFingerprint":"c1d44ff0"}
+{"timestamp":"2026-04-21T21:28:18.323Z","level":"warn","message":"User user@example.com unauthorized for roles admin","service":"RequireRole","userId":"user-abc","userRoles":["viewer"],"requiredRoles":["admin"]}
+{"timestamp":"2026-04-21T21:28:18.323Z","level":"warn","message":"Unauthenticated request to protected route","service":"RequireRole"}
+{"timestamp":"2026-04-21T21:28:18.318Z","level":"error","message":"Failed to get roles for user user-123","service":"RoleManager","error":"[object Object]","errorFingerprint":"c1d44ff0"}
+{"timestamp":"2026-04-21T21:28:18.319Z","level":"error","message":"Failed to get roles for user user-123","service":"RoleManager","error":"[object Object]","errorFingerprint":"c1d44ff0"}
+{"timestamp":"2026-04-21T21:28:18.320Z","level":"info","message":"Assigned role 'admin' to service 'user-123'","service":"RoleManager"}
+{"timestamp":"2026-04-21T21:28:18.320Z","level":"info","message":"Assigned roles [admin] to user user-123","service":"RoleManager","userId":"user-123","roles":["admin"]}
+ [32mΓ£ô[39m src/services/audit/__tests__/audit-service.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32mΓ£ô[39m src/services/auth/__tests__/role-manager.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32mΓ£ô[39m src/middleware/auth/__tests__/require-role.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32mΓ£ô[39m src/services/workspace-context-hub/__tests__/service.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32mΓ£ô[39m src/middleware/__tests__/jwt-auth.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 158[2mms[22m[39m
+ [32mΓ£ô[39m src/services/__tests__/figma-client.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32mΓ£ô[39m src/services/__tests__/feature-flags-client.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32mΓ£ô[39m src/routes/admin/__tests__/roles.integration.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+stderr | src/services/ticket-linking/__tests__/ticket-detector.test.ts > TicketDetector > File Scanning > should scan entire file and return all tickets
+Linear API key not configured
+
+stderr | src/services/ticket-linking/__tests__/ticket-detector.test.ts > TicketDetector > File Scanning > should scan entire file and return all tickets
+Linear API key not configured
+
+stderr | src/services/ticket-linking/__tests__/ticket-detector.test.ts > TicketDetector > File Scanning > should scan entire file and return all tickets
+GitHub token not configured
+
+ [32mΓ£ô[39m src/services/ticket-linking/__tests__/ticket-detector.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+{"timestamp":"2026-04-21T21:28:19.158Z","level":"info","message":"Registered group mapping: custom-group@company.com ΓåÆ custom-role","service":"RoleMapper"}
+{"timestamp":"2026-04-21T21:28:19.162Z","level":"info","message":"Registered group mapping: management@company.com ΓåÆ manager, developer","service":"RoleMapper"}
+{"timestamp":"2026-04-21T21:28:19.166Z","level":"info","message":"Registered group mapping: test@company.com ΓåÆ test-role","service":"RoleMapper"}
+ [32mΓ£ô[39m src/services/auth/__tests__/role-mapper.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32mΓ£ô[39m src/services/ai/__tests__/indexing-quality.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m src/services/session/__tests__/migration.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32mΓ£ô[39m src/services/workspace-context-hub/__tests__/contracts.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m src/services/__tests__/otel-apm-client.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32mΓ£ô[39m src/services/feature-flags/__tests__/feature-flags.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32mΓ£ô[39m src/services/__tests__/pagerduty-client.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m src/services/__tests__/sentry-client.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32mΓ£ô[39m src/services/__tests__/docs-generator.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [31mΓ¥»[39m src/integrations/slack/__tests__/handler.test.ts [2m([22m[2m18 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1165[2mms[22m[39m
+[31m       [31m├ù[31m should verify valid Slack request signature[39m[32m 24[2mms[22m[39m
+       [32mΓ£ô[39m should reject request with invalid signature[32m 3[2mms[22m[39m
+       [32mΓ£ô[39m should reject request with old timestamp[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should reject request without signature headers[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should create a new shared session[32m 5[2mms[22m[39m
+       [32mΓ£ô[39m should store session in Redis with TTL[32m 3[2mms[22m[39m
+       [32mΓ£ô[39m should generate valid share URL[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should retrieve session by ID[32m 3[2mms[22m[39m
+       [32mΓ£ô[39m should return null for non-existent session[32m 3[2mms[22m[39m
+       [33m[2mΓ£ô[22m[39m should return null for expired session [33m 1107[2mms[22m[39m
+       [32mΓ£ô[39m should list active sessions for a channel[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should return empty list for channel with no sessions[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should filter out expired sessions[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should revoke an active session[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should return false when revoking non-existent session[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should handle multiple revokes gracefully[32m 2[2mms[22m[39m
+       [32mΓ£ô[39m should handle complete session lifecycle[32m 1[2mms[22m[39m
+       [32mΓ£ô[39m should support multiple concurrent sessions[32m 1[2mms[22m[39m
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Tests 1 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  src/integrations/slack/__tests__/handler.test.ts > Slack Integration Handler > verifySlackRequest > should verify valid Slack request signature
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ Γ¥» src/integrations/slack/__tests__/handler.test.ts:55:46
+     53|       };
+     54|
+     55|       expect(verifySlackRequest(req as any)).toBe(true);
+       |                                              ^
+     56|     });
+     57|
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/1]ΓÄ»
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m21 passed[39m[22m[90m (22)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m380 passed[39m[22m[90m (381)[39m
+[2m   Start at [22m 17:28:17
+[2m   Duration [22m 2.35s[2m (transform 2.67s, setup 1.05s, import 5.27s, tests 1.96s, environment 7ms)[22m
+
+ΓÇëELIFECYCLEΓÇë Test failed. See above for more details.

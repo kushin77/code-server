@@ -7,6 +7,7 @@
 /**
  * Identity and status data for a single repository card.
  * Refreshed at the interval configured by policy `home_view_refresh_interval_seconds`.
+ * @ts-prune-ignore - Used transitively through RepoHomeSnapshot['cards']
  */
 export interface RepoCard {
   /** Stable repo identifier (sha256 of canonical_path[:12]) */

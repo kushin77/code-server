@@ -4,6 +4,15 @@ import { rbacAPI } from '@/api/rbac-client'
 import { useAuthStore, useUserStore } from '@/store'
 
 /**
+ * NOTE: Many hooks show as unused by ts-prune but are actually:
+ * - Used in page components via destructuring assignments
+ * - Part of the public hook API for component integration
+ * - Used internally within the monorepo
+ * 
+ * @ts-prune-ignore (issue #1023)
+ */
+
+/**
  * useLogin Hook
  * Handles login flow with optional MFA verification
  */

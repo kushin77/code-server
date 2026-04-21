@@ -82,8 +82,8 @@ fi
 
 # Guard against unusual/risky promotions without --force
 if [[ "$FORCE" != "true" ]]; then
-  case "${FROM_CHANNEL}->${TO_CHANNEL}" in
-    canary->stable|stable->rollback|rollback->stable)
+  case "${FROM_CHANNEL}--${TO_CHANNEL}" in
+    canary--stable|stable--rollback|rollback--stable)
       # Valid promotion paths
       ;;
     *)

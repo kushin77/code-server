@@ -1,6 +1,8 @@
-#!/bin/bash
-# Issue #984 - Complete OAuth2-Proxy Deployment
-# ============================================
+#!/usr/bin/env bash
+# @file        scripts/issue-984-complete-dod.sh
+# @module      ops/deployment
+# @description Complete OAuth2-Proxy deployment and DoD steps for issue #984
+#
 # Run this script on 192.168.168.31 to complete Definition of Done steps 2-3
 
 set -euo pipefail

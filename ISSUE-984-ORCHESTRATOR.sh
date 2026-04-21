@@ -173,7 +173,7 @@ else
   log_info "Running terraform plan first (dry-run)..."
   cd terraform
   
-  if terraform plan -out=tfplan &2>&1 | tee -a "$EXECUTION_LOG"; then
+  if terraform plan -out=tfplan 2>&1 | tee -a "$EXECUTION_LOG"; then
     log_success "Terraform plan succeeded"
     
     log_info "Applying terraform changes..."

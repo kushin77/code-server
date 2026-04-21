@@ -72,6 +72,7 @@ export async function performWSSessionHandoff({
 /**
  * Hook to inject into the session refresh cycle
  * Whenever any tab refreshes (via BroadcastChannel), trigger hand-off for any active WS
+ * @deprecated - Ready for use once session sync and WebSocket features are integrated
  */
 export function setupWSAutoHandoff(getActiveWS: () => WebSocket | null, updateWS: (newWs: WebSocket) => void): void {
   if (typeof BroadcastChannel === 'undefined') return;

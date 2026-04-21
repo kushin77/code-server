@@ -140,6 +140,7 @@ export function scheduleRefresh(): void {
 
 /**
  * Initializes the session keepalive logic
+ * @deprecated - Import and call in App or main layout component when session feature is ready
  */
 export function initSessionKeepalive(): void {
   if (typeof window === 'undefined') return;

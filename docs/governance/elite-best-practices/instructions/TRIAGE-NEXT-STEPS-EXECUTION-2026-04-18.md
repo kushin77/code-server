@@ -108,7 +108,7 @@ Priority debug rule:
 11. **#743**: Windows-DC to portal capability mapping and ownership matrix.
 12. **COMPLETED**: Backstage as primary portal control-plane UX (issue 744 closed).
 13. **COMPLETED**: Appsmith operator revoke + break-glass console (issue 745 closed).
-14. **#746**: Identity authority standardization (Keycloak/Auth + group claims).
+14. **COMPLETED**: Identity authority standardization closed (issue 746 closed).
 15. **#747**: OPA centralized policy decision point integration.
 16. **#748**: Vault adoption for policy-signing keys and secret lifecycle.
 

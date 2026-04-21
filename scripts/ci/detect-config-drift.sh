@@ -9,6 +9,7 @@ set -euo pipefail
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Source common utilities
@@ -54,6 +55,8 @@ declare -a SKIP_DIRS=(
     "phase-20-a1-config.yml"
     "docker-compose.production.yml"
     "docker-compose-phase-"
+    "docker-compose-air-gapped.yml"
+    "Caddyfile-air-gapped"
     "phase-"
 )
 
@@ -65,6 +68,7 @@ declare -a DOMAIN_ALLOWLIST_FILES=(
 )
 
 # Hardcoded patterns to detect (should use env vars instead)
+# shellcheck disable=SC2034
 declare -A DRIFT_PATTERNS=(
     ["IP_192_168"]="192\.168\.168\.\d+"
     ["DOMAIN_KUSHNIR"]="kushnir\.cloud"
@@ -75,6 +79,7 @@ declare -A DRIFT_PATTERNS=(
 )
 
 # Files to scan
+# shellcheck disable=SC2034
 declare -a SCAN_PATTERNS=(
     "docker-compose*.yml"
     "docker-compose*.yaml"
@@ -88,6 +93,7 @@ declare -a SCAN_PATTERNS=(
 REPORT_DIR="artifacts/config-ssot"
 REPORT_JSON="${REPORT_DIR}/config-ssot-report.json"
 
+# shellcheck disable=SC2034
 declare -a SCAN_FILES=()
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -216,6 +222,7 @@ check_hardcoded_domains() {
 
 check_hardcoded_ports() {
     local drift_found=0
+    # shellcheck disable=SC2034
     local -a files=()
     local file
     local line

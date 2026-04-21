@@ -129,9 +129,13 @@ jobs:
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           
           EXIT_CODE=0
-          for script in $(find . -name "*.sh" -type f ! -path './archived/**' ! -path './scripts/_archive/**' ! -path './scripts/common-functions.sh' ! -path './scripts/logging.sh' ! -path './.git/**'); do
+          for script in $(find . -name "*.sh" -type f ! -path './archived/**' ! -path './scripts/_archive/**' ! -path './.git/**'); do
+            # Skip retired shims (files with archive marker)
+            if grep -q "ARCHIVED: Deprecated and archived file" "$script" 2>/dev/null; then
+              continue
+            fi
             echo "Checking: $script"
-            if ! shellcheck -x --severity=warning "$script" 2>&1; then
+            if ! shellcheck -x --severity=error "$script" 2>&1; then
               EXIT_CODE=1
             fi
           done

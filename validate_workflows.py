@@ -8,7 +8,7 @@ import re
 
 workflows = [
     '.github/workflows/policy-bundle-governance.yml',
-    '.github/workflows/governance-waiver-audit.yml', 
+    '.github/workflows/governance-waiver-audit.yml',
     '.github/workflows/policy-ssot-guard.yml'
 ]
 
@@ -46,7 +46,7 @@ for wf in workflows:
                 unpinned.append(action)
             else:
                 unpinned.append(action)
-        
+
         if unpinned:
             print(f"! {wf} unpinned actions: {unpinned}")
             all_valid = False

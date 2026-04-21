@@ -2,6 +2,7 @@
 // @module      auth/role-mapping
 // @description Unit tests for RoleMapper service
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { RoleMapper } from '../role-mapper';
 
 describe('RoleMapper', () => {
@@ -112,7 +113,7 @@ describe('RoleMapper', () => {
     it('should combine multiple role sources', () => {
       const claims = {
         sub: 'multi-123',
-        email: 'admin.svc.internal@company.com',
+        email: 'service-admin.svc.internal@company.com',
         admin: true,
         groups: ['developers@company.com'],
       };

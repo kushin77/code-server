@@ -84,12 +84,12 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-violet-50 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-700">Active workspace</p>
-              <p className="mt-1 text-lg font-semibold text-slate-900">{profileSnapshot.workspaceLabel}</p>
-              <p className="text-sm text-slate-600">Root: {activeRoot.path}</p>
+              <p className="mt-1 text-lg font-semibold text-slate-900">{profileSnapshot.workspaceLabel || selectedWorkspaceId}</p>
+              <p className="text-sm text-slate-600">Root: {activeRoot?.path || 'N/A'}</p>
             </div>
             <div className="rounded-2xl bg-emerald-50 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Merge order</p>
-              <p className="mt-1 text-sm font-medium text-slate-700">{profileSnapshot.mergeOrder.join(' → ')}</p>
+              <p className="mt-1 text-sm font-medium text-slate-700">{profileSnapshot.mergeOrder?.join(' → ') || 'N/A'}</p>
               <p className="text-xs text-slate-500">Global config is refined by workspace and root-folder scope.</p>
             </div>
           </div>
@@ -98,7 +98,7 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
         <div className="mt-6 grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Root folders</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">{profile.roots.length}</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">{profile?.roots?.length || 0}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Policy lane</p>
@@ -142,8 +142,8 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{profile.workspaceLabel}</p>
-                  <p className="text-sm text-slate-600">{profile.description}</p>
+                  <p className="text-sm font-semibold text-slate-900">{profile?.workspaceLabel || profile?.name || 'Workspace'}</p>
+                  <p className="text-sm text-slate-600">{profile?.description || 'N/A'}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -154,21 +154,22 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
                   >
                     Copy workspace.json
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => selectWorkspace(profile.workspaceId)}
-                    className="rounded-full bg-violet-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
-                  >
-                    Activate profile
-                  </button>
-                </div>
+                  {profile?.workspaceId && (
+                    <button
+                      type="button"
+                      onClick={() => selectWorkspace(profile.workspaceId!)}
+                      className="rounded-full bg-violet-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
+                    >
+                      Activate profile
+                    </button>
+                  )}
               </div>
 
               {copyNotice ? <p className="mt-3 text-sm font-medium text-emerald-700">{copyNotice}</p> : null}
 
               <div className="mt-5 flex flex-wrap gap-2">
-                {profile.roots.map((root) => {
-                  const isSelected = root.path === activeRoot.path
+                {profile?.roots?.map((root) => {
+                  const isSelected = root.path === activeRoot?.path
 
                   return (
                     <button
@@ -179,7 +180,7 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
                         isSelected ? 'bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:border-violet-400 hover:text-violet-700'
                       }`}
                     >
-                      {root.label}
+                      {root.label || root.path}
                     </button>
                   )
                 })}

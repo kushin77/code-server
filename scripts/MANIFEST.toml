@@ -95,10 +95,8 @@ purpose  = "TODO: add purpose"
 [[script]]
 file     = "common-functions.sh"
 category = "uncategorized"
-status   = "active"
-purpose  = "TODO: add purpose"
-
-[[script]]
+  status   = "archived"
+  purpose  = "Deprecated shim - use scripts/_common/init.sh instead"
 file     = "configure-audit-logging-phase1.sh"
 category = "uncategorized"
 status   = "active"

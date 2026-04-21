@@ -31,6 +31,7 @@ compose_files = [repo_root / "docker-compose.yml", repo_root / "docker-compose.s
 
 local_compose_images = {
   "code-server-enterprise:dev",
+  "session-broker:latest",
 }
 
 errors = []

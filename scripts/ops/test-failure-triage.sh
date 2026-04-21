@@ -273,7 +273,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
 fi
 
 if [[ -n "$existing_issue" ]]; then
-  gh issue comment "$existing_issue" --repo "$GH_REPO" --body "Re-occurrence detected for fingerprint \\`$fingerprint\\`.
+  gh issue comment "$existing_issue" --repo "$GH_REPO" --body "Re-occurrence detected for fingerprint \`$fingerprint\`.
 
 - Summary: $summary
 - Run URL: ${RUN_URL:-n/a}

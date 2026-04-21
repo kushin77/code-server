@@ -87,7 +87,7 @@ if [[ "$FORCE" != "true" ]]; then
       # Valid promotion paths
       ;;
     *)
-      log_fatal "Non-standard promotion path ${FROM_CHANNEL} → ${TO_CHANNEL}. Use --force to override."
+      log_fatal "Non-standard promotion path ${FROM_CHANNEL} -> ${TO_CHANNEL}. Use --force to override."
       ;;
   esac
 fi

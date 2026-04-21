@@ -300,7 +300,7 @@ for idx in $(seq 0 $((total - 1))); do
     --jq ".[] | select((.title | contains(\"[cf-${short_fp}]\")) or (.body | contains(\"cloudflare-fingerprint:${fingerprint}\"))) | .number" | head -n 1)
 
   if [[ -n "$existing" ]]; then
-    gh issue comment "$existing" --repo "$GH_REPO" --body "Cloudflare recurrence detected for fingerprint \\`${fingerprint}\\`.
+    gh issue comment "$existing" --repo "$GH_REPO" --body "Cloudflare recurrence detected for fingerprint \`${fingerprint}\`.
 
 - Class: ${event_class}
 - Severity: ${severity}

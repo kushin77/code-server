@@ -6,8 +6,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import { requireRole, attachRoles } from '../require-role';
 import { getRoleManager } from '../../../services/auth/role-manager';
+import { getAuditService } from '../../../services/audit/audit-service';
 
 vi.mock('../../../services/auth/role-manager');
+vi.mock('../../../services/audit/audit-service');
 
 interface TestRequest extends Request {
   user?: {
@@ -244,6 +246,97 @@ describe('attachRoles Middleware', () => {
       mockRes as Response,
       mockNext
     );
+
+    expect(mockNext).toHaveBeenCalled();
+  });
+});
+
+describe('requireRole – audit event emission', () => {
+  let mockReq: Partial<Request & { user?: { sub: string; email: string; roles?: string[] } }>;
+  let mockRes: Partial<Response>;
+  let mockNext: ReturnType<typeof vi.fn>;
+  let mockRoleManager: any;
+  let mockAuditService: { emit: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    mockReq = {
+      user: { sub: 'user-abc', email: 'user@example.com' },
+      method: 'GET',
+      path: '/api/data',
+      ip: '127.0.0.1',
+      headers: {},
+    };
+
+    mockRes = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    };
+
+    mockNext = vi.fn();
+
+    mockRoleManager = { getUserRoles: vi.fn() };
+    (getRoleManager as any).mockReturnValue(mockRoleManager);
+
+    mockAuditService = { emit: vi.fn() };
+    (getAuditService as any).mockReturnValue(mockAuditService);
+  });
+
+  it('emits an allow audit event when user is authorized', async () => {
+    mockRoleManager.getUserRoles.mockResolvedValue(['admin']);
+
+    await requireRole('admin')(
+      mockReq as any,
+      mockRes as Response,
+      mockNext
+    );
+
+    expect(mockAuditService.emit).toHaveBeenCalledOnce();
+    const event = mockAuditService.emit.mock.calls[0][0];
+    expect(event.action).toBe('allow');
+    expect(event.userId).toBe('user-abc');
+    expect(event.statusCode).toBe(200);
+  });
+
+  it('emits a deny audit event when user lacks required role', async () => {
+    mockRoleManager.getUserRoles.mockResolvedValue(['viewer']);
+
+    await requireRole('admin')(
+      mockReq as any,
+      mockRes as Response,
+      mockNext
+    );
+
+    expect(mockAuditService.emit).toHaveBeenCalledOnce();
+    const event = mockAuditService.emit.mock.calls[0][0];
+    expect(event.action).toBe('deny');
+    expect(event.userId).toBe('user-abc');
+    expect(event.statusCode).toBe(403);
+  });
+
+  it('emits a deny audit event for unauthenticated requests', async () => {
+    mockReq.user = undefined;
+
+    await requireRole('admin')(
+      mockReq as any,
+      mockRes as Response,
+      mockNext
+    );
+
+    expect(mockAuditService.emit).toHaveBeenCalledOnce();
+    const event = mockAuditService.emit.mock.calls[0][0];
+    expect(event.action).toBe('deny');
+    expect(event.userId).toBe('anonymous');
+    expect(event.statusCode).toBe(401);
+  });
+
+  it('skips audit emission when audit service is not initialised', async () => {
+    (getAuditService as any).mockReturnValue(null);
+    mockRoleManager.getUserRoles.mockResolvedValue(['admin']);
+
+    // Must not throw
+    await expect(
+      requireRole('admin')(mockReq as any, mockRes as Response, mockNext)
+    ).resolves.not.toThrow();
 
     expect(mockNext).toHaveBeenCalled();
   });

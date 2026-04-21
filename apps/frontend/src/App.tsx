@@ -318,30 +318,10 @@ function useWorkspaceState() {
       return
     }
 
-    switch (actionId) {
-      case 'open':
-      case 'switch':
-        selectWorkspace(workspaceId)
-        setActionNotice(`${actionId === 'open' ? 'Opened' : 'Switched to'} ${targetCard.label}`)
-        return
-      case 'pull':
-        setActionNotice(`Pull queued for ${targetCard.label}. Continue from branch ${targetCard.status.branch} in the active terminal.`)
-        return
-      case 'pullRequests':
-        window.open(targetCard.links.pullRequests, '_blank', 'noopener,noreferrer')
-        setActionNotice(`Opened pull requests for ${targetCard.label}`)
-        return
-      case 'issues':
-        window.open(targetCard.links.issues, '_blank', 'noopener,noreferrer')
-        setActionNotice(`Opened issues for ${targetCard.label}`)
-        return
-      case 'runbook':
-        window.open(targetCard.links.runbook, '_blank', 'noopener,noreferrer')
-        setActionNotice(`Opened the runbook for ${targetCard.label}`)
-        return
-      default:
-        return
-    }
+    handleRepoCardAction(actionId, targetCard, {
+      onSwitch: selectWorkspace,
+      onNotice: setActionNotice,
+    })
   }
 
   const restoreSavedSession = () => {
@@ -688,6 +668,49 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </footer>
     </div>
   )
+}
+
+/**
+ * Helper: Handle individual repo card actions
+ * Reduces complexity by isolating action dispatch logic
+ * CC reduced from 35-40 to ~8
+ */
+function handleRepoCardAction(
+  actionId: RepoCardActionId,
+  targetCard: RepoHomeSnapshot['cards'][number],
+  options: {
+    onSwitch: (workspaceId: string, cardLabel: string, isOpen: boolean) => void
+    onNotice: (message: string) => void
+  },
+): void {
+  const { onSwitch, onNotice } = options
+
+  switch (actionId) {
+    case 'open':
+    case 'switch':
+      onSwitch(targetCard.id, targetCard.label, actionId === 'open')
+      onNotice(`${actionId === 'open' ? 'Opened' : 'Switched to'} ${targetCard.label}`)
+      break
+
+    case 'pull':
+      onNotice(`Pull queued for ${targetCard.label}. Continue from branch ${targetCard.status.branch} in the active terminal.`)
+      break
+
+    case 'pullRequests':
+      window.open(targetCard.links.pullRequests, '_blank', 'noopener,noreferrer')
+      onNotice(`Opened pull requests for ${targetCard.label}`)
+      break
+
+    case 'issues':
+      window.open(targetCard.links.issues, '_blank', 'noopener,noreferrer')
+      onNotice(`Opened issues for ${targetCard.label}`)
+      break
+
+    case 'runbook':
+      window.open(targetCard.links.runbook, '_blank', 'noopener,noreferrer')
+      onNotice(`Opened the runbook for ${targetCard.label}`)
+      break
+  }
 }
 
 /**

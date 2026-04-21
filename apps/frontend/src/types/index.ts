@@ -41,30 +41,6 @@ export interface UserRole {
   reason?: string
 }
 
-export interface Team {
-  id: string
-  name: string
-  org_id: string
-  created_by: string
-  createdAt: Date
-}
-
-export interface TeamMember {
-  id: string
-  team_id: string
-  user_id: string
-  role: 'owner' | 'admin' | 'developer'
-  joined_at: Date
-}
-
-export interface Repository {
-  id: string
-  name: string
-  url: string
-  isPrivate: boolean
-  org_id: string
-}
-
 export interface RepositoryAccess {
   id: string
   userId: string

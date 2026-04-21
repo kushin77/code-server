@@ -52,8 +52,7 @@ log_info "✓ IAM bindings defined"
 
 log_info "Step 2: Checking GitHub Actions workflow..."
 
-if ! grep -q "e2e-oauth-automatic.yml" .github/workflows/e2e-oauth-automatic.yml 2>/dev/null || \
-   ! [ -f ".github/workflows/e2e-oauth-automatic.yml" ]; then
+if ! [ -f ".github/workflows/e2e-oauth-automatic.yml" ]; then
     log_error "✗ GitHub Actions workflow not found"
     exit 1
 fi

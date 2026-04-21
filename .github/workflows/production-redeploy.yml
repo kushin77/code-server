@@ -51,7 +51,7 @@ jobs:
       gate_report: ${{ steps.gate.outputs.gate_report }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -79,7 +79,7 @@ jobs:
 
       - name: Upload gate report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: predeploy-gate-report
           path: artifacts/ci/predeploy-gate-report.json
@@ -97,7 +97,7 @@ jobs:
       url: https://ide.kushnir.cloud
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Configure SSH
         run: |
@@ -126,7 +126,7 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
         with:
           script: |
             github.rest.issues.createComment({
@@ -148,7 +148,7 @@ jobs:
       url: https://ide.kushnir.cloud
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Configure SSH
         run: |
@@ -193,7 +193,7 @@ jobs:
       url: https://ide.kushnir.cloud
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Configure SSH
         run: |
@@ -230,7 +230,7 @@ jobs:
       url: https://portal.kushnir.cloud
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Configure SSH
         run: |
@@ -267,7 +267,7 @@ jobs:
 
       - name: Publish deployment report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: deployment-summary
           path: |

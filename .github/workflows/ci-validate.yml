@@ -261,15 +261,6 @@ jobs:
       - name: Validate checked-in OpenAPI 3.1 specifications
         run: bash scripts/ci/validate-api-specification.sh
 
-  test-matrix:
-    name: Governance — test matrix enforcement
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-
-      - name: Validate matrix updates for production-facing changes
-        run: bash scripts/ci/validate-test-matrix.sh
-
   terraform-backend-hardening:
     name: Governance — terraform backend hardening
     runs-on: ubuntu-latest

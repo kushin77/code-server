@@ -15,8 +15,6 @@ permissions:
 
 env:
   TRUFFLEHOG_VERSION: "3.76.3"
-
-env:
   COST_CATEGORY: "ci-security"
 
 concurrency:

@@ -182,8 +182,7 @@ jobs:
           if [[ -n "${SEED_PATTERNS}" ]]; then
             echo "Applying seeded triage patterns from workflow_dispatch input"
             if [[ -n "${PATTERNS}" ]]; then
-              PATTERNS="${PATTERNS}
-${SEED_PATTERNS}"
+              PATTERNS="${PATTERNS}"$'\n'"${SEED_PATTERNS}"
             else
               PATTERNS="${SEED_PATTERNS}"
             fi

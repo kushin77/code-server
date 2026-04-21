@@ -225,7 +225,7 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
                   <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
                     <p className="text-sm font-semibold text-slate-900">Scoped extensions</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {activeRoot.enabledExtensions.map((extensionId) => (
+                      {activeRoot.enabledExtensions.map((extensionId: string) => (
                         <span key={extensionId} className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
                           {extensionId}
                         </span>

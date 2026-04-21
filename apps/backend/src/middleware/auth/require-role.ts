@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getLogger } from '../../lib/logger';
 import { getRoleManager } from '../../services/auth/role-manager';
+import { getAuditService } from '../../services/audit/audit-service';
 
 const logger = getLogger('RequireRole');
 
@@ -30,9 +31,29 @@ export function requireRole(...allowedRoles: string[]) {
     next: NextFunction
   ) => {
     try {
+      const audit = getAuditService();
+      const traceId =
+        (req.headers?.['x-trace-id'] as string | undefined) ||
+        (req.headers?.['x-request-id'] as string | undefined) ||
+        undefined;
+      const sessionId = (req.headers?.['x-session-id'] as string | undefined) || undefined;
+      const ipAddress = req.ip ?? undefined;
+
       // Check if user is authenticated
       if (!req.user) {
         logger.warn('Unauthenticated request to protected route');
+        audit?.emit({
+          userId: 'anonymous',
+          method: req.method,
+          path: req.path,
+          role: allowedRoles.join(','),
+          action: 'deny',
+          reason: 'unauthenticated',
+          statusCode: 401,
+          ipAddress,
+          traceId,
+          sessionId,
+        });
         return res.status(401).json({
           error: 'Unauthorized',
           message: 'Authentication required',
@@ -47,6 +68,19 @@ export function requireRole(...allowedRoles: string[]) {
           `User ${req.user.email} has no assigned roles`,
           { userId: req.user.sub }
         );
+        audit?.emit({
+          userId: req.user.sub,
+          userEmail: req.user.email,
+          method: req.method,
+          path: req.path,
+          role: allowedRoles.join(','),
+          action: 'deny',
+          reason: 'no_roles_assigned',
+          statusCode: 403,
+          ipAddress,
+          traceId,
+          sessionId,
+        });
         return res.status(403).json({
           error: 'Forbidden',
           message: 'No roles assigned to user',
@@ -67,6 +101,19 @@ export function requireRole(...allowedRoles: string[]) {
             requiredRoles: allowedRoles,
           }
         );
+        audit?.emit({
+          userId: req.user.sub,
+          userEmail: req.user.email,
+          method: req.method,
+          path: req.path,
+          role: userRoles.join(','),
+          action: 'deny',
+          reason: `requires_one_of:${allowedRoles.join(',')}`,
+          statusCode: 403,
+          ipAddress,
+          traceId,
+          sessionId,
+        });
         return res.status(403).json({
           error: 'Forbidden',
           message: `Requires one of: ${allowedRoles.join(', ')}`,
@@ -81,6 +128,19 @@ export function requireRole(...allowedRoles: string[]) {
         `User ${req.user.email} authorized with roles: ${userRoles.join(', ')}`,
         { userId: req.user.sub }
       );
+
+      audit?.emit({
+        userId: req.user.sub,
+        userEmail: req.user.email,
+        method: req.method,
+        path: req.path,
+        role: userRoles.join(','),
+        action: 'allow',
+        statusCode: 200,
+        ipAddress,
+        traceId,
+        sessionId,
+      });
 
       next();
     } catch (error) {

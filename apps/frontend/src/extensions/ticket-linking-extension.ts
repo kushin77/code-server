@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import TicketLinkingPanel from './ticket-linking-panel';
+import { measureAsyncExtensionProfiler } from '@/utils/extensionProfiler';
 
 let detector: any;
 let ticketPanel: TicketLinkingPanel | undefined;
@@ -14,111 +15,121 @@ let ticketPanel: TicketLinkingPanel | undefined;
  * VS Code extension activation
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  console.log('Ticket Linking Extension activated');
+  return measureAsyncExtensionProfiler(
+    {
+      id: 'ticket-linking',
+      label: 'Ticket linking extension',
+      category: 'integration',
+      kind: 'activation',
+    },
+    async () => {
+      console.log('Ticket Linking Extension activated');
 
-  // Lazy load detector service
-  const { default: TicketDetector } = await import(
-    '../../../backend/src/services/ticket-linking/ticket-detector'
-  );
+      // Lazy load detector service
+      const { default: TicketDetector } = await import(
+        '../../../backend/src/services/ticket-linking/ticket-detector'
+      );
 
-  // Initialize detector with API credentials from workspace settings
-  const config = vscode.workspace.getConfiguration('ticketLinking');
-  const apiCredentials = new Map([
-    ['linear', config.get<string>('linearApiKey') || process.env.LINEAR_API_KEY || ''],
-    ['jira', config.get<string>('jiraApiKey') || process.env.JIRA_API_KEY || ''],
-    ['github', config.get<string>('githubToken') || process.env.GITHUB_TOKEN || ''],
-  ]);
+      // Initialize detector with API credentials from workspace settings
+      const config = vscode.workspace.getConfiguration('ticketLinking');
+      const apiCredentials = new Map([
+        ['linear', (config.get('linearApiKey') as string) || process.env.LINEAR_API_KEY || ''],
+        ['jira', (config.get('jiraApiKey') as string) || process.env.JIRA_API_KEY || ''],
+        ['github', (config.get('githubToken') as string) || process.env.GITHUB_TOKEN || ''],
+      ]);
 
-  detector = new TicketDetector(apiCredentials);
+      detector = new TicketDetector(apiCredentials);
 
-  // Register commands
-  context.subscriptions.push(
-    vscode.commands.registerCommand('ticketLinking.showPanel', () => {
-      ticketPanel = TicketLinkingPanel.createOrShow(context.extensionUri);
-      refreshTickets();
-    }),
+      // Register commands
+      context.subscriptions.push(
+        vscode.commands.registerCommand('ticketLinking.showPanel', () => {
+          ticketPanel = TicketLinkingPanel.createOrShow(context.extensionUri);
+          void refreshTickets();
+        }),
 
-    vscode.commands.registerCommand('ticketLinking.refresh', async () => {
-      await refreshTickets();
-    }),
+        vscode.commands.registerCommand('ticketLinking.refresh', async () => {
+          await refreshTickets();
+        }),
 
-    vscode.commands.registerCommand('ticketLinking.configure', async () => {
-      await configureCredentials();
-    })
-  );
+        vscode.commands.registerCommand('ticketLinking.configure', async () => {
+          await configureCredentials();
+        })
+      );
 
-  // Auto-show panel when opening a file with tickets
-  context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(async (editor) => {
-      if (editor && detector) {
-        const tickets = await detector.getResolvedTicketsForFile(
-          editor.document.uri.fsPath,
-          editor.document.getText()
-        );
+      // Auto-show panel when opening a file with tickets
+      context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(async (editor: any) => {
+          if (editor && detector) {
+            const tickets = await detector.getResolvedTicketsForFile(
+              editor.document.uri.fsPath,
+              editor.document.getText()
+            );
 
-        if (tickets.length > 0) {
-          if (!ticketPanel) {
-            ticketPanel = TicketLinkingPanel.createOrShow(context.extensionUri);
+            if (tickets.length > 0) {
+              if (!ticketPanel) {
+                ticketPanel = TicketLinkingPanel.createOrShow(context.extensionUri);
+              }
+              ticketPanel.updateTickets(tickets);
+            }
           }
-          ticketPanel.updateTickets(tickets);
+        })
+      );
+
+      // Refresh on document change (debounced)
+      let changeTimer: NodeJS.Timeout;
+      context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(async (_event: any) => {
+          clearTimeout(changeTimer);
+          changeTimer = setTimeout(async () => {
+            await refreshTickets();
+          }, 500); // Debounce 500ms
+        })
+      );
+
+      // Add context menu item
+      context.subscriptions.push(
+        vscode.commands.registerCommand('ticketLinking.linkTicket', async (_args: any) => {
+          const editor = vscode.window.activeTextEditor;
+          if (!editor) {
+            vscode.window.showErrorMessage('No editor active');
+            return;
+          }
+
+          const ticketId = await vscode.window.showInputBox({
+            prompt: 'Enter ticket ID (e.g., PROJ-123, #456)',
+            validateInput: (value: string) => {
+              if (!value) return 'Ticket ID cannot be empty';
+              return null;
+            },
+          });
+
+          if (ticketId) {
+            // Insert ticket reference at cursor
+            const edit = new vscode.WorkspaceEdit();
+            edit.insert(editor.document.uri, editor.selection.active, `/* Relates to: ${ticketId} */`);
+            await vscode.workspace.applyEdit(edit);
+
+            // Refresh to resolve the new ticket
+            await refreshTickets();
+          }
+        })
+      );
+
+      // Status bar item
+      const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
+      statusBar.command = 'ticketLinking.showPanel';
+      statusBar.text = '📋 Tickets';
+      statusBar.show();
+      context.subscriptions.push(statusBar);
+
+      // Clean up expired cache periodically
+      setInterval(() => {
+        if (detector) {
+          detector.clearExpiredCache();
         }
-      }
-    })
-  );
-
-  // Refresh on document change (debounced)
-  let changeTimer: NodeJS.Timeout;
-  context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument(async (event) => {
-      clearTimeout(changeTimer);
-      changeTimer = setTimeout(async () => {
-        await refreshTickets();
-      }, 500); // Debounce 500ms
-    })
-  );
-
-  // Add context menu item
-  context.subscriptions.push(
-    vscode.commands.registerCommand('ticketLinking.linkTicket', async (args) => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage('No editor active');
-        return;
-      }
-
-      const ticketId = await vscode.window.showInputBox({
-        prompt: 'Enter ticket ID (e.g., PROJ-123, #456)',
-        validateInput: (value) => {
-          if (!value) return 'Ticket ID cannot be empty';
-          return null;
-        },
-      });
-
-      if (ticketId) {
-        // Insert ticket reference at cursor
-        const edit = new vscode.WorkspaceEdit();
-        edit.insert(editor.document.uri, editor.selection.active, `/* Relates to: ${ticketId} */`);
-        await vscode.workspace.applyEdit(edit);
-
-        // Refresh to resolve the new ticket
-        await refreshTickets();
-      }
-    })
-  );
-
-  // Status bar item
-  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
-  statusBar.command = 'ticketLinking.showPanel';
-  statusBar.text = '📋 Tickets';
-  statusBar.show();
-  context.subscriptions.push(statusBar);
-
-  // Clean up expired cache periodically
-  setInterval(() => {
-    if (detector) {
-      detector.clearExpiredCache();
+      }, 600000); // Every 10 minutes
     }
-  }, 600000); // Every 10 minutes
+  );
 }
 
 /**
@@ -140,7 +151,7 @@ async function refreshTickets(): Promise<void> {
 
     // Update status bar
     const statusBar = vscode.window.statusBarItems.find(
-      (item) => item.text === '📋 Tickets'
+      (item: any) => item.text === '📋 Tickets'
     );
     if (statusBar && tickets.length > 0) {
       statusBar.text = `📋 ${tickets.length} Ticket${tickets.length !== 1 ? 's' : ''}`;
@@ -169,7 +180,7 @@ async function configureCredentials(): Promise<void> {
   const apiKey = await vscode.window.showInputBox({
     prompt: `Enter ${selected} API Key (stored in workspace settings)`,
     password: true,
-    validateInput: (value) => {
+    validateInput: (value: string) => {
       if (!value) return `${selected} API Key cannot be empty`;
       return null;
     },
@@ -181,9 +192,9 @@ async function configureCredentials(): Promise<void> {
 
     // Reinitialize detector with new credentials
     const newCredentials = new Map([
-      ['linear', config.get<string>('linearApiKey') || ''],
-      ['jira', config.get<string>('jiraApiKey') || ''],
-      ['github', config.get<string>('githubToken') || ''],
+      ['linear', (config.get('linearApiKey') as string) || ''],
+      ['jira', (config.get('jiraApiKey') as string) || ''],
+      ['github', (config.get('githubToken') as string) || ''],
     ]);
     const { default: TicketDetector } = await import(
       '../../../backend/src/services/ticket-linking/ticket-detector'

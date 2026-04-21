@@ -4,6 +4,7 @@
 
 import * as vscode from 'vscode';
 import OtelApmClient, { ApmOverview, TraceSummary } from '../../../backend/src/services/observability/otel-apm-client';
+import { measureAsyncExtensionProfiler } from '@/utils/extensionProfiler';
 
 interface ApmTreeData {
   kind: 'root' | 'service' | 'trace' | 'metric';
@@ -15,7 +16,7 @@ interface ApmTreeData {
 }
 
 export class OtelApmSidebarProvider implements vscode.TreeDataProvider<ApmTreeItem> {
-  private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<ApmTreeItem | undefined>();
+  private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter();
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
   private client: OtelApmClient;
@@ -27,36 +28,46 @@ export class OtelApmSidebarProvider implements vscode.TreeDataProvider<ApmTreeIt
   constructor(private readonly context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('otelApm');
     this.client = new OtelApmClient(
-      config.get<string>('jaegerBaseUrl', 'http://localhost:16686'),
-      config.get<string>('prometheusBaseUrl', 'http://localhost:9090')
+      (config.get('jaegerBaseUrl') as string) || 'http://localhost:16686',
+      (config.get('prometheusBaseUrl') as string) || 'http://localhost:9090'
     );
 
     void this.refresh();
     this.refreshHandle = setInterval(() => {
       void this.refresh();
-    }, config.get<number>('refreshInterval', 30000));
+    }, (config.get('refreshInterval') as number) || 30000);
   }
 
   async refresh(): Promise<void> {
-    try {
-      this.services = await this.client.listServices();
-      this.overview = await this.client.getOverview(this.services[0]);
-      this.tracesByService.clear();
+    return measureAsyncExtensionProfiler(
+      {
+        id: 'otel-apm',
+        label: 'OpenTelemetry APM',
+        category: 'observability',
+        kind: 'refresh',
+      },
+      async () => {
+        try {
+          this.services = await this.client.listServices();
+          this.overview = await this.client.getOverview(this.services[0]);
+          this.tracesByService.clear();
 
-      for (const service of this.services.slice(0, 5)) {
-        this.tracesByService.set(service, await this.client.getTraces(service, '1h', 10));
+          for (const service of this.services.slice(0, 5)) {
+            this.tracesByService.set(service, await this.client.getTraces(service, '1h', 10));
+          }
+
+          this.onDidChangeTreeDataEmitter.fire(undefined);
+        } catch (error) {
+          vscode.window.showWarningMessage(
+            `Failed to load OpenTelemetry data: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        }
       }
-
-      this.onDidChangeTreeDataEmitter.fire(undefined);
-    } catch (error) {
-      vscode.window.showWarningMessage(
-        `Failed to load OpenTelemetry data: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
+    );
   }
 
   getTreeItem(element: ApmTreeItem): vscode.TreeItem {
-    return element;
+    return element as unknown as vscode.TreeItem;
   }
 
   async getChildren(element?: ApmTreeItem): Promise<ApmTreeItem[]> {

@@ -109,6 +109,9 @@ export async function doSilentRefresh(): Promise<boolean> {
   } finally {
     releaseRefreshLock();
   }
+
+  return false;
+
 }
 
 /**
@@ -136,6 +139,7 @@ export function scheduleRefresh(): void {
     console.debug(`[Session] Scheduling refresh in ${Math.round(timeUntilRefresh / 1000)}s`);
     refreshTimer = setTimeout(doSilentRefresh, timeUntilRefresh);
   }
+
 }
 
 /** @internal Reset throttle state between tests only. */

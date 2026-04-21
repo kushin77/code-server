@@ -206,6 +206,40 @@ describe('Token Exchange Script', () => {
   });
 });
 
+describe('OIDC Workload Deployments', () => {
+  const manifestPath = path.join(__dirname, '../../kubernetes/oidc-workload-deployments.yaml');
+  let manifestContent: string;
+
+  beforeAll(() => {
+    if (fs.existsSync(manifestPath)) {
+      manifestContent = fs.readFileSync(manifestPath, 'utf-8');
+    }
+  });
+
+  test('manifest should exist', () => {
+    expect(fs.existsSync(manifestPath)).toBe(true);
+  });
+
+  test('manifest should define github-actions-runner deployment', () => {
+    expect(manifestContent).toContain('name: github-actions-runner');
+    expect(manifestContent).toContain('kind: Deployment');
+    expect(manifestContent).toContain('serviceAccountName: github-actions-ci');
+  });
+
+  test('manifest should define batch processor workload identity example', () => {
+    expect(manifestContent).toContain('name: batch-processor-job');
+    expect(manifestContent).toContain('serviceAccountName: batch-processor');
+    expect(manifestContent).toContain('serviceAccountToken:');
+  });
+
+  test('manifest should include OIDC projection and security hardening', () => {
+    expect(manifestContent).toContain('/var/run/secrets/tokens/oidc');
+    expect(manifestContent).toMatch(/OIDC_ISSUER_URL|OIDC_AUDIENCE/);
+    expect(manifestContent).toMatch(/runAsNonRoot:\s*true/);
+    expect(manifestContent).toMatch(/readOnlyRootFilesystem:\s*true/);
+  });
+});
+
 describe('API Client Example', () => {
   const scriptPath = path.join(__dirname, '../../kubernetes/api-client-example.sh');
   let scriptContent: string;

@@ -10,18 +10,21 @@
     "test:ai-quality": "vitest run src/services/ai/__tests__/indexing-quality.test.ts src/services/ai/__tests__/indexing.test.ts --reporter=verbose"
   },
   "dependencies": {
+    "axios": "catalog:",
     "express": "catalog:",
     "ioredis": "catalog:",
     "jose": "catalog:",
     "pg": "catalog:",
+    "uuid": "^9.0.1",
     "pino": "catalog:"
   },
   "devDependencies": {
     "@types/express": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "@types/ioredis-mock": "^8.0.0",
     "@vitest/coverage-v8": "^4.1.4",
-    "ioredis-mock": "^9.0.0",
+    "ioredis-mock": "^8.13.1",
     "supertest": "^6.3.4",
     "typescript": "catalog:",
     "vitest": "catalog:"

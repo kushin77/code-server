@@ -2,19 +2,10 @@
 // @module      extensions/sentry-errors-sidebar
 // @description VS Code sidebar for Sentry error monitoring
 
-import * as vscode from 'vscode';
-import axios, { AxiosInstance } from 'axios';
+import * as vscode from 'vscode'
 
-interface SentryError {
-  id: string;
-  title: string;
-  level: 'fatal' | 'error' | 'warning' | 'info' | 'debug';
-  status: 'unresolved' | 'resolved' | 'ignored';
-  count: number;
-  userCount: number;
-  lastSeen: string;
-  environment: string;
-}
+import { createSentryApiClient, fetchSentryErrors, type SentryError } from './sentry-errors'
+import { measureAsyncExtensionProfiler } from '@/utils/extensionProfiler'
 
 /**
  * Sentry Errors Sidebar Provider
@@ -27,94 +18,96 @@ interface SentryError {
  * - Direct links to Sentry
  */
 export class SentryErrorsSidebarProvider implements vscode.TreeDataProvider<SentryTreeItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<SentryTreeItem | undefined>();
-  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+  private readonly _onDidChangeTreeData = new vscode.EventEmitter()
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event
 
-  private apiClient: AxiosInstance | null = null;
-  private errors: SentryError[] = [];
-  private refreshInterval: NodeJS.Timer | null = null;
+  private apiClient: ReturnType<typeof createSentryApiClient> | null = null
+  private errors: SentryError[] = []
+  private refreshInterval: ReturnType<typeof setInterval> | null = null
 
-  constructor(private context: vscode.ExtensionContext) {
-    this.loadConfig();
-    this.setupRefreshInterval();
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.loadConfig()
+    this.setupRefreshInterval()
   }
 
   private loadConfig(): void {
-    const config = vscode.workspace.getConfiguration('sentry');
-    const token = config.get<string>('token', '');
-    const organization = config.get<string>('organization', '');
-    const project = config.get<string>('project', '');
+    const config = vscode.workspace.getConfiguration('sentry')
+    const token = (config.get('token') as string) || ''
 
     if (!token) {
-      vscode.window.showWarningMessage(
-        'Sentry Error Monitor: Configure SENTRY_TOKEN in settings',
-        'Settings'
-      ).then((selected) => {
-        if (selected === 'Settings') {
-          vscode.commands.executeCommand('workbench.action.openSettings', 'sentry');
-        }
-      });
-      return;
+      void vscode.window
+        .showWarningMessage('Sentry Error Monitor: Configure SENTRY_TOKEN in settings', 'Settings')
+        .then((selected: string | undefined) => {
+          if (selected === 'Settings') {
+            void vscode.commands.executeCommand('workbench.action.openSettings', 'sentry')
+          }
+        })
+      return
     }
 
-    this.apiClient = axios.create({
-      baseURL: 'https://sentry.io/api/0',
-      headers: { 'Authorization': `Bearer ${token}` },
-      timeout: 5000,
-    });
-
-    this.loadErrors();
+    this.apiClient = createSentryApiClient(token)
+    void this.loadErrors()
   }
 
   private async loadErrors(): Promise<void> {
-    if (!this.apiClient) return;
-
-    try {
-      const config = vscode.workspace.getConfiguration('sentry');
-      const organization = config.get<string>('organization', '');
-      const project = config.get<string>('project', '');
-
-      const response = await this.apiClient.get(
-        `/projects/${organization}/${project}/issues/`,
-        { params: { query: 'is:unresolved', limit: 20 } }
-      );
-
-      this.errors = response.data;
-      this._onDidChangeTreeData.fire(undefined);
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to load Sentry errors: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+    if (!this.apiClient) {
+      return
     }
+
+    return measureAsyncExtensionProfiler(
+      {
+        id: 'sentry-errors',
+        label: 'Sentry errors sidebar',
+        category: 'observability',
+        kind: 'load',
+      },
+      async () => {
+        try {
+          const config = vscode.workspace.getConfiguration('sentry')
+          this.errors = await fetchSentryErrors(
+            {
+              token: (config.get('token') as string) || '',
+              organization: (config.get('organization') as string) || '',
+              project: (config.get('project') as string) || '',
+              environment: (config.get('environment') as string) || '',
+            },
+            this.apiClient ?? undefined
+          )
+          this._onDidChangeTreeData.fire(undefined)
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            `Failed to load Sentry errors: ${error instanceof Error ? error.message : 'Unknown error'}`
+          )
+        }
+      }
+    )
   }
 
   private setupRefreshInterval(): void {
-    const interval = vscode.workspace.getConfiguration('sentry').get('refreshInterval', 60000);
+    const interval = Number(vscode.workspace.getConfiguration('sentry').get('refreshInterval', 60000)) || 60000
 
     this.refreshInterval = setInterval(() => {
-      this.loadErrors();
-    }, interval);
+      void this.loadErrors()
+    }, interval)
   }
 
   getTreeItem(element: SentryTreeItem): vscode.TreeItem {
-    return element;
+    return element as unknown as vscode.TreeItem
   }
 
   async getChildren(element?: SentryTreeItem): Promise<SentryTreeItem[]> {
     if (!element) {
       if (this.errors.length === 0) {
-        return [new SentryTreeItem('No errors', vscode.TreeItemCollapsibleState.None)];
+        return [new SentryTreeItem('No errors', vscode.TreeItemCollapsibleState.None)]
       }
 
-      return this.errors.map((error) =>
-        new SentryTreeItem(
-          `${this.getSeverityIcon(error.level)} ${error.title}`,
-          vscode.TreeItemCollapsibleState.Collapsed,
-          error
-        )
-      );
-    } else if (element.error) {
-      const error = element.error;
+      return this.errors.map(
+        (error) => new SentryTreeItem(`${this.getSeverityIcon(error.level)} ${error.title}`, vscode.TreeItemCollapsibleState.Collapsed, error)
+      )
+    }
+
+    if (element.error) {
+      const error = element.error
 
       return [
         new SentryTreeItem(`Status: ${error.status}`, vscode.TreeItemCollapsibleState.None),
@@ -122,34 +115,34 @@ export class SentryErrorsSidebarProvider implements vscode.TreeDataProvider<Sent
         new SentryTreeItem(`Affected Users: ${error.userCount}`, vscode.TreeItemCollapsibleState.None),
         new SentryTreeItem(`Environment: ${error.environment}`, vscode.TreeItemCollapsibleState.None),
         new SentryTreeItem(`Last Seen: ${error.lastSeen}`, vscode.TreeItemCollapsibleState.None),
-      ];
+      ]
     }
 
-    return [];
+    return []
   }
 
   private getSeverityIcon(level: string): string {
     switch (level) {
       case 'fatal':
-        return '🔴';
+        return '🔴'
       case 'error':
-        return '❌';
+        return '❌'
       case 'warning':
-        return '⚠️';
+        return '⚠️'
       case 'info':
-        return 'ℹ️';
+        return 'ℹ️'
       default:
-        return '●';
+        return '●'
     }
   }
 
   public refresh(): void {
-    this.loadErrors();
+    void this.loadErrors()
   }
 
   public dispose(): void {
     if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
+      clearInterval(this.refreshInterval)
     }
   }
 }
@@ -160,18 +153,20 @@ class SentryTreeItem extends vscode.TreeItem {
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly error?: SentryError
   ) {
-    super(label, collapsibleState);
+    super(label, collapsibleState)
 
     if (error) {
-      this.tooltip = `${error.title} - ${error.count} occurrences`;
-      this.contextValue = 'error';
-      this.command = {
-        title: 'Open in Sentry',
-        command: 'sentryErrors.openInSentry',
-        arguments: [error],
-      };
+      this.tooltip = `${error.title} - ${error.count} occurrences`
+      this.contextValue = 'error'
+      if (error.permalink) {
+        this.command = {
+          title: 'Open in Sentry',
+          command: 'vscode.open',
+          arguments: [vscode.Uri.parse(error.permalink)],
+        }
+      }
     }
   }
 }
 
-export { SentryErrorsSidebarProvider, SentryTreeItem };
+export { SentryTreeItem }

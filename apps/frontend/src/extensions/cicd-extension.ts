@@ -4,31 +4,42 @@
 
 import * as vscode from 'vscode';
 import { CICDStatusSidebarProvider } from './cicd-status-sidebar';
+import { measureAsyncExtensionProfiler } from '@/utils/extensionProfiler';
 
 /**
  * Activate CI/CD Status Sidebar extension
  */
 export function activateCICDStatusSidebar(context: vscode.ExtensionContext): void {
-  const provider = new CICDStatusSidebarProvider(context);
+  void measureAsyncExtensionProfiler(
+    {
+      id: 'cicd-status',
+      label: 'CI/CD status sidebar',
+      category: 'operations',
+      kind: 'activation',
+    },
+    async () => {
+      const provider = new CICDStatusSidebarProvider(context);
 
-  // Register tree view
-  const treeView = vscode.window.createTreeView('cicdStatus', {
-    treeDataProvider: provider,
-    showCollapseAll: true,
-  });
+      // Register tree view
+      const treeView = vscode.window.createTreeView('cicdStatus', {
+        treeDataProvider: provider,
+        showCollapseAll: true,
+      });
 
-  // Register commands
-  registerCommands(provider, context);
+      // Register commands
+      registerCommands(provider, context);
 
-  // Watch for configuration changes
-  vscode.workspace.onDidChangeConfiguration((event) => {
-    if (event.affectsConfiguration('cicd')) {
-      provider.refresh();
+      // Watch for configuration changes
+      vscode.workspace.onDidChangeConfiguration((event: any) => {
+        if (event.affectsConfiguration('cicd')) {
+          provider.refresh();
+        }
+      });
+
+      // Store provider in context for cleanup
+      context.subscriptions.push(treeView, provider as any);
     }
-  });
-
-  // Store provider in context for cleanup
-  context.subscriptions.push(treeView, provider as any);
+  );
 }
 
 /**

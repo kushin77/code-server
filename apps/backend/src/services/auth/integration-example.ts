@@ -9,11 +9,9 @@ import express, { Request, Response, NextFunction } from 'express';
 import {
   JwtValidator,
   JwtTokenClient,
-  jwtAuth,
-  requireJwt,
-  requireClaim,
   JwtRedisCache,
 } from './index.js';
+import { jwtAuth, requireJwt, requireClaim } from '../../middleware/jwt-auth.js';
 import Redis from 'ioredis';
 
 /**

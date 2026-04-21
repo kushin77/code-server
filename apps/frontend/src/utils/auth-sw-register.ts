@@ -113,7 +113,7 @@ function setupMessageHandlers(): void {
   /**
    * Listen for messages from SW
    */
-  navigator.serviceWorker.addEventListener('message', async (event: ExtendableMessageEvent) => {
+  navigator.serviceWorker.addEventListener('message', async (event: MessageEvent) => {
     const { data } = event;
     metrics.sw_message_received++;
 

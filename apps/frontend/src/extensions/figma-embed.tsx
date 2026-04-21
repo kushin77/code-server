@@ -14,8 +14,9 @@ import {
   Badge,
   Box,
   Flex,
-} from '@primer/react';
+} from '@/ui/primer';
 import axios, { AxiosInstance } from 'axios';
+import { measureAsyncExtensionProfiler, useExtensionMountProfiler } from '@/utils/extensionProfiler';
 
 interface FigmaFile {
   key: string;
@@ -80,6 +81,12 @@ interface FigmaConfig {
  * - Design version history
  */
 export const FigmaEmbedPanel: React.FC = () => {
+  useExtensionMountProfiler({
+    id: 'figma-embed',
+    label: 'Figma embed panel',
+    category: 'design',
+  });
+
   const [config, setConfig] = useState<FigmaConfig | null>(null);
   const [apiClient, setApiClient] = useState<AxiosInstance | null>(null);
   const [files, setFiles] = useState<FigmaFile[]>([]);
@@ -108,7 +115,7 @@ export const FigmaEmbedPanel: React.FC = () => {
         timeout: 10000,
       });
       setApiClient(client);
-      fetchFiles();
+      void fetchFiles(client);
     }
   }, [config]);
 
@@ -121,7 +128,7 @@ export const FigmaEmbedPanel: React.FC = () => {
     const fileKey = localStorage.getItem('figma.fileKey');
 
     if (token) {
-      setConfig({ token, fileKey });
+      setConfig({ token, fileKey: fileKey ?? undefined });
     } else {
       setError('Figma token not configured. Open settings to configure.');
     }
@@ -130,25 +137,35 @@ export const FigmaEmbedPanel: React.FC = () => {
   /**
    * Fetch list of Figma files
    */
-  const fetchFiles = useCallback(async () => {
-    if (!apiClient) return;
+  const fetchFiles = useCallback(async (client: AxiosInstance | null = apiClient) => {
+    if (!client) return;
 
-    try {
-      setLoading(true);
-      setError(null);
+    return measureAsyncExtensionProfiler(
+      {
+        id: 'figma-embed',
+        label: 'Figma embed panel',
+        category: 'design',
+        kind: 'load',
+      },
+      async () => {
+        try {
+          setLoading(true);
+          setError(null);
 
-      // Get files from team or recent files
-      const response = await apiClient.get('/files', {
-        params: { team_id: config?.teamId },
-      });
+          // Get files from team or recent files
+          const response = await client.get('/files', {
+            params: { team_id: config?.teamId },
+          });
 
-      setFiles(response.data.files || []);
-    } catch (err) {
-      setError(`Failed to fetch files: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error('[Figma] Error fetching files:', err);
-    } finally {
-      setLoading(false);
-    }
+          setFiles(response.data.files || []);
+        } catch (err) {
+          setError(`Failed to fetch files: ${err instanceof Error ? err.message : 'Unknown error'}`);
+          console.error('[Figma] Error fetching files:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
   }, [apiClient, config?.teamId]);
 
   /**
@@ -300,8 +317,8 @@ export const FigmaEmbedPanel: React.FC = () => {
         <PanelHeader>
           <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
             <span>Figma Designs</span>
-            <Button size="small" onClick={fetchFiles} disabled={loading}>
-              {loading ? <Spinner size="small" /> : 'Refresh'}
+            <Button size="small" onClick={() => void fetchFiles()} disabled={loading}>
+              {loading ? <Spinner /> : 'Refresh'}
             </Button>
           </Box>
         </PanelHeader>

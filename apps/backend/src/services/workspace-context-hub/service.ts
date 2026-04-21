@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import {
+  WorkspaceAccessControlContext,
   WorkspaceAuditEvent,
   WorkspaceLaunchMetadata,
   WorkspaceLaunchProvenance,
@@ -16,6 +17,9 @@ import {
 } from "./types.js";
 
 const SENSITIVE_KEY_PATTERN = /(token|secret|password|passwd|private|key|credential)/i;
+const ACCESS_CONTROL_POLICY_VERSION = "workspace-access-control/v1";
+const ACCESS_CONTROL_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const ACCESS_CONTROL_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const PROVENANCE_POLICY_VERSION = "ephemeral-provenance-v1";
 const PROVENANCE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const PROVENANCE_CLOCK_SKEW_MS = 5 * 60 * 1000;
@@ -459,18 +463,20 @@ export class WorkspaceContextHubService {
           blockedTerminalReplayCount: 0,
           redactedFields: [],
           requiresConfirmation: false,
+          accessControl: request.accessControl,
           generatedAt: Date.now(),
         },
         activeRepoId: request.targetRepoId || snapshot?.activeRepoId || "",
       };
     }
 
+    const accessControlError = this.validateLaunchAccessControl(request.accessControl);
     const provenanceError = this.validateLaunchProvenance(request.provenance);
     const authorizationError = this.validateLaunchAuthorization(workspaceSet, request);
     const sanitized = snapshot ? this.sanitizeSnapshot(workspaceSet, snapshot, request) : undefined;
     const activeRepoId = request.targetRepoId || snapshot?.activeRepoId || workspaceSet.repositories[0]?.repoId || "";
-    const sessionFingerprint = request.provenance
-      ? this.computeSessionFingerprint(workspaceSet, activeRepoId, request.provenance, snapshot)
+    const sessionFingerprint = request.accessControl && request.provenance
+      ? this.computeSessionFingerprint(workspaceSet, activeRepoId, request.accessControl, request.provenance, snapshot)
       : undefined;
     const restoreMetadata: WorkspaceLaunchMetadata = {
       workspaceSetId: workspaceSet.id,
@@ -482,17 +488,47 @@ export class WorkspaceContextHubService {
       redactedFields: sanitized?.redactedFields ?? [],
       requiresConfirmation: sanitized?.requiresConfirmation ?? false,
       sessionFingerprint,
+      accessControl: request.accessControl,
       provenance: request.provenance,
       generatedAt: Date.now(),
     };
 
     return {
       workspaceSet,
-      reason: provenanceError ?? authorizationError,
+      reason: accessControlError ?? provenanceError ?? authorizationError,
       sanitized,
       restoreMetadata,
       activeRepoId,
     };
+  }
+
+  private validateLaunchAccessControl(accessControl?: WorkspaceAccessControlContext): string | undefined {
+    if (!accessControl) {
+      return "Launch requires zero-trust workspace trust context";
+    }
+
+    if (accessControl.workspaceTrustMode !== "zero-trust") {
+      return "Workspace trust mode must be zero-trust";
+    }
+
+    if (accessControl.filePermissionEnforcement !== "strict") {
+      return "File-permission enforcement must be strict";
+    }
+
+    if (accessControl.policyVersion !== ACCESS_CONTROL_POLICY_VERSION) {
+      return `Unsupported workspace access-control policy version ${accessControl.policyVersion}`;
+    }
+
+    const now = Date.now();
+    if (accessControl.verifiedAt > now + ACCESS_CONTROL_CLOCK_SKEW_MS) {
+      return "Workspace access-control timestamp is in the future";
+    }
+
+    if (now - accessControl.verifiedAt > ACCESS_CONTROL_MAX_AGE_MS) {
+      return "Workspace access-control record is stale";
+    }
+
+    return undefined;
   }
 
   private validateLaunchProvenance(provenance?: WorkspaceLaunchProvenance): string | undefined {
@@ -535,6 +571,7 @@ export class WorkspaceContextHubService {
   private computeSessionFingerprint(
     workspaceSet: WorkspaceSetDefinition,
     activeRepoId: string,
+    accessControl: WorkspaceAccessControlContext,
     provenance: WorkspaceLaunchProvenance,
     snapshot?: WorkspaceSnapshot,
   ): string {
@@ -546,6 +583,12 @@ export class WorkspaceContextHubService {
       repositoryIds: [...workspaceSet.repositories].map((repo) => repo.repoId).sort(),
       openFiles: [...(snapshot?.openFiles ?? [])].sort(),
       terminalCount: snapshot?.terminals.length ?? 0,
+      accessControl: {
+        workspaceTrustMode: accessControl.workspaceTrustMode,
+        filePermissionEnforcement: accessControl.filePermissionEnforcement,
+        policyVersion: accessControl.policyVersion,
+        verifiedAt: accessControl.verifiedAt,
+      },
       provenance: {
         imageDigest: provenance.imageDigest,
         attestationRef: provenance.attestationRef,
@@ -757,4 +800,4 @@ export function createWorkspaceContextHubService(): WorkspaceContextHubService {
   return new WorkspaceContextHubService();
 }
 
-export type { WorkspaceAccessMode, WorkspaceAuditEvent, WorkspaceLaunchMetadata, WorkspaceLaunchProvenance, WorkspaceLaunchRequest, WorkspaceLaunchResult, WorkspaceProvenanceVerificationResult, WorkspaceRepositoryDescriptor, WorkspaceSetDefinition, WorkspaceSnapshot, WorkspaceTerminalSnapshot } from "./types.js";
+export type { WorkspaceAccessControlContext, WorkspaceAccessMode, WorkspaceAuditEvent, WorkspaceLaunchMetadata, WorkspaceLaunchProvenance, WorkspaceLaunchRequest, WorkspaceLaunchResult, WorkspaceProvenanceVerificationResult, WorkspaceRepositoryDescriptor, WorkspaceSetDefinition, WorkspaceSnapshot, WorkspaceTerminalSnapshot } from "./types.js";

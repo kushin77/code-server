@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import * as vscode from 'vscode';
+import { measureAsyncExtensionProfiler, useExtensionMountProfiler } from '@/utils/extensionProfiler';
 
 interface IncidentData {
   id: string;
@@ -34,6 +35,12 @@ interface IncidentStats {
  * - Incident creation
  */
 export const PagerDutyIncidentsPanel: React.FC = () => {
+  useExtensionMountProfiler({
+    id: 'pagerduty-incidents',
+    label: 'PagerDuty incidents panel',
+    category: 'incident-response',
+  });
+
   const [incidents, setIncidents] = useState<IncidentData[]>([]);
   const [stats, setStats] = useState<IncidentStats>({ triggered: 0, acknowledged: 0, resolved: 0 });
   const [loading, setLoading] = useState(true);
@@ -41,30 +48,40 @@ export const PagerDutyIncidentsPanel: React.FC = () => {
   const [selectedIncident, setSelectedIncident] = useState<IncidentData | null>(null);
 
   useEffect(() => {
-    loadIncidents();
+    void loadIncidents();
     const interval = setInterval(loadIncidents, 15000); // Refresh every 15 seconds
 
     return () => clearInterval(interval);
   }, [filterStatus]);
 
   const loadIncidents = async (): Promise<void> => {
-    try {
-      setLoading(true);
+    return measureAsyncExtensionProfiler(
+      {
+        id: 'pagerduty-incidents',
+        label: 'PagerDuty incidents panel',
+        category: 'incident-response',
+        kind: 'load',
+      },
+      async () => {
+        try {
+          setLoading(true);
 
-      const response = await fetch(
-        `http://localhost:3100/api/incidents?status=${filterStatus}&limit=20`
-      );
-      const data = await response.json();
+          const response = await fetch(
+            `http://localhost:3100/api/incidents?status=${filterStatus}&limit=20`
+          );
+          const data = await response.json();
 
-      setIncidents(data.incidents || []);
-      setStats(data.stats || { triggered: 0, acknowledged: 0, resolved: 0 });
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to load incidents: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    } finally {
-      setLoading(false);
-    }
+          setIncidents(data.incidents || []);
+          setStats(data.stats || { triggered: 0, acknowledged: 0, resolved: 0 });
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            `Failed to load incidents: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
   };
 
   const acknowledgeIncident = async (incidentId: string): Promise<void> => {

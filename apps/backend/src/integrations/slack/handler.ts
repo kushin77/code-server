@@ -1,7 +1,6 @@
-#!/usr/bin/env bash
-# @file        apps/backend/src/integrations/slack/handler.ts
-# @module      integrations/slack
-# @description Slack slash command handler for IDE session sharing
+// @file        apps/backend/src/integrations/slack/handler.ts
+// @module      integrations/slack
+// @description Slack slash command handler for IDE session sharing
 
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
@@ -54,6 +53,7 @@ function verifySlackRequest(req: Request): boolean {
   const slackSignature = req.headers['x-slack-signature'] as string;
   const timestamp = req.headers['x-slack-request-timestamp'] as string;
   const body = req.rawBody as string;
+  const slackSigningSecret = process.env.SLACK_SIGNING_SECRET || '';
 
   if (!slackSignature || !timestamp) {
     return false;
@@ -67,7 +67,7 @@ function verifySlackRequest(req: Request): boolean {
 
   // Verify signature
   const baseString = `v0:${timestamp}:${body}`;
-  const hash = createHmac('sha256', SLACK_SIGNING_SECRET)
+  const hash = createHmac('sha256', slackSigningSecret)
     .update(baseString)
     .digest('hex');
   const computedSignature = `v0=${hash}`;

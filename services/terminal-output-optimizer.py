@@ -31,9 +31,10 @@ import time
 import json
 import asyncio
 import logging
+import re
 from dataclasses import dataclass, asdict
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import deque
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -48,6 +49,27 @@ import base64
 BATCH_TIMEOUT_MS = 20  # Flush batch after 20ms (imperceptible delay)
 BATCH_MAX_SIZE = 4096  # Max bytes before forcing flush
 COMPRESSION_THRESHOLD = 100  # Only compress if > 100 bytes
+
+# DLP configuration
+DLP_BLOCK_PATTERNS = {
+    'private_key_block': re.compile(r'-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----', re.IGNORECASE),
+    'github_pat': re.compile(r'\bgithub_pat_[A-Za-z0-9_]{20,}\b', re.IGNORECASE),
+    'github_token': re.compile(r'\bgh[pousr]_[A-Za-z0-9]{36,}\b', re.IGNORECASE),
+    'slack_token': re.compile(r'\bxox[baprs]-[A-Za-z0-9-]{10,}\b', re.IGNORECASE),
+    'bearer_token': re.compile(r'Bearer\s+[A-Za-z0-9\-_.=+/]+', re.IGNORECASE),
+    'credential_assignment': re.compile(
+        r'(?i)(?:--(?:password|passwd|token|secret|api[-_]?key|credential)\b(?:\s*=\s*|\s+)\S+|'
+        r'(?:password|passwd|token|secret|api[_-]?key|credential)\s*[:=]\s*\S+)',
+    ),
+}
+
+DLP_REDACT_PATTERNS = [
+    (re.compile(r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'), '[EMAIL-REDACTED]'),
+    (re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '[IP-REDACTED]'),
+]
+
+BLOCKED_OUTPUT_PLACEHOLDER = '[blocked sensitive terminal output]'
+REDACTED_OUTPUT_PLACEHOLDER = '[redacted sensitive terminal output]'
 
 # Performance monitoring
 ENABLE_METRICS = True
@@ -70,6 +92,8 @@ class TerminalUpdate:
     timestamp: float
     data: str
     type: str = 'output'  # output, control, resize, etc.
+    dlp_action: str = 'allow'  # allow, redact, or block
+    dlp_reason: Optional[str] = None
 
 @dataclass
 class BatchMetrics:
@@ -81,6 +105,8 @@ class BatchMetrics:
     compression_ratio: float
     avg_batch_latency_ms: float
     messages_per_second: int
+    blocked_updates: int
+    redacted_updates: int
 
 ###############################################################################
 # BATCHING ENGINE
@@ -119,18 +145,49 @@ class TerminalBatchOptimizer:
         self.messages_batched = 0
         self.bytes_sent = 0
         self.bytes_saved = 0
+        self.blocked_updates = 0
+        self.redacted_updates = 0
         self.batch_start_time = time.time()
         self.batch_times: deque = deque(maxlen=100)
+
+    def _apply_dlp_controls(self, data: str) -> tuple[str, str, Optional[str]]:
+        """Inspect terminal output for secrets and PII before buffering."""
+        reasons: List[str] = []
+
+        for name, pattern in DLP_BLOCK_PATTERNS.items():
+            if pattern.search(data):
+                reasons.append(name)
+
+        if reasons:
+            self.blocked_updates += 1
+            return BLOCKED_OUTPUT_PLACEHOLDER, 'block', ','.join(reasons)
+
+        sanitized = data
+        redacted = False
+        for pattern, replacement in DLP_REDACT_PATTERNS:
+            if pattern.search(sanitized):
+                sanitized = pattern.sub(replacement, sanitized)
+                redacted = True
+
+        if redacted:
+            self.redacted_updates += 1
+            return sanitized, 'redact', 'pii_redacted'
+
+        return data, 'allow', None
     
     def add_update(self, data: str, update_type: str = 'output') -> Optional[Dict[str, Any]]:
         """
         Add an update to the batch.
         Returns: Batch to send (if flushed), or None if batched.
         """
+        sanitized_data, dlp_action, dlp_reason = self._apply_dlp_controls(data)
+
         update = TerminalUpdate(
             timestamp=time.time(),
-            data=data,
-            type=update_type
+            data=sanitized_data,
+            type=update_type,
+            dlp_action=dlp_action,
+            dlp_reason=dlp_reason,
         )
         
         # Check if we should flush based on existing batch
@@ -146,7 +203,7 @@ class TerminalBatchOptimizer:
                 should_flush = True
             
             # Check size
-            new_size = self.batch_size + len(data)
+            new_size = self.batch_size + len(sanitized_data)
             if new_size > self.max_batch_size:
                 should_flush = True
         
@@ -160,7 +217,7 @@ class TerminalBatchOptimizer:
         
         # Add to current batch
         self.batch_buffer.append(update)
-        self.batch_size += len(data)
+        self.batch_size += len(sanitized_data)
         self.pending_flush = True
         
         return None
@@ -206,7 +263,12 @@ class TerminalBatchOptimizer:
             'combined_size': len(combined_data),
             'compressed': compressed_data is not None,
             'compression_ratio': compression_ratio,
-            'latency_ms': batch_latency_ms
+            'latency_ms': batch_latency_ms,
+            'dlp': {
+                'blocked_updates': self.blocked_updates,
+                'redacted_updates': self.redacted_updates,
+                'contains_sensitive_content': self.blocked_updates > 0 or self.redacted_updates > 0,
+            },
         }
         
         # Update metrics
@@ -243,13 +305,15 @@ class TerminalBatchOptimizer:
         )
         
         return BatchMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             messages_batched=self.messages_batched,
             bytes_sent=self.bytes_sent,
             bytes_saved=self.bytes_saved,
             compression_ratio=compression_ratio,
             avg_batch_latency_ms=avg_batch_latency,
-            messages_per_second=int(messages_per_sec)
+            messages_per_second=int(messages_per_sec),
+            blocked_updates=self.blocked_updates,
+            redacted_updates=self.redacted_updates,
         )
 
 ###############################################################################

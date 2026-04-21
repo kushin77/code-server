@@ -69,6 +69,7 @@ import {
   type SessionBrokerAccessConfig,
   type SessionBrokerPrincipal,
 } from './session-access-control.js';
+import { resolveSessionSandboxDecision, type SessionSandboxMode } from './session-sandbox.js';
 import { buildSessionPublicUrl, stripSessionPublicRoutePrefix } from './session-public-route.js';
 import {
   createSessionBrokerTelemetryState,
@@ -88,6 +89,7 @@ import {
 } from './session-shadow-replay.js';
 import RedisSessionStore from './redis-session-store.js';
 import { setupGracefulShutdown } from './shutdown.js';
+import IncidentCorrelationEngine from './incident-correlation.js';
 
 interface RuntimeConfig {
   logLevel: string;
@@ -101,6 +103,8 @@ interface RuntimeConfig {
   sessionCpuLimit: string;
   sessionMemoryLimit: string;
   sessionStorageLimit: string;
+  sessionSandboxRuntime: string;
+  sessionSandboxRequired: boolean;
   sessionMaxConcurrentPerUser: number;
   sessionMaxConcurrentPerTeam: number;
   sessionMaxRuntimeSeconds: number;
@@ -203,6 +207,8 @@ const validateRuntimeConfig = (): RuntimeConfig => {
     sessionCpuLimit: readRequiredEnv('SESSION_CPU_LIMIT'),
     sessionMemoryLimit: readRequiredEnv('SESSION_MEMORY_LIMIT'),
     sessionStorageLimit: readRequiredEnv('SESSION_STORAGE_LIMIT'),
+    sessionSandboxRuntime: process.env.SESSION_SANDBOX_RUNTIME?.trim() || '',
+    sessionSandboxRequired: readBooleanEnv('SESSION_SANDBOX_REQUIRED', 'false'),
     sessionMaxConcurrentPerUser: readPositiveIntegerEnv('SESSION_MAX_CONCURRENT_PER_USER', '1'),
     sessionMaxConcurrentPerTeam: readPositiveIntegerEnv('SESSION_MAX_CONCURRENT_PER_TEAM', '3'),
     sessionMaxRuntimeSeconds: readPositiveIntegerEnv('SESSION_MAX_RUNTIME_SECONDS', '28800'),
@@ -232,6 +238,8 @@ const validateRuntimeConfig = (): RuntimeConfig => {
   if (!/^\d+[kKmMgG]$/.test(config.sessionStorageLimit)) {
     throw new Error('[session-broker] SESSION_STORAGE_LIMIT must use k, m, or g units');
   }
+
+  resolveSessionSandboxDecision(config.sessionSandboxRuntime, config.sessionSandboxRequired);
 
   return config;
 };
@@ -402,6 +410,8 @@ interface ContainerConfig {
   hostname: string;
   cpuLimit: string;
   memoryLimit: string;
+  runtime?: string;
+  sandboxMode: SessionSandboxMode;
   portMapping: { host: number; container: number };
   volumes: { [containerPath: string]: { bind: string; 'ro': boolean } };
   env: { [key: string]: string };
@@ -450,6 +460,8 @@ class SessionManager {
       socketPath,
       codeServerImageId: runtimeConfig.codeServerImageId,
       redisEnabled: this.useRedis,
+      sandboxRuntime: runtimeConfig.sessionSandboxRuntime || 'default',
+      sandboxRequired: runtimeConfig.sessionSandboxRequired,
     });
   }
 
@@ -728,6 +740,7 @@ class SessionManager {
         '8080/tcp': {}
       },
       HostConfig: {
+        ...(containerConfig.runtime ? { Runtime: containerConfig.runtime } : {}),
         PortBindings: {
           '8080/tcp': [{ HostPort: String(session.containerPort) }]
         },
@@ -2045,11 +2058,18 @@ class SessionManager {
 
   private buildContainerConfig(session: SessionContext): ContainerConfig {
     const { workspacePath, profilePath } = this.getSessionStoragePaths(session.sessionId);
+    const sandboxDecision = resolveSessionSandboxDecision(
+      this.runtimeConfig.sessionSandboxRuntime,
+      this.runtimeConfig.sessionSandboxRequired,
+    );
+
     return {
       image: session.baseImageId,
       hostname: session.containerName,
       cpuLimit: session.quotas.cpuLimit,
       memoryLimit: session.quotas.memoryLimit,
+      runtime: sandboxDecision.runtime,
+      sandboxMode: sandboxDecision.mode,
       portMapping: { host: session.containerPort, container: 8080 },
       volumes: {
         '/home/coder/workspace': {
@@ -2075,6 +2095,9 @@ class SessionManager {
         SESSION_PROVENANCE_POLICY_VERSION: session.provenance.policyVersion,
         SESSION_PROVENANCE_FRESHNESS_HOURS: String(session.provenance.freshnessHours),
         SESSION_PROVENANCE_SESSION_FINGERPRINT: session.provenance.sessionFingerprint,
+        SESSION_SANDBOX_MODE: sandboxDecision.mode,
+        SESSION_SANDBOX_ENABLED: String(sandboxDecision.enabled),
+        SESSION_SANDBOX_RUNTIME: sandboxDecision.runtime || '',
         SERVICE_URL: 'https://open-vsx.org/vscode/gallery',
         ITEM_URL: 'https://open-vsx.org/vscode/item',
         CS_DISABLE_FILE_DOWNLOADS: 'false',
@@ -3744,6 +3767,29 @@ const server = app.listen(PORT, async () => {
     logger.error('Redis store initialization failed', { error: String(error) });
     if (process.env.SESSION_REDIS_REQUIRED === 'true') {
       process.exit(1);
+    }
+  }
+
+  // Initialize incident correlation engine for error budget monitoring (Issue #1061)
+  if (process.env.INCIDENT_CORRELATION_ENABLED !== 'false') {
+    try {
+      const correlationEngine = new IncidentCorrelationEngine(
+        manager['db'] as unknown as import('pg').Pool,
+        process.env.PROMETHEUS_URL || 'http://prometheus:9090',
+        process.env.LOKI_URL || 'http://loki:3100',
+        process.env.MATRIX_API_URL || 'http://matrix-homeserver:8008',
+        process.env.MATRIX_TOKEN || '',
+        process.env.MATRIX_INCIDENTS_ROOM_ID || ''
+      );
+
+      // Start continuous SLO monitoring
+      await correlationEngine.start();
+      logger.info('Incident correlation engine started');
+    } catch (error) {
+      logger.warn('Incident correlation engine initialization failed', {
+        error: String(error),
+      });
+      // Non-blocking failure: monitoring is optional
     }
   }
   

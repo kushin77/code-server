@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import QRCode from 'qrcode.react'
+import QRCode from '@/components/QRCode'
 import { Button, Input, Alert, Card, Spinner } from '@/components/Common'
 import { rbacAPI } from '@/api/rbac-client'
 
@@ -244,7 +244,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                 </Card>
               </div>
 
-              {error && <Alert type="error">{error}</Alert>}
+              {state.error && <Alert type="error">{state.error}</Alert>}
 
               <div className="flex gap-4">
                 <Button
@@ -334,7 +334,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                 Enter the 6-digit code from your authenticator app to verify the setup:
               </p>
 
-              {error && <Alert type="error">{error}</Alert>}
+              {state.error && <Alert type="error">{state.error}</Alert>}
 
               <form onSubmit={handleVerifyTOTP} className="space-y-4">
                 <Input
@@ -343,7 +343,7 @@ ${state.backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}`
                   placeholder="000000"
                   maxLength={6}
                   value={state.totpCode}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = e.target.value.replace(/\D/g, '').slice(0, 6)
                     setState((prev) => ({ ...prev, totpCode: value, error: null }))
                   }}

@@ -5,10 +5,14 @@
 // @owner      Infrastructure Team
 // @status      ACTIVE
 
-export { JwtValidator, type JwtClaims, type CachedKey } from './jwt-validator';
-export { JwtTokenClient, type TokenResponse } from './jwt-token-client';
-export { JwtRedisCache } from './jwt-redis-cache';
-export { jwtMetrics, metricsHandler, renderMetrics } from './jwt-metrics';
+import { JwtValidator } from './jwt-validator.js';
+import { JwtTokenClient } from './jwt-token-client.js';
+import { JwtRedisCache } from './jwt-redis-cache.js';
+
+export { JwtValidator, type JwtClaims, type CachedKey } from './jwt-validator.js';
+export { JwtTokenClient, type TokenResponse } from './jwt-token-client.js';
+export { JwtRedisCache } from './jwt-redis-cache.js';
+export { jwtMetrics, metricsHandler, renderMetrics } from './jwt-metrics.js';
 
 /**
  * Create a complete service-to-service auth stack

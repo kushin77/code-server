@@ -45,6 +45,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@mui/material': path.resolve(__dirname, './src/shims/mui-material.tsx'),
+      '@mui/icons-material': path.resolve(__dirname, './src/shims/mui-icons-material.tsx'),
     },
   },
 })

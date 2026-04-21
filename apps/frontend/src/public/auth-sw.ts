@@ -13,6 +13,15 @@ type SessionMessage =
   | { type: 'SESSION_REFRESH_START' }
   | { type: 'SESSION_REFRESH_FAILED'; reason: string };
 
+type AuthServiceWorkerFetchEvent = Event & {
+  request: Request;
+  respondWith(response: Promise<Response> | Response): void;
+};
+
+type AuthServiceWorkerExtendableEvent = Event & {
+  waitUntil(promise: Promise<unknown> | unknown): void;
+};
+
 // Configuration constants
 const REFRESH_ENDPOINT = '/api/auth/refresh';
 const REFRESH_TIMEOUT_MS = 5000; // Max time to wait for refresh before returning error
@@ -121,7 +130,7 @@ async function notifyClients(message: SessionMessage): Promise<void> {
  * Main request interception handler
  * Intercepts all same-origin requests and handles 401 with automatic refresh
  */
-(self as any).addEventListener('fetch', (event: FetchEvent) => {
+(self as any).addEventListener('fetch', (event: AuthServiceWorkerFetchEvent) => {
   const { request } = event;
 
   // Only intercept GET/POST requests
@@ -181,7 +190,7 @@ async function notifyClients(message: SessionMessage): Promise<void> {
 /**
  * Service Worker activation - clean up old caches
  */
-(self as any).addEventListener('activate', (event: ExtendableEvent) => {
+(self as any).addEventListener('activate', (event: AuthServiceWorkerExtendableEvent) => {
   event.waitUntil(
     (async () => {
       const cacheNames = await caches.keys();
@@ -203,14 +212,14 @@ async function notifyClients(message: SessionMessage): Promise<void> {
 /**
  * Service Worker installation
  */
-(self as any).addEventListener('install', (event: ExtendableEvent) => {
+(self as any).addEventListener('install', (event: AuthServiceWorkerExtendableEvent) => {
   event.waitUntil((self as any).skipWaiting());
 });
 
 /**
  * Message handler for communication with page JS
  */
-(self as any).addEventListener('message', (event: ExtendableMessageEvent) => {
+(self as any).addEventListener('message', (event: MessageEvent) => {
   const { data } = event;
 
   if (data.type === 'SKIP_WAITING') {

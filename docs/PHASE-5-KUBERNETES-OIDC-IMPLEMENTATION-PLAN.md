@@ -100,8 +100,8 @@ The oauth2-oidc-issuer service (Phase 2.1) is already configured for Kubernetes:
 ## Implementation Sequence
 
 ### Step 1: Kubernetes Manifests (4 hours)
-- [ ] Create `k8s/oidc-serviceaccounts.yaml` with ServiceAccount definitions
-- [ ] Create `k8s/oidc-workload-deployments.yaml` with example deployments
+- [x] Create `kubernetes/oidc-serviceaccounts.yaml` with ServiceAccount definitions
+- [x] Create `kubernetes/oidc-workload-deployments.yaml` with example deployments
 - [ ] Document token projection in pod specs
 - [ ] Verify manifests are syntactically correct
 

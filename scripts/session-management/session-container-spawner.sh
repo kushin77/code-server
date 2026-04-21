@@ -28,6 +28,11 @@ CPU_LIMIT="${CPU_LIMIT:-2.0}"
 MEMORY_LIMIT="${MEMORY_LIMIT:-4g}"
 STORAGE_LIMIT="${STORAGE_LIMIT:-50g}"
 SESSION_TTL_SECONDS="${SESSION_TTL_SECONDS:-28800}"  # 8 hours default
+SESSION_SANDBOX_RUNTIME="${SESSION_SANDBOX_RUNTIME:-}"
+SESSION_SANDBOX_REQUIRED="${SESSION_SANDBOX_REQUIRED:-false}"
+SANDBOX_MODE="default"
+SANDBOX_RUNTIME=""
+SANDBOX_ENABLED="false"
 
 # Base image
 BASE_IMAGE="${CODE_SERVER_IMAGE:-code-server-enterprise:dev}"
@@ -65,6 +70,32 @@ setup_session_directories() {
 
 create_session_container() {
   log_step "Creating Docker container with isolation"
+
+  SANDBOX_MODE="default"
+  SANDBOX_RUNTIME=""
+  SANDBOX_ENABLED="false"
+
+  if [[ -n "$SESSION_SANDBOX_RUNTIME" ]]; then
+    case "${SESSION_SANDBOX_RUNTIME,,}" in
+      gvisor|runsc)
+        SANDBOX_RUNTIME="runsc"
+        SANDBOX_MODE="gvisor"
+        SANDBOX_ENABLED="true"
+        ;;
+      *)
+        log_error_step "Unsupported SESSION_SANDBOX_RUNTIME value: $SESSION_SANDBOX_RUNTIME"
+        return 1
+        ;;
+    esac
+  elif [[ "${SESSION_SANDBOX_REQUIRED,,}" == "true" ]]; then
+    log_error_step "SESSION_SANDBOX_REQUIRED is true but SESSION_SANDBOX_RUNTIME is empty"
+    return 1
+  fi
+
+  local -a runtime_args=()
+  if [[ -n "$SANDBOX_RUNTIME" ]]; then
+    runtime_args+=(--runtime "$SANDBOX_RUNTIME")
+  fi
   
   # Calculate resource limits for Docker
   # shellcheck disable=SC2034
@@ -81,6 +112,7 @@ create_session_container() {
     --hostname "$CONTAINER_NAME" \
     --network "$NETWORK" \
     --publish "$PORT:8080" \
+    "${runtime_args[@]}" \
     --cpus "$CPU_LIMIT" \
     --memory "$MEMORY_LIMIT" \
     --memory-swap "$MEMORY_LIMIT" \
@@ -101,6 +133,9 @@ create_session_container() {
     --env EXPIRES_AT="$(date -u -d "+$SESSION_TTL_SECONDS seconds" '+%Y-%m-%dT%H:%M:%SZ')" \
     --env PASSWORD="${CODE_SERVER_PASSWORD}" \
     --env SUDO_PASSWORD="${CODE_SERVER_PASSWORD}" \
+    --env SESSION_SANDBOX_MODE="$SANDBOX_MODE" \
+    --env SESSION_SANDBOX_ENABLED="$SANDBOX_ENABLED" \
+    --env SESSION_SANDBOX_RUNTIME="$SANDBOX_RUNTIME" \
     --env SERVICE_URL="https://open-vsx.org/vscode/gallery" \
     --env ITEM_URL="https://open-vsx.org/vscode/item" \
     --env CS_DISABLE_FILE_DOWNLOADS="false" \
@@ -195,6 +230,8 @@ output_session_details() {
 ║ Memory Limit:      $MEMORY_LIMIT
 ║ Storage Limit:     $STORAGE_LIMIT
 ║ TTL:               $SESSION_TTL_SECONDS seconds
+║ Sandbox Mode:      $SANDBOX_MODE
+║ Sandbox Runtime:   ${SANDBOX_RUNTIME:-default}
 ║                                                                ║
 ║ Created At:        $(date -u '+%Y-%m-%dT%H:%M:%SZ')
 ║ Expires At:        $(date -u -d "+$SESSION_TTL_SECONDS seconds" '+%Y-%m-%dT%H:%M:%SZ')

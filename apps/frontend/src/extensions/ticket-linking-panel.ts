@@ -11,16 +11,16 @@ import * as vscode from 'vscode';
  */
 export class TicketLinkingPanel {
   public static currentPanel: TicketLinkingPanel | undefined;
-  private readonly panel: vscode.WebviewPanel;
-  private readonly extensionUri: vscode.Uri;
+  private readonly panel: any;
+  private readonly extensionUri: any;
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+  private constructor(panel: any, extensionUri: any) {
     this.panel = panel;
     this.extensionUri = extensionUri;
 
     this.panel.onDidDispose(() => this.dispose(), null);
     this.panel.webview.onDidReceiveMessage(
-      async (message) => {
+      async (message: any) => {
         await this.handleMessage(message);
       },
       null
@@ -29,7 +29,7 @@ export class TicketLinkingPanel {
     this.update();
   }
 
-  public static createOrShow(extensionUri: vscode.Uri): TicketLinkingPanel {
+  public static createOrShow(extensionUri: any): TicketLinkingPanel {
     const column = vscode.ViewColumn.Beside;
 
     if (TicketLinkingPanel.currentPanel) {

@@ -149,7 +149,12 @@ ulimit -p 256                    # Max 256 processes
 --cap-drop ALL                   # Drop all capabilities
 --cap-add NET_BIND_SERVICE       # Only allow port binding
 --security-opt no-new-privileges # Prevent privilege escalation
+
+# Optional sandbox runtime for untrusted sessions
+--runtime runsc                  # Enable gVisor when SESSION_SANDBOX_RUNTIME=runsc
 ```
+
+When `SESSION_SANDBOX_RUNTIME=runsc` is set, the session broker and container spawner both launch code-server with the gVisor `runsc` runtime and expose `SESSION_SANDBOX_MODE=gvisor` to the container for auditability.
 
 ## Integration Points
 

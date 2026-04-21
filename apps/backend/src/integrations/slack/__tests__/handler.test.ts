@@ -38,21 +38,28 @@ describe('Slack Integration Handler', () => {
       const timestamp = Math.floor(Date.now() / 1000).toString();
       const body = 'test=body';
       const secret = 'test_secret';
+      const previousSecret = process.env.SLACK_SIGNING_SECRET;
 
-      const baseString = `v0:${timestamp}:${body}`;
-      const signature = createHmac('sha256', secret)
-        .update(baseString)
-        .digest('hex');
+      process.env.SLACK_SIGNING_SECRET = secret;
 
-      const req = {
-        headers: {
-          'x-slack-signature': `v0=${signature}`,
-          'x-slack-request-timestamp': timestamp,
-        },
-        rawBody: body,
-      };
+      try {
+        const baseString = `v0:${timestamp}:${body}`;
+        const signature = createHmac('sha256', secret)
+          .update(baseString)
+          .digest('hex');
 
-      expect(verifySlackRequest(req as any)).toBe(true);
+        const req = {
+          headers: {
+            'x-slack-signature': `v0=${signature}`,
+            'x-slack-request-timestamp': timestamp,
+          },
+          rawBody: body,
+        };
+
+        expect(verifySlackRequest(req as any)).toBe(true);
+      } finally {
+        process.env.SLACK_SIGNING_SECRET = previousSecret;
+      }
     });
 
     it('should reject request with invalid signature', () => {

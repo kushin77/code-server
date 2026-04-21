@@ -271,6 +271,7 @@ describe("WorkspaceContextHubService", () => {
     expect(allowed.allowed).toBe(true);
     expect(allowed.workspaceSet?.approved).toBe(true);
     expect(allowed.restoreMetadata?.repositoryCount).toBe(2);
+    expect(allowed.restoreMetadata?.accessControl.workspaceTrustMode).toBe("zero-trust");
     expect(allowed.restoreMetadata?.provenance?.imageDigest).toBe(provenance.imageDigest);
     expect(allowed.restoreMetadata?.sessionFingerprint).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
@@ -339,6 +340,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "workspace-hub",
       targetRepoId: "repo-a",
       correlationId: "corr-4-preview",
+      accessControl: launchAccessControl,
       provenance,
     }, snapshot);
 
@@ -446,6 +448,40 @@ describe("WorkspaceContextHubService", () => {
 
     expect(stale.allowed).toBe(false);
     expect(stale.reason).toContain("stale");
+  });
+
+  it("fails closed when zero-trust access control is missing or stale", () => {
+    service.registerWorkspaceSet({
+      id: "trust-set",
+      name: "Trust set",
+      owner: "owner@example.com",
+      org: "kushin77",
+      shared: false,
+      repositories: [{ repoId: "repo-a", accessMode: "admin" }],
+    });
+
+    const missing = service.launchWorkspace({
+      actor: "owner@example.com",
+      workspaceSetId: "trust-set",
+      targetRepoId: "repo-a",
+      correlationId: "corr-10",
+      provenance: createProvenance(),
+    } as never);
+
+    expect(missing.allowed).toBe(false);
+    expect(missing.reason).toContain("zero-trust workspace trust context");
+
+    const stale = service.launchWorkspace({
+      actor: "owner@example.com",
+      workspaceSetId: "trust-set",
+      targetRepoId: "repo-a",
+      correlationId: "corr-11",
+      accessControl: createAccessControl({ verifiedAt: Date.now() - 2 * 24 * 60 * 60 * 1000 }),
+      provenance: createProvenance(),
+    });
+
+    expect(stale.allowed).toBe(false);
+    expect(stale.reason).toContain("access-control record is stale");
   });
 
   it("records audit events for launch attempts", () => {

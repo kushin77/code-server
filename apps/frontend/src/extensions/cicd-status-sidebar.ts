@@ -4,6 +4,7 @@
 
 import * as vscode from 'vscode';
 import axios, { AxiosInstance } from 'axios';
+import { measureAsyncExtensionProfiler } from '@/utils/extensionProfiler';
 
 interface Pipeline {
   id: string;
@@ -55,13 +56,13 @@ interface CICDConfig {
  * - Auto-refresh (configurable interval)
  */
 export class CICDStatusSidebarProvider implements vscode.TreeDataProvider<CICDTreeItem> {
-  private _onDidChangeTreeData = new vscode.EventEmitter<CICDTreeItem | undefined>();
+  private _onDidChangeTreeData = new vscode.EventEmitter();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private config: CICDConfig | null = null;
   private apiClient: AxiosInstance | null = null;
   private pipelines: Pipeline[] = [];
-  private refreshInterval: NodeJS.Timer | null = null;
+  private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private currentBranch: string = 'main';
 
   constructor(private context: vscode.ExtensionContext) {
@@ -78,18 +79,18 @@ export class CICDStatusSidebarProvider implements vscode.TreeDataProvider<CICDTr
     const config = vscode.workspace.getConfiguration('cicd');
 
     this.config = {
-      provider: config.get('provider', 'github'),
-      token: config.get('token', ''),
-      owner: config.get('owner', ''),
-      repo: config.get('repo', ''),
-      baseUrl: config.get('baseUrl'),
+      provider: (config.get('provider') as CICDConfig['provider']) || 'github',
+      token: (config.get('token') as string) || '',
+      owner: (config.get('owner') as string) || '',
+      repo: (config.get('repo') as string) || '',
+      baseUrl: config.get('baseUrl') as string | undefined,
     };
 
     if (!this.config.token) {
       vscode.window.showWarningMessage(
         'CI/CD Status: Configure CICD_TOKEN in settings',
         'Settings'
-      ).then((selected) => {
+      ).then((selected: string | undefined) => {
         if (selected === 'Settings') {
           vscode.commands.executeCommand('workbench.action.openSettings', 'cicd');
         }
@@ -175,16 +176,26 @@ export class CICDStatusSidebarProvider implements vscode.TreeDataProvider<CICDTr
   private async fetchPipelines(): Promise<Pipeline[]> {
     if (!this.apiClient || !this.config) return [];
 
-    try {
-      const pipelines = await this.fetchProviderPipelines();
-      this.pipelines = pipelines.sort((a, b) => b.createdAt - a.createdAt);
-      return this.pipelines;
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to fetch CI/CD pipelines: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-      return [];
-    }
+    return measureAsyncExtensionProfiler(
+      {
+        id: 'cicd-status',
+        label: 'CI/CD status sidebar',
+        category: 'operations',
+        kind: 'load',
+      },
+      async () => {
+        try {
+          const pipelines = await this.fetchProviderPipelines();
+          this.pipelines = pipelines.sort((a, b) => b.createdAt - a.createdAt);
+          return this.pipelines;
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            `Failed to fetch CI/CD pipelines: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+          return [];
+        }
+      }
+    );
   }
 
   /**

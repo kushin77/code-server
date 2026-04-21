@@ -4,9 +4,29 @@ import { useAuthStore } from '@/store'
 import { LoginPage } from '@/pages/LoginPage'
 import { MFASetup } from '@/pages/MFASetup'
 import { AdminControlsPage } from '@/pages/AdminControlsPage'
+import { WorkspaceOnboardingWizard } from '@/pages/WorkspaceOnboardingWizard'
+import { WorkspaceProfilesPage } from '@/pages/WorkspaceProfilesPage'
+import { IDEPerformanceProfilerPage } from '@/pages/IDEPerformanceProfilerPage'
+import { FigmaDesignEmbedPage } from '@/pages/FigmaDesignEmbedPage'
+import { SentryErrorsPage } from '@/pages/SentryErrorsPage'
+import { FeatureFlagsPage } from '@/pages/FeatureFlagsPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { EphemeralSessionsPage } from '@/pages/EphemeralSessions'
 import { RepoHomeView } from '@/pages/RepoHomeView'
+import {
+  ALL_WORKSPACES,
+  PINNED_WORKSPACES,
+  RECENT_STORAGE_KEY,
+  WORKSPACE_STATE_SYNC_EVENT,
+  WORKSPACE_STORAGE_KEY,
+  buildRecentWorkspaceIds,
+  getWorkspaceById,
+  readStoredWorkspaceTabs as readStoredWorkspaceTabsFromStorage,
+  scoreWorkspace,
+  writeStoredWorkspaceTabs,
+  type WorkspaceState,
+  type WorkspaceTab,
+} from '@/utils/workspaceCatalog'
 import {
   assessMultiRepoPolicyConformance,
   buildMultiRepoPolicyAuditRecord,
@@ -36,85 +56,10 @@ import {
   writeWorkspaceSessionSnapshot,
 } from '@/utils/workspaceSessionPersistence'
 
-type WorkspaceTab = {
-  id: string
-  label: string
-  branch: string
-  pinned: boolean
-}
-const RECENT_STORAGE_KEY = 'workspace-tabs:recent-repos'
-const WORKSPACE_STORAGE_KEY = 'workspace-tabs:active-repo'
-
-const PINNED_WORKSPACES: WorkspaceTab[] = [
-  { id: 'portal-main', label: 'Portal main', branch: 'main', pinned: true },
-  { id: 'docs-review', label: 'Docs review', branch: 'docs-sync', pinned: true },
-  { id: 'ops-control', label: 'Ops control', branch: 'release-control', pinned: true },
-]
-
-const DEFAULT_RECENT_WORKSPACES: WorkspaceTab[] = [
-  { id: 'dev-sandbox', label: 'Dev sandbox', branch: 'feature/multi-repo', pinned: false },
-  { id: 'security-lab', label: 'Security lab', branch: 'hardening', pinned: false },
-]
-
-const ALL_WORKSPACES: WorkspaceTab[] = [...PINNED_WORKSPACES, ...DEFAULT_RECENT_WORKSPACES]
-
-type WorkspaceState = {
-  activeRepoId: string
-  recentRepoIds: string[]
-}
-
-function scoreWorkspace(query: string, workspace: WorkspaceTab): number {
-  const normalizedQuery = query.trim().toLowerCase()
-  if (!normalizedQuery) {
-    return workspace.pinned ? 100 : 50
-  }
-
-  const haystack = `${workspace.label} ${workspace.branch} ${workspace.id}`.toLowerCase()
-  if (haystack === normalizedQuery) {
-    return 200
-  }
-  if (haystack.startsWith(normalizedQuery)) {
-    return 150
-  }
-  if (haystack.includes(normalizedQuery)) {
-    return 100 - Math.min(25, haystack.indexOf(normalizedQuery))
-  }
-
-  let matchIndex = 0
-  for (const character of normalizedQuery) {
-    matchIndex = haystack.indexOf(character, matchIndex)
-    if (matchIndex === -1) {
-      return -1
-    }
-    matchIndex += 1
-  }
-
-  return 40 - normalizedQuery.length
-}
-
-function readStoredWorkspaceTabs(): WorkspaceState {
-  if (typeof window === 'undefined') {
-    return { activeRepoId: PINNED_WORKSPACES[0].id, recentRepoIds: DEFAULT_RECENT_WORKSPACES.map((workspace) => workspace.id) }
-  }
-
-  try {
-    const activeRepoId = window.localStorage.getItem(WORKSPACE_STORAGE_KEY) || PINNED_WORKSPACES[0].id
-    const recentRepoIds = JSON.parse(window.localStorage.getItem(RECENT_STORAGE_KEY) || '[]') as string[]
-
-    return {
-      activeRepoId,
-      recentRepoIds: Array.isArray(recentRepoIds) ? recentRepoIds : DEFAULT_RECENT_WORKSPACES.map((workspace) => workspace.id),
-    }
-  } catch {
-    return { activeRepoId: PINNED_WORKSPACES[0].id, recentRepoIds: DEFAULT_RECENT_WORKSPACES.map((workspace) => workspace.id) }
-  }
-}
-
-const getWorkspaceById = (workspaceId: string): WorkspaceTab | undefined =>
-  ALL_WORKSPACES.find((workspace) => workspace.id === workspaceId)
-
 function useWorkspaceState() {
-  const [{ activeRepoId, recentRepoIds }, setWorkspaceState] = useState<WorkspaceState>(readStoredWorkspaceTabs)
+  const [{ activeRepoId, recentRepoIds }, setWorkspaceState] = useState<WorkspaceState>(() =>
+    readStoredWorkspaceTabsFromStorage(typeof window === 'undefined' ? undefined : window.localStorage)
+  )
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [switcherQuery, setSwitcherQuery] = useState('')
   const [sessionSnapshot, setSessionSnapshot] = useState<WorkspaceSessionSnapshot | null>(() =>
@@ -162,8 +107,7 @@ function useWorkspaceState() {
       return
     }
 
-    window.localStorage.setItem(WORKSPACE_STORAGE_KEY, activeRepoId)
-    window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(recentRepoIds))
+    writeStoredWorkspaceTabs(window.localStorage, { activeRepoId, recentRepoIds })
     scheduleWorkspaceSessionPersist(() => {
       writeWorkspaceSessionSnapshot(
         window.localStorage,
@@ -175,6 +119,30 @@ function useWorkspaceState() {
       )
     })
   }, [activeRepoId, recentRepoIds])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const handleWorkspaceStateSync = () => {
+      setWorkspaceState(readStoredWorkspaceTabsFromStorage(window.localStorage))
+    }
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key === WORKSPACE_STORAGE_KEY || event.key === RECENT_STORAGE_KEY || event.key === null) {
+        handleWorkspaceStateSync()
+      }
+    }
+
+    window.addEventListener(WORKSPACE_STATE_SYNC_EVENT, handleWorkspaceStateSync)
+    window.addEventListener('storage', handleStorageEvent)
+
+    return () => {
+      window.removeEventListener(WORKSPACE_STATE_SYNC_EVENT, handleWorkspaceStateSync)
+      window.removeEventListener('storage', handleStorageEvent)
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -219,7 +187,7 @@ function useWorkspaceState() {
   const visibleRecentWorkspaces = useMemo(() => {
     return recentRepoIds
       .map((workspaceId) => getWorkspaceById(workspaceId))
-      .filter((workspace): workspace is WorkspaceTab => Boolean(workspace) && !workspace.pinned)
+      .filter((workspace): workspace is WorkspaceTab => Boolean(workspace) && workspace !== undefined && !workspace.pinned)
       .slice(0, workspacePolicy.maxRecentWorkspaces)
   }, [recentRepoIds, workspacePolicy.maxRecentWorkspaces])
 
@@ -287,9 +255,9 @@ function useWorkspaceState() {
     }
 
     setWorkspaceState((current) => {
-      const nextRecent = [workspaceId, ...current.recentRepoIds.filter((recentId) => recentId !== workspaceId)]
-        .filter((recentId) => !PINNED_WORKSPACES.some((workspace) => workspace.id === recentId))
-        .slice(0, workspacePolicy.maxRecentWorkspaces)
+      const nextRecent = buildRecentWorkspaceIds(workspaceId, current.recentRepoIds).filter(
+        (recentId) => !PINNED_WORKSPACES.some((workspace) => workspace.id === recentId)
+      ).slice(0, workspacePolicy.maxRecentWorkspaces)
 
       return {
         activeRepoId: workspaceId,
@@ -346,9 +314,11 @@ function useWorkspaceState() {
 
     const restorePlan = buildSafeWorkspaceRestorePlan(savedSession, restorePreferences, false)
 
-    const nextRecentRepoIds = restorePlan.recentRepoIds
-      .filter((workspaceId) => !PINNED_WORKSPACES.some((workspace) => workspace.id === workspaceId))
-      .slice(0, workspacePolicy.maxRecentWorkspaces)
+    const nextRecentRepoIds = buildRecentWorkspaceIds(
+      restorePlan.activeRepoId,
+      restorePlan.recentRepoIds.filter((workspaceId) => !PINNED_WORKSPACES.some((workspace) => workspace.id === workspaceId)),
+      workspacePolicy.maxRecentWorkspaces,
+    )
 
     setWorkspaceState({
       activeRepoId: restorePlan.activeRepoId,
@@ -594,12 +564,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 /**
  * Layout Component
  */
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const Layout: React.FC<{ children: React.ReactNode; workspaceState: ReturnType<typeof useWorkspaceState> }> = ({
+  children,
+  workspaceState,
+}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, isAuthenticated } = useAuthStore()
-  const workspaceState = useWorkspaceState()
   const isSessionsPage = location.pathname.startsWith('/sessions')
+  const isOnboardingPage = location.pathname.startsWith('/onboarding')
+  const isWorkspaceProfilesPage = location.pathname.startsWith('/workspace-profiles')
+  const isProfilerPage = location.pathname.startsWith('/performance-profiler')
+  const isFigmaDesignPage = location.pathname.startsWith('/figma-design')
+  const isSentryErrorsPage = location.pathname.startsWith('/sentry-errors')
+  const isFeatureFlagsPage = location.pathname.startsWith('/feature-flags')
   const canOpenAdminControls = user?.roles.some((role) => role.roleId === 'admin') ?? false
 
   if (!isAuthenticated) {
@@ -618,6 +596,72 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               to="/"
             >
               Dashboard
+            </Link>
+            <Link
+              aria-current={isOnboardingPage ? 'page' : undefined}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isOnboardingPage
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+              to="/onboarding"
+            >
+              Onboarding
+            </Link>
+            <Link
+              aria-current={isWorkspaceProfilesPage ? 'page' : undefined}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isWorkspaceProfilesPage
+                  ? 'border-violet-200 bg-violet-50 text-violet-900'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+              to="/workspace-profiles"
+            >
+              Workspace Profiles
+            </Link>
+            <Link
+              aria-current={isProfilerPage ? 'page' : undefined}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isProfilerPage
+                  ? 'border-sky-200 bg-sky-50 text-sky-900'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+              to="/performance-profiler"
+            >
+              Profiler
+            </Link>
+            <Link
+              aria-current={isFigmaDesignPage ? 'page' : undefined}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isFigmaDesignPage
+                  ? 'border-pink-200 bg-pink-50 text-pink-900'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+              to="/figma-design"
+            >
+              Figma Design
+            </Link>
+            <Link
+              aria-current={isSentryErrorsPage ? 'page' : undefined}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isSentryErrorsPage
+                  ? 'border-orange-200 bg-orange-50 text-orange-900'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+              to="/sentry-errors"
+            >
+              Sentry Errors
+            </Link>
+            <Link
+              aria-current={isFeatureFlagsPage ? 'page' : undefined}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isFeatureFlagsPage
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+              to="/feature-flags"
+            >
+              Feature Flags
             </Link>
             <Link
               aria-current={isSessionsPage ? 'page' : undefined}
@@ -658,7 +702,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Main Content */}
       <main className="flex-1">
-        <RepoHomeView workspaceState={workspaceState} />
+        {!isOnboardingPage ? <RepoHomeView workspaceState={workspaceState} /> : null}
         {children}
       </main>
 
@@ -718,15 +762,65 @@ function handleRepoCardAction(
  * Main SPA router and layout
  */
 export function App() {
+  const workspaceState = useWorkspaceState()
+
   return (
     <Router>
-      <Layout>
+      <Layout workspaceState={workspaceState}>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/mfa-setup" element={<MFASetup />} />
 
           {/* Protected Routes */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <WorkspaceOnboardingWizard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/workspace-profiles"
+            element={
+              <ProtectedRoute>
+                <WorkspaceProfilesPage workspaceState={workspaceState} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/performance-profiler"
+            element={
+              <ProtectedRoute>
+                <IDEPerformanceProfilerPage workspaceState={workspaceState} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/figma-design"
+            element={
+              <ProtectedRoute>
+                <FigmaDesignEmbedPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sentry-errors"
+            element={
+              <ProtectedRoute>
+                <SentryErrorsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/feature-flags"
+            element={
+              <ProtectedRoute>
+                <FeatureFlagsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/"
             element={

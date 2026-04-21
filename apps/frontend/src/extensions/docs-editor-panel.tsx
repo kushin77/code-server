@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import * as vscode from 'vscode';
+import { measureAsyncExtensionProfiler, useExtensionMountProfiler } from '@/utils/extensionProfiler';
 
 interface DocItem {
   id: string;
@@ -25,6 +26,12 @@ interface DocItem {
  * - Search and indexing
  */
 export const DocsEditorPanel: React.FC = () => {
+  useExtensionMountProfiler({
+    id: 'docs-editor',
+    label: 'Docs editor panel',
+    category: 'content',
+  });
+
   const [docs, setDocs] = useState<DocItem[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<DocItem | null>(null);
   const [editContent, setEditContent] = useState('');
@@ -32,28 +39,38 @@ export const DocsEditorPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDocs();
+    void loadDocs();
   }, []);
 
   const loadDocs = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:3100/api/docs');
-      const data = await response.json();
+    return measureAsyncExtensionProfiler(
+      {
+        id: 'docs-editor',
+        label: 'Docs editor panel',
+        category: 'content',
+        kind: 'load',
+      },
+      async () => {
+        try {
+          setLoading(true);
+          const response = await fetch('http://localhost:3100/api/docs');
+          const data = await response.json();
 
-      setDocs(data.docs || []);
+          setDocs(data.docs || []);
 
-      if (data.docs && data.docs.length > 0) {
-        setSelectedDoc(data.docs[0]);
-        setEditContent(data.docs[0].content);
+          if (data.docs && data.docs.length > 0) {
+            setSelectedDoc(data.docs[0]);
+            setEditContent(data.docs[0].content);
+          }
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            `Failed to load docs: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        } finally {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to load docs: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   const generateDocs = async (): Promise<void> => {

@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-actions-runner
+  namespace: code-server-workloads
+  labels:
+    app: code-server
+    component: github-actions
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: code-server
+      component: github-actions
+  template:
+    metadata:
+      labels:
+        app: code-server
+        component: github-actions
+      annotations:
+        oidc.kubernetes.io/issuer: "https://ide.kushnir.cloud:4182"
+        oidc.kubernetes.io/audience: "kubernetes"
+    spec:
+      serviceAccountName: github-actions-ci
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: runner
+        image: ghcr.io/actions/runner:2.322.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: OIDC_ISSUER_URL
+          value: "https://ide.kushnir.cloud:4182"
+        - name: OIDC_AUDIENCE
+          value: "kubernetes"
+        - name: OIDC_TOKEN_PATH
+          value: "/var/run/secrets/tokens/oidc/token"
+        - name: API_SERVER_URL
+          value: "http://api:3000"
+        volumeMounts:
+        - name: oidc-token
+          mountPath: /var/run/secrets/tokens/oidc
+          readOnly: true
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: oidc-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 3600
+              audience: kubernetes
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: batch-processor-job
+  namespace: code-server-workloads
+  labels:
+    app: code-server
+    component: batch
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: code-server
+            component: batch
+        spec:
+          serviceAccountName: batch-processor
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+          - name: processor
+            image: ghcr.io/curlimages/curl:8.7.1
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Batch job authenticated with Kubernetes workload identity"
+              cat /var/run/secrets/tokens/oidc/token >/dev/null
+            env:
+            - name: OIDC_ISSUER_URL
+              value: "https://ide.kushnir.cloud:4182"
+            - name: OIDC_AUDIENCE
+              value: "kubernetes"
+            volumeMounts:
+            - name: oidc-token
+              mountPath: /var/run/secrets/tokens/oidc
+              readOnly: true
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "128Mi"
+              limits:
+                cpu: "500m"
+                memory: "256Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+          volumes:
+          - name: oidc-token
+            projected:
+              sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+                  audience: kubernetes

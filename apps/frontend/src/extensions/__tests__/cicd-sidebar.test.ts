@@ -112,13 +112,15 @@ describe('CI/CD Status Sidebar', () => {
   });
 
   describe('Refresh Mechanism', () => {
-    it('should emit change event on refresh', (done) => {
-      const onChangeListener = provider.onDidChangeTreeData(() => {
-        done();
-      });
+    it('should emit change event on refresh', async () => {
+      await new Promise<void>((resolve) => {
+        const onChangeListener = provider.onDidChangeTreeData(() => {
+          onChangeListener.dispose();
+          resolve();
+        });
 
-      provider.refresh();
-      onChangeListener.dispose();
+        provider.refresh();
+      });
     });
 
     it('should auto-refresh at configured interval', () => {

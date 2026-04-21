@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import * as vscode from 'vscode';
+import { measureAsyncExtensionProfiler, useExtensionMountProfiler } from '@/utils/extensionProfiler';
 
 interface FeatureFlag {
   key: string;
@@ -27,6 +28,12 @@ interface FeatureFlag {
  * - Multi-environment support
  */
 export const FeatureFlagsPanel: React.FC = () => {
+  useExtensionMountProfiler({
+    id: 'feature-flags',
+    label: 'Feature flags panel',
+    category: 'release',
+  });
+
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,27 +41,37 @@ export const FeatureFlagsPanel: React.FC = () => {
   const [filterProvider, setFilterProvider] = useState<string>('all');
 
   useEffect(() => {
-    loadFlags();
+    void loadFlags();
     const interval = setInterval(loadFlags, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
   }, []);
 
   const loadFlags = async (): Promise<void> => {
-    try {
-      setLoading(true);
+    return measureAsyncExtensionProfiler(
+      {
+        id: 'feature-flags',
+        label: 'Feature flags panel',
+        category: 'release',
+        kind: 'load',
+      },
+      async () => {
+        try {
+          setLoading(true);
 
-      const response = await fetch('http://localhost:3100/api/flags');
-      const data = await response.json();
+          const response = await fetch('http://localhost:3100/api/flags');
+          const data = await response.json();
 
-      setFlags(data.flags);
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to load flags: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    } finally {
-      setLoading(false);
-    }
+          setFlags(data.flags);
+        } catch (error) {
+          vscode.window.showErrorMessage(
+            `Failed to load flags: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
   };
 
   const toggleFlag = async (flag: FeatureFlag): Promise<void> => {

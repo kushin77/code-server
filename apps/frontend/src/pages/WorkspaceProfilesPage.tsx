@@ -163,6 +163,7 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
                       Activate profile
                     </button>
                   )}
+                </div>
               </div>
 
               {copyNotice ? <p className="mt-3 text-sm font-medium text-emerald-700">{copyNotice}</p> : null}

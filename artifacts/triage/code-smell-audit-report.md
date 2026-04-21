@@ -1,6 +1,6 @@
 # Code Smell Audit Report
 
-- Timestamp (UTC): 2026-04-21T12:50:44Z
+- Timestamp (UTC): 2026-04-21T12:52:47Z
 - Strict mode: 1
 - Run ESLint checks: 1
 - Run unused-export checks: 1
@@ -10,7 +10,7 @@
 
 ## ESLint Strict Mode
 - PASS: apps/frontend eslint strict check
-- FAIL: apps/extensions/agent-farm eslint strict check
+- PASS: apps/extensions/agent-farm eslint strict check
 
 ## Unused Export Checks
 - FAIL: apps/frontend has unused exports
@@ -19,52 +19,52 @@
 ```
 \apps\frontend\src\App.tsx:720 - App
 \apps\frontend\src\App.tsx:417 - WorkspaceStateHandle (used in module)
-\apps\frontend\src\hooks\index.ts:20 - useLogin
-\apps\frontend\src\hooks\index.ts:93 - useUserManagement
-\apps\frontend\src\hooks\index.ts:179 - useRepositoryAccess
-\apps\frontend\src\hooks\index.ts:227 - useAPITokens
-\apps\frontend\src\hooks\index.ts:288 - useSessions
-\apps\frontend\src\hooks\index.ts:338 - useEphemeralSessions
-\apps\frontend\src\store\index.ts:9 - useAuthStore
-\apps\frontend\src\store\index.ts:44 - useUserStore
-\apps\frontend\src\store\index.ts:82 - useRoleStore
+\apps\frontend\src\hooks\index.ts:21 - useLogin
+\apps\frontend\src\hooks\index.ts:95 - useUserManagement
+\apps\frontend\src\hooks\index.ts:182 - useRepositoryAccess
+\apps\frontend\src\hooks\index.ts:231 - useAPITokens
+\apps\frontend\src\hooks\index.ts:293 - useSessions
+\apps\frontend\src\hooks\index.ts:344 - useEphemeralSessions
+\apps\frontend\src\store\index.ts:10 - useAuthStore
+\apps\frontend\src\store\index.ts:46 - useUserStore
+\apps\frontend\src\store\index.ts:85 - useRoleStore
 \apps\frontend\src\types\index.ts:15 - Organization (used in module)
 \apps\frontend\src\types\index.ts:22 - User (used in module)
 \apps\frontend\src\types\index.ts:34 - Role (used in module)
 \apps\frontend\src\types\index.ts:42 - UserRole (used in module)
-\apps\frontend\src\types\index.ts:52 - RepositoryAccess
-\apps\frontend\src\types\index.ts:63 - APIToken
-\apps\frontend\src\types\index.ts:73 - Session
-\apps\frontend\src\types\index.ts:84 - SessionLifecycleState (used in module)
-\apps\frontend\src\types\index.ts:86 - SessionQueueLane (used in module)
-\apps\frontend\src\types\index.ts:88 - SessionDataProfile (used in module)
-\apps\frontend\src\types\index.ts:90 - SessionProvenanceVerificationResult (used in module)
-\apps\frontend\src\types\index.ts:92 - SessionProvenanceManifest (used in module)
-\apps\frontend\src\types\index.ts:103 - EphemeralSession
-\apps\frontend\src\types\index.ts:132 - EphemeralSessionLaunchRequest
-\apps\frontend\src\types\index.ts:142 - SessionQueueSummary (used in module)
-\apps\frontend\src\types\index.ts:151 - EphemeralSessionStatus
-\apps\frontend\src\types\index.ts:168 - AuditLog
-\apps\frontend\src\types\index.ts:179 - Permission (used in module)
-\apps\frontend\src\types\index.ts:189 - LoginRequest
-\apps\frontend\src\types\index.ts:196 - LoginResponse
-\apps\frontend\src\types\index.ts:205 - MFAVerifyRequest
-\apps\frontend\src\types\index.ts:211 - MFAVerifyResponse
-\apps\frontend\src\types\index.ts:218 - MFASetupResponse
-\apps\frontend\src\types\index.ts:225 - CreateUserRequest
-\apps\frontend\src\types\index.ts:232 - UpdateUserRequest
-\apps\frontend\src\types\index.ts:238 - AssignRoleRequest
-\apps\frontend\src\types\index.ts:245 - GrantRepoAccessRequest
-\apps\frontend\src\types\index.ts:254 - CreateTokenRequest
-\apps\frontend\src\types\index.ts:261 - CreateTokenResponse
-\apps\frontend\src\types\index.ts:273 - AuthState
-\apps\frontend\src\types\index.ts:288 - UserState
-\apps\frontend\src\types\index.ts:303 - RoleState
-\apps\frontend\src\types\index.ts:313 - TableColumn
-\apps\frontend\src\types\index.ts:322 - PaginationParams
-\apps\frontend\src\types\index.ts:328 - FilterConfig (used in module)
-\apps\frontend\src\types\index.ts:340 - HealthCheckResponse
-\apps\frontend\src\types\index.ts:348 - ListResponse
+\apps\frontend\src\types\index.ts:53 - RepositoryAccess
+\apps\frontend\src\types\index.ts:65 - APIToken
+\apps\frontend\src\types\index.ts:76 - Session
+\apps\frontend\src\types\index.ts:87 - SessionLifecycleState (used in module)
+\apps\frontend\src\types\index.ts:89 - SessionQueueLane (used in module)
+\apps\frontend\src\types\index.ts:91 - SessionDataProfile (used in module)
+\apps\frontend\src\types\index.ts:93 - SessionProvenanceVerificationResult (used in module)
+\apps\frontend\src\types\index.ts:95 - SessionProvenanceManifest (used in module)
+\apps\frontend\src\types\index.ts:107 - EphemeralSession
+\apps\frontend\src\types\index.ts:136 - EphemeralSessionLaunchRequest
+\apps\frontend\src\types\index.ts:147 - SessionQueueSummary (used in module)
+\apps\frontend\src\types\index.ts:156 - EphemeralSessionStatus
+\apps\frontend\src\types\index.ts:173 - AuditLog
+\apps\frontend\src\types\index.ts:184 - Permission (used in module)
+\apps\frontend\src\types\index.ts:195 - LoginRequest
+\apps\frontend\src\types\index.ts:202 - LoginResponse
+\apps\frontend\src\types\index.ts:212 - MFAVerifyRequest
+\apps\frontend\src\types\index.ts:218 - MFAVerifyResponse
+\apps\frontend\src\types\index.ts:225 - MFASetupResponse
+\apps\frontend\src\types\index.ts:232 - CreateUserRequest
+\apps\frontend\src\types\index.ts:238 - UpdateUserRequest
+\apps\frontend\src\types\index.ts:244 - AssignRoleRequest
+\apps\frontend\src\types\index.ts:251 - GrantRepoAccessRequest
+\apps\frontend\src\types\index.ts:260 - CreateTokenRequest
+\apps\frontend\src\types\index.ts:267 - CreateTokenResponse
+\apps\frontend\src\types\index.ts:279 - AuthState
+\apps\frontend\src\types\index.ts:294 - UserState
+\apps\frontend\src\types\index.ts:309 - RoleState
+\apps\frontend\src\types\index.ts:319 - TableColumn
+\apps\frontend\src\types\index.ts:328 - PaginationParams
+\apps\frontend\src\types\index.ts:334 - FilterConfig (used in module)
+\apps\frontend\src\types\index.ts:346 - HealthCheckResponse
+\apps\frontend\src\types\index.ts:354 - ListResponse
 \apps\frontend\src\types\repo-card.ts:12 - RepoCard
 \apps\frontend\src\types\repo-card.ts:39 - RepoCardError (used in module)
 \apps\frontend\src\types\repo-card.ts:52 - RepoCardAction
@@ -199,9 +199,9 @@
 - PASS: TODO/FIXME/HACK markers are issue-linked or absent
 
 ## Summary
-- eslint_fail: 1
+- eslint_fail: 0
 - unused_export_fail: 1
 - complexity_fail: 0
 - suppress_fail: 0
 - todo_fail: 0
-- total_failure_flags: 2
+- total_failure_flags: 1

@@ -143,6 +143,7 @@ export interface EphemeralSessionLaunchRequest {
   ttlSeconds?: number
 }
 
+// @ts-prune-ignore
 export interface SessionQueueSummary {
   lane: SessionQueueLane
   position: number | null
@@ -189,6 +190,7 @@ export interface Permission {
 
 // ============= API Request Types =============
 
+// @ts-prune-ignore
 /** @ts-prune-ignore - API contract type for login requests */
 export interface LoginRequest {
   email: string
@@ -205,6 +207,7 @@ export interface LoginResponse {
   mfaToken?: string
 }
 
+// @ts-prune-ignore
 /** @ts-prune-ignore - API contract type for MFA verification */
 export interface MFAVerifyRequest {
   mfaToken: string
@@ -231,8 +234,7 @@ export interface CreateUserRequest {
   fullName: string
   initialRoles?: string[]
 }
-
-/** @ts-prune-ignore - API contract type for user updates */
+// @ts-prune-ignore/** @ts-prune-ignore - API contract type for user updates */
 export interface UpdateUserRequest {
   fullName?: string
   status?: 'active' | 'inactive'

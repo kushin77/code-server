@@ -112,7 +112,7 @@ init_logs() {
 }
 
 validate_target() {
-    if [[ ! " ${DEPLOYMENT_TARGETS[@]} " =~ ${TARGET} ]]; then
+    if [[ ! " ${DEPLOYMENT_TARGETS[*]} " =~ ${TARGET} ]]; then
         log_error "Invalid target: ${TARGET}"
         log_error "Valid targets: ${DEPLOYMENT_TARGETS[*]}"
         return 1
@@ -440,7 +440,7 @@ Next Steps:
 
 Audit Trail:
   - All actions logged to: ${LOG_FILE}
-  - GitHub Actions run: ${GITHUB_SERVER_URL:-https://github.com}/${{ github.repository }}/actions/runs/${GITHUB_RUN_ID:-N/A}
+  - GitHub Actions run: ${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-N/A}/actions/runs/${GITHUB_RUN_ID:-N/A}
   - Issue linked to PR which triggered deployment
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

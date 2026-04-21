@@ -368,6 +368,6 @@ if [ "$FAIL_COUNT" -eq 0 ]; then
     echo "✅ IaC AUDIT PASSED - All systems automated"
     exit 0
 else
-    echo "❌ IaC AUDIT FAILED - $FAIL_COUNT test(s) failed"
+    echo "[FAIL] IaC AUDIT FAILED - $FAIL_COUNT test(s) failed"
     exit 1
 fi

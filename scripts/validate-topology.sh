@@ -164,7 +164,7 @@ check_loader_sourcing() {
     done
     
     if [[ ${#missing[@]} -gt 0 ]]; then
-        echo "⚠️  Missing inventory-loader sourcing in: ${missing[@]}"
+        echo "WARNING: Missing inventory-loader sourcing in: ${missing[*]}"
         return 1
     fi
     

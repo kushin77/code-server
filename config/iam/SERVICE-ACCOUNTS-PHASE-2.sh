@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Service Accounts for Phase 2 Service-to-Service Authentication
 # These should be created in Google Secret Manager and loaded at deployment time
 

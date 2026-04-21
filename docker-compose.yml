@@ -239,6 +239,11 @@ services:
     expose:
       - "4182"
     environment:
+      # OAuth2 Required Settings (even in OIDC issuer mode)
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET:-${IDE_SESSION_LB_SECRET:?IDE_SESSION_LB_SECRET must be set}}"
+      OAUTH2_PROXY_CLIENT_ID: "${SERVICE_CLIENT_SESSION_BROKER_ID:-code-server-issuer}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${SERVICE_CLIENT_SESSION_BROKER_SECRET:-issuer-secret}"
+      
       # OIDC Issuer Mode - self-issued tokens
       OAUTH2_PROXY_PROVIDER: "oidc"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://ide.kushnir.cloud"

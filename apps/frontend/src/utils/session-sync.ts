@@ -185,13 +185,6 @@ export function broadcastSessionRefresh(newExpiryMs: number): void {
 }
 
 /**
- * Alias for broadcastSessionRefresh (for convenience - internal, not exported)
- */
-function broadcastRefresh(newExpiryMs: number): void {
-  broadcastSessionRefresh(newExpiryMs);
-}
-
-/**
  * Broadcast session expiry to all other tabs.
  * Call when session refresh fails permanently.
  */
@@ -212,13 +205,6 @@ export function broadcastSessionExpiry(): void {
   metrics.broadcast_events_total++;
   metrics.broadcast_expired++;
   channel.postMessage(message);
-}
-
-/**
- * Alias for broadcastSessionExpiry (for convenience - internal, not exported)
- */
-function broadcastExpiry(): void {
-  broadcastSessionExpiry();
 }
 
 /**

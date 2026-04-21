@@ -69,23 +69,3 @@ export async function performWSSessionHandoff({
   }
 }
 
-/**
- * Hook to inject into the session refresh cycle (internal - not yet wired)
- * Whenever any tab refreshes (via BroadcastChannel), trigger hand-off for any active WS
- */
-function setupWSAutoHandoff(getActiveWS: () => WebSocket | null, updateWS: (newWs: WebSocket) => void): void {
-  if (typeof BroadcastChannel === 'undefined') return;
-
-  const channel = new BroadcastChannel('code-server-session');
-  channel.onmessage = (event) => {
-    if (event.data.type === 'SESSION_REFRESHED') {
-      const currentWs = getActiveWS();
-      if (currentWs && currentWs.readyState === WebSocket.OPEN) {
-        performWSSessionHandoff({
-          ws: currentWs,
-          onReconnect: (newWs) => updateWS(newWs)
-        });
-      }
-    }
-  };
-}

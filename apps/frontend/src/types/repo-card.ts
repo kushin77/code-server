@@ -59,36 +59,8 @@ export type RepoCardAction =
   | 'unpin';        // Unpin/unfavourite this repo
 
 /**
- * Internal type for action result tracking (not yet used)
- */
-interface RepoCardActionResult {
-  action: RepoCardAction;
-  repoId: string;
-  success: boolean;
-  error?: string;
-  /** ISO 8601 timestamp */
-  completedAt: string;
-}
-
-/**
- * Internal type for multi-repo home view caching (not yet used)
- */
-interface HomeViewCache {
-  cards: RepoCard[];
-  /** ISO 8601 timestamp when the cache was last fully populated */
-  lastFullRefresh: string;
-  /** Number of cards that failed to load on last refresh */
-  refreshErrors: number;
-}
-
-/**
- * Internal type for home view refresh configuration (not yet used)
- */
-interface HomeViewConfig {
-  /** Seconds between background status refreshes (default: 30) */
-  refreshIntervalSeconds: number;
-  /** Maximum number of repo cards to show (from max_open_repos policy) */
-  maxCards: number;
-  /** Show error cards for unreachable repos (default: true) */
+ * Actions available on each repo card.
+ * All actions respect the user's repo access permissions.
+ */  /** Show error cards for unreachable repos (default: true) */
   showErrors: boolean;
 }

@@ -36,7 +36,7 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x]
     
     steps:
       - name: Checkout our fork with enhancement branch
@@ -117,7 +117,7 @@ jobs:
       UPSTREAM_DIR: /tmp/upstream-main/${{ github.run_id }}/${{ github.job }}/${{ matrix.node-version }}
     strategy:
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x]
     
     steps:
       - name: Fetch latest upstream/main

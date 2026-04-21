@@ -544,6 +544,11 @@ services:
     expose:
       - "6432"
     environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-codeserver}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      - DB_NAME=${POSTGRES_DB:-codeserver}
       - DATABASES_HOST=postgres
       - DATABASES_PORT=5432
       - DATABASES_USER=${POSTGRES_USER:-codeserver}

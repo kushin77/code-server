@@ -9,10 +9,8 @@
 }
 
 {$IDE_DOMAIN:ide.kushnir.cloud}:80, {$IDE_DOMAIN:ide.kushnir.cloud}:443 {
-    # For on-prem testing: use self-signed certificates
-    tls {
-        issuer self_signed
-    }
+    # For on-prem testing: force HTTPS with default certificate handling
+    tls
 
     encode gzip
 

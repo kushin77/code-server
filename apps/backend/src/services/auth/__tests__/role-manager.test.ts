@@ -2,24 +2,24 @@
 // @module      auth/role-management
 // @description Unit tests for RoleManager service
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RoleManager } from '../role-manager';
-import { Redis } from 'ioredis';
 
 // Mock Redis
-jest.mock('ioredis');
+vi.mock('ioredis');
 
 describe('RoleManager', () => {
   let roleManager: RoleManager;
-  let mockRedis: jest.Mocked<Redis>;
+  let mockRedis: any;
 
   beforeEach(() => {
-    mockRedis = new Redis() as jest.Mocked<Redis>;
+    mockRedis = new Redis() as any;
     roleManager = new RoleManager(mockRedis);
   });
 
   describe('assignRoles', () => {
     it('should assign roles to a user', async () => {
-      mockRedis.setex = jest.fn().mockResolvedValue('OK');
+      mockRedis.setex = vi.fn().mockResolvedValue('OK');
 
       await roleManager.assignRoles('user-123', ['admin', 'developer']);
 
@@ -31,7 +31,7 @@ describe('RoleManager', () => {
     });
 
     it('should support custom TTL', async () => {
-      mockRedis.setex = jest.fn().mockResolvedValue('OK');
+      mockRedis.setex = vi.fn().mockResolvedValue('OK');
 
       await roleManager.assignRoles('user-123', ['developer'], 7200);
 
@@ -43,7 +43,7 @@ describe('RoleManager', () => {
     });
 
     it('should deduplicate roles', async () => {
-      mockRedis.setex = jest.fn().mockResolvedValue('OK');
+      mockRedis.setex = vi.fn().mockResolvedValue('OK');
 
       await roleManager.assignRoles('user-123', ['admin', 'admin', 'developer']);
 
@@ -68,7 +68,7 @@ describe('RoleManager', () => {
     });
 
     it('should return empty array if no roles found', async () => {
-      mockRedis.get = jest.fn().mockResolvedValue(null);
+      mockRedis.get = vi.fn().mockResolvedValue(null);
 
       const result = await roleManager.getUserRoles('user-123');
 

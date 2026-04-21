@@ -2,11 +2,12 @@
 // @module      admin/role-management
 // @description Integration tests for role management API
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { Express } from 'express';
 import { getRoleManager } from '../../../services/auth/role-manager';
 
-jest.mock('../../../services/auth/role-manager');
+vi.mock('../../../services/auth/role-manager');
 
 describe('Role Management API Integration', () => {
   let app: Express;
@@ -15,15 +16,15 @@ describe('Role Management API Integration', () => {
   beforeEach(async () => {
     // Mock Express app setup (simplified)
     mockRoleManager = {
-      getUserRoles: jest.fn(),
-      assignRoles: jest.fn(),
-      removeRole: jest.fn(),
-      clearRoles: jest.fn(),
-      listAllRoles: jest.fn(),
-      getAuditLog: jest.fn(),
+      getUserRoles: vi.fn(),
+      assignRoles: vi.fn(),
+      removeRole: vi.fn(),
+      clearRoles: vi.fn(),
+      listAllRoles: vi.fn(),
+      getAuditLog: vi.fn(),
     };
 
-    (getRoleManager as jest.Mock).mockReturnValue(mockRoleManager);
+    (getRoleManager as any).mockReturnValue(mockRoleManager);
   });
 
   const mockAuthMiddleware = (req: any, res: any, next: any) => {

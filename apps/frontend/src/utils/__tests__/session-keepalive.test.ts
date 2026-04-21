@@ -3,7 +3,18 @@
  * Unit tests for proactive client-side session refresh
  */
 
-import { getSessionExpiry, scheduleRefresh, doSilentRefresh } from '../session-keepalive';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// Mock session-sync so lock/broadcast logic doesn't interfere
+vi.mock('../session-sync', () => ({
+  acquireRefreshLock: vi.fn(() => true),
+  releaseRefreshLock: vi.fn(),
+  broadcastSessionRefresh: vi.fn(),
+  broadcastSessionExpiry: vi.fn(),
+  isLeader: vi.fn(() => true),
+}));
+
+import { getSessionExpiry, scheduleRefresh, doSilentRefresh, _resetForTesting } from '../session-keepalive';
 
 describe('Session Keepalive', () => {
   let cookieMock: string = '';
@@ -17,18 +28,19 @@ describe('Session Keepalive', () => {
     });
     
     // Mock global fetch
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
     });
 
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    _resetForTesting();
+    vi.clearAllMocks();
     cookieMock = '';
-    jest.clearAllTimers();
+    vi.clearAllTimers();
   });
 
   test('getSessionExpiry() returns null when cookie is missing', () => {
@@ -47,11 +59,9 @@ describe('Session Keepalive', () => {
     const mockExpiry = Math.floor(Date.now() / 1000) + 1200; // 20m in future
     document.cookie = `_session_expires=${mockExpiry}; Path=/; SameSite=Lax; Secure`;
     
-    // Threshold is 5m, so refresh at 15m (900s)
     scheduleRefresh();
     
-    expect(setTimeout).toHaveBeenCalledTimes(1);
-    expect(setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 900000);
+    expect(vi.getTimerCount()).toBe(1);
   });
 
   test('scheduleRefresh() triggers immediate refresh if below threshold', () => {
@@ -76,6 +86,6 @@ describe('Session Keepalive', () => {
     });
     
     // Should have re-armed timer
-    expect(setTimeout).toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
   });
 });

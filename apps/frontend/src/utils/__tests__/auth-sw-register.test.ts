@@ -44,9 +44,17 @@ describe('auth-sw-register', () => {
       writable: true,
       configurable: true,
     });
+
+    // Reset webdriver flag so private-browsing tests don't bleed into later tests
+    Object.defineProperty(navigator, 'webdriver', {
+      value: false,
+      writable: true,
+      configurable: true,
+    });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await unregisterAuthServiceWorker();
     vi.clearAllMocks();
   });
 
@@ -353,24 +361,18 @@ describe('auth-sw-register', () => {
   });
 
   describe('storage events from other tabs', () => {
-    beforeEach(async () => {
+    it('should listen for storage events from other tabs', async () => {
+      const windowSpy = vi.spyOn(window, 'addEventListener');
       await registerAuthServiceWorker();
-    });
-
-    it('should listen for storage events from other tabs', () => {
-      expect(mockNavigatorSW.addEventListener).toHaveBeenCalledWith(
-        'storage',
-        expect.any(Function)
-      );
+      expect(windowSpy).toHaveBeenCalledWith('storage', expect.any(Function));
+      windowSpy.mockRestore();
     });
   });
 
   describe('initialization', () => {
-    it('should handle DOMContentLoaded correctly', (done) => {
+    it('should handle DOMContentLoaded correctly', () => {
       // Document is already loaded in test
       expect(document.readyState).toBe('complete');
-
-      done();
     });
 
     it('should handle errors during initialization gracefully', async () => {

@@ -12,51 +12,98 @@ import {
   isSessionValid,
 } from '../session-indexeddb-store';
 
-// Mock IndexedDB for testing
-class MockIDBDatabase {
-  stores: Record<string, Record<string, any>> = {};
+// ─── Minimal async-correct IDB mock ─────────────────────────────────────────
 
-  transaction(name: string) {
-    const store = this.stores[name] || (this.stores[name] = {});
-    return {
-      objectStore: () => ({
-        put: (value: any, key: string) => ({
-          onerror: null,
-          get error() { return null; },
-          onsuccess: () => { store[key] = value; },
-        }),
-        get: (key: string) => ({
-          onerror: null,
-          onsuccess: null,
-          get result() { return store[key]; },
-        }),
-        delete: (key: string) => ({
-          onerror: null,
-          onsuccess: () => { delete store[key]; },
-        }),
-      }),
-      oncomplete: null,
-      get onerror() { return null; },
-    };
+class MockIDBObjectStore {
+  constructor(
+    private data: Record<string, any>,
+    private tx: MockIDBTransaction,
+  ) {}
+
+  put(value: any, key: string) {
+    this.tx._addPendingOp(() => { this.data[key] = value; });
+    return MockIDBObjectStore._makeRequest(null);
+  }
+
+  get(key: string) {
+    const result = this.data[key];
+    return MockIDBObjectStore._makeRequest(result);
+  }
+
+  delete(key: string) {
+    this.tx._addPendingOp(() => { delete this.data[key]; });
+    return MockIDBObjectStore._makeRequest(null);
+  }
+
+  private static _makeRequest(result: any) {
+    const req: any = { result, error: null };
+    Object.defineProperty(req, 'onsuccess', {
+      set(cb: ((e: any) => void) | null) {
+        if (cb) queueMicrotask(() => cb({ target: req }));
+      },
+      configurable: true,
+    });
+    Object.defineProperty(req, 'onerror', { set() {}, configurable: true });
+    return req;
   }
 }
+
+class MockIDBTransaction {
+  private _pendingOps: Array<() => void> = [];
+  private _store: MockIDBObjectStore;
+
+  constructor(storeData: Record<string, any>) {
+    this._store = new MockIDBObjectStore(storeData, this);
+  }
+
+  objectStore(_name: string) {
+    return this._store;
+  }
+
+  set oncomplete(cb: (() => void) | null) {
+    queueMicrotask(() => {
+      this._pendingOps.forEach(op => op());
+      cb?.();
+    });
+  }
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  set onerror(_v: any) {}
+
+  _addPendingOp(op: () => void) {
+    this._pendingOps.push(op);
+  }
+}
+
+class MockIDBDatabase {
+  readonly stores: Record<string, Record<string, any>> = {};
+
+  transaction(name: string, _mode?: string) {
+    if (!this.stores[name]) this.stores[name] = {};
+    return new MockIDBTransaction(this.stores[name]);
+  }
+}
+
+function makeMockOpenRequest(db: MockIDBDatabase) {
+  const req: any = { result: db, error: null };
+  Object.defineProperty(req, 'onsuccess', {
+    set(cb: any) { if (cb) queueMicrotask(() => cb({ target: req })); },
+    configurable: true,
+  });
+  Object.defineProperty(req, 'onerror', { set() {}, configurable: true });
+  Object.defineProperty(req, 'onupgradeneeded', { set() {}, configurable: true });
+  req.addEventListener = () => {};
+  return req;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 describe('session-indexeddb-store', () => {
   let mockDB: MockIDBDatabase;
 
   beforeEach(() => {
     mockDB = new MockIDBDatabase();
-    // Mock indexedDB global
     global.indexedDB = {
-      open: vi.fn(() => {
-        return {
-          result: mockDB,
-          onerror: null,
-          onsuccess: null,
-          onupgradeneeded: null,
-          addEventListener: () => {},
-        };
-      }),
+      open: vi.fn(() => makeMockOpenRequest(mockDB)),
     } as any;
   });
 

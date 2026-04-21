@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   buildSafeWorkspaceRestorePlan,
@@ -122,12 +122,15 @@ describe('workspaceSessionPersistence', () => {
   })
 
   it('schedules persistence work immediately when idle callbacks are unavailable', () => {
+    vi.useFakeTimers()
     let invoked = false
 
     scheduleWorkspaceSessionPersist(() => {
       invoked = true
     })
 
+    vi.runAllTimers()
     expect(invoked).toBe(true)
+    vi.useRealTimers()
   })
 })

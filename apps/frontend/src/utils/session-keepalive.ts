@@ -138,3 +138,5 @@ export function scheduleRefresh(): void {
   }
 }
 
+/** @internal Reset throttle state between tests only. */
+export function _resetForTesting(): void { lastRefreshTime = 0; }

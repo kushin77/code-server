@@ -66,7 +66,7 @@ export async function getSessionExpiry(): Promise<number | null> {
       const request = store.get(EXPIRY_KEY);
 
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result || null);
+      request.onsuccess = () => resolve(request.result ?? null);
     });
   } catch (error) {
     console.warn('[session-store] Failed to retrieve expiry from IndexedDB:', error);

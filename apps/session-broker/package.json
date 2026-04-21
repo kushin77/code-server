@@ -15,6 +15,7 @@
     "express": "^4.18.2",
     "cookie-parser": "^1.4.7",
     "dockerode": "^4.0.9",
+    "jose": "catalog:",
     "pg": "^8.11.0",
     "uuid": "^9.0.1",
     "winston": "^3.11.0",

@@ -108,7 +108,7 @@
     "dev": "npm run watch"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.0",
+    "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "@types/vscode": "catalog:",
     "@typescript-eslint/eslint-plugin": "catalog:",

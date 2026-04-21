@@ -58,10 +58,3 @@ export type RepoCardAction =
   | 'open_runbook'  // Open repo runbook if present
   | 'pin'           // Pin/favourite this repo
   | 'unpin';        // Unpin/unfavourite this repo
-
-/**
- * Actions available on each repo card.
- * All actions respect the user's repo access permissions.
- */  /** Show error cards for unreachable repos (default: true) */
-  showErrors: boolean;
-}

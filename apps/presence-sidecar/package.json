@@ -30,7 +30,7 @@
     "@typescript-eslint/parser": "catalog:",
     "eslint": "catalog:",
     "jest": "catalog:",
-    "@types/jest": "^29.5.4"
+    "@types/jest": "catalog:"
   },
   "engines": {
     "node": ">=18.0.0"

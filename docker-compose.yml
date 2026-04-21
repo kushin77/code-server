@@ -457,7 +457,6 @@ services:
     image: caddy:2.7.6@sha256:7b51768d110708c44179dc299884e9ee73d243a37abccce2dc796abc36371a38
     container_name: caddy
     restart: unless-stopped
-    user: "33"  # caddy user (non-root, can still bind to ports via capabilities)
     networks:
       - net-edge
       - net-app

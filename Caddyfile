@@ -1,13 +1,24 @@
-# Caddyfile with OIDC Issuer Routing (Phase 2.1)
-# On-prem HTTP proxy behind Cloudflare TLS termination
-# Generated April 21, 2026 for Phase 2.1 OIDC Issuer Deployment
+# Production Caddyfile — kushnir.cloud / ide.kushnir.cloud
+# Caddy 2.7.6 — direct TLS termination with existing Let's Encrypt certs
+# Certs stored in enterprise_caddy-data volume (valid until 2026-07-19)
+# NOTE: Caddy must run as root (user 0) to access root-owned cert files.
 
-{
-    auto_https off
-}
-
-:80 {
+ide.kushnir.cloud {
     encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
+    # ────────────────────────────────────────────────────────────────────────────
+    # Health Check Endpoints (always respond, no auth)
+    # ────────────────────────────────────────────────────────────────────────────
+    @health path /health /healthz /ping
+    respond @health "OK" 200
 
     # ────────────────────────────────────────────────────────────────────────────
     # OIDC Discovery Endpoints (public, no auth)
@@ -17,34 +28,47 @@
         header_up Host ide.kushnir.cloud
         header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
     }
 
     # ────────────────────────────────────────────────────────────────────────────
-    # Token Issuance Endpoint (public, requires credentials)
+    # Token Issuance Endpoint (OIDC issuer, public with credentials)
     # ────────────────────────────────────────────────────────────────────────────
     @token_endpoint path /oauth2/token
     reverse_proxy @token_endpoint oauth2-oidc-issuer:4182 {
         header_up Host ide.kushnir.cloud
         header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
     }
 
     # ────────────────────────────────────────────────────────────────────────────
-    # Health Check Endpoints (always respond)
+    # OAuth2-Proxy Authentication Gate (default — all other traffic)
+    # oauth2-proxy handles Google OAuth flow and upstream proxy to code-server
     # ────────────────────────────────────────────────────────────────────────────
-    @health path /health /healthz /ping
-    respond @health "OK" 200
-
-    # ────────────────────────────────────────────────────────────────────────────
-    # OAuth2-Proxy Authentication Gate (default)
-    # All other traffic goes through oauth2-proxy for Google OAuth
-    # ────────────────────────────────────────────────────────────────────────────
-    reverse_proxy 172.28.1.2:4180 {
+    reverse_proxy oauth2-proxy:4180 {
         header_up Host ide.kushnir.cloud
         header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
+    }
+}
+
+kushnir.cloud {
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    # oauth2-proxy sign-in gate for portal domain
+    reverse_proxy oauth2-proxy:4180 {
+        header_up Host kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
     }
 }

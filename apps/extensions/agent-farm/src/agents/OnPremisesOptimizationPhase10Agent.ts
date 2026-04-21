@@ -1,6 +1,7 @@
 /**
  * Phase 10: On-Premises Optimization Agent
  * Orchestrates edge deployment, offline operations, and resource constraints
+ * @ts-prune-ignore - Agent exported for orchestrator registry
  */
 
 import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';

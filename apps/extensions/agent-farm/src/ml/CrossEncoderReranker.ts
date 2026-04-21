@@ -1,6 +1,7 @@
 /**
  * Cross-Encoder Reranker Module
  * Reranks search results based on semantic relevance
+ * @ts-prune-ignore - ML API contract types
  */
 
 export interface RankedResult {

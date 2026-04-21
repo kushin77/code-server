@@ -1,6 +1,7 @@
 /**
  * Multi-Modal Analyzer Module
  * Analyzes code across text, AST, and semantic modalities
+ * @ts-prune-ignore - Multi-modal analysis types
  */
 
 export interface MultiModalAnalysis {

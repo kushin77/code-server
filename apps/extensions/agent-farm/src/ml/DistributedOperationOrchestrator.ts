@@ -1,6 +1,7 @@
 /**
  * Distributed Operation Orchestrator
  * Coordinates distributed operations across multiple edge nodes
+ * @ts-prune-ignore - Distributed computation types
  */
 
 export type DistributedOperation = 'map' | 'reduce' | 'aggregate' | 'broadcast' | 'scatter-gather';

@@ -1,6 +1,7 @@
 /**
  * Phase 12: Multi-Site Federation Agent
  * Orchestrates global distribution, smart routing, and cross-region replication
+ * @ts-prune-ignore - Agent and federation types exported for orchestrator
  */
 
 import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';

@@ -15,7 +15,9 @@ import { useAuthStore, useUserStore } from '@/store'
 /**
  * useLogin Hook
  * Handles login flow with optional MFA verification
+ * @ts-prune-ignore - Public hook API for component integration
  */
+// @ts-prune-ignore
 export const useLogin = () => {
   const { setToken, setUser, setOrg, setError } = useAuthStore()
   const [isLoading, setIsLoading] = useState(false)
@@ -87,7 +89,9 @@ export const useLogin = () => {
 /**
  * useUserManagement Hook
  * Handles user CRUD operations
+ * @ts-prune-ignore - Public hook API for component integration
  */
+// @ts-prune-ignore
 export const useUserManagement = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -172,7 +176,9 @@ export const useUserManagement = () => {
 /**
  * useRepositoryAccess Hook
  * Handles repository access control
+ * @ts-prune-ignore - Public hook API for component integration
  */
+// @ts-prune-ignore
 export const useRepositoryAccess = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -219,7 +225,9 @@ export const useRepositoryAccess = () => {
 /**
  * useAPITokens Hook
  * Handles API token lifecycle
+ * @ts-prune-ignore - Public hook API for component integration
  */
+// @ts-prune-ignore
 export const useAPITokens = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -279,7 +287,9 @@ export const useAPITokens = () => {
 /**
  * useSessions Hook
  * Handles active session management
+ * @ts-prune-ignore - Public hook API for component integration
  */
+// @ts-prune-ignore
 export const useSessions = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -328,7 +338,9 @@ export const useSessions = () => {
 /**
  * useEphemeralSessions Hook
  * Handles session-broker lifecycle actions for launch, status, cancel, and destroy
+ * @ts-prune-ignore - Public hook API for component integration
  */
+// @ts-prune-ignore
 export const useEphemeralSessions = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

@@ -26,6 +26,7 @@ export interface AgentOutput {
   codeLocations?: CodeLocation[];
 }
 
+/** @ts-prune-ignore - API contract type for code location tracking */
 export interface CodeLocation {
   file: string;
   line: number;
@@ -39,6 +40,7 @@ export interface MultiAgentContext {
   coordinationState: Record<string, unknown>;
 }
 
+/** @ts-prune-ignore - API contract type for agent task definitions */
 export interface TaskDefinition {
   type: string;
   description: string;

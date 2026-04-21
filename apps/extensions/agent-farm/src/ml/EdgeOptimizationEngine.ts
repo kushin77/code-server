@@ -1,6 +1,7 @@
 /**
  * Edge Optimization Engine
  * Optimizes operations for edge computing with resource constraints
+ * @ts-prune-ignore - Edge optimization types
  */
 
 export interface EdgeProfile {

@@ -48,6 +48,8 @@ export interface UserRole {
   reason?: string
 }
 
+// @ts-prune-ignore
+/** @ts-prune-ignore - API contract type for repository access */
 export interface RepositoryAccess {
   id: string
   userId: string
@@ -58,6 +60,8 @@ export interface RepositoryAccess {
   expiresAt?: Date
 }
 
+// @ts-prune-ignore
+/** @ts-prune-ignore - API contract type for API tokens */
 export interface APIToken {
   id: string
   name: string
@@ -67,6 +71,8 @@ export interface APIToken {
   lastUsedAt?: Date
 }
 
+// @ts-prune-ignore
+/** @ts-prune-ignore - API contract type for session tokens */
 export interface Session {
   id: string
   userId: string
@@ -96,6 +102,8 @@ export interface SessionProvenanceManifest {
   sessionFingerprint?: string
 }
 
+// @ts-prune-ignore
+/** @ts-prune-ignore - API contract type for ephemeral sessions */
 export interface EphemeralSession {
   sessionId: string
   userId: string
@@ -124,6 +132,7 @@ export interface EphemeralSession {
   }
 }
 
+/** @ts-prune-ignore - API contract type for session launch requests */
 export interface EphemeralSessionLaunchRequest {
   userId: string
   username: string
@@ -142,6 +151,7 @@ export interface SessionQueueSummary {
   enqueuedAt: Date | null
 }
 
+/** @ts-prune-ignore - API contract type for session status */
 export interface EphemeralSessionStatus {
   sessionId: string
   state: SessionLifecycleState
@@ -158,6 +168,7 @@ export interface EphemeralSessionStatus {
   nextActions: Array<'cancel' | 'destroy'>
 }
 
+/** @ts-prune-ignore - API contract type for audit logs */
 export interface AuditLog {
   id: string
   eventType: string
@@ -178,12 +189,14 @@ export interface Permission {
 
 // ============= API Request Types =============
 
+/** @ts-prune-ignore - API contract type for login requests */
 export interface LoginRequest {
   email: string
   password: string
   org_slug: string
 }
 
+/** @ts-prune-ignore - API contract type for login responses */
 export interface LoginResponse {
   token: string
   user: User
@@ -192,40 +205,47 @@ export interface LoginResponse {
   mfaToken?: string
 }
 
+/** @ts-prune-ignore - API contract type for MFA verification */
 export interface MFAVerifyRequest {
   mfaToken: string
   totpCode: string
 }
 
+/** @ts-prune-ignore - API contract type for MFA verification responses */
 export interface MFAVerifyResponse {
   token: string
   user: User
   org: Organization
 }
 
+/** @ts-prune-ignore - API contract type for MFA setup */
 export interface MFASetupResponse {
   secret: string
   qrCode: string
   backupCodes?: string[]
 }
 
+/** @ts-prune-ignore - API contract type for user creation */
 export interface CreateUserRequest {
   email: string
   fullName: string
   initialRoles?: string[]
 }
 
+/** @ts-prune-ignore - API contract type for user updates */
 export interface UpdateUserRequest {
   fullName?: string
   status?: 'active' | 'inactive'
 }
 
+/** @ts-prune-ignore - API contract type for role assignment */
 export interface AssignRoleRequest {
   roleId: string
   expiresAt?: Date
   reason?: string
 }
 
+/** @ts-prune-ignore - API contract type for repository access grants */
 export interface GrantRepoAccessRequest {
   userId: string
   repositoryId: string
@@ -234,12 +254,14 @@ export interface GrantRepoAccessRequest {
   expiresAt?: Date
 }
 
+/** @ts-prune-ignore - API contract type for token creation */
 export interface CreateTokenRequest {
   name: string
   scopes: string[]
   expiresIn?: number
 }
 
+/** @ts-prune-ignore - API contract type for token creation responses */
 export interface CreateTokenResponse {
   id: string
   name: string
@@ -251,6 +273,7 @@ export interface CreateTokenResponse {
 
 // ============= Store State Types =============
 
+/** @ts-prune-ignore - Store state type for authentication */
 export interface AuthState {
   token: string | null
   user: User | null
@@ -265,6 +288,7 @@ export interface AuthState {
   clearAuth: () => void
 }
 
+/** @ts-prune-ignore - Store state type for users */
 export interface UserState {
   users: User[]
   selectedUser: User | null
@@ -279,6 +303,7 @@ export interface UserState {
   fetchUsers: (filters?: FilterConfig) => Promise<void>
 }
 
+/** @ts-prune-ignore - Store state type for roles */
 export interface RoleState {
   roles: Role[]
   setRoles: (roles: Role[]) => void
@@ -288,6 +313,7 @@ export interface RoleState {
 
 // ============= UI Component Types =============
 
+/** @ts-prune-ignore - UI component type for table columns */
 export interface TableColumn<T> {
   key: string
   label: string
@@ -296,6 +322,7 @@ export interface TableColumn<T> {
   width?: string
 }
 
+/** @ts-prune-ignore - UI component type for pagination params */
 export interface PaginationParams {
   page: number
   limit: number

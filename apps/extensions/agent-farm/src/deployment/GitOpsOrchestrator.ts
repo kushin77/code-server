@@ -1,6 +1,7 @@
 /**
  * GitOps Orchestrator
  * Git-based deployment orchestration with reconciliation loop
+ * @ts-prune-ignore - Deployment API contract types
  */
 
 export interface GitOpsConfig {

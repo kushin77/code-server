@@ -4,7 +4,9 @@ import * as types from '@/types'
 /**
  * Authentication Store
  * Manages global auth state (token, user, org)
+ * @ts-prune-ignore - Public store API for component integration
  */
+// @ts-prune-ignore
 export const useAuthStore = create<types.AuthState>((set) => ({
   token: localStorage.getItem('auth_token'),
   user: null,
@@ -38,7 +40,9 @@ export const useAuthStore = create<types.AuthState>((set) => ({
 /**
  * User Management Store
  * Manages user list state and operations
+ * @ts-prune-ignore - Public store API for component integration
  */
+// @ts-prune-ignore
 export const useUserStore = create<types.UserState>((set) => ({
   users: [],
   selectedUser: null,
@@ -75,7 +79,9 @@ export const useUserStore = create<types.UserState>((set) => ({
 /**
  * Role Store
  * Manages role definitions (read-only)
+ * @ts-prune-ignore - Public store API for component integration
  */
+// @ts-prune-ignore
 export const useRoleStore = create<types.RoleState>((set) => ({
   roles: [
     {

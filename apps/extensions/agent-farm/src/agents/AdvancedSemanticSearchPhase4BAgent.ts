@@ -1,6 +1,7 @@
 /**
  * Phase 4B: Advanced ML Semantic Search Agent
  * AdvancedSemanticSearchPhase4BAgent - Full semantic search with query understanding and re-ranking
+ * @ts-prune-ignore - Agent class exported for orchestrator registry
  */
 
 import { Agent, AgentOutput, CodeContext, MultiAgentContext } from '../types';

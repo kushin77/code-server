@@ -17,9 +17,8 @@
 
 # QA User Email (immutable, versioned)
 resource "google_secret_manager_secret" "qa_email" {
-  project            = var.gcp_project_id
-  secret_id          = "qa-user-email"
-  replication_policy = "user_managed"
+  project   = var.gcp_project_id
+  secret_id = "qa-user-email"
 
   replication {
     user_managed {
@@ -44,9 +43,8 @@ resource "google_secret_manager_secret" "qa_email" {
 
 # QA User Password (immutable, versioned, sensitive)
 resource "google_secret_manager_secret" "qa_password" {
-  project            = var.gcp_project_id
-  secret_id          = "qa-user-password"
-  replication_policy = "user_managed"
+  project   = var.gcp_project_id
+  secret_id = "qa-user-password"
 
   replication {
     user_managed {

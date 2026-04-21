@@ -223,8 +223,8 @@ services:
       - caddy-data:/data
     environment:
       - ACME_AGREE=true
-      - PRIMARY_HOST=${PRIMARY_HOST:-192.168.168.31}
-      - REPLICA_HOST=${REPLICA_HOST:-192.168.168.42}
+      - PRIMARY_HOST=$${PRIMARY_HOST:-192.168.168.31}
+      - REPLICA_HOST=$${REPLICA_HOST:-192.168.168.42}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/healthz || exit 1"]
       interval: 30s

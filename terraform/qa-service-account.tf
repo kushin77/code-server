@@ -41,7 +41,7 @@ resource "google_secret_manager_secret" "qa_user_email" {
   project   = var.gcp_project_id
 
   replication {
-    automatic = true
+    auto {}
   }
 
   labels = {
@@ -61,7 +61,7 @@ resource "google_secret_manager_secret" "qa_service_account_key" {
   project   = var.gcp_project_id
 
   replication {
-    automatic = true
+    auto {}
   }
 
   labels = {

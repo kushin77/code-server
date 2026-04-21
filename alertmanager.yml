@@ -13,8 +13,4 @@ route:
 receivers:
   - name: 'null'
 
-# Inhibition rules for alert grouping
-inhibit_rules:
-  # Don't send resolve notifications
-  - match:
-      severity: 'info'
+inhibit_rules: []

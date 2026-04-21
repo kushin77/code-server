@@ -270,12 +270,4 @@ resource "cloudflare_logpush_job" "access_audit_log" {
   logpull_options = "fields=RayID,Timestamp,Action,UserEmail,IPAddress,DeviceID,AppDomain,RuleEvaluationSummary,DevicePostureCheckPass&timestamps=unix"
 
   destination_conf = "r2://${var.logpush_r2_bucket}/access-audit-logs/{DATE}?account-id=${var.cloudflare_account_id}&access-key-id={R2_ACCESS_KEY_ID}&secret-access-key={R2_SECRET_ACCESS_KEY}"
-
-  filter {
-    where {
-      key      = "ClientRequestUserAgent"
-      operator = "!eq"
-      value    = ""
-    }
-  }
 }

@@ -273,3 +273,10 @@ variable "ci_service_account_email" {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+# Operational variables
+variable "environment" {
+  description = "Deployment environment name (e.g. production, staging)"
+  type        = string
+  default     = "production"
+}

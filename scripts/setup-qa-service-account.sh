@@ -35,7 +35,7 @@ cd "$SCRIPT_DIR"
 QA_EMAIL="qa@kushnir.cloud"
 QA_SERVICE_ACCOUNT_ID="qa-user"
 QA_DISTRIBUTION_GROUP="qa-team@kushnir.cloud"  # Email forwarding destination
-GCP_PROJECT="${GCP_PROJECT:-kushin77-ops}"
+GCP_PROJECT="${GCP_PROJECT:-$(gcloud config get-value project 2>/dev/null || echo 'kushin77-ops')}"
 TERRAFORM_DIR="./terraform"
 
 # Colors

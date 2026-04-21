@@ -1,0 +1,5 @@
+# terraform/terraform.tfvars.example
+# Example Terraform variables for QA service account setup
+# Copy to terraform.tfvars and update with your values
+
+gcp_project_id = "kushin77-ops"  # Change to your GCP project ID

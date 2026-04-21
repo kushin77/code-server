@@ -18,6 +18,12 @@ terraform {
   }
 }
 
+variable "gcp_project_id" {
+  description = "GCP project ID"
+  type        = string
+  default     = ""  # Will use current gcloud project if not set
+}
+
 # ============================================================================
 # Service Account for QA (simulates qa@kushnir.cloud user)
 # ============================================================================

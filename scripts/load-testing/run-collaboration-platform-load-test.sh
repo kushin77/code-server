@@ -162,7 +162,7 @@ run_load_test() {
       --out json="$report_file"
   fi
 
-  if [[ $? -ne 0 ]]; then
+  if [[ "$?" -ne 0 ]]; then
     echo -e "${RED}[ERROR]${NC} Load test failed"
     return 1
   fi

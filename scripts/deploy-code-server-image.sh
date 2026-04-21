@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # @file        scripts/deploy-code-server-image.sh
 # @module      operations/deployment
-# @description Rebuild and deploy code-server container image to on-prem host
+# @description Rebuild and deploy KC IDE container image to on-prem host
 # @owner       platform
 # @status      active
 #
 # PURPOSE:
-#   Automates the complete rebuild and deployment cycle for code-server image:
+#   Automates the complete rebuild and deployment cycle for KC IDE (code-server) image:
 #   1. Validate Dockerfile syntax
 #   2. Build new image with timestamp tag
 #   3. Update docker-compose to reference new image

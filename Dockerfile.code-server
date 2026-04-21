@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════════════════════
-# code-server enterprise build — IaC, immutable, idempotent
+# KC IDE (code-server) enterprise build — IaC, immutable, idempotent
 # Pin all versions for reproducible builds and true immutability
 # ════════════════════════════════════════════════════════════════════════════
 # @file        Dockerfile.code-server

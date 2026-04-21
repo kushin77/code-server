@@ -164,7 +164,7 @@ output_details() {
     log INFO "Retrieving access details..."
 
     log SUCCESS "=========================================="
-    log SUCCESS "Code-Server Enterprise Deployment Complete"
+    log SUCCESS "Kushnir.cloud (KC) Deployment Complete"
     log SUCCESS "=========================================="
 
     terraform -chdir="${TF_DIR}" output -raw code_server_url 2>/dev/null
@@ -188,7 +188,7 @@ cleanup() {
 
 # Main execution
 main() {
-    log INFO "Starting Code-Server Enterprise Deployment"
+    log INFO "Starting Kushnir.cloud (KC) Deployment"
     log INFO "Log file: ${LOG_FILE}"
     log INFO "Target: ${DEPLOY_HOST}"
     log INFO "Remote deployment: ${IS_REMOTE}"

@@ -31,6 +31,7 @@ Thumbs.db
 *.tmp
 *.bak
 *.backup
+.task-completion/
 
 # Sensitive data (if accidentally created)
 *.pem

@@ -1,12 +1,12 @@
-name: Production Redeploy (Manual Dispatch)
+name: Kushnir.cloud (KC) Production Redeploy
 # @module ci/deployment
-# @description Manual workflow to trigger production redeploy with predeploy gate validation
+# @description Manual workflow to trigger KC production redeploy with predeploy gate validation
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Deployment mode"
+        description: "Deployment mode (full|partial|portal|service)"
         required: true
         default: "full"
         type: choice

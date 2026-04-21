@@ -1,4 +1,4 @@
-name: Deploy Code-Server Enterprise IaC
+name: Deploy Kushnir.cloud (KC) Infrastructure
 
 on:
   push:
@@ -178,16 +178,13 @@ jobs:
         with:
           payload: |
             {
-              "text": "Code-Server Enterprise Deployed",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Code-Server Enterprise IaC deployment successful\n*URL:* https://ide.kushnir.cloud\n*Deployment:* ${{ github.sha }}"
-                  }
-                }
-              ]
+                "text": "Kushnir.cloud (KC) Deployed",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "Kushnir.cloud (KC) infrastructure deployed successfully\n*URL:* https://ide.kushnir.cloud\n*Deployment:* ${{ github.sha }}"
             }
 
   destroy:
@@ -229,16 +226,13 @@ jobs:
         with:
           payload: |
             {
-              "text": "Code-Server Enterprise Destroyed",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Code-Server Enterprise IaC resources destroyed"
-                  }
-                }
-              ]
+                "text": "Kushnir.cloud (KC) Destroyed",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "Kushnir.cloud (KC) infrastructure resources destroyed"
             }
 
   final-status:

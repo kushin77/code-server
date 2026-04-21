@@ -23,7 +23,7 @@ This script will:
 ### Step 2: Approve Deployment in GitHub (via UI)
 When prompted by GitHub Actions:
 1. Go to https://github.com/kushin77/code-server/actions
-2. Find the "Deploy Code-Server Enterprise IaC" workflow run
+2. Find the "Kushnir.cloud (KC) Infrastructure" workflow run
 3. Click "Review deployments"
 4. Select "production" environment
 5. Click "Approve and deploy"
@@ -199,7 +199,7 @@ docker compose ps
 
 ### Real-time in GitHub Actions
 1. Go to https://github.com/kushin77/code-server/actions
-2. Click the "Deploy Code-Server Enterprise IaC" run
+2. Click the "Kushnir.cloud (KC) Infrastructure" run
 3. Watch logs as it progresses
 
 ### Via SSH

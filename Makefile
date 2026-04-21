@@ -20,7 +20,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 help:
-	@echo "✅ Code-Server Enterprise - IaC-First Deployment with Ollama"
+	@echo "✅ Kushnir.cloud (KC) IDE - IaC-First Deployment with Ollama"
 	@echo ""
 	@echo "GETTING STARTED:"
 	@echo "  make deploy        - Deploy entire infrastructure (idempotent)"

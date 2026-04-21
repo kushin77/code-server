@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # @file        scripts/deploy-kushnir-cloud.sh
 # @module      deployment
-# @description deploy kushnir cloud — on-prem code-server
+# @description Deploy Kushnir.cloud (KC) IDE to on-prem infrastructure
 # @owner       platform
 # @status      active
 # deploy-kushnir-cloud.sh

@@ -390,7 +390,7 @@ notify_slack() {
           "short": true
         }
       ],
-      "footer": "Code-Server Enterprise Auto-Deploy"
+      "footer": "Kushnir.cloud (KC) Auto-Deploy"
     }
   ]
 }

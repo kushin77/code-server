@@ -100,6 +100,95 @@ echo "── Test: _dod_duration ──"
 dur="$(_dod_duration "build")"
 [[ -n "$dur" && "$dur" -ge 0 ]] && ok "_dod_duration returns non-negative integer" || fail "_dod_duration broken"
 
+# ── 11. sourcing library does not mutate caller strict-mode flags ───────────
+echo ""
+echo "── Test: library sourcing preserves caller shell options ──"
+strict_state="$(FRAMEWORK_PATH="$SCRIPT_DIR/lib/task-completion-framework.sh" bash -c '
+  set +e +u
+  set +o pipefail
+  source "$FRAMEWORK_PATH"
+  printf "%s|%s|%s" "$(set -o | awk '\''$1=="errexit"{print $2}'\'')" "$(set -o | awk '\''$1=="nounset"{print $2}'\'')" "$(set -o | awk '\''$1=="pipefail"{print $2}'\'')"
+')"
+[[ "$strict_state" == "off|off|off" ]] && ok "caller shell options preserved" || fail "caller shell options mutated: $strict_state"
+
+
+# ── 12. safe_task_complete blocked verdict ──────────────────────────────────
+echo ""
+echo "── Test: safe_task_complete blocked verdict ──"
+reset_dod
+TEST_WORKSPACE="$(mktemp -d /tmp/dod-workspace-XXXX)"
+export DOD_WORKSPACE_ROOT="$TEST_WORKSPACE"
+export DOD_ARTIFACT_DIR="$TEST_WORKSPACE/.task-completion"
+register_dod_item "agent-step" "Finish implementation" "agent"
+register_dod_item "manual-step" "QA sign-off" "manual"
+if safe_task_complete 1234; then
+  fail "safe_task_complete should not succeed while agent items remain"
+else
+  rc=$?
+  [[ "$rc" -eq 1 ]] && ok "blocked verdict returns exit code 1" || fail "blocked verdict returned $rc"
+fi
+grep -q 'VERDICT=blocked' "$DOD_ARTIFACT_DIR/issue-1234-status.env" && ok "blocked receipt written" || fail "blocked receipt missing"
+grep -q 'READY_FOR_TASK_COMPLETE=false' "$DOD_ARTIFACT_DIR/issue-1234-status.env" && ok "blocked receipt marks task_complete false" || fail "blocked receipt readiness incorrect"
+rm -rf "$TEST_WORKSPACE"
+unset DOD_WORKSPACE_ROOT DOD_ARTIFACT_DIR
+
+# ── 13. safe_task_complete handoff verdict ──────────────────────────────────
+echo ""
+echo "── Test: safe_task_complete handoff verdict ──"
+reset_dod
+TEST_WORKSPACE="$(mktemp -d /tmp/dod-workspace-XXXX)"
+export DOD_WORKSPACE_ROOT="$TEST_WORKSPACE"
+export DOD_ARTIFACT_DIR="$TEST_WORKSPACE/.task-completion"
+register_dod_item "agent-step" "Finish implementation" "agent"
+register_dod_item "manual-step" "QA sign-off" "manual"
+mark_dod_complete "agent-step"
+if safe_task_complete 4321; then
+  fail "safe_task_complete should return handoff when only non-agent items remain"
+else
+  rc=$?
+  [[ "$rc" -eq 2 ]] && ok "handoff verdict returns exit code 2" || fail "handoff verdict returned $rc"
+fi
+grep -q 'VERDICT=handoff' "$DOD_ARTIFACT_DIR/issue-4321-status.env" && ok "handoff receipt written" || fail "handoff receipt missing"
+grep -q 'READY_FOR_HANDOFF=true' "$DOD_ARTIFACT_DIR/issue-4321-status.env" && ok "handoff receipt marks handoff true" || fail "handoff receipt readiness incorrect"
+grep -q 'AGENT_WORK_COMPLETE=true' "$DOD_ARTIFACT_DIR/issue-4321-status.env" && ok "handoff receipt marks agent work complete" || fail "handoff agent completion incorrect"
+rm -rf "$TEST_WORKSPACE"
+unset DOD_WORKSPACE_ROOT DOD_ARTIFACT_DIR
+
+# ── 14. safe_task_complete ready verdict ────────────────────────────────────
+echo ""
+echo "── Test: safe_task_complete ready verdict ──"
+reset_dod
+TEST_WORKSPACE="$(mktemp -d /tmp/dod-workspace-XXXX)"
+export DOD_WORKSPACE_ROOT="$TEST_WORKSPACE"
+export DOD_ARTIFACT_DIR="$TEST_WORKSPACE/.task-completion"
+register_dod_item "agent-step" "Finish implementation" "agent"
+mark_dod_complete "agent-step"
+if safe_task_complete 777; then
+  ok "ready verdict returns exit code 0"
+else
+  fail "ready verdict should succeed"
+fi
+grep -q 'VERDICT=ready' "$DOD_ARTIFACT_DIR/issue-777-status.env" && ok "ready receipt written" || fail "ready receipt missing"
+grep -q 'READY_FOR_TASK_COMPLETE=true' "$DOD_ARTIFACT_DIR/issue-777-status.env" && ok "ready receipt marks task_complete true" || fail "ready receipt readiness incorrect"
+[[ -f "$DOD_ARTIFACT_DIR/issue-777-dod-state.json" ]] && ok "ready state file written" || fail "ready state file missing"
+rm -rf "$TEST_WORKSPACE"
+unset DOD_WORKSPACE_ROOT DOD_ARTIFACT_DIR
+
+# ── 15. reset_dod clears side-channel state ─────────────────────────────────
+echo ""
+echo "── Test: reset_dod clears side-channel state ──"
+reset_dod
+enable_dod_verbose
+enable_dod_audit "$(mktemp /tmp/dod-audit-XXXX.log)"
+set_dod_github_repo "kushin77/code-server"
+register_dod_item "cleanup-step" "Cleanup" "agent"
+mark_dod_complete "cleanup-step"
+reset_dod
+[[ ${#_DOD_TIMESTAMPS[@]} -eq 0 ]] && ok "timestamps cleared on reset" || fail "timestamps not cleared on reset"
+[[ -z "$_DOD_AUDIT_LOG" ]] && ok "audit log cleared on reset" || fail "audit log not cleared on reset"
+[[ -z "$_DOD_GITHUB_REPO" ]] && ok "GitHub repo cleared on reset" || fail "GitHub repo not cleared on reset"
+[[ $_COMPLETION_VERBOSE -eq 0 ]] && ok "verbose flag cleared on reset" || fail "verbose flag not cleared on reset"
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
 echo "════════════════════════════════"

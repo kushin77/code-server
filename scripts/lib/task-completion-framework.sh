@@ -12,13 +12,21 @@
 #   register_dod_item "step-1" "Implement feature" "agent"
 #   do_work
 #   mark_dod_complete "step-1"
-#   validate_definition_of_done && safe_task_complete 1234 || diagnose_completion_blockers
+#   safe_task_complete 1234
+#   case $? in
+#     0) echo "Ready for task_complete" ;;
+#     1) diagnose_completion_blockers ;;
+#     2) echo "Ready for handoff" ;;
+#   esac
 #
 # @owner       kushin77
 # @status      production
 #
 
-set -euo pipefail
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "ERROR: task-completion-framework.sh requires bash" >&2
+  exit 1
+fi
 
 # ============================================================================
 # INTERNAL STATE (do not modify directly)
@@ -32,6 +40,7 @@ declare -g  _DOD_INITIALIZED=0
 declare -g  _COMPLETION_VERBOSE=0
 declare -g  _DOD_AUDIT_LOG=""       # Path to audit log file (empty = disabled)
 declare -g  _DOD_GITHUB_REPO=""     # "owner/repo" for GitHub integration
+declare -gr _DOD_DEFAULT_ARTIFACT_SUBDIR=".task-completion"
 
 # ============================================================================
 # CORE API
@@ -165,6 +174,247 @@ function _dod_parse_field() {
   echo "${parts[$idx]:-}"
 }
 
+# _dod_status_counts() — pipe-delimited aggregate counters
+# Output: total|completed|blocked|pending|remaining_agent|remaining_non_agent
+function _dod_status_counts() {
+  local total=0
+  local completed=0
+  local blocked=0
+  local pending=0
+  local remaining_agent=0
+  local remaining_non_agent=0
+  local id=""
+
+  for id in "${!_DOD_COMPLETION[@]}"; do
+    local status="${_DOD_COMPLETION[$id]}"
+    local reg="${_DOD_REGISTRY[$id]:-}"
+    local blocker_type=""
+
+    blocker_type="$(_dod_parse_field "$reg" 1)"
+    ((total++))
+
+    case "$status" in
+      completed)
+        ((completed++))
+        ;;
+      blocked)
+        ((blocked++))
+        ;;
+      *)
+        ((pending++))
+        ;;
+    esac
+
+    if [[ "$status" != "completed" ]]; then
+      if [[ "$blocker_type" == "agent" ]]; then
+        ((remaining_agent++))
+      else
+        ((remaining_non_agent++))
+      fi
+    fi
+  done
+
+  printf '%s|%s|%s|%s|%s|%s\n' \
+    "$total" "$completed" "$blocked" "$pending" "$remaining_agent" "$remaining_non_agent"
+}
+
+# _dod_completion_verdict() — classify current completion state
+# Return codes:
+#   0 = ready (all DoD items complete)
+#   1 = blocked (agent-owned work still incomplete)
+#   2 = handoff (agent work complete, only non-agent items remain)
+function _dod_completion_verdict() {
+  local total=0
+  local completed=0
+  local blocked=0
+  local pending=0
+  local remaining_agent=0
+  local remaining_non_agent=0
+
+  IFS='|' read -r total completed blocked pending remaining_agent remaining_non_agent <<< "$(_dod_status_counts)"
+
+  if [[ "$total" -eq 0 || "$completed" -eq "$total" ]]; then
+    echo "ready"
+    return 0
+  fi
+
+  if [[ "$remaining_agent" -eq 0 ]]; then
+    echo "handoff"
+    return 2
+  fi
+
+  echo "blocked"
+  return 1
+}
+
+# _dod_workspace_root() — best-effort workspace root discovery
+function _dod_workspace_root() {
+  if [[ -n "${DOD_WORKSPACE_ROOT:-}" ]]; then
+    printf '%s\n' "$DOD_WORKSPACE_ROOT"
+    return 0
+  fi
+
+  if command -v git &>/dev/null; then
+    local root=""
+    root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+    if [[ -n "$root" ]]; then
+      printf '%s\n' "$root"
+      return 0
+    fi
+  fi
+
+  pwd
+}
+
+# _dod_artifact_dir() — location for durable completion receipts
+function _dod_artifact_dir() {
+  if [[ -n "${DOD_ARTIFACT_DIR:-}" ]]; then
+    printf '%s\n' "$DOD_ARTIFACT_DIR"
+    return 0
+  fi
+
+  printf '%s/%s\n' "$(_dod_workspace_root)" "$_DOD_DEFAULT_ARTIFACT_SUBDIR"
+}
+
+# _dod_write_completion_receipt(issue_id, verdict, forced) — persist completion state
+function _dod_write_completion_receipt() {
+  local issue_id="${1:?missing issue_id}"
+  local verdict="${2:?missing verdict}"
+  local forced="${3:-0}"
+  local artifact_dir=""
+  local issue_prefix="issue-${issue_id}"
+  local state_file=""
+  local status_file=""
+  local summary_file=""
+  local generated_at=""
+  local total=0
+  local completed=0
+  local blocked=0
+  local pending=0
+  local remaining_agent=0
+  local remaining_non_agent=0
+  local ready_for_task_complete=false
+  local ready_for_handoff=false
+  local agent_work_complete=false
+  local human_status=""
+  local next_action=""
+  local force_flag=false
+
+  IFS='|' read -r total completed blocked pending remaining_agent remaining_non_agent <<< "$(_dod_status_counts)"
+  artifact_dir="$(_dod_artifact_dir)"
+  state_file="$artifact_dir/${issue_prefix}-dod-state.json"
+  status_file="$artifact_dir/${issue_prefix}-status.env"
+  summary_file="$artifact_dir/${issue_prefix}-summary.txt"
+  generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)"
+
+  mkdir -p "$artifact_dir"
+  save_dod_state "$state_file" >/dev/null
+
+  if [[ "$forced" -eq 1 ]]; then
+    force_flag=true
+  fi
+
+  case "$verdict" in
+    ready)
+      ready_for_task_complete=true
+      agent_work_complete=true
+      human_status="READY FOR TASK_COMPLETE"
+      next_action="Call the platform task_complete tool once the summary message is prepared."
+      ;;
+    handoff)
+      ready_for_handoff=true
+      agent_work_complete=true
+      human_status="READY FOR HANDOFF"
+      next_action="Stop retrying task_complete. Hand off the remaining non-agent steps or rerun with force only if policy allows."
+      ;;
+    forced)
+      ready_for_task_complete=true
+      agent_work_complete=true
+      human_status="FORCED COMPLETION"
+      next_action="Call the platform task_complete tool and include the forced completion rationale."
+      ;;
+    *)
+      human_status="BLOCKED"
+      next_action="Finish remaining agent-owned DoD items before calling task_complete."
+      ;;
+  esac
+
+  cat > "$status_file" <<EOF
+ISSUE_ID=$issue_id
+VERDICT=$verdict
+FORCED=$force_flag
+READY_FOR_TASK_COMPLETE=$ready_for_task_complete
+READY_FOR_HANDOFF=$ready_for_handoff
+AGENT_WORK_COMPLETE=$agent_work_complete
+TOTAL_ITEMS=$total
+COMPLETED_ITEMS=$completed
+BLOCKED_ITEMS=$blocked
+PENDING_ITEMS=$pending
+REMAINING_AGENT_ITEMS=$remaining_agent
+REMAINING_NON_AGENT_ITEMS=$remaining_non_agent
+GENERATED_AT=$generated_at
+STATE_FILE=$state_file
+SUMMARY_FILE=$summary_file
+EOF
+
+  cat > "$summary_file" <<EOF
+Task Completion Receipt
+=======================
+
+Issue: #$issue_id
+Verdict: $verdict
+Status: $human_status
+Generated: $generated_at
+
+Counts:
+- Total items: $total
+- Completed items: $completed
+- Blocked items: $blocked
+- Pending items: $pending
+- Remaining agent items: $remaining_agent
+- Remaining non-agent items: $remaining_non_agent
+
+Next action:
+$next_action
+EOF
+
+  if [[ "${DOD_WRITE_LEGACY_MARKERS:-0}" -eq 1 ]]; then
+    local workspace_root=""
+    workspace_root="$(_dod_workspace_root)"
+
+    cat > "$workspace_root/.ISSUE-${issue_id}-TASK-COMPLETE" <<EOF
+TASK COMPLETION MARKER - ISSUE #$issue_id
+Verdict: $verdict
+Status: $human_status
+Generated: $generated_at
+Receipt: $summary_file
+EOF
+
+    cat > "$workspace_root/.AGENT_TASK_COMPLETE_ACK" <<EOF
+AGENT_TASK_COMPLETION_ACKNOWLEDGMENT
+
+Status: $human_status
+Date: $generated_at
+Issue: #$issue_id
+Receipt: $summary_file
+EOF
+
+    if [[ "$verdict" == "ready" || "$verdict" == "forced" ]]; then
+      cat > "$workspace_root/.TASK_COMPLETE" <<EOF
+TASK COMPLETION MARKER
+
+Issue: #$issue_id
+Verdict: $verdict
+Status: $human_status
+Generated: $generated_at
+Receipt: $summary_file
+EOF
+    fi
+  fi
+
+  printf '%s\n' "$status_file"
+}
+
 # ============================================================================
 # VALIDATION & DIAGNOSIS
 # ============================================================================
@@ -176,28 +426,47 @@ function _dod_parse_field() {
 # Returns 0 if all complete, 1 if any blocked/pending.
 #
 function validate_definition_of_done() {
-  if [[ $_DOD_INITIALIZED -eq 0 ]]; then
-    [[ $_COMPLETION_VERBOSE -eq 1 ]] && echo "ℹ️  No DoD items registered"
-    return 0  # No DoD defined = validation passes
-  fi
-
   local total=0
   local completed=0
+  local remaining_agent=0
+  local verdict_rc=0
 
-  for id in "${!_DOD_COMPLETION[@]}"; do
-    ((total++))
-    if [[ "${_DOD_COMPLETION[$id]}" == "completed" ]]; then
-      ((completed++))
-    fi
-  done
+  IFS='|' read -r total completed _ _ remaining_agent _ <<< "$(_dod_status_counts)"
+  _dod_completion_verdict >/dev/null 2>&1 || verdict_rc=$?
 
-  if [[ $completed -eq $total && $total -gt 0 ]]; then
+  if [[ $_DOD_INITIALIZED -eq 0 ]]; then
+    [[ $_COMPLETION_VERBOSE -eq 1 ]] && echo "ℹ️  No DoD items registered"
+    return 0
+  fi
+
+  if [[ $verdict_rc -eq 0 ]]; then
     [[ $_COMPLETION_VERBOSE -eq 1 ]] && echo "✅ Definition of Done: $completed/$total complete"
     return 0
-  else
-    [[ $_COMPLETION_VERBOSE -eq 1 ]] && echo "❌ Definition of Done: $completed/$total complete"
+  fi
+
+  if [[ $verdict_rc -eq 2 ]]; then
+    [[ $_COMPLETION_VERBOSE -eq 1 ]] && echo "🟡 Definition of Done: $completed/$total complete (agent work done, handoff required)"
     return 1
   fi
+
+  [[ $_COMPLETION_VERBOSE -eq 1 ]] && echo "❌ Definition of Done: $completed/$total complete ($remaining_agent agent item(s) still open)"
+  return 1
+}
+
+##
+# get_completion_verdict()
+#
+# Return the current completion verdict and matching exit code.
+# Verdicts: ready, blocked, handoff
+# Exit codes: 0=ready, 1=blocked, 2=handoff
+#
+function get_completion_verdict() {
+  local verdict=""
+  local verdict_rc=0
+
+  verdict="$(_dod_completion_verdict)" || verdict_rc=$?
+  printf '%s\n' "$verdict"
+  return $verdict_rc
 }
 
 ##
@@ -207,20 +476,41 @@ function validate_definition_of_done() {
 #
 function get_completion_status() {
   local format="${1:-text}"
-
   local total=0
   local completed=0
   local blocked=0
   local pending=0
+  local remaining_agent=0
+  local remaining_non_agent=0
+  local verdict=""
+  local ready_for_task_complete=false
+  local ready_for_handoff=false
+  local agent_work_complete=false
+  local overall_status=""
 
-  for id in "${!_DOD_COMPLETION[@]}"; do
-    ((total++))
-    case "${_DOD_COMPLETION[$id]}" in
-      completed) ((completed++)) ;;
-      blocked) ((blocked++)) ;;
-      pending) ((pending++)) ;;
-    esac
-  done
+  IFS='|' read -r total completed blocked pending remaining_agent remaining_non_agent <<< "$(_dod_status_counts)"
+  verdict="$(_dod_completion_verdict 2>/dev/null || true)"
+
+  case "$verdict" in
+    ready)
+      ready_for_task_complete=true
+      ready_for_handoff=false
+      agent_work_complete=true
+      overall_status="TASK_COMPLETE_READY ✅"
+      ;;
+    handoff)
+      ready_for_task_complete=false
+      ready_for_handoff=true
+      agent_work_complete=true
+      overall_status="HANDOFF_REQUIRED 🟡"
+      ;;
+    *)
+      ready_for_task_complete=false
+      ready_for_handoff=false
+      agent_work_complete=false
+      overall_status="BLOCKED ❌"
+      ;;
+  esac
 
   case "$format" in
     text)
@@ -231,8 +521,10 @@ Total Items:    $total
 Completed:      $completed ✅
 Blocked:        $blocked ⚠️
 Pending:        $pending 🔄
+Agent Open:     $remaining_agent
+Non-Agent Open: $remaining_non_agent
 ────────────────────────────────────────
-Status:         $(validate_definition_of_done >/dev/null 2>&1 && echo "READY ✅" || echo "NOT READY ❌")
+Status:         $overall_status
 EOF
       ;;
     json)
@@ -241,7 +533,12 @@ EOF
       echo "  \"completed\": $completed,"
       echo "  \"blocked\": $blocked,"
       echo "  \"pending\": $pending,"
-      echo "  \"ready\": $(validate_definition_of_done >/dev/null 2>&1 && echo "true" || echo "false"),"
+      echo "  \"remaining_agent\": $remaining_agent,"
+      echo "  \"remaining_non_agent\": $remaining_non_agent,"
+      echo "  \"verdict\": \"$verdict\","
+      echo "  \"ready\": $([[ "$ready_for_task_complete" == true ]] && echo "true" || echo "false"),"
+      echo "  \"ready_for_handoff\": $([[ "$ready_for_handoff" == true ]] && echo "true" || echo "false"),"
+      echo "  \"agent_work_complete\": $([[ "$agent_work_complete" == true ]] && echo "true" || echo "false"),"
       echo "  \"items\": {"
       local first=1
       for id in "${!_DOD_REGISTRY[@]}"; do
@@ -276,8 +573,10 @@ EOF
 | Completed | $completed ✅ |
 | Blocked | $blocked ⚠️ |
 | Pending | $pending 🔄 |
+| Remaining Agent Items | $remaining_agent |
+| Remaining Non-Agent Items | $remaining_non_agent |
 
-**Overall Status**: $(validate_definition_of_done >/dev/null 2>&1 && echo "**READY ✅**" || echo "**NOT READY ❌**")
+**Overall Status**: **$overall_status**
 EOF
       ;;
     *)
@@ -295,11 +594,14 @@ EOF
 #
 function diagnose_completion_blockers() {
   local show_solutions="${1:-1}"
+  local verdict_rc=0
 
   if [[ $_DOD_INITIALIZED -eq 0 ]]; then
     echo "ℹ️  No DoD items registered - nothing to diagnose"
     return 0
   fi
+
+  _dod_completion_verdict >/dev/null 2>&1 || verdict_rc=$?
 
   local has_blockers=0
   declare -A blocker_by_type
@@ -309,6 +611,11 @@ function diagnose_completion_blockers() {
   echo "COMPLETION BLOCKER DIAGNOSIS"
   echo "════════════════════════════════════════════════════════════════"
   echo ""
+
+  if [[ $verdict_rc -eq 2 ]]; then
+    echo "🟡 Agent-owned work is complete. Remaining items require handoff, credentials, or manual verification."
+    echo ""
+  fi
 
   for id in "${!_DOD_COMPLETION[@]}"; do
     local status="${_DOD_COMPLETION[$id]}"
@@ -402,8 +709,14 @@ EOF
 ##
 # safe_task_complete(issue_id, [force])
 #
-# Safely call task_complete after validating Definition of Done.
-# If force=1, skips validation and calls task_complete anyway.
+# Safely determine whether task_complete can be called and persist a receipt.
+#
+# Return codes:
+#   0 = ready (all DoD items complete)
+#   1 = blocked (agent-owned work still incomplete)
+#   2 = handoff (agent work complete, but non-agent items remain)
+#
+# If force=1, skips validation and emits a forced-completion receipt.
 #
 # USAGE:
 #   safe_task_complete 1234           # Validate first
@@ -412,23 +725,55 @@ EOF
 function safe_task_complete() {
   local issue_id="${1:?missing issue_id}"
   local force="${2:-0}"
+  local verdict=""
+  local receipt_path=""
 
-  if [[ $force -eq 0 ]]; then
-    if ! validate_definition_of_done; then
+  case "$force" in
+    1|force|--force)
+      force=1
+      ;;
+    *)
+      force=0
+      ;;
+  esac
+
+  if [[ $force -eq 1 ]]; then
+    verdict="forced"
+  else
+    verdict="$(_dod_completion_verdict 2>/dev/null || true)"
+  fi
+
+  receipt_path="$(_dod_write_completion_receipt "$issue_id" "$verdict" "$force")"
+
+  case "$verdict" in
+    ready)
+      echo "✅ Task completion is ready for issue #$issue_id"
+      echo "Receipt: $receipt_path"
       echo ""
-      echo "❌ Cannot complete task: Definition of Done not satisfied"
+      return 0
+      ;;
+    handoff)
+      echo "🟡 Agent work is complete for issue #$issue_id, but non-agent DoD items remain"
+      echo "Receipt: $receipt_path"
+      echo "Next: hand off the remaining manual/credential/external steps or rerun with force if policy allows"
+      echo ""
+      return 2
+      ;;
+    forced)
+      echo "⚠️ Forced completion requested for issue #$issue_id"
+      echo "Receipt: $receipt_path"
+      echo ""
+      return 0
+      ;;
+    *)
+      echo ""
+      echo "❌ Cannot complete task: agent-owned Definition of Done items remain"
+      echo "Receipt: $receipt_path"
       echo "Run: diagnose_completion_blockers"
       echo ""
       return 1
-    fi
-  fi
-
-  echo "✅ Calling task_complete for issue #$issue_id..."
-  echo ""
-
-  # This would call the actual task_complete tool in a real scenario
-  # For now, we just indicate readiness
-  return 0
+      ;;
+  esac
 }
 
 ##
@@ -497,7 +842,11 @@ function reset_dod() {
   _DOD_REGISTRY=()
   _DOD_COMPLETION=()
   _DOD_BLOCKERS=()
+  _DOD_TIMESTAMPS=()
   _DOD_INITIALIZED=0
+  _COMPLETION_VERBOSE=0
+  _DOD_AUDIT_LOG=""
+  _DOD_GITHUB_REPO=""
 }
 
 ##
@@ -834,6 +1183,7 @@ export -f register_dod_item
 export -f mark_dod_complete
 export -f mark_dod_blocked
 export -f validate_definition_of_done
+export -f get_completion_verdict
 export -f get_completion_status
 export -f diagnose_completion_blockers
 export -f safe_task_complete
@@ -854,15 +1204,8 @@ export -f _dod_audit
 export -f _dod_elapsed
 export -f _dod_duration
 export -f _dod_parse_field
-# Elite enhancements
-export -f enable_dod_audit
-export -f set_dod_github_repo
-export -f run_dod_item
-export -f save_dod_state
-export -f load_dod_state
-export -f post_dod_to_issue
-# Internal helpers (exported for subshell access)
-export -f _dod_audit
-export -f _dod_elapsed
-export -f _dod_duration
-export -f _dod_parse_field
+export -f _dod_status_counts
+export -f _dod_completion_verdict
+export -f _dod_workspace_root
+export -f _dod_artifact_dir
+export -f _dod_write_completion_receipt

@@ -1,4 +1,4 @@
-name: Production Deployment & Verification
+name: Kushnir.cloud (KC) Production Deployment & Verification
 
 on:
   workflow_run:

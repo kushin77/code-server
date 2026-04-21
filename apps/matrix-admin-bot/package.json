@@ -13,7 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "matrix-bot-sdk": "^0.7.1",
+    "matrix-bot-sdk": "^0.8.0",
     "pino": "catalog:",
     "pg": "catalog:"
   },

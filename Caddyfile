@@ -1,19 +1,16 @@
 {
     email {$ACME_EMAIL:admin@kushnir.cloud}
-    # Use Let's Encrypt in production, internal/self-signed for local development
-    # For on-prem testing without public DNS: use internal
-    {{if eq (env "CADDY_TLS_MODE") "internal"}}
-    local_certs
-    {{end}}
-    {{if ne (env "CADDY_TLS_MODE") "internal"}}
     acme_ca https://acme-v02.api.letsencrypt.org/directory
-    {{end}}
     admin localhost:2019 {
         origins localhost
     }
 }
 
 {$IDE_DOMAIN:ide.kushnir.cloud}, {$IDE_DOMAIN:ide.kushnir.cloud}:443 {
+    # For on-prem testing: use internal self-signed certificates
+    # Comment out or remove this line to use Let's Encrypt in production
+    tls internal
+
     encode gzip
 
     header {

@@ -181,6 +181,23 @@ export class MeetService {
 
 ## UI Layer Details
 
+### Status Bar Tiles
+
+Team Hub exposes configurable status bar tiles driven by the current presence snapshot.
+
+```json
+"teamHub.statusBarTiles": ["online", "same-file", "workspace"]
+```
+
+Available tiles:
+- `online` - online collaborator count
+- `away` - away collaborator count
+- `offline` - offline collaborator count
+- `same-file` - collaborators currently in the same file
+- `workspace` - active workspace label
+
+Tiles are rendered in the order configured by the user and click through to the Team Hub sidebar.
+
 ### Sidebar (Webview)
 
 **File**: `media/sidebar.html`, `media/sidebar.js`

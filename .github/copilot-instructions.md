@@ -106,7 +106,7 @@ Repository underwent comprehensive deduplication audit (see [DEDUPLICATION-AND-E
 - ✅ Use: Single init.sh which loads all dependencies in correct order
 
 **Configuration Sources**: NEVER hardcode values
-- ❌ Avoid: `DEPLOY_HOST="192.168.168.31"`, `DOMAIN="kushnir.cloud"` in scripts
+- ❌ Avoid: `DEPLOY_HOST="192.168.168.31"`, `APEX_DOMAIN="kushnir.cloud"` in scripts
 - ✅ Use: `DEPLOY_HOST="${DEPLOY_HOST}"` (loads from .env via init.sh → config.sh)
 - Master config SSOT: `.env.schema.json` (env var schema), `CONFIG-SSOT-MASTER.md` (precedence map), `terraform/variables.tf` (IaC config)
 

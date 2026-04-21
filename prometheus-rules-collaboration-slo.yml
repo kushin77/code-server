@@ -1,0 +1,61 @@
+groups:
+  - name: collaboration-slo-recording
+    interval: 1m
+    rules:
+      - record: sli:collaboration_presence_sync:ratio_rate5m
+        expr: |
+          sum(rate(presence_update_latency_bucket{job="presence-sidecar", le="0.1"}[5m]))
+            /
+          clamp_min(sum(rate(presence_update_latency_bucket{job="presence-sidecar", le="+Inf"}[5m])), 1e-9)
+      - record: sli:collaboration_presence_sync:ratio_rate30d
+        expr: avg_over_time(sli:collaboration_presence_sync:ratio_rate5m[30d])
+      - record: sli:collaboration_presence_sync:p99_5m
+        expr: histogram_quantile(0.99, sum(rate(presence_update_latency_bucket{job="presence-sidecar"}[5m])) by (le))
+      - record: sli:session_bootstrap:p99
+        expr: max(code_server_bootstrap_duration_seconds{quantile="0.99"})
+      - record: slo:collaboration_presence_sync:target
+        expr: vector(0.99)
+      - record: slo:collaboration_presence_sync:error_budget_remaining
+        expr: |
+          1 - (
+            (1 - sli:collaboration_presence_sync:ratio_rate30d)
+            /
+            (1 - slo:collaboration_presence_sync:target)
+          )
+      - record: slo:collaboration_presence_sync:burn_rate_1h
+        expr: |
+          (1 - avg_over_time(sli:collaboration_presence_sync:ratio_rate5m[1h]))
+            /
+          (1 - slo:collaboration_presence_sync:target)
+      - record: slo:collaboration_presence_sync:burn_rate_6h
+        expr: |
+          (1 - avg_over_time(sli:collaboration_presence_sync:ratio_rate5m[6h]))
+            /
+          (1 - slo:collaboration_presence_sync:target)
+
+  - name: collaboration-slo-alerts
+    rules:
+      - alert: CollaborationPresenceSyncLatencyBurnRateHigh
+        expr: slo:collaboration_presence_sync:burn_rate_1h > 6 and slo:collaboration_presence_sync:burn_rate_6h > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Collaboration presence sync is burning error budget too quickly"
+          description: "Presence updates are trending below the 100ms p99 collaboration SLO."
+      - alert: CollaborationPresenceSyncLatencySLOBreach
+        expr: sli:collaboration_presence_sync:p99_5m > 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Collaboration presence sync p99 is above 100ms"
+          description: "The collaboration presence update path is outside the p99 latency objective."
+      - alert: CollaborationSessionBootstrapLatencySLOBreach
+        expr: sli:session_bootstrap:p99 > 30
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Session bootstrap p99 is above 30s"
+          description: "Browser-to-IDE session start is outside the 30 second objective."

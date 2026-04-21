@@ -1,4 +1,5 @@
 import type {
+  WorkspaceAccessControlContext,
   WorkspaceLaunchRequest,
   WorkspaceLaunchResult,
   WorkspaceReviewerPermission,
@@ -27,6 +28,7 @@ export type PortalWorkspaceLaunchRequestPayload = {
   correlationId: string;
   targetRepoId?: string;
   confirmCrossRepoReplay?: boolean;
+  accessControl: WorkspaceAccessControlContext;
 };
 
 export type PortalWorkspaceLaunchResponsePayload = {
@@ -42,6 +44,7 @@ export type PortalWorkspaceLaunchResponsePayload = {
     redactedFields: string[];
     requiresConfirmation: boolean;
     sessionFingerprint?: string;
+    accessControl: WorkspaceAccessControlContext;
     generatedAt: number;
   };
   audit: {
@@ -99,6 +102,28 @@ export function validatePortalWorkspaceLaunchRequest(
     errors.push("confirmCrossRepoReplay must be boolean when provided");
   }
 
+  if (typeof input.accessControl !== "object" || input.accessControl === null) {
+    errors.push("accessControl is required");
+  } else {
+    const accessControl = input.accessControl as Record<string, unknown>;
+
+    if (accessControl.workspaceTrustMode !== "zero-trust") {
+      errors.push("accessControl.workspaceTrustMode must be zero-trust");
+    }
+
+    if (accessControl.filePermissionEnforcement !== "strict") {
+      errors.push("accessControl.filePermissionEnforcement must be strict");
+    }
+
+    if (!isNonEmptyString(accessControl.policyVersion)) {
+      errors.push("accessControl.policyVersion is required");
+    }
+
+    if (typeof accessControl.verifiedAt !== "number" || Number.isNaN(accessControl.verifiedAt)) {
+      errors.push("accessControl.verifiedAt must be a number");
+    }
+  }
+
   if (errors.length > 0) {
     return { valid: false, errors };
   }
@@ -111,6 +136,7 @@ export function validatePortalWorkspaceLaunchRequest(
       correlationId: input.correlationId as string,
       targetRepoId: input.targetRepoId as string | undefined,
       confirmCrossRepoReplay: input.confirmCrossRepoReplay as boolean | undefined,
+      accessControl: input.accessControl as WorkspaceAccessControlContext,
     },
     errors,
   };
@@ -123,6 +149,7 @@ export function toWorkspaceLaunchRequest(payload: PortalWorkspaceLaunchRequestPa
     correlationId: payload.correlationId,
     targetRepoId: payload.targetRepoId,
     confirmCrossRepoReplay: payload.confirmCrossRepoReplay,
+    accessControl: payload.accessControl,
   };
 }
 
@@ -143,6 +170,7 @@ export function toPortalWorkspaceLaunchResponse(
           redactedFields: result.restoreMetadata.redactedFields,
           requiresConfirmation: result.restoreMetadata.requiresConfirmation,
           sessionFingerprint: result.restoreMetadata.sessionFingerprint,
+          accessControl: result.restoreMetadata.accessControl,
           generatedAt: result.restoreMetadata.generatedAt,
         }
       : undefined,

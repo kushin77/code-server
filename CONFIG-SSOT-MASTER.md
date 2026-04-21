@@ -12,6 +12,8 @@ All configuration items MUST declare a single authoritative source. This documen
 
 Branding vocabulary and naming rules are governed by [docs/BRANDING-SSOT.md](docs/BRANDING-SSOT.md) and should be treated as the companion policy to this config master.
 
+The migration decision table lives in [docs/BRANDING-REPLACEMENT-MATRIX.md](docs/BRANDING-REPLACEMENT-MATRIX.md).
+
 **Hierarchy (in order of precedence):**
 1. Runtime environment variables (docker-compose env_file, .env, exported vars)
 2. `terraform/variables.tf` (IaC parameters)
@@ -24,7 +26,7 @@ Branding vocabulary and naming rules are governed by [docs/BRANDING-SSOT.md](doc
 
 | Config Item | SSOT Location | Current Value | Status | Notes |
 |---|---|---|---|---|
-| **DOMAIN** | `terraform/variables.tf` | `kushnir.cloud` | ✅ FIXED | Primary domain for all services |
+| **APEX_DOMAIN** | `.env.schema.json` / `.env.defaults` | `kushnir.cloud` | ✅ FIXED | Primary public domain; Terraform `domain` backs this value |
 | **IDE_DOMAIN** | `terraform/variables.tf` | `ide.kushnir.cloud` | ✅ FIXED | Code-server public hostname |
 | **DEPLOY_HOST** | `.env.defaults` / `.env.production` | `192.168.168.31` | ✅ FIXED | Primary production host |
 | **DEPLOY_REPLICA_HOST** | `.env.defaults` / `.env.production` | `192.168.168.42` | ✅ FIXED | Failover replica host |

@@ -27,6 +27,9 @@ This document is the top-level SSOT for service-level objectives across the plat
 | redis | P99 latency | < 50ms | Cache performance target. |
 | session-broker | Availability | 99.9% monthly | Internal session orchestration path. |
 | session-broker | P99 latency | < 500ms | Session creation and routing must stay responsive. |
+| presence-sidecar | Availability | 99.9% monthly | Real-time collaboration presence sync path. |
+| presence-sidecar | P99 latency | < 100ms | Presence updates must remain effectively instant. |
+| code-server | Bootstrap latency | < 30s | Browser-to-IDE session start must remain usable. |
 | token-microservice | Availability | 99.9% monthly | Token minting and validation service. |
 | token-microservice | Correctness | 99.99% successful responses | Token operations must fail closed. |
 

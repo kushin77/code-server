@@ -10,6 +10,8 @@ Applies to the core user path:
 - IDE authentication and access
 - Static asset delivery for portal and IDE
 - Primary-to-replica failover readiness
+- Real-time collaboration presence sync
+- Browser-to-IDE session bootstrap
 
 ## SLO Targets
 
@@ -19,6 +21,8 @@ Applies to the core user path:
 | Auth success rate | 99.9% | < 99.7% for 5 minutes | 5 minutes + 30 days |
 | Portal static asset success | 99.95% | < 99.8% for 5 minutes | 5 minutes + 30 days |
 | P99 request latency (portal/ide) | < 800 ms | > 1000 ms for 5 minutes | 5 minutes |
+| Presence sync compliance | 99% under 100 ms | < 98% over 30 days | 5 minutes + 30 days |
+| Session bootstrap latency | < 30 s p99 | > 30 s for 10 minutes | 10 minutes + 30 days |
 | Failover recovery time | <= 15 minutes | > 15 minutes | Per drill or incident |
 | Data recovery point | <= 5 minutes | > 5 minutes | Per drill or incident |
 

@@ -88,6 +88,7 @@ import {
 } from './session-shadow-replay.js';
 import RedisSessionStore from './redis-session-store.js';
 import { setupGracefulShutdown } from './shutdown.js';
+import IncidentCorrelationEngine from './incident-correlation.js';
 
 interface RuntimeConfig {
   logLevel: string;
@@ -3744,6 +3745,28 @@ const server = app.listen(PORT, async () => {
     logger.error('Redis store initialization failed', { error: String(error) });
     if (process.env.SESSION_REDIS_REQUIRED === 'true') {
       process.exit(1);
+    }
+  }
+
+  // Initialize incident correlation engine for error budget monitoring (Issue #1061)
+  if (process.env.INCIDENT_CORRELATION_ENABLED !== 'false') {
+    try {
+      const correlationEngine = new IncidentCorrelationEngine(
+        pgPool,
+        process.env.LOKI_URL || 'http://loki:3100',
+        process.env.MATRIX_API_URL || 'http://matrix-homeserver:8008',
+        process.env.MATRIX_TOKEN || '',
+        process.env.MATRIX_INCIDENTS_ROOM_ID || ''
+      );
+
+      // Start continuous SLO monitoring
+      await correlationEngine.start();
+      logger.info('Incident correlation engine started');
+    } catch (error) {
+      logger.warn('Incident correlation engine initialization failed', {
+        error: String(error),
+      });
+      // Non-blocking failure: monitoring is optional
     }
   }
   

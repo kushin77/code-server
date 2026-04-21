@@ -175,6 +175,12 @@ fi
 echo ""
 echo "[5] Extension governance conformance"
 
+if grep -q "workspace-provision" scripts/code-server-entrypoint.sh; then
+  record "entrypoint: workspace-provision is wired into container startup" "pass"
+else
+  record "entrypoint: workspace-provision is wired into container startup" "fail" "entrypoint does not source workspace-provision"
+fi
+
 if bash scripts/ci/lint-role-profiles.sh >/tmp/role-profile-lint.log 2>&1; then
   record "extension-governance: role profile recommendation policy lint" "pass"
 else

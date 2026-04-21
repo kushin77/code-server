@@ -8,6 +8,17 @@ import {
   validatePortalWorkspaceLaunchRequest,
 } from "../contracts";
 import { WorkspaceContextHubService } from "../service";
+import type { WorkspaceAccessControlContext } from "../types";
+
+const createAccessControl = (
+  overrides: Partial<WorkspaceAccessControlContext> = {},
+): WorkspaceAccessControlContext => ({
+  workspaceTrustMode: "zero-trust",
+  filePermissionEnforcement: "strict",
+  policyVersion: "workspace-access-control/v1",
+  verifiedAt: Date.now(),
+  ...overrides,
+});
 
 describe("workspace-context-hub contracts", () => {
   it("validates portal launch payloads", () => {
@@ -15,12 +26,14 @@ describe("workspace-context-hub contracts", () => {
     expect(invalid.valid).toBe(false);
     expect(invalid.errors).toContain("actor is required");
     expect(invalid.errors).toContain("correlationId is required");
+    expect(invalid.errors).toContain("accessControl is required");
 
     const valid = validatePortalWorkspaceLaunchRequest({
       actor: "dev@example.com",
       workspaceSetId: "set-1",
       correlationId: "corr-1",
       confirmCrossRepoReplay: false,
+      accessControl: createAccessControl(),
     });
     expect(valid.valid).toBe(true);
     expect(valid.errors).toHaveLength(0);
@@ -33,6 +46,7 @@ describe("workspace-context-hub contracts", () => {
       correlationId: "corr-2",
       targetRepoId: "repo-a",
       confirmCrossRepoReplay: true,
+      accessControl: createAccessControl(),
     };
 
     expect(toWorkspaceLaunchRequest(payload)).toEqual(payload);
@@ -56,6 +70,7 @@ describe("workspace-context-hub contracts", () => {
       workspaceSetId: "set-portal",
       targetRepoId: "repo-a",
       correlationId: "corr-3",
+      accessControl: createAccessControl(),
       provenance: {
         imageDigest: `sha256:${"b".repeat(64)}`,
         attestationRef: "attestation://build/contracts-1",
@@ -71,6 +86,7 @@ describe("workspace-context-hub contracts", () => {
     expect(response.allowed).toBe(true);
     expect(response.workspaceSetId).toBe("set-portal");
     expect(response.audit.correlationId).toBe("corr-3");
+    expect(response.restoreMetadata?.accessControl.workspaceTrustMode).toBe("zero-trust");
   });
 
   it("builds concise workspace-set summaries for Backstage and Appsmith", () => {

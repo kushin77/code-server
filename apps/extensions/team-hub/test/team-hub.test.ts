@@ -12,7 +12,8 @@ const config: TeamHubConfig = {
   enableGoogleMeet: true,
   presenceUpdateInterval: 5000,
   showAvatars: true,
-  highlightSameFile: true
+  highlightSameFile: true,
+  statusBarTiles: ['online', 'same-file', 'workspace']
 };
 
 const users: TeamHubUser[] = [

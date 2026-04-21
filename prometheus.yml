@@ -14,6 +14,7 @@ alerting:
 rule_files:
   - /etc/prometheus/alert-rules.yml
   - /etc/prometheus/prometheus-rules-phase-23.yml
+  - /etc/prometheus/prometheus-rules-collaboration-slo.yml
   - /etc/prometheus/prometheus-rules-matrix-alerts.yml
 
 scrape_configs:

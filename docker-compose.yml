@@ -825,6 +825,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules-phase-23.yml:/etc/prometheus/prometheus-rules-phase-23.yml:ro
+      - ./prometheus-rules-collaboration-slo.yml:/etc/prometheus/prometheus-rules-collaboration-slo.yml:ro
       - ./prometheus-rules-alerts-operational.yml:/etc/prometheus/prometheus-rules-alerts-operational.yml:ro
       - ./prometheus-rules-slo-phase-8.yml:/etc/prometheus/prometheus-rules-slo-phase-8.yml:ro
       - ./prometheus-rules-matrix-alerts.yml:/etc/prometheus/prometheus-rules-matrix-alerts.yml:ro
@@ -869,6 +870,7 @@ services:
       - ./config/grafana-dashboard-providers.yaml:/etc/grafana/provisioning/dashboards/providers.yaml:ro
       - ./config/grafana-dashboard-matrix-overview.json:/etc/grafana/provisioning/dashboards/matrix-overview.json:ro
       - ./config/grafana-dashboard-collaboration.json:/etc/grafana/provisioning/dashboards/collaboration.json:ro
+      - ./config/grafana-dashboard-collaboration-slo.json:/etc/grafana/provisioning/dashboards/collaboration-slo.json:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
       interval: 30s

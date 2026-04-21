@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { WorkspaceContextHubService } from "../service";
-import type { WorkspaceLaunchProvenance, WorkspaceSnapshot } from "../types";
+import type { WorkspaceAccessControlContext, WorkspaceLaunchProvenance, WorkspaceSnapshot } from "../types";
 
 const createProvenance = (overrides: Partial<WorkspaceLaunchProvenance> = {}): WorkspaceLaunchProvenance => ({
   imageDigest: `sha256:${"a".repeat(64)}`,
@@ -11,6 +11,18 @@ const createProvenance = (overrides: Partial<WorkspaceLaunchProvenance> = {}): W
   policyVersion: "ephemeral-provenance-v1",
   ...overrides,
 });
+
+const createAccessControl = (
+  overrides: Partial<WorkspaceAccessControlContext> = {},
+): WorkspaceAccessControlContext => ({
+  workspaceTrustMode: "zero-trust",
+  filePermissionEnforcement: "strict",
+  policyVersion: "workspace-access-control/v1",
+  verifiedAt: Date.now(),
+  ...overrides,
+});
+
+const launchAccessControl = createAccessControl({ verifiedAt: Date.now() });
 
 describe("WorkspaceContextHubService", () => {
   let service: WorkspaceContextHubService;
@@ -251,6 +263,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "multi-repo-dev",
       targetRepoId: "repo-a",
       correlationId: "corr-1",
+      accessControl: launchAccessControl,
       provenance,
     });
 
@@ -265,6 +278,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "multi-repo-dev",
       targetRepoId: "repo-a",
       correlationId: "corr-3",
+      accessControl: launchAccessControl,
       provenance,
     });
 
@@ -328,6 +342,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "workspace-hub",
       targetRepoId: "repo-a",
       correlationId: "corr-4",
+      accessControl: launchAccessControl,
       provenance,
     }, snapshot);
 
@@ -353,6 +368,7 @@ describe("WorkspaceContextHubService", () => {
       targetRepoId: "repo-a",
       correlationId: "corr-5",
       confirmCrossRepoReplay: true,
+      accessControl: launchAccessControl,
       provenance,
     }, snapshot);
 
@@ -398,6 +414,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "restricted",
       targetRepoId: "repo-a",
       correlationId: "corr-6",
+      accessControl: launchAccessControl,
       provenance,
     });
 
@@ -420,6 +437,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "provenance-set",
       targetRepoId: "repo-a",
       correlationId: "corr-7",
+      accessControl: launchAccessControl,
     });
 
     expect(missing.allowed).toBe(false);
@@ -430,6 +448,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "provenance-set",
       targetRepoId: "repo-a",
       correlationId: "corr-8",
+      accessControl: launchAccessControl,
       provenance: createProvenance({ verificationResult: "failed" }),
     });
 
@@ -441,6 +460,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "provenance-set",
       targetRepoId: "repo-a",
       correlationId: "corr-9",
+      accessControl: launchAccessControl,
       provenance: createProvenance({ verificationTimestamp: Date.now() - 2 * 24 * 60 * 60 * 1000 }),
     });
 
@@ -465,6 +485,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "audit-set",
       targetRepoId: "repo-a",
       correlationId: "corr-7",
+      accessControl: launchAccessControl,
       provenance,
     });
 
@@ -575,6 +596,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "fingerprint-set",
       targetRepoId: "repo-a",
       correlationId: "corr-10",
+      accessControl: launchAccessControl,
       provenance,
     });
 
@@ -583,6 +605,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "fingerprint-set",
       targetRepoId: "repo-a",
       correlationId: "corr-11",
+      accessControl: launchAccessControl,
       provenance,
     });
 
@@ -646,6 +669,7 @@ describe("WorkspaceContextHubService", () => {
       workspaceSetId: "restore-meta-set",
       targetRepoId: "repo-a",
       correlationId,
+      accessControl: launchAccessControl,
       provenance,
     });
 

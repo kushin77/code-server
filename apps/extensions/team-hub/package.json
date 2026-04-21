@@ -48,6 +48,10 @@
         "title": "Team Hub: Mention User"
       },
       {
+        "command": "teamHub.openSidebar",
+        "title": "Team Hub: Open Sidebar"
+      },
+      {
         "command": "teamHub.startMeet",
         "title": "Team Hub: Start Google Meet"
       },
@@ -112,6 +116,15 @@
           "type": "boolean",
           "default": true,
           "description": "Highlight collaborators editing the same file."
+        },
+        "teamHub.statusBarTiles": {
+          "type": "array",
+          "default": ["online", "same-file", "workspace"],
+          "description": "Status bar tiles to display and their order.",
+          "items": {
+            "type": "string",
+            "enum": ["online", "away", "offline", "same-file", "workspace"]
+          }
         }
       }
     }

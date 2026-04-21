@@ -17,6 +17,13 @@ export interface WorkspaceLaunchProvenance {
   policyVersion: string;
 }
 
+export interface WorkspaceAccessControlContext {
+  workspaceTrustMode: "zero-trust";
+  filePermissionEnforcement: "strict";
+  policyVersion: string;
+  verifiedAt: number;
+}
+
 export interface WorkspaceReviewerAccessGrant {
   grantId: string;
   workspaceSetId: string;
@@ -79,6 +86,7 @@ export interface WorkspaceLaunchRequest {
   targetRepoId?: string;
   correlationId: string;
   confirmCrossRepoReplay?: boolean;
+  accessControl: WorkspaceAccessControlContext;
   provenance?: WorkspaceLaunchProvenance;
 }
 
@@ -92,6 +100,7 @@ export interface WorkspaceLaunchMetadata {
   redactedFields: string[];
   requiresConfirmation: boolean;
   sessionFingerprint?: string;
+  accessControl: WorkspaceAccessControlContext;
   provenance?: WorkspaceLaunchProvenance;
   generatedAt: number;
 }

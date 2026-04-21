@@ -16,6 +16,7 @@ export type {
   PortalWorkspaceLaunchRequestPayload,
   PortalWorkspaceLaunchResponsePayload,
   PortalWorkspaceSetSummary,
+  WorkspaceAccessControlContext,
   WorkspaceAccessMode,
   WorkspaceAuditEvent,
   WorkspaceLaunchMetadata,

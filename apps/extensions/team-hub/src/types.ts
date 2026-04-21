@@ -1,5 +1,7 @@
 export type PresenceStatus = 'online' | 'away' | 'offline';
 
+export type TeamHubStatusBarTileId = 'online' | 'away' | 'offline' | 'same-file' | 'workspace';
+
 export interface TeamHubUser {
   id: string;
   displayName: string;
@@ -20,6 +22,7 @@ export interface TeamHubConfig {
   presenceUpdateInterval: number;
   showAvatars: boolean;
   highlightSameFile: boolean;
+  statusBarTiles: TeamHubStatusBarTileId[];
 }
 
 export interface TeamHubSnapshot {

@@ -7,6 +7,7 @@ import { CodeAnalyzer } from './code-analyzer';
 let ollamaClient: OllamaClient;
 let repositoryIndexer: RepositoryIndexer;
 let codeAnalyzer: CodeAnalyzer;
+let securityDiagnostics: vscode.DiagnosticCollection | undefined;
 let activeChatParticipant: vscode.Disposable | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -20,6 +21,24 @@ export async function activate(context: vscode.ExtensionContext) {
   ollamaClient = new OllamaClient(endpoint, defaultModel);
   repositoryIndexer = new RepositoryIndexer(ollamaClient);
   codeAnalyzer = new CodeAnalyzer(ollamaClient, repositoryIndexer);
+  securityDiagnostics = vscode.languages.createDiagnosticCollection('ollamaSecurityReview');
+
+  const syncSecurityDiagnostics = (document?: vscode.TextDocument) => {
+    if (!securityDiagnostics || !document || document.uri.scheme !== 'file') {
+      return;
+    }
+
+    const diagnostics = codeAnalyzer.buildSecurityDiagnostics(document);
+    securityDiagnostics.set(document.uri, diagnostics);
+  };
+
+  const clearSecurityDiagnostics = (document?: vscode.TextDocument) => {
+    if (!securityDiagnostics || !document) {
+      return;
+    }
+
+    securityDiagnostics.delete(document.uri);
+  };
 
   // Register chat participant
   activeChatParticipant = vscode.chat.createChatParticipant('ollama.chat', handleChatRequest);
@@ -32,6 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
     { label: 'refactor', description: 'Suggest refactoring' },
     { label: 'test', description: 'Generate tests' },
     { label: 'document', description: 'Generate documentation' },
+    { label: 'security', description: 'Run a security review with inline SAST annotations' },
   ];
 
   // Register commands
@@ -41,10 +61,53 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('ollama.listModels', listAvailableModels),
     vscode.commands.registerCommand('ollama.indexRepository', indexRepository),
     vscode.commands.registerCommand('ollama.analyzeFile', analyzeCurrentFile),
+    vscode.commands.registerCommand('ollama.securityReviewCurrentFile', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showWarningMessage('No file open');
+        return;
+      }
+
+      syncSecurityDiagnostics(editor.document);
+
+      const findings = securityDiagnostics?.get(editor.document.uri) || [];
+      const severitySummary = findings.reduce(
+        (summary, diagnostic) => {
+          if (diagnostic.severity === vscode.DiagnosticSeverity.Error) {
+            summary.errors += 1;
+          } else if (diagnostic.severity === vscode.DiagnosticSeverity.Warning) {
+            summary.warnings += 1;
+          } else if (diagnostic.severity === vscode.DiagnosticSeverity.Information) {
+            summary.information += 1;
+          }
+
+          return summary;
+        },
+        { errors: 0, warnings: 0, information: 0 }
+      );
+
+      vscode.window.showInformationMessage(
+        `Security review complete: ${severitySummary.errors} error(s), ${severitySummary.warnings} warning(s), ${severitySummary.information} note(s).`
+      );
+    }),
     vscode.commands.registerCommand('ollama.generateCode', generateCode),
     vscode.commands.registerCommand('ollama.generateTests', generateTests),
     vscode.commands.registerCommand('ollama.refactorCode', refactorCurrentFile),
     vscode.commands.registerCommand('ollama.generateDocumentation', documentCurrentFile)
+  );
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor) {
+        syncSecurityDiagnostics(editor.document);
+      }
+    }),
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      syncSecurityDiagnostics(document);
+    }),
+    vscode.workspace.onDidCloseTextDocument((document) => {
+      clearSecurityDiagnostics(document);
+    })
   );
 
   context.subscriptions.push(chatParticipant);
@@ -59,6 +122,10 @@ export async function activate(context: vscode.ExtensionContext) {
   try {
     await ollamaClient.checkHealth();
     vscode.window.showInformationMessage('✅ Ollama connected and ready. Chat with @ollama in the Chat view!');
+
+    if (vscode.window.activeTextEditor) {
+      syncSecurityDiagnostics(vscode.window.activeTextEditor.document);
+    }
   } catch (error) {
     vscode.window.showWarningMessage(
       '⚠️ Ollama server not responding. Make sure Docker containers are running.',
@@ -123,6 +190,7 @@ async function handleChatRequest(
 function inferIntent(prompt: string): string {
   const normalized = prompt.toLowerCase();
 
+  if (normalized.includes('security') || normalized.includes('sast') || normalized.includes('vulnerability')) return 'security';
   if (normalized.includes('test') || normalized.includes('spec')) return 'test';
   if (normalized.includes('document') || normalized.includes('doc')) return 'document';
   if (normalized.includes('refactor')) return 'refactor';
@@ -163,6 +231,8 @@ User request: ${userPrompt}`;
     systemPrompt += '\n\nExplain the code clearly and concisely, highlighting key design decisions.';
   } else if (intent === 'generate') {
     systemPrompt += '\n\nReturn only the implementation and keep the output immediately usable.';
+  } else if (intent === 'security') {
+    systemPrompt += '\n\nFocus on security defects, SAST findings, inline annotations, injection risks, and secret handling. Call out exact file-level risks with clear remediation guidance.';
   }
 
   return systemPrompt;

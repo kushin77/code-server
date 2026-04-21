@@ -52,6 +52,10 @@
         "title": "Ollama: Analyze Current File"
       },
       {
+        "command": "ollama.securityReviewCurrentFile",
+        "title": "Ollama: Security Review Current File"
+      },
+      {
         "command": "ollama.generateCode",
         "title": "Ollama: Generate Code"
       },

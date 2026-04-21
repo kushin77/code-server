@@ -2,6 +2,12 @@ import * as vscode from 'vscode';
 import { OllamaClient } from './ollama-client';
 import { RepositoryIndexer } from './repository-indexer';
 
+interface SecurityRule {
+  readonly pattern: RegExp;
+  readonly message: string;
+  readonly severity: vscode.DiagnosticSeverity;
+}
+
 export class CodeAnalyzer {
   constructor(
     private ollamaClient: OllamaClient,
@@ -103,5 +109,69 @@ Include:
 4. Configuration guide`;
 
     return await this.ollamaClient.generate(prompt);
+  }
+
+  buildSecurityDiagnostics(document: vscode.TextDocument): vscode.Diagnostic[] {
+    const findings: vscode.Diagnostic[] = [];
+    const rules: SecurityRule[] = [
+      {
+        pattern: /\beval\s*\(/g,
+        message: 'Avoid eval(); use explicit parsing or safe dispatch instead.',
+        severity: vscode.DiagnosticSeverity.Error,
+      },
+      {
+        pattern: /\bdangerouslySetInnerHTML\b/g,
+        message: 'Avoid dangerouslySetInnerHTML unless the value is sanitized.',
+        severity: vscode.DiagnosticSeverity.Error,
+      },
+      {
+        pattern: /\binnerHTML\s*=/g,
+        message: 'Avoid innerHTML assignments; prefer textContent or sanitized rendering.',
+        severity: vscode.DiagnosticSeverity.Warning,
+      },
+      {
+        pattern: /\b(?:child_process\.)?exec(?:Sync)?\s*\(/g,
+        message: 'Shell execution is security-sensitive; prefer a safe API or strict argument validation.',
+        severity: vscode.DiagnosticSeverity.Error,
+      },
+      {
+        pattern: /\b(?:password|secret|token|api[_-]?key)\s*[:=]\s*['"][^'"]+['"]/gi,
+        message: 'Hardcoded credential detected; load secrets from a secure source instead.',
+        severity: vscode.DiagnosticSeverity.Error,
+      },
+      {
+        pattern: /https?:\/\//g,
+        message: 'Use HTTPS-only endpoints for security-sensitive integrations.',
+        severity: vscode.DiagnosticSeverity.Information,
+      },
+    ];
+
+    for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
+      const line = document.lineAt(lineIndex);
+
+      for (const rule of rules) {
+        const regex = new RegExp(rule.pattern.source, rule.pattern.flags.includes('g') ? rule.pattern.flags : `${rule.pattern.flags}g`);
+        let match: RegExpExecArray | null;
+
+        while ((match = regex.exec(line.text)) !== null) {
+          const startColumn = match.index;
+          const endColumn = startColumn + Math.max(match[0].length, 1);
+          const diagnostic = new vscode.Diagnostic(
+            new vscode.Range(lineIndex, startColumn, lineIndex, endColumn),
+            rule.message,
+            rule.severity
+          );
+
+          diagnostic.source = 'ollama-sast';
+          findings.push(diagnostic);
+
+          if (match[0].length === 0) {
+            break;
+          }
+        }
+      }
+    }
+
+    return findings;
   }
 }

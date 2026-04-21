@@ -153,6 +153,7 @@ alert_code_server_down:
 - [ ] Should we tighten SLO?
 - [ ] Should we increase error budget (accept lower availability)?
 - [ ] Capacity planning update
+- [ ] Review collaboration SLO dashboard and 30-day compliance trend
 
 ### Annually (Q1)
 - [ ] Full SLO strategy review

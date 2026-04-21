@@ -11,6 +11,16 @@ source /usr/local/bin/_common/init.sh
 # Initialize logging
 log_info "Starting code-server initialization"
 
+# Provision session-scoped workspace credentials before launching code-server.
+# The helper is source-safe, so its main() only runs when called explicitly.
+if [[ -f /usr/local/bin/workspace-provision ]]; then
+    # shellcheck source=/dev/null
+    source /usr/local/bin/workspace-provision
+    main || log_warn "workspace-provision had warnings (non-fatal)"
+else
+    log_warn "workspace-provision helper not found; continuing without session credential bootstrap"
+fi
+
 # Set working directory
 WORKSPACE_DIR="/home/coder/workspace"
 PROFILE_DIR="/home/coder/.local/share/code-server"

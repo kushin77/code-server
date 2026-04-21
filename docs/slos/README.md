@@ -28,6 +28,12 @@ Purpose: canonical entry point for platform SLO policy, service targets, and ope
 
 See [PLATFORM-SLOS.md](PLATFORM-SLOS.md) for the canonical platform targets, review cadence, and recovery expectations.
 
+## Collaboration SLOs
+
+- [../SLO.md](../SLO.md) contains the presence sync and bootstrap objectives.
+- [../../config/grafana-dashboard-collaboration-slo.json](../../config/grafana-dashboard-collaboration-slo.json) is the SLO dashboard for collaboration presence and bootstrap targets.
+- [../../config/grafana-dashboard-collaboration.json](../../config/grafana-dashboard-collaboration.json) remains the live presence operations dashboard.
+
 ## Change Control
 
 - Update the SLO document before changing alert thresholds or recovery objectives.

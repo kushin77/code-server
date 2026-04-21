@@ -27,8 +27,9 @@ These names are the canonical vocabulary for brand-driven configuration:
 
 | Variable | Meaning | Precedence / Notes |
 |----------|---------|--------------------|
-| `DOMAIN` | Public apex / portal hostname | Existing runtime + IaC source of truth |
-| `IDE_DOMAIN` | IDE hostname | Existing runtime + IaC source of truth |
+| `APEX_DOMAIN` | Public apex / portal hostname | Canonical runtime env var; backed by Terraform `domain` |
+| `IDE_DOMAIN` | IDE hostname | Canonical runtime env var |
+| `DOMAIN` | Legacy compatibility alias | Keep only when a surface has not yet been migrated |
 | `BRAND_PUBLIC_NAME` | Human-facing public brand string | `Kushnir.cloud` |
 | `BRAND_SHORT_NAME` | Internal shorthand | `KC` |
 | `PROJECT_BRAND` | Full project brand label | `Kushnir.cloud (KC)` when a combined label is needed |
@@ -64,7 +65,8 @@ Replace `code-server` with brand-driven language in active project-owned context
 
 - Use `Kushnir.cloud` for public-facing product and deployment branding.
 - Use `KC` for internal shorthand where the full brand is unnecessary.
-- Use `DOMAIN` and `IDE_DOMAIN` for deployment hostnames.
+- Use `APEX_DOMAIN` and `IDE_DOMAIN` for deployment hostnames.
+- Keep `DOMAIN` only as a compatibility alias while legacy surfaces are being migrated.
 - Use `BRAND_PUBLIC_NAME` and `BRAND_SHORT_NAME` in docs or UI copy when a brand label must be derived from configuration.
 - Do not introduce a new project-owned `code-server` label if the same meaning can be expressed with brand variables.
 
@@ -79,7 +81,7 @@ When `code-server` appears in active text or code:
 
 ## Relationship To Other Issues
 
-- #1186 provides the replacement matrix and exception catalog.
+- [docs/BRANDING-REPLACEMENT-MATRIX.md](BRANDING-REPLACEMENT-MATRIX.md) provides the replacement matrix and exception catalog.
 - #1184 uses this SSOT to update active code and configuration.
 - #1185 uses this SSOT to update documentation, comments, tests, and archives.
 

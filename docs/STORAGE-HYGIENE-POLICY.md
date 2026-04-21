@@ -1,3 +1,7 @@
+# Storage Hygiene Policy
+
+**Purpose**: Storage Hygiene Policy reference document.
+
 ---
 title: Storage Hygiene and Artifact Retention Policy
 description: Retention windows, cleanup rules, protected assets, and incident recovery procedures
@@ -401,8 +405,8 @@ PROTECTED_VOLUMES="postgres-data,redis-data,my-data" bash scripts/ops/docker-sto
 
 - [#896 Storage Hygiene Automation](https://github.com/kushin77/code-server/issues/896)
 - [#891 Phase 3 Ruthless Ops Governance](https://github.com/kushin77/code-server/issues/891)
-- [Backup and Recovery Procedures](./operations/backup-recovery-procedures.md)
-- [Incident Response Guide](./operations/incident-response-guide.md)
+- Backup and Recovery Procedures
+- Incident Response Guide
 
 ---
 

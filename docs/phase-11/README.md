@@ -1,5 +1,7 @@
 # Phase 11: Advanced Resilience & HA/DR
 
+**Purpose**: Phase 11: Advanced Resilience & HA/DR — reference and operational document.
+
 **Status**: Ready for Deployment
 **Date**: April 13, 2026
 **Risk Level**: Low (backward compatible)

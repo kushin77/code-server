@@ -1,5 +1,7 @@
 # Global Dedup Triage
 
+**Purpose**: Global Dedup Triage — reference and operational document.
+
 Version: 1.0  
 Date: 2026-04-17  
 Owner: Platform Engineering

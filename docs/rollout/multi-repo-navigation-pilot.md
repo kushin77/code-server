@@ -1,5 +1,7 @@
 # Multi-Repo Navigation: Pilot Program, Feature Flags, and A/B Validation
 
+**Purpose**: Multi-Repo Navigation: Pilot Program, Feature Flags, and A/B Validation — reference and operational document.
+
 **Status**: Ready for Execution  
 **Version**: 1.0.0  
 **Date**: 2026-04-20  

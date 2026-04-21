@@ -1,5 +1,7 @@
 # Playwright Storage State Provisioning (#750)
 
+**Purpose**: Playwright Storage State Provisioning (#750) — reference and operational document.
+
 ## Purpose
 
 Provision non-interactive authenticated Playwright storage state for authenticated continuity tests (#733).

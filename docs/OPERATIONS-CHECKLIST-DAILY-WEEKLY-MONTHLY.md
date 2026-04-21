@@ -1,4 +1,6 @@
 # Operations Checklist - Daily/Weekly/Monthly
+
+**Purpose**: Operations Checklist - Daily/Weekly/Monthly — reference and operational document.
 ## kushin77/code-server Deployment #950
 
 ---

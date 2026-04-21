@@ -1,5 +1,7 @@
 # Code-Server-Enterprise Governance & Guardrails
 
+**Purpose**: Code-Server-Enterprise Governance & Guardrails — reference and operational document.
+
 **Document Version**: 1.0  
 **Last Updated**: April 14, 2026  
 **Status**: GOVERNING DOCUMENT - All development must comply
@@ -763,7 +765,7 @@ If Z happens, do W
 - Block merge if any fail
 - Required checks: test, lint, tf-validate, secret-scan
 
-**Code Review Bot** (configured in [elite-best-practices/instructions/README.md](elite-best-practices/instructions/README.md)):
+**Code Review Bot** (configured in elite-best-practices/instructions/README.md):
 - Requests architecture review for terraform changes
 - Blocks merges of phase-numbered files
 - Warns about duplicate config files
@@ -817,7 +819,7 @@ If Z happens, do W
 ## References
 
 - [Documentation Structure SSOT](structure/README.md)
-- [Contributor Instructions](elite-best-practices/instructions/)
+- Contributor Instructions
 - [Architecture Documentation](adr/README.md)
 - [Deployment and Operations](ops/)
 

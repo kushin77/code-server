@@ -1,5 +1,7 @@
 # Architecture Decision Record: Matrix Homeserver Deployment
 
+**Purpose**: Architecture Decision Record: Matrix Homeserver Deployment — reference and operational document.
+
 **Date**: April 2026  
 **Status**: Accepted  
 **Context**: Issue #1001 - Design Matrix Homeserver Architecture and Deployment Strategy  
@@ -424,4 +426,3 @@ workers: []  # Single-process mode; add workers in Phase 2
 - [ ] OIDC integration (#1009 in progress)
 - [ ] Element client deployment (#1002 in progress)
 - [ ] Production deployment & validation
-

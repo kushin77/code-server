@@ -1,5 +1,7 @@
 # Ephemeral Workspace Container Lifecycle - Implementation Guide
 
+**Purpose**: Ephemeral Workspace Container Lifecycle - Implementation Guide — reference and operational document.
+
 **Issue**: #755  
 **Module**: `src/services/ephemeral-workspace-lifecycle/`  
 **Status**: ✅ Implementation Complete  

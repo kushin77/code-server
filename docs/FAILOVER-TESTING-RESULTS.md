@@ -1,5 +1,7 @@
 # Failover Testing Results — kushin77/code-server
 
+**Purpose**: Failover Testing Results — kushin77/code-server — reference and operational document.
+
 **Date**: April 21, 2026  
 **Test Duration**: 47 minutes (Infrastructure Recovery Session)  
 **Status**: ✅ ALL TESTS PASSED  
@@ -537,3 +539,5 @@ echo "✅ Verification complete"
 **Last Updated**: April 21, 2026 04:13 UTC  
 **Next Test Scheduled**: April 28, 2026 (Weekly verification)  
 **Owner**: @kushin77
+
+<!-- Runbook tracking: #1674 -->

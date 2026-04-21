@@ -1,5 +1,7 @@
 # Policy Changelog
 
+**Purpose**: Policy Changelog — reference and operational document.
+
 All normative policy changes to `config/code-server/` must be recorded here.  
 Format: `YYYY-MM-DD | vX.Y.Z | Author | Summary`
 

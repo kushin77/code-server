@@ -1,3 +1,7 @@
+# Ephemeral Session Provenance Contract
+
+**Purpose**: Ephemeral Session Provenance Contract reference document.
+
 ---
 title: Ephemeral Session Provenance Contract
 description: Source-of-truth contract for verified-build launch gating and deterministic session manifest replay.

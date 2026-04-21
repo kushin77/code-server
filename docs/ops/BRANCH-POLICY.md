@@ -43,3 +43,5 @@ Purpose: canonical branch naming and cleanup policy for this repository.
 - [README.md](README.md)
 - [OPERATIONS-INDEX.md](OPERATIONS-INDEX.md)
 - [DEPLOYMENT-CHECKLIST.md](DEPLOYMENT-CHECKLIST.md)
+
+<!-- Runbook tracking: #1674 -->

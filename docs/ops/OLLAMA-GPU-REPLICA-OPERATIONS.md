@@ -1,5 +1,7 @@
 # Ollama GPU Replica Operations
 
+**Purpose**: Ollama GPU Replica Operations — reference and operational document.
+
 Objective:
 - Keep GPU-class inference on `replica.prod.internal` with seamless failover to `primary.prod.internal`.
 

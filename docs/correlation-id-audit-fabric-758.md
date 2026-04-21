@@ -1,5 +1,7 @@
 # Issue #758: Enforce End-to-End Correlation-ID Audit Fabric in Runtime Decisions
 
+**Purpose**: Issue #758: Enforce End-to-End Correlation-ID Audit Fabric in Runtime Decisions — reference and operational document.
+
 **Status**: ✅ Implementation Complete  
 **Parent Epic**: #751 (Core code-server transformation)  
 **Related**: #749 (Audit requirements)  

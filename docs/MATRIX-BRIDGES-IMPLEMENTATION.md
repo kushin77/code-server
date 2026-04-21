@@ -1,4 +1,6 @@
 # Matrix Bridge Implementation Summary
+
+**Purpose**: Matrix Bridge Implementation Summary — reference and operational document.
 # Issues #1004-#1008: Slack, Teams, Google Chat, Meet, Element Call Bridges
 
 **Status**: Architecture & Configuration Complete  
@@ -708,4 +710,3 @@ logging:
 4. User documentation for bridge setup
 5. Admin procedures documentation
 6. Production deployment with monitoring
-

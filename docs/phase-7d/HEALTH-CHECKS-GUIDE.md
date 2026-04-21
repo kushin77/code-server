@@ -1,5 +1,7 @@
 # Health Checks & Automatic Failover (Phase 7d-003)
 
+**Purpose**: Health Checks & Automatic Failover (Phase 7d-003) — reference and operational document.
+
 ## Status: ACTIVE (Phase 7d Implementation)
 
 This document describes the automated health monitoring and failover system for code-server High Availability.

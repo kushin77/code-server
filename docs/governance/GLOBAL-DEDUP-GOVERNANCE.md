@@ -1,5 +1,7 @@
 # Global Dedup Governance
 
+**Purpose**: Global Dedup Governance — reference and operational document.
+
 Version: 1.0  
 Effective: 2026-04-17  
 Owner: Platform Engineering

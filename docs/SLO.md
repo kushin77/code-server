@@ -1,5 +1,7 @@
 # Service SLO Matrix
 
+**Purpose**: Service SLO Matrix — reference and operational document.
+
 This document is the top-level SSOT for service-level objectives across the platform. It complements [docs/slos/README.md](slos/README.md) and the platform targets in [docs/slos/PLATFORM-SLOS.md](slos/PLATFORM-SLOS.md).
 
 ## Policy

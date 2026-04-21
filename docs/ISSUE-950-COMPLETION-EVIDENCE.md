@@ -1,4 +1,6 @@
 # Issue #950 Completion Evidence & Deployment Verification
+
+**Purpose**: Issue #950 Completion Evidence & Deployment Verification — reference and operational document.
 ## EPIC: Track sanitized full-stack redeploy after history rewrite
 
 **Date**: April 22, 2026  
@@ -131,22 +133,22 @@ f17eab60 feat: Enhanced scripts/ops/redeploy.sh with GitHub issue tracking for d
 - ✅ Recent fixes summary
 
 **Supporting Documentation Created**:
-1. [POST-DEPLOYMENT-VALIDATION-APRIL-2026.md](../POST-DEPLOYMENT-VALIDATION-APRIL-2026.md)
+1. POST-DEPLOYMENT-VALIDATION-APRIL-2026.md
    - Comprehensive validation runbook
    - 13 detailed verification sections
    - All procedures documented for future rollouts
 
-2. [DEPLOYMENT-EPIC-950-SUMMARY-APRIL-2026.md](../DEPLOYMENT-EPIC-950-SUMMARY-APRIL-2026.md)
+2. DEPLOYMENT-EPIC-950-SUMMARY-APRIL-2026.md
    - Architecture documentation
    - Service configuration details
    - Success metrics and baselines
 
-3. [QUICK-REFERENCE-OPERATIONS-GUIDE.md](../QUICK-REFERENCE-OPERATIONS-GUIDE.md)
+3. QUICK-REFERENCE-OPERATIONS-GUIDE.md
    - Fast reference for operators
    - Troubleshooting procedures
    - Emergency response playbooks
 
-4. [OPERATIONS-CHECKLIST-DAILY-WEEKLY-MONTHLY.md](../OPERATIONS-CHECKLIST-DAILY-WEEKLY-MONTHLY.md)
+4. OPERATIONS-CHECKLIST-DAILY-WEEKLY-MONTHLY.md
    - Printable daily/weekly/monthly checklists
    - Audit trail sign-off sheets
    - Escalation procedures

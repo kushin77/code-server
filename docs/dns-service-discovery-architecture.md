@@ -1,5 +1,7 @@
 # DNS Service Discovery Architecture (Issue #888)
 
+**Purpose**: DNS Service Discovery Architecture (Issue #888) — reference and operational document.
+
 ## Overview
 
 This document defines the canonical internal DNS naming scheme and enforcement policy for the code-server-enterprise infrastructure. All inter-service communication must use DNS names instead of hardcoded IP addresses.

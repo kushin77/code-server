@@ -1,5 +1,7 @@
 # Service Registry SSOT
 
+**Purpose**: Service Registry SSOT — reference and operational document.
+
 `docker-compose.yml` is the runtime source of truth for compose-managed service topology. This registry mirrors the compose stack and also lists adjacent non-compose runtime services so engineers can see the full service map without grepping multiple files.
 
 ## Purpose

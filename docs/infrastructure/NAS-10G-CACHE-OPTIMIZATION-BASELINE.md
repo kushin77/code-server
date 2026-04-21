@@ -1,5 +1,7 @@
 # NAS/10G Network Performance Baseline and Optimization Targets
 
+**Purpose**: NAS/10G Network Performance Baseline and Optimization Targets — reference and operational document.
+
 > Issue: [#895](https://github.com/kushin77/code-server/issues/895)
 > Date: 2026-04-20
 > Status: Baseline & targets defined

@@ -1,5 +1,7 @@
 # ADR-006: Dual-Portal Architecture Decision
 
+**Purpose**: ADR-006: Dual-Portal Architecture Decision — reference and operational document.
+
 **Status**: APPROVED FOR IMPLEMENTATION  
 **Date**: April 22, 2026  
 **Author**: Infrastructure Team  

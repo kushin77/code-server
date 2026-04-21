@@ -1,5 +1,7 @@
 # AI Model Promotion Gates (#630)
 
+**Purpose**: AI Model Promotion Gates (#630) — reference and operational document.
+
 This file is kept as a compatibility bridge for CI policy checks and for direct references from governance automation.
 
 Canonical navigation index: [docs/structure/README.md](structure/README.md)

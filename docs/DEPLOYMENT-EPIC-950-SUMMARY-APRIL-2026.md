@@ -1,4 +1,6 @@
 # Deployment Epic #950 - Summary & Completion Report
+
+**Purpose**: Deployment Epic #950 - Summary & Completion Report — reference and operational document.
 ## April 2026 - Full-Stack Infrastructure Deployment
 
 ---

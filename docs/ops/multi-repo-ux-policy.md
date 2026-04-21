@@ -1,5 +1,7 @@
 # Multi-Repo UX Policy
 
+**Purpose**: Multi-Repo UX Policy — reference and operational document.
+
 Schema version: `1`
 
 This policy governs the default behavior for the multi-repo navigation experience. It is intentionally versioned so that the client and any future backend enforcement can validate the same contract.

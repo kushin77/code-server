@@ -1,5 +1,7 @@
 # Port Ownership Map
 
+**Purpose**: Port Ownership Map — reference and operational document.
+
 This document records the reserved host-port policy for the on-prem Docker stacks used by the primary host (`192.168.168.31`) and the replica host (`192.168.168.42`). It exists to prevent repeat bind collisions during restart and redeploy operations.
 
 ## Reserved Host Ports

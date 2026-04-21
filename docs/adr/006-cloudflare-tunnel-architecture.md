@@ -1,5 +1,7 @@
 # ADR-001: Lean Remote Developer Access System via Cloudflare Tunnel
 
+**Purpose**: ADR-001: Lean Remote Developer Access System via Cloudflare Tunnel — reference and operational document.
+
 **Status:** ✅ APPROVED  
 **Date:** April 13, 2026  
 **Decision:** Cloudflare Tunnel + Restricted Terminal + Git Proxy  

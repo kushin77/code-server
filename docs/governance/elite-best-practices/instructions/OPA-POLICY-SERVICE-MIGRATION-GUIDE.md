@@ -1,5 +1,7 @@
 # OPA Policy Service Migration Guide (#708)
 
+**Purpose**: OPA Policy Service Migration Guide (#708) — reference and operational document.
+
 ## Purpose
 
 This guide defines the first production-safe migration slice for #708:

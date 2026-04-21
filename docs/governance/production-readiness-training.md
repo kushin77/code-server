@@ -1,5 +1,7 @@
 # Production Readiness Gate Training
 
+**Purpose**: Production Readiness Gate Training — reference and operational document.
+
 ## Purpose
 
 This document is the training artifact for issue #381 and the production-readiness gate process.

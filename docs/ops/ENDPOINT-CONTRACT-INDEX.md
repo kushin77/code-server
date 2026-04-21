@@ -31,7 +31,7 @@ Purpose: canonical SSOT for external, internal, auth, and health endpoints used 
 ## Contract Sources
 
 - [docs/adr/002-oauth2-authentication.md](../adr/002-oauth2-authentication.md)
-- [docs/adr/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md](../adr/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md)
+- docs/adr/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md
 - [docs/ops/OPERATIONS-INDEX.md](OPERATIONS-INDEX.md)
 - [scripts/ci/validate-oidc-issuer-contract.sh](../../scripts/ci/validate-oidc-issuer-contract.sh)
 - [scripts/e2e-test-suite.sh](../../scripts/e2e-test-suite.sh)

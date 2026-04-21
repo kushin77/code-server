@@ -1,5 +1,7 @@
 # Phase 11: High Availability Architecture
 
+**Purpose**: Phase 11: High Availability Architecture — reference and operational document.
+
 **Document**: Detailed HA design for code-server
 **Date**: April 13, 2026
 

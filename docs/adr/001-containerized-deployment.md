@@ -1,5 +1,7 @@
 # 001. Containerized Code-Server Deployment (Linux Production)
 
+**Purpose**: 001. Containerized Code-Server Deployment (Linux Production) — reference and operational document.
+
 **Status**: Accepted
 **Date**: 2026-01-27
 **Author(s)**: @kushin77
@@ -197,7 +199,7 @@ This ensures:
   - Understanding Docker, Compose, Terraform required
   - Understanding Caddy reverse proxy behavior
   - Understanding OAuth2 Proxy authentication flow
-  - Runbook created for common issues (see [RUNBOOKS.md](../../RUNBOOKS.md))
+  - Runbook created for common issues (see RUNBOOKS.md)
 
 ---
 
@@ -246,3 +248,5 @@ This ensures:
 - [x] Security review: @kushin77
 - [x] Operations review: @kushin77
 - [x] Architecture consensus: @kushin77
+
+<!-- Runbook tracking: #1674 -->

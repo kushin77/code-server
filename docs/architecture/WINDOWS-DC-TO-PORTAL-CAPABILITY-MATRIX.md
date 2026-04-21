@@ -1,5 +1,7 @@
 # Windows DC to Portal Capability Matrix
 
+**Purpose**: Windows DC to Portal Capability Matrix — reference and operational document.
+
 Parent issue: #743  
 Parent epic: #742
 

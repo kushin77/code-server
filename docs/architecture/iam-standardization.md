@@ -1,5 +1,7 @@
 # P1 #388: IAM Identity & Workload Authentication Standardization
 
+**Purpose**: P1 #388: IAM Identity & Workload Authentication Standardization — reference and operational document.
+
 **Status**: Implementation Ready  
 **Priority**: P1 BLOCKING  
 **Date**: April 22, 2026  

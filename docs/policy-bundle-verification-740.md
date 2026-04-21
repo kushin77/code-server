@@ -1,5 +1,7 @@
 # Policy Bundle Verification - Implementation & Rollout Guide
 
+**Purpose**: Policy Bundle Verification - Implementation & Rollout Guide — reference and operational document.
+
 **Issue**: #740  
 **Module**: `src/services/policy-bundle-verifier/`  
 **Status**: ✅ Implementation Complete  

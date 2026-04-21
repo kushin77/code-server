@@ -1,5 +1,7 @@
 # Code Quality Governance Policy
 
+**Purpose**: Code Quality Governance Policy — reference and operational document.
+
 **Version**: 1.0  
 **Effective**: April 22, 2026  
 **Owner**: Infrastructure Team  

@@ -1,5 +1,7 @@
 # Monorepo Architecture and Dependency Governance
 
+**Purpose**: Monorepo Architecture and Dependency Governance — reference and operational document.
+
 This document is the monorepo SSOT for workspace boundaries and dependency management.
 
 ## Workspace Model
@@ -43,3 +45,5 @@ This document is the monorepo SSOT for workspace boundaries and dependency manag
 - Workspace governance index: [governance/elite-best-practices/README.md](governance/elite-best-practices/README.md)
 - Existing monorepo plan: [governance/elite-best-practices/monorepo/MONOREPO-PNPM-PLAN.md](governance/elite-best-practices/monorepo/MONOREPO-PNPM-PLAN.md)
 - Documentation SSOT map: [structure/README.md](structure/README.md)
+
+<!-- Runbook tracking: #1674 -->

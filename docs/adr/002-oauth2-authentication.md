@@ -1,5 +1,7 @@
 # 002. OAuth2 Proxy for Centralized Authentication
 
+**Purpose**: 002. OAuth2 Proxy for Centralized Authentication — reference and operational document.
+
 **Status**: Accepted
 **Date**: 2026-01-27
 **Author(s)**: @kushin77
@@ -204,7 +206,7 @@ Benefits:
   - Understanding OAuth2 flow (OIDC handshake)
   - Debugging session/cookie issues
   - Google OAuth troubleshooting
-  - Runbook for common issues (see [RUNBOOKS.md](../../RUNBOOKS.md))
+  - Runbook for common issues (see RUNBOOKS.md)
 
 ---
 
@@ -257,3 +259,5 @@ Benefits:
 - [x] Security review: @kushin77
 - [x] Operations review: @kushin77
 - [x] Architecture consensus: @kushin77
+
+<!-- Runbook tracking: #1674 -->

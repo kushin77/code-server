@@ -1,5 +1,7 @@
 # ADR-004: Multi-Repo Interaction Model
 
+**Purpose**: ADR-004: Multi-Repo Interaction Model — reference and operational document.
+
 **Status**: ACCEPTED (2026-04-20)
 **Date**: April 19, 2026
 **Approved**: 2026-04-20
@@ -99,9 +101,8 @@ Pilot validation criteria (minimum):
 
 ## Cross-References
 
-- Multi-repo session substrate: [../apps/frontend/src/utils/SESSION_SYNC_INTEGRATION.md](../apps/frontend/src/utils/SESSION_SYNC_INTEGRATION.md)
-- Repository indexing substrate: [../apps/extensions/ollama-chat/src/repository-indexer.ts](../apps/extensions/ollama-chat/src/repository-indexer.ts)
+- Multi-repo session substrate: ../apps/frontend/src/utils/SESSION_SYNC_INTEGRATION.md
+- Repository indexing substrate: ../apps/extensions/ollama-chat/src/repository-indexer.ts
 - Workspace boundary SSOT: [../MONOREPO.md](../MONOREPO.md)
 - Program tracker index: [../status/PROGRAM-TRACKER-INDEX-APRIL-19-2026.md](../status/PROGRAM-TRACKER-INDEX-APRIL-19-2026.md)
-
 

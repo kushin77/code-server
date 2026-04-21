@@ -1,5 +1,7 @@
 # Secretsless AI Access
 
+**Purpose**: Secretsless AI Access — reference and operational document.
+
 This repository standardizes AI access for code-server as a startup-injected workspace policy, not a user-managed token workflow.
 
 Policy:

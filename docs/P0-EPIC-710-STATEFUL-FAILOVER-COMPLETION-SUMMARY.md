@@ -1,5 +1,7 @@
 # P0 EPIC: Stateful Code-Server Failover - Complete Implementation Summary
 
+**Purpose**: P0 EPIC: Stateful Code-Server Failover - Complete Implementation Summary — reference and operational document.
+
 **Status**: 🟡 **IN PROGRESS** — Core infrastructure complete; validation in progress  
 **Date**: April 18, 2026  
 **Epic Issue**: [#710](https://github.com/kushin77/code-server/issues/710)
@@ -280,12 +282,12 @@ gh workflow run e2e-authenticated-failover-continuity.yml \
 
 ## References & Documentation
 
-- **NFS Architecture**: [docs/infrastructure/NFS-BACKEND-ARCHITECTURE.md](../infrastructure/NFS-BACKEND-ARCHITECTURE.md)
-- **Keepalived VRRP**: [terraform/modules/keepalived/README.md](../../terraform/modules/keepalived/README.md)
-- **Failover Orchestration**: [scripts/operations/redeploy/onprem/failover-orchestrate.sh](../../scripts/operations/redeploy/onprem/failover-orchestrate.sh)
+- **NFS Architecture**: docs/infrastructure/NFS-BACKEND-ARCHITECTURE.md
+- **Keepalived VRRP**: terraform/modules/keepalived/README.md
+- **Failover Orchestration**: scripts/operations/redeploy/onprem/failover-orchestrate.sh
 - **DR Game-Day Drill**: [#714](https://github.com/kushin77/code-server/issues/714)
-- **Playwright Testing**: [docs/ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md](../ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md)
-- **Storage State Provisioning**: [docs/ops/PLAYWRIGHT-STORAGE-STATE-PROVISIONING-750.md](../ops/PLAYWRIGHT-STORAGE-STATE-PROVISIONING-750.md)
+- **Playwright Testing**: docs/ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md
+- **Storage State Provisioning**: docs/ops/PLAYWRIGHT-STORAGE-STATE-PROVISIONING-750.md
 
 ---
 

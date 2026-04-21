@@ -1,5 +1,7 @@
 # Phase 11: Advanced Resilience & HA/DR
 
+**Purpose**: Phase 11: Advanced Resilience & HA/DR — reference and operational document.
+
 **Status**: In Development
 **Date Started**: April 13, 2026
 **Target Completion**: April 15, 2026
@@ -358,3 +360,5 @@ Historical Data (6 months)
 **Created**: April 13, 2026
 **Updated**: April 13, 2026
 **Status**: Architecture Complete, Implementation In Progress
+
+<!-- Runbook tracking: #1674 -->

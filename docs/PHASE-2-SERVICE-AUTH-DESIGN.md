@@ -1,4 +1,6 @@
 # Phase 2: Service-to-Service Authentication
+
+**Purpose**: Phase 2: Service-to-Service Authentication — reference and operational document.
 # Implementation Design for Issue #388 Phase 2
 
 ## Overview

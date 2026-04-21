@@ -1,5 +1,7 @@
 # Phase 11: Chaos Engineering
 
+**Purpose**: Phase 11: Chaos Engineering — reference and operational document.
+
 **Document**: Resilience testing through controlled chaos
 **Date**: April 13, 2026
 

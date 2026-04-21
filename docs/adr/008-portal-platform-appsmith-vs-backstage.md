@@ -1,5 +1,7 @@
 # ADR-008: Portal Platform — Appsmith vs Backstage
 
+**Purpose**: ADR-008: Portal Platform — Appsmith vs Backstage — reference and operational document.
+
 **Date**: 2026-04-16  
 **Status**: Accepted  
 **Deciders**: Platform Team  

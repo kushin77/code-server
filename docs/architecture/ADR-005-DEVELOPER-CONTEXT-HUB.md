@@ -1,5 +1,7 @@
 # ADR-005: Developer Context Hub for Multi-Repo Work
 
+**Purpose**: ADR-005: Developer Context Hub for Multi-Repo Work — reference and operational document.
+
 **Status**: ACCEPTED (2026-04-20)
 **Date**: April 19, 2026
 **Approved**: 2026-04-20
@@ -106,7 +108,7 @@ All closure criteria met (2026-04-20):
 
 ## Cross-References
 
-- Dual-portal architecture: [ADR-002-DUAL-PORTAL-ARCHITECTURE.md](ADR-002-DUAL-PORTAL-ARCHITECTURE.md)
+- Dual-portal architecture: ADR-002-DUAL-PORTAL-ARCHITECTURE.md
 - Multi-repo interaction model: [ADR-004-MULTI-REPO-INTERACTION-MODEL.md](ADR-004-MULTI-REPO-INTERACTION-MODEL.md)
 - Workspace set schema: [../../config/schemas/workspace-set.schema.json](../../config/schemas/workspace-set.schema.json)
 - Workspace set API: [../api/workspace-set.openapi.yaml](../api/workspace-set.openapi.yaml)

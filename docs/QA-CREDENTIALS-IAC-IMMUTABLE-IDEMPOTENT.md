@@ -1,5 +1,7 @@
 # QA Credentials Management: IaC, Immutable, Idempotent, Automated
 
+**Purpose**: QA Credentials Management: IaC, Immutable, Idempotent, Automated — reference and operational document.
+
 ## Overview
 
 This document describes the Infrastructure-as-Code (IaC) approach for managing QA user credentials used in OAuth endpoint E2E testing. The solution is **immutable**, **idempotent**, and **automatically enforced** for all OAuth testing in CI/CD.

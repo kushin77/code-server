@@ -1,3 +1,7 @@
+# Reviewer Collaboration Flow
+
+**Purpose**: Reviewer Collaboration Flow reference document.
+
 ---
 title: Reviewer Collaboration Flow
 description: Requestor and reviewer UX flow for scoped live-session access links with expiry, audit, and revocation.

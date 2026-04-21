@@ -1,5 +1,7 @@
 # On-Prem Immutable State Data Plane (.31/.42)
 
+**Purpose**: On-Prem Immutable State Data Plane (.31/.42) — reference and operational document.
+
 ## Purpose
 Define the single source of truth for code-server user durability across primary 192.168.168.31 and replica 192.168.168.42, with immutable IaC-mounted paths, retention classes, and deterministic verification evidence.
 

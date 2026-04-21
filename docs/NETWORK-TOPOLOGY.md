@@ -1,5 +1,7 @@
 # Network Topology — kushin77/code-server
 
+**Purpose**: Network Topology — kushin77/code-server — reference and operational document.
+
 > Implements: [#887](https://github.com/kushin77/code-server/issues/887) — Air-gap network segmentation
 > Last updated: 2026-04-22
 

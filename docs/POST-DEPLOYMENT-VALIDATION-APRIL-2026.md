@@ -1,4 +1,6 @@
 # Post-Deployment Validation Runbook
+
+**Purpose**: Post-Deployment Validation Runbook — reference and operational document.
 ## April 2026 Deployment Epic #950
 
 ### Executive Summary

@@ -1,5 +1,7 @@
 # Autopilot Setup-State RCA
 
+**Purpose**: Autopilot Setup-State RCA — reference and operational document.
+
 Summary:
 - The false `Finish Setup` prompt is a setup-state drift problem, not a confirmed auth-path failure.
 

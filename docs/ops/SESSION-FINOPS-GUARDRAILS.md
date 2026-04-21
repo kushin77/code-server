@@ -1,5 +1,7 @@
 # Session FinOps Guardrails
 
+**Purpose**: Session FinOps Guardrails — reference and operational document.
+
 This runbook defines the operational policy for ephemeral session quotas, runtime limits, inactivity timeouts, and usage visibility.
 
 ## Policy Defaults

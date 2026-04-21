@@ -1,5 +1,7 @@
 # Phase 12: Multi-Site Federation - Quick Reference
 
+**Purpose**: Phase 12: Multi-Site Federation - Quick Reference — reference and operational document.
+
 **Status**: Ready for Staging Deployment
 **Date**: April 13, 2026
 **Effort**: 6 weeks, 2 engineers
@@ -255,3 +257,5 @@ All items required before production:
 **Status**: Ready for Implementation ✅
 
 Let's build a global system!
+
+<!-- Runbook tracking: #1674 -->

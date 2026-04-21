@@ -1,5 +1,7 @@
 # 003. Terraform for Infrastructure as Code
 
+**Purpose**: 003. Terraform for Infrastructure as Code — reference and operational document.
+
 **Status**: Accepted
 **Date**: 2026-01-27
 **Author(s)**: @kushin77
@@ -207,7 +209,7 @@ Key decisions:
   - Understanding Terraform state managemen
   - Diagnosing apply failures (provider errors, quota issues)
   - Manual state editing (debugging only, rare)
-  - Runbook for common issues (see [RUNBOOKS.md](../../RUNBOOKS.md))
+  - Runbook for common issues (see RUNBOOKS.md)
 
 ---
 
@@ -278,3 +280,5 @@ terraform/
 - [x] Security review: @kushin77
 - [x] Operations review: @kushin77
 - [x] Architecture consensus: @kushin77
+
+<!-- Runbook tracking: #1674 -->

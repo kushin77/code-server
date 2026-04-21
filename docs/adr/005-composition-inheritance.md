@@ -1,5 +1,7 @@
 # ADR-005: Composition Inheritance for Configuration Management
 
+**Purpose**: ADR-005: Composition Inheritance for Configuration Management — reference and operational document.
+
 **Status**: Accepted  
 **Date**: April 14, 2026  
 **Supersedes**: N/A  
@@ -380,3 +382,5 @@ module "code_server_dev" {
 
 **Status**: Accepted (April 14, 2026)  
 **Last Updated**: April 14, 2026
+
+<!-- Runbook tracking: #1674 -->

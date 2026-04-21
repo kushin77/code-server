@@ -1,5 +1,7 @@
 # ADR-003: Dual-Portal Architecture - Backstage + Appsmith
 
+**Purpose**: ADR-003: Dual-Portal Architecture - Backstage + Appsmith — reference and operational document.
+
 **Status**: DRAFT (awaiting ADR-002 IAM approval)  
 **Date**: April 16, 2026  
 **Author**: Platform Engineering  
@@ -539,3 +541,5 @@ database:
 ---
 
 **Next Action**: After ADR-002 IAM approval, schedule architecture review for this ADR.
+
+<!-- Runbook tracking: #1674 -->

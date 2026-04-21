@@ -1,5 +1,7 @@
 # SSOT Registry
 
+**Purpose**: SSOT Registry — reference and operational document.
+
 Version: 2026-04-19
 
 This registry defines the canonical ownership surface for cross-consistency checks. It is the versioned entry point for the SSOT integrity auditor.

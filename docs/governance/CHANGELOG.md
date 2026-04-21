@@ -1,5 +1,7 @@
 # Governance Policy Changelog
 
+**Purpose**: Governance Policy Changelog — reference and operational document.
+
 ## 2026-04-18
 - Added canonical policy index and precedence model in docs/governance/POLICY-INDEX.md
 - Added CI policy SSOT checks via scripts/ci/check-policy-ssot.sh

@@ -1,5 +1,7 @@
 # Authenticated Session Failover Continuity Testing (#733)
 
+**Purpose**: Authenticated Session Failover Continuity Testing (#733) — reference and operational document.
+
 ## Purpose
 
 Validate that authenticated code-server users do not experience service interruption when the infrastructure undergoes failover (e.g., primary host failure → replica takeover).

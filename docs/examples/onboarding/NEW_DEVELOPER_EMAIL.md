@@ -1,3 +1,7 @@
+# New Developer Email
+
+**Purpose**: New Developer Email reference document.
+
 Subject: Welcome — code-server developer onboarding
 
 Hi <New Developer>,

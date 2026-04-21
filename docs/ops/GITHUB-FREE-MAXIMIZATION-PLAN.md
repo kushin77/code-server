@@ -1,3 +1,7 @@
+# Github Free Maximization Plan
+
+**Purpose**: Github Free Maximization Plan reference document.
+
 ---
 title: GitHub Free Maximization Plan
 description: Inventory and optimization baseline for reducing paid GitHub Actions/API usage while preserving delivery quality.

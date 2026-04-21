@@ -1,4 +1,6 @@
 # Quick Reference Guide - Operations & Support
+
+**Purpose**: Quick Reference Guide - Operations & Support — reference and operational document.
 ## kushin77/code-server Deployment #950
 
 ---

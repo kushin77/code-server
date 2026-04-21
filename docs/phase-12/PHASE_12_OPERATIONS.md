@@ -1,5 +1,7 @@
 # Phase 12: Multi-Region Operations Guide
 
+**Purpose**: Phase 12: Multi-Region Operations Guide — reference and operational document.
+
 **Document**: Day-2 operations for federated code-server system
 **Date**: April 13, 2026
 
@@ -445,3 +447,5 @@ Network usage:
 **Status**: Complete
 **Last Updated**: April 13, 2026
 **Maintained By**: SRE/Operations Team
+
+<!-- Runbook tracking: #1674 -->

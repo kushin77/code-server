@@ -1,5 +1,7 @@
 # Issue Deduplication & Consolidation Report
 
+**Purpose**: Issue Deduplication & Consolidation Report — reference and operational document.
+
 **Date**: April 22, 2026  
 **Status**: Phase 1 (Deduplication Audit & Closure)  
 **Owner**: Infrastructure Team

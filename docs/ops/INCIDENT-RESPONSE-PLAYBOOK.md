@@ -1,5 +1,7 @@
 # Incident Response Playbook
 
+**Purpose**: Incident Response Playbook — reference and operational document.
+
 This playbook defines escalation, communication, and execution flow for production incidents.
 
 ## Severity Levels

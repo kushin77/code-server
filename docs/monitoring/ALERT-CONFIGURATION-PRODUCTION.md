@@ -32,7 +32,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: Service health check failed for > 2 minutes  
-**Action**: See [Runbook: Code-Server Down](docs/runbooks/code-server-down.md)  
+**Action**: See [Runbook: Code-Server Down](../runbooks/code-server-down.md)  
 
 #### Alert: CaddyDown
 ```yaml
@@ -49,7 +49,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: Caddy health endpoint unreachable for > 2 minutes  
-**Action**: See [Runbook: Caddy Down](docs/runbooks/caddy-down.md)  
+**Action**: See [Runbook: Caddy Down](../runbooks/caddy-down.md)  
 
 #### Alert: PostgreSQLDown
 ```yaml
@@ -66,7 +66,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: PostgreSQL exporter unable to connect for > 2 minutes  
-**Action**: See [Runbook: PostgreSQL Down](docs/runbooks/postgresql-down.md)  
+**Action**: See [Runbook: PostgreSQL Down](../runbooks/postgresql-down.md)  
 
 ### 2. Performance Degradation Alerts
 
@@ -85,7 +85,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: p99 request latency > 500ms for > 5 minutes  
-**Action**: See [Runbook: High Latency](docs/runbooks/high-latency.md)  
+**Action**: See [Runbook: High Latency](../runbooks/high-latency.md)  
 
 #### Alert: ErrorRateHigh
 ```yaml
@@ -121,7 +121,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: Available disk < 10% for > 10 minutes  
-**Action**: See [Runbook: Disk Full](docs/runbooks/disk-full.md)  
+**Action**: See [Runbook: Disk Full](../runbooks/disk-full.md)  
 
 #### Alert: MemoryPressure
 ```yaml
@@ -138,7 +138,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: Memory utilization > 90% for > 5 minutes  
-**Action**: See [Runbook: Memory Pressure](docs/runbooks/memory-pressure.md)  
+**Action**: See Runbook: Memory Pressure  
 
 ### 4. Data Integrity Alerts
 
@@ -157,7 +157,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: Last backup > 24 hours ago  
-**Action**: See [Runbook: Backup Missing](docs/runbooks/backup-missing.md)  
+**Action**: See Runbook: Backup Missing  
 
 #### Alert: TLSCertificateExpiring
 ```yaml
@@ -174,7 +174,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: TLS certificate expires within 7 days  
-**Action**: See [Runbook: Certificate Expiring](docs/runbooks/cert-expiring.md)  
+**Action**: See Runbook: Certificate Expiring  
 
 ### 5. Infrastructure Health Alerts
 
@@ -193,7 +193,7 @@ All alerts configured in Prometheus with:
 ```
 
 **Threshold**: Ollama health endpoint unreachable for > 2 minutes  
-**Action**: See [Runbook: Ollama Down](docs/runbooks/ollama-down.md)  
+**Action**: See Runbook: Ollama Down  
 
 ## Alert Summary Table
 

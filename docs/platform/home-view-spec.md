@@ -1,5 +1,7 @@
 # Multi-Repo Home View — Feature Specification
 
+**Purpose**: Multi-Repo Home View — Feature Specification — reference and operational document.
+
 **Status**: Specified (ready for implementation)  
 **Version**: 1.0.0  
 **Date**: 2026-04-20  

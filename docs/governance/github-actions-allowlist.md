@@ -1,5 +1,7 @@
 # GitHub Actions Approved Allowlist
 
+**Purpose**: GitHub Actions Approved Allowlist — reference and operational document.
+
 This document defines approved third-party GitHub Actions and the update process for immutable pinning.
 
 ## Policy

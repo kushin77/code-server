@@ -1,5 +1,7 @@
 # ADR-002: Unified Identity & RBAC Architecture
 
+**Purpose**: ADR-002: Unified Identity & RBAC Architecture — reference and operational document.
+
 **Status**: DRAFT (awaiting architecture + security review)  
 **Date**: April 16, 2026  
 **Author**: Platform Engineering  
@@ -367,3 +369,5 @@ sudo /scripts/emergency-access.sh  # Prompts for emergency key
 ---
 
 **Next Action**: Schedule architecture review meeting with @kushin77 + security lead to approve this ADR before Phase 2 code begins.
+
+<!-- Runbook tracking: #1674 -->

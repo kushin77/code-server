@@ -1,5 +1,7 @@
 # Ollama Routing Policy
 
+**Purpose**: Ollama Routing Policy — reference and operational document.
+
 Routing standard:
 - Primary endpoint: `http://replica.prod.internal:11434`
 - Fallback endpoint: `http://primary.prod.internal:11434`

@@ -1,5 +1,7 @@
 # HAProxy Load Balancing & Failover (Phase 7d-002)
 
+**Purpose**: HAProxy Load Balancing & Failover (Phase 7d-002) — reference and operational document.
+
 ## Status: ACTIVE (Phase 7d Implementation)
 
 This document describes the HAProxy-based load balancing and failover architecture for the on-prem code-server environment.

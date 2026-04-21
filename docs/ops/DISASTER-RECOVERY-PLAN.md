@@ -1,5 +1,7 @@
 # Disaster Recovery Plan
 
+**Purpose**: Disaster Recovery Plan — reference and operational document.
+
 This plan defines backup, restore, failover, and testing requirements for production services.
 
 ## Objectives

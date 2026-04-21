@@ -1,5 +1,7 @@
 # Dependency License Report
 
+**Purpose**: Dependency License Report — reference and operational document.
+
 **Generated**: April 19, 2026  
 **Report Version**: 1.0  
 **Policy Reference**: `.license-policy.json`  

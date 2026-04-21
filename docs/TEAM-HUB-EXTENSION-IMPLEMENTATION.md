@@ -1,5 +1,7 @@
 # Team Hub Extension Implementation Guide
 
+**Purpose**: Team Hub Extension Implementation Guide — reference and operational document.
+
 ## Overview
 
 Complete VS Code extension for real-time team collaboration with presence awareness, file tracking, and integrated communication via Matrix.
@@ -506,4 +508,3 @@ describe('Start Meet Flow', () => {
 - **API Docs**: /docs/team-hub-api.md
 - **Troubleshooting**: /docs/team-hub-troubleshooting.md
 - **Release Notes**: /CHANGELOG.md
-

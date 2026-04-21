@@ -1,5 +1,7 @@
 # External Browser QA Smoke Tests
 
+**Purpose**: External Browser QA Smoke Tests — reference and operational document.
+
 This runbook defines external-network browser validation for portal and IDE access.
 
 ## Quick Start

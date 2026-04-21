@@ -1,5 +1,7 @@
 # Repository Session Persistence and Safe Context Restore
 
+**Purpose**: Repository Session Persistence and Safe Context Restore — reference and operational document.
+
 **Status**: Specified  
 **Version**: 1.0.0  
 **Date**: 2026-04-20  

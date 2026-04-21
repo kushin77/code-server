@@ -1,5 +1,7 @@
 # DNS Architecture & Configuration — kushin77/code-server
 
+**Purpose**: DNS Architecture & Configuration — kushin77/code-server — reference and operational document.
+
 **Last Updated**: April 21, 2026  
 **Status**: ✅ PRODUCTION READY  
 **Architecture**: Cloudflare-based load balancing with automatic failover

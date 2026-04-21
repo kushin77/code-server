@@ -1,5 +1,7 @@
 # Governance Waiver Registry
 
+**Purpose**: Governance Waiver Registry — reference and operational document.
+
 Canonical registry for approved governance waivers.
 
 Machine-enforced canonical source: `config/governance-waivers.json`

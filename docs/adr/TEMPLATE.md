@@ -1,5 +1,7 @@
 # ADR Template
 
+**Purpose**: ADR Template — reference and operational document.
+
 Use this template for all Architecture Decision Records.
 
 ---
@@ -135,3 +137,5 @@ How will we know this decision was the right one?
 - [ ] Security review: @reviewer2
 - [ ] Operations review: @reviewer3
 - [ ] Architecture consensus: @reviewer4
+
+<!-- Runbook tracking: #1674 -->

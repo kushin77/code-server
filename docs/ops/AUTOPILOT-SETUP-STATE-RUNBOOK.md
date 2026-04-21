@@ -1,5 +1,7 @@
 # Autopilot Setup-State Recovery Runbook
 
+**Purpose**: Autopilot Setup-State Recovery Runbook — reference and operational document.
+
 Objective:
 - Restore a healthy code-server setup state when the UI shows a stale `Finish Setup` prompt.
 - Prefer the canonical GSM-backed auth path and keep remediation idempotent.

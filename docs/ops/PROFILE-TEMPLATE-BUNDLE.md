@@ -1,3 +1,7 @@
+# Profile Template Bundle
+
+**Purpose**: Profile Template Bundle reference document.
+
 ---
 title: Profile Template Bundle
 description: Versioned baseline bundle for seeding hardened user-project profiles from the code-server profile.

@@ -1,5 +1,7 @@
 # Ollama Integration Contract Runbook
 
+**Purpose**: Ollama Integration Contract Runbook — reference and operational document.
+
 Objective:
 - Validate the cross-repo Ollama integration contract before promotion or rollout.
 

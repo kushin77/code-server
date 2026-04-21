@@ -1,5 +1,7 @@
 # Governance Waiver Request Process
 
+**Purpose**: Governance Waiver Request Process — reference and operational document.
+
 **Version**: 1.0  
 **Effective**: April 22, 2026  
 **Owner**: Infrastructure Team

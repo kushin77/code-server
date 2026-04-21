@@ -1,3 +1,7 @@
+# Break Glass Policy
+
+**Purpose**: Break Glass Policy reference document.
+
 ---
 title: Break-Glass Emergency Access Policy
 description: Strict controls for break-glass waiver exceptions in kushnir.cloud governance

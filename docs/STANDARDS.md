@@ -1,3 +1,7 @@
+# Standards
+
+**Purpose**: Standards reference document.
+
 ---
 title: Documentation Standards and Taxonomy
 description: Canonical structure, frontmatter format, and CI enforcement for all repository documentation
@@ -157,7 +161,7 @@ status: archived
 deprecation_warning: "Replaced by docs/operations/gpu-upgrade-path.md (see that doc instead)"
 ---
 
-> **⚠️ DEPRECATED**: This document is archived. Use [docs/operations/gpu-upgrade-path.md](../operations/gpu-upgrade-path.md) instead.
+> **⚠️ DEPRECATED**: This document is archived. Use docs/operations/gpu-upgrade-path.md instead.
 ```
 
 ---
@@ -347,9 +351,9 @@ FIXME: Add read replicas          # ❌ No issue link
 Reference other docs by relative path with descriptive text:
 
 ```markdown
-See [Deployment Architecture](../architecture/infrastructure/deployment-model.md) for details.
+See Deployment Architecture for details.
 
-[Incident Response Procedures](../runbooks/incident-response/critical-outage.md) outline steps to follow.
+Incident Response Procedures outline steps to follow.
 ```
 
 **NOT**:

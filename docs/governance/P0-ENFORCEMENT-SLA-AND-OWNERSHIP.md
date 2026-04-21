@@ -1,5 +1,7 @@
 # P0 Governance Enforcement SLA and Ownership Matrix
 
+**Purpose**: P0 Governance Enforcement SLA and Ownership Matrix — reference and operational document.
+
 Date: 2026-04-18
 Issue: #702
 

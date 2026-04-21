@@ -1,5 +1,7 @@
 # code-server Onboarding Handoff
 
+**Purpose**: code-server Onboarding Handoff — reference and operational document.
+
 This handoff summarizes the onboarding work done, where to find artifacts, verification commands, and recommended next admin actions.
 
 Summary of completed work
@@ -11,7 +13,7 @@ Summary of completed work
 - README.md with CI badges and local CI instructions.
 
 Where to find artifacts
-- Onboarding files: [onboarding/](onboarding/)
+- Onboarding files: onboarding/
 - Docs: `DEV_ONBOARDING.md`, `CONTRIBUTING.md
 - CI workflows: `.github/workflows/
 - Validation scripts: `scripts/validate.sh` and `.pre-commit-config.yaml

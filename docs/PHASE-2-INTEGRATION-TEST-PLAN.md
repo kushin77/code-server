@@ -1,4 +1,6 @@
 # Phase 2 Integration Test Plan
+
+**Purpose**: Phase 2 Integration Test Plan — reference and operational document.
 ## Per-Session Isolation - Caddy Integration & OAuth2 Hooks
 
 **Date**: April 18, 2026  
@@ -433,3 +435,5 @@ bash scripts/test-phase-2-integration.sh
 ---
 
 **Next**: Phase 3 testing automation and monitoring setup
+
+<!-- Runbook tracking: #1674 -->

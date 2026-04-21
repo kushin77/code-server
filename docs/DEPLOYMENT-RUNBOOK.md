@@ -1,5 +1,7 @@
 # Deployment Runbook — kushin77/code-server
 
+**Purpose**: Deployment Runbook — kushin77/code-server — reference and operational document.
+
 **Last Updated**: April 21, 2026  
 **Status**: 🟢 PRODUCTION READY (All phases complete)  
 **Deployment Model**: Dual-host active-passive failover on-prem behind Cloudflare

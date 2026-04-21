@@ -1,5 +1,7 @@
 # Governance Policy Index
 
+**Purpose**: Governance Policy Index — reference and operational document.
+
 Date: 2026-04-18
 Issue: #704
 

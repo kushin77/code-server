@@ -1,5 +1,7 @@
 # Phase 11: Capacity Planning & Right-Sizing
 
+**Purpose**: Phase 11: Capacity Planning & Right-Sizing — reference and operational document.
+
 **Document**: ML-driven capacity planning and forecasting
 **Date**: April 13, 2026
 

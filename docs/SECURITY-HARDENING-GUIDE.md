@@ -1,5 +1,7 @@
 # Security Hardening Guide
 
+**Purpose**: Security Hardening Guide — reference and operational document.
+
 This guide consolidates mandatory security controls for infrastructure, services, and operational workflows.
 
 ## 1. Secret Management
@@ -67,3 +69,5 @@ This guide consolidates mandatory security controls for infrastructure, services
 - Incident playbook: [ops/INCIDENT-RESPONSE-PLAYBOOK.md](ops/INCIDENT-RESPONSE-PLAYBOOK.md)
 - Ops compliance checklist: [ops/OPS-COMPLIANCE-CHECKLIST.md](ops/OPS-COMPLIANCE-CHECKLIST.md)
 - Governance policy index: [governance/POLICY-INDEX.md](governance/POLICY-INDEX.md)
+
+<!-- Runbook tracking: #1674 -->

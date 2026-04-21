@@ -1,5 +1,7 @@
 # Portal OAuth GCP/GSM Bootstrap Runbook (#695)
 
+**Purpose**: Portal OAuth GCP/GSM Bootstrap Runbook (#695) — reference and operational document.
+
 ## Purpose
 
 Canonical runbook for the non-interactive GCP Workload Identity and GSM bootstrap path used by `portal-oauth-redeploy.yml` on self-hosted runners.

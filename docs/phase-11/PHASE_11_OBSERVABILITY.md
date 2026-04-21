@@ -1,5 +1,7 @@
 # Phase 11: Advanced Observability
 
+**Purpose**: Phase 11: Advanced Observability — reference and operational document.
+
 **Document**: Observability strategy for production systems
 **Date**: April 13, 2026
 

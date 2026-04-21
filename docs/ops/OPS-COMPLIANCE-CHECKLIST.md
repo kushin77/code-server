@@ -1,5 +1,7 @@
 # Operations Compliance Checklist
 
+**Purpose**: Operations Compliance Checklist — reference and operational document.
+
 Use this checklist before merge for P0/P1 changes and before production redeploy.
 
 ## Governance
@@ -43,3 +45,5 @@ Use this checklist before merge for P0/P1 changes and before production redeploy
 - Date:
 - Related issue(s):
 - Related PR:
+
+<!-- Runbook tracking: #1674 -->

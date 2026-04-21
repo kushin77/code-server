@@ -1,5 +1,7 @@
 # Dynamic Ingress Routing Strategy for Ephemeral Sessions
 
+**Purpose**: Dynamic Ingress Routing Strategy for Ephemeral Sessions — reference and operational document.
+
 > Issue: [#908](https://github.com/kushin77/code-server/issues/908)
 > Parent: [#906](https://github.com/kushin77/code-server/issues/906)
 > Date: 2026-04-20

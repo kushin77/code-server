@@ -1,5 +1,7 @@
 # E2E Account Provisioning Runbook (#750)
 
+**Purpose**: E2E Account Provisioning Runbook (#750) — reference and operational document.
+
 **Objective**: Provision E2E test account credentials and capture authenticated Playwright storage state for non-interactive failover continuity tests (#733).
 
 **Status**: BLOCKING #733 (authenticated session continuity), requires manual E2E account setup

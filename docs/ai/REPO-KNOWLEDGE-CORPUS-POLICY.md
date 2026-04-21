@@ -1,5 +1,7 @@
 # Repo Knowledge Corpus Policy
 
+**Purpose**: Repo Knowledge Corpus Policy — reference and operational document.
+
 This policy defines what repository content may be indexed for repo-aware AI retrieval.
 
 In scope:

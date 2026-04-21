@@ -1,5 +1,7 @@
 # Deterministic Browser Automation Kit Runbook
 
+**Purpose**: Deterministic Browser Automation Kit Runbook — reference and operational document.
+
 Objective:
 - Provision and validate the deterministic Playwright browser automation kit for the E2E service-account path.
 

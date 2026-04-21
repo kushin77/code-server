@@ -1,5 +1,7 @@
 # Phase 2B: API Integration Guide
 
+**Purpose**: Phase 2B: API Integration Guide — reference and operational document.
+
 **Status**: 🔄 IN PROGRESS  
 **Scope**: Integrate JWT authentication into code-server and session-broker APIs  
 **Effort**: 7-13 hours total (Phase 2B-2D)  

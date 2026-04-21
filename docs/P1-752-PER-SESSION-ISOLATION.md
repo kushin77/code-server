@@ -1,5 +1,7 @@
 # Per-Session/Per-User Isolation Implementation (#752)
 
+**Purpose**: Per-Session/Per-User Isolation Implementation (#752) — reference and operational document.
+
 **Epic Parent**: #751 (Core code-server transformation to domain-managed multi-user client)  
 **Status**: IMPLEMENTATION IN PROGRESS  
 **Timeline**: Estimated 20 hours  

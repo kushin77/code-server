@@ -1,5 +1,7 @@
 # Enterprise Policies for Multi-Repo UX
 
+**Purpose**: Enterprise Policies for Multi-Repo UX — reference and operational document.
+
 **Status**: Active  
 **Version**: 1.0.0  
 **Date**: 2026-04-20  

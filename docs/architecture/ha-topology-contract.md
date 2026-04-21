@@ -1,5 +1,7 @@
 # HA Topology Contract: OAuth + Appsmith Portal + IDE Path
 
+**Purpose**: HA Topology Contract: OAuth + Appsmith Portal + IDE Path — reference and operational document.
+
 **Status**: Contract Definition  
 **Version**: 1.0  
 **Last Updated**: 2026-04-20  

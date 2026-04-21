@@ -1,5 +1,7 @@
 # Phase 11: Disaster Recovery
 
+**Purpose**: Phase 11: Disaster Recovery — reference and operational document.
+
 **Document**: DR procedures, automation, and recovery processes
 **Date**: April 13, 2026
 

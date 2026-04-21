@@ -1,5 +1,7 @@
 # ADR-002: Dual-Portal Architecture Decision (Backstage + Appsmith)
 
+**Purpose**: ADR-002: Dual-Portal Architecture Decision (Backstage + Appsmith) — reference and operational document.
+
 **Status**: ACCEPTED (Decision Record)  
 **Date**: 2026-04-23  
 **Author**: Platform Engineering Team  

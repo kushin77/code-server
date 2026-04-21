@@ -1,5 +1,7 @@
 # Phase 2: Service-to-Service Authentication
 
+**Purpose**: Phase 2: Service-to-Service Authentication — reference and operational document.
+
 **Date**: April 21, 2026  
 **Status**: IMPLEMENTATION IN PROGRESS  
 **Priority**: P1  

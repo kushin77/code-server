@@ -1,5 +1,7 @@
 # ADR-004: Configuration Consolidation Patterns
 
+**Purpose**: ADR-004: Configuration Consolidation Patterns — reference and operational document.
+
 **Status**: Accepted  
 **Date**: April 14, 2026  
 **Decision Makers**: Architecture Team  

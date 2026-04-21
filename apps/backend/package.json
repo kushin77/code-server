@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "express": "catalog:",
-    "ioredis": "^5.3.2",
+    "ioredis": "catalog:",
     "jose": "catalog:",
     "pg": "catalog:",
     "pino": "catalog:"
@@ -21,6 +21,7 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@vitest/coverage-v8": "^4.1.4",
+    "supertest": "^6.3.4",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

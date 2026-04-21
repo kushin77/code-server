@@ -64,7 +64,8 @@ export class CICDStatusSidebarProvider implements vscode.TreeDataProvider<CICDTr
   private refreshInterval: NodeJS.Timer | null = null;
   private currentBranch: string = 'main';
 
-  constructor(private context: vscode.ExtensionContext) {
+  constructor(private _context: vscode.ExtensionContext) {
+    // Reserved for future use (workspace state, storage, etc.)
     this.loadConfig();
     this.initializeApiClient();
     this.setupRefreshInterval();
@@ -89,7 +90,7 @@ export class CICDStatusSidebarProvider implements vscode.TreeDataProvider<CICDTr
       vscode.window.showWarningMessage(
         'CI/CD Status: Configure CICD_TOKEN in settings',
         'Settings'
-      ).then((selected) => {
+      ).then((selected: string | undefined) => {
         if (selected === 'Settings') {
           vscode.commands.executeCommand('workbench.action.openSettings', 'cicd');
         }

@@ -219,7 +219,10 @@ function useWorkspaceState() {
   const visibleRecentWorkspaces = useMemo(() => {
     return recentRepoIds
       .map((workspaceId) => getWorkspaceById(workspaceId))
-      .filter((workspace): workspace is WorkspaceTab => Boolean(workspace) && !workspace.pinned)
+      .filter((workspace): workspace is WorkspaceTab => {
+        if (!workspace) return false
+        return !workspace.pinned
+      })
       .slice(0, workspacePolicy.maxRecentWorkspaces)
   }, [recentRepoIds, workspacePolicy.maxRecentWorkspaces])
 

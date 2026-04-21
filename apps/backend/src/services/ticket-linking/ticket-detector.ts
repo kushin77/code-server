@@ -193,7 +193,7 @@ export class TicketDetector extends EventEmitter {
 
     switch (system) {
       case 'linear':
-        return this.fetchLinearTicket(id, workspace);
+        return this.fetchLinearTicket(id);
       case 'jira':
         return this.fetchJiraTicket(id, workspace);
       case 'github':
@@ -206,7 +206,7 @@ export class TicketDetector extends EventEmitter {
   /**
    * Fetch from Linear GraphQL API
    */
-  private async fetchLinearTicket(ticketId: string, workspace: string): Promise<ResolvedTicket | null> {
+  private async fetchLinearTicket(ticketId: string): Promise<ResolvedTicket | null> {
     const apiKey = this.apiCredentials.get('linear');
     if (!apiKey) {
       console.warn('Linear API key not configured');

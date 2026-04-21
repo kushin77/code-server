@@ -37,8 +37,8 @@ export class OtelApmClient {
   private cacheTtlMs = 60_000;
 
   constructor(
-    private jaegerBaseUrl: string = 'http://localhost:16686',
-    private prometheusBaseUrl: string = 'http://localhost:9090'
+    jaegerBaseUrl: string = 'http://localhost:16686',
+    prometheusBaseUrl: string = 'http://localhost:9090'
   ) {
     this.jaegerClient = axios.create({ baseURL: jaegerBaseUrl, timeout: 10_000 });
     this.prometheusClient = axios.create({ baseURL: prometheusBaseUrl, timeout: 10_000 });

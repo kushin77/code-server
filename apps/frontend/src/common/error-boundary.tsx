@@ -3,7 +3,7 @@
  * Wraps components and catches errors during rendering
  */
 
-import React, { ReactNode, Component, ErrorInfo } from 'react'
+import { Component, ReactNode, ErrorInfo } from 'react'
 
 interface Props {
   children: ReactNode

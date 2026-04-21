@@ -240,7 +240,7 @@ export class ResiliencePhase11Agent extends Agent {
   /**
    * Get failover history
    */
-  getFailoverHistory(serviceName: string, limit?: number) {
+  getFailoverHistory(serviceName: string, limit?: number): any[] {
     const manager = this.failoverManagers.get(serviceName);
     if (!manager) return [];
     return manager.getFailoverHistory(limit);

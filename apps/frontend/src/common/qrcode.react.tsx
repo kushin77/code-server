@@ -26,14 +26,7 @@ interface QRCodeProps {
  * Renders a QR code using Canvas or SVG
  * This is a simplified implementation
  */
-const QRCode: React.FC<QRCodeProps> = ({
-  value,
-  size = 256,
-  level = 'M',
-  includeMargin = false,
-  imageSettings,
-  className = '',
-}) => {
+const QRCode: React.FC<QRCodeProps> = ({ value, size = 256, className = '' }) => {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
 
   React.useEffect(() => {

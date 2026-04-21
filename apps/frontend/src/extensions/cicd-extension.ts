@@ -21,7 +21,7 @@ export function activateCICDStatusSidebar(context: vscode.ExtensionContext): voi
   registerCommands(provider, context);
 
   // Watch for configuration changes
-  vscode.workspace.onDidChangeConfiguration((event) => {
+  vscode.workspace.onDidChangeConfiguration((event: any) => {
     if (event.affectsConfiguration('cicd')) {
       provider.refresh();
     }

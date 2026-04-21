@@ -3,7 +3,7 @@
  * Provides hooks and utilities for measuring extension performance
  */
 
-import { useCallback, useRef, useEffect } from 'react'
+import { useEffect } from 'react'
 
 export interface PerformanceMetric {
   id: string

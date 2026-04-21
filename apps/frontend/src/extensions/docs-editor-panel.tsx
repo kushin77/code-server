@@ -29,7 +29,6 @@ export const DocsEditorPanel: React.FC = () => {
   const [selectedDoc, setSelectedDoc] = useState<DocItem | null>(null);
   const [editContent, setEditContent] = useState('');
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('split');
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadDocs();
@@ -37,7 +36,6 @@ export const DocsEditorPanel: React.FC = () => {
 
   const loadDocs = async (): Promise<void> => {
     try {
-      setLoading(true);
       const response = await fetch('http://localhost:3100/api/docs');
       const data = await response.json();
 
@@ -51,8 +49,6 @@ export const DocsEditorPanel: React.FC = () => {
       vscode.window.showErrorMessage(
         `Failed to load docs: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
-    } finally {
-      setLoading(false);
     }
   };
 

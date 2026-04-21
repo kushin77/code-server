@@ -1,6 +1,6 @@
-# @file        apps/presence-sidecar/src/index.ts
-# @module      collaboration/presence-sidecar
-# @description Real-time team presence tracking WebSocket service
+// @file        apps/presence-sidecar/src/index.ts
+// @module      collaboration/presence-sidecar
+// @description Real-time team presence tracking WebSocket service
 
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';

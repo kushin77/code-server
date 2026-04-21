@@ -8,12 +8,8 @@
 # - Secret Manager secrets for E2E test credentials
 # - Email forwarding from QA account to distribution group
 #
-
-variable "gcp_project_id" {
-  description = "GCP project ID"
-  type        = string
-  default     = ""  # Will use current gcloud project if not set
-}
+# Note: gcp_project_id variable is defined in variables.tf
+#
 
 # ============================================================================
 # Service Account for QA (simulates qa@kushnir.cloud user)

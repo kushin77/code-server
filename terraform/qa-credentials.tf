@@ -8,38 +8,8 @@
 # - Automatic credential rotation scheduling
 # - Versioned secret management (never overwrite, always version)
 #
-
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
-variable "gcp_project_id" {
-  description = "GCP project ID where QA credentials are stored"
-  type        = string
-}
-
-variable "qa_email" {
-  description = "QA user email (qa@kushnir.cloud)"
-  type        = string
-  default     = "qa@kushnir.cloud"
-}
-
-variable "qa_password" {
-  description = "QA user password (from reset process)"
-  type        = string
-  sensitive   = true
-}
-
-variable "ci_service_account_email" {
-  description = "CI/CD service account email (GitHub Actions)"
-  type        = string
-  default     = "github-actions@kushin77-ops.iam.gserviceaccount.com"
-}
+# Variables are defined in variables.tf
+#
 
 # ============================================================================
 # Google Secret Manager Secrets (Immutable Versions)
@@ -47,10 +17,10 @@ variable "ci_service_account_email" {
 
 # QA User Email (immutable, versioned)
 resource "google_secret_manager_secret" "qa_email" {
-  project                 = var.gcp_project_id
-  secret_id               = "qa-user-email"
-  replication_policy      = "user_managed"
-  
+  project            = var.gcp_project_id
+  secret_id          = "qa-user-email"
+  replication_policy = "user_managed"
+
   replication {
     user_managed {
       replicas {
@@ -60,10 +30,10 @@ resource "google_secret_manager_secret" "qa_email" {
   }
 
   labels = {
-    env         = "qa"
-    purpose     = "oauth-testing"
-    managed-by  = "terraform"
-    immutable   = "true"
+    env        = "qa"
+    purpose    = "oauth-testing"
+    managed-by = "terraform"
+    immutable  = "true"
   }
 
   lifecycle {
@@ -74,10 +44,10 @@ resource "google_secret_manager_secret" "qa_email" {
 
 # QA User Password (immutable, versioned, sensitive)
 resource "google_secret_manager_secret" "qa_password" {
-  project                 = var.gcp_project_id
-  secret_id               = "qa-user-password"
-  replication_policy      = "user_managed"
-  
+  project            = var.gcp_project_id
+  secret_id          = "qa-user-password"
+  replication_policy = "user_managed"
+
   replication {
     user_managed {
       replicas {
@@ -87,11 +57,11 @@ resource "google_secret_manager_secret" "qa_password" {
   }
 
   labels = {
-    env         = "qa"
-    purpose     = "oauth-testing"
-    managed-by  = "terraform"
-    immutable   = "true"
-    sensitive   = "true"
+    env        = "qa"
+    purpose    = "oauth-testing"
+    managed-by = "terraform"
+    immutable  = "true"
+    sensitive  = "true"
   }
 
   lifecycle {

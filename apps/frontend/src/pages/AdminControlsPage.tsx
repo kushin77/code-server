@@ -278,6 +278,8 @@ function describeRemoteAuditLog(log: RemoteAuditLog): string {
 }
 
 export const AdminControlsPage: React.FC = () => {
+  // eslint-disable-next-line complexity
+  // @issue #1023 - Refactor to extract sub-components (RestrictedAccessPanel, ComplianceScoreHeader, etc)
   const { user } = useAuthStore()
   const isAuthorized = user?.roles.some((role) => role.roleId === 'admin') ?? false
   const [snapshot, setSnapshot] = useState<ControlPlaneSnapshot>(() => readSnapshot())

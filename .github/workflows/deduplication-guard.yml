@@ -100,6 +100,3 @@ jobs:
           echo "Deduplication score too low: ${{ steps.score.outputs.DEDUP_SCORE }}/100"
           echo "Required: 60+. See score report above."
           exit 1
-
-permissions:
-  contents: read

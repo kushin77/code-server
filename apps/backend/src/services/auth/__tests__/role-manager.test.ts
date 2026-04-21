@@ -5,16 +5,33 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RoleManager } from '../role-manager';
 
-// Mock Redis
+// Mock Redis and Database
 vi.mock('ioredis');
+vi.mock('../../db', () => ({
+  Database: vi.fn(),
+}));
 
 describe('RoleManager', () => {
   let roleManager: RoleManager;
   let mockRedis: any;
+  let mockDb: any;
 
   beforeEach(() => {
-    mockRedis = new Redis() as any;
-    roleManager = new RoleManager(mockRedis);
+    // Create mock Redis instance
+    mockRedis = {
+      setex: vi.fn(),
+      get: vi.fn(),
+      del: vi.fn(),
+      keys: vi.fn(),
+      mget: vi.fn(),
+    };
+    
+    // Create mock Database instance
+    mockDb = {
+      query: vi.fn(),
+    };
+    
+    roleManager = new RoleManager(mockRedis, mockDb);
   });
 
   describe('assignRoles', () => {

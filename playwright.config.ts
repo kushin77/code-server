@@ -124,14 +124,16 @@ export default defineConfig({
     },
   ],
 
-  // Web server configuration (if tests need to start a local server)
+  // Web server configuration (disabled - tests use remote servers)
+  // Uncomment below if you need to start a local web server for tests
+  /*
   webServer: {
-    command: 'echo "Using remote server at ${BASE_URL}"',
-    url: env.BASE_URL,
-    timeout: 120 * 1000,                  // 2min startup
-    reuseExistingServer: true,            // Reuse if already running
-    ignoreHTTPSErrors: true,              // Accept self-signed certs
+    command: 'npm run dev',  // Start your local dev server
+    url: 'http://localhost:3000',
+    timeout: 120 * 1000,
+    reuseExistingServer: true,
   },
+  */
 
   // Output configuration
   outputDir: 'test-results',

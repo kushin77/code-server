@@ -7,8 +7,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 FAIL_ON_HARDCODED="${FAIL_ON_HARDCODED:-1}"
@@ -17,7 +18,7 @@ FAIL_ON_MISSING_REQUIRED="${FAIL_ON_MISSING_REQUIRED:-1}"
 DRY_RUN="${DRY_RUN:-0}"
 
 # Report file
-REPORT_FILE="${SCRIPT_DIR}/artifacts/ci/lb-cookie-secret-report.json"
+REPORT_FILE="${REPO_ROOT}/artifacts/ci/lb-cookie-secret-report.json"
 mkdir -p "$(dirname "$REPORT_FILE")"
 
 log_stage() {
@@ -105,7 +106,7 @@ check_required_in_schema() {
     
     log_info "Verifying IDE_SESSION_LB_SECRET is marked as required in .env.schema.json..."
     
-    if ! grep -q '"IDE_SESSION_LB_SECRET"' "${SCRIPT_DIR}/.env.schema.json" 2>/dev/null; then
+    if ! grep -q '"IDE_SESSION_LB_SECRET"' "${REPO_ROOT}/.env.schema.json" 2>/dev/null; then
         log_error "❌ IDE_SESSION_LB_SECRET not found in .env.schema.json"
         if [ $FAIL_ON_MISSING_REQUIRED -eq 1 ]; then
             return 1
@@ -113,7 +114,7 @@ check_required_in_schema() {
         return 0
     fi
     
-    if ! grep -q '"IDE_SESSION_LB_SECRET".*"required": true' "${SCRIPT_DIR}/.env.schema.json" 2>/dev/null; then
+    if ! grep -q '"IDE_SESSION_LB_SECRET".*"required": true' "${REPO_ROOT}/.env.schema.json" 2>/dev/null; then
         log_warn "⚠️  IDE_SESSION_LB_SECRET found but not marked as required"
         return 0
     fi
@@ -130,7 +131,7 @@ check_caddyfile_uses_var() {
     local caddy_uses_var=0
     
     # Check if Caddyfile uses the variable (properly)
-    if grep -q '{\$IDE_SESSION_LB_SECRET}' "${SCRIPT_DIR}/Caddyfile" 2>/dev/null; then
+    if grep -q '{\$IDE_SESSION_LB_SECRET}' "${REPO_ROOT}/Caddyfile" 2>/dev/null; then
         log_info "  ✅ Found {\$IDE_SESSION_LB_SECRET} in Caddyfile"
         caddy_uses_var=1
     else
@@ -139,7 +140,7 @@ check_caddyfile_uses_var() {
     fi
     
     # Verify no fallback pattern
-    if grep -q '{\$IDE_SESSION_LB_SECRET:[^}]*}' "${SCRIPT_DIR}/Caddyfile" 2>/dev/null; then
+    if grep -q '{\$IDE_SESSION_LB_SECRET:[^}]*}' "${REPO_ROOT}/Caddyfile" 2>/dev/null; then
         log_error "  ❌ Caddyfile uses fallback pattern (should be {$IDE_SESSION_LB_SECRET} without :...)"
         return 1
     fi

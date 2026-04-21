@@ -16,14 +16,15 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "$SCRIPT_DIR/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
-ALERT_RULES_FILE="${SCRIPT_DIR}/alert-rules.yml"
-DASHBOARD_FILE="${SCRIPT_DIR}/artifacts/triage/portal-ide-auth-path-dashboard.json"
-ALERTMANAGER_FILE="${SCRIPT_DIR}/alertmanager.yml"
-REPORT_FILE="${SCRIPT_DIR}/artifacts/triage/observability-alerts-validation.json"
+ALERT_RULES_FILE="${REPO_ROOT}/alert-rules.yml"
+DASHBOARD_FILE="${REPO_ROOT}/artifacts/triage/portal-ide-auth-path-dashboard.json"
+ALERTMANAGER_FILE="${REPO_ROOT}/alertmanager.yml"
+REPORT_FILE="${REPO_ROOT}/artifacts/triage/observability-alerts-validation.json"
 
 mkdir -p "${REPORT_FILE%/*}"
 

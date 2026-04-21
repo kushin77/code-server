@@ -7,7 +7,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="${REPO_ROOT}"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Counters
 CHECKS_PASSED=0

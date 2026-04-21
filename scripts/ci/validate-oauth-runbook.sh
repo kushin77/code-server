@@ -16,12 +16,13 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "$SCRIPT_DIR/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
-RUNBOOK_FILE="${SCRIPT_DIR}/docs/runbooks/oauth-login-failure-recovery.md"
-REPORT_FILE="${SCRIPT_DIR}/artifacts/triage/oauth-runbook-validation.json"
+RUNBOOK_FILE="${REPO_ROOT}/docs/runbooks/oauth-login-failure-recovery.md"
+REPORT_FILE="${REPO_ROOT}/artifacts/triage/oauth-runbook-validation.json"
 
 mkdir -p "${REPORT_FILE%/*}"
 

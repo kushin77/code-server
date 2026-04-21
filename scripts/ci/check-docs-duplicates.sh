@@ -5,9 +5,11 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-DOCS_DIR="${SCRIPT_DIR}/docs"
-REPORT_FILE="${SCRIPT_DIR}/artifacts/triage/docs-duplicates-report.log"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+DOCS_DIR="${REPO_ROOT}/docs"
+REPORT_FILE="${REPO_ROOT}/artifacts/triage/docs-duplicates-report.log"
 
 mkdir -p "$(dirname "$REPORT_FILE")"
 

@@ -5,8 +5,10 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-AUDIT_DIR="${SCRIPT_DIR}/artifacts/triage"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+AUDIT_DIR="${REPO_ROOT}/artifacts/triage"
 REPORT_FILE="${AUDIT_DIR}/dependency-audit-report.md"
 REPORT_JSON="${AUDIT_DIR}/dependency-audit-report.json"
 

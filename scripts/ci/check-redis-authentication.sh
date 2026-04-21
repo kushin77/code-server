@@ -7,8 +7,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 REDIS_HOST="${REDIS_HOST:-redis}"
@@ -16,7 +17,7 @@ REDIS_PORT="${REDIS_PORT:-6379}"
 DRY_RUN="${DRY_RUN:-1}"
 
 # Report file
-REPORT_FILE="${SCRIPT_DIR}/artifacts/ci/redis-authentication-report.json"
+REPORT_FILE="${REPO_ROOT}/artifacts/ci/redis-authentication-report.json"
 mkdir -p "$(dirname "$REPORT_FILE")"
 
 log_stage() {
@@ -26,17 +27,17 @@ log_stage() {
 check_redis_password_in_schema() {
     log_stage "CHECK 1: REDIS_PASSWORD in .env.schema.json"
     
-    if ! grep -q '"REDIS_PASSWORD"' "${SCRIPT_DIR}/.env.schema.json" 2>/dev/null; then
+    if ! grep -q '"REDIS_PASSWORD"' "${REPO_ROOT}/.env.schema.json" 2>/dev/null; then
         log_error "❌ REDIS_PASSWORD not found in .env.schema.json"
         return 1
     fi
     
-    if ! grep -q '"REDIS_PASSWORD".*"required": true' "${SCRIPT_DIR}/.env.schema.json" 2>/dev/null; then
+    if ! grep -q '"REDIS_PASSWORD".*"required": true' "${REPO_ROOT}/.env.schema.json" 2>/dev/null; then
         log_error "❌ REDIS_PASSWORD not marked as required"
         return 1
     fi
     
-    if ! grep -q '"REDIS_PASSWORD".*"secret": true' "${SCRIPT_DIR}/.env.schema.json" 2>/dev/null; then
+    if ! grep -q '"REDIS_PASSWORD".*"secret": true' "${REPO_ROOT}/.env.schema.json" 2>/dev/null; then
         log_error "❌ REDIS_PASSWORD not marked as secret"
         return 1
     fi
@@ -48,7 +49,7 @@ check_redis_password_in_schema() {
 check_docker_compose_requirepass() {
     log_stage "CHECK 2: Redis --requirepass in docker-compose.yml"
     
-    if ! grep -q '\-\-requirepass.*REDIS_PASSWORD' "${SCRIPT_DIR}/docker-compose.yml" 2>/dev/null; then
+    if ! grep -q '\-\-requirepass.*REDIS_PASSWORD' "${REPO_ROOT}/docker-compose.yml" 2>/dev/null; then
         log_error "❌ Redis command does not include --requirepass with REDIS_PASSWORD env var"
         return 1
     fi
@@ -61,7 +62,7 @@ check_healthcheck_uses_auth() {
     log_stage "CHECK 3: Redis healthcheck uses authentication"
     
     # Look for redis-cli with -a flag in healthcheck
-    if ! grep -A 5 'redis:' "${SCRIPT_DIR}/docker-compose.yml" | grep -q 'redis-cli.*-a.*REDIS_PASSWORD' 2>/dev/null; then
+    if ! grep -A 5 'redis:' "${REPO_ROOT}/docker-compose.yml" | grep -q 'redis-cli.*-a.*REDIS_PASSWORD' 2>/dev/null; then
         log_error "❌ Redis healthcheck does not authenticate with -a flag"
         return 1
     fi
@@ -73,8 +74,8 @@ check_healthcheck_uses_auth() {
 check_oauth2proxy_uses_auth() {
     log_stage "CHECK 4: oauth2-proxy services use authenticated Redis connection"
     
-    local oauth2_count=$(grep -c 'oauth2-proxy' "${SCRIPT_DIR}/docker-compose.yml" || true)
-    local authenticated_count=$(grep -c 'OAUTH2_PROXY_REDIS_CONNECTION_URL.*:\${REDIS_PASSWORD' "${SCRIPT_DIR}/docker-compose.yml" || true)
+    local oauth2_count=$(grep -c 'oauth2-proxy' "${REPO_ROOT}/docker-compose.yml" || true)
+    local authenticated_count=$(grep -c 'OAUTH2_PROXY_REDIS_CONNECTION_URL.*:\${REDIS_PASSWORD' "${REPO_ROOT}/docker-compose.yml" || true)
     
     if [ "$authenticated_count" -lt 2 ]; then
         log_error "❌ Not all oauth2-proxy services use authenticated Redis connection"

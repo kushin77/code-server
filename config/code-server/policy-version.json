@@ -11,7 +11,7 @@
     },
     "extension_manifest": {
       "file": "config/code-server/extensions/extensions-approved.json",
-      "sha256": "3233dc2665f6cafbfc76e100c89ed80c5a4dd87b295827f2e6db0b73e0e92327"
+      "sha256": "589cf6a9fc08c9b7abc26419602dc29c74807e750ad9331ca58ac612ca603682"
     },
     "role_profiles": {
       "files": [

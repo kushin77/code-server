@@ -250,7 +250,7 @@ services:
       OAUTH2_PROXY_OIDC_AUDIENCE: "code-server,api,github-actions,kubernetes"
       
       # JWT Token Configuration
-      OAUTH2_PROXY_JWT_ISSUERS: "https://ide.kushnir.cloud"
+      OAUTH2_PROXY_JWT_ISSUERS: "${OIDC_JWT_ISSUER_URL:-https://ide.${APEX_DOMAIN:-kushnir.cloud}}"
       OAUTH2_PROXY_JWT_KEY: "${OIDC_ISSUER_SIGNING_KEY}"
       OAUTH2_PROXY_JWT_SIGNING_METHOD: "RS256"
       OAUTH2_PROXY_JWT_CLAIMS: "sub,aud,iss,iat,exp,email,groups,actor,repository"

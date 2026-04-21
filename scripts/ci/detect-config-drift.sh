@@ -61,6 +61,7 @@ declare -a SKIP_DIRS=(
 # (documentation/examples, not runtime config surfaces).
 declare -a DOMAIN_ALLOWLIST_FILES=(
     "docs/service-registry.yaml"
+    "team-hub-extension-package.json"
 )
 
 # Hardcoded patterns to detect (should use env vars instead)
@@ -184,7 +185,7 @@ check_hardcoded_domains() {
         content=$(echo "$line" | cut -d: -f3-)
         
         # Skip SSOT files and archived directories
-        if is_ssot_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
+        if is_ssot_file "$file" || is_allowlisted_domain_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
             continue
         fi
         

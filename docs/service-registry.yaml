@@ -222,6 +222,58 @@
       "restart_policy": "Deployment",
       "depends_on": ["vault", "oidc-issuer"],
       "healthcheck": {"type": "http", "target": "http://token-microservice.default.svc.cluster.local:8888/health"}
+    },
+    {
+      "name": "oauth2-oidc-issuer",
+      "container_name": "oauth2-oidc-issuer",
+      "source": "compose",
+      "purpose": "OIDC Token Issuer for Workload Identity Federation (GitHub Actions, Kubernetes SA)",
+      "internal_dns": "oauth2-oidc-issuer",
+      "external_dns": null,
+      "ports": [4182],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": [],
+      "healthcheck": {"type": "http", "target": "http://oauth2-oidc-issuer:4182/.well-known/openid-configuration"}
+    },
+    {
+      "name": "redis-exporter",
+      "container_name": "redis-exporter",
+      "source": "compose",
+      "purpose": "Prometheus exporter for Redis and Sentinel metrics",
+      "internal_dns": "redis-exporter",
+      "external_dns": null,
+      "ports": [9121],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": ["redis", "redis-sentinel-1", "redis-sentinel-arbiter"],
+      "healthcheck": {"type": "http", "target": "http://localhost:9121/metrics"}
+    },
+    {
+      "name": "redis-sentinel-1",
+      "container_name": "redis-sentinel-1",
+      "source": "compose",
+      "purpose": "Redis Sentinel node — monitors master and coordinates failover",
+      "internal_dns": "redis-sentinel-1",
+      "external_dns": null,
+      "ports": [26379],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": ["redis"],
+      "healthcheck": {"type": "command", "target": "redis-cli -p 26379 ping"}
+    },
+    {
+      "name": "redis-sentinel-arbiter",
+      "container_name": "redis-sentinel-arbiter",
+      "source": "compose",
+      "purpose": "Redis Sentinel arbiter — tie-breaker for quorum",
+      "internal_dns": "redis-sentinel-arbiter",
+      "external_dns": null,
+      "ports": [26379],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": ["redis"],
+      "healthcheck": {"type": "command", "target": "redis-cli -p 26379 ping"}
     }
   ]
 }

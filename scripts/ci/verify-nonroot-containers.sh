@@ -16,11 +16,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "$SCRIPT_DIR/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
-REPORT_FILE="${SCRIPT_DIR}/artifacts/triage/nonroot-container-verification.json"
+REPORT_FILE="${REPO_ROOT}/artifacts/triage/nonroot-container-verification.json"
 mkdir -p "${REPORT_FILE%/*}"
 
 # Containers to check (name, expected_uid)
@@ -81,7 +82,7 @@ log_info "Check 2: Verifying docker-compose.yml user directives..."
 for container_name in "${!CONTAINER_CHECKS[@]}"; do
   expected_uid="${CONTAINER_CHECKS[$container_name]}"
   
-  if grep -A 5 "container_name: $container_name" "$SCRIPT_DIR/docker-compose.yml" | grep -q "user:.*\"$expected_uid\""; then
+  if grep -A 5 "container_name: $container_name" "$REPO_ROOT/docker-compose.yml" | grep -q "user:.*\"$expected_uid\""; then
     log_info "  ✓ $container_name has user: \"$expected_uid\" directive"
     CHECKS_PASSED=$((CHECKS_PASSED + 1))
   else
@@ -94,7 +95,7 @@ done
 # ============================================================================
 log_info "Check 3: Checking for insecure docker socket mounts..."
 
-if grep -q "/var/run/docker.sock.*root" "$SCRIPT_DIR/docker-compose.yml"; then
+if grep -q "/var/run/docker.sock.*root" "$REPO_ROOT/docker-compose.yml"; then
   log_error "  ✗ Found docker.sock mounted with root ownership"
   CHECKS_FAILED=$((CHECKS_FAILED + 1))
   FAILURES+=("docker.sock mounted with root ownership in docker-compose.yml")

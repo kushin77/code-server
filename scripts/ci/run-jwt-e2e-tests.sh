@@ -8,13 +8,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../_common/init.sh" 2>/dev/null || {
-  # Fallback logging when _common/init.sh is not available
-  log_info()  { echo "[INFO]  $(date -u +%T) $*"; }
-  log_warn()  { echo "[WARN]  $(date -u +%T) $*" >&2; }
-  log_error() { echo "[ERROR] $(date -u +%T) $*" >&2; }
-  log_fatal() { echo "[FATAL] $(date -u +%T) $*" >&2; exit 1; }
-}
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # ---------------------------------------------------------------------------
 # Configuration

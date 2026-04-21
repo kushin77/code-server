@@ -7,14 +7,15 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 DRY_RUN="${DRY_RUN:-1}"
 
 # Report file
-REPORT_FILE="${SCRIPT_DIR}/artifacts/ci/nonroot-containers-report.json"
+REPORT_FILE="${REPO_ROOT}/artifacts/ci/nonroot-containers-report.json"
 mkdir -p "$(dirname "$REPORT_FILE")"
 
 log_stage() {
@@ -24,11 +25,11 @@ log_stage() {
 check_oauth2proxy_in_compose() {
     log_stage "CHECK 1: oauth2-proxy services don't have user: \"0:0\""
     
-    local count=$(grep -c 'user: "0:0"' "${SCRIPT_DIR}/docker-compose.yml" || echo 0)
+    local count=$(grep -c 'user: "0:0"' "${REPO_ROOT}/docker-compose.yml" || echo 0)
     
     if [ "$count" -gt 0 ]; then
         log_error "❌ Found $count instances of user: \"0:0\" in docker-compose.yml"
-        grep -n 'user: "0:0"' "${SCRIPT_DIR}/docker-compose.yml" || true
+        grep -n 'user: "0:0"' "${REPO_ROOT}/docker-compose.yml" || true
         return 1
     fi
     
@@ -40,10 +41,10 @@ check_oauth2proxy_user_removed() {
     log_stage "CHECK 2: oauth2-proxy removed root user override"
     
     # Count oauth2-proxy services
-    local oauth2_count=$(grep -c "oauth2-proxy:" "${SCRIPT_DIR}/docker-compose.yml" || echo 0)
+    local oauth2_count=$(grep -c "oauth2-proxy:" "${REPO_ROOT}/docker-compose.yml" || echo 0)
     
     # They should not have user: "0:0" anymore
-    if grep -A 10 "oauth2-proxy:" "${SCRIPT_DIR}/docker-compose.yml" | grep -q 'user: "0:0"'; then
+    if grep -A 10 "oauth2-proxy:" "${REPO_ROOT}/docker-compose.yml" | grep -q 'user: "0:0"'; then
         log_error "❌ oauth2-proxy services still have user: \"0:0\""
         return 1
     fi
@@ -55,12 +56,12 @@ check_oauth2proxy_user_removed() {
 check_session_broker_dockerfile() {
     log_stage "CHECK 3: session-broker Dockerfile creates non-root user"
     
-    if ! grep -q "USER session-broker" "${SCRIPT_DIR}/apps/session-broker/Dockerfile"; then
+    if ! grep -q "USER session-broker" "${REPO_ROOT}/apps/session-broker/Dockerfile"; then
         log_error "❌ session-broker Dockerfile missing USER directive"
         return 1
     fi
     
-    if ! grep -q "useradd.*session-broker" "${SCRIPT_DIR}/apps/session-broker/Dockerfile"; then
+    if ! grep -q "useradd.*session-broker" "${REPO_ROOT}/apps/session-broker/Dockerfile"; then
         log_error "❌ session-broker Dockerfile missing user creation"
         return 1
     fi
@@ -72,7 +73,7 @@ check_session_broker_dockerfile() {
 check_session_broker_docker_group() {
     log_stage "CHECK 4: session-broker user added to docker group"
     
-    if ! grep -q "usermod.*docker.*session-broker" "${SCRIPT_DIR}/apps/session-broker/Dockerfile"; then
+    if ! grep -q "usermod.*docker.*session-broker" "${REPO_ROOT}/apps/session-broker/Dockerfile"; then
         log_error "❌ session-broker user not added to docker group"
         return 1
     fi

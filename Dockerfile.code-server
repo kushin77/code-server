@@ -133,11 +133,12 @@ COPY config/code-server/extensions/extensions-approved.json /etc/code-server/ext
 # Build and stage the extension for post-deployment installation.
 COPY pnpm-workspace.yaml pnpm-lock.yaml /app/
 COPY apps/extensions/team-hub /app/apps/extensions/team-hub
-RUN cd /app/apps/extensions/team-hub \
-  && npm install -g pnpm@9.15.4 \
+WORKDIR /app/apps/extensions/team-hub
+RUN npm install -g pnpm@9.15.4 \
   && pnpm install \
   && pnpm run build \
   && echo "✓ Team Hub extension built successfully to /app/apps/extensions/team-hub/dist"
+WORKDIR /home/coder
 
 
 USER coder

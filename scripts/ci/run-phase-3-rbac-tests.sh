@@ -5,8 +5,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "$SCRIPT_DIR/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Test configuration
 RBAC_TEST_TIMEOUT=${RBAC_TEST_TIMEOUT:-30000}
@@ -21,7 +22,7 @@ log_info "Test base URL: $TEST_BASE_URL"
 # Test 1: Role Mapper Unit Tests
 log_info "TEST 1: Role Mapper Unit Tests"
 (
-  cd "$SCRIPT_DIR/apps/backend"
+  cd "$REPO_ROOT/apps/backend"
   npm test -- --testPathPattern="role-mapper.test.ts" \
     --testTimeout=$RBAC_TEST_TIMEOUT \
     --verbose
@@ -34,7 +35,7 @@ log_info "✓ Role Mapper tests passed"
 # Test 2: Role Manager Unit Tests
 log_info "TEST 2: Role Manager Unit Tests"
 (
-  cd "$SCRIPT_DIR/apps/backend"
+  cd "$REPO_ROOT/apps/backend"
   npm test -- --testPathPattern="role-manager.test.ts" \
     --testTimeout=$RBAC_TEST_TIMEOUT \
     --verbose
@@ -47,7 +48,7 @@ log_info "✓ Role Manager tests passed"
 # Test 3: Authorization Middleware Tests
 log_info "TEST 3: Authorization Middleware Tests"
 (
-  cd "$SCRIPT_DIR/apps/backend"
+  cd "$REPO_ROOT/apps/backend"
   npm test -- --testPathPattern="require-role.test.ts" \
     --testTimeout=$RBAC_TEST_TIMEOUT \
     --verbose
@@ -60,7 +61,7 @@ log_info "✓ Authorization middleware tests passed"
 # Test 4: Integration Tests - Role Assignment API
 log_info "TEST 4: Role Assignment API Integration Tests"
 (
-  cd "$SCRIPT_DIR/apps/backend"
+  cd "$REPO_ROOT/apps/backend"
   npm test -- --testPathPattern="roles.integration.test.ts" \
     --testTimeout=$RBAC_TEST_TIMEOUT \
     --verbose
@@ -72,8 +73,8 @@ log_info "✓ Role Assignment API integration tests passed"
 
 # Test 5: E2E Tests - Admin workflow
 log_info "TEST 5: End-to-End Tests - Admin Workflow"
-if [ -f "$SCRIPT_DIR/scripts/ci/run-playwright-rbac-e2e.sh" ]; then
-  bash "$SCRIPT_DIR/scripts/ci/run-playwright-rbac-e2e.sh" || {
+if [ -f "$REPO_ROOT/scripts/ci/run-playwright-rbac-e2e.sh" ]; then
+  bash "$REPO_ROOT/scripts/ci/run-playwright-rbac-e2e.sh" || {
     log_error "E2E RBAC tests failed"
     exit 1
   }
@@ -85,7 +86,7 @@ fi
 # Test 6: Security Tests - Unauthorized Access
 log_info "TEST 6: Security Tests - Unauthorized Access Prevention"
 (
-  cd "$SCRIPT_DIR/apps/backend"
+  cd "$REPO_ROOT/apps/backend"
   npm test -- --testPathPattern="rbac-security.test.ts" \
     --testTimeout=$RBAC_TEST_TIMEOUT \
     --verbose
@@ -98,7 +99,7 @@ log_info "✓ Security tests passed"
 # Test 7: Role Cache Tests
 log_info "TEST 7: Role Cache Performance Tests"
 (
-  cd "$SCRIPT_DIR/apps/backend"
+  cd "$REPO_ROOT/apps/backend"
   npm test -- --testPathPattern="role-cache.test.ts" \
     --testTimeout=$RBAC_TEST_TIMEOUT \
     --verbose
@@ -111,7 +112,7 @@ log_info "✓ Role cache tests passed"
 # Test 8: Audit Logging Tests
 log_info "TEST 8: Role Audit Logging Tests"
 (
-  cd "$SCRIPT_DIR/apps/backend"
+  cd "$REPO_ROOT/apps/backend"
   npm test -- --testPathPattern="role-audit.test.ts" \
     --testTimeout=$RBAC_TEST_TIMEOUT \
     --verbose

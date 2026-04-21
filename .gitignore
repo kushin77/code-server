@@ -39,6 +39,13 @@ Thumbs.db
 .env
 .env.local
 
+# OIDC and authentication keys - NEVER commit these
+.env.oidc
+.env.phase-2-additions
+OIDC_ISSUER_SIGNING_KEY.env
+*.oidc
+*-signing-key*
+
 # User session and secrets (never commit)
 sessions/
 .secrets/

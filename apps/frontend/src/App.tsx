@@ -27,7 +27,6 @@ import {
   buildSafeWorkspaceRestorePlan,
   clearWorkspaceSessionSnapshot,
   createWorkspaceSessionSnapshot,
-  DEFAULT_RESTORE_PREFERENCES,
   readWorkspaceRestorePreferences,
   readWorkspaceSessionSnapshot,
   scheduleWorkspaceSessionPersist,
@@ -448,7 +447,6 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
     switcherResults,
     activeWorkspace,
     selectWorkspace,
-    workspacePolicy,
     multiRepoTabsEnabled,
     multiRepoSwitcherEnabled,
   } = workspaceState

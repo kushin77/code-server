@@ -10,6 +10,7 @@ import { IDEPerformanceProfilerPage } from '@/pages/IDEPerformanceProfilerPage'
 import { FigmaDesignEmbedPage } from '@/pages/FigmaDesignEmbedPage'
 import { SentryErrorsPage } from '@/pages/SentryErrorsPage'
 import { FeatureFlagsPage } from '@/pages/FeatureFlagsPage'
+import { PagerDutyIncidentsPage } from '@/pages/PagerDutyIncidentsPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { EphemeralSessionsPage } from '@/pages/EphemeralSessions'
 import { RepoHomeView } from '@/pages/RepoHomeView'
@@ -578,6 +579,7 @@ const Layout: React.FC<{ children: React.ReactNode; workspaceState: ReturnType<t
   const isFigmaDesignPage = location.pathname.startsWith('/figma-design')
   const isSentryErrorsPage = location.pathname.startsWith('/sentry-errors')
   const isFeatureFlagsPage = location.pathname.startsWith('/feature-flags')
+  const isPagerDutyIncidentsPage = location.pathname.startsWith('/pagerduty-incidents')
   const canOpenAdminControls = user?.roles.some((role) => role.roleId === 'admin') ?? false
 
   if (!isAuthenticated) {
@@ -662,6 +664,17 @@ const Layout: React.FC<{ children: React.ReactNode; workspaceState: ReturnType<t
               to="/feature-flags"
             >
               Feature Flags
+            </Link>
+            <Link
+              aria-current={isPagerDutyIncidentsPage ? 'page' : undefined}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isPagerDutyIncidentsPage
+                  ? 'border-red-200 bg-red-50 text-red-900'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+              to="/pagerduty-incidents"
+            >
+              PagerDuty Incidents
             </Link>
             <Link
               aria-current={isSessionsPage ? 'page' : undefined}
@@ -818,6 +831,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <FeatureFlagsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pagerduty-incidents"
+            element={
+              <ProtectedRoute>
+                <PagerDutyIncidentsPage />
               </ProtectedRoute>
             }
           />

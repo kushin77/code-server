@@ -60,9 +60,9 @@ describe('AuditService', () => {
       expect(params[1]).toBe('user@example.com');   // userEmail  $2
       expect(params[2]).toBe('admin');              // role       $3
       // params[3] = identityType                              $4
-      expect(params[4]).toBe('GET');                // method     $5
-      expect(params[5]).toBe('/api/admin/users');   // path       $6
-      expect(params[6]).toBe('allow');              // action     $7
+      expect(params[5]).toBe('GET');                // method     $6
+      expect(params[6]).toBe('/api/admin/users');   // path       $7
+      expect(params[7]).toBe('allow');              // action     $8
     });
 
     it('writes a deny decision with reason', async () => {
@@ -76,9 +76,9 @@ describe('AuditService', () => {
       await flushImmediate();
 
       const [, params] = db.query.mock.calls[0] as [string, unknown[]];
-      expect(params[6]).toBe('deny');                  // action     $7
-      expect(params[7]).toBe('requires_one_of:admin'); // reason     $8
-      expect(params[8]).toBe(403);                     // statusCode $9
+      expect(params[7]).toBe('deny');                  // action     $8
+      expect(params[8]).toBe('requires_one_of:admin'); // reason     $9
+      expect(params[9]).toBe(403);                     // statusCode $10
     });
 
     it('is fire-and-forget: does not throw even when DB fails', async () => {
@@ -121,10 +121,11 @@ describe('AuditService', () => {
       await flushImmediate();
 
       const [, params] = db.query.mock.calls[0] as [string, unknown[]];
-      expect(params[1]).toBeNull();  // userEmail  $2
-      expect(params[7]).toBeNull();  // reason     $8
-      expect(params[8]).toBeNull();  // statusCode $9
-      expect(params[9]).toBeNull();  // ipAddress  $10
+      expect(params[1]).toBeNull();   // userEmail   $2
+      expect(params[4]).toBeNull();   // userAgent   $5
+      expect(params[8]).toBeNull();   // reason      $9
+      expect(params[9]).toBeNull();   // statusCode  $10
+      expect(params[10]).toBeNull();  // ipAddress   $11
     });
 
     it('serialises jwtClaims as JSON string', async () => {
@@ -133,7 +134,7 @@ describe('AuditService', () => {
       await flushImmediate();
 
       const [, params] = db.query.mock.calls[0] as [string, unknown[]];
-      expect(params[10]).toBe(JSON.stringify({ sub: 'u1', groups: ['admin'] })); // jwtClaims $11
+      expect(params[11]).toBe(JSON.stringify({ sub: 'u1', groups: ['admin'] })); // jwtClaims $12
     });
   });
 

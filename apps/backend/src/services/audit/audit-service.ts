@@ -18,6 +18,7 @@ export interface AuditEvent {
   /** The role that matched (allow) or required roles (deny). */
   role: string;
   identityType?: IdentityType;
+  userAgent?: string;
   method: string;
   path: string;
   action: AuditAction;
@@ -38,10 +39,10 @@ export interface AuditDb {
 
 const INSERT_SQL = `
   INSERT INTO audit_logs (
-    user_id, user_email, role, identity_type,
+    user_id, user_email, role, identity_type, user_agent,
     method, path, action, reason, status_code,
     ip_address, jwt_claims, session_id, trace_id
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 `;
 
 export class AuditService {
@@ -74,19 +75,20 @@ export class AuditService {
 
   private async _write(event: AuditEvent): Promise<void> {
     await this.db.query(INSERT_SQL, [
-      event.userId,
-      event.userEmail ?? null,
-      event.role,
-      event.identityType ?? 'human',
-      event.method,
-      event.path,
-      event.action,
-      event.reason ?? null,
-      event.statusCode ?? null,
-      event.ipAddress ?? null,
-      event.jwtClaims ? JSON.stringify(event.jwtClaims) : null,
-      event.sessionId ?? null,
-      event.traceId ?? null,
+      event.userId,                                               // [0]  user_id
+      event.userEmail ?? null,                                    // [1]  user_email
+      event.role,                                                 // [2]  role
+      event.identityType ?? 'human',                             // [3]  identity_type
+      event.userAgent ?? null,                                    // [4]  user_agent
+      event.method,                                               // [5]  method
+      event.path,                                                 // [6]  path
+      event.action,                                               // [7]  action
+      event.reason ?? null,                                       // [8]  reason
+      event.statusCode ?? null,                                   // [9]  status_code
+      event.ipAddress ?? null,                                    // [10] ip_address
+      event.jwtClaims ? JSON.stringify(event.jwtClaims) : null,  // [11] jwt_claims
+      event.sessionId ?? null,                                    // [12] session_id
+      event.traceId ?? null,                                      // [13] trace_id
     ]);
     this._writeCount++;
   }

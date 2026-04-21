@@ -38,6 +38,7 @@ export function requireRole(...allowedRoles: string[]) {
         undefined;
       const sessionId = (req.headers?.['x-session-id'] as string | undefined) || undefined;
       const ipAddress = req.ip ?? undefined;
+      const userAgent = (req.headers?.['user-agent'] as string | undefined) || undefined;
 
       // Check if user is authenticated
       if (!req.user) {
@@ -51,6 +52,7 @@ export function requireRole(...allowedRoles: string[]) {
           reason: 'unauthenticated',
           statusCode: 401,
           ipAddress,
+          userAgent,
           traceId,
           sessionId,
         });
@@ -78,6 +80,7 @@ export function requireRole(...allowedRoles: string[]) {
           reason: 'no_roles_assigned',
           statusCode: 403,
           ipAddress,
+          userAgent,
           traceId,
           sessionId,
         });
@@ -111,6 +114,7 @@ export function requireRole(...allowedRoles: string[]) {
           reason: `requires_one_of:${allowedRoles.join(',')}`,
           statusCode: 403,
           ipAddress,
+          userAgent,
           traceId,
           sessionId,
         });
@@ -138,6 +142,7 @@ export function requireRole(...allowedRoles: string[]) {
         action: 'allow',
         statusCode: 200,
         ipAddress,
+        userAgent,
         traceId,
         sessionId,
       });

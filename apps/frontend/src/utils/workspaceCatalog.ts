@@ -97,16 +97,13 @@ export function getWorkspacePath(id: string): string | undefined {
 /**
  * Score a workspace for relevance in workspace switcher
  */
-export function scoreWorkspace(workspaceId: string, query: string): number {
-  const workspace = getWorkspaceById(workspaceId)
-  if (!workspace) return 0
-
+export function scoreWorkspace(query: string, workspace: WorkspaceTab): number {
   if (workspace.id.includes(query)) return 100
   if (workspace.label.toLowerCase().includes(query.toLowerCase())) return 80
   if (workspace.path?.includes(query)) return 60
   return 0
 }
-export function buildRecentWorkspaceIds(activeId: string, recent: string[], maxCount: number): string[] {
+export function buildRecentWorkspaceIds(activeId: string, recent: string[], maxCount: number = 10): string[] {
   const ids = [activeId, ...recent].filter((v, i, a) => a.indexOf(v) === i)
   return ids.slice(0, maxCount)
 }

@@ -223,6 +223,70 @@ services:
         max-file: "3"
 
   # ────────────────────────────────────────────────────────────────────────────
+  # oauth2-oidc-issuer — OIDC Token Issuer for Workload Identity Federation
+  # Phase 2.1 Implementation: Enables GitHub Actions & Kubernetes ServiceAccounts
+  # to request JWT tokens from this issuer for machine-to-machine authentication
+  # Endpoints: /.well-known/openid-configuration, /.well-known/jwks.json, /oauth2/token
+  # ────────────────────────────────────────────────────────────────────────────
+  oauth2-oidc-issuer:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:e797b3934eb8d7cb2756b67e59be2ef29c18c2b45da763f540ece66d843cec85
+    container_name: oauth2-oidc-issuer
+    restart: unless-stopped
+    user: "101"
+    networks:
+      - net-edge
+      - net-app
+    expose:
+      - "4182"
+    environment:
+      # OIDC Issuer Mode - self-issued tokens
+      OAUTH2_PROXY_PROVIDER: "oidc"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://ide.kushnir.cloud"
+      OAUTH2_PROXY_OIDC_AUDIENCE: "code-server,api,github-actions,kubernetes"
+      
+      # JWT Token Configuration
+      OAUTH2_PROXY_JWT_ISSUERS: "https://ide.kushnir.cloud"
+      OAUTH2_PROXY_JWT_KEY: "${OIDC_ISSUER_SIGNING_KEY}"
+      OAUTH2_PROXY_JWT_SIGNING_METHOD: "RS256"
+      OAUTH2_PROXY_JWT_CLAIMS: "sub,aud,iss,iat,exp,email,groups,actor,repository"
+      
+      # OIDC Configuration
+      OAUTH2_PROXY_OIDC_ALLOWED_AUDIENCES: "code-server,api,github-actions,kubernetes"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      
+      # HTTP Configuration
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4182"
+      OAUTH2_PROXY_PROXY_PREFIX: "/.well-known"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_TRUST_PROXY: "true"
+      
+      # Logging
+      OAUTH2_PROXY_AUTH_LOGGING: "true"
+      OAUTH2_PROXY_REQUEST_LOGGING: "true"
+      
+      # Skip auth for OIDC discovery endpoints
+      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/.well-known|^/healthz|^/ping"
+    
+    volumes:
+      - ./config/iam:/etc/oauth2-proxy:ro
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4182/.well-known/openid-configuration || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    
+    depends_on:
+      - redis
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
   # oauth2-proxy-portal — Google OIDC gate for portal domain (via Appsmith)
   # Issue #688: Split OAuth callback — enables separate redirect URLs for apex vs. IDE
   # Redeploy: pnpm redeploy:portal-oauth OR manually trigger portal-oauth-redeploy.yml

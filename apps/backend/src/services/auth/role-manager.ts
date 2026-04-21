@@ -220,6 +220,106 @@ export class RoleManager {
       logger.warn(`Failed to invalidate role cache for ${serviceId}: ${error}`);
     }
   }
+
+  // ========== User-facing API methods ==========
+  // These methods provide a user-centric interface for role management
+
+  /**
+   * Get roles for a user (user-facing API)
+   */
+  async getUserRoles(userId: string): Promise<string[]> {
+    try {
+      return await this.getRoles(userId);
+    } catch (error) {
+      logger.error(`Failed to get roles for user ${userId}`, { error });
+      return [];
+    }
+  }
+
+  /**
+   * Assign multiple roles to a user (user-facing API)
+   */
+  async assignRoles(
+    userId: string,
+    roles: string[],
+    expiresIn?: number
+  ): Promise<void> {
+    const deduped = [...new Set(roles)]; // Remove duplicates
+
+    for (const role of deduped) {
+      await this.assignRole(userId, role, expiresIn);
+    }
+
+    logger.info(`Assigned roles [${deduped.join(', ')}] to user ${userId}`, {
+      userId,
+      roles: deduped,
+      expiresIn,
+    });
+  }
+
+  /**
+   * Remove a specific role from a user (user-facing API)
+   */
+  async removeRole(userId: string, role: string): Promise<void> {
+    await this.revokeRole(userId, role);
+  }
+
+  /**
+   * Clear all roles from a user (user-facing API)
+   */
+  async clearRoles(userId: string): Promise<void> {
+    const assignments = await this.listRoles(userId);
+
+    for (const assignment of assignments) {
+      await this.revokeRole(userId, assignment.role);
+    }
+
+    logger.info(`Cleared all roles for user ${userId}`, { userId });
+  }
+
+  /**
+   * List all role assignments globally (user-facing API)
+   */
+  async listAllRoles(): Promise<Record<string, string[]>> {
+    try {
+      const result = await this.db.query(`
+        SELECT DISTINCT service_id
+        FROM role_assignments
+        WHERE expires_at IS NULL OR expires_at > NOW()
+      `);
+
+      const userIds = result.rows.map((row) => row.service_id);
+      const allRoles: Record<string, string[]> = {};
+
+      for (const userId of userIds) {
+        allRoles[userId] = await this.getRoles(userId);
+      }
+
+      return allRoles;
+    } catch (error) {
+      logger.error('Failed to list all roles', { error });
+      return {};
+    }
+  }
+
+  /**
+   * Get audit log of role assignments (user-facing API)
+   */
+  async getAuditLog(): Promise<RoleAssignment[]> {
+    try {
+      const result = await this.db.query(`
+        SELECT id, service_id, role, created_at, expires_at
+        FROM role_assignments
+        ORDER BY created_at DESC
+        LIMIT 1000
+      `);
+
+      return result.rows;
+    } catch (error) {
+      logger.error('Failed to get audit log', { error });
+      return [];
+    }
+  }
 }
 
 /**

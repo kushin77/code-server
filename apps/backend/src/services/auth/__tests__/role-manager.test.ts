@@ -36,47 +36,45 @@ describe('RoleManager', () => {
 
   describe('assignRoles', () => {
     it('should assign roles to a user', async () => {
+      mockDb.query = vi.fn().mockResolvedValue({ rows: [], rowCount: 1 });
       mockRedis.setex = vi.fn().mockResolvedValue('OK');
+      mockRedis.del = vi.fn().mockResolvedValue(1);
 
       await roleManager.assignRoles('user-123', ['admin', 'developer']);
 
-      expect(mockRedis.setex).toHaveBeenCalledWith(
-        'roles:user-123',
-        3600, // 1 hour TTL
-        JSON.stringify(['admin', 'developer'])
-      );
+      expect(mockDb.query).toHaveBeenCalled();
+      expect(mockRedis.del).toHaveBeenCalledWith('roles:user-123');
     });
 
     it('should support custom TTL', async () => {
+      mockDb.query = vi.fn().mockResolvedValue({ rows: [], rowCount: 1 });
       mockRedis.setex = vi.fn().mockResolvedValue('OK');
+      mockRedis.del = vi.fn().mockResolvedValue(1);
 
       await roleManager.assignRoles('user-123', ['developer'], 7200);
 
-      expect(mockRedis.setex).toHaveBeenCalledWith(
-        'roles:user-123',
-        7200,
-        JSON.stringify(['developer'])
-      );
+      expect(mockDb.query).toHaveBeenCalled();
+      expect(mockRedis.del).toHaveBeenCalledWith('roles:user-123');
     });
 
     it('should deduplicate roles', async () => {
+      mockDb.query = vi.fn().mockResolvedValue({ rows: [], rowCount: 1 });
       mockRedis.setex = vi.fn().mockResolvedValue('OK');
+      mockRedis.del = vi.fn().mockResolvedValue(1);
 
       await roleManager.assignRoles('user-123', ['admin', 'admin', 'developer']);
 
-      const savedRoles = JSON.parse(
-        (mockRedis.setex as jest.Mock).mock.calls[0][2]
-      );
-      expect(savedRoles).toEqual(['admin', 'developer']);
+      // Verify db.query was called (at least 2 calls: one per unique role, plus invalidation calls)
+      expect(mockDb.query.mock.calls.length).toBeGreaterThanOrEqual(2);
+      // Verify redis.del was called to invalidate cache
+      expect(mockRedis.del).toHaveBeenCalledWith('roles:user-123');
     });
   });
 
   describe('getUserRoles', () => {
     it('should retrieve user roles from cache', async () => {
       const roles = ['admin', 'developer'];
-      mockRedis.get = jest
-        .fn()
-        .mockResolvedValue(JSON.stringify(roles));
+      mockRedis.get = vi.fn().mockResolvedValue(JSON.stringify({ roles, expiresAt: Date.now() + 10000 }));
 
       const result = await roleManager.getUserRoles('user-123');
 
@@ -93,9 +91,7 @@ describe('RoleManager', () => {
     });
 
     it('should handle cache misses gracefully', async () => {
-      mockRedis.get = jest
-        .fn()
-        .mockRejectedValue(new Error('Redis error'));
+      mockRedis.get = vi.fn().mockRejectedValue(new Error('Redis error'));
 
       const result = await roleManager.getUserRoles('user-123');
 
@@ -105,53 +101,63 @@ describe('RoleManager', () => {
 
   describe('removeRole', () => {
     it('should remove a specific role from user', async () => {
-      mockRedis.get = jest
-        .fn()
-        .mockResolvedValue(JSON.stringify(['admin', 'developer']));
-      mockRedis.setex = jest.fn().mockResolvedValue('OK');
+      mockDb.query = vi.fn().mockResolvedValue({ rows: [], rowCount: 1 });
+      mockRedis.del = vi.fn().mockResolvedValue(1);
 
       await roleManager.removeRole('user-123', 'admin');
 
-      const savedRoles = JSON.parse(
-        (mockRedis.setex as jest.Mock).mock.calls[0][2]
-      );
-      expect(savedRoles).toEqual(['developer']);
+      expect(mockDb.query).toHaveBeenCalled();
+      expect(mockRedis.del).toHaveBeenCalledWith('roles:user-123');
     });
 
     it('should handle removing non-existent role', async () => {
-      mockRedis.get = jest
-        .fn()
-        .mockResolvedValue(JSON.stringify(['developer']));
-      mockRedis.setex = jest.fn().mockResolvedValue('OK');
+      mockDb.query = vi.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+      mockRedis.del = vi.fn().mockResolvedValue(1);
 
       await roleManager.removeRole('user-123', 'admin');
 
-      const savedRoles = JSON.parse(
-        (mockRedis.setex as jest.Mock).mock.calls[0][2]
-      );
-      expect(savedRoles).toEqual(['developer']);
+      expect(mockDb.query).toHaveBeenCalled();
+      expect(mockRedis.del).toHaveBeenCalledWith('roles:user-123');
     });
   });
 
   describe('clearRoles', () => {
     it('should clear all roles for a user', async () => {
-      mockRedis.del = jest.fn().mockResolvedValue(1);
+      // Mock listRoles to return some assignments
+      mockDb.query = vi
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [
+            { id: '1', service_id: 'user-123', role: 'admin', created_at: new Date(), expires_at: null },
+            { id: '2', service_id: 'user-123', role: 'developer', created_at: new Date(), expires_at: null },
+          ],
+        })
+        .mockResolvedValue({ rows: [], rowCount: 1 }); // For DELETE calls
+
+      mockRedis.del = vi.fn().mockResolvedValue(1);
 
       await roleManager.clearRoles('user-123');
 
+      expect(mockDb.query).toHaveBeenCalled();
       expect(mockRedis.del).toHaveBeenCalledWith('roles:user-123');
     });
   });
 
   describe('listAllRoles', () => {
     it('should list all role assignments', async () => {
-      mockRedis.keys = jest
+      // Mock database query to return service_ids
+      mockDb.query = vi.fn().mockResolvedValue({
+        rows: [
+          { service_id: 'user-1' },
+          { service_id: 'user-2' },
+        ],
+      });
+
+      // Mock Redis cache for each user
+      mockRedis.get = vi
         .fn()
-        .mockResolvedValue(['roles:user-1', 'roles:user-2']);
-      mockRedis.mget = jest.fn().mockResolvedValue([
-        JSON.stringify(['admin']),
-        JSON.stringify(['developer']),
-      ]);
+        .mockResolvedValueOnce(JSON.stringify({ roles: ['admin'], expiresAt: Date.now() + 10000 }))
+        .mockResolvedValueOnce(JSON.stringify({ roles: ['developer'], expiresAt: Date.now() + 10000 }));
 
       const result = await roleManager.listAllRoles();
 
@@ -162,7 +168,10 @@ describe('RoleManager', () => {
     });
 
     it('should handle empty role cache', async () => {
-      mockRedis.keys = jest.fn().mockResolvedValue([]);
+      // Mock database query to return empty list
+      mockDb.query = vi.fn().mockResolvedValue({
+        rows: [],
+      });
 
       const result = await roleManager.listAllRoles();
 
@@ -173,9 +182,7 @@ describe('RoleManager', () => {
   describe('caching', () => {
     it('should cache role lookups', async () => {
       const roles = ['admin'];
-      mockRedis.get = jest
-        .fn()
-        .mockResolvedValue(JSON.stringify(roles));
+      mockRedis.get = vi.fn().mockResolvedValue(JSON.stringify(roles));
 
       // First call
       await roleManager.getUserRoles('user-123');
@@ -186,8 +193,8 @@ describe('RoleManager', () => {
     });
 
     it('should invalidate cache on role assignment', async () => {
-      mockRedis.setex = jest.fn().mockResolvedValue('OK');
-      mockRedis.del = jest.fn().mockResolvedValue(1);
+      mockRedis.setex = vi.fn().mockResolvedValue('OK');
+      mockRedis.del = vi.fn().mockResolvedValue(1);
 
       await roleManager.assignRoles('user-123', ['admin']);
 

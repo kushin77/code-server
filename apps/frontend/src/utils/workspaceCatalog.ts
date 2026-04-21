@@ -114,7 +114,7 @@ export function buildRecentWorkspaceIds(activeId: string, recent: string[], maxC
 /**
  * Get suggested workspace ID based on availability
  */
-export function getSuggestedWorkspaceId(): string {
+export function getSuggestedWorkspaceId(roleIds?: string[]): string {
   return PINNED_WORKSPACES[0]?.id ?? 'primary'
 }
 

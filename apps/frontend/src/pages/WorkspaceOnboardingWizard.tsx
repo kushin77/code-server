@@ -200,7 +200,10 @@ export function WorkspaceOnboardingWizard() {
       activeRepoId: workspaceId,
       recentRepoIds: buildRecentWorkspaceIds(workspaceId, currentTabs.recentRepoIds, maxRecentCount),
     })
-    notifyWorkspaceTabsChanged()
+    notifyWorkspaceTabsChanged({
+      activeRepoId: selectedWorkspace.id,
+      recentRepoIds: nextRecentRepoIds,
+    })
   }
 
   const toggleChecklist = (key: WizardChecklistKey) => {

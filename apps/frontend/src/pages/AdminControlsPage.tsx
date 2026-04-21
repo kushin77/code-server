@@ -277,6 +277,449 @@ function describeRemoteAuditLog(log: RemoteAuditLog): string {
   return pieces.join(' · ')
 }
 
+// --- Sub-components ---
+
+const RestrictedAccessPanel: React.FC<{ userRoles: string[] }> = ({ userRoles }) => (
+  <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-16 sm:px-6 lg:px-8">
+      <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
+        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-200">Restricted access</p>
+        <h1 className="mt-4 text-3xl font-semibold text-white">Control plane access is limited to admins</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+          The portal control plane contains security, compliance, and emergency lockdown controls.
+          Your current role set does not grant view or edit access to this surface.
+        </p>
+        <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm text-slate-300">
+          <p className="font-medium text-slate-100">Current roles</p>
+          <p className="mt-2">{userRoles.join(', ') || 'none detected'}</p>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-300">
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Audit logging</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Approval workflow</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Emergency lockdown</span>
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+interface ComplianceScoreHeaderProps {
+  complianceScore: number
+  postureLabel: string
+  remoteSignals: RemoteSignals
+  isRefreshing: boolean
+  onRefresh: () => void
+  panelError: string | null
+  pendingApprovalsCount: number
+  lockdownArmed: boolean
+  criticalControlsCount: number
+  lastSyncedAt: string | null
+}
+
+const ComplianceScoreHeader: React.FC<ComplianceScoreHeaderProps> = ({
+  complianceScore,
+  postureLabel,
+  remoteSignals,
+  isRefreshing,
+  onRefresh,
+  panelError,
+  pendingApprovalsCount,
+  lockdownArmed,
+  criticalControlsCount,
+  lastSyncedAt,
+}) => (
+  <>
+    <header className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-sky-200">
+            <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1">Portal control plane</span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Admin UX hardening</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Compliance and security controls in one panel
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
+              Centralized control over approval gates, emergency lockdown, policy drift enforcement, and audit exports.
+              Every change is tracked locally with actor, timestamp, and diff, while live health and audit signals are
+              refreshed from the backend.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:w-[28rem]">
+          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">Compliance score</p>
+            <p className="mt-3 text-4xl font-semibold text-white">{complianceScore}</p>
+            <p className="mt-2 text-sm text-emerald-50/80">{postureLabel} posture for the current control set.</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Live signal</p>
+            <p className="mt-3 text-lg font-semibold text-white">
+              {remoteSignals.health === 'healthy'
+                ? 'Health OK'
+                : remoteSignals.health === 'degraded'
+                  ? 'Health degraded'
+                  : remoteSignals.health === 'error'
+                    ? 'Health error'
+                    : 'Waiting for refresh'}
+            </p>
+            <p className="mt-2 text-sm text-slate-300">
+              {remoteSignals.auditSummary ?? 'Latest audit sample will appear after refresh.'}
+            </p>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="mt-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? 'Refreshing...' : 'Refresh live signals'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    {panelError ? (
+      <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-100">
+        {panelError}
+      </div>
+    ) : null}
+
+    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Approval queue</p>
+        <p className="mt-2 text-3xl font-semibold text-white">{pendingApprovalsCount}</p>
+        <p className="mt-1 text-sm text-slate-300">Critical requests awaiting sign-off.</p>
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Lockdown mode</p>
+        <p className="mt-2 text-3xl font-semibold text-white">{lockdownArmed ? 'Armed' : 'Clear'}</p>
+        <p className="mt-1 text-sm text-slate-300">Emergency operations status.</p>
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Audit feed</p>
+        <p className="mt-2 text-3xl font-semibold text-white">{remoteSignals.auditCount}</p>
+        <p className="mt-1 text-sm text-slate-300">Latest records observed from the backend.</p>
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Last sync</p>
+        <p className="mt-2 text-lg font-semibold text-white">
+          {lastSyncedAt ? formatTimestamp(lastSyncedAt) : 'Not synced'}
+        </p>
+        <p className="mt-1 text-sm text-slate-300">Control plane snapshot persistence.</p>
+      </div>
+    </div>
+
+    <div className="mt-4 rounded-2xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-slate-300">
+      <span className="font-medium text-white">{criticalControlsCount} high-risk controls</span>
+      {' '}require approval before apply.
+    </div>
+  </>
+)
+
+interface PolicyControlsGridProps {
+  controls: PolicyControl[]
+  pendingApprovals: PolicyApprovalRequest[]
+  draftReasons: Record<ControlId, string>
+  onDraftReasonChange: (id: ControlId, value: string) => void
+  onControlToggle: (control: PolicyControl) => void
+}
+
+const PolicyControlsGrid: React.FC<PolicyControlsGridProps> = ({
+  controls,
+  pendingApprovals,
+  draftReasons,
+  onDraftReasonChange,
+  onControlToggle,
+}) => (
+  <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Policy controls</p>
+        <h2 className="mt-2 text-2xl font-semibold text-white">Operational toggles and critical gates</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+          Critical controls require a request, approval selection, and final apply step. Non-critical controls
+          can be changed immediately and are still written to the local audit trail.
+        </p>
+      </div>
+    </div>
+
+    <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      {controls.map((control) => {
+        const style = CATEGORY_STYLES[control.category]
+        const pendingRequest = pendingApprovals.find((request) => request.controlId === control.id)
+        const nextValue = !control.value
+
+        return (
+          <article
+            key={control.id}
+            className={`rounded-3xl border ${style.border} bg-gradient-to-br ${style.accent} p-5`}
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-lg font-semibold text-white">{control.label}</p>
+                    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] ${style.chip}`}>
+                      {style.label}
+                    </span>
+                    {control.critical ? (
+                      <span className="rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-rose-100">
+                        Critical
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-slate-200/90">{control.description}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 text-right">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">State</p>
+                  <p className={`mt-2 text-2xl font-semibold ${control.value ? 'text-emerald-300' : 'text-slate-200'}`}>
+                    {control.value ? 'Enabled' : 'Disabled'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 text-sm text-slate-200/80">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Owner</p>
+                  <p className="mt-2 font-medium text-white">{control.owner}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {control.lastChangedBy ? `Updated by ${control.lastChangedBy}` : 'Not yet updated'}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Last change</p>
+                  <p className="mt-2 font-medium text-white">
+                    {control.lastChangedAt ? formatTimestamp(control.lastChangedAt) : 'No change recorded'}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {control.critical ? 'Approval required for the next change.' : 'Immediate change is allowed.'}
+                  </p>
+                </div>
+              </div>
+
+              {control.critical ? (
+                <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                  <label className="block text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    Approval reason
+                  </label>
+                  <textarea
+                    value={draftReasons[control.id] ?? ''}
+                    onChange={(event) => {
+                      onDraftReasonChange(control.id, event.target.value)
+                    }}
+                    rows={3}
+                    placeholder={`Why should ${control.label.toLowerCase()} change?`}
+                    className="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-400/60"
+                  />
+                  {pendingRequest ? (
+                    <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-50">
+                      <p className="font-semibold">Approval pending</p>
+                      <p className="mt-1">
+                        Requested by {pendingRequest.requestedBy} at {formatTimestamp(pendingRequest.requestedAt)}
+                      </p>
+                      <p className="mt-1">Reason: {pendingRequest.reason}</p>
+                    </div>
+                  ) : null}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                      type="button"
+                      onClick={() => { onControlToggle(control) }}
+                      className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+                    >
+                      Request {nextValue ? 'enable' : 'disable'}
+                    </button>
+                    <p className="text-xs text-slate-400">
+                      Pending requests become auditable change records before the control is applied.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-white">Immediate change</p>
+                    <p className="text-xs text-slate-400">
+                      This control can be changed directly. The edit is still written to the audit trail.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { onControlToggle(control) }}
+                    className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      control.value
+                        ? 'bg-slate-200 text-slate-950 hover:bg-white'
+                        : 'bg-emerald-400 text-slate-950 hover:bg-emerald-300'
+                    }`}
+                  >
+                    Toggle to {nextValue ? 'enabled' : 'disabled'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </article>
+        )
+      })}
+    </div>
+  </div>
+)
+
+interface ApprovalWorkflowPanelProps {
+  pendingApprovals: PolicyApprovalRequest[]
+  controls: PolicyControl[]
+  onUpdateApprover: (requestId: string, approver: string) => void
+  onApprove: (requestId: string) => void
+  onReject: (requestId: string) => void
+}
+
+const ApprovalWorkflowPanel: React.FC<ApprovalWorkflowPanelProps> = ({
+  pendingApprovals,
+  controls,
+  onUpdateApprover,
+  onApprove,
+  onReject,
+}) => (
+  <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
+    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Approval workflow</p>
+    <h2 className="mt-2 text-2xl font-semibold text-white">Pending critical changes</h2>
+    <p className="mt-2 text-sm leading-6 text-slate-300">
+      Only approved requests can mutate critical controls. This queue records the requested value, the chosen
+      approver, and the reason submitted by the operator.
+    </p>
+
+    <div className="mt-6 space-y-4">
+      {pendingApprovals.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-300">
+          No pending critical changes.
+        </div>
+      ) : null}
+
+      {pendingApprovals.map((request) => {
+        const control = controls.find((item) => item.id === request.controlId)
+
+        return (
+          <div key={request.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-white">{control?.label ?? request.controlId}</p>
+                <p className="mt-1 text-xs text-slate-400">Requested at {formatTimestamp(request.requestedAt)}</p>
+              </div>
+              <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-100">
+                Pending
+              </span>
+            </div>
+
+            <p className="mt-3 text-sm text-slate-300">Reason: {request.reason}</p>
+            <p className="mt-2 text-sm text-slate-300">
+              Requested value: <span className="font-semibold text-white">{request.requestedValue ? 'Enabled' : 'Disabled'}</span>
+            </p>
+
+            <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+              Approver
+            </label>
+            <select
+              value={request.approver}
+              onChange={(event) => { onUpdateApprover(request.id, event.target.value) }}
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/60"
+            >
+              {APPROVER_OPTIONS.map((approver) => (
+                <option key={approver} value={approver}>{approver}</option>
+              ))}
+            </select>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => { onApprove(request.id) }}
+                className="inline-flex flex-1 items-center justify-center rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+              >
+                Approve and apply
+              </button>
+              <button
+                type="button"
+                onClick={() => { onReject(request.id) }}
+                className="inline-flex flex-1 items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  </div>
+)
+
+interface AuditTrailPanelProps {
+  auditTrail: PolicyAuditEntry[]
+  latestAuditEntry: PolicyAuditEntry | undefined
+}
+
+const AuditTrailPanel: React.FC<AuditTrailPanelProps> = ({ auditTrail, latestAuditEntry }) => (
+  <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
+    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Local audit trail</p>
+    <h2 className="mt-2 text-2xl font-semibold text-white">Change history</h2>
+    <p className="mt-2 text-sm leading-6 text-slate-300">
+      The control plane keeps a durable browser-side record of who changed what, when they changed it, and why.
+    </p>
+
+    <div className="mt-6 space-y-3">
+      {auditTrail.slice(0, 8).map((entry) => (
+        <div key={entry.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-white">{entry.diff}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                {entry.actor} · {formatTimestamp(entry.timestamp)}
+              </p>
+            </div>
+            <span
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${
+                entry.status === 'success'
+                  ? 'bg-emerald-500/15 text-emerald-100'
+                  : entry.status === 'warn'
+                    ? 'bg-amber-500/15 text-amber-100'
+                    : entry.status === 'critical'
+                      ? 'bg-rose-500/15 text-rose-100'
+                      : 'bg-slate-500/15 text-slate-100'
+              }`}
+            >
+              {entry.action}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {latestAuditEntry ? (
+      <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm text-slate-300">
+        <p className="font-semibold text-white">Latest event</p>
+        <p className="mt-1">{latestAuditEntry.diff}</p>
+      </div>
+    ) : null}
+  </div>
+)
+
+const RemoteSignalsPanel: React.FC<{ remoteSignals: RemoteSignals }> = ({ remoteSignals }) => (
+  <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
+    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Remote status</p>
+    <h2 className="mt-2 text-2xl font-semibold text-white">Backend signals</h2>
+    <div className="mt-6 space-y-3 text-sm text-slate-300">
+      <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Health</p>
+        <p className="mt-2 text-base font-semibold text-white">{remoteSignals.health}</p>
+        <p className="mt-1">{remoteSignals.healthCheckedAt ? formatTimestamp(remoteSignals.healthCheckedAt) : 'Not checked'}</p>
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Audit sample</p>
+        <p className="mt-2 text-base font-semibold text-white">{remoteSignals.auditSummary ?? 'Unavailable'}</p>
+        <p className="mt-1">{remoteSignals.error ?? 'Backend signals received successfully.'}</p>
+      </div>
+    </div>
+  </div>
+)
+
 export const AdminControlsPage: React.FC = () => {
   const { user } = useAuthStore()
   const isAuthorized = user?.roles.some((role) => role.roleId === 'admin') ?? false
@@ -594,405 +1037,52 @@ export const AdminControlsPage: React.FC = () => {
   }
 
   if (!isAuthorized) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100">
-        <div className="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-16 sm:px-6 lg:px-8">
-          <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-200">Restricted access</p>
-            <h1 className="mt-4 text-3xl font-semibold text-white">Control plane access is limited to admins</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-              The portal control plane contains security, compliance, and emergency lockdown controls.
-              Your current role set does not grant view or edit access to this surface.
-            </p>
-            <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm text-slate-300">
-              <p className="font-medium text-slate-100">Current roles</p>
-              <p className="mt-2">{user?.roles.map((role) => role.roleId).join(', ') || 'none detected'}</p>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-300">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Audit logging</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Approval workflow</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Emergency lockdown</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <RestrictedAccessPanel userRoles={user?.roles.map((role) => role.roleId) ?? []} />
   }
+
+  const lockdownArmed = snapshot.controls.find((control) => control.id === 'emergencyLockdown')?.value ?? false
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.22),_transparent_38%),radial-gradient(circle_at_bottom_left,_rgba(244,63,94,0.14),_transparent_32%),linear-gradient(180deg,_rgba(15,23,42,0.98),_rgba(2,6,23,1))]" />
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-sky-200">
-                <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1">Portal control plane</span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Admin UX hardening</span>
-              </div>
-              <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                  Compliance and security controls in one panel
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Centralized control over approval gates, emergency lockdown, policy drift enforcement, and audit exports.
-                  Every change is tracked locally with actor, timestamp, and diff, while live health and audit signals are
-                  refreshed from the backend.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:w-[28rem]">
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">Compliance score</p>
-                <p className="mt-3 text-4xl font-semibold text-white">{complianceScore}</p>
-                <p className="mt-2 text-sm text-emerald-50/80">{postureLabel} posture for the current control set.</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Live signal</p>
-                <p className="mt-3 text-lg font-semibold text-white">
-                  {remoteSignals.health === 'healthy'
-                    ? 'Health OK'
-                    : remoteSignals.health === 'degraded'
-                      ? 'Health degraded'
-                      : remoteSignals.health === 'error'
-                        ? 'Health error'
-                        : 'Waiting for refresh'}
-                </p>
-                <p className="mt-2 text-sm text-slate-300">
-                  {remoteSignals.auditSummary ?? 'Latest audit sample will appear after refresh.'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void refreshSignals()
-                  }}
-                  className="mt-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isRefreshing}
-                >
-                  {isRefreshing ? 'Refreshing...' : 'Refresh live signals'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {panelError ? (
-          <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-100">
-            {panelError}
-          </div>
-        ) : null}
+        <ComplianceScoreHeader
+          complianceScore={complianceScore}
+          postureLabel={postureLabel}
+          remoteSignals={remoteSignals}
+          isRefreshing={isRefreshing}
+          onRefresh={() => { void refreshSignals() }}
+          panelError={panelError}
+          pendingApprovalsCount={pendingApprovals.length}
+          lockdownArmed={lockdownArmed}
+          criticalControlsCount={criticalControls.length}
+          lastSyncedAt={snapshot.lastSyncedAt}
+        />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_1fr]">
           <section className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Approval queue</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{pendingApprovals.length}</p>
-                <p className="mt-1 text-sm text-slate-300">Critical requests awaiting sign-off.</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Lockdown mode</p>
-                <p className="mt-2 text-3xl font-semibold text-white">
-                  {snapshot.controls.find((control) => control.id === 'emergencyLockdown')?.value ? 'Armed' : 'Clear'}
-                </p>
-                <p className="mt-1 text-sm text-slate-300">Emergency operations status.</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Audit feed</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{remoteSignals.auditCount}</p>
-                <p className="mt-1 text-sm text-slate-300">Latest records observed from the backend.</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Last sync</p>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {snapshot.lastSyncedAt ? formatTimestamp(snapshot.lastSyncedAt) : 'Not synced'}
-                </p>
-                <p className="mt-1 text-sm text-slate-300">Control plane snapshot persistence.</p>
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Policy controls</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Operational toggles and critical gates</h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                    Critical controls require a request, approval selection, and final apply step. Non-critical controls
-                    can be changed immediately and are still written to the local audit trail.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
-                  <p className="font-medium text-white">High risk controls</p>
-                  <p className="mt-1">{criticalControls.length} controls require approval before apply.</p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                {snapshot.controls.map((control) => {
-                  const style = CATEGORY_STYLES[control.category]
-                  const pendingRequest = pendingApprovals.find((request) => request.controlId === control.id)
-                  const nextValue = !control.value
-
-                  return (
-                    <article
-                      key={control.id}
-                      className={`rounded-3xl border ${style.border} bg-gradient-to-br ${style.accent} p-5`}
-                    >
-                      <div className="flex flex-col gap-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-lg font-semibold text-white">{control.label}</p>
-                              <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] ${style.chip}`}>
-                                {style.label}
-                              </span>
-                              {control.critical ? (
-                                <span className="rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-rose-100">
-                                  Critical
-                                </span>
-                              ) : null}
-                            </div>
-                            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-200/90">{control.description}</p>
-                          </div>
-                          <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 text-right">
-                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">State</p>
-                            <p className={`mt-2 text-2xl font-semibold ${control.value ? 'text-emerald-300' : 'text-slate-200'}`}>
-                              {control.value ? 'Enabled' : 'Disabled'}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-3 sm:grid-cols-2 text-sm text-slate-200/80">
-                          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Owner</p>
-                            <p className="mt-2 font-medium text-white">{control.owner}</p>
-                            <p className="mt-1 text-xs text-slate-400">
-                              {control.lastChangedBy ? `Updated by ${control.lastChangedBy}` : 'Not yet updated'}
-                            </p>
-                          </div>
-                          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Last change</p>
-                            <p className="mt-2 font-medium text-white">
-                              {control.lastChangedAt ? formatTimestamp(control.lastChangedAt) : 'No change recorded'}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-400">
-                              {control.critical ? 'Approval required for the next change.' : 'Immediate change is allowed.'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {control.critical ? (
-                          <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                            <label className="block text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                              Approval reason
-                            </label>
-                            <textarea
-                              value={draftReasons[control.id] ?? ''}
-                              onChange={(event) => {
-                                const value = event.target.value
-                                setDraftReasons((current) => ({
-                                  ...current,
-                                  [control.id]: value,
-                                }))
-                              }}
-                              rows={3}
-                              placeholder={`Why should ${control.label.toLowerCase()} change?`}
-                              className="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-400/60"
-                            />
-                            {pendingRequest ? (
-                              <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-50">
-                                <p className="font-semibold">Approval pending</p>
-                                <p className="mt-1">
-                                  Requested by {pendingRequest.requestedBy} at {formatTimestamp(pendingRequest.requestedAt)}
-                                </p>
-                                <p className="mt-1">Reason: {pendingRequest.reason}</p>
-                              </div>
-                            ) : null}
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  handleControlToggle(control)
-                                }}
-                                className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
-                              >
-                                Request {nextValue ? 'enable' : 'disable'}
-                              </button>
-                              <p className="text-xs text-slate-400">
-                                Pending requests become auditable change records before the control is applied.
-                              </p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-white">Immediate change</p>
-                              <p className="text-xs text-slate-400">
-                                This control can be changed directly. The edit is still written to the audit trail.
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleControlToggle(control)
-                              }}
-                              className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition ${
-                                control.value
-                                  ? 'bg-slate-200 text-slate-950 hover:bg-white'
-                                  : 'bg-emerald-400 text-slate-950 hover:bg-emerald-300'
-                              }`}
-                            >
-                              Toggle to {nextValue ? 'enabled' : 'disabled'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            </div>
+            <PolicyControlsGrid
+              controls={snapshot.controls}
+              pendingApprovals={pendingApprovals}
+              draftReasons={draftReasons}
+              onDraftReasonChange={(id, value) => { setDraftReasons((current) => ({ ...current, [id]: value })) }}
+              onControlToggle={handleControlToggle}
+            />
           </section>
 
           <aside className="space-y-6">
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Approval workflow</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Pending critical changes</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                Only approved requests can mutate critical controls. This queue records the requested value, the chosen
-                approver, and the reason submitted by the operator.
-              </p>
-
-              <div className="mt-6 space-y-4">
-                {pendingApprovals.length === 0 ? (
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-300">
-                    No pending critical changes.
-                  </div>
-                ) : null}
-
-                {pendingApprovals.map((request) => {
-                  const control = snapshot.controls.find((item) => item.id === request.controlId)
-
-                  return (
-                    <div key={request.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-white">{control?.label ?? request.controlId}</p>
-                          <p className="mt-1 text-xs text-slate-400">Requested at {formatTimestamp(request.requestedAt)}</p>
-                        </div>
-                        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-100">
-                          Pending
-                        </span>
-                      </div>
-
-                      <p className="mt-3 text-sm text-slate-300">Reason: {request.reason}</p>
-                      <p className="mt-2 text-sm text-slate-300">
-                        Requested value: <span className="font-semibold text-white">{request.requestedValue ? 'Enabled' : 'Disabled'}</span>
-                      </p>
-
-                      <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                        Approver
-                      </label>
-                      <select
-                        value={request.approver}
-                        onChange={(event) => {
-                          updateApprover(request.id, event.target.value)
-                        }}
-                        className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-400/60"
-                      >
-                        {APPROVER_OPTIONS.map((approver) => (
-                          <option key={approver} value={approver}>
-                            {approver}
-                          </option>
-                        ))}
-                      </select>
-
-                      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            approveRequest(request.id)
-                          }}
-                          className="inline-flex flex-1 items-center justify-center rounded-full bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-                        >
-                          Approve and apply
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            rejectRequest(request.id)
-                          }}
-                          className="inline-flex flex-1 items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Local audit trail</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Change history</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                The control plane keeps a durable browser-side record of who changed what, when they changed it, and why.
-              </p>
-
-              <div className="mt-6 space-y-3">
-                {snapshot.auditTrail.slice(0, 8).map((entry) => (
-                  <div key={entry.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">{entry.diff}</p>
-                        <p className="mt-1 text-xs text-slate-400">
-                          {entry.actor} · {formatTimestamp(entry.timestamp)}
-                        </p>
-                      </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${
-                          entry.status === 'success'
-                            ? 'bg-emerald-500/15 text-emerald-100'
-                            : entry.status === 'warn'
-                              ? 'bg-amber-500/15 text-amber-100'
-                              : entry.status === 'critical'
-                                ? 'bg-rose-500/15 text-rose-100'
-                                : 'bg-slate-500/15 text-slate-100'
-                        }`}
-                      >
-                        {entry.action}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {latestAuditEntry ? (
-                <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm text-slate-300">
-                  <p className="font-semibold text-white">Latest event</p>
-                  <p className="mt-1">{latestAuditEntry.diff}</p>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Remote status</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Backend signals</h2>
-              <div className="mt-6 space-y-3 text-sm text-slate-300">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Health</p>
-                  <p className="mt-2 text-base font-semibold text-white">{remoteSignals.health}</p>
-                  <p className="mt-1">{remoteSignals.healthCheckedAt ? formatTimestamp(remoteSignals.healthCheckedAt) : 'Not checked'}</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Audit sample</p>
-                  <p className="mt-2 text-base font-semibold text-white">{remoteSignals.auditSummary ?? 'Unavailable'}</p>
-                  <p className="mt-1">{remoteSignals.error ?? 'Backend signals received successfully.'}</p>
-                </div>
-              </div>
-            </div>
+            <ApprovalWorkflowPanel
+              pendingApprovals={pendingApprovals}
+              controls={snapshot.controls}
+              onUpdateApprover={updateApprover}
+              onApprove={approveRequest}
+              onReject={rejectRequest}
+            />
+            <AuditTrailPanel
+              auditTrail={snapshot.auditTrail}
+              latestAuditEntry={latestAuditEntry}
+            />
+            <RemoteSignalsPanel remoteSignals={remoteSignals} />
           </aside>
         </div>
       </div>

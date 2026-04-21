@@ -428,7 +428,7 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
           </button>
 
           <div className="flex flex-wrap gap-2">
-            {PINNED_WORKSPACES.map((workspace) => (
+            {PINNED_WORKSPACES.map((workspace: typeof PINNED_WORKSPACES[0]) => (
               <button
                 key={workspace.id}
                 type="button"
@@ -451,7 +451,7 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
           <div className="flex flex-wrap items-center gap-2 border-l-0 border-slate-200 pt-1 lg:border-l lg:pl-4 lg:pt-0">
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Recent</span>
             {visibleRecentWorkspaces.length > 0 ? (
-              visibleRecentWorkspaces.map((workspace) => (
+              visibleRecentWorkspaces.map((workspace: typeof visibleRecentWorkspaces[0]) => (
                 <button
                   key={workspace.id}
                   type="button"
@@ -509,7 +509,7 @@ const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ wor
               />
 
               <div className="mt-4 space-y-2">
-                {switcherResults.map((workspace) => (
+                {switcherResults.map((workspace: typeof switcherResults[0]) => (
                   <button
                     key={workspace.id}
                     type="button"

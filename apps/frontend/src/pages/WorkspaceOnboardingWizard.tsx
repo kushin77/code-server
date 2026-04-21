@@ -8,9 +8,10 @@ import {
   getSuggestedWorkspaceId,
   getWorkspaceById,
   notifyWorkspaceTabsChanged,
-  readStoredWorkspaceTabs as readStoredWorkspaceTabsFromStorage,
-  type WorkspaceTab,
+  readStoredWorkspaceTabs,
   writeStoredWorkspaceTabs,
+  type WorkspaceTab,
+  type WorkspaceTabsState,
 } from '@/utils/workspaceCatalog'
 
 type WizardChecklistKey = 'mfa' | 'workspace' | 'handoff' | 'sessions'
@@ -175,7 +176,7 @@ export function WorkspaceOnboardingWizard() {
   const checklistCompletedCount = Object.values(state.checklist).filter(Boolean).length
   const checklistProgress = Math.round((checklistCompletedCount / CHECKLIST_ITEMS.length) * 100)
   const currentStep = STEPS[state.stepIndex] ?? STEPS[0]
-  const currentTabs = readStoredWorkspaceTabsFromStorage(typeof window === 'undefined' ? undefined : window.localStorage)
+  const currentTabs = readStoredWorkspaceTabs(typeof window === 'undefined' ? undefined : window.localStorage)
 
   const handleWorkspaceSelect = (workspaceId: string) => {
     const workspace = getWorkspaceById(workspaceId)
@@ -252,7 +253,10 @@ export function WorkspaceOnboardingWizard() {
       activeRepoId: selectedWorkspace.id,
       recentRepoIds: nextRecentRepoIds,
     })
-    notifyWorkspaceTabsChanged()
+    notifyWorkspaceTabsChanged({
+      activeRepoId: selectedWorkspace.id,
+      recentRepoIds: nextRecentRepoIds,
+    })
   }
 
   const handleRestart = () => {
@@ -371,7 +375,7 @@ export function WorkspaceOnboardingWizard() {
               {state.stepIndex === 1 ? (
                 <section>
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {ALL_WORKSPACES.map((workspace) => {
+                    {ALL_WORKSPACES.map((workspace: WorkspaceTab) => {
                       const isSelected = workspace.id === selectedWorkspace.id
 
                       return (
@@ -561,7 +565,7 @@ export function WorkspaceOnboardingWizard() {
               <p className="font-semibold text-slate-900">Recent workspace lanes</p>
               <p className="mt-1">
                 {currentTabs.recentRepoIds.length > 0
-                  ? currentTabs.recentRepoIds.map((workspaceId) => getWorkspaceById(workspaceId)?.label ?? workspaceId).join(' · ')
+                  ? currentTabs.recentRepoIds.map((workspaceId: string) => getWorkspaceById(workspaceId)?.label ?? workspaceId).join(' · ')
                   : 'No recent workspace lanes yet.'}
               </p>
             </div>

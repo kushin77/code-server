@@ -114,7 +114,7 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
           <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Workspace sets</p>
             <div className="mt-3 space-y-2">
-              {ALL_WORKSPACES.map((workspace) => {
+              {ALL_WORKSPACES.map((workspace: WorkspaceTab) => {
                 const isSelected = workspace.id === selectedWorkspaceId
 
                 return (

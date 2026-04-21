@@ -989,35 +989,23 @@ networks:
   # ── Edge tier: internet-facing proxies (caddy, oauth2-proxy) ────────────
   net-edge:
     name: net-edge
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.1.0/24
+    external: true
 
   # ── Application tier: code execution, session management, AI, Redis ─────
   net-app:
     name: net-app
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.2.0/24
+    external: true
 
   # ── Data tier: Postgres, pgbouncer — no external routes ─────────────────
   # INVARIANT: No service is attached to both net-edge and net-data (#887)
   net-data:
     name: net-data
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.3.0/24
+    external: true
 
   # ── Management tier: observability — internal access only ────────────────
   net-management:
     name: net-management
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.4.0/24
+    external: true
 
 # ════════════════════════════════════════════════════════════════════════════
 # Volumes — All named, all persisted. No anonymous volumes.
@@ -1082,9 +1070,11 @@ volumes:
   grafana-data:
     driver: local
   caddy-config:
-    driver: local
+    name: enterprise_caddy-config
+    external: true
   caddy-data:
-    driver: local
+    name: enterprise_caddy-data
+    external: true
 
   jaeger-data:
     driver: local

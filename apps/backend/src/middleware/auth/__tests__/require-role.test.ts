@@ -2,11 +2,12 @@
 // @module      auth/authorization
 // @description Tests for requireRole middleware
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import { requireRole, attachRoles } from '../require-role';
 import { getRoleManager } from '../../../services/auth/role-manager';
 
-jest.mock('../../../services/auth/role-manager');
+vi.mock('../../../services/auth/role-manager');
 
 interface TestRequest extends Request {
   user?: {
@@ -19,7 +20,7 @@ interface TestRequest extends Request {
 describe('requireRole Middleware', () => {
   let mockReq: Partial<TestRequest>;
   let mockRes: Partial<Response>;
-  let mockNext: jest.Mock<void>;
+  let mockNext: ReturnType<typeof vi.fn>;
   let mockRoleManager: any;
 
   beforeEach(() => {
@@ -31,17 +32,17 @@ describe('requireRole Middleware', () => {
     };
 
     mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
     };
 
-    mockNext = jest.fn();
+    mockNext = vi.fn();
 
     mockRoleManager = {
-      getUserRoles: jest.fn(),
+      getUserRoles: vi.fn(),
     };
 
-    (getRoleManager as jest.Mock).mockReturnValue(mockRoleManager);
+    (getRoleManager as any).mockReturnValue(mockRoleManager);
   });
 
   describe('with authorized user', () => {
@@ -169,7 +170,7 @@ describe('requireRole Middleware', () => {
 describe('attachRoles Middleware', () => {
   let mockReq: Partial<TestRequest>;
   let mockRes: Partial<Response>;
-  let mockNext: jest.Mock<void>;
+  let mockNext: ReturnType<typeof vi.fn>;
   let mockRoleManager: any;
 
   beforeEach(() => {
@@ -181,13 +182,13 @@ describe('attachRoles Middleware', () => {
     };
 
     mockRes = {};
-    mockNext = jest.fn();
+    mockNext = vi.fn();
 
     mockRoleManager = {
-      getUserRoles: jest.fn(),
+      getUserRoles: vi.fn(),
     };
 
-    (getRoleManager as jest.Mock).mockReturnValue(mockRoleManager);
+    (getRoleManager as any).mockReturnValue(mockRoleManager);
   });
 
   it('should attach roles to authenticated request', async () => {

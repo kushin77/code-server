@@ -56,12 +56,18 @@ const validClaims = {
 // ── jwtAuth ───────────────────────────────────────────────────────────────────
 
 describe('jwtAuth()', () => {
+  let mockValidator: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // Create a mock validator instance with the mocked validateToken method
+    mockValidator = {
+      validateToken: mockValidateToken,
+    };
   });
 
   it('returns 401 when Authorization header is missing and optional=false', () => {
-    const mw = jwtAuth({ audience: 'code-server' });
+    const mw = jwtAuth({ audience: 'code-server', validator: mockValidator });
     const req = makeReq();
     const { res, status, json } = makeRes();
     const next = makeNext();
@@ -74,7 +80,7 @@ describe('jwtAuth()', () => {
   });
 
   it('calls next() without token when optional=true', () => {
-    const mw = jwtAuth({ audience: 'code-server', optional: true });
+    const mw = jwtAuth({ audience: 'code-server', optional: true, validator: mockValidator });
     const req = makeReq();
     const { res } = makeRes();
     const next = makeNext();
@@ -85,7 +91,7 @@ describe('jwtAuth()', () => {
   });
 
   it('returns 401 for malformed Authorization header', () => {
-    const mw = jwtAuth({ audience: 'code-server' });
+    const mw = jwtAuth({ audience: 'code-server', validator: mockValidator });
     const req = makeReq({ headers: { authorization: 'NotBearer xyz' } });
     const { res, status, json } = makeRes();
     const next = makeNext();
@@ -101,7 +107,7 @@ describe('jwtAuth()', () => {
   it('attaches claims on valid token and calls next()', async () => {
     mockValidateToken.mockResolvedValueOnce(validClaims);
 
-    const mw = jwtAuth({ audience: 'code-server' });
+    const mw = jwtAuth({ audience: 'code-server', validator: mockValidator });
     const req = makeReq({ headers: { authorization: 'Bearer valid.token.here' } });
     const { res } = makeRes();
     const next = makeNext();
@@ -116,8 +122,8 @@ describe('jwtAuth()', () => {
   it('returns 401 when validator throws', async () => {
     mockValidateToken.mockRejectedValueOnce(new Error('Token expired'));
 
-    const mw = jwtAuth({ audience: 'code-server' });
-    const req = makeReq({ headers: { authorization: 'Bearer expired.token' } });
+    const mw = jwtAuth({ audience: 'code-server', validator: mockValidator });
+    const req = makeReq({ headers: { authorization: 'Bearer expired.token.here' } });
     const { res, status, json } = makeRes();
     const next = makeNext();
 
@@ -132,7 +138,7 @@ describe('jwtAuth()', () => {
   });
 
   it('skips validation for excluded routes', () => {
-    const mw = jwtAuth({ audience: 'code-server', excludeRoutes: [/^\/health/] });
+    const mw = jwtAuth({ audience: 'code-server', excludeRoutes: [/^\/health/], validator: mockValidator });
     const req = makeReq({ path: '/health', headers: {} });
     const { res } = makeRes();
     const next = makeNext();

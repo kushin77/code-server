@@ -89,8 +89,20 @@ export class JwtValidator {
     const [headerB64, payloadB64, signatureB64] = parts;
 
     // Decode header and payload
-    const header = JSON.parse(this.base64UrlDecode(headerB64));
-    const payload = JSON.parse(this.base64UrlDecode(payloadB64));
+    let header: any;
+    let payload: any;
+    
+    try {
+      header = JSON.parse(this.base64UrlDecode(headerB64));
+    } catch (err) {
+      throw new Error('Invalid JWT format (header is not valid JSON)');
+    }
+    
+    try {
+      payload = JSON.parse(this.base64UrlDecode(payloadB64));
+    } catch (err) {
+      throw new Error('Invalid JWT format (payload is not valid JSON)');
+    }
 
     // Validate header
     if (header.alg !== 'RS256') {
@@ -243,16 +255,13 @@ export class JwtValidator {
       throw new Error(`Unsupported key type: ${jwk.kty}`);
     }
 
-    // Decode base64url-encoded components
-    const nBuffer = Buffer.from(jwk.n, 'base64');
-    const eBuffer = Buffer.from(jwk.e, 'base64');
-
-    // Build RSA key structure
+    // Create public key using JWK format
+    // JWK format expects base64url-encoded strings for n and e
     const publicKey = crypto.createPublicKey({
       key: {
         kty: 'RSA',
-        n: nBuffer,
-        e: eBuffer,
+        n: jwk.n,
+        e: jwk.e,
       },
       format: 'jwk',
     });

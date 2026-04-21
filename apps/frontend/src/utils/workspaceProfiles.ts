@@ -2,10 +2,26 @@
  * Workspace profile management utilities
  */
 
+export interface WorkspaceRoot {
+  path: string
+  label?: string
+  debugger?: {
+    type?: string
+    config?: Record<string, any>
+  }
+  terminal?: {
+    shell?: string
+    env?: Record<string, string>
+  }
+  enabledExtensions?: string[]
+}
+
 export interface WorkspaceProfile {
   id: string
   name: string
   root: string
+  workspaceId?: string
+  roots?: WorkspaceRoot[]
   settings: Record<string, any>
 }
 
@@ -19,7 +35,7 @@ export interface WorkspaceProfileSnapshot {
 /**
  * Build a snapshot of workspace profiles
  */
-export function buildWorkspaceProfileSnapshot(_root: string): WorkspaceProfileSnapshot {
+export function buildWorkspaceProfileSnapshot(_root: string, _selectedRoot?: string): WorkspaceProfileSnapshot {
   return {
     profiles: [],
     activeProfileId: null,
@@ -37,6 +53,6 @@ export function getWorkspaceProfile(_id: string): WorkspaceProfile | null {
 /**
  * Resolve workspace root profile
  */
-export function resolveWorkspaceRootProfile(_root: string): WorkspaceProfile | null {
+export function resolveWorkspaceRootProfile(_root: string, _selectedPath?: string): WorkspaceProfile | null {
   return null
 }

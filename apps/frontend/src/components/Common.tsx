@@ -11,13 +11,15 @@ import React from 'react'
 export const Button: React.FC<{
   children?: React.ReactNode
   label?: string
-  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void | Promise<void>
   type?: 'button' | 'submit' | 'reset'
   disabled?: boolean
   className?: string
   variant?: 'primary' | 'secondary' | 'danger'
   fullWidth?: boolean
   flex?: boolean
+  loading?: boolean
+  size?: 'sm' | 'md' | 'lg'
 }> = ({
   children,
   label,
@@ -28,6 +30,8 @@ export const Button: React.FC<{
   variant = 'primary',
   fullWidth = false,
   flex = false,
+  loading = false,
+  size = 'md',
 }) => {
   const variantClass = {
     primary: 'bg-blue-500 text-white hover:bg-blue-600',
@@ -35,16 +39,22 @@ export const Button: React.FC<{
     danger: 'bg-red-500 text-white hover:bg-red-600',
   }[variant]
 
+  const sizeClass = {
+    sm: 'px-2 py-1 text-sm',
+    md: 'px-4 py-2 text-base',
+    lg: 'px-6 py-3 text-lg',
+  }[size]
+
   const content = children || label
 
   return (
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-2 rounded font-medium transition-colors ${variantClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${fullWidth ? 'w-full' : ''} ${flex ? 'flex-1' : ''} ${className}`}
+      disabled={disabled || loading}
+      className={`${sizeClass} rounded font-medium transition-colors ${variantClass} ${disabled || loading ? 'opacity-50 cursor-not-allowed' : ''} ${fullWidth ? 'w-full' : ''} ${flex ? 'flex-1' : ''} ${className}`}
     >
-      {content}
+      {loading ? '...' : content}
     </button>
   )
 }

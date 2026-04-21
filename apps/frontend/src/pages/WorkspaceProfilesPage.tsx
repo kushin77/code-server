@@ -45,12 +45,13 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
   )
 
   useEffect(() => {
+    if (!profile?.roots) return
     if (profile.roots.some((root) => root.path === selectedRootPath)) {
       return
     }
 
     setSelectedRootPath(profile.roots[0]?.path)
-  }, [profile.roots, selectedRootPath])
+  }, [profile?.roots, selectedRootPath])
 
   const handleWorkspaceSelect = (workspaceId: string) => {
     setSelectedWorkspaceId(workspaceId)

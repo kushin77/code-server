@@ -113,20 +113,21 @@ function setupMessageHandlers(): void {
   /**
    * Listen for messages from SW
    */
-  navigator.serviceWorker.addEventListener('message', async (event: ExtendableMessageEvent) => {
-    const { data } = event;
-    metrics.sw_message_received++;
+  navigator.serviceWorker.addEventListener('message', async (event) => {
+    const messageEvent = event as ExtendableMessageEvent
+    const { data } = messageEvent
+    metrics.sw_message_received++
 
     switch (data.type) {
       case 'SESSION_REFRESHED':
         console.info('[auth-sw-register] SW notified: session refreshed', {
           newExpiry: new Date(data.expiry).toISOString(),
-        });
+        })
         // Update IndexedDB with new expiry
-        await storeSessionExpiry(data.expiry);
-        metrics.sw_session_refreshed++;
-        reportMetric('sw_session_refreshed', 1);
-        break;
+        await storeSessionExpiry(data.expiry)
+        metrics.sw_session_refreshed++
+        reportMetric('sw_session_refreshed', 1)
+        break
 
       case 'SESSION_EXPIRED':
         console.warn('[auth-sw-register] SW notified: session expired');

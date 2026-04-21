@@ -2,71 +2,104 @@
 // @module      extensions/figma-embed
 // @description Figma design embed panel for viewing and commenting on designs in IDE
 
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Panel,
-  PanelHeader,
-  PanelBody,
-  Button,
-  TextInput,
-  Spinner,
-  Alert,
-  Badge,
-  Box,
-  Flex,
-} from '@primer/react';
-import axios, { AxiosInstance } from 'axios';
+import React, { useState, useEffect, useCallback, ReactNode } from 'react'
+import axios, { AxiosInstance } from 'axios'
 
 interface FigmaFile {
-  key: string;
-  name: string;
-  lastModified: string;
-  thumbnailUrl: string;
-  version: string;
-  editorType: string;
+  key: string
+  name: string
+  lastModified: string
+  thumbnailUrl: string
+  version: string
+  editorType: string
 }
 
 interface FigmaNode {
-  id: string;
-  name: string;
-  type: string;
-  description?: string;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
+  id: string
+  name: string
+  type: string
+  description?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
   absoluteBoundingBox?: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  visible?: boolean;
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  visible?: boolean
 }
 
 interface FigmaComment {
-  id: string;
+  id: string
   user: {
-    id: string;
-    handle: string;
-    imgUrl: string;
-  };
-  text: string;
-  createdAt: string;
-  resolvedAt?: string;
+    id: string
+    handle: string
+    imgUrl: string
+  }
+  text: string
+  createdAt: string
+  resolvedAt?: string
   clientMeta?: {
-    nodeId?: string;
-    x?: number;
-    y?: number;
-  };
+    nodeId?: string
+    x?: number
+    y?: number
+  }
 }
 
 interface FigmaConfig {
-  token: string;
-  personalToken?: string;
-  fileKey?: string;
-  teamId?: string;
+  token: string
+  personalToken?: string
+  fileKey?: string
+  teamId?: string
 }
+
+// Simple placeholder components
+const Panel: React.FC<{ children: ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`border rounded-lg shadow ${className}`}>{children}</div>
+)
+const PanelHeader: React.FC<{ children: ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`bg-gray-100 border-b p-4 font-semibold ${className}`}>{children}</div>
+)
+const PanelBody: React.FC<{ children: ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`p-4 ${className}`}>{children}</div>
+)
+const TextInput: React.FC<{
+  value?: string
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  placeholder?: string
+  disabled?: boolean
+}> = (props) => <input type="text" className="border rounded px-3 py-2 w-full" {...props} />
+const Spinner: React.FC = () => <div className="inline-block animate-spin">⟳</div>
+const Alert: React.FC<{ children: ReactNode; type?: 'info' | 'warning' | 'error' }> = ({ children, type = 'info' }) => {
+  const bgColor = { info: 'bg-blue-100', warning: 'bg-yellow-100', error: 'bg-red-100' }[type]
+  return <div className={`${bgColor} p-3 rounded`}>{children}</div>
+}
+const Badge: React.FC<{ children: ReactNode }> = ({ children }) => (
+  <span className="bg-gray-200 text-gray-900 px-2 py-1 rounded text-sm">{children}</span>
+)
+const Box: React.FC<{ children: ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={className}>{children}</div>
+)
+const Flex: React.FC<{ children: ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`flex ${className}`}>{children}</div>
+)
+const Button: React.FC<{
+  onClick?: () => void
+  disabled?: boolean
+  children: ReactNode
+  className?: string
+}> = ({ onClick, disabled = false, children, className = '' }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50 ${className}`}
+  >
+    {children}
+  </button>
+)
 
 /**
  * Figma Embed Panel Component
@@ -80,24 +113,21 @@ interface FigmaConfig {
  * - Design version history
  */
 export const FigmaEmbedPanel: React.FC = () => {
-  const [config, setConfig] = useState<FigmaConfig | null>(null);
-  const [apiClient, setApiClient] = useState<AxiosInstance | null>(null);
-  const [files, setFiles] = useState<FigmaFile[]>([]);
-  const [selectedFile, setSelectedFile] = useState<FigmaFile | null>(null);
-  const [nodes, setNodes] = useState<FigmaNode[]>([]);
-  const [comments, setComments] = useState<FigmaComment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [commentText, setCommentText] = useState('');
-  const [selectedNode, setSelectedNode] = useState<FigmaNode | null>(null);
+  const [config, setConfig] = useState<FigmaConfig | null>(null)
+  const [apiClient, setApiClient] = useState<AxiosInstance | null>(null)
+  const [files, setFiles] = useState<FigmaFile[]>([])
+  const [selectedFile, setSelectedFile] = useState<FigmaFile | undefined>()
+  const [nodes, setNodes] = useState<FigmaNode[]>([])
+  const [comments, setComments] = useState<FigmaComment[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | undefined>()
+  const [commentText, setCommentText] = useState('')
+  const [selectedNode, setSelectedNode] = useState<FigmaNode | undefined>()
 
   // Load configuration
   useEffect(() => {
-    loadConfig();
-  }, []);
-
-  // Initialize API client when config loads
-  useEffect(() => {
+    void loadConfig()
+  }, [])
     if (config?.token) {
       const client = axios.create({
         baseURL: 'https://api.figma.com/v1',
@@ -115,130 +145,132 @@ export const FigmaEmbedPanel: React.FC = () => {
   /**
    * Load Figma configuration from VS Code settings
    */
-  const loadConfig = useCallback(() => {
+  const loadConfig = useCallback((): void => {
     // In real implementation, would call VS Code API
-    const token = localStorage.getItem('figma.token');
-    const fileKey = localStorage.getItem('figma.fileKey');
+    const token = localStorage.getItem('figma.token')
+    const fileKey = localStorage.getItem('figma.fileKey')
 
     if (token) {
-      setConfig({ token, fileKey });
+      setConfig({ token, fileKey: fileKey || undefined })
     } else {
-      setError('Figma token not configured. Open settings to configure.');
+      setError('Figma token not configured. Open settings to configure.')
     }
-  }, []);
+  }, [])
 
   /**
    * Fetch list of Figma files
    */
-  const fetchFiles = useCallback(async () => {
-    if (!apiClient) return;
+  const fetchFiles = useCallback(async (): Promise<void> => {
+    if (!apiClient) return
 
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(undefined)
 
       // Get files from team or recent files
       const response = await apiClient.get('/files', {
         params: { team_id: config?.teamId },
-      });
+      })
 
-      setFiles(response.data.files || []);
+      setFiles(response.data.files || [])
     } catch (err) {
-      setError(`Failed to fetch files: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error('[Figma] Error fetching files:', err);
+      setError(`Failed to fetch files: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      console.error('[Figma] Error fetching files:', err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [apiClient, config?.teamId]);
+  }, [apiClient, config?.teamId])
 
   /**
    * Fetch nodes (components, frames) from selected file
    */
   const fetchFileNodes = useCallback(
-    async (fileKey: string) => {
-      if (!apiClient) return;
+    async (fileKey: string): Promise<void> => {
+      if (!apiClient) return
 
       try {
-        setLoading(true);
-        setError(null);
+        setLoading(true)
+        setError(undefined)
 
-        const response = await apiClient.get(`/files/${fileKey}`);
-        const fileData = response.data;
+        const response = await apiClient.get(`/files/${fileKey}`)
+        const fileData = response.data
 
         // Extract nodes from document tree
-        const extractedNodes = extractNodes(fileData.document);
-        setNodes(extractedNodes);
-        setSelectedFile(files.find((f) => f.key === fileKey) || null);
+        const extractedNodes = extractNodes(fileData.document)
+        setNodes(extractedNodes)
+        setSelectedFile(files.find((f) => f.key === fileKey))
 
         // Fetch comments for this file
-        await fetchFileComments(fileKey);
+        await fetchFileComments(fileKey)
       } catch (err) {
-        setError(`Failed to fetch file: ${err instanceof Error ? err.message : 'Unknown error'}`);
-        console.error('[Figma] Error fetching file:', err);
+        setError(`Failed to fetch file: ${err instanceof Error ? err.message : 'Unknown error'}`)
+        console.error('[Figma] Error fetching file:', err)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     },
     [apiClient, files]
-  );
+  )
 
   /**
    * Extract nodes from Figma document tree
    */
-  const extractNodes = (node: any, nodes: FigmaNode[] = []): FigmaNode[] => {
-    if (!node) return nodes;
+  const extractNodes = (node: unknown, nodes: FigmaNode[] = []): FigmaNode[] => {
+    if (!node || typeof node !== 'object') return nodes
+
+    const nodeObj = node as any
 
     // Add current node if it's relevant (frames, components, etc.)
     if (
-      node.type === 'FRAME' ||
-      node.type === 'COMPONENT' ||
-      node.type === 'COMPONENT_SET' ||
-      node.type === 'INSTANCE'
+      nodeObj.type === 'FRAME' ||
+      nodeObj.type === 'COMPONENT' ||
+      nodeObj.type === 'COMPONENT_SET' ||
+      nodeObj.type === 'INSTANCE'
     ) {
       nodes.push({
-        id: node.id,
-        name: node.name,
-        type: node.type,
-        description: node.description,
-        absoluteBoundingBox: node.absoluteBoundingBox,
-        visible: node.visible !== false,
-      });
+        id: nodeObj.id as string,
+        name: nodeObj.name as string,
+        type: nodeObj.type as string,
+        description: nodeObj.description as string | undefined,
+        absoluteBoundingBox: nodeObj.absoluteBoundingBox as { x: number; y: number; width: number; height: number } | undefined,
+        visible: nodeObj.visible !== false,
+      })
     }
 
     // Recursively process children
-    if (node.children && Array.isArray(node.children)) {
-      node.children.forEach((child: any) => extractNodes(child, nodes));
+    if (nodeObj.children && Array.isArray(nodeObj.children)) {
+      nodeObj.children.forEach((child: unknown) => extractNodes(child, nodes))
     }
 
-    return nodes;
-  };
+    return nodes
+  }
 
   /**
    * Fetch comments for file
    */
   const fetchFileComments = useCallback(
-    async (fileKey: string) => {
-      if (!apiClient) return;
+    async (fileKey: string): Promise<void> => {
+      if (!apiClient) return
 
       try {
-        const response = await apiClient.get(`/files/${fileKey}/comments`);
-        setComments(response.data.comments || []);
+        const response = await apiClient.get(`/files/${fileKey}/comments`)
+        setComments(response.data.comments || [])
       } catch (err) {
-        console.error('[Figma] Error fetching comments:', err);
+        console.error('[Figma] Error fetching comments:', err)
         // Don't fail if comments fail to load
       }
     },
     [apiClient]
-  );
+  )
 
   /**
    * Add comment to design
    */
-  const handleAddComment = useCallback(async () => {
-    if (!apiClient || !selectedFile || !commentText.trim()) return;
+  const handleAddComment = useCallback(async (): Promise<void> => {
+    if (!apiClient || !selectedFile || !commentText.trim()) return
 
     try {
-      setLoading(true);
+      setLoading(true)
 
       await apiClient.post(`/files/${selectedFile.key}/comments`, {
         message: commentText,
@@ -249,23 +281,23 @@ export const FigmaEmbedPanel: React.FC = () => {
               y: selectedNode.absoluteBoundingBox?.y || 0,
             }
           : undefined,
-      });
+      })
 
-      setCommentText('');
-      await fetchFileComments(selectedFile.key);
+      setCommentText('')
+      await fetchFileComments(selectedFile.key)
     } catch (err) {
-      setError(`Failed to post comment: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(`Failed to post comment: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [apiClient, selectedFile, selectedNode, commentText]);
+  }, [apiClient, selectedFile, selectedNode, commentText])
 
   /**
    * Open file in Figma
    */
-  const handleOpenInFigma = useCallback(() => {
+  const handleOpenInFigma = useCallback((): void => {
     if (selectedFile) {
-      window.open(`https://figma.com/file/${selectedFile.key}`, '_blank');
+      window.open(`https://figma.com/file/${selectedFile.key}`, '_blank')
     }
   }, [selectedFile]);
 

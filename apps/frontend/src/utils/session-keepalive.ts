@@ -101,6 +101,9 @@ export async function doSilentRefresh(): Promise<boolean> {
       }
       
       return false;
+    } else {
+      console.warn(`[Session] Proactive refresh failed: HTTP ${response.status}`);
+      return false;
     }
   } catch (error) {
     console.error('[Session] Error during proactive refresh:', error);

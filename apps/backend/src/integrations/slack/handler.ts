@@ -1,9 +1,8 @@
-#!/usr/bin/env bash
-# @file        apps/backend/src/integrations/slack/handler.ts
-# @module      integrations/slack
-# @description Slack slash command handler for IDE session sharing
+// @file        apps/backend/src/integrations/slack/handler.ts
+// @module      integrations/slack
+// @description Slack slash command handler for IDE session sharing
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid';
 import { createHmac } from 'crypto';
 import Redis from 'ioredis';

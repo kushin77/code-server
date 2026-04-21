@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import QRCode from 'qrcode.react'
+import QRCode from '@/common/qrcode.react'
 import { Button, Input, Alert, Card, Spinner } from '@/components/Common'
 import { rbacAPI } from '@/api/rbac-client'
 

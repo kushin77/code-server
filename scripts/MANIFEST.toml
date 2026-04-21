@@ -189,6 +189,24 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "deploy-qa-credentials-iac.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-qa-credentials-to-gcp.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "deploy-qa-service-account-cli.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "deploy-rbac-enforcement-docker-phase3.sh"
 category = "uncategorized"
 status   = "active"
@@ -261,6 +279,12 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "fix-infrastructure-issues.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "fix-metadata-headers.sh"
 category = "uncategorized"
 status   = "active"
@@ -298,6 +322,42 @@ purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "init-repo-governance.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-automated-qa-setup.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-complete-dod.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-execute.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-fix-ssl-certificates.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-interactive-deployment.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "issue-984-setup-qa-oauth.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -465,7 +525,31 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "qa-iac-quickstart.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "redeploy.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "register-google-workspace-domain.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "render-nas-ingress.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "run-e2e-tests-with-gsm.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -501,13 +585,31 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "setup-qa-service-account.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "setup-vault-secrets.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "task-completion-example.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "test-latency-optimization.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "test-task-completion-framework.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
@@ -555,6 +657,12 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "validate-qa-iac.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
 file     = "validate-rbac-enforcement-docker-phase3.sh"
 category = "uncategorized"
 status   = "active"
@@ -574,6 +682,18 @@ purpose  = "TODO: add purpose"
 
 [[script]]
 file     = "validate.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "verify-iac-deployment-ready.sh"
+category = "uncategorized"
+status   = "active"
+purpose  = "TODO: add purpose"
+
+[[script]]
+file     = "verify-iac-readiness.sh"
 category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"

@@ -3,10 +3,10 @@
 // @description Authorization middleware decorator for role-based access control
 
 import { Request, Response, NextFunction } from 'express';
-import { Logger } from '../../utils/logger';
+import { getLogger } from '../../lib/logger';
 import { getRoleManager } from '../../services/auth/role-manager';
 
-const logger = new Logger('RequireRole');
+const logger = getLogger('RequireRole');
 
 interface AuthenticatedRequest extends Request {
   user?: {

@@ -2,7 +2,7 @@
 // @module      auth/role-mapping
 // @description Maps Google OAuth groups and claims to application roles
 
-import { Logger } from '../../utils/logger';
+import { getLogger } from '../../lib/logger';
 
 interface TokenClaims {
   sub: string;
@@ -12,7 +12,7 @@ interface TokenClaims {
   admin?: boolean;
 }
 
-const logger = new Logger('RoleMapper');
+const logger = getLogger('RoleMapper');
 
 /**
  * RoleMapper maps external identity provider claims (Google Groups, SAML groups)

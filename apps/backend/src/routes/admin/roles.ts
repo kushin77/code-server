@@ -3,12 +3,12 @@
 // @description REST API for role assignment and management
 
 import { Router, Request, Response } from 'express';
-import { Logger } from '../../utils/logger';
+import { getLogger } from '../../lib/logger';
 import { getRoleManager } from '../../services/auth/role-manager';
 import { requireRole, attachRoles } from '../../middleware/auth/require-role';
 
 const router = Router();
-const logger = new Logger('RoleManagementAPI');
+const logger = getLogger('RoleManagementAPI');
 
 interface AuthenticatedRequest extends Request {
   user?: {

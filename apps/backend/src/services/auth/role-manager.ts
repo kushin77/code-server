@@ -2,7 +2,7 @@
 // @module      auth/role-management
 // @description Service for managing role assignments and role lookups with caching
 
-import { Logger } from '../../utils/logger';
+import { getLogger } from '../../lib/logger';
 import { Redis } from 'redis';
 import { Database } from '../../db';
 
@@ -19,7 +19,7 @@ interface RoleCache {
   expiresAt: number;
 }
 
-const logger = new Logger('RoleManager');
+const logger = getLogger('RoleManager');
 const ROLE_CACHE_TTL_MINUTES = 60; // Cache roles for 1 hour
 const CACHE_KEY_PREFIX = 'roles:';
 

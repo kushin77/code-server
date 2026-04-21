@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { WorkspaceProfilesPage, type WorkspaceProfilesPageProps } from '../WorkspaceProfilesPage'
@@ -12,7 +12,7 @@ afterEach(() => {
 function buildProps(overrides: Partial<WorkspaceProfilesPageProps> = {}): WorkspaceProfilesPageProps {
   return {
     workspaceState: {
-      activeWorkspace: { id: 'portal-main', label: 'Portal main', path: '/portal', branch: 'main', pinned: true },
+      activeWorkspace: { id: 'portal-main', label: 'Portal main', branch: 'main', pinned: true },
       recentRepoIds: ['dev-sandbox'],
       selectWorkspace: vi.fn(),
       workspacePolicy: {
@@ -44,7 +44,7 @@ describe('WorkspaceProfilesPage', () => {
       <WorkspaceProfilesPage
         {...buildProps({
           workspaceState: {
-            activeWorkspace: { id: 'portal-main', label: 'Portal main', path: '/portal', branch: 'main', pinned: true },
+            activeWorkspace: { id: 'portal-main', label: 'Portal main', branch: 'main', pinned: true },
             recentRepoIds: ['dev-sandbox'],
             selectWorkspace,
             workspacePolicy: {

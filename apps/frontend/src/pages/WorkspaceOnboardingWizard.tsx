@@ -256,10 +256,7 @@ export function WorkspaceOnboardingWizard() {
       activeRepoId: selectedWorkspace.id,
       recentRepoIds: nextRecentRepoIds,
     })
-    notifyWorkspaceTabsChanged({
-      activeRepoId: selectedWorkspace.id,
-      recentRepoIds: nextRecentRepoIds,
-    })
+    notifyWorkspaceTabsChanged()
   }
 
   const handleRestart = () => {

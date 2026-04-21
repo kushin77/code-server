@@ -2,6 +2,7 @@
 // @module      pages/__tests__/pagerduty-incidents
 // @description Unit tests for PagerDuty Incidents page component
 
+import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import axios from 'axios'
 import { vi } from 'vitest'
@@ -14,7 +15,7 @@ vi.mock('@/common/error-boundary', () => ({
 }))
 vi.mock('@/common/performance', () => ({
   useExtensionMountProfiler: () => ({}),
-  measureAsyncExtensionProfiler: (_, __, fn: any) => fn(),
+  measureAsyncExtensionProfiler: async (_config: any, fn: any) => fn(),
 }))
 
 const mockIncidents = [

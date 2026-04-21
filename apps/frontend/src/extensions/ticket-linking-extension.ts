@@ -22,12 +22,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   // Initialize detector with API credentials from workspace settings
-  const config = vscode.workspace.getConfiguration('ticketLinking');
+  const config = vscode.workspace.getConfiguration('ticketLinking')
   const apiCredentials = new Map([
-    ['linear', config.get<string>('linearApiKey') || process.env.LINEAR_API_KEY || ''],
-    ['jira', config.get<string>('jiraApiKey') || process.env.JIRA_API_KEY || ''],
-    ['github', config.get<string>('githubToken') || process.env.GITHUB_TOKEN || ''],
-  ]);
+    ['linear', (config.get('linearApiKey') as string | undefined) || process.env.LINEAR_API_KEY || ''],
+    ['jira', (config.get('jiraApiKey') as string | undefined) || process.env.JIRA_API_KEY || ''],
+    ['github', (config.get('githubToken') as string | undefined) || process.env.GITHUB_TOKEN || ''],
+  ])
 
   detector = new TicketDetector(apiCredentials);
 
@@ -49,50 +49,50 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Auto-show panel when opening a file with tickets
   context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+    vscode.window.onDidChangeActiveTextEditor(async (editor: vscode.TextEditor | undefined) => {
       if (editor && detector) {
         const tickets = await detector.getResolvedTicketsForFile(
           editor.document.uri.fsPath,
           editor.document.getText()
-        );
+        )
 
         if (tickets.length > 0) {
           if (!ticketPanel) {
-            ticketPanel = TicketLinkingPanel.createOrShow(context.extensionUri);
+            ticketPanel = TicketLinkingPanel.createOrShow(context.extensionUri)
           }
-          ticketPanel.updateTickets(tickets);
+          ticketPanel.updateTickets(tickets)
         }
       }
     })
-  );
+  )
 
   // Refresh on document change (debounced)
-  let changeTimer: NodeJS.Timeout;
+  let changeTimer: NodeJS.Timeout
   context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument(async (event) => {
-      clearTimeout(changeTimer);
+    vscode.workspace.onDidChangeTextDocument(async (_event: vscode.TextDocumentChangeEvent) => {
+      clearTimeout(changeTimer)
       changeTimer = setTimeout(async () => {
-        await refreshTickets();
-      }, 500); // Debounce 500ms
+        await refreshTickets()
+      }, 500) // Debounce 500ms
     })
-  );
+  )
 
   // Add context menu item
   context.subscriptions.push(
-    vscode.commands.registerCommand('ticketLinking.linkTicket', async (args) => {
-      const editor = vscode.window.activeTextEditor;
+    vscode.commands.registerCommand('ticketLinking.linkTicket', async (_args: unknown) => {
+      const editor = vscode.window.activeTextEditor
       if (!editor) {
-        vscode.window.showErrorMessage('No editor active');
-        return;
+        vscode.window.showErrorMessage('No editor active')
+        return
       }
 
       const ticketId = await vscode.window.showInputBox({
         prompt: 'Enter ticket ID (e.g., PROJ-123, #456)',
-        validateInput: (value) => {
-          if (!value) return 'Ticket ID cannot be empty';
-          return null;
+        validateInput: (value: string) => {
+          if (!value) return 'Ticket ID cannot be empty'
+          return null
         },
-      });
+      })
 
       if (ticketId) {
         // Insert ticket reference at cursor

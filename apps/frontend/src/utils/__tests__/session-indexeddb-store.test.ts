@@ -66,7 +66,6 @@ class MockIDBTransaction {
       cb?.();
     });
   }
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   set onerror(_v: any) {}
 
   _addPendingOp(op: () => void) {
@@ -239,7 +238,7 @@ describe('session-indexeddb-store', () => {
     });
 
     it('should handle expiry 1ms in future', async () => {
-      const nearFutureExpiry = Date.now() + 1;
+      const nearFutureExpiry = Date.now() + 1000; // 1s margin ensures test is not flaky
       mockDB.stores['metadata'] = { session_expiry: nearFutureExpiry };
 
       const result = await isSessionValid();

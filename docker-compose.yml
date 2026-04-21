@@ -472,6 +472,7 @@ services:
       - DEV_SESSION_DOMAIN=${DEV_SESSION_DOMAIN:-dev.kushnir.cloud}
       - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}
       - ACME_AGREE=true
+      - IDE_SESSION_LB_SECRET=${IDE_SESSION_LB_SECRET:?IDE_SESSION_LB_SECRET must be set (HMAC key for sticky sessions)}
     healthcheck:
       test: ["CMD-SHELL", "caddy version >/dev/null || exit 1"]
       interval: 30s
@@ -581,8 +582,8 @@ services:
     restart: unless-stopped
     networks:
       - net-app
-    expose:
-      - "6379"
+    ports:
+      - "0.0.0.0:6379:6379"
     command: >
       redis-server
       --maxmemory 512mb
@@ -621,12 +622,13 @@ services:
     restart: unless-stopped
     networks:
       - net-app
-    expose:
-      - "26379"
+    ports:
+      - "0.0.0.0:26379:26379"
     environment:
       PRIMARY_HOST: ${PRIMARY_HOST:-192.168.168.31}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
     command: >
-      sh -ec 'MASTER_HOST="$${PRIMARY_HOST:-192.168.168.31}"; sed "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
+      sh -ec 'MASTER_HOST="$${PRIMARY_HOST:-192.168.168.31}"; RPASS="$${REDIS_PASSWORD}"; sed -e "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" -e "s/__REDIS_PASSWORD__/$${RPASS}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
     volumes:
       - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
       - redis-sentinel-1-data:/data
@@ -683,8 +685,9 @@ services:
       - "26379"
     environment:
       PRIMARY_HOST: ${PRIMARY_HOST:-192.168.168.31}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
     command: >
-      sh -ec 'MASTER_HOST="$${PRIMARY_HOST:-192.168.168.31}"; sed "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
+      sh -ec 'MASTER_HOST="$${PRIMARY_HOST:-192.168.168.31}"; RPASS="$${REDIS_PASSWORD}"; sed -e "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" -e "s/__REDIS_PASSWORD__/$${RPASS}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
     volumes:
       - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
       - redis-sentinel-arbiter-data:/data

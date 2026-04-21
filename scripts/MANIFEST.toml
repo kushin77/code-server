@@ -97,6 +97,8 @@ file     = "common-functions.sh"
 category = "uncategorized"
   status   = "archived"
   purpose  = "Deprecated shim - use scripts/_common/init.sh instead"
+
+[[script]]
 file     = "configure-audit-logging-phase1.sh"
 category = "uncategorized"
 status   = "active"
@@ -732,3 +734,21 @@ category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
 
+
+[[script]]
+file     = "deploy-gvisor-isolation.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy gVisor workspace isolation for hardware-based process isolation (issue #1275)"
+
+[[script]]
+file     = "deploy-terminal-dlp.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy terminal output DLP to prevent credential/PII leakage (issue #1274)"
+
+[[script]]
+file     = "deploy-zero-trust-network.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy zero-trust network with mTLS, cert rotation, and audit logging (issue #1273)"

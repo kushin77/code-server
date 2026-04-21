@@ -6,15 +6,19 @@ export interface WorkspaceDebuggerProfile {
   name: string
   type: string
   request: string
-  cwd: string
+  settings: Record<string, unknown>
   program: string
-  args?: string[]
+    request?: string
+    cwd?: string
+    program?: string
+    config?: Record<string, unknown>
   runtimeExecutable?: string
   env?: Record<string, string>
-  config?: Record<string, any>
+    name: string
+    cwd?: string
 }
 
-export interface WorkspaceTerminalProfile {
+  enabledExtensions: string[]
   name: string
   shell: string
   cwd: string
@@ -39,7 +43,7 @@ export interface WorkspaceProfile {
   workspaceId?: string
   roots?: WorkspaceRoot[]
   mergeOrder?: number[]
-  settings: Record<string, any>
+  settings: Record<string, unknown>
 }
 
 export interface WorkspaceProfileSnapshot {

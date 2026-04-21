@@ -4,6 +4,7 @@ import {
   buildWorkspaceProfileSnapshot,
   getWorkspaceProfile,
   resolveWorkspaceRootProfile,
+  type WorkspaceRoot,
 } from '../utils/workspaceProfiles'
 
 type WorkspaceProfilesPageWorkspaceState = {
@@ -39,10 +40,28 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
     () => buildWorkspaceProfileSnapshot(selectedWorkspaceId, selectedRootPath),
     [selectedRootPath, selectedWorkspaceId]
   )
-  const activeRoot = useMemo(
-    () => resolveWorkspaceRootProfile(selectedWorkspaceId, selectedRootPath),
-    [selectedRootPath, selectedWorkspaceId]
-  )
+  const activeRoot = useMemo<WorkspaceRoot>(() => {
+    return (
+      resolveWorkspaceRootProfile(selectedWorkspaceId, selectedRootPath) ?? {
+        path: selectedRootPath ?? 'workspace-root',
+        label: 'Workspace root',
+        settings: {},
+        debugger: {
+          name: 'Debugger',
+          type: 'node',
+          request: 'launch',
+          cwd: selectedRootPath ?? '',
+          program: '',
+        },
+        terminal: {
+          name: 'Terminal',
+          shell: 'bash',
+          cwd: selectedRootPath ?? '',
+        },
+        enabledExtensions: [],
+      }
+    )
+  }, [selectedRootPath, selectedWorkspaceId])
 
   useEffect(() => {
     if (!profile?.roots) return
@@ -50,7 +69,7 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
       return
     }
 
-    setSelectedRootPath(profile.roots[0]?.path)
+    setSelectedRootPath(profile.roots[0]?.path ?? selectedWorkspaceId)
   }, [profile?.roots, selectedRootPath])
 
   const handleWorkspaceSelect = (workspaceId: string) => {

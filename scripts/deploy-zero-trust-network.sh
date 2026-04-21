@@ -11,8 +11,6 @@ set -euo pipefail
 # Source common utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
-source "$SCRIPT_DIR/_common/logging.sh"
-source "$SCRIPT_DIR/_common/config.sh"
 
 CERT_DIR="/etc/ssl/certs/zero-trust"
 CA_CERT="$CERT_DIR/ca.crt"

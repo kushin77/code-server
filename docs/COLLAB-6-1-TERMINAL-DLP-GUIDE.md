@@ -154,71 +154,74 @@ dlp.addPattern({
 
 ## Integration with Session Broker
 
-### Terminal Output Interception
+### Basic Usage
 
-**Location**: `apps/session-broker/src/index.ts`
+The TerminalOutputDLP engine is instantiated via the singleton pattern:
 
-**Integration points**:
+```typescript
+import { getTerminalDLP } from './terminal-output-dlp';
 
-1. **WebSocket Message Handler** (terminal I/O):
+const dlp = getTerminalDLP();
+
+// Scan terminal output
+const result = dlp.scan(output);
+
+if (result.action === 'blocked') {
+  // Prevent output from being displayed
+  console.error('Output blocked by DLP policy');
+  return;
+}
+
+// Use sanitized output (with redacted secrets)
+console.log(result.sanitized);
+```
+
+### Integration Points (Applications)
+
+To integrate DLP into your application:
+
+1. **Command Output Scanning**:
    ```typescript
-   ws.on('message', (data) => {
-     const dlpResult = dlp.scan(data.toString());
-     
-     if (dlpResult.action === 'blocked') {
-       ws.send(JSON.stringify({
-         error: 'Output blocked by DLP policy',
-         reason: dlpResult.severity,
-       }));
-       return;
-     }
-     
-     // Send redacted output to terminal
-     ws.send(dlpResult.sanitized);
-   });
+   const output = execSync('npm list').toString();
+   const result = dlp.scan(output);
+   console.log(result.sanitized);  // Display redacted version
    ```
 
-2. **Piped Command Output**:
+2. **File Content Validation**:
    ```typescript
-   const execResult = exec(cmd);
-   dlp.validateBinary(execResult.stdout);  // Throws if unsafe
+   const fileContent = fs.readFileSync(file, 'utf-8');
+   const result = dlp.scan(fileContent);
+   if (result.action === 'blocked') {
+     throw new Error('File contains blocked patterns');
+   }
    ```
 
-3. **File Stream Reading**:
+3. **Binary Data Validation**:
    ```typescript
-   const stream = fs.createReadStream(file);
-   stream.on('data', (chunk) => {
-     dlp.validateBinary(chunk);  // Validate chunks
-   });
+   const buffer = await fs.promises.readFile(file);
+   try {
+     dlp.validateBinary(buffer);  // Throws if unsafe
+   } catch (err) {
+     logger.warn('Binary validation failed:', err);
+   }
    ```
 
-### Event Handlers
+### Event Emission
 
-Listen for DLP events:
+The DLP engine emits events for observability:
 
 ```typescript
 const dlp = getTerminalDLP();
 
-// Detection event (any match)
+// Detection event (when any pattern matches)
 dlp.on('dlp-detection', (event) => {
-  console.log(`DLP: ${event.action} - ${event.matchCount} matches`);
-  // Send to observability system
-  metrics.increment('terminal.dlp.detection', 1, {
-    action: event.action,
-    severity: event.severity,
-  });
+  console.log(`DLP detected ${event.matchCount} matches (${event.action})`);
 });
 
-// Block event (output prevented)
-dlp.on('dlp-block', (event) => {
-  logger.warn(`DLP blocked output: ${event.reason}`);
-  // Alert security team if critical
-});
-
-// Audit log (for compliance)
+// Audit log event (when auditLog enabled)
 dlp.on('audit-log', (event) => {
-  // Store in PostgreSQL audit table
-  auditDB.insert('terminal_dlp_events', event);
+  console.log(`Audit: ${event.action} - ${event.patterns.join(', ')}`);
+  // Forward to your logging system (Loki, ELK, etc.)
 });
 ```
 
@@ -226,19 +229,18 @@ dlp.on('audit-log', (event) => {
 
 ### Prerequisites
 
-- Node.js 18+ (for native regex)
+- Node.js 18+ (for native regex support)
 - Session broker v4.115.0+
-- PostgreSQL for audit logs (optional)
 
 ### Installation
 
-1. **Add to session-broker**:
+1. **Already included in session-broker**:
    ```bash
-   cd apps/session-broker
-   npm install  # terminal-output-dlp.ts is already in src/
+   # terminal-output-dlp.ts is already in apps/session-broker/src/
+   # No additional packages needed
    ```
 
-2. **Update docker-compose.yml**:
+2. **Configure environment variables in docker-compose.yml**:
    ```yaml
    services:
      session-broker:
@@ -249,17 +251,20 @@ dlp.on('audit-log', (event) => {
          TERMINAL_DLP_AUDIT_LOG: "true"
    ```
 
-3. **Initialize in session-broker startup**:
+3. **Use in your application code**:
    ```typescript
    import { getTerminalDLP } from './terminal-output-dlp';
    
+   // At startup
    const dlp = getTerminalDLP({
      enabled: process.env.TERMINAL_DLP_ENABLED !== 'false',
      mode: process.env.TERMINAL_DLP_MODE as 'block' | 'redact',
+     blockCritical: process.env.TERMINAL_DLP_BLOCK_CRITICAL !== 'false',
+     auditLog: process.env.TERMINAL_DLP_AUDIT_LOG !== 'false',
    });
    
-   // Attach to express middleware or WebSocket handlers
-   app.use(dlpMiddleware(dlp));
+   // When processing output
+   const result = dlp.scan(output);
    ```
 
 ### Production Configuration
@@ -267,8 +272,8 @@ dlp.on('audit-log', (event) => {
 **Recommended for production**:
 ```bash
 TERMINAL_DLP_ENABLED=true          # Always enabled
-TERMINAL_DLP_MODE=redact           # Default redact, block critical
-TERMINAL_DLP_BLOCK_CRITICAL=true   # Hard stop on private keys
+TERMINAL_DLP_MODE=redact           # Redact sensitive data
+TERMINAL_DLP_BLOCK_CRITICAL=true   # Hard-block private keys
 TERMINAL_DLP_AUDIT_LOG=true        # Log all detections
 ```
 
@@ -354,72 +359,111 @@ k6 run scripts/load-testing/terminal-dlp-load-test.js
 # - < 0.1% false positives (legitimate content not flagged)
 ```
 
-## Monitoring & Alerting
+## Monitoring & Observability
 
-### Prometheus Metrics
+### In-Memory Metrics
 
-**Available metrics**:
+The DLP engine tracks metrics in memory:
 
-```
-# Counter: Total DLP detections
-terminal_dlp_detections_total{action, severity}
+```typescript
+const dlp = getTerminalDLP();
 
-# Counter: Patterns matched by category
-terminal_dlp_patterns_total{pattern_name, severity}
+// Get current metrics
+const metrics = dlp.getMetrics();
+console.log(metrics);
+// Output:
+// {
+//   scansTotal: 42,
+//   blockedTotal: 3,
+//   redactedTotal: 8,
+//   patternsMatched: {
+//     'github-pat': 2,
+//     'postgres_password': 1,
+//     'email': 5,
+//     ...
+//   }
+// }
 
-# Gauge: Current DLP status (enabled/disabled)
-terminal_dlp_enabled{mode, block_critical}
-
-# Histogram: Scan latency (ms)
-terminal_dlp_scan_duration_ms{quantile, terminal_id}
-
-# Counter: Blocked vs redacted actions
-terminal_dlp_actions_total{action}
-```
-
-**Example scrape config**:
-
-```yaml
-scrape_configs:
-  - job_name: 'session-broker-dlp'
-    static_configs:
-      - targets: ['localhost:5000']
-    metrics_path: '/metrics/dlp'
-    scrape_interval: '15s'
+// Reset metrics
+dlp.resetMetrics();
 ```
 
-### Grafana Dashboard
+### Metrics Available
 
-**Location**: `config/grafana-dashboard-terminal-dlp.json`
+| Metric | Type | Description |
+|--------|------|-------------|
+| `scansTotal` | Counter | Total number of scans performed |
+| `blockedTotal` | Counter | Total patterns blocked |
+| `redactedTotal` | Counter | Total patterns redacted |
+| `patternsMatched` | Map | Count of each pattern matched |
 
-Shows:
-- DLP action distribution (blocked vs redacted)
-- Pattern match frequency (top 10)
-- Scan latency over time (P50, P95, P99)
-- False positive rate (legitimate patterns caught)
-- Audit trail of blocked outputs
+### Event-Based Monitoring
 
-### Alert Rules
+Subscribe to DLP events for real-time monitoring:
 
-**Location**: `prometheus-rules-terminal-dlp.yml`
+```typescript
+const dlp = getTerminalDLP();
 
-```yaml
-groups:
-  - name: terminal-dlp
-    rules:
-      - alert: HighDLPBlockRate
-        expr: rate(terminal_dlp_actions_total{action="blocked"}[5m]) > 10
-        for: 2m
-        annotations:
-          summary: "High rate of blocked terminal output"
-          description: "{{ $value }} blocks/sec - possible secrets leak attempt"
+// Listen for detection events
+dlp.on('dlp-detection', (event) => {
+  // event.action: 'blocked' | 'redacted' | 'allowed'
+  // event.matchCount: number of patterns found
+  // event.severity: 'critical' | 'high' | 'medium' | 'low'
+  
+  // Send to monitoring system (Prometheus, Datadog, etc.)
+  prometheus.counter('dlp_detections_total', 1, {
+    action: event.action,
+    severity: event.severity,
+  });
+});
 
-      - alert: DLPPatternMissing
-        expr: up{job="session-broker-dlp"} == 0
-        for: 1m
-        annotations:
-          summary: "DLP metrics unavailable"
-          description: "Session broker DLP metrics not responding"
+// Listen for audit events (when auditLog enabled)
+dlp.on('audit-log', (event) => {
+  // event.timestamp: ISO string
+  // event.sessionId: session identifier
+  // event.action: 'blocked' | 'redacted'
+  // event.matchCount: number of patterns
+  // event.patterns: array of pattern names
+  
+  // Send to logging system (Loki, ELK, Splunk, etc.)
+  logger.info('DLP audit', event);
+});
+```
+
+### Integration with External Monitoring
+
+To export metrics to Prometheus, Datadog, or other systems:
+
+```typescript
+import { getTerminalDLP } from './terminal-output-dlp';
+
+const dlp = getTerminalDLP();
+
+// Forward DLP events to your monitoring system
+dlp.on('dlp-detection', (event) => {
+  // Example: Prometheus push gateway
+  pushMetrics({
+    'terminal_dlp_detections_total': 1,
+    'terminal_dlp_action': event.action,
+    'terminal_dlp_severity': event.severity,
+  });
+  
+  // Example: Datadog custom metrics
+  datadog.gauge('terminal_dlp.detections', event.matchCount, {
+    action: event.action,
+    severity: event.severity,
+  });
+});
+
+// Periodically export metrics
+setInterval(() => {
+  const metrics = dlp.getMetrics();
+  pushMetrics({
+    'terminal_dlp_scans_total': metrics.scansTotal,
+    'terminal_dlp_blocked_total': metrics.blockedTotal,
+    'terminal_dlp_redacted_total': metrics.redactedTotal,
+  });
+}, 60000);  // Every 60 seconds
 ```
 
 ## Security Considerations
@@ -592,16 +636,16 @@ dlp.addPattern({
 
 ## Completion Checklist
 
-- ✅ TerminalOutputDLP implementation (650+ lines)
+- ✅ TerminalOutputDLP implementation (334 lines)
 - ✅ 25+ sensitive patterns (critical, high, medium, low)
-- ✅ BLOCK and REDACT modes
-- ✅ Event emission (detection, block, audit)
-- ✅ Metrics tracking (patterns, counts)
-- ✅ Configuration (env vars, programmatic)
-- ✅ Comprehensive test suite (52 test cases, 100% coverage)
-- ✅ Integration with session-broker
-- ✅ Prometheus metrics and Grafana dashboard
-- ✅ Alert rules
+- ✅ BLOCK and REDACT modes with configurable behavior
+- ✅ Event emission (detection, audit-log)
+- ✅ In-memory metrics tracking (scans, blocks, redactions, pattern counts)
+- ✅ Configuration via environment variables and programmatic API
+- ✅ Singleton pattern for easy integration
+- ✅ Binary data validation with size limits
+- ✅ Comprehensive test suite (52+ test cases, 100% coverage)
+- ✅ Production documentation with examples
 - ✅ E2E and load tests
 - ✅ Comprehensive documentation
 - ✅ Performance SLA validated (< 5ms)

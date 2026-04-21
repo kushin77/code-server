@@ -234,3 +234,42 @@ variable "enable_keepalived" {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// QA Credentials for OAuth Endpoint Testing (Immutable, IaC-Managed)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "qa_password" {
+  description = "QA user password for OAuth E2E testing (immutable, stored in GSM). Generate: openssl rand -hex 16 | head -c 32"
+  type        = string
+  sensitive   = true
+  default     = ""
+  
+  validation {
+    condition     = length(var.qa_password) == 0 || length(var.qa_password) >= 16
+    error_message = "qa_password must be at least 16 characters (recommend 32-character random string)"
+  }
+}
+
+variable "qa_email" {
+  description = "QA user email for OAuth E2E testing (default: qa@kushnir.cloud)"
+  type        = string
+  default     = "qa@kushnir.cloud"
+  
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.qa_email))
+    error_message = "qa_email must be a valid email address"
+  }
+}
+
+variable "gcp_project_id" {
+  description = "GCP project ID where QA credentials are stored in GSM (kushin77-ops)"
+  type        = string
+  default     = "kushin77-ops"
+}
+
+variable "ci_service_account_email" {
+  description = "CI/CD service account email that requires access to QA credentials in GSM (GitHub Actions WIF)"
+  type        = string
+  default     = ""
+}
+
+// ─────────────────────────────────────────────────────────────────────────────

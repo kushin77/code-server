@@ -15,7 +15,7 @@ requests==2.33.0
 urllib3==2.6.3
 
 # Configuration
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 
 # Database (if using PostgreSQL for audit logs)
 psycopg2-binary==2.9.9

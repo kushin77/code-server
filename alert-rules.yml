@@ -689,10 +689,7 @@ groups:
           component: matrix-presence
         annotations:
           summary: "Presence sync errors: {{ $value }} in last 5m"
-          description: "Presence sidecar is failing to keep up with sync. May indicate high load or network issues.
-        annotations:
-          summary: "PostgreSQL replication is BROKEN on replica — standby not receiving WAL"
-          description: "Run: select * from pg_stat_replication; on primary to diagnose."
+          description: "Presence sidecar is failing to keep up with sync. May indicate high load or network issues."
 
   - name: disk
     interval: 60s

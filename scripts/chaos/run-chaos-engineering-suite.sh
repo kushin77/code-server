@@ -96,6 +96,44 @@ run_network_tests() {
   fi
 }
 
+run_load_balancer_tests() {
+  log_info "Running Load Balancer Failure Tests..."
+  TESTS_RUN=$((TESTS_RUN + 1))
+  
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log_info "DRY_RUN: Load balancer test would execute as:"
+    log_info "  bash scripts/chaos/simulate-load-balancer-failure.sh"
+    return 0
+  fi
+  
+  if bash "$SCRIPT_DIR/simulate-load-balancer-failure.sh"; then
+    log_info "✓ Load balancer tests PASSED"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_error "✗ Load balancer tests FAILED"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+}
+
+run_cascading_failure_tests() {
+  log_info "Running Cascading Failure Tests..."
+  TESTS_RUN=$((TESTS_RUN + 1))
+  
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log_info "DRY_RUN: Cascading failure test would execute as:"
+    log_info "  bash scripts/chaos/simulate-cascading-failure.sh"
+    return 0
+  fi
+  
+  if bash "$SCRIPT_DIR/simulate-cascading-failure.sh"; then
+    log_info "✓ Cascading failure tests PASSED"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+  else
+    log_error "✗ Cascading failure tests FAILED"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+  fi
+}
+
 generate_summary_report() {
   log_info "Generating chaos engineering summary report..."
   
@@ -307,6 +345,8 @@ main() {
       run_postgres_tests
       run_redis_tests
       run_network_tests
+      run_load_balancer_tests
+      run_cascading_failure_tests
       ;;
     postgres)
       run_postgres_tests
@@ -316,6 +356,12 @@ main() {
       ;;
     network)
       run_network_tests
+      ;;
+    load-balancer)
+      run_load_balancer_tests
+      ;;
+    cascading)
+      run_cascading_failure_tests
       ;;
     *)
       log_error "Unknown test suite: $TEST_SUITE"

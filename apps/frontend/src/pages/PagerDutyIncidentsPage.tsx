@@ -77,15 +77,23 @@ export function PagerDutyIncidentsPage() {
     setError(null)
 
     try {
-      await measureAsyncExtensionProfiler(pageProfiler, 'fetch-incidents', async () => {
-        const { incidents: fetchedIncidents, stats: fetchedStats } = await fetchPagerDutyIncidents(
-          cfg,
-          activeStatus === 'all' ? undefined : activeStatus
-        )
+      await measureAsyncExtensionProfiler(
+        {
+          id: 'fetch-pagerduty-incidents',
+          label: 'Fetch PagerDuty Incidents',
+          category: 'pagerduty',
+          kind: 'load',
+        },
+        async () => {
+          const { incidents: fetchedIncidents, stats: fetchedStats } = await fetchPagerDutyIncidents(
+            cfg,
+            activeStatus === 'all' ? undefined : activeStatus
+          )
 
-        setIncidents(fetchedIncidents)
-        setStats(fetchedStats)
-      })
+          setIncidents(fetchedIncidents)
+          setStats(fetchedStats)
+        }
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch incidents')
       setIncidents([])

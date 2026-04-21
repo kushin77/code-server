@@ -11,7 +11,6 @@ import {
   readStoredWorkspaceTabs,
   writeStoredWorkspaceTabs,
   type WorkspaceTab,
-  type WorkspaceTabsState,
 } from '@/utils/workspaceCatalog'
 
 type WizardChecklistKey = 'mfa' | 'workspace' | 'handoff' | 'sessions'
@@ -200,10 +199,7 @@ export function WorkspaceOnboardingWizard() {
       activeRepoId: workspaceId,
       recentRepoIds: buildRecentWorkspaceIds(workspaceId, currentTabs.recentRepoIds, maxRecentCount),
     })
-    notifyWorkspaceTabsChanged({
-      activeRepoId: selectedWorkspace.id,
-      recentRepoIds: nextRecentRepoIds,
-    })
+    notifyWorkspaceTabsChanged()
   }
 
   const toggleChecklist = (key: WizardChecklistKey) => {

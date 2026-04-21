@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import axios from 'axios'
 import { vi } from 'vitest'
+import '@testing-library/jest-dom'
 
 import { PagerDutyIncidentsPage } from '../PagerDutyIncidentsPage'
 

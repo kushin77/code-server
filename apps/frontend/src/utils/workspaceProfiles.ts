@@ -19,9 +19,12 @@ export interface WorkspaceRoot {
 export interface WorkspaceProfile {
   id: string
   name: string
+  workspaceLabel?: string
+  description?: string
   root: string
   workspaceId?: string
   roots?: WorkspaceRoot[]
+  mergeOrder?: number[]
   settings: Record<string, any>
 }
 
@@ -30,6 +33,8 @@ export interface WorkspaceProfileSnapshot {
   activeProfileId: string | null
   lastUpdated: number
   workspaceJson?: string
+  workspaceLabel?: string
+  mergeOrder?: number[]
 }
 
 /**
@@ -53,6 +58,6 @@ export function getWorkspaceProfile(_id: string): WorkspaceProfile | null {
 /**
  * Resolve workspace root profile
  */
-export function resolveWorkspaceRootProfile(_root: string, _selectedPath?: string): WorkspaceProfile | null {
+export function resolveWorkspaceRootProfile(_root: string, _selectedPath?: string): WorkspaceRoot | null {
   return null
 }

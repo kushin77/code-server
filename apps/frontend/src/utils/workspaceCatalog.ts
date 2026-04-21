@@ -11,11 +11,11 @@ export const WORKSPACE_STATE_SYNC_EVENT = 'workspace:state:sync'
 export interface WorkspaceTab {
   id: string
   label: string
-  path: string
+  branch: string
+  pinned: boolean
+  path?: string
   icon?: string
   description?: string
-  branch?: string
-  pinned?: boolean
 }
 
 export type WorkspaceState = string
@@ -30,25 +30,34 @@ export interface WorkspaceTabsState {
  */
 export const ALL_WORKSPACES: WorkspaceTab[] = [
   {
-    id: 'primary',
-    label: 'Primary Workspace',
-    path: '/workspace/primary',
-    icon: 'folder',
-    description: 'Main development workspace',
+    id: 'portal-main',
+    label: 'Portal main',
+    branch: 'main',
+    pinned: true,
   },
   {
-    id: 'sandbox',
-    label: 'Sandbox',
-    path: '/workspace/sandbox',
-    icon: 'beaker',
-    description: 'Isolated testing environment',
+    id: 'docs-review',
+    label: 'Docs review',
+    branch: 'docs',
+    pinned: false,
   },
   {
-    id: 'archive',
-    label: 'Archive',
-    path: '/workspace/archive',
-    icon: 'archive',
-    description: 'Historical projects and reference code',
+    id: 'ops-control',
+    label: 'Ops control',
+    branch: 'ops',
+    pinned: false,
+  },
+  {
+    id: 'security-lab',
+    label: 'Security lab',
+    branch: 'security',
+    pinned: false,
+  },
+  {
+    id: 'dev-sandbox',
+    label: 'Dev sandbox',
+    branch: 'sandbox',
+    pinned: false,
   },
 ]
 
@@ -57,11 +66,10 @@ export const ALL_WORKSPACES: WorkspaceTab[] = [
  */
 export const PINNED_WORKSPACES: WorkspaceTab[] = [
   {
-    id: 'primary',
-    label: 'Primary Workspace',
-    path: '/workspace/primary',
-    icon: 'folder',
-    description: 'Main development workspace',
+    id: 'portal-main',
+    label: 'Portal main',
+    branch: 'main',
+    pinned: true,
   },
 ]
 
@@ -112,7 +120,7 @@ export function buildRecentWorkspaceIds(activeId: string, recent: string[], maxC
  * Get suggested workspace ID based on availability
  */
 export function getSuggestedWorkspaceId(roleIds?: string[]): string {
-  return PINNED_WORKSPACES[0]?.id ?? 'primary'
+  return PINNED_WORKSPACES[0]?.id ?? 'portal-main'
 }
 
 /**
@@ -131,12 +139,12 @@ export function readStoredWorkspaceTabs(storage?: Storage): WorkspaceTabsState {
     return stored
       ? JSON.parse(stored)
       : {
-          activeRepoId: PINNED_WORKSPACES[0]?.id ?? 'primary',
+          activeRepoId: PINNED_WORKSPACES[0]?.id ?? 'portal-main',
           recentRepoIds: [],
         }
   } catch {
     return {
-      activeRepoId: PINNED_WORKSPACES[0]?.id ?? 'primary',
+      activeRepoId: PINNED_WORKSPACES[0]?.id ?? 'portal-main',
       recentRepoIds: [],
     }
   }

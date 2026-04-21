@@ -116,7 +116,76 @@ DRY_RUN=0 WS_ENDPOINT=wss://ide.kushnir.cloud/ws ./run-websocket-load-test.sh mo
 - Connection stability over time
 - Bidirectional communication
 
-### 4. Comprehensive Load Test Suite
+### 4. Session Creation Load Test
+Validates session-broker throughput and resource management.
+
+**File**: `run-session-creation-load-test.sh`
+
+**Scenarios**:
+- **light**: 10 VUS, 50 sessions total
+- **moderate**: 50 VUS, 200 sessions total
+- **stress**: 200 VUS, 600 sessions total
+
+**Run**:
+```bash
+DRY_RUN=0 SESSION_ENDPOINT=https://ide.kushnir.cloud/api/sessions ./run-session-creation-load-test.sh moderate
+```
+
+**Validates**:
+- Session creation latency
+- Session validation performance
+- Session cleanup efficiency
+- Resource usage under concurrent session load
+- Database connection pool capacity
+
+### 5. API Endpoint Load Test
+Validates authenticated API performance including authorization and RBAC.
+
+**File**: `run-api-endpoint-load-test.sh`
+
+**Scenarios**:
+- **light**: 10 VUS, ~50 req/sec
+- **moderate**: 50 VUS, ~200 req/sec
+- **stress**: 200 VUS, ~500 req/sec
+
+**Run**:
+```bash
+DRY_RUN=0 API_ENDPOINT=https://ide.kushnir.cloud/api/v1 ./run-api-endpoint-load-test.sh moderate
+```
+
+**Validates**:
+- API endpoint performance under load
+- JWT authentication overhead
+- RBAC authorization checks
+- Permission enforcement correctness
+- Error handling with unauthorized requests
+- Unauthorized access denial
+
+### 6. Failover Load Test
+Validates system resilience during primary-to-replica failover.
+
+**File**: `run-failover-load-test.sh`
+
+**Scenarios**:
+- **monitor**: Light monitoring during failover (5 VUS)
+- **light**: Light load during failover (10 VUS)
+- **moderate**: Moderate load during failover (50 VUS)
+
+**Run**:
+```bash
+# Requires manual intervention to trigger failover
+DRY_RUN=0 FAILOVER_TRIGGER_DELAY=30 ./run-failover-load-test.sh light
+```
+
+**Validates**:
+- Failover detection time (RTO - Recovery Time Objective)
+- Error rate during failover transition
+- Traffic routing to replica
+- Request recovery post-failover
+- Connection stability during infrastructure switch
+- Data consistency across failover
+
+### 7. Comprehensive Load Test Suite
 Orchestrates all tests and generates consolidated report.
 
 **File**: `run-comprehensive-load-tests.sh`
@@ -270,14 +339,20 @@ cat artifacts/load-test-*-summary.json | jq .
 
 These are **target** performance baselines for production readiness. Your infrastructure should meet or exceed these under the specified load.
 
-| Test | Scenario | P95 Latency | Success Rate | Cache Hit |
-|------|----------|-------------|--------------|-----------|
-| OAuth Flow | light (10 VUS) | < 500ms | > 99% | N/A |
-| OAuth Flow | moderate (50 VUS) | < 500ms | > 98% | N/A |
-| JWT Token | light (50 tok/s) | < 200ms | > 99% | > 80% |
-| JWT Token | moderate (200 tok/s) | < 300ms | > 98% | > 75% |
-| WebSocket | light (10 conn) | < 100ms | > 99% | N/A |
-| WebSocket | moderate (50 conn) | < 150ms | > 98% | N/A |
+| Test | Scenario | P95 Latency | Success Rate | Notes |
+|------|----------|-------------|--------------|-------|
+| OAuth Flow | light (10 VUS) | < 500ms | > 99% | Login critical path |
+| OAuth Flow | moderate (50 VUS) | < 500ms | > 98% | Peak user hours |
+| JWT Token | light (50 tok/s) | < 200ms | > 99% | With caching |
+| JWT Token | moderate (200 tok/s) | < 300ms | > 98% | Cache efficiency >75% |
+| WebSocket | light (10 conn) | < 100ms | > 99% | Real-time channels |
+| WebSocket | moderate (50 conn) | < 150ms | > 98% | Scaling test |
+| Session | light (50 sess) | < 200ms | > 99% | Create/Read/Delete |
+| Session | moderate (200 sess) | < 250ms | > 98% | Resource limits |
+| API Endpoint | light (50 req/s) | < 500ms | > 99% | With auth/RBAC |
+| API Endpoint | moderate (200 req/s) | < 600ms | > 98% | Auth overhead |
+| Failover | light (10 VUS) | < 2s | > 85% during window | RTO goal: < 5s |
+| Failover | moderate (50 VUS) | < 2s | > 80% during window | With moderate load |
 
 ## Next Steps
 

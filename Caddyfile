@@ -1,410 +1,59 @@
+# Minimal Caddyfile for on-prem OAuth testing
+# Generated for Issue #984 - QA OAuth automation
+
 {
     email {$ACME_EMAIL:admin@kushnir.cloud}
-    # On-prem testing: use self-signed certificates
-    # Comment back in to use Let's Encrypt in production:
-    # acme_ca https://acme-v02.api.letsencrypt.org/directory
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
     admin localhost:2019 {
         origins localhost
     }
 }
 
+# IDE domain - proxy to code-server via oauth2-proxy
 {$IDE_DOMAIN:ide.kushnir.cloud}:80, {$IDE_DOMAIN:ide.kushnir.cloud}:443 {
-    # For on-prem testing: force HTTPS with default certificate handling
-    tls
-
     encode gzip
 
-    header {
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
-        -Server
-    }
-
+    # Health check
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    # Portal-first gate: require a valid portal cookie before allowing IDE host access.
-    # This keeps ide.kushnir.cloud out of the normal public entry path.
-    @no_portal_access {
-        not path /health /healthz /ping /oauth2 /oauth2/*
-        not header Cookie *_oauth2_proxy_portal=*
-    }
-    redir @no_portal_access https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://{$PORTAL_DOMAIN:kushnir.cloud}/ 302
-
-    # Logout handler: clean up session before sign out
-    @logout path /logout /signout
-    handle @logout {
-        # Rewrite logout path before proxying to session-broker endpoint.
-        rewrite * /oauth2/logout
-        # Extract session ID from cookie and pass it to session-broker logout.
-        # Use dual upstreams for availability during failover
-        reverse_proxy session-broker:5000 {
-            header_up X-Session-Id {http.request.cookie._code_server_session_id}
-            upstreams {
-                {$PRIMARY_HOST:192.168.168.31}:5000
-            }
-            upstreams {
-                {$REPLICA_HOST:replica-host}:5000
-            }
-            health_uri /health
-            health_interval 10s
-            health_fails 2
-        }
-    }
-
-    # oauth2-proxy endpoints must pass through directly (they ARE the auth flow)
-    # IMPORTANT: auth MUST be single-origin (no LB here). CSRF tokens and sessions
-    # are stored in Redis on .31; splitting auth across hosts causes CSRF failures
-    # and redirect loops. LB only applies to the IDE content path (session-broker).
-    @oauth2 path /oauth2 /oauth2/*
-    handle @oauth2 {
-        reverse_proxy oauth2-proxy:4180 {
-            # Use canonical domain for oauth2-proxy, not the VIP
-            # This prevents redirect loops when requests arrive via VIP (192.168.168.30)
-            header_up Host {$IDE_DOMAIN:ide.kushnir.cloud}
-            header_up X-Forwarded-Host {host}
-            header_up X-Forwarded-Proto https
-            header_up X-Real-IP {remote_host}
-            header_down X-LB-Upstream {http.reverse_proxy.upstream.address}
-            # Passive health checks prevent auth-request pileups when oauth2-proxy is unhealthy.
-            health_uri /ping
-            health_interval 15s
-            health_timeout 5s
-            health_fails 2
-            fail_duration 30s
-            lb_try_duration 5s
-            transport http {
-                keepalive 30s
-                keepalive_idle_conns 100
-                response_header_timeout 30s
-            }
-        }
-    }
-
-    # Session broker routes: session management APIs
-    # POST /sessions — create new isolated session
-    # DELETE /sessions/:id — terminate session
-    @session-api path /sessions /sessions/*
-    handle @session-api {
-        reverse_proxy session-broker:5000 {
-            header_up Host {$IDE_DOMAIN:ide.kushnir.cloud}
-            header_up X-Forwarded-Host {host}
-            header_up X-Forwarded-Proto https
-            header_up X-Real-IP {remote_host}
-        }
-    }
-
-    # Default: ALL traffic proxied through session-broker (handles auth + routing to container)
-    # Session broker validates oauth2 session cookie, creates/retrieves user's isolated session,
-    # and routes to the corresponding code-server container.
-    # 
-    # HA Configuration: Dual upstreams for failover
-    # Primary: session-broker on primary host (.31, default: localhost:5000)
-    # Replica: session-broker on replica host (.42, default: replica-host:5000)
-    # Health checks: <30 sec detection, automatic failover to replica on primary failure
-    # Sticky routing: Cookie-based LB within each upstream to maintain session affinity
-    reverse_proxy session-broker:5000 {
+    # OAuth2-proxy on port 4180
+    reverse_proxy 172.28.1.2:4180 {
         header_up Host {$IDE_DOMAIN:ide.kushnir.cloud}
-        header_up X-Forwarded-Host {host}
         header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
         header_up X-Real-IP {remote_host}
-        header_up X-Session-Id {http.request.cookie._code_server_session_id}
-        # Dual upstreams: primary + replica for automatic failover
-        # Primary upstream (.31, default localhost): active under normal conditions
-        upstreams {
-            {$PRIMARY_HOST:192.168.168.31}:5000
-        }
-        # Replica upstream (.42, default replica-host): standby, activated on primary failure
-        # Set via REPLICA_HOST env var; falls back to replica-host if not set
-        upstreams {
-            {$REPLICA_HOST:replica-host}:5000
-        }
-        # Sticky load balancing for WebSocket IDE traffic within a user's session.
-        lb_policy cookie ide_session_lb {$IDE_SESSION_LB_SECRET}
-        # Health checks: fast detection (<30 sec) of primary failure
-        health_uri /health
-        health_interval 10s
-        health_timeout 5s
-        # Mark upstream down after 2 consecutive health check failures (<20 sec)
-        health_fails 2
-        # Auto-recovery: retry failed upstream every 30s
-        fail_duration 30s
-        # Connection attempt timeout
-        lb_try_duration 5s
     }
 }
 
-{$DEV_SESSION_DOMAIN:dev.kushnir.cloud}, {$DEV_SESSION_DOMAIN:dev.kushnir.cloud}:443 {
+# Portal domain (same as IDE domain in test)
+{$PORTAL_DOMAIN:kushnir.cloud}:80, {$PORTAL_DOMAIN:kushnir.cloud}:443 {
     encode gzip
-
-    header {
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
-        -Server
-    }
 
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    @logout path /logout /signout
-    handle @logout {
-        rewrite * /oauth2/logout
-        reverse_proxy session-broker:5000 {
-            header_up X-Session-Id {http.request.cookie._code_server_session_id}
-            upstreams {
-                {$PRIMARY_HOST:192.168.168.31}:5000
-            }
-            upstreams {
-                {$REPLICA_HOST:replica-host}:5000
-            }
-            health_uri /health
-            health_interval 10s
-            health_fails 2
-        }
+    # OAuth2-proxy on port 4180
+    reverse_proxy 172.28.1.2:4180 {
+        header_up Host {$PORTAL_DOMAIN:kushnir.cloud}
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Real-IP {remote_host}
     }
+}
 
-    @oauth2 path /oauth2 /oauth2/*
-    handle @oauth2 {
-        reverse_proxy oauth2-proxy:4180 {
-            header_up Host {$IDE_DOMAIN:ide.kushnir.cloud}
-            header_up X-Forwarded-Host {host}
-            header_up X-Forwarded-Proto https
-            header_up X-Real-IP {remote_host}
-            header_down X-LB-Upstream {http.reverse_proxy.upstream.address}
-        }
-    }
+# Dev domain (if needed)
+{$DEV_SESSION_DOMAIN:dev.kushnir.cloud}:80, {$DEV_SESSION_DOMAIN:dev.kushnir.cloud}:443 {
+    encode gzip
 
-    reverse_proxy session-broker:5000 {
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    # OAuth2-proxy on port 4180
+    reverse_proxy 172.28.1.2:4180 {
         header_up Host {$DEV_SESSION_DOMAIN:dev.kushnir.cloud}
-        header_up X-Forwarded-Host {host}
         header_up X-Forwarded-Proto https
-        header_up X-Real-IP {remote_host}
-        header_up X-Session-Id {http.request.cookie._code_server_session_id}
-        # Dual upstreams for failover
-        upstreams {
-                {$PRIMARY_HOST:192.168.168.31}:5000
-        }
-        upstreams {
-            {$REPLICA_HOST:replica-host}:5000
-        }
-        # Sticky load balancing with environment variable secret
-        lb_policy cookie ide_session_lb {$IDE_SESSION_LB_SECRET}
-        health_uri /health
-        health_interval 10s
-        health_timeout 5s
-        health_fails 2
-        fail_duration 30s
-        lb_try_duration 5s
-    }
-}
-
-kushnir.cloud {
-    # Root portal is fronted by oauth2-proxy-portal (admin portal with Appsmith).
-
-    encode gzip
-
-    header {
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
-        -Server
-    }
-
-    @health path /health /healthz /ping
-    @root path /
-    @auth_reset path /auth/reset
-    @logout path /logout /signout
-    @oauth2 path /oauth2 /oauth2/*
-
-    route {
-        respond @health "OK" 200
-
-        # One-shot auth reset to clear stale cookies that can cause redirect loops.
-        # If you're stuck in a login loop, visit: /auth/reset
-        handle @auth_reset {
-            header Clear-Site-Data "\"cache\", \"cookies\", \"storage\""
-            header Content-Type "text/html; charset=utf-8"
-            header Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain={$PORTAL_DOMAIN:kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_portal=; Path=/; Domain=.{$PORTAL_DOMAIN:kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain={$PORTAL_DOMAIN:kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_portal_csrf=; Path=/; Domain=.{$PORTAL_DOMAIN:kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain={$IDE_DOMAIN:ide.kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_ide=; Path=/; Domain=.{$IDE_DOMAIN:ide.kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain={$IDE_DOMAIN:ide.kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            header +Set-Cookie "_oauth2_proxy_ide_csrf=; Path=/; Domain=.{$IDE_DOMAIN:ide.kushnir.cloud}; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-            respond "<!doctype html><html><head><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"1;url=https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://{$PORTAL_DOMAIN:kushnir.cloud}/\"><title>Auth Reset</title></head><body>Auth reset complete. Redirecting to login... <a href=\"https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://{$PORTAL_DOMAIN:kushnir.cloud}/\">Continue</a></body></html>" 200
-        }
-
-        # Unified sign-out endpoint: clear oauth2 session and return to root.
-        redir @logout /oauth2/sign_out?rd=https://{$PORTAL_DOMAIN:kushnir.cloud}/ 302
-
-        # oauth2-proxy-portal control plane endpoints
-        handle @oauth2 {
-            # HA Configuration: oauth2-proxy-portal dual upstreams for failover
-            # Primary: oauth2-proxy-portal on primary host (.31, default localhost:4181)
-            # Replica: oauth2-proxy-portal on replica host (.42, default replica-host:4181)
-            reverse_proxy oauth2-proxy-portal:4181 {
-                # Use canonical domain for oauth2-proxy, not the VIP
-                # This prevents redirect loops when requests arrive via VIP (192.168.168.30)
-                header_up Host {$DOMAIN:kushnir.cloud}
-                header_up X-Forwarded-Host {host}
-                header_up X-Forwarded-Proto https
-                header_up X-Real-IP {remote_host}
-                header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
-                # Dual upstreams for automatic failover on oauth2-proxy-portal
-                upstreams {
-                    {$PRIMARY_HOST:192.168.168.31}:4181
-                }
-                upstreams {
-                    {$REPLICA_HOST:replica-host}:4181
-                }
-                # Health checks: fast detection (<30 sec) of primary failure
-                health_uri /ping
-                health_interval 10s
-                health_timeout 5s
-                health_fails 2
-                fail_duration 30s
-                lb_try_duration 5s
-                transport http {
-                    keepalive 30s
-                    keepalive_idle_conns 100
-                    response_header_timeout 30s
-                }
-            }
-        }
-
-        # Convenience deep link to IDE app.
-        redir /ide https://{$IDE_DOMAIN:ide.kushnir.cloud}/ 302
-
-        # Root is SSO protected via oauth2-proxy-portal (Appsmith admin backend).
-        # Use canonical domain for oauth2-proxy, not the VIP
-        # HA Configuration: Dual upstreams for automatic failover
-        reverse_proxy oauth2-proxy-portal:4181 {
-            header_up Host {$DOMAIN:kushnir.cloud}
-            header_up X-Forwarded-Host {host}
-            header_up X-Forwarded-Proto https
-            header_up X-Real-IP {remote_host}
-            header_down X-Auth-Upstream {http.reverse_proxy.upstream.address}
-            # Dual upstreams for automatic failover
-            upstreams {
-                {$PRIMARY_HOST:192.168.168.31}:4181
-            }
-            upstreams {
-                {$REPLICA_HOST:replica-host}:4181
-            }
-            # Health checks: fast detection (<30 sec) of primary failure
-            health_uri /ping
-            health_interval 10s
-            health_timeout 5s
-            health_fails 2
-            fail_duration 30s
-            lb_try_duration 5s
-            transport http {
-                keepalive 30s
-                keepalive_idle_conns 100
-                response_header_timeout 30s
-            }
-        }
-    }
-}
-
-grafana.{$DOMAIN:kushnir.cloud}, grafana.{$DOMAIN:kushnir.cloud}:443 {
-    encode gzip
-
-    header {
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
-        -Server
-    }
-
-    @health path /health /healthz /ping
-    respond @health "OK" 200
-
-    @no_portal_access {
-        not path /health /healthz /ping /oauth2 /oauth2/*
-        not header Cookie *_oauth2_proxy_portal=*
-    }
-    redir @no_portal_access https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://grafana.{$DOMAIN:kushnir.cloud}/ 302
-
-    reverse_proxy grafana:3000 {
-        header_up Host grafana.{$DOMAIN:kushnir.cloud}
-        header_up X-Forwarded-Host {host}
-        header_up X-Forwarded-Proto https
-        header_up X-Real-IP {remote_host}
-    }
-}
-
-prometheus.{$DOMAIN:kushnir.cloud}, prometheus.{$DOMAIN:kushnir.cloud}:443 {
-    encode gzip
-
-    header {
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
-        -Server
-    }
-
-    @health path /health /healthz /ping
-    respond @health "OK" 200
-
-    @no_portal_access {
-        not path /health /healthz /ping /oauth2 /oauth2/*
-        not header Cookie *_oauth2_proxy_portal=*
-    }
-    redir @no_portal_access https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://prometheus.{$DOMAIN:kushnir.cloud}/ 302
-
-    reverse_proxy prometheus:9090 {
-        header_up Host prometheus.{$DOMAIN:kushnir.cloud}
-        header_up X-Forwarded-Host {host}
-        header_up X-Forwarded-Proto https
-        header_up X-Real-IP {remote_host}
-    }
-}
-
-alertmanager.{$DOMAIN:kushnir.cloud}, alertmanager.{$DOMAIN:kushnir.cloud}:443 {
-    encode gzip
-
-    header {
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
-        -Server
-    }
-
-    @health path /health /healthz /ping
-    respond @health "OK" 200
-
-    @no_portal_access {
-        not path /health /healthz /ping /oauth2 /oauth2/*
-        not header Cookie *_oauth2_proxy_portal=*
-    }
-    redir @no_portal_access https://{$PORTAL_DOMAIN:kushnir.cloud}/oauth2/start?rd=https://alertmanager.{$DOMAIN:kushnir.cloud}/ 302
-
-    reverse_proxy alertmanager:9093 {
-        header_up Host alertmanager.{$DOMAIN:kushnir.cloud}
-        header_up X-Forwarded-Host {host}
-        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-For {remote_host}
         header_up X-Real-IP {remote_host}
     }
 }

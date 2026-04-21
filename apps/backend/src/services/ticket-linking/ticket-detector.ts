@@ -114,6 +114,7 @@ export class TicketDetector extends EventEmitter {
   ): Promise<TicketReference[]> {
     const lines = content.split('\n');
     const references: TicketReference[] = [];
+    const seen = new Set<string>(); // Track duplicates by line:column:id
 
     for (const [systemName, pattern] of this.patterns) {
       let match;
@@ -126,6 +127,13 @@ export class TicketDetector extends EventEmitter {
         const precedingText = content.substring(0, match.index);
         const lineNum = precedingText.split('\n').length - 1;
         const column = match.index - precedingText.lastIndexOf('\n');
+
+        // Deduplicate by location and ID
+        const key = `${lineNum}:${column}:${ticketId}`;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
 
         // Capture context
         const contextWindow = 3; // lines before and after

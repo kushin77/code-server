@@ -15,6 +15,12 @@ export interface ServiceWorkerHealth {
   lastRefreshTime?: number;
 }
 
+interface AuthServiceWorkerMessage {
+  type: 'SESSION_REFRESHED' | 'SESSION_EXPIRED' | 'SESSION_REFRESH_START' | 'SESSION_REFRESH_FAILED' | 'GET_SESSION_EXPIRY' | 'SESSION_EXPIRY_UPDATED'
+  expiry?: number
+  reason?: string
+}
+
 // Module state
 let swRegistration: ServiceWorkerRegistration | null = null;
 const swHealth: ServiceWorkerHealth = {
@@ -113,9 +119,8 @@ function setupMessageHandlers(): void {
   /**
    * Listen for messages from SW
    */
-  navigator.serviceWorker.addEventListener('message', async (event) => {
-    const messageEvent = event as ExtendableMessageEvent
-    const { data } = messageEvent
+  navigator.serviceWorker.addEventListener('message', async (event: MessageEvent<AuthServiceWorkerMessage>) => {
+    const { data } = event
     metrics.sw_message_received++
 
     switch (data.type) {
@@ -189,7 +194,7 @@ function setupStorageObserver(): void {
 /**
  * Sends a message to the Service Worker
  */
-export function sendMessageToSW(message: Record<string, any>): void {
+export function sendMessageToSW(message: AuthServiceWorkerMessage): void {
   if (!navigator.serviceWorker.controller) {
     console.warn('[auth-sw-register] SW not active, message not sent');
     return;

@@ -51,8 +51,11 @@ create_gsm_secret() {
             2>&1 | log_info
     else
         log_info "Creating new secret..."
-        echo -n "$secret_value" | gcloud secrets create "$SECRET_NAME" \
+        gcloud secrets create "$SECRET_NAME" \
             --replication-policy=automatic \
+            --project="$GCP_PROJECT" \
+            2>&1 | log_info
+        echo -n "$secret_value" | gcloud secrets versions add "$SECRET_NAME" \
             --data-file=- \
             --project="$GCP_PROJECT" \
             2>&1 | log_info

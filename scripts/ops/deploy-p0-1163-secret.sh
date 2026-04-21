@@ -26,7 +26,7 @@ source "$SCRIPT_DIR/_common/init.sh"
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
 REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
 SSH_USER="${DEPLOY_USER:-akushnir}"
-DEPLOY_DIR="/home/${SSH_USER}/code-server-enterprise"
+DEPLOY_PATH="/home/${SSH_USER}/code-server-enterprise"
 
 # Secret configuration
 SECRET_NAME="IDE_SESSION_LB_SECRET"
@@ -65,7 +65,7 @@ deploy_to_host() {
     
     local commands=$(cat <<EOF
 set -euo pipefail
-cd $DEPLOY_DIR || exit 1
+cd $DEPLOY_PATH || exit 1
 
 # Backup existing .env
 if [[ -f .env ]]; then

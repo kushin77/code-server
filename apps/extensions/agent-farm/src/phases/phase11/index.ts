@@ -6,7 +6,7 @@
 export { CircuitBreaker } from '../../ml/CircuitBreaker';
 export type { CircuitBreakerConfig, CircuitBreakerMetrics, CircuitState } from '../../ml/CircuitBreaker';
 
-// TODO: Enable FailoverManager exports once actually integrated with other phases
+// FailoverManager exports disabled - used by FailoverManager.ts tests but not yet integrated with other phases
 // export { FailoverManager } from '../../ml/FailoverManager';
 // export type {
 //   FailoverConfig,

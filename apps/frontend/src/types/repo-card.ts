@@ -59,9 +59,9 @@ export type RepoCardAction =
   | 'unpin';        // Unpin/unfavourite this repo
 
 /**
- * @deprecated - Not currently used; reserved for future action result tracking
+ * Internal type for action result tracking (not yet used)
  */
-export interface RepoCardActionResult {
+interface RepoCardActionResult {
   action: RepoCardAction;
   repoId: string;
   success: boolean;
@@ -71,11 +71,9 @@ export interface RepoCardActionResult {
 }
 
 /**
- * Cached state for the multi-repo home view.
- * Cards are refreshed in the background; the UI renders from cache.
- * @deprecated - Not currently used; reserved for future caching implementation
+ * Internal type for multi-repo home view caching (not yet used)
  */
-export interface HomeViewCache {
+interface HomeViewCache {
   cards: RepoCard[];
   /** ISO 8601 timestamp when the cache was last fully populated */
   lastFullRefresh: string;
@@ -84,11 +82,9 @@ export interface HomeViewCache {
 }
 
 /**
- * Config for the home view refresh pipeline.
- * Sourced from the multi-repo-ux-policy.json (runtime) or defaults below.
- * @deprecated - Not currently used; reserved for future config implementation
+ * Internal type for home view refresh configuration (not yet used)
  */
-export interface HomeViewConfig {
+interface HomeViewConfig {
   /** Seconds between background status refreshes (default: 30) */
   refreshIntervalSeconds: number;
   /** Maximum number of repo cards to show (from max_open_repos policy) */

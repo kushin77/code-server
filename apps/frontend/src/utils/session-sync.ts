@@ -185,10 +185,9 @@ export function broadcastSessionRefresh(newExpiryMs: number): void {
 }
 
 /**
- * Alias for broadcastSessionRefresh (for convenience).
- * @deprecated - Use broadcastSessionRefresh directly instead
+ * Alias for broadcastSessionRefresh (for convenience - internal, not exported)
  */
-export function broadcastRefresh(newExpiryMs: number): void {
+function broadcastRefresh(newExpiryMs: number): void {
   broadcastSessionRefresh(newExpiryMs);
 }
 
@@ -216,10 +215,9 @@ export function broadcastSessionExpiry(): void {
 }
 
 /**
- * Alias for broadcastSessionExpiry (for convenience).
- * @deprecated - Use broadcastSessionExpiry directly instead
+ * Alias for broadcastSessionExpiry (for convenience - internal, not exported)
  */
-export function broadcastExpiry(): void {
+function broadcastExpiry(): void {
   broadcastSessionExpiry();
 }
 

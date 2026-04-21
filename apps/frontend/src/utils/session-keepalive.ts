@@ -139,10 +139,9 @@ export function scheduleRefresh(): void {
 }
 
 /**
- * Initializes the session keepalive logic
- * @deprecated - Import and call in App or main layout component when session feature is ready
+ * Initializes the session keepalive logic (internal - not yet wired to app)
  */
-export function initSessionKeepalive(): void {
+function initSessionKeepalive(): void {
   if (typeof window === 'undefined') return;
 
   // 1. Initial schedule

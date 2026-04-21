@@ -3,10 +3,10 @@
  * Manages failover between replicas and data centers
  */
 
-export type FailoverStrategy = 'active-active' | 'active-passive' | 'active-backup';
-export type FailoverTrigger = 'health-check' | 'manual' | 'automatic';
+type FailoverStrategy = 'active-active' | 'active-passive' | 'active-backup';
+type FailoverTrigger = 'health-check' | 'manual' | 'automatic';
 
-export interface ReplicaHealth {
+interface ReplicaHealth {
   replicaId: string;
   isHealthy: boolean;
   lastHeartbeat: number;
@@ -15,7 +15,7 @@ export interface ReplicaHealth {
   capacity: number;
 }
 
-export interface FailoverEvent {
+interface FailoverEvent {
   timestamp: number;
   trigger: FailoverTrigger;
   fromReplica: string;

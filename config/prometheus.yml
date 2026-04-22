@@ -82,3 +82,13 @@ scrape_configs:
       - targets: ['localhost:9100']
     scrape_interval: 15s
     scrape_timeout: 10s
+
+  # NAS host metrics (node_exporter on 192.168.168.56)
+  - job_name: 'nas'
+    static_configs:
+      - targets: ['192.168.168.56:9100']
+        labels:
+          host: 'kushnas'
+          region: 'on-prem-storage'
+    scrape_interval: 15s
+    scrape_timeout: 10s

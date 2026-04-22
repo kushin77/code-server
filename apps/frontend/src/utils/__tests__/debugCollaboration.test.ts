@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createDebugSession,
   fetchDebugSession,
+  fetchRelayedDebugMessages,
   joinDebugSession,
   leaveDebugSession,
   recordDebugStep,
@@ -96,6 +97,22 @@ describe('debugCollaboration', () => {
       6,
       '/api/debug-sessions/session-1/relay',
       expect.objectContaining({ method: 'POST' })
+    )
+  })
+
+  it('fetches relay deltas with actor and sequence cursor', async () => {
+    fetchMock.mockResolvedValueOnce(buildJsonResponse({ sessionId: 'session-1', latestSequence: 2, messages: [] }))
+
+    await expect(fetchRelayedDebugMessages('session-1', 'Portal main', 2)).resolves.toMatchObject({
+      sessionId: 'session-1',
+      latestSequence: 2,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/debug-sessions/session-1/relay/messages?actor=Portal+main&since=2',
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+      })
     )
   })
 })

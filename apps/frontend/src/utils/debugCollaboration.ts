@@ -38,11 +38,19 @@ export type DebugStepEvent = {
 
 export type DebugRelayMessage = {
   id: string
+  sequence: number
   actor: string
   message: Record<string, unknown>
   relayTarget?: string
   forwarded: boolean
   timestamp: string
+}
+
+export type DebugRelaySyncResult = {
+  sessionId: string
+  relayTarget?: string
+  latestSequence: number
+  messages: DebugRelayMessage[]
 }
 
 export type DebugSessionRecord = {
@@ -162,4 +170,13 @@ export async function relayDebugProtocolMessage(sessionId: string, input: RelayD
     method: 'POST',
     body: JSON.stringify(input),
   })
+}
+
+export async function fetchRelayedDebugMessages(sessionId: string, actor: string, sinceSequence = 0): Promise<DebugRelaySyncResult> {
+  const params = new URLSearchParams({
+    actor,
+    since: String(Math.max(0, sinceSequence)),
+  })
+
+  return requestJson<DebugRelaySyncResult>(`${DEBUG_SESSION_API_BASE}/${sessionId}/relay/messages?${params.toString()}`)
 }

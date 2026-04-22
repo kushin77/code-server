@@ -1,17 +1,64 @@
 global:
   resolve_timeout: 5m
 
-# Simplified routing - just send all alerts to null receiver
-# In production, configure Slack, PagerDuty, etc. via environment variables
+# Alert routing configuration
+# Properly routes alerts by severity instead of null receiver (P0 #1361 fix)
 route:
   group_by: ['alertname', 'cluster', 'service']
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 1h
-  receiver: 'null'
+  receiver: 'default'
+  routes:
+    # Critical P0 alerts - maximum routing (email + logging)
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      repeat_interval: 15m
+      group_wait: 10s
+    # High priority P1 alerts
+    - match:
+        severity: warning
+      receiver: 'warnings'
+      repeat_interval: 1h
+    # Info and debug messages
+    - match:
+        severity: info
+      receiver: 'info'
 
 receivers:
-  - name: 'null'
+  # Default receiver - logs all alerts
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:8080/api/v1/alerts/incoming'
+        send_resolved: true
 
-# Inhibition rules for alert grouping
-inhibit_rules: []
+  # Critical alerts - immediate notification
+  - name: 'critical-alerts'
+    webhook_configs:
+      - url: 'http://localhost:8080/api/v1/alerts/critical'
+        send_resolved: true
+    # Send to GitHub issues via webhook when available
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY:-}'
+
+  # Warning/High priority alerts
+  - name: 'warnings'
+    webhook_configs:
+      - url: 'http://localhost:8080/api/v1/alerts/warnings'
+        send_resolved: true
+
+  # Info alerts - log only
+  - name: 'info'
+    webhook_configs:
+      - url: 'http://localhost:8080/api/v1/alerts/info'
+        send_resolved: true
+
+# Inhibition rules - suppress duplicate alerts when critical is firing
+inhibit_rules:
+  # Suppress warning and info alerts when critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match_re:
+      severity: 'warning|info'
+    equal: ['alertname', 'cluster', 'service']

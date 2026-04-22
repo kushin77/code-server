@@ -590,7 +590,11 @@ services:
     container_name: redis
     restart: unless-stopped
     networks:
-      - net-app
+      net-app:
+        ipv4_address: 172.28.2.50
+        aliases:
+          - redis-server
+          - redis-master
     ports:
       - "127.0.0.1:6379:6379"
     command: >
@@ -634,10 +638,10 @@ services:
     ports:
       - "127.0.0.1:26379:26379"
     environment:
-      PRIMARY_HOST: ${PRIMARY_HOST:-192.168.168.31}
+      PRIMARY_HOST: 172.28.2.50
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
     command: >
-      sh -ec 'MASTER_HOST="$${PRIMARY_HOST:-192.168.168.31}"; RPASS="$${REDIS_PASSWORD}"; sed -e "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" -e "s/__REDIS_PASSWORD__/$${RPASS}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
+      sh -ec 'MASTER_HOST="172.28.2.50"; RPASS="$${REDIS_PASSWORD}"; sed -e "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" -e "s/__REDIS_PASSWORD__/$${RPASS}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
     volumes:
       - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
       - redis-sentinel-1-data:/data
@@ -648,7 +652,8 @@ services:
       retries: 5
       start_period: 5s
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     deploy:
       resources:
         limits:

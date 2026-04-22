@@ -215,14 +215,24 @@ jobs:
           echo "[P0] Secrets Scanning - TruffleHog"
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           
+          echo "Running TruffleHog filesystem scan..."
           trufflehog filesystem . \
-            --concurrency 1 \
             --json 2>&1 | tee /tmp/trufflehog-output.json
+          TRUFFLEHOG_EXIT_CODE=$?
+          echo "TruffleHog exit code: $TRUFFLEHOG_EXIT_CODE"
           
+          echo "Checking for verified secrets in output..."
           if grep -q '"verified":\s*true' /tmp/trufflehog-output.json || grep -q '"Verified":\s*true' /tmp/trufflehog-output.json; then
             echo "✗ Verified secrets detected"
             exit 1
           fi
+          
+          # If TruffleHog exited with code 1 but no verified secrets found, it might be unverified findings
+          if [ $TRUFFLEHOG_EXIT_CODE -eq 1 ]; then
+            echo "⚠ TruffleHog found potential secrets but none were verified"
+            echo "This is not a failure - continuing..."
+          fi
+          
           echo "✓ No verified secrets found"
 
       - name: Route TruffleHog findings to issues

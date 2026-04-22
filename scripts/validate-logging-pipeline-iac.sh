@@ -111,7 +111,7 @@ else
   ((failed++))
 fi
 
-if git -C "${PROJECT_ROOT}" diff-index --quiet HEAD --; then
+if [ "$(git -C "${PROJECT_ROOT}" status --porcelain | grep -v '??' | wc -l)" -eq 0 ]; then
   log_info "✓ Working tree clean"
 else
   log_error "✗ Working tree has uncommitted changes"

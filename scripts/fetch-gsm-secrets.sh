@@ -267,6 +267,14 @@ fetch_gsm_secret_optional "qa-oauth-token" "E2E_USER_OAUTH_TOKEN" || \
     fetch_gsm_secret_optional "prod-qa-oauth-token" "E2E_USER_OAUTH_TOKEN" || \
     true
 
+# Alerting integrations (optional — alertmanager/pagerduty/slack)
+fetch_gsm_secret_optional "alertmanager-slack-webhook" "SLACK_WEBHOOK_URL" || \
+    echo "WARN: No alertmanager-slack-webhook found in GSM (Slack alerts will be disabled)" >&2
+fetch_gsm_secret_optional "prod-pagerduty-service-key" "PAGERDUTY_KEY" || \
+    echo "WARN: No prod-pagerduty-service-key found in GSM (PagerDuty alerts will be disabled)" >&2
+fetch_gsm_secret_optional "slack-notification-token" "SLACK_NOTIFICATION_TOKEN" || \
+    echo "WARN: No slack-notification-token found in GSM (Slack notifications will be disabled)" >&2
+
 # Fill Terraform inputs expected by root/module variables.
 export TF_VAR_code_server_password="${TF_VAR_code_server_password:-$CODE_SERVER_PASSWORD}"
 export TF_VAR_google_client_id="${TF_VAR_google_client_id:-$GOOGLE_CLIENT_ID}"
@@ -296,6 +304,9 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
 GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-}
 REDIS_PASSWORD=${REDIS_PASSWORD:-}
 KONG_DATABASE_PASSWORD=${KONG_DATABASE_PASSWORD:-}
+SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+PAGERDUTY_KEY=${PAGERDUTY_KEY:-}
+SLACK_NOTIFICATION_TOKEN=${SLACK_NOTIFICATION_TOKEN:-}
 TF_VAR_code_server_password=${TF_VAR_code_server_password:-}
 TF_VAR_google_client_id=${TF_VAR_google_client_id:-}
 TF_VAR_google_client_secret=${TF_VAR_google_client_secret:-}

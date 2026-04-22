@@ -134,7 +134,20 @@ echo ""
 
 # Test 6: Verify Node.js syntax of all APIs
 echo "[TEST 6] Node.js Syntax Validation"
-if node -c scripts/integrations/sentry-integration-api.js 2>&1 && node -c scripts/integrations/slack-slash-commands-api.js 2>&1; then
+check_node_syntax() {
+    local file_path="$1"
+
+    if command -v powershell.exe >/dev/null 2>&1 && command -v wslpath >/dev/null 2>&1; then
+        local windows_file_path
+        windows_file_path=$(wslpath -w "$file_path")
+        powershell.exe -NoProfile -Command "& 'C:\Program Files\nodejs\node.exe' -c '$windows_file_path'"
+        return $?
+    fi
+
+    node -c "$file_path"
+}
+
+if check_node_syntax scripts/integrations/sentry-integration-api.js 2>&1 && check_node_syntax scripts/integrations/slack-slash-commands-api.js 2>&1; then
     echo "✓ PASS: All integration APIs have valid Node.js syntax"
 else
     echo "✗ FAIL: One or more API files have syntax errors"

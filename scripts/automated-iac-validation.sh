@@ -261,19 +261,19 @@ echo ""
 cat > "$AUDIT_FILE" << EOF
 # IaC Audit Report
 
-**Generated:** $(date -u +%Y-%m-%dT%H:%M:%SZ)  
+**Generated:** \$(date -u +%Y-%m-%dT%H:%M:%SZ)  
 **Auditor:** automated-iac-validation.sh
 
 ## Executive Summary
 
-**Status:** $([ "$FAIL_COUNT" -eq 0 ] && echo '[PASS] IaC COMPLIANT' || echo '[FAIL] IaC NON-COMPLIANT')
+**Status:** \$([ "$FAIL_COUNT" -eq 0 ] && echo '[PASS] IaC COMPLIANT' || echo '[FAIL] IaC NON-COMPLIANT')
 
 **Metrics:**
 - Passed Tests: $PASS_COUNT
 - Failed Tests: $FAIL_COUNT
 - Warnings: $WARN_COUNT
 
-**Conclusion:** $(
+**Conclusion:** \$(
   if [ "$FAIL_COUNT" -eq 0 ]; then
     echo "[PASS] Zero manual steps detected. All deployment tasks are automated via IaC."
   else
@@ -285,18 +285,18 @@ cat > "$AUDIT_FILE" << EOF
 
 | # | Test | Result |
 |----|------|--------|
-| 1 | No "manual" references in docs | $([ $(grep -r "manual" "$PARENT_DIR"/*.md 2>/dev/null | grep -v "AUDIT" | wc -l) -eq 0 ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
-| 2 | Automated environment generation | $([ -f "${SCRIPT_DIR}/automated-env-generator.sh" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
-| 3 | Automated certificate management | $([ -f "${SCRIPT_DIR}/automated-certificate-management.sh" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
-| 4 | Automated DNS configuration | $([ -f "${SCRIPT_DIR}/automated-dns-configuration.sh" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
-| 5 | Automated deployment orchestration | $([ -f "${SCRIPT_DIR}/automated-deployment-orchestration.sh" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
-| 6 | Automatic HTTPS via ACME | $(grep -q "auto_https on" "$PARENT_DIR/Caddyfile" && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
-| 7 | Environment-based configuration | $(grep -q "ACME_EMAIL\|CLOUDFLARE" "$PARENT_DIR/docker-compose.yml" && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
-| 8 | Configuration templates | $([ -f "$PARENT_DIR/.env.template" ] && echo '[PASS] PASS' || echo 'ARN') |
-| 9 | IaC documentation | $([ -f "$PARENT_DIR/PRODUCTION-DEPLOYMENT-IAC.md" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
-| 10 | No hardcoded secrets | $([ $(grep -r "password\|secret\|token" "$PARENT_DIR/docker-compose.yml" | grep -v "\\${" | grep -v "#" | wc -l) -eq 0 ] && echo '[PASS] PASS' || echo 'ARN') |
+| 1 | No "manual" references in docs | \$([ \$(grep -r "manual" "$PARENT_DIR"/*.md 2>/dev/null | grep -v "AUDIT" | wc -l) -eq 0 ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
+| 2 | Automated environment generation | \$([ -f "${SCRIPT_DIR}/automated-env-generator.sh" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
+| 3 | Automated certificate management | \$([ -f "${SCRIPT_DIR}/automated-certificate-management.sh" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
+| 4 | Automated DNS configuration | \$([ -f "${SCRIPT_DIR}/automated-dns-configuration.sh" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
+| 5 | Automated deployment orchestration | \$([ -f "${SCRIPT_DIR}/automated-deployment-orchestration.sh" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
+| 6 | Automatic HTTPS via ACME | \$(grep -q "auto_https on" "$PARENT_DIR/Caddyfile" && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
+| 7 | Environment-based configuration | \$(grep -q "ACME_EMAIL\|CLOUDFLARE" "$PARENT_DIR/docker-compose.yml" && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
+| 8 | Configuration templates | \$([ -f "$PARENT_DIR/.env.template" ] && echo '[PASS] PASS' || echo 'ARN') |
+| 9 | IaC documentation | \$([ -f "$PARENT_DIR/PRODUCTION-DEPLOYMENT-IAC.md" ] && echo '[PASS] PASS' || echo '[FAIL] FAIL') |
+| 10 | No hardcoded secrets | \$([ \$(grep -r "password\|secret\|token" "$PARENT_DIR/docker-compose.yml" | grep -v "\\${" | grep -v "#" | wc -l) -eq 0 ] && echo '[PASS] PASS' || echo 'ARN') |
 | 11 | Version controlled | [PASS] PASS |
-| 12 | Idempotent scripts | $(grep -q "set -e" "${SCRIPT_DIR}"/automated-*.sh && echo '[PASS] PASS' || echo 'ARN') |
+| 12 | Idempotent scripts | \$(grep -q "set -e" "${SCRIPT_DIR}"/automated-*.sh && echo '[PASS] PASS' || echo 'ARN') |
 
 ## Automated IaC Components
 
@@ -329,7 +329,7 @@ cat > "$AUDIT_FILE" << EOF
 
 ## Recommendations
 
-$(
+\$(
   if [ "$FAIL_COUNT" -eq 0 ]; then
     echo "[PASS] **No recommendations.** System is fully IaC compliant."
   else
@@ -344,8 +344,8 @@ $(
 To re-run this audit:
 
 \`\`\`bash
-cd $(dirname "$SCRIPT_DIR")
-bash $(basename "$SCRIPT_DIR")/automated-iac-validation.sh
+cd \$(dirname "$SCRIPT_DIR")
+bash \$(basename "$SCRIPT_DIR")/automated-iac-validation.sh
 \`\`\`
 
 ## Next Steps

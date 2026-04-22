@@ -93,7 +93,7 @@ log_info "GitHub Issue Creation Governance Check"
 log_info "========================================"
 
 # Find all files matching patterns
-local -a files_to_scan=()
+files_to_scan=()
 
 for pattern in "${SCAN_PATTERNS[@]}"; do
     # Use find for shell scripts
@@ -125,9 +125,9 @@ for pattern in "${SCAN_PATTERNS[@]}"; do
 done
 
 # Remove duplicates
-local -a unique_files=()
+unique_files=()
 for file in "${files_to_scan[@]}"; do
-    if [[ ! " ${unique_files[@]} " =~ " ${file} " ]]; then
+    if [[ ! " ${unique_files[*]} " =~ " ${file} " ]]; then
         unique_files+=("$file")
     fi
 done

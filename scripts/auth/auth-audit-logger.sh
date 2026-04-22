@@ -38,7 +38,7 @@ readonly AUDIT_EVENT_TYPES=(
 # ============================================================================
 # Environment Setup
 # ============================================================================
-AUDIT_LOG_PROJECT="${AUDIT_LOG_PROJECT:-gcp-eiq}"
+AUDIT_LOG_PROJECT="${AUDIT_LOG_PROJECT:-gcp-kc}"
 AUDIT_LOG_NAME="${AUDIT_LOG_NAME:-code-server-auth-policy}"
 AUDIT_RETENTION_DAYS="${AUDIT_RETENTION_DAYS:-90}"
 AUDIT_BUFFER_FILE="${TMPDIR:-/tmp}/audit-buffer-$$.jsonl"

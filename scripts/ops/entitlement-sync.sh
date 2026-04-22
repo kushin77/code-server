@@ -17,7 +17,7 @@ _warn() { echo "[entitlement-sync] WARN: $*" >&2; }
 DRY_RUN="${DRY_RUN:-0}"
 USER_EMAIL="${USER_EMAIL:-${WORKSPACE_USER:-}}"
 GH_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
-GSM_PROJECT="${GSM_PROJECT:-gcp-eiq}"
+GSM_PROJECT="${GSM_PROJECT:-gcp-kc}"
 
 # ── Entitlement mapping (repo/team → credentials) ─────────────────────────────
 # Pattern: "repo_pattern" → space-separated GSM secret names to provision

@@ -66,7 +66,7 @@ else
 fi
 
 # 3. GSM env canonical
-if [[ "${GSM_PROJECT:-}" == "gcp-eiq" && "${GSM_SECRET_NAME:-}" == "github-token" ]]; then
+if [[ "${GSM_PROJECT:-}" == "gcp-kc" && "${GSM_SECRET_NAME:-}" == "github-token" ]]; then
   probe "gsm-env-canonical" "ok" "HEALTHY"
 else
   probe "gsm-env-canonical" "fail" "AUTH_ENV_DRIFT" "GSM_PROJECT=${GSM_PROJECT:-<unset>} GSM_SECRET_NAME=${GSM_SECRET_NAME:-<unset>}"

@@ -5,8 +5,7 @@
 # @owner       platform
 # @status      active
 # fetch-gsm-secrets.sh
-# Fetches code-server secrets from Google Secret Manager (gcp-eiq project)
-# Mimics eiq-org pattern: gcloud secrets versions access → env var injection
+# Fetches code-server secrets from Google Secret Manager (gcp-kc project)
 # Requires: gcloud auth login (or service account activation)
 # Usage: source ./fetch-gsm-secrets.sh   (sources env vars into current shell)
 #        ./fetch-gsm-secrets.sh > .env    (writes to env file)
@@ -15,7 +14,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-readonly GSM_PROJECT="${GSM_PROJECT:-gcp-eiq}"
+readonly GSM_PROJECT="${GSM_PROJECT:-gcp-kc}"
 NON_INTERACTIVE="false"
 SHOW_HELP="false"
 
@@ -192,8 +191,14 @@ fi
 require_command openssl "openssl is required to generate local fallback secrets"
 
 # GoDaddy API credentials (DNS management)
-fetch_gsm_secret "prod-godaddy-api-key"    GODADDY_KEY
-fetch_gsm_secret "prod-godaddy-api-secret" GODADDY_SECRET
+# Optional in environments that do not manage DNS from this host.
+if ! fetch_first_available_secret "GODADDY_KEY" "prod-godaddy-api-key" "prod-code-server-godaddy-key"; then
+    echo "WARN: No GoDaddy API key found in GSM (DNS automation will stay disabled)" >&2
+fi
+
+if ! fetch_first_available_secret "GODADDY_SECRET" "prod-godaddy-api-secret" "prod-code-server-godaddy-secret"; then
+    echo "WARN: No GoDaddy API secret found in GSM (DNS automation will stay disabled)" >&2
+fi
 
 # Google OAuth2 credentials (code-server login via oauth2-proxy)
 fetch_gsm_secret "prod-portal-google-oauth-client-id"     GOOGLE_CLIENT_ID

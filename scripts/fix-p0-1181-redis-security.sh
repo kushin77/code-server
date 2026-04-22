@@ -29,7 +29,7 @@ source "$SCRIPT_DIR/_common/init.sh"
 # ────────────────────────────────────────────────────────────────────────────
 
 DRY_RUN="${DRY_RUN:-1}"
-GSM_PROJECT="${GSM_PROJECT:-gcp-eiq}"
+GSM_PROJECT="${GSM_PROJECT:-gcp-kc}"
 REDIS_PASSWORD_SECRET="${GSM_REDIS_PASSWORD_SECRET:-prod-redis-password}"
 REDIS_PASSWORD_SECRET_BACKUP="${GSM_REDIS_PASSWORD_SECRET_BACKUP:-prod-code-server-redis-password}"
 

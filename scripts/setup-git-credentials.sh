@@ -19,7 +19,7 @@
 #   6. Verifies git can authenticate against github.com
 #
 # Environment:
-#   GSM_PROJECT       GCP project (default: gcp-eiq)
+#   GSM_PROJECT       GCP project (default: gcp-kc)
 #   GSM_SECRET_NAME   Secret name  (default: github-token)
 #   GITHUB_PAT        PAT to store (if not already in GSM); prompted if unset
 set -euo pipefail
@@ -27,7 +27,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-readonly GSM_PROJECT="${GSM_PROJECT:-gcp-eiq}"
+readonly GSM_PROJECT="${GSM_PROJECT:-gcp-kc}"
 readonly GSM_SECRET_NAME="${GSM_SECRET_NAME:-github-token}"
 readonly CREDENTIAL_HELPER_BIN="/usr/local/bin/git-credential-gsm"
 readonly CREDENTIAL_HELPER_SRC="${SCRIPT_DIR}/git-credential-gsm"

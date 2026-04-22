@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
 # Configuration
-PROJECT_ID="${GCP_PROJECT:-gcp-eiq}"
+PROJECT_ID="${GCP_PROJECT:-gcp-kc}"
 REMOTE_HOST="${DEPLOY_HOST:-192.168.168.31}"
 REMOTE_USER="${DEPLOY_USER:-akushnir}"
 REMOTE_PATH="/home/${REMOTE_USER}/code-server-enterprise"

@@ -92,8 +92,8 @@ spec:
           - ci-cd:execute
           - e2e:execute
         assignments:
-          - e2e-test-account@gcp-eiq.iam.gserviceaccount.com
-          - ci-automation@gcp-eiq.iam.gserviceaccount.com
+          - e2e-test-account@gcp-kc.iam.gserviceaccount.com
+          - ci-automation@gcp-kc.iam.gserviceaccount.com
 
     # Policy evaluation defaults
     defaultRole: viewer
@@ -106,8 +106,8 @@ spec:
   auditLogging:
     enabled: true
     destination: stackdriver  # Google Cloud Logging
-    projectId: gcp-eiq
-    logName: projects/gcp-eiq/logs/code-server-auth-policy
+    projectId: gcp-kc
+    logName: projects/gcp-kc/logs/code-server-auth-policy
     
     # Events to audit
     events:

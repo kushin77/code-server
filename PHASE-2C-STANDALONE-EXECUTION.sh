@@ -15,7 +15,7 @@ set -euo pipefail
 # ────────────────────────────────────────────────────────────────────────────
 
 # Configuration
-GCP_PROJECT="${GCP_PROJECT:-gcp-eiq}"
+GCP_PROJECT="${GCP_PROJECT:-gcp-kc}"
 DRY_RUN="${DRY_RUN:-1}"  # Default to dry-run for safety
 PHASE_2C_SKIP="${PHASE_2C_SKIP:-}"  # Can skip sections: 1,2,3,4,5
 

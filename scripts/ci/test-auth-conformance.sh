@@ -57,7 +57,7 @@ run_in_clean_env() {
   # Execute command in a sub-shell that mimics a fresh login shell:
   # clears all auth-related env vars, then sources code-server-entrypoint logic.
   env -i HOME="$HOME" PATH="$PATH" USER="${USER:-coder}" \
-    GSM_PROJECT=gcp-eiq \
+    GSM_PROJECT=gcp-kc \
     GSM_SECRET_NAME=github-token \
     GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=github-token \
     bash --norc --noprofile -c "$1"
@@ -72,9 +72,9 @@ echo ""
 # ── Category 1: Fresh login shell ────────────────────────────────────────────
 echo "[1] Fresh login shell"
 
-run_in_clean_env 'echo $GSM_PROJECT' | grep -q "^gcp-eiq$" \
-  && record "fresh-shell: GSM_PROJECT=gcp-eiq" "pass" \
-  || record "fresh-shell: GSM_PROJECT=gcp-eiq" "fail" "env var not set or wrong"
+run_in_clean_env 'echo $GSM_PROJECT' | grep -q "^gcp-kc$" \
+  && record "fresh-shell: GSM_PROJECT=gcp-kc" "pass" \
+  || record "fresh-shell: GSM_PROJECT=gcp-kc" "fail" "env var not set or wrong"
 
 run_in_clean_env 'echo $GSM_SECRET_NAME' | grep -q "^github-token$" \
   && record "fresh-shell: GSM_SECRET_NAME=github-token" "pass" \
@@ -90,11 +90,11 @@ echo "[2] Restored terminal (env propagation)"
 
 # Simulate exported env surviving subshell
 (
-  export GSM_PROJECT=gcp-eiq
+  export GSM_PROJECT=gcp-kc
   export GSM_SECRET_NAME=github-token
   export GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=github-token
   bash --norc --noprofile -c '
-    [[ "$GSM_PROJECT" == "gcp-eiq" ]] && echo OK || echo FAIL
+    [[ "$GSM_PROJECT" == "gcp-kc" ]] && echo OK || echo FAIL
   '
 ) | grep -q "^OK$" \
   && record "restored-shell: GSM_PROJECT propagates" "pass" \
@@ -113,7 +113,7 @@ echo "[3] Stale env contamination"
 
 # Deprecated var should be ignored by credential helper if canonical is set
 RESULT=$(env -i HOME="$HOME" PATH="$PATH" USER="${USER:-coder}" \
-  GSM_PROJECT=gcp-eiq \
+  GSM_PROJECT=gcp-kc \
   GSM_SECRET_NAME=github-token \
   GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=github-token \
   GSM_GITHUB_TOKEN_SECRET=prod-github-token \
@@ -127,7 +127,7 @@ RESULT=$(env -i HOME="$HOME" PATH="$PATH" USER="${USER:-coder}" \
 
 # Canonical secret name must be github-token despite legacy override attempt
 RESULT=$(env -i HOME="$HOME" PATH="$PATH" USER="${USER:-coder}" \
-  GSM_PROJECT=gcp-eiq \
+  GSM_PROJECT=gcp-kc \
   GSM_GITHUB_TOKEN_SECRET=prod-github-token \
   GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=github-token \
   bash --norc --noprofile -c 'echo ${GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME:-missing}')
@@ -148,7 +148,7 @@ trap 'rm -rf "$TMPDIR_A" "$TMPDIR_B"' EXIT
 
 # Auth env must be stable after switching repos
 RESULT=$(env -i HOME="$HOME" PATH="$PATH" USER="${USER:-coder}" \
-  GSM_PROJECT=gcp-eiq GSM_SECRET_NAME=github-token \
+  GSM_PROJECT=gcp-kc GSM_SECRET_NAME=github-token \
   GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=github-token \
   bash --norc --noprofile -c "
     cd \"$TMPDIR_A\"

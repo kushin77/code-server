@@ -42,7 +42,7 @@ services:
       - NODE_OPTIONS=--max-old-space-size=6144
       - OLLAMA_ENDPOINT=http://ollama:11434
       - OLLAMA_DEFAULT_MODEL=codellama:7b
-      - GSM_PROJECT=${GSM_PROJECT:-gcp-eiq}
+      - GSM_PROJECT=${GSM_PROJECT:-gcp-kc}
       - GSM_SECRET_NAME=${GSM_SECRET_NAME:-github-token}
       - GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=${GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME:-github-token}
       # Development tools environment variables

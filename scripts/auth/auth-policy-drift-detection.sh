@@ -155,7 +155,7 @@ check_audit_log_health() {
     return 0
   fi
   
-  local project="${AUDIT_LOG_PROJECT:-gcp-eiq}"
+  local project="${AUDIT_LOG_PROJECT:-gcp-kc}"
   local log_name="${AUDIT_LOG_NAME:-code-server-auth-policy}"
   
   # Check if recent logs exist (within last 1 hour)

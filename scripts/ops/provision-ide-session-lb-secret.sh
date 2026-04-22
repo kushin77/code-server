@@ -13,7 +13,7 @@ source "$SCRIPT_DIR/../_common/init.sh"
 # Configuration
 # ────────────────────────────────────────────────────────────────────────────
 
-GCP_PROJECT="${GCP_PROJECT:-gcp-eiq}"
+GCP_PROJECT="${GCP_PROJECT:-gcp-kc}"
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
 REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
 SSH_USER="${DEPLOY_USER:-akushnir}"

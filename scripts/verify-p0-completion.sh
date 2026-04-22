@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# @file        scripts/verify-p0-completion.sh
+# @module      /verify-p0-completion
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 # P0 Issues Completion Verification Script
 # Automated verification that both P0 issues are fully resolved
 

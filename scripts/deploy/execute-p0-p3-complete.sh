@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# @file        scripts/deploy/execute-p0-p3-complete.sh
+# @module      deployment/execute-p0-p3-complete
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 ################################################################################
 # P0-P3 Complete Execution Orchestrator
 # Master script to execute all phases in sequence

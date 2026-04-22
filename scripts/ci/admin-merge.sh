@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# @file        scripts/ci/admin-merge.sh
+# @module      ci/admin-merge
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 ################################################################################
 # admin-merge.sh
 # Admin Merge Override - Force merge PRs when CI passes but branch protection blocks

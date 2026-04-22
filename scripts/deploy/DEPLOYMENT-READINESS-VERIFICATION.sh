@@ -1,4 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        scripts/deploy/DEPLOYMENT-READINESS-VERIFICATION.sh
+# @module      deployment/DEPLOYMENT-READINESS-VERIFICATION
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 ################################################################################
 # Phase 14-18 Deployment Readiness Verification
 # Purpose: Comprehensive pre-production validation of all infrastructure

@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# @file        scripts/ci/ci-merge-automation.sh
+# @module      ci/ci-merge-automation
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 ################################################################################
 # ci-merge-automation.sh
 # CI Completion Monitor & Automatic Merge Executor for Phase PRs

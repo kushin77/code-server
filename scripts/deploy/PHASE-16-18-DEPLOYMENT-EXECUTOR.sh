@@ -1,4 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        scripts/deploy/PHASE-16-18-DEPLOYMENT-EXECUTOR.sh
+# @module      deployment/PHASE-16-18-DEPLOYMENT-EXECUTOR
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 ################################################################################
 # PHASE 16-18 PRODUCTION DEPLOYMENT EXECUTOR
 # Executes all infrastructure phases in proper sequence

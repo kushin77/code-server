@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# @file        scripts/error-triage-engine-fixed.sh
+# @module      /error-triage-engine-fixed
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

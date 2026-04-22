@@ -1,4 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        scripts/deploy/deploy-security.sh
+# @module      deployment/deploy-security
+# @description Deployment script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 # Quick deployment script to get security running immediately
 
 set -euo pipefail

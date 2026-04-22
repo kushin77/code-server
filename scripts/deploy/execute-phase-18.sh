@@ -1,4 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        scripts/deploy/execute-phase-18.sh
+# @module      deployment/execute-phase-18
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 ################################################################################
 # PHASE 18 EXECUTION - SECURITY HARDENING & SOC 2 COMPLIANCE
 # Autonomous execution per user directive: "proceed now no waiting"

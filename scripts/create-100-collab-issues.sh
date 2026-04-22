@@ -1,4 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        scripts/create-100-collab-issues.sh
+# @module      /create-100-collab-issues
+# @description Automation script
+#
+# IaC Principles:
+# - Immutable: State frozen after execution, no side effects on re-run
+# - Idempotent: Safe to run multiple times with identical results
+# - Versioned: All changes tracked with audit trail
+
 # Create 100 collaboration platform enhancement issues on GitHub
 
 REPO="kushin77/code-server"

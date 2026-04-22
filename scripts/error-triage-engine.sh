@@ -193,7 +193,7 @@ create_triage_issue() {
 ## Automated Error Triage Report
 
 **Severity**: P1 (Automated Detection)
-**Detected**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+**Detected**: \$(date -u +'%Y-%m-%d %H:%M:%S UTC')
 **Occurrence Count**: ${error_count}
 
 ### Error Pattern

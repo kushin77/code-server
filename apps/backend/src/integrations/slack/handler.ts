@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createHmac } from 'crypto';
 import Redis from 'ioredis';
 
-const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || '';
+const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || (process.env.NODE_ENV === 'test' ? 'test_secret' : '');
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN || '';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const SESSION_TTL_SECONDS = parseInt(process.env.SLACK_SESSION_TTL_SECONDS || '86400'); // 24 hours

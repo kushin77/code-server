@@ -163,6 +163,12 @@ status   = "active"
 purpose  = "TODO: add purpose"
 
 [[script]]
+file     = "deploy-zero-trust-network.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy mTLS rotation, egress policy, and audit visibility for zero-trust networking"
+
+[[script]]
 file     = "deploy-falco.sh"
 category = "uncategorized"
 status   = "active"

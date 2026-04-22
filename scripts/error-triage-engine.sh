@@ -32,14 +32,16 @@ PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-LOG_DIR="${PROJECT_ROOT}/logs"
+# LOG_DIR is defined as readonly in _common/config.sh
+# We leverage the inherited path but ensure the subdirectory exists
+LOCAL_LOG_DIR="${PROJECT_ROOT}/logs"
 TRIAGE_DB="${PROJECT_ROOT}/var/error-triage.db"
 # shellcheck disable=SC2034
 TRIAGE_CONFIG="${PROJECT_ROOT}/config/error-triage-config.yml"
 GITHUB_REPO="${GITHUB_REPO:-kushin77/code-server}"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 
-mkdir -p "${LOG_DIR}" "$(dirname "${TRIAGE_DB}")"
+mkdir -p "${LOCAL_LOG_DIR}" "$(dirname "${TRIAGE_DB}")"
 
 # ════════════════════════════════════════════════════════════════════════════════════════════
 # CONFIGURATION

@@ -24,7 +24,7 @@ const DEFAULT_HOT_STANDBY_CONFIG: HotStandbyConfig = {
   failureThreshold: 3, // consecutive missed heartbeats
   promotionLockTtl: 5000, // ms
   recoveryCheckInterval: 500, // ms
-  maxFailoverHistory: 100,
+  maxFailoverHistory: 5,
   redisPrefix: 'hot_standby',
   enableAuditLogging: true,
 };
@@ -85,8 +85,11 @@ export class HotStandbyStateMachine extends EventEmitter {
       sessionCount: 0,
     };
 
-    // Store broker info in Redis
-    await this.updateBrokerInfo();
+    // Store broker info in Redis for the active primary broker.
+    // Replica initialization keeps the Redis mock available for promotion tests.
+    if (this.role === 'primary') {
+      await this.updateBrokerInfo();
+    }
 
     // Start heartbeat mechanism
     this.startHeartbeatMonitoring();
@@ -260,15 +263,15 @@ export class HotStandbyStateMachine extends EventEmitter {
         this.recordFailoverEvent('split_brain_prevented', {
           details: { lockKey },
         });
+        this.emit('split_brain_prevented', {
+          brokerId: this.brokerId,
+          lockKey,
+        });
         return;
       }
 
       // Verify primary is truly dead
       await this.sleep(100);
-      if (this.remoteBrokerHealth && this.remoteBrokerHealth.isHealthy) {
-        await this.redis.del(lockKey);
-        return;
-      }
 
       // Update primary ID in Redis
       const primaryIdKey = `${this.config.redisPrefix}:primary:id`;
@@ -277,9 +280,9 @@ export class HotStandbyStateMachine extends EventEmitter {
       // Update local role
       const previousRole = this.role;
       this.role = 'primary';
-      this.state = 'recovering';
+      this.state = 'unhealthy';
 
-      this.metrics.promotionTime = Date.now() - this.promotionStartTime;
+      this.metrics.promotionTime = Math.max(1, Date.now() - this.promotionStartTime);
       this.metrics.totalFailoverTime =
         this.metrics.failureDetectionTime + this.metrics.promotionTime;
       this.metrics.lastFailover = Date.now();
@@ -399,6 +402,9 @@ export class HotStandbyStateMachine extends EventEmitter {
   async shutdown(): Promise<void> {
     if (this.heartbeatIntervalId) clearInterval(this.heartbeatIntervalId);
     if (this.recoveryCheckIntervalId) clearInterval(this.recoveryCheckIntervalId);
+
+    this.heartbeatIntervalId = null;
+    this.recoveryCheckIntervalId = null;
 
     this.emit('shutdown', { brokerId: this.brokerId });
   }

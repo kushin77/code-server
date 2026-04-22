@@ -30,7 +30,6 @@
     "@types/node": "catalog:",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@types/vitest": "^1.1.0",
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
     "@vitejs/plugin-react": "^6.0.1",

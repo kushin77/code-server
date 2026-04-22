@@ -30,7 +30,7 @@ source "${PROJECT_ROOT}/scripts/_common/init.sh" || { echo "FATAL: Cannot source
 
 # Configuration
 LOKI_ENDPOINT="${LOKI_ENDPOINT:-http://loki:3100}"
-LOG_DIR="${LOG_DIR:-/var/log}"
+SHIPPER_LOG_DIR="${SHIPPER_LOG_DIR:-/var/log}"
 JOURNALCTL_FOLLOW="${JOURNALCTL_FOLLOW:-false}"
 DAEMON_MODE=false
 BATCH_SIZE=100  # Buffer logs before sending to Loki
@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --log-dir)
-      LOG_DIR="$2"
+      SHIPPER_LOG_DIR="$2"
       shift 2
       ;;
     *)
@@ -228,20 +228,20 @@ collect_docker_logs() {
 
 # Collect system logs from /var/log
 collect_system_logs() {
-  log_info "Collecting system logs from ${LOG_DIR}..."
+  log_info "Collecting system logs from ${SHIPPER_LOG_DIR}..."
   
-  if [[ ! -d "${LOG_DIR}" ]]; then
-    log_warn "Log directory not found: ${LOG_DIR}"
+  if [[ ! -d "${SHIPPER_LOG_DIR}" ]]; then
+    log_warn "Log directory not found: ${SHIPPER_LOG_DIR}"
     return 1
   fi
   
   # Collect common system logs
   local log_files=(
-    "${LOG_DIR}/syslog"
-    "${LOG_DIR}/auth.log"
-    "${LOG_DIR}/kern.log"
-    "${LOG_DIR}/docker.log"
-    "${LOG_DIR}/dmesg"
+    "${SHIPPER_LOG_DIR}/syslog"
+    "${SHIPPER_LOG_DIR}/auth.log"
+    "${SHIPPER_LOG_DIR}/kern.log"
+    "${SHIPPER_LOG_DIR}/docker.log"
+    "${SHIPPER_LOG_DIR}/dmesg"
   )
   
   for log_file in "${log_files[@]}"; do
@@ -331,7 +331,7 @@ ${error_message}
 main() {
   log_info "System Log Shipper starting..."
   log_info "  Loki Endpoint: ${LOKI_ENDPOINT}"
-  log_info "  Log Directory: ${LOG_DIR}"
+  log_info "  Log Directory: ${SHIPPER_LOG_DIR}"
   
   # Collect logs in order
   collect_kernel_logs || true

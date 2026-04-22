@@ -34,6 +34,7 @@ GITHUB_REPO="${GITHUB_REPO:-kushin77/code-server}"
 INSTALL_MODE=false
 DRY_RUN=false
 SYSTEMD_USER="${SYSTEMD_USER:-root}"
+USE_USER_SESSION=false
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -44,6 +45,15 @@ while [[ $# -gt 0 ]]; do
       ;;
     --dry-run)
       DRY_RUN=true
+      shift
+      ;;
+    --user)
+      USE_USER_SESSION=true
+      SYSTEMD_USER="$(whoami)"
+      shift
+      ;;
+    --check)
+      # No-op, just run validation
       shift
       ;;
     --systemd-user)
@@ -129,8 +139,16 @@ install_systemd_services() {
   log_info "Installing systemd services..."
   
   local service_dir="/etc/systemd/system"
+  local cmd_prefix="sudo"
+  local systemctl_cmd="sudo systemctl"
   
-  if [[ ! -d "${service_dir}" ]]; then
+  if [[ "${USE_USER_SESSION}" == "true" ]]; then
+    service_dir="${HOME}/.config/systemd/user"
+    mkdir -p "${service_dir}"
+    cmd_prefix=""
+    systemctl_cmd="systemctl --user"
+    log_info "  Using user-level systemd session (${service_dir})"
+  elif [[ ! -d "${service_dir}" ]]; then
     log_error "Systemd not available"
     return 1
   fi
@@ -140,7 +158,7 @@ install_systemd_services() {
   log_info "  Creating error-triage.service..."
   
   if [[ "${DRY_RUN}" == "false" ]]; then
-    sudo tee "${error_triage_service}" >/dev/null <<EOF
+    ${cmd_prefix} tee "${error_triage_service}" >/dev/null <<EOF
 [Unit]
 Description=Automated Error Triage Engine
 After=network.target docker.service
@@ -148,9 +166,8 @@ Wants=docker.service
 
 [Service]
 Type=simple
-User=${SYSTEMD_USER}
 WorkingDirectory=${PROJECT_ROOT}
-ExecStart=/bin/bash ${SCRIPT_DIR}/error-triage-engine.sh --daemon
+ExecStart=/bin/bash ${PROJECT_ROOT}/scripts/error-triage-engine.sh --daemon
 Restart=always
 RestartSec=30
 
@@ -163,7 +180,7 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 EOF
   else
     log_info "    [DRY-RUN] Would create error-triage.service"
@@ -174,16 +191,15 @@ EOF
   log_info "  Creating haproxy-failover.service..."
   
   if [[ "${DRY_RUN}" == "false" ]]; then
-    sudo tee "${failover_service}" >/dev/null <<EOF
+    ${cmd_prefix} tee "${failover_service}" >/dev/null <<EOF
 [Unit]
 Description=HAProxy Failover Event Logger
 After=network.target docker.service
 
 [Service]
 Type=simple
-User=${SYSTEMD_USER}
 WorkingDirectory=${PROJECT_ROOT}
-ExecStart=/bin/bash ${SCRIPT_DIR}/haproxy-failover-event-logger.sh --daemon --interval 10
+ExecStart=/bin/bash ${PROJECT_ROOT}/scripts/observability/haproxy-failover-event-logger.sh --daemon --interval 10
 Restart=always
 RestartSec=30
 
@@ -198,7 +214,7 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 EOF
   else
     log_info "    [DRY-RUN] Would create haproxy-failover.service"
@@ -206,30 +222,47 @@ EOF
   
   # System Log Shipper service
   local syslog_service="${service_dir}/system-log-shipper.service"
+  local syslog_timer="${service_dir}/system-log-shipper.timer"
   log_info "  Creating system-log-shipper.service..."
   
   if [[ "${DRY_RUN}" == "false" ]]; then
-    sudo tee "${syslog_service}" >/dev/null <<EOF
+    ${cmd_prefix} tee "${syslog_service}" >/dev/null <<EOF
 [Unit]
 Description=System Log Shipper to Loki
 After=network.target
 
 [Service]
 Type=oneshot
-User=${SYSTEMD_USER}
 WorkingDirectory=${PROJECT_ROOT}
-ExecStart=/bin/bash ${SCRIPT_DIR}/system-log-shipper.sh
+ExecStart=/bin/bash ${PROJECT_ROOT}/scripts/observability/system-log-shipper.sh
 StandardOutput=journal
 StandardError=journal
 
-# Run every 5 minutes
-ExecStartPost=/usr/bin/systemctl start system-log-shipper.timer
-
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 EOF
   else
     log_info "    [DRY-RUN] Would create system-log-shipper.service"
+  fi
+
+  log_info "  Creating system-log-shipper.timer..."
+
+  if [[ "${DRY_RUN}" == "false" ]]; then
+    ${cmd_prefix} tee "${syslog_timer}" >/dev/null <<EOF
+[Unit]
+Description=Run System Log Shipper every 5 minutes
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=5m
+Persistent=true
+Unit=system-log-shipper.service
+
+[Install]
+WantedBy=timers.target
+EOF
+  else
+    log_info "    [DRY-RUN] Would create system-log-shipper.timer"
   fi
   
   # Log-to-GitHub Bridge service
@@ -237,16 +270,15 @@ EOF
   log_info "  Creating log-github-bridge.service..."
   
   if [[ "${DRY_RUN}" == "false" ]]; then
-    sudo tee "${bridge_service}" >/dev/null <<EOF
+    ${cmd_prefix} tee "${bridge_service}" >/dev/null <<EOF
 [Unit]
 Description=Log-to-GitHub Bridge (Automated Issue Creation)
 After=network.target docker.service
 
 [Service]
 Type=simple
-User=${SYSTEMD_USER}
 WorkingDirectory=${PROJECT_ROOT}
-ExecStart=/bin/bash ${SCRIPT_DIR}/log-to-github-bridge.sh --daemon --interval 600
+ExecStart=/bin/bash ${PROJECT_ROOT}/scripts/observability/log-to-github-bridge.sh --daemon --interval 600
 Restart=always
 RestartSec=60
 
@@ -258,7 +290,7 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 EOF
   else
     log_info "    [DRY-RUN] Would create log-github-bridge.service"
@@ -267,10 +299,16 @@ EOF
   # Reload systemd and enable services
   if [[ "${DRY_RUN}" == "false" ]]; then
     log_info "  Enabling and starting services..."
-    sudo systemctl daemon-reload
-    sudo systemctl enable error-triage.service
-    sudo systemctl enable haproxy-failover.service
-    sudo systemctl enable log-github-bridge.service
+    ${systemctl_cmd} daemon-reload
+    ${systemctl_cmd} enable error-triage.service
+    ${systemctl_cmd} enable haproxy-failover.service
+    ${systemctl_cmd} enable log-github-bridge.service
+    ${systemctl_cmd} enable system-log-shipper.timer
+    ${systemctl_cmd} start error-triage.service
+    ${systemctl_cmd} start haproxy-failover.service
+    ${systemctl_cmd} start log-github-bridge.service
+    ${systemctl_cmd} start system-log-shipper.service
+    ${systemctl_cmd} start system-log-shipper.timer
     
     log_success "Systemd services installed and enabled"
   else

@@ -13,6 +13,51 @@ REPLICA_HOST="192.168.168.42"
 DEPLOY_USER="akushnir"
 REPO_PATH="~/code-server-enterprise"
 
+TARGET_HOST=""
+TARGET_LABEL=""
+
+usage() {
+  cat <<'EOF'
+Usage: bash scripts/ops/direct-deploy-logging-pipeline.sh [--host <ip>]
+
+Options:
+  --host <ip>   Deploy only to the specified host. Defaults to both primary and replica.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --host)
+      TARGET_HOST="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -n "$TARGET_HOST" ]]; then
+  case "$TARGET_HOST" in
+    "$PRIMARY_HOST")
+      TARGET_LABEL="PRIMARY"
+      ;;
+    "$REPLICA_HOST")
+      TARGET_LABEL="REPLICA"
+      ;;
+    *)
+      echo "Unsupported host: $TARGET_HOST" >&2
+      exit 1
+      ;;
+  esac
+fi
+
 deploy_host() {
   local host="$1"
   local label="$2"
@@ -41,21 +86,30 @@ echo "║ Direct IaC Logging Pipeline Deployment (Idempotent & Immutable)      �
 echo "╚════════════════════════════════════════════════════════════════════════╝"
 echo ""
 
-# Deploy to primary
-if deploy_host "$PRIMARY_HOST" "PRIMARY"; then
-  echo "✓ PRIMARY deployment successful"
+if [[ -n "$TARGET_HOST" ]]; then
+  if deploy_host "$TARGET_HOST" "$TARGET_LABEL"; then
+    echo "✓ ${TARGET_LABEL} deployment successful"
+  else
+    echo "✗ ${TARGET_LABEL} deployment failed"
+    exit 1
+  fi
 else
-  echo "✗ PRIMARY deployment failed"
-  exit 1
-fi
+  # Deploy to primary
+  if deploy_host "$PRIMARY_HOST" "PRIMARY"; then
+    echo "✓ PRIMARY deployment successful"
+  else
+    echo "✗ PRIMARY deployment failed"
+    exit 1
+  fi
 
-echo ""
+  echo ""
 
-# Deploy to replica
-if deploy_host "$REPLICA_HOST" "REPLICA"; then
-  echo "✓ REPLICA deployment successful"
-else
-  echo "⚠ REPLICA deployment failed (primary succeeded, continuing)"
+  # Deploy to replica
+  if deploy_host "$REPLICA_HOST" "REPLICA"; then
+    echo "✓ REPLICA deployment successful"
+  else
+    echo "⚠ REPLICA deployment failed (primary succeeded, continuing)"
+  fi
 fi
 
 echo ""

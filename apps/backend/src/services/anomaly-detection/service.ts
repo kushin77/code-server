@@ -110,17 +110,6 @@ export class AnomalyDetectionService {
         };
       }
 
-      if (this.isInGracePeriod(profile)) {
-        return {
-          sessionId: event.sessionId,
-          userId: event.userId,
-          timestamp: event.timestamp,
-          isAnomaly: false,
-          alerts: [],
-          processingTimeMs: Date.now() - startTime,
-        };
-      }
-
       const anomalyScore = this.engine.scoreSession(event, profile);
       let alerts: AnomalyAlert[] = [];
       const isAnomaly = anomalyScore.overallScore >= this.config.anomalyScoreThreshold;

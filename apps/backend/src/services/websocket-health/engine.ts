@@ -105,6 +105,8 @@ export class WebSocketHealthEngine {
       conn.reconnectionAttempts++;
     }
 
+    this.calculateHealthScore(conn);
+
     this.recordEvent({
       type:
         state === 'connected'
@@ -154,6 +156,7 @@ export class WebSocketHealthEngine {
 
     // Check for latency spikes
     this.checkLatencyHealth(conn);
+    this.calculateHealthScore(conn);
 
     return measurement;
   }
@@ -168,6 +171,7 @@ export class WebSocketHealthEngine {
     conn.messagesReceived++;
     conn.lastHeartbeatAt = Date.now();
     this.updateDeliveryRate(conn);
+    this.calculateHealthScore(conn);
   }
 
   /**
@@ -180,6 +184,7 @@ export class WebSocketHealthEngine {
     conn.messagesLost += count;
     this.updateDeliveryRate(conn);
     this.checkMessageLossHealth(conn);
+    this.calculateHealthScore(conn);
   }
 
   /**
@@ -189,6 +194,7 @@ export class WebSocketHealthEngine {
     const conn = this.connections.get(connectionId);
     if (!conn) return;
 
+    conn.reconnectionAttempts++;
     conn.reconnectionFailures++;
     conn.state = 'disconnected';
 
@@ -201,6 +207,8 @@ export class WebSocketHealthEngine {
       });
       conn.isHealthy = false;
     }
+
+    this.calculateHealthScore(conn);
   }
 
   /**
@@ -212,6 +220,7 @@ export class WebSocketHealthEngine {
 
     conn.state = 'disconnected';
     conn.error = error;
+    this.calculateHealthScore(conn);
 
     this.recordEvent({
       type: 'disconnected',

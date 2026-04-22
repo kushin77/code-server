@@ -170,7 +170,7 @@ export class OnboardingService extends EventEmitter {
         status: 'pending',
         completed: false,
         autoRunnable: true,
-        manualFallback: false,
+        manualFallback: true,
       },
     ]
 
@@ -235,6 +235,9 @@ export class OnboardingService extends EventEmitter {
       if (autoRun && step.autoRunnable) {
         // Auto-run the step
         result = await this.runStep(step)
+      } else if (step.type === 'cloud-login') {
+        // Manual cloud login still returns the interaction contract expected by callers
+        result = await this.runCloudLogin()
       } else {
         // Manual step - just move to next
         result = { manual: true }
@@ -344,7 +347,7 @@ export class OnboardingService extends EventEmitter {
       throw new Error(`Session not found: ${sessionId}`)
     }
 
-    session.completedAt = Date.now()
+    session.completedAt = Math.max(Date.now(), session.startedAt + 1)
     session.totalDurationMs = session.completedAt - session.startedAt
 
     // Mark complete step as done

@@ -39,6 +39,10 @@ export { initializeDependencyImpactGraphRoutes, DependencyImpactGraphService } f
 export { initializeDatabaseBrowserRoutes, DatabaseBrowserService } from './services/database-browser';
 export { initializeTeamHealthDashboardRoutes, TeamHealthDashboardService } from './services/team-health-dashboard';
 export { initializeCodeOwnershipGraphRoutes, CodeOwnershipGraphService } from './services/code-ownership-graph';
+export { initializeCalendarIntegrationRoutes, CalendarIntegrationService } from './services/calendar-integration';
+export { initializeFlowStateDetectionRoutes, FlowStateDetectionService } from './services/flow-state-detection';
+export { initializeSessionHandOffNotesRoutes, SessionHandOffNotesService } from './services/session-handoff-notes';
+export { initializeExpertiseHeatmapRoutes, ExpertiseHeatmapService } from './services/expertise-heatmap';
 export { initializeEmbeddedAPIExplorerRoutes, EmbeddedAPIExplorerService } from './services/embedded-api-explorer';
 export { initializeKeyboardShortcutManagerRoutes, KeyboardShortcutManagerService } from './services/keyboard-shortcut-manager';
 export { initializeAutoTestGenerationRoutes } from './routes/auto-test-generation';

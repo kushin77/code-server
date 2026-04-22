@@ -24,7 +24,7 @@ resource "cloudflare_zero_trust_access_application" "grafana" {
   session_duration = "8h"
 
   auto_redirect_to_identity = false
-  allowed_idps               = [cloudflare_access_identity_provider.google.id]
+  allowed_idps               = [cloudflare_zero_trust_access_identity_provider.google.id]
 
   cors_headers {
     allow_credentials = true
@@ -35,9 +35,9 @@ resource "cloudflare_zero_trust_access_application" "grafana" {
   }
 }
 
-resource "cloudflare_access_policy" "grafana_allow" {
+resource "cloudflare_zero_trust_access_policy" "grafana_allow" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.grafana.id
+  application_id = cloudflare_zero_trust_access_application.grafana.id
   name           = "Allow allowed-emails with Google auth"
   decision       = "allow"
   precedence     = 1
@@ -55,9 +55,9 @@ resource "cloudflare_access_policy" "grafana_allow" {
   }
 }
 
-resource "cloudflare_access_policy" "grafana_bypass_localhost" {
+resource "cloudflare_zero_trust_access_policy" "grafana_bypass_localhost" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.grafana.id
+  application_id = cloudflare_zero_trust_access_application.grafana.id
   name           = "Bypass — deploy host localhost"
   decision       = "bypass"
   precedence     = 0
@@ -78,12 +78,12 @@ resource "cloudflare_zero_trust_access_application" "prometheus" {
   session_duration = "8h"
 
   auto_redirect_to_identity = false
-  allowed_idps               = [cloudflare_access_identity_provider.google.id]
+  allowed_idps               = [cloudflare_zero_trust_access_identity_provider.google.id]
 }
 
-resource "cloudflare_access_policy" "prometheus_allow" {
+resource "cloudflare_zero_trust_access_policy" "prometheus_allow" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.prometheus.id
+  application_id = cloudflare_zero_trust_access_application.prometheus.id
   name           = "Allow allowed-emails with Google auth"
   decision       = "allow"
   precedence     = 1
@@ -100,9 +100,9 @@ resource "cloudflare_access_policy" "prometheus_allow" {
   }
 }
 
-resource "cloudflare_access_policy" "prometheus_bypass_localhost" {
+resource "cloudflare_zero_trust_access_policy" "prometheus_bypass_localhost" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.prometheus.id
+  application_id = cloudflare_zero_trust_access_application.prometheus.id
   name           = "Bypass — deploy host localhost"
   decision       = "bypass"
   precedence     = 0
@@ -123,12 +123,12 @@ resource "cloudflare_zero_trust_access_application" "alertmanager" {
   session_duration = "8h"
 
   auto_redirect_to_identity = false
-  allowed_idps               = [cloudflare_access_identity_provider.google.id]
+  allowed_idps               = [cloudflare_zero_trust_access_identity_provider.google.id]
 }
 
-resource "cloudflare_access_policy" "alertmanager_allow" {
+resource "cloudflare_zero_trust_access_policy" "alertmanager_allow" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.alertmanager.id
+  application_id = cloudflare_zero_trust_access_application.alertmanager.id
   name           = "Allow allowed-emails with Google auth"
   decision       = "allow"
   precedence     = 1
@@ -145,9 +145,9 @@ resource "cloudflare_access_policy" "alertmanager_allow" {
   }
 }
 
-resource "cloudflare_access_policy" "alertmanager_bypass_localhost" {
+resource "cloudflare_zero_trust_access_policy" "alertmanager_bypass_localhost" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.alertmanager.id
+  application_id = cloudflare_zero_trust_access_application.alertmanager.id
   name           = "Bypass — deploy host localhost"
   decision       = "bypass"
   precedence     = 0
@@ -160,7 +160,7 @@ resource "cloudflare_access_policy" "alertmanager_bypass_localhost" {
 # ─────────────────────────────────────────────────────────────────────────────
 # Cloudflare Access: Jaeger
 # ─────────────────────────────────────────────────────────────────────────────
-resource "cloudflare_access_application" "jaeger" {
+resource "cloudflare_zero_trust_access_application" "jaeger" {
   account_id       = var.cloudflare_account_id
   name             = "Jaeger — ${var.apex_domain}"
   domain           = "jaeger.${var.apex_domain}"
@@ -168,12 +168,12 @@ resource "cloudflare_access_application" "jaeger" {
   session_duration = "8h"
 
   auto_redirect_to_identity = false
-  allowed_idps               = [cloudflare_access_identity_provider.google.id]
+  allowed_idps               = [cloudflare_zero_trust_access_identity_provider.google.id]
 }
 
-resource "cloudflare_access_policy" "jaeger_allow" {
+resource "cloudflare_zero_trust_access_policy" "jaeger_allow" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.jaeger.id
+  application_id = cloudflare_zero_trust_access_application.jaeger.id
   name           = "Allow allowed-emails with Google auth"
   decision       = "allow"
   precedence     = 1
@@ -190,9 +190,9 @@ resource "cloudflare_access_policy" "jaeger_allow" {
   }
 }
 
-resource "cloudflare_access_policy" "jaeger_bypass_localhost" {
+resource "cloudflare_zero_trust_access_policy" "jaeger_bypass_localhost" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.jaeger.id
+  application_id = cloudflare_zero_trust_access_application.jaeger.id
   name           = "Bypass — deploy host localhost"
   decision       = "bypass"
   precedence     = 0
@@ -205,7 +205,7 @@ resource "cloudflare_access_policy" "jaeger_bypass_localhost" {
 # ─────────────────────────────────────────────────────────────────────────────
 # Google as Identity Provider
 # ─────────────────────────────────────────────────────────────────────────────
-resource "cloudflare_access_identity_provider" "google" {
+resource "cloudflare_zero_trust_access_identity_provider" "google" {
   account_id = var.cloudflare_account_id
   name       = "Google"
   type       = "google"
@@ -219,41 +219,41 @@ resource "cloudflare_access_identity_provider" "google" {
 # ─────────────────────────────────────────────────────────────────────────────
 # Service Tokens for CI/CD pipelines
 # ─────────────────────────────────────────────────────────────────────────────
-resource "cloudflare_access_service_token" "ci_prometheus" {
+resource "cloudflare_zero_trust_access_service_token" "ci_prometheus" {
   account_id = var.cloudflare_account_id
   name       = "CI — Prometheus scrape (expires 90d)"
   min_days_for_renewal = 7
 }
 
-resource "cloudflare_access_service_token" "ci_grafana" {
+resource "cloudflare_zero_trust_access_service_token" "ci_grafana" {
   account_id = var.cloudflare_account_id
   name       = "CI — Grafana API (expires 90d)"
   min_days_for_renewal = 7
 }
 
 # Allow service tokens to access Prometheus (for CI health checks)
-resource "cloudflare_access_policy" "prometheus_ci_token" {
+resource "cloudflare_zero_trust_access_policy" "prometheus_ci_token" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.prometheus.id
+  application_id = cloudflare_zero_trust_access_application.prometheus.id
   name           = "Allow CI service token"
   decision       = "non_identity"
   precedence     = 2
 
   include {
-    service_token = [cloudflare_access_service_token.ci_prometheus.id]
+    service_token = [cloudflare_zero_trust_access_service_token.ci_prometheus.id]
   }
 }
 
 # Allow service tokens to access Grafana (for CI dashboard checks)
-resource "cloudflare_access_policy" "grafana_ci_token" {
+resource "cloudflare_zero_trust_access_policy" "grafana_ci_token" {
   account_id     = var.cloudflare_account_id
-  application_id = cloudflare_access_application.grafana.id
+  application_id = cloudflare_zero_trust_access_application.grafana.id
   name           = "Allow CI service token"
   decision       = "non_identity"
   precedence     = 2
 
   include {
-    service_token = [cloudflare_access_service_token.ci_grafana.id]
+    service_token = [cloudflare_zero_trust_access_service_token.ci_grafana.id]
   }
 }
 

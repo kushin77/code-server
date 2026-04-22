@@ -31,11 +31,27 @@ set +a
 
 # Fill in any missing values with defaults
 echo "Phase 3: Setting missing values..."
-GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-${VAULT_GRAFANA_PASSWORD:-admin123}}"
-CODE_SERVER_PASSWORD="${CODE_SERVER_PASSWORD:-${VAULT_CODE_SERVER_PASSWORD:-code123}}"
+GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-${VAULT_GRAFANA_PASSWORD:-}}"
+if [ -z "$GRAFANA_PASSWORD" ]; then
+  echo "ERROR: GRAFANA_PASSWORD must be provided via environment or GSM-backed vault secret"
+  exit 1
+fi
+CODE_SERVER_PASSWORD="${CODE_SERVER_PASSWORD:-${VAULT_CODE_SERVER_PASSWORD:-}}"
+if [ -z "$CODE_SERVER_PASSWORD" ]; then
+  echo "ERROR: CODE_SERVER_PASSWORD must be provided via environment or GSM-backed vault secret (VAULT_CODE_SERVER_PASSWORD)"
+  exit 1
+fi
 OAUTH2_PROXY_COOKIE_SECRET="${OAUTH2_PROXY_COOKIE_SECRET:-${VAULT_OAUTH2_PROXY_COOKIE_SECRET:-}}"
-POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-${VAULT_POSTGRES_PASSWORD:-postgres123}}"
-REDIS_PASSWORD="${REDIS_PASSWORD:-${VAULT_REDIS_PASSWORD:-redis123}}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-${VAULT_POSTGRES_PASSWORD:-}}"
+if [ -z "$POSTGRES_PASSWORD" ]; then
+  echo "ERROR: POSTGRES_PASSWORD must be provided via environment or GSM-backed vault secret (VAULT_POSTGRES_PASSWORD)"
+  exit 1
+fi
+REDIS_PASSWORD="${REDIS_PASSWORD:-${VAULT_REDIS_PASSWORD:-}}"
+if [ -z "$REDIS_PASSWORD" ]; then
+  echo "ERROR: REDIS_PASSWORD must be provided via environment or GSM-backed vault secret (VAULT_REDIS_PASSWORD)"
+  exit 1
+fi
 CODE_SERVER_IMAGE_ID="${CODE_SERVER_IMAGE_ID:-a7c1eb39d243}"
 SESSION_PROVENANCE_VERIFIED_AT="${SESSION_PROVENANCE_VERIFIED_AT:-$(date -u +%s)}"
 SESSION_BROKER_SECRET_KEY="${SESSION_BROKER_SECRET_KEY:-default-dev-secret-key-not-secure}"
@@ -77,5 +93,5 @@ echo "  - Replica:  192.168.168.42 (standby/HA)"
 echo ""
 echo "Access points:"
 echo "  - Code-server: http://code-server.192.168.168.31.nip.io:8080"
-echo "  - Grafana: http://192.168.168.31:3000 (admin/admin123)"
+echo "  - Grafana: http://192.168.168.31:3000 (credentials via GSM)"
 echo "  - Failover: Automatic via Caddy health checks + Sentinel"

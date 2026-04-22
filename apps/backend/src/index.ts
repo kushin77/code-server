@@ -31,6 +31,7 @@ export { initializeActivityFeedRoutes, ActivityFeedService } from './routes/acti
 export { initializeGuestSessionRoutes, GuestSessionService } from './routes/guest-sessions';
 export { initializeSharedPromptLibraryRoutes, SharedPromptLibraryService } from './routes/shared-prompt-library';
 export { initializeAIReviewerRouterRoutes, AIReviewerRouterService } from './routes/ai-reviewer-router';
+export { initializeRichPresenceRoutes, RichPresenceService } from './routes/rich-presence';
 export { initializeSessionReplayTimelineRoutes, SessionReplayTimelineService } from './services/session-replay-timeline';
 export { initializeCapacityForecastingRoutes, CapacityForecastingService } from './services/capacity-forecasting';
 export { initializeFunnelAnalyticsRoutes, FunnelAnalyticsService } from './services/funnel-analytics';

@@ -18,6 +18,9 @@ const slackService = new SlackSlashCommandsService({
     workspaceUrl: process.env.WORKSPACE_URL || 'https://ide.kushnir.cloud',
 });
 
+// Idempotency cache for Slack commands
+const slackCommandCache = new Map(); // triggerId → commandResult
+
 // Event listeners
 slackService.on('code-review-created', (context) => {
     console.log(`[Slack] Code review session: ${context.sessionId}`);
@@ -70,6 +73,16 @@ app.post('/slack/commands', (req, res) => {
             : body;
         
         const slashCommand = command.command || command.get('command');
+        const triggerId = command.trigger_id || command.get('trigger_id');
+        
+        // Idempotency check - Slack trigger_id is unique per command invocation
+        if (triggerId && slackCommandCache.has(triggerId)) {
+            const cachedResult = slackCommandCache.get(triggerId);
+            return res.json({
+                ...cachedResult,
+                cached: true
+            });
+        }
         
         // Handle command
         let result;
@@ -81,7 +94,7 @@ app.post('/slack/commands', (req, res) => {
                 user_name: command.user_name || command.get('user_name'),
                 channel_id: command.channel_id || command.get('channel_id'),
                 channel_name: command.channel_name || command.get('channel_name'),
-                trigger_id: command.trigger_id || command.get('trigger_id'),
+                trigger_id: triggerId,
                 text: command.text || command.get('text'),
             });
         } else if (slashCommand === '/workspace-share') {
@@ -91,13 +104,25 @@ app.post('/slack/commands', (req, res) => {
                 user_name: command.user_name || command.get('user_name'),
                 channel_id: command.channel_id || command.get('channel_id'),
                 channel_name: command.channel_name || command.get('channel_name'),
-                trigger_id: command.trigger_id || command.get('trigger_id'),
+                trigger_id: triggerId,
                 text: command.text || command.get('text'),
             });
         }
         
-        res.json({
-            response_type: 'in_channel',
+        // Freeze result for immutability and cache for idempotency
+        const frozenResult = Object.freeze({
+            response_type: result.response_type || 'in_channel',
+            text: result.text,
+            blocks: result.blocks ? Object.freeze(result.blocks) : undefined,
+            cached: false,
+            timestamp: new Date().toISOString()
+        });
+        
+        if (triggerId) {
+            slackCommandCache.set(triggerId, frozenResult);
+        }
+        
+        res.json(frozenResult);
             blocks: [
                 {
                     type: 'section',

@@ -27,6 +27,9 @@ const analyzer = new SentryErrorAnalyzer({
     cache: true
 });
 
+// Idempotency cache for fix suggestions
+const fixSuggestionCache = new Map(); // idempotencyKey → fixSuggestion
+
 // Event listeners for logging
 sentryService.on('errors-fetched', (data) => {
     console.log(`[Sentry API] ✅ Fetched ${data.count} errors from ${data.projects.join(', ')}`);
@@ -123,6 +126,16 @@ app.get('/api/sentry/errors/:eventId', async (req, res) => {
 app.post('/api/sentry/ai-fix', async (req, res) => {
     try {
         const { errorId, projectSlug = 'code-server', stackTrace, errorMessage, errorType } = req.body;
+        const idempotencyKey = req.headers['x-idempotency-key'] || `fix-${errorId}-${Date.now()}`;
+        
+        // Idempotency check
+        if (fixSuggestionCache.has(idempotencyKey)) {
+            return res.status(200).json({
+                success: true,
+                cached: true,
+                suggestion: fixSuggestionCache.get(idempotencyKey)
+            });
+        }
         
         // Prepare context for AI analysis
         const aiContext = await sentryService.prepareAIContext(
@@ -133,17 +146,26 @@ app.post('/api/sentry/ai-fix', async (req, res) => {
         // Generate fix suggestion
         const suggestion = await analyzer.generateFixSuggestion(aiContext);
         
+        // Freeze suggestion for immutability
+        const frozenSuggestion = Object.freeze({
+            errorId,
+            fix: suggestion.fix,
+            explanation: suggestion.explanation,
+            confidence: suggestion.confidence,
+            codeSnippet: suggestion.codeSnippet,
+            testCase: suggestion.testCase,
+            relatedDocs: suggestion.relatedDocs,
+            generatedAt: new Date().toISOString(),
+            version: 1
+        });
+        
+        // Cache for idempotency
+        fixSuggestionCache.set(idempotencyKey, frozenSuggestion);
+        
         res.json({
             success: true,
-            suggestion: {
-                errorId,
-                fix: suggestion.fix,
-                explanation: suggestion.explanation,
-                confidence: suggestion.confidence,
-                codeSnippet: suggestion.codeSnippet,
-                testCase: suggestion.testCase,
-                relatedDocs: suggestion.relatedDocs
-            }
+            cached: false,
+            suggestion: frozenSuggestion
         });
     } catch (error) {
         res.status(500).json({

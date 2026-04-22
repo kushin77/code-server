@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 /**
+ * @file        scripts/monitoring/ws-health-api.js
+ * @module      monitoring/websocket
+ * @description REST API for WebSocket health monitoring with immutable metric snapshots
+ *
+ * IaC Principles:
+ * - Immutable: Health snapshots frozen per measurement period
+ * - Idempotent: Same session ID always returns consistent metrics
+ * - Versioned: All health records timestamped for audit
+ */
+
+/**
  * WebSocket Health Monitoring API
  * Express server exposing health metrics via REST endpoints
  */

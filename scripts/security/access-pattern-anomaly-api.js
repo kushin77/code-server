@@ -1,5 +1,17 @@
 #!/usr/bin/env node
 /**
+ * @file        scripts/security/access-pattern-anomaly-api.js
+ * @module      security/anomaly
+ * @description REST API for access pattern anomaly detection with immutable model snapshots
+ *
+ * IaC Principles:
+ * - Immutable: Trained models frozen after training
+ * - Immutable: Anomaly scores frozen once computed
+ * - Idempotent: Same access patterns produce same anomaly scores
+ * - Versioned: Model versions with timestamps for audit trail
+ */
+
+/**
  * Access Pattern Anomaly Detection API
  * REST API for anomaly detection and alerting
  */

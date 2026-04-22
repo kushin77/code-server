@@ -1,5 +1,17 @@
 #!/usr/bin/env node
 /**
+ * @file        scripts/security/access-pattern-anomaly-detector.js
+ * @module      security/anomaly
+ * @description Access pattern anomaly detection using Isolation Forest ML
+ *
+ * IaC Principles:
+ * - Immutable: Baselines frozen once trained
+ * - Immutable: Trained forest models never mutated after training
+ * - Idempotent: Same access patterns = same anomaly score
+ * - Versioned: Model versions for audit trail and rollback
+ */
+
+/**
  * Access Pattern Anomaly Detector
  * Uses Isolation Forest ML to detect anomalous user access patterns
  * Baselines: login time, files accessed, session duration

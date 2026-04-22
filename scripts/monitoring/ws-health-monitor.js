@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 /**
+ * @file        scripts/monitoring/ws-health-monitor.js
+ * @module      monitoring/websocket
+ * @description WebSocket health monitoring with immutable metrics snapshots
+ *
+ * IaC Principles:
+ * - Immutable: Health snapshots frozen after each measurement period
+ * - Idempotent: Same connection state = same quality score
+ * - Versioned: Metric history timestamps for audit trail
+ */
+
+/**
  * WebSocket Health Monitoring Service
  * Tracks per-connection: latency, jitter, packet loss, quality score (0-100)
  * Implements auto-reconnect with exponential backoff

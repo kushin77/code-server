@@ -3,11 +3,16 @@ set -euo pipefail
 
 cd code-server-enterprise-ops
 
-# Load production environment
+# Load production environment safely
 echo "Loading production environment..."
 if [ -f .env.production ]; then
-  # shellcheck disable=SC2046
-  export $(cat .env.production | grep -v '^#' | xargs)
+  # Use safe environment loading instead of xargs
+  while IFS='=' read -r key value; do
+    # Skip comments and empty lines
+    [[ $key =~ ^[[:space:]]*# ]] && continue
+    [[ -z "$key" ]] && continue
+    export "$key=$value"
+  done < .env.production
   echo "✓ Production environment loaded"
 fi
 

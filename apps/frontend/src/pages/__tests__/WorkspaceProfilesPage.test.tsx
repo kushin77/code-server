@@ -81,6 +81,7 @@ describe('WorkspaceProfilesPage', () => {
     expect(screen.getByText('Collaborative debugging')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Create shared session' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Relay step action' })).toBeTruthy()
+    expect(screen.getByText('AI debug insights')).toBeTruthy()
   })
 
   it('shows an auto-config preview when project markers are available', () => {

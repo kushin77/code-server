@@ -14,6 +14,7 @@ import {
   type DebugStepAction,
   type DebugVariableSnapshot,
 } from '../utils/debugCollaboration'
+import { analyzeDebugSession, type DebugSessionInsight } from '../utils/debugSessionInsights'
 
 export type CollaborativeDebuggingPanelProps = {
   workspaceId: string
@@ -60,6 +61,7 @@ export function CollaborativeDebuggingPanel({
   const [variableValue, setVariableValue] = useState('ready')
   const [stepAction, setStepAction] = useState<DebugStepAction>('next')
   const [stepNote, setStepNote] = useState('')
+  const insights = useMemo<DebugSessionInsight[]>(() => analyzeDebugSession(session), [session])
 
   const refreshSession = useCallback(
     async (nextSessionId?: string) => {
@@ -448,6 +450,27 @@ export function CollaborativeDebuggingPanel({
                 ))
               ) : (
                 <p className="text-slate-500">No step activity recorded yet.</p>
+              )}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-violet-200 bg-violet-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">AI debug insights</p>
+            <div className="mt-2 space-y-3 text-sm text-slate-700">
+              {insights.length ? (
+                insights.map((insight) => (
+                  <div key={insight.title} className="rounded-xl border border-violet-200 bg-white px-3 py-2 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold text-slate-900">{insight.title}</p>
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-violet-700">{Math.round(insight.confidence)}%</p>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">Root cause: {insight.rootCause}</p>
+                    <p className="mt-1 text-xs text-slate-700">Fix: {insight.fixApproach}</p>
+                    <p className="mt-1 text-xs text-slate-500">Docs: {insight.relevantDocs.join(', ')}</p>
+                    {insight.evidence.length ? <p className="mt-1 text-xs text-slate-500">Evidence: {insight.evidence.join(' · ')}</p> : null}
+                  </div>
+                ))
+              ) : (
+                <p className="text-slate-500">Capture or join a session to generate debug insights.</p>
               )}
             </div>
           </div>

@@ -1,4 +1,10 @@
 #!/usr/bin/env pwsh
+# ⚠️  GOVERNANCE NOTE (Rule 10 - Linux-Native Only)
+# This is a Windows PowerShell script. The repository runs EXCLUSIVELY on Linux.
+# This script should be converted to bash or removed in future refactoring.
+# For now, it's kept as a Windows development utility only.
+# NOT PART OF PRODUCTION INFRASTRUCTURE - Use only for local Windows dev environment
+#
 # P0 Issues Completion Verification Script (PowerShell)
 # Automated verification that both P0 issues are fully resolved
 

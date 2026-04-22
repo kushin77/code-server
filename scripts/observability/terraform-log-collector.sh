@@ -116,15 +116,15 @@ parse_terraform_output() {
     level="WARN"
     should_log=true
   # Detect resource operations
-  elif [[ "${line}" =~ ^(Apply\ complete|aws_|google_|azurerm_|docker_|postgresql_|random_).* ]]; then
+  elif [[ "${line}" =~ Apply\ complete|aws_|google_|azurerm_|docker_|postgresql_|random_ ]]; then
     level="INFO"
     should_log=true
   # Detect plan operations
-  elif [[ "${line}" =~ \(# will\ be|# must\ be|# will\ be\ added|# will\ be\ destroyed\) ]]; then
+  elif [[ "${line}" =~ (#\ will\ be|#\ must\ be|#\ will\ be\ added|#\ will\ be\ destroyed) ]]; then
     level="DEBUG"
     should_log=true
   # Detect network/timeout issues
-  elif [[ "${line}" =~ (timeout|Timeout|TIMEOUT|connection refused|Connection refused|503|502|504|dial tcp) ]]; then
+  elif [[ "${line}" =~ (timeout|Timeout|TIMEOUT|connection\ refused|503|502|504) ]]; then
     level="ERROR"
     should_log=true
   fi

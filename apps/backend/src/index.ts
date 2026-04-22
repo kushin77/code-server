@@ -37,9 +37,12 @@ export { initializeFunnelAnalyticsRoutes, FunnelAnalyticsService } from './servi
 export { initializeIDEPerformanceProfilerRoutes, IDEPerformanceProfilerService } from './services/ide-performance-profiler';
 export { initializeDependencyImpactGraphRoutes, DependencyImpactGraphService } from './services/dependency-impact-graph';
 export { initializeDatabaseBrowserRoutes, DatabaseBrowserService } from './services/database-browser';
+export { initializeTeamHealthDashboardRoutes, TeamHealthDashboardService } from './services/team-health-dashboard';
+export { initializeCodeOwnershipGraphRoutes, CodeOwnershipGraphService } from './services/code-ownership-graph';
 export { initializeEmbeddedAPIExplorerRoutes, EmbeddedAPIExplorerService } from './services/embedded-api-explorer';
 export { initializeKeyboardShortcutManagerRoutes, KeyboardShortcutManagerService } from './services/keyboard-shortcut-manager';
-export { initializeAutoTestGenerationRoutes, AutoTestGenerationService } from './routes/auto-test-generation';
+export { initializeAutoTestGenerationRoutes } from './routes/auto-test-generation';
+export { AutoTestGenerationService } from './services/auto-test-generation';
 export { default as onboardingRouter } from './routes/onboarding';
 export { default as sloRouter } from './routes/slo';
 export { default as anomalyRouter } from './routes/anomaly';

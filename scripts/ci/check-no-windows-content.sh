@@ -21,18 +21,47 @@ PS_PATTERNS=(
   'Write-Error'
   'Write-Verbose'
   'Get-Content'
+  'powershell\.exe'
+  'node\.exe'
+  'npx\.cmd'
+  'npx\.exe'
+  'gh\.exe'
+  'ssh\.exe'
+  'wslpath'
 )
 
 # Windows path patterns
 WIN_PATH_PATTERNS=(
   '[A-Za-z]:\\\\[A-Za-z]'          # C:\foo\bar
   '\\\\\\\\[A-Za-z0-9._-]+\\[A-Za-z0-9._-]+'  # \\server\share UNC path
+  '/mnt/c/'                         # WSL Windows host path
+  '\$APPDATA'                       # Windows env var
+  '\$USERPROFILE'                   # Windows env var
+  '\$LOCALAPPDATA'                  # Windows env var
 )
 
 # CRLF: checked separately via git
 
 fail=0
 violations=()
+
+# ── check for .ps1 files outside deprecated/windows/ ──────────────────────────
+PS1_FILES="$(find . -name "*.ps1" ! -path "*/deprecated/windows/*" ! -path "*/node_modules/*" -type f 2>/dev/null || true)"
+if [[ -n "$PS1_FILES" ]]; then
+  while IFS= read -r f; do
+    violations+=("$f: PowerShell file (.ps1) found outside deprecated/windows/")
+    fail=1
+  done <<< "$PS1_FILES"
+fi
+
+# ── check for .bat files anywhere ───────────────────────────────────────────────
+BAT_FILES="$(find . -name "*.bat" ! -path "*/node_modules/*" -type f 2>/dev/null || true)"
+if [[ -n "$BAT_FILES" ]]; then
+  while IFS= read -r f; do
+    violations+=("$f: Batch file (.bat) found")
+    fail=1
+  done <<< "$BAT_FILES"
+fi
 
 check_file() {
   local f="$1"
@@ -48,8 +77,8 @@ check_file() {
     return 0
   fi
 
-  # Check PowerShell patterns (only in .sh, .py, .tf — not in PS1 which is expected)
-  if [[ "$f" =~ \.(sh|bash|py|tf)$ ]]; then
+  # Check PowerShell patterns (in .sh, .bash, .py, .tf, .ts, .js)
+  if [[ "$f" =~ \.(sh|bash|py|tf|ts|js)$ ]]; then
     for pat in "${PS_PATTERNS[@]}"; do
       if grep -qE "$pat" "$f" 2>/dev/null; then
         violations+=("$f: PowerShell pattern detected: $pat")

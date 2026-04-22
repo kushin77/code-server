@@ -98,7 +98,7 @@ if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_ID" ];
     warning "Cloudflare credentials incomplete. Would revoke in production."
 else
     # Call Cloudflare API to revoke access
-    # curl -X DELETE "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/access/apps/${CLOUDFLARE_ID}" \
+    # curl -X DELETE "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/zero_trust/access/apps/${CLOUDFLARE_ID}" \
     #   -H "Authorization: Bearer ${CF_API_TOKEN}"
     log "Would call Cloudflare API to revoke: $CLOUDFLARE_ID"
 fi

@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
+  }
+}
+
 resource "docker_image" "element" {
   name          = var.docker_image
   pull_triggers = [var.docker_image]
@@ -27,11 +36,6 @@ resource "docker_container" "element" {
     interval = "30s"
     timeout  = "5s"
     retries  = 3
-  }
-
-  labels = {
-    "com.example.environment" = var.environment
-    "com.example.module"      = "element-web"
   }
 }
 

@@ -4,6 +4,12 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "environment" {
+  type        = string
+  description = "Deployment environment (dev, staging, production)"
+  default     = "production"
+}
+
 variable "matrix_domain" {
   type        = string
   description = "Domain for Matrix homeserver (e.g., matrix.example.com)"

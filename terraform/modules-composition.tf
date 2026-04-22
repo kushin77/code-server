@@ -158,48 +158,48 @@ module "failover" {
 ################################
 # MODULE 5: Matrix Collaboration (Multi-Region)
 ################################
-module "matrix_collab" {
-  for_each = toset(var.regions)
-  source   = "./modules/matrix-collab"
+# module "matrix_collab" {
+#   for_each = toset(var.regions)
+#   source   = "./modules/matrix-collab"
 
-  region       = each.value
-  environment  = var.deployment_environment
-  matrix_domain = var.matrix_domain
-  apex_domain  = var.domain
+#   region       = each.value
+#   environment  = var.deployment_environment
+#   matrix_domain = var.matrix_domain
+#   apex_domain  = var.domain
 
-  # OIDC
-  google_client_id     = var.google_client_id
-  google_client_secret = var.google_client_secret
+#   # OIDC
+#   google_client_id     = var.google_client_id
+#   google_client_secret = var.google_client_secret
 
-  # Tokens
-  synapse_admin_token = var.synapse_admin_token
+#   # Tokens
+#   synapse_admin_token = var.synapse_admin_token
 
-  # Infrastructure
-  redis_url      = "redis://redis:6379"
-  prometheus_url = "http://prometheus:9090"
+#   # Infrastructure
+#   redis_url      = "redis://redis:6379"
+#   prometheus_url = "http://prometheus:9090"
 
-  # Docker images
-  docker_image_synapse = "matrixdotorg/synapse:v1.98.0"
-  docker_image_element = "vectorim/element-web:v1.11.51"
+#   # Docker images
+#   docker_image_synapse = "matrixdotorg/synapse:v1.98.0"
+#   docker_image_element = "vectorim/element-web:v1.11.51"
 
-  # Postgres
-  postgres_version = "15"
+#   # Postgres
+#   postgres_version = "15"
 
-  # Synapse config
-  synapse_max_upload_size = var.synapse_max_upload_size
-  synapse_db_pool_size    = var.synapse_db_pool_size
+#   # Synapse config
+#   synapse_max_upload_size = var.synapse_max_upload_size
+#   synapse_db_pool_size    = var.synapse_db_pool_size
 
-  # Features
-  enable_slack_bridge      = var.enable_slack_bridge
-  enable_teams_bridge      = var.enable_teams_bridge
-  enable_google_chat_bridge = var.enable_google_chat_bridge
-  enable_presence_sidecar  = var.enable_presence_sidecar
-  enable_element_call      = var.enable_element_call
+#   # Features
+#   enable_slack_bridge      = var.enable_slack_bridge
+#   enable_teams_bridge      = var.enable_teams_bridge
+#   enable_google_chat_bridge = var.enable_google_chat_bridge
+#   enable_presence_sidecar  = var.enable_presence_sidecar
+#   enable_element_call      = var.enable_element_call
 
-  primary_chat_platform = var.primary_chat_platform
+#   primary_chat_platform = var.primary_chat_platform
 
-  tags = merge(local.common_labels, { module = "matrix-collab", region = each.value })
-}
+#   tags = merge(local.common_labels, { module = "matrix-collab", region = each.value })
+# }
 locals {
   common_labels = {
     environment = var.deployment_environment

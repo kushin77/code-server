@@ -14,6 +14,7 @@ function buildProps(overrides: Partial<WorkspaceProfilesPageProps> = {}): Worksp
     workspaceState: {
       activeWorkspace: { id: 'portal-main', label: 'Portal main', branch: 'main', pinned: true },
       recentRepoIds: ['dev-sandbox'],
+      projectFiles: ['package.json', 'eslint.config.js'],
       selectWorkspace: vi.fn(),
       workspacePolicy: {
         label: 'Developer',
@@ -72,5 +73,32 @@ describe('WorkspaceProfilesPage', () => {
     expect(screen.getAllByText('Frontend root').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Debugger/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Terminal/i).length).toBeGreaterThan(0)
+  })
+
+  it('shows an auto-config preview when project markers are available', () => {
+    render(
+      <WorkspaceProfilesPage
+        {...buildProps({
+          workspaceState: {
+            activeWorkspace: { id: 'portal-main', label: 'Portal main', branch: 'main', pinned: true },
+            recentRepoIds: ['dev-sandbox'],
+            projectFiles: ['package.json', 'eslint.config.js'],
+            selectWorkspace: vi.fn(),
+            workspacePolicy: {
+              label: 'Developer',
+              canSwitchWorkspace: true,
+              canUseQuickSwitcher: true,
+              canRestoreSession: true,
+              canPinWorkspace: false,
+              maxRecentWorkspaces: 3,
+            },
+          },
+        })}
+      />
+    )
+
+    expect(screen.getByText('Auto-config preview')).toBeTruthy()
+    expect(screen.getByText('Detected project type: node')).toBeTruthy()
+    expect(screen.getAllByText(/dbaeumer\.vscode-eslint/).length).toBeGreaterThan(0)
   })
 })

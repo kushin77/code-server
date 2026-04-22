@@ -20,6 +20,7 @@ export type RepoCardStatus = {
 export type RepoCardLinks = {
   workspace: string
   pullRequests: string
+  ci: string
   issues: string
   runbook: string
 }
@@ -84,6 +85,7 @@ function buildRepoLinks(repoSlug: string): RepoCardLinks {
   return {
     workspace: '/',
     pullRequests: `https://github.com/${repoSlug}/pulls`,
+    ci: `https://github.com/${repoSlug}/actions`,
     issues: `https://github.com/${repoSlug}/issues`,
     runbook: `https://github.com/${repoSlug}/blob/main/README.md`,
   }
@@ -225,6 +227,7 @@ function isValidRepoCard(value: unknown): value is RepoHomeCard {
     !!candidate.links &&
     typeof candidate.links.workspace === 'string' &&
     typeof candidate.links.pullRequests === 'string' &&
+    typeof candidate.links.ci === 'string' &&
     typeof candidate.links.issues === 'string' &&
     typeof candidate.links.runbook === 'string'
   )

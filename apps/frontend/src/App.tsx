@@ -7,6 +7,8 @@ import { AdminControlsPage } from '@/pages/AdminControlsPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { EphemeralSessionsPage } from '@/pages/EphemeralSessions'
 import { RepoHomeView } from '@/pages/RepoHomeView'
+import { PagerDutyIncidentsPage } from '@/pages/PagerDutyIncidentsPage'
+import { TeamHubMetricsPage } from '@/pages/TeamHubMetricsPage'
 import {
   assessMultiRepoPolicyConformance,
   buildMultiRepoPolicyAuditRecord,
@@ -23,6 +25,14 @@ import {
   refreshRepoHomeSnapshot,
   writeRepoHomeSnapshot,
 } from '@/utils/repoHomeData'
+import {
+  fetchActivePagerDutyIncidentCount,
+  fetchOpenPullRequestCount,
+  getDemoTeamOnlineCount,
+  getGitHubHandleFromEmail,
+  PAGERDUTY_INCIDENTS_ROUTE,
+  TEAM_HUB_ROUTE,
+} from '@/utils/collaborationMetrics'
 import {
   buildSafeWorkspaceRestorePlan,
   clearWorkspaceSessionSnapshot,
@@ -419,6 +429,173 @@ function useWorkspaceState() {
 
 export type WorkspaceStateHandle = ReturnType<typeof useWorkspaceState>
 
+const CI_STATUS_LABELS: Record<string, { badge: string; text: string; description: string }> = {
+  passing: {
+    badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    text: 'text-emerald-700',
+    description: 'Branch checks passing',
+  },
+  running: {
+    badge: 'border-sky-200 bg-sky-50 text-sky-700',
+    text: 'text-sky-700',
+    description: 'Branch checks running',
+  },
+  failing: {
+    badge: 'border-rose-200 bg-rose-50 text-rose-700',
+    text: 'text-rose-700',
+    description: 'Branch checks failing',
+  },
+  blocked: {
+    badge: 'border-amber-200 bg-amber-50 text-amber-700',
+    text: 'text-amber-700',
+    description: 'Branch checks blocked',
+  },
+}
+
+const CollaborationStatusStrip: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ workspaceState }) => {
+  const { user } = useAuthStore()
+  const { activeRepoCard, activeWorkspace } = workspaceState
+  const [openPullRequestCount, setOpenPullRequestCount] = useState<number | null>(null)
+  const [activeIncidentCount, setActiveIncidentCount] = useState<number | null>(null)
+
+  const githubHandle = useMemo(() => getGitHubHandleFromEmail(user?.email), [user?.email])
+  const ciStatus = activeRepoCard?.status.ciStatus ?? 'passing'
+  const ciStyle = CI_STATUS_LABELS[ciStatus] ?? CI_STATUS_LABELS.passing
+  const openPullRequestLabel = githubHandle && activeRepoCard ? `for @${githubHandle}` : 'for the active repo'
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadPullRequests = async () => {
+      if (!activeRepoCard) {
+        setOpenPullRequestCount(null)
+        return
+      }
+
+      const count = await fetchOpenPullRequestCount(activeRepoCard.repoSlug, githubHandle)
+      if (!cancelled) {
+        setOpenPullRequestCount(count)
+      }
+    }
+
+    void loadPullRequests()
+    const refreshHandle = window.setInterval(() => {
+      void loadPullRequests()
+    }, 5 * 60 * 1000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(refreshHandle)
+    }
+  }, [activeRepoCard?.repoSlug, githubHandle])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadIncidentCount = async () => {
+      if (typeof window === 'undefined') {
+        return
+      }
+
+      const token = window.localStorage.getItem('pagerduty.token')
+      const count = await fetchActivePagerDutyIncidentCount(token)
+      if (!cancelled) {
+        setActiveIncidentCount(count)
+      }
+    }
+
+    void loadIncidentCount()
+    const refreshHandle = window.setInterval(() => {
+      void loadIncidentCount()
+    }, 60 * 1000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(refreshHandle)
+    }
+  }, [])
+
+  const teamOnlineCount = getDemoTeamOnlineCount()
+
+  return (
+    <section className="border-b border-slate-200 bg-white/95 px-4 py-4 shadow-sm shadow-slate-100">
+      <div className="mx-auto grid max-w-7xl gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <a
+          href={activeRepoCard?.links.pullRequests ?? '#'}
+          target={activeRepoCard ? '_blank' : undefined}
+          rel={activeRepoCard ? 'noopener noreferrer' : undefined}
+          className="group rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-sky-400 hover:bg-sky-50"
+          title={`Open the pull request list ${openPullRequestLabel}`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Open PRs</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{openPullRequestCount ?? '—'}</p>
+            </div>
+            <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 transition group-hover:border-sky-300 group-hover:text-sky-700">
+              {openPullRequestLabel}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">Open the PR list for the active repo.</p>
+        </a>
+
+        <a
+          href={activeRepoCard?.links.ci ?? activeRepoCard?.links.pullRequests ?? '#'}
+          target={activeRepoCard ? '_blank' : undefined}
+          rel={activeRepoCard ? 'noopener noreferrer' : undefined}
+          className={`group rounded-2xl border px-4 py-3 transition ${ciStyle.badge}`}
+          title={`Branch CI for ${activeWorkspace.label}`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Branch CI</p>
+              <p className={`mt-1 text-lg font-semibold ${ciStyle.text}`}>{ciStatus}</p>
+            </div>
+            <span className="rounded-full border border-current/20 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 transition group-hover:border-current/40">
+              {activeRepoCard?.status.branch ?? activeWorkspace.branch}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">{ciStyle.description}</p>
+        </a>
+
+        <Link
+          to={PAGERDUTY_INCIDENTS_ROUTE}
+          className="group rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 transition hover:border-rose-400 hover:bg-rose-100"
+          title="Open the PagerDuty incidents page"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">Active incidents</p>
+              <p className="mt-1 text-2xl font-semibold text-rose-800">{activeIncidentCount ?? '—'}</p>
+            </div>
+            <span className="rounded-full border border-rose-200 bg-white px-2 py-1 text-[11px] font-medium text-rose-700 transition group-hover:border-rose-300">
+              PagerDuty
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-rose-700">Open incident details and refresh the live count.</p>
+        </Link>
+
+        <Link
+          to={TEAM_HUB_ROUTE}
+          className="group rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 transition hover:border-emerald-400 hover:bg-emerald-100"
+          title="Open the team collaboration metrics page"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Team online</p>
+              <p className="mt-1 text-2xl font-semibold text-emerald-800">{teamOnlineCount}</p>
+            </div>
+            <span className="rounded-full border border-emerald-200 bg-white px-2 py-1 text-[11px] font-medium text-emerald-700 transition group-hover:border-emerald-300">
+              Presence
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-emerald-700">View the collaboration presence snapshot.</p>
+        </Link>
+      </div>
+    </section>
+  )
+}
+
 const WorkspaceTabs: React.FC<{ workspaceState: WorkspaceStateHandle }> = ({ workspaceState }) => {
   const {
     activeRepoId,
@@ -657,6 +834,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </nav>
 
+      <CollaborationStatusStrip workspaceState={workspaceState} />
       <WorkspaceTabs workspaceState={workspaceState} />
 
       {/* Main Content */}
@@ -743,6 +921,22 @@ export function App() {
             element={
               <ProtectedRoute>
                 <EphemeralSessionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={PAGERDUTY_INCIDENTS_ROUTE}
+            element={
+              <ProtectedRoute>
+                <PagerDutyIncidentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={TEAM_HUB_ROUTE}
+            element={
+              <ProtectedRoute>
+                <TeamHubMetricsPage />
               </ProtectedRoute>
             }
           />

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildWorkspaceProfileSnapshot,
+  detectWorkspaceProjectType,
   getWorkspaceProfile,
   resolveWorkspaceRootProfile,
 } from '../workspaceProfilesData'
@@ -27,7 +28,7 @@ describe('workspaceProfiles', () => {
   })
 
   it('builds a manifest preview snapshot for the selected workspace', () => {
-    const snapshot = buildWorkspaceProfileSnapshot('portal-main', 'apps/frontend')
+    const snapshot = buildWorkspaceProfileSnapshot('portal-main', 'apps/frontend', ['package.json', 'eslint.config.js'])
 
     expect(snapshot.activeProfileId).toBe('portal-main')
     expect(snapshot.workspaceLabel).toBe('Portal main')
@@ -35,6 +36,15 @@ describe('workspaceProfiles', () => {
     expect(snapshot.profiles).toHaveLength(1)
     expect(snapshot.workspaceJson).toContain('"selected_root": "apps/frontend"')
     expect(snapshot.workspaceJson).toContain('Frontend root')
+    expect(snapshot.detectedProjectType).toBe('node')
+    expect(snapshot.autoConfig?.recommendedExtensions).toContain('dbaeumer.vscode-eslint')
+    expect(snapshot.autoConfig?.recommendedLinters).toContain('eslint')
+  })
+
+  it('detects project type from common workspace marker files', () => {
+    expect(detectWorkspaceProjectType(['go.mod', 'main.go'])).toBe('go')
+    expect(detectWorkspaceProjectType(['pyproject.toml', 'app.py'])).toBe('python')
+    expect(detectWorkspaceProjectType(['README.md'])).toBe('docs')
   })
 
   it('falls back to a safe root profile when the workspace id is unknown', () => {

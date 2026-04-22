@@ -46,6 +46,9 @@ interface PresenceUpdate {
   file?: string;
   line?: number;
   character?: number;
+  currentFunction?: string;
+  currentTask?: string;
+  customStatus?: string;
   timestamp: number;
 }
 
@@ -83,6 +86,9 @@ const matrixClient: MatrixClient = createClient({
 const redisPub = new Redis(REDIS_URL);
 const redisSub = new Redis(REDIS_URL);
 
+const PRESENCE_SNAPSHOT_KEY = 'presence:snapshot';
+const PRESENCE_SNAPSHOT_TTL_SECONDS = 4 * 60 * 60;
+
 // In-memory state
 const presenceState = new Map<string, PresenceUpdate>();
 const clientSessions = new Map<string, ClientSession>();
@@ -107,10 +113,12 @@ function scheduleAwayTimeout(userId: string, session: ClientSession) {
   }
   
   session.inactivityTimer = setTimeout(() => {
+    const previous = presenceState.get(userId);
     const update: PresenceUpdate = {
+      ...previous,
       type: 'presence_update',
       userId,
-      displayName: presenceState.get(userId)?.displayName || userId,
+      displayName: previous?.displayName || userId,
       status: 'away',
       timestamp: Date.now()
     };
@@ -138,6 +146,39 @@ function broadcast(message: any) {
   console.log(`Broadcasted to ${successCount} clients (${latency}ms)`);
 }
 
+async function persistPresenceSnapshot() {
+  const snapshot = {
+    users: Array.from(presenceState.values()),
+    updatedAt: Date.now()
+  };
+
+  await redisPub.set(PRESENCE_SNAPSHOT_KEY, JSON.stringify(snapshot), 'EX', PRESENCE_SNAPSHOT_TTL_SECONDS);
+}
+
+async function restorePresenceSnapshot() {
+  try {
+    const rawSnapshot = await redisPub.get(PRESENCE_SNAPSHOT_KEY);
+    if (!rawSnapshot) {
+      return;
+    }
+
+    const parsed = JSON.parse(rawSnapshot) as { users?: PresenceUpdate[] } | PresenceUpdate[];
+    const users = Array.isArray(parsed) ? parsed : parsed.users;
+    if (!Array.isArray(users)) {
+      return;
+    }
+
+    presenceState.clear();
+    users.forEach((user) => {
+      presenceState.set(user.userId, user);
+    });
+
+    console.log(`Restored ${presenceState.size} presence records from Redis`);
+  } catch (error) {
+    console.error(`Failed to restore presence snapshot from Redis: ${error}`);
+  }
+}
+
 // Publish to Redis for scaled deployment
 function publishToRedis(message: any) {
   redisPub.publish('presence:updates', JSON.stringify(message));
@@ -146,12 +187,18 @@ function publishToRedis(message: any) {
 // Handle presence update
 async function handlePresenceUpdate(update: PresenceUpdate) {
   presenceUpdatesTotal.labels(update.status).inc();
-  
-  presenceState.set(update.userId, update);
+
+  const mergedUpdate = {
+    ...presenceState.get(update.userId),
+    ...update
+  } as PresenceUpdate;
+
+  presenceState.set(update.userId, mergedUpdate);
   
   // Broadcast to all connected clients (local and remote via Redis)
-  broadcast(update);
-  publishToRedis(update);
+  broadcast(mergedUpdate);
+  publishToRedis(mergedUpdate);
+  await persistPresenceSnapshot();
   
   // Persist to Matrix room state
   try {
@@ -287,6 +334,16 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.get('/snapshot', (req, res) => {
+  const users = Array.from(presenceState.values());
+  res.json({
+    type: 'presence_state',
+    timestamp: Date.now(),
+    users,
+    count: users.length
+  });
+});
+
 // Prometheus metrics endpoint
 app.get('/metrics', (req, res) => {
   res.set('Content-Type', promClient.register.contentType);
@@ -305,11 +362,20 @@ app.get('/api/presence', (req, res) => {
 });
 
 // Start server
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Presence Sidecar listening on port ${PORT}`);
-  console.log(`WebSocket: ws://localhost:${PORT}`);
-  console.log(`Health: http://localhost:${PORT}/health`);
-  console.log(`Metrics: http://localhost:${PORT}/metrics`);
+async function startServer() {
+  await restorePresenceSnapshot();
+
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Presence Sidecar listening on port ${PORT}`);
+    console.log(`WebSocket: ws://localhost:${PORT}`);
+    console.log(`Health: http://localhost:${PORT}/health`);
+    console.log(`Metrics: http://localhost:${PORT}/metrics`);
+  });
+}
+
+void startServer().catch((error) => {
+  console.error(`Failed to start presence sidecar: ${error}`);
+  process.exit(1);
 });
 
 // Graceful shutdown

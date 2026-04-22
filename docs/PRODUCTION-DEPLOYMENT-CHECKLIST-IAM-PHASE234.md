@@ -33,14 +33,23 @@ This checklist consolidates all pre-deployment validation steps for Phase 2/3/4 
   
 - [ ] PostgreSQL replication is synced
   ```bash
-  ssh akushnir@192.168.168.31 'psql -U postgres -d code_server -c "SELECT slot_name, restart_lsn FROM pg_replication_slots;"'
+  # Run inside the postgres container because the primary host does not publish 5432 on the host network.
+  ssh akushnir@192.168.168.31 'docker exec postgres psql -U codeserver -d codeserver -c "SELECT slot_name, restart_lsn FROM pg_replication_slots;"'
   ```
   
 - [ ] Redis is operational on both hosts
   ```bash
-  ssh akushnir@192.168.168.31 'redis-cli ping'
-  ssh akushnir@192.168.168.42 'redis-cli ping'
-  # Both should return PONG
+  # Run inside the redis container because the primary host does not publish 6379 on the host network.
+  ssh akushnir@192.168.168.31 'docker exec redis redis-cli ping'
+  ssh akushnir@192.168.168.42 'docker exec redis redis-cli ping'
+  # Primary should return PONG; replica may return NOAUTH until the auth check below passes.
+  ```
+
+- [ ] Redis auth is validated where requirepass is enabled
+  ```bash
+  # Requires GSM access on the host running the check.
+  ssh akushnir@192.168.168.42 'cd ~/code-server-enterprise && source scripts/fetch-gsm-secrets.sh && docker exec redis redis-cli -a "$REDIS_PASSWORD" ping'
+  # Should return PONG once the deployed password has been loaded from GSM.
   ```
   
 - [ ] Network connectivity between hosts is stable

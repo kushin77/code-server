@@ -42,6 +42,17 @@ export interface WorkspaceProfile {
   settings: Record<string, unknown>
 }
 
+export type WorkspaceProjectType = 'node' | 'go' | 'python' | 'rust' | 'java' | 'docs' | 'unknown'
+
+export interface WorkspaceAutoConfigSuggestion {
+  projectType: WorkspaceProjectType
+  detectedFrom: string[]
+  recommendedExtensions: string[]
+  recommendedDebugger: WorkspaceDebuggerProfile
+  recommendedLinters: string[]
+  summary: string
+}
+
 export interface WorkspaceProfileSnapshot {
   profiles: WorkspaceProfile[]
   activeProfileId: string | null
@@ -49,12 +60,161 @@ export interface WorkspaceProfileSnapshot {
   workspaceJson?: string
   workspaceLabel?: string
   mergeOrder?: number[]
+  detectedProjectType?: WorkspaceProjectType
+  autoConfig?: WorkspaceAutoConfigSuggestion
 }
 
 type WorkspaceProfileManifest = WorkspaceProfile
 type StoredWorkspaceTabs = {
   activeRepoId: string
   recentRepoIds: string[]
+}
+
+type ProjectDetectionRule = {
+  projectType: WorkspaceProjectType
+  markers: string[]
+  recommendedExtensions: string[]
+  recommendedDebugger: WorkspaceDebuggerProfile
+  recommendedLinters: string[]
+  summary: string
+}
+
+const PROJECT_DETECTION_RULES: ProjectDetectionRule[] = [
+  {
+    projectType: 'node',
+    markers: ['package.json', 'pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'bun.lockb'],
+    recommendedExtensions: ['dbaeumer.vscode-eslint', 'bradlc.vscode-tailwindcss', 'ms-vscode.vscode-typescript-next'],
+    recommendedDebugger: {
+      name: 'Node app',
+      type: 'pwa-node',
+      request: 'launch',
+      cwd: '.',
+      program: 'src/index.ts',
+      runtimeExecutable: 'node',
+      args: ['--enable-source-maps'],
+    },
+    recommendedLinters: ['eslint'],
+    summary: 'Detected a Node/TypeScript project from package manager metadata.',
+  },
+  {
+    projectType: 'go',
+    markers: ['go.mod', 'go.sum'],
+    recommendedExtensions: ['golang.go'],
+    recommendedDebugger: {
+      name: 'Go service',
+      type: 'go',
+      request: 'launch',
+      cwd: '.',
+      program: 'main.go',
+      runtimeExecutable: 'go',
+    },
+    recommendedLinters: ['golangci-lint'],
+    summary: 'Detected a Go project from module metadata.',
+  },
+  {
+    projectType: 'python',
+    markers: ['pyproject.toml', 'requirements.txt', 'poetry.lock', 'setup.py'],
+    recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
+    recommendedDebugger: {
+      name: 'Python app',
+      type: 'python',
+      request: 'launch',
+      cwd: '.',
+      program: 'app.py',
+      runtimeExecutable: 'python',
+    },
+    recommendedLinters: ['ruff', 'pylint'],
+    summary: 'Detected a Python project from packaging metadata.',
+  },
+  {
+    projectType: 'rust',
+    markers: ['Cargo.toml', 'Cargo.lock'],
+    recommendedExtensions: ['rust-lang.rust-analyzer'],
+    recommendedDebugger: {
+      name: 'Rust binary',
+      type: 'lldb',
+      request: 'launch',
+      cwd: '.',
+      program: 'target/debug/app',
+      runtimeExecutable: 'cargo',
+    },
+    recommendedLinters: ['cargo clippy'],
+    summary: 'Detected a Rust workspace from Cargo metadata.',
+  },
+  {
+    projectType: 'java',
+    markers: ['pom.xml', 'build.gradle', 'build.gradle.kts'],
+    recommendedExtensions: ['redhat.java'],
+    recommendedDebugger: {
+      name: 'Java service',
+      type: 'java',
+      request: 'launch',
+      cwd: '.',
+      program: 'src/main/java/Main.java',
+      runtimeExecutable: 'java',
+    },
+    recommendedLinters: ['checkstyle'],
+    summary: 'Detected a Java project from build metadata.',
+  },
+  {
+    projectType: 'docs',
+    markers: ['mkdocs.yml', 'docs/scripts/preview.ts', 'README.md'],
+    recommendedExtensions: ['yzhang.markdown-all-in-one', 'bierner.markdown-mermaid'],
+    recommendedDebugger: {
+      name: 'Docs preview',
+      type: 'pwa-node',
+      request: 'launch',
+      cwd: 'docs',
+      program: 'docs/scripts/preview.ts',
+      runtimeExecutable: 'node',
+    },
+    recommendedLinters: ['markdownlint'],
+    summary: 'Detected documentation-heavy workspace markers.',
+  },
+]
+
+const normalizeMarker = (value: string): string => value.replace(/\\/g, '/').toLowerCase()
+
+const extractBasename = (value: string): string => normalizeMarker(value).split('/').pop() ?? normalizeMarker(value)
+
+function findProjectDetectionRule(fileNames: string[]): ProjectDetectionRule | undefined {
+  const normalizedMarkers = fileNames.map((fileName) => normalizeMarker(fileName))
+
+  for (const rule of PROJECT_DETECTION_RULES) {
+    const matchedMarkers = rule.markers.filter((marker) => {
+      const normalizedMarker = normalizeMarker(marker)
+      return normalizedMarkers.some((fileName) => fileName.endsWith(normalizedMarker) || extractBasename(fileName) === normalizedMarker)
+    })
+
+    if (matchedMarkers.length > 0) {
+      return {
+        ...rule,
+        markers: matchedMarkers,
+      }
+    }
+  }
+
+  return undefined
+}
+
+export function detectWorkspaceProjectType(fileNames: string[]): WorkspaceProjectType {
+  return findProjectDetectionRule(fileNames)?.projectType ?? 'unknown'
+}
+
+export function buildWorkspaceAutoConfigSuggestion(fileNames: string[]): WorkspaceAutoConfigSuggestion | undefined {
+  const rule = findProjectDetectionRule(fileNames)
+  if (!rule) {
+    return undefined
+  }
+
+  return {
+    projectType: rule.projectType,
+    detectedFrom: rule.markers,
+    recommendedExtensions: [...rule.recommendedExtensions],
+    recommendedDebugger: { ...rule.recommendedDebugger },
+    recommendedLinters: [...rule.recommendedLinters],
+    summary: rule.summary,
+  }
 }
 
 const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
@@ -307,9 +467,10 @@ function createWorkspaceJson(profile: WorkspaceProfile, activeRoot: WorkspaceRoo
   )
 }
 
-export function buildWorkspaceProfileSnapshot(root: string, selectedRoot?: string): WorkspaceProfileSnapshot {
+export function buildWorkspaceProfileSnapshot(root: string, selectedRoot?: string, projectFiles: string[] = []): WorkspaceProfileSnapshot {
   const profile = getWorkspaceProfileManifest(root)
   const activeRoot = resolveWorkspaceRootProfile(root, selectedRoot)
+  const autoConfig = buildWorkspaceAutoConfigSuggestion(projectFiles)
 
   return {
     profiles: profile ? [cloneWorkspaceProfile(profile)] : [],
@@ -330,6 +491,8 @@ export function buildWorkspaceProfileSnapshot(root: string, selectedRoot?: strin
         ),
     workspaceLabel: profile?.workspaceLabel ?? root,
     mergeOrder: profile?.mergeOrder ?? [1, 2, 3, 4, 5],
+    detectedProjectType: autoConfig?.projectType,
+    autoConfig,
   }
 }
 

@@ -10,6 +10,7 @@ import {
 type WorkspaceProfilesPageWorkspaceState = {
   activeWorkspace: WorkspaceTab
   recentRepoIds: string[]
+  projectFiles?: string[]
   selectWorkspace: (workspaceId: string) => void
   workspacePolicy: {
     label: string
@@ -37,8 +38,8 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
 
   const profile = useMemo(() => getWorkspaceProfile(selectedWorkspaceId), [selectedWorkspaceId])
   const profileSnapshot = useMemo(
-    () => buildWorkspaceProfileSnapshot(selectedWorkspaceId, selectedRootPath),
-    [selectedRootPath, selectedWorkspaceId]
+    () => buildWorkspaceProfileSnapshot(selectedWorkspaceId, selectedRootPath, workspaceState.projectFiles),
+    [selectedRootPath, selectedWorkspaceId, workspaceState.projectFiles]
   )
   const activeRoot = useMemo<WorkspaceRoot>(() => {
     return (
@@ -243,6 +244,28 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
                       <p className="mt-2 text-xs text-slate-700">Env: {Object.entries(activeRoot.terminal.env).map(([key, value]) => `${key}=${value}`).join(', ')}</p>
                     ) : null}
                   </div>
+
+                  {profileSnapshot.autoConfig ? (
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-3">
+                      <p className="text-sm font-semibold text-violet-900">Auto-config preview</p>
+                      <p className="text-sm text-violet-800">Detected project type: {profileSnapshot.autoConfig.projectType}</p>
+                      <p className="mt-1 text-xs text-violet-700">{profileSnapshot.autoConfig.summary}</p>
+                      <p className="mt-2 text-xs text-violet-700">
+                        Recommended debugger: {profileSnapshot.autoConfig.recommendedDebugger.name}
+                      </p>
+                      <p className="mt-1 text-xs text-violet-700">
+                        Suggested linters: {profileSnapshot.autoConfig.recommendedLinters.join(', ')}
+                      </p>
+                      <p className="mt-1 text-xs text-violet-700">
+                        Auto-install extensions: {profileSnapshot.autoConfig.recommendedExtensions.join(', ')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-3">
+                      <p className="text-sm font-semibold text-slate-900">Auto-config preview</p>
+                      <p className="text-xs text-slate-500">Pass project marker files such as package.json or go.mod to preview the recommended workspace setup.</p>
+                    </div>
+                  )}
 
                   <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
                     <p className="text-sm font-semibold text-slate-900">Scoped extensions</p>

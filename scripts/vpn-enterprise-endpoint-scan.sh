@@ -38,7 +38,7 @@ ENDPOINTS=(
 
 # shellcheck disable=SC2034
 ENDPOINTS_REPLICA=(
-    "${REPLICA_HOST:-192.168.168.42}:${PORT_CODE_SERVER}"    # Code-Server (Replica)
+    "${STANDBY_HOST:-192.168.168.42}:${PORT_CODE_SERVER}"    # Code-Server (Replica)
 )
 
 # Counters
@@ -139,9 +139,9 @@ main() {
     echo ""
     
     # Replica Site Scan
-    log_header "Replica Site - ${REPLICA_HOST:-192.168.168.42}"
+    log_header "Replica Site - ${STANDBY_HOST:-192.168.168.42}"
     echo ""
-    check_endpoint "${REPLICA_HOST:-192.168.168.42}:${PORT_CODE_SERVER}" "Code-Server (Replica - Standby)" || true
+    check_endpoint "${STANDBY_HOST:-192.168.168.42}:${PORT_CODE_SERVER}" "Code-Server (Replica - Standby)" || true
     echo ""
     
     # Summary

@@ -60,8 +60,8 @@ log_info "✓ CI service account permissions granted"
 
 # Step 4: Redeploy oauth2-proxy
 log_info "Step 4: Redeploying oauth2-proxy..."
-ssh akushnir@192.168.168.31 "cd code-server-enterprise && docker-compose restart oauth2-proxy oauth2-proxy-portal" || {
-    log_error "Failed to redeploy oauth2-proxy. Ensure SSH access to 192.168.168.31"
+ssh akushnir@${DEPLOY_HOST} "cd code-server-enterprise && docker-compose restart oauth2-proxy oauth2-proxy-portal" || {
+    log_error "Failed to redeploy oauth2-proxy. Ensure SSH access to ${DEPLOY_HOST}"
     exit 1
 }
 sleep 5

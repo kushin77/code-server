@@ -3,7 +3,7 @@
 # @module      ops/deployment
 # @description Complete OAuth2-Proxy deployment and DoD steps for issue #984
 #
-# Run this script on 192.168.168.31 to complete Definition of Done steps 2-3
+# Run this script on ${DEPLOY_HOST} to complete Definition of Done steps 2-3
 
 set -euo pipefail
 

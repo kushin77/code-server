@@ -2,7 +2,7 @@
 # @file        scripts/deploy-qa-credentials-to-gcp.sh
 # @module      deployment/gcp/qa-credentials
 # @description Deploy QA Credentials IaC to GCP (immutable, idempotent, automated)
-# @usage       Run on production host (192.168.168.31): bash scripts/deploy-qa-credentials-to-gcp.sh
+# @usage       Run on production host (${DEPLOY_HOST}): bash scripts/deploy-qa-credentials-to-gcp.sh
 #
 
 set -euo pipefail

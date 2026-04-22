@@ -10,7 +10,7 @@
 #   scripts/_template.sh [arg1] [arg2]
 #
 # ENVIRONMENT VARIABLES (from .env, loaded by _common/init.sh)
-#   DEPLOY_HOST       - Production host IP/FQDN (e.g., 192.168.168.31)
+#   DEPLOY_HOST       - Production host IP/FQDN (e.g., ${DEPLOY_HOST})
 #   DEPLOY_USER       - SSH user (e.g., akushnir)
 #   DOMAIN            - Public domain (e.g., kushnir.cloud)
 #

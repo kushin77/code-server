@@ -4,6 +4,7 @@ locals {
     {
       module      = "matrix-collab"
       environment = var.environment
+      region      = var.region
       managed_by  = "terraform"
     }
   )
@@ -14,6 +15,7 @@ module "homeserver" {
   source = "./modules/homeserver"
 
   environment           = var.environment
+  region                = var.region
   matrix_domain         = var.matrix_domain
   apex_domain           = var.apex_domain
   google_client_id      = var.google_client_id

@@ -5,7 +5,7 @@ resource "docker_image" "postgres" {
 }
 
 resource "docker_container" "postgres" {
-  name    = "synapse-postgres"
+  name    = "synapse-postgres-${var.region}"
   image   = docker_image.postgres.image_id
   restart = "unless-stopped"
 
@@ -46,7 +46,7 @@ resource "docker_image" "synapse" {
 }
 
 resource "docker_container" "synapse" {
-  name    = "synapse-homeserver"
+  name    = "synapse-homeserver-${var.region}"
   image   = docker_image.synapse.image_id
   restart = "unless-stopped"
 

@@ -1,7 +1,7 @@
-variable "environment" {
+variable "region" {
   type        = string
-  description = "Deployment environment (dev, staging, prod)"
-  default     = "prod"
+  description = "AWS region for deployment"
+  default     = "us-central1"
 }
 
 variable "matrix_domain" {

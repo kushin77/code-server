@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { rbacAPI } from '@/api/rbac-client'
 import { useAuthStore } from '@/store'
 
@@ -723,7 +723,21 @@ const RemoteSignalsPanel: React.FC<{ remoteSignals: RemoteSignals }> = ({ remote
 export const AdminControlsPage: React.FC = () => {
   const { user } = useAuthStore()
   const isAuthorized = user?.roles.some((role) => role.roleId === 'admin') ?? false
-  const [snapshot, setSnapshot] = useState<ControlPlaneSnapshot>(() => readSnapshot())
+
+  if (!isAuthorized) {
+    return <RestrictedAccessPanel userRoles={user?.roles.map((role) => role.roleId) ?? []} />
+  }
+
+  // Delegate to main orchestrator component
+  return <AdminControlsPageOrchestratorComponent userEmail={user?.email ?? 'unknown'} />
+}
+
+// Orchestrator component - CC < 15 (main logic delegated to helpers and sub-components)
+const AdminControlsPageOrchestratorComponent: React.FC<{ userEmail: string }> = ({ userEmail }) => {
+  const initialSnapshot = useMemo(() => readSnapshot(), [])
+  const { snapshot: storageSnapshot, setSnapshot: setStorageSnapshot } = useWorkspaceStorageManager(initialSnapshot)
+
+  const { remoteSignals, isRefreshing, panelError, setPanelError, refreshSignals } = useRemoteSignalsManager()
   const [draftReasons, setDraftReasons] = useState<Record<ControlId, string>>({
     sessionApprovalRequired: '',
     emergencyLockdown: '',
@@ -731,316 +745,44 @@ export const AdminControlsPage: React.FC = () => {
     driftDetectionEnforced: '',
     auditExportEnabled: '',
   })
-  const [remoteSignals, setRemoteSignals] = useState<RemoteSignals>({
-    health: 'unknown',
-    healthCheckedAt: null,
-    auditCount: 0,
-    auditSummary: null,
-    error: null,
-  })
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [panelError, setPanelError] = useState<string | null>(null)
 
+  // Load initial signals
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
+    void refreshSignals(() => rbacAPI.healthCheck(), () => rbacAPI.getAuditLogs({ limit: 5 }))
+  }, [refreshSignals])
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
-  }, [snapshot])
-
-  const refreshSignals = async () => {
-    setIsRefreshing(true)
-    setPanelError(null)
-
-    try {
-      const [healthResult, auditResult] = await Promise.allSettled([
-        rbacAPI.healthCheck(),
-        rbacAPI.getAuditLogs({ limit: 5 }),
-      ])
-
-      const nextRemoteSignals: RemoteSignals = {
-        health: 'unknown',
-        healthCheckedAt: nowIso(),
-        auditCount: 0,
-        auditSummary: null,
-        error: null,
-      }
-
-      if (healthResult.status === 'fulfilled') {
-        nextRemoteSignals.health = healthResult.value.status === 'ok' ? 'healthy' : 'degraded'
-      } else {
-        nextRemoteSignals.health = 'error'
-        nextRemoteSignals.error = healthResult.reason instanceof Error ? healthResult.reason.message : 'Health check failed'
-      }
-
-      if (auditResult.status === 'fulfilled') {
-        nextRemoteSignals.auditCount = auditResult.value.logs.length
-        const latest = auditResult.value.logs[0]
-        nextRemoteSignals.auditSummary = latest ? describeRemoteAuditLog(latest as RemoteAuditLog) : 'No recent audit events'
-      } else if (!nextRemoteSignals.error) {
-        nextRemoteSignals.error = auditResult.reason instanceof Error ? auditResult.reason.message : 'Audit fetch failed'
-      }
-
-      setRemoteSignals(nextRemoteSignals)
-      setSnapshot((current) => ({
-        ...current,
-        lastSyncedAt: nextRemoteSignals.healthCheckedAt,
-      }))
-    } catch (error) {
-      setRemoteSignals({
-        health: 'error',
-        healthCheckedAt: nowIso(),
-        auditCount: 0,
-        auditSummary: null,
-        error: error instanceof Error ? error.message : 'Unable to refresh control-plane signals',
-      })
-      setPanelError(error instanceof Error ? error.message : 'Unable to refresh control-plane signals')
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
-
-  useEffect(() => {
-    void refreshSignals()
-  }, [])
-
+  // Calculate derived state
   const pendingApprovals = useMemo(
-    () => snapshot.approvals.filter((request) => request.status === 'pending'),
-    [snapshot.approvals],
+    () => storageSnapshot.approvals.filter((request: any) => request.status === 'pending'),
+    [storageSnapshot.approvals],
   )
 
-  const complianceScore = useMemo(() => {
-    const pendingPenalty = pendingApprovals.length * 12
-    const lockdownPenalty = snapshot.controls.find((control) => control.id === 'emergencyLockdown')?.value ? 18 : 0
-    const auditBonus = remoteSignals.health === 'healthy' ? 5 : 0
-    const driftBonus = snapshot.controls.every((control) => control.value || !control.critical) ? 4 : 0
-
-    return Math.max(0, Math.min(100, 88 + auditBonus + driftBonus - pendingPenalty - lockdownPenalty))
-  }, [pendingApprovals.length, remoteSignals.health, snapshot.controls])
-
-  const postureLabel = useMemo(() => {
-    if (!isAuthorized) {
-      return 'Restricted'
-    }
-
-    if (complianceScore >= 90 && pendingApprovals.length === 0 && remoteSignals.health === 'healthy') {
-      return 'Ready'
-    }
-
-    if (complianceScore >= 70) {
-      return 'Review'
-    }
-
-    return 'Blocked'
-  }, [complianceScore, isAuthorized, pendingApprovals.length, remoteSignals.health])
-
+  const complianceScore = useComplianceScore(storageSnapshot, pendingApprovals, remoteSignals)
+  const postureLabel = usePostureLabel(complianceScore, pendingApprovals, remoteSignals)
   const criticalControls = useMemo(
-    () => snapshot.controls.filter((control) => control.critical),
-    [snapshot.controls],
+    () => storageSnapshot.controls.filter((control: any) => control.critical),
+    [storageSnapshot.controls],
   )
+  const lockdownArmed = storageSnapshot.controls.find((control: any) => control.id === 'emergencyLockdown')?.value ?? false
+  const latestAuditEntry = storageSnapshot.auditTrail[0]
 
-  const latestAuditEntry = snapshot.auditTrail[0]
-
-  const updateControl = (controlId: ControlId, nextValue: boolean) => {
-    const actor = user?.email ?? 'unknown'
-    setSnapshot((current) => {
-      const control = current.controls.find((item) => item.id === controlId)
-      if (!control) {
-        return current
-      }
-
-      const nextControls = current.controls.map((item) => {
-        if (item.id !== controlId) {
-          return item
-        }
-
-        return {
-          ...item,
-          value: nextValue,
-          lastChangedAt: nowIso(),
-          lastChangedBy: actor,
-        }
-      })
-
-      return {
-        ...current,
-        controls: nextControls,
-        auditTrail: [
-          createControlAuditEntry({
-            action: 'update',
-            actor,
-            controlId,
-            diff: `${control.label}: ${control.value ? 'enabled' : 'disabled'} -> ${nextValue ? 'enabled' : 'disabled'}`,
-            status: nextValue ? 'success' : 'warn',
-          }),
-          ...current.auditTrail,
-        ],
-      }
-    })
-  }
-
-  const requestCriticalChange = (controlId: ControlId) => {
-    const actor = user?.email ?? 'unknown'
-    const control = snapshot.controls.find((item) => item.id === controlId)
-    if (!control) {
-      return
-    }
-
-    const reason = draftReasons[controlId]?.trim()
-    if (!reason) {
-      setPanelError('Critical control changes require a reason before submission.')
-      return
-    }
-
-    const requestId = `approval-${Date.now()}-${controlId}`
-    const nextValue = !control.value
-    const approvalRequest: PolicyApprovalRequest = {
-      id: requestId,
-      controlId,
-      requestedValue: nextValue,
-      requestedBy: actor,
-      approver: DEFAULT_APPROVER,
-      reason,
-      status: 'pending',
-      requestedAt: nowIso(),
-    }
-
-    setSnapshot((current) => ({
-      ...current,
-      approvals: [approvalRequest, ...current.approvals],
-      auditTrail: [
-        createControlAuditEntry({
-          action: 'request-approval',
-          actor,
-          controlId,
-          diff: `${control.label}: requested ${nextValue ? 'enable' : 'disable'} with reason "${reason}"`,
-          status: 'warn',
-        }),
-        ...current.auditTrail,
-      ],
-    }))
-
-    setDraftReasons((current) => ({
-      ...current,
-      [controlId]: '',
-    }))
-  }
-
+  // Handlers - delegated to utility functions (CC < 10 each)
   const handleControlToggle = (control: PolicyControl) => {
     setPanelError(null)
-
-    if (control.critical) {
-      requestCriticalChange(control.id)
-      return
-    }
-
-    updateControl(control.id, !control.value)
+    toggleControl(control, storageSnapshot, setStorageSnapshot, draftReasons, setDraftReasons, userEmail, setPanelError)
   }
 
-  const updateApprover = (requestId: string, approver: string) => {
-    setSnapshot((current) => ({
-      ...current,
-      approvals: current.approvals.map((request) => {
-        if (request.id !== requestId) {
-          return request
-        }
-
-        return {
-          ...request,
-          approver,
-        }
-      }),
-    }))
+  const handleApproverUpdate = (requestId: string, approver: string) => {
+    updateApproverInSnapshot(requestId, approver, setStorageSnapshot)
   }
 
-  const approveRequest = (requestId: string) => {
-    const actor = user?.email ?? 'unknown'
-    const request = snapshot.approvals.find((item) => item.id === requestId)
-    const control = request ? snapshot.controls.find((item) => item.id === request.controlId) : undefined
-
-    if (!request || !control) {
-      return
-    }
-
-    setSnapshot((current) => ({
-      ...current,
-      controls: current.controls.map((item) => {
-        if (item.id !== request.controlId) {
-          return item
-        }
-
-        return {
-          ...item,
-          value: request.requestedValue,
-          lastChangedAt: nowIso(),
-          lastChangedBy: request.approver,
-        }
-      }),
-      approvals: current.approvals.map((item) => {
-        if (item.id !== requestId) {
-          return item
-        }
-
-        return {
-          ...item,
-          status: 'approved',
-          decidedAt: nowIso(),
-        }
-      }),
-      auditTrail: [
-        createControlAuditEntry({
-          action: 'approve',
-          actor,
-          controlId: request.controlId,
-          diff: `${control.label}: approved by ${request.approver}; ${control.value ? 'enabled' : 'disabled'} -> ${request.requestedValue ? 'enabled' : 'disabled'}`,
-          status: 'success',
-        }),
-        ...current.auditTrail,
-      ],
-    }))
+  const handleApproveRequest = (requestId: string) => {
+    approveRequestInSnapshot(requestId, userEmail, storageSnapshot, setStorageSnapshot)
   }
 
-  const rejectRequest = (requestId: string) => {
-    const actor = user?.email ?? 'unknown'
-    const request = snapshot.approvals.find((item) => item.id === requestId)
-    if (!request) {
-      return
-    }
-
-    const control = snapshot.controls.find((item) => item.id === request.controlId)
-
-    setSnapshot((current) => ({
-      ...current,
-      approvals: current.approvals.map((item) => {
-        if (item.id !== requestId) {
-          return item
-        }
-
-        return {
-          ...item,
-          status: 'rejected',
-          decidedAt: nowIso(),
-        }
-      }),
-      auditTrail: [
-        createControlAuditEntry({
-          action: 'reject',
-          actor,
-          controlId: request.controlId,
-          diff: `${control?.label ?? request.controlId}: request rejected by ${actor}`,
-          status: 'critical',
-        }),
-        ...current.auditTrail,
-      ],
-    }))
+  const handleRejectRequest = (requestId: string) => {
+    rejectRequestInSnapshot(requestId, userEmail, storageSnapshot, setStorageSnapshot)
   }
-
-  if (!isAuthorized) {
-    return <RestrictedAccessPanel userRoles={user?.roles.map((role) => role.roleId) ?? []} />
-  }
-
-  const lockdownArmed = snapshot.controls.find((control) => control.id === 'emergencyLockdown')?.value ?? false
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
@@ -1051,18 +793,18 @@ export const AdminControlsPage: React.FC = () => {
           postureLabel={postureLabel}
           remoteSignals={remoteSignals}
           isRefreshing={isRefreshing}
-          onRefresh={() => { void refreshSignals() }}
+          onRefresh={() => { void refreshSignals(() => rbacAPI.healthCheck(), () => rbacAPI.getAuditLogs({ limit: 5 })) }}
           panelError={panelError}
           pendingApprovalsCount={pendingApprovals.length}
           lockdownArmed={lockdownArmed}
           criticalControlsCount={criticalControls.length}
-          lastSyncedAt={snapshot.lastSyncedAt}
+          lastSyncedAt={storageSnapshot.lastSyncedAt}
         />
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_1fr]">
           <section className="space-y-6">
             <PolicyControlsGrid
-              controls={snapshot.controls}
+              controls={storageSnapshot.controls}
               pendingApprovals={pendingApprovals}
               draftReasons={draftReasons}
               onDraftReasonChange={(id, value) => { setDraftReasons((current) => ({ ...current, [id]: value })) }}
@@ -1073,13 +815,13 @@ export const AdminControlsPage: React.FC = () => {
           <aside className="space-y-6">
             <ApprovalWorkflowPanel
               pendingApprovals={pendingApprovals}
-              controls={snapshot.controls}
-              onUpdateApprover={updateApprover}
-              onApprove={approveRequest}
-              onReject={rejectRequest}
+              controls={storageSnapshot.controls}
+              onUpdateApprover={handleApproverUpdate}
+              onApprove={handleApproveRequest}
+              onReject={handleRejectRequest}
             />
             <AuditTrailPanel
-              auditTrail={snapshot.auditTrail}
+              auditTrail={storageSnapshot.auditTrail}
               latestAuditEntry={latestAuditEntry}
             />
             <RemoteSignalsPanel remoteSignals={remoteSignals} />
@@ -1088,4 +830,294 @@ export const AdminControlsPage: React.FC = () => {
       </div>
     </div>
   )
+}
+
+// Helper hooks - each < 15 CC
+function useWorkspaceStorageManager(initialSnapshot: ControlPlaneSnapshot) {
+  const [snapshot, setSnapshot] = useState<ControlPlaneSnapshot>(initialSnapshot)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
+  }, [snapshot])
+
+  return { snapshot, setSnapshot }
+}
+
+function useRemoteSignalsManager() {
+  const [remoteSignals, setRemoteSignals] = useState<RemoteSignals>({
+    health: 'unknown',
+    healthCheckedAt: null,
+    auditCount: 0,
+    auditSummary: null,
+    error: null,
+  })
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [panelError, setPanelError] = useState<string | null>(null)
+
+  const refreshSignals = useCallback(
+    async (healthCheck: () => Promise<any>, getAuditLogs: () => Promise<any>) => {
+      setIsRefreshing(true)
+      setPanelError(null)
+
+      try {
+        const [healthResult, auditResult] = await Promise.allSettled([healthCheck(), getAuditLogs()])
+
+        const nextRemoteSignals: RemoteSignals = {
+          health: 'unknown',
+          healthCheckedAt: nowIso(),
+          auditCount: 0,
+          auditSummary: null,
+          error: null,
+        }
+
+        if (healthResult.status === 'fulfilled') {
+          nextRemoteSignals.health = healthResult.value.status === 'ok' ? 'healthy' : 'degraded'
+        } else {
+          nextRemoteSignals.health = 'error'
+          nextRemoteSignals.error = healthResult.reason instanceof Error ? healthResult.reason.message : 'Health check failed'
+        }
+
+        if (auditResult.status === 'fulfilled') {
+          nextRemoteSignals.auditCount = auditResult.value.logs.length
+          const latest = auditResult.value.logs[0]
+          nextRemoteSignals.auditSummary = latest ? describeRemoteAuditLog(latest as RemoteAuditLog) : 'No recent audit events'
+        } else if (!nextRemoteSignals.error) {
+          nextRemoteSignals.error = auditResult.reason instanceof Error ? auditResult.reason.message : 'Audit fetch failed'
+        }
+
+        setRemoteSignals(nextRemoteSignals)
+      } catch (error) {
+        setRemoteSignals({
+          health: 'error',
+          healthCheckedAt: nowIso(),
+          auditCount: 0,
+          auditSummary: null,
+          error: error instanceof Error ? error.message : 'Unable to refresh control-plane signals',
+        })
+        setPanelError(error instanceof Error ? error.message : 'Unable to refresh control-plane signals')
+      } finally {
+        setIsRefreshing(false)
+      }
+    },
+    [],
+  )
+
+  return { remoteSignals, isRefreshing, panelError, setPanelError, refreshSignals }
+}
+
+function useComplianceScore(snapshot: ControlPlaneSnapshot, pendingApprovals: any[], remoteSignals: RemoteSignals) {
+  return useMemo(() => {
+    const pendingPenalty = pendingApprovals.length * 12
+    const lockdownPenalty = snapshot.controls.find((control) => control.id === 'emergencyLockdown')?.value ? 18 : 0
+    const auditBonus = remoteSignals.health === 'healthy' ? 5 : 0
+    const driftBonus = snapshot.controls.every((control) => control.value || !control.critical) ? 4 : 0
+
+    return Math.max(0, Math.min(100, 88 + auditBonus + driftBonus - pendingPenalty - lockdownPenalty))
+  }, [pendingApprovals.length, remoteSignals.health, snapshot.controls])
+}
+
+function usePostureLabel(complianceScore: number, pendingApprovals: any[], remoteSignals: RemoteSignals) {
+  return useMemo(() => {
+    if (complianceScore >= 90 && pendingApprovals.length === 0 && remoteSignals.health === 'healthy') {
+      return 'Ready'
+    }
+
+    if (complianceScore >= 70) {
+      return 'Review'
+    }
+
+    return 'Blocked'
+  }, [complianceScore, pendingApprovals.length, remoteSignals.health])
+}
+
+// Handler utilities - each < 10 CC
+function toggleControl(
+  control: PolicyControl,
+  snapshot: ControlPlaneSnapshot,
+  setSnapshot: (snap: ControlPlaneSnapshot) => void,
+  draftReasons: Record<ControlId, string>,
+  setDraftReasons: (reasons: Record<ControlId, string>) => void,
+  userEmail: string,
+  setPanelError: (error: string | null) => void,
+) {
+  if (control.critical) {
+    const reason = draftReasons[control.id]?.trim()
+    if (!reason) {
+      setPanelError('Critical control changes require a reason before submission.')
+      return
+    }
+
+    requestCriticalApproval(control, snapshot, setSnapshot, draftReasons, setDraftReasons, userEmail)
+  } else {
+    updateControlDirect(control.id, !control.value, snapshot, setSnapshot, userEmail)
+  }
+}
+
+function requestCriticalApproval(
+  control: PolicyControl,
+  snapshot: ControlPlaneSnapshot,
+  setSnapshot: (snap: ControlPlaneSnapshot) => void,
+  draftReasons: Record<ControlId, string>,
+  setDraftReasons: (reasons: Record<ControlId, string>) => void,
+  userEmail: string,
+) {
+  const reason = draftReasons[control.id]?.trim() ?? ''
+  const nextValue = !control.value
+
+  setSnapshot({
+    ...snapshot,
+    approvals: [
+      {
+        id: `approval-${Date.now()}-${control.id}`,
+        controlId: control.id,
+        requestedValue: nextValue,
+        requestedBy: userEmail,
+        approver: DEFAULT_APPROVER,
+        reason,
+        status: 'pending',
+        requestedAt: nowIso(),
+      },
+      ...snapshot.approvals,
+    ],
+    auditTrail: [
+      createControlAuditEntry({
+        action: 'request-approval',
+        actor: userEmail,
+        controlId: control.id,
+        diff: `${control.label}: requested ${nextValue ? 'enable' : 'disable'} with reason "${reason}"`,
+        status: 'warn',
+      }),
+      ...snapshot.auditTrail,
+    ],
+  })
+
+  setDraftReasons((current) => ({
+    ...current,
+    [control.id]: '',
+  }))
+}
+
+function updateControlDirect(
+  controlId: ControlId,
+  nextValue: boolean,
+  snapshot: ControlPlaneSnapshot,
+  setSnapshot: (snap: ControlPlaneSnapshot) => void,
+  userEmail: string,
+) {
+  const control = snapshot.controls.find((item) => item.id === controlId)
+  if (!control) {
+    return
+  }
+
+  setSnapshot({
+    ...snapshot,
+    controls: snapshot.controls.map((item) =>
+      item.id === controlId
+        ? {
+            ...item,
+            value: nextValue,
+            lastChangedAt: nowIso(),
+            lastChangedBy: userEmail,
+          }
+        : item,
+    ),
+    auditTrail: [
+      createControlAuditEntry({
+        action: 'update',
+        actor: userEmail,
+        controlId,
+        diff: `${control.label}: ${control.value ? 'enabled' : 'disabled'} -> ${nextValue ? 'enabled' : 'disabled'}`,
+        status: nextValue ? 'success' : 'warn',
+      }),
+      ...snapshot.auditTrail,
+    ],
+  })
+}
+
+function updateApproverInSnapshot(
+  requestId: string,
+  approver: string,
+  setSnapshot: (snap: ControlPlaneSnapshot) => void,
+) {
+  setSnapshot((current: ControlPlaneSnapshot) => ({
+    ...current,
+    approvals: current.approvals.map((request: any) =>
+      request.id === requestId ? { ...request, approver } : request,
+    ),
+  }))
+}
+
+function approveRequestInSnapshot(
+  requestId: string,
+  userEmail: string,
+  snapshot: ControlPlaneSnapshot,
+  setSnapshot: (snap: ControlPlaneSnapshot) => void,
+) {
+  const request = snapshot.approvals.find((item: any) => item.id === requestId)
+  const control = request ? snapshot.controls.find((item) => item.id === request.controlId) : undefined
+
+  if (!request || !control) {
+    return
+  }
+
+  setSnapshot({
+    ...snapshot,
+    controls: snapshot.controls.map((item) =>
+      item.id === request.controlId
+        ? {
+            ...item,
+            value: request.requestedValue,
+            lastChangedAt: nowIso(),
+            lastChangedBy: request.approver,
+          }
+        : item,
+    ),
+    approvals: snapshot.approvals.map((item: any) =>
+      item.id === requestId ? { ...item, status: 'approved', decidedAt: nowIso() } : item,
+    ),
+    auditTrail: [
+      createControlAuditEntry({
+        action: 'approve',
+        actor: userEmail,
+        controlId: request.controlId,
+        diff: `${control.label}: approved by ${request.approver}; ${control.value ? 'enabled' : 'disabled'} -> ${request.requestedValue ? 'enabled' : 'disabled'}`,
+        status: 'success',
+      }),
+      ...snapshot.auditTrail,
+    ],
+  })
+}
+
+function rejectRequestInSnapshot(
+  requestId: string,
+  userEmail: string,
+  snapshot: ControlPlaneSnapshot,
+  setSnapshot: (snap: ControlPlaneSnapshot) => void,
+) {
+  const request = snapshot.approvals.find((item: any) => item.id === requestId)
+  if (!request) {
+    return
+  }
+
+  const control = snapshot.controls.find((item) => item.id === request.controlId)
+
+  setSnapshot({
+    ...snapshot,
+    approvals: snapshot.approvals.map((item: any) =>
+      item.id === requestId ? { ...item, status: 'rejected', decidedAt: nowIso() } : item,
+    ),
+    auditTrail: [
+      createControlAuditEntry({
+        action: 'reject',
+        actor: userEmail,
+        controlId: request.controlId,
+        diff: `${control?.label ?? request.controlId}: request rejected by ${userEmail}`,
+        status: 'critical',
+      }),
+      ...snapshot.auditTrail,
+    ],
+  })
 }

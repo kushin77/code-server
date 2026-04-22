@@ -18,9 +18,14 @@ source "${PROJECT_ROOT}/scripts/_common/init.sh" || {
 BACKUP_DIR="${BACKUP_DIR:-/mnt/nas-56/redis-backups}"
 REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
 REDIS_PORT="${REDIS_PORT:-6379}"
-REDIS_PASSWORD="${REDIS_PASSWORD:-redis-secure-default}"
+REDIS_PASSWORD="${REDIS_PASSWORD}" # MUST be set via env or vault, no default
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Validate required credentials
+if [[ -z "${REDIS_PASSWORD:-}" ]]; then
+  log_fatal "REDIS_PASSWORD must be set via environment variable (use vault/GSM, not defaults)"
+fi
 
 # ════════════════════════════════════════════════════════════════════════════
 # Functions

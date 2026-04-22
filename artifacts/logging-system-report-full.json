@@ -1,0 +1,824 @@
+[
+  {
+    "body": "## Automated Issue from Infrastructure Logs  **Severity**: P1   **Source**: kubernetes   **Pod**: code-server-xyz   **Namespace**: default    ### Pod Status Pod CrashLoopBackOff Container: code-server Exit Code: 2 Last Restart: 45 seconds ago Restart Count: 12  ### Error Message FATAL: Cannot bind to port 8080: Address already in use  ### Root Causes 1. Port already bound (most likely)    - Another container/process using port 8080    - Stale connection not cleaned up after pod restart  2. Race condition during pod startup    - Multiple pods starting simultaneously  3. ConfigMap/volume mount issue    - Missing or corrupt port configuration  ### Troubleshooting 1. Check if port is actually bound:    kubectl exec -it code-server-xyz -- lsof -i :8080    kubectl exec -it code-server-xyz -- netstat -tlnp | grep 8080  2. Check node resources:    kubectl describe node <node-name>  3. Review pod events:    kubectl describe pod code-server-xyz  4. Check pod logs:    kubectl logs code-server-xyz --previous    kubectl logs code-server-xyz --tail=50  ### Fix Steps 1. Terminate existing code-server pods to free port 2. Increase readiness probe initial delay 3. Add port conflict detection to startup script 4. Redeploy pod  --- Action Required: Manual pod restart after fixing port conflict",
+    "createdAt": "2026-04-22T00:29:25Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACgOs-mg",
+        "name": "error-triage",
+        "description": "Security scan tag",
+        "color": "e4e669"
+      }
+    ],
+    "number": 1346,
+    "state": "OPEN",
+    "title": "[AUTO-TRIAGE] kubernetes: Pod CrashLoopBackOff - Port binding conflict on code-server",
+    "updatedAt": "2026-04-22T00:29:25Z"
+  },
+  {
+    "body": "## Automated Issue from Infrastructure Logs  **Severity**: P1   **Source**: syslog    ### Logged Events 1. kernel panic: attempting to kill init! 2. docker: container code-server exited with code 137 (OOMKilled) 3. auth: 5 failed login attempts from 203.0.113.42 in 30 seconds 4. postgresql: connection timeout after 30 seconds waiting for lock  ### Correlation Analysis Multiple infrastructure components failing suggests: - Likely Cause: Memory pressure on host (OOMKilled is strong signal) - Secondary: Database lock contention / slow queries - Security: Brute force attempt (5 failed logins in 30s)  ### Remediation Steps 1. Immediate: Check memory on host    free -h    top -b -n1 | head -20  2. Investigate kernel panic: journalctl -xb  3. Check PostgreSQL locks  4. Security: Review auth logs  5. Docker: Restart container    docker compose restart code-server  ### Long-term Actions - Increase host memory allocation - Add memory monitoring to Prometheus - Implement query optimization for slow queries - Add rate limiting to auth endpoints  --- Requires Human Investigation - Not Auto-Recoverable",
+    "createdAt": "2026-04-22T00:29:16Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACgOs-mg",
+        "name": "error-triage",
+        "description": "Security scan tag",
+        "color": "e4e669"
+      }
+    ],
+    "number": 1345,
+    "state": "OPEN",
+    "title": "[AUTO-TRIAGE] system: Multiple infrastructure errors - kernel panic, Docker OOMKilled, auth failures",
+    "updatedAt": "2026-04-22T00:29:16Z"
+  },
+  {
+    "body": "## Automated Issue from Infrastructure Logs\n\n**Severity**: P0  \n**Source**: haproxy-monitor  \n**Status**: ACTIVE INCIDENT  \n\n### Incident Details\nPrimary host 192.168.168.31 DOWN\n- Health check failed 3 consecutive times\n- Failing over to replica 192.168.168.42\n- All sessions being redirected to replica\n- RTO (Recovery Time Objective): ~45 seconds\n\n### Impact\n- Brief service interruption (< 1 min) during failover\n- Data integrity maintained (stateless sessions on replica)\n- Authentication state preserved in Redis\n\n### Automated Response\n1. [x] Detected: Primary health check failed\n2. [x] Initiated: Failover to replica 192.168.168.42\n3. [x] Updated: DNS/load balancer routing\n4. [ ] In Progress: Draining existing connections\n\n### Investigation Required\n- SSH to 192.168.168.31 and check logs\n- Verify Docker daemon is running\n- Check network connectivity\n- Review recent deployments or changes\n- Once recovered: Run full regression test suite\n\n### Prevention\n- Implement better alerting thresholds\n- Add pre-checks before health failures\n- Automate recovery (already in progress)\n\n---\nP0 Incident - Immediate Investigation Required",
+    "createdAt": "2026-04-22T00:29:06Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXzNw",
+        "name": "P0",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACgOs-mg",
+        "name": "error-triage",
+        "description": "Security scan tag",
+        "color": "e4e669"
+      }
+    ],
+    "number": 1344,
+    "state": "OPEN",
+    "title": "[AUTO-TRIAGE] failover: Primary host 192.168.168.31 DOWN - Replica failover in progress",
+    "updatedAt": "2026-04-22T00:29:06Z"
+  },
+  {
+    "body": "## Automated Issue from Infrastructure Logs\n\n**Severity**: P1  \n**Source**: terraform-apply  \n\n### Error Pattern\nERROR: Resource conflict - aws_instance.primary already exists in state.\nManual intervention required.\n\n### Root Cause Analysis\n- State file corruption or manual infrastructure modifications\n- Concurrent terraform apply operations (race condition)  \n- IaC versioning mismatch between environments\n\n### Next Steps\n1. Verify infrastructure state: terraform state list\n2. Check for running operations\n3. If safe, refresh state: terraform refresh\n\n---\nAuto-generated by Logging Pipeline Demonstration",
+    "createdAt": "2026-04-22T00:28:59Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACgOs-mg",
+        "name": "error-triage",
+        "description": "Security scan tag",
+        "color": "e4e669"
+      }
+    ],
+    "number": 1343,
+    "state": "OPEN",
+    "title": "[AUTO-TRIAGE] terraform: Terraform apply failed - Resource conflict",
+    "updatedAt": "2026-04-22T00:28:59Z"
+  },
+  {
+    "body": "## Objective\n\nVerify that infrastructure logs from all sources automatically create GitHub issues without manual intervention.\n\n## Scope - All Log Sources\n- [x] Terraform deployment logs (apply/plan failures)\n- [x] HAProxy failover events (primary/replica transitions)\n- [x] System logs (kernel panics, Docker crashes, auth failures)\n- [x] Kubernetes pod lifecycle events (CrashLoopBackOff, OOMKilled, etc.)\n- [x] Container health check failures\n\n## Implementation Status\n\n### Γ£à Completed\n- Error triage engine script (\\scripts/error-triage-engine.sh\\)\n- Log collectors for all infrastructure sources (10 scripts in \\scripts/observability/\\)\n- Loki log aggregation backend (config: \\config/loki-config.yaml\\)\n- Promtail log shipping (config: \\config/promtail-config.yaml\\)\n- GitHub issue bridge (\\scripts/observability/log-to-github-bridge.sh\\)\n- IaC deployment scripts (idempotent, immutable)\n- End-to-end test suite\n\n### ΓÅ│ In Progress\n- Deployment to production hosts (192.168.168.31 and .42)\n- Verification that logs actually flow through the pipeline\n- Testing that GitHub issues are created automatically\n\n## Deployment Steps\n1. Run pre-flight validation: \\\\\\\bash scripts/validate-logging-pipeline-iac.sh\\\\\\\n2. Deploy to primary: \\\\\\\bash scripts/deploy-logging-pipeline-iac.sh --host 192.168.168.31 --install\\\\\\\n3. Deploy to replica: \\\\\\\bash scripts/deploy-logging-pipeline-iac.sh --host 192.168.168.42 --install\\\\\\\n4. Verify: \\\\\\\bash scripts/observability/test-log-pipeline.sh --all\\\\\\\n\n## Acceptance Criteria\n\n### Phase 1: Logs Flowing to Loki\n- [ ] Loki is deployed and accessible on both hosts\n- [ ] Promtail is shipping logs successfully\n- [ ] All log sources appear in Loki query results\n- [ ] Log retention policy is working (30-day retention)\n\n### Phase 2: Error Pattern Detection\n- [ ] Error-triage-engine detects recurring error patterns\n- [ ] Clustering groups similar errors together\n- [ ] False positive rate is acceptable (< 5%)\n\n### Phase 3: GitHub Issue Creation\n- [ ] New error patterns trigger GitHub issue creation within 5 minutes\n- [ ] GitHub issues include proper context (logs, stack traces, severity)\n- [ ] Duplicate errors update existing issues instead of creating new ones\n- [ ] Issues are labeled appropriately (error-triage, P0/P1/P2, source-type)\n\n### Phase 4: Production Verification\n- [ ] Both production hosts are running the logging pipeline\n- [ ] End-to-end test suite passes\n- [ ] Real infrastructure events trigger GitHub issues automatically\n- [ ] Issue creation meets SLA (< 5 minutes from event to issue)\n\n## Related Issues\n- #378 - P0 Automated Error Triage Framework\n- #1069 - Infrastructure Observability\n- #1194 - EPIC Observability\n\n## Notes\n\nAll scripts are production-ready, tested, and committed to main. This issue tracks the deployment and live verification phase.\n\nSee \\docs/observability/LOG-PIPELINE-TO-GITHUB-ISSUES.md\\ for complete documentation.\n\n---\n\n**Status:** Ready for deployment  \n**Effort:** ~4-6 hours (deployment + verification)  \n**Owner:** @kushin77  \n**Labels:** P0, observability, infrastructure, logging",
+    "createdAt": "2026-04-22T00:27:14Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXzNw",
+        "name": "P0",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1342,
+    "state": "OPEN",
+    "title": "[P0] Automated Infrastructure Logging to GitHub Issues - End-to-End Verification",
+    "updatedAt": "2026-04-22T00:29:40Z"
+  },
+  {
+    "body": "## Epic: Observability ΓÇö OTel Rollout + Logging Standards\n\nPlan: TBD ΓÇö run `/plan-eng-review` before implementation.\n\nPhase-7 OpenTelemetry instrumentation (#644/#645/#646) was filed against an inconsistent logging baseline. Standardizing log levels, structure, and frontend error reporting first lets the OTel rollout drop into clean code rather than landing alongside churn. Bundling phase-7 with its prerequisite logging-standard issues keeps the instrumentation contract consistent across .NET, Python, and the frontend.\n\n### Children\n\n**Prerequisites ΓÇö logging standards**\n- [ ] #256 ΓÇö structured logging across .NET API\n- [ ] #976 ΓÇö frontend centralized error reporting\n- [ ] #1216 ΓÇö log-level standards across processing engine\n- [ ] #1354 ΓÇö log-level inconsistency in error paths *(also under C1)*\n- [ ] #1386 ΓÇö request_id / job_id propagation across services\n- [ ] #1395 ΓÇö sensitive-data redaction in logs\n\n**OTel rollout (Phase 7)**\n- [ ] #644 ΓÇö OTel instrumentation: .NET API\n- [ ] #645 ΓÇö OTel instrumentation: Python processing engine\n- [ ] #646 ΓÇö OTel instrumentation: AWS export + local collector\n- [ ] #1239 ΓÇö OTel context propagation across SignalR\n- [ ] #1241 ΓÇö OTel sampling configuration\n\n### Deliverable\n\n(1) `Astronomy.Observability` shared logging conventions in .NET; (2) Python `app/observability/logging.py` with structured JSON logger + redaction; (3) frontend `src/lib/observability.ts` reporting unhandled errors to backend; (4) OTel SDK initialized in all three services exporting OTLP to a local collector (dev) or AWS X-Ray (staging/prod); (5) request_id + job_id propagated across the full call graph.\n\n### PR split (3 PRs)\n\n1. Logging standards + redaction (#256, #976, #1216, #1354, #1395)\n2. Cross-service correlation IDs (#1386)\n3. OTel rollout (#644, #645, #646, #1239, #1241)\n\n### Acceptance\n\n- [ ] Single request_id traceable from frontend ΓåÆ API ΓåÆ processing engine ΓåÆ MongoDB\n- [ ] Sensitive-data redaction unit-tested (tokens, emails, paths)\n- [ ] OTel traces visible in local collector for composite + mosaic flows\n- [ ] All 11 child issues closed\n- [ ] Phase-7 milestone marked complete in `docs/development-plan.md`\n",
+    "createdAt": "2026-04-22T00:01:13Z",
+    "labels": [
+      {
+        "id": "LA_kwDOPHCowc8AAAACX74VvQ",
+        "name": "priority: medium",
+        "description": "Medium priority item",
+        "color": "f97316"
+      },
+      {
+        "id": "LA_kwDOPHCowc8AAAACaL6rdQ",
+        "name": "phase:7",
+        "description": "Phase 7: Observability & Monitoring",
+        "color": "fbca04"
+      },
+      {
+        "id": "LA_kwDOPHCowc8AAAACfg6DrA",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOPHCowc8AAAACfv9M0g",
+        "name": "epic",
+        "description": "Umbrella tracking issue that coordinates several child issues",
+        "color": "A60098"
+      }
+    ],
+    "number": 1404,
+    "state": "OPEN",
+    "title": "epic: observability ΓÇö OTel rollout + logging standards",
+    "updatedAt": "2026-04-22T00:01:13Z"
+  },
+  {
+    "body": "Silent failures on launch day are fatal. Check current state: is `@sentry/node` initialized, is SENTRY_DSN set in `/opt/floom-mcp-preview/.env`, is there a Discord webhook for error alerts, does PostHog log run failures? Gap-fix any missing piece. Related: existing task #80.",
+    "createdAt": "2026-04-21T23:32:42Z",
+    "labels": [
+      {
+        "id": "LA_kwDOSBulNM8AAAACf4zjqQ",
+        "name": "p0",
+        "description": "P0 severity - blocker",
+        "color": "b60205"
+      },
+      {
+        "id": "LA_kwDOSBulNM8AAAACgRDdrw",
+        "name": "launch-blocker",
+        "description": "Blocks launch",
+        "color": "b60205"
+      },
+      {
+        "id": "LA_kwDOSBulNM8AAAACgRDd0w",
+        "name": "observability",
+        "description": "Monitoring, logging, alerts",
+        "color": "fbca04"
+      }
+    ],
+    "number": 311,
+    "state": "OPEN",
+    "title": "[P0] Wire prod observability: Sentry + Discord alerts",
+    "updatedAt": "2026-04-21T23:32:42Z"
+  },
+  {
+    "body": "## Finding from the 2026-04-22 full-flywheel dogfood on #26 (PR #57)\n\n`SymphonyElixir.Verification.maybe_critique/2` at `elixir/lib/symphony_elixir/verification.ex:107` returns `:approve` **silently**. Only the reject, timeout, and codex-failure paths emit log lines:\n\n- `elixir/lib/symphony_elixir/verification.ex:114` ΓÇö `warning: Verification critic failed (fail-open): ...`\n- `elixir/lib/symphony_elixir/verification.ex:119` ΓÇö `warning: Verification critic timed out (fail-open)`\n- `elixir/lib/symphony_elixir/orchestrator.ex` ΓÇö `info: Critic rejected recipe for ...`\n\n## Why it matters\n\nIn the #26 dogfood, verification passed in 13s and the dogfood log showed **zero critic-related entries**. From the logs alone it was impossible to tell whether the critic actually fired, fail-opened silently (shouldn't ΓÇö that path logs), or was bypassed. I had to boot iex and re-parse the workflow YAML to confirm `critic_enabled: true` was in effect.\n\nClaimed value of the critic gate (#42) was breaking the correlated-error blind spot. If we can't see it running on healthy approvals, we can't tell when it silently regresses.\n\n## Proposal\n\nEmit an info-level log on every critic invocation outcome, including approvals. Minimal shape:\n\n```\ninfo: Verification critic approved for issue_id=... identifier=...\ninfo: Verification critic rejected for issue_id=... identifier=... reason=...\n```\n\nOptionally include `codex_seconds` and a short reason snippet in structured fields once metrics are a priority. The approve log is the load-bearing piece ΓÇö rejection/timeout/fail already log.\n\n## Acceptance\n\n- Every codepath through `maybe_critique/2` emits at least one log line carrying the verdict.\n- A passing critic run in a dogfood is visibly distinguishable from a run where the critic was disabled.",
+    "createdAt": "2026-04-21T23:01:32Z",
+    "labels": [
+      {
+        "id": "LA_kwDOSD5im88AAAACgL76iQ",
+        "name": "opal",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOSD5im88AAAACgL77Uw",
+        "name": "verification",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDOSD5im88AAAACgL78DA",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 58,
+    "state": "OPEN",
+    "title": "feat(verification): log critic outcomes on approve (observability gap)",
+    "updatedAt": "2026-04-21T23:01:32Z"
+  },
+  {
+    "body": "## Problem\n\nThe `daily` pipeline wraps at least 8 independent fetches in non-fatal `catch` blocks that demote errors to `warn()` and return empty fallbacks, but `DailyOutput` exposes no structured `warnings` field. A run can produce an outwardly-successful `{success: true, data: {...}}` JSON envelope while silently skipping repo metadata, monthly analytics, scout sync, Gist checkpoint, and more ΓÇö the user has no signal beyond log noise.\n\nAdditionally, phases 2ΓÇô5 each run their own `batch()` with no cross-phase atomicity: if phase 4 throws, phases 2/3 have already committed state changes.\n\n## Evidence\n\nNon-fatal catch sites in `packages/core/src/commands/daily.ts`:\n- Phase 1 ΓÇö `fetchUserMergedPRCounts`, `fetchUserClosedPRCounts`, `fetchRecentlyClosedPRs`, `fetchRecentlyMergedPRs` each fall back to empty on failure (`daily.ts:141-220`).\n- Phase 1 ΓÇö `issueMonitor.fetchCommentedIssues()` synthetic failure entry (`daily.ts:179-191`).\n- Phase 2 ΓÇö `fetchRepoMetadata` fallback on non-rate-limit errors (`daily.ts:324`).\n- Phase 2 ΓÇö outer try/catch on `save()` failure logs only (`daily.ts:314-316, 365-367`).\n- Phase 3 ΓÇö analytics batch outer try/catch (`daily.ts:596-617`).\n- Phase 3.5 ΓÇö oss-scout sync try/catch (`daily.ts:620-633`).\n- Phase 6 ΓÇö final Gist checkpoint try/catch (`daily.ts:648-655`).\n\n`DailyOutput` type (`packages/core/src/formatters/json.ts:137-147`): has `failures: PRCheckFailure[]` but that only captures PR-fetch failures from `fetchUserOpenPRs`, not any of the ancillary warnings above.\n\nAtomicity: `core/state.ts:143-157` ΓÇö each `batch()` calls `save()` once at the outer boundary. Four separate batches across four phases means four disk writes, no cross-phase rollback.\n\n## Proposed fix\n\n### 1. Add `warnings` to `DailyOutput`\n\nExtend `DailyOutput` and `CompactDailyOutput` with:\n\n```ts\ninterface DailyWarning {\n  phase: 'fetch' | 'repo-scores' | 'analytics' | 'scout-sync' | 'partition' | 'dismiss-filter' | 'gist-checkpoint';\n  operation: string;\n  message: string;\n}\n\ninterface DailyOutput {\n  // ...existing fields...\n  warnings: DailyWarning[];\n}\n```\n\n### 2. Thread a warnings collector through the pipeline\n\nInstrument each non-fatal catch block to push an entry into a local `warnings: DailyWarning[]` array that flows through to `toDailyOutput()`. Example:\n\n```ts\ntry {\n  await fetchRepoMetadata(...);\n} catch (err) {\n  warnings.push({phase: 'repo-scores', operation: 'fetchRepoMetadata', message: String(err)});\n  warn(MODULE, 'fetchRepoMetadata failed', err);\n}\n```\n\n### 3. Optional ΓÇö wrap the whole pipeline in an outer batch\n\nTo improve cross-phase atomicity, wrap phases 2ΓÇô5 in a single outer `stateManager.batch(async () => { ... })`. This preserves `save()`-once semantics and ensures partial failures don't leave inconsistent state.\n\n### 4. Update golden contract tests\n\n`daily.contract.test.ts` needs new goldens covering the `warnings` field (empty array for the typical case, populated array for a degraded fixture).\n\n## Acceptance criteria\n\n- `DailyOutput.warnings` field exists and is populated for every non-fatal failure in phases 1ΓÇô5 and the Gist checkpoint.\n- `warnings` is always an array (never `undefined`), even on clean runs (empty array).\n- Plugin/MCP consumers can inspect `warnings.length > 0` to surface degradation to the user.\n- New unit tests in `daily-orchestration.test.ts` assert that each phase's failure mode produces the expected warning entry.\n- Contract test goldens updated.\n\n## Scope / out-of-scope\n\n**In scope:** `warnings` field on `DailyOutput`/`CompactDailyOutput`, per-phase collector, tests, goldens.\n\n**Out of scope:** the cross-phase atomicity outer-batch refactor (worth doing but separable ΓÇö open as a follow-up); cross-process file lock for `state.json` (separate C4 fix); dashboard `partialFailures` counterpart (covered by C9).\n\n**Severity:** High ┬╖ **Area:** CLI PR-flow / observability ┬╖ **Audit ref:** H7\n",
+    "createdAt": "2026-04-21T22:49:59Z",
+    "labels": [
+      {
+        "id": "LA_kwDOQ0LQsc8AAAACUGvCZA",
+        "name": "bug",
+        "description": "Something isn't working",
+        "color": "d73a4a"
+      },
+      {
+        "id": "LA_kwDOQ0LQsc8AAAACZXqIXA",
+        "name": "priority:high",
+        "description": "High priority - should be addressed soon",
+        "color": "d93f0b"
+      },
+      {
+        "id": "LA_kwDOQ0LQsc8AAAACZXqJHA",
+        "name": "observability",
+        "description": "Logging, debugging, monitoring",
+        "color": "5319E7"
+      }
+    ],
+    "number": 1042,
+    "state": "OPEN",
+    "title": "[HIGH] daily swallows 8+ non-fatal failures with no warnings field in DailyOutput",
+    "updatedAt": "2026-04-21T22:49:59Z"
+  },
+  {
+    "body": "## Problem\n\nThe `check-integration` command has a name that strongly implies a system-health / doctor command (validate token, gh auth, bundle, state, scout dependency, Gist reachability). In reality, it is a feature-branch helper that runs `git diff --name-only --diff-filter=A <base>...HEAD` plus `git grep` to find orphan new files on the current branch. It performs zero system diagnostics.\n\nThere is no real `doctor` / `self-test` / `check-setup` command in the CLI. `checkSetup` in the registry only reads `config.setupComplete` ΓÇö a single boolean ΓÇö which is not useful when users hit the common failure modes (missing token, missing bundle, corrupted state, unreachable scout).\n\n## Evidence\n\n- `packages/core/src/commands/check-integration.ts` ΓÇö module docstring at line 3: *\"Detects new files in the current branch that aren't referenced elsewhere.\"*\n- JSON shape: `{newFiles: NewFileInfo[], unreferencedCount: number}` where `NewFileInfo = {path, referencedBy: string[], isIntegrated: boolean, suggestedEntryPoints?: string[]}`.\n- Implementation runs `git diff --name-only --diff-filter=A <base>...HEAD` and `git grep -l -- <pattern>`. No token check, no bundle check, no gh CLI check, no `GET /user` ping, no state.json parse check, no scout resolution check.\n- `cli-registry.ts` ΓÇö the `check-setup` registry entry only inspects `config.setupComplete`, a boolean.\n- When `git ls-files` fails (not a git repo), `allFiles = []` silently, so every file becomes `isIntegrated: false` ΓÇö confusing output with no loud error.\n\n## Proposed fix\n\n**Two parts:**\n\n### 1. Rename the existing command\n\nRename `check-integration` to something that describes what it does, e.g. `orphan-files`, `new-file-audit`, or `branch-integration`. Keep the existing behavior; only the name changes. Update `cli-registry.ts`, test filenames, any references in workflows/agents, and the help text.\n\n### 2. Add a real `doctor` command\n\nCreate `packages/core/src/commands/doctor.ts` exporting `runDoctor()` that produces a `DoctorOutput` envelope:\n\n```ts\ninterface DoctorOutput {\n  checks: Array<{\n    name: string;\n    status: 'ok' | 'warning' | 'error';\n    message: string;\n    remediation?: string;\n  }>;\n  summary: { ok: number; warnings: number; errors: number };\n}\n```\n\nChecks to include:\n- `$GITHUB_TOKEN` or `gh auth token` resolves (hit `GET /user`, parse login).\n- `gh` CLI present and authenticated (`gh auth status`).\n- `packages/core/dist/cli.bundle.cjs` exists and mtime is newer than `packages/core/src/cli.ts`.\n- `~/.oss-autopilot/state.json` parses and `schemaVersion === current`.\n- `@oss-scout/core` resolvable (`require.resolve`).\n- GitHub Search API rate-limit status (`GET /rate_limit`).\n- If Gist mode: gist reachable and writable.\n\nWire into `cli-registry.ts` as `doctor` (needs auth for the live API ping; flag gracefully when no token so the other checks still run).\n\nOptional: surface from the plugin `/oss` menu as \"Run diagnostic.\"\n\n## Acceptance criteria\n\n- `check-integration` is renamed; the existing feature-branch behavior is preserved under the new name.\n- `oss-autopilot doctor --json` returns a structured checks array.\n- Every check emits `ok`/`warning`/`error` with an actionable `remediation` string on failure.\n- The command works even when `$GITHUB_TOKEN` is missing (skips the GitHub API checks with a clear `warning`).\n- Unit tests mock each external dependency (fs for bundle, `require.resolve` for scout, Octokit for API) and cover the ok + error paths.\n- `workflows/reference.md` documents the new `doctor` command.\n\n## Scope / out-of-scope\n\n**In scope:** rename + new `doctor` command + tests + reference.md update.\n\n**Out of scope:** auto-repair (e.g. running the rebuild automatically); that belongs in a future follow-up.\n\n**Severity:** High ┬╖ **Area:** CLI diagnostics ┬╖ **Audit ref:** H4\n",
+    "createdAt": "2026-04-21T22:49:51Z",
+    "labels": [
+      {
+        "id": "LA_kwDOQ0LQsc8AAAACUGvCeg",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDOQ0LQsc8AAAACZXqIXA",
+        "name": "priority:high",
+        "description": "High priority - should be addressed soon",
+        "color": "d93f0b"
+      },
+      {
+        "id": "LA_kwDOQ0LQsc8AAAACZXqJHA",
+        "name": "observability",
+        "description": "Logging, debugging, monitoring",
+        "color": "5319E7"
+      }
+    ],
+    "number": 1039,
+    "state": "OPEN",
+    "title": "[HIGH] check-integration is misnamed; no real doctor command exists",
+    "updatedAt": "2026-04-21T22:49:51Z"
+  },
+  {
+    "body": "Standby receives all ops, < 1s failover. Zero loss (checksum verified). Auto-reconnect within 2s.",
+    "createdAt": "2026-04-21T22:35:31Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1321,
+    "state": "OPEN",
+    "title": "[Collab-10.9]: Hot-standby failover",
+    "updatedAt": "2026-04-21T22:35:31Z"
+  },
+  {
+    "body": "Delta encoding (cursor), LZ4 compress (ops), message batching (5ms). Typing op < 100 bytes.",
+    "createdAt": "2026-04-21T22:35:30Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffx59A",
+        "name": "P2",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1320,
+    "state": "OPEN",
+    "title": "[Collab-10.8]: Message compression < 1 KB",
+    "updatedAt": "2026-04-21T23:24:19Z"
+  },
+  {
+    "body": "Region-specific databases. Data residency enforcement. Cross-region access blocked. GDPR compliance.",
+    "createdAt": "2026-04-21T22:35:29Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffyqMw",
+        "name": "P3",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1319,
+    "state": "OPEN",
+    "title": "[Collab-10.7]: Multi-region deployment",
+    "updatedAt": "2026-04-21T22:35:29Z"
+  },
+  {
+    "body": "Multiple instances, consistent hashing, Redis-backed state. k6 test: 3 instances balanced load.",
+    "createdAt": "2026-04-21T22:35:28Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1318,
+    "state": "OPEN",
+    "title": "[Collab-10.6]: session-broker horizontal scale",
+    "updatedAt": "2026-04-21T22:35:28Z"
+  },
+  {
+    "body": "Lightweight relays at geographic edges. GeoDNS routing. < 50ms global latency. Stateless forward to primary.",
+    "createdAt": "2026-04-21T22:35:27Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffx59A",
+        "name": "P2",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1317,
+    "state": "OPEN",
+    "title": "[Collab-10.5]: Edge relay nodes",
+    "updatedAt": "2026-04-21T22:35:27Z"
+  },
+  {
+    "body": "WiFi ΓåÆ 4G: buffer ops, reconnect < 3s, zero loss. Session token stable across IP changes.",
+    "createdAt": "2026-04-21T22:35:26Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1316,
+    "state": "OPEN",
+    "title": "[Collab-10.4]: Network migration",
+    "updatedAt": "2026-04-21T22:35:26Z"
+  },
+  {
+    "body": "State vector exchange. Send only missing ops (O(change) not O(doc)). LZ4 compress. < 100 bytes per 1-char edit.",
+    "createdAt": "2026-04-21T22:35:26Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1315,
+    "state": "OPEN",
+    "title": "[Collab-10.3]: Selective delta sync",
+    "updatedAt": "2026-04-21T22:35:26Z"
+  },
+  {
+    "body": "Snapshot + truncate ops when log > 10MB or age > 7d. Non-blocking. New clients get snapshot + incremental.",
+    "createdAt": "2026-04-21T22:35:25Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1314,
+    "state": "OPEN",
+    "title": "[Collab-10.2]: CRDT compaction",
+    "updatedAt": "2026-04-21T22:35:25Z"
+  },
+  {
+    "body": "3-node relay behind HAProxy. Consistent hash routing (session_id). Redis Pub/Sub fan-out. k6 test 1k pairs.",
+    "createdAt": "2026-04-21T22:35:24Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1313,
+    "state": "OPEN",
+    "title": "[Collab-10.1]: WebSocket gateway cluster",
+    "updatedAt": "2026-04-21T22:35:24Z"
+  },
+  {
+    "body": "WebSocket gateway 10k sessions, CRDT compaction, delta sync, network migration, edge relays.",
+    "createdAt": "2026-04-21T22:35:23Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZcgQ",
+        "name": "performance",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1312,
+    "state": "OPEN",
+    "title": "EPIC [Collab-10]: Scale & Performance",
+    "updatedAt": "2026-04-21T22:35:23Z"
+  },
+  {
+    "body": "Deployment freq, lead time, change failure %, MTTR. 12w trend. Elite/High/Med/Low tier benchmark.",
+    "createdAt": "2026-04-21T22:35:13Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACV89JqA",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffx59A",
+        "name": "P2",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1301,
+    "state": "OPEN",
+    "title": "[Collab-8.9]: DORA metrics dashboard",
+    "updatedAt": "2026-04-21T22:35:47Z"
+  },
+  {
+    "body": "ML baseline: login time, files accessed, session duration. Isolation Forest scoring. Alert on drift.",
+    "createdAt": "2026-04-21T22:35:12Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMZJ1Q",
+        "name": "security",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1300,
+    "state": "OPEN",
+    "title": "[Collab-8.8]: Access pattern anomaly detection",
+    "updatedAt": "2026-04-21T22:35:45Z"
+  },
+  {
+    "body": "Grafana: all events for historical session. Deployments overlaid. Click event ΓåÆ full JSON.",
+    "createdAt": "2026-04-21T22:35:11Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACV89JqA",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffx59A",
+        "name": "P2",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1299,
+    "state": "OPEN",
+    "title": "[Collab-8.7]: Session replay timeline",
+    "updatedAt": "2026-04-21T22:35:42Z"
+  },
+  {
+    "body": "Time-series regression on: sessions/day, CPU, memory. Forecast 30/60/90d. Alert before breach.",
+    "createdAt": "2026-04-21T22:35:10Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACV89JqA",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffx59A",
+        "name": "P2",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1298,
+    "state": "OPEN",
+    "title": "[Collab-8.6]: Capacity forecasting",
+    "updatedAt": "2026-04-21T22:35:42Z"
+  },
+  {
+    "body": "SLO breach ΓåÆ auto-correlate with deploys, config changes, restarts. Timeline in incident summary.",
+    "createdAt": "2026-04-21T22:35:09Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACV89JqA",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1297,
+    "state": "OPEN",
+    "title": "[Collab-8.5]: Incident correlation",
+    "updatedAt": "2026-04-21T22:35:41Z"
+  },
+  {
+    "body": "Onboarding funnel: invite ΓåÆ link ΓåÆ account ΓåÆ session join ΓåÆ edit ΓåÆ 7d streak. Conversion % tracking.",
+    "createdAt": "2026-04-21T22:35:08Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACV89JqA",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffx59A",
+        "name": "P2",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1296,
+    "state": "OPEN",
+    "title": "[Collab-8.4]: Funnel analytics",
+    "updatedAt": "2026-04-21T22:35:41Z"
+  },
+  {
+    "body": "Per-connection: latency, jitter, packet loss. Quality score 0-100. Auto-reconnect with backoff.",
+    "createdAt": "2026-04-21T22:35:07Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACV89JqA",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1295,
+    "state": "OPEN",
+    "title": "[Collab-8.3]: WebSocket health monitoring",
+    "updatedAt": "2026-04-21T22:35:40Z"
+  },
+  {
+    "body": "Define: sync < 100ms p99, presence < 500ms p99. Error budget burn tracking. 30d trend.",
+    "createdAt": "2026-04-21T22:35:07Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACV89JqA",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1294,
+    "state": "OPEN",
+    "title": "[Collab-8.2]: SLO/SLA dashboard",
+    "updatedAt": "2026-04-21T22:35:38Z"
+  },
+  {
+    "body": "OTel instrumentation of all collab events. Jaeger export. p99 latency queryable per event type.",
+    "createdAt": "2026-04-21T22:35:06Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACV89JqA",
+        "name": "enhancement",
+        "description": "New feature or request",
+        "color": "a2eeef"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1293,
+    "state": "OPEN",
+    "title": "[Collab-8.1]: End-to-end distributed tracing",
+    "updatedAt": "2026-04-21T22:35:36Z"
+  },
+  {
+    "body": "Distributed tracing, SLOs, health monitoring, funnel analytics, incident correlation, forecasting.",
+    "createdAt": "2026-04-21T22:35:05Z",
+    "labels": [
+      {
+        "id": "LA_kwDORBHzSs8AAAACfMY2Zw",
+        "name": "infrastructure",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACfOXc6Q",
+        "name": "P1",
+        "description": "",
+        "color": "ededed"
+      },
+      {
+        "id": "LA_kwDORBHzSs8AAAACffzY0A",
+        "name": "observability",
+        "description": "",
+        "color": "ededed"
+      }
+    ],
+    "number": 1292,
+    "state": "OPEN",
+    "title": "EPIC [Collab-8]: Observability",
+    "updatedAt": "2026-04-21T22:35:34Z"
+  }
+]

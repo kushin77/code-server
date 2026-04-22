@@ -28,7 +28,7 @@ env:
   GOVERNANCE_MANIFEST: config/governance-manifest.yml
   JSCPD_VERSION: "3.5.10"
   GITLEAKS_VERSION: "8.21.1"
-  TRUFFLEHOG_VERSION: "3.76.3"
+  TRUFFLEHOG_VERSION: "3.95.2"
   TRIVY_VERSION: "0.55.0"
 
 jobs:
@@ -49,9 +49,10 @@ jobs:
           wget https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz
           tar xzf gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz gitleaks
           sudo mv gitleaks /usr/local/bin/gitleaks
-          if ! pip install truffleHog==${TRUFFLEHOG_VERSION}; then
-            echo "⚠ truffleHog==${TRUFFLEHOG_VERSION} not available on pip; continuing (advisory scans handle fallback)"
-          fi
+          # Install TruffleHog v3 binary
+          wget https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz
+          tar xzf trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz
+          sudo mv trufflehog /usr/local/bin/trufflehog
           if wget https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz; then
             tar zxvf trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
             sudo mv trivy /usr/local/bin/
@@ -215,8 +216,8 @@ jobs:
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           
           trufflehog filesystem . \
-            --only-verified \
-            --json 2>&1 | tee /tmp/trufflehog-output.json
+            --fail \
+            --json 2>&1 | tee /tmp/trufflehog-output.json || true
           
           if grep -q '"verified": true' /tmp/trufflehog-output.json; then
             echo "✗ Verified secrets detected"

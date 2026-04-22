@@ -3,9 +3,23 @@
 // @description Unit tests for the standup summaries service
 // @owner       collab-2.9
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Pool } from 'pg';
 import { StandupSummariesService } from '../index';
+
+const collaborationEncryptionKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const originalEncryptionKey = process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY;
+
+const loggerMock = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+};
+
+vi.mock('../../../lib/logger', () => ({
+  getLogger: vi.fn(() => loggerMock),
+}));
 
 // Mock the AI router
 const mockAIRouter = {
@@ -22,7 +36,17 @@ describe('StandupSummariesService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY = collaborationEncryptionKey;
     service = new StandupSummariesService(mockPool, mockAIRouter);
+  });
+
+  afterEach(() => {
+    if (originalEncryptionKey === undefined) {
+      delete process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY;
+      return;
+    }
+
+    process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY = originalEncryptionKey;
   });
 
   describe('initialization', () => {
@@ -245,6 +269,43 @@ describe('StandupSummariesService', () => {
       expect(collectSpy).toHaveBeenCalledWith(date);
       expect(generateSpy).toHaveBeenCalled();
       expect(result.summary).toBe('Generated summary');
+    });
+  });
+
+  describe('postToMatrix', () => {
+    it('should post encrypted collaboration payloads to Matrix', async () => {
+      service = new StandupSummariesService(mockPool, mockAIRouter, {
+        matrixRoomId: '!room:kushnir.cloud',
+        enabled: false,
+      });
+
+      mockPool.query
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'test-id',
+            date: '2024-01-01',
+            summary: 'Encrypted summary content',
+            status: 'approved',
+            created_at: new Date(),
+            posted_at: null,
+            approved_by: 'test-user',
+            matrix_message_id: null,
+          }],
+        })
+        .mockResolvedValueOnce({ rows: [] });
+
+      const result = await service.postToMatrix('2024-01-01');
+
+      expect(result).toBe(true);
+      expect(loggerMock.info).toHaveBeenCalledWith(
+        'Would post encrypted collaboration payload to Matrix',
+        expect.objectContaining({
+          roomId: '!room:kushnir.cloud',
+          keyId: expect.any(String),
+          messageType: 'm.text',
+          payloadBytes: expect.any(Number),
+        })
+      );
     });
   });
 });

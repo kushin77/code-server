@@ -5,8 +5,14 @@
 // @owner       collab-2.9
 // @status      active
 import { EventEmitter } from 'events';
-import { getLogger } from '../../lib/logger';
+import { getLogger } from '../../lib/logger.js';
+import { CollaborationMessageEncryptionService } from '../collaboration-message-encryption/index.js';
 export class StandupSummariesService extends EventEmitter {
+    db;
+    logger;
+    aiRouter;
+    config;
+    scheduleTimer;
     constructor(db, aiRouter, config = {}) {
         super();
         this.db = db;
@@ -455,17 +461,23 @@ Please format as a clean standup summary suitable for team chat.`;
                 return false;
             }
             // Basic Matrix posting implementation
-            // In production, this would use a proper Matrix client
+            // In production, this would use a proper Matrix client with encrypted payloads only.
+            const encryptedMessage = new CollaborationMessageEncryptionService().encryptMessage(summary.summary, {
+                channel: 'matrix',
+                roomId: this.config.matrixRoomId,
+                summaryDate: date,
+                summaryStatus: summary.status,
+            });
             const matrixMessage = {
-                body: summary.summary,
-                formatted_body: summary.summary.replace(/\n/g, '<br>'),
+                body: encryptedMessage.body,
                 msgtype: 'm.text',
-                format: 'org.matrix.custom.html',
             };
             // For now, just log the message that would be sent
-            this.logger.info('Would post to Matrix', {
+            this.logger.info('Would post encrypted collaboration payload to Matrix', {
                 roomId: this.config.matrixRoomId,
-                message: matrixMessage,
+                keyId: encryptedMessage.keyId,
+                messageType: matrixMessage.msgtype,
+                payloadBytes: Buffer.byteLength(matrixMessage.body, 'utf8'),
             });
             // TODO: Implement actual Matrix API call
             // const success = await this.sendMatrixMessage(this.config.matrixRoomId, matrixMessage);

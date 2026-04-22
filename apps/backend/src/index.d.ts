@@ -1,6 +1,7 @@
 export { StandupSummariesService } from './services/standup-summaries';
 export type { DailyActivity, CommitActivity, ReviewActivity, CommentActivity, IssueActivity, StandupSummary, StandupConfig, } from './services/standup-summaries';
 export { setupStandupSummariesIntegration, createExampleApp } from './services/standup-summaries/integration-example';
+export { CollaborationMessageEncryptionService } from './services/collaboration-message-encryption';
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';
 export { initializeSymbolDiscussionsRoutes, SymbolDiscussionsService } from './routes/symbol-discussions';
 export { initializeMentionSystemRoutes, MentionSystemService } from './routes/mention-system';

@@ -7,7 +7,8 @@
 
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
-import { getLogger } from '../../lib/logger';
+import { getLogger } from '../../lib/logger.js';
+import { CollaborationMessageEncryptionService } from '../collaboration-message-encryption/index.js';
 
 export interface MentionMatch {
   username: string;
@@ -312,19 +313,27 @@ export class MentionSystemService extends EventEmitter {
   }
 
   private async sendMatrixNotification(mention: Mention, roomId: string): Promise<void> {
-    const messageBody = this.formatMatrixNotification(mention);
-
     try {
-      // In production, use Matrix client SDK
-      // For now, log the notification
-      this.logger.info('Sending Matrix notification', {
+      const messageBody = this.formatMatrixNotification(mention);
+      const encryptedMessage = new CollaborationMessageEncryptionService().encryptMessage(messageBody, {
+        channel: 'matrix',
+        roomId,
+        mentionId: mention.id,
+        mentionedBy: mention.mentionedBy,
+        mentionedUser: mention.mentionedUser,
+        contextId: mention.context.contextId,
+      });
+
+      // In production, use Matrix client SDK with encrypted payloads only.
+      this.logger.info('Prepared encrypted Matrix notification', {
         roomId,
         user: mention.mentionedUser,
-        message: messageBody,
+        keyId: encryptedMessage.keyId,
+        payloadBytes: Buffer.byteLength(encryptedMessage.body, 'utf8'),
       });
 
       // TODO: Integrate with Matrix SDK
-      // await matrixClient.sendMessage(roomId, messageBody);
+      // await matrixClient.sendMessage(roomId, encryptedMessage.body);
     } catch (error) {
       this.logger.error('Failed to send Matrix notification', { error, roomId, mention: mention.id });
       throw error;

@@ -5,18 +5,22 @@
 // @owner       collab-2.5
 // @status      active
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Pool } from 'pg';
 import { MentionSystemService } from '../index';
 
+const collaborationEncryptionKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const originalEncryptionKey = process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY;
+const loggerMock = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+};
+
 // Mock the logger
 vi.mock('../../../lib/logger', () => ({
-  getLogger: vi.fn(() => ({
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  })),
+  getLogger: vi.fn(() => loggerMock),
 }));
 
 // Mock the database pool
@@ -31,6 +35,7 @@ describe('MentionSystemService', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY = collaborationEncryptionKey;
 
     mockClient = {
       query: vi.fn(),
@@ -42,6 +47,15 @@ describe('MentionSystemService', () => {
     service = new MentionSystemService(mockPool);
     mockClient.query.mockResolvedValue({ rows: [] });
     await service.initialize();
+  });
+
+  afterEach(() => {
+    if (originalEncryptionKey === undefined) {
+      delete process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY;
+      return;
+    }
+
+    process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY = originalEncryptionKey;
   });
 
   describe('initialization', () => {
@@ -254,6 +268,16 @@ describe('MentionSystemService', () => {
         channels: ['matrix'],
         matrixRoomId: '!room:kushnir.cloud',
       });
+
+      expect(loggerMock.info).toHaveBeenCalledWith(
+        'Prepared encrypted Matrix notification',
+        expect.objectContaining({
+          roomId: '!room:kushnir.cloud',
+          user: 'bob',
+          keyId: expect.any(String),
+          payloadBytes: expect.any(Number),
+        })
+      );
 
       expect(mockClient.query).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE mentions'),

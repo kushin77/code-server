@@ -7,8 +7,9 @@
 
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
-import { getLogger } from '../../lib/logger';
-import { AIRouter } from '../ai/router';
+import { getLogger } from '../../lib/logger.js';
+import { AIRouter } from '../ai/router.js';
+import { CollaborationMessageEncryptionService } from '../collaboration-message-encryption/index.js';
 
 export interface DailyActivity {
   date: string;
@@ -600,18 +601,25 @@ Please format as a clean standup summary suitable for team chat.`;
       }
 
       // Basic Matrix posting implementation
-      // In production, this would use a proper Matrix client
+      // In production, this would use a proper Matrix client with encrypted payloads only.
+      const encryptedMessage = new CollaborationMessageEncryptionService().encryptMessage(summary.summary, {
+        channel: 'matrix',
+        roomId: this.config.matrixRoomId,
+        summaryDate: date,
+        summaryStatus: summary.status,
+      });
+
       const matrixMessage = {
-        body: summary.summary,
-        formatted_body: summary.summary.replace(/\n/g, '<br>'),
+        body: encryptedMessage.body,
         msgtype: 'm.text' as const,
-        format: 'org.matrix.custom.html' as const,
       };
 
       // For now, just log the message that would be sent
-      this.logger.info('Would post to Matrix', {
+      this.logger.info('Would post encrypted collaboration payload to Matrix', {
         roomId: this.config.matrixRoomId,
-        message: matrixMessage,
+        keyId: encryptedMessage.keyId,
+        messageType: matrixMessage.msgtype,
+        payloadBytes: Buffer.byteLength(matrixMessage.body, 'utf8'),
       });
 
       // TODO: Implement actual Matrix API call

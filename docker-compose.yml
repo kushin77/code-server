@@ -1059,8 +1059,8 @@ services:
       - LOG_LEVEL=info
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        soft: 1048576
+        hard: 1048576
     volumes:
       - ./config/promtail-config.yaml:/etc/promtail/config.yml:ro
       - ${DOCKER_ROOT_DIR:-/var/snap/docker/common/var-lib-docker}/containers:/var/lib/docker/containers:ro

@@ -1,0 +1,18 @@
+[Unit]
+Description=mTLS Certificate Rotation Service
+Documentation=file:///root/code-server-enterprise/docs/ZERO-TRUST-NETWORK-ARCHITECTURE.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/code-server-enterprise
+ExecStart=/bin/bash -c 'bash scripts/security/rotate-mtls-certificates.sh'
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cert-rotation
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

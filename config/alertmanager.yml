@@ -40,7 +40,7 @@ receivers:
         send_resolved: true
     # Send to GitHub issues via webhook when available
     pagerduty_configs:
-      - service_key: '${PAGERDUTY_SERVICE_KEY:-}'
+      - service_key: '__PAGERDUTY_SERVICE_KEY__'
 
   # Warning/High priority alerts
   - name: 'warnings'

@@ -141,11 +141,7 @@ services:
     command:
       - -c
       - |
-        echo "Waiting for ollama to be ready..."
-        until ollama list >/dev/null; do sleep 3; done
-        echo "Pulling llama2:7b-chat..."
-        ollama pull llama2:7b-chat || true
-        echo "Pulling codellama:7b..."
+      - test -n "$PAGERDUTY_SERVICE_KEY" || exit 1; escaped_key=$(printf "%s" "$PAGERDUTY_SERVICE_KEY" | sed "s/[&/]/\\\\&/g"); sed "s/__PAGERDUTY_SERVICE_KEY__/$escaped_key/g" /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.rendered.yml; exec /bin/alertmanager --config.file=/tmp/alertmanager.rendered.yml --storage.path=/alertmanager
         ollama pull codellama:7b || true
         echo "All models ready."
     depends_on:
@@ -605,9 +601,13 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
     command: >
-      redis-server
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
+      - sh
+      - -c
+      - |
+        test -n "$PAGERDUTY_SERVICE_KEY" || exit 1
+        escaped_key=$(printf '%s' "$PAGERDUTY_SERVICE_KEY" | sed 's/[&|]/\\&/g')
+        sed "s|__PAGERDUTY_SERVICE_KEY__|$escaped_key|g" /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.rendered.yml
+        exec /bin/alertmanager --config.file=/tmp/alertmanager.rendered.yml --storage.path=/alertmanager
       --appendonly yes
       --appendfsync everysec
       --loglevel warning

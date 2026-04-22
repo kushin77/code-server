@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   createDebugSession,
   fetchDebugSession,
+  fetchRelayedDebugMessages,
   joinDebugSession,
   leaveDebugSession,
   recordDebugStep,
@@ -91,6 +92,74 @@ export function CollaborativeDebuggingPanel({
     setSessionId(storedSessionId)
     void refreshSession(storedSessionId)
   }, [refreshSession, storageKey])
+
+  useEffect(() => {
+    if (!session?.sessionId) {
+      return
+    }
+
+    let cancelled = false
+
+    const syncRemoteSession = async () => {
+      try {
+        const nextSession = await fetchDebugSession(session.sessionId)
+
+        if (cancelled) {
+          return
+        }
+
+        setSession(nextSession)
+      } catch (syncError) {
+        if (!cancelled) {
+          setError(syncError instanceof Error ? syncError.message : 'Unable to sync debug session')
+        }
+      }
+    }
+
+    const relaySequence = session.relaySequence ?? 0
+    const syncRelayMessages = async () => {
+      try {
+        const relaySync = await fetchRelayedDebugMessages(session.sessionId, actorName, relaySequence)
+
+        if (cancelled || relaySync.messages.length === 0) {
+          return
+        }
+
+        setSession((current) => {
+          if (!current || current.sessionId !== relaySync.sessionId) {
+            return current
+          }
+
+          const knownMessageIds = new Set(current.relayMessages.map((relayMessage) => relayMessage.id))
+          const relayMessages = [
+            ...current.relayMessages,
+            ...relaySync.messages.filter((relayMessage) => !knownMessageIds.has(relayMessage.id)),
+          ].sort((left, right) => left.sequence - right.sequence)
+
+          return {
+            ...current,
+            relayMessages,
+            relaySequence: relaySync.latestSequence,
+          }
+        })
+      } catch {
+        // Relay polling is best-effort; session refresh remains authoritative.
+      }
+    }
+
+    void syncRemoteSession()
+    void syncRelayMessages()
+
+    const intervalId = window.setInterval(() => {
+      void syncRemoteSession()
+      void syncRelayMessages()
+    }, 3000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [actorName, session?.sessionId, session?.relaySequence])
 
   async function persistSession(nextSession: DebugSessionRecord) {
     setSession(nextSession)

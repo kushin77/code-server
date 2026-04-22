@@ -13,6 +13,7 @@ function buildSession(overrides: Partial<DebugSessionRecord> = {}): DebugSession
     debuggerProgram: 'src/main.ts',
     debuggerCwd: '/workspace/portal',
     owner: 'Portal main',
+    relaySequence: 0,
     participants: [],
     breakpoints: [],
     variables: [],

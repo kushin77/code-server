@@ -61,6 +61,7 @@ export type DebugSessionRecord = {
   debuggerCwd: string
   owner: string
   relayTarget?: string
+  relaySequence: number
   participants: DebugSessionParticipant[]
   breakpoints: DebugBreakpoint[]
   variables: DebugVariableSnapshot[]

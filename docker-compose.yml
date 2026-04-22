@@ -1206,6 +1206,81 @@ services:
         max-size: "5m"
         max-file: "3"
 
+  # ────────────────────────────────────────────────────────────────────────────
+  # postgres_exporter — PostgreSQL metrics for Prometheus
+  # Exposes pg_stat_statements, replication lag, connection counts, cache hit ratio
+  # ────────────────────────────────────────────────────────────────────────────
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres_exporter
+    restart: unless-stopped
+    networks:
+      - net-data
+      - net-management
+    expose:
+      - "9187"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-codeserver}?sslmode=disable
+    command:
+      - "--extend.query-path=/etc/postgres_exporter/queries.yml"
+      - "--web.telemetry-path=/metrics"
+    volumes:
+      - ./config/postgres_exporter_queries.yml:/etc/postgres_exporter/queries.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9187/metrics || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.2"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis_exporter — Redis metrics for Prometheus
+  # Exposes memory usage, cache hit/miss rates, evictions, persistence metrics
+  # ────────────────────────────────────────────────────────────────────────────
+  redis_exporter:
+    image: oliver006/redis_exporter:1.59.1
+    container_name: redis_exporter
+    restart: unless-stopped
+    networks:
+      - net-app
+      - net-management
+    expose:
+      - "9121"
+    environment:
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9121/metrics || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+          cpus: "0.1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
 # ════════════════════════════════════════════════════════════════════════════
 # Networks
 # ════════════════════════════════════════════════════════════════════════════

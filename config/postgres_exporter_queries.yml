@@ -1,0 +1,137 @@
+# PostgreSQL Exporter Queries (v0.15.0)
+# Custom queries for infrastructure observability
+# Reference: https://github.com/prometheus-community/postgres_exporter
+
+# Authentication queries are handled via DATA_SOURCE_NAME environment variable
+# The following queries will be automatically executed to expose PostgreSQL metrics
+
+queries:
+  # Query 1: pg_stat_statements - Identify slow queries and query performance
+  pg_stat_statements:
+    query: |
+      SELECT 
+        database AS db,
+        userid,
+        query,
+        calls,
+        total_exec_time,
+        mean_exec_time,
+        rows
+      FROM pg_stat_statements
+      ORDER BY total_exec_time DESC
+      LIMIT 10;
+    metrics:
+      - {name: "pg_statement_calls", help: "Number of times statement was executed", type: "gauge", valueColumn: "calls"}
+      - {name: "pg_statement_total_time_ms", help: "Total time spent in statement", type: "gauge", valueColumn: "total_exec_time"}
+      - {name: "pg_statement_mean_time_ms", help: "Mean time per execution", type: "gauge", valueColumn: "mean_exec_time"}
+      - {name: "pg_statement_rows", help: "Rows returned by statement", type: "gauge", valueColumn: "rows"}
+
+  # Query 2: Replication lag (Master → Replica)
+  pg_replication_lag:
+    query: |
+      SELECT 
+        pg_last_xact_replay_timestamp() AS replication_timestamp,
+        EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp()))::INTEGER AS replication_lag_seconds;
+    metrics:
+      - {name: "pg_replication_lag_seconds", help: "Replication lag in seconds", type: "gauge"}
+
+  # Query 3: Active connections by database
+  pg_stat_activity_count:
+    query: |
+      SELECT 
+        datname AS database,
+        COUNT(*) as connection_count
+      FROM pg_stat_activity
+      GROUP BY datname;
+    metrics:
+      - {name: "pg_stat_activity_count", help: "Number of active connections per database", type: "gauge", labels: ["database"]}
+
+  # Query 4: PostgreSQL cache hit ratio (should be > 99% in production)
+  pg_cache_hit_ratio:
+    query: |
+      SELECT 
+        (SUM(heap_blks_hit) + SUM(idx_blks_hit)) / 
+        (SUM(heap_blks_hit) + SUM(heap_blks_read) + SUM(idx_blks_hit) + SUM(idx_blks_read))::float * 100 
+        AS cache_hit_ratio_percent
+      FROM pg_stat_user_tables;
+    metrics:
+      - {name: "pg_cache_hit_ratio_percent", help: "PostgreSQL buffer cache hit ratio", type: "gauge"}
+
+  # Query 5: Table bloat estimation (unused space)
+  pg_table_size:
+    query: |
+      SELECT 
+        schemaname,
+        tablename,
+        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size_human,
+        pg_total_relation_size(schemaname||'.'||tablename) as total_size_bytes
+      FROM pg_tables
+      WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+      ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+      LIMIT 10;
+    metrics:
+      - {name: "pg_table_total_size_bytes", help: "Total table size including indexes", type: "gauge", labels: ["schemaname", "tablename"]}
+
+  # Query 6: Transaction wraparound warning (xmin horizon)
+  pg_transaction_wraparound_age:
+    query: |
+      SELECT 
+        datname AS database,
+        age(datfrozenxid) as wraparound_age,
+        2147483647 - age(datfrozenxid) as transactions_until_wraparound
+      FROM pg_database
+      WHERE datname NOT IN ('template0', 'template1');
+    metrics:
+      - {name: "pg_transaction_wraparound_age", help: "Age of oldest unfrozen transaction", type: "gauge", labels: ["database"]}
+
+  # Query 7: Checkpoint statistics (WAL write performance)
+  pg_checkpoint_stats:
+    query: |
+      SELECT 
+        checkpoints_timed + checkpoints_req as total_checkpoints,
+        checkpoints_timed,
+        checkpoints_req,
+        ROUND(write_time / 1000.0, 2) as checkpoint_write_time_seconds,
+        ROUND(sync_time / 1000.0, 2) as checkpoint_sync_time_seconds
+      FROM pg_stat_bgwriter;
+    metrics:
+      - {name: "pg_checkpoint_write_time_seconds", help: "Time spent writing checkpoints to disk", type: "gauge"}
+      - {name: "pg_checkpoint_sync_time_seconds", help: "Time spent syncing checkpoints", type: "gauge"}
+      - {name: "pg_checkpoint_total_count", help: "Total number of checkpoints", type: "gauge"}
+
+  # Query 8: Index bloat (unused indexes)
+  pg_unused_indexes:
+    query: |
+      SELECT 
+        schemaname,
+        tablename,
+        indexname,
+        idx_scan,
+        pg_size_pretty(pg_relation_size(indexrelid)) as index_size_human,
+        pg_relation_size(indexrelid) as index_size_bytes
+      FROM pg_stat_user_indexes
+      WHERE idx_scan = 0
+      ORDER BY pg_relation_size(indexrelid) DESC
+      LIMIT 10;
+    metrics:
+      - {name: "pg_unused_index_size_bytes", help: "Size of unused indexes", type: "gauge", labels: ["schemaname", "tablename", "indexname"]}
+
+  # Query 9: Vacuum and Analyze lag (table maintenance)
+  pg_table_vacuum_analyze:
+    query: |
+      SELECT 
+        schemaname,
+        tablename,
+        n_live_tup as live_rows,
+        n_dead_tup as dead_rows,
+        ROUND(100 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) as dead_row_percent,
+        last_vacuum,
+        last_analyze
+      FROM pg_stat_user_tables
+      WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+      ORDER BY n_dead_tup DESC
+      LIMIT 10;
+    metrics:
+      - {name: "pg_table_live_rows", help: "Number of live rows", type: "gauge", labels: ["schemaname", "tablename"]}
+      - {name: "pg_table_dead_rows", help: "Number of dead rows", type: "gauge", labels: ["schemaname", "tablename"]}
+      - {name: "pg_table_dead_row_percent", help: "Percentage of dead rows", type: "gauge", labels: ["schemaname", "tablename"]}

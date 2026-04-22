@@ -57,7 +57,7 @@ secrets:
     purpose: "Detects secrets committed to Git history"
 
   trufflehog:
-    version: "2.2.1"
+    version: "3.63.0"
     enabled: true
     severity: "fail-closed"
     patterns: "entropy-based + hardcoded patterns"

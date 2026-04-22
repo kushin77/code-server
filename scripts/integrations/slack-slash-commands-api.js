@@ -123,18 +123,6 @@ app.post('/slack/commands', (req, res) => {
         }
         
         res.json(frozenResult);
-            blocks: [
-                {
-                    type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: result.status === 'created'
-                            ? `✅ Session created\n<${result.url}|Join session>\nExpires: ${result.expiresAt}`
-                            : `ℹ️ Session already exists\n<${result.url}|Join session>`,
-                    },
-                },
-            ],
-        });
     } catch (err) {
         console.error('[Slack] Command error:', err);
         res.status(400).json({ error: err.message });

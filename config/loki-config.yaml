@@ -33,8 +33,6 @@ storage_config:
   filesystem:
     directory: /loki/chunks
 
-chunk_store_config: {}
-
 limits_config:
   allow_structured_metadata: false
   reject_old_samples: true

@@ -75,6 +75,14 @@ describe('WorkspaceProfilesPage', () => {
     expect(screen.getAllByText(/Terminal/i).length).toBeGreaterThan(0)
   })
 
+  it('renders the collaborative debugging panel inside the debugger view', () => {
+    render(<WorkspaceProfilesPage {...buildProps()} />)
+
+    expect(screen.getByText('Collaborative debugging')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Create shared session' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Relay step action' })).toBeTruthy()
+  })
+
   it('shows an auto-config preview when project markers are available', () => {
     render(
       <WorkspaceProfilesPage

@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto'
 import { EventEmitter } from 'node:events'
 import { Router, type Response } from 'express'
 
-import { getLogger } from '../../lib/logger'
+import { getLogger } from '../../lib/logger.js'
 
 export type DebugSessionParticipantRole = 'owner' | 'collaborator' | 'observer'
 
@@ -205,7 +205,7 @@ export class DebugSessionCollaborationService extends EventEmitter {
     }
 
     this.sessions.set(session.sessionId, session)
-    this.logger.info({ sessionId: session.sessionId, workspaceId }, 'Created collaborative debug session')
+    this.logger.info('Created collaborative debug session', { sessionId: session.sessionId, workspaceId })
     this.emit('debug-session-created', cloneSession(session))
     return cloneSession(session)
   }
@@ -256,11 +256,14 @@ export class DebugSessionCollaborationService extends EventEmitter {
       throw new Error('Debug session actor is required')
     }
 
-    if (session.owner !== participantActor) {
-      session.participants = session.participants.filter((participant) => participant.actor !== participantActor)
-      session.updatedAt = nowIso()
-      this.emit('debug-session-left', cloneSession(session))
+    session.participants = session.participants.filter((participant) => participant.actor !== participantActor)
+    if (session.owner === participantActor && session.participants.length > 0) {
+      session.owner = session.participants[0].actor
+      session.participants[0].role = 'owner'
     }
+
+    session.updatedAt = nowIso()
+    this.emit('debug-session-left', cloneSession(session))
 
     return cloneSession(session)
   }
@@ -323,7 +326,7 @@ export class DebugSessionCollaborationService extends EventEmitter {
         })
         relayMessage.forwarded = (response.status ?? 200) < 400
       } catch (error) {
-        this.logger.warn({ sessionId, relayTarget, error }, 'Failed to relay debug protocol message')
+        this.logger.warn('Failed to relay debug protocol message', { sessionId, relayTarget, error })
         throw new Error(`Failed to relay debug protocol message to ${relayTarget}`)
       }
     }
@@ -374,7 +377,7 @@ function requireRequestText(value: unknown, fallback = ''): string {
   return normalized
 }
 
-export async function initializeDebugSessionCollaborationRoutes(service: DebugSessionCollaborationService) {
+export async function initializeDebugSessionCollaborationRoutes(service: DebugSessionCollaborationService): Promise<Router> {
   const router = Router()
 
   router.get('/api/debug-sessions', (request, response) => {

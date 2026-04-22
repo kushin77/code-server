@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CollaborativeDebuggingPanel } from '../components/CollaborativeDebuggingPanel'
 import { ALL_WORKSPACES, type WorkspaceTab } from '../utils/workspaceCatalog'
 import {
   buildWorkspaceProfileSnapshot,
@@ -280,6 +281,14 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
                 </div>
               </div>
             </div>
+
+            <CollaborativeDebuggingPanel
+              workspaceId={selectedWorkspaceId}
+              actorName={activeWorkspace.label}
+              debuggerName={activeRoot.debugger.name}
+              debuggerProgram={activeRoot.debugger.program}
+              debuggerCwd={activeRoot.debugger.cwd}
+            />
 
             <div className="rounded-2xl border border-dashed border-violet-200 bg-violet-50 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-700">workspace.json preview</p>

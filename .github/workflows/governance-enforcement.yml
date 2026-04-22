@@ -52,7 +52,7 @@ jobs:
           # Install TruffleHog v3 binary
           wget https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz
           tar xzf trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz
-          sudo mv trufflehog /usr/local/bin/trufflehog
+          sudo mv trufflehog /usr/local/bin/trufflehog || sudo mv trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64/trufflehog /usr/local/bin/trufflehog
           if wget https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz; then
             tar zxvf trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz
             sudo mv trivy /usr/local/bin/

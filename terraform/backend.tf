@@ -15,50 +15,10 @@
 # 
 # ════════════════════════════════════════════════════════════════════════════
 
-# ─────────────────────────────────────────────────────────────────────────────
-# OPTION 1: S3-Compatible Backend (MinIO) — ✅ RECOMMENDED FOR ON-PREM
-# ─────────────────────────────────────────────────────────────────────────────
-# 
-# MinIO provides:
-#   ✅ S3 API compatibility (same as AWS S3)
-#   ✅ State versioning (recover from mistakes)
-#   ✅ State locking with DynamoDB-compatible interface
-#   ✅ Encryption at rest (default)
-#   ✅ Self-hosted (no cloud dependency)
-#   ✅ Runs in Docker (easy to manage)
-# 
-# Setup:
-#   1. Start MinIO: docker run -d -p 9000:9000 minio/minio server /data
-#   2. Configure creds: export AWS_ACCESS_KEY_ID=minioadmin
-#   3. Export creds: export AWS_SECRET_ACCESS_KEY=minioadmin
-#   4. Create bucket: aws s3 mb s3://terraform-state --endpoint-url http://minio:9000
-#   5. Run: terraform init
-# 
+# Local backend for development
 terraform {
-  backend "s3" {
-    # MinIO (on-prem) endpoint
-    endpoint            = "http://minio:9000"
-    bucket              = "terraform-state"
-    key                 = "code-server/terraform.tfstate"
-    region              = "us-east-1"  # Required but not used by MinIO
-    
-    # S3-compatible options
-    skip_credentials_validation = true
-    skip_requesting_account_id  = true
-    skip_region_validation      = true
-    use_lockfile                = true
-    
-    # State locking (requires DynamoDB or MinIO DynamoDB-compatible)
-    # dynamodb_table = "terraform-locks"  # Enable for multi-admin safety
-    
-    # Encryption at rest
-    encrypt = true
-    
-    # Enable versioning (recover from mistakes)
-    # Note: MinIO versioning configured separately
-    
-    # Connection settings
-    max_retries = 3
+  backend "local" {
+    path = "terraform.tfstate"
   }
 }
 

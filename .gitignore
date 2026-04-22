@@ -75,3 +75,23 @@ workspace/*
 terraform.tfvars
 data/postgresql/
 data/
+
+# Security: Never commit environment files with secrets
+.env.oidc
+.env.phase-2-additions
+.env.*.local
+.env.*.prod
+.env.secrets
+
+# Security: Never commit private keys or certificates
+*.key
+*.pem
+*.p12
+*.pfx
+private-key*
+signing-key*
+tls.key
+
+# Security: Never commit Google Cloud service account keys
+*-gcp-*.json
+service-account*.json

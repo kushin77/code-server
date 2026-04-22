@@ -343,8 +343,8 @@ cat > "$AUDIT_FILE" << EOF
 
 To re-run this audit, use these commands:
 
-cd \$(dirname "$SCRIPT_DIR")
-bash \$(basename "$SCRIPT_DIR")/automated-iac-validation.sh
+cd <parent_directory_of_scripts>
+bash automated-iac-validation.sh
 
 ## Next Steps
 

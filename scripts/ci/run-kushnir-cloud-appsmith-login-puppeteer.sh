@@ -21,13 +21,10 @@ run_puppeteer_parity() {
   local node_cmd
   local probe_script_path
 
-  node_cmd="$(command -v node 2>/dev/null || command -v node.exe 2>/dev/null || true)"
+  node_cmd="$(command -v node 2>/dev/null || true)"
 
   if [[ -n "$node_cmd" ]]; then
     probe_script_path="$SCRIPT_DIR/puppeteer-parity-probe.cjs"
-    if [[ "$node_cmd" == *.exe && "$(command -v wslpath 2>/dev/null || true)" != "" ]]; then
-      probe_script_path="$(wslpath -w "$probe_script_path")"
-    fi
 
     PORTAL_BASE_URL="$PORTAL_BASE_URL" IDE_BASE_URL="$IDE_BASE_URL" PUPPETEER_TIMEOUT_MS="$PUPPETEER_TIMEOUT_MS" E2E_DIR="$E2E_DIR" \
       "$node_cmd" "$probe_script_path"

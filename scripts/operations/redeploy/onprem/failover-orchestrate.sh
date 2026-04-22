@@ -56,7 +56,7 @@ Options:
   --action ACTION       status|promote|failback
   --mode MODE           ssh|local-on-host (default: ssh)
   --ssh-key PATH        SSH private key for deterministic auth
-  --ssh-bin CMD         SSH client binary (ssh, ssh.exe)
+  --ssh-bin CMD         SSH client binary
   --primary-host HOST   Override primary host IP/name
   --replica-host HOST   Override replica host IP/name
   --user USER           Override remote SSH user
@@ -138,11 +138,7 @@ parse_args() {
 
 initialize_platform_defaults() {
   if [[ -z "$SSH_BIN" ]]; then
-    if command -v ssh.exe >/dev/null 2>&1; then
-      SSH_BIN="ssh.exe"
-    else
-      SSH_BIN="ssh"
-    fi
+    SSH_BIN="ssh"
   fi
 }
 
@@ -191,15 +187,7 @@ check_reachability() {
   local -a args
   mapfile -t args < <(ssh_common_args)
   if ! "$SSH_BIN" "${args[@]}" "${TARGET_USER}@${host}" "echo OK" >/dev/null 2>&1; then
-    if [[ "${SSH_BIN}" == "ssh" ]] && command -v ssh.exe >/dev/null 2>&1; then
-      log_warn "Default ssh failed; retrying with ssh.exe for Windows agent compatibility"
-      SSH_BIN="ssh.exe"
-      if ! "$SSH_BIN" "${args[@]}" "${TARGET_USER}@${host}" "echo OK" >/dev/null 2>&1; then
-        log_fatal "SSH reachability failed for ${TARGET_USER}@${host}"
-      fi
-    else
-      log_fatal "SSH reachability failed for ${TARGET_USER}@${host}"
-    fi
+    log_fatal "SSH reachability failed for ${TARGET_USER}@${host}"
   fi
 }
 

@@ -30,7 +30,7 @@ Options:
   --action ACTION          preflight|redeploy|status|promote|failback
   --mode MODE              ssh|local-on-host (default: ssh)
   --ssh-key PATH           SSH key path for non-interactive auth
-  --ssh-bin CMD            SSH binary override (ssh|ssh.exe)
+  --ssh-bin CMD            SSH binary override
   --evidence-file PATH     Explicit evidence output path
   -h, --help               Show this help
 

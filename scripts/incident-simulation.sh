@@ -20,7 +20,7 @@ REPORT_FILE="incident-simulation-$(date +%Y%m%d-%H%M%S).txt"
 GH_REPO="${GH_REPO:-${GITHUB_REPOSITORY:-kushin77/code-server}}"
 ROUTE_TO_GITHUB_ISSUES="${ROUTE_TO_GITHUB_ISSUES:-0}"
 TRACKER_ISSUE_NUMBER="${TRACKER_ISSUE_NUMBER:-}"
-GH_BIN="${GH_BIN:-$(command -v gh 2>/dev/null || command -v gh.exe 2>/dev/null || true)}"
+GH_BIN="${GH_BIN:-$(command -v gh 2>/dev/null || true)}"
 
 # Color codes
 # shellcheck disable=SC2034

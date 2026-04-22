@@ -40,7 +40,7 @@ Options:
   --repo PATH           Remote repository path. Default: ~/code-server-enterprise
   --mode MODE           ssh|local-on-host (default: ssh)
   --ssh-key PATH        SSH private key for deterministic auth
-  --ssh-bin CMD         SSH client binary (ssh, ssh.exe)
+  --ssh-bin CMD         SSH client binary
   --rollback-commit SHA Optional explicit rollback commit; defaults to parent commit of current HEAD
   --evidence-dir PATH   Evidence directory. Default: artifacts/triage
   -h, --help            Show this help
@@ -120,15 +120,7 @@ remote() {
   fi
 
   if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
-    if [[ "${SSH_BIN}" == "ssh" ]] && command -v ssh.exe >/dev/null 2>&1; then
-      log_warn "Default ssh failed; retrying with ssh.exe for Windows agent compatibility"
-      SSH_BIN="ssh.exe"
-      if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
-        log_fatal "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
-      fi
-    else
-      log_fatal "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
-    fi
+    log_fatal "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
   fi
 
   "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "cd ${TARGET_REPO} && ${cmd}"

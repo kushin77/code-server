@@ -69,10 +69,8 @@ fi
 
 if command -v gh >/dev/null 2>&1; then
   GH_CLI="gh"
-elif command -v gh.exe >/dev/null 2>&1; then
-  GH_CLI="gh.exe"
 else
-  log_fatal "Required command not found: gh (or gh.exe)"
+  log_fatal "Required command not found: gh"
 fi
 
 # Do not auto-bootstrap tokens here; callers/workflows should provide GH auth.

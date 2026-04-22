@@ -28,14 +28,14 @@ require_file "$E2E_DIR/playwright.config.ts"
 run_playwright_tests() {
   local npx_cmd
 
-  npx_cmd="$(command -v npx 2>/dev/null || command -v npx.cmd 2>/dev/null || command -v npx.exe 2>/dev/null || true)"
+  npx_cmd="$(command -v npx 2>/dev/null || true)"
 
   if [[ -n "$npx_cmd" ]]; then
     env PORTAL_BASE_URL="$PORTAL_BASE_URL" IDE_BASE_URL="$IDE_BASE_URL" APPSMITH_EXPECTED_REDIRECT_URI="$APPSMITH_EXPECTED_REDIRECT_URI" REQUIRE_SINGLE_LOGIN="$REQUIRE_SINGLE_LOGIN" TEST_BASE_URL="$PORTAL_BASE_URL" E2E_FLAKE_OUTPUT_DIR="${E2E_FLAKE_OUTPUT_DIR:-artifacts/triage}" "$DETERMINISTIC_E2E_RUNNER" --suite-name "appsmith-login" --output-dir "${E2E_FLAKE_OUTPUT_DIR:-artifacts/triage}" -- "$npx_cmd" playwright test --config "$E2E_DIR/playwright.config.ts" "$TEST_SPEC"
     return 0
   fi
 
-  log_fatal "npx is not available. Ensure Node.js 18+ is installed or WSL Node.js is configured in PATH. (Linux-native mandate enforced—PowerShell fallback removed per #885)"
+  log_fatal "npx is not available. Ensure Node.js 18+ is installed."
 }
 
 if [[ "$REQUIRE_VPN" == "1" ]]; then

@@ -23,21 +23,10 @@ DEFAULT_FLAKE_SIGNATURES_FILE="$SCRIPT_DIR/../../config/test-flake-signatures.js
 FLAKE_SIGNATURES_FILE="${E2E_FLAKE_SIGNATURES_FILE:-$DEFAULT_FLAKE_SIGNATURES_FILE}"
 
 resolve_node_command() {
-  local candidate
-  for candidate in node node.exe \
-    "/mnt/c/Program Files/nodejs/node.exe" \
-    "/mnt/c/Program Files/nodejs/node"; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      command -v "$candidate"
-      return 0
-    fi
-
-    if [[ -x "$candidate" ]]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-
+  if command -v node >/dev/null 2>&1; then
+    command -v node
+    return 0
+  fi
   return 1
 }
 
@@ -45,14 +34,10 @@ resolve_node_command() {
 NODE_CMD="$(resolve_node_command || true)"
 
 resolve_npx_command() {
-  local candidate
-  for candidate in npx npx.cmd npx.exe; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      command -v "$candidate"
-      return 0
-    fi
-  done
-
+  if command -v npx >/dev/null 2>&1; then
+    command -v npx
+    return 0
+  fi
   return 1
 }
 

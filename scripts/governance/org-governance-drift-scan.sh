@@ -68,11 +68,7 @@ require_command "jq" "jq is required"
 
 GH_BIN="gh"
 if ! command -v "$GH_BIN" >/dev/null 2>&1; then
-  if command -v gh.exe >/dev/null 2>&1; then
-    GH_BIN="gh.exe"
-  else
-    log_fatal "GitHub CLI is required: gh (or gh.exe) not found"
-  fi
+  log_fatal "GitHub CLI is required: gh not found"
 fi
 
 if [[ ! -f "$BASELINE_FILE" ]]; then

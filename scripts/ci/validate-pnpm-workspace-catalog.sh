@@ -19,20 +19,11 @@ NODE_CMD=""
 
 if command -v node >/dev/null 2>&1; then
   NODE_CMD="node"
-elif command -v node.exe >/dev/null 2>&1; then
-  NODE_CMD="node.exe"
 else
-  log_fatal "node or node.exe is required for pnpm catalog validation"
+  log_fatal "node is required for pnpm catalog validation"
 fi
 
 NODE_ROOT_DIR="$ROOT_DIR"
-if [[ "$NODE_CMD" == "node.exe" ]]; then
-  if command -v wslpath >/dev/null 2>&1; then
-    NODE_ROOT_DIR="$(wslpath -w "$ROOT_DIR")"
-  elif command -v cygpath >/dev/null 2>&1; then
-    NODE_ROOT_DIR="$(cygpath -w "$ROOT_DIR")"
-  fi
-fi
 
 log_info "Validating pnpm workspace catalog and protocol policy"
 

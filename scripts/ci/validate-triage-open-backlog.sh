@@ -16,10 +16,8 @@ require_file "$DOC_PATH" "Triage next-steps document is required"
 GH_BIN=""
 if command -v gh >/dev/null 2>&1; then
   GH_BIN="gh"
-elif command -v gh.exe >/dev/null 2>&1; then
-  GH_BIN="gh.exe"
 else
-  log_fatal "GitHub CLI is required (gh or gh.exe not found)"
+  log_fatal "GitHub CLI is required (gh not found)"
 fi
 
 if ! "$GH_BIN" auth status >/dev/null 2>&1; then

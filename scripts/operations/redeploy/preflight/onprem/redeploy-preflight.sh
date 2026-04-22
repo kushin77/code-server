@@ -48,7 +48,7 @@ Options:
   --repo PATH        Remote repository path. Default: ~/code-server-enterprise
   --mode MODE        Connection mode: auto|ssh|local-on-host. Default: auto
   --ssh-key PATH     SSH private key path for deterministic auth.
-  --ssh-bin CMD      SSH client binary (e.g. ssh, ssh.exe). Default: ssh
+  --ssh-bin CMD      SSH client binary. Default: ssh
   -h, --help         Show this help text.
 
 Environment:
@@ -125,22 +125,10 @@ remote() {
   fi
 
   if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
-    if [[ "${SSH_BIN}" == "ssh" ]] && command -v ssh.exe >/dev/null 2>&1; then
-      log_warn "Default ssh failed; retrying with ssh.exe for Windows agent compatibility"
-      SSH_BIN="ssh.exe"
-      if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
-        log_error "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
-        log_error "Set SSH_KEY_PATH or run with --mode local-on-host directly on target host"
-        log_error "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs'"
-        return 1
-      fi
-    else
-      log_error "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
-      log_error "Set SSH_KEY_PATH or run with --mode local-on-host directly on target host"
-      log_error "If running from WSL, use --ssh-bin ssh.exe to use Windows SSH agent"
-      log_error "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs'"
-      return 1
-    fi
+    log_error "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
+    log_error "Set SSH_KEY_PATH or run with --mode local-on-host directly on target host"
+    log_error "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs'"
+    return 1
   fi
 
   "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "$cmd"

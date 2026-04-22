@@ -16,26 +16,10 @@ METRICS_PROM_PATH="${E2E_METRICS_PROM_PATH:-e2e-metrics.prom}"
 PUSHGATEWAY_URL="${PUSHGATEWAY_URL:-}"
 
 resolve_node_command() {
-  local candidate
-  local -a candidates=(
-    node
-    node.exe
-    "/mnt/c/Program Files/nodejs/node.exe"
-    "/mnt/c/Program Files/nodejs/node"
-  )
-
-  for candidate in "${candidates[@]}"; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      command -v "$candidate"
-      return 0
-    fi
-
-    if [[ -x "$candidate" ]]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-
+  if command -v node >/dev/null 2>&1; then
+    command -v node
+    return 0
+  fi
   return 1
 }
 

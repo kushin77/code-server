@@ -12,11 +12,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
 NAS_USER="${NAS_USER:-akushnir}"
 DRY_RUN="${DRY_RUN:-0}"
 
-require_var NAS_HOST "NAS host IP (e.g., 192.168.168.56)"
+require_var NAS_HOST "NAS host IP (should be set in config.sh)"
 require_command ssh "SSH is required to connect to NAS"
 
 log_info "NAS Disk Space Remediation"

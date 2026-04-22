@@ -1,12 +1,6 @@
-// @file        apps/backend/src/index.ts
-// @module      backend
-// @description Main exports for the backend library - routes, services, and initialization functions
-// @owner       backend
-// Services
 export { StandupSummariesService } from './services/standup-summaries';
-// Integration examples
+export type { DailyActivity, CommitActivity, ReviewActivity, CommentActivity, IssueActivity, StandupSummary, StandupConfig, } from './services/standup-summaries';
 export { setupStandupSummariesIntegration, createExampleApp } from './services/standup-summaries/integration-example';
-// Routes
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';
 export { initializeSymbolDiscussionsRoutes, SymbolDiscussionsService } from './routes/symbol-discussions';
 export { initializeMentionSystemRoutes, MentionSystemService } from './routes/mention-system';
@@ -45,8 +39,7 @@ export { AutoTestGenerationService } from './services/auto-test-generation';
 export { default as onboardingRouter } from './routes/onboarding';
 export { default as sloRouter } from './routes/slo';
 export { default as anomalyRouter } from './routes/anomaly';
-// AI Router
 export { AIRouter } from './services/ai/router';
-// Logger
+export type { RouteRequest, RouteResult, ModelEntry } from './services/ai/router';
 export { getLogger } from './lib/logger';
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=index.d.ts.map

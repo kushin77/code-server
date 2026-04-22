@@ -6,6 +6,7 @@
 // @status      active
 
 import { EventEmitter } from 'events';
+import { Router, type Response } from 'express';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
 
@@ -69,11 +70,25 @@ export class ConflictPredictionService extends EventEmitter {
     this.activeEdits.set(key, { userId, filePath, functionName, timestamp: Date.now() });
 
     // Check for overlaps with other users
-    for (const [otherKey, edit] of this.activeEdits.entries()) {
+    for (const edit of this.activeEdits.values()) {
       if (edit.userId !== userId && edit.filePath === filePath && edit.functionName === functionName) {
         await this.triggerConflictAlert(userId, edit.userId, filePath, functionName);
       }
     }
+  }
+
+  previewConflicts(userId: string, filePath: string, functionName: string | null): ConflictAlert[] {
+    return this.getMatchingEdits(userId, filePath, functionName).map((otherEdit) => ({
+      id: Math.random().toString(36).substring(7),
+      targetUserId: userId,
+      otherUserId: otherEdit.userId,
+      filePath,
+      functionName,
+      riskScore: this.calculateRiskScore(filePath, functionName),
+      message: functionName
+        ? `Warning: ${otherEdit.userId} is also editing function ${functionName} in ${filePath}`
+        : `Warning: ${otherEdit.userId} is also editing ${filePath}`,
+    }));
   }
 
   private async triggerConflictAlert(
@@ -117,6 +132,12 @@ export class ConflictPredictionService extends EventEmitter {
     return functionName ? 90 : 50;
   }
 
+  private getMatchingEdits(userId: string, filePath: string, functionName: string | null): ActiveEdit[] {
+    return Array.from(this.activeEdits.values()).filter((edit) => {
+      return edit.userId !== userId && edit.filePath === filePath && edit.functionName === functionName;
+    });
+  }
+
   private startCleanupInterval(): void {
     // Purge edits older than 5 minutes
     setInterval(() => {
@@ -128,4 +149,66 @@ export class ConflictPredictionService extends EventEmitter {
       }
     }, 60000);
   }
+}
+
+function sendError(response: Response, error: unknown): Response {
+  const message = error instanceof Error ? error.message : 'Unexpected conflict prediction error';
+  return response.status(400).json({ error: message });
+}
+
+function requireText(value: unknown): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error('Missing required field');
+  }
+
+  return value.trim();
+}
+
+export function initializeConflictPredictionRoutes(pool: Pool) {
+  const router = Router();
+  const service = new ConflictPredictionService(pool);
+  const logger = getLogger('ConflictPredictionRoutes');
+
+  service.initialize().catch((error) => {
+    logger.error('Failed to initialize conflict prediction service', { error });
+  });
+
+  router.post('/api/conflict-prediction/activity', async (request, response) => {
+    try {
+      const userId = requireText(request.body?.userId);
+      const filePath = requireText(request.body?.filePath);
+      const functionName = typeof request.body?.functionName === 'string' && request.body.functionName.trim().length > 0
+        ? request.body.functionName.trim()
+        : null;
+
+      await service.reportActivity(userId, filePath, functionName);
+      response.status(201).json({
+        success: true,
+        conflicts: service.previewConflicts(userId, filePath, functionName),
+      });
+    } catch (error) {
+      logger.error('Failed to record conflict prediction activity', { error, body: request.body });
+      sendError(response, error);
+    }
+  });
+
+  router.get('/api/conflict-prediction/preview', async (request, response) => {
+    try {
+      const userId = requireText(request.query.userId);
+      const filePath = requireText(request.query.filePath);
+      const functionName = typeof request.query.functionName === 'string' && request.query.functionName.trim().length > 0
+        ? request.query.functionName.trim()
+        : null;
+
+      response.json({
+        success: true,
+        conflicts: service.previewConflicts(userId, filePath, functionName),
+      });
+    } catch (error) {
+      logger.error('Failed to preview conflict prediction', { error, query: request.query });
+      sendError(response, error);
+    }
+  });
+
+  return router;
 }

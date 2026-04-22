@@ -70,4 +70,16 @@ describe('ConflictPredictionService', () => {
 
     expect(conflictSpy).not.toHaveBeenCalled();
   });
+
+  it('previews conflicts without emitting events', async () => {
+    const conflictSpy = vi.fn();
+    service.on('conflict-detected', conflictSpy);
+
+    await service.reportActivity('user1', 'src/shared.ts', 'transform');
+    const preview = service.previewConflicts('user2', 'src/shared.ts', 'transform');
+
+    expect(preview).toHaveLength(1);
+    expect(preview[0].otherUserId).toBe('user1');
+    expect(conflictSpy).not.toHaveBeenCalled();
+  });
 });

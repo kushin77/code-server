@@ -36,6 +36,7 @@ services:
     environment:
       - PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
+    command: code-server --auth=password --bind-addr=0.0.0.0:8080
       - SERVICE_URL=https://open-vsx.org/vscode/gallery
       - ITEM_URL=https://open-vsx.org/vscode/item
       - CS_DISABLE_FILE_DOWNLOADS=false

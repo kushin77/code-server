@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Pre-deployment verification for Issue #984 execution
 # Runs comprehensive checks before starting OAuth whitelist configuration
 # Exit code 0 = All checks passed, safe to proceed

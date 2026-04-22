@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Post-deployment verification for Issue #984
 # Comprehensive validation that OAuth whitelist + GSM credentials are properly configured
 

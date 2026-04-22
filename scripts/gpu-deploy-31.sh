@@ -26,15 +26,13 @@ mkdir -p "$LOG_DIR"
 
 # Execute with optional dry-run
 execute() {
-  # shellcheck disable=SC2124
-  local cmd="$@"
-  log_info "Executing: $cmd"
+  log_info "Executing: $@"
   
   if [[ $DRY_RUN == true ]]; then
-    log_warning "[DRY-RUN] Would execute: $cmd"
+    log_warning "[DRY-RUN] Would execute: $@"
   else
-    eval "$cmd" 2>&1 | tee -a "$LOG_FILE" || {
-      log_error "Command failed: $cmd"
+    "$@" 2>&1 | tee -a "$LOG_FILE" || {
+      log_error "Command failed: $@"
       return 1
     }
   fi

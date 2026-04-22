@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Issue #984 Definition of Done - VERIFICATION CHECKLIST
 # Date: April 21, 2026
 

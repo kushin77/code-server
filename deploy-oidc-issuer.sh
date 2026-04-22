@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 cd /home/akushnir/code-server-enterprise || exit 1
 
 # Start oauth2-oidc-issuer

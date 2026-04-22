@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # @file        ISSUE-984-ORCHESTRATOR-STARTUP-TEST.sh
 # @module      testing/deployment
 # @description Test that orchestrator can initialize and start (dry-run mode without deployment)

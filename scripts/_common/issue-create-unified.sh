@@ -209,29 +209,29 @@ github_issue_create() {
         fi
     fi
     
-    # Build gh command
-    local gh_cmd="gh issue create --repo $repo --title \"$title\""
+    # Build gh command as array for safe execution
+    local gh_cmd=("gh" "issue" "create" "--repo" "$repo" "--title" "$title")
     
     # Add body if provided
     if [[ -n "$body" ]]; then
-        gh_cmd="$gh_cmd --body \"$body\""
+        gh_cmd+=("--body" "$body")
     fi
     
     # Add labels
     if [[ -n "$labels" ]]; then
-        gh_cmd="$gh_cmd --label \"$labels\""
+        gh_cmd+=("--label" "$labels")
     fi
     
     # Dry run: just show what would be executed
     if [[ "$dry_run" == "true" ]]; then
-        log_info "[DRY RUN] Would execute: $gh_cmd"
+        log_info "[DRY RUN] Would execute: ${gh_cmd[*]}"
         return 0
     fi
     
     # Execute issue creation
     log_info "Creating issue in $repo: $title"
     local issue_url
-    issue_url=$(eval "$gh_cmd" 2>&1)
+    issue_url=$("${gh_cmd[@]}" 2>&1)
     
     if [[ $? -eq 0 ]]; then
         log_info "✓ Issue created: $issue_url"

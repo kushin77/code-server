@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Phase 2.1 + Phase 2C Complete Deployment
 # Deploys OIDC issuer + JWT services together
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # PHASE-2C-BOOTSTRAP.sh - Generate and deploy test secrets for Phase 2C
 # This creates test JWT configuration without needing GCP auth
 

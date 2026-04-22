@@ -938,8 +938,7 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
       - SPAN_STORAGE_TYPE=badger
-      - BADGER_EPHEMERAL=false
-      - BADGER_DIRECTORY=/jaeger/data
+      - BADGER_EPHEMERAL=true
       - MEMORY_MAX_TRACES=50000
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:16686/ || exit 1"]

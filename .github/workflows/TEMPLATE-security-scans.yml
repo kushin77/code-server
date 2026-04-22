@@ -53,6 +53,7 @@ jobs:
 
       - name: Run DAST scan
         env:
+          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL }}
           PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
           IDE_BASE_URL: ${{ vars.IDE_BASE_URL }}
           GH_TOKEN: ${{ github.token }}

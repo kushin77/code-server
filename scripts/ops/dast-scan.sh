@@ -61,6 +61,14 @@ if [[ -z "$TARGET_URL" ]]; then
   exit 0
 fi
 
+# Guard: skip loopback/private targets unreachable from CI runners
+# 127.x, 192.168.x, 10.x, ::1 cannot be scanned from GitHub Actions
+if echo "$TARGET_URL" | grep -qE '^https?://(127\.|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|localhost|\[::1\])'; then
+  log_warn "DAST target '$TARGET_URL' is a loopback/private address — not scannable from CI. Set PORTAL_BASE_URL or IDE_BASE_URL to a publicly reachable URL."
+  log_warn "Skipping DAST scan to prevent false-positive findings."
+  exit 0
+fi
+
 require_command python3
 
 mkdir -p "$(dirname "$OUTPUT_JSON")" "$(dirname "$OUTPUT_MD")"

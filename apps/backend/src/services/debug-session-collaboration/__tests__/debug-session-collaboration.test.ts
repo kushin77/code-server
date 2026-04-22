@@ -84,6 +84,37 @@ describe('DebugSessionCollaborationService', () => {
     })
     expect(relayed.relayMessages).toHaveLength(1)
     expect(relayed.relayMessages[0].forwarded).toBe(true)
+    expect(relayed.relayMessages[0].sequence).toBe(1)
+  })
+
+  it('returns relay message deltas using a sequence cursor', async () => {
+    const session = service.createSession({
+      workspaceId: 'portal-main',
+      actor: 'Portal main',
+      debuggerName: 'Portal debugger',
+      debuggerProgram: 'src/main.ts',
+      debuggerCwd: '/workspace/portal',
+    })
+
+    await service.relayDapMessage(session.sessionId, {
+      actor: 'Portal main',
+      message: { type: 'request', command: 'stepIn' },
+    })
+    await service.relayDapMessage(session.sessionId, {
+      actor: 'Portal main',
+      message: { type: 'request', command: 'next' },
+    })
+
+    const allMessages = service.listRelayMessages(session.sessionId, 'Portal main', 0)
+    expect(allMessages.latestSequence).toBe(2)
+    expect(allMessages.messages).toHaveLength(2)
+    expect(allMessages.messages[0].sequence).toBe(1)
+    expect(allMessages.messages[1].sequence).toBe(2)
+
+    const deltaMessages = service.listRelayMessages(session.sessionId, 'Portal main', 1)
+    expect(deltaMessages.latestSequence).toBe(2)
+    expect(deltaMessages.messages).toHaveLength(1)
+    expect(deltaMessages.messages[0].message).toMatchObject({ command: 'next' })
   })
 
   it('rejects updates from actors who have not joined the session', () => {

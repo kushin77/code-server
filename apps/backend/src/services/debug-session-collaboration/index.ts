@@ -51,11 +51,19 @@ export interface DebugStepEvent {
 
 export interface DebugRelayMessage {
   id: string
+  sequence: number
   actor: string
   message: Record<string, unknown>
   relayTarget?: string
   forwarded: boolean
   timestamp: string
+}
+
+export interface DebugRelaySyncResult {
+  sessionId: string
+  relayTarget?: string
+  latestSequence: number
+  messages: DebugRelayMessage[]
 }
 
 export interface DebugSessionRecord {
@@ -71,6 +79,7 @@ export interface DebugSessionRecord {
   variables: DebugVariableSnapshot[]
   stepEvents: DebugStepEvent[]
   relayMessages: DebugRelayMessage[]
+  relaySequence: number
   createdAt: string
   updatedAt: string
 }
@@ -200,6 +209,7 @@ export class DebugSessionCollaborationService extends EventEmitter {
       variables: [],
       stepEvents: [],
       relayMessages: [],
+      relaySequence: 0,
       createdAt: timestamp,
       updatedAt: timestamp,
     }
@@ -306,9 +316,11 @@ export class DebugSessionCollaborationService extends EventEmitter {
   async relayDapMessage(sessionId: string, input: RelayDebugMessageInput): Promise<DebugSessionRecord> {
     const session = this.requireParticipant(sessionId, input.actor)
     const timestamp = nowIso()
+    const sequence = session.relaySequence + 1
     const relayTarget = normalizeText(input.relayTarget) || session.relayTarget
     const relayMessage: DebugRelayMessage = {
       id: randomUUID(),
+      sequence,
       actor: normalizeActor(input.actor),
       message: { ...input.message },
       relayTarget: relayTarget || undefined,
@@ -332,10 +344,26 @@ export class DebugSessionCollaborationService extends EventEmitter {
     }
 
     session.relayTarget = relayTarget || session.relayTarget
+    session.relaySequence = sequence
     session.relayMessages = [...session.relayMessages, relayMessage]
     session.updatedAt = timestamp
     this.emit('debug-dap-relayed', cloneSession(session))
     return cloneSession(session)
+  }
+
+  listRelayMessages(sessionId: string, actor: string, sinceSequence = 0): DebugRelaySyncResult {
+    const session = this.requireParticipant(sessionId, actor)
+    const normalizedSinceSequence = Math.max(0, normalizeNumber(sinceSequence, 0))
+    const messages = session.relayMessages
+      .filter((relayMessage) => relayMessage.sequence > normalizedSinceSequence)
+      .map((relayMessage) => ({ ...relayMessage, message: { ...relayMessage.message } }))
+
+    return {
+      sessionId: session.sessionId,
+      relayTarget: session.relayTarget,
+      latestSequence: session.relaySequence,
+      messages,
+    }
   }
 
   private requireSession(sessionId: string): DebugSessionRecord {
@@ -405,6 +433,17 @@ export async function initializeDebugSessionCollaborationRoutes(service: DebugSe
   router.get('/api/debug-sessions/:sessionId', (request, response) => {
     try {
       response.json(service.getSession(request.params.sessionId))
+    } catch (error) {
+      sendError(response, error)
+    }
+  })
+
+  router.get('/api/debug-sessions/:sessionId/relay/messages', (request, response) => {
+    try {
+      const actor = requireRequestText(request.query.actor)
+      const since = normalizeNumber(request.query.since, 0)
+
+      response.json(service.listRelayMessages(request.params.sessionId, actor, since))
     } catch (error) {
       sendError(response, error)
     }

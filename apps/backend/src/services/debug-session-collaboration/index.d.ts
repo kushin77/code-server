@@ -35,11 +35,18 @@ export interface DebugStepEvent {
 }
 export interface DebugRelayMessage {
     id: string;
+    sequence: number;
     actor: string;
     message: Record<string, unknown>;
     relayTarget?: string;
     forwarded: boolean;
     timestamp: string;
+}
+export interface DebugRelaySyncResult {
+    sessionId: string;
+    relayTarget?: string;
+    latestSequence: number;
+    messages: DebugRelayMessage[];
 }
 export interface DebugSessionRecord {
     sessionId: string;
@@ -54,6 +61,7 @@ export interface DebugSessionRecord {
     variables: DebugVariableSnapshot[];
     stepEvents: DebugStepEvent[];
     relayMessages: DebugRelayMessage[];
+    relaySequence: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -95,6 +103,7 @@ export declare class DebugSessionCollaborationService extends EventEmitter {
     updateVariables(sessionId: string, input: UpdateDebugVariablesInput): DebugSessionRecord;
     recordStep(sessionId: string, input: RecordDebugStepInput): DebugSessionRecord;
     relayDapMessage(sessionId: string, input: RelayDebugMessageInput): Promise<DebugSessionRecord>;
+    listRelayMessages(sessionId: string, actor: string, sinceSequence?: number): DebugRelaySyncResult;
     private requireSession;
     private requireParticipant;
 }

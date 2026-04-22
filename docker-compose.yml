@@ -544,11 +544,12 @@ services:
     expose:
       - "6432"
     environment:
-      - DATABASES_HOST=postgres
-      - DATABASES_PORT=5432
-      - DATABASES_USER=${POSTGRES_USER:-codeserver}
-      - DATABASES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
-      - DATABASES_DBNAME=${POSTGRES_DB:-codeserver}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-codeserver}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      - DB_NAME=${POSTGRES_DB:-codeserver}
+      - LISTEN_PORT=6432
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=500
       - DEFAULT_POOL_SIZE=50
@@ -560,7 +561,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "psql -U ${POSTGRES_USER:-codeserver} -h localhost -p 6432 -d ${POSTGRES_DB:-codeserver} -c 'SELECT 1' >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER:-codeserver} >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -758,7 +759,7 @@ services:
   # Monitors both Master-Replica Redis instances and Sentinel quorum status
   # ────────────────────────────────────────────────────────────────────────────
   redis-exporter:
-    image: oliver006/redis_exporter:latest
+    image: oliver006/redis_exporter@sha256:d82625bda93823fb40de881ffbb45b65aca772a39c30141387f92314c258da5d
     container_name: redis-exporter
     restart: unless-stopped
     networks:
@@ -992,7 +993,7 @@ services:
   # Query interface: http://loki:3100
   # ────────────────────────────────────────────────────────────────────────────
   loki:
-    image: grafana/loki:3.0.0@sha256:3c2ca5868432ae258711afa5c18f8ae61a6c725bec2586b186e5cd0adbf31496
+    image: grafana/loki:3.0.0@sha256:757b5fadf816a1396f1fea598152947421fa49cb8b2db1ddd2a6e30fae003253
     container_name: loki
     restart: unless-stopped
     networks:
@@ -1036,7 +1037,7 @@ services:
   # Ships to: Loki for aggregation and query
   # ────────────────────────────────────────────────────────────────────────────
   promtail:
-    image: grafana/promtail:3.0.0@sha256:c64c687cbea9300178b30c95835354e34c4e4febc4badfe27102879de0483b5e
+    image: grafana/promtail:3.0.0@sha256:d3de3da9431cfbe74a6a94555050df5257f357e827be8e63f8998d509c37af8b
     container_name: promtail
     restart: unless-stopped
     networks:
@@ -1047,7 +1048,7 @@ services:
       - LOG_LEVEL=info
     volumes:
       - ./config/promtail-config.yaml:/etc/promtail/config.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ${DOCKER_ROOT_DIR:-/var/snap/docker/common/var-lib-docker}/containers:/var/lib/docker/containers:ro
       - /var/log:/var/log:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     command: >
@@ -1092,19 +1093,20 @@ services:
     environment:
       - LOKI_ENDPOINT=http://loki:3100
       - GITHUB_REPO=${GITHUB_REPO:-kushin77/code-server}
-      - GITHUB_TOKEN=${GITHUB_TOKEN:?GITHUB_TOKEN must be set}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - ERROR_TRIAGE_INTERVAL=${ERROR_TRIAGE_INTERVAL:-300}
       - ERROR_TRIAGE_THRESHOLD=${ERROR_TRIAGE_THRESHOLD:-3}
       - ERROR_TRIAGE_WINDOW=${ERROR_TRIAGE_WINDOW:-3600}
     volumes:
       - ./scripts/error-triage-engine.sh:/usr/local/bin/error-triage-engine:ro
+      - ./scripts/_common:/usr/local/bin/_common:ro
       - error-triage-db:/var/lib/error-triage
     entrypoint: /bin/ash
     command:
       - -c
       - |
-        apk add --no-cache bash curl sqlite jq
-        /usr/local/bin/error-triage-engine --daemon
+        apk add --no-cache bash curl sqlite jq github-cli
+        bash /usr/local/bin/error-triage-engine --daemon
     healthcheck:
       test: ["CMD", "test", "-f", "/var/run/error-triage-engine.pid"]
       interval: 60s

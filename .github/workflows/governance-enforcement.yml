@@ -218,7 +218,7 @@ jobs:
           trufflehog filesystem . \
             --json 2>&1 | tee /tmp/trufflehog-output.json
           
-          if grep -q '"verified": true' /tmp/trufflehog-output.json; then
+          if grep -q '"verified":\s*true' /tmp/trufflehog-output.json || grep -q '"Verified":\s*true' /tmp/trufflehog-output.json; then
             echo "✗ Verified secrets detected"
             exit 1
           fi

@@ -341,19 +341,17 @@ cat > "$AUDIT_FILE" << EOF
 
 ## Running the Audit
 
-To re-run this audit:
+To re-run this audit, use these commands:
 
-\`\`\`bash
 cd \$(dirname "$SCRIPT_DIR")
 bash \$(basename "$SCRIPT_DIR")/automated-iac-validation.sh
-\`\`\`
 
 ## Next Steps
 
-1. Verify all 12 tests pass: \`$PASS_COUNT / 12\`
+1. Verify all 12 tests pass: $PASS_COUNT / 12
 2. Address any failed tests (currently: $FAIL_COUNT failures)
-3. Deploy via orchestration script: \`./automated-deployment-orchestration.sh\`
-4. Monitor logs: \`docker-compose logs -f\`
+3. Deploy via orchestration script: ./automated-deployment-orchestration.sh
+4. Monitor logs: docker-compose logs -f
 
 ---
 

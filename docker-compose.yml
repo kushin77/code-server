@@ -986,6 +986,148 @@ services:
         max-size: "20m"
         max-file: "3"
 
+  # ────────────────────────────────────────────────────────────────────────────
+  # loki — Log aggregation backend for infrastructure events
+  # Stores logs from all services (terraform, haproxy, kubernetes, system)
+  # Query interface: http://loki:3100
+  # ────────────────────────────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.0.0@sha256:3c2ca5868432ae258711afa5c18f8ae61a6c725bec2586b186e5cd0adbf31496
+    container_name: loki
+    restart: unless-stopped
+    networks:
+      - net-management
+      - net-app
+    expose:
+      - "3100"
+    command: >
+      -config.file=/etc/loki/local-config.yaml
+      -print-config-stderr=true
+    environment:
+      - LOKI_RETENTION_DAYS=${LOKI_RETENTION_DAYS:-30}
+      - LOKI_MAX_CHUNK_AGE=${LOKI_MAX_CHUNK_AGE:-2h}
+      - LOKI_CHUNK_IDLE_PERIOD=${LOKI_CHUNK_IDLE_PERIOD:-3m}
+    volumes:
+      - ./config/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 512m
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # promtail — Log shipper that sends logs from containers and host to Loki
+  # Scrapes: Docker container logs, Kubernetes pod logs, system logs
+  # Ships to: Loki for aggregation and query
+  # ────────────────────────────────────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:3.0.0@sha256:c64c687cbea9300178b30c95835354e34c4e4febc4badfe27102879de0483b5e
+    container_name: promtail
+    restart: unless-stopped
+    networks:
+      - net-management
+      - net-app
+    environment:
+      - HOSTNAME=promtail-${HOSTNAME:-primary}
+      - LOG_LEVEL=info
+    volumes:
+      - ./config/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: >
+      -config.file=/etc/promtail/config.yml
+      -print-config-stderr=false
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9080/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      loki:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+          cpus: "0.1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # error-triage-engine — Detects error patterns from logs and creates GitHub issues
+  # Runs as daemon, queries Loki every 300 seconds for new error patterns
+  # Creates GitHub issues automatically for repeated errors
+  # ────────────────────────────────────────────────────────────────────────────
+  error-triage-engine:
+    image: alpine:3.20@sha256:c64c687cbea9300178b30c95835354e34c4e4febc4badfe27102879de0483b5e
+    container_name: error-triage-engine
+    restart: unless-stopped
+    profiles: ["observability"]  # Enable with: COMPOSE_PROFILES=observability docker-compose up -d
+    networks:
+      - net-management
+      - net-app
+    environment:
+      - LOKI_ENDPOINT=http://loki:3100
+      - GITHUB_REPO=${GITHUB_REPO:-kushin77/code-server}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:?GITHUB_TOKEN must be set}
+      - ERROR_TRIAGE_INTERVAL=${ERROR_TRIAGE_INTERVAL:-300}
+      - ERROR_TRIAGE_THRESHOLD=${ERROR_TRIAGE_THRESHOLD:-3}
+      - ERROR_TRIAGE_WINDOW=${ERROR_TRIAGE_WINDOW:-3600}
+    volumes:
+      - ./scripts/error-triage-engine.sh:/usr/local/bin/error-triage-engine:ro
+      - error-triage-db:/var/lib/error-triage
+    entrypoint: /bin/ash
+    command:
+      - -c
+      - |
+        apk add --no-cache bash curl sqlite jq
+        /usr/local/bin/error-triage-engine --daemon
+    healthcheck:
+      test: ["CMD", "test", "-f", "/var/run/error-triage-engine.pid"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      loki:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+          cpus: "0.1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 # ════════════════════════════════════════════════════════════════════════════
 # Networks
 # ════════════════════════════════════════════════════════════════════════════
@@ -1092,3 +1234,19 @@ volumes:
       type: nfs
       o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
       device: ":${NAS_EXPORT_PATH:-/export}/appsmith"
+
+  # ── Observability: Loki log storage ──────────────────────────────────────
+  loki-data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/loki"
+
+  # ── Error Triage: SQLite database for error patterns ──────────────────────
+  error-triage-db:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/error-triage-db"

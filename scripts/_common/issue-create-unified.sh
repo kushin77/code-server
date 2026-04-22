@@ -105,7 +105,8 @@ validate_parameters() {
     fi
     
     if [[ ! -v PRIORITY_LABELS["$priority"] ]]; then
-        log_fatal "Invalid priority: $priority (valid: ${!PRIORITY_LABELS[@]})"
+        local -a valid_priorities=("${!PRIORITY_LABELS[@]}")
+        log_fatal "Invalid priority: $priority (valid: ${valid_priorities[*]})"
     fi
     
     # Type validation
@@ -143,7 +144,7 @@ build_labels() {
     # Remove duplicates
     local -a unique_labels=()
     for label in "${labels[@]}"; do
-        if [[ ! " ${unique_labels[@]} " =~ " ${label} " ]]; then
+        if [[ ! " ${unique_labels[*]} " =~ " ${label} " ]]; then
             unique_labels+=("$label")
         fi
     done

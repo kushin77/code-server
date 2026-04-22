@@ -123,8 +123,12 @@ else
     exit 1
 fi
 
-if git status | grep -q "up to date with 'origin/main'"; then
-    echo "✓ PASS: All commits pushed to origin/main"
+current_branch=$(git branch --show-current)
+current_head=$(git rev-parse HEAD)
+remote_head=$(git ls-remote --heads origin "$current_branch" | awk '{print $1}')
+
+if [ -n "$remote_head" ] && [ "$remote_head" = "$current_head" ]; then
+    echo "✓ PASS: All commits pushed to origin/$current_branch"
 else
     echo "✗ FAIL: Commits not pushed"
     exit 1

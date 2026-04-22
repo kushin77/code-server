@@ -26,13 +26,13 @@ mkdir -p "$LOG_DIR"
 
 # Execute with optional dry-run
 execute() {
-  log_info "Executing: $@"
+  log_info "Executing: $*"
   
   if [[ $DRY_RUN == true ]]; then
-    log_warning "[DRY-RUN] Would execute: $@"
+    log_warning "[DRY-RUN] Would execute: $*"
   else
     "$@" 2>&1 | tee -a "$LOG_FILE" || {
-      log_error "Command failed: $@"
+      log_error "Command failed: $*"
       return 1
     }
   fi

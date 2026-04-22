@@ -60,18 +60,90 @@ require_command "docker" "Docker is required to run this script"
 # HELPER FUNCTIONS (script-specific, not in _common/)
 ################################################################################
 
-# Example helper — follows canonical logging patterns
-my_helper_function() {
-    local arg="$1"
-    log_info "Running helper with argument: $arg"
+# HELPER FUNCTIONS (script-specific, not in _common/)
+
+# Apply iptables rules for zero-trust egress
+apply_iptables_rules() {
+    log_info "Applying zero-trust iptables egress rules"
     
-    # Use canonical error handling
-    if [[ -z "$arg" ]]; then
-        log_error "Argument cannot be empty"
+    # Create audit chain
+    iptables -t filter -N ZERO_TRUST_AUDIT 2>/dev/null || true
+    iptables -t filter -F ZERO_TRUST_AUDIT
+    
+    # Log all outbound connections
+    iptables -t filter -A ZERO_TRUST_AUDIT -j LOG --log-prefix "ZERO-TRUST-OUT: " --log-level 6
+    
+    # Allow DNS
+    iptables -t filter -A ZERO_TRUST_AUDIT -p udp --dport 53 -j ACCEPT
+    iptables -t filter -A ZERO_TRUST_AUDIT -p tcp --dport 53 -j ACCEPT
+    
+    # Allow HTTP/HTTPS to allowed hosts
+    for host in "${ALLOWED_EGRESS_HOSTS[@]}"; do
+        # Resolve host to IP (simplified - in practice use getent or similar)
+        host_ip=$(getent hosts "$host" | awk '{print $1}' | head -1)
+        if [[ -n "$host_ip" ]]; then
+            iptables -t filter -A ZERO_TRUST_AUDIT -d "$host_ip" -p tcp --dport 80 -j ACCEPT
+            iptables -t filter -A ZERO_TRUST_AUDIT -d "$host_ip" -p tcp --dport 443 -j ACCEPT
+        fi
+    done
+    
+    # Allow Docker network internal traffic
+    iptables -t filter -A ZERO_TRUST_AUDIT -s "$DOCKER_NETWORK_SUBNET" -d "$DOCKER_NETWORK_SUBNET" -j ACCEPT
+    
+    # Allow localhost
+    iptables -t filter -A ZERO_TRUST_AUDIT -d 127.0.0.1 -j ACCEPT
+    iptables -t filter -A ZERO_TRUST_AUDIT -d ::1 -j ACCEPT
+    
+    # Drop everything else
+    iptables -t filter -A ZERO_TRUST_AUDIT -j DROP
+    
+    # Insert audit chain into OUTPUT chain
+    iptables -t filter -C OUTPUT -j ZERO_TRUST_AUDIT 2>/dev/null || iptables -t filter -I OUTPUT -j ZERO_TRUST_AUDIT
+    
+    log_info "Iptables rules applied successfully"
+}
+
+# Verify iptables rules
+verify_iptables_rules() {
+    log_info "Verifying iptables rules"
+    
+    if ! iptables -t filter -L ZERO_TRUST_AUDIT >/dev/null 2>&1; then
+        log_error "ZERO_TRUST_AUDIT chain not found"
         return 1
     fi
     
-    log_debug "Helper completed successfully"
+    local rule_count
+    rule_count=$(iptables -t filter -L ZERO_TRUST_AUDIT | wc -l)
+    if [[ $rule_count -lt 5 ]]; then
+        log_warn "ZERO_TRUST_AUDIT chain has fewer rules than expected ($rule_count)"
+    fi
+    
+    log_info "Iptables rules verified"
+    return 0
+}
+
+# Show audit logs
+show_audit_logs() {
+    log_info "Showing recent zero-trust audit logs"
+    
+    if [[ -f "$AUDIT_LOG_FILE" ]]; then
+        tail -50 "$AUDIT_LOG_FILE" | grep "ZERO-TRUST"
+    else
+        log_warn "Audit log file not found: $AUDIT_LOG_FILE"
+        # Try journalctl or dmesg
+        journalctl -k -g "ZERO-TRUST" --since "1 hour ago" 2>/dev/null || dmesg | grep "ZERO-TRUST" | tail -20
+    fi
+}
+
+# Clean up iptables rules
+cleanup_iptables_rules() {
+    log_info "Cleaning up iptables rules"
+    
+    iptables -t filter -D OUTPUT -j ZERO_TRUST_AUDIT 2>/dev/null || true
+    iptables -t filter -F ZERO_TRUST_AUDIT 2>/dev/null || true
+    iptables -t filter -X ZERO_TRUST_AUDIT 2>/dev/null || true
+    
+    log_info "Iptables rules cleaned up"
 }
 
 ################################################################################
@@ -79,21 +151,34 @@ my_helper_function() {
 ################################################################################
 
 main() {
-    log_info "Starting $SCRIPT_NAME"
+    log_info "Starting Network Security Management"
     
-    # Example: process arguments
-    local arg1="${1:-}"
-    if [[ -z "$arg1" ]]; then
-        log_error "Usage: $SCRIPT_NAME <arg1>"
-        return 2
-    fi
+    local command="${1:-}"
     
-    # Call helper function with error checking
-    if ! my_helper_function "$arg1"; then
-        log_fatal "Helper failed, aborting"
-    fi
+    case "$command" in
+        apply)
+            apply_iptables_rules
+            ;;
+        verify)
+            verify_iptables_rules
+            ;;
+        audit)
+            show_audit_logs
+            ;;
+        cleanup)
+            cleanup_iptables_rules
+            ;;
+        *)
+            log_error "Usage: $SCRIPT_NAME {apply|verify|audit|cleanup}"
+            log_error "  apply   - Apply zero-trust iptables egress rules"
+            log_error "  verify  - Verify iptables rules are in place"
+            log_error "  audit   - Show recent audit logs"
+            log_error "  cleanup - Remove iptables rules"
+            return 2
+            ;;
+    esac
     
-    log_info "$SCRIPT_NAME completed successfully"
+    log_info "Network Security Management completed successfully"
     return 0
 }
 

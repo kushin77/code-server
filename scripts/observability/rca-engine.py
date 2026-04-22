@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# @file        scripts/observability/rca-engine.py
+# @module      observability/rca
+# @description Root Cause Analysis engine with immutable hypothesis ranking
+#
+# IaC Principles:
+# - Immutable: Alert snapshots frozen at analysis time
+# - Idempotent: Same alert metrics = same RCA hypothesis ranking
+# - Versioned: Report timestamps for audit trail
 """
 Phase 23-E: Root Cause Analysis (RCA) Engine
 ─────────────────────────────────────────────────────────────────────────────

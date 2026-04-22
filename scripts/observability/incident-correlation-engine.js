@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 /**
+ * @file        scripts/observability/incident-correlation-engine.js
+ * @module      observability/incidents
+ * @description Incident correlation engine for root cause analysis with immutable events
+ *
+ * IaC Principles:
+ * - Immutable: Events frozen once recorded, never mutated
+ * - Idempotent: Same events = same correlations (deterministic)
+ * - Versioned: Event versions for audit trail and timeline analysis
+ */
+
+/**
  * Incident Correlation Engine
  * Automatically correlates SLO breaches with deploys, config changes, and restarts
  * Provides timeline analysis for incident root cause analysis

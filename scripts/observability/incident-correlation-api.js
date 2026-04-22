@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 /**
+ * @file        scripts/observability/incident-correlation-api.js
+ * @module      observability/incidents
+ * @description REST API for incident correlation and SLO tracking with immutable events
+ *
+ * IaC Principles:
+ * - Immutable: Event payloads stored as-received (frozen)
+ * - Idempotent: Same events always correlate to same incidents
+ * - Versioned: All event timestamps for audit trail
+ */
+
+/**
  * Incident Correlation API
  * REST API for incident correlation and SLO tracking
  */

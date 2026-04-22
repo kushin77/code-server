@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# @file        scripts/observability/anomaly-detector.py
+# @module      observability/anomaly
+# @description Prometheus anomaly detection using z-score with immutable baseline windows
+#
+# IaC Principles:
+# - Immutable: Baseline windows frozen (30-min, never updated live)
+# - Idempotent: Same metrics window = same z-score calculation
+# - Versioned: Anomaly scores timestamped for audit trail
 """
 Phase 23-C: Anomaly Detector
 ─────────────────────────────────────────────────────────────────────────────

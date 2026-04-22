@@ -53,7 +53,13 @@ jobs:
         run: |
           if [ -f trufflehog-output.json ]; then
             bash scripts/ops/security-scan-triage.sh --tool trufflehog --secret-jsonl trufflehog-output.json --repo "${GH_REPO}"
-          elif [ -f package.json ]; then
+          fi
+        timeout-minutes: 10
+
+      - name: Install npm dependencies
+        if: always()
+        run: |
+          if [ -f package.json ]; then
             npm install
           else
             echo "No package.json detected; skipping npm dependency install"

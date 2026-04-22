@@ -997,7 +997,7 @@ services:
   # Query interface: http://loki:3100
   # ────────────────────────────────────────────────────────────────────────────
   loki:
-    image: grafana/loki:3.0.0
+    image: grafana/loki:3.0.0@sha256:757b5fadf816a1396f1fea598152947421fa49cb8b2db1ddd2a6e30fae003253
     container_name: loki
     restart: unless-stopped
     networks:

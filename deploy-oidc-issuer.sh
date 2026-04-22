@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        deploy-oidc-issuer.sh
+# @module      deployment/oidc-issuer
+# @description OIDC issuer service deployment - oauth2-proxy configuration
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 cd /home/akushnir/code-server-enterprise
 
 # Start oauth2-oidc-issuer

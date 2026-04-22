@@ -1,6 +1,10 @@
-#!/bin/bash
-# Deploy OIDC Issuer RSA Signing Key to remote (simplified)
-
+#!/usr/bin/env bash
+# @file        deploy-oidc-key.sh
+# @module      deployment/oidc-signing-key
+# @description Deploy OIDC issuer RSA signing key to remote host
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -e
 
 REMOTE="akushnir@192.168.168.31"

@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# @file        deploy-complete.sh
+# @module      deployment/primary
+# @description Primary host deployment orchestrator (192.168.168.31) - docker-compose + terraform
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -eo pipefail
 
 # Find and navigate to the ops directory

@@ -1,6 +1,10 @@
-#!/bin/bash
-# Phase 2.1 OIDC Deployment Script
-
+#!/usr/bin/env bash
+# @file        deploy-oidc.sh
+# @module      deployment/oidc-phase-2.1
+# @description Phase 2.1 OIDC deployment - OAuth2 proxy and issuer setup
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 cd /home/akushnir/code-server-enterprise
 
 # Backup existing files

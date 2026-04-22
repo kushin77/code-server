@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# @file        deploy-final.sh
+# @module      deployment/final
+# @description Final deployment stage - sources .env.production and starts services
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -eo pipefail
 
 cd code-server-enterprise-ops

@@ -1,7 +1,10 @@
-#!/bin/bash
-# Issue #984 Execution Orchestrator
-# Automated workflow that executes the complete #984 deployment with safety gates
-
+#!/usr/bin/env bash
+# @file        ISSUE-984-ORCHESTRATOR.sh
+# @module      deployment/issue-984-orchestrator
+# @description Issue #984 execution orchestrator - automated deployment with safety gates
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

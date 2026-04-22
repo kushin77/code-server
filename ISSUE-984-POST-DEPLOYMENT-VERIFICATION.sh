@@ -1,7 +1,10 @@
-#!/bin/bash
-# Post-deployment verification for Issue #984
-# Comprehensive validation that OAuth whitelist + GSM credentials are properly configured
-
+#!/usr/bin/env bash
+# @file        ISSUE-984-POST-DEPLOYMENT-VERIFICATION.sh
+# @module      deployment/issue-984-verification
+# @description Post-deployment verification - OAuth whitelist and GSM credentials validation
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

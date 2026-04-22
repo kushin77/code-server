@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# @file        deploy-replica.sh
+# @module      deployment/replica
+# @description Replica host deployment orchestrator (192.168.168.42) - HA mirror of primary
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -eo pipefail
 
 # Deployment script for replica host (192.168.168.42)

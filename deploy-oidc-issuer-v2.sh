@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        deploy-oidc-issuer-v2.sh
+# @module      deployment/oidc-issuer-v2
+# @description OIDC issuer v2 deployment with configuration loading from .env
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 cd /home/akushnir/code-server-enterprise
 
 # Load configuration

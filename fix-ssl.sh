@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# @file        fix-ssl.sh
+# @module      operations/ssl-maintenance
+# @description SSL certificate and Caddy SSL configuration recovery
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -e
 
 # Stop Caddy

@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# @file        deploy-now-v2.sh
+# @module      deployment/quick-v2
+# @description Quick deployment v2 - uses .env.production with docker-compose
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -euo pipefail
 
 cd code-server-enterprise-ops

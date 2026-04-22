@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Phase 2C Deployment: Configuration Merge and Service Update
-
+# @file        DEPLOY-PHASE-2C.sh
+# @module      deployment/phase-2c
+# @description Phase 2C deployment - configuration merge and service update
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -euo pipefail
 
 cd ~/code-server-enterprise

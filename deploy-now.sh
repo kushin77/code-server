@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# @file        deploy-now.sh
+# @module      deployment/quick
+# @description Quick deployment trigger - loads .env.production and starts services
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 set -euo pipefail
 
 cd code-server-enterprise-ops

@@ -28,7 +28,7 @@ env:
   GOVERNANCE_MANIFEST: config/governance-manifest.yml
   JSCPD_VERSION: "3.5.10"
   GITLEAKS_VERSION: "8.30.1"
-  TRUFFLEHOG_VERSION: "3.95.2"
+  TRUFFLEHOG_VERSION: "2.2.1"
   TRIVY_VERSION: "0.70.0"
 
 jobs:

@@ -79,7 +79,7 @@ if [[ "$USER" == "developer" ]] || [[ "$USER" == *"dev"* ]]; then
     # Log all commands for audit trail
     AUDIT_LOG="/var/log/developer-access/audit-$USER.log"
     if [ -w "$(dirname "$AUDIT_LOG")" ] 2>/dev/null; then
-        export PROMPT_COMMAND="echo \$(date '+%Y-%m-%d %H:%M:%S'): \$USER@\$(hostname):\$PWD:\$SHELL >> \"$AUDIT_LOG\"; eval \"\$PROMPT_COMMAND\""
+        export PROMPT_COMMAND="echo \$(date '+%Y-%m-%d %H:%M:%S'): \$USER@\$(hostname):\$PWD:\$SHELL >> \"$AUDIT_LOG\""
     fi
     
     # ==================== SESSION TIMEOUT ====================

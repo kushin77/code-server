@@ -385,6 +385,35 @@ copilot_pre_execute_check \
 5. **All searches are logged** — Audit trail for decisions
 
 ---
+
+### Rule 10 — Linux-Native Code Only (NON-NEGOTIABLE)
+
+This repository runs **EXCLUSIVELY on Linux** (Ubuntu on 192.168.168.31 / .42).
+
+**Copilot MUST NEVER generate:**
+- PowerShell syntax or `.ps1` files
+- Windows paths (`C:\`, `%APPDATA%`, `$USERPROFILE`, `$LOCALAPPDATA`)
+- `.exe`, `.bat`, `.cmd` binary references
+- `node.exe`, `npx.cmd`, `npx.exe`, `gh.exe`, `ssh.exe` fallbacks
+- `wslpath`, `cmd /c`, `powershell.exe` commands
+- `os.platform() === 'win32'` checks in application code
+- `/mnt/c/` WSL paths
+- macOS paths (`$HOME/Library`, `darwin` OSTYPE checks)
+
+**Always use:**
+- Bash (`#!/usr/bin/env bash`) for shell scripts
+- Python 3 for complex automation
+- `/bin/bash` hardcoded in Node.js `spawn()` calls
+- `ssh` (never `ssh.exe`) for remote operations
+- Linux standard paths (`/home`, `/opt`, `/var`, `/etc`)
+- Standard utilities only (bash, python3, curl, git, docker, ssh, jq)
+
+**Enforcement:**
+- Code review will reject any Windows/macOS/WSL artifacts
+- CI will block commits with `powershell`, `pwsh`, `.ps1`, `C:\` patterns
+- Future Copilot sessions must produce zero Windows-specific code patterns
+
+---
 <!-- SCOPE SENTINEL: This workspace is kushin77/code-server ONLY -->
 
 ## Scope

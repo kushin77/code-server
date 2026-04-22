@@ -306,7 +306,7 @@ variable "qa_password" {
   type        = string
   sensitive   = true
   default     = ""
-  
+
   validation {
     condition     = length(var.qa_password) == 0 || length(var.qa_password) >= 16
     error_message = "qa_password must be at least 16 characters (recommend 32-character random string)"
@@ -317,7 +317,7 @@ variable "qa_email" {
   description = "QA user email for OAuth E2E testing (default: qa@kushnir.cloud)"
   type        = string
   default     = "qa@kushnir.cloud"
-  
+
   validation {
     condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.qa_email))
     error_message = "qa_email must be a valid email address"

@@ -1,51 +1,8 @@
-#!/usr/bin/env bash
-# @file        scripts/deploy/DEPLOYMENT-READINESS-VERIFICATION.sh
-# @module      deployment/DEPLOYMENT-READINESS-VERIFICATION
-# @description Automation script
-#
-# IaC Principles:
-# - Immutable: State frozen after execution, no side effects on re-run
-# - Idempotent: Safe to run multiple times with identical results
-# - Versioned: All changes tracked with audit trail
-
-################################################################################
-# Phase 14-18 Deployment Readiness Verification
-# Purpose: Comprehensive pre-production validation of all infrastructure
-# IaC Status: IMMUTABLE (version-pinned) + IDEMPOTENT (safe to apply)
-# Validation: All phases verified ready for automated execution
-################################################################################
-
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../_common/init.sh"
-
-TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
-REPORT_DIR="${SCRIPT_DIR}/../../artifacts/triage"
-REPORT_FILE="${REPORT_DIR}/deployment-readiness-report-${TIMESTAMP}.md"
-GENERATED_AT="$(date -u -Iseconds)"
-BRANCH_NAME="$(git -C "$SCRIPT_DIR/../.." branch --show-current 2>/dev/null || echo main)"
-GIT_COMMIT="$(git -C "$SCRIPT_DIR/../.." rev-parse HEAD)"
-
-mkdir -p "$REPORT_DIR"
-
-# Colors
-GREEN='\033[0;32m'
-# shellcheck disable=SC2034
-RED='\033[0;31m'
-# shellcheck disable=SC2034
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-echo -e "${CYAN}Generating deployment readiness report...${NC}"
-
-cat > "${REPORT_FILE}" <<'EOF'
 # Phase 14-18 Deployment Readiness Report
 
-**Generated**: __GENERATED_AT__
+**Generated**: 2026-04-22T17:55:46+00:00
 **Repository**: kushin77/code-server
-**Branch**: __BRANCH_NAME__
+**Branch**: main
 **IaC Status**: IMMUTABLE & IDEMPOTENT
 
 ## ✅ Phase Readiness Summary
@@ -193,16 +150,6 @@ All phases verified READY for production deployment.
 
 ---
 
-**Report Generated** at __GENERATED_AT__  
-**Repository**: kushin77/code-server (branch: __BRANCH_NAME__)  
-**Git Commit**: __GIT_COMMIT__
-EOF
-
-sed -i \
-	-e "s|__GENERATED_AT__|${GENERATED_AT}|g" \
-	-e "s|__BRANCH_NAME__|${BRANCH_NAME}|g" \
-	-e "s|__GIT_COMMIT__|${GIT_COMMIT}|g" \
-	"${REPORT_FILE}"
-
-echo -e "${GREEN}✓ Report generated: ${REPORT_FILE}${NC}"
-cat "${REPORT_FILE}"
+**Report Generated** at 2026-04-22T17:55:46+00:00  
+**Repository**: kushin77/code-server (branch: main)  
+**Git Commit**: 644d91b1b9d546c24d4f9f1a12150c2033f752b1

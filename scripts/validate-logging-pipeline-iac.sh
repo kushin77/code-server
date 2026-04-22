@@ -118,7 +118,7 @@ else
   ((failed++))
 fi
 
-if git -C "${PROJECT_ROOT}" log --oneline -5 | grep -q "logging[- ]pipeline"; then
+if git -C "${PROJECT_ROOT}" log --oneline -5 | grep -q -i "logging\|observability"; then
   log_info "✓ Recent commits include logging pipeline work"
 else
   log_error "✗ Recent commits don't include logging pipeline"

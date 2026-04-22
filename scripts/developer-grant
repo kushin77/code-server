@@ -144,7 +144,7 @@ log "Creating Cloudflare Access policy..."
 CLOUDFLARE_ACCESS_ID="access_$(openssl rand -hex 8)"
 
 # For actual implementation, call Cloudflare API:
-# curl -X POST "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/access/apps" \
+# curl -X POST "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/zero_trust/access/apps" \
 #   -H "Authorization: Bearer ${CF_API_TOKEN}" \
 #   -H "Content-Type: application/json" \
 #   -d "{...}"

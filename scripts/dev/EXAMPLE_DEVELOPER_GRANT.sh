@@ -136,7 +136,7 @@ echo ""
 echo "Creating Cloudflare Access policy..."
 
 # In production, this would call the Cloudflare API:
-# curl -X POST https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps \
+# curl -X POST https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/zero_trust/access/apps \
 #   -H "Authorization: Bearer $CF_API_TOKEN" \
 #   -d '{
 #     "name": "dev-access-'$EMAIL'",

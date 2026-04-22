@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.code-server
-    image: code-server-enterprise:dev
+    image: code-server-enterprise:4.115.0
     container_name: code-server
     restart: unless-stopped
     user: "1000"
@@ -382,7 +382,7 @@ services:
     build:
       context: .
       dockerfile: apps/session-broker/Dockerfile
-    image: session-broker:latest
+    image: session-broker:1.0.0
     container_name: session-broker
     restart: unless-stopped
     profiles: ["session-isolation"]  # Disabled by default pending dependency fixes

@@ -46,6 +46,7 @@ export { initializeWorkspaceDiffRoutes, WorkspaceDiffService } from './services/
 export { initializeWorkspaceForkingRoutes, WorkspaceForkingService } from './services/workspace-forking';
 export { initializeMultiRootWorkspaceManagerRoutes, MultiRootWorkspaceManagerService } from './services/multi-root-workspace-manager';
 export { initializeDebugSessionCollaborationRoutes, DebugSessionCollaborationService } from './services/debug-session-collaboration';
+export { CollaborationMessageEncryptionService } from './services/collaboration-message-encryption';
 export { initializeConflictPredictionRoutes, ConflictPredictionService } from './services/conflict-prediction';
 export { initializeSessionHandoffProtocolRoutes, SessionHandoffProtocolService } from './services/session-handoff-protocol';
 export { initializeSessionHandOffNotesRoutes, SessionHandOffNotesService } from './services/session-handoff-notes';

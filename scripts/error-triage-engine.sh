@@ -25,6 +25,7 @@ CHECK_INTERVAL="${ERROR_TRIAGE_INTERVAL:-300}"
 MIN_OCCURRENCE_THRESHOLD="${ERROR_TRIAGE_THRESHOLD:-3}"
 ERROR_TRIAGE_WINDOW="${ERROR_TRIAGE_WINDOW:-3600}"
 PID_FILE="${PID_FILE:-/tmp/error-triage-engine.pid}"
+ISSUE_CREATE_HELPER="${PROJECT_ROOT}/scripts/_common/issue-create-unified.sh"
 
 init_db() {
     mkdir -p "$(dirname "$TRIAGE_DB")"
@@ -78,6 +79,14 @@ alert_on_pattern() {
         return 0
     fi
 
+    if [[ ! -f "$ISSUE_CREATE_HELPER" ]]; then
+        log_warn "Issue creation helper not available; skipping issue creation for this cycle."
+        return 0
+    fi
+
+    # shellcheck source=/dev/null
+    source "$ISSUE_CREATE_HELPER"
+
     local issue_title="[AUTO-TRIAGE] Error Pattern: ${msg:0:60}..."
     local issue_body
     issue_body=$(cat <<'BODY'
@@ -106,20 +115,26 @@ BODY
     issue_body="${issue_body//COUNT_PLACEHOLDER/$count}"
     issue_body="${issue_body//MSG_PLACEHOLDER/$msg}"
 
-    local gh_output
-    gh_output=$(gh issue create --title "$issue_title" --body "$issue_body" --repo kushin77/code-server 2>&1) || {
+    local issue_url
+    issue_url=$(copilot_create_issue \
+        --title "$issue_title" \
+        --body "$issue_body" \
+        --priority P1 \
+        --type infrastructure \
+        --repo kushin77/code-server \
+        --force-create 2>&1) || {
         log_warn "Failed to create GitHub issue for pattern $hash"
         return 1
     }
 
     local new_issue_number
-    new_issue_number=$(printf '%s' "$gh_output" | grep -oE 'issues/[0-9]+' | awk -F/ '{print $NF}' || true)
+    new_issue_number=$(printf '%s' "$issue_url" | grep -oE 'issues/[0-9]+' | awk -F/ '{print $NF}' || true)
 
     if [[ -n "$new_issue_number" ]]; then
         "$SQLITE3" "$TRIAGE_DB" "UPDATE error_patterns SET github_issue_number = $new_issue_number, status = 'alerted' WHERE pattern_hash = '$hash';"
         log_info "Linked error pattern $hash to GitHub Issue #$new_issue_number"
     else
-        log_warn "Could not extract issue number from gh output: $gh_output"
+        log_warn "Could not extract issue number from issue creation output: $issue_url"
     fi
 }
 

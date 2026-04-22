@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# @file        scripts/locustfile.py
+# @module      testing/load-test
+# @description Phase 15 code-server load testing - Locust scenarios for capacity planning
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 """
 Phase 15: Code-Server Load Testing with Locust
 

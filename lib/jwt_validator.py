@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# @file        lib/jwt_validator.py
+# @module      auth/jwt
+# @description JWT validation library for service-to-service authentication (P1 #388 Phase 2)
+# @owner       Infrastructure Team
+# @status      ACTIVE
+#
 """
 JWT Validator Library for Python Services
 P1 #388 Phase 2: Service-to-Service Authentication

@@ -41,8 +41,14 @@ export { initializeTeamHealthDashboardRoutes, TeamHealthDashboardService } from 
 export { initializeCodeOwnershipGraphRoutes, CodeOwnershipGraphService } from './services/code-ownership-graph';
 export { initializeCalendarIntegrationRoutes, CalendarIntegrationService } from './services/calendar-integration';
 export { initializeFlowStateDetectionRoutes, FlowStateDetectionService } from './services/flow-state-detection';
+export { initializeFileAdvisoryLockRoutes, FileAdvisoryLockService } from './services/file-advisory-locks';
+export { initializeWorkspaceDiffRoutes, WorkspaceDiffService } from './services/workspace-diff';
+export { initializeWorkspaceForkingRoutes, WorkspaceForkingService } from './services/workspace-forking';
+export { initializeMultiRootWorkspaceManagerRoutes, MultiRootWorkspaceManagerService } from './services/multi-root-workspace-manager';
+export { initializeSessionHandoffProtocolRoutes, SessionHandoffProtocolService } from './services/session-handoff-protocol';
 export { initializeSessionHandOffNotesRoutes, SessionHandOffNotesService } from './services/session-handoff-notes';
 export { initializeExpertiseHeatmapRoutes, ExpertiseHeatmapService } from './services/expertise-heatmap';
+export { initializeMessageCompressionPipelineRoutes, MessageCompressionPipelineService } from './services/message-compression-pipeline';
 export { initializeEmbeddedAPIExplorerRoutes, EmbeddedAPIExplorerService } from './services/embedded-api-explorer';
 export { initializeKeyboardShortcutManagerRoutes, KeyboardShortcutManagerService } from './services/keyboard-shortcut-manager';
 export { initializeAutoTestGenerationRoutes } from './routes/auto-test-generation';

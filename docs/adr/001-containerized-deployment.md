@@ -15,7 +15,7 @@ Enterprise development requires:
 - **Multi-developer access** to isolated development environments
 - **Infrastructure as Code** management at scale
 - **Security enforcement** (authentication, RBAC, audit logging)
-- **Reproducible Linux production deployments** (no Windows-only code paths)
+- **Reproducible Linux production deployments** (no desktop-only code paths)
 - **Resource isolation** to prevent one developer from impacting others
 
 Previously, code-server was deployed manually, leading to:
@@ -71,7 +71,7 @@ This ensures:
 
 **Cons**:
 - **Over-engineered for MVP** — additional complexity, operational burden
-- **Requires external infrastructure** — not portable to Windows dev machines
+- **Requires external infrastructure** — not portable to local dev machines
 - **Steep learning curve** — team not ready ye
 - **Cost** — licensing, infrastructure, operational overhead
 
@@ -107,7 +107,7 @@ This ensures:
 
 ### Negative Consequences (Accepted Risks)
 - ⚠️ **Docker complexity** — team must learn Docker, Compose, Caddy
-- ⚠️ **Windows-specific quirks** — Docker Desktop for Windows has performance issues
+- ⚠️ **Desktop virtualization quirks** — Docker Desktop-style environments can have performance issues
 - ⚠️ **Resource overhead** — containers use more resources than native processes
 - ⚠️ **Container registry needed** — must host images (mitigated: GitHub Container Registry free)
 - ⚠️ **Orchestration gap** — Compose insufficient for production scale (mitigated: roadmap to K8s)
@@ -150,7 +150,7 @@ This ensures:
   - Session-affine routing is required for active IDE sessions; code-server should not be treated as a generic stateless backend under active-active ingress
 
 - **Bottlenecks**:
-  - Single Docker Desktop instance on Windows (performance capped)
+  - Single Docker Compose instance on Linux (performance capped)
   - Network I/O for code syncing between instances (if using shared workspace)
   - Storage I/O if using network mounts (NFS, SMB)
 

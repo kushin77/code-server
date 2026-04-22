@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env node
 /**
  * @file        apps/backend/src/services/embedded-api-explorer/index.ts
  * @module      services/developer-experience
@@ -321,8 +321,8 @@ export class EmbeddedAPIExplorerService extends EventEmitter {
         throw new Error('One or both responses not found');
       }
 
-      const body1 = JSON.parse(result1.rows[0].body);
-      const body2 = JSON.parse(result2.rows[0].body);
+      const body1 = this.normalizeResponseBody(result1.rows[0].body);
+      const body2 = this.normalizeResponseBody(result2.rows[0].body);
 
       // Simple diff calculation
       const added = this.findKeys(body2, body1);
@@ -363,6 +363,23 @@ export class EmbeddedAPIExplorerService extends EventEmitter {
       }
     }
     return result;
+  }
+
+  private normalizeResponseBody(body: unknown): Record<string, any> {
+    if (body && typeof body === 'object') {
+      return body as Record<string, any>;
+    }
+
+    if (typeof body !== 'string') {
+      return {};
+    }
+
+    try {
+      const parsed = JSON.parse(body);
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, any> : { _raw: body };
+    } catch {
+      return { _raw: body };
+    }
   }
 
   async shareRequest(requestId: string, sharedByUserId: string, sharedWithUserId?: string, teamId?: string): Promise<void> {

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env node
 /**
  * @file        apps/backend/src/services/dependency-impact-graph/index.ts
  * @module      services/developer-experience

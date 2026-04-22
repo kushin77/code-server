@@ -66,6 +66,7 @@ build/
 *.d.ts
 *.d.ts.map
 *.js.map
+tests/artifacts/playwright-results.json
 
 # Terraform backup
 backup.tfstate

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env node
 /**
  * @file        apps/backend/src/services/capacity-forecasting/index.ts
  * @module      services/analytics

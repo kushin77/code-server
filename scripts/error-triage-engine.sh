@@ -24,7 +24,7 @@ DAEMON_MODE=false
 CHECK_INTERVAL="${ERROR_TRIAGE_INTERVAL:-300}"
 MIN_OCCURRENCE_THRESHOLD="${ERROR_TRIAGE_THRESHOLD:-3}"
 ERROR_TRIAGE_WINDOW="${ERROR_TRIAGE_WINDOW:-3600}"
-PID_FILE="${PID_FILE:-/var/run/error-triage-engine.pid}"
+PID_FILE="${PID_FILE:-/tmp/error-triage-engine.pid}"
 
 init_db() {
     mkdir -p "$(dirname "$TRIAGE_DB")"

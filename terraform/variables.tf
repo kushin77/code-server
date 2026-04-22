@@ -53,6 +53,13 @@ variable "google_client_secret" {
   default     = ""
 }
 
+variable "github_token" {
+  description = "GitHub Personal Access Token (optional, for higher rate limits)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "redis_password" {
   description = "Redis authentication password (from GSM or vault-backed env)"
   type        = string

@@ -252,7 +252,7 @@ export class ActivityFeedService extends EventEmitter {
         userId: row.user_id,
         repository: row.repository,
         timestamp: new Date(row.timestamp),
-        metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+        metadata: this.normalizeJsonObject(row.metadata),
         tags: row.tags,
       };
     } catch (error) {
@@ -327,7 +327,7 @@ export class ActivityFeedService extends EventEmitter {
         userId: row.user_id,
         repository: row.repository,
         timestamp: new Date(row.timestamp),
-        metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+        metadata: this.normalizeJsonObject(row.metadata),
         tags: row.tags,
       }));
     } catch (error) {
@@ -452,7 +452,7 @@ export class ActivityFeedService extends EventEmitter {
       return {
         id: row.id,
         userId: row.user_id,
-        filters: JSON.parse(row.filters),
+        filters: this.normalizeFilters(row.filters),
         isActive: row.is_active,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),
@@ -476,7 +476,7 @@ export class ActivityFeedService extends EventEmitter {
       return result.rows.map(row => ({
         id: row.id,
         userId: row.user_id,
-        filters: JSON.parse(row.filters),
+        filters: this.normalizeFilters(row.filters),
         isActive: row.is_active,
         createdAt: new Date(row.created_at),
         updatedAt: new Date(row.updated_at),
@@ -520,7 +520,7 @@ export class ActivityFeedService extends EventEmitter {
 
       let notifiedCount = 0;
       for (const subscription of result.rows) {
-        const filters = JSON.parse(subscription.filters);
+        const filters = this.normalizeFilters(subscription.filters);
 
         // Check if activity matches filters
         if (this.matchesFilter(activity, filters)) {
@@ -551,6 +551,31 @@ export class ActivityFeedService extends EventEmitter {
     return true;
   }
 
+  private normalizeJsonObject(value: unknown): Record<string, any> | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    if (typeof value === 'object') {
+      return value as Record<string, any>;
+    }
+
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' ? parsed as Record<string, any> : undefined;
+      } catch {
+        return undefined;
+      }
+    }
+
+    return undefined;
+  }
+
+  private normalizeFilters(value: unknown): ActivityFilter {
+    return (this.normalizeJsonObject(value) as ActivityFilter) || {};
+  }
+
   async getPendingNotifications(subscriptionId: string, limit: number = 10): Promise<Activity[]> {
     const client = await this.pool.connect();
     try {
@@ -572,7 +597,7 @@ export class ActivityFeedService extends EventEmitter {
         userId: row.user_id,
         repository: row.repository,
         timestamp: new Date(row.timestamp),
-        metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+        metadata: this.normalizeJsonObject(row.metadata),
         tags: row.tags,
       }));
     } catch (error) {

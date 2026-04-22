@@ -202,6 +202,23 @@ describe('EmbeddedAPIExplorerService', () => {
     expect(diff.similarity).toBeGreaterThanOrEqual(0);
   });
 
+  it('should compare plain-text responses without parsing errors', async () => {
+    mockClient.query.mockResolvedValueOnce({
+      rows: [{ request_id: 'req-1', body: 'plain text response a' }]
+    });
+
+    mockClient.query.mockResolvedValueOnce({
+      rows: [{ request_id: 'req-2', body: 'plain text response b' }]
+    });
+
+    const diff = await service.compareResponses('resp-1', 'resp-2');
+
+    expect(diff.requestId1).toBe('req-1');
+    expect(diff.requestId2).toBe('req-2');
+    expect(diff.added).toBeDefined();
+    expect(diff.removed).toBeDefined();
+  });
+
   it('should share request', async () => {
     mockClient.query.mockResolvedValueOnce({});
 

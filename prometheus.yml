@@ -123,6 +123,17 @@ scrape_configs:
         regex: 'redis_(info|command_calls|command_duration|connected_clients|evicted_keys|expired_keys|maxmemory|memory|used_memory|keyspace|db|slaves|replication|sentinel|master)'
         action: keep
 
+  # NAS node_exporter metrics (#1393)
+  - job_name: 'nas-node-exporter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['192.168.168.56:9100']
+        labels:
+          instance: nas-node-exporter
+          host: kushnas
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
   # ── Matrix Collaboration Hub Metrics (#1011) ────────────────────────────
   # Synapse homeserver metrics
   - job_name: 'synapse'

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env node
 /**
  * @file        apps/backend/src/services/ide-performance-profiler/index.ts
  * @module      services/developer-experience

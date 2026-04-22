@@ -288,8 +288,8 @@ aws route53 change-resource-record-sets \
 
 #### 🟢 Option D: Local /etc/hosts (Testing Only)
 ```bash
-# On Windows (if testing locally)
-# Edit: C:\Windows\System32\drivers\etc\hosts
+# On a Linux workstation (or via SSH if applying remotely)
+# Edit: /etc/hosts
 # Add:
 192.168.168.31 kushnir.cloud
 192.168.168.31 ide.kushnir.cloud
@@ -297,7 +297,7 @@ aws route53 change-resource-record-sets \
 
 **Verify DNS propagation**:
 ```bash
-# From Windows (in new PowerShell window)
+# From a Linux shell
 nslookup kushnir.cloud
 # Expected: Name: kushnir.cloud, Address: 192.168.168.31
 
@@ -309,14 +309,14 @@ dig kushnir.cloud @8.8.8.8
 
 ### STEP 8: Test HTTPS Access (5 min)
 
-**From Windows (new terminal)**:
+**From a Linux shell or SSH session**:
 
-```powershell
+```bash
 # Test basic HTTPS connectivity
-curl -v https://kushnir.cloud --insecure 2>&1 | Select-String -Pattern "HTTP/","SSL","certificate"
+curl -v https://kushnir.cloud --insecure 2>&1 | grep -E "HTTP/|SSL|certificate"
 
 # If cert is valid (Let's Encrypt), remove --insecure:
-curl -v https://kushnir.cloud 2>&1 | Select-String -Pattern "HTTP/","certificate"
+curl -v https://kushnir.cloud 2>&1 | grep -E "HTTP/|certificate"
 
 # Expected output:
 # < HTTP/1.1 200 OK

@@ -378,6 +378,24 @@ describe('ActivityFeedService', () => {
       expect(subscription?.id).toBe('sub-1');
     });
 
+    it('should handle object-shaped subscription filters', async () => {
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{
+          id: 'sub-2',
+          user_id: 'user-1',
+          filters: { repository: 'code-server', statuses: ['failure'] },
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        }],
+      });
+
+      const subscription = await service.getSubscription('sub-2');
+
+      expect(subscription?.filters.repository).toBe('code-server');
+      expect(subscription?.filters.statuses).toEqual(['failure']);
+    });
+
     it('should return null if subscription not found', async () => {
       mockClient.query.mockResolvedValueOnce({ rows: [] });
 

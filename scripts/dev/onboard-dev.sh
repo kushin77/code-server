@@ -14,7 +14,7 @@
 # - Pre-commit hooks
 # - code-server launch
 #
-# Requirements: Linux/macOS, bash 4+, internet connection, sudo access
+# Requirements: Linux, bash 4+, internet connection, sudo access
 #
 ###############################################################################
 
@@ -94,9 +94,6 @@ phase_preflight() {
     if [[ "$OSTYPE" =~ ^linux ]]; then
         OS="linux"
         success "Linux detected"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        OS="macos"
-        success "macOS detected"
     else
         error "Unsupported OS: $OSTYPE"
     fi

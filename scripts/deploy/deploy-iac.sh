@@ -99,16 +99,13 @@ install_terraform() {
     log_info "Installing Terraform..."
 
     # Detect OS
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        OS="linux"
-        ARCH="amd64"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        OS="darwin"
-        ARCH="amd64"
-    else
+    if [[ "$OSTYPE" != "linux-gnu"* ]]; then
         log_error "Unsupported OS: $OSTYPE (Linux-only development mandate)"
         exit 1
     fi
+
+    OS="linux"
+    ARCH="amd64"
 
     TF_VERSION="1.6.0"
     TF_URL="https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_${OS}_${ARCH}.zip"

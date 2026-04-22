@@ -93,7 +93,7 @@ sudo systemctl stop nginx
 ### Phase 3: Verify End-to-End (30 minutes)
 
 ```bash
-# From Windows
+# From a Linux shell
 curl -v https://kushnir.cloud
 # Should see:
 # - 200 OK from Caddy
@@ -221,7 +221,7 @@ curl -v https://kushnir.cloud
 
 4. **Test HTTPS Access** (5 min):
    ```bash
-   # From Windows
+   # From a Linux shell or SSH session
    curl -v https://kushnir.cloud -I  # Should return HTTP 200 or redirect
    
    # Browser: https://kushnir.cloud

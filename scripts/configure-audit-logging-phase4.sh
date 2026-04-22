@@ -597,8 +597,6 @@ psql -h localhost -d code_server_prod -U postgres -c \
 
 ```bash
 # Install k6
-brew install k6  # macOS
-# or
 apt-get install k6  # Linux
 
 # Create test script

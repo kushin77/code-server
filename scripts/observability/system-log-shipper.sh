@@ -4,7 +4,7 @@
 # @description Ships host and container logs from /var/log and Docker to Loki.
 # @owner       platform
 # @status      active
-# ════════════════════════════════════════════════════════════════════════════════════════════
+# ------------------------------------------------------------------------------
 # System Log Shipper (Phase 22+)
 #
 # Purpose:
@@ -19,7 +19,7 @@
 #   SSH to host: ssh akushnir@192.168.168.31
 #   Run on host: docker-compose exec system-logger bash scripts/observability/system-log-shipper.sh
 #
-# ════════════════════════════════════════════════════════════════════════════════════════════
+# ------------------------------------------------------------------------------
 
 set -euo pipefail
 
@@ -29,7 +29,7 @@ PROJECT_ROOT="$(dirname "$(dirname "${SCRIPT_DIR}")")"
 source "${PROJECT_ROOT}/scripts/_common/init.sh" || { echo "FATAL: Cannot source init.sh"; exit 1; }
 
 # Configuration
-LOKI_ENDPOINT="${LOKI_ENDPOINT:-http://loki:3100}"
+LOKI_ENDPOINT="${LOKI_ENDPOINT:-http://localhost:3100}"
 SHIPPER_LOG_DIR="${SHIPPER_LOG_DIR:-/var/log}"
 JOURNALCTL_FOLLOW="${JOURNALCTL_FOLLOW:-false}"
 DAEMON_MODE=false
@@ -58,9 +58,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ════════════════════════════════════════════════════════════════════════════════════════════
+# ------------------------------------------------------------------------------
 # LOG COLLECTION & LOKI SHIPPING
-# ════════════════════════════════════════════════════════════════════════════════════════════
+# ------------------------------------------------------------------------------
 
 # Send logs batch to Loki
 send_batch_to_loki() {
@@ -86,7 +86,7 @@ send_batch_to_loki() {
     local level="INFO"
     
     # Detect severity level from line content
-    if [[ "${line}" =~ (ERROR|FATAL|panic|Panic) ]]; then
+    if [[ "${line}" =~ (ERROR|FATAL|panic|Panic|error|fatal) ]]; then
       level="ERROR"
     elif [[ "${line}" =~ (WARNING|WARN|Deprecat) ]]; then
       level="WARN"
@@ -294,7 +294,7 @@ create_issue_on_kernel_error() {
   }
   
   copilot_create_issue \
-    --title "🔴 CRITICAL: Kernel ${error_type} Detected" \
+    --title "P0 CRITICAL: Kernel ${error_type} Detected" \
     --body "## Kernel Error Report
 
 **Error Type**: ${error_type}
@@ -324,9 +324,9 @@ ${error_message}
     --type infrastructure
 }
 
-# ════════════════════════════════════════════════════════════════════════════════════════════
+# ------------------------------------------------------------------------------
 # MAIN ENTRY POINT
-# ════════════════════════════════════════════════════════════════════════════════════════════
+# ------------------------------------------------------------------------------
 
 main() {
   log_info "System Log Shipper starting..."
@@ -342,3 +342,4 @@ main() {
 }
 
 main "$@"
+

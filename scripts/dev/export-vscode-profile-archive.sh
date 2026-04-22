@@ -37,8 +37,7 @@ detect_user_dir() {
 
     local candidates=(
         "$HOME/.config/Code/User"
-        "$HOME/Library/Application Support/Code/User"
-        "$APPDATA/Code/User"
+        "$HOME/.local/share/code-server/User"
     )
 
     local dir
@@ -60,7 +59,7 @@ detect_extensions_dir() {
 
     local candidates=(
         "$HOME/.vscode/extensions"
-        "$USERPROFILE/.vscode/extensions"
+        "$HOME/.local/share/code-server/extensions"
     )
 
     local dir

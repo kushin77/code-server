@@ -100,12 +100,10 @@ validate_parameters() {
     fi
     
     # Priority validation
-    if [[ -z "$priority" ]]; then
-        log_fatal "Priority is required (P0, P1, P2, or P3)"
-    fi
-    
-    if [[ ! -v PRIORITY_LABELS["$priority"] ]]; then
-        log_fatal "Invalid priority: $priority (valid: ${!PRIORITY_LABELS[@]})"
+    if [[ -n "$priority" ]]; then
+        if [[ ! -v PRIORITY_LABELS["$priority"] ]]; then
+            log_fatal "Invalid priority: $priority (valid: ${!PRIORITY_LABELS[@]})"
+        fi
     fi
     
     # Type validation

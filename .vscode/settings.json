@@ -189,7 +189,10 @@
     "ms-python.python": ["workspace"],
     "ms-python.vscode-pylance": ["workspace"],
     "golang.go": ["workspace"],
-    "rust-lang.rust-analyzer": ["workspace"]
+    "rust-lang.rust-analyzer": ["workspace"],
+    "kushin77.team-hub": ["ui"],
+    "kushin77.agent-farm": ["ui"],
+    "kushin77.ollama-chat": ["ui"]
   },
   "[python]": {
     "editor.defaultFormatter": "none",

@@ -38,6 +38,11 @@ declare -a PROCESS_HISTORY=()
 ALERT_COUNT=0
 THROTTLE_COUNT=0
 
+if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+    echo "Unsupported OS: $OSTYPE (Linux-only development mandate)" >&2
+    exit 1
+fi
+
 # ============================================================================
 # Utility Functions
 # ============================================================================
@@ -69,16 +74,12 @@ log() {
 get_total_memory() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         free | grep Mem | awk '{print $2}'
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.'
     fi
 }
 
 get_used_memory() {
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         free | grep Mem | awk '{print $3}'
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        vm_stat | grep -E "Pages wired|Pages active" | awk '{sum+=$3} END {print sum}'
     fi
 }
 
@@ -100,8 +101,6 @@ get_process_memory() {
         if [[ -f "/proc/$pid/status" ]]; then
             grep VmRSS /proc/$pid/status | awk '{print $2}'
         fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ps -o rss= -p "$pid" 2>/dev/null || echo "0"
     fi
 }
 
@@ -110,8 +109,6 @@ get_process_name() {
     
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         comm -n "$pid" 2>/dev/null || echo "unknown"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ps -o comm= -p "$pid" 2>/dev/null || echo "unknown"
     fi
 }
 
@@ -146,8 +143,6 @@ get_top_processes() {
     
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         ps aux --sort=-%mem | head -n $((count + 1)) | tail -n "$count"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        ps aux -m | sort -rn -k3 | head -n "$count"
     fi
 }
 

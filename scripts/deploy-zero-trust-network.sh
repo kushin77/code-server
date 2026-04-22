@@ -2,7 +2,7 @@
 ################################################################################
 # @file        scripts/deploy-zero-trust-network.sh
 # @module      security/zero-trust
-# @description Deploy and verify zero-trust network access controls (mTLS, egress policy, audit logs).
+# @description Deploy mTLS rotation, egress policy, and audit visibility for zero-trust networking
 # @owner       platform
 # @status      active
 #

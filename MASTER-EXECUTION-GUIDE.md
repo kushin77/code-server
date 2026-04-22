@@ -45,8 +45,8 @@ Before starting, verify you have:
 
 **1a. Preview the changes (optional dry-run):**
 ```bash
-# From your Windows machine:
-cd c:\code-server-enterprise
+# From a Linux shell or SSH session:
+cd /home/akushnir/code-server-enterprise
 bash scripts/infrastructure/fix-ssl-protocol-error.sh
 ```
 

@@ -1,7 +1,7 @@
 package main
 
 # Deny privileged Docker Compose services.
-deny[msg] {
+deny contains msg if {
   services := object.get(input, "services", {})
   some name
   service := services[name]
@@ -10,7 +10,7 @@ deny[msg] {
 }
 
 # Deny host network mode in Docker Compose services.
-deny[msg] {
+deny contains msg if {
   services := object.get(input, "services", {})
   some name
   service := services[name]
@@ -19,7 +19,7 @@ deny[msg] {
 }
 
 # Deny Kubernetes Deployment containers without explicit cpu+memory limits.
-deny[msg] {
+deny contains msg if {
   input.kind == "Deployment"
   containers := object.get(object.get(object.get(object.get(input, "spec", {}), "template", {}), "spec", {}), "containers", [])
   some i
@@ -29,7 +29,7 @@ deny[msg] {
   msg := sprintf("deployment container %q must define cpu limit", [object.get(container, "name", sprintf("index-%v", [i]))])
 }
 
-deny[msg] {
+deny contains msg if {
   input.kind == "Deployment"
   containers := object.get(object.get(object.get(object.get(input, "spec", {}), "template", {}), "spec", {}), "containers", [])
   some i

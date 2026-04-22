@@ -2,7 +2,7 @@ package main
 
 # Require immutable Docker image tags (no :latest).
 # Exception: locally-built services (those with a "build" key) use :latest by convention.
-deny[msg] {
+deny contains msg if {
   services := object.get(input, "services", {})
   some name
   service := services[name]
@@ -13,7 +13,7 @@ deny[msg] {
 }
 
 # Require Kubernetes workloads to include app label.
-deny[msg] {
+deny contains msg if {
   kind := object.get(input, "kind", "")
   allowed_kinds := {"Deployment", "StatefulSet", "DaemonSet"}
   allowed_kinds[kind]

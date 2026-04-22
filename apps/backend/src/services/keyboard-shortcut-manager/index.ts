@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env node
 /**
  * @file        apps/backend/src/services/keyboard-shortcut-manager/index.ts
  * @module      services/developer-experience

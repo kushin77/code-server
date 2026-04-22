@@ -1224,7 +1224,7 @@ services:
     expose:
       - "9187"
     environment:
-      - DATA_SOURCE_NAME=postgresql://codeserver:${POSTGRES_PASSWORD}@postgres:5432/codeserver?sslmode=disable
+      - DATA_SOURCE_NAME=host=postgres port=5432 user=codeserver password=${POSTGRES_PASSWORD} dbname=codeserver sslmode=disable
     command:
       - "--extend.query-path=/etc/postgres_exporter/queries.yml"
       - "--web.telemetry-path=/metrics"

@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 /**
+ * @file        scripts/integrations/pagerduty-integration-api.js
+ * @module      integrations/pagerduty
+ * @description REST API for incident handling with immutable snapshots
+ *
+ * IaC Principles:
+ * - Immutable: Incident payloads stored as-received
+ * - Idempotent: Webhook endpoint safe for retry (deduplication via incident ID + timestamp)
+ * - Versioned: All state changes tracked with timestamps
+ */
+
+/**
  * PagerDuty Integration API
  * REST API for incident handling and workspace context generation
  */

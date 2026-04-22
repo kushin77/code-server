@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 /**
+ * @file        scripts/integrations/pagerduty-integration-service.js
+ * @module      integrations/pagerduty
+ * @description PagerDuty incident integration with auto-file opening and notification
+ *
+ * IaC Principles:
+ * - Immutable: Incident snapshots frozen once received from webhook
+ * - Idempotent: Webhook handler safe to retry (event deduplication via incident ID)
+ * - Versioned: Incident state versioning for audit trail
+ */
+
+/**
  * PagerDuty Integration Service
  * Listens for incidents and auto-opens relevant files in workspace
  * Supports incident context: recent deploys, stack traces, affected services

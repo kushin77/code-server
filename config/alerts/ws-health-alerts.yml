@@ -1,0 +1,58 @@
+groups:
+  - name: websocket_health
+    interval: 30s
+    rules:
+      # Critical: Quality score < 20
+      - alert: WebSocketHealthCritical
+        expr: ws_health_quality_score < 20
+        for: 1m
+        labels:
+          severity: critical
+          component: websocket
+        annotations:
+          summary: "WebSocket connection critical for {{ $labels.session_id }}"
+          description: "Quality score: {{ $value }}. Check latency, jitter, packet loss."
+      
+      # Warning: Quality score 20-50
+      - alert: WebSocketHealthPoor
+        expr: ws_health_quality_score < 50 and ws_health_quality_score >= 20
+        for: 5m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "WebSocket connection poor for {{ $labels.session_id }}"
+          description: "Quality score: {{ $value }}. Monitor connection stability."
+      
+      # High latency (> 500ms)
+      - alert: WebSocketHighLatency
+        expr: ws_health_latency_ms > 500
+        for: 2m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High latency on {{ $labels.session_id }}"
+          description: "Average latency: {{ $value }}ms"
+      
+      # High jitter (> 100ms)
+      - alert: WebSocketHighJitter
+        expr: ws_health_jitter_ms > 100
+        for: 2m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High jitter on {{ $labels.session_id }}"
+          description: "Jitter: {{ $value }}ms"
+      
+      # Packet loss > 5%
+      - alert: WebSocketPacketLoss
+        expr: ws_health_packet_loss_pct > 5
+        for: 1m
+        labels:
+          severity: critical
+          component: websocket
+        annotations:
+          summary: "High packet loss on {{ $labels.session_id }}"
+          description: "Packet loss: {{ $value }}%"

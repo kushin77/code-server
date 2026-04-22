@@ -36,7 +36,6 @@ services:
     environment:
       - PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
-    command: code-server --auth=password --bind-addr=0.0.0.0:8080
       - SERVICE_URL=https://open-vsx.org/vscode/gallery
       - ITEM_URL=https://open-vsx.org/vscode/item
       - CS_DISABLE_FILE_DOWNLOADS=false
@@ -51,6 +50,7 @@ services:
       - PYTHONUNBUFFERED=1
       - GOPATH=/opt/go
       - RUST_BACKTRACE=1
+    command: code-server --auth=password --bind-addr=0.0.0.0:8080
     volumes:
       - code-server-workspace:/home/coder/workspace
       - code-server-profile:/home/coder/.local/share/code-server
@@ -470,6 +470,12 @@ services:
       - "80:80"
       - "443:443"
       - "127.0.0.1:2019:2019"
+    # Use upstream DNS to avoid Docker DNS resolver SERVFAIL issues with service names
+    # See: https://github.com/moby/moby/issues/19316
+    dns:
+      - 127.0.0.11  # Docker embedded resolver (primary)
+      - 8.8.8.8     # Google DNS (fallback)
+      - 1.1.1.1     # Cloudflare DNS (fallback)
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

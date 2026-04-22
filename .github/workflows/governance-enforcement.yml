@@ -28,7 +28,7 @@ env:
   GOVERNANCE_MANIFEST: config/governance-manifest.yml
   JSCPD_VERSION: "4.0.9"
   GITLEAKS_VERSION: "8.30.1"
-  TRUFFLEHOG_VERSION: "3.95.2"
+  TRUFFLEHOG_VERSION: "3.63.0"
   TRIVY_VERSION: "0.70.0"
 
 jobs:
@@ -216,6 +216,7 @@ jobs:
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           
           trufflehog filesystem . \
+            --concurrency 1 \
             --json 2>&1 | tee /tmp/trufflehog-output.json
           
           if grep -q '"verified":\s*true' /tmp/trufflehog-output.json || grep -q '"Verified":\s*true' /tmp/trufflehog-output.json; then

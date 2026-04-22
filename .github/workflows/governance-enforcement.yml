@@ -216,8 +216,7 @@ jobs:
           echo "════════════════════════════════════════════════════════════════════════════════════════════"
           
           trufflehog filesystem . \
-            --fail \
-            --json 2>&1 | tee /tmp/trufflehog-output.json || true
+            --json 2>&1 | tee /tmp/trufflehog-output.json
           
           if grep -q '"verified": true' /tmp/trufflehog-output.json; then
             echo "✗ Verified secrets detected"

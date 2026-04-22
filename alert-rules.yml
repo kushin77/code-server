@@ -846,3 +846,123 @@ groups:
             High latency may indicate JWKS cache misses causing network round-trips to the OIDC issuer.
             Check JWKS cache hit rate and Redis connectivity.
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # PostgreSQL & Data Tier Alerts (#1069)
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: database
+    interval: 30s
+    rules:
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag_seconds > 10
+        for: 5m
+        labels:
+          severity: P1
+          team: platform
+          component: database
+        annotations:
+          summary: "PostgreSQL replication lag > 10 seconds"
+          description: "Replication lag is {{ $value }}s. This indicates the replica is falling behind the primary, which may cause stale reads on failover."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#replication-lag"
+
+      - alert: PostgreSQLConnectionPoolNearSaturation
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: P2
+          team: platform
+          component: database
+        annotations:
+          summary: "PostgreSQL connection pool nearing saturation"
+          description: "Active connections: {{ $value }}. Connection pool may be exhausted soon. Check slow queries and consider scaling pgbouncer."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#connection-pool-saturation"
+
+      - alert: PostgreSQLCacheHitRatioDegraded
+        expr: pg_cache_hit_ratio_percent < 95
+        for: 10m
+        labels:
+          severity: P2
+          team: platform
+          component: database
+        annotations:
+          summary: "PostgreSQL cache hit ratio below 95%"
+          description: "Cache hit ratio: {{ $value }}%. This indicates inefficient queries or insufficient RAM. Check query performance and index usage."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#cache-hit-ratio"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Redis & Session Store Alerts (#1069)
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: cache
+    interval: 30s
+    rules:
+      - alert: RedisMemoryUsageHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: P2
+          team: platform
+          component: cache
+        annotations:
+          summary: "Redis memory usage above 80%"
+          description: "Memory usage: {{ $value | humanizePercentage }}. Redis is approaching its maxmemory limit. Consider increasing memory or eviction policy tuning."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#redis-memory-pressure"
+
+      - alert: RedisEvictionRateHigh
+        expr: rate(redis_evicted_keys[5m]) > 5
+        for: 5m
+        labels:
+          severity: P1
+          team: platform
+          component: cache
+        annotations:
+          summary: "Redis evictions above 5 keys/sec"
+          description: "Eviction rate: {{ $value }} keys/sec. Sessions are being evicted due to memory pressure. Increase Redis memory or review session TTLs."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#redis-evictions"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Session-Broker & Workspace Alerts (#1069)
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: session-management
+    interval: 30s
+    rules:
+      - alert: SessionBrokerSpawnErrorRate
+        expr: rate(session_broker_container_spawn_errors_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: P1
+          team: platform
+          component: session-broker
+        annotations:
+          summary: "Session-broker spawn error rate > 5%"
+          description: "Error rate: {{ $value | humanizePercentage }}. Containers are failing to spawn. Check Docker resources, kernel limits, and session-broker logs."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#session-spawn-errors"
+
+      - alert: SessionBrokerSpawnLatencyHigh
+        expr: histogram_quantile(0.95, rate(session_broker_session_create_duration_seconds_bucket[5m])) > 10
+        for: 5m
+        labels:
+          severity: P2
+          team: platform
+          component: session-broker
+        annotations:
+          summary: "Session spawn p95 latency > 10 seconds"
+          description: "p95 latency: {{ $value }}s. Session startup is slow, likely due to container pull or heavy I/O. Check network and disk performance."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#slow-session-spawns"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # HTTP & Ingress Alerts (#1069)
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: http-gateway
+    interval: 30s
+    rules:
+      - alert: CaddyHTTPErrorRateHigh
+        expr: rate(caddy_http_requests_total{status=~"5.."}[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: P1
+          team: platform
+          component: ingress
+        annotations:
+          summary: "Caddy 5xx error rate > 1%"
+          description: "5xx error rate: {{ $value | humanizePercentage }}. The reverse proxy or backend services are returning errors. Check Caddy logs and backend service health."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#high-http-error-rate"
+

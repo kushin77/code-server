@@ -1141,6 +1141,71 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ────────────────────────────────────────────────────────────────────────────
+  # sentry-integration-api — Sentry error monitoring API
+  # Immutable error snapshots + x-idempotency-key for safe retry
+  # ────────────────────────────────────────────────────────────────────────────
+  sentry-integration-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.sentry-integration
+    image: sentry-integration-api:latest
+    container_name: sentry-integration-api
+    restart: unless-stopped
+    networks:
+      - net-app
+    expose:
+      - "9095"
+    environment:
+      - PORT=9095
+      - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN:?SENTRY_AUTH_TOKEN must be set}
+      - SENTRY_ORG_SLUG=${SENTRY_ORG_SLUG:?SENTRY_ORG_SLUG must be set}
+      - SENTRY_PROJECT_SLUG=${SENTRY_PROJECT_SLUG:-code-server}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:?GITHUB_TOKEN must be set}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9095/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # slack-slash-commands-api — Slack slash commands handler
+  # Immutable responses + trigger_id deduplication for idempotent command handling
+  # ────────────────────────────────────────────────────────────────────────────
+  slack-slash-commands-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.slack-integration
+    image: slack-slash-commands-api:latest
+    container_name: slack-slash-commands-api
+    restart: unless-stopped
+    networks:
+      - net-app
+    expose:
+      - "9096"
+    environment:
+      - PORT=9096
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:?SLACK_SIGNING_SECRET must be set}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:?SLACK_BOT_TOKEN must be set}
+      - WORKSPACE_URL=${WORKSPACE_URL:-https://ide.kushnir.cloud}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9096/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
 # ════════════════════════════════════════════════════════════════════════════
 # Networks
 # ════════════════════════════════════════════════════════════════════════════

@@ -5,6 +5,7 @@
 // @owner       collab-3.5
 // @status      active
 
+import { AuditService } from '../audit/audit-service';
 import { Router, Request, Response } from 'express';
 import { SharedPromptLibraryService, PromptCategory, PromptVisibility } from '../services/shared-prompt-library';
 import { getLogger } from '../lib/logger';

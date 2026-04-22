@@ -7,6 +7,7 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { StandupSummariesService } from '../services/standup-summaries'
 import { logger } from '../lib/logger'
+import { AuditService } from '../audit/audit-service';
 
 const router = Router()
 
@@ -19,11 +20,13 @@ let standupService: StandupSummariesService | null = null
  */
 export function initializeStandupRoutes(
   db: any,
-  aiRouter: any,
+  auditService?: AuditService,
+  aiRouter?: any,
   config?: any
-) {
-  standupService = new StandupSummariesService(db, aiRouter, config)
-  standupService.initialize()
+): Router {
+  standupService = new StandupSummariesService(db, auditService, aiRouter, config)
+  standupService.initialize().catch(err => logger.error('Failed to initialize standup service', { err }))
+  return router;
 }
 
 /**

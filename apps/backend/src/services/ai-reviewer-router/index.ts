@@ -5,6 +5,7 @@
 // @owner       collab-3.7
 // @status      active
 
+import { AuditService } from '../audit/audit-service';
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
@@ -68,13 +69,15 @@ export interface AIReviewerRouterConfig {
 
 export class AIReviewerRouterService extends EventEmitter {
   private pool: Pool;
+  private auditService?: AuditService;
   private logger = getLogger('AIReviewerRouterService');
   private initialized = false;
   private config: Required<AIReviewerRouterConfig>;
 
-  constructor(pool: Pool, config: AIReviewerRouterConfig = {}) {
+  constructor(pool: Pool, auditService?: AuditService, config: AIReviewerRouterConfig = {}) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
     this.config = {
       maxReviewersToScore: config.maxReviewersToScore || 10,
       minExpertiseThreshold: config.minExpertiseThreshold || 30,
@@ -299,6 +302,14 @@ export class AIReviewerRouterService extends EventEmitter {
   }
 
   async assignReview(
+    this.auditService?.emit({
+      userId: 'system',
+      action: 'allow',
+      role: 'system',
+      method: 'assignReview',
+      path: '/api/reviews/assign',
+      reason: 'Assigned review for PR ' + pullRequestId
+    });
     pullRequestId: string,
     changedFiles: string[],
     teamId: string

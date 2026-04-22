@@ -6,6 +6,8 @@
 
 import { createHash } from "node:crypto";
 import { watch, type FSWatcher } from "node:fs";
+import { getAuditService } from "../audit/audit-service";
+
 
 export type SupportedLanguage = "python" | "typescript" | "go" | "rust" | "java" | "unknown";
 
@@ -520,6 +522,14 @@ export function startRepositoryFileWatcher(
         if (!isIndexablePath(filePath)) {
           return;
         }
+
+        // Emit audit event for file read
+        getAuditService().emit({
+          method: 'READ',
+          path: filePath,
+          resourceType: 'file',
+          fileAction: 'read',
+        });
 
         void readFile(filePath)
           .then((content) => indexer.processFileChange(filePath, content))

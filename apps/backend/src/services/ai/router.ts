@@ -9,6 +9,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
+import { getAuditService } from "../audit/audit-service";
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -74,6 +76,14 @@ export class AIRouter {
 
   constructor() {
     this.registry = loadRegistry();
+    
+    // Emit audit event for registry read
+    getAuditService().emit({
+      action: 'allow',
+      resourceType: 'config',
+      fileAction: 'read',
+      method: 'READ',
+    });
   }
 
   /**

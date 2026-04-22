@@ -3,6 +3,7 @@
 // @description Maps Google OAuth groups and claims to application roles
 
 import { getLogger } from '../../lib/logger';
+import { AuditService } from '../audit/audit-service.js';
 
 interface TokenClaims {
   sub: string;
@@ -26,8 +27,10 @@ const logger = getLogger('RoleMapper');
  */
 export class RoleMapper {
   private groupToRoleMap: Map<string, string[]>;
+  private auditService?: AuditService;
 
-  constructor() {
+  constructor(auditService?: AuditService) {
+    this.auditService = auditService;
     this.groupToRoleMap = new Map([
       ['admin@company.com', ['admin']],
       ['developers@company.com', ['developer']],
@@ -71,6 +74,23 @@ export class RoleMapper {
       `Mapped claims for ${claims.email} to roles: ${Array.from(roles).join(', ')}`
     );
 
+    if (this.auditService) {
+      this.auditService.emit({
+        userId: claims.email,
+        action: 'read',
+        resourceType: 'oauth-claims',
+        resource: `oauth:${claims.sub}`,
+        metadata: {
+          email: claims.email,
+          groups: claims.groups || [],
+          mappedRoles: Array.from(roles),
+          adminFlag: claims.admin || false,
+          isServiceAccount: claims.email?.includes('svc.internal') || false,
+        },
+        reason: 'SOC2: OAuth claims evaluation for role mapping',
+      });
+    }
+
     return Array.from(roles);
   }
 
@@ -80,6 +100,21 @@ export class RoleMapper {
   registerGroupMapping(group: string, roles: string[]): void {
     this.groupToRoleMap.set(group, roles);
     logger.info(`Registered group mapping: ${group} → ${roles.join(', ')}`);
+
+    if (this.auditService) {
+      this.auditService.emit({
+        userId: 'system',
+        action: 'update',
+        resourceType: 'role-mapping-config',
+        resource: `role-mapping:${group}`,
+        metadata: {
+          group,
+          roles,
+          mappingCount: this.groupToRoleMap.size,
+        },
+        reason: 'SOC2: Group-to-role mapping configuration change',
+      });
+    }
   }
 
   /**

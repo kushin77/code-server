@@ -61,13 +61,13 @@
   "security.workspace.trust.startupPrompt": "once",
 
   // ─── T1: EXTENSION SUPPLY CHAIN (immutable) ───────────────────────────────
-  // Disable public marketplace; all extension installs must go through the
-  // curated internal channel defined in config/code-server/extensions/.
-  // EXTENSIONS_GALLERY env var in docker-compose controls the actual gallery
-  // URL; these settings disable the built-in fallback discovery paths.
-  "extensions.gallery.serviceUrl": "",
-  "extensions.gallery.itemUrl": "",
-  "extensions.gallery.resourceUrlTemplate": "",
+  // Issue #1047: Route all extensions through internal kushnir.cloud registry.
+  // Org extensions installed from http://open-vsix-registry:4000 (internal)
+  // Falls back to Open VSX if registry unavailable.
+  // Blocklist enforced in registry prevents installation of dangerous/policy-violating extensions.
+  "extensions.gallery.serviceUrl": "http://open-vsix-registry:4000/vscode/gallery",
+  "extensions.gallery.itemUrl": "http://open-vsix-registry:4000/vscode/item",
+  "extensions.gallery.resourceUrlTemplate": "http://open-vsix-registry:4000/vscode/asset/{publisher}/{name}/{version}/{resource}",
   "extensions.recommendations": false,
   "extensions.ignoreRecommendations": true,
 

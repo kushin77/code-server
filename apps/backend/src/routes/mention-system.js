@@ -8,9 +8,9 @@ import { Router } from 'express';
 import { MentionSystemService } from '../services/mention-system';
 import { getLogger } from '../lib/logger';
 const logger = getLogger('MentionSystemRoutes');
-export function initializeMentionSystemRoutes(pool) {
+export function initializeMentionSystemRoutes(pool, auditService) {
     const router = Router();
-    const mentionService = new MentionSystemService(pool);
+    const mentionService = new MentionSystemService(pool, auditService);
     // Initialize the service
     mentionService.initialize().catch(error => {
         logger.error('Failed to initialize mention system service', { error });

@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
+import { AuditService } from '../audit/audit-service';
 
 export type HelpUrgency = 'urgent' | 'normal' | 'low';
 export type HelpStatus = 'open' | 'assigned' | 'in-progress' | 'resolved' | 'closed';
@@ -74,13 +75,16 @@ export interface HelpQueueConfig {
 
 export class HelpQueueService extends EventEmitter {
   private pool: Pool;
+  private auditService?: AuditService;
   private logger = getLogger('HelpQueueService');
   private initialized = false;
   private config: Required<HelpQueueConfig>;
 
-  constructor(pool: Pool, config: HelpQueueConfig = {}) {
+  constructor(pool: Pool, auditService?: AuditService, config: HelpQueueConfig = {}) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
+    console.log('DEBUG: HelpQueueService started with auditService:', !!this.auditService);
     this.config = {
       urgentSlaHours: config.urgentSlaHours || 2,
       normalSlaHours: config.normalSlaHours || 24,
@@ -222,6 +226,16 @@ export class HelpQueueService extends EventEmitter {
         [id, userId, JSON.stringify(codeSnippet), question, urgency, tags || [], slaDueAt]
       );
 
+      // SOC2: Audit request creation
+      this.auditService?.emit({
+        userId,
+        action: 'create',
+        resource: `help-request:${id}`,
+        resourceType: 'help-request',
+        reason: `Help request created by ${userId}`,
+        metadata: { urgency, tags, filePath: codeSnippet.filePath }
+      });
+
       this.logger.info('Help request created', { requestId: id, userId, urgency });
 
       return {
@@ -304,6 +318,16 @@ export class HelpQueueService extends EventEmitter {
       );
 
       await client.query('COMMIT');
+
+      this.auditService?.emit({
+        userId: expertId,
+        action: 'update',
+        resource: `help-request:${requestId}`,
+        resourceType: 'help-request',
+        reason: 'Assigned help request to expert',
+        metadata: { requestId, expertId }
+      });
+
       this.logger.info('Request assigned to expert', { requestId, expertId });
     } catch (error) {
       await client.query('ROLLBACK');
@@ -324,6 +348,15 @@ export class HelpQueueService extends EventEmitter {
          VALUES ($1, $2, $3, $4, $5)`,
         [responseId, requestId, expertId, response, codeProposal || null]
       );
+
+      this.auditService?.emit({
+        userId: expertId,
+        action: 'create',
+        resource: `help-response:${responseId}`,
+        resourceType: 'help-response',
+        reason: 'Added help response',
+        metadata: { requestId, codeProposal: !!codeProposal }
+      });
 
       this.logger.info('Response added', { requestId, expertId });
     } catch (error) {
@@ -383,6 +416,15 @@ export class HelpQueueService extends EventEmitter {
       );
 
       await client.query('COMMIT');
+
+      this.auditService?.emit({
+        userId: expertId,
+        action: 'update',
+        resource: `help-request:${requestId}`,
+        resourceType: 'help-request',
+        reason: 'Resolved help request',
+        metadata: { slaBreached, resolutionTimeMs, urgency: request.urgency }
+      });
 
       this.logger.info('Request resolved', { requestId, slaBreached, resolutionTimeMs });
 
@@ -549,6 +591,15 @@ export class HelpQueueService extends EventEmitter {
          ON CONFLICT (user_id) DO UPDATE SET expertise = $2`,
         [userId, expertise]
       );
+
+      this.auditService?.emit({
+        userId,
+        action: 'update',
+        resource: `expert:${userId}`,
+        resourceType: 'expert',
+        reason: 'Registered help queue expert',
+        metadata: { expertise }
+      });
 
       this.logger.info('Expert registered', { userId, expertise });
     } catch (error) {

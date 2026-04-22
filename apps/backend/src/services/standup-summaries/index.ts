@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger.js';
+import { AuditService } from '../audit/audit-service.js';
 import { AIRouter } from '../ai/router.js';
 import { CollaborationMessageEncryptionService } from '../collaboration-message-encryption/index.js';
 
@@ -76,6 +77,7 @@ export interface StandupConfig {
 
 export class StandupSummariesService extends EventEmitter {
   private readonly db: Pool;
+  private readonly auditService: AuditService;
   private readonly logger: ReturnType<typeof getLogger>;
   private readonly aiRouter: AIRouter;
   private readonly config: StandupConfig;
@@ -83,11 +85,13 @@ export class StandupSummariesService extends EventEmitter {
 
   constructor(
     db: Pool,
+    auditService: AuditService,
     aiRouter: AIRouter,
     config: Partial<StandupConfig> = {}
   ) {
     super();
     this.db = db;
+    this.auditService = auditService;
     this.logger = getLogger('StandupSummariesService');
     this.aiRouter = aiRouter;
     this.config = {
@@ -547,6 +551,17 @@ Please format as a clean standup summary suitable for team chat.`;
         matrixMessageId: row.matrix_message_id,
       };
 
+      // SOC2: Audit draft summary save
+      // Since date is used as an identifier, we use a generic placeholder or the date itself in path if needed.
+      this.auditService.emit({
+        userId: 'system', // Ideally passed from request context, but service layer doesn't have it here yet
+        role: 'system',
+        method: 'POST',
+        path: `/api/standup/summaries/${date}/draft`,
+        action: 'allow',
+        reason: `Saved draft standup summary for ${date}`,
+      });
+
       this.logger.info('Saved draft standup summary', { date, id: standupSummary.id });
       return standupSummary;
 
@@ -571,6 +586,16 @@ Please format as a clean standup summary suitable for team chat.`;
       const updated = (result.rowCount || 0) > 0;
 
       if (updated) {
+        // SOC2: Audit summary approval
+        this.auditService.emit({
+          userId: approvedBy,
+          role: 'developer',
+          method: 'POST',
+          path: `/api/standup/summaries/${date}/approve`,
+          action: 'allow',
+          reason: `Approved standup summary for ${date}`,
+        });
+
         this.logger.info('Approved standup summary', { date, approvedBy });
       } else {
         this.logger.warn('No draft summary found to approve', { date });
@@ -630,6 +655,17 @@ Please format as a clean standup summary suitable for team chat.`;
 
       if (success) {
         await this.markAsPosted(date);
+
+        // SOC2: Audit summary posting
+        this.auditService.emit({
+          userId: 'system', // Automated posting or system-triggered
+          role: 'system',
+          method: 'POST',
+          path: `/api/standup/summaries/${date}/post`,
+          action: 'allow',
+          reason: `Posted standup summary for ${date} to Matrix`,
+        });
+
         this.logger.info('Posted standup summary to Matrix', { date });
       }
 

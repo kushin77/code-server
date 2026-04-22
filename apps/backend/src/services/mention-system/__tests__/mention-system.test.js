@@ -4,8 +4,10 @@
 // @description Unit tests for mention system service
 // @owner       collab-2.5
 // @status      active
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MentionSystemService } from '../index';
+const collaborationEncryptionKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const originalEncryptionKey = process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY;
 // Mock the logger
 vi.mock('../../../lib/logger', () => ({
     getLogger: vi.fn(() => ({
@@ -20,19 +22,31 @@ const mockPool = {
     connect: vi.fn(),
     end: vi.fn(),
 };
+const mockAuditService = {
+    emit: vi.fn(),
+};
 describe('MentionSystemService', () => {
     let service;
     let mockClient;
     beforeEach(async () => {
         vi.clearAllMocks();
+        process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY = collaborationEncryptionKey;
+        mockAuditService.emit.mockReset();
         mockClient = {
             query: vi.fn(),
             release: vi.fn(),
         };
         mockPool.connect.mockResolvedValue(mockClient);
-        service = new MentionSystemService(mockPool);
+        service = new MentionSystemService(mockPool, mockAuditService);
         mockClient.query.mockResolvedValue({ rows: [] });
         await service.initialize();
+    });
+    afterEach(() => {
+        if (originalEncryptionKey === undefined) {
+            delete process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY;
+            return;
+        }
+        process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY = originalEncryptionKey;
     });
     describe('initialization', () => {
         it('should initialize with database schema', async () => {
@@ -95,6 +109,12 @@ describe('MentionSystemService', () => {
             const mentions = await service.processMentions(request);
             expect(mentions).toBeDefined();
             expect(mentions.length).toBeGreaterThanOrEqual(0);
+            expect(mockAuditService.emit).toHaveBeenCalledTimes(2);
+            expect(mockAuditService.emit).toHaveBeenNthCalledWith(1, expect.objectContaining({
+                userId: 'charlie',
+                action: 'allow',
+                resource: expect.stringContaining('mention:'),
+            }));
         });
     });
     describe('getMentionsForUser', () => {
@@ -121,6 +141,11 @@ describe('MentionSystemService', () => {
             expect(mentions).toHaveLength(1);
             expect(mentions[0].mentionedUser).toBe('bob');
             expect(mentions[0].mentionedBy).toBe('alice');
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'bob',
+                action: 'allow',
+                resource: 'mentions-list',
+            }));
         });
         it('should support pagination', async () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] });
@@ -161,6 +186,11 @@ describe('MentionSystemService', () => {
                 digestFrequency: 'daily',
             });
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO mention_notification_preferences'), expect.any(Array));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'alice',
+                action: 'allow',
+                resource: 'mention-preferences:alice',
+            }));
         });
         it('should update existing preferences', async () => {
             mockClient.query
@@ -170,6 +200,11 @@ describe('MentionSystemService', () => {
                 digestFrequency: 'weekly',
             });
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE mention_notification_preferences'), expect.any(Array));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'alice',
+                action: 'allow',
+                resource: 'mention-preferences:alice',
+            }));
         });
     });
     describe('sendNotifications', () => {
@@ -196,6 +231,11 @@ describe('MentionSystemService', () => {
                 matrixRoomId: '!room:kushnir.cloud',
             });
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE mentions'), expect.any(Array));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'alice',
+                action: 'allow',
+                resource: 'mention:mention-1',
+            }));
         });
         it('should queue email digest notifications', async () => {
             const mention = {
@@ -220,6 +260,11 @@ describe('MentionSystemService', () => {
                 emailAddress: 'bob@kushnir.cloud',
             });
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE mentions'), expect.any(Array));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'alice',
+                action: 'allow',
+                resource: 'mention:mention-1',
+            }));
         });
         it('should send in-app notifications', async () => {
             const mention = {
@@ -243,6 +288,11 @@ describe('MentionSystemService', () => {
                 channels: ['in_app'],
             });
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE mentions'), expect.any(Array));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'alice',
+                action: 'allow',
+                resource: 'mention:mention-1',
+            }));
         });
     });
     describe('generateEmailDigest', () => {
@@ -270,11 +320,21 @@ describe('MentionSystemService', () => {
             expect(digest.userId).toBe('bob');
             expect(digest.frequency).toBe('daily');
             expect(digest.mentions).toBeDefined();
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'bob',
+                action: 'allow',
+                resource: 'email-digest',
+            }));
         });
         it('should generate weekly email digest', async () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] });
             const digest = await service.generateEmailDigest('alice', 'weekly');
             expect(digest.frequency).toBe('weekly');
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'alice',
+                action: 'allow',
+                resource: 'email-digest',
+            }));
         });
     });
     describe('markDigestAsSent', () => {
@@ -282,6 +342,11 @@ describe('MentionSystemService', () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] });
             await service.markDigestAsSent('alice', ['mention-1', 'mention-2']);
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE email_digest_queue'), expect.any(Array));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'alice',
+                action: 'allow',
+                resource: 'email-digest',
+            }));
         });
     });
 });

@@ -8,13 +8,14 @@
 import { Router } from 'express';
 import { Pool } from 'pg';
 import { IssueLinkingService, type IssueLinkingConfig } from '../services/issue-linking';
+import { AuditService } from '../services/audit/audit-service';
 import { getLogger } from '../lib/logger';
 
 const logger = getLogger('IssueLinkingRoutes');
 
-export function initializeIssueLinkingRoutes(pool: Pool, config?: IssueLinkingConfig): Router {
+export function initializeIssueLinkingRoutes(pool: Pool, auditService?: AuditService, config?: IssueLinkingConfig): Router {
   const router = Router();
-  const issueLinkingService = new IssueLinkingService(pool, config);
+  const issueLinkingService = new IssueLinkingService(pool, auditService, config);
 
   issueLinkingService.initialize().catch(error => {
     logger.error('Failed to initialize issue linking service', { error });

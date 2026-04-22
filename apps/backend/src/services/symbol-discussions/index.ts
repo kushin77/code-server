@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
+import { AuditService } from '../audit/audit-service';
 
 export interface SymbolDiscussion {
   id: string;
@@ -87,12 +88,14 @@ export interface SearchDiscussionsRequest {
 
 export class SymbolDiscussionsService extends EventEmitter {
   private pool: Pool;
+  private auditService: AuditService;
   private logger = getLogger('SymbolDiscussionsService');
   private initialized = false;
 
-  constructor(pool: Pool) {
+  constructor(pool: Pool, auditService: AuditService) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
   }
 
   async initialize(): Promise<void> {
@@ -213,6 +216,17 @@ export class SymbolDiscussionsService extends EventEmitter {
           [request.fqn, request.filePath, request.symbolName, request.symbolType, request.lineNumber]
         );
         discussionId = insertResult.rows[0].id;
+
+        // SOC2: Audit discussion creation
+        this.auditService.emit({
+          userId: request.author,
+          role: 'developer',
+          method: 'POST',
+          path: `/api/symbols/discussions/${request.fqn}`,
+          action: 'allow',
+          reason: `Created discussion thread for symbol ${request.symbolName}`,
+        });
+
         // Create the thread for the new symbol discussion
         const threadResult = await client.query(
           `INSERT INTO discussion_threads (discussion_id, title, created_by)
@@ -302,6 +316,16 @@ export class SymbolDiscussionsService extends EventEmitter {
         [request.threadId]
       );
 
+      // SOC2: Audit comment addition
+      this.auditService.emit({
+        userId: request.author,
+        role: 'developer',
+        method: 'POST',
+        path: `/api/symbols/threads/${request.threadId}/comments`,
+        action: 'allow',
+        reason: `Added comment to thread ${request.threadId}`,
+      });
+
       const commentId = result.rows[0].id;
       return await this.getCommentById(commentId);
     } catch (error) {
@@ -362,6 +386,16 @@ export class SymbolDiscussionsService extends EventEmitter {
         UPDATE symbol_discussions SET updated_at = NOW()
         WHERE id = (SELECT discussion_id FROM discussion_threads WHERE id = $1)
       `, [threadId]);
+
+      // SOC2: Audit thread resolution
+      this.auditService.emit({
+        userId: resolvedBy,
+        role: 'developer',
+        method: 'POST',
+        path: `/api/symbols/threads/${threadId}/resolve`,
+        action: 'allow',
+        reason: `Resolved discussion thread ${threadId}`,
+      });
 
       this.logger.info('Thread resolved', { threadId, resolvedBy });
     } catch (error) {

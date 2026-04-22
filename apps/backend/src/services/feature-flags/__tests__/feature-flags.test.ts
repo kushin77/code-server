@@ -1,18 +1,23 @@
-import { getFeatureFlagService } from "../index";
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createFeatureFlagService } from "../index";
 
 describe("FeatureFlagService", () => {
   let ff: any;
   let mockRedis: any;
+  let mockAuditService: any;
 
   beforeEach(() => {
     // Reset singleton if necessary or use a fresh service
     mockRedis = {
       data: new Map<string, string>(),
-      get: jest.fn(async (key: string) => mockRedis.data.get(key) || null),
-      set: jest.fn(async (key: string, val: string) => { mockRedis.data.set(key, val); }),
-      del: jest.fn(async (key: string) => { mockRedis.data.delete(key); }),
+      get: vi.fn(async (key: string) => mockRedis.data.get(key) || null),
+      set: vi.fn(async (key: string, val: string) => { mockRedis.data.set(key, val); }),
+      del: vi.fn(async (key: string) => { mockRedis.data.delete(key); }),
     };
-    ff = getFeatureFlagService(mockRedis);
+    mockAuditService = {
+      emit: vi.fn(),
+    };
+    ff = createFeatureFlagService(mockRedis, mockAuditService);
   });
 
   describe("isEnabled", () => {
@@ -95,6 +100,105 @@ describe("FeatureFlagService", () => {
       });
       const val = await ff.getFlagValue("api_config", {});
       expect(val).toEqual(configObj);
+    });
+  });
+
+  describe("Audit Logging", () => {
+    it("should emit audit event when checking feature flag", async () => {
+      const mockAudit = { emit: vi.fn() };
+      const testRedis = {
+        data: new Map<string, string>(),
+        get: vi.fn(async (key: string) => testRedis.data.get(key) || null),
+        set: vi.fn(async (key: string, val: string) => { testRedis.data.set(key, val); }),
+        del: vi.fn(async (key: string) => { testRedis.data.delete(key); }),
+      };
+      const testFf = createFeatureFlagService(testRedis, mockAudit);
+      
+      await testFf.setFlag("test_flag", { enabled: true, rollout: { percentage: 50 } });
+      await testFf.isEnabled("test_flag", "user@example.com");
+
+      expect(mockAudit.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user@example.com",
+          action: 'read',
+          resourceType: 'feature-flag',
+          resource: 'feature:test_flag',
+          metadata: expect.objectContaining({
+            flag: "test_flag",
+            rolloutPercentage: 50,
+          }),
+        })
+      );
+    });
+
+    it("should emit audit event when setting feature flag", async () => {
+      const mockAudit = { emit: vi.fn() };
+      const testRedis = {
+        data: new Map<string, string>(),
+        get: vi.fn(async (key: string) => testRedis.data.get(key) || null),
+        set: vi.fn(async (key: string, val: string) => { testRedis.data.set(key, val); }),
+        del: vi.fn(async (key: string) => { testRedis.data.delete(key); }),
+      };
+      const testFf = createFeatureFlagService(testRedis, mockAudit);
+      
+      await testFf.setFlag("new_flag", { enabled: true, rollout: { percentage: 100 } });
+
+      expect(mockAudit.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'system',
+          action: 'create',
+          resourceType: 'feature-flag-config',
+          resource: 'feature:new_flag',
+          metadata: expect.objectContaining({
+            flag: "new_flag",
+            enabled: true,
+            rolloutPercentage: 100,
+          }),
+        })
+      );
+    });
+
+    it("should emit audit event when deleting feature flag", async () => {
+      const mockAudit = { emit: vi.fn() };
+      const testRedis = {
+        data: new Map<string, string>(),
+        get: vi.fn(async (key: string) => testRedis.data.get(key) || null),
+        set: vi.fn(async (key: string, val: string) => { testRedis.data.set(key, val); }),
+        del: vi.fn(async (key: string) => { testRedis.data.delete(key); }),
+      };
+      const testFf = createFeatureFlagService(testRedis, mockAudit);
+      
+      await testFf.setFlag("temp_flag", { enabled: true });
+      mockAudit.emit.mockClear();
+      
+      await testFf.deleteFlag("temp_flag");
+
+      expect(mockAudit.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'system',
+          action: 'delete',
+          resourceType: 'feature-flag-config',
+          resource: 'feature:temp_flag',
+          metadata: expect.objectContaining({
+            flag: "temp_flag",
+          }),
+        })
+      );
+    });
+
+    it("should work without audit service", async () => {
+      const testRedis = {
+        data: new Map<string, string>(),
+        get: vi.fn(async (key: string) => testRedis.data.get(key) || null),
+        set: vi.fn(async (key: string, val: string) => { testRedis.data.set(key, val); }),
+        del: vi.fn(async (key: string) => { testRedis.data.delete(key); }),
+      };
+      const testFf = createFeatureFlagService(testRedis);
+      
+      await testFf.setFlag("flag_no_audit", { enabled: true });
+      const enabled = await testFf.isEnabled("flag_no_audit");
+      
+      expect(enabled).toBe(true);
     });
   });
 });

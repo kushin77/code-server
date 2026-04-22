@@ -5,6 +5,7 @@
 
 import { IFeatureFlagService, FeatureFlag, FeatureFlagValue } from "./types";
 import crypto from "crypto";
+import { AuditService } from '../audit/audit-service.js';
 
 // Mocking Redis for this example as we don't have the client yet.
 // In a real scenario, this would import a shared redis client.
@@ -13,9 +14,11 @@ import crypto from "crypto";
 export class FeatureFlagService implements IFeatureFlagService {
   private readonly redisPrefix = "ff:";
   private redis: any;
+  private auditService?: AuditService;
 
-  constructor(redisClient: any) {
+  constructor(redisClient: any, auditService?: AuditService) {
     this.redis = redisClient;
+    this.auditService = auditService;
   }
 
   /**
@@ -47,7 +50,26 @@ export class FeatureFlagService implements IFeatureFlagService {
         const hashInt = parseInt(hash.substring(0, 8), 16);
         const userScore = hashInt % 100;
 
-        return userScore < config.rollout.percentage;
+        const isEnabled = userScore < config.rollout.percentage;
+
+        if (this.auditService) {
+          this.auditService.emit({
+            userId: userId,
+            action: 'read',
+            resourceType: 'feature-flag',
+            resource: `feature:${flag}`,
+            metadata: {
+              flag,
+              enabled: isEnabled,
+              rolloutPercentage: config.rollout.percentage,
+              userScore,
+              inWhitelist: config.rollout.users?.includes(userId) || false,
+            },
+            reason: 'SOC2: Feature flag evaluation with gradual rollout',
+          });
+        }
+
+        return isEnabled;
       }
 
       // If no user ID but there's a rollout, we can't determine person-specific state.
@@ -80,6 +102,22 @@ export class FeatureFlagService implements IFeatureFlagService {
   async setFlag(flag: string, config: FeatureFlag): Promise<void> {
     const key = `${this.redisPrefix}${flag}`;
     await this.redis.set(key, JSON.stringify(config));
+
+    if (this.auditService) {
+      this.auditService.emit({
+        userId: 'system',
+        action: 'create',
+        resourceType: 'feature-flag-config',
+        resource: `feature:${flag}`,
+        metadata: {
+          flag,
+          enabled: config.enabled,
+          rolloutPercentage: config.rollout?.percentage || 100,
+          userWhitelist: config.rollout?.users?.length || 0,
+        },
+        reason: 'SOC2: Feature flag configuration creation',
+      });
+    }
   }
 
   /**
@@ -88,6 +126,20 @@ export class FeatureFlagService implements IFeatureFlagService {
   async deleteFlag(flag: string): Promise<void> {
     const key = `${this.redisPrefix}${flag}`;
     await this.redis.del(key);
+
+    if (this.auditService) {
+      this.auditService.emit({
+        userId: 'system',
+        action: 'delete',
+        resourceType: 'feature-flag-config',
+        resource: `feature:${flag}`,
+        metadata: {
+          flag,
+          deletedAt: Date.now(),
+        },
+        reason: 'SOC2: Feature flag configuration deletion',
+      });
+    }
   }
 
   /**

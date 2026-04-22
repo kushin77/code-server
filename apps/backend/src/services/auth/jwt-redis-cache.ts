@@ -170,6 +170,80 @@ export class JwtRedisCache {
   }
 
   /**
+   * Store session-scoped service credentials
+   * 
+   * Session credentials are temporary credentials with a TTL for a specific session.
+   * Each session can have multiple credential types (db, cloud, etc.)
+   * 
+   * @param sessionId - Session ID
+   * @param serviceName - Service type (e.g., 'db', 'cloud')
+   * @param clientId - OIDC client ID
+   * @param clientSecret - OIDC client secret
+   * @param ttlSeconds - Time to live for this credential (session lifetime)
+   */
+  async storeSessionCredentials(
+    sessionId: string,
+    serviceName: string,
+    clientId: string,
+    clientSecret: string,
+    ttlSeconds: number,
+  ): Promise<void> {
+    const key = `${this.keyPrefix}session:${sessionId}:${serviceName}`;
+    const value = JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      session_id: sessionId,
+      service_name: serviceName,
+      stored_at: Date.now(),
+    });
+    await this.redisClient.setex(key, ttlSeconds, value);
+  }
+
+  /**
+   * Get session-scoped service credentials
+   * 
+   * @param sessionId - Session ID
+   * @param serviceName - Service type
+   * @returns Session credentials or null if not found
+   */
+  async getSessionCredentials(
+    sessionId: string,
+    serviceName: string,
+  ): Promise<{ client_id: string; client_secret: string; session_id: string; service_name: string } | null> {
+    const key = `${this.keyPrefix}session:${sessionId}:${serviceName}`;
+    const cached = await this.redisClient.get(key);
+    if (!cached) {
+      return null;
+    }
+    const data = JSON.parse(cached);
+    return {
+      client_id: data.client_id,
+      client_secret: data.client_secret,
+      session_id: data.session_id,
+      service_name: data.service_name,
+    };
+  }
+
+  /**
+   * Revoke all credentials for a session
+   * 
+   * Removes all session-scoped credentials associated with a session ID.
+   * Does not affect legacy service credentials (without session ID).
+   * 
+   * @param sessionId - Session ID
+   * @returns Number of credentials revoked
+   */
+  async revokeSessionCredentials(sessionId: string): Promise<number> {
+    const pattern = `${this.keyPrefix}session:${sessionId}:*`;
+    const keys = await this.scanKeys(pattern);
+    if (keys.length === 0) {
+      return 0;
+    }
+    const deletedCount = await this.redisClient.del(...keys);
+    return deletedCount;
+  }
+
+  /**
    * Get cache statistics
    * 
    * @returns Cache statistics including key counts
@@ -228,5 +302,3 @@ export class JwtRedisCache {
     return keys;
   }
 }
-
-export { JwtRedisCache };

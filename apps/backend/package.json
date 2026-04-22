@@ -14,6 +14,8 @@
     "express": "catalog:",
     "ioredis": "catalog:",
     "jose": "catalog:",
+    "js-yaml": "^4.1.1",
+    "livekit-server-sdk": "catalog:",
     "lz4js": "^0.2.0",
     "pg": "catalog:",
     "pino": "catalog:",

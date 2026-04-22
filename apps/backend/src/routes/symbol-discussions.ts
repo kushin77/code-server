@@ -9,12 +9,13 @@ import { Router } from 'express';
 import { Pool } from 'pg';
 import { SymbolDiscussionsService, CreateThreadRequest, AddCommentRequest, UpdateCommentRequest, SearchDiscussionsRequest } from '../services/symbol-discussions';
 import { getLogger } from '../lib/logger';
+import { AuditService } from '../services/audit/audit-service';
 
 const logger = getLogger('SymbolDiscussionsRoutes');
 
-export function initializeSymbolDiscussionsRoutes(pool: Pool): Router {
+export function initializeSymbolDiscussionsRoutes(pool: Pool, auditService: AuditService): Router {
   const router = Router();
-  const discussionsService = new SymbolDiscussionsService(pool);
+  const discussionsService = new SymbolDiscussionsService(pool, auditService);
 
   // Initialize the service
   discussionsService.initialize().catch(error => {

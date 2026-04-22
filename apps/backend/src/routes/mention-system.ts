@@ -8,13 +8,14 @@
 import { Router } from 'express';
 import { Pool } from 'pg';
 import { MentionSystemService, ParseMentionsRequest, SendNotificationRequest } from '../services/mention-system';
+import { AuditService } from '../services/audit/audit-service';
 import { getLogger } from '../lib/logger';
 
 const logger = getLogger('MentionSystemRoutes');
 
-export function initializeMentionSystemRoutes(pool: Pool): Router {
+export function initializeMentionSystemRoutes(pool: Pool, auditService?: AuditService): Router {
   const router = Router();
-  const mentionService = new MentionSystemService(pool);
+  const mentionService = new MentionSystemService(pool, auditService);
 
   // Initialize the service
   mentionService.initialize().catch(error => {

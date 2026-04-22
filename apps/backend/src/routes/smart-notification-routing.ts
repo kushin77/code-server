@@ -5,6 +5,7 @@
 // @owner       collab-4.6
 // @status      active
 
+import { AuditService } from '../audit/audit-service';
 import { Router } from 'express';
 import { Pool } from 'pg';
 import { SmartNotificationRoutingService, type NotificationChannel, type NotificationPriority, type UserStatus } from '../services/smart-notification-routing';
@@ -12,9 +13,9 @@ import { getLogger } from '../lib/logger';
 
 const logger = getLogger('SmartNotificationRoutingRoutes');
 
-export function initializeSmartNotificationRoutingRoutes(pool: Pool): Router {
+export function initializeSmartNotificationRoutingRoutes(pool: Pool, auditService?: AuditService): Router {
   const router = Router();
-  const notificationService = new SmartNotificationRoutingService(pool);
+  const notificationService = new SmartNotificationRoutingService(pool, auditService);
 
   notificationService.initialize().catch(error => {
     logger.error('Failed to initialize notification routing service', { error });

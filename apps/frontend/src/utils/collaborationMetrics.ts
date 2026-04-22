@@ -2,7 +2,7 @@
 // @module      utils/collaboration-metrics
 // @description Collaboration status bar metrics and demo presence helpers
 
-import { fetchPagerDutyIncidents } from '@/extensions/pagerduty-incidents'
+import { fetchPagerDutyIncidents } from '@/extensions/pagerduty-incidents.js'
 
 const DEMO_TEAM_USERS = [
   { id: 'alice', displayName: 'Alice Chen', status: 'online' as const },

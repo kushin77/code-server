@@ -5,6 +5,8 @@
 // @status      active
 import { createHash } from "node:crypto";
 import { watch } from "node:fs";
+import { getAuditService } from "../audit/audit-service";
+
 const DEFAULT_OPTIONS = {
     chunkSizeTokens: 800,
     chunkOverlapTokens: 120,
@@ -361,6 +363,13 @@ export function startRepositoryFileWatcher(rootPath, indexer, readFile, onEvent,
             if (!isIndexablePath(filePath)) {
                 return;
             }
+            // Emit audit event for file read
+            getAuditService().emit({
+                method: 'READ',
+                path: filePath,
+                resourceType: 'file',
+                fileAction: 'read',
+            });
             void readFile(filePath)
                 .then((content) => indexer.processFileChange(filePath, content))
                 .then((indexed) => onEvent?.({ eventType, filePath, indexed }))

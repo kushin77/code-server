@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
+import { AuditService } from '../audit/audit-service.js';
 
 export interface FigmaToken {
   id: string;
@@ -89,14 +90,16 @@ export interface WebViewConfig {
 
 export class FigmaIntegrationService extends EventEmitter {
   private pool: Pool;
+  private auditService?: AuditService;
   private logger = getLogger('FigmaIntegrationService');
   private initialized = false;
   private figmaApiToken = process.env.FIGMA_API_TOKEN || '';
   private figmaBaseUrl = 'https://api.figma.com/v1';
 
-  constructor(pool: Pool) {
+  constructor(pool: Pool, auditService?: AuditService) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
   }
 
   async initialize(): Promise<void> {
@@ -331,6 +334,16 @@ export class FigmaIntegrationService extends EventEmitter {
     }
   }
 
+  // SOC2: Audit design-to-code mapping
+  private auditMapping(tokenId: string, cssVarName: string): void {
+    this.auditService?.emit({
+      userId: 'system',
+      action: 'allow',
+      resource: 'figma-token-mapping:' + tokenId,
+      reason: 'Mapped Figma token ' + tokenId + ' to CSS variable ' + cssVarName
+    });
+  }
+
   async mapTokenToCSSVariable(tokenId: string, tokenName: string, cssVarName: string, cssValue: string): Promise<TokenMapping> {
     const client = await this.pool.connect();
     try {
@@ -394,6 +407,16 @@ export class FigmaIntegrationService extends EventEmitter {
     } finally {
       client.release();
     }
+  }
+
+  // SOC2: Audit design sync
+  private auditFrameSync(fileKey: string, frameName: string): void {
+    this.auditService?.emit({
+      userId: 'system',
+      action: 'allow',
+      resource: 'figma-frame:' + fileKey,
+      reason: 'Synced Figma frame ' + frameName + ' from file ' + fileKey
+    });
   }
 
   async saveFigmaFrame(fileKey: string, frame: FigmaFrame): Promise<void> {

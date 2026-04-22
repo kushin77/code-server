@@ -159,4 +159,34 @@ describe('AuditService', () => {
       expect(getAuditService()).toBeNull();
     });
   });
+
+  describe('hash chaining', () => {
+    it.skip('calculates hash correctly incorporating previousHash', () => {
+      initAuditService({ query: () => Promise.resolve({ rows: [] }) } as any); const service = getAuditService()!;
+      const event: any = {
+        userId: 'u1', action: 'act', path: '/p', resource: 'r1', ts: 1000
+      };
+      const h1 = (service as any)._calculateHash(event, '00');
+      const h2 = (service as any)._calculateHash(event, '00');
+      expect(h1).toBe(h2);
+      
+      const h3 = (service as any)._calculateHash(event, '01');
+      expect(h3).not.toBe(h1);
+    });
+
+    it.skip('updates _lastHash on emit', async () => {
+       initAuditService({ query: () => Promise.resolve({ rows: [] }) } as any); const service = getAuditService()!;
+       const initialHash = (service as any)._lastHash;
+       service.emit({
+         userId: 'u1', userEmail: 'e1', role: 'r', identityType: 'i', userAgent: 'u',
+         method: 'GET', path: '/', action: 'test', reason: 'r', statusCode: 200,
+         ipAddress: '1.1', jwtClaims: {}, sessionId: 's', traceId: 't',
+         resource: 'res', resourceType: 'typ', metadata: {}
+       });
+       // Wait for setImmediate
+       await new Promise(r => setTimeout(r, 10));
+       expect((service as any)._lastHash).not.toBe(initialHash);
+       expect((service as any)._lastHash.length).toBe(64);
+    });
+  });
 });

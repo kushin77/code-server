@@ -2,14 +2,18 @@
 // @module      auth/role-mapping
 // @description Unit tests for RoleMapper service
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RoleMapper } from '../role-mapper';
 
 describe('RoleMapper', () => {
   let mapper: RoleMapper;
+  let mockAuditService: any;
 
   beforeEach(() => {
-    mapper = new RoleMapper();
+    mockAuditService = {
+      emit: vi.fn(),
+    };
+    mapper = new RoleMapper(mockAuditService);
   });
 
   describe('mapClaimsToRoles', () => {
@@ -180,6 +184,68 @@ describe('RoleMapper', () => {
 
       expect(mappings).toHaveProperty('admin@company.com');
       expect(mappings).toHaveProperty('developers@company.com');
+    });
+  });
+
+  describe('Audit Logging', () => {
+    it('should emit audit event when mapping claims', () => {
+      const mockAudit = { emit: vi.fn() };
+      const testMapper = new RoleMapper(mockAudit as any);
+
+      const claims = {
+        sub: 'user-123',
+        email: 'user@example.com',
+        groups: ['developers@company.com'],
+        admin: false,
+      };
+
+      testMapper.mapClaimsToRoles(claims);
+
+      expect(mockAudit.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user@example.com',
+          action: 'read',
+          resourceType: 'oauth-claims',
+          resource: 'oauth:user-123',
+          metadata: expect.objectContaining({
+            email: 'user@example.com',
+            mappedRoles: expect.arrayContaining(['user', 'developer']),
+          }),
+        })
+      );
+    });
+
+    it('should emit audit event when registering group mapping', () => {
+      const mockAudit = { emit: vi.fn() };
+      const testMapper = new RoleMapper(mockAudit as any);
+
+      testMapper.registerGroupMapping('analytics@company.com', ['analyst']);
+
+      expect(mockAudit.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'system',
+          action: 'update',
+          resourceType: 'role-mapping-config',
+          resource: 'role-mapping:analytics@company.com',
+          metadata: expect.objectContaining({
+            group: 'analytics@company.com',
+            roles: ['analyst'],
+          }),
+        })
+      );
+    });
+
+    it('should work without audit service', () => {
+      const mapperNoAudit = new RoleMapper();
+
+      const claims = {
+        sub: 'user-123',
+        email: 'user@example.com',
+      };
+
+      const roles = mapperNoAudit.mapClaimsToRoles(claims);
+
+      expect(roles).toContain('user');
     });
   });
 });

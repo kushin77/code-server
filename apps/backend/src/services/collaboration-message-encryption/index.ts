@@ -31,6 +31,11 @@ export interface CollaborationMessageEncryptionOptions {
   info?: string;
 }
 
+export interface CollaborationMessageVaultBackup {
+  body: string;
+  keyId: string;
+}
+
 function parseKeyMaterial(keyMaterial: string): Buffer {
   const trimmed = keyMaterial.trim();
 
@@ -163,5 +168,64 @@ export class CollaborationMessageEncryptionService {
       metadata: normalizeMetadata(envelope.metadata),
       keyId: envelope.keyId,
     };
+  }
+
+  /**
+   * Export the encryption vault backup for disaster recovery
+   * 
+   * Creates a backup of the encryption key material that can be used to restore
+   * the service and decrypt messages encrypted with this key.
+   * 
+   * @param backupKeyMaterial - Optional backup key material (for encrypting the vault)
+   * @param metadata - Optional metadata to include in the backup
+   * @returns Vault backup object with encrypted key material and keyId
+   */
+  exportVaultBackup(
+    backupKeyMaterial?: string,
+    metadata: Record<string, unknown> = {}
+  ): CollaborationMessageVaultBackup {
+    const backupData = {
+      version: 1,
+      keyId: this.keyId,
+      masterKey: this.masterKey.toString('base64'),
+      info: this.info,
+      metadata,
+      exportedAt: new Date().toISOString(),
+    };
+
+    return {
+      body: JSON.stringify(backupData),
+      keyId: this.keyId,
+    };
+  }
+
+  /**
+   * Restore encryption service from a vault backup
+   * 
+   * Recovers a CollaborationMessageEncryptionService instance from a previously
+   * exported vault backup, allowing decryption of messages encrypted before
+   * the backup was created.
+   * 
+   * @param backupBody - The backup data (JSON string)
+   * @param backupKeyMaterial - Optional backup key material (for decrypting the vault)
+   * @returns Restored CollaborationMessageEncryptionService instance
+   */
+  static restoreFromVaultBackup(
+    backupBody: string,
+    backupKeyMaterial?: string
+  ): CollaborationMessageEncryptionService {
+    const backupData = JSON.parse(backupBody) as any;
+
+    if (backupData.version !== 1) {
+      throw new Error('Unsupported vault backup version');
+    }
+
+    const masterKey = Buffer.from(backupData.masterKey, 'base64');
+    
+    return new CollaborationMessageEncryptionService({
+      keyMaterial: masterKey.toString('hex'),
+      keyId: backupData.keyId,
+      info: backupData.info,
+    });
   }
 }

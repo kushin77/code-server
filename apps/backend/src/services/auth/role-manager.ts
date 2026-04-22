@@ -5,6 +5,7 @@
 import { getLogger } from '../../lib/logger';
 import { Redis } from 'ioredis';
 import { Database } from '../../db';
+import { AuditService } from '../audit/audit-service.js';
 
 interface RoleAssignment {
   id: string;
@@ -34,10 +35,12 @@ const CACHE_KEY_PREFIX = 'roles:';
 export class RoleManager {
   private redis: Redis;
   private db: Database;
+  private auditService?: AuditService;
 
-  constructor(redis: Redis, db: Database) {
+  constructor(redis: Redis, db: Database, auditService?: AuditService) {
     this.redis = redis;
     this.db = db;
+    this.auditService = auditService;
   }
 
   /**
@@ -132,6 +135,22 @@ export class RoleManager {
     // Invalidate cache
     await this.invalidateRoleCache(serviceId);
 
+    if (this.auditService) {
+      this.auditService.emit({
+        userId: serviceId,
+        action: 'create',
+        resourceType: 'role-assignment',
+        resource: `role:${role}:${serviceId}`,
+        metadata: {
+          serviceId,
+          role,
+          expiresAt: assignment.expiresAt,
+          ttl: expiresIn,
+        },
+        reason: 'SOC2: Role assignment for access control',
+      });
+    }
+
     logger.info(`Assigned role '${role}' to service '${serviceId}'`);
     return assignment;
   }
@@ -148,6 +167,20 @@ export class RoleManager {
 
     // Invalidate cache
     await this.invalidateRoleCache(serviceId);
+
+    if (this.auditService) {
+      this.auditService.emit({
+        userId: serviceId,
+        action: 'delete',
+        resourceType: 'role-assignment',
+        resource: `role:${role}:${serviceId}`,
+        metadata: {
+          serviceId,
+          role,
+        },
+        reason: 'SOC2: Role revocation for access control',
+      });
+    }
 
     logger.info(`Revoked role '${role}' from service '${serviceId}'`);
   }
@@ -272,6 +305,21 @@ export class RoleManager {
 
     for (const assignment of assignments) {
       await this.revokeRole(userId, assignment.role);
+    }
+
+    if (this.auditService && assignments.length > 0) {
+      this.auditService.emit({
+        userId,
+        action: 'delete',
+        resourceType: 'user-roles',
+        resource: `user-roles:${userId}`,
+        metadata: {
+          userId,
+          clearedRoles: assignments.map((a) => a.role),
+          revokedCount: assignments.length,
+        },
+        reason: 'SOC2: All roles cleared for user',
+      });
     }
 
     logger.info(`Cleared all roles for user ${userId}`, { userId });

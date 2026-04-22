@@ -8,6 +8,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
+import { getAuditService } from "../audit/audit-service";
+
 function loadRegistry() {
     const configPath = path.resolve(__dirname, "../../../config/model-registry.yml");
     const raw = fs.readFileSync(configPath, "utf8");
@@ -17,6 +19,13 @@ function loadRegistry() {
 export class AIRouter {
     constructor() {
         this.registry = loadRegistry();
+        // Emit audit event for registry read
+        getAuditService().emit({
+            action: 'allow',
+            resourceType: 'config',
+            fileAction: 'read',
+            method: 'READ',
+        });
     }
     /**
      * Route a task to the appropriate model/provider.

@@ -1,313 +1,436 @@
-/**
- * WebSocket health monitoring API routes
- */
+#!/usr/bin/env node
+// @file        apps/backend/src/routes/websocket-health.ts
+// @module      routes
+// @description REST API routes for WebSocket health monitoring
 
 import { Router, Request, Response } from 'express';
-import { getWebSocketHealthService } from '../services/websocket-health';
+import service, { ConnectionHealth, ConnectionType } from '../services/monitoring/websocket-health-service';
+import { getLogger } from '../lib/logger';
 
+const logger = getLogger('WebSocketHealthRoutes');
 const router = Router();
-const healthService = getWebSocketHealthService();
 
 /**
- * POST /websocket/register
- * Register a new WebSocket connection for monitoring
+ * Serialize connection for JSON response
  */
-router.post('/websocket/register', (req: Request, res: Response) => {
-  try {
-    const { connectionId, sessionId, userId } = req.body;
+function serializeConnection(connection: ConnectionHealth): any {
+  return {
+    connectionId: connection.connectionId,
+    type: connection.type,
+    userId: connection.userId,
+    workspaceId: connection.workspaceId,
+    connected: connection.connected,
+    qualityScore: connection.qualityScore,
+    latency: connection.latency,
+    jitter: connection.jitter,
+    packetLoss: connection.packetLoss,
+    lastPingTime: connection.lastPingTime,
+    lastPongTime: connection.lastPongTime,
+    lastQualityUpdate: connection.lastQualityUpdate,
+    reconnectAttempts: connection.reconnectAttempts,
+    lastReconnectTime: connection.lastReconnectTime,
+    createdAt: connection.createdAt,
+    metrics: connection.metrics,
+  };
+}
 
-    if (!connectionId || !sessionId || !userId) {
+/**
+ * POST /api/websocket-health/register
+ * Register a new WebSocket connection
+ */
+router.post('/register', (req: Request, res: Response) => {
+  try {
+    const { connectionId, type, userId, workspaceId } = req.body;
+
+    if (!connectionId || !type || !userId || !workspaceId) {
       return res.status(400).json({
-        error: 'Missing required fields: connectionId, sessionId, userId',
+        success: false,
+        error: 'Missing required fields: connectionId, type, userId, workspaceId',
       });
     }
 
-    const metrics = healthService.registerConnection(
-      connectionId,
-      sessionId,
-      userId
-    );
+    const validTypes: ConnectionType[] = ['collaboration', 'presence', 'voice-signaling', 'session-broker'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid connection type. Must be one of: ${validTypes.join(', ')}`,
+      });
+    }
 
-    res.status(201).json({
+    const health = service.registerConnection(connectionId, type, userId, workspaceId);
+
+    return res.status(201).json({
       success: true,
-      metrics,
+      data: serializeConnection(health),
     });
   } catch (error) {
-    console.error('Error registering connection:', error);
-    res.status(500).json({ error: 'Failed to register connection' });
+    logger.error('Error registering connection', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to register connection',
+    });
   }
 });
 
 /**
- * POST /websocket/health-check
- * Record a latency measurement (ping/pong response)
+ * GET /api/websocket-health/connections/:id
+ * Get connection health by ID
  */
-router.post('/websocket/health-check', (req: Request, res: Response) => {
+router.get('/connections/:id', (req: Request, res: Response) => {
   try {
-    const { connectionId, latencyMs } = req.body;
+    const { id } = req.params;
+    const health = service.getConnection(id);
 
-    if (!connectionId || latencyMs === undefined) {
-      return res.status(400).json({
-        error: 'Missing required fields: connectionId, latencyMs',
+    if (!health) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connection not found',
       });
     }
 
-    healthService.recordHealthCheck(connectionId, latencyMs);
-    const health = healthService.getConnectionHealth(connectionId);
-
-    res.json({
+    return res.status(200).json({
       success: true,
-      health,
+      data: serializeConnection(health),
     });
   } catch (error) {
-    console.error('Error recording health check:', error);
-    res.status(500).json({ error: 'Failed to record health check' });
+    logger.error('Error retrieving connection', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve connection',
+    });
   }
 });
 
 /**
- * POST /websocket/message-delivery
- * Record a successfully delivered message
+ * GET /api/websocket-health/user/:userId/connections
+ * Get all connections for a user
  */
-router.post('/websocket/message-delivery', (req: Request, res: Response) => {
+router.get('/user/:userId/connections', (req: Request, res: Response) => {
   try {
-    const { connectionId } = req.body;
+    const { userId } = req.params;
+    const connections = service.getConnectionsForUser(userId);
 
-    if (!connectionId) {
-      return res.status(400).json({
-        error: 'Missing required field: connectionId',
-      });
-    }
-
-    healthService.recordMessageDelivery(connectionId);
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error recording message delivery:', error);
-    res.status(500).json({ error: 'Failed to record message delivery' });
-  }
-});
-
-/**
- * POST /websocket/message-loss
- * Record message loss (unacknowledged messages)
- */
-router.post('/websocket/message-loss', (req: Request, res: Response) => {
-  try {
-    const { connectionId, count = 1 } = req.body;
-
-    if (!connectionId) {
-      return res.status(400).json({
-        error: 'Missing required field: connectionId',
-      });
-    }
-
-    healthService.recordMessageLoss(connectionId, count);
-    const health = healthService.getConnectionHealth(connectionId);
-
-    res.json({
+    return res.status(200).json({
       success: true,
-      health,
+      data: connections.map(serializeConnection),
     });
   } catch (error) {
-    console.error('Error recording message loss:', error);
-    res.status(500).json({ error: 'Failed to record message loss' });
+    logger.error('Error retrieving user connections', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve user connections',
+    });
   }
 });
 
 /**
- * POST /websocket/reconnect
- * Record a reconnection attempt
+ * GET /api/websocket-health/type/:type
+ * Get all connections by type
  */
-router.post('/websocket/reconnect', (req: Request, res: Response) => {
+router.get('/type/:type', (req: Request, res: Response) => {
   try {
-    const { connectionId, success = true } = req.body;
+    const { type } = req.params;
 
-    if (!connectionId) {
+    const validTypes: ConnectionType[] = ['collaboration', 'presence', 'voice-signaling', 'session-broker'];
+    if (!validTypes.includes(type as ConnectionType)) {
       return res.status(400).json({
-        error: 'Missing required field: connectionId',
+        success: false,
+        error: `Invalid connection type. Must be one of: ${validTypes.join(', ')}`,
       });
     }
 
-    if (success) {
-      healthService.recordReconnectionSuccess(connectionId);
-    } else {
-      healthService.recordReconnectionFailure(connectionId);
-    }
+    const connections = service.getConnectionsByType(type as ConnectionType);
 
-    const health = healthService.getConnectionHealth(connectionId);
-
-    res.json({
+    return res.status(200).json({
       success: true,
-      health,
+      data: connections.map(serializeConnection),
     });
   } catch (error) {
-    console.error('Error recording reconnection:', error);
-    res.status(500).json({ error: 'Failed to record reconnection' });
+    logger.error('Error retrieving connections by type', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve connections',
+    });
   }
 });
 
 /**
- * POST /websocket/close
- * Mark a connection as closed
+ * GET /api/websocket-health/degraded
+ * Get degraded connections
  */
-router.post('/websocket/close', (req: Request, res: Response) => {
+router.get('/degraded', (req: Request, res: Response) => {
   try {
-    const { connectionId, error } = req.body;
+    const { workspaceId } = req.query;
 
-    if (!connectionId) {
-      return res.status(400).json({
-        error: 'Missing required field: connectionId',
+    const degraded = service.getDegradedConnections(workspaceId as string | undefined);
+
+    return res.status(200).json({
+      success: true,
+      data: degraded.map(serializeConnection),
+    });
+  } catch (error) {
+    logger.error('Error retrieving degraded connections', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve degraded connections',
+    });
+  }
+});
+
+/**
+ * GET /api/websocket-health/workspace/:workspaceId/stats
+ * Get workspace health statistics
+ */
+router.get('/workspace/:workspaceId/stats', (req: Request, res: Response) => {
+  try {
+    const { workspaceId } = req.params;
+    const stats = service.getWorkspaceStats(workspaceId);
+
+    return res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    logger.error('Error retrieving workspace stats', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve workspace stats',
+    });
+  }
+});
+
+/**
+ * GET /api/websocket-health/system/health
+ * Get system-wide health summary
+ */
+router.get('/system/health', (req: Request, res: Response) => {
+  try {
+    const health = service.getSystemHealth();
+
+    return res.status(200).json({
+      success: true,
+      data: health,
+    });
+  } catch (error) {
+    logger.error('Error retrieving system health', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve system health',
+    });
+  }
+});
+
+/**
+ * PATCH /api/websocket-health/connections/:id/ping
+ * Record ping sent
+ */
+router.patch('/connections/:id/ping', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const health = service.recordPingSent(id);
+
+    if (!health) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connection not found',
       });
     }
 
-    healthService.closeConnection(connectionId, error);
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error closing connection:', error);
-    res.status(500).json({ error: 'Failed to close connection' });
-  }
-});
-
-/**
- * GET /websocket/health/:connectionId
- * Get health status for a specific connection
- */
-router.get(
-  '/websocket/health/:connectionId',
-  (req: Request, res: Response) => {
-    try {
-      const { connectionId } = req.params;
-      const health = healthService.getConnectionHealth(connectionId);
-
-      if (!health) {
-        return res.status(404).json({ error: 'Connection not found' });
-      }
-
-      res.json(health);
-    } catch (error) {
-      console.error('Error getting connection health:', error);
-      res.status(500).json({ error: 'Failed to get connection health' });
-    }
-  }
-);
-
-/**
- * GET /websocket/metrics
- * Get aggregated metrics across all connections
- */
-router.get('/websocket/metrics', (req: Request, res: Response) => {
-  try {
-    const metrics = healthService.getAggregatedMetrics();
-    res.json(metrics);
-  } catch (error) {
-    console.error('Error getting aggregated metrics:', error);
-    res.status(500).json({ error: 'Failed to get aggregated metrics' });
-  }
-});
-
-/**
- * GET /websocket/connections
- * Get all active connections
- */
-router.get('/websocket/connections', (req: Request, res: Response) => {
-  try {
-    const connections = healthService.getActiveConnections();
-    res.json({
-      total: connections.length,
-      connections,
+    return res.status(200).json({
+      success: true,
+      data: serializeConnection(health),
     });
   } catch (error) {
-    console.error('Error getting active connections:', error);
-    res.status(500).json({ error: 'Failed to get active connections' });
+    logger.error('Error recording ping', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to record ping',
+    });
   }
 });
 
 /**
- * GET /websocket/session/:sessionId
- * Get health stats for a specific session
+ * PATCH /api/websocket-health/connections/:id/pong
+ * Record pong received and update latency
  */
-router.get('/websocket/session/:sessionId', (req: Request, res: Response) => {
+router.patch('/connections/:id/pong', (req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params;
-    const stats = healthService.getSessionHealth(sessionId);
+    const { id } = req.params;
+    const health = service.recordPongReceived(id);
 
-    if (!stats) {
-      return res.status(404).json({ error: 'Session not found' });
+    if (!health) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connection not found',
+      });
     }
 
-    res.json(stats);
-  } catch (error) {
-    console.error('Error getting session health:', error);
-    res.status(500).json({ error: 'Failed to get session health' });
-  }
-});
-
-/**
- * GET /websocket/events
- * Get recent WebSocket health events
- */
-router.get('/websocket/events', (req: Request, res: Response) => {
-  try {
-    const limit = parseInt(req.query.limit as string, 10) || 100;
-    const events = healthService.getRecentEvents(Math.min(limit, 1000));
-
-    res.json({
-      total: events.length,
-      events,
+    return res.status(200).json({
+      success: true,
+      data: serializeConnection(health),
     });
   } catch (error) {
-    console.error('Error getting events:', error);
-    res.status(500).json({ error: 'Failed to get events' });
+    logger.error('Error recording pong', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to record pong',
+    });
   }
 });
 
 /**
- * GET /websocket/prometheus
- * Get Prometheus-format metrics for Grafana
+ * PATCH /api/websocket-health/connections/:id/packet-loss
+ * Record packet loss percentage
  */
-router.get('/websocket/prometheus', (req: Request, res: Response) => {
+router.patch('/connections/:id/packet-loss', (req: Request, res: Response) => {
   try {
-    const metrics = healthService.getPrometheusMetrics();
-    res.set('Content-Type', 'text/plain; charset=utf-8');
-    res.send(metrics);
+    const { id } = req.params;
+    const { lossPercentage } = req.body;
+
+    if (typeof lossPercentage !== 'number') {
+      return res.status(400).json({
+        success: false,
+        error: 'lossPercentage must be a number',
+      });
+    }
+
+    const health = service.recordPacketLoss(id, lossPercentage);
+
+    if (!health) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connection not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: serializeConnection(health),
+    });
   } catch (error) {
-    console.error('Error exporting Prometheus metrics:', error);
-    res.status(500).json({ error: 'Failed to export metrics' });
+    logger.error('Error recording packet loss', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to record packet loss',
+    });
   }
 });
 
 /**
- * GET /websocket/health
- * Overall health check endpoint
+ * POST /api/websocket-health/connections/:id/disconnect
+ * Mark connection as disconnected
  */
-router.get('/websocket/health', (req: Request, res: Response) => {
+router.post('/connections/:id/disconnect', (req: Request, res: Response) => {
   try {
-    const metrics = healthService.getAggregatedMetrics();
+    const { id } = req.params;
+    const health = service.markDisconnected(id);
 
-    const status = {
-      status:
-        metrics.criticalIssueCount === 0 ? 'healthy' : 'degraded',
-      timestamp: metrics.timestamp,
-      metrics: {
-        activeConnections: metrics.activeConnections,
-        healthyConnections: metrics.healthyConnections,
-        healthyPercent: metrics.healthyPercent.toFixed(2),
-        avgLatencyMs: metrics.avgLatencyMs.toFixed(2),
-        avgDeliverySuccessRate:
-          metrics.avgDeliverySuccessRate.toFixed(2),
-        criticalIssues: metrics.criticalIssueCount,
-        warnings: metrics.warningIssueCount,
-      },
-    };
+    if (!health) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connection not found',
+      });
+    }
 
-    const statusCode =
-      metrics.criticalIssueCount === 0 ? 200 : 503;
-    res.status(statusCode).json(status);
+    return res.status(200).json({
+      success: true,
+      data: serializeConnection(health),
+    });
   } catch (error) {
-    console.error('Error checking health:', error);
-    res.status(500).json({ error: 'Failed to check health' });
+    logger.error('Error marking connection as disconnected', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to disconnect',
+    });
+  }
+});
+
+/**
+ * POST /api/websocket-health/connections/:id/reconnect
+ * Attempt reconnection
+ */
+router.post('/connections/:id/reconnect', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const health = service.attemptReconnection(id);
+
+    if (!health) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connection not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: serializeConnection(health),
+    });
+  } catch (error) {
+    logger.error('Error attempting reconnection', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to attempt reconnection',
+    });
+  }
+});
+
+/**
+ * POST /api/websocket-health/connections/:id/reconnect-success
+ * Mark reconnection as successful
+ */
+router.post('/connections/:id/reconnect-success', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const health = service.reconnectionSuccessful(id);
+
+    if (!health) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connection not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: serializeConnection(health),
+    });
+  } catch (error) {
+    logger.error('Error marking reconnection successful', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to mark reconnection successful',
+    });
+  }
+});
+
+/**
+ * DELETE /api/websocket-health/connections/:id
+ * Unregister and cleanup connection
+ */
+router.delete('/connections/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const health = service.getConnection(id);
+
+    if (!health) {
+      return res.status(404).json({
+        success: false,
+        error: 'Connection not found',
+      });
+    }
+
+    service.unregisterConnection(id);
+
+    return res.status(200).json({
+      success: true,
+      data: { connectionId: id },
+    });
+  } catch (error) {
+    logger.error('Error unregistering connection', { error });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to unregister connection',
+    });
   }
 });
 

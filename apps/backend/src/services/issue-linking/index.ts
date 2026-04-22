@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
+import { AuditService } from '../audit/audit-service.js';
 
 export type IssueProvider = 'linear' | 'jira';
 
@@ -67,13 +68,15 @@ export interface SearchResult {
 
 export class IssueLinkingService extends EventEmitter {
   private pool: Pool;
+  private auditService?: AuditService;
   private logger = getLogger('IssueLinkingService');
   private initialized = false;
   private config: IssueLinkingConfig;
 
-  constructor(pool: Pool, config: IssueLinkingConfig = {}) {
+  constructor(pool: Pool, auditService?: AuditService, config: IssueLinkingConfig = {}) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
     this.config = {
       linearApiToken: process.env.LINEAR_API_TOKEN,
       jiraBaseUrl: process.env.JIRA_BASE_URL,
@@ -323,6 +326,16 @@ export class IssueLinkingService extends EventEmitter {
     } finally {
       client.release();
     }
+  }
+
+  // SOC2: Audit ticket linking
+  private auditTicketLink(ticketId: string, githubIssueNumber: number): void {
+    this.auditService?.emit({
+      userId: 'system',
+      action: 'allow',
+      resource: 'ticket-link:' + ticketId,
+      reason: 'Linked ticket ' + ticketId + ' to GitHub issue #' + githubIssueNumber
+    });
   }
 
   async linkIssue(ticketId: string, githubIssueNumber: number, provider: IssueProvider): Promise<void> {

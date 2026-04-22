@@ -5,6 +5,7 @@
 // @owner       collab-4.5
 // @status      active
 
+import { AuditService } from '../audit/audit-service';
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
@@ -62,13 +63,15 @@ export interface ActivityConfig {
 
 export class ActivityFeedService extends EventEmitter {
   private pool: Pool;
+  private auditService?: AuditService;
   private logger = getLogger('ActivityFeedService');
   private initialized = false;
   private config: Required<ActivityConfig>;
 
-  constructor(pool: Pool, config: ActivityConfig = {}) {
+  constructor(pool: Pool, auditService?: AuditService, config: ActivityConfig = {}) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
     this.config = {
       maxHistoryDays: config.maxHistoryDays || 7,
       batchSize: config.batchSize || 50,
@@ -171,6 +174,14 @@ export class ActivityFeedService extends EventEmitter {
   }
 
   async recordActivity(
+    this.auditService?.emit({
+      userId: options?.userId || 'system',
+      action: 'allow',
+      role: options?.userId ? 'user' : 'system',
+      method: 'recordActivity',
+      path: '/api/activity',
+      reason: 'Recorded activity type ' + type + ': ' + title
+    });
     type: ActivityType,
     title: string,
     status: ActivityStatus = 'info',

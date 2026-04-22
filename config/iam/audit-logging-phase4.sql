@@ -1,5 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Phase 4: Audit Logging — Immutable RBAC + Auth Event Trail
+-- EXTENDED: Application-Domain Event Support (Help Queue, Mentions, etc.)
 -- Database: codeserver (matches docker-compose POSTGRES_DB)
 -- User: codeserver (matches docker-compose POSTGRES_USER)
 -- Idempotent: safe to run multiple times
@@ -11,12 +12,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   timestamp           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   user_id             TEXT NOT NULL,
   user_email          TEXT,
-  role                TEXT NOT NULL DEFAULT 'unknown',
+  role                TEXT,
   identity_type       TEXT NOT NULL DEFAULT 'human'
                         CHECK (identity_type IN ('human', 'workload', 'automation')),
-  method              TEXT NOT NULL DEFAULT 'UNKNOWN',
-  path                TEXT NOT NULL DEFAULT '/',
-  action              TEXT NOT NULL CHECK (action IN ('allow', 'deny')),
+  method              TEXT,
+  path                TEXT,
+  action              TEXT NOT NULL,
   reason              TEXT,
   status_code         INTEGER,
   ip_address          INET,
@@ -26,6 +27,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   evaluation_time_ms  NUMERIC,
   session_id          TEXT,
   trace_id            TEXT,
+  
+  -- Application-domain auditing fields (for Help Queue, Mentions, Sessions, etc.)
+  resource            TEXT,           -- e.g., 'help-request:uuid', 'mention:uuid'
+  resource_type       TEXT,           -- e.g., 'help-request', 'help-response', 'mention', 'expert'
+  metadata            JSONB,          -- Additional context (urgency, tags, SLA info, etc.)
+  
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

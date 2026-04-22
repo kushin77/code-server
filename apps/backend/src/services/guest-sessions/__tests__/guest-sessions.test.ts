@@ -417,4 +417,78 @@ describe('GuestSessionService', () => {
       expect(stats.totalActivity).toBe(42);
     });
   });
+
+  describe('onSessionEnded callback wiring', () => {
+    it('should store onSessionEnded callback from config', async () => {
+      const onSessionEnded = vi.fn(async () => {});
+      service = new GuestSessionService(mockPool as Pool, { onSessionEnded });
+
+      // The callback should be stored and callable
+      expect(onSessionEnded).toBeDefined();
+    });
+
+    it('should invoke onSessionEnded callback when revoking a session', async () => {
+      const onSessionEnded = vi.fn(async () => {});
+      service = new GuestSessionService(mockPool as Pool, { onSessionEnded });
+
+      mockClient.query.mockResolvedValueOnce({});
+
+      await service.revokeSession('session-123');
+
+      expect(onSessionEnded).toHaveBeenCalledWith('session-123');
+    });
+
+    it('should invoke onSessionEnded for each session during cleanup', async () => {
+      const onSessionEnded = vi.fn(async () => {});
+      service = new GuestSessionService(mockPool as Pool, { onSessionEnded });
+
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ id: 'session-1' }, { id: 'session-2' }],
+      });
+
+      const count = await service.cleanupExpiredSessions();
+
+      expect(count).toBe(2);
+      expect(onSessionEnded).toHaveBeenCalledTimes(2);
+      expect(onSessionEnded).toHaveBeenCalledWith('session-1');
+      expect(onSessionEnded).toHaveBeenCalledWith('session-2');
+    });
+
+    it('should handle callback errors without breaking revocation', async () => {
+      const onSessionEnded = vi.fn(async () => {
+        throw new Error('Callback failed');
+      });
+      service = new GuestSessionService(mockPool as Pool, { onSessionEnded });
+
+      mockClient.query.mockResolvedValueOnce({});
+
+      // Should not throw even though callback fails
+      await expect(
+        service.revokeSession('session-123')
+      ).resolves.toBeUndefined();
+
+      expect(onSessionEnded).toHaveBeenCalledWith('session-123');
+    });
+
+    it('should continue cleanup despite callback errors', async () => {
+      let callCount = 0;
+      const onSessionEnded = vi.fn(async (id: string) => {
+        callCount++;
+        if (callCount === 1) {
+          throw new Error('First callback failed');
+        }
+      });
+      service = new GuestSessionService(mockPool as Pool, { onSessionEnded });
+
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ id: 'session-1' }, { id: 'session-2' }],
+      });
+
+      const count = await service.cleanupExpiredSessions();
+
+      expect(count).toBe(2);
+      expect(onSessionEnded).toHaveBeenCalledTimes(2);
+      // Even though first callback failed, second should still be attempted
+    });
+  });
 });

@@ -27,13 +27,20 @@ let instance: IFeatureFlagService | null = null;
  * Initialize and get the feature flag service.
  * In production, pass the real Redis client.
  */
-export function getFeatureFlagService(redisClient?: any): IFeatureFlagService {
+export function getFeatureFlagService(redisClient?: any, auditService?: any): IFeatureFlagService {
   if (!instance) {
     // Fallback to mock if no client provided (useful for tests)
     const client = redisClient || new MockRedis();
-    instance = new FeatureFlagService(client);
+    instance = new FeatureFlagService(client, auditService);
   }
   return instance;
+}
+
+/**
+ * Create a fresh instance (for testing only).
+ */
+export function createFeatureFlagService(redisClient: any, auditService?: any): IFeatureFlagService {
+  return new FeatureFlagService(redisClient, auditService);
 }
 
 export * from "./types";

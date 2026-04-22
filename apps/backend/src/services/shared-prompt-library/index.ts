@@ -5,6 +5,7 @@
 // @owner       collab-3.5
 // @status      active
 
+import { AuditService } from '../audit/audit-service';
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
@@ -57,13 +58,15 @@ export interface PromptLibraryConfig {
 
 export class SharedPromptLibraryService extends EventEmitter {
   private pool: Pool;
+  private auditService?: AuditService;
   private logger = getLogger('SharedPromptLibraryService');
   private initialized = false;
   private config: Required<PromptLibraryConfig>;
 
-  constructor(pool: Pool, config: PromptLibraryConfig = {}) {
+  constructor(pool: Pool, auditService?: AuditService, config: PromptLibraryConfig = {}) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
     this.config = {
       maxPromptLength: config.maxPromptLength || 10000,
       minMatchScore: config.minMatchScore || 50,
@@ -171,6 +174,14 @@ export class SharedPromptLibraryService extends EventEmitter {
   }
 
   async createPrompt(
+    this.auditService?.emit({
+      userId: createdBy,
+      action: 'allow',
+      role: 'user',
+      method: 'createPrompt',
+      path: '/api/prompts',
+      reason: 'Created shared prompt: ' + name
+    });
     teamId: string,
     name: string,
     content: string,

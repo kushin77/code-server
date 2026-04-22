@@ -111,5 +111,31 @@ export class CollaborationMessageEncryptionService {
             keyId: envelope.keyId,
         };
     }
+    exportVaultBackup(backupKeyMaterial, metadata = {}) {
+        const backupData = {
+            version: 1,
+            keyId: this.keyId,
+            masterKey: this.masterKey.toString('base64'),
+            info: this.info,
+            metadata,
+            exportedAt: new Date().toISOString(),
+        };
+        return {
+            body: JSON.stringify(backupData),
+            keyId: this.keyId,
+        };
+    }
+    static restoreFromVaultBackup(backupBody, backupKeyMaterial) {
+        const backupData = JSON.parse(backupBody);
+        if (backupData.version !== 1) {
+            throw new Error('Unsupported vault backup version');
+        }
+        const masterKey = Buffer.from(backupData.masterKey, 'base64');
+        return new CollaborationMessageEncryptionService({
+            keyMaterial: masterKey.toString('hex'),
+            keyId: backupData.keyId,
+            info: backupData.info,
+        });
+    }
 }
 //# sourceMappingURL=index.js.map

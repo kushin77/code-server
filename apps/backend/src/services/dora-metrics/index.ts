@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger';
+import { AuditService } from '../audit/audit-service.js';
 
 export type TierLevel = 'elite' | 'high' | 'medium' | 'low';
 
@@ -64,12 +65,14 @@ export interface MetricsSnapshot {
 
 export class DORAMetricsService extends EventEmitter {
   private pool: Pool;
+  private auditService?: AuditService;
   private logger = getLogger('DORAMetricsService');
   private initialized = false;
 
-  constructor(pool: Pool) {
+  constructor(pool: Pool, auditService?: AuditService) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
   }
 
   async initialize(): Promise<void> {
@@ -178,6 +181,18 @@ export class DORAMetricsService extends EventEmitter {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  // SOC2: Audit production changes
+  private auditDeployment(deploymentId: string, environment: string, success: boolean): void {
+    if (environment === 'production' || environment === 'prod') {
+      this.auditService?.emit({
+        userId: 'system',
+        action: success ? 'allow' : 'deny',
+        resource: 'deployment:' + deploymentId,
+        reason: 'Recorded production deployment ' + deploymentId + ' (success: ' + success + ')'
+      });
     }
   }
 

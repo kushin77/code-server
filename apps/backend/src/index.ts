@@ -17,6 +17,7 @@ export type {
 
 // Integration examples
 export { setupStandupSummariesIntegration, createExampleApp } from './services/standup-summaries/integration-example';
+export { initializeGuestSessionRuntime } from './services/guest-sessions/integration-example';
 
 // Routes
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';
@@ -29,6 +30,7 @@ export { initializeHelpQueueRoutes, HelpQueueService } from './routes/help-queue
 export { initializeSmartNotificationRoutingRoutes, SmartNotificationRoutingService } from './routes/smart-notification-routing';
 export { initializeActivityFeedRoutes, ActivityFeedService } from './routes/activity-feed';
 export { initializeGuestSessionRoutes, GuestSessionService } from './routes/guest-sessions';
+export { router as workspaceAutoConfigRouter } from './routes/workspace-auto-config';
 export { initializeSharedPromptLibraryRoutes, SharedPromptLibraryService } from './routes/shared-prompt-library';
 export { initializeAIReviewerRouterRoutes, AIReviewerRouterService } from './routes/ai-reviewer-router';
 export { initializeSessionReplayTimelineRoutes, SessionReplayTimelineService } from './services/session-replay-timeline';
@@ -60,6 +62,17 @@ export { AutoTestGenerationService } from './services/auto-test-generation';
 export { default as onboardingRouter } from './routes/onboarding';
 export { default as sloRouter } from './routes/slo';
 export { default as anomalyRouter } from './routes/anomaly';
+export { initializeStandupRoutes } from './routes/standup-summaries';
+export { initializeSymbolDiscussionsRoutes } from './routes/symbol-discussions';
+export { default as websocketHealthRouter } from './routes/websocket-health';
+export type { ConnectionHealth, ConnectionType, QualityMetric } from './services/monitoring/websocket-health-service';
+export { default as websocketHealthService } from './services/monitoring/websocket-health-service';
+export { default as helpQueueAuditRouter } from './routes/help-queue-audit';
+export type { HelpQueueAuditAction, HelpQueueAuditEntry } from './services/help-queue/help-queue-audit';
+export { HelpQueueAuditService } from './services/help-queue/help-queue-audit';
+export { default as extensionRegistryRouter } from './routes/extension-registry';
+export type { ExtensionMetadata, ExtensionStatus, VersionPinning, RegistryStats } from './services/extension-registry/registry-manager';
+export { RegistryManagerService } from './services/extension-registry/registry-manager';
 
 // AI Router
 export { AIRouter } from './services/ai/router';

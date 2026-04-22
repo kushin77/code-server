@@ -8,12 +8,14 @@ import { Pool } from 'pg';
 import { AIRouter } from '../ai/router';
 import standupSummariesRouter, { initializeStandupRoutes } from '../../routes/standup-summaries';
 import { getLogger } from '../../lib/logger';
+import { AuditService } from '../audit/audit-service';
 
 /**
  * Example of how to integrate the standup summaries service into an Express application
  */
 export function setupStandupSummariesIntegration(app: express.Express, db: Pool, aiRouter: AIRouter) {
   const logger = getLogger('StandupIntegration');
+  const auditService = new AuditService(db);
 
   // Initialize the standup summaries service with configuration
   const standupConfig = {
@@ -28,7 +30,7 @@ export function setupStandupSummariesIntegration(app: express.Express, db: Pool,
 
   try {
     // Initialize the service and routes
-    initializeStandupRoutes(db, aiRouter, standupConfig);
+    initializeStandupRoutes(db, auditService, aiRouter, standupConfig);
 
     // Mount the routes under /api/standup-summaries
     app.use('/api/standup-summaries', standupSummariesRouter);

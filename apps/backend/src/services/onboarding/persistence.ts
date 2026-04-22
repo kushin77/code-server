@@ -9,6 +9,7 @@ import * as path from 'path'
 import { promisify } from 'util'
 import { OnboardingSession } from './onboarding-service'
 import { logger } from '../../lib/logger'
+import { AuditService } from '../audit/audit-service'
 
 const writeFile = promisify(fs.writeFile)
 const readFile = promisify(fs.readFile)
@@ -20,7 +21,10 @@ const mkdir = promisify(fs.mkdir)
 export class OnboardingPersistence {
   private storageDir: string
 
-  constructor(storageDir: string = './.onboarding-sessions') {
+  constructor(
+    storageDir: string = './.onboarding-sessions',
+    private auditService?: AuditService
+  ) {
     this.storageDir = storageDir
   }
 
@@ -51,6 +55,20 @@ export class OnboardingPersistence {
 
       await writeFile(filePath, data, 'utf-8')
 
+      if (this.auditService) {
+        this.auditService.emit({
+          userId: session.userId || 'system',
+          action: 'update',
+          resourceType: 'session',
+          resource: `onboarding-session:${session.sessionId}`,
+          metadata: {
+            filePath,
+            status: session.status,
+          },
+          reason: 'SOC2: Persisting onboarding session state',
+        })
+      }
+
       logger.debug('Onboarding session saved', {
         sessionId: session.sessionId,
         filePath,
@@ -74,6 +92,20 @@ export class OnboardingPersistence {
 
       const data = await readFile(filePath, 'utf-8')
       const session = JSON.parse(data) as OnboardingSession
+
+      if (this.auditService) {
+        this.auditService.emit({
+          userId: session.userId || 'system',
+          action: 'read',
+          resourceType: 'session',
+          resource: `onboarding-session:${sessionId}`,
+          metadata: {
+            filePath,
+            status: session.status,
+          },
+          reason: 'SOC2: Reading onboarding session state',
+        })
+      }
 
       logger.debug('Onboarding session loaded', {
         sessionId,
@@ -112,6 +144,22 @@ export class OnboardingPersistence {
 
       await writeFile(filePath, data, 'utf-8')
 
+      if (this.auditService) {
+        this.auditService.emit({
+          userId: 'system',
+          action: 'create',
+          resourceType: 'checkpoint',
+          resource: `onboarding-checkpoint:${sessionId}:${checkpoint.timestamp}`,
+          metadata: {
+            filePath,
+            stepIndex: checkpoint.stepIndex,
+            completedSteps: checkpoint.completedSteps,
+            skippedSteps: checkpoint.skippedSteps,
+          },
+          reason: 'SOC2: Creating onboarding progress checkpoint',
+        })
+      }
+
       logger.debug('Onboarding checkpoint saved', {
         sessionId,
         checkpointTime: new Date(checkpoint.timestamp).toISOString(),
@@ -142,8 +190,23 @@ export class OnboardingPersistence {
       const latestFile = files[0]
       const filePath = path.join(checkpointDir, latestFile)
       const data = await readFile(filePath, 'utf-8')
+      const checkpoint = JSON.parse(data)
 
-      return JSON.parse(data)
+      if (this.auditService) {
+        this.auditService.emit({
+          userId: 'system',
+          action: 'read',
+          resourceType: 'checkpoint',
+          resource: `onboarding-checkpoint:${sessionId}:${latestFile}`,
+          metadata: {
+            filePath,
+            fileName: latestFile,
+          },
+          reason: 'SOC2: Reading latest onboarding checkpoint',
+        })
+      }
+
+      return checkpoint
     } catch (error) {
       logger.error('Failed to load latest checkpoint', error)
       throw error
@@ -177,12 +240,39 @@ export class OnboardingPersistence {
 
       if (fs.existsSync(sessionDir)) {
         fs.rmSync(sessionDir, { recursive: true, force: true })
+
+        if (this.auditService) {
+          this.auditService.emit({
+            userId: 'system',
+            action: 'delete',
+            resourceType: 'session',
+            resource: `onboarding-session:${sessionId}:checkpoints`,
+            metadata: {
+              sessionDir,
+            },
+            reason: 'SOC2: Onboarding session checkpoint deletion',
+          })
+        }
+
         logger.info('Onboarding session deleted', { sessionId })
       }
 
       const filePath = this.getSessionFilePath(sessionId)
       if (fs.existsSync(filePath)) {
         fs.rmSync(filePath)
+
+        if (this.auditService) {
+          this.auditService.emit({
+            userId: 'system',
+            action: 'delete',
+            resourceType: 'session',
+            resource: `onboarding-session:${sessionId}`,
+            metadata: {
+              filePath,
+            },
+            reason: 'SOC2: Onboarding session deletion',
+          })
+        }
       }
     } catch (error) {
       logger.error('Failed to delete onboarding session', error)

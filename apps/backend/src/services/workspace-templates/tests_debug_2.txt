@@ -1,0 +1,107 @@
+
+>   it('builds a pinned collaboration template from the canonical SSOT inputs', () => {
+      const service = createService();
+  
+      const snapshot = service.getSnapshot();
+  
+      expect(snapshot.templates).toHaveLength(1);
+      expect(snapshot.templates[0].id).toBe('collaboration-core');
+      expect(snapshot.templates[0].pinnedExtensions).toEqual([
+        'GitHub.copilot@1.295.0',
+        'esbenp.prettier-vscode@10.4.0',
+      ]);
+      expect(snapshot.templates[0].settings['extensions.autoUpdate']).toBe(false);
+      expect(snapshot.templates[0].settings['telemetry.telemetryLevel']).toBe('off');
+      expect(emitSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'READ',
+          path: expect.stringContaining('settings.json'),
+          resourceType: 'config',
+          fileAction: 'read',
+        })
+      );
+    });
+  
+>   it('returns the collaboration-core template by id', () => {
+      const service = createService();
+  
+      const template = service.getTemplate('collaboration-core');
+  
+      expect(template?.name).toBe('Collaboration Core Workspace');
+      expect(template?.source.settingsPath).toContain('settings.json');
+      expect(template?.source.approvedManifestPath).toContain('extensions-approved.json');
+    });
+  
+>   it('synthesizes a devcontainer payload from the same template inputs', () => {
+      const service = createService();
+  
+      const devcontainer = service.buildDevcontainer('collaboration-core');
+  
+      expect(devcontainer.image).toContain('devcontainers/base:ubuntu');
+      expect(devcontainer.customizations.vscode.extensions).toContain('GitHub.copilot@1.295.0');
+      expect(devcontainer.customizations.vscode.settings['git.requireGitUserConfig']).toBe(true);
+    });
+  
+>   it('throws for unknown workspace templates', () => {
+      const service = createService();
+  
+      expect(() => service.buildDevcontainer('missing-template')).toThrow('Unknown workspace template');
+    });
+  
+>   it('scans and includes role-specific templates', () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'role-templates-'));
+      tempDirs.push(tempDir);
+      process.env.ROLE_SETTINGS_DIR = tempDir;
+  
+      const devProfile = {
+        role: 'developer',
+        description: 'Dev environment',
+        settings: { 'editor.fontSize': 16 },
+      };
+      fs.writeFileSync(path.join(tempDir, 'developer-profile.json'), JSON.stringify(devProfile));
+  
+      const service = createService();
+      const snapshot = service.getSnapshot();
+  
+      const roleTemplate = snapshot.templates.find((t) => t.id === 'role-developer');
+      expect(roleTemplate).toBeDefined();
+      expect(roleTemplate?.name).toBe('Developer Environment');
+      expect(roleTemplate?.settings['editor.fontSize']).toBe(16);
+      expect(roleTemplate?.envSchema).toBeDefined();
+      expect(roleTemplate?.envSchema?.PROJECT_NAME).toBeDefined();
+  
+      delete process.env.ROLE_SETTINGS_DIR;
+    });
+  
+>   it('audits role profile and directory reads', () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'role-audit-'));
+      tempDirs.push(tempDir);
+      process.env.ROLE_SETTINGS_DIR = tempDir;
+  
+      fs.writeFileSync(path.join(tempDir, 'admin-profile.json'), JSON.stringify({ role: 'admin' }));
+  
+      const service = createService();
+      service.getSnapshot();
+  
+      const auditCalls = emitSpy.mock.calls.map((call) => call[0]);
+  
+      expect(auditCalls).toContainEqual(
+        expect.objectContaining({
+          method: 'LIST',
+          path: tempDir,
+          resourceType: 'config',
+        })
+      );
+  
+      expect(auditCalls).toContainEqual(
+        expect.objectContaining({
+          method: 'READ',
+          path: path.join(tempDir, 'admin-profile.json'),
+          resourceType: 'config',
+        })
+      );
+  
+      delete process.env.ROLE_SETTINGS_DIR;
+    });
+  });
+

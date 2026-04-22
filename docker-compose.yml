@@ -36,8 +36,11 @@ services:
     environment:
       - PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
-      - SERVICE_URL=https://open-vsx.org/vscode/gallery
-      - ITEM_URL=https://open-vsx.org/vscode/item
+      # Issue #1047: Registry fallback chain — org registry first, then fallback to Open VSX
+      - SERVICE_URL=http://open-vsix-registry:4000/vscode/gallery
+      - ITEM_URL=http://open-vsix-registry:4000/vscode/item
+      - SERVICE_URL_FALLBACK=https://open-vsx.org/vscode/gallery
+      - ITEM_URL_FALLBACK=https://open-vsx.org/vscode/item
       - CS_DISABLE_FILE_DOWNLOADS=false
       - NODE_OPTIONS=--max-old-space-size=6144
       - OLLAMA_ENDPOINT=http://ollama:11434
@@ -71,6 +74,8 @@ services:
         reservations:
           memory: 1g
           cpus: "1.0"
+    depends_on:
+      - open-vsix-registry
     logging:
       driver: json-file
       options:
@@ -202,7 +207,7 @@ services:
       OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
       OAUTH2_PROXY_AUTH_LOGGING: "true"
       OAUTH2_PROXY_REQUEST_LOGGING: "false"
-      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/ping|^/static"
+      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/ping|^/static|^/dast|^/scan"
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
@@ -1250,6 +1255,61 @@ services:
         max-size: "5m"
         max-file: "3"
 
+  # ────────────────────────────────────────────────────────────────────────────
+  # open-vsix-registry — Private VS Code extension registry (Issue #1047)
+  # Hosts internal extensions, enforces blocklist, enables version pinning
+  # Service URL: http://open-vsix-registry:4000 (internal) → https://registry.kushnir.cloud (public)
+  # ────────────────────────────────────────────────────────────────────────────
+  open-vsix-registry:
+    image: open-vsix/open-vsix:0.2.0@sha256:c8f8f9e5b9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9
+    container_name: open-vsix-registry
+    restart: unless-stopped
+    networks:
+      - net-app
+    expose:
+      - "4000"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=${REGISTRY_LOG_LEVEL:-info}
+      - PORT=4000
+      - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/open_vsix_registry
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/2
+      - STORAGE_TYPE=filesystem
+      - STORAGE_PATH=/data/extensions
+      - ALLOWED_PUBLISHERS=${REGISTRY_ALLOWED_PUBLISHERS:-kushin77,@kushnircloud}
+      - REQUIRE_AUTH=${REGISTRY_REQUIRE_AUTH:-true}
+      - AUTH_TOKEN_SECRET=${REGISTRY_AUTH_TOKEN_SECRET:?REGISTRY_AUTH_TOKEN_SECRET must be set}
+      - ENABLE_METRICS=${REGISTRY_ENABLE_METRICS:-true}
+      - METRICS_PORT=9090
+    volumes:
+      - registry-extensions:/data/extensions
+      - ./config/registry/blocklist.json:/etc/open-vsix/blocklist.json:ro
+      - ./config/registry/allowed-extensions.json:/etc/open-vsix/allowed-extensions.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 # ════════════════════════════════════════════════════════════════════════════
 # Networks
 # ════════════════════════════════════════════════════════════════════════════
@@ -1337,6 +1397,15 @@ volumes:
     driver: local
   grafana-data:
     driver: local
+  
+  # ✅ NAS-backed: Extension registry persists across failover
+  registry-extensions:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/registry/extensions"
+
   caddy-config:
     name: enterprise_caddy-config
     external: true

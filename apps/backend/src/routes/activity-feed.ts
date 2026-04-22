@@ -5,6 +5,7 @@
 // @owner       collab-4.5
 // @status      active
 
+import { AuditService } from '../audit/audit-service';
 import { Router } from 'express';
 import { Pool } from 'pg';
 import { ActivityFeedService, type ActivityType, type ActivityStatus, type ActivityFilter } from '../services/activity-feed';
@@ -12,9 +13,9 @@ import { getLogger } from '../lib/logger';
 
 const logger = getLogger('ActivityFeedRoutes');
 
-export function initializeActivityFeedRoutes(pool: Pool): Router {
+export function initializeActivityFeedRoutes(pool: Pool, auditService?: AuditService): Router {
   const router = Router();
-  const activityFeedService = new ActivityFeedService(pool);
+  const activityFeedService = new ActivityFeedService(pool, auditService);
 
   activityFeedService.initialize().catch(error => {
     logger.error('Failed to initialize activity feed service', { error });

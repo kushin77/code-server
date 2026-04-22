@@ -8,13 +8,14 @@
 import { Router } from 'express';
 import { Pool } from 'pg';
 import { FigmaIntegrationService } from '../services/figma-integration';
+import { AuditService } from '../services/audit/audit-service';
 import { getLogger } from '../lib/logger';
 
 const logger = getLogger('FigmaIntegrationRoutes');
 
-export function initializeFigmaIntegrationRoutes(pool: Pool): Router {
+export function initializeFigmaIntegrationRoutes(pool: Pool, auditService?: AuditService): Router {
   const router = Router();
-  const figmaService = new FigmaIntegrationService(pool);
+  const figmaService = new FigmaIntegrationService(pool, auditService);
 
   figmaService.initialize().catch(error => {
     logger.error('Failed to initialize figma integration service', { error });

@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Pool } from 'pg';
 import { HelpQueueService } from '../index';
+import { AuditService } from '../../audit/audit-service';
 
 vi.mock('../../../lib/logger', () => ({
   getLogger: vi.fn(() => ({
@@ -23,6 +24,10 @@ const mockPool = {
   end: vi.fn(),
 } as unknown as Pool;
 
+const mockAuditService = {
+  emit: vi.fn(),
+} as unknown as AuditService;
+
 describe('HelpQueueService', () => {
   let service: HelpQueueService;
   let mockClient: any;
@@ -37,7 +42,7 @@ describe('HelpQueueService', () => {
 
     (mockPool.connect as any).mockResolvedValue(mockClient);
 
-    service = new HelpQueueService(mockPool);
+    service = new HelpQueueService(mockPool, mockAuditService);
     mockClient.query.mockResolvedValue({ rows: [] });
     await service.initialize();
   });
@@ -79,6 +84,14 @@ describe('HelpQueueService', () => {
       expect(request.question).toBe('Why does this return 1?');
       expect(request.status).toBe('open');
       expect(request.urgency).toBe('normal');
+
+      expect(mockAuditService.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          action: 'create',
+          resourceType: 'help-request',
+        })
+      );
     });
 
     it('should calculate correct SLA for urgent requests', async () => {
@@ -168,6 +181,14 @@ describe('HelpQueueService', () => {
         expect.stringContaining('UPDATE help_requests'),
         expect.any(Array)
       );
+
+      expect(mockAuditService.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'expert-1',
+          action: 'update',
+          resourceType: 'help-request',
+        })
+      );
     });
 
     it('should reject assignment if expert at capacity', async () => {
@@ -206,6 +227,14 @@ describe('HelpQueueService', () => {
       expect(mockClient.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO help_responses'),
         expect.any(Array)
+      );
+
+      expect(mockAuditService.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'expert-1',
+          action: 'create',
+          resourceType: 'help-response',
+        })
       );
     });
 
@@ -248,6 +277,14 @@ describe('HelpQueueService', () => {
 
       expect(slaBroken.slaBreached).toBe(false);
       expect(slaBroken.resolutionTimeMs).toBeGreaterThan(0);
+
+      expect(mockAuditService.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'expert-1',
+          action: 'update',
+          resourceType: 'help-request',
+        })
+      );
     });
 
     it('should detect SLA breach', async () => {
@@ -444,6 +481,14 @@ describe('HelpQueueService', () => {
       expect(mockClient.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO expert_profiles'),
         expect.arrayContaining([['react', 'typescript', 'testing']])
+      );
+
+      expect(mockAuditService.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'expert-1',
+          action: 'update',
+          resourceType: 'expert',
+        })
       );
     });
   });

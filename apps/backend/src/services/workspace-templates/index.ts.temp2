@@ -1,0 +1,62 @@
+
+>     const roleTemplates = this.buildRoleSpecificTemplates(extensionManifest);
+  
+      return {
+        templates: [standardTemplate, ...roleTemplates],
+        settings: standardTemplate.settings,
+        extensionManifest,
+      };
+    }
+  
+>   private buildRoleSpecificTemplates(
+      extensionManifest: PrivateExtensionRegistrySnapshot
+    ): WorkspaceTemplateDefinition[] {
+      const templates: WorkspaceTemplateDefinition[] = [];
+      const roleSettingsDir = this.getRoleSettingsDir();
+  
+      if (!fs.existsSync(roleSettingsDir)) {
+        return templates;
+      }
+  
+      const files = fs.readdirSync(roleSettingsDir);
+      emitDirectoryReadAudit(roleSettingsDir);
+  
+      for (const file of files) {
+        if (!file.endsWith('-profile.json')) continue;
+  
+        try {
+          const filePath = path.join(roleSettingsDir, file);
+          const raw = fs.readFileSync(filePath, 'utf8');
+          emitRoleProfileReadAudit(filePath);
+  
+          const profile = JSON.parse(raw);
+          const role = profile.role || file.replace('-profile.json', '');
+  
+          templates.push({
+            id: `role-${role}`,
+            name: `${role.charAt(0).toUpperCase() + role.slice(1)} Environment`,
+            description: profile.description || `Standard workspace for ${role} role`,
+            settings: profile.settings || {},
+            pinnedExtensions: extensionManifest.approvedExtensions.map((ext) => formatExtensionId(ext.id, ext.version)),
+            devcontainer: {
+              name: `${role} Workspace`,
+              image: 'mcr.microsoft.com/devcontainers/base:ubuntu',
+              customizations: {
+                vscode: {
+                  extensions: extensionManifest.approvedExtensions.map((ext) => formatExtensionId(ext.id, ext.version)),
+                  settings: profile.settings || {},
+                },
+              },
+            },
+            envSchema: STANDARD_ENV_SCHEMA,
+            source: {
+              settingsPath: this.settingsPath,
+              approvedManifestPath: this.approvedManifestPath,
+              roleProfilePath: filePath,
+            },
+          });
+        } catch (error) {
+          console.error(`Failed to load role profile ${file}:`, error);
+        }
+      }
+

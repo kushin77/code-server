@@ -8,6 +8,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Pool } from 'pg';
 import { SymbolDiscussionsService, CreateThreadRequest, AddCommentRequest, UpdateCommentRequest } from '../index';
+import { AuditService } from '../../audit/audit-service';
+
+// Mock the audit service
+const mockAuditService = {
+  emit: vi.fn(),
+} as any;
 
 // Mock the logger
 vi.mock('../../../lib/logger', () => ({
@@ -40,7 +46,7 @@ describe('SymbolDiscussionsService', () => {
 
     (mockPool.connect as any).mockResolvedValue(mockClient);
 
-    service = new SymbolDiscussionsService(mockPool);
+    service = new SymbolDiscussionsService(mockPool, mockAuditService);
     mockClient.query.mockResolvedValue({ rows: [] });
     await service.initialize();
   });
@@ -85,6 +91,13 @@ describe('SymbolDiscussionsService', () => {
       expect(discussion.symbolName).toBe(request.symbolName);
       expect(discussion.thread.title).toBe(request.title);
       expect(discussion.thread.comments).toHaveLength(1);
+
+      // Audit verification
+      expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+        userId: request.author,
+        action: 'allow',
+        reason: expect.stringContaining(`Created discussion thread for symbol ${request.symbolName}`),
+      }));
     });
   });
 
@@ -108,6 +121,13 @@ describe('SymbolDiscussionsService', () => {
       expect(comment.threadId).toBe(commentRequest.threadId);
       expect(comment.content).toBe(commentRequest.content);
       expect(comment.author).toBe(commentRequest.author);
+
+      // Audit verification
+      expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+        userId: commentRequest.author,
+        action: 'allow',
+        reason: expect.stringContaining(`Added comment to thread ${commentRequest.threadId}`),
+      }));
     });
   });
 
@@ -148,6 +168,13 @@ describe('SymbolDiscussionsService', () => {
         expect.stringContaining('UPDATE discussion_threads'),
         [threadId, 'bob']
       );
+
+      // Audit verification
+      expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+        userId: 'bob',
+        action: 'allow',
+        reason: expect.stringContaining(`Resolved discussion thread ${threadId}`),
+      }));
     });
   });
 

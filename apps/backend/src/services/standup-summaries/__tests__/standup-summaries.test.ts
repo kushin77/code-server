@@ -26,6 +26,11 @@ const mockAIRouter = {
   route: vi.fn(),
 };
 
+// Mock Audit service
+const mockAuditService = {
+  emit: vi.fn(),
+};
+
 // Mock the database
 const mockPool = {
   query: vi.fn(),
@@ -37,7 +42,7 @@ describe('StandupSummariesService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY = collaborationEncryptionKey;
-    service = new StandupSummariesService(mockPool, mockAIRouter);
+    service = new StandupSummariesService(mockPool, mockAuditService as any, mockAIRouter as any);
   });
 
   afterEach(() => {
@@ -70,7 +75,7 @@ describe('StandupSummariesService', () => {
         enabled: false,
       };
 
-      service = new StandupSummariesService(mockPool, mockAIRouter, customConfig);
+      service = new StandupSummariesService(mockPool, mockAuditService as any, mockAIRouter as any, customConfig);
       await service.initialize();
 
       // Config should be applied (though we can't easily test this without exposing it)
@@ -274,7 +279,7 @@ describe('StandupSummariesService', () => {
 
   describe('postToMatrix', () => {
     it('should post encrypted collaboration payloads to Matrix', async () => {
-      service = new StandupSummariesService(mockPool, mockAIRouter, {
+      service = new StandupSummariesService(mockPool, mockAuditService as any, mockAIRouter as any, {
         matrixRoomId: '!room:kushnir.cloud',
         enabled: false,
       });
@@ -297,6 +302,14 @@ describe('StandupSummariesService', () => {
       const result = await service.postToMatrix('2024-01-01');
 
       expect(result).toBe(true);
+      
+      // Audit verification
+      expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+        userId: 'system',
+        action: 'allow',
+        reason: expect.stringContaining('Posted standup summary for 2024-01-01 to Matrix'),
+      }));
+
       expect(loggerMock.info).toHaveBeenCalledWith(
         'Would post encrypted collaboration payload to Matrix',
         expect.objectContaining({

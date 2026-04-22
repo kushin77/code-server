@@ -7,6 +7,7 @@
 
 import { EventEmitter } from 'events';
 import { Pool } from 'pg';
+import { AuditService } from '../audit/audit-service.js';
 import { getLogger } from '../../lib/logger';
 
 export type AccessLevel = 'read' | 'read-write';
@@ -37,17 +38,22 @@ export interface GuestSessionConfig {
   defaultTtlMinutes?: number;
   tokenLength?: number;
   maxActiveSessions?: number;
+  onSessionEnded?: (guestSessionId: string) => Promise<void>;
 }
 
 export class GuestSessionService extends EventEmitter {
   private pool: Pool;
   private logger = getLogger('GuestSessionService') ?? console;
   private initialized = false;
-  private config: Required<GuestSessionConfig>;
+  private auditService?: AuditService;
+  private config: Omit<Required<GuestSessionConfig>, 'onSessionEnded'> & { onSessionEnded?: (guestSessionId: string) => Promise<void> };
+  private onSessionEnded?: (guestSessionId: string) => Promise<void>;
 
-  constructor(pool: Pool, config: GuestSessionConfig = {}) {
+  constructor(pool: Pool, config: GuestSessionConfig = {}, auditService?: AuditService) {
     super();
     this.pool = pool;
+    this.auditService = auditService;
+    this.onSessionEnded = config.onSessionEnded;
     this.config = {
       defaultTtlMinutes: config.defaultTtlMinutes || 60,
       tokenLength: config.tokenLength || 32,
@@ -151,6 +157,24 @@ export class GuestSessionService extends EventEmitter {
       );
 
       this.logger.info('Guest session created', { guestSessionId: id, userId, scopedPath });
+
+      if (this.auditService) {
+        this.auditService.emit({
+          userId,
+          action: 'create',
+          resourceType: 'guest-session',
+          resource: `guest-session:${id}`,
+          metadata: {
+            guestSessionId: id,
+            scopedPath,
+            accessLevel,
+            ttlMinutes: ttl,
+            expiresAt,
+          },
+          reason: 'SOC2: Guest session creation for temporary access',
+        });
+      }
+
       this.emit('session-created', { id, userId, scopedPath, expiresAt });
 
       return {
@@ -292,7 +316,32 @@ export class GuestSessionService extends EventEmitter {
       );
 
       this.logger.info('Guest session revoked', { guestSessionId });
+
+      if (this.auditService) {
+        this.auditService.emit({
+          userId: 'system', // Revocation could be from admin or session expiry
+          action: 'delete',
+          resourceType: 'guest-session',
+          resource: `guest-session:${guestSessionId}`,
+          metadata: {
+            guestSessionId,
+            revokedAt: Date.now(),
+          },
+          reason: 'SOC2: Guest session revocation/expiration',
+        });
+      }
+
       this.emit('session-revoked', { guestSessionId, timestamp: new Date() });
+
+      // Invoke session ended callback if registered
+      if (this.onSessionEnded) {
+        try {
+          await this.onSessionEnded(guestSessionId);
+        } catch (error) {
+          this.logger.error('Failed to invoke onSessionEnded callback', { error, guestSessionId });
+          // Don't rethrow - session is already revoked, callback failure shouldn't break revocation
+        }
+      }
     } catch (error) {
       this.logger.error('Failed to revoke session', { error, guestSessionId });
       throw error;
@@ -336,6 +385,18 @@ export class GuestSessionService extends EventEmitter {
       if (result.rows.length > 0) {
         this.logger.info('Expired sessions cleaned up', { count: result.rows.length });
         this.emit('sessions-cleaned', { count: result.rows.length, timestamp: new Date() });
+
+        // Invoke session ended callback for each expired session
+        if (this.onSessionEnded) {
+          for (const row of result.rows) {
+            try {
+              await this.onSessionEnded(row.id);
+            } catch (error) {
+              this.logger.error('Failed to invoke onSessionEnded callback during cleanup', { error, guestSessionId: row.id });
+              // Continue cleanup for other sessions even if one callback fails
+            }
+          }
+        }
       }
 
       return result.rows.length;

@@ -9,14 +9,16 @@ import { getLogger } from '../../lib/logger.js';
 import { CollaborationMessageEncryptionService } from '../collaboration-message-encryption/index.js';
 export class MentionSystemService extends EventEmitter {
     pool;
+    auditService;
     logger = getLogger('MentionSystemService');
     initialized = false;
     matrixBaseUrl = process.env.MATRIX_BASE_URL || 'https://matrix.kushnir.cloud';
     emailFrom = process.env.MENTION_EMAIL_FROM || 'mentions@kushnir.cloud';
     mentionRegex = /@([a-zA-Z0-9_-]+)/g;
-    constructor(pool) {
+    constructor(pool, auditService) {
         super();
         this.pool = pool;
+        this.auditService = auditService;
     }
     async initialize() {
         if (this.initialized)
@@ -139,6 +141,14 @@ export class MentionSystemService extends EventEmitter {
                     context: request.context,
                 });
                 mentions.push(mention);
+                // SOC2: Audit mention creation
+                this.auditService?.emit({
+                    userId: request.author,
+                    action: 'allow',
+                    resource: 'mention:' + mention.id,
+                    reason: 'Created mention for user ' + match.username,
+                    metadata: { mentionedUser: match.username, context: request.context }
+                });
                 this.logger.info('Created mention', { mentionedUser: match.username, contextId: request.context.contextId });
             }
             catch (error) {
@@ -212,6 +222,19 @@ export class MentionSystemService extends EventEmitter {
             }
             // Update notification status
             await client.query(`UPDATE mentions SET notification_sent = TRUE, notification_channels = $1 WHERE id = $2`, [channels, request.mention.id]);
+            // SOC2: Audit notification send
+            this.auditService?.emit({
+                userId: request.mention.mentionedBy,
+                action: 'allow',
+                resource: 'mention:' + request.mention.id,
+                reason: 'Sent notifications for mention',
+                metadata: {
+                    mentionedUser: request.mention.mentionedUser,
+                    channels: channels,
+                    contextId: request.mention.context.contextId,
+                    filePath: request.mention.context.filePath
+                }
+            });
             this.logger.info('Notifications sent for mention', { mentionId: request.mention.id, channels });
         }
         catch (error) {
@@ -331,6 +354,20 @@ export class MentionSystemService extends EventEmitter {
                     preferences.notifyInApp ?? true,
                 ]);
             }
+            // SOC2: Audit preference changes
+            this.auditService?.emit({
+                userId: userId,
+                action: 'allow',
+                resource: 'mention-preferences:' + userId,
+                reason: 'Updated mention notification preferences',
+                metadata: {
+                    emailAddress: preferences.emailAddress ? '***@***' : undefined,
+                    digestFrequency: preferences.digestFrequency,
+                    notifyMatrix: preferences.notifyMatrix,
+                    notifyEmail: preferences.notifyEmail,
+                    notifyInApp: preferences.notifyInApp
+                }
+            });
             this.logger.info('Updated mention notification preferences', { userId });
         }
         catch (error) {
@@ -345,6 +382,18 @@ export class MentionSystemService extends EventEmitter {
         const client = await this.pool.connect();
         try {
             const result = await client.query(`SELECT * FROM mentions WHERE mentioned_user = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`, [userId, limit, offset]);
+            // SOC2: Audit read access
+            this.auditService?.emit({
+                userId: userId,
+                action: 'allow',
+                resource: 'mentions-list',
+                reason: 'Retrieved mentions for user',
+                metadata: {
+                    mentionCount: result.rows.length,
+                    limit: limit,
+                    offset: offset
+                }
+            });
             return result.rows.map(row => ({
                 id: row.id,
                 mentionedBy: row.mentioned_by,
@@ -400,6 +449,18 @@ export class MentionSystemService extends EventEmitter {
                 },
                 summaryText: this.formatEmailDigestEntry(row),
             }));
+            // SOC2: Audit email digest generation
+            this.auditService?.emit({
+                userId: userId,
+                action: 'allow',
+                resource: 'email-digest',
+                reason: 'Generated email digest for user',
+                metadata: {
+                    frequency: frequency,
+                    mentionCount: mentions.length,
+                    periodHours: hoursBack
+                }
+            });
             return {
                 userId,
                 frequency,
@@ -419,6 +480,14 @@ export class MentionSystemService extends EventEmitter {
         return `${row.mentioned_by} mentioned you in ${row.file_path}:${row.line_number || 'start'}\n"${row.content}"\nView: ${row.url}`;
     }
     async markDigestAsSent(userId, mentionIds) {
+        // SOC2: Audit digest delivery
+        this.auditService?.emit({
+            userId: userId,
+            action: 'allow',
+            resource: 'email-digest',
+            reason: 'Marked email digest as sent',
+            metadata: { mentionCount: mentionIds.length }
+        });
         const client = await this.pool.connect();
         try {
             await client.query(`UPDATE email_digest_queue SET sent_at = NOW() WHERE user_id = $1 AND mention_id = ANY($2)`, [userId, mentionIds]);

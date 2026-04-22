@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Rollback automation for Issue #984 deployment
 # Safely reverts OAuth whitelist + GSM credentials configuration if needed
 

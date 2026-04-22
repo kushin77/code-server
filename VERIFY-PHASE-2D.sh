@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo "=== PHASE 2D OBSERVABILITY VERIFICATION ==="
 echo ""

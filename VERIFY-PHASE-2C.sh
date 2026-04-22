@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Verify Phase 2C deployment
 
 ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.31 << 'EOF'

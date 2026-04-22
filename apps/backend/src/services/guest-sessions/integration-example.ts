@@ -32,8 +32,12 @@ export async function initializeGuestSessionRuntime(
         return;
       }
 
-      // Invalidate the JWT token associated with this guest session
-      await config.cache.invalidateToken(guestSessionId);
+      // Revoke all session credentials when guest session ends
+      // This ensures ephemeral credentials are cleaned up
+      const revokedCount = await config.cache.revokeSessionCredentials(guestSessionId);
+      if (revokedCount > 0) {
+        console.log(`[GuestSession] Revoked ${revokedCount} credentials for session ${guestSessionId}`);
+      }
     },
   });
 

@@ -15,6 +15,12 @@ export interface ServiceWorkerHealth {
   lastRefreshTime?: number;
 }
 
+interface AuthServiceWorkerMessage {
+  type: string
+  expiry?: number
+  reason?: string
+}
+
 // Module state
 let swRegistration: ServiceWorkerRegistration | null = null;
 const swHealth: ServiceWorkerHealth = {
@@ -113,13 +119,17 @@ function setupMessageHandlers(): void {
   /**
    * Listen for messages from SW
    */
-  navigator.serviceWorker.addEventListener('message', async (event) => {
-    const messageEvent = event as ExtendableMessageEvent
-    const { data } = messageEvent
+  navigator.serviceWorker.addEventListener('message', async (event: MessageEvent<AuthServiceWorkerMessage>) => {
+    const { data } = event
     metrics.sw_message_received++
 
     switch (data.type) {
       case 'SESSION_REFRESHED':
+        if (typeof data.expiry !== 'number') {
+          console.warn('[auth-sw-register] SW notified: session refreshed without expiry')
+          break
+        }
+
         console.info('[auth-sw-register] SW notified: session refreshed', {
           newExpiry: new Date(data.expiry).toISOString(),
         })
@@ -150,7 +160,7 @@ function setupMessageHandlers(): void {
       case 'GET_SESSION_EXPIRY': {
         // SW asking for expiry via IndexedDB
         const expiry = await getSessionExpiry();
-        event.ports[0].postMessage({ type: 'SESSION_EXPIRY_RESPONSE', expiry });
+        event.ports[0]?.postMessage({ type: 'SESSION_EXPIRY_RESPONSE', expiry })
         break;
       }
     }
@@ -189,7 +199,7 @@ function setupStorageObserver(): void {
 /**
  * Sends a message to the Service Worker
  */
-export function sendMessageToSW(message: Record<string, any>): void {
+export function sendMessageToSW(message: AuthServiceWorkerMessage): void {
   if (!navigator.serviceWorker.controller) {
     console.warn('[auth-sw-register] SW not active, message not sent');
     return;

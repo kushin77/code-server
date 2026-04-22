@@ -226,7 +226,7 @@ export function PagerDutyIncidentsPage() {
         <div className="flex gap-2 px-6 py-4 border-b border-gray-700 bg-gray-800 bg-opacity-50">
           {(['all', 'triggered', 'acknowledged', 'resolved'] as const).map((status) => {
             const isActive = activeStatus === status
-            const style = status === 'all' ? {} : STATUS_STYLES[status]
+            const style = status === 'all' ? undefined : STATUS_STYLES[status]
             const label =
               status === 'all'
                 ? `All (${stats.total})`
@@ -240,7 +240,7 @@ export function PagerDutyIncidentsPage() {
                   isActive
                     ? status === 'all'
                       ? 'bg-gray-600 text-white'
-                      : style.button + ' text-white'
+                      : style?.button + ' text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
               >

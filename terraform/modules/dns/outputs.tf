@@ -2,12 +2,12 @@
 
 output "cloudflare_tunnel_url" {
   description = "Cloudflare Tunnel CNAME"
-  value       = cloudflare_tunnel.main.cname
+  value       = cloudflare_zero_trust_tunnel_cloudflared.main.cname
 }
 
 output "cloudflare_tunnel_name" {
   description = "Cloudflare Tunnel name"
-  value       = cloudflare_tunnel.main.name
+  value       = cloudflare_zero_trust_tunnel_cloudflared.main.name
 }
 
 output "load_balancer_endpoint" {

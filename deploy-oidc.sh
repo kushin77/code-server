@@ -1,11 +1,11 @@
 #!/bin/bash
 # Phase 2.1 OIDC Deployment Script
 
-cd /home/akushnir/code-server-enterprise || exit 1
+cd /home/akushnir/code-server-enterprise
 
 # Backup existing files
-cp Caddyfile "Caddyfile.backup.$(date +%s)"
-cp docker-compose.yml "docker-compose.yml.backup.$(date +%s)"
+cp Caddyfile Caddyfile.backup.$(date +%s)
+cp docker-compose.yml docker-compose.yml.backup.$(date +%s)
 echo "✅ Files backed up"
 
 # Copy new files

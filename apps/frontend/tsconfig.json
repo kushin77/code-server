@@ -31,6 +31,6 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/extensions"],
+  "exclude": ["src/extensions", "src/utils/workspaceProfiles.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -55,7 +55,7 @@ api_put() {
 
 find_app_id_by_domain() {
   local domain="$1"
-  api_get "/access/apps" | jq -r --arg d "$domain" '.result[] | select(.domain == $d) | .id' | head -n1
+  api_get "/zero_trust/access/apps" | jq -r --arg d "$domain" '.result[] | select(.domain == $d) | .id' | head -n1
 }
 
 ensure_access_app() {
@@ -76,7 +76,7 @@ ensure_access_app() {
     --arg session "$SESSION_DURATION" \
     '{name:$name, domain:$domain, type:"self_hosted", session_duration:$session}')"
 
-  api_post "/access/apps" "$payload" >/dev/null
+  api_post "/zero_trust/access/apps" "$payload" >/dev/null
   log_info "Created Access app for ${domain}"
 }
 
@@ -91,16 +91,16 @@ ensure_default_allow_policy() {
   fi
 
   local existing
-  existing="$(api_get "/access/apps/${app_id}/policies" | jq -r '.result[]? | select(.name=="Allow Authenticated Emails") | .id' | head -n1)"
+  existing="$(api_get "/zero_trust/access/apps/${app_id}/policies" | jq -r '.result[]? | select(.name=="Allow Authenticated Emails") | .id' | head -n1)"
 
   local payload
   payload='{"name":"Allow Authenticated Emails","precedence":1,"decision":"allow","include":[{"email_domain":{"domain":"*"}}]}'
 
   if [[ -n "$existing" ]]; then
-    api_put "/access/apps/${app_id}/policies/${existing}" "$payload" >/dev/null
+    api_put "/zero_trust/access/apps/${app_id}/policies/${existing}" "$payload" >/dev/null
     log_info "Updated Access policy for ${domain}"
   else
-    api_post "/access/apps/${app_id}/policies" "$payload" >/dev/null
+    api_post "/zero_trust/access/apps/${app_id}/policies" "$payload" >/dev/null
     log_info "Created Access policy for ${domain}"
   fi
 }

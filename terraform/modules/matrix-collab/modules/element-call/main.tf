@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
+  }
+}
+
 resource "docker_image" "element_call" {
   name          = "vectorim/element-call:latest"
   pull_triggers = ["latest"]
@@ -23,10 +32,5 @@ resource "docker_container" "element_call" {
     interval = "30s"
     timeout  = "5s"
     retries  = 3
-  }
-
-  labels = {
-    "com.example.environment" = var.environment
-    "com.example.module"      = "element-call"
   }
 }

@@ -1,11 +1,20 @@
 # PostgreSQL database for Synapse
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
+  }
+}
+
 resource "docker_image" "postgres" {
   name          = "postgres:${var.postgres_version}-alpine"
   pull_triggers = [var.postgres_version]
 }
 
 resource "docker_container" "postgres" {
-  name    = "synapse-postgres"
+  name    = "synapse-postgres-${var.region}"
   image   = docker_image.postgres.image_id
   restart = "unless-stopped"
 
@@ -27,11 +36,6 @@ resource "docker_container" "postgres" {
     timeout  = "5s"
     retries  = 5
   }
-
-  labels = {
-    "com.example.environment" = var.environment
-    "com.example.module"      = "matrix-homeserver"
-  }
 }
 
 resource "random_password" "postgres_password" {
@@ -46,7 +50,7 @@ resource "docker_image" "synapse" {
 }
 
 resource "docker_container" "synapse" {
-  name    = "synapse-homeserver"
+  name    = "synapse-homeserver-${var.region}"
   image   = docker_image.synapse.image_id
   restart = "unless-stopped"
 
@@ -74,11 +78,6 @@ resource "docker_container" "synapse" {
     interval = "30s"
     timeout  = "5s"
     retries  = 3
-  }
-
-  labels = {
-    "com.example.environment" = var.environment
-    "com.example.module"      = "matrix-homeserver"
   }
 }
 

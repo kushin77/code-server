@@ -24,7 +24,7 @@ locals {
 }
 
 # Cloudflare Tunnel (encrypted connection to on-prem)
-resource "cloudflare_tunnel" "main" {
+resource "cloudflare_zero_trust_tunnel_cloudflared" "main" {
   account_id = var.cloudflare_account_id
   name       = var.tunnel_name
   secret     = random_bytes.tunnel_secret.base64
@@ -40,7 +40,7 @@ resource "cloudflare_record" "tunnel" {
   zone_id = var.cloudflare_zone_id
   name    = "@"
   type    = "CNAME"
-  value   = cloudflare_tunnel.main.cname
+  value   = cloudflare_zero_trust_tunnel_cloudflared.main.cname
   ttl     = 1
   proxied = true
 }

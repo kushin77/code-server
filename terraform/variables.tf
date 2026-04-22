@@ -75,11 +75,59 @@ variable "oauth2_proxy_cookie_secret" {
   }
 }
 
-variable "github_token" {
-  description = "GitHub Personal Access Token (optional, for higher Copilot rate limits)"
+variable "synapse_admin_token" {
+  description = "Admin token for Synapse server"
   type        = string
   sensitive   = true
   default     = ""
+}
+
+variable "synapse_max_upload_size" {
+  description = "Maximum upload size for Synapse"
+  type        = number
+  default     = 52428800
+}
+
+variable "synapse_db_pool_size" {
+  description = "Database pool size for Synapse"
+  type        = number
+  default     = 10
+}
+
+variable "enable_slack_bridge" {
+  description = "Enable Slack bridge"
+  type        = bool
+  default     = true
+}
+
+variable "enable_teams_bridge" {
+  description = "Enable Teams bridge"
+  type        = bool
+  default     = false
+}
+
+variable "enable_google_chat_bridge" {
+  description = "Enable Google Chat bridge"
+  type        = bool
+  default     = false
+}
+
+variable "enable_presence_sidecar" {
+  description = "Enable presence sidecar"
+  type        = bool
+  default     = true
+}
+
+variable "enable_element_call" {
+  description = "Enable Element Call"
+  type        = bool
+  default     = true
+}
+
+variable "primary_chat_platform" {
+  description = "Primary chat platform"
+  type        = string
+  default     = "slack"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,8 +163,24 @@ variable "enable_workspace_mount" {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Ollama (Local LLM Server)
+// Multi-Region Configuration
 // ─────────────────────────────────────────────────────────────────────────────
+
+variable "regions" {
+  description = "List of AWS regions to deploy infrastructure in for multi-region support and data residency"
+  type        = list(string)
+  default     = ["us-central1"]
+  validation {
+    condition     = length(var.regions) > 0
+    error_message = "At least one region must be specified."
+  }
+}
+
+variable "matrix_domain" {
+  description = "Domain for Matrix homeserver"
+  type        = string
+  default     = "matrix.kushnir.cloud"
+}
 
 variable "enable_ollama" {
   description = "Enable Ollama local LLM service"
@@ -242,7 +306,7 @@ variable "qa_password" {
   type        = string
   sensitive   = true
   default     = ""
-  
+
   validation {
     condition     = length(var.qa_password) == 0 || length(var.qa_password) >= 16
     error_message = "qa_password must be at least 16 characters (recommend 32-character random string)"
@@ -253,7 +317,7 @@ variable "qa_email" {
   description = "QA user email for OAuth E2E testing (default: qa@kushnir.cloud)"
   type        = string
   default     = "qa@kushnir.cloud"
-  
+
   validation {
     condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.qa_email))
     error_message = "qa_email must be a valid email address"

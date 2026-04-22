@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
+  }
+}
+
 resource "docker_image" "presence_sidecar" {
   name          = "matrix-presence-sidecar:latest"
   pull_triggers = ["latest"]
@@ -26,10 +35,5 @@ resource "docker_container" "presence_sidecar" {
     interval = "30s"
     timeout  = "5s"
     retries  = 3
-  }
-
-  labels = {
-    "com.example.environment" = var.environment
-    "com.example.module"      = "presence-sidecar"
   }
 }

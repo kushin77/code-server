@@ -4,7 +4,7 @@ import {
   buildWorkspaceProfileSnapshot,
   getWorkspaceProfile,
   resolveWorkspaceRootProfile,
-} from '../workspaceProfiles'
+} from '../workspaceProfilesData'
 
 describe('workspaceProfiles', () => {
   it('returns a manifest-backed profile for the portal workspace', () => {

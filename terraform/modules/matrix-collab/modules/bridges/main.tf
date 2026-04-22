@@ -1,4 +1,13 @@
 # Slack bridge
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
+  }
+}
+
 resource "docker_image" "slack_bridge" {
   count         = var.enable_slack_bridge ? 1 : 0
   name          = "halfshot/matrix-appservice-slack:latest"
@@ -26,11 +35,6 @@ resource "docker_container" "slack_bridge" {
     interval = "30s"
     timeout  = "5s"
     retries  = 3
-  }
-
-  labels = {
-    "com.example.environment" = var.environment
-    "com.example.module"      = "slack-bridge"
   }
 }
 
@@ -63,11 +67,6 @@ resource "docker_container" "teams_bridge" {
     timeout  = "5s"
     retries  = 3
   }
-
-  labels = {
-    "com.example.environment" = var.environment
-    "com.example.module"      = "teams-bridge"
-  }
 }
 
 # Google Chat bridge
@@ -98,10 +97,5 @@ resource "docker_container" "google_chat_bridge" {
     interval = "30s"
     timeout  = "5s"
     retries  = 3
-  }
-
-  labels = {
-    "com.example.environment" = var.environment
-    "com.example.module"      = "google-chat-bridge"
   }
 }

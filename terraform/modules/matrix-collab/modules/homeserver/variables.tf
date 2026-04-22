@@ -1,5 +1,11 @@
-variable "environment" {
+variable "region" {
   type = string
+}
+
+variable "environment" {
+  type        = string
+  description = "Deployment environment"
+  default     = "production"
 }
 
 variable "matrix_domain" {

@@ -5,7 +5,7 @@ import {
   getWorkspaceProfile,
   resolveWorkspaceRootProfile,
   type WorkspaceRoot,
-} from '../utils/workspaceProfiles'
+} from '../utils/workspaceProfilesData'
 
 type WorkspaceProfilesPageWorkspaceState = {
   activeWorkspace: WorkspaceTab
@@ -69,7 +69,7 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
       return
     }
 
-    setSelectedRootPath(profile.roots[0]?.path ?? selectedWorkspaceId)
+    setSelectedRootPath(profile.roots[0]?.path ?? activeWorkspace.id)
   }, [profile?.roots, selectedRootPath])
 
   const handleWorkspaceSelect = (workspaceId: string) => {
@@ -84,7 +84,7 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
       return
     }
 
-    await navigator.clipboard.writeText(profileSnapshot.workspaceJson)
+    await navigator.clipboard.writeText(profileSnapshot.workspaceJson ?? '')
     setCopyNotice('Workspace profile JSON copied to clipboard')
   }
 

@@ -408,14 +408,13 @@ run_triage_check() {
   
   # Create issues for high-priority patterns
   log_info "Creating GitHub issues for high-priority error patterns..."
-  # shellcheck disable=SC2034
   get_high_priority_patterns | while IFS='|' read -r id hash message count issue_num status; do
     if [[ -z "${issue_num}" ]] || [[ "${issue_num}" == "NULL" ]]; then
       log_info "Creating issue for pattern: ${message:0:80}"
-      # create_triage_issue "${count}" "${message}" "${loki_response}"
+      create_triage_issue "${count}" "${message}" "${loki_response}"
     else
       log_debug "Issue #${issue_num} already exists for pattern"
-      # update_triage_issue "${issue_num}" "${count}"
+      update_triage_issue "${issue_num}" "${count}"
     fi
   done
   

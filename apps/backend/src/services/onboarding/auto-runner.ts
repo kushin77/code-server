@@ -5,7 +5,6 @@
 //
 
 import { spawn } from 'child_process'
-import * as os from 'os'
 import { logger } from '../../lib/logger'
 
 /**
@@ -29,14 +28,9 @@ export class GitConfigExecutor implements StepExecutor {
 
   async execute(): Promise<any> {
     return new Promise((resolve, reject) => {
-      const isWindows = os.platform() === 'win32'
-      const shell = isWindows ? 'powershell.exe' : '/bin/bash'
+      const commands = `git config --global user.name "${this.gitName}" && git config --global user.email "${this.gitEmail}"`
 
-      const commands = isWindows
-        ? `git config --global user.name "${this.gitName}"; git config --global user.email "${this.gitEmail}"`
-        : `git config --global user.name "${this.gitName}" && git config --global user.email "${this.gitEmail}"`
-
-      const proc = spawn(shell, isWindows ? ['-Command', commands] : ['-c', commands])
+      const proc = spawn('/bin/bash', ['-c', commands])
 
       let stdout = ''
       let stderr = ''
@@ -84,15 +78,10 @@ export class SSHSetupExecutor implements StepExecutor {
 
   async execute(): Promise<any> {
     return new Promise((resolve, reject) => {
-      const isWindows = os.platform() === 'win32'
-      const shell = isWindows ? 'powershell.exe' : '/bin/bash'
-
       // Command to generate SSH key
-      const command = isWindows
-        ? `if (-not (Test-Path "${this.keyPath}") { mkdir "${this.keyPath}" }; ssh-keygen -t rsa -b 4096 -f "${this.keyPath}\\${this.keyName}" -N "" -C "onboarding@team"`
-        : `mkdir -p "${this.keyPath}" && ssh-keygen -t rsa -b 4096 -f "${this.keyPath}/${this.keyName}" -N "" -C "onboarding@team"`
+      const command = `mkdir -p "${this.keyPath}" && ssh-keygen -t rsa -b 4096 -f "${this.keyPath}/${this.keyName}" -N "" -C "onboarding@team"`
 
-      const proc = spawn(shell, isWindows ? ['-Command', command] : ['-c', command])
+      const proc = spawn('/bin/bash', ['-c', command])
 
       let stdout = ''
       let stderr = ''
@@ -163,14 +152,9 @@ export class RepoCloneExecutor implements StepExecutor {
 
   async execute(): Promise<any> {
     return new Promise((resolve, reject) => {
-      const isWindows = os.platform() === 'win32'
-      const shell = isWindows ? 'powershell.exe' : '/bin/bash'
+      const command = `git clone "${this.repoUrl}" "${this.targetPath}"`
 
-      const command = isWindows
-        ? `git clone "${this.repoUrl}" "${this.targetPath}"`
-        : `git clone "${this.repoUrl}" "${this.targetPath}"`
-
-      const proc = spawn(shell, isWindows ? ['-Command', command] : ['-c', command], {
+      const proc = spawn('/bin/bash', ['-c', command], {
         stdio: ['ignore', 'pipe', 'pipe'],
       })
 
@@ -221,26 +205,17 @@ export class BuildConfigExecutor implements StepExecutor {
 
   async execute(): Promise<any> {
     return new Promise((resolve, reject) => {
-      const isWindows = os.platform() === 'win32'
-      const shell = isWindows ? 'powershell.exe' : '/bin/bash'
-
       // Determine install command based on build tool
       let command = ''
       if (this.buildTool === 'npm') {
-        command = isWindows
-          ? `cd "${this.targetPath}" && npm install`
-          : `cd "${this.targetPath}" && npm install`
+        command = `cd "${this.targetPath}" && npm install`
       } else if (this.buildTool === 'yarn') {
-        command = isWindows
-          ? `cd "${this.targetPath}" && yarn install`
-          : `cd "${this.targetPath}" && yarn install`
+        command = `cd "${this.targetPath}" && yarn install`
       } else if (this.buildTool === 'pnpm') {
-        command = isWindows
-          ? `cd "${this.targetPath}" && pnpm install`
-          : `cd "${this.targetPath}" && pnpm install`
+        command = `cd "${this.targetPath}" && pnpm install`
       }
 
-      const proc = spawn(shell, isWindows ? ['-Command', command] : ['-c', command], {
+      const proc = spawn('/bin/bash', ['-c', command], {
         stdio: ['ignore', 'pipe', 'pipe'],
       })
 
@@ -288,15 +263,10 @@ export class VerifyExecutor implements StepExecutor {
 
   async execute(): Promise<any> {
     return new Promise((resolve, reject) => {
-      const isWindows = os.platform() === 'win32'
-      const shell = isWindows ? 'powershell.exe' : '/bin/bash'
-
       // Run build and tests
-      const command = isWindows
-        ? `cd "${this.targetPath}" && npm run build && npm test`
-        : `cd "${this.targetPath}" && npm run build && npm test`
+      const command = `cd "${this.targetPath}" && npm run build && npm test`
 
-      const proc = spawn(shell, isWindows ? ['-Command', command] : ['-c', command], {
+      const proc = spawn('/bin/bash', ['-c', command], {
         stdio: ['ignore', 'pipe', 'pipe'],
       })
 

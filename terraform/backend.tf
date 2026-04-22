@@ -37,26 +37,26 @@
 terraform {
   backend "s3" {
     # MinIO (on-prem) endpoint
-    endpoint            = "http://minio:9000"
-    bucket              = "terraform-state"
-    key                 = "code-server/terraform.tfstate"
-    region              = "us-east-1"  # Required but not used by MinIO
-    
+    endpoint = "http://minio:9000"
+    bucket   = "terraform-state"
+    key      = "code-server/terraform.tfstate"
+    region   = "us-east-1" # Required but not used by MinIO
+
     # S3-compatible options
     skip_credentials_validation = true
     skip_requesting_account_id  = true
     skip_region_validation      = true
     use_lockfile                = true
-    
+
     # State locking (requires DynamoDB or MinIO DynamoDB-compatible)
     # dynamodb_table = "terraform-locks"  # Enable for multi-admin safety
-    
+
     # Encryption at rest
     encrypt = true
-    
+
     # Enable versioning (recover from mistakes)
     # Note: MinIO versioning configured separately
-    
+
     # Connection settings
     max_retries = 3
   }

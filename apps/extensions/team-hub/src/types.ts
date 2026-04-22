@@ -20,6 +20,7 @@ export interface TeamHubConfig {
   presenceUpdateInterval: number;
   showAvatars: boolean;
   highlightSameFile: boolean;
+  enableTerminalDLP?: boolean;
 }
 
 export interface TeamHubSnapshot {

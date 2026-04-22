@@ -12,6 +12,7 @@ export const readTeamHubConfig = (): TeamHubConfig => {
     enableGoogleMeet: config.get<boolean>('enableGoogleMeet', true),
     presenceUpdateInterval: config.get<number>('presenceUpdateInterval', 5000),
     showAvatars: config.get<boolean>('showAvatars', true),
-    highlightSameFile: config.get<boolean>('highlightSameFile', true)
+    highlightSameFile: config.get<boolean>('highlightSameFile', true),
+    enableTerminalDLP: config.get<boolean>('enableTerminalDLP', true)
   };
 };

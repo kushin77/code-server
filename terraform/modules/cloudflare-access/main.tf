@@ -16,7 +16,7 @@ terraform {
 # ─────────────────────────────────────────────────────────────────────────────
 # Cloudflare Access: Grafana
 # ─────────────────────────────────────────────────────────────────────────────
-resource "cloudflare_access_application" "grafana" {
+resource "cloudflare_zero_trust_access_application" "grafana" {
   account_id       = var.cloudflare_account_id
   name             = "Grafana — ${var.apex_domain}"
   domain           = "grafana.${var.apex_domain}"
@@ -70,7 +70,7 @@ resource "cloudflare_access_policy" "grafana_bypass_localhost" {
 # ─────────────────────────────────────────────────────────────────────────────
 # Cloudflare Access: Prometheus
 # ─────────────────────────────────────────────────────────────────────────────
-resource "cloudflare_access_application" "prometheus" {
+resource "cloudflare_zero_trust_access_application" "prometheus" {
   account_id       = var.cloudflare_account_id
   name             = "Prometheus — ${var.apex_domain}"
   domain           = "prometheus.${var.apex_domain}"
@@ -115,7 +115,7 @@ resource "cloudflare_access_policy" "prometheus_bypass_localhost" {
 # ─────────────────────────────────────────────────────────────────────────────
 # Cloudflare Access: AlertManager
 # ─────────────────────────────────────────────────────────────────────────────
-resource "cloudflare_access_application" "alertmanager" {
+resource "cloudflare_zero_trust_access_application" "alertmanager" {
   account_id       = var.cloudflare_account_id
   name             = "AlertManager — ${var.apex_domain}"
   domain           = "alertmanager.${var.apex_domain}"

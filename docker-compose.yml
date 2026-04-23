@@ -90,7 +90,8 @@ services:
     image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
     container_name: ollama
     restart: unless-stopped
-    user: "0:0"
+    # SECURITY FIX #969: Run as non-root user (1001:1001)
+    user: "1001:1001"
     # ✅ GPU ACCELERATION - Uncomment this line if NVIDIA GPU detected on host
     # runtime: nvidia
     networks:
@@ -248,7 +249,8 @@ services:
       - "4182"
     environment:
       # OAuth2 Required Settings (even in OIDC issuer mode)
-      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET:-${IDE_SESSION_LB_SECRET:?IDE_SESSION_LB_SECRET must be set}}"
+      # CRITICAL FIX #968: No fallback - OAUTH2_PROXY_COOKIE_SECRET MUST be set
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET:?OAUTH2_PROXY_COOKIE_SECRET must be set}"
       OAUTH2_PROXY_CLIENT_ID: "${SERVICE_CLIENT_SESSION_BROKER_ID:?SERVICE_CLIENT_SESSION_BROKER_ID must be set}"
       OAUTH2_PROXY_CLIENT_SECRET: "${SERVICE_CLIENT_SESSION_BROKER_SECRET:?SERVICE_CLIENT_SESSION_BROKER_SECRET must be set}"
       
@@ -399,7 +401,8 @@ services:
       - "5000"
     environment:
       - LOG_LEVEL=${SESSION_BROKER_LOG_LEVEL:-info}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-codeserver}
+      # CRITICAL FIX #998: No hardcoded fallbacks - use env vars with required flags
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - DOCKER_SOCKET=${DOCKER_SOCKET:-unix:///var/run/docker.sock}
       - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:?CODE_SERVER_IMAGE_ID must be set}
       - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
@@ -467,6 +470,13 @@ services:
     image: caddy:2.7.6@sha256:7b51768d110708c44179dc299884e9ee73d243a37abccce2dc796abc36371a38
     container_name: caddy
     restart: unless-stopped
+    # SECURITY FIX #969: Run as root but drop dangerous capabilities
+    # Caddy needs CAP_NET_BIND_SERVICE to bind to ports 80/443
+    cap_add:
+      - NET_BIND_SERVICE
+    cap_drop:
+      - ALL
+      - SYS_CHROOT
     networks:
       - net-edge
       - net-app
@@ -845,6 +855,7 @@ services:
       - ./prometheus-rules-slo-phase-8.yml:/etc/prometheus/prometheus-rules-slo-phase-8.yml:ro
       - ./prometheus-rules-matrix-alerts.yml:/etc/prometheus/prometheus-rules-matrix-alerts.yml:ro
       - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - ./alert-rules-nvme-monitoring.yml:/etc/prometheus/alert-rules-nvme-monitoring.yml:ro
       # - ./alerts-phase-23.yml:/etc/prometheus/alerts-phase-23.yml:ro
       - prometheus-data:/prometheus
     healthcheck:
@@ -944,6 +955,8 @@ services:
     image: jaegertracing/all-in-one:1.50@sha256:93ff440dbda3f3654e54f21a8fe71fc7c4a85f75a54e840006351b4dffbec6a5
     container_name: jaeger
     restart: no
+    # SECURITY FIX #969: Run as non-root user (10001:10001)
+    user: "10001:10001"
     # jaeger receives OTLP traces from app tier; net-app needed for ingest
     networks:
       - net-management

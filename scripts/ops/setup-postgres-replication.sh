@@ -217,6 +217,72 @@ ${YELLOW}Next Steps:${NC}
 ${YELLOW}Replication User Credentials:${NC}
   Username: ${REPLICATION_USER}
   Password: ${REPLICATION_PASSWORD}
+
+EOF
+}
+
+# ============================================================================
+# MAIN EXECUTION
+# ============================================================================
+
+main() {
+    log_info "PostgreSQL Master-Slave Replication Setup"
+    log_info "Primary: ${PRIMARY_HOST} | Replica: ${REPLICA_HOST}"
+    
+    # Pre-flight checks
+    log_step "Running pre-flight checks..."
+    
+    # Check SSH connectivity to primary
+    if ! ssh -q "${TARGET_USER}@${PRIMARY_HOST}" "echo 'OK'" > /dev/null 2>&1; then
+        log_error "Cannot connect to primary host (${PRIMARY_HOST})"
+        exit 1
+    fi
+    log_success "Primary host reachable"
+    
+    # Check SSH connectivity to replica
+    if ! ssh -q "${TARGET_USER}@${REPLICA_HOST}" "echo 'OK'" > /dev/null 2>&1; then
+        log_error "Cannot connect to replica host (${REPLICA_HOST})"
+        exit 1
+    fi
+    log_success "Replica host reachable"
+    
+    # Check PostgreSQL on primary
+    if ! ssh "${TARGET_USER}@${PRIMARY_HOST}" "docker ps | grep postgres" > /dev/null 2>&1; then
+        log_error "PostgreSQL container not running on primary"
+        exit 1
+    fi
+    log_success "PostgreSQL running on primary"
+    
+    # Check PostgreSQL on replica
+    if ! ssh "${TARGET_USER}@${REPLICA_HOST}" "docker ps | grep postgres" > /dev/null 2>&1; then
+        log_error "PostgreSQL container not running on replica"
+        exit 1
+    fi
+    log_success "PostgreSQL running on replica"
+    
+    # Execute replication setup
+    log_step "Starting replication setup..."
+    
+    setup_replication_user
+    configure_primary_postgres
+    configure_primary_hba
+    setup_replica_from_backup
+    configure_pgbouncer_failover
+    verify_replication
+    test_failover
+    
+    print_summary
+    
+    log_success "PostgreSQL replication setup complete!"
+    return 0
+}
+
+# Trap errors
+trap 'log_error "Setup failed"; exit 1' ERR
+
+# Run main
+main "$@"
+exit $?
   Store in secure vault (GSM or HashiCorp Vault)
 
 ${YELLOW}Connection Failure Expectations:${NC}

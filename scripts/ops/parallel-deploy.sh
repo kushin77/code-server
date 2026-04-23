@@ -49,8 +49,11 @@ REPLICAS=(
 )
 
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
-SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
-COMPOSE_PROFILES="${1:-all}"
+# Note: SSH_OPTS may be set by init.sh; only set if not already defined
+if [[ -z "${SSH_OPTS:-}" ]]; then
+  SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
+fi
+COMPOSE_PROFILES="all"
 DRY_RUN=false
 
 # Parse arguments

@@ -177,6 +177,7 @@ ls -la .env* | head -5 && echo "✅ .env files present"
 
 **Objective**: Deploy latest code to all replicas simultaneously  
 **Duration**: ~5-8 minutes  
+**Note**: Script automatically handles Replica 2 port override (#1641 workaround)
 
 ```bash
 cd /home/akushnir/code-server-enterprise
@@ -186,13 +187,27 @@ bash scripts/ops/parallel-deploy.sh --profiles portal
 
 # Expected output:
 # ✅ SSH to Replica 1 (192.168.168.31)
-# ✅ Pulling latest Docker images
+# ✅ Pulling latest Docker images (standard config)
 # ✅ Starting services (docker compose up -d)
 # ✅ SSH to Replica 2 (192.168.168.42)
-# ✅ Pulling latest Docker images
-# ✅ Starting services (docker compose up -d)
+# ✅ Using port override for Replica 2 (#1641 workaround)
+# ✅ Pulling latest Docker images (with port override)
+# ✅ Starting services (with port override)
 # ✅ All replicas updated simultaneously
 ```
+
+**Replica-Specific Deployment Details**:
+
+- **Replica 1** (192.168.168.31):
+  - Uses standard docker-compose.yml
+  - Caddy bound to host ports 80/443
+  - Handles external traffic
+  
+- **Replica 2** (192.168.168.42):
+  - Uses docker-compose.yml + docker-compose.replica.yml + docker-compose.replica-port-override.yml
+  - Caddy runs internally only (no host port binding)
+  - Workaround for issue #1641 (kernel-level port 80 phantom binding)
+  - Will be corrected after host reboot (sudo reboot on 192.168.168.42)
 
 **Monitor Deployment Progress**:
 ```bash

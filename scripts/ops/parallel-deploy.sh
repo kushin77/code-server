@@ -163,33 +163,43 @@ fi
 
 log_section "PHASE 2: Parallel Deployment to All Replicas"
 
-# Build deployment command
-DEPLOY_CMD="
-  cd code-server-enterprise
-  set -euo pipefail
-  
-  # Fetch latest .env from GSM (if available)
-  if [[ -f scripts/fetch-gsm-secrets.sh ]]; then
-    source scripts/fetch-gsm-secrets.sh || log_warn 'GSM secrets failed'
-  fi
-  
-  # Pull latest code
-  git fetch origin main
-  git checkout main
-  git pull origin main
-  
-  # Pull latest images
-  COMPOSE_PROFILES='${COMPOSE_PROFILES}' docker-compose pull
-  
-  # Deploy services
-  COMPOSE_PROFILES='${COMPOSE_PROFILES}' docker-compose up -d
-"
-
 # Deploy to all replicas in parallel
 log_info "Starting parallel deployments..."
 declare -A pids
 for replica in "${REPLICAS[@]}"; do
   host=$(parse_replica "$replica")
+  ip_addr="${host#*@}"  # Extract IP from akushnir@192.168.168.XX
+  
+  # Replica 2 needs port override to work around kernel-level port 80 phantom binding (#1641)
+  if [[ "$ip_addr" == "192.168.168.42" ]]; then
+    COMPOSE_FILES="-f docker-compose.yml -f docker-compose.replica.yml -f docker-compose.replica-port-override.yml"
+    log_info "→ Using port override for Replica 2 (#1641 workaround)"
+  else
+    COMPOSE_FILES="-f docker-compose.yml"
+  fi
+  
+  # Build deployment command for this replica
+  DEPLOY_CMD="
+    cd code-server-enterprise
+    set -euo pipefail
+    
+    # Fetch latest .env from GSM (if available)
+    if [[ -f scripts/fetch-gsm-secrets.sh ]]; then
+      source scripts/fetch-gsm-secrets.sh || log_warn 'GSM secrets failed'
+    fi
+    
+    # Pull latest code
+    git fetch origin main
+    git checkout main
+    git pull origin main
+    
+    # Pull latest images
+    COMPOSE_PROFILES='${COMPOSE_PROFILES}' docker-compose ${COMPOSE_FILES} pull
+    
+    # Deploy services
+    COMPOSE_PROFILES='${COMPOSE_PROFILES}' docker-compose ${COMPOSE_FILES} up -d
+  "
+  
   run_on_replica "$replica" "$DEPLOY_CMD" &
   pids["$host"]=$!
   log_info "→ $host deployment started (PID ${pids[$host]})"

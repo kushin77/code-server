@@ -1,6 +1,3 @@
-done
-done
-done
 #!/usr/bin/env bash
 ################################################################################
 # @file        scripts/ops/setup-passwordless-sudo.sh
@@ -21,15 +18,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
 require_command ssh "ssh is required for sudo configuration verification"
-require_file "$HOME/.ssh/id_rsa_onprem"
 
-TARGET_HOSTS=("${@:-${DEPLOY_HOST} ${STANDBY_HOST}}")
-SUDO_USER="${SUDO_USER:-${DEPLOY_USER}}"
 SSH_KEY_PATH="${SSH_KEY_PATH:-$HOME/.ssh/id_rsa_onprem}"
-SUDOERS_TEMPLATE="$SCRIPT_DIR/../..//etc/sudoers.d/akushnir"
+SUDO_USER="${SUDO_USER:-${DEPLOY_USER}}"
+SUDOERS_TEMPLATE="$SCRIPT_DIR/../../etc/sudoers.d/akushnir"
 
-if [[ ! -f "$SUDOERS_TEMPLATE" ]]; then
-    log_fatal "Required sudoers template not found: $SUDOERS_TEMPLATE"
+require_file "$SSH_KEY_PATH"
+require_file "$SUDOERS_TEMPLATE"
+
+if [[ $# -gt 0 ]]; then
+    TARGET_HOSTS=("$@")
+else
+    TARGET_HOSTS=("$DEPLOY_HOST" "$STANDBY_HOST")
 fi
 
 apply_sudoers() {

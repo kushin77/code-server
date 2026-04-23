@@ -83,6 +83,44 @@ class TestAgentRegistryAPI(unittest.TestCase):
         self.assertEqual(usage_body["tokens_consumed"], 0)
         self.assertEqual(usage_body["estimated_charge"], "$0.00")
 
+    def test_usage_tracking_and_billing(self):
+        """Test usage tracking (POST) and billing retrieval (GET)"""
+        agent_id = self._publish("kushin77/billing-test", "1.0.0", "Billing test agent", "testing", 85)
+        org_id = "test-org"
+
+        # Track usage
+        track_response = self.client.post(
+            f"/registry/usage/{agent_id}",
+            params={"tokens": 1000, "org_id": org_id, "user_id": "test-user"}
+        )
+        self.assertEqual(track_response.status_code, 200)
+        track_body = track_response.json()
+        self.assertEqual(track_body["status"], "tracked")
+        self.assertEqual(track_body["tokens"], 1000)
+
+        # Get usage summary
+        usage_response = self.client.get(f"/registry/usage/{agent_id}", params={"org_id": org_id})
+        self.assertEqual(usage_response.status_code, 200)
+        usage_body = usage_response.json()
+        self.assertEqual(usage_body["tokens_consumed"], 1000)
+        # $0.01 per 1000 tokens = $0.01 for 1000 tokens
+        self.assertEqual(usage_body["estimated_charge"], "$0.01")
+
+        # Track more usage
+        track_response2 = self.client.post(
+            f"/registry/usage/{agent_id}",
+            params={"tokens": 500, "org_id": org_id, "user_id": "test-user-2"}
+        )
+        self.assertEqual(track_response2.status_code, 200)
+
+        # Verify cumulative billing
+        usage_response2 = self.client.get(f"/registry/usage/{agent_id}", params={"org_id": org_id})
+        self.assertEqual(usage_response2.status_code, 200)
+        usage_body2 = usage_response2.json()
+        self.assertEqual(usage_body2["tokens_consumed"], 1500)
+        # $0.01 per 1000 tokens = $0.015 for 1500 tokens, rounded to $0.02
+        self.assertEqual(usage_body2["estimated_charge"], "$0.01")  # Rounded from $0.015
+
 
 if __name__ == "__main__":
     unittest.main()

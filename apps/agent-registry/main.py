@@ -26,11 +26,11 @@ from datetime import datetime, timezone
 try:
     from .discovery import get_engine
     from .packages import get_store
-    from .billing import get_engine as get_billing_engine
+    from .billing import get_engine as get_billing_engine, UsageEvent
 except ImportError:  # pragma: no cover - script execution fallback
     from discovery import get_engine
     from packages import get_store
-    from billing import get_engine as get_billing_engine
+    from billing import get_engine as get_billing_engine, UsageEvent
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -265,6 +265,46 @@ async def install_agent(
 # ============================================================================
 # Endpoints: Billing
 # ============================================================================
+
+@app.post("/registry/usage/{agent_id}")
+async def track_usage(
+    agent_id: str,
+    tokens: int = Query(...),
+    org_id: str = Query(default="default-org"),
+    user_id: str = Query(default="anonymous"),
+) -> dict:
+    """Track token usage for an agent (for billing purposes)"""
+    try:
+        logger.info(f"Tracking usage for agent {agent_id}: {tokens} tokens by {org_id}/{user_id}")
+
+        # Create usage event
+        event = UsageEvent(
+            agent_id=agent_id,
+            org_id=org_id,
+            tokens=tokens,
+        )
+
+        # Track in billing engine
+        billing = get_billing_engine()
+        success = billing.track_usage(event)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to track usage")
+
+        return {
+            "status": "tracked",
+            "agent_id": agent_id,
+            "org_id": org_id,
+            "user_id": user_id,
+            "tokens": tokens,
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error tracking usage: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.get("/registry/usage/{agent_id}")
 async def get_usage(

@@ -1034,12 +1034,18 @@ services:
     volumes:
       - ./config/loki-config.yaml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
+    # Health check rationale (April 23, 2026 - Issue #1516):
+    # - start_period: 45s (was 15s) - Loki needs time to initialize boltdb storage layer
+    # - timeout: 15s (was 5s) - /ready endpoint can be slow to respond during heavy load
+    # - interval: 30s - Check health every 30s during normal operation
+    # - retries: 2 - Allow 2 consecutive failures before marking unhealthy
+    # This reduces transient startup failures while maintaining responsive health monitoring
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
       interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      timeout: 15s
+      retries: 2
+      start_period: 45s
     deploy:
       resources:
         limits:

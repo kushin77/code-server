@@ -7,13 +7,10 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GitHubTaskSyncService } from '../index';
-import { GitHubAPIClient } from '../github-api-client';
-
-// Mock GitHub API client
-vi.mock('../github-api-client');
+import * as GitHubModule from '../github-api-client';
 
 describe('GitHubTaskSyncService', () => {
-  let service: GitHubTaskSyncService;
+  let service: GitHubTaskSyncService | null = null;
   let mockApiClient: any;
 
   beforeEach(() => {
@@ -29,8 +26,10 @@ describe('GitHubTaskSyncService', () => {
       removeListener: vi.fn(),
     };
 
-    // Mock the GitHubAPIClient constructor
-    (GitHubAPIClient as any).mockImplementation(() => mockApiClient);
+    // Spy on and replace the GitHubAPIClient constructor
+    vi.spyOn(GitHubModule, 'GitHubAPIClient' as any).mockImplementation(
+      () => mockApiClient
+    );
 
     service = new GitHubTaskSyncService({
       githubToken: 'test-token',
@@ -40,7 +39,9 @@ describe('GitHubTaskSyncService', () => {
   });
 
   afterEach(() => {
-    service.stopPolling();
+    if (service) {
+      service.stopPolling();
+    }
     vi.clearAllMocks();
   });
 

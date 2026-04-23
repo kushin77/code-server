@@ -15,22 +15,23 @@
   },
   "dependencies": {
     "express": "catalog:",
-    "ws": "^8.14.2",
-    "matrix-js-sdk": "^38.2.0",
     "ioredis": "catalog:",
-    "prom-client": "^15.0.0"
+    "matrix-js-sdk": "^38.2.0",
+    "prom-client": "^15.0.0",
+    "uuid": "^14.0.0",
+    "ws": "^8.14.2"
   },
   "devDependencies": {
     "@types/express": "catalog:",
+    "@types/jest": "catalog:",
     "@types/node": "catalog:",
     "@types/ws": "^8.5.5",
-    "typescript": "catalog:",
-    "ts-node": "catalog:",
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
     "eslint": "catalog:",
     "jest": "catalog:",
-    "@types/jest": "catalog:"
+    "ts-node": "catalog:",
+    "typescript": "catalog:"
   },
   "engines": {
     "node": ">=18.0.0"

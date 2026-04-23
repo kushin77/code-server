@@ -172,6 +172,9 @@ describe('ActivityStreamService', () => {
       for (const activity of activities) {
         await service.ingestActivity(activity);
       }
+      
+      // Wait for batch to flush
+      await new Promise(resolve => setTimeout(resolve, 1200));
     });
 
     it('should query all activities', async () => {
@@ -258,8 +261,13 @@ describe('ActivityStreamService', () => {
         teamId: 'team-001',
       });
 
+      let deleted = false;
+      service.once('subscriptionDeleted', (subId) => {
+        deleted = subId === subscription.subscriptionId;
+      });
+
       await service.unsubscribe(subscription.subscriptionId);
-      expect(subscription.isActive).toBe(true); // Original unchanged, service deleted
+      expect(deleted).toBe(true);
     });
 
     it('should notify matching subscribers', async () => {
@@ -366,6 +374,9 @@ describe('ActivityStreamService', () => {
         };
         await service.ingestActivity(activity);
       }
+      
+      // Wait for batch to flush
+      await new Promise(resolve => setTimeout(resolve, 1200));
     });
 
     it('should analyze activity trend', async () => {
@@ -406,6 +417,9 @@ describe('ActivityStreamService', () => {
         };
         await service.ingestActivity(activity);
       }
+      
+      // Wait for batch to flush
+      await new Promise(resolve => setTimeout(resolve, 1200));
     });
 
     it('should aggregate activities for time period', async () => {

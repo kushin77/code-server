@@ -1,33 +1,42 @@
 #!/usr/bin/env node
+// @file        apps/backend/src/services/team-health-dashboard/index.ts
+// @module      collaboration/team-health-dashboard/exports
+// @description Factory functions and type exports for TeamHealthDashboard
+// @owner       collab-6.4
+// @status      active
+
+export { TeamHealthDashboard } from './team-health-dashboard';
+export type {
+  TeamHealthScore,
+  DashboardWidget,
+  TrackedRecommendation,
+  DashboardAlert,
+  TrendDataPoint,
+  TrendAnalysis,
+  TeamComparison,
+  DashboardConfig,
+  ReportGenerationParams,
+  ReportSection,
+  DashboardSnapshot,
+  ActivitySummary,
+  WidgetRefreshEvent,
+  HealthUpdateEvent,
+} from './types';
+
+import { TeamHealthDashboard } from './team-health-dashboard';
+import type { DashboardConfig } from './types';
+
 /**
- * @file        apps/backend/src/services/team-health-dashboard/index.ts
- * @module      services/collaboration
- * @description Team health metrics with flow time, pair frequency, review latency, AI utilization
+ * Factory function to create and initialize a TeamHealthDashboard instance
+ * @param config Optional configuration overrides
+ * @returns Initialized TeamHealthDashboard service ready for use
  */
-
-import { EventEmitter } from 'events';
-import { Pool, PoolClient } from 'pg';
-import { getLogger } from '../../lib/logger';
-
-export interface TeamHealthMetrics {
-  teamId: string;
-  averageFlowTime: number;
-  pairingFrequency: number;
-  reviewLatency: number;
-  aiUtilization: number;
-  collaborationIndex: number;
-  healthScore: number;
-  generatedAt: Date;
-}
-
-export interface WeeklyDigest {
-  teamId: string;
-  week: string;
-  metrics: TeamHealthMetrics;
-  topPairs: Array<{ user1: string; user2: string; sessions: number }>;
-  slowReviews: Array<{ pullRequestId: string; latency: number }>;
-  aiTrends: { usage: number; impactScore: number };
-  summary: string;
+export async function createTeamHealthDashboard(
+  config?: Partial<DashboardConfig>
+): Promise<TeamHealthDashboard> {
+  const dashboard = new TeamHealthDashboard(config);
+  await dashboard.initialize();
+  return dashboard;
 }
 
 export class TeamHealthDashboardService extends EventEmitter {

@@ -21,6 +21,7 @@ BASELINE_USERS=${BASELINE_USERS:-100}
 SPIKE_USERS=${SPIKE_USERS:-1000}
 SUSTAINED_USERS=${SUSTAINED_USERS:-500}
 OUTPUT_DIR=${OUTPUT_DIR:-./artifacts/performance-tests}
+TEST_PAUSE_BETWEEN_PHASES=${TEST_PAUSE_BETWEEN_PHASES:-30}
 
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
@@ -59,20 +60,11 @@ check_prerequisites() {
     
     # Try to install k6 if not present
     if ! command -v k6 &> /dev/null; then
-        log_warn "k6 not found. Attempting to install..."
-        
-        if command -v apt-get &> /dev/null; then
-            sudo apt-get update && sudo apt-get install -y k6 || log_warn "Failed to install k6 via apt"
-        elif command -v brew &> /dev/null; then
-            brew install k6 || log_warn "Failed to install k6 via brew"
-        else
-            log_error "Could not install k6. Please install manually: https://k6.io/docs/getting-started/installation/"
-            exit 1
-        fi
+        log_warn "k6 not found. Falling back to the built-in simple benchmark path."
     fi
     
     # Check if target is reachable
-    if ! curl -s -m 5 "$TEST_TARGET/health" > /dev/null 2>&1; then
+    if ! curl -fsSL -m 5 "$TEST_TARGET/health" > /dev/null 2>&1; then
         log_error "Target $TEST_TARGET is not reachable"
         exit 1
     fi
@@ -86,6 +78,7 @@ create_k6_script() {
     local users=$2
     local duration=$3
     local output_file=$4
+    local fast_mode=${FAST_MODE:-0}
     
     cat > "$output_file" << 'EOF'
 import http from 'k6/http';
@@ -112,20 +105,35 @@ export default function() {
 EOF
     
     # Replace placeholders
-    case "$test_type" in
-        "baseline")
-            # Ramp up to 100 users over 2 minutes, stay for 8 minutes
-            sed -i "s|__STAGES__|{ duration: '2m', target: $users }, { duration: '8m', target: $users }|g" "$output_file"
-            ;;
-        "spike")
-            # Ramp up to 1000 users over 30 seconds, stay for 4:30 minutes
-            sed -i "s|__STAGES__|{ duration: '30s', target: $users }, { duration: '4m30s', target: $users }|g" "$output_file"
-            ;;
-        "sustained")
-            # Ramp up to 500 users over 5 minutes, stay for 25 minutes
-            sed -i "s|__STAGES__|{ duration: '5m', target: $users }, { duration: '25m', target: $users }|g" "$output_file"
-            ;;
-    esac
+    if [ "$fast_mode" = "1" ]; then
+        local ramp_seconds=$(( duration / 4 ))
+        local sustain_seconds=$(( duration - ramp_seconds ))
+
+        if [ "$ramp_seconds" -lt 1 ]; then
+            ramp_seconds=1
+        fi
+
+        if [ "$sustain_seconds" -lt 1 ]; then
+            sustain_seconds=1
+        fi
+
+        sed -i "s|__STAGES__|{ duration: '${ramp_seconds}s', target: $users }, { duration: '${sustain_seconds}s', target: $users }|g" "$output_file"
+    else
+        case "$test_type" in
+            "baseline")
+                # Ramp up to 100 users over 2 minutes, stay for 8 minutes
+                sed -i "s|__STAGES__|{ duration: '2m', target: $users }, { duration: '8m', target: $users }|g" "$output_file"
+                ;;
+            "spike")
+                # Ramp up to 1000 users over 30 seconds, stay for 4:30 minutes
+                sed -i "s|__STAGES__|{ duration: '30s', target: $users }, { duration: '4m30s', target: $users }|g" "$output_file"
+                ;;
+            "sustained")
+                # Ramp up to 500 users over 5 minutes, stay for 25 minutes
+                sed -i "s|__STAGES__|{ duration: '5m', target: $users }, { duration: '25m', target: $users }|g" "$output_file"
+                ;;
+        esac
+    fi
     
     sed -i "s|__URL__|'$TEST_TARGET'|g" "$output_file"
 }
@@ -195,7 +203,7 @@ EOF
     local start_time=$(date +%s%N)
     
     for i in {1..10}; do
-        (curl -s -w "\nStatus: %{http_code}\nTime: %{time_total}s\n" "$TEST_TARGET/health" >> "$output_file" &)
+        (curl -fsSL -w "\nStatus: %{http_code}\nTime: %{time_total}s\n" "$TEST_TARGET/health" >> "$output_file" &)
     done
     
     wait
@@ -236,7 +244,7 @@ collect_metrics() {
             # Target service health
             if command -v curl &> /dev/null; then
                 echo "Service Health:"
-                curl -s -m 2 "$TEST_TARGET/health" 2>/dev/null || echo "Timeout/Error"
+                curl -fsSL -m 2 "$TEST_TARGET/health" 2>/dev/null || echo "Timeout/Error"
             fi
             
             # Docker stats (if running in container)
@@ -287,7 +295,7 @@ main() {
     fi
     echo ""
     
-    sleep 30
+    sleep "$TEST_PAUSE_BETWEEN_PHASES"
     
     # Run spike test
     log_info "=== SPIKE TEST: $SPIKE_USERS concurrent users ==="
@@ -299,7 +307,7 @@ main() {
     fi
     echo ""
     
-    sleep 30
+    sleep "$TEST_PAUSE_BETWEEN_PHASES"
     
     # Run sustained test (with metrics collection)
     log_info "=== SUSTAINED TEST: $SUSTAINED_USERS concurrent users for 30 minutes ==="

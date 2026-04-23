@@ -1,0 +1,43 @@
+=== spike Benchmark Results ===
+Date: Wed Apr 22 21:16:11 EDT 2026
+Target: https://ide.kushnir.cloud
+Users: 5 (simulated via concurrent requests)
+Duration: 8s
+
+Sample Results:
+
+Total Time: 11ms
+Requests: 10
+Average Time per Request: 1ms
+
+Note: This is a simple benchmark. For comprehensive load testing, install k6.
+OKOKOK
+Status: 200
+Time: 0.064481s
+
+Status: 200
+Time: 0.056074s
+
+Status: 200
+Time: 0.062272s
+OKOK
+Status: 200
+Time: 0.062821s
+
+Status: 200
+Time: 0.066869s
+OKOK
+Status: 200
+Time: 0.071059s
+
+Status: 200
+Time: 0.073548s
+OK
+Status: 200
+Time: 0.070420s
+OKOK
+Status: 200
+Time: 0.089393s
+
+Status: 200
+Time: 0.084972s

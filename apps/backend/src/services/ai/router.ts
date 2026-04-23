@@ -77,13 +77,16 @@ export class AIRouter {
   constructor() {
     this.registry = loadRegistry();
     
-    // Emit audit event for registry read
-    getAuditService().emit({
-      action: 'allow',
-      resourceType: 'config',
-      fileAction: 'read',
-      method: 'READ',
-    });
+    // Emit audit event for registry read (if audit service available)
+    const auditService = getAuditService();
+    if (auditService) {
+      auditService.emit({
+        action: 'allow',
+        resourceType: 'config',
+        fileAction: 'read',
+        method: 'READ',
+      });
+    }
   }
 
   /**

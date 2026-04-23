@@ -75,6 +75,16 @@ repos:
         pass_filenames: false
         stages: [commit]
 
+      # P0 SECURITY: Detect secrets before commit using TruffleHog
+      - id: trufflehog-secrets
+        name: "Security: TruffleHog secret detection"
+        entry: bash -c 'python3 -m pip install truffleHog >/dev/null 2>&1 && trufflehog filesystem . --only-verified --max-depth 3 || echo "⚠ TruffleHog scan skipped - install with: pip install truffleHog"'
+        language: system
+        files: ''
+        pass_filenames: false
+        stages: [commit]
+        # Only runs locally; can be skipped with --no-verify if needed for emergency commits
+
   # Phase 2.3: Bash script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.9.0.6

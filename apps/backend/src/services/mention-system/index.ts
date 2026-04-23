@@ -10,6 +10,8 @@ import { Pool } from 'pg';
 import { getLogger } from '../../lib/logger.js';
 import { AuditService } from '../audit/audit-service.js';
 import { CollaborationMessageEncryptionService } from '../collaboration-message-encryption/index.js';
+import { NotificationAggregator } from '../notification-aggregator/notification-aggregator-service.js';
+import { MatrixCollaborationTransportService } from '../collaboration-message-transport/index.js';
 
 export interface MentionMatch {
   username: string;
@@ -69,16 +71,18 @@ export interface SendNotificationRequest {
 export class MentionSystemService extends EventEmitter {
   private pool: Pool;
   private auditService?: AuditService;
+  private matrixTransport?: MatrixCollaborationTransportService;
   private logger = getLogger('MentionSystemService');
   private initialized = false;
   private matrixBaseUrl = process.env.MATRIX_BASE_URL || 'https://matrix.kushnir.cloud';
   private emailFrom = process.env.MENTION_EMAIL_FROM || 'mentions@kushnir.cloud';
   private mentionRegex = /@([a-zA-Z0-9_-]+)/g;
 
-  constructor(pool: Pool, auditService?: AuditService) {
+  constructor(pool: Pool, auditService?: AuditService, matrixTransport?: MatrixCollaborationTransportService) {
     super();
     this.pool = pool;
     this.auditService = auditService;
+    this.matrixTransport = matrixTransport;
   }
 
   async initialize(): Promise<void> {
@@ -358,8 +362,33 @@ export class MentionSystemService extends EventEmitter {
         payloadBytes: Buffer.byteLength(encryptedMessage.body, 'utf8'),
       });
 
-      // TODO: Integrate with Matrix SDK
-      // await matrixClient.sendMessage(roomId, encryptedMessage.body);
+      // Send the encrypted message through Matrix transport if available
+      if (this.matrixTransport) {
+        const payload = await this.matrixTransport.sendEncryptedMessage(
+          roomId,
+          messageBody,
+          {
+            mentionId: mention.id,
+            mentionedBy: mention.mentionedBy,
+            mentionedUser: mention.mentionedUser,
+            contextType: mention.context.contextType,
+            contextId: mention.context.contextId,
+            filePath: mention.context.filePath,
+            lineNumber: mention.context.lineNumber,
+          }
+        );
+
+        this.logger.info('Sent encrypted Matrix notification', {
+          roomId,
+          user: mention.mentionedUser,
+          keyId: payload.content.keyId,
+        });
+      } else {
+        this.logger.warn('Matrix transport service not configured, skipping Matrix notification', {
+          roomId,
+          mention: mention.id,
+        });
+      }
     } catch (error) {
       this.logger.error('Failed to send Matrix notification', { error, roomId, mention: mention.id });
       throw error;
@@ -393,13 +422,39 @@ export class MentionSystemService extends EventEmitter {
   }
 
   private async createInAppNotification(mention: Mention): Promise<void> {
-    this.logger.info('Created in-app notification for mention', {
-      user: mention.mentionedUser,
-      mention: mention.id,
-    });
+    try {
+      const notificationAggregator = NotificationAggregator.getInstance();
+      
+      const notificationContent = `You were mentioned by ${mention.mentionedBy} in ${mention.context.filePath}:${mention.context.lineNumber || 'start'}`;
+      
+      // Create notification through the aggregator service
+      await notificationAggregator.createNotification({
+        userId: mention.mentionedUser,
+        title: `New mention from ${mention.mentionedBy}`,
+        message: notificationContent,
+        category: 'mention' as any,
+        channel: 'in-app',
+        priority: 'high',
+        actionUrl: mention.context.url,
+        metadata: {
+          contextType: mention.context.contextType,
+          contextId: mention.context.contextId,
+          mentionId: mention.id,
+        },
+      });
 
-    // TODO: Integrate with in-app notification system
-    // This would typically emit an event or write to a notifications table
+      this.logger.info('Created in-app notification for mention', {
+        user: mention.mentionedUser,
+        mention: mention.id,
+      });
+    } catch (error) {
+      this.logger.error('Failed to create in-app notification', {
+        error,
+        user: mention.mentionedUser,
+        mention: mention.id,
+      });
+      // Don't throw - notification delivery is best-effort
+    }
   }
 
   async getMentionNotificationPreferences(userId: string): Promise<any> {

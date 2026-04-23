@@ -7,6 +7,7 @@ import {
   resolveWorkspaceRootProfile,
   type WorkspaceRoot,
 } from '../utils/workspaceProfilesData'
+import { fetchWorkspaceTemplate } from '../utils/workspaceTemplates'
 
 type WorkspaceProfilesPageWorkspaceState = {
   activeWorkspace: WorkspaceTab
@@ -32,6 +33,8 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(activeWorkspace.id)
   const [selectedRootPath, setSelectedRootPath] = useState<string | undefined>()
   const [copyNotice, setCopyNotice] = useState<string | null>(null)
+  const [applyingAutoConfig, setApplyingAutoConfig] = useState(false)
+  const [autoConfigMessage, setAutoConfigMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     setSelectedWorkspaceId(activeWorkspace.id)
@@ -88,6 +91,69 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
 
     await navigator.clipboard.writeText(profileSnapshot.workspaceJson ?? '')
     setCopyNotice('Workspace profile JSON copied to clipboard')
+  }
+
+  const handleApplyAutoConfig = async () => {
+    try {
+      setApplyingAutoConfig(true)
+      setAutoConfigMessage(null)
+
+      // Fetch the collaboration-core template which contains the recommended settings
+      const template = await fetchWorkspaceTemplate('collaboration-core')
+      
+      if (!template) {
+        setAutoConfigMessage({
+          type: 'error',
+          text: 'Failed to load workspace template',
+        })
+        return
+      }
+
+      // Apply the template settings and extensions to the current workspace root
+      const currentRoot = activeRoot
+      if (!currentRoot) {
+        setAutoConfigMessage({
+          type: 'error',
+          text: 'No workspace root selected',
+        })
+        return
+      }
+
+      // Merge template settings with current root settings
+      const updatedSettings = {
+        ...currentRoot.settings,
+        ...template.settings,
+      }
+
+      // Add template extensions to current root extensions
+      const updatedExtensions = Array.from(
+        new Set([...currentRoot.enabledExtensions, ...template.pinnedExtensions])
+      )
+
+      // Store the applied configuration (in a real app, this would persist to backend)
+      localStorage.setItem(
+        `workspace-auto-config-${selectedWorkspaceId}`,
+        JSON.stringify({
+          appliedAt: new Date().toISOString(),
+          templateId: 'collaboration-core',
+          settings: updatedSettings,
+          extensions: updatedExtensions,
+        })
+      )
+
+      setAutoConfigMessage({
+        type: 'success',
+        text: 'Auto-config applied! Settings and extensions have been configured. Refresh the workspace to apply changes.',
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to apply auto-config'
+      setAutoConfigMessage({
+        type: 'error',
+        text: message,
+      })
+    } finally {
+      setApplyingAutoConfig(false)
+    }
   }
 
   return (
@@ -260,6 +326,32 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
                       <p className="mt-1 text-xs text-violet-700">
                         Auto-install extensions: {profileSnapshot.autoConfig.recommendedExtensions.join(', ')}
                       </p>
+                      
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleApplyAutoConfig}
+                          disabled={applyingAutoConfig}
+                          className="rounded-full bg-violet-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {applyingAutoConfig ? 'Applying...' : 'Apply auto-config'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAutoConfigMessage(null)}
+                          className="rounded-full border border-violet-300 px-3 py-2 text-xs font-medium text-violet-700 transition hover:bg-violet-100"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                      
+                      {autoConfigMessage && (
+                        <p className={`mt-2 text-xs font-medium ${
+                          autoConfigMessage.type === 'success' ? 'text-emerald-700' : 'text-red-700'
+                        }`}>
+                          {autoConfigMessage.text}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-3">

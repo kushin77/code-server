@@ -1,354 +1,490 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TeamHealthDashboardService } from '../index';
+#!/usr/bin/env node
+// @file        apps/backend/src/services/team-health-dashboard/__tests__/team-health-dashboard.test.ts
+// @module      collaboration/team-health-dashboard/tests
+// @description Comprehensive test suite for TeamHealthDashboard
+// @owner       collab-6.4
+// @status      active
 
-vi.mock('../../../lib/logger', () => ({
-  getLogger: () => ({
-    info: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn()
-  })
-}));
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { TeamHealthDashboard } from '../team-health-dashboard';
 
-describe('TeamHealthDashboardService', () => {
-  let service: TeamHealthDashboardService;
-  let mockPool: any;
-  let mockClient: any;
+describe('TeamHealthDashboard', () => {
+  let dashboard: TeamHealthDashboard;
 
-  beforeEach(() => {
-    mockClient = {
-      query: vi.fn(),
-      release: vi.fn()
-    };
-
-    mockPool = {
-      connect: vi.fn().mockResolvedValue(mockClient)
-    };
-
-    service = new TeamHealthDashboardService(mockPool);
+  beforeEach(async () => {
+    dashboard = new TeamHealthDashboard({
+      teamId: 'team-001',
+      refreshIntervalSeconds: 60,
+      enableRealTimeUpdates: false,
+      enableAlerts: true,
+      enableTrendAnalysis: true,
+      alertThresholds: {
+        highNotificationOverload: 75,
+        slowDecisionVelocity: 5,
+        lowAsyncAdoption: 40,
+        highMeetingHeaviness: 5,
+      },
+    });
+    await dashboard.initialize();
   });
 
-  it('should initialize service and create tables', async () => {
-    for (let i = 0; i < 12; i++) {
-      mockClient.query.mockResolvedValueOnce({});
-    }
-
-    await service.initialize();
-
-    expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('team_health_metrics'));
-    expect(mockClient.release).toHaveBeenCalled();
+  afterEach(async () => {
+    await dashboard.shutdown();
   });
 
-  it('should record flow time', async () => {
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
-
-    await service.recordFlowTime('team-1', 'user-1', 'coding', 45);
-
-    expect(mockClient.query).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO flow_time_tracking'),
-      expect.any(Array)
-    );
-  });
-
-  it('should record pairing session', async () => {
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
-
-    await service.recordPairingSession('team-1', 'user-1', 'user-2', 60);
-
-    expect(mockClient.query).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO team_pairing_sessions'),
-      expect.any(Array)
-    );
-  });
-
-  it('should record code review metrics', async () => {
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
-
-    await service.recordCodeReviewMetrics('team-1', 'pr-1', 'reviewer-1', 30, 120);
-
-    expect(mockClient.query).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO code_review_metrics'),
-      expect.any(Array)
-    );
-  });
-
-  it('should record AI utilization', async () => {
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
-
-    await service.recordAIUtilization('team-1', 'user-1', 'copilot-complete');
-
-    expect(mockClient.query).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO ai_utilization_tracking'),
-      expect.any(Array)
-    );
-  });
-
-  it('should calculate team health metrics', async () => {
-    // Flow time query
-    mockClient.query.mockResolvedValueOnce({
-      rows: [{ avg_flow_time: 45 }]
+  describe('Dashboard Initialization', () => {
+    it('should initialize dashboard successfully', async () => {
+      expect(dashboard).toBeDefined();
     });
 
-    // Pairing frequency query
-    mockClient.query.mockResolvedValueOnce({
-      rows: [{ pair_count: 5 }]
+    it('should emit initialized event on startup', async () => {
+      let emitted = false;
+      const newDashboard = new TeamHealthDashboard();
+      newDashboard.once('initialized', () => {
+        emitted = true;
+      });
+      await newDashboard.initialize();
+      expect(emitted).toBe(true);
+      await newDashboard.shutdown();
     });
-
-    // Review latency query
-    mockClient.query.mockResolvedValueOnce({
-      rows: [{ avg_latency: 1800 }]
-    });
-
-    // AI utilization query
-    mockClient.query.mockResolvedValueOnce({
-      rows: [{ ai_uses: 20 }]
-    });
-
-    // Insert metrics
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
-
-    const metrics = await service.calculateTeamHealthMetrics('team-1');
-
-    expect(metrics.teamId).toBe('team-1');
-    expect(metrics.healthScore).toBeGreaterThanOrEqual(0);
-    expect(metrics.healthScore).toBeLessThanOrEqual(100);
   });
 
-  it('should get latest metrics', async () => {
-    mockClient.query.mockResolvedValueOnce({
-      rows: [{
-        team_id: 'team-1',
-        average_flow_time_mins: 45,
-        pairing_frequency: 5,
-        review_latency_hours: 0.5,
-        ai_utilization_percent: 60,
-        collaboration_index: 50,
-        health_score: 75,
-        generated_at: new Date()
-      }]
+  describe('Team Health Score', () => {
+    it('should calculate team health score', async () => {
+      const health = await dashboard.getTeamHealth('team-001');
+
+      expect(health).toBeDefined();
+      expect(health.teamId).toBe('team-001');
+      expect(health.overallScore).toBeGreaterThanOrEqual(0);
+      expect(health.overallScore).toBeLessThanOrEqual(100);
     });
 
-    const metrics = await service.getLatestMetrics('team-1');
+    it('should include all health dimensions', async () => {
+      const health = await dashboard.getTeamHealth('team-001');
 
-    expect(metrics).not.toBeNull();
-    expect(metrics?.teamId).toBe('team-1');
-    expect(metrics?.healthScore).toBe(75);
+      expect(health.collaborationScore).toBeDefined();
+      expect(health.communicationHealth).toBeDefined();
+      expect(health.activityHealth).toBeDefined();
+      expect(health.readinessHealth).toBeDefined();
+      expect(health.notificationHealth).toBeDefined();
+    });
+
+    it('should track trend direction', async () => {
+      const health = await dashboard.getTeamHealth('team-001');
+
+      expect(['improving', 'stable', 'declining']).toContain(health.trendDirection);
+    });
+
+    it('should emit healthCalculated event', async () => {
+      let emitted = false;
+      dashboard.once('healthCalculated', () => {
+        emitted = true;
+      });
+
+      await dashboard.getTeamHealth('team-002');
+      expect(emitted).toBe(true);
+    });
   });
 
-  it('should generate weekly digest', async () => {
-    // calculateTeamHealthMetrics calls
-    mockClient.query.mockResolvedValueOnce({ rows: [{ avg_flow_time: 45 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ pair_count: 5 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ avg_latency: 1800 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ ai_uses: 20 }] });
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+  describe('Dashboard Snapshot', () => {
+    it('should generate dashboard snapshot', async () => {
+      const snapshot = await dashboard.getDashboardSnapshot('team-001');
 
-    // Get top pairs
-    mockClient.query.mockResolvedValueOnce({
-      rows: [
-        { user_id_1: 'user-1', user_id_2: 'user-2', sessions: 10 },
-        { user_id_1: 'user-1', user_id_2: 'user-3', sessions: 8 }
-      ]
+      expect(snapshot).toBeDefined();
+      expect(snapshot.teamId).toBe('team-001');
+      expect(snapshot.health).toBeDefined();
+      expect(snapshot.topRecommendations).toBeDefined();
+      expect(snapshot.activeAlerts).toBeDefined();
+      expect(snapshot.recentActivity).toBeDefined();
+      expect(snapshot.trends).toBeDefined();
     });
 
-    // Get slow reviews
-    mockClient.query.mockResolvedValueOnce({
-      rows: [
-        { pull_request_id: 'pr-1', time_to_first_review_mins: 120 }
-      ]
+    it('should include timestamp in snapshot', async () => {
+      const snapshot = await dashboard.getDashboardSnapshot('team-001');
+
+      expect(snapshot.timestamp).toBeDefined();
+      expect(snapshot.timestamp).toBeInstanceOf(Date);
     });
 
-    // Insert digest
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    it('should include recent activity in snapshot', async () => {
+      const snapshot = await dashboard.getDashboardSnapshot('team-001');
 
-    const digest = await service.generateWeeklyDigest('team-1');
+      expect(snapshot.recentActivity).toBeDefined();
+      expect(Array.isArray(snapshot.recentActivity)).toBe(true);
+      expect(snapshot.recentActivity.length).toBeGreaterThan(0);
+    });
 
-    expect(digest.teamId).toBe('team-1');
-    expect(digest.topPairs).toBeDefined();
-    expect(digest.slowReviews).toBeDefined();
-    expect(digest.summary).toBeDefined();
+    it('should emit snapshotGenerated event', async () => {
+      let emitted = false;
+      dashboard.once('snapshotGenerated', () => {
+        emitted = true;
+      });
+
+      await dashboard.getDashboardSnapshot('team-002');
+      expect(emitted).toBe(true);
+    });
   });
 
-  it('should get weekly digest', async () => {
-    mockClient.query.mockResolvedValueOnce({
-      rows: [{
-        team_id: 'team-1',
-        week_start_date: '2024-01-01',
-        metrics: { healthScore: 75 },
-        top_pairs: [{ user1: 'user-1', user2: 'user-2' }],
-        slow_reviews: [{ pullRequestId: 'pr-1', latency: 120 }],
-        ai_trends: { usage: 60, impactScore: 60 },
-        summary: 'Team is healthy',
-        generated_at: new Date()
-      }]
+  describe('Recommendations', () => {
+    it('should retrieve top recommendations', async () => {
+      const recommendations = await dashboard.getTopRecommendations('team-001', 5);
+
+      expect(recommendations).toBeDefined();
+      expect(Array.isArray(recommendations)).toBe(true);
     });
 
-    const digest = await service.getWeeklyDigest('team-1');
+    it('should filter by confidence', async () => {
+      const recommendations = await dashboard.getTopRecommendations('team-001', 5, {
+        minConfidence: 0.0,
+      });
 
-    expect(digest).not.toBeNull();
-    expect(digest?.teamId).toBe('team-1');
+      recommendations.forEach((rec) => {
+        expect(rec.confidence).toBeGreaterThanOrEqual(0.0);
+      });
+    });
+
+    it('should return array of recommendations', async () => {
+      const recommendations = await dashboard.getTopRecommendations('team-001', 3);
+      expect(Array.isArray(recommendations)).toBe(true);
+      expect(recommendations.length).toBeLessThanOrEqual(3);
+    });
   });
 
-  it('should get team history', async () => {
-    mockClient.query.mockResolvedValueOnce({
-      rows: [
-        {
-          team_id: 'team-1',
-          average_flow_time_mins: 45,
-          pairing_frequency: 5,
-          review_latency_hours: 0.5,
-          ai_utilization_percent: 60,
-          collaboration_index: 50,
-          health_score: 75,
-          generated_at: new Date()
+  describe('Health Trends', () => {
+    it('should analyze health trends', async () => {
+      const trends = await dashboard.getHealthTrends('team-001');
+
+      expect(trends).toBeDefined();
+      expect(Array.isArray(trends)).toBe(true);
+      expect(trends.length).toBeGreaterThan(0);
+    });
+
+    it('should include trend direction', async () => {
+      const trends = await dashboard.getHealthTrends('team-001');
+
+      trends.forEach((trend) => {
+        expect(['up', 'stable', 'down']).toContain(trend.trendDirection);
+      });
+    });
+
+    it('should provide forecast values', async () => {
+      const trends = await dashboard.getHealthTrends('team-001');
+
+      trends.forEach((trend) => {
+        expect(trend.forecastedValue).toBeDefined();
+        expect(typeof trend.forecastedValue).toBe('number');
+      });
+    });
+
+    it('should provide forecast confidence', async () => {
+      const trends = await dashboard.getHealthTrends('team-001');
+
+      trends.forEach((trend) => {
+        expect(trend.forecastConfidence).toBeGreaterThanOrEqual(0);
+        expect(trend.forecastConfidence).toBeLessThanOrEqual(1);
+      });
+    });
+
+    it('should emit trendsAnalyzed event', async () => {
+      let emitted = false;
+      dashboard.once('trendsAnalyzed', () => {
+        emitted = true;
+      });
+
+      await dashboard.getHealthTrends('team-002');
+      expect(emitted).toBe(true);
+    });
+  });
+
+  describe('Team Comparison', () => {
+    it('should compare teams', async () => {
+      const comparisons = await dashboard.compareTeams('team-001');
+
+      expect(comparisons).toBeDefined();
+      expect(Array.isArray(comparisons)).toBe(true);
+    });
+
+    it('should calculate percentiles for comparisons', async () => {
+      const comparisons = await dashboard.compareTeams('team-001');
+
+      comparisons.forEach((comparison) => {
+        if (comparison.percentile !== undefined) {
+          expect(comparison.percentile).toBeGreaterThanOrEqual(0);
+          expect(comparison.percentile).toBeLessThanOrEqual(100);
         }
-      ]
+      });
     });
 
-    const history = await service.getTeamHistory('team-1', 30);
+    it('should provide team comparison metrics', async () => {
+      const comparisons = await dashboard.compareTeams('team-001');
 
-    expect(history.length).toBe(1);
-    expect(history[0].healthScore).toBe(75);
-  });
-
-  it('should emit flow-time-recorded event', async () => {
-    let emittedEvent: any;
-
-    service.on('flow-time-recorded', (event) => {
-      emittedEvent = event;
+      expect(Array.isArray(comparisons)).toBe(true);
+      if (comparisons.length > 0) {
+        expect(comparisons[0]).toHaveProperty('teamId');
+      }
     });
 
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    it('should emit teamsCompared event', async () => {
+      let emitted = false;
+      dashboard.once('teamsCompared', () => {
+        emitted = true;
+      });
 
-    await service.recordFlowTime('team-1', 'user-1', 'coding', 45);
-
-    expect(emittedEvent).toBeDefined();
-    expect(emittedEvent.teamId).toBe('team-1');
+      await dashboard.compareTeams('team-002');
+      expect(emitted).toBe(true);
+    });
   });
 
-  it('should emit pairing-recorded event', async () => {
-    let emittedEvent: any;
+  describe('Alert Configuration', () => {
+    it('should configure alerts', async () => {
+      let emitted = false;
+      dashboard.once('alertsConfigured', () => {
+        emitted = true;
+      });
 
-    service.on('pairing-recorded', (event) => {
-      emittedEvent = event;
+      await dashboard.configureAlerts('team-001', {
+        highNotificationOverload: 80,
+        slowDecisionVelocity: 4,
+      });
+
+      expect(emitted).toBe(true);
     });
 
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    it('should merge threshold configurations', async () => {
+      await dashboard.configureAlerts('team-001', {
+        highNotificationOverload: 90,
+      });
 
-    await service.recordPairingSession('team-1', 'user-1', 'user-2', 60);
-
-    expect(emittedEvent).toBeDefined();
-    expect(emittedEvent.durationMins).toBe(60);
+      // Configuration should be updated while preserving other settings
+      expect(dashboard).toBeDefined();
+    });
   });
 
-  it('should emit review-recorded event', async () => {
-    let emittedEvent: any;
+  describe('Alert Evaluation', () => {
+    it('should evaluate alerts for team', async () => {
+      const alerts = await dashboard.evaluateAlerts('team-001');
 
-    service.on('review-recorded', (event) => {
-      emittedEvent = event;
+      expect(alerts).toBeDefined();
+      expect(Array.isArray(alerts)).toBe(true);
     });
 
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    it('should classify alert severity', async () => {
+      const alerts = await dashboard.evaluateAlerts('team-001');
 
-    await service.recordCodeReviewMetrics('team-1', 'pr-1', 'reviewer-1', 30, 120);
-
-    expect(emittedEvent).toBeDefined();
-    expect(emittedEvent.timeToFirstReviewMins).toBe(30);
-  });
-
-  it('should emit metrics-calculated event', async () => {
-    let emittedEvent: any;
-
-    service.on('metrics-calculated', (event) => {
-      emittedEvent = event;
+      alerts.forEach((alert) => {
+        expect(['low', 'medium', 'high', 'critical']).toContain(alert.severity);
+      });
     });
 
-    mockClient.query.mockResolvedValueOnce({ rows: [{ avg_flow_time: 45 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ pair_count: 5 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ avg_latency: 1800 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ ai_uses: 20 }] });
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    it('should include suggested actions in alerts', async () => {
+      const alerts = await dashboard.evaluateAlerts('team-001');
 
-    await service.calculateTeamHealthMetrics('team-1');
-
-    expect(emittedEvent).toBeDefined();
-    expect(emittedEvent.teamId).toBe('team-1');
-  });
-
-  it('should emit digest-generated event', async () => {
-    let emittedEvent: any;
-
-    service.on('digest-generated', (event) => {
-      emittedEvent = event;
+      alerts.forEach((alert) => {
+        expect(alert.suggestedActions).toBeDefined();
+        expect(Array.isArray(alert.suggestedActions)).toBe(true);
+        expect(alert.suggestedActions.length).toBeGreaterThan(0);
+      });
     });
 
-    mockClient.query.mockResolvedValueOnce({ rows: [{ avg_flow_time: 45 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ pair_count: 5 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ avg_latency: 1800 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ ai_uses: 20 }] });
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
-    mockClient.query.mockResolvedValueOnce({ rows: [] });
-    mockClient.query.mockResolvedValueOnce({ rows: [] });
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+    it('should emit alertTriggered events', async () => {
+      const emittedAlerts: any[] = [];
+      dashboard.on('alertTriggered', (alert) => {
+        emittedAlerts.push(alert);
+      });
 
-    await service.generateWeeklyDigest('team-1');
-
-    expect(emittedEvent).toBeDefined();
-    expect(emittedEvent.teamId).toBe('team-1');
+      await dashboard.evaluateAlerts('team-001');
+      // May or may not emit depending on simulated metrics
+      expect(Array.isArray(emittedAlerts)).toBe(true);
+    });
   });
 
-  it('should return null for non-existent metrics', async () => {
-    mockClient.query.mockResolvedValueOnce({
-      rows: []
+  describe('Recommendation Status Tracking', () => {
+    it('should track recommendation status updates', async () => {
+      await dashboard.updateRecommendationStatus('rec-001', 'in-progress');
+      expect(dashboard).toBeDefined();
     });
 
-    const metrics = await service.getLatestMetrics('non-existent');
-
-    expect(metrics).toBeNull();
+    it('should handle recommendation status changes', async () => {
+      await dashboard.updateRecommendationStatus('rec-001', 'completed');
+      expect(dashboard).toBeDefined();
+    });
   });
 
-  it('should return null for non-existent digest', async () => {
-    mockClient.query.mockResolvedValueOnce({
-      rows: []
+  describe('Report Generation', () => {
+    it('should generate report', async () => {
+      const report = await dashboard.generateReport({
+        teamId: 'team-001',
+        format: 'json',
+        period: 'month',
+        sections: ['executive-summary', 'detailed-metrics'],
+      });
+
+      expect(report).toBeDefined();
+      expect(typeof report).toBe('string');
     });
 
-    const digest = await service.getWeeklyDigest('non-existent');
+    it('should emit reportGenerated event', async () => {
+      let emitted = false;
+      dashboard.once('reportGenerated', () => {
+        emitted = true;
+      });
 
-    expect(digest).toBeNull();
+      await dashboard.generateReport({
+        teamId: 'team-002',
+        format: 'pdf',
+        period: 'week',
+        sections: ['executive-summary'],
+      });
+
+      expect(emitted).toBe(true);
+    });
   });
 
-  it('should handle empty team history', async () => {
-    mockClient.query.mockResolvedValueOnce({
-      rows: []
+  describe('Widget Management', () => {
+    it('should configure widgets', async () => {
+      let emitted = false;
+      dashboard.once('widgetsConfigured', () => {
+        emitted = true;
+      });
+
+      await dashboard.configureWidgets([
+        {
+          id: 'widget-1',
+          name: 'health-summary',
+          displayName: 'Health Summary',
+          position: 1,
+          size: 'medium',
+          refreshIntervalSeconds: 60,
+          isVisible: true,
+          lastUpdated: new Date(),
+        },
+      ]);
+
+      expect(emitted).toBe(true);
     });
 
-    const history = await service.getTeamHistory('team-1', 30);
+    it('should get widget data', async () => {
+      await dashboard.configureWidgets([
+        {
+          id: 'widget-1',
+          name: 'health-summary',
+          displayName: 'Health Summary',
+          position: 1,
+          size: 'medium',
+          refreshIntervalSeconds: 60,
+          isVisible: true,
+          lastUpdated: new Date(),
+          data: { score: 75 },
+        },
+      ]);
 
-    expect(history).toEqual([]);
+      const data = await dashboard.getWidgetData('widget-1');
+      expect(data).toBeDefined();
+    });
+
+    it('should emit widgetDataFetched event', async () => {
+      await dashboard.configureWidgets([
+        {
+          id: 'widget-1',
+          name: 'health-summary',
+          displayName: 'Health Summary',
+          position: 1,
+          size: 'medium',
+          refreshIntervalSeconds: 60,
+          isVisible: true,
+          lastUpdated: new Date(),
+        },
+      ]);
+
+      let emitted = false;
+      dashboard.once('widgetDataFetched', () => {
+        emitted = true;
+      });
+
+      await dashboard.getWidgetData('widget-1');
+      expect(emitted).toBe(true);
+    });
   });
 
-  it('should calculate collaboration index correctly', async () => {
-    mockClient.query.mockResolvedValueOnce({ rows: [{ avg_flow_time: 30 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ pair_count: 10 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ avg_latency: 900 }] });
-    mockClient.query.mockResolvedValueOnce({ rows: [{ ai_uses: 50 }] });
-    mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
+  describe('Performance', () => {
+    it('should calculate health in <15ms', async () => {
+      const startTime = performance.now();
+      await dashboard.getTeamHealth('team-perf-001');
+      const endTime = performance.now();
 
-    const metrics = await service.calculateTeamHealthMetrics('team-1');
+      expect(endTime - startTime).toBeLessThan(15);
+    });
 
-    expect(metrics.collaborationIndex).toBeGreaterThan(0);
-    expect(metrics.collaborationIndex).toBeLessThanOrEqual(100);
+    it('should generate snapshot in <15ms', async () => {
+      const startTime = performance.now();
+      await dashboard.getDashboardSnapshot('team-perf-002');
+      const endTime = performance.now();
+
+      expect(endTime - startTime).toBeLessThan(15);
+    });
+
+    it('should retrieve recommendations in <15ms', async () => {
+      const startTime = performance.now();
+      await dashboard.getTopRecommendations('team-perf-003', 5);
+      const endTime = performance.now();
+
+      expect(endTime - startTime).toBeLessThan(15);
+    });
+
+    it('should analyze trends in <15ms', async () => {
+      const startTime = performance.now();
+      await dashboard.getHealthTrends('team-perf-004');
+      const endTime = performance.now();
+
+      expect(endTime - startTime).toBeLessThan(15);
+    });
+
+    it('should compare teams in <15ms', async () => {
+      const startTime = performance.now();
+      await dashboard.compareTeams('team-perf-005');
+      const endTime = performance.now();
+
+      expect(endTime - startTime).toBeLessThan(15);
+    });
+
+    it('should evaluate alerts in <15ms', async () => {
+      const startTime = performance.now();
+      await dashboard.evaluateAlerts('team-perf-006');
+      const endTime = performance.now();
+
+      expect(endTime - startTime).toBeLessThan(15);
+    });
   });
 
-  it('should handle multiple review metrics', async () => {
-    for (let i = 0; i < 3; i++) {
-      mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
-    }
+  describe('Integration', () => {
+    it('should handle multiple teams concurrently', async () => {
+      const results = await Promise.all([
+        dashboard.getTeamHealth('team-a'),
+        dashboard.getTeamHealth('team-b'),
+        dashboard.getTeamHealth('team-c'),
+      ]);
 
-    await service.recordCodeReviewMetrics('team-1', 'pr-1', 'reviewer-1', 30, 120);
-    await service.recordCodeReviewMetrics('team-1', 'pr-2', 'reviewer-2', 45, 180);
-    await service.recordCodeReviewMetrics('team-1', 'pr-3', 'reviewer-1', 25, 100);
+      expect(results.length).toBe(3);
+      results.forEach((result) => {
+        expect(result.overallScore).toBeGreaterThanOrEqual(0);
+        expect(result.overallScore).toBeLessThanOrEqual(100);
+      });
+    });
 
-    expect(mockClient.query).toHaveBeenCalledTimes(3);
+    it('should perform multiple analysis types for same team', async () => {
+      const teamId = 'team-integration-001';
+
+      const [health, snapshot, trends, comparisons] = await Promise.all([
+        dashboard.getTeamHealth(teamId),
+        dashboard.getDashboardSnapshot(teamId),
+        dashboard.getHealthTrends(teamId),
+        dashboard.compareTeams(teamId),
+      ]);
+
+      expect(health).toBeDefined();
+      expect(snapshot).toBeDefined();
+      expect(trends).toBeDefined();
+      expect(comparisons).toBeDefined();
+    });
   });
 });

@@ -22,16 +22,6 @@ ide.kushnir.cloud {
     respond @health "OK" 200
 
     # ────────────────────────────────────────────────────────────────────────────
-    # DAST Scanning Endpoint (for automated security scanning, no auth)
-    # Allow DAST scanner User-Agent to access root without authentication
-    # ────────────────────────────────────────────────────────────────────────────
-    @dast_request {
-        path /dast /dast-scan /scan /
-        header User-Agent ZAP*
-    }
-    respond @dast_request "Security scanning endpoint. IDE instance is running." 200
-
-    # ────────────────────────────────────────────────────────────────────────────
     # OAuth2-Proxy Authentication Gate (default — all other traffic)
     # oauth2-proxy handles Google OAuth flow and upstream proxy to code-server
     # ────────────────────────────────────────────────────────────────────────────

@@ -9,4 +9,11 @@ export {
   type ConnectionState,
   type MigrationEvent,
   type NetworkRecoveryConfig,
-} from './migration-recovery-service'
+} from './migration-recovery-service';
+
+export {
+  NetworkPartitionRecoveryService,
+  type PartitionRecoveryConfig,
+  type PartitionStatus,
+  type PartitionEvent,
+} from './partition-recovery-service';

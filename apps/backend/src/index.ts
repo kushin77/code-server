@@ -40,6 +40,9 @@ export { initializePresenceTimezoneRoutes, setupPresenceTimezoneIntegration, cre
 export { SessionCostTrackingService } from './services/session-cost-tracking';
 export type { SessionCost, CostComponent, UserCostSummary, ProjectCostSummary } from './services/session-cost-tracking';
 export { initializeSessionCostTrackingRoutes, setupSessionCostTrackingIntegration, createSessionCostTrackingExampleApp } from './services/session-cost-tracking/integration-example';
+export { InlineCommunicationService } from './services/inline-communication';
+export type { InlineCommentThread, InlineComment, CodeLocation, ThreadArchive } from './services/inline-communication';
+export { initializeInlineCommunicationRoutes, setupInlineCommunicationIntegration, createInlineCommunicationExampleApp } from './services/inline-communication/integration-example';
 
 // Routes
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';

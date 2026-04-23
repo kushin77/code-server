@@ -12,9 +12,8 @@ source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 REPLICA_HOST="${REPLICA_1_HOST:-192.168.168.31}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
-DEPLOY_DIR="${DEPLOY_DIR:-code-server-enterprise}"
-SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3)
+# Note: DEPLOY_USER, DEPLOY_DIR, SSH_OPTS are set as readonly by config.sh (via init.sh)
+# We use them directly without reassigning
 DRY_RUN="${DRY_RUN:-0}"
 
 log_info "Replica 1 Permission Remediation"
@@ -53,12 +52,12 @@ clean_git_state() {
   local remote_cmd="cd ~/${DEPLOY_DIR} && git clean -fdx && git reset --hard origin/main"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh ${SSH_OPTS[*]} ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
   log_info "Cleaning git state on $REPLICA_HOST..."
-  if ! ssh "${SSH_OPTS[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
     log_error "Git cleanup failed"
     return 1
   fi
@@ -70,12 +69,12 @@ redeploy() {
   local remote_cmd="cd ~/${DEPLOY_DIR} && git pull --ff-only origin main && docker compose pull && docker compose up -d"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh ${SSH_OPTS[*]} ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
   log_info "Redeploying on $REPLICA_HOST..."
-  if ! ssh "${SSH_OPTS[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
     log_error "Redeployment failed"
     return 1
   fi
@@ -91,10 +90,10 @@ verify_git_status() {
     return 0
   fi
   
-  local commit_sha=$(ssh "${SSH_OPTS[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "cd ~/${DEPLOY_DIR} && git rev-parse --short HEAD")
+  local commit_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ~/${DEPLOY_DIR} && git rev-parse --short HEAD")
   log_info "Replica 1 commit: $commit_sha"
   
-  local main_sha=$(ssh "${SSH_OPTS[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "cd ~/${DEPLOY_DIR} && git rev-parse --short origin/main")
+  local main_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ~/${DEPLOY_DIR} && git rev-parse --short origin/main")
   log_info "Main branch commit: $main_sha"
   
   if [[ "$commit_sha" == "$main_sha" ]]; then

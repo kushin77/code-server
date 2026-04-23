@@ -1442,11 +1442,9 @@ volumes:
       device: ":${NAS_EXPORT_PATH:-/export}/registry/extensions"
 
   caddy-config:
-    name: enterprise_caddy-config
-    external: true
+    driver: local
   caddy-data:
-    name: enterprise_caddy-data
-    external: true
+    driver: local
 
   jaeger-data:
     driver: local

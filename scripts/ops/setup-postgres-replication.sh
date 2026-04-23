@@ -1,62 +1,154 @@
 #!/usr/bin/env bash
 # @file        scripts/ops/setup-postgres-replication.sh
-# @module      ops/database
-# @description Setup PostgreSQL master-slave replication across 192.168.168.31 and .42
+# @module      infrastructure/database
+# @description PostgreSQL Master-Slave streaming replication setup for 192.168.168.31 <-> .42
+# @owner       Infrastructure Team
+# @status      Production-ready - April 23, 2026
+#
+# Purpose: Eliminate database single-point-of-failure via streaming replication
+# Target: <30s failover, <100ms lag, zero data loss
+#
+# Prerequisites:
+#   - SSH access to both hosts (192.168.168.31, 192.168.168.42)
+#   - PostgreSQL 15+ running on both hosts in Docker
+#   - Primary host active, replica host ready for replication
+#
+# Usage:
+#   bash scripts/ops/setup-postgres-replication.sh
+#   
+# Environment variables:
+#   PRIMARY_HOST=192.168.168.31      (default)
+#   REPLICA_HOST=192.168.168.42      (default)
+#   TARGET_USER=akushnir             (default)
+#   REPLICATION_PASSWORD=<generated> (auto-generated if not set)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
 REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
 TARGET_USER="${TARGET_USER:-akushnir}"
-POSTGRES_USER="code_server"
-POSTGRES_DB="code_server"
+POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-postgres}"
+POSTGRES_USER="${POSTGRES_USER:-postgres}"
+POSTGRES_DB="${POSTGRES_DB:-postgres}"
 REPLICATION_USER="replicator"
 REPLICATION_PASSWORD="${REPLICATION_PASSWORD:-$(openssl rand -base64 32)}"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# WAL archiving
+WAL_ARCHIVE_DIR="/var/lib/postgresql/wal_archive"
+WAL_LEVEL="replica"
+MAX_WAL_SENDERS="3"
+MAX_REPLICATION_SLOTS="3"
+REPLICATION_SLOT_NAME="replica_slot"
 
-log_step() { echo -e "${BLUE}→${NC} $1"; }
-log_success() { echo -e "${GREEN}✓${NC} $1"; }
-log_warn() { echo -e "${YELLOW}!${NC} $1"; }
+# Logging
+LOG_DIR="/var/log/postgres-replication"
+LOG_FILE="${LOG_DIR}/setup-$(date +%Y%m%d-%H%M%S).log"
 
 # ============================================================================
-# STEP 1: Create replication user on primary
+# UTILITY FUNCTIONS
 # ============================================================================
-setup_replication_user() {
-    log_step "Creating replication user on primary (31)..."
-    
-    ssh "${TARGET_USER}@${PRIMARY_HOST}" "docker exec postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c \"
-        CREATE ROLE ${REPLICATION_USER} WITH REPLICATION ENCRYPTED PASSWORD '${REPLICATION_PASSWORD}' LOGIN;
-        GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ${REPLICATION_USER};
-    \" 2>/dev/null || echo 'Replication user may already exist'"
-    
-    log_success "Replication user created"
+
+ensure_log_dir() {
+    mkdir -p "${LOG_DIR}"
+    chmod 755 "${LOG_DIR}"
+}
+
+log_phase() {
+    echo ""
+    log_info "═══════════════════════════════════════════════════════════"
+    log_info "  PHASE: $1"
+    log_info "═══════════════════════════════════════════════════════════"
+    log_info "$(date '+%Y-%m-%d %H:%M:%S')"
+}
+
+ssh_primary() {
+    ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${TARGET_USER}@${PRIMARY_HOST}" "$@"
+}
+
+ssh_replica() {
+    ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${TARGET_USER}@${REPLICA_HOST}" "$@"
+}
+
+psql_primary() {
+    ssh_primary "docker exec ${POSTGRES_CONTAINER} psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} $@"
+}
+
+psql_replica() {
+    ssh_replica "docker exec ${POSTGRES_CONTAINER} psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} $@"
 }
 
 # ============================================================================
-# STEP 2: Configure primary postgresql.conf for replication
+# PHASE 1: PRE-FLIGHT CHECKS
 # ============================================================================
-configure_primary_postgres() {
-    log_step "Configuring primary PostgreSQL for replication..."
+
+preflight_checks() {
+    log_phase "Pre-Flight Checks"
+
+    # Check SSH connectivity to primary
+    if ! ssh_primary "echo 'SSH OK'" > /dev/null 2>&1; then
+        log_error "Cannot connect to primary host (${PRIMARY_HOST})"
+        return 1
+    fi
+    log_info "✓ Primary host reachable via SSH"
+
+    # Check SSH connectivity to replica
+    if ! ssh_replica "echo 'SSH OK'" > /dev/null 2>&1; then
+        log_error "Cannot connect to replica host (${REPLICA_HOST})"
+        return 1
+    fi
+    log_info "✓ Replica host reachable via SSH"
+
+    # Check PostgreSQL container on primary
+    if ! ssh_primary "docker ps --filter name=${POSTGRES_CONTAINER} --format '{{.Names}}' | grep -q ${POSTGRES_CONTAINER}" 2>/dev/null; then
+        log_error "PostgreSQL container not running on primary"
+        return 1
+    fi
+    log_info "✓ PostgreSQL container running on primary"
+
+    # Check PostgreSQL container on replica
+    if ! ssh_replica "docker ps --filter name=${POSTGRES_CONTAINER} --format '{{.Names}}' | grep -q ${POSTGRES_CONTAINER}" 2>/dev/null; then
+        log_error "PostgreSQL container not running on replica"
+        return 1
+    fi
+    log_info "✓ PostgreSQL container running on replica"
+
+    # Check PostgreSQL accessibility on primary
+    if ! psql_primary -c "SELECT version();" > /dev/null 2>&1; then
+        log_error "Cannot connect to PostgreSQL on primary"
+        return 1
+    fi
+    log_info "✓ PostgreSQL accessible on primary"
+
+    log_success "All pre-flight checks passed"
+}
+
+# ============================================================================
+# PHASE 2: CREATE REPLICATION USER
+# ============================================================================
+
+create_replication_user() {
+    log_phase "Create Replication User on Primary"
+
+    log_info "Creating replication user: ${REPLICATION_USER}"
     
-    ssh "${TARGET_USER}@${PRIMARY_HOST}" "docker exec -T postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c \"
-        ALTER SYSTEM SET wal_level = replica;
-        ALTER SYSTEM SET max_wal_senders = 3;
-        ALTER SYSTEM SET max_replication_slots = 3;
-        ALTER SYSTEM SET hot_standby = on;
-        ALTER SYSTEM SET hot_standby_feedback = on;
-        SELECT pg_reload_conf();
-    \" 2>/dev/null"
-    
-    log_success "Primary PostgreSQL configured for replication"
+    psql_primary <<EOF 2>&1 | head -10
+CREATE ROLE ${REPLICATION_USER} WITH REPLICATION ENCRYPTED PASSWORD '${REPLICATION_PASSWORD}' LOGIN;
+GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ${REPLICATION_USER};
+EOF
+
+    if psql_primary -c "SELECT usename FROM pg_user WHERE usename = '${REPLICATION_USER}';" 2>/dev/null | grep -q "${REPLICATION_USER}"; then
+        log_success "Replication user created successfully"
+    else
+        log_error "Failed to create replication user"
+        return 1
+    fi
 }
 
 # ============================================================================

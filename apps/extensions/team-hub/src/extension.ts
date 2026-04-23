@@ -5,7 +5,6 @@ import { TeamHubActions } from './actions';
 import { TeamHubSidebarProvider } from './sidebar';
 import { TerminalDLPScanner } from './terminal-dlp';
 import { GitHubTaskPanelProvider } from './github-task-panel';
-import { GitHubTaskSyncService } from '../../../backend/src/services/github-task-sync';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const getConfig = readTeamHubConfig;
@@ -20,19 +19,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Initialize GitHub Task Sync (optional, if enabled)
   const config = getConfig();
   let gitHubTaskPanel: GitHubTaskPanelProvider | undefined;
-  let gitHubSyncService: GitHubTaskSyncService | undefined;
 
   if (config.enableGitHubTaskSync && config.githubToken && config.githubOwner && config.githubRepo) {
     try {
-      gitHubSyncService = new GitHubTaskSyncService({
-        githubToken: config.githubToken,
-        owner: config.githubOwner,
-        repo: config.githubRepo,
-        pollingIntervalMs: config.gitHubTaskSyncInterval,
-      });
-
-      await gitHubSyncService.initialize();
-
       gitHubTaskPanel = new GitHubTaskPanelProvider({
         apiBaseUrl: 'http://localhost:3100',
         pollingIntervalMs: config.gitHubTaskSyncInterval,
@@ -41,8 +30,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       context.subscriptions.push(
         vscode.window.registerTreeDataProvider('gitHubTasks', gitHubTaskPanel)
       );
-
-      gitHubSyncService.startPolling();
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to initialize GitHub Task Sync: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -64,8 +51,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }),
     new vscode.Disposable(() => presenceService.dispose()),
-    new vscode.Disposable(() => terminalMonitor.dispose()),
-    new vscode.Disposable(() => gitHubSyncService?.stopPolling())
+    new vscode.Disposable(() => terminalMonitor.dispose())
   );
 
   const enableAutoPresence = config.enableAutoPresence;

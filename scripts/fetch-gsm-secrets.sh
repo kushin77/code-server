@@ -207,6 +207,13 @@ fetch_gsm_secret "prod-portal-google-oauth-client-secret" GOOGLE_CLIENT_SECRET
 # oauth2-proxy cookie secre
 fetch_gsm_secret "prod-portal-oauth2-cookie-secret" OAUTH2_PROXY_COOKIE_SECRET
 
+# Integration service configuration
+SENTRY_ORG_SLUG="${SENTRY_ORG_SLUG:-kushnir-cloud}"
+export SENTRY_ORG_SLUG
+echo "export SENTRY_ORG_SLUG=${SENTRY_ORG_SLUG}" >&2
+fetch_gsm_secret "slack-bot-token" SLACK_BOT_TOKEN
+fetch_gsm_secret "registry-auth-token-secret" REGISTRY_AUTH_TOKEN_SECRET
+
 # Application and data-layer secrets: prefer GSM, fall back to local generation
 # only when GSM is unavailable (local dev / bootstrap gaps).
 fetch_or_generate_secret "CODE_SERVER_PASSWORD" base64 24 \
@@ -299,6 +306,9 @@ GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
 OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
 GITHUB_TOKEN=${GITHUB_TOKEN:-}
+SENTRY_ORG_SLUG=${SENTRY_ORG_SLUG:-kushnir-cloud}
+SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
+REGISTRY_AUTH_TOKEN_SECRET=${REGISTRY_AUTH_TOKEN_SECRET:-}
 CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
 GRAFANA_PASSWORD=${GRAFANA_PASSWORD:-}

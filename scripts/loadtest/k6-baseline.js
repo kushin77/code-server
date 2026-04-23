@@ -47,9 +47,10 @@ export const options = {
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
 
 export default function () {
-  const res = http.get(`${BASE_URL}/healthz`);
+  // code-server does not expose /healthz; use root path (returns login or workspace)
+  const res = http.get(`${BASE_URL}/`);
   check(res, {
-    "status is 200": (r) => r.status === 200,
+    "status 200 or 302": (r) => r.status === 200 || r.status === 302,
   });
   sleep(1);
 }

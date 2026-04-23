@@ -77,8 +77,6 @@ services:
         reservations:
           memory: 1g
           cpus: "1.0"
-    depends_on:
-      - open-vsix-registry
     logging:
       driver: json-file
       options:
@@ -1278,7 +1276,11 @@ services:
   # Service URL: http://open-vsix-registry:4000 (internal) → https://registry.kushnir.cloud (public)
   # ────────────────────────────────────────────────────────────────────────────
   open-vsix-registry:
-    image: open-vsix/open-vsix:0.2.0@sha256:c8f8f9e5b9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9
+    # Profile: extensions-registry — opt-in, image must be built/provided externally
+    # Blocked by #1617 — image source not yet resolved. Add to COMPOSE_PROFILES to enable.
+    profiles:
+      - extensions-registry
+    image: open-vsix/open-vsix:0.2.0
     container_name: open-vsix-registry
     restart: unless-stopped
     networks:
@@ -1295,7 +1297,7 @@ services:
       - STORAGE_PATH=/data/extensions
       - ALLOWED_PUBLISHERS=${REGISTRY_ALLOWED_PUBLISHERS:-kushin77,@kushnircloud}
       - REQUIRE_AUTH=${REGISTRY_REQUIRE_AUTH:-true}
-      - AUTH_TOKEN_SECRET=${REGISTRY_AUTH_TOKEN_SECRET:?REGISTRY_AUTH_TOKEN_SECRET must be set}
+      - AUTH_TOKEN_SECRET=${REGISTRY_AUTH_TOKEN_SECRET:-change-me-in-production}
       - ENABLE_METRICS=${REGISTRY_ENABLE_METRICS:-true}
       - METRICS_PORT=9090
     volumes:

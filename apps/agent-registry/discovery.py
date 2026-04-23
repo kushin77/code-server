@@ -19,6 +19,11 @@ import logging
 from typing import List, Dict, Optional
 from dataclasses import dataclass
 
+try:
+    from .packages import get_store
+except ImportError:  # pragma: no cover - script execution fallback
+    from packages import get_store
+
 logger = logging.getLogger(__name__)
 
 # Agent categories
@@ -77,15 +82,33 @@ class DiscoveryEngine:
         """
         try:
             logger.info(f"Search: query='{query}', category={category}, limit={limit}")
-            
-            # TODO: Implement full-text search
-            # 1. Tokenize query
-            # 2. Search agent metadata (name, description, author)
-            # 3. Filter by category if provided
-            # 4. Rank results
-            # 5. Return top N
-            
-            return []
+
+            store = get_store()
+            tokens = [token.lower() for token in query.split() if token.strip()]
+
+            agents = store.list_all_latest()
+            if category:
+                agents = self.filter_by_category(agents, category)
+
+            public_agents = self.filter_public(agents)
+            matched_agents: List[Dict] = []
+
+            for agent in public_agents:
+                metadata = dict(agent.get("metadata", agent))
+                searchable_values = [
+                    metadata.get("namespace", ""),
+                    metadata.get("description", ""),
+                    metadata.get("author", ""),
+                    metadata.get("category", ""),
+                    " ".join(metadata.get("capabilities", [])),
+                ]
+                haystack = " ".join(searchable_values).lower()
+
+                if all(token in haystack for token in tokens):
+                    matched_agents.append(metadata)
+
+            ranked = self.rank(matched_agents)
+            return ranked[:limit]
             
         except Exception as e:
             logger.error(f"Error searching: {e}")

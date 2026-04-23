@@ -16,7 +16,15 @@ RUNBOOK_FILE="${RUNBOOK_FILE:-docs/PRODUCTION-DEPLOYMENT-RUNBOOK.md}"
 PERF_GUIDE_FILE="${PERF_GUIDE_FILE:-docs/PERFORMANCE-LOAD-TESTING-GUIDE.md}"
 PERF_REPORT_FILE="${PERF_REPORT_FILE:-artifacts/performance-tests/PERFORMANCE-TEST-ANALYSIS-APR22-2026.md}"
 STAGING_REPORT_FILE="${STAGING_REPORT_FILE:-artifacts/staging/staging-deployment-report.md}"
-READINESS_REPORT_FILE="${READINESS_REPORT_FILE:-artifacts/triage/deployment-readiness-report-20260423.md}"
+# Find latest readiness report if not explicitly set, convert to relative path
+if [[ -z "${READINESS_REPORT_FILE:-}" ]]; then
+  latest_readiness="$(ls -t "$REPO_ROOT/artifacts/triage/deployment-readiness-report"*.md 2>/dev/null | head -1)"
+  if [[ -n "$latest_readiness" ]]; then
+    READINESS_REPORT_FILE="${latest_readiness#$REPO_ROOT/}"
+  else
+    READINESS_REPORT_FILE="artifacts/triage/deployment-readiness-report-20260423.md"
+  fi
+fi
 
 usage() {
   cat <<'EOF'

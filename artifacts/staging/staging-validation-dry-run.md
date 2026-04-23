@@ -1,6 +1,6 @@
 # Staging Validation Dry Run
 
-**Generated**: 2026-04-23T02:47:57+00:00
+**Generated**: 2026-04-23T21:58:58+00:00
 **Target Host**: 192.168.168.42
 **Status**: READY TO EXECUTE
 
@@ -10,7 +10,7 @@
 - Performance guide: docs/PERFORMANCE-LOAD-TESTING-GUIDE.md
 - Performance evidence: artifacts/performance-tests/PERFORMANCE-TEST-ANALYSIS-APR22-2026.md
 - Staging report: artifacts/staging/staging-deployment-report.md
-- Readiness report: artifacts/triage/deployment-readiness-report-20260423.md
+- Readiness report: artifacts/triage/deployment-readiness-report-20260423-215738.md
 
 ## Validation Focus
 
@@ -42,6 +42,6 @@ Proceed with the Apr 27-29 staging validation window using the current evidence 
 
 ## Repository State
 
-- Branch: feat/collab-2.1-voice-channel-1233
-- Commit: 6ed4c739359df640595ed38b7b449089eb2e6ae7
+- Branch: main
+- Commit: fb4206635ee5a90eee5ab3a36fa4df5b27318ea4
 

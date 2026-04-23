@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # @file        scripts/observability/demo-logging-to-issues.py
 # @module      observability/demo
 # @description Demonstrate infrastructure logging → GitHub issues end-to-end
 # @owner       platform
+
+import sys
+import io
+
+# Fix Windows console encoding issue (charmap -> UTF-8)
+if sys.stdout.encoding and sys.stdout.encoding.lower() in ('cp1252', 'charmap', 'ascii'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # @status      active
 
 import sys

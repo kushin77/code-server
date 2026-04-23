@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import subprocess
 import sys
+import io
+
+# Fix Windows console encoding issue (charmap -> UTF-8)
+if sys.stdout.encoding and sys.stdout.encoding.lower() in ('cp1252', 'charmap', 'ascii'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 REPO = "kushin77/code-server"
 ISSUES = [

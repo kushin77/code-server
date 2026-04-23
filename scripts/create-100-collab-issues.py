@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """Create 100 collaboration platform enhancement issues on GitHub using REST API."""
 import json
 import urllib.request
 import urllib.error
+import sys
+import io
+
+# Fix Windows console encoding issue (charmap -> UTF-8)
+if sys.stdout.encoding and sys.stdout.encoding.lower() in ('cp1252', 'charmap', 'ascii'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 import os
 import sys
 import time

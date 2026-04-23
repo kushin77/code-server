@@ -7,18 +7,20 @@
 import { EventEmitter } from 'events';
 import { getLogger } from '../../lib/logger';
 export class IssueLinkingService extends EventEmitter {
-    constructor(pool, auditService, config = {}) {
+    constructor(pool, auditServiceOrConfig, config = {}) {
         super();
         this.logger = getLogger('IssueLinkingService');
         this.initialized = false;
         this.pool = pool;
-        this.auditService = auditService;
+        const hasAuditService = !!auditServiceOrConfig && typeof auditServiceOrConfig.emit === 'function';
+        this.auditService = hasAuditService ? auditServiceOrConfig : undefined;
+        const resolvedConfig = hasAuditService ? config : (auditServiceOrConfig ?? {});
         this.config = {
             linearApiToken: process.env.LINEAR_API_TOKEN,
             jiraBaseUrl: process.env.JIRA_BASE_URL,
             jiraUsername: process.env.JIRA_USERNAME,
             jiraApiToken: process.env.JIRA_API_TOKEN,
-            ...config,
+            ...resolvedConfig,
         };
     }
     async initialize() {

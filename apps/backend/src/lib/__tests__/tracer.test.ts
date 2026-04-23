@@ -169,12 +169,13 @@ describe('getCurrentTraceContext', () => {
 describe('withSpanSync', () => {
   it('sets OK status and returns the callback result', () => {
     const mockSpan = {
+      setAttribute: vi.fn().mockReturnThis(),
       setStatus: vi.fn(),
       recordException: vi.fn(),
       end: vi.fn(),
     };
     const tracer = {
-      startActiveSpan: vi.fn((_name, _options, callback) => callback(mockSpan)),
+      startSpan: vi.fn(() => mockSpan),
     } as unknown as Parameters<typeof withSpanSync>[0];
 
     const result = withSpanSync(tracer, 'demo', { feature: 'tracing' }, () => 'value');
@@ -186,12 +187,13 @@ describe('withSpanSync', () => {
 
   it('records exceptions and sets ERROR status', () => {
     const mockSpan = {
+      setAttribute: vi.fn().mockReturnThis(),
       setStatus: vi.fn(),
       recordException: vi.fn(),
       end: vi.fn(),
     };
     const tracer = {
-      startActiveSpan: vi.fn((_name, _options, callback) => callback(mockSpan)),
+      startSpan: vi.fn(() => mockSpan),
     } as unknown as Parameters<typeof withSpanSync>[0];
 
     expect(() => withSpanSync(tracer, 'demo', {}, () => {

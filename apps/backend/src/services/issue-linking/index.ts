@@ -73,16 +73,25 @@ export class IssueLinkingService extends EventEmitter {
   private initialized = false;
   private config: IssueLinkingConfig;
 
-  constructor(pool: Pool, auditService?: AuditService, config: IssueLinkingConfig = {}) {
+  constructor(pool: Pool, auditService: AuditService, config?: IssueLinkingConfig);
+  constructor(pool: Pool, config?: IssueLinkingConfig);
+
+  constructor(
+    pool: Pool,
+    auditServiceOrConfig?: AuditService | IssueLinkingConfig,
+    config: IssueLinkingConfig = {}
+  ) {
     super();
     this.pool = pool;
-    this.auditService = auditService;
+    const hasAuditService = !!auditServiceOrConfig && typeof (auditServiceOrConfig as AuditService).emit === 'function';
+    this.auditService = hasAuditService ? (auditServiceOrConfig as AuditService) : undefined;
+    const resolvedConfig = hasAuditService ? config : (auditServiceOrConfig as IssueLinkingConfig | undefined) ?? {};
     this.config = {
       linearApiToken: process.env.LINEAR_API_TOKEN,
       jiraBaseUrl: process.env.JIRA_BASE_URL,
       jiraUsername: process.env.JIRA_USERNAME,
       jiraApiToken: process.env.JIRA_API_TOKEN,
-      ...config,
+      ...resolvedConfig,
     };
   }
 

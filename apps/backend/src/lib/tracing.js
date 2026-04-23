@@ -83,6 +83,7 @@ export async function withSpan(tracer, name, attributes, fn) {
         return result;
     }
     catch (err) {
+        span.recordException(err instanceof Error ? err : new Error(String(err)));
         span.setStatus({ code: 2 }); // ERROR
         throw err;
     }
@@ -104,6 +105,7 @@ export function withSpanSync(tracer, name, attributes, fn) {
         return result;
     }
     catch (err) {
+        span.recordException(err instanceof Error ? err : new Error(String(err)));
         span.setStatus({ code: 2 }); // ERROR
         throw err;
     }

@@ -68,7 +68,6 @@ export class AuditService {
 
   constructor(db: AuditDb) {
     this.db = db;
-    this._initLastHash();
   }
 
   /**

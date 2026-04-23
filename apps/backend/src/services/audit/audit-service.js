@@ -21,7 +21,6 @@ export class AuditService {
         /** Last processed event hash — used for hash chain chaining. */
         this._lastHash = null;
         this.db = db;
-        this._initLastHash();
     }
     /**
      * Emit an audit event. Fire-and-forget: never throws, never blocks the

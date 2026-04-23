@@ -122,6 +122,7 @@ export async function withSpan<T>(
     span.setStatus({ code: 0 }); // OK
     return result;
   } catch (err) {
+    span.recordException(err instanceof Error ? err : new Error(String(err)));
     span.setStatus({ code: 2 }); // ERROR
     throw err;
   } finally {
@@ -147,6 +148,7 @@ export function withSpanSync<T>(
     span.setStatus({ code: 0 }); // OK
     return result;
   } catch (err) {
+    span.recordException(err instanceof Error ? err : new Error(String(err)));
     span.setStatus({ code: 2 }); // ERROR
     throw err;
   } finally {

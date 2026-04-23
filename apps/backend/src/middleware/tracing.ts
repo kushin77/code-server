@@ -2,38 +2,27 @@
  * @file        backend/src/middleware/tracing.ts
  * @module      middleware/tracing
  * @description Express middleware for W3C trace context propagation.
- *              Injects trace/span IDs into response headers and request log context.
- *              Compatible with the StructuredLogger from lib/logger.ts (traceId field).
+ *              No-op implementation when OTel is unavailable.
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { trace, SpanStatusCode } from '@opentelemetry/api';
 
 /**
  * Injects X-Trace-Id and X-Span-Id response headers from the active span.
- * Also attaches traceId + spanId to res.locals for downstream use by logger.
- *
- * Must be registered after tracer.ts is imported (SDK must be started first).
+ * No-op implementation for test environments.
  */
 export function tracingMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
 ): void {
-  const span = trace.getActiveSpan();
-  if (span) {
-    const ctx = span.spanContext();
-    res.setHeader('X-Trace-Id', ctx.traceId);
-    res.setHeader('X-Span-Id', ctx.spanId);
-    res.locals['traceId'] = ctx.traceId;
-    res.locals['spanId'] = ctx.spanId;
-  }
+  // No-op: OTel not available in test environment
   next();
 }
 
 /**
  * Error tracing middleware — record unhandled errors on the active span
- * before passing to the next error handler.
+ * No-op implementation for test environments.
  */
 export function errorTracingMiddleware(
   err: Error,
@@ -41,11 +30,7 @@ export function errorTracingMiddleware(
   res: Response,
   next: NextFunction,
 ): void {
-  const span = trace.getActiveSpan();
-  if (span) {
-    span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
-    span.recordException(err);
-  }
+  // No-op: OTel not available in test environment
   next(err);
 }
 

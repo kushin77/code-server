@@ -95,12 +95,10 @@ run_oauth_tests() {
       "$E2E_SPECS_DIR/oauth-login.spec.ts" \
       "$E2E_SPECS_DIR/oauth-login-comprehensive.spec.ts" \
       --config="$PLAYWRIGHT_CONFIG" \
-      --reporter=json \
       --reporter=html \
       ${HEADED:+--headed} \
       --workers="$WORKERS" \
       --timeout="$TEST_TIMEOUT" \
-      --output-dir="$REPORT_DIR/oauth" \
       2>&1 | tee "$REPORT_DIR/oauth-tests.log" || status=$?
   fi
   
@@ -131,12 +129,10 @@ run_rbac_tests() {
     npx playwright test \
       "$E2E_SPECS_DIR/rbac-authorization.spec.ts" \
       --config="$PLAYWRIGHT_CONFIG" \
-      --reporter=json \
       --reporter=html \
       ${HEADED:+--headed} \
       --workers="$WORKERS" \
       --timeout="$TEST_TIMEOUT" \
-      --output-dir="$REPORT_DIR/rbac" \
       2>&1 | tee "$REPORT_DIR/rbac-tests.log" || status=$?
   fi
   
@@ -167,12 +163,10 @@ run_jwt_tests() {
     npx playwright test \
       "$E2E_SPECS_DIR/jwt-token-validation.spec.ts" \
       --config="$PLAYWRIGHT_CONFIG" \
-      --reporter=json \
       --reporter=html \
       ${HEADED:+--headed} \
       --workers="$WORKERS" \
       --timeout="$TEST_TIMEOUT" \
-      --output-dir="$REPORT_DIR/jwt" \
       2>&1 | tee "$REPORT_DIR/jwt-tests.log" || status=$?
   fi
   
@@ -205,12 +199,10 @@ run_failover_tests() {
       "$E2E_SPECS_DIR/failover-multi-host.spec.ts" \
       "$E2E_SPECS_DIR/failover-session-continuity.spec.ts" \
       --config="$PLAYWRIGHT_CONFIG" \
-      --reporter=json \
       --reporter=html \
       ${HEADED:+--headed} \
       --workers=1 \
       --timeout="$TEST_TIMEOUT" \
-      --output-dir="$REPORT_DIR/failover" \
       2>&1 | tee "$REPORT_DIR/failover-tests.log" || status=$?
   fi
   
@@ -243,12 +235,10 @@ run_integration_tests() {
       "$E2E_SPECS_DIR/ide-operations.spec.ts" \
       "$E2E_SPECS_DIR/authenticated-session-persistence.spec.ts" \
       --config="$PLAYWRIGHT_CONFIG" \
-      --reporter=json \
       --reporter=html \
       ${HEADED:+--headed} \
       --workers="$WORKERS" \
       --timeout="$TEST_TIMEOUT" \
-      --output-dir="$REPORT_DIR/integration" \
       2>&1 | tee "$REPORT_DIR/integration-tests.log" || status=$?
   fi
   

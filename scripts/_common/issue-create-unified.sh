@@ -57,6 +57,7 @@ declare -A TYPE_LABELS=(
     [testing]="testing"
     [performance]="performance"
     [accessibility]="accessibility"
+    [integrations]="integrations"
 )
 
 # Production priority indicators (P0/P1 must be addressed before new features)
@@ -111,7 +112,39 @@ validate_parameters() {
         log_warn "Unknown issue type '$issue_type', will use as-is"
     fi
 }
-
+# Validate that labels exist in the repository
+validate_labels() {
+    local repo="$1"
+    local labels_str="$2"
+    
+    if [[ -z "$labels_str" ]]; then
+        return 0
+    fi
+    
+    local -a labels
+    IFS=',' read -ra labels <<< "$labels_str"
+    
+    log_debug "Validating labels for repo $repo: ${labels[*]}"
+    
+    # Get list of existing labels in repo
+    local existing_labels
+    existing_labels=$(gh label list --repo "$repo" --json name --query '.[].name' 2>&1 | tr '\n' '|')
+    
+    local invalid_labels=()
+    for label in "${labels[@]}"; do
+        label="${label// /}"  # Trim whitespace
+        if [[ -n "$label" && ! "$existing_labels" =~ "$label" ]]; then
+            invalid_labels+=("$label")
+        fi
+    done
+    
+    if [[ ${#invalid_labels[@]} -gt 0 ]]; then
+        log_warn "Invalid labels (not found in repo): ${invalid_labels[*]}"
+        return 1
+    fi
+    
+    return 0
+}
 # Build label array from priority + type + custom labels
 build_labels() {
     local priority="$1"
@@ -203,6 +236,13 @@ github_issue_create() {
         if ! check_for_duplicates "$title" "$repo"; then
             log_warn "Skipping creation due to potential duplicates. Use --force-create to bypass."
             return 1
+        fi
+    fi
+    
+    # Validate labels exist in repo (skip if empty)
+    if [[ -n "$labels" ]]; then
+        if ! validate_labels "$repo" "$labels"; then
+            log_warn "Some labels do not exist in repository. Attempting to create issue anyway."
         fi
     fi
     

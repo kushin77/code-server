@@ -11,6 +11,7 @@ import { getLogger } from '../../lib/logger.js';
 import { AuditService } from '../audit/audit-service.js';
 import { AIRouter } from '../ai/router.js';
 import { CollaborationMessageEncryptionService } from '../collaboration-message-encryption/index.js';
+import { MatrixCollaborationTransportService } from '../collaboration-message-transport/index.js';
 
 export interface DailyActivity {
   date: string;
@@ -81,19 +82,22 @@ export class StandupSummariesService extends EventEmitter {
   private readonly logger: ReturnType<typeof getLogger>;
   private readonly aiRouter: AIRouter;
   private readonly config: StandupConfig;
+  private readonly matrixTransport?: MatrixCollaborationTransportService;
   private scheduleTimer?: NodeJS.Timeout;
 
   constructor(
     db: Pool,
     auditService: AuditService,
     aiRouter: AIRouter,
-    config: Partial<StandupConfig> = {}
+    config: Partial<StandupConfig> = {},
+    matrixTransport?: MatrixCollaborationTransportService
   ) {
     super();
     this.db = db;
     this.auditService = auditService;
     this.logger = getLogger('StandupSummariesService');
     this.aiRouter = aiRouter;
+    this.matrixTransport = matrixTransport;
     this.config = {
       githubRepo: 'code-server',
       githubOwner: 'kushin77',
@@ -647,11 +651,36 @@ Please format as a clean standup summary suitable for team chat.`;
         payloadBytes: Buffer.byteLength(matrixMessage.body, 'utf8'),
       });
 
-      // TODO: Implement actual Matrix API call
-      // const success = await this.sendMatrixMessage(this.config.matrixRoomId, matrixMessage);
+      // Send encrypted message through Matrix transport if available
+      let success = false;
+      if (this.matrixTransport && this.config.matrixRoomId) {
+        try {
+          const payload = await this.matrixTransport.sendEncryptedMessage(
+            this.config.matrixRoomId,
+            summary.summary,
+            {
+              summaryDate: date,
+              summaryStatus: summary.status,
+              summaryId: summary.id,
+            }
+          );
 
-      // Simulate success for now
-      const success = true;
+          this.logger.info('Sent encrypted standup summary to Matrix', {
+            roomId: this.config.matrixRoomId,
+            keyId: payload.content.keyId,
+            date,
+          });
+
+          success = true;
+        } catch (transportError) {
+          this.logger.error('Failed to send message through Matrix transport', { error: transportError, date });
+          success = false;
+        }
+      } else {
+        // Simulate success if no transport service configured (backward compatible)
+        this.logger.warn('Matrix transport service not configured, simulating success for compatibility', { date });
+        success = true;
+      }
 
       if (success) {
         await this.markAsPosted(date);

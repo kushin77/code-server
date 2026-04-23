@@ -309,11 +309,13 @@ describe('CRDTCompactionService', () => {
       const removed = service.removeOldSnapshots(24) // Remove older than 24 hours
 
       // Wait for processing
-      setTimeout(() => {
-        const remaining = service.getAllSnapshots()
-        expect(remaining).toHaveLength(0)
-        done()
-      }, 100)
+      return new Promise(resolve => {
+        setTimeout(() => {
+          const remaining = service.getAllSnapshots()
+          expect(remaining).toHaveLength(0)
+          resolve(null)
+        }, 100)
+      })
     })
 
     it('should keep recent snapshots', () => {

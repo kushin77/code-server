@@ -205,10 +205,11 @@ export class AuditLoggingService extends EventEmitter {
     if (!this.isInitialized) throw new Error('Service not initialized');
 
     const userContext = this.userContextMap.get(event.createdByUserId);
+    const now = Date.now();
 
     const entry: AuditLogEntry = {
-      id: `audit-${workspaceId}-${Date.now()}-${Math.random().toString(16).substring(2, 10)}`,
-      timestamp: Date.now(),
+      id: `audit-${workspaceId}-${now}-${Math.random().toString(16).substring(2, 10)}`,
+      timestamp: now,
       userId: event.createdByUserId,
       userEmail: userContext?.email,
       userRole: userContext?.role || 'user',
@@ -228,7 +229,7 @@ export class AuditLoggingService extends EventEmitter {
       sessionId,
       requestId,
       error: event.error,
-      createdAt: Date.now(),
+      createdAt: now,
       _immutable: true,
     };
 

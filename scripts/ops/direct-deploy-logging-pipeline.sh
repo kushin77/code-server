@@ -15,13 +15,18 @@ REPO_PATH="~/code-server-enterprise"
 
 TARGET_HOST=""
 TARGET_LABEL=""
+DEPLOY_ALL=0
 
 usage() {
   cat <<'EOF'
-Usage: bash scripts/ops/direct-deploy-logging-pipeline.sh [--host <ip>]
+Usage: bash scripts/ops/direct-deploy-logging-pipeline.sh [OPTIONS]
 
 Options:
-  --host <ip>   Deploy only to the specified host. Defaults to both primary and replica.
+  --host <ip>   Deploy only to the specified host (192.168.168.31 or 192.168.168.42).
+  --all         Deploy to both primary and replica hosts (192.168.168.31 and 192.168.168.42).
+  -h,--help     Show this help message.
+
+Default (no options): Deploy to both hosts (same as --all).
 EOF
 }
 
@@ -30,6 +35,10 @@ while [[ $# -gt 0 ]]; do
     --host)
       TARGET_HOST="${2:-}"
       shift 2
+      ;;
+    --all)
+      DEPLOY_ALL=1
+      shift 1
       ;;
     -h|--help)
       usage
@@ -93,7 +102,8 @@ if [[ -n "$TARGET_HOST" ]]; then
     echo "✗ ${TARGET_LABEL} deployment failed"
     exit 1
   fi
-else
+elif [[ $DEPLOY_ALL -eq 1 ]] || [[ -z "$TARGET_HOST" && $DEPLOY_ALL -eq 0 ]]; then
+  # Deploy to both hosts (--all flag or default behavior)
   # Deploy to primary
   if deploy_host "$PRIMARY_HOST" "PRIMARY"; then
     echo "✓ PRIMARY deployment successful"

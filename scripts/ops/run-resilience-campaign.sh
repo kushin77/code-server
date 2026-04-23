@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # @file        scripts/ops/run-resilience-campaign.sh
-# @module      ops/monitoring
-# @description Run the active resilience campaign baseline, soak-lite, and authenticated smoke checks.
+# @module      ops/governance
+# @description Orchestrate resilience campaign audits, smoke tests, and failover validation
+# @owner       akushnir
+# @status      production
 #
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
+source "$SCRIPT_DIR/../_common/issue-create-unified.sh"
 
 OUTPUT_DIR="${OUTPUT_DIR:-artifacts/triage}"
 CAMPAIGN_BASENAME="${CAMPAIGN_BASENAME:-resilience-campaign}"
@@ -107,9 +110,9 @@ summary_md="$OUTPUT_DIR/${CAMPAIGN_BASENAME}.md"
 loadtest_log="$OUTPUT_DIR/${CAMPAIGN_BASENAME}-k6.log"
 loadtest_json="$OUTPUT_DIR/${CAMPAIGN_BASENAME}-k6.json"
 
-log_info "Running resilience campaign profile: $CAMPAIGN_PROFILE"
+log_stage "Running resilience campaign profile: $CAMPAIGN_PROFILE"
 
-log_info "Collecting baseline surface measurements"
+log_stage "Collecting baseline surface measurements"
 REQUEST_COUNT="$BASELINE_REQUEST_COUNT" \
 THROTTLE_LIMIT="$BASELINE_THROTTLE_LIMIT" \
 OUTPUT_DIR="$OUTPUT_DIR" \
@@ -119,7 +122,7 @@ bash "$SCRIPT_DIR/collect-live-surface-baseline.sh"
 require_file "$baseline_json"
 require_file "$baseline_md"
 
-log_info "Collecting soak-lite surface measurements"
+log_stage "Collecting soak-lite surface measurements"
 REQUEST_COUNT="$SOAK_REQUEST_COUNT" \
 THROTTLE_LIMIT="$SOAK_THROTTLE_LIMIT" \
 OUTPUT_DIR="$OUTPUT_DIR" \
@@ -134,7 +137,7 @@ loadtest_exit_code=0
 loadtest_reason="not requested"
 
 if [[ "$RUN_K6_LOADTEST" == "1" ]]; then
-    log_info "Running k6 loadtest profile: $K6_SCALE_PROFILE"
+    log_stage "Running k6 loadtest profile: $K6_SCALE_PROFILE"
     set +e
     trap - ERR
     env \
@@ -170,7 +173,7 @@ puppeteer_reason="not requested"
 defect_issue_url=""
 
 if [[ "$RUN_AUTHENTICATED_SMOKE" == "1" ]]; then
-    log_info "Running authenticated smoke check"
+    log_stage "Running authenticated smoke check"
     set +e
     trap - ERR
     env \
@@ -199,7 +202,7 @@ else
 fi
 
 if [[ "$RUN_PUPPETEER_PARITY" == "1" ]]; then
-    log_info "Running Puppeteer parity check"
+    log_stage "Running Puppeteer parity check"
     set +e
     trap - ERR
     env \
@@ -229,7 +232,7 @@ if [[ "$RUN_FAILOVER_CONTINUITY" == "1" ]]; then
         failover_reason="PLAYWRIGHT_STORAGE_STATE not set"
         log_warn "Failover continuity check skipped: $failover_reason"
     else
-        log_info "Running failover continuity check"
+        log_stage "Running failover continuity check"
         set +e
         trap - ERR
         env \
@@ -258,150 +261,30 @@ else
     log_info "Failover continuity check skipped by configuration"
 fi
 
-python3 - "$baseline_json" "$soak_json" "$summary_json" "$summary_md" "$auth_status" "$auth_exit_code" "$auth_reason" "$loadtest_status" "$loadtest_exit_code" "$loadtest_reason" "$failover_status" "$failover_exit_code" "$failover_reason" "$puppeteer_status" "$puppeteer_exit_code" "$puppeteer_reason" "$PORTAL_BASE_URL" "$IDE_BASE_URL" "$K6_SCALE_PROFILE" <<'PY'
-import json
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-baseline_json = Path(sys.argv[1])
-soak_json = Path(sys.argv[2])
-summary_json = Path(sys.argv[3])
-summary_md = Path(sys.argv[4])
-auth_status = sys.argv[5]
-auth_exit_code = int(sys.argv[6])
-auth_reason = sys.argv[7]
-loadtest_status = sys.argv[8]
-loadtest_exit_code = int(sys.argv[9])
-loadtest_reason = sys.argv[10]
-failover_status = sys.argv[11]
-failover_exit_code = int(sys.argv[12])
-failover_reason = sys.argv[13]
-puppeteer_status = sys.argv[14]
-puppeteer_exit_code = int(sys.argv[15])
-puppeteer_reason = sys.argv[16]
-portal_base_url = sys.argv[17]
-ide_base_url = sys.argv[18]
-scale_profile = sys.argv[19]
-
-with baseline_json.open(encoding='utf-8') as handle:
-    baseline = json.load(handle)
-
-with soak_json.open(encoding='utf-8') as handle:
-    soak = json.load(handle)
-
-generated_at = datetime.now(timezone.utc).isoformat(timespec='seconds')
-
-summary = {
-    'generated_at': generated_at,
-    'portal_base_url': portal_base_url,
-    'ide_base_url': ide_base_url,
-    'baseline': baseline,
-    'soak_lite': soak,
-    'authenticated_smoke': {
-        'status': auth_status,
-        'exit_code': auth_exit_code,
-        'reason': auth_reason,
-        'log_file': str(summary_json.parent / f"{summary_json.stem}-authenticated-smoke.log"),
-    },
-    'loadtest': {
-        'status': loadtest_status,
-        'exit_code': loadtest_exit_code,
-        'reason': loadtest_reason,
-        'log_file': str(summary_json.parent / f"{summary_json.stem}-k6.log"),
-        'summary_file': str(summary_json.parent / f"{summary_json.stem}-k6.json"),
-        'scale_profile': scale_profile,
-    },
-    'failover_continuity': {
-        'status': failover_status,
-        'exit_code': failover_exit_code,
-        'reason': failover_reason,
-        'log_file': str(summary_json.parent / f"{summary_json.stem}-failover-continuity.log"),
-    },
-    'puppeteer_parity': {
-        'status': puppeteer_status,
-        'exit_code': puppeteer_exit_code,
-        'reason': puppeteer_reason,
-        'log_file': str(summary_json.parent / f"{summary_json.stem}-puppeteer-parity.log"),
-    },
-    'campaign_status': 'degraded' if auth_status == 'failed' or loadtest_status == 'failed' or failover_status == 'failed' or puppeteer_status == 'failed' else 'in-progress',
-}
-
-summary_json.write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
-
-lines = [
-    '# Resilience Campaign Summary',
-    '',
-    f'Generated: {generated_at}',
-    f'Campaign profile: {scale_profile}',
-    f'Portal base URL: {portal_base_url}',
-    f'IDE base URL: {ide_base_url}',
-    '',
-    '## Baseline',
-    '',
-]
-
-for report in baseline['reports']:
-    lines.append(
-        f"- {report['name']}: {report['status_counts']} avg={report['average_seconds']}s min={report['min_seconds']}s max={report['max_seconds']}s"
-    )
-
-lines += [
-    '',
-    '## Soak-Lite',
-    '',
-]
-
-for report in soak['reports']:
-    lines.append(
-        f"- {report['name']}: {report['status_counts']} avg={report['average_seconds']}s min={report['min_seconds']}s max={report['max_seconds']}s"
-    )
-
-lines += [
-    '',
-    '## Authenticated Smoke',
-    '',
-    f'- status: {auth_status}',
-    f'- exit code: {auth_exit_code}',
-    f'- reason: {auth_reason or "n/a"}',
-    '',
-    '## Loadtest',
-    '',
-    f'- status: {loadtest_status}',
-    f'- exit code: {loadtest_exit_code}',
-    f'- reason: {loadtest_reason or "n/a"}',
-    f'- scale profile: {scale_profile}',
-    '',
-    '## Failover Continuity',
-    '',
-    f'- status: {failover_status}',
-    f'- exit code: {failover_exit_code}',
-    f'- reason: {failover_reason or "n/a"}',
-    '',
-    '## Puppeteer Parity',
-    '',
-    f'- status: {puppeteer_status}',
-    f'- exit code: {puppeteer_exit_code}',
-    f'- reason: {puppeteer_reason or "n/a"}',
-    '',
-    '## Notes',
-    '',
-    '- This runner collects a repeatable surface baseline and a slightly heavier soak sample.',
-    '- It also provides an authenticated smoke path when the required environment is available.',
-    '- It includes a Puppeteer parity probe for critical login and root-path checks.',
-    '- It includes a profile-driven k6 loadtest for baseline and 100x campaign modes.',
-    '- Chaos/fault injection remains a separate follow-up step for the broader resilience campaign.',
-]
-
-summary_md.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-PY
+python3 "$SCRIPT_DIR/generate-resilience-summary.py" \
+    --baseline-json "$baseline_json" \
+    --soak-json "$soak_json" \
+    --summary-json "$summary_json" \
+    --summary-md "$summary_md" \
+    --auth-status "$auth_status" \
+    --auth-exit-code "$auth_exit_code" \
+    --auth-reason "$auth_reason" \
+    --loadtest-status "$loadtest_status" \
+    --loadtest-exit-code "$loadtest_exit_code" \
+    --loadtest-reason "$loadtest_reason" \
+    --failover-status "$failover_status" \
+    --failover-exit-code "$failover_exit_code" \
+    --failover-reason "$failover_reason" \
+    --puppeteer-status "$puppeteer_status" \
+    --puppeteer-exit-code "$puppeteer_exit_code" \
+    --puppeteer-reason "$puppeteer_reason" \
+    --portal-base-url "$PORTAL_BASE_URL" \
+    --ide-base-url "$IDE_BASE_URL" \
+    --scale-profile "$K6_SCALE_PROFILE"
 
 if [[ "$AUTO_FILE_DEFECTS" == "1" && ( "$auth_status" == "failed" || "$loadtest_status" == "failed" || "$failover_status" == "failed" || "$puppeteer_status" == "failed" ) ]]; then
-    if command -v gh >/dev/null 2>&1; then
-        defect_body_file="$OUTPUT_DIR/${CAMPAIGN_BASENAME}-defect.md"
-        defect_title="P1: Resilience campaign failure (${CAMPAIGN_BASENAME})"
-
-        cat > "$defect_body_file" <<EOF
+    defect_title="P1: Resilience campaign failure (${CAMPAIGN_BASENAME})"
+    defect_body=$(cat <<EOF
 Automated resilience campaign detected at least one failing phase.
 
 Campaign: $CAMPAIGN_BASENAME
@@ -416,7 +299,6 @@ Statuses:
 
 Reproduction:
 1. Run: 
-   \
    CAMPAIGN_PROFILE=$CAMPAIGN_PROFILE OUTPUT_DIR=$OUTPUT_DIR bash scripts/ops/run-resilience-campaign.sh
 2. Inspect logs under: $OUTPUT_DIR
 
@@ -428,43 +310,15 @@ Artifact links (local paths):
 - $OUTPUT_DIR/${CAMPAIGN_BASENAME}-failover-continuity.log
 - $OUTPUT_DIR/${CAMPAIGN_BASENAME}-puppeteer-parity.log
 EOF
+)
 
-        IFS=',' read -r -a defect_labels <<< "$DEFECT_LABELS_CSV"
-        gh_args=(issue create --repo "$DEFECT_REPO" --title "$defect_title" --body-file "$defect_body_file")
-        for label in "${defect_labels[@]}"; do
-            trimmed_label="$(printf '%s' "$label" | xargs)"
-            if [[ -n "$trimmed_label" ]]; then
-                gh_args+=(--label "$trimmed_label")
-            fi
-        done
-
-        set +e
-        trap - ERR
-        defect_issue_url="$(gh "${gh_args[@]}" 2>/dev/null)"
-        gh_exit=$?
-        set -e
-        if [[ "$gh_exit" -ne 0 ]]; then
-            log_warn "Automatic defect filing failed for $DEFECT_REPO"
-        else
-            log_warn "Filed campaign defect: $defect_issue_url"
-        fi
-    else
-        log_warn "AUTO_FILE_DEFECTS requested but gh is not available"
-    fi
-fi
-
-if [[ -n "$defect_issue_url" ]]; then
-    python3 - "$summary_json" "$defect_issue_url" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-summary_path = Path(sys.argv[1])
-issue_url = sys.argv[2]
-data = json.loads(summary_path.read_text(encoding='utf-8'))
-data['defect_issue_url'] = issue_url
-summary_path.write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
-PY
+    copilot_create_issue \
+        --title "$defect_title" \
+        --body "$defect_body" \
+        --priority P1 \
+        --type bug \
+        --repo "$DEFECT_REPO" \
+        --check-duplicates
 fi
 
 log_info "Resilience campaign collected in $OUTPUT_DIR"

@@ -4,7 +4,7 @@
 # @description Deploy Collab-9 to production cluster
 #
 # Deploys code-server-enterprise with Collab-9 features to
-# multi-replica cluster (192.168.168.31, .42) with health verification
+# the configured multi-replica cluster with health verification
 # and automatic rollback on failure.
 #
 # Usage:
@@ -17,11 +17,10 @@ source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 DRY_RUN=0
-REPLICAS=("192.168.168.31" "192.168.168.42")
-DEPLOY_USER="akushnir"
-DEPLOY_TIMEOUT=300
-HEALTH_RETRIES=10
-HEALTH_RETRY_DELAY=5
+TARGET_REPLICAS=("192.168.168.31" "192.168.168.42")
+SSH_USER="${DEPLOY_USER:-akushnir}"
+DEPLOY_HEALTH_RETRIES=10
+DEPLOY_HEALTH_RETRY_DELAY=5
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -31,7 +30,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --replicas)
-      IFS=',' read -ra REPLICAS <<<"$2"
+      IFS=',' read -ra TARGET_REPLICAS <<<"$2"
       shift 2
       ;;
     *)
@@ -42,7 +41,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 log_info "Collab-9 Production Deployment"
-log_info "Target Replicas: ${REPLICAS[*]}"
+log_info "Target Replicas: ${TARGET_REPLICAS[*]}"
 log_info "Dry Run: $([[ $DRY_RUN -eq 1 ]] && echo 'YES' || echo 'NO')"
 
 # Verify git status
@@ -66,11 +65,11 @@ deploy_to_replica() {
   log_info "Deploying to $replica..."
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[DRY RUN] Would execute: ssh ${DEPLOY_USER}@${replica} '${cmd}'"
+    log_info "[DRY RUN] Would execute: ssh ${SSH_USER}@${replica} '${cmd}'"
     return 0
   fi
 
-  if ssh "${DEPLOY_USER}@${replica}" "$cmd" 2>&1; then
+  if ssh "${SSH_USER}@${replica}" "$cmd" 2>&1; then
     log_info "Deployment to $replica completed."
     return 0
   else
@@ -85,8 +84,8 @@ verify_replica_health() {
   local url="http://${replica}:3000/health/ready"
   local retries=0
 
-  while [[ $retries -lt $HEALTH_RETRIES ]]; do
-    log_info "Health check for $replica (attempt $((retries + 1))/$HEALTH_RETRIES)..."
+  while [[ $retries -lt $DEPLOY_HEALTH_RETRIES ]]; do
+    log_info "Health check for $replica (attempt $((retries + 1))/$DEPLOY_HEALTH_RETRIES)..."
     
     if curl -s -f "$url" &>/dev/null; then
       local status=$(curl -s "$url" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
@@ -98,20 +97,20 @@ verify_replica_health() {
     fi
     
     retries=$((retries + 1))
-    if [[ $retries -lt $HEALTH_RETRIES ]]; then
-      log_info "Health check failed. Retrying in ${HEALTH_RETRY_DELAY}s..."
-      sleep "$HEALTH_RETRY_DELAY"
+    if [[ $retries -lt $DEPLOY_HEALTH_RETRIES ]]; then
+      log_info "Health check failed. Retrying in ${DEPLOY_HEALTH_RETRY_DELAY}s..."
+      sleep "$DEPLOY_HEALTH_RETRY_DELAY"
     fi
   done
 
-  log_error "✗ $replica failed health check after $HEALTH_RETRIES attempts."
+  log_error "✗ $replica failed health check after $DEPLOY_HEALTH_RETRIES attempts."
   return 1
 }
 
 # Deploy to all replicas in parallel
-log_info "Starting deployment to ${#REPLICAS[@]} replicas..."
+log_info "Starting deployment to ${#TARGET_REPLICAS[@]} replicas..."
 deploy_pids=()
-for replica in "${REPLICAS[@]}"; do
+for replica in "${TARGET_REPLICAS[@]}"; do
   deploy_to_replica "$replica" &
   deploy_pids+=("$!")
 done
@@ -133,7 +132,7 @@ fi
 # Verify health of all replicas
 log_info "Verifying cluster health..."
 health_failed=0
-for replica in "${REPLICAS[@]}"; do
+for replica in "${TARGET_REPLICAS[@]}"; do
   if ! verify_replica_health "$replica"; then
     health_failed=1
   fi

@@ -53,7 +53,7 @@ jobs:
 
       - name: Run DAST scan
         env:
-          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL }}
+          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL || format('{0}/health', vars.IDE_BASE_URL || 'https://ide.kushnir.cloud') }}
           PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
           IDE_BASE_URL: ${{ vars.IDE_BASE_URL }}
           GH_TOKEN: ${{ github.token }}

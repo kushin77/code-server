@@ -1,7 +1,7 @@
 # Phase 2C Deployment - Continuation Status
 **Date**: April 21, 2026  
 **Status**: Phase 2C Deployment In Progress  
-**Current Blockers**: OIDC_ISSUER_SIGNING_KEY deployment
+**Current Blockers**: None on the signing-key path; the active mismatch is public routing/documentation
 
 ---
 
@@ -9,11 +9,11 @@
 
 ### Services Running on Primary (192.168.168.31)
 ✅ caddy (reverse proxy) - UP, healthy
-✅ oauth2-proxy - UP, unhealthy (waiting for OIDC issuer)
+✅ oauth2-proxy - UP, healthy
 ✅ redis - UP, healthy  
 ✅ redis-sentinel-1 - UP, healthy
 ✅ redis-sentinel-arbiter - UP, healthy
-❌ oauth2-oidc-issuer - Not started (missing OIDC_ISSUER_SIGNING_KEY)
+✅ oauth2-oidc-issuer - Running and healthy on the internal Docker network
 ⏳ code-server, postgres, grafana, prometheus, alertmanager - Available on docker-compose
 
 ### Environment Variables
@@ -24,14 +24,14 @@ The following Phase 2 variables are already in .env:
 - ✅ SERVICE_CLIENT_SESSION_BROKER_ID
 - ✅ SERVICE_CLIENT_BACKEND_ID
 - ✅ OIDC_ISSUER_URL
-- ❌ OIDC_ISSUER_SIGNING_KEY (needs to be added)
+- ✅ OIDC_ISSUER_SIGNING_KEY (deployed on host; verify against the live .env if needed)
 
 ---
 
 ## Phase 2C: Immediate Next Steps
 
-### Step 1: Deploy OIDC RSA Signing Key
-Execute the deployment script to add the RSA private key to .env:
+### Step 1: Confirm OIDC RSA Signing Key
+The signing key is already deployed on the host. If you are rebuilding a fresh host, use the deployment script to restore it:
 
 ```bash
 # On your local machine
@@ -57,7 +57,7 @@ grep -c "BEGIN PRIVATE KEY" .env
 ```
 
 ### Step 2: Restart oauth2-oidc-issuer Service
-Once the key is in .env, restart the service:
+Restart the service and verify internal health; the current Caddyfile does not expose a public `/.well-known/openid-configuration` route for `ide.kushnir.cloud`:
 
 ```bash
 docker-compose up -d oauth2-oidc-issuer
@@ -66,11 +66,11 @@ docker-compose up -d oauth2-oidc-issuer
 docker-compose logs oauth2-oidc-issuer --tail 20
 
 # Verify health
-curl -s http://oauth2-oidc-issuer:4182/.well-known/openid-configuration | jq .
+curl -s http://oauth2-oidc-issuer:4182/ping
 ```
 
 ### Step 3: Restart oauth2-proxy
-oauth2-proxy is currently unhealthy because it's trying to reach oauth2-oidc-issuer for OIDC discovery:
+oauth2-proxy should remain healthy once the issuer is healthy; public discovery is handled by edge routing only when that route is enabled:
 
 ```bash
 docker-compose restart oauth2-proxy
@@ -92,10 +92,11 @@ docker-compose ps
 
 ## Phase 2C Completion Checklist
 
-- [ ] OIDC_ISSUER_SIGNING_KEY added to .env
-- [ ] oauth2-oidc-issuer service UP and healthy
-- [ ] .well-known/openid-configuration endpoint responds (HTTP 200)
-- [ ] oauth2-proxy UP and healthy
+- [x] OIDC_ISSUER_SIGNING_KEY present in .env via deployment flow
+- [x] oauth2-oidc-issuer service UP and healthy
+- [x] oauth2-oidc-issuer /ping endpoint responds (HTTP 200)
+- [ ] Public .well-known/openid-configuration route enabled in edge routing
+- [x] oauth2-proxy UP and healthy
 - [ ] code-server service UP and healthy
 - [ ] All 9 services in docker-compose ps show as "Up"
 - [ ] Browser test: Can access https://ide.kushnir.cloud and see login redirect

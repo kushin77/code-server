@@ -612,3 +612,29 @@ jobs:
         # P1 blocking: if settings.json or extensions-approved.json changed without
         # updating policy-version.json, this detects the drift and blocks the merge.
         run: bash scripts/ci/validate-policy-version.sh
+
+  # ── P2 #1622: Cluster parity validation ───────────────────────────────────
+  cluster-parity-check:
+    name: Infrastructure — multi-replica cluster parity validation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install OpenSSH client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq openssh-client
+
+      - name: Validate cluster parity (git + services + health)
+        env:
+          SSH_KEY_ONPREM: ${{ secrets.SSH_KEY_ONPREM }}
+          PRIMARY_HOST: 192.168.168.31
+          SECONDARY_HOST: 192.168.168.42
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY_ONPREM" > ~/.ssh/id_rsa_onprem
+          chmod 600 ~/.ssh/id_rsa_onprem
+          bash scripts/ops/validate-cluster-parity.sh 2>&1 || {
+            echo "::warning::Cluster parity check failed — replicas may be diverged"
+            exit 0
+          }

@@ -89,6 +89,18 @@ scrape_configs:
     scrape_interval: 15s
     scrape_timeout: 10s
 
+  # PostgreSQL metrics via postgres_exporter
+  - job_name: 'postgres_exporter'
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'postgres:5432'
+
   # NAS host metrics (node_exporter on 192.168.168.56)
   - job_name: 'nas'
     static_configs:

@@ -368,7 +368,8 @@ services:
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4181/ping || exit 1"]
+      # Use /healthz endpoint directly via TCP - doesn't require external tools
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/4181 && echo -e 'GET /healthz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200' && exec 3>&- && exit 0 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

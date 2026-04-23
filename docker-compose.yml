@@ -92,6 +92,7 @@ services:
     image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
     container_name: ollama
     restart: unless-stopped
+    user: "1000:1000"
     # ✅ GPU ACCELERATION - Uncomment this line if NVIDIA GPU detected on host
     # runtime: nvidia
     networks:
@@ -214,7 +215,7 @@ services:
       OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
       OAUTH2_PROXY_AUTH_LOGGING: "true"
       OAUTH2_PROXY_REQUEST_LOGGING: "false"
-      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/ping|^/static|^/dast|^/scan"
+      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/$|^/healthz|^/ping|^/static|^/dast|^/scan"
     volumes:
       - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
     healthcheck:
@@ -554,6 +555,7 @@ services:
     image: edoburu/pgbouncer@sha256:85d1e38593617af1b5f7f285e97d407e56c29939683cc7cfe4c8f6dc19f1268b
     container_name: pgbouncer
     restart: unless-stopped
+    user: "postgres:postgres"
     networks:
       - net-data
     expose:
@@ -604,6 +606,7 @@ services:
     image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
     container_name: redis
     restart: unless-stopped
+    user: "redis:redis"
     networks:
       net-app:
         ipv4_address: 172.28.2.50
@@ -652,6 +655,7 @@ services:
     image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
     container_name: redis-sentinel-1
     restart: unless-stopped
+    user: "redis:redis"
     networks:
       - net-app
     ports:
@@ -712,6 +716,7 @@ services:
     image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
     container_name: redis-sentinel-arbiter
     restart: unless-stopped
+    user: "redis:redis"
     networks:
       - net-app
     expose:
@@ -750,6 +755,7 @@ services:
     image: alpine:3.20@sha256:c64c687cbea9300178b30c95835354e34c4e4febc4badfe27102879de0483b5e
     container_name: code-server-profile-backup
     restart: unless-stopped
+    user: "1000:1000"
     networks:
       - net-app
     depends_on:
@@ -829,6 +835,7 @@ services:
     image: prom/prometheus:v2.48.0@sha256:13f40c0279df792517b456ae6427dd6344685e9b1478fb9de8e4dc418727668f
     container_name: prometheus
     restart: unless-stopped
+    user: "nobody:nobody"
     # prometheus is on all tiers: pull-only metrics scraping across edge/app/data
     # does not expose external ports; net-edge + net-data access is read-only scrape only
     networks:
@@ -875,6 +882,7 @@ services:
     image: grafana/grafana:10.2.3@sha256:1c2ca5868432ae258711afa5c18f8ae61a6c725bec2586b186e5cd0adbf31496
     container_name: grafana
     restart: unless-stopped
+    user: "472:472"
     networks:
       - net-management
     environment:
@@ -915,6 +923,7 @@ services:
     image: prom/alertmanager:v0.26.0@sha256:b97390a5b2b52cf4dd66098a091ac0575d18fbf35acf2501fb0f180e3488ad15
     container_name: alertmanager
     restart: unless-stopped
+    user: "nobody:nobody"
     networks:
       - net-management
     command:
@@ -1069,6 +1078,7 @@ services:
     image: grafana/promtail:3.0.0@sha256:d3de3da9431cfbe74a6a94555050df5257f357e827be8e63f8998d509c37af8b
     container_name: promtail
     restart: unless-stopped
+    user: "1000:1000"
     networks:
       - net-management
       - net-app

@@ -9,6 +9,7 @@ export {
   initTracing,
   getTracer,
   withSpan,
+  withSpanSync,
   extractTraceHeaders,
   currentTraceId,
   currentSpanId,

@@ -29,6 +29,7 @@ SSH_KEY_PATH="${SSH_KEY_PATH:-}"
 SSH_BIN="${SSH_BIN:-ssh}"
 PRECHECK_SSH_TIMEOUT="${PRECHECK_SSH_TIMEOUT:-8}"
 PRECHECK_COMMAND_TIMEOUT="${PRECHECK_COMMAND_TIMEOUT:-90}"
+SSH_BLOCKER_ISSUE="#1485"
 FIX_STALE_LOGS="false"
 MAX_LOG_TAIL_AGE_SEC="${MAX_LOG_TAIL_AGE_SEC:-3600}"
 NAS_HOST_DEFAULT="${NAS_HOST:-}"
@@ -36,6 +37,20 @@ NAS_EXPORT_PATH_DEFAULT="${NAS_EXPORT_PATH:-}"
 NAS_SSH_USER="${NAS_SSH_USER:-}"
 PRIMARY_HOST_DEFAULT="${PRIMARY_HOST:-${DEPLOY_HOST:-192.168.168.31}}"
 REPLICA_HOST_DEFAULT="${REPLICA_HOST:-192.168.168.42}"
+
+if [[ -z "${SSH_KEY_PATH}" ]]; then
+  canonical_home="$(getent passwd "$(whoami)" | cut -d: -f6 || true)"
+  if [[ -n "${canonical_home}" ]]; then
+    for candidate in \
+      "${canonical_home}/.ssh/id_rsa_onprem_wsl" \
+      "${canonical_home}/.ssh/id_rsa_onprem"; do
+      if [[ -f "${candidate}" ]]; then
+        SSH_KEY_PATH="${candidate}"
+        break
+      fi
+    done
+  fi
+fi
 
 usage() {
   cat <<'EOF'
@@ -126,6 +141,7 @@ remote() {
 
   if ! "${SSH_BIN}" "${ssh_args[@]}" "${TARGET_USER}@${TARGET_HOST}" "echo OK" >/dev/null 2>&1; then
     log_error "Cannot establish non-interactive SSH session to ${TARGET_USER}@${TARGET_HOST}"
+    log_error "Canonical blocker: ${SSH_BLOCKER_ISSUE}"
     log_error "Set SSH_KEY_PATH or run with --mode local-on-host directly on target host"
     log_error "Example: ssh ${TARGET_USER}@${TARGET_HOST} 'cd ~/code-server-enterprise && bash scripts/operations/redeploy/preflight/onprem/redeploy-preflight.sh --mode local-on-host --fix-stale-logs'"
     return 1

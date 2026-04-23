@@ -9,6 +9,20 @@ vi.mock('axios', () => ({
   },
 }))
 
+vi.mock('../../../lib/tracing.js', () => ({
+  extractTraceHeaders: vi.fn(() => ({ traceparent: '00-abcdef0123456789abcdef0123456789-abcdef0123456789-01' })),
+  getTracer: vi.fn(() => ({})),
+  withSpan: vi.fn(async (_tracer, _name, _attributes, fn) => {
+    const span = {
+      setAttribute: vi.fn(),
+      setStatus: vi.fn(),
+      recordException: vi.fn(),
+      end: vi.fn(),
+    }
+    return fn(span as any)
+  }),
+}))
+
 describe('DebugSessionCollaborationService', () => {
   let service: DebugSessionCollaborationService
 
@@ -81,6 +95,10 @@ describe('DebugSessionCollaborationService', () => {
       actor: 'Portal main',
       message: { type: 'request', command: 'next', arguments: { threadId: 1 } },
       timestamp: expect.any(String),
+    }, {
+      headers: {
+        traceparent: '00-abcdef0123456789abcdef0123456789-abcdef0123456789-01',
+      },
     })
     expect(relayed.relayMessages).toHaveLength(1)
     expect(relayed.relayMessages[0].forwarded).toBe(true)

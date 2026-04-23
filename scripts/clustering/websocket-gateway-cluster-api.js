@@ -6,6 +6,7 @@
  */
 
 const express = require('express');
+const crypto = require('crypto');
 const WebSocketGatewayClusterService = require('./websocket-gateway-cluster-service');
 
 const app = express();
@@ -42,11 +43,42 @@ app.get('/health', (req, res) => {
     res.json({ status: 'healthy', service: 'websocket-gateway-cluster' });
 });
 
+// Resolve route for a session using consistent hashing
+app.get('/route', (req, res) => {
+    try {
+        const sessionId = req.query.session_id || req.query.sessionId;
+
+        if (!sessionId) {
+            return res.status(400).json({ error: 'session_id is required' });
+        }
+
+        const connectionId = req.query.connection_id || `route-${sessionId}-${crypto.randomBytes(4).toString('hex')}`;
+        const route = clusterService.routeConnectionToNode({
+            connectionId,
+            sessionId: String(sessionId),
+            channel: req.query.channel || 'route',
+        });
+
+        res.json({
+            status: 'routed',
+            sessionId: String(sessionId),
+            connectionId: route.connectionId,
+            nodeId: route.nodeId,
+            gateway: route.gateway,
+            channel: route.channel,
+        });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
 // Route connection (idempotent)
 app.post('/connections', (req, res) => {
     try {
         const connectionToken = req.headers['x-connection-token'] || 
-            `conn-${req.body.connectionId}-${Date.now()}`;
+            req.body.connectionToken ||
+            req.body.connectionId ||
+            req.body.sessionId;
         
         const route = clusterService.routeConnectionToNode(req.body, connectionToken);
         
@@ -216,14 +248,19 @@ app.get('/statistics', (req, res) => {
 });
 
 // Listen
-app.listen(PORT, () => {
-    console.log(`[WebSocket Gateway Cluster API] Listening on port ${PORT}`);
-    console.log(`[WebSocket Gateway Cluster API] POST /connections - Route connection (idempotent)`);
-    console.log(`[WebSocket Gateway Cluster API] GET /connections/:id - Get route`);
-    console.log(`[WebSocket Gateway Cluster API] GET /connections - Query routes`);
-    console.log(`[WebSocket Gateway Cluster API] POST /connections/:id/disconnect - Disconnect`);
-    console.log(`[WebSocket Gateway Cluster API] GET /nodes/:id - Get node`);
-    console.log(`[WebSocket Gateway Cluster API] GET /nodes - Get all nodes`);
-    console.log(`[WebSocket Gateway Cluster API] POST /nodes/:id/health - Record health`);
-    console.log(`[WebSocket Gateway Cluster API] GET /statistics - Get statistics`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`[WebSocket Gateway Cluster API] Listening on port ${PORT}`);
+        console.log(`[WebSocket Gateway Cluster API] GET /route - Resolve route by session_id`);
+        console.log(`[WebSocket Gateway Cluster API] POST /connections - Route connection (idempotent)`);
+        console.log(`[WebSocket Gateway Cluster API] GET /connections/:id - Get route`);
+        console.log(`[WebSocket Gateway Cluster API] GET /connections - Query routes`);
+        console.log(`[WebSocket Gateway Cluster API] POST /connections/:id/disconnect - Disconnect`);
+        console.log(`[WebSocket Gateway Cluster API] GET /nodes/:id - Get node`);
+        console.log(`[WebSocket Gateway Cluster API] GET /nodes - Get all nodes`);
+        console.log(`[WebSocket Gateway Cluster API] POST /nodes/:id/health - Record health`);
+        console.log(`[WebSocket Gateway Cluster API] GET /statistics - Get statistics`);
+    });
+}
+
+module.exports = { app, clusterService };

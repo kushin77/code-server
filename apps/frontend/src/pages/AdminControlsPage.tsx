@@ -2,6 +2,49 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { rbacAPI } from '@/api/rbac-client'
 import { useAuthStore } from '@/store'
 
+interface CostTotals {
+  cpuHours: number
+  memoryGbHours: number
+  storageGbDays: number
+  gpuHours: number
+}
+
+interface CostQuotaReport extends CostTotals {
+  quotaId: string
+  userId?: string
+  workspaceId?: string
+  windowStart: number
+  windowEnd: number
+  sampleCount: number
+  estimated: boolean
+}
+
+interface MonthlyCostReport {
+  userId?: string
+  workspaceId?: string
+  windowStart: number
+  windowEnd: number
+  totals: CostTotals
+  quotas: CostQuotaReport[]
+}
+
+interface BudgetAlert {
+  alertId: string
+  scope: 'quota' | 'user' | 'workspace'
+  scopeId: string
+  quotaId?: string
+  userId?: string
+  workspaceId?: string
+  metric: keyof CostTotals
+  threshold: number
+  actual: number
+  severity: 'warning' | 'critical'
+  message: string
+  triggeredAt: number
+  acknowledgedAt?: number
+  acknowledgedBy?: string
+}
+
 type ControlCategory = 'security' | 'compliance' | 'operations' | 'release'
 type ControlId =
   | 'sessionApprovalRequired'
@@ -81,6 +124,15 @@ const APPROVER_OPTIONS = [
 const TIMESTAMP_FORMAT = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
   timeStyle: 'short',
+})
+
+const MONTH_LABEL_FORMAT = new Intl.DateTimeFormat(undefined, {
+  month: 'long',
+  year: 'numeric',
+})
+
+const NUMBER_FORMAT = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 2,
 })
 
 const CATEGORY_STYLES: Record<
@@ -275,6 +327,37 @@ function describeRemoteAuditLog(log: RemoteAuditLog): string {
   }
 
   return pieces.join(' · ')
+}
+
+function formatCostValue(value: number): string {
+  return NUMBER_FORMAT.format(value)
+}
+
+function formatCostMetricLabel(metric: keyof CostTotals): string {
+  switch (metric) {
+    case 'cpuHours':
+      return 'CPU-h'
+    case 'memoryGbHours':
+      return 'RAM GB-h'
+    case 'storageGbDays':
+      return 'Storage GB-d'
+    case 'gpuHours':
+      return 'GPU-h'
+    default:
+      return metric
+  }
+}
+
+function formatCostScopeLabel(report: CostQuotaReport): string {
+  if (report.userId && report.workspaceId) {
+    return `${report.userId} · ${report.workspaceId}`
+  }
+
+  return report.userId ?? report.workspaceId ?? report.quotaId
+}
+
+function sumCostTotals(report: CostTotals): number {
+  return report.cpuHours + report.memoryGbHours + report.storageGbDays + report.gpuHours
 }
 
 // --- Sub-components ---
@@ -720,6 +803,195 @@ const RemoteSignalsPanel: React.FC<{ remoteSignals: RemoteSignals }> = ({ remote
   </div>
 )
 
+interface CostInsightsPanelProps {
+  monthlyReport: MonthlyCostReport | null
+  budgetAlerts: BudgetAlert[]
+  isLoading: boolean
+  error: string | null
+  lastLoadedAt: string | null
+  onRefresh: () => void
+}
+
+const CostInsightsPanel: React.FC<CostInsightsPanelProps> = ({
+  monthlyReport,
+  budgetAlerts,
+  isLoading,
+  error,
+  lastLoadedAt,
+  onRefresh,
+}) => {
+  const rankedQuotas = useMemo(
+    () =>
+      [...(monthlyReport?.quotas ?? [])].sort((left, right) => sumCostTotals(right) - sumCostTotals(left)),
+    [monthlyReport],
+  )
+  const acknowledgedCount = budgetAlerts.filter((alert) => Boolean(alert.acknowledgedAt)).length
+  const activeAlerts = budgetAlerts.filter((alert) => !alert.acknowledgedAt)
+  const criticalAlerts = budgetAlerts.filter((alert) => alert.severity === 'critical')
+
+  return (
+    <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Session cost dashboard</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">Monthly cost report and budget alerts</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+            This panel surfaces the backend resource-quota cost rollups, active alerts, and acknowledgement
+            state so operators do not need to query the backend directly.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={isLoading}
+        >
+          {isLoading ? 'Refreshing...' : 'Refresh cost data'}
+        </button>
+      </div>
+
+      {error ? (
+        <div className="mt-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-100">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">CPU-h</p>
+          <p className="mt-2 text-3xl font-semibold text-white">{formatCostValue(monthlyReport?.totals.cpuHours ?? 0)}</p>
+          <p className="mt-1 text-sm text-slate-300">Compute consumed in the selected month.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">RAM GB-h</p>
+          <p className="mt-2 text-3xl font-semibold text-white">{formatCostValue(monthlyReport?.totals.memoryGbHours ?? 0)}</p>
+          <p className="mt-1 text-sm text-slate-300">Memory-time across all tracked sessions.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Storage GB-d</p>
+          <p className="mt-2 text-3xl font-semibold text-white">{formatCostValue(monthlyReport?.totals.storageGbDays ?? 0)}</p>
+          <p className="mt-1 text-sm text-slate-300">Persistent storage exposure over time.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">GPU-h</p>
+          <p className="mt-2 text-3xl font-semibold text-white">{formatCostValue(monthlyReport?.totals.gpuHours ?? 0)}</p>
+          <p className="mt-1 text-sm text-slate-300">Accelerator time in the current period.</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Window</p>
+          <p className="mt-2 text-lg font-semibold text-white">
+            {monthlyReport ? MONTH_LABEL_FORMAT.format(new Date(monthlyReport.windowStart)) : 'Current month'}
+          </p>
+          <p className="mt-1 text-sm text-slate-300">Report window starts at {monthlyReport ? formatTimestamp(new Date(monthlyReport.windowStart).toISOString()) : 'current month start'}.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Alerts</p>
+          <p className="mt-2 text-lg font-semibold text-white">{activeAlerts.length} active</p>
+          <p className="mt-1 text-sm text-slate-300">{criticalAlerts.length} critical, {acknowledgedCount} acknowledged.</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Last loaded</p>
+          <p className="mt-2 text-lg font-semibold text-white">{lastLoadedAt ? formatTimestamp(lastLoadedAt) : 'Not loaded yet'}</p>
+          <p className="mt-1 text-sm text-slate-300">Latest fetch from the resource-quota endpoints.</p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Quota rollups</p>
+          <div className="mt-3 space-y-3">
+            {rankedQuotas.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-300">
+                No monthly cost samples have been recorded yet.
+              </div>
+            ) : null}
+
+            {rankedQuotas.slice(0, 5).map((quota) => (
+              <div key={quota.quotaId} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-white">{formatCostScopeLabel(quota)}</p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {quota.quotaId} · {quota.sampleCount} samples · {quota.estimated ? 'estimated' : 'exact'}
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-sky-100">
+                    {formatCostValue(sumCostTotals(quota))} total units
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  {(['cpuHours', 'memoryGbHours', 'storageGbDays', 'gpuHours'] as const).map((metric) => (
+                    <div key={metric} className="rounded-2xl border border-white/10 bg-slate-900/70 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                        {formatCostMetricLabel(metric)}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-white">{formatCostValue(quota[metric])}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Budget alerts</p>
+          <div className="mt-3 space-y-3">
+            {budgetAlerts.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-300">
+                No budget alerts are currently active.
+              </div>
+            ) : null}
+
+            {budgetAlerts.map((alert) => (
+              <div key={alert.alertId} className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-white">{alert.message}</p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {alert.scope} · {alert.scopeId} · {formatTimestamp(new Date(alert.triggeredAt).toISOString())}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] ${
+                      alert.severity === 'critical'
+                        ? 'bg-rose-500/15 text-rose-100'
+                        : 'bg-amber-500/15 text-amber-100'
+                    }`}
+                  >
+                    {alert.severity}
+                  </span>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-300">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Metric</p>
+                    <p className="mt-1 font-medium text-white">{formatCostMetricLabel(alert.metric)}</p>
+                    <p className="mt-1">Threshold {formatCostValue(alert.threshold)} · Actual {formatCostValue(alert.actual)}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-300">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Acknowledgement</p>
+                    <p className="mt-1 font-medium text-white">
+                      {alert.acknowledgedAt ? 'Acknowledged' : 'Open'}
+                    </p>
+                    <p className="mt-1">
+                      {alert.acknowledgedBy ? `By ${alert.acknowledgedBy}` : 'Awaiting review'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export const AdminControlsPage: React.FC = () => {
   const { user } = useAuthStore()
   const isAuthorized = user?.roles.some((role) => role.roleId === 'admin') ?? false
@@ -738,6 +1010,7 @@ const AdminControlsPageOrchestratorComponent: React.FC<{ userEmail: string }> = 
   const { snapshot: storageSnapshot, setSnapshot: setStorageSnapshot } = useWorkspaceStorageManager(initialSnapshot)
 
   const { remoteSignals, isRefreshing, panelError, setPanelError, refreshSignals } = useRemoteSignalsManager()
+  const { monthlyReport, budgetAlerts, isLoading: isCostLoading, error: costError, lastLoadedAt, refreshCostInsights } = useCostInsightsManager()
   const [draftReasons, setDraftReasons] = useState<Record<ControlId, string>>({
     sessionApprovalRequired: '',
     emergencyLockdown: '',
@@ -813,6 +1086,14 @@ const AdminControlsPageOrchestratorComponent: React.FC<{ userEmail: string }> = 
           </section>
 
           <aside className="space-y-6">
+            <CostInsightsPanel
+              monthlyReport={monthlyReport}
+              budgetAlerts={budgetAlerts}
+              isLoading={isCostLoading}
+              error={costError}
+              lastLoadedAt={lastLoadedAt}
+              onRefresh={() => { void refreshCostInsights() }}
+            />
             <ApprovalWorkflowPanel
               pendingApprovals={pendingApprovals}
               controls={storageSnapshot.controls}
@@ -906,6 +1187,53 @@ function useRemoteSignalsManager() {
   )
 
   return { remoteSignals, isRefreshing, panelError, setPanelError, refreshSignals }
+}
+
+function useCostInsightsManager() {
+  const [monthlyReport, setMonthlyReport] = useState<MonthlyCostReport | null>(null)
+  const [budgetAlerts, setBudgetAlerts] = useState<BudgetAlert[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null)
+
+  const refreshCostInsights = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const [monthlyResponse, alertsResponse] = await Promise.all([
+        fetch('/api/resource-quotas/cost/monthly', { credentials: 'include' }),
+        fetch('/api/resource-quotas/cost/alerts', { credentials: 'include' }),
+      ])
+
+      if (!monthlyResponse.ok) {
+        throw new Error(`Monthly cost report request failed (${monthlyResponse.status})`)
+      }
+
+      if (!alertsResponse.ok) {
+        throw new Error(`Budget alerts request failed (${alertsResponse.status})`)
+      }
+
+      const monthlyPayload = (await monthlyResponse.json()) as { success?: boolean; data?: MonthlyCostReport }
+      const alertsPayload = (await alertsResponse.json()) as { success?: boolean; data?: BudgetAlert[] }
+
+      setMonthlyReport(monthlyPayload.data ?? null)
+      setBudgetAlerts(alertsPayload.data ?? [])
+      setLastLoadedAt(nowIso())
+    } catch (fetchError) {
+      setMonthlyReport(null)
+      setBudgetAlerts([])
+      setError(fetchError instanceof Error ? fetchError.message : 'Unable to load cost insights')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshCostInsights()
+  }, [refreshCostInsights])
+
+  return { monthlyReport, budgetAlerts, isLoading, error, lastLoadedAt, refreshCostInsights }
 }
 
 function useComplianceScore(snapshot: ControlPlaneSnapshot, pendingApprovals: any[], remoteSignals: RemoteSignals) {

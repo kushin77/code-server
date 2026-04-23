@@ -8,6 +8,8 @@
 import { EventEmitter } from 'events';
 import type {
   NotificationRoute,
+  UserStatus,
+  UserStatusInfo,
   EscalationLevel,
   ChannelPreference,
   RoutingContext,
@@ -24,6 +26,7 @@ export class SmartNotificationRoutingService extends EventEmitter {
   private channelStatus: Map<NotificationRoute, ChannelStatus> = new Map();
   private routingDecisions: Map<string, RoutingDecision> = new Map();
   private deliveryAcks: Map<string, DeliveryAck> = new Map();
+  private userStatuses: Map<string, UserStatusInfo> = new Map();
 
   // Signal weights for routing decision
   private weights = {
@@ -34,7 +37,7 @@ export class SmartNotificationRoutingService extends EventEmitter {
     deviceAvailability: 0.05,
   };
 
-  constructor() {
+  constructor(_pool?: unknown, _auditService?: unknown) {
     super();
     this.initializeChannelStatus();
   }
@@ -84,6 +87,8 @@ export class SmartNotificationRoutingService extends EventEmitter {
 
     // Calculate delivery delay
     const deliveryDelay = this.calculateDeliveryDelay(context, selectedRoute);
+    const meetingModePaused = this.shouldPauseForMeeting(context);
+    const queuedDelay = meetingModePaused ? Math.max(deliveryDelay, this.getMeetingModeDelay(context.priority)) : deliveryDelay;
 
     const decision: RoutingDecision = {
       notificationId: context.notificationId,
@@ -91,12 +96,19 @@ export class SmartNotificationRoutingService extends EventEmitter {
       selectedRoute,
       secondaryRoutes,
       escalationPolicy: escalationLevel,
-      deliveryDelay,
+      deliveryDelay: queuedDelay,
       batchable: !context.conversationContext?.urgency?.includes('critical'),
       reason: `Selected ${selectedRoute} for readiness=${context.readinessLevel}, priority=${context.priority}`,
       confidence: Math.round((scores[selectedRoute] + 50) / 2),
       timestamp: new Date(),
     };
+
+    if (meetingModePaused) {
+      decision.selectedRoute = 'in-app';
+      decision.secondaryRoutes = decision.secondaryRoutes.filter((route) => route !== 'in-app');
+      decision.batchable = true;
+      decision.reason = `${decision.reason}; meeting mode active, queued non-urgent delivery`;
+    }
 
     this.routingDecisions.set(context.notificationId, decision);
     return decision;
@@ -188,6 +200,69 @@ export class SmartNotificationRoutingService extends EventEmitter {
     }
 
     return 1000; // 1 second default
+  }
+
+  private shouldPauseForMeeting(context: RoutingContext): boolean {
+    if (context.priority === 'P0' || context.conversationContext?.urgency === 'critical') {
+      return false;
+    }
+
+    return Boolean(
+      context.isInMeeting ||
+      context.userPreferences.meetingModeExclusion ||
+      context.userPreferences.doNotDisturb.enabled
+    );
+  }
+
+  private getMeetingModeDelay(priority: string): number {
+    const parsedPriority = Number.parseInt(priority.replace(/^P/i, ''), 10);
+
+    if (parsedPriority <= 1) {
+      return 2 * 60 * 1000;
+    }
+
+    if (parsedPriority === 2) {
+      return 10 * 60 * 1000;
+    }
+
+    return 15 * 60 * 1000;
+  }
+
+  /**
+   * Store normalized user status for routing and presence consumers.
+   */
+  async updateUserStatus(
+    userId: string,
+    status: UserStatus,
+    context: {
+      location?: string;
+      calendarStatus?: string;
+      currentDevice?: 'ide' | 'mobile' | 'desktop' | 'unknown';
+    } = {},
+  ): Promise<UserStatusInfo> {
+    const meetingModeActive = context.calendarStatus === 'in-meeting';
+    const currentStatus: UserStatus = meetingModeActive ? 'dnd' : status;
+
+    const nextStatus: UserStatusInfo = {
+      userId,
+      currentStatus,
+      calendarStatus: context.calendarStatus,
+      location: context.location,
+      currentDevice: context.currentDevice,
+      meetingModeActive,
+      lastStatusChange: new Date(),
+    };
+
+    this.userStatuses.set(userId, nextStatus);
+    this.emit('userStatusUpdated', nextStatus);
+    return nextStatus;
+  }
+
+  /**
+   * Read the latest stored user status.
+   */
+  async getUserStatus(userId: string): Promise<UserStatusInfo | null> {
+    return this.userStatuses.get(userId) ?? null;
   }
 
   /**

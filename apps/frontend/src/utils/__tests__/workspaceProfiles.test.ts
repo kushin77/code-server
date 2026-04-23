@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildWorkspaceAutoConfigSuggestion,
   buildWorkspaceProfileSnapshot,
   detectWorkspaceProjectType,
   getWorkspaceProfile,
@@ -39,6 +40,18 @@ describe('workspaceProfiles', () => {
     expect(snapshot.detectedProjectType).toBe('node')
     expect(snapshot.autoConfig?.recommendedExtensions).toContain('dbaeumer.vscode-eslint')
     expect(snapshot.autoConfig?.recommendedLinters).toContain('eslint')
+  })
+
+  it('builds project-specific auto-config settings from repo markers', () => {
+    const autoConfig = buildWorkspaceAutoConfigSuggestion(['package.json', 'tsconfig.json'])
+
+    expect(autoConfig?.projectType).toBe('node')
+    expect(autoConfig?.detectedFrom).toContain('package.json')
+    expect(autoConfig?.recommendedSettings?.['typescript.tsdk']).toBe('node_modules/typescript/lib')
+    expect(autoConfig?.recommendedSettings?.['[typescript]']).toMatchObject({
+      'editor.defaultFormatter': 'dbaeumer.vscode-eslint',
+      'editor.formatOnSave': true,
+    })
   })
 
   it('detects project type from common workspace marker files', () => {

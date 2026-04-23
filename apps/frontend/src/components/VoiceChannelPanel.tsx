@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   createVoiceSession,
@@ -9,10 +9,16 @@ import {
   type VoiceSession,
   type VoiceStats,
 } from '../utils/voiceChannel'
+import {
+  fetchTeamRichPresence,
+  upsertRichPresence,
+  type RichPresenceStatus,
+} from '../utils/richPresence'
 
 export type VoiceChannelPanelProps = {
   workspaceId: string
   workspaceLabel: string
+  teamId?: string | null
   currentUserId: string | null
   currentDisplayName: string | null
   authToken: string | null
@@ -25,6 +31,7 @@ function formatLatency(value: number): string {
 export function VoiceChannelPanel({
   workspaceId,
   workspaceLabel,
+  teamId,
   currentUserId,
   currentDisplayName,
   authToken,
@@ -36,11 +43,57 @@ export function VoiceChannelPanel({
   const [joinSessionId, setJoinSessionId] = useState('')
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [operation, setOperation] = useState<string | null>(null)
+  const previousPresenceStatusRef = useRef<RichPresenceStatus | null>(null)
 
   const activeSession = useMemo(
     () => sessions.find((session) => session.sessionId === activeSessionId) ?? null,
     [activeSessionId, sessions]
   )
+
+  const meetingModeActive = Boolean(activeSessionId && teamId && currentUserId)
+
+  const updateMeetingPresence = async (nextStatus: RichPresenceStatus): Promise<void> => {
+    if (!teamId || !currentUserId) {
+      return
+    }
+
+    try {
+      if (nextStatus === 'dnd') {
+        const snapshot = await fetchTeamRichPresence(teamId)
+        const currentPresence = snapshot.presence.find((entry) => entry.userId === currentUserId)
+        previousPresenceStatusRef.current = currentPresence?.status ?? 'online'
+      }
+
+      await upsertRichPresence(teamId, currentUserId, {
+        displayName: currentDisplayName ?? undefined,
+        status: nextStatus,
+        currentTask: nextStatus === 'dnd' ? 'In a voice session' : null,
+        customStatus: nextStatus === 'dnd' ? '📞 In a voice session' : null,
+      })
+    } catch {
+      // Keep voice flow resilient if presence sync fails.
+    }
+  }
+
+  const restoreMeetingPresence = async (): Promise<void> => {
+    if (!teamId || !currentUserId) {
+      return
+    }
+
+    const restoreStatus = previousPresenceStatusRef.current ?? 'online'
+    previousPresenceStatusRef.current = null
+
+    try {
+      await upsertRichPresence(teamId, currentUserId, {
+        displayName: currentDisplayName ?? undefined,
+        status: restoreStatus,
+        currentTask: null,
+        customStatus: null,
+      })
+    } catch {
+      // Keep voice flow resilient if presence sync fails.
+    }
+  }
 
   const loadVoiceData = async () => {
     setLoading(true)
@@ -110,6 +163,7 @@ export function VoiceChannelPanel({
     try {
       const nextSession = await createVoiceSession(workspaceId, authToken)
       setActiveSessionId(nextSession.session.sessionId)
+      await updateMeetingPresence('dnd')
       await loadVoiceData()
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'Unable to create voice session')
@@ -132,6 +186,7 @@ export function VoiceChannelPanel({
       const nextSession = await joinVoiceSession(nextSessionId, authToken)
       setActiveSessionId(nextSession.session.sessionId)
       setJoinSessionId('')
+      await updateMeetingPresence('dnd')
       await loadVoiceData()
     } catch (joinError) {
       setError(joinError instanceof Error ? joinError.message : 'Unable to join voice session')
@@ -150,6 +205,7 @@ export function VoiceChannelPanel({
 
     try {
       await leaveVoiceSession(activeSessionId, authToken)
+      await restoreMeetingPresence()
       setActiveSessionId(null)
       await loadVoiceData()
     } catch (leaveError) {
@@ -164,7 +220,14 @@ export function VoiceChannelPanel({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-700">Voice channel</p>
-          <h3 className="mt-1 text-xl font-bold text-slate-900">Live voice for {workspaceLabel}</h3>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h3 className="text-xl font-bold text-slate-900">Live voice for {workspaceLabel}</h3>
+            {meetingModeActive ? (
+              <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-800">
+                📞 Meeting mode active
+              </span>
+            ) : null}
+          </div>
           <p className="mt-2 max-w-2xl text-sm text-slate-600">
             Start or join a workspace voice session from the IDE shell. The backend issues LiveKit session tokens and tracks participant health.
           </p>

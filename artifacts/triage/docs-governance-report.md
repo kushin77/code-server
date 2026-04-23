@@ -1,175 +1,93 @@
 # Documentation Governance Report
 
-Generated at (UTC): 2026-04-20T00:57:29.245321+00:00
-Docs scanned: 419
-Blocking violations: 163
-Duplicate candidates: 0
+Generated at (UTC): 2026-04-23T02:18:01.878715+00:00
+Docs scanned: 523
+Blocking violations: 76
+Duplicate candidates: 2
 Stale docs: 0
 
 ## Blocking violations
 
-- [metadata-purpose] docs/AI-MODEL-PROMOTION-GATES-630.md — Missing Purpose metadata near top of document
-- [issue-link] docs/COMPLIANCE-CHECKLIST.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/GOVERNANCE.md — Missing Purpose metadata near top of document
-- [broken-link] docs/GOVERNANCE.md — Missing local link target: elite-best-practices/instructions/README.md
-- [broken-link] docs/GOVERNANCE.md — Missing local link target: elite-best-practices/instructions/
-- [metadata-purpose] docs/MONOREPO.md — Missing Purpose metadata near top of document
-- [issue-link] docs/MONOREPO.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md — Missing Purpose metadata near top of document
-- [broken-link] docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md — Missing local link target: ../infrastructure/NFS-BACKEND-ARCHITECTURE.md
-- [broken-link] docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md — Missing local link target: ../../terraform/modules/keepalived/README.md
-- [broken-link] docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md — Missing local link target: ../../scripts/operations/redeploy/onprem/failover-orchestrate.sh
-- [broken-link] docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md — Missing local link target: ../ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md
-- [broken-link] docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md — Missing local link target: ../ops/PLAYWRIGHT-STORAGE-STATE-PROVISIONING-750.md
-- [metadata-purpose] docs/P1-752-PER-SESSION-ISOLATION.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/PHASE-2-INTEGRATION-TEST-PLAN.md — Missing Purpose metadata near top of document
-- [issue-link] docs/PHASE-2-INTEGRATION-TEST-PLAN.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/POLICY-CHANGELOG.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/SECURITY-HARDENING-GUIDE.md — Missing Purpose metadata near top of document
-- [issue-link] docs/SECURITY-HARDENING-GUIDE.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/SERVICE-REGISTRY.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/SLO.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/001-containerized-deployment.md — Missing Purpose metadata near top of document
-- [broken-link] docs/adr/001-containerized-deployment.md — Missing local link target: ../../RUNBOOKS.md
-- [metadata-purpose] docs/adr/002-oauth2-authentication.md — Missing Purpose metadata near top of document
-- [broken-link] docs/adr/002-oauth2-authentication.md — Missing local link target: ../../RUNBOOKS.md
-- [metadata-purpose] docs/adr/003-terraform-infrastructure.md — Missing Purpose metadata near top of document
-- [broken-link] docs/adr/003-terraform-infrastructure.md — Missing local link target: ../../RUNBOOKS.md
-- [metadata-purpose] docs/adr/004-configuration-consolidation-patterns.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/005-composition-inheritance.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/006-cloudflare-tunnel-architecture.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/007-dual-portal-architecture.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/008-portal-platform-appsmith-vs-backstage.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0000-template.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0001-containerized-deployment.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0002-oauth2-authentication.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0003-terraform-infrastructure.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0004-configuration-consolidation-patterns.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0005-composition-inheritance.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0006-cloudflare-tunnel-architecture.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0007-dual-portal-architecture.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-0008-portal-platform-appsmith-vs-backstage.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/ADR-002-DUAL-PORTAL-ARCHITECTURE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/adr/TEMPLATE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ai/OLLAMA-ROUTING-POLICY.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ai/REPO-KNOWLEDGE-CORPUS-POLICY.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ai/SECRETSLESS-AI-ACCESS.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/architecture/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md — Missing Purpose metadata near top of document
-- [issue-link] docs/architecture/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/architecture/ADR-003-DUAL-PORTAL-ARCHITECTURE.md — Missing Purpose metadata near top of document
-- [issue-link] docs/architecture/ADR-003-DUAL-PORTAL-ARCHITECTURE.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/architecture/ADR-004-MULTI-REPO-INTERACTION-MODEL.md — Missing Purpose metadata near top of document
-- [broken-link] docs/architecture/ADR-004-MULTI-REPO-INTERACTION-MODEL.md — Missing local link target: ../apps/frontend/src/utils/SESSION_SYNC_INTEGRATION.md
-- [broken-link] docs/architecture/ADR-004-MULTI-REPO-INTERACTION-MODEL.md — Missing local link target: ../apps/extensions/ollama-chat/src/repository-indexer.ts
-- [metadata-purpose] docs/architecture/ADR-005-DEVELOPER-CONTEXT-HUB.md — Missing Purpose metadata near top of document
-- [broken-link] docs/architecture/ADR-005-DEVELOPER-CONTEXT-HUB.md — Missing local link target: ADR-002-DUAL-PORTAL-ARCHITECTURE.md
-- [metadata-purpose] docs/architecture/WINDOWS-DC-TO-PORTAL-CAPABILITY-MATRIX.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/architecture/iam-standardization.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/correlation-id-audit-fabric-758.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ephemeral-workspace-lifecycle-755.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/examples/onboarding/HANDOFF.md — Missing Purpose metadata near top of document
-- [broken-link] docs/examples/onboarding/HANDOFF.md — Missing local link target: onboarding/
-- [metadata-title] docs/examples/onboarding/NEW_DEVELOPER_EMAIL.md — Missing H1 title at top of document
-- [metadata-purpose] docs/examples/onboarding/NEW_DEVELOPER_EMAIL.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/CHANGELOG.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/DEDUPLICATION-REPORT.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/GLOBAL-DEDUP-GOVERNANCE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/GLOBAL-DEDUP-TRIAGE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/P0-ENFORCEMENT-SLA-AND-OWNERSHIP.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/POLICY-INDEX.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/POLICY.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/SSOT-REGISTRY.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/WAIVER-REQUEST.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/WAIVERS.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/elite-best-practices/instructions/OPA-POLICY-SERVICE-MIGRATION-GUIDE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/elite-best-practices/ssot/ON-PREM-IMMUTABLE-STATE-DATA-PLANE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/github-actions-allowlist.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/governance/production-readiness-training.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing Purpose metadata near top of document
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/code-server-down.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/caddy-down.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/postgresql-down.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/high-latency.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/error-rate-high.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/disk-full.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/memory-pressure.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/backup-missing.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/cert-expiring.md
-- [broken-link] docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md — Missing local link target: docs/runbooks/ollama-down.md
-- [metadata-title] docs/operations/session-history/historical/2026/ops-record-apr16-phase-overview-s2.md — Missing H1 title at top of document
-- [metadata-purpose] docs/operations/session-history/historical/2026/ops-record-apr16-phase-overview-s2.md — Missing Purpose metadata near top of document
-- [metadata-title] docs/operations/session-history/historical/2026/ops-record-apr16-phase-status-s3.md — Missing H1 title at top of document
-- [metadata-purpose] docs/operations/session-history/historical/2026/ops-record-apr16-phase-status-s3.md — Missing Purpose metadata near top of document
-- [metadata-title] docs/operations/session-history/historical/2026/ops-record-apr16-remediation-s3.md — Missing H1 title at top of document
-- [metadata-purpose] docs/operations/session-history/historical/2026/ops-record-apr16-remediation-s3.md — Missing Purpose metadata near top of document
-- [metadata-title] docs/operations/session-history/historical/2026/ops-record-apr17-phase2-p2418-s5.md — Missing H1 title at top of document
-- [metadata-purpose] docs/operations/session-history/historical/2026/ops-record-apr17-phase2-p2418-s5.md — Missing Purpose metadata near top of document
-- [metadata-title] docs/operations/session-history/historical/2026/ops-record-apr17-phase21-deploy-s4.md — Missing H1 title at top of document
-- [metadata-purpose] docs/operations/session-history/historical/2026/ops-record-apr17-phase21-deploy-s4.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/AUTOPILOT-SETUP-STATE-RCA.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/AUTOPILOT-SETUP-STATE-RUNBOOK.md — Missing Purpose metadata near top of document
-- [issue-link] docs/ops/BRANCH-POLICY.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/ops/DISASTER-RECOVERY-PLAN.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/E2E-ACCOUNT-PROVISIONING-RUNBOOK-750.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/E2E-BROWSER-AUTOMATION-RUNBOOK.md — Missing Purpose metadata near top of document
-- [broken-link] docs/ops/ENDPOINT-CONTRACT-INDEX.md — Missing local link target: ../adr/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md
-- [metadata-purpose] docs/ops/EXTERNAL-BROWSER-QA-SMOKE-TESTS.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/INCIDENT-RESPONSE-PLAYBOOK.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/OLLAMA-GPU-REPLICA-OPERATIONS.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/OLLAMA-INTEGRATION-CONTRACT-RUNBOOK.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/OPS-COMPLIANCE-CHECKLIST.md — Missing Purpose metadata near top of document
-- [issue-link] docs/ops/OPS-COMPLIANCE-CHECKLIST.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/ops/PLAYWRIGHT-STORAGE-STATE-PROVISIONING-750.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/PORT-OWNERSHIP-MAP.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/ops/SESSION-FINOPS-GUARDRAILS.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-11/PHASE_11_CAPACITY_PLANNING.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-11/PHASE_11_CHAOS_ENGINEERING.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-11/PHASE_11_DISASTER_RECOVERY.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-11/PHASE_11_HA_ARCHITECTURE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-11/PHASE_11_OBSERVABILITY.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-11/PHASE_11_OVERVIEW.md — Missing Purpose metadata near top of document
-- [issue-link] docs/phase-11/PHASE_11_OVERVIEW.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/phase-11/README.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-12/PHASE_12_2_DATA_REPLICATION_GUIDE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-12/PHASE_12_ARCHITECTURE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-12/PHASE_12_IMPLEMENTATION_GUIDE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-12/PHASE_12_OPERATIONS.md — Missing Purpose metadata near top of document
-- [issue-link] docs/phase-12/PHASE_12_OPERATIONS.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/phase-12/PHASE_12_OVERVIEW.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-12/README.md — Missing Purpose metadata near top of document
-- [issue-link] docs/phase-12/README.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/phase-7d/HAPROXY-LOAD-BALANCING.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/phase-7d/HEALTH-CHECKS-GUIDE.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/policy-bundle-verification-740.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/RBAC-ENFORCEMENT-RUNBOOK.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/backup-recovery.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/caddy-down.md — Missing Purpose metadata near top of document
-- [issue-link] docs/runbooks/caddy-down.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/runbooks/certificate-renewal.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/cloudflare-trace-correlation.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/code-server-down.md — Missing Purpose metadata near top of document
-- [issue-link] docs/runbooks/code-server-down.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/runbooks/container-restart-investigation.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/disk-full.md — Missing Purpose metadata near top of document
-- [issue-link] docs/runbooks/disk-full.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/runbooks/disk-space-cleanup.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/dual-host-restart-harvest.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/error-rate-high.md — Missing Purpose metadata near top of document
-- [issue-link] docs/runbooks/error-rate-high.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/runbooks/full-redeploy-certification.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/high-latency.md — Missing Purpose metadata near top of document
-- [issue-link] docs/runbooks/high-latency.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/runbooks/ollama-performance-investigation.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/postgresql-down.md — Missing Purpose metadata near top of document
-- [issue-link] docs/runbooks/postgresql-down.md — Unchecked action items require at least one issue reference in the file
-- [metadata-purpose] docs/runbooks/postgresql-replication-lag.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/runbooks/qa-coverage-phase-2.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/security/THREAT-MODEL-2026-04-19.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/session-bootstrap-enforcement-756.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/shared-workspace-acl-754.md — Missing Purpose metadata near top of document
-- [metadata-purpose] docs/slos/code-server.md — Missing Purpose metadata near top of document
-- [issue-link] docs/slos/code-server.md — Unchecked action items require at least one issue reference in the file
+- [metadata-purpose] docs/ANOMALY-DETECTION.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/APRIL-22-LATE-EVENING-STATUS.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/APRIL-22-SESSION-COMPLETION-FINAL.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/ARCHITECTURE-GITHUB-ISSUE-CREATION-GOVERNANCE.md — Missing Purpose metadata near top of document
+- [issue-link] docs/ARCHITECTURE-GITHUB-ISSUE-CREATION-GOVERNANCE.md — Unchecked action items require at least one issue reference in the file
+- [metadata-purpose] docs/BRANDING-SSOT.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-1.9-COLLABORATIVE-DEBUGGING.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-10-8-HOT-STANDBY-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-10.1-CRDT-LOG-COMPACTION.md — Missing Purpose metadata near top of document
+- [broken-link] docs/COLLAB-10.1-CRDT-LOG-COMPACTION.md — Missing local link target: ../../src/services/replication/SyncProtocol.ts
+- [broken-link] docs/COLLAB-10.1-CRDT-LOG-COMPACTION.md — Missing local link target: ../../src/services/replication/ReplicationService.ts
+- [broken-link] docs/COLLAB-10.1-CRDT-LOG-COMPACTION.md — Missing local link target: ../../src/services/replication/__tests__/SyncProtocol.test.ts
+- [metadata-purpose] docs/COLLAB-10.4-EDGE-RELAY-NODES.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-6-1-TERMINAL-DLP-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-6-2-GVISOR-ISOLATION-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-6-2-GVISOR-OPERATIONS-RUNBOOK.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-9.2-SLACK-INTEGRATION.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-9.3-CICD-SIDEBAR.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-9.4-FIGMA-EMBED.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-9.5-SENTRY-ERRORS.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-9.6-FEATURE-FLAGS.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-9.7-PAGERDUTY.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-9.8-DOCS-EDITOR.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COLLAB-9.9-OTEL-APM.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/compliance/ACCESS-CONTROL-POLICY.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/compliance/AUDIT-LOGGING-POLICY.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/compliance/CHANGE-MANAGEMENT-POLICY.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/compliance/DATA-PROTECTION-POLICY.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/compliance/INCIDENT-RESPONSE-POLICY.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/compliance/INFORMATION-SECURITY-POLICY.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/COPILOT-SESSION-INITIALIZATION.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/GITHUB-ISSUE-CREATION-GOVERNANCE.md — Missing Purpose metadata near top of document
+- [issue-link] docs/GITHUB-ISSUE-CREATION-GOVERNANCE.md — Unchecked action items require at least one issue reference in the file
+- [metadata-purpose] docs/IDE-SESSION-LB-SECRET-ROTATION.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/INCIDENT-RESPONSE-RUNBOOK.md — Missing Purpose metadata near top of document
+- [issue-link] docs/INCIDENT-RESPONSE-RUNBOOK.md — Unchecked action items require at least one issue reference in the file
+- [metadata-purpose] docs/ISSUE-CREATION-INTEGRATION-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/KUBERNETES-OIDC-INTEGRATION.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/NAS-DISK-CLEANUP-MANUAL-REMEDIATION.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/NAS-SECURITY-REMEDIATION.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/NAS-SYSTEMD-UNITS-MANUAL-REMEDIATION.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/observability/LOG-PIPELINE-TO-GITHUB-ISSUES.md — Missing Purpose metadata near top of document
+- [broken-link] docs/observability/LOG-PIPELINE-TO-GITHUB-ISSUES.md — Missing local link target: ../error-triage-engine.sh
+- [broken-link] docs/observability/LOG-PIPELINE-TO-GITHUB-ISSUES.md — Missing local link target: ./comprehensive-log-pipeline-setup.sh
+- [metadata-purpose] docs/OPERATIONS-RUNBOOK-INFRASTRUCTURE-OBSERVABILITY.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/P0-1163-IMPLEMENTATION-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/P0-DATA-PROTECTION-PLAN.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/P1-FIREWALL-HARDENING-PLAN.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/P1-REMEDIATION-STATUS-APRIL-22.md — Missing Purpose metadata near top of document
+- [broken-link] docs/P1-REMEDIATION-STATUS-APRIL-22.md — Missing local link target: docs/NAS-SECURITY-REMEDIATION.md
+- [broken-link] docs/P1-REMEDIATION-STATUS-APRIL-22.md — Missing local link target: docs/NAS-SECURITY-REMEDIATION.md
+- [broken-link] docs/P1-REMEDIATION-STATUS-APRIL-22.md — Missing local link target: docs/P1-1392-FIREWALL-DEPLOYMENT-RUNBOOK.md
+- [metadata-purpose] docs/PERFORMANCE-LOAD-TESTING-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/PERFORMANCE-TESTING-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/PHASE-2-SERVICE-AUTH-DESIGN.md — Missing Purpose metadata near top of document
+- [metadata-title] docs/PHASE-5-DEPLOYMENT-READINESS.md — Missing H1 title at top of document
+- [metadata-purpose] docs/PHASE-5-DEPLOYMENT-READINESS.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/PHASE-5-KUBERNETES-OIDC-IMPLEMENTATION-PLAN.md — Missing Purpose metadata near top of document
+- [issue-link] docs/PHASE-5-KUBERNETES-OIDC-IMPLEMENTATION-PLAN.md — Unchecked action items require at least one issue reference in the file
+- [metadata-purpose] docs/PRODUCTION-DEPLOYMENT-CHECKLIST-IAM-PHASE234.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/PRODUCTION-DEPLOYMENT-RUNBOOK.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/PRODUCTION-FAILOVER-TEST-RUNBOOK.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/QUICK-REFERENCE-ISSUE-CREATION.md — Missing Purpose metadata near top of document
+- [issue-link] docs/QUICK-REFERENCE-ISSUE-CREATION.md — Unchecked action items require at least one issue reference in the file
+- [metadata-purpose] docs/SESSION-COMPLETION-APRIL-22-EVENING.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/SLO-SLA-DASHBOARD.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/TICKET-LINKING-IMPLEMENTATION-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/WEBSOCKET-HEALTH-MONITORING.md — Missing Purpose metadata near top of document
+- [issue-link] docs/WEBSOCKET-HEALTH-MONITORING.md — Unchecked action items require at least one issue reference in the file
+- [metadata-purpose] docs/WORKSPACE-ONBOARDING-WIZARD-GUIDE.md — Missing Purpose metadata near top of document
+- [metadata-purpose] docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md — Missing Purpose metadata near top of document
+- [broken-link] docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md — Missing local link target: docs/ZERO-TRUST-NETWORK-ARCHITECTURE.md
+- [broken-link] docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md — Missing local link target: docs/CERTIFICATE-MANAGEMENT.md
+- [broken-link] docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md — Missing local link target: docs/EGRESS-FIREWALL-POLICIES.md
+- [broken-link] docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md — Missing local link target: docs/AUDIT-LOG-SPECIFICATION.md
+- [metadata-purpose] docs/ZERO-TRUST-NETWORK-ARCHITECTURE.md — Missing Purpose metadata near top of document
 
-Machine-readable artifact: /mnt/c/code-server-enterprise/artifacts/triage/docs-governance-report.json
+## Duplicate candidates
+
+- docs/governance/multi-repo-ux-policy.md, docs/ops/multi-repo-ux-policy.md
+- docs/security/session-provenance-contract.md, docs/session-broker/SESSION-PROVENANCE-CONTRACT.md
+
+Machine-readable artifact: C:/code-server-enterprise/artifacts/triage/docs-governance-report.json

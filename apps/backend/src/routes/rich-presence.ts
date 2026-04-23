@@ -6,9 +6,12 @@
 import { Router, Request, Response } from 'express';
 import service, { BulkPresenceQuery } from '../services/collaboration/rich-presence-service';
 import { getLogger } from '../lib/logger';
+import { tracingMiddleware } from '../middleware/tracing';
 
 const logger = getLogger('RichPresenceRoutes');
 const router = Router();
+
+router.use(tracingMiddleware);
 
 /**
  * Get all online users (must come before :userId routes)

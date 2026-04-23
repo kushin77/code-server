@@ -1,824 +1,404 @@
 {
-  "generatedAtUtc": "2026-04-20T00:57:29.245321+00:00",
-  "docsScanned": 419,
+  "generatedAtUtc": "2026-04-23T02:18:01.878715+00:00",
+  "docsScanned": 523,
   "violations": [
     {
       "rule": "metadata-purpose",
-      "path": "docs/AI-MODEL-PROMOTION-GATES-630.md",
+      "path": "docs/ANOMALY-DETECTION.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/APRIL-22-LATE-EVENING-STATUS.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/APRIL-22-SESSION-COMPLETION-FINAL.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/ARCHITECTURE-GITHUB-ISSUE-CREATION-GOVERNANCE.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "issue-link",
-      "path": "docs/COMPLIANCE-CHECKLIST.md",
+      "path": "docs/ARCHITECTURE-GITHUB-ISSUE-CREATION-GOVERNANCE.md",
       "detail": "Unchecked action items require at least one issue reference in the file"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/GOVERNANCE.md",
+      "path": "docs/BRANDING-SSOT.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-1.9-COLLABORATIVE-DEBUGGING.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-10-8-HOT-STANDBY-GUIDE.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-10.1-CRDT-LOG-COMPACTION.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "broken-link",
-      "path": "docs/GOVERNANCE.md",
-      "detail": "Missing local link target: elite-best-practices/instructions/README.md"
+      "path": "docs/COLLAB-10.1-CRDT-LOG-COMPACTION.md",
+      "detail": "Missing local link target: ../../src/services/replication/SyncProtocol.ts"
     },
     {
       "rule": "broken-link",
-      "path": "docs/GOVERNANCE.md",
-      "detail": "Missing local link target: elite-best-practices/instructions/"
+      "path": "docs/COLLAB-10.1-CRDT-LOG-COMPACTION.md",
+      "detail": "Missing local link target: ../../src/services/replication/ReplicationService.ts"
+    },
+    {
+      "rule": "broken-link",
+      "path": "docs/COLLAB-10.1-CRDT-LOG-COMPACTION.md",
+      "detail": "Missing local link target: ../../src/services/replication/__tests__/SyncProtocol.test.ts"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/MONOREPO.md",
+      "path": "docs/COLLAB-10.4-EDGE-RELAY-NODES.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-6-1-TERMINAL-DLP-GUIDE.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-6-2-GVISOR-ISOLATION-GUIDE.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-6-2-GVISOR-OPERATIONS-RUNBOOK.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-9.2-SLACK-INTEGRATION.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-9.3-CICD-SIDEBAR.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-9.4-FIGMA-EMBED.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-9.5-SENTRY-ERRORS.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-9.6-FEATURE-FLAGS.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-9.7-PAGERDUTY.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-9.8-DOCS-EDITOR.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COLLAB-9.9-OTEL-APM.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/compliance/ACCESS-CONTROL-POLICY.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/compliance/AUDIT-LOGGING-POLICY.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/compliance/CHANGE-MANAGEMENT-POLICY.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/compliance/DATA-PROTECTION-POLICY.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/compliance/INCIDENT-RESPONSE-POLICY.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/compliance/INFORMATION-SECURITY-POLICY.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/COPILOT-SESSION-INITIALIZATION.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/GITHUB-ISSUE-CREATION-GOVERNANCE.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "issue-link",
-      "path": "docs/MONOREPO.md",
+      "path": "docs/GITHUB-ISSUE-CREATION-GOVERNANCE.md",
       "detail": "Unchecked action items require at least one issue reference in the file"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md",
-      "detail": "Missing local link target: ../infrastructure/NFS-BACKEND-ARCHITECTURE.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md",
-      "detail": "Missing local link target: ../../terraform/modules/keepalived/README.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md",
-      "detail": "Missing local link target: ../../scripts/operations/redeploy/onprem/failover-orchestrate.sh"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md",
-      "detail": "Missing local link target: ../ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/P0-EPIC-710-STATEFUL-FAILOVER-COMPLETION-SUMMARY.md",
-      "detail": "Missing local link target: ../ops/PLAYWRIGHT-STORAGE-STATE-PROVISIONING-750.md"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/P1-752-PER-SESSION-ISOLATION.md",
+      "path": "docs/IDE-SESSION-LB-SECRET-ROTATION.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/PHASE-2-INTEGRATION-TEST-PLAN.md",
+      "path": "docs/INCIDENT-RESPONSE-RUNBOOK.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "issue-link",
-      "path": "docs/PHASE-2-INTEGRATION-TEST-PLAN.md",
+      "path": "docs/INCIDENT-RESPONSE-RUNBOOK.md",
       "detail": "Unchecked action items require at least one issue reference in the file"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/POLICY-CHANGELOG.md",
+      "path": "docs/ISSUE-CREATION-INTEGRATION-GUIDE.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/SECURITY-HARDENING-GUIDE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/SECURITY-HARDENING-GUIDE.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/SERVICE-REGISTRY.md",
+      "path": "docs/KUBERNETES-OIDC-INTEGRATION.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/SLO.md",
+      "path": "docs/NAS-DISK-CLEANUP-MANUAL-REMEDIATION.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/adr/001-containerized-deployment.md",
+      "path": "docs/NAS-SECURITY-REMEDIATION.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
-      "rule": "broken-link",
-      "path": "docs/adr/001-containerized-deployment.md",
-      "detail": "Missing local link target: ../../RUNBOOKS.md"
+      "rule": "metadata-purpose",
+      "path": "docs/NAS-SYSTEMD-UNITS-MANUAL-REMEDIATION.md",
+      "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/adr/002-oauth2-authentication.md",
+      "path": "docs/observability/LOG-PIPELINE-TO-GITHUB-ISSUES.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "broken-link",
-      "path": "docs/adr/002-oauth2-authentication.md",
-      "detail": "Missing local link target: ../../RUNBOOKS.md"
+      "path": "docs/observability/LOG-PIPELINE-TO-GITHUB-ISSUES.md",
+      "detail": "Missing local link target: ../error-triage-engine.sh"
+    },
+    {
+      "rule": "broken-link",
+      "path": "docs/observability/LOG-PIPELINE-TO-GITHUB-ISSUES.md",
+      "detail": "Missing local link target: ./comprehensive-log-pipeline-setup.sh"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/adr/003-terraform-infrastructure.md",
+      "path": "docs/OPERATIONS-RUNBOOK-INFRASTRUCTURE-OBSERVABILITY.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/P0-1163-IMPLEMENTATION-GUIDE.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/P0-DATA-PROTECTION-PLAN.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/P1-FIREWALL-HARDENING-PLAN.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/P1-REMEDIATION-STATUS-APRIL-22.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "broken-link",
-      "path": "docs/adr/003-terraform-infrastructure.md",
-      "detail": "Missing local link target: ../../RUNBOOKS.md"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/004-configuration-consolidation-patterns.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/005-composition-inheritance.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/006-cloudflare-tunnel-architecture.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/007-dual-portal-architecture.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/008-portal-platform-appsmith-vs-backstage.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0000-template.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0001-containerized-deployment.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0002-oauth2-authentication.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0003-terraform-infrastructure.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0004-configuration-consolidation-patterns.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0005-composition-inheritance.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0006-cloudflare-tunnel-architecture.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0007-dual-portal-architecture.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-0008-portal-platform-appsmith-vs-backstage.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/ADR-002-DUAL-PORTAL-ARCHITECTURE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/adr/TEMPLATE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ai/OLLAMA-ROUTING-POLICY.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ai/REPO-KNOWLEDGE-CORPUS-POLICY.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ai/SECRETSLESS-AI-ACCESS.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/architecture/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/architecture/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/architecture/ADR-003-DUAL-PORTAL-ARCHITECTURE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/architecture/ADR-003-DUAL-PORTAL-ARCHITECTURE.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/architecture/ADR-004-MULTI-REPO-INTERACTION-MODEL.md",
-      "detail": "Missing Purpose metadata near top of document"
+      "path": "docs/P1-REMEDIATION-STATUS-APRIL-22.md",
+      "detail": "Missing local link target: docs/NAS-SECURITY-REMEDIATION.md"
     },
     {
       "rule": "broken-link",
-      "path": "docs/architecture/ADR-004-MULTI-REPO-INTERACTION-MODEL.md",
-      "detail": "Missing local link target: ../apps/frontend/src/utils/SESSION_SYNC_INTEGRATION.md"
+      "path": "docs/P1-REMEDIATION-STATUS-APRIL-22.md",
+      "detail": "Missing local link target: docs/NAS-SECURITY-REMEDIATION.md"
     },
     {
       "rule": "broken-link",
-      "path": "docs/architecture/ADR-004-MULTI-REPO-INTERACTION-MODEL.md",
-      "detail": "Missing local link target: ../apps/extensions/ollama-chat/src/repository-indexer.ts"
+      "path": "docs/P1-REMEDIATION-STATUS-APRIL-22.md",
+      "detail": "Missing local link target: docs/P1-1392-FIREWALL-DEPLOYMENT-RUNBOOK.md"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/architecture/ADR-005-DEVELOPER-CONTEXT-HUB.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/architecture/ADR-005-DEVELOPER-CONTEXT-HUB.md",
-      "detail": "Missing local link target: ADR-002-DUAL-PORTAL-ARCHITECTURE.md"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/architecture/WINDOWS-DC-TO-PORTAL-CAPABILITY-MATRIX.md",
+      "path": "docs/PERFORMANCE-LOAD-TESTING-GUIDE.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/architecture/iam-standardization.md",
+      "path": "docs/PERFORMANCE-TESTING-GUIDE.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/correlation-id-audit-fabric-758.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ephemeral-workspace-lifecycle-755.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/examples/onboarding/HANDOFF.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/examples/onboarding/HANDOFF.md",
-      "detail": "Missing local link target: onboarding/"
-    },
-    {
-      "rule": "metadata-title",
-      "path": "docs/examples/onboarding/NEW_DEVELOPER_EMAIL.md",
-      "detail": "Missing H1 title at top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/examples/onboarding/NEW_DEVELOPER_EMAIL.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/CHANGELOG.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/DEDUPLICATION-REPORT.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/GLOBAL-DEDUP-GOVERNANCE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/GLOBAL-DEDUP-TRIAGE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/P0-ENFORCEMENT-SLA-AND-OWNERSHIP.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/POLICY-INDEX.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/POLICY.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/SSOT-REGISTRY.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/WAIVER-REQUEST.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/WAIVERS.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/elite-best-practices/instructions/OPA-POLICY-SERVICE-MIGRATION-GUIDE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/elite-best-practices/ssot/ON-PREM-IMMUTABLE-STATE-DATA-PLANE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/github-actions-allowlist.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/governance/production-readiness-training.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/code-server-down.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/caddy-down.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/postgresql-down.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/high-latency.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/error-rate-high.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/disk-full.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/memory-pressure.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/backup-missing.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/cert-expiring.md"
-    },
-    {
-      "rule": "broken-link",
-      "path": "docs/monitoring/ALERT-CONFIGURATION-PRODUCTION.md",
-      "detail": "Missing local link target: docs/runbooks/ollama-down.md"
-    },
-    {
-      "rule": "metadata-title",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr16-phase-overview-s2.md",
-      "detail": "Missing H1 title at top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr16-phase-overview-s2.md",
+      "path": "docs/PHASE-2-SERVICE-AUTH-DESIGN.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-title",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr16-phase-status-s3.md",
+      "path": "docs/PHASE-5-DEPLOYMENT-READINESS.md",
       "detail": "Missing H1 title at top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr16-phase-status-s3.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-title",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr16-remediation-s3.md",
-      "detail": "Missing H1 title at top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr16-remediation-s3.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-title",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr17-phase2-p2418-s5.md",
-      "detail": "Missing H1 title at top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr17-phase2-p2418-s5.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-title",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr17-phase21-deploy-s4.md",
-      "detail": "Missing H1 title at top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/operations/session-history/historical/2026/ops-record-apr17-phase21-deploy-s4.md",
+      "path": "docs/PHASE-5-DEPLOYMENT-READINESS.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/ops/AUTHENTICATED-FAILOVER-CONTINUITY-733.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/AUTOPILOT-SETUP-STATE-RCA.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/AUTOPILOT-SETUP-STATE-RUNBOOK.md",
+      "path": "docs/PHASE-5-KUBERNETES-OIDC-IMPLEMENTATION-PLAN.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "issue-link",
-      "path": "docs/ops/BRANCH-POLICY.md",
+      "path": "docs/PHASE-5-KUBERNETES-OIDC-IMPLEMENTATION-PLAN.md",
       "detail": "Unchecked action items require at least one issue reference in the file"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/ops/DISASTER-RECOVERY-PLAN.md",
+      "path": "docs/PRODUCTION-DEPLOYMENT-CHECKLIST-IAM-PHASE234.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/ops/E2E-ACCOUNT-PROVISIONING-RUNBOOK-750.md",
+      "path": "docs/PRODUCTION-DEPLOYMENT-RUNBOOK.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/ops/E2E-BROWSER-AUTOMATION-RUNBOOK.md",
+      "path": "docs/PRODUCTION-FAILOVER-TEST-RUNBOOK.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/QUICK-REFERENCE-ISSUE-CREATION.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "issue-link",
+      "path": "docs/QUICK-REFERENCE-ISSUE-CREATION.md",
+      "detail": "Unchecked action items require at least one issue reference in the file"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/SESSION-COMPLETION-APRIL-22-EVENING.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/SLO-SLA-DASHBOARD.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/TICKET-LINKING-IMPLEMENTATION-GUIDE.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/WEBSOCKET-HEALTH-MONITORING.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "issue-link",
+      "path": "docs/WEBSOCKET-HEALTH-MONITORING.md",
+      "detail": "Unchecked action items require at least one issue reference in the file"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/WORKSPACE-ONBOARDING-WIZARD-GUIDE.md",
+      "detail": "Missing Purpose metadata near top of document"
+    },
+    {
+      "rule": "metadata-purpose",
+      "path": "docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md",
       "detail": "Missing Purpose metadata near top of document"
     },
     {
       "rule": "broken-link",
-      "path": "docs/ops/ENDPOINT-CONTRACT-INDEX.md",
-      "detail": "Missing local link target: ../adr/ADR-002-UNIFIED-IDENTITY-ARCHITECTURE.md"
+      "path": "docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md",
+      "detail": "Missing local link target: docs/ZERO-TRUST-NETWORK-ARCHITECTURE.md"
+    },
+    {
+      "rule": "broken-link",
+      "path": "docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md",
+      "detail": "Missing local link target: docs/CERTIFICATE-MANAGEMENT.md"
+    },
+    {
+      "rule": "broken-link",
+      "path": "docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md",
+      "detail": "Missing local link target: docs/EGRESS-FIREWALL-POLICIES.md"
+    },
+    {
+      "rule": "broken-link",
+      "path": "docs/ZERO-TRUST-IMPLEMENTATION-GUIDE.md",
+      "detail": "Missing local link target: docs/AUDIT-LOG-SPECIFICATION.md"
     },
     {
       "rule": "metadata-purpose",
-      "path": "docs/ops/EXTERNAL-BROWSER-QA-SMOKE-TESTS.md",
+      "path": "docs/ZERO-TRUST-NETWORK-ARCHITECTURE.md",
       "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/INCIDENT-RESPONSE-PLAYBOOK.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/OLLAMA-GPU-REPLICA-OPERATIONS.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/OLLAMA-INTEGRATION-CONTRACT-RUNBOOK.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/OPS-COMPLIANCE-CHECKLIST.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/ops/OPS-COMPLIANCE-CHECKLIST.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/PLAYWRIGHT-STORAGE-STATE-PROVISIONING-750.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/PORT-OWNERSHIP-MAP.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/ops/SESSION-FINOPS-GUARDRAILS.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-11/PHASE_11_CAPACITY_PLANNING.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-11/PHASE_11_CHAOS_ENGINEERING.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-11/PHASE_11_DISASTER_RECOVERY.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-11/PHASE_11_HA_ARCHITECTURE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-11/PHASE_11_OBSERVABILITY.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-11/PHASE_11_OVERVIEW.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/phase-11/PHASE_11_OVERVIEW.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-11/README.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-12/PHASE_12_2_DATA_REPLICATION_GUIDE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-12/PHASE_12_ARCHITECTURE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-12/PHASE_12_IMPLEMENTATION_GUIDE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-12/PHASE_12_OPERATIONS.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/phase-12/PHASE_12_OPERATIONS.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-12/PHASE_12_OVERVIEW.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-12/README.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/phase-12/README.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-7d/HAPROXY-LOAD-BALANCING.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/phase-7d/HEALTH-CHECKS-GUIDE.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/policy-bundle-verification-740.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/RBAC-ENFORCEMENT-RUNBOOK.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/backup-recovery.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/caddy-down.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/runbooks/caddy-down.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/certificate-renewal.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/cloudflare-trace-correlation.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/code-server-down.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/runbooks/code-server-down.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/container-restart-investigation.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/disk-full.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/runbooks/disk-full.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/disk-space-cleanup.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/dual-host-restart-harvest.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/error-rate-high.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/runbooks/error-rate-high.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/full-redeploy-certification.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/high-latency.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/runbooks/high-latency.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/ollama-performance-investigation.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/postgresql-down.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/runbooks/postgresql-down.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/postgresql-replication-lag.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/runbooks/qa-coverage-phase-2.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/security/THREAT-MODEL-2026-04-19.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/session-bootstrap-enforcement-756.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/shared-workspace-acl-754.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "metadata-purpose",
-      "path": "docs/slos/code-server.md",
-      "detail": "Missing Purpose metadata near top of document"
-    },
-    {
-      "rule": "issue-link",
-      "path": "docs/slos/code-server.md",
-      "detail": "Unchecked action items require at least one issue reference in the file"
     }
   ],
-  "duplicateCandidates": [],
+  "duplicateCandidates": [
+    {
+      "normalizedName": "multirepouxpolicymd",
+      "paths": [
+        "docs/governance/multi-repo-ux-policy.md",
+        "docs/ops/multi-repo-ux-policy.md"
+      ]
+    },
+    {
+      "normalizedName": "sessionprovenancecontractmd",
+      "paths": [
+        "docs/security/session-provenance-contract.md",
+        "docs/session-broker/SESSION-PROVENANCE-CONTRACT.md"
+      ]
+    }
+  ],
   "staleDocs": [],
   "staleThresholdDays": 90
 }

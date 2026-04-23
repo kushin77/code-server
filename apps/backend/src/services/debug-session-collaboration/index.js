@@ -7,6 +7,7 @@ import axios from 'axios';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { Router } from 'express';
+import { extractTraceHeaders, getTracer, withSpan } from '../../lib/tracing.js';
 import { getLogger } from '../../lib/logger.js';
 function nowIso() {
     return new Date().toISOString();
@@ -174,40 +175,49 @@ export class DebugSessionCollaborationService extends EventEmitter {
         return cloneSession(session);
     }
     async relayDapMessage(sessionId, input) {
-        const session = this.requireParticipant(sessionId, input.actor);
-        const timestamp = nowIso();
-        const sequence = session.relaySequence + 1;
-        const relayTarget = normalizeText(input.relayTarget) || session.relayTarget;
-        const relayMessage = {
-            id: randomUUID(),
-            sequence,
-            actor: normalizeActor(input.actor),
-            message: { ...input.message },
-            relayTarget: relayTarget || undefined,
-            forwarded: false,
-            timestamp,
-        };
-        if (relayTarget) {
-            try {
-                const response = await axios.post(relayTarget, {
-                    sessionId,
-                    actor: relayMessage.actor,
-                    message: relayMessage.message,
-                    timestamp,
-                });
-                relayMessage.forwarded = (response.status ?? 200) < 400;
+        return withSpan(getTracer('backend/services/debug-session-collaboration'), 'debug-session.relay-dap', {
+            'collab.session_id': sessionId,
+        }, async (span) => {
+            const session = this.requireParticipant(sessionId, input.actor);
+            const timestamp = nowIso();
+            const sequence = session.relaySequence + 1;
+            const relayTarget = normalizeText(input.relayTarget) || session.relayTarget;
+            const relayMessage = {
+                id: randomUUID(),
+                sequence,
+                actor: normalizeActor(input.actor),
+                message: { ...input.message },
+                relayTarget: relayTarget || undefined,
+                forwarded: false,
+                timestamp,
+            };
+            span.setAttribute('collab.relay_sequence', sequence);
+            span.setAttribute('collab.relay_target_present', Boolean(relayTarget));
+            if (relayTarget) {
+                try {
+                    const response = await axios.post(relayTarget, {
+                        sessionId,
+                        actor: relayMessage.actor,
+                        message: relayMessage.message,
+                        timestamp,
+                    }, {
+                        headers: extractTraceHeaders(),
+                    });
+                    relayMessage.forwarded = (response.status ?? 200) < 400;
+                }
+                catch (error) {
+                    this.logger.warn('Failed to relay debug protocol message', { sessionId, relayTarget, error });
+                    throw new Error(`Failed to relay debug protocol message to ${relayTarget}`);
+                }
             }
-            catch (error) {
-                this.logger.warn('Failed to relay debug protocol message', { sessionId, relayTarget, error });
-                throw new Error(`Failed to relay debug protocol message to ${relayTarget}`);
-            }
-        }
-        session.relayTarget = relayTarget || session.relayTarget;
-        session.relaySequence = sequence;
-        session.relayMessages = [...session.relayMessages, relayMessage];
-        session.updatedAt = timestamp;
-        this.emit('debug-dap-relayed', cloneSession(session));
-        return cloneSession(session);
+            session.relayTarget = relayTarget || session.relayTarget;
+            session.relaySequence = sequence;
+            session.relayMessages = [...session.relayMessages, relayMessage];
+            session.updatedAt = timestamp;
+            this.emit('debug-dap-relayed', cloneSession(session));
+            span.setAttribute('collab.forwarded', relayMessage.forwarded);
+            return cloneSession(session);
+        });
     }
     listRelayMessages(sessionId, actor, sinceSequence = 0) {
         const session = this.requireParticipant(sessionId, actor);

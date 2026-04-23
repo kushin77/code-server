@@ -11,6 +11,24 @@
 export type NotificationRoute = 'in-app' | 'email' | 'slack' | 'sms' | 'push';
 
 /**
+ * Stored user-facing status for routing and presence updates
+ */
+export type UserStatus = 'online' | 'away' | 'busy' | 'dnd' | 'offline';
+
+/**
+ * Normalized routing status snapshot
+ */
+export interface UserStatusInfo {
+  userId: string;
+  currentStatus: UserStatus;
+  calendarStatus?: string;
+  location?: string;
+  currentDevice?: 'ide' | 'mobile' | 'desktop' | 'unknown';
+  meetingModeActive: boolean;
+  lastStatusChange: Date;
+}
+
+/**
  * Escalation level for notification delivery
  */
 export type EscalationLevel = 1 | 2 | 3 | 4 | 5;

@@ -8,7 +8,7 @@
 
 import { Router, Request, Response } from "express";
 import { getLogger } from "../lib/logger";
-import ResourceQuotaService, { QuotaTier, QuotaEnforcement } from "../services/resource-quota";
+import { ResourceQuotaService, QuotaTier, QuotaEnforcement } from "../services/resource-quota";
 
 const logger = getLogger("resource-quota-routes");
 const router = Router();
@@ -49,19 +49,157 @@ router.post("/enforce", (req: Request, res: Response) => {
 });
 
 /**
+ * POST /resource-quotas/:sessionId/cost
+ * Record a cost sample for a session
+ */
+router.post("/:sessionId/cost", (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const {
+      durationMs,
+      cpuMillicores,
+      memoryBytes,
+      storageBytes,
+      gpuCount,
+      projectId,
+    } = req.body;
+
+    if (durationMs === undefined || cpuMillicores === undefined || memoryBytes === undefined) {
+      return res.status(400).json({
+        error: "Missing required fields: durationMs, cpuMillicores, memoryBytes",
+      });
+    }
+
+    const sample = quotaService.recordSessionCost(sessionId, {
+      durationMs: Number(durationMs),
+      cpuMillicores: Number(cpuMillicores),
+      memoryBytes: Number(memoryBytes),
+      storageBytes: storageBytes !== undefined ? Number(storageBytes) : undefined,
+      gpuCount: gpuCount !== undefined ? Number(gpuCount) : undefined,
+      projectId,
+    });
+
+    res.status(201).json({
+      success: true,
+      data: sample,
+    });
+  } catch (error) {
+    logger.error("Error recording session cost", { error });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status = message.includes("Quota not found") ? 404 : 400;
+
+    res.status(status).json({
+      error: "Failed to record session cost",
+      details: message,
+    });
+  }
+});
+
+/**
+ * PUT /resource-quotas/cost/budgets
+ * Configure a monthly budget for a user or project
+ */
+router.put("/cost/budgets", (req: Request, res: Response) => {
+  try {
+    const { scope, identifier, monthlyBudgetUsd, monthKey } = req.body;
+
+    if (!scope || !identifier || monthlyBudgetUsd === undefined) {
+      return res.status(400).json({
+        error: "Missing required fields: scope, identifier, monthlyBudgetUsd",
+      });
+    }
+
+    if (scope !== "user" && scope !== "project") {
+      return res.status(400).json({
+        error: "Invalid scope. Must be one of: user, project",
+      });
+    }
+
+    const budget = quotaService.setCostBudget(
+      scope,
+      identifier,
+      Number(monthlyBudgetUsd),
+      typeof monthKey === "string" && monthKey.length > 0 ? monthKey : undefined
+    );
+
+    res.status(200).json({
+      success: true,
+      data: budget,
+    });
+  } catch (error) {
+    logger.error("Error configuring cost budget", { error });
+    res.status(500).json({
+      error: "Failed to configure cost budget",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+/**
+ * GET /resource-quotas/cost/monthly
+ * Get the monthly cost report
+ */
+router.get("/cost/monthly", (req: Request, res: Response) => {
+  try {
+    const { monthKey } = req.query;
+    const report = quotaService.getMonthlyCostReport(
+      typeof monthKey === "string" && monthKey.length > 0 ? monthKey : undefined
+    );
+
+    res.status(200).json({
+      success: true,
+      data: report,
+    });
+  } catch (error) {
+    logger.error("Error retrieving monthly cost report", { error });
+    res.status(500).json({
+      error: "Failed to retrieve monthly cost report",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+/**
+ * GET /resource-quotas/cost/alerts
+ * Get the current cost alerts for a month
+ */
+router.get("/cost/alerts", (req: Request, res: Response) => {
+  try {
+    const { monthKey } = req.query;
+    const alerts = quotaService.getCostAlerts(
+      typeof monthKey === "string" && monthKey.length > 0 ? monthKey : undefined
+    );
+
+    res.status(200).json({
+      success: true,
+      data: alerts,
+      count: alerts.length,
+    });
+  } catch (error) {
+    logger.error("Error retrieving cost alerts", { error });
+    res.status(500).json({
+      error: "Failed to retrieve cost alerts",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+/**
  * PUT /resource-quotas/:sessionId/usage
  * Update resource usage for a session
  */
 router.put("/:sessionId/usage", (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const { cpuUsage, memoryUsage, diskIOUsage, bandwidthUsage } = req.body;
+    const { cpuUsage, memoryUsage, diskIOUsage, bandwidthUsage, storageUsage, gpuUsage } = req.body;
 
     const usage = quotaService.updateResourceUsage(sessionId, {
       cpuUsage,
       memoryUsage,
       diskIOUsage,
       bandwidthUsage,
+      storageUsage,
+      gpuUsage,
     });
 
     res.status(200).json({

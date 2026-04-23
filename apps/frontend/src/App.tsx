@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store'
 import { LoginPage } from '@/pages/LoginPage'
 import { MFASetup } from '@/pages/MFASetup'
 import { AdminControlsPage } from '@/pages/AdminControlsPage'
+import { WorkspaceOnboardingWizard } from '@/pages/WorkspaceOnboardingWizard'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { EphemeralSessionsPage } from '@/pages/EphemeralSessions'
 import { RepoHomeView } from '@/pages/RepoHomeView'
@@ -26,12 +27,19 @@ import {
   writeRepoHomeSnapshot,
 } from '@/utils/repoHomeData'
 import {
+  DEFAULT_STATUS_BAR_TILES,
+  CI_LOGS_ROUTE,
   fetchActivePagerDutyIncidentCount,
   fetchOpenPullRequestCount,
+  fetchReviewRequestCount,
   getDemoTeamOnlineCount,
   getGitHubHandleFromEmail,
   PAGERDUTY_INCIDENTS_ROUTE,
+  readStatusBarTileConfig,
+  StatusBarTileConfig,
+  StatusBarTileId,
   TEAM_HUB_ROUTE,
+  writeStatusBarTileConfig,
 } from '@/utils/collaborationMetrics'
 import {
   buildSafeWorkspaceRestorePlan,
@@ -456,7 +464,12 @@ const CollaborationStatusStrip: React.FC<{ workspaceState: WorkspaceStateHandle 
   const { user } = useAuthStore()
   const { activeRepoCard, activeWorkspace } = workspaceState
   const [openPullRequestCount, setOpenPullRequestCount] = useState<number | null>(null)
+  const [reviewRequestCount, setReviewRequestCount] = useState<number | null>(null)
   const [activeIncidentCount, setActiveIncidentCount] = useState<number | null>(null)
+  const [tileCustomizerOpen, setTileCustomizerOpen] = useState(false)
+  const [statusBarTiles, setStatusBarTiles] = useState<StatusBarTileConfig[]>(() =>
+    readStatusBarTileConfig(typeof window === 'undefined' ? undefined : window.localStorage)
+  )
 
   const githubHandle = useMemo(() => getGitHubHandleFromEmail(user?.email), [user?.email])
   const ciStatus = activeRepoCard?.status.ciStatus ?? 'passing'
@@ -464,24 +477,123 @@ const CollaborationStatusStrip: React.FC<{ workspaceState: WorkspaceStateHandle 
   const openPullRequestLabel = githubHandle && activeRepoCard ? `for @${githubHandle}` : 'for the active repo'
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    writeStatusBarTileConfig(window.localStorage, statusBarTiles)
+  }, [statusBarTiles])
+
+  const updateTileVisibility = (tileId: StatusBarTileId, visible: boolean) => {
+    setStatusBarTiles((currentTiles) =>
+      currentTiles.map((tile) => (tile.id === tileId ? { ...tile, visible } : tile))
+    )
+  }
+
+  const moveTile = (tileId: StatusBarTileId, direction: -1 | 1) => {
+    setStatusBarTiles((currentTiles) => {
+      const currentIndex = currentTiles.findIndex((tile) => tile.id === tileId)
+      const targetIndex = currentIndex + direction
+
+      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= currentTiles.length) {
+        return currentTiles
+      }
+
+      const nextTiles = [...currentTiles]
+      const [movedTile] = nextTiles.splice(currentIndex, 1)
+      nextTiles.splice(targetIndex, 0, movedTile)
+      return nextTiles
+    })
+  }
+
+  const resetTileConfig = () => {
+    setStatusBarTiles(DEFAULT_STATUS_BAR_TILES.map((tile) => ({ ...tile })))
+    setTileCustomizerOpen(false)
+  }
+
+  const renderTileSettings = () => (
+    <div className="mx-auto mt-4 max-w-7xl rounded-3xl border border-slate-200 bg-slate-50/80 p-4 shadow-inner shadow-slate-100">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Status bar tiles</p>
+          <p className="mt-1 text-sm text-slate-600">Show, hide, and reorder the collaboration tiles.</p>
+        </div>
+        <button
+          type="button"
+          onClick={resetTileConfig}
+          className="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+        >
+          Reset defaults
+        </button>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {statusBarTiles.map((tile, index) => (
+          <div key={tile.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {tile.id === 'open-prs' ? 'Open PRs' : tile.id === 'branch-ci' ? 'Branch CI' : tile.id === 'pagerduty' ? 'PagerDuty' : 'Team online'}
+                </p>
+                <p className="text-xs text-slate-500">{tile.visible ? 'Visible' : 'Hidden'}</p>
+              </div>
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={tile.visible}
+                  onChange={(event) => updateTileVisibility(tile.id, event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                />
+                Show
+              </label>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => moveTile(tile.id, -1)}
+                disabled={index === 0}
+                className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition enabled:hover:border-slate-400 enabled:hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Move up
+              </button>
+              <button
+                type="button"
+                onClick={() => moveTile(tile.id, 1)}
+                disabled={index === statusBarTiles.length - 1}
+                className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 transition enabled:hover:border-slate-400 enabled:hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Move down
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  useEffect(() => {
     let cancelled = false
 
     const loadPullRequests = async () => {
       if (!activeRepoCard) {
         setOpenPullRequestCount(null)
+        setReviewRequestCount(null)
         return
       }
 
-      const count = await fetchOpenPullRequestCount(activeRepoCard.repoSlug, githubHandle)
+      const [count, requestedReviewCount] = await Promise.all([
+        fetchOpenPullRequestCount(activeRepoCard.repoSlug, githubHandle),
+        fetchReviewRequestCount(activeRepoCard.repoSlug, githubHandle),
+      ])
       if (!cancelled) {
         setOpenPullRequestCount(count)
+        setReviewRequestCount(requestedReviewCount)
       }
     }
 
     void loadPullRequests()
     const refreshHandle = window.setInterval(() => {
       void loadPullRequests()
-    }, 5 * 60 * 1000)
+    }, 60 * 1000)
 
     return () => {
       cancelled = true
@@ -516,82 +628,117 @@ const CollaborationStatusStrip: React.FC<{ workspaceState: WorkspaceStateHandle 
   }, [])
 
   const teamOnlineCount = getDemoTeamOnlineCount()
+  const visibleStatusBarTiles = statusBarTiles.filter((tile) => tile.visible)
+
+  const renderStatusBarTile = (tileId: StatusBarTileId) => {
+    switch (tileId) {
+      case 'open-prs':
+        return (
+          <a
+            href={activeRepoCard?.links.pullRequests ?? '#'}
+            target={activeRepoCard ? '_blank' : undefined}
+            rel={activeRepoCard ? 'noopener noreferrer' : undefined}
+            className="group rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-sky-400 hover:bg-sky-50"
+            title={`Open the pull request list ${openPullRequestLabel}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Open PRs</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">{openPullRequestCount ?? '—'}</p>
+              </div>
+              <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 transition group-hover:border-sky-300 group-hover:text-sky-700">
+                {reviewRequestCount === null ? 'Review requests —' : `${reviewRequestCount} review requests`}
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">Open the PR list for the active repo.</p>
+            <p className="mt-1 text-xs text-slate-500">{openPullRequestLabel}</p>
+          </a>
+        )
+      case 'branch-ci':
+        return (
+          <Link
+            to={{
+              pathname: CI_LOGS_ROUTE,
+              search:
+                activeRepoCard != null
+                  ? `?repo=${encodeURIComponent(activeRepoCard.repoSlug)}&workspace=${encodeURIComponent(activeWorkspace.label)}`
+                  : '',
+            }}
+            className={`group rounded-2xl border px-4 py-3 transition ${ciStyle.badge}`}
+            title={`Branch CI for ${activeWorkspace.label}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Branch CI</p>
+                <p className={`mt-1 text-lg font-semibold ${ciStyle.text}`}>{ciStatus}</p>
+              </div>
+              <span className="rounded-full border border-current/20 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 transition group-hover:border-current/40">
+                {activeRepoCard?.status.branch ?? activeWorkspace.branch}
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">{ciStyle.description}</p>
+          </Link>
+        )
+      case 'pagerduty':
+        return (
+          <Link
+            to={PAGERDUTY_INCIDENTS_ROUTE}
+            className="group rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 transition hover:border-rose-400 hover:bg-rose-100"
+            title="Open the PagerDuty incidents page"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">Active incidents</p>
+                <p className="mt-1 text-2xl font-semibold text-rose-800">{activeIncidentCount ?? '—'}</p>
+              </div>
+              <span className="rounded-full border border-rose-200 bg-white px-2 py-1 text-[11px] font-medium text-rose-700 transition group-hover:border-rose-300">
+                PagerDuty
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-rose-700">Open incident details and refresh the live count.</p>
+          </Link>
+        )
+      case 'team-online':
+        return (
+          <Link
+            to={TEAM_HUB_ROUTE}
+            className="group rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 transition hover:border-emerald-400 hover:bg-emerald-100"
+            title="Open the team collaboration metrics page"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Team online</p>
+                <p className="mt-1 text-2xl font-semibold text-emerald-800">{teamOnlineCount}</p>
+              </div>
+              <span className="rounded-full border border-emerald-200 bg-white px-2 py-1 text-[11px] font-medium text-emerald-700 transition group-hover:border-emerald-300">
+                Presence
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-emerald-700">View the collaboration presence snapshot.</p>
+          </Link>
+        )
+      default:
+        return null
+    }
+  }
 
   return (
     <section className="border-b border-slate-200 bg-white/95 px-4 py-4 shadow-sm shadow-slate-100">
       <div className="mx-auto grid max-w-7xl gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <a
-          href={activeRepoCard?.links.pullRequests ?? '#'}
-          target={activeRepoCard ? '_blank' : undefined}
-          rel={activeRepoCard ? 'noopener noreferrer' : undefined}
-          className="group rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:border-sky-400 hover:bg-sky-50"
-          title={`Open the pull request list ${openPullRequestLabel}`}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Open PRs</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{openPullRequestCount ?? '—'}</p>
-            </div>
-            <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 transition group-hover:border-sky-300 group-hover:text-sky-700">
-              {openPullRequestLabel}
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-slate-600">Open the PR list for the active repo.</p>
-        </a>
-
-        <a
-          href={activeRepoCard?.links.ci ?? activeRepoCard?.links.pullRequests ?? '#'}
-          target={activeRepoCard ? '_blank' : undefined}
-          rel={activeRepoCard ? 'noopener noreferrer' : undefined}
-          className={`group rounded-2xl border px-4 py-3 transition ${ciStyle.badge}`}
-          title={`Branch CI for ${activeWorkspace.label}`}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Branch CI</p>
-              <p className={`mt-1 text-lg font-semibold ${ciStyle.text}`}>{ciStatus}</p>
-            </div>
-            <span className="rounded-full border border-current/20 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 transition group-hover:border-current/40">
-              {activeRepoCard?.status.branch ?? activeWorkspace.branch}
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-slate-600">{ciStyle.description}</p>
-        </a>
-
-        <Link
-          to={PAGERDUTY_INCIDENTS_ROUTE}
-          className="group rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 transition hover:border-rose-400 hover:bg-rose-100"
-          title="Open the PagerDuty incidents page"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">Active incidents</p>
-              <p className="mt-1 text-2xl font-semibold text-rose-800">{activeIncidentCount ?? '—'}</p>
-            </div>
-            <span className="rounded-full border border-rose-200 bg-white px-2 py-1 text-[11px] font-medium text-rose-700 transition group-hover:border-rose-300">
-              PagerDuty
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-rose-700">Open incident details and refresh the live count.</p>
-        </Link>
-
-        <Link
-          to={TEAM_HUB_ROUTE}
-          className="group rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 transition hover:border-emerald-400 hover:bg-emerald-100"
-          title="Open the team collaboration metrics page"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Team online</p>
-              <p className="mt-1 text-2xl font-semibold text-emerald-800">{teamOnlineCount}</p>
-            </div>
-            <span className="rounded-full border border-emerald-200 bg-white px-2 py-1 text-[11px] font-medium text-emerald-700 transition group-hover:border-emerald-300">
-              Presence
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-emerald-700">View the collaboration presence snapshot.</p>
-        </Link>
+        {visibleStatusBarTiles.map((tile) => (
+          <React.Fragment key={tile.id}>{renderStatusBarTile(tile.id)}</React.Fragment>
+        ))}
       </div>
+      <div className="mx-auto max-w-7xl">
+        <button
+          type="button"
+          onClick={() => setTileCustomizerOpen((current) => !current)}
+          className="mt-4 inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+        >
+          {tileCustomizerOpen ? 'Hide tile settings' : 'Customize tiles'}
+        </button>
+      </div>
+      {tileCustomizerOpen ? renderTileSettings() : null}
     </section>
   )
 }
@@ -780,6 +927,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuthStore()
   const workspaceState = useWorkspaceState()
   const isSessionsPage = location.pathname.startsWith('/sessions')
+  const isOnboardingPage = location.pathname.startsWith('/onboarding')
   const canOpenAdminControls = user?.roles.some((role) => role.roleId === 'admin') ?? false
 
   if (!isAuthenticated) {
@@ -809,6 +957,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               to="/sessions"
             >
               Ephemeral Sessions
+            </Link>
+            <Link
+              aria-current={isOnboardingPage ? 'page' : undefined}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                isOnboardingPage
+                  ? 'border-sky-200 bg-sky-50 text-sky-900'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+              to="/onboarding"
+            >
+              Onboarding
             </Link>
             {canOpenAdminControls ? (
               <Link
@@ -925,6 +1084,14 @@ export function App() {
             }
           />
           <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <WorkspaceOnboardingWizard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path={PAGERDUTY_INCIDENTS_ROUTE}
             element={
               <ProtectedRoute>
@@ -937,6 +1104,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <TeamHubMetricsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={CI_LOGS_ROUTE}
+            element={
+              <ProtectedRoute>
+                <CiLogsPage />
               </ProtectedRoute>
             }
           />

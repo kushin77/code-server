@@ -7,6 +7,8 @@ export { StandupSummariesService } from './services/standup-summaries';
 // Integration examples
 export { setupStandupSummariesIntegration, createExampleApp } from './services/standup-summaries/integration-example';
 export { CollaborationMessageEncryptionService } from './services/collaboration-message-encryption/index.js';
+export { initializeVoiceChannelRuntime } from './services/voice-channel/integration-example.js';
+export { setupVoiceChannelIntegration, createVoiceChannelExampleApp } from './services/voice-channel/integration-example.js';
 // Routes
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';
 export { initializeSymbolDiscussionsRoutes, SymbolDiscussionsService } from './routes/symbol-discussions';

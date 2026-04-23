@@ -26,13 +26,17 @@ export function initializeSmartNotificationRoutingRoutes(pool: Pool, auditServic
     try {
       const { userId, status, location, calendarStatus, currentDevice } = req.body;
 
-      if (!userId || !status) {
+      if (!userId || (!status && !calendarStatus)) {
         return res.status(400).json({
-          error: 'Missing required fields: userId, status',
+          error: 'Missing required fields: userId and either status or calendarStatus',
         });
       }
 
-      await notificationService.updateUserStatus(userId, status as UserStatus, {
+      const normalizedStatus = calendarStatus === 'in-meeting'
+        ? 'dnd'
+        : (status ?? 'online');
+
+      const nextStatus = await notificationService.updateUserStatus(userId, normalizedStatus as UserStatus, {
         location,
         calendarStatus,
         currentDevice,
@@ -41,6 +45,7 @@ export function initializeSmartNotificationRoutingRoutes(pool: Pool, auditServic
       res.json({
         success: true,
         message: 'User status updated',
+        status: nextStatus,
       });
     } catch (error) {
       logger.error('Failed to update user status', { error, body: req.body });

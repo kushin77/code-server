@@ -5,8 +5,10 @@
 
 import { EventEmitter } from 'events';
 import { getLogger } from '../../lib/logger';
+import { getTracer, withSpanSync } from '../../lib/tracing';
 
 const logger = getLogger('CodeReviewRequestService');
+const tracer = getTracer('collaboration/code-review');
 
 /**
  * Code Review Request Priority Levels
@@ -114,35 +116,42 @@ class CodeReviewRequestService extends EventEmitter {
     filePath?: string,
     dueAt?: number
   ): CodeReviewRequest {
-    const requestId = `review-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const request: CodeReviewRequest = {
-      id: requestId,
-      requesterId,
-      reviewerId,
-      workspaceId,
-      filePath,
-      contextNote,
+    return withSpanSync(tracer, 'collaboration.code-review.createRequest', {
+      'requester.id': requesterId,
+      'reviewer.id': reviewerId,
+      'workspace.id': workspaceId,
       priority,
-      status: 'pending',
-      createdAt: Date.now(),
-      dueAt,
-    };
+    }, () => {
+      const requestId = `review-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const request: CodeReviewRequest = {
+        id: requestId,
+        requesterId,
+        reviewerId,
+        workspaceId,
+        filePath,
+        contextNote,
+        priority,
+        status: 'pending',
+        createdAt: Date.now(),
+        dueAt,
+      };
 
-    this.requests.set(requestId, request);
+      this.requests.set(requestId, request);
 
-    // Add to reviewer's queue
-    if (!this.requestsByReviewer.has(reviewerId)) {
-      this.requestsByReviewer.set(reviewerId, []);
-    }
-    this.requestsByReviewer.get(reviewerId)!.push(requestId);
+      // Add to reviewer's queue
+      if (!this.requestsByReviewer.has(reviewerId)) {
+        this.requestsByReviewer.set(reviewerId, []);
+      }
+      this.requestsByReviewer.get(reviewerId)!.push(requestId);
 
-    // Create notification
-    this.createNotification(requestId, reviewerId, 'review_requested');
+      // Create notification
+      this.createNotification(requestId, reviewerId, 'review_requested');
 
-    this.emit('reviewRequested', request);
-    logger.info(`Code review requested: ${requestId} from ${requesterId} to ${reviewerId}`);
+      this.emit('reviewRequested', request);
+      logger.info(`Code review requested: ${requestId} from ${requesterId} to ${reviewerId}`);
 
-    return request;
+      return request;
+    });
   }
 
   /**
@@ -178,67 +187,82 @@ class CodeReviewRequestService extends EventEmitter {
     status: ReviewRequestStatus,
     comment: string
   ): CodeReviewRequest | undefined {
-    const request = this.requests.get(requestId);
-    if (!request) return undefined;
-
-    request.status = status;
-    request.respondedAt = Date.now();
-    request.response = {
+    return withSpanSync(tracer, 'collaboration.code-review.respondToRequest', {
+      'request.id': requestId,
+      'reviewer.id': reviewerId,
       status,
-      comment,
-      timestamp: Date.now(),
-      reviewerId,
-    };
+    }, () => {
+      const request = this.requests.get(requestId);
+      if (!request) return undefined;
 
-    // Update badge
-    const badgeKey = `${request.reviewerId}-${status}`;
-    const badge = this.reviewerBadges.get(badgeKey) || {
-      type: status as 'approved' | 'requested_changes' | 'commented',
-      count: 0,
-      lastUpdated: Date.now(),
-    };
-    badge.count++;
-    badge.lastUpdated = Date.now();
-    this.reviewerBadges.set(badgeKey, badge);
-    request.badge = badge;
+      request.status = status;
+      request.respondedAt = Date.now();
+      request.response = {
+        status,
+        comment,
+        timestamp: Date.now(),
+        reviewerId,
+      };
 
-    // Create notification for requester
-    this.createNotification(requestId, request.requesterId, 'review_response');
+      // Update badge
+      const badgeKey = `${request.reviewerId}-${status}`;
+      const badge = this.reviewerBadges.get(badgeKey) || {
+        type: status as 'approved' | 'requested_changes' | 'commented',
+        count: 0,
+        lastUpdated: Date.now(),
+      };
+      badge.count++;
+      badge.lastUpdated = Date.now();
+      this.reviewerBadges.set(badgeKey, badge);
+      request.badge = badge;
 
-    this.emit('reviewResponded', request);
-    logger.info(`Code review response: ${requestId} with status ${status}`);
+      // Create notification for requester
+      this.createNotification(requestId, request.requesterId, 'review_response');
 
-    return request;
+      this.emit('reviewResponded', request);
+      logger.info(`Code review response: ${requestId} with status ${status}`);
+
+      return request;
+    });
   }
 
   /**
    * Dismiss a review request
    */
   dismissRequest(requestId: string): CodeReviewRequest | undefined {
-    const request = this.requests.get(requestId);
-    if (!request) return undefined;
+    return withSpanSync(tracer, 'collaboration.code-review.dismissRequest', {
+      'request.id': requestId,
+    }, () => {
+      const request = this.requests.get(requestId);
+      if (!request) return undefined;
 
-    request.status = 'dismissed';
-    request.respondedAt = Date.now();
+      request.status = 'dismissed';
+      request.respondedAt = Date.now();
 
-    this.emit('reviewDismissed', request);
-    logger.info(`Code review dismissed: ${requestId}`);
+      this.emit('reviewDismissed', request);
+      logger.info(`Code review dismissed: ${requestId}`);
 
-    return request;
+      return request;
+    });
   }
 
   /**
    * Set due date for a request
    */
   setDueDate(requestId: string, dueAt: number): CodeReviewRequest | undefined {
-    const request = this.requests.get(requestId);
-    if (!request) return undefined;
+    return withSpanSync(tracer, 'collaboration.code-review.setDueDate', {
+      'request.id': requestId,
+      'review.due_at': dueAt,
+    }, () => {
+      const request = this.requests.get(requestId);
+      if (!request) return undefined;
 
-    request.dueAt = dueAt;
-    this.emit('dueDateSet', request);
-    logger.info(`Due date set for review ${requestId}: ${new Date(dueAt).toISOString()}`);
+      request.dueAt = dueAt;
+      this.emit('dueDateSet', request);
+      logger.info(`Due date set for review ${requestId}: ${new Date(dueAt).toISOString()}`);
 
-    return request;
+      return request;
+    });
   }
 
   /**
@@ -255,14 +279,18 @@ class CodeReviewRequestService extends EventEmitter {
    * Send reminder for pending request
    */
   sendReminder(requestId: string): CodeReviewRequest | undefined {
-    const request = this.requests.get(requestId);
-    if (!request || request.status !== 'pending') return undefined;
+    return withSpanSync(tracer, 'collaboration.code-review.sendReminder', {
+      'request.id': requestId,
+    }, () => {
+      const request = this.requests.get(requestId);
+      if (!request || request.status !== 'pending') return undefined;
 
-    this.createNotification(requestId, request.reviewerId, 'review_reminder');
-    this.emit('reminderSent', request);
-    logger.info(`Reminder sent for review ${requestId}`);
+      this.createNotification(requestId, request.reviewerId, 'review_reminder');
+      this.emit('reminderSent', request);
+      logger.info(`Reminder sent for review ${requestId}`);
 
-    return request;
+      return request;
+    });
   }
 
   /**
@@ -301,14 +329,18 @@ class CodeReviewRequestService extends EventEmitter {
    * Mark notification as read
    */
   markNotificationAsRead(notificationId: string): ReviewNotification | undefined {
-    const notification = this.notifications.get(notificationId);
-    if (!notification) return undefined;
+    return withSpanSync(tracer, 'collaboration.code-review.markNotificationAsRead', {
+      'notification.id': notificationId,
+    }, () => {
+      const notification = this.notifications.get(notificationId);
+      if (!notification) return undefined;
 
-    notification.read = true;
-    this.emit('notificationRead', notification);
-    logger.info(`Notification marked as read: ${notificationId}`);
+      notification.read = true;
+      this.emit('notificationRead', notification);
+      logger.info(`Notification marked as read: ${notificationId}`);
 
-    return notification;
+      return notification;
+    });
   }
 
   /**
@@ -374,19 +406,23 @@ class CodeReviewRequestService extends EventEmitter {
    * Expire old requests (older than 30 days)
    */
   expireOldRequests(maxAgeMs: number = 30 * 24 * 60 * 60 * 1000): CodeReviewRequest[] {
-    const now = Date.now();
-    const expired: CodeReviewRequest[] = [];
+    return withSpanSync(tracer, 'collaboration.code-review.expireOldRequests', {
+      'review.max_age_ms': maxAgeMs,
+    }, () => {
+      const now = Date.now();
+      const expired: CodeReviewRequest[] = [];
 
-    this.requests.forEach((request) => {
-      if (request.status === 'pending' && now - request.createdAt > maxAgeMs) {
-        request.status = 'expired';
-        expired.push(request);
-        this.emit('requestExpired', request);
-      }
+      this.requests.forEach((request) => {
+        if (request.status === 'pending' && now - request.createdAt > maxAgeMs) {
+          request.status = 'expired';
+          expired.push(request);
+          this.emit('requestExpired', request);
+        }
+      });
+
+      logger.info(`Expired ${expired.length} old review requests`);
+      return expired;
     });
-
-    logger.info(`Expired ${expired.length} old review requests`);
-    return expired;
   }
 
   /**

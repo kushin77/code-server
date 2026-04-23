@@ -5,8 +5,10 @@
 
 import { EventEmitter } from 'events';
 import { getLogger } from '../../lib/logger';
+import { getTracer, withSpanSync } from '../../lib/tracing';
 
 const logger = getLogger('RichPresenceService');
+const tracer = getTracer('collaboration/rich-presence');
 
 // Presence data structures
 export interface PresenceStatus {
@@ -100,170 +102,208 @@ export class RichPresenceService extends EventEmitter {
    * Update or create presence
    */
   updatePresence(userId: string, updates: Partial<PresenceStatus>): PresenceStatus {
-    const now = Date.now();
     const existingPresence = this.presence.get(userId);
+    return withSpanSync(tracer, 'collaboration.presence.updatePresence', {
+      'user.id': userId,
+      'workspace.id': updates.workspaceId || existingPresence?.workspaceId || '',
+    }, () => {
+      const now = Date.now();
 
-    const presence: PresenceStatus = {
-      userId,
-      username: updates.username || existingPresence?.username || 'Unknown',
-      email: updates.email || existingPresence?.email,
-      avatarUrl: updates.avatarUrl || existingPresence?.avatarUrl,
-      status: updates.status || existingPresence?.status || 'online',
-      currentFile: updates.currentFile || existingPresence?.currentFile,
-      currentFunction: updates.currentFunction || existingPresence?.currentFunction,
-      currentTask: updates.currentTask || existingPresence?.currentTask,
-      customStatus: updates.customStatus || existingPresence?.customStatus,
-      workspaceId: updates.workspaceId || existingPresence?.workspaceId || '',
-      sessionId: updates.sessionId || existingPresence?.sessionId || '',
-      lastActiveAt: now,
-      cursorPosition: updates.cursorPosition || existingPresence?.cursorPosition,
-      editingFile: updates.editingFile || existingPresence?.editingFile,
-    };
+      const presence: PresenceStatus = {
+        userId,
+        username: updates.username || existingPresence?.username || 'Unknown',
+        email: updates.email || existingPresence?.email,
+        avatarUrl: updates.avatarUrl || existingPresence?.avatarUrl,
+        status: updates.status || existingPresence?.status || 'online',
+        currentFile: updates.currentFile || existingPresence?.currentFile,
+        currentFunction: updates.currentFunction || existingPresence?.currentFunction,
+        currentTask: updates.currentTask || existingPresence?.currentTask,
+        customStatus: updates.customStatus || existingPresence?.customStatus,
+        workspaceId: updates.workspaceId || existingPresence?.workspaceId || '',
+        sessionId: updates.sessionId || existingPresence?.sessionId || '',
+        lastActiveAt: now,
+        cursorPosition: updates.cursorPosition || existingPresence?.cursorPosition,
+        editingFile: updates.editingFile || existingPresence?.editingFile,
+      };
 
-    this.presence.set(userId, presence);
+      this.presence.set(userId, presence);
 
-    // Store in Redis cache with TTL
-    this.redisPresenceCache.set(userId, presence);
-    this.presenceTTL.set(userId, now + this.TTL_MS);
+      // Store in Redis cache with TTL
+      this.redisPresenceCache.set(userId, presence);
+      this.presenceTTL.set(userId, now + this.TTL_MS);
 
-    logger.debug(`Presence updated for user ${userId}`);
-    this.emit('presenceUpdated', { userId, presence, changes: updates });
+      logger.debug(`Presence updated for user ${userId}`);
+      this.emit('presenceUpdated', { userId, presence, changes: updates });
 
-    return presence;
+      return presence;
+    });
   }
 
   /**
    * Set user status
    */
   setStatus(userId: string, status: 'online' | 'away' | 'idle' | 'offline'): PresenceStatus | null {
-    const presence = this.presence.get(userId);
-    if (!presence) {
-      return null;
-    }
+    return withSpanSync(tracer, 'collaboration.presence.setStatus', {
+      'user.id': userId,
+      'presence.status': status,
+    }, () => {
+      const presence = this.presence.get(userId);
+      if (!presence) {
+        return null;
+      }
 
-    presence.status = status;
-    this.presence.set(userId, presence);
-    this.redisPresenceCache.set(userId, presence);
-    this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
+      presence.status = status;
+      this.presence.set(userId, presence);
+      this.redisPresenceCache.set(userId, presence);
+      this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
 
-    this.emit('statusChanged', { userId, status });
-    return presence;
+      this.emit('statusChanged', { userId, status });
+      return presence;
+    });
   }
 
   /**
    * Update file being edited
    */
   setCurrentFile(userId: string, file: { path: string; line?: number; column?: number }): PresenceStatus | null {
-    const presence = this.presence.get(userId);
-    if (!presence) {
-      return null;
-    }
+    return withSpanSync(tracer, 'collaboration.presence.setCurrentFile', {
+      'user.id': userId,
+      'file.path': file.path,
+    }, () => {
+      const presence = this.presence.get(userId);
+      if (!presence) {
+        return null;
+      }
 
-    presence.currentFile = file;
-    presence.editingFile = file.path;
-    this.presence.set(userId, presence);
-    this.redisPresenceCache.set(userId, presence);
-    this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
+      presence.currentFile = file;
+      presence.editingFile = file.path;
+      this.presence.set(userId, presence);
+      this.redisPresenceCache.set(userId, presence);
+      this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
 
-    this.emit('fileChanged', { userId, file });
-    return presence;
+      this.emit('fileChanged', { userId, file });
+      return presence;
+    });
   }
 
   /**
    * Update current function being debugged/edited
    */
   setCurrentFunction(userId: string, func: { name: string; file: string; line: number }): PresenceStatus | null {
-    const presence = this.presence.get(userId);
-    if (!presence) {
-      return null;
-    }
+    return withSpanSync(tracer, 'collaboration.presence.setCurrentFunction', {
+      'user.id': userId,
+      'function.name': func.name,
+      'function.file': func.file,
+    }, () => {
+      const presence = this.presence.get(userId);
+      if (!presence) {
+        return null;
+      }
 
-    presence.currentFunction = func;
-    this.presence.set(userId, presence);
-    this.redisPresenceCache.set(userId, presence);
-    this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
+      presence.currentFunction = func;
+      this.presence.set(userId, presence);
+      this.redisPresenceCache.set(userId, presence);
+      this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
 
-    this.emit('functionChanged', { userId, function: func });
-    return presence;
+      this.emit('functionChanged', { userId, function: func });
+      return presence;
+    });
   }
 
   /**
    * Update current task
    */
   setCurrentTask(userId: string, task: { id: string; title: string; status: 'active' | 'paused' | 'completed' }): PresenceStatus | null {
-    const presence = this.presence.get(userId);
-    if (!presence) {
-      return null;
-    }
+    return withSpanSync(tracer, 'collaboration.presence.setCurrentTask', {
+      'user.id': userId,
+      'task.id': task.id,
+    }, () => {
+      const presence = this.presence.get(userId);
+      if (!presence) {
+        return null;
+      }
 
-    presence.currentTask = task;
-    this.presence.set(userId, presence);
-    this.redisPresenceCache.set(userId, presence);
-    this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
+      presence.currentTask = task;
+      this.presence.set(userId, presence);
+      this.redisPresenceCache.set(userId, presence);
+      this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
 
-    this.emit('taskChanged', { userId, task });
-    return presence;
+      this.emit('taskChanged', { userId, task });
+      return presence;
+    });
   }
 
   /**
    * Set custom status (emoji + text)
    */
   setCustomStatus(userId: string, customStatus: { emoji?: string; text?: string; expiresIn?: number }): PresenceStatus | null {
-    const presence = this.presence.get(userId);
-    if (!presence) {
-      return null;
-    }
+    return withSpanSync(tracer, 'collaboration.presence.setCustomStatus', {
+      'user.id': userId,
+    }, () => {
+      const presence = this.presence.get(userId);
+      if (!presence) {
+        return null;
+      }
 
-    const expiresAt = customStatus.expiresIn ? Date.now() + customStatus.expiresIn : undefined;
-    presence.customStatus = {
-      emoji: customStatus.emoji,
-      text: customStatus.text,
-      expiresAt,
-    };
+      const expiresAt = customStatus.expiresIn ? Date.now() + customStatus.expiresIn : undefined;
+      presence.customStatus = {
+        emoji: customStatus.emoji,
+        text: customStatus.text,
+        expiresAt,
+      };
 
-    this.presence.set(userId, presence);
-    this.redisPresenceCache.set(userId, presence);
-    this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
+      this.presence.set(userId, presence);
+      this.redisPresenceCache.set(userId, presence);
+      this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
 
-    this.emit('customStatusChanged', { userId, customStatus: presence.customStatus });
-    return presence;
+      this.emit('customStatusChanged', { userId, customStatus: presence.customStatus });
+      return presence;
+    });
   }
 
   /**
    * Clear custom status
    */
   clearCustomStatus(userId: string): PresenceStatus | null {
-    const presence = this.presence.get(userId);
-    if (!presence) {
-      return null;
-    }
+    return withSpanSync(tracer, 'collaboration.presence.clearCustomStatus', {
+      'user.id': userId,
+    }, () => {
+      const presence = this.presence.get(userId);
+      if (!presence) {
+        return null;
+      }
 
-    presence.customStatus = undefined;
-    this.presence.set(userId, presence);
-    this.redisPresenceCache.set(userId, presence);
-    this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
+      presence.customStatus = undefined;
+      this.presence.set(userId, presence);
+      this.redisPresenceCache.set(userId, presence);
+      this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
 
-    this.emit('customStatusCleared', { userId });
-    return presence;
+      this.emit('customStatusCleared', { userId });
+      return presence;
+    });
   }
 
   /**
    * Update cursor position
    */
   setCursorPosition(userId: string, position: { x: number; y: number }): PresenceStatus | null {
-    const presence = this.presence.get(userId);
-    if (!presence) {
-      return null;
-    }
+    return withSpanSync(tracer, 'collaboration.presence.setCursorPosition', {
+      'user.id': userId,
+    }, () => {
+      const presence = this.presence.get(userId);
+      if (!presence) {
+        return null;
+      }
 
-    presence.cursorPosition = position;
-    presence.lastActiveAt = Date.now();
-    this.presence.set(userId, presence);
-    this.redisPresenceCache.set(userId, presence);
-    this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
+      presence.cursorPosition = position;
+      presence.lastActiveAt = Date.now();
+      this.presence.set(userId, presence);
+      this.redisPresenceCache.set(userId, presence);
+      this.presenceTTL.set(userId, Date.now() + this.TTL_MS);
 
-    this.emit('cursorMoved', { userId, position });
-    return presence;
+      this.emit('cursorMoved', { userId, position });
+      return presence;
+    });
   }
 
   /**
@@ -333,16 +373,20 @@ export class RichPresenceService extends EventEmitter {
    * Remove presence
    */
   removePresence(userId: string): boolean {
-    const result = this.presence.delete(userId);
-    this.redisPresenceCache.delete(userId);
-    this.presenceTTL.delete(userId);
+    return withSpanSync(tracer, 'collaboration.presence.removePresence', {
+      'user.id': userId,
+    }, () => {
+      const result = this.presence.delete(userId);
+      this.redisPresenceCache.delete(userId);
+      this.presenceTTL.delete(userId);
 
-    if (result) {
-      logger.debug(`Presence removed for user ${userId}`);
-      this.emit('presenceRemoved', { userId });
-    }
+      if (result) {
+        logger.debug(`Presence removed for user ${userId}`);
+        this.emit('presenceRemoved', { userId });
+      }
 
-    return result;
+      return result;
+    });
   }
 
   /**
@@ -393,13 +437,17 @@ export class RichPresenceService extends EventEmitter {
    * Broadcast presence update to all users (for real-time sync)
    */
   broadcastPresenceUpdate(userId: string): PresenceStatus | null {
-    const presence = this.presence.get(userId);
-    if (!presence) {
-      return null;
-    }
+    return withSpanSync(tracer, 'collaboration.presence.broadcastPresenceUpdate', {
+      'user.id': userId,
+    }, () => {
+      const presence = this.presence.get(userId);
+      if (!presence) {
+        return null;
+      }
 
-    this.emit('presenceBroadcast', presence);
-    return presence;
+      this.emit('presenceBroadcast', presence);
+      return presence;
+    });
   }
 
   /**

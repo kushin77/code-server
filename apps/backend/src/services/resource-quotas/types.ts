@@ -47,6 +47,7 @@ export interface ResourceQuota {
   name: string; // Small, Medium, Large, or custom
   userId?: string;
   workspaceId?: string;
+  projectId?: string;
   cpu: CPUQuota;
   memory: MemoryQuota;
   diskIO: DiskIOQuota;
@@ -85,7 +86,77 @@ export interface ResourceUsage {
   egressMbps: number; // Current egress
   ingressPercent: number; // % of limit
   egressPercent: number; // % of limit
+  storageGBUsed?: number; // Current storage usage in GB
+  gpuCountUsed?: number; // GPUs in use during the sample window
   timestamp: number;
+}
+
+/**
+ * Resource cost totals
+ */
+export interface ResourceCostTotals {
+  cpuHours: number;
+  memoryGbHours: number;
+  storageGbDays: number;
+  gpuHours: number;
+}
+
+/**
+ * Budget threshold definition for a report scope
+ */
+export interface BudgetThresholds extends Partial<ResourceCostTotals> {}
+
+/**
+ * Budget alert scope
+ */
+export type BudgetAlertScope = 'quota' | 'user' | 'workspace';
+
+/**
+ * Budget alert details
+ */
+export interface BudgetAlert {
+  alertId: string;
+  scope: BudgetAlertScope;
+  scopeId: string;
+  quotaId?: string;
+  userId?: string;
+  workspaceId?: string;
+  projectId?: string;
+  metric: keyof ResourceCostTotals;
+  threshold: number;
+  actual: number;
+  severity: 'warning' | 'critical';
+  message: string;
+  triggeredAt: number;
+  acknowledgedAt?: number;
+  acknowledgedBy?: string;
+}
+
+/**
+ * Resource cost report for a quota
+ */
+export interface ResourceCostReport extends ResourceCostTotals {
+  quotaId: string;
+  userId?: string;
+  workspaceId?: string;
+  projectId?: string;
+  windowStart: number;
+  windowEnd: number;
+  sampleCount: number;
+  estimated: boolean;
+}
+
+/**
+ * Monthly cost report for a user or workspace
+ */
+export interface MonthlyCostReport {
+  userId?: string;
+  workspaceId?: string;
+  projectId?: string;
+  windowStart: number;
+  windowEnd: number;
+  totals: ResourceCostTotals;
+  quotas: ResourceCostReport[];
 }
 
 /**
@@ -107,6 +178,7 @@ export interface LimitExceededEvent {
   quotaId: string;
   userId?: string;
   workspaceId?: string;
+  projectId?: string;
   limitType: 'cpu' | 'memory' | 'diskIO' | 'bandwidth';
   currentUsage: number;
   limit: number;

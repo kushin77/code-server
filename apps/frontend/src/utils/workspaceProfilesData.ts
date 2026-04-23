@@ -47,6 +47,7 @@ export type WorkspaceProjectType = 'node' | 'go' | 'python' | 'rust' | 'java' | 
 export interface WorkspaceAutoConfigSuggestion {
   projectType: WorkspaceProjectType
   detectedFrom: string[]
+  recommendedSettings: Record<string, unknown>
   recommendedExtensions: string[]
   recommendedDebugger: WorkspaceDebuggerProfile
   recommendedLinters: string[]
@@ -73,6 +74,7 @@ type StoredWorkspaceTabs = {
 type ProjectDetectionRule = {
   projectType: WorkspaceProjectType
   markers: string[]
+  recommendedSettings: Record<string, unknown>
   recommendedExtensions: string[]
   recommendedDebugger: WorkspaceDebuggerProfile
   recommendedLinters: string[]
@@ -83,6 +85,14 @@ const PROJECT_DETECTION_RULES: ProjectDetectionRule[] = [
   {
     projectType: 'node',
     markers: ['package.json', 'pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'bun.lockb'],
+    recommendedSettings: {
+      '[typescript]': {
+        'editor.defaultFormatter': 'dbaeumer.vscode-eslint',
+        'editor.formatOnSave': true,
+      },
+      'typescript.tsdk': 'node_modules/typescript/lib',
+      'typescript.enablePromptUseWorkspaceTsdk': true,
+    },
     recommendedExtensions: ['dbaeumer.vscode-eslint', 'bradlc.vscode-tailwindcss', 'ms-vscode.vscode-typescript-next'],
     recommendedDebugger: {
       name: 'Node app',
@@ -99,6 +109,14 @@ const PROJECT_DETECTION_RULES: ProjectDetectionRule[] = [
   {
     projectType: 'go',
     markers: ['go.mod', 'go.sum'],
+    recommendedSettings: {
+      '[go]': {
+        'editor.formatOnSave': true,
+        'editor.codeActionsOnSave': {
+          'source.organizeImports': true,
+        },
+      },
+    },
     recommendedExtensions: ['golang.go'],
     recommendedDebugger: {
       name: 'Go service',
@@ -114,6 +132,14 @@ const PROJECT_DETECTION_RULES: ProjectDetectionRule[] = [
   {
     projectType: 'python',
     markers: ['pyproject.toml', 'requirements.txt', 'poetry.lock', 'setup.py'],
+    recommendedSettings: {
+      'python.linting.enabled': true,
+      'python.linting.pylintEnabled': true,
+      '[python]': {
+        'editor.defaultFormatter': 'ms-python.python',
+        'editor.formatOnSave': true,
+      },
+    },
     recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
     recommendedDebugger: {
       name: 'Python app',
@@ -129,6 +155,12 @@ const PROJECT_DETECTION_RULES: ProjectDetectionRule[] = [
   {
     projectType: 'rust',
     markers: ['Cargo.toml', 'Cargo.lock'],
+    recommendedSettings: {
+      '[rust]': {
+        'editor.formatOnSave': true,
+        'editor.defaultFormatter': 'rust-lang.rust-analyzer',
+      },
+    },
     recommendedExtensions: ['rust-lang.rust-analyzer'],
     recommendedDebugger: {
       name: 'Rust binary',
@@ -144,6 +176,11 @@ const PROJECT_DETECTION_RULES: ProjectDetectionRule[] = [
   {
     projectType: 'java',
     markers: ['pom.xml', 'build.gradle', 'build.gradle.kts'],
+    recommendedSettings: {
+      '[java]': {
+        'editor.formatOnSave': true,
+      },
+    },
     recommendedExtensions: ['redhat.java'],
     recommendedDebugger: {
       name: 'Java service',
@@ -159,6 +196,17 @@ const PROJECT_DETECTION_RULES: ProjectDetectionRule[] = [
   {
     projectType: 'docs',
     markers: ['mkdocs.yml', 'docs/scripts/preview.ts', 'README.md'],
+    recommendedSettings: {
+      '[markdown]': {
+        'editor.wordWrap': 'on',
+        'editor.quickSuggestions': {
+          comments: 'off',
+          strings: 'off',
+          other: 'off',
+        },
+      },
+      'markdown.preview.breaks': true,
+    },
     recommendedExtensions: ['yzhang.markdown-all-in-one', 'bierner.markdown-mermaid'],
     recommendedDebugger: {
       name: 'Docs preview',
@@ -210,6 +258,7 @@ export function buildWorkspaceAutoConfigSuggestion(fileNames: string[]): Workspa
   return {
     projectType: rule.projectType,
     detectedFrom: rule.markers,
+    recommendedSettings: { ...rule.recommendedSettings },
     recommendedExtensions: [...rule.recommendedExtensions],
     recommendedDebugger: { ...rule.recommendedDebugger },
     recommendedLinters: [...rule.recommendedLinters],
@@ -269,7 +318,7 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
           type: 'node',
           request: 'launch',
           cwd: 'apps/backend',
-          program: 'apps/backend/src/index.ts',
+          program: 'apps/backend/src/server.js',
           runtimeExecutable: 'node',
         },
         terminal: {
@@ -382,7 +431,7 @@ const WORKSPACE_PROFILE_MANIFESTS: Record<string, WorkspaceProfileManifest> = {
           type: 'node',
           request: 'launch',
           cwd: 'apps/backend',
-          program: 'apps/backend/src/index.ts',
+          program: 'apps/backend/src/server.js',
           runtimeExecutable: 'node',
         },
         terminal: { name: 'Security terminal', shell: 'bash', cwd: 'apps/backend' },

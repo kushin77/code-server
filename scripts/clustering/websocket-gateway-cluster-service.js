@@ -28,7 +28,7 @@ class WebSocketGatewayClusterService extends EventEmitter {
         this.routingTable = new Map(); // connectionId → frozen route
         
         // Connection token to route mapping (idempotency)
-        this.connectionTokens = new Map(); // token → nodeId
+        this.connectionTokens = new Map(); // token → connectionId
         
         // Cluster state history (immutable versions)
         this.stateHistory = [];
@@ -89,6 +89,21 @@ class WebSocketGatewayClusterService extends EventEmitter {
             nodes: Array.from(this.nodes.keys()),
         });
     }
+
+    /**
+     * Resolve the routing key for a connection
+     */
+    getRoutingKey(connectionData, connectionToken) {
+        return connectionData.sessionId || connectionToken || connectionData.connectionId;
+    }
+
+    /**
+     * Select a node using consistent hashing
+     */
+    selectNodeByConsistentHash(availableNodes, routingKey) {
+        const hashBuffer = crypto.createHash('sha256').update(String(routingKey || '')).digest();
+        return availableNodes[hashBuffer.readUInt32BE(0) % availableNodes.length];
+    }
     
     /**
      * Route connection to node (idempotent)
@@ -96,21 +111,37 @@ class WebSocketGatewayClusterService extends EventEmitter {
     routeConnectionToNode(connectionData, connectionToken) {
         // Idempotency check
         if (connectionToken && this.connectionTokens.has(connectionToken)) {
-            const nodeId = this.connectionTokens.get(connectionToken);
-            return this.getRoute(connectionData.connectionId);
+            const connectionId = this.connectionTokens.get(connectionToken);
+            const existingRoute = this.getRoute(connectionId);
+
+            if (existingRoute && existingRoute.status === 'active') {
+                return existingRoute;
+            }
+
+            this.connectionTokens.delete(connectionToken);
         }
         
-        // Find node with lowest connection count (load balancing)
+        const connectionId = connectionData.connectionId || (
+            connectionToken || connectionData.sessionId
+                ? `conn-${String(connectionToken || connectionData.sessionId)}-${crypto.randomBytes(4).toString('hex')}`
+                : null
+        );
+        if (!connectionId) {
+            throw new Error('connectionId is required');
+        }
+
+        const routingKey = this.getRoutingKey(connectionData, connectionToken);
+
+        // Find node using consistent hashing
         const availableNodes = Array.from(this.nodes.values())
             .filter(n => n.status === 'ready' && n.currentConnections < n.maxConnections)
-            .sort((a, b) => a.currentConnections - b.currentConnections);
+            .sort((a, b) => a.nodeId.localeCompare(b.nodeId));
         
         if (availableNodes.length === 0) {
             throw new Error('No available WebSocket nodes');
         }
         
-        const selectedNode = availableNodes[0];
-        const connectionId = connectionData.connectionId;
+        const selectedNode = this.selectNodeByConsistentHash(availableNodes, routingKey);
         
         // Create immutable route
         const route = {
@@ -142,7 +173,7 @@ class WebSocketGatewayClusterService extends EventEmitter {
         this.routingTable.set(connectionId, route);
         
         if (connectionToken) {
-            this.connectionTokens.set(connectionToken, selectedNode.nodeId);
+            this.connectionTokens.set(connectionToken, connectionId);
         }
         
         // Update node (create new version)
@@ -241,6 +272,12 @@ class WebSocketGatewayClusterService extends EventEmitter {
         
         Object.freeze(updated);
         this.routingTable.set(connectionId, updated);
+
+        for (const [token, mappedConnectionId] of this.connectionTokens.entries()) {
+            if (mappedConnectionId === connectionId) {
+                this.connectionTokens.delete(token);
+            }
+        }
         
         this.recordClusterState('connection_disconnected');
         

@@ -3,9 +3,25 @@
 // @module      routes/rich-presence
 // @description Comprehensive tests for rich presence routes
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+vi.mock('../../lib/tracing', () => ({
+  getTracer: () => ({
+    startActiveSpan: (_name: string, _options: unknown, callback: (span: { setStatus: () => void; recordException: () => void; end: () => void }) => unknown) =>
+      callback({
+        setStatus: vi.fn(),
+        recordException: vi.fn(),
+        end: vi.fn(),
+      }),
+  }),
+  withSpanSync: (_tracer: unknown, _name: string, _attributes: Record<string, string | number | boolean>, fn: (span: { setStatus: () => void; recordException: () => void; end: () => void }) => unknown) =>
+    fn({
+      setStatus: vi.fn(),
+      recordException: vi.fn(),
+      end: vi.fn(),
+    }),
+}));
 import richPresenceRouter from '../rich-presence';
 import service from '../../services/collaboration/rich-presence-service';
 
@@ -19,6 +35,9 @@ describe('Rich Presence Routes', () => {
   });
 
   afterEach(() => {
+vi.mock('../../middleware/tracing', () => ({
+  tracingMiddleware: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
     service.reset();
   });
 

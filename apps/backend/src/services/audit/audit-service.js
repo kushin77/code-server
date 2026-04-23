@@ -2,7 +2,7 @@
 // @module      audit/logging
 // @description Immutable append-only audit logging for RBAC authorization decisions.
 //              Writes are fire-and-forget (never block the request path).
-import { getLogger } from '../../lib/logger';
+import { getLogger } from '../../lib/logger.js';
 const logger = getLogger('AuditService');
 // ── Service ───────────────────────────────────────────────────────────────────
 const INSERT_SQL = `

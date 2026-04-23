@@ -7,7 +7,6 @@ import {
   resolveWorkspaceRootProfile,
   type WorkspaceRoot,
 } from '../utils/workspaceProfilesData'
-import { fetchWorkspaceTemplate } from '../utils/workspaceTemplates'
 
 type WorkspaceProfilesPageWorkspaceState = {
   activeWorkspace: WorkspaceTab
@@ -98,18 +97,16 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
       setApplyingAutoConfig(true)
       setAutoConfigMessage(null)
 
-      // Fetch the collaboration-core template which contains the recommended settings
-      const template = await fetchWorkspaceTemplate('collaboration-core')
-      
-      if (!template) {
+      const autoConfig = profileSnapshot.autoConfig
+
+      if (!autoConfig) {
         setAutoConfigMessage({
           type: 'error',
-          text: 'Failed to load workspace template',
+          text: 'No project markers detected for auto-configuration',
         })
         return
       }
 
-      // Apply the template settings and extensions to the current workspace root
       const currentRoot = activeRoot
       if (!currentRoot) {
         setAutoConfigMessage({
@@ -119,31 +116,32 @@ export function WorkspaceProfilesPage({ workspaceState }: WorkspaceProfilesPageP
         return
       }
 
-      // Merge template settings with current root settings
       const updatedSettings = {
         ...currentRoot.settings,
-        ...template.settings,
+        ...autoConfig.recommendedSettings,
       }
 
-      // Add template extensions to current root extensions
       const updatedExtensions = Array.from(
-        new Set([...currentRoot.enabledExtensions, ...template.pinnedExtensions])
+        new Set([...currentRoot.enabledExtensions, ...autoConfig.recommendedExtensions])
       )
 
-      // Store the applied configuration (in a real app, this would persist to backend)
       localStorage.setItem(
         `workspace-auto-config-${selectedWorkspaceId}`,
         JSON.stringify({
           appliedAt: new Date().toISOString(),
-          templateId: 'collaboration-core',
+          projectType: autoConfig.projectType,
+          detectedFrom: autoConfig.detectedFrom,
+          summary: autoConfig.summary,
           settings: updatedSettings,
           extensions: updatedExtensions,
+          debugger: autoConfig.recommendedDebugger,
+          linters: autoConfig.recommendedLinters,
         })
       )
 
       setAutoConfigMessage({
         type: 'success',
-        text: 'Auto-config applied! Settings and extensions have been configured. Refresh the workspace to apply changes.',
+        text: `Auto-config applied for ${autoConfig.projectType}. Refresh the workspace to apply changes.`,
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to apply auto-config'

@@ -48,6 +48,8 @@ export type { SmartNotificationRoutingConfig } from './types';
 // Export all types
 export type {
   NotificationRoute,
+  UserStatus,
+  UserStatusInfo,
   EscalationLevel,
   DeliveryStatus,
   ChannelPreference,

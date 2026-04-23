@@ -10,6 +10,8 @@ const fetchVoiceStats = vi.fn()
 const fetchWorkspaceVoiceSessions = vi.fn()
 const joinVoiceSession = vi.fn()
 const leaveVoiceSession = vi.fn()
+const fetchTeamRichPresence = vi.fn()
+const upsertRichPresence = vi.fn()
 
 vi.mock('../../utils/voiceChannel', () => ({
   createVoiceSession: (...args: unknown[]) => createVoiceSession(...args),
@@ -19,6 +21,11 @@ vi.mock('../../utils/voiceChannel', () => ({
   leaveVoiceSession: (...args: unknown[]) => leaveVoiceSession(...args),
 }))
 
+vi.mock('../../utils/richPresence', () => ({
+  fetchTeamRichPresence: (...args: unknown[]) => fetchTeamRichPresence(...args),
+  upsertRichPresence: (...args: unknown[]) => upsertRichPresence(...args),
+}))
+
 afterEach(() => {
   cleanup()
   createVoiceSession.mockReset()
@@ -26,6 +33,8 @@ afterEach(() => {
   fetchWorkspaceVoiceSessions.mockReset()
   joinVoiceSession.mockReset()
   leaveVoiceSession.mockReset()
+  fetchTeamRichPresence.mockReset()
+  upsertRichPresence.mockReset()
 })
 
 describe('VoiceChannelPanel', () => {
@@ -53,6 +62,20 @@ describe('VoiceChannelPanel', () => {
       audioQualityP95: 95,
       noiseReductionEnabled: true,
       timestamp: 1,
+    })
+    fetchTeamRichPresence.mockResolvedValue({
+      teamId: 'team-main',
+      count: 1,
+      presence: [
+        {
+          teamId: 'team-main',
+          userId: 'alice',
+          displayName: 'Alice Chen',
+          status: 'online',
+          updatedAt: '2026-04-22T00:00:00.000Z',
+          expiresAt: '2026-04-22T00:05:00.000Z',
+        },
+      ],
     })
     createVoiceSession.mockResolvedValue({
       session: {
@@ -88,6 +111,7 @@ describe('VoiceChannelPanel', () => {
       <VoiceChannelPanel
         workspaceId="portal-main"
         workspaceLabel="Portal main"
+        teamId="team-main"
         currentUserId="alice"
         currentDisplayName="Alice Chen"
         authToken="token"
@@ -104,6 +128,16 @@ describe('VoiceChannelPanel', () => {
     await waitFor(() => {
       expect(createVoiceSession).toHaveBeenCalledWith('portal-main', 'token')
     })
+    await waitFor(() => {
+      expect(upsertRichPresence).toHaveBeenCalledWith(
+        'team-main',
+        'alice',
+        expect.objectContaining({
+          status: 'dnd',
+          customStatus: '📞 In a voice session',
+        })
+      )
+    })
 
     fireEvent.change(screen.getByLabelText('Join by session ID'), { target: { value: 'session-1' } })
     fireEvent.click(screen.getByRole('button', { name: 'Join voice session' }))
@@ -116,6 +150,16 @@ describe('VoiceChannelPanel', () => {
 
     await waitFor(() => {
       expect(leaveVoiceSession).toHaveBeenCalledWith('session-1', 'token')
+    })
+    await waitFor(() => {
+      expect(upsertRichPresence).toHaveBeenCalledWith(
+        'team-main',
+        'alice',
+        expect.objectContaining({
+          status: 'online',
+          customStatus: null,
+        })
+      )
     })
   })
 })

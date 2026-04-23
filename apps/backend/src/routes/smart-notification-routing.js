@@ -18,12 +18,15 @@ export function initializeSmartNotificationRoutingRoutes(pool) {
     router.post('/status', async (req, res) => {
         try {
             const { userId, status, location, calendarStatus, currentDevice } = req.body;
-            if (!userId || !status) {
+            if (!userId || (!status && !calendarStatus)) {
                 return res.status(400).json({
-                    error: 'Missing required fields: userId, status',
+                    error: 'Missing required fields: userId and either status or calendarStatus',
                 });
             }
-            await notificationService.updateUserStatus(userId, status, {
+            const normalizedStatus = calendarStatus === 'in-meeting'
+                ? 'dnd'
+                : (status ?? 'online');
+            const nextStatus = await notificationService.updateUserStatus(userId, normalizedStatus, {
                 location,
                 calendarStatus,
                 currentDevice,
@@ -31,6 +34,7 @@ export function initializeSmartNotificationRoutingRoutes(pool) {
             res.json({
                 success: true,
                 message: 'User status updated',
+                status: nextStatus,
             });
         }
         catch (error) {

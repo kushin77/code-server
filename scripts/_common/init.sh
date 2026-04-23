@@ -56,6 +56,32 @@ _load "logging.sh"
 _load "utils.sh"
 _load "error-handler.sh"
 
+_ensure_pnpm() {
+    if command -v pnpm >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if command -v corepack >/dev/null 2>&1; then
+        corepack enable >/dev/null 2>&1 || true
+        if command -v pnpm >/dev/null 2>&1; then
+            return 0
+        fi
+    fi
+
+    if command -v npm >/dev/null 2>&1; then
+        pnpm() {
+            npm exec --yes pnpm@9.15.4 -- "$@"
+        }
+        export -f pnpm
+        log_debug "pnpm shim enabled via npm exec fallback"
+        return 0
+    fi
+
+    log_warn "pnpm is unavailable; install pnpm or corepack for workspace scripts"
+}
+
+_ensure_pnpm
+
 # Load optional modules when present (do not fail if absent)
 [[ -f "$_COMMON_DIR/docker.sh" ]] && source "$_COMMON_DIR/docker.sh"
 [[ -f "$_COMMON_DIR/ssh.sh"    ]] && source "$_COMMON_DIR/ssh.sh"
@@ -65,5 +91,6 @@ set -euo pipefail
 
 unset _COMMON_DIR
 unset -f _load
+unset -f _ensure_pnpm
 
 log_debug "✓ _common/init.sh loaded (config + logging + utils + error-handler)"

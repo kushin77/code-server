@@ -966,3 +966,33 @@ groups:
           description: "5xx error rate: {{ $value | humanizePercentage }}. The reverse proxy or backend services are returning errors. Check Caddy logs and backend service health."
           runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#high-http-error-rate"
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # Collaboration Synthetic Monitoring
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: collaboration-synthetic-monitor
+    interval: 30s
+    rules:
+      - alert: CollaborationSyntheticMonitorFailureBurst
+        expr: sum_over_time(synthetic_check_failure_total[15m]) >= 3
+        for: 1m
+        labels:
+          severity: P0
+          team: platform
+          component: collaboration-synthetic-monitor
+        annotations:
+          summary: "Collaboration synthetic checks have failed three times in 15 minutes"
+          description: "The Playwright collaboration synthetic monitor has reported at least three failures in the last 15 minutes. Check portal launch, IDE continuity, voice session, and file lock flows immediately."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#synthetic-monitoring"
+
+      - alert: CollaborationSyntheticMonitorLatencyHigh
+        expr: avg_over_time(synthetic_check_duration_ms[15m]) > 45000
+        for: 5m
+        labels:
+          severity: P2
+          team: platform
+          component: collaboration-synthetic-monitor
+        annotations:
+          summary: "Collaboration synthetic checks are running slowly"
+          description: "Average collaboration synthetic runtime has exceeded 45s for 5 minutes. Check external network latency, auth redirects, and IDE startup performance."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#synthetic-monitoring"
+

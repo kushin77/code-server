@@ -126,6 +126,27 @@ export async function withSpan(tracer, name, attributes, fn) {
     });
 }
 /**
+ * Wrap a synchronous function in a span.
+ * Use for hot-path service methods that must preserve their synchronous API.
+ */
+export function withSpanSync(tracer, name, attributes, fn) {
+    return tracer.startActiveSpan(name, { attributes, kind: SpanKind.INTERNAL }, (span) => {
+        try {
+            const result = fn(span);
+            span.setStatus({ code: SpanStatusCode.OK });
+            return result;
+        }
+        catch (err) {
+            span.recordException(err instanceof Error ? err : new Error(String(err)));
+            span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
+            throw err;
+        }
+        finally {
+            span.end();
+        }
+    });
+}
+/**
  * Extract W3C traceparent + tracestate headers from current context.
  * Use when making outgoing HTTP calls to propagate trace context.
  *

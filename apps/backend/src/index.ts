@@ -18,6 +18,22 @@ export type {
 // Integration examples
 export { setupStandupSummariesIntegration, createExampleApp } from './services/standup-summaries/integration-example';
 export { initializeGuestSessionRuntime } from './services/guest-sessions/integration-example';
+export {
+  initializeVoiceChannelRuntime,
+  setupVoiceChannelIntegration,
+  createVoiceChannelExampleApp,
+} from './services/voice-channel/integration-example';
+export { initializeSharedClipboardRoutes, SharedClipboardService } from './services/shared-clipboard';
+export { setupSharedClipboardIntegration, createSharedClipboardExampleApp } from './services/shared-clipboard/integration-example';
+export { CRDTOperationsService } from './services/crdt-operations';
+export type { CRDTOperation, CRDTDocumentState } from './services/crdt-operations';
+export { initializeCRDTRoutes, setupCRDTIntegration, createCRDTExampleApp } from './services/crdt-operations/integration-example';
+export { TeamRichPresenceService, PresenceState } from './services/team-rich-presence';
+export type { UserPresence, TeamActivitySummary, PresenceSnapshot } from './services/team-rich-presence';
+export { initializeTeamRichPresenceRoutes, setupTeamRichPresenceIntegration, createTeamRichPresenceExampleApp } from './services/team-rich-presence/integration-example';
+export { GuestSessionQuotasService, QuotaTier, QUOTA_LIMITS } from './services/guest-session-quotas';
+export type { GuestSessionQuota, QuotaLimit, QuotaWarning } from './services/guest-session-quotas';
+export { initializeGuestSessionQuotasRoutes, setupGuestSessionQuotasIntegration, createGuestSessionQuotasExampleApp } from './services/guest-session-quotas/integration-example';
 
 // Routes
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';
@@ -67,6 +83,21 @@ export { initializeSymbolDiscussionsRoutes } from './routes/symbol-discussions';
 export { default as websocketHealthRouter } from './routes/websocket-health';
 export type { ConnectionHealth, ConnectionType, QualityMetric } from './services/monitoring/websocket-health-service';
 export { default as websocketHealthService } from './services/monitoring/websocket-health-service';
+export { default as resourceQuotaRouter, initializeResourceQuotaRoutes } from './routes/resource-quota';
+export { default as resourceQuotaService, ResourceQuotaService, QuotaTier } from './services/resource-quota';
+export type {
+  QuotaConfig,
+  ResourceUsage,
+  QuotaEnforcement,
+  QuotaViolation,
+  CostRateCard,
+  CostUsageSample,
+  SessionCostEntry,
+  CostBudget,
+  CostAlert,
+  CostSummary,
+  MonthlyCostReport,
+} from './services/resource-quota';
 export { default as helpQueueAuditRouter } from './routes/help-queue-audit';
 export type { HelpQueueAuditAction, HelpQueueAuditEntry } from './services/help-queue/help-queue-audit';
 export { HelpQueueAuditService } from './services/help-queue/help-queue-audit';

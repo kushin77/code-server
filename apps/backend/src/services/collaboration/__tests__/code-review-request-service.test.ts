@@ -3,7 +3,23 @@
 // @module      services/collaboration
 // @description Tests for code review request service
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+vi.mock('../../../lib/tracing', () => ({
+  getTracer: () => ({
+    startActiveSpan: (_name: string, _options: unknown, callback: (span: { setStatus: () => void; recordException: () => void; end: () => void }) => unknown) =>
+      callback({
+        setStatus: vi.fn(),
+        recordException: vi.fn(),
+        end: vi.fn(),
+      }),
+  }),
+  withSpanSync: (_tracer: unknown, _name: string, _attributes: Record<string, string | number | boolean>, fn: (span: { setStatus: () => void; recordException: () => void; end: () => void }) => unknown) =>
+    fn({
+      setStatus: vi.fn(),
+      recordException: vi.fn(),
+      end: vi.fn(),
+    }),
+}));
 import service, { CodeReviewRequestService } from '../code-review-request-service';
 
 describe('CodeReviewRequestService', () => {

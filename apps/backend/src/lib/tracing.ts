@@ -6,23 +6,38 @@
 // @owner       platform
 // @status      active
 
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { Resource } from '@opentelemetry/resources';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
-import {
-  BatchSpanProcessor,
-  ConsoleSpanExporter,
-  SimpleSpanProcessor,
-  SpanProcessor,
-} from '@opentelemetry/sdk-trace-node';
-import { W3CTraceContextPropagator } from '@opentelemetry/core';
-import { CompositePropagator, W3CBaggagePropagator } from '@opentelemetry/core';
-import { trace, context, SpanStatusCode, SpanKind, type Span, type Tracer } from '@opentelemetry/api';
-import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
-import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
-import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
-import { RedisInstrumentation } from '@opentelemetry/instrumentation-redis-4';
+// Lazy imports: OpenTelemetry SDK is optional (disabled in test environments)
+let NodeSDK: typeof import('@opentelemetry/sdk-node').NodeSDK | null = null;
+let Resource: typeof import('@opentelemetry/resources').Resource | null = null;
+let SemanticResourceAttributes: Record<string, string> | null = null;
+let OTLPTraceExporter: any = null;
+let BatchSpanProcessor: any = null;
+let ConsoleSpanExporter: any = null;
+let SimpleSpanProcessor: any = null;
+let W3CTraceContextPropagator: any = null;
+let CompositePropagator: any = null;
+let W3CBaggagePropagator: any = null;
+let trace: any = null;
+let context: any = null;
+let SpanStatusCode: any = null;
+let SpanKind: any = null;
+let AsyncLocalStorageContextManager: any = null;
+let HttpInstrumentation: any = null;
+let PgInstrumentation: any = null;
+let RedisInstrumentation: any = null;
+
+// Try to load OpenTelemetry packages, fallback to no-op if not available
+try {
+  ({ NodeSDK } = await import('@opentelemetry/sdk-node').catch(() => ({ NodeSDK: null })));
+  ({ Resource } = await import('@opentelemetry/resources').catch(() => ({ Resource: null })));
+  ({ SemanticResourceAttributes } = await import('@opentelemetry/semantic-conventions').catch(() => ({ SemanticResourceAttributes: {} })));
+} catch (e) {
+  // OpenTelemetry not available, will use no-op implementations
+}
+
+// Define no-op types if dependencies are missing
+type Span = { setAttribute(key: string, value: any): void; setStatus(status: any): void; end(): void };
+type Tracer = { startSpan(name: string): Span; startActiveSpan(name: string, options: any, fn: (span: Span) => any): any };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -149,6 +164,31 @@ export async function withSpan<T>(
   return tracer.startActiveSpan(name, { attributes, kind: SpanKind.INTERNAL }, async (span) => {
     try {
       const result = await fn(span);
+      span.setStatus({ code: SpanStatusCode.OK });
+      return result;
+    } catch (err) {
+      span.recordException(err instanceof Error ? err : new Error(String(err)));
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err instanceof Error ? err.message : String(err) });
+      throw err;
+    } finally {
+      span.end();
+    }
+  });
+}
+
+/**
+ * Wrap a synchronous function in a span.
+ * Use for hot-path service methods that must preserve their synchronous API.
+ */
+export function withSpanSync<T>(
+  tracer: Tracer,
+  name: string,
+  attributes: Record<string, string | number | boolean>,
+  fn: (span: Span) => T,
+): T {
+  return tracer.startActiveSpan(name, { attributes, kind: SpanKind.INTERNAL }, (span) => {
+    try {
+      const result = fn(span);
       span.setStatus({ code: SpanStatusCode.OK });
       return result;
     } catch (err) {

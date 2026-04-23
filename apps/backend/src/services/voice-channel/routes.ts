@@ -177,9 +177,6 @@ export function initializeVoiceChannelRoutes(
       }
     }
   );
-      }
-    }
-  );
 
   /**
    * GET /api/voice/sessions/:sessionId - Get session details

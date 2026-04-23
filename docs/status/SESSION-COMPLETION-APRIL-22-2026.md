@@ -6,6 +6,11 @@
 **Issues Updated**: 7 (P1 #388, P1 #385, P1 #463, + 4 closed)  
 **Quality Gate**: 20/20 ✅ (100% passing)
 
+## Documentation Refresh
+
+- Updated the deployment runbook post-deployment checklist to reflect the current validated state.
+- Captured the post-deployment docs and training handoff note for issue #1473 in the canonical status trail.
+
 ---
 
 ## Execution Summary

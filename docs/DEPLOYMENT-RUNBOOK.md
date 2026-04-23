@@ -440,8 +440,10 @@ curl http://PRIMARY_IP/health
 - [ ] Monitoring dashboards updated
 - [ ] Backups configured and tested
 - [ ] Team notified of deployment completion
-- [ ] Issue #1017 documentation updated
+- [x] Issue #1017 documentation updated
 - [ ] Incident runbook reviewed by team
+
+Post-deployment documentation refresh is tracked in issue #1473 and recorded in the dated status evidence for the April 22 session.
 
 ---
 

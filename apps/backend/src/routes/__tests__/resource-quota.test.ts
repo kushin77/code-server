@@ -7,6 +7,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import express, { type Express } from "express";
+import request from "supertest";
 import { ResourceQuotaService, QuotaTier } from "../../services/resource-quota";
 import router from "../resource-quota";
 
@@ -26,6 +28,8 @@ const mockResponse = () => {
 
 describe("Resource Quota Routes", () => {
   let quotaService: ResourceQuotaService;
+  let routeService: ResourceQuotaService;
+  let app: Express;
 
   beforeEach(() => {
     quotaService = new ResourceQuotaService();
@@ -33,6 +37,8 @@ describe("Resource Quota Routes", () => {
 
   afterEach(() => {
     quotaService.reset();
+    ResourceQuotaService.getInstance().reset();
+    routeService?.reset();
   });
 
   describe("POST /enforce", () => {
@@ -389,6 +395,90 @@ describe("Resource Quota Routes", () => {
       const found = quotas.find((q) => q.sessionId === "session-31");
       expect(found?.userId).toBe("user-31");
       expect(found?.tier).toBe(QuotaTier.SMALL);
+    });
+  });
+
+  describe("Cost tracking routes", () => {
+    beforeEach(() => {
+      routeService = ResourceQuotaService.getInstance();
+      routeService.reset();
+      app = express();
+      app.use(express.json());
+      app.use("/api/resource-quotas", router);
+    });
+
+    it("records a session cost sample", async () => {
+      routeService.enforceQuota("session-cost-1", "user-cost-1", QuotaTier.SMALL, {
+        projectId: "project-alpha",
+      });
+
+      const response = await request(app)
+        .post("/api/resource-quotas/session-cost-1/cost")
+        .send({
+          durationMs: 3_600_000,
+          cpuMillicores: 1000,
+          memoryBytes: 1024 * 1024 * 1024,
+          storageBytes: 10 * 1024 * 1024 * 1024,
+          gpuCount: 1,
+          projectId: "project-alpha",
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.cpuHours).toBeCloseTo(1, 5);
+      expect(response.body.data.ramGbHours).toBeCloseTo(1, 5);
+      expect(response.body.data.gpuHours).toBeCloseTo(1, 5);
+      expect(response.body.data.estimatedCostUsd).toBeGreaterThan(0);
+    });
+
+    it("returns the monthly cost report", async () => {
+      routeService.enforceQuota("session-cost-2", "user-cost-2", QuotaTier.SMALL, {
+        projectId: "project-beta",
+      });
+      routeService.recordSessionCost("session-cost-2", {
+        durationMs: 1_800_000,
+        cpuMillicores: 500,
+        memoryBytes: 512 * 1024 * 1024,
+        storageBytes: 5 * 1024 * 1024 * 1024,
+        gpuCount: 0,
+        projectId: "project-beta",
+      });
+
+      const response = await request(app).get("/api/resource-quotas/cost/monthly");
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.totals.sampleCount).toBe(1);
+      expect(response.body.data.byUser[0].identifier).toBe("user-cost-2");
+      expect(response.body.data.byProject[0].identifier).toBe("project-beta");
+    });
+
+    it("raises cost budget alerts when a budget is exceeded", async () => {
+      routeService.enforceQuota("session-cost-3", "user-cost-3", QuotaTier.SMALL, {
+        projectId: "project-gamma",
+      });
+      routeService.setCostBudget("user", "user-cost-3", 0.02);
+
+      const response = await request(app)
+        .post("/api/resource-quotas/session-cost-3/cost")
+        .send({
+          durationMs: 3_600_000,
+          cpuMillicores: 1000,
+          memoryBytes: 1024 * 1024 * 1024,
+          storageBytes: 0,
+          gpuCount: 0,
+          projectId: "project-gamma",
+        });
+
+      expect(response.status).toBe(201);
+
+      const alerts = await request(app).get("/api/resource-quotas/cost/alerts");
+
+      expect(alerts.status).toBe(200);
+      expect(alerts.body.count).toBe(1);
+      expect(alerts.body.data[0].scope).toBe("user");
+      expect(alerts.body.data[0].identifier).toBe("user-cost-3");
+      expect(alerts.body.data[0].severity).toBe("critical");
     });
   });
 });

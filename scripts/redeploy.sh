@@ -16,18 +16,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
 
-# Precondition assertions — fail fast before any side effects
-assert_envs DEPLOY_HOST DEPLOY_USER
-assert_deploy_access   # SSH connectivity to production host
-
 # Script metadata
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 PREFLIGHT_GUARD="${PREFLIGHT_GUARD:-$REPO_ROOT/scripts/ops/preflight.sh}"
-LOG_DIR="${REPO_ROOT}/logs/deployments"
+REDEPLOY_LOG_DIR="${REPO_ROOT}/logs/deployments"
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
-export LOG_FILE="${LOG_DIR}/redeploy_${TIMESTAMP}.log"
+export LOG_FILE="${REDEPLOY_LOG_DIR}/redeploy_${TIMESTAMP}.log"
 
-mkdir -p "$LOG_DIR"
+mkdir -p "$REDEPLOY_LOG_DIR"
 
 # Configuration
 DEPLOYMENT_TARGETS=("production" "staging")
@@ -35,6 +31,7 @@ DEFAULT_TARGET="production"
 DRY_RUN=false
 NOTIFY_SLACK=true
 VERBOSE=false
+NO_HEALTH_CHECK=false
 PROD_ENDPOINT="${PROD_ENDPOINT:-https://${DOMAIN:-localhost}}"
 STAGING_ENDPOINT="${STAGING_ENDPOINT:-https://staging.${DOMAIN:-localhost}}"
 
@@ -93,6 +90,10 @@ parse_args() {
                 NOTIFY_SLACK=false
                 shift
                 ;;
+            --no-health-check)
+                NO_HEALTH_CHECK=true
+                shift
+                ;;
             -h|--help)
                 usage 0
                 ;;
@@ -105,7 +106,7 @@ parse_args() {
 }
 
 init_logs() {
-    mkdir -p "$LOG_DIR"
+    mkdir -p "$REDEPLOY_LOG_DIR"
     echo "Auto-Deploy Orchestration Log - ${TIMESTAMP}" > "$LOG_FILE"
     echo "Repository: ${REPO_ROOT}" >> "$LOG_FILE"
     echo "Target: ${TARGET}" >> "$LOG_FILE"
@@ -486,10 +487,19 @@ main() {
     log_info "DRY RUN: ${DRY_RUN}"
     log_info "Log file: ${LOG_FILE}"
 
+    if [[ "${DRY_RUN}" != true ]]; then
+        assert_envs DEPLOY_HOST DEPLOY_USER
+        assert_deploy_access   # SSH connectivity to production host
+    else
+        log_info "Skipping SSH deploy precondition checks in dry-run mode"
+    fi
+
     # Validation
     validate_target || return 1
 
-    if [[ -f "$PREFLIGHT_GUARD" ]]; then
+    if [[ "${DRY_RUN}" == true ]]; then
+        log_info "Skipping repo-local preflight guard in dry-run mode"
+    elif [[ -f "$PREFLIGHT_GUARD" ]]; then
         bash "$PREFLIGHT_GUARD" --local-only || return 1
     else
         log_warn "Preflight guard not executable: ${PREFLIGHT_GUARD}"
@@ -498,7 +508,12 @@ main() {
     # Pre-flight checks
     check_git_state || return 1
     check_deployment_readiness || return 1
-    check_health_before_deploy
+
+    if [[ "${DRY_RUN}" != true && "${NO_HEALTH_CHECK}" != true ]]; then
+        check_health_before_deploy
+    else
+        log_info "Skipping pre-deployment health checks"
+    fi
 
     # Deployment
     perform_deployment || {
@@ -507,8 +522,19 @@ main() {
         return 1
     }
 
+    if [[ "${DRY_RUN}" == true ]]; then
+        generate_report
+        log_success "Dry-run orchestration complete ✨"
+        return 0
+    fi
+
     # Post-flight checks
-    check_health_after_deploy
+    if [[ "${NO_HEALTH_CHECK}" != true ]]; then
+        check_health_after_deploy
+    else
+        log_info "Skipping post-deployment health checks"
+    fi
+
     verify_deployment
 
     # Notifications

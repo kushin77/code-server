@@ -368,8 +368,8 @@ export class E2EEService extends EventEmitter {
       oldKey.rotatedAt = Date.now();
     }
 
-    // Wait a bit to ensure different timestamp
-    await new Promise((resolve) => setTimeout(resolve, 1));
+    // Wait to ensure different timestamp
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     // Generate new key with different timestamp
     const newKey = await this.generateKey(userId, deviceId);

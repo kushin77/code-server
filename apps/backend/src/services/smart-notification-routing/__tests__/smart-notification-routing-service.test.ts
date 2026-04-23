@@ -187,6 +187,49 @@ describe('SmartNotificationRoutingService', () => {
       expect(decision.batchable).toBe(true);
     });
 
+    it('should queue non-urgent notifications in meeting mode', async () => {
+      const context: RoutingContext = {
+        userId: 'user-meeting',
+        notificationId: 'notif-meeting-001',
+        notificationType: 'comment',
+        priority: 'P2',
+        timestamp: new Date(),
+        readinessLevel: 'busy',
+        isInFocusTime: false,
+        isInMeeting: true,
+        deviceAvailability: {
+          hasDesktopClient: true,
+          hasWebClient: true,
+          hasMobileApp: true,
+        },
+        userPreferences: {
+          userId: 'user-meeting',
+          preferredChannels: ['in-app', 'email', 'slack'],
+          channelPriority: { 'in-app': 5, 'email': 3, 'slack': 4 },
+          doNotDisturb: { enabled: true },
+          focusTimeExclusion: false,
+          meetingModeExclusion: true,
+          channelOptOuts: [],
+          escalationPolicy: {
+            policyId: 'policy-meeting',
+            userId: 'user-meeting',
+            levels: [1, 2, 3],
+            levelRoutes: { 1: ['in-app'], 2: ['email'], 3: ['slack'], 4: [], 5: [] },
+            levelDelays: { 1: 0, 2: 300000, 3: 900000, 4: 0, 5: 0 },
+            enableForPriority: ['P0', 'P1'],
+            maxEscalationLevel: 3,
+          },
+        },
+      };
+
+      const decision = await service.makeRoutingDecision(context);
+
+      expect(decision.selectedRoute).toBe('in-app');
+      expect(decision.deliveryDelay).toBeGreaterThanOrEqual(10 * 60 * 1000);
+      expect(decision.batchable).toBe(true);
+      expect(decision.reason).toContain('meeting mode active');
+    });
+
     it('should not batch critical notifications', async () => {
       const context: RoutingContext = {
         userId: 'user-critical',

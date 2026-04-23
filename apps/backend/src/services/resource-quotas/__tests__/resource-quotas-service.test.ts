@@ -119,4 +119,198 @@ describe('ResourceQuotasService', () => {
       await svc.shutdown();
     });
   });
+
+  describe('Cost Tracking', () => {
+    it('should record usage samples and calculate a cost report', async () => {
+      const quota = await service.createQuotaFromTier('user-cost', 'workspace-cost', 'small');
+
+      await service.recordUsageSample(quota.id, {
+        cpuPercent: 50,
+        cpuCoresUsed: 2,
+        memoryMB: 4096,
+        memoryPercent: 50,
+        diskIOReadBytesPerSec: 100,
+        diskIOWriteBytesPerSec: 100,
+        diskIOReadPercent: 10,
+        diskIOWritePercent: 10,
+        ingressMbps: 1,
+        egressMbps: 1,
+        ingressPercent: 10,
+        egressPercent: 10,
+        storageGBUsed: 10,
+        gpuCountUsed: 1,
+        timestamp: 0,
+      });
+
+      await service.recordUsageSample(quota.id, {
+        cpuPercent: 50,
+        cpuCoresUsed: 2,
+        memoryMB: 4096,
+        memoryPercent: 50,
+        diskIOReadBytesPerSec: 100,
+        diskIOWriteBytesPerSec: 100,
+        diskIOReadPercent: 10,
+        diskIOWritePercent: 10,
+        ingressMbps: 1,
+        egressMbps: 1,
+        ingressPercent: 10,
+        egressPercent: 10,
+        storageGBUsed: 10,
+        gpuCountUsed: 1,
+        timestamp: 60 * 60 * 1000,
+      });
+
+      const report = await service.getCostReport(quota.id, 0, 2 * 60 * 60 * 1000);
+
+      expect(report.quotaId).toBe(quota.id);
+      expect(report.sampleCount).toBe(2);
+      expect(report.projectId).toBe('workspace-cost')
+      expect(report.cpuHours).toBeCloseTo(4, 5);
+      expect(report.memoryGbHours).toBeCloseTo(8, 5);
+      expect(report.storageGbDays).toBeCloseTo(0.833333, 5);
+      expect(report.gpuHours).toBeCloseTo(2, 5);
+    });
+
+    it('should aggregate monthly reports by workspace', async () => {
+      const quotaOne = await service.createQuotaFromTier('user-report', 'workspace-report', 'small');
+      const quotaTwo = await service.createQuotaFromTier('user-report', 'workspace-report', 'medium');
+
+      await service.recordUsageSample(quotaOne.id, {
+        cpuPercent: 25,
+        cpuCoresUsed: 1,
+        memoryMB: 1024,
+        memoryPercent: 25,
+        diskIOReadBytesPerSec: 100,
+        diskIOWriteBytesPerSec: 100,
+        diskIOReadPercent: 10,
+        diskIOWritePercent: 10,
+        ingressMbps: 1,
+        egressMbps: 1,
+        ingressPercent: 10,
+        egressPercent: 10,
+        storageGBUsed: 2,
+        gpuCountUsed: 0,
+        timestamp: 0,
+      });
+
+      await service.recordUsageSample(quotaOne.id, {
+        cpuPercent: 25,
+        cpuCoresUsed: 1,
+        memoryMB: 1024,
+        memoryPercent: 25,
+        diskIOReadBytesPerSec: 100,
+        diskIOWriteBytesPerSec: 100,
+        diskIOReadPercent: 10,
+        diskIOWritePercent: 10,
+        ingressMbps: 1,
+        egressMbps: 1,
+        ingressPercent: 10,
+        egressPercent: 10,
+        storageGBUsed: 2,
+        gpuCountUsed: 0,
+        timestamp: 60 * 60 * 1000,
+      });
+
+      await service.recordUsageSample(quotaTwo.id, {
+        cpuPercent: 75,
+        cpuCoresUsed: 3,
+        memoryMB: 6144,
+        memoryPercent: 75,
+        diskIOReadBytesPerSec: 100,
+        diskIOWriteBytesPerSec: 100,
+        diskIOReadPercent: 10,
+        diskIOWritePercent: 10,
+        ingressMbps: 1,
+        egressMbps: 1,
+        ingressPercent: 10,
+        egressPercent: 10,
+        storageGBUsed: 4,
+        gpuCountUsed: 2,
+        timestamp: 0,
+      });
+
+      await service.recordUsageSample(quotaTwo.id, {
+        cpuPercent: 75,
+        cpuCoresUsed: 3,
+        memoryMB: 6144,
+        memoryPercent: 75,
+        diskIOReadBytesPerSec: 100,
+        diskIOWriteBytesPerSec: 100,
+        diskIOReadPercent: 10,
+        diskIOWritePercent: 10,
+        ingressMbps: 1,
+        egressMbps: 1,
+        ingressPercent: 10,
+        egressPercent: 10,
+        storageGBUsed: 4,
+        gpuCountUsed: 2,
+        timestamp: 60 * 60 * 1000,
+      });
+
+      const report = await service.getMonthlyCostReport('user-report', 'workspace-report', 0, 2 * 60 * 60 * 1000);
+
+      expect(report.projectId).toBe('workspace-report')
+      expect(report.quotas).toHaveLength(2);
+      expect(report.totals.cpuHours).toBeCloseTo(8, 5);
+      expect(report.totals.memoryGbHours).toBeCloseTo(14, 5);
+      expect(report.totals.storageGbDays).toBeCloseTo(0.5, 5);
+      expect(report.totals.gpuHours).toBeCloseTo(4, 5);
+    });
+
+    it('should emit budget alerts when thresholds are exceeded', async () => {
+      const quota = await service.createQuotaFromTier('user-budget', 'workspace-budget', 'small');
+
+      service.setBudgetThresholds('workspace', 'workspace-budget', {
+        cpuHours: 1,
+        memoryGbHours: 1,
+      });
+
+      await service.recordUsageSample(quota.id, {
+        cpuPercent: 100,
+        cpuCoresUsed: 2,
+        memoryMB: 4096,
+        memoryPercent: 100,
+        diskIOReadBytesPerSec: 100,
+        diskIOWriteBytesPerSec: 100,
+        diskIOReadPercent: 10,
+        diskIOWritePercent: 10,
+        ingressMbps: 1,
+        egressMbps: 1,
+        ingressPercent: 10,
+        egressPercent: 10,
+        storageGBUsed: 0,
+        gpuCountUsed: 0,
+        timestamp: 0,
+      });
+
+      await service.recordUsageSample(quota.id, {
+        cpuPercent: 100,
+        cpuCoresUsed: 2,
+        memoryMB: 4096,
+        memoryPercent: 100,
+        diskIOReadBytesPerSec: 100,
+        diskIOWriteBytesPerSec: 100,
+        diskIOReadPercent: 10,
+        diskIOWritePercent: 10,
+        ingressMbps: 1,
+        egressMbps: 1,
+        ingressPercent: 10,
+        egressPercent: 10,
+        storageGBUsed: 0,
+        gpuCountUsed: 0,
+        timestamp: 60 * 60 * 1000,
+      });
+
+      await service.getMonthlyCostReport('user-budget', 'workspace-budget', 0, 2 * 60 * 60 * 1000);
+
+      const alerts = service.getBudgetAlerts('workspace', 'workspace-budget');
+      expect(alerts.length).toBeGreaterThan(0);
+      expect(alerts.some((alert) => alert.metric === 'cpuHours')).toBe(true);
+      expect(alerts.some((alert) => alert.metric === 'memoryGbHours')).toBe(true);
+
+      const acknowledged = service.acknowledgeBudgetAlert(alerts[0].alertId, 'tester');
+      expect(acknowledged).toBe(true);
+      expect(service.getBudgetAlerts('workspace', 'workspace-budget')[0].acknowledgedBy).toBe('tester');
+    });
+  });
 });

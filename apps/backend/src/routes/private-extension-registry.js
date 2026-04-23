@@ -5,7 +5,6 @@
 // @status      active
 import { Router } from 'express';
 import { getAuditService } from '../services/audit/audit-service';
-import { PrivateExtensionRegistryService, } from '../services/private-extension-registry';
 import { getLogger } from '../lib/logger';
 const logger = getLogger('PrivateExtensionRegistryRoutes');
 function emitValidationAudit(decision, actor) {
@@ -104,3 +103,4 @@ export function initializePrivateExtensionRegistryRoutes(service) {
     return router;
 }
 export { PrivateExtensionRegistryService } from '../services/private-extension-registry';
+//# sourceMappingURL=private-extension-registry.js.map

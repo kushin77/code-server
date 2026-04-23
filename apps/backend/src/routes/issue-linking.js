@@ -8,9 +8,9 @@ import { Router } from 'express';
 import { IssueLinkingService } from '../services/issue-linking';
 import { getLogger } from '../lib/logger';
 const logger = getLogger('IssueLinkingRoutes');
-export function initializeIssueLinkingRoutes(pool, config) {
+export function initializeIssueLinkingRoutes(pool, auditService, config) {
     const router = Router();
-    const issueLinkingService = new IssueLinkingService(pool, config);
+    const issueLinkingService = new IssueLinkingService(pool, auditService, config);
     issueLinkingService.initialize().catch(error => {
         logger.error('Failed to initialize issue linking service', { error });
     });

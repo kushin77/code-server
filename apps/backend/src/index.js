@@ -6,9 +6,22 @@
 export { StandupSummariesService } from './services/standup-summaries';
 // Integration examples
 export { setupStandupSummariesIntegration, createExampleApp } from './services/standup-summaries/integration-example';
-export { CollaborationMessageEncryptionService } from './services/collaboration-message-encryption/index.js';
-export { initializeVoiceChannelRuntime } from './services/voice-channel/integration-example.js';
-export { setupVoiceChannelIntegration, createVoiceChannelExampleApp } from './services/voice-channel/integration-example.js';
+export { initializeGuestSessionRuntime } from './services/guest-sessions/integration-example';
+export { initializeVoiceChannelRuntime, setupVoiceChannelIntegration, createVoiceChannelExampleApp, } from './services/voice-channel/integration-example';
+export { initializeSharedClipboardRoutes, SharedClipboardService } from './services/shared-clipboard';
+export { setupSharedClipboardIntegration, createSharedClipboardExampleApp } from './services/shared-clipboard/integration-example';
+export { CRDTOperationsService } from './services/crdt-operations';
+export { initializeCRDTRoutes, setupCRDTIntegration, createCRDTExampleApp } from './services/crdt-operations/integration-example';
+export { TeamRichPresenceService, PresenceState } from './services/team-rich-presence';
+export { initializeTeamRichPresenceRoutes, setupTeamRichPresenceIntegration, createTeamRichPresenceExampleApp } from './services/team-rich-presence/integration-example';
+export { GuestSessionQuotasService, QuotaTier, QUOTA_LIMITS } from './services/guest-session-quotas';
+export { initializeGuestSessionQuotasRoutes, setupGuestSessionQuotasIntegration, createGuestSessionQuotasExampleApp } from './services/guest-session-quotas/integration-example';
+export { PresenceTimezoneService } from './services/presence-timezone';
+export { initializePresenceTimezoneRoutes, setupPresenceTimezoneIntegration, createPresenceTimezoneExampleApp } from './services/presence-timezone/integration-example';
+export { SessionCostTrackingService } from './services/session-cost-tracking';
+export { initializeSessionCostTrackingRoutes, setupSessionCostTrackingIntegration, createSessionCostTrackingExampleApp } from './services/session-cost-tracking/integration-example';
+export { InlineCommunicationService } from './services/inline-communication';
+export { initializeInlineCommunicationRoutes, setupInlineCommunicationIntegration, createInlineCommunicationExampleApp } from './services/inline-communication/integration-example';
 // Routes
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';
 export { initializeSymbolDiscussionsRoutes, SymbolDiscussionsService } from './routes/symbol-discussions';
@@ -20,6 +33,7 @@ export { initializeHelpQueueRoutes, HelpQueueService } from './routes/help-queue
 export { initializeSmartNotificationRoutingRoutes, SmartNotificationRoutingService } from './routes/smart-notification-routing';
 export { initializeActivityFeedRoutes, ActivityFeedService } from './routes/activity-feed';
 export { initializeGuestSessionRoutes, GuestSessionService } from './routes/guest-sessions';
+export { router as workspaceAutoConfigRouter } from './routes/workspace-auto-config';
 export { initializeSharedPromptLibraryRoutes, SharedPromptLibraryService } from './routes/shared-prompt-library';
 export { initializeAIReviewerRouterRoutes, AIReviewerRouterService } from './routes/ai-reviewer-router';
 export { initializeSessionReplayTimelineRoutes, SessionReplayTimelineService } from './services/session-replay-timeline';
@@ -38,9 +52,10 @@ export { initializeWorkspaceForkingRoutes, WorkspaceForkingService } from './ser
 export { initializeMultiRootWorkspaceManagerRoutes, MultiRootWorkspaceManagerService } from './services/multi-root-workspace-manager';
 export { initializeDebugSessionCollaborationRoutes, DebugSessionCollaborationService } from './services/debug-session-collaboration';
 export { setupDebugSessionCollaborationIntegration, createDebugSessionCollaborationExampleApp } from './services/debug-session-collaboration/integration-example';
+export { CollaborationMessageEncryptionService } from './services/collaboration-message-encryption';
+export { initializeConflictPredictionRoutes, ConflictPredictionService } from './services/conflict-prediction';
 export { initializeSessionHandoffProtocolRoutes, SessionHandoffProtocolService } from './services/session-handoff-protocol';
 export { initializeSessionHandOffNotesRoutes, SessionHandOffNotesService } from './services/session-handoff-notes';
-export { initializeConflictPredictionRoutes, ConflictPredictionService } from './services/conflict-prediction';
 export { initializeExpertiseHeatmapRoutes, ExpertiseHeatmapService } from './services/expertise-heatmap';
 export { initializeMessageCompressionPipelineRoutes, MessageCompressionPipelineService } from './services/message-compression-pipeline';
 export { initializeEmbeddedAPIExplorerRoutes, EmbeddedAPIExplorerService } from './services/embedded-api-explorer';
@@ -50,6 +65,16 @@ export { AutoTestGenerationService } from './services/auto-test-generation';
 export { default as onboardingRouter } from './routes/onboarding';
 export { default as sloRouter } from './routes/slo';
 export { default as anomalyRouter } from './routes/anomaly';
+export { initializeStandupRoutes } from './routes/standup-summaries';
+export { initializeSymbolDiscussionsRoutes } from './routes/symbol-discussions';
+export { default as websocketHealthRouter } from './routes/websocket-health';
+export { default as websocketHealthService } from './services/monitoring/websocket-health-service';
+export { default as resourceQuotaRouter, initializeResourceQuotaRoutes } from './routes/resource-quota';
+export { default as resourceQuotaService, ResourceQuotaService, QuotaTier } from './services/resource-quota';
+export { default as helpQueueAuditRouter } from './routes/help-queue-audit';
+export { HelpQueueAuditService } from './services/help-queue/help-queue-audit';
+export { default as extensionRegistryRouter } from './routes/extension-registry';
+export { RegistryManagerService } from './services/extension-registry/registry-manager';
 // AI Router
 export { AIRouter } from './services/ai/router';
 // Logger

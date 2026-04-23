@@ -16,6 +16,7 @@ function buildRepoLinks(repoSlug) {
     return {
         workspace: '/',
         pullRequests: `https://github.com/${repoSlug}/pulls`,
+        ci: `https://github.com/${repoSlug}/actions`,
         issues: `https://github.com/${repoSlug}/issues`,
         runbook: `https://github.com/${repoSlug}/blob/main/README.md`,
     };
@@ -148,6 +149,7 @@ function isValidRepoCard(value) {
         !!candidate.links &&
         typeof candidate.links.workspace === 'string' &&
         typeof candidate.links.pullRequests === 'string' &&
+        typeof candidate.links.ci === 'string' &&
         typeof candidate.links.issues === 'string' &&
         typeof candidate.links.runbook === 'string');
 }

@@ -1,12 +1,16 @@
 // @file        apps/backend/src/services/auth/__tests__/role-mapper.test.ts
 // @module      auth/role-mapping
 // @description Unit tests for RoleMapper service
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RoleMapper } from '../role-mapper';
 describe('RoleMapper', () => {
     let mapper;
+    let mockAuditService;
     beforeEach(() => {
-        mapper = new RoleMapper();
+        mockAuditService = {
+            emit: vi.fn(),
+        };
+        mapper = new RoleMapper(mockAuditService);
     });
     describe('mapClaimsToRoles', () => {
         it('should assign user role to everyone', () => {
@@ -137,6 +141,53 @@ describe('RoleMapper', () => {
             const mappings = mapper2.getGroupMappings();
             expect(mappings).toHaveProperty('admin@company.com');
             expect(mappings).toHaveProperty('developers@company.com');
+        });
+    });
+    describe('Audit Logging', () => {
+        it('should emit audit event when mapping claims', () => {
+            const mockAudit = { emit: vi.fn() };
+            const testMapper = new RoleMapper(mockAudit);
+            const claims = {
+                sub: 'user-123',
+                email: 'user@example.com',
+                groups: ['developers@company.com'],
+                admin: false,
+            };
+            testMapper.mapClaimsToRoles(claims);
+            expect(mockAudit.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'user@example.com',
+                action: 'read',
+                resourceType: 'oauth-claims',
+                resource: 'oauth:user-123',
+                metadata: expect.objectContaining({
+                    email: 'user@example.com',
+                    mappedRoles: expect.arrayContaining(['user', 'developer']),
+                }),
+            }));
+        });
+        it('should emit audit event when registering group mapping', () => {
+            const mockAudit = { emit: vi.fn() };
+            const testMapper = new RoleMapper(mockAudit);
+            testMapper.registerGroupMapping('analytics@company.com', ['analyst']);
+            expect(mockAudit.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'system',
+                action: 'update',
+                resourceType: 'role-mapping-config',
+                resource: 'role-mapping:analytics@company.com',
+                metadata: expect.objectContaining({
+                    group: 'analytics@company.com',
+                    roles: ['analyst'],
+                }),
+            }));
+        });
+        it('should work without audit service', () => {
+            const mapperNoAudit = new RoleMapper();
+            const claims = {
+                sub: 'user-123',
+                email: 'user@example.com',
+            };
+            const roles = mapperNoAudit.mapClaimsToRoles(claims);
+            expect(roles).toContain('user');
         });
     });
 });

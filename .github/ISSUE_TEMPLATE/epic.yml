@@ -1,0 +1,83 @@
+name: "🎯 Epic"
+description: "Strategic initiative with ordered sub-issues, labels, and completion gates"
+title: "[EPIC] <epic-name>: <description>"
+labels: ["epic", "P1", "needs-priority"]
+assignees: []
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: "🎯 Purpose"
+      description: "Strategic outcome and business value"
+      placeholder: "Transform kushin77/code-server into..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: "📋 Problem Statement"
+      description: "Current state vs. target state"
+      placeholder: "Current state:\n- Issue 1\n- Issue 2\n\nTarget state:\n- Goal 1\n- Goal 2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: sub_issues
+    attributes:
+      label: "🗂️ Sub-Issues (agent executes in order)"
+      description: "Ordered checklist of sub-issues (A → B → C → ...)"
+      placeholder: "- [ ] **EPIC-001-A** #1234 — Description\n- [ ] **EPIC-001-B** #1235 — Description"
+    validations:
+      required: true
+
+  - type: textarea
+    id: agent_rules
+    attributes:
+      label: "🤖 Agent Execution Rules"
+      description: "Non-negotiable constraints for Copilot execution"
+      placeholder: |
+        1. **Epic lock is mandatory** — Run session-start.sh, do NOT touch other epics
+        2. **Linear execution** — Work sub-issues A → B → C in order
+        3. **Completion gate per sub-issue** — commit → merge → deploy → clean → close
+        4. **Session persistence** — Write handoff before ending session
+        5. **No scope creep** — Do not create new issues or touch other epics
+    validations:
+      required: true
+
+  - type: textarea
+    id: completion_criteria
+    attributes:
+      label: "✅ Epic Completion Criteria"
+      description: "Definition of done for entire epic"
+      placeholder: |
+        - [ ] All sub-issues (#N – #M) closed
+        - [ ] Deliverables on `main` branch
+        - [ ] Production deployed on 192.168.168.31
+        - [ ] All feature branches deleted
+        - [ ] This epic closed with final comment
+    validations:
+      required: true
+
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: "📦 Deliverables Index"
+      description: "Table of artifacts, locations, and ownership"
+      placeholder: |
+        | Deliverable | Location | Sub-Issue |
+        |-------------|----------|-----------|
+        | Script X | `scripts/pmo/script-x.sh` | #1234 |
+        | Config Y | `.github/config.yml` | #1235 |
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: priority_gate
+    attributes:
+      label: "Priority & Epic Assignment"
+      options:
+        - label: "✅ Priority assigned (P0/P1/P2/P3)"
+        - label: "✅ Epic label applied"
+    validations:
+      required: true

@@ -8,9 +8,9 @@ import { Router } from 'express';
 import { SymbolDiscussionsService } from '../services/symbol-discussions';
 import { getLogger } from '../lib/logger';
 const logger = getLogger('SymbolDiscussionsRoutes');
-export function initializeSymbolDiscussionsRoutes(pool) {
+export function initializeSymbolDiscussionsRoutes(pool, auditService) {
     const router = Router();
-    const discussionsService = new SymbolDiscussionsService(pool);
+    const discussionsService = new SymbolDiscussionsService(pool, auditService);
     // Initialize the service
     discussionsService.initialize().catch(error => {
         logger.error('Failed to initialize symbol discussions service', { error });

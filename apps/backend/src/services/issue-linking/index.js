@@ -7,11 +7,12 @@
 import { EventEmitter } from 'events';
 import { getLogger } from '../../lib/logger';
 export class IssueLinkingService extends EventEmitter {
-    constructor(pool, config = {}) {
+    constructor(pool, auditService, config = {}) {
         super();
         this.logger = getLogger('IssueLinkingService');
         this.initialized = false;
         this.pool = pool;
+        this.auditService = auditService;
         this.config = {
             linearApiToken: process.env.LINEAR_API_TOKEN,
             jiraBaseUrl: process.env.JIRA_BASE_URL,
@@ -242,6 +243,15 @@ export class IssueLinkingService extends EventEmitter {
         finally {
             client.release();
         }
+    }
+    // SOC2: Audit ticket linking
+    auditTicketLink(ticketId, githubIssueNumber) {
+        this.auditService?.emit({
+            userId: 'system',
+            action: 'allow',
+            resource: 'ticket-link:' + ticketId,
+            reason: 'Linked ticket ' + ticketId + ' to GitHub issue #' + githubIssueNumber
+        });
     }
     async linkIssue(ticketId, githubIssueNumber, provider) {
         const client = await this.pool.connect();

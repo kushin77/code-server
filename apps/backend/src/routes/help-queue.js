@@ -8,9 +8,9 @@ import { Router } from 'express';
 import { HelpQueueService } from '../services/help-queue';
 import { getLogger } from '../lib/logger';
 const logger = getLogger('HelpQueueRoutes');
-export function initializeHelpQueueRoutes(pool) {
+export function initializeHelpQueueRoutes(pool, auditService) {
     const router = Router();
-    const helpQueueService = new HelpQueueService(pool);
+    const helpQueueService = new HelpQueueService(pool, auditService);
     helpQueueService.initialize().catch(error => {
         logger.error('Failed to initialize help queue service', { error });
     });

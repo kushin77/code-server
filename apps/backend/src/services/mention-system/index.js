@@ -8,15 +8,13 @@ import { EventEmitter } from 'events';
 import { getLogger } from '../../lib/logger.js';
 import { CollaborationMessageEncryptionService } from '../collaboration-message-encryption/index.js';
 export class MentionSystemService extends EventEmitter {
-    pool;
-    auditService;
-    logger = getLogger('MentionSystemService');
-    initialized = false;
-    matrixBaseUrl = process.env.MATRIX_BASE_URL || 'https://matrix.kushnir.cloud';
-    emailFrom = process.env.MENTION_EMAIL_FROM || 'mentions@kushnir.cloud';
-    mentionRegex = /@([a-zA-Z0-9_-]+)/g;
     constructor(pool, auditService) {
         super();
+        this.logger = getLogger('MentionSystemService');
+        this.initialized = false;
+        this.matrixBaseUrl = process.env.MATRIX_BASE_URL || 'https://matrix.kushnir.cloud';
+        this.emailFrom = process.env.MENTION_EMAIL_FROM || 'mentions@kushnir.cloud';
+        this.mentionRegex = /@([a-zA-Z0-9_-]+)/g;
         this.pool = pool;
         this.auditService = auditService;
     }

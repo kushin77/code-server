@@ -14,9 +14,10 @@ const CACHE_KEY_PREFIX = 'roles:';
  * - Role expiration (optional)
  */
 export class RoleManager {
-    constructor(redis, db) {
+    constructor(redis, db, auditService) {
         this.redis = redis;
         this.db = db;
+        this.auditService = auditService;
     }
     /**
      * Get all roles for a given service/user ID
@@ -89,6 +90,21 @@ export class RoleManager {
        ON CONFLICT (service_id, role) DO UPDATE SET expires_at = $3`, [serviceId, role, assignment.expiresAt, assignment.createdAt]);
         // Invalidate cache
         await this.invalidateRoleCache(serviceId);
+        if (this.auditService) {
+            this.auditService.emit({
+                userId: serviceId,
+                action: 'create',
+                resourceType: 'role-assignment',
+                resource: `role:${role}:${serviceId}`,
+                metadata: {
+                    serviceId,
+                    role,
+                    expiresAt: assignment.expiresAt,
+                    ttl: expiresIn,
+                },
+                reason: 'SOC2: Role assignment for access control',
+            });
+        }
         logger.info(`Assigned role '${role}' to service '${serviceId}'`);
         return assignment;
     }
@@ -100,6 +116,19 @@ export class RoleManager {
        WHERE service_id = $1 AND role = $2`, [serviceId, role]);
         // Invalidate cache
         await this.invalidateRoleCache(serviceId);
+        if (this.auditService) {
+            this.auditService.emit({
+                userId: serviceId,
+                action: 'delete',
+                resourceType: 'role-assignment',
+                resource: `role:${role}:${serviceId}`,
+                metadata: {
+                    serviceId,
+                    role,
+                },
+                reason: 'SOC2: Role revocation for access control',
+            });
+        }
         logger.info(`Revoked role '${role}' from service '${serviceId}'`);
     }
     /**
@@ -193,6 +222,20 @@ export class RoleManager {
         const assignments = await this.listRoles(userId);
         for (const assignment of assignments) {
             await this.revokeRole(userId, assignment.role);
+        }
+        if (this.auditService && assignments.length > 0) {
+            this.auditService.emit({
+                userId,
+                action: 'delete',
+                resourceType: 'user-roles',
+                resource: `user-roles:${userId}`,
+                metadata: {
+                    userId,
+                    clearedRoles: assignments.map((a) => a.role),
+                    revokedCount: assignments.length,
+                },
+                reason: 'SOC2: All roles cleared for user',
+            });
         }
         logger.info(`Cleared all roles for user ${userId}`, { userId });
     }

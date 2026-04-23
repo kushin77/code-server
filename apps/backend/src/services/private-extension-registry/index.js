@@ -1,10 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { getAuditService } from '../audit/audit-service';
-
-const DEFAULT_APPROVED_MANIFEST = path.resolve(__dirname, '../../../../../config/code-server/extensions/extensions-approved.json');
-const DEFAULT_BLOCKED_MANIFEST = path.resolve(__dirname, '../../../../../config/code-server/extensions/extensions-blocked.json');
-
 function emitManifestReadAudit(filePath) {
     getAuditService()?.emit({
         userId: 'system',
@@ -18,20 +14,16 @@ function emitManifestReadAudit(filePath) {
         fileAction: 'read',
     });
 }
-
+const DEFAULT_APPROVED_MANIFEST = path.resolve(__dirname, '../../../../../config/code-server/extensions/extensions-approved.json');
+const DEFAULT_BLOCKED_MANIFEST = path.resolve(__dirname, '../../../../../config/code-server/extensions/extensions-blocked.json');
 export class PrivateExtensionRegistryService {
-    approvedManifestPath;
-    blockedManifestPath;
-
     constructor(options = {}) {
         this.approvedManifestPath = options.approvedManifestPath ?? DEFAULT_APPROVED_MANIFEST;
         this.blockedManifestPath = options.blockedManifestPath ?? DEFAULT_BLOCKED_MANIFEST;
     }
-
     getSnapshot() {
         const approvedManifest = this.readJson(this.approvedManifestPath);
         const blockedManifest = this.readJson(this.blockedManifestPath);
-
         return {
             policyVersion: approvedManifest.policy_version,
             policyDate: approvedManifest.policy_date,
@@ -40,17 +32,14 @@ export class PrivateExtensionRegistryService {
             blockedExtensions: blockedManifest.blocked.map((extension) => ({ ...extension })),
         };
     }
-
     listApprovedExtensions() {
         const snapshot = this.getSnapshot();
         return snapshot.approvedExtensions;
     }
-
     listBlockedExtensions() {
         const snapshot = this.getSnapshot();
         return snapshot.blockedExtensions;
     }
-
     validateExtension(extensionId, requestedVersion) {
         const snapshot = this.getSnapshot();
         const blockedExtension = this.findBlockedExtension(snapshot, extensionId);
@@ -65,7 +54,6 @@ export class PrivateExtensionRegistryService {
                 alternative: blockedExtension.alternative,
             };
         }
-
         const approvedExtension = this.findApprovedExtension(snapshot, extensionId);
         if (!approvedExtension) {
             return {
@@ -76,7 +64,6 @@ export class PrivateExtensionRegistryService {
                 reason: 'Extension is not present in the approved manifest',
             };
         }
-
         if (requestedVersion && requestedVersion !== approvedExtension.version) {
             return {
                 extensionId,
@@ -88,7 +75,6 @@ export class PrivateExtensionRegistryService {
                 tier: approvedExtension.tier,
             };
         }
-
         return {
             extensionId,
             requestedVersion: requestedVersion ?? approvedExtension.version,
@@ -99,34 +85,30 @@ export class PrivateExtensionRegistryService {
             tier: approvedExtension.tier,
         };
     }
-
     canPublish(extensionId, version) {
         return this.validateExtension(extensionId, version);
     }
-
     findApprovedExtension(snapshot, extensionId) {
         return snapshot.approvedExtensions.find((extension) => extension.id === extensionId);
     }
-
     findBlockedExtension(snapshot, extensionId) {
         for (const blockedExtension of snapshot.blockedExtensions) {
             try {
                 if (new RegExp(blockedExtension.pattern, 'i').test(extensionId)) {
                     return blockedExtension;
                 }
-            } catch {
+            }
+            catch {
                 continue;
             }
         }
-
         return undefined;
     }
-
     readJson(filePath) {
         const raw = fs.readFileSync(filePath, 'utf8');
         emitManifestReadAudit(filePath);
         return JSON.parse(raw);
     }
 }
-
 export default PrivateExtensionRegistryService;
+//# sourceMappingURL=index.js.map

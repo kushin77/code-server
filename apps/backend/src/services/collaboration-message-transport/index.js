@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // @file        apps/backend/src/services/collaboration-message-transport/index.ts
 // @module      collaboration/message-transport
 // @description Matrix SDK transport adapter for encrypted collaboration messages
@@ -49,8 +50,6 @@ function buildEncryptionState(options) {
     ];
 }
 export class MatrixCollaborationTransportService extends EventEmitter {
-    client;
-    encryption;
     constructor(client, encryption = new CollaborationMessageEncryptionService()) {
         super();
         this.client = client;
@@ -110,3 +109,4 @@ export class MatrixCollaborationTransportService extends EventEmitter {
         return this.encryption.exportVaultBackup(backupKeyMaterial, metadata);
     }
 }
+//# sourceMappingURL=index.js.map

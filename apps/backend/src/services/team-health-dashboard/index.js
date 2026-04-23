@@ -1,11 +1,21 @@
 #!/usr/bin/env node
+// @file        apps/backend/src/services/team-health-dashboard/index.ts
+// @module      collaboration/team-health-dashboard/exports
+// @description Factory functions and type exports for TeamHealthDashboard
+// @owner       collab-6.4
+// @status      active
+export { TeamHealthDashboard } from './team-health-dashboard';
+import { TeamHealthDashboard } from './team-health-dashboard';
 /**
- * @file        apps/backend/src/services/team-health-dashboard/index.ts
- * @module      services/collaboration
- * @description Team health metrics with flow time, pair frequency, review latency, AI utilization
+ * Factory function to create and initialize a TeamHealthDashboard instance
+ * @param config Optional configuration overrides
+ * @returns Initialized TeamHealthDashboard service ready for use
  */
-import { EventEmitter } from 'events';
-import { getLogger } from '../../lib/logger';
+export async function createTeamHealthDashboard(config) {
+    const dashboard = new TeamHealthDashboard(config);
+    await dashboard.initialize();
+    return dashboard;
+}
 export class TeamHealthDashboardService extends EventEmitter {
     constructor(pool) {
         super();

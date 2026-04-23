@@ -7,11 +7,12 @@
 import { EventEmitter } from 'events';
 import { getLogger } from '../../lib/logger';
 export class DORAMetricsService extends EventEmitter {
-    constructor(pool) {
+    constructor(pool, auditService) {
         super();
         this.logger = getLogger('DORAMetricsService');
         this.initialized = false;
         this.pool = pool;
+        this.auditService = auditService;
     }
     async initialize() {
         if (this.initialized)
@@ -114,6 +115,17 @@ export class DORAMetricsService extends EventEmitter {
         }
         finally {
             client.release();
+        }
+    }
+    // SOC2: Audit production changes
+    auditDeployment(deploymentId, environment, success) {
+        if (environment === 'production' || environment === 'prod') {
+            this.auditService?.emit({
+                userId: 'system',
+                action: success ? 'allow' : 'deny',
+                resource: 'deployment:' + deploymentId,
+                reason: 'Recorded production deployment ' + deploymentId + ' (success: ' + success + ')'
+            });
         }
     }
     async recordDeployment(event) {

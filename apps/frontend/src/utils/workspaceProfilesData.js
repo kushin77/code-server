@@ -1,6 +1,181 @@
 /**
  * Workspace profile management utilities
  */
+const PROJECT_DETECTION_RULES = [
+    {
+        projectType: 'node',
+        markers: ['package.json', 'pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'bun.lockb'],
+        recommendedSettings: {
+            '[typescript]': {
+                'editor.defaultFormatter': 'dbaeumer.vscode-eslint',
+                'editor.formatOnSave': true,
+            },
+            'typescript.tsdk': 'node_modules/typescript/lib',
+            'typescript.enablePromptUseWorkspaceTsdk': true,
+        },
+        recommendedExtensions: ['dbaeumer.vscode-eslint', 'bradlc.vscode-tailwindcss', 'ms-vscode.vscode-typescript-next'],
+        recommendedDebugger: {
+            name: 'Node app',
+            type: 'pwa-node',
+            request: 'launch',
+            cwd: '.',
+            program: 'src/index.ts',
+            runtimeExecutable: 'node',
+            args: ['--enable-source-maps'],
+        },
+        recommendedLinters: ['eslint'],
+        summary: 'Detected a Node/TypeScript project from package manager metadata.',
+    },
+    {
+        projectType: 'go',
+        markers: ['go.mod', 'go.sum'],
+        recommendedSettings: {
+            '[go]': {
+                'editor.formatOnSave': true,
+                'editor.codeActionsOnSave': {
+                    'source.organizeImports': true,
+                },
+            },
+        },
+        recommendedExtensions: ['golang.go'],
+        recommendedDebugger: {
+            name: 'Go service',
+            type: 'go',
+            request: 'launch',
+            cwd: '.',
+            program: 'main.go',
+            runtimeExecutable: 'go',
+        },
+        recommendedLinters: ['golangci-lint'],
+        summary: 'Detected a Go project from module metadata.',
+    },
+    {
+        projectType: 'python',
+        markers: ['pyproject.toml', 'requirements.txt', 'poetry.lock', 'setup.py'],
+        recommendedSettings: {
+            'python.linting.enabled': true,
+            'python.linting.pylintEnabled': true,
+            '[python]': {
+                'editor.defaultFormatter': 'ms-python.python',
+                'editor.formatOnSave': true,
+            },
+        },
+        recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
+        recommendedDebugger: {
+            name: 'Python app',
+            type: 'python',
+            request: 'launch',
+            cwd: '.',
+            program: 'app.py',
+            runtimeExecutable: 'python',
+        },
+        recommendedLinters: ['ruff', 'pylint'],
+        summary: 'Detected a Python project from packaging metadata.',
+    },
+    {
+        projectType: 'rust',
+        markers: ['Cargo.toml', 'Cargo.lock'],
+        recommendedSettings: {
+            '[rust]': {
+                'editor.formatOnSave': true,
+                'editor.defaultFormatter': 'rust-lang.rust-analyzer',
+            },
+        },
+        recommendedExtensions: ['rust-lang.rust-analyzer'],
+        recommendedDebugger: {
+            name: 'Rust binary',
+            type: 'lldb',
+            request: 'launch',
+            cwd: '.',
+            program: 'target/debug/app',
+            runtimeExecutable: 'cargo',
+        },
+        recommendedLinters: ['cargo clippy'],
+        summary: 'Detected a Rust workspace from Cargo metadata.',
+    },
+    {
+        projectType: 'java',
+        markers: ['pom.xml', 'build.gradle', 'build.gradle.kts'],
+        recommendedSettings: {
+            '[java]': {
+                'editor.formatOnSave': true,
+            },
+        },
+        recommendedExtensions: ['redhat.java'],
+        recommendedDebugger: {
+            name: 'Java service',
+            type: 'java',
+            request: 'launch',
+            cwd: '.',
+            program: 'src/main/java/Main.java',
+            runtimeExecutable: 'java',
+        },
+        recommendedLinters: ['checkstyle'],
+        summary: 'Detected a Java project from build metadata.',
+    },
+    {
+        projectType: 'docs',
+        markers: ['mkdocs.yml', 'docs/scripts/preview.ts', 'README.md'],
+        recommendedSettings: {
+            '[markdown]': {
+                'editor.wordWrap': 'on',
+                'editor.quickSuggestions': {
+                    comments: 'off',
+                    strings: 'off',
+                    other: 'off',
+                },
+            },
+            'markdown.preview.breaks': true,
+        },
+        recommendedExtensions: ['yzhang.markdown-all-in-one', 'bierner.markdown-mermaid'],
+        recommendedDebugger: {
+            name: 'Docs preview',
+            type: 'pwa-node',
+            request: 'launch',
+            cwd: 'docs',
+            program: 'docs/scripts/preview.ts',
+            runtimeExecutable: 'node',
+        },
+        recommendedLinters: ['markdownlint'],
+        summary: 'Detected documentation-heavy workspace markers.',
+    },
+];
+const normalizeMarker = (value) => value.replace(/\\/g, '/').toLowerCase();
+const extractBasename = (value) => normalizeMarker(value).split('/').pop() ?? normalizeMarker(value);
+function findProjectDetectionRule(fileNames) {
+    const normalizedMarkers = fileNames.map((fileName) => normalizeMarker(fileName));
+    for (const rule of PROJECT_DETECTION_RULES) {
+        const matchedMarkers = rule.markers.filter((marker) => {
+            const normalizedMarker = normalizeMarker(marker);
+            return normalizedMarkers.some((fileName) => fileName.endsWith(normalizedMarker) || extractBasename(fileName) === normalizedMarker);
+        });
+        if (matchedMarkers.length > 0) {
+            return {
+                ...rule,
+                markers: matchedMarkers,
+            };
+        }
+    }
+    return undefined;
+}
+export function detectWorkspaceProjectType(fileNames) {
+    return findProjectDetectionRule(fileNames)?.projectType ?? 'unknown';
+}
+export function buildWorkspaceAutoConfigSuggestion(fileNames) {
+    const rule = findProjectDetectionRule(fileNames);
+    if (!rule) {
+        return undefined;
+    }
+    return {
+        projectType: rule.projectType,
+        detectedFrom: rule.markers,
+        recommendedSettings: { ...rule.recommendedSettings },
+        recommendedExtensions: [...rule.recommendedExtensions],
+        recommendedDebugger: { ...rule.recommendedDebugger },
+        recommendedLinters: [...rule.recommendedLinters],
+        summary: rule.summary,
+    };
+}
 const WORKSPACE_PROFILE_MANIFESTS = {
     'portal-main': {
         id: 'portal-main',
@@ -175,182 +350,6 @@ const WORKSPACE_PROFILE_MANIFESTS = {
         ],
     },
 };
-const PROJECT_DETECTION_RULES = [
-    {
-        projectType: 'node',
-        markers: ['package.json', 'pnpm-lock.yaml', 'package-lock.json', 'yarn.lock', 'bun.lockb'],
-        recommendedSettings: {
-            '[typescript]': {
-                'editor.defaultFormatter': 'dbaeumer.vscode-eslint',
-                'editor.formatOnSave': true,
-            },
-            'typescript.tsdk': 'node_modules/typescript/lib',
-            'typescript.enablePromptUseWorkspaceTsdk': true,
-        },
-        recommendedExtensions: ['dbaeumer.vscode-eslint', 'bradlc.vscode-tailwindcss', 'ms-vscode.vscode-typescript-next'],
-        recommendedDebugger: {
-            name: 'Node app',
-            type: 'pwa-node',
-            request: 'launch',
-            cwd: '.',
-            program: 'src/index.ts',
-            runtimeExecutable: 'node',
-            args: ['--enable-source-maps'],
-        },
-        recommendedLinters: ['eslint'],
-        summary: 'Detected a Node/TypeScript project from package manager metadata.',
-    },
-    {
-        projectType: 'go',
-        markers: ['go.mod', 'go.sum'],
-        recommendedSettings: {
-            '[go]': {
-                'editor.formatOnSave': true,
-                'editor.codeActionsOnSave': {
-                    'source.organizeImports': true,
-                },
-            },
-        },
-        recommendedExtensions: ['golang.go'],
-        recommendedDebugger: {
-            name: 'Go service',
-            type: 'go',
-            request: 'launch',
-            cwd: '.',
-            program: 'main.go',
-            runtimeExecutable: 'go',
-        },
-        recommendedLinters: ['golangci-lint'],
-        summary: 'Detected a Go project from module metadata.',
-    },
-    {
-        projectType: 'python',
-        markers: ['pyproject.toml', 'requirements.txt', 'poetry.lock', 'setup.py'],
-        recommendedSettings: {
-            'python.linting.enabled': true,
-            'python.linting.pylintEnabled': true,
-            '[python]': {
-                'editor.defaultFormatter': 'ms-python.python',
-                'editor.formatOnSave': true,
-            },
-        },
-        recommendedExtensions: ['ms-python.python', 'ms-python.vscode-pylance'],
-        recommendedDebugger: {
-            name: 'Python app',
-            type: 'python',
-            request: 'launch',
-            cwd: '.',
-            program: 'app.py',
-            runtimeExecutable: 'python',
-        },
-        recommendedLinters: ['ruff', 'pylint'],
-        summary: 'Detected a Python project from packaging metadata.',
-    },
-    {
-        projectType: 'rust',
-        markers: ['Cargo.toml', 'Cargo.lock'],
-        recommendedSettings: {
-            '[rust]': {
-                'editor.formatOnSave': true,
-                'editor.defaultFormatter': 'rust-lang.rust-analyzer',
-            },
-        },
-        recommendedExtensions: ['rust-lang.rust-analyzer'],
-        recommendedDebugger: {
-            name: 'Rust binary',
-            type: 'lldb',
-            request: 'launch',
-            cwd: '.',
-            program: 'target/debug/app',
-            runtimeExecutable: 'cargo',
-        },
-        recommendedLinters: ['cargo clippy'],
-        summary: 'Detected a Rust workspace from Cargo metadata.',
-    },
-    {
-        projectType: 'java',
-        markers: ['pom.xml', 'build.gradle', 'build.gradle.kts'],
-        recommendedSettings: {
-            '[java]': {
-                'editor.formatOnSave': true,
-            },
-        },
-        recommendedExtensions: ['redhat.java'],
-        recommendedDebugger: {
-            name: 'Java service',
-            type: 'java',
-            request: 'launch',
-            cwd: '.',
-            program: 'src/main/java/Main.java',
-            runtimeExecutable: 'java',
-        },
-        recommendedLinters: ['checkstyle'],
-        summary: 'Detected a Java project from build metadata.',
-    },
-    {
-        projectType: 'docs',
-        markers: ['mkdocs.yml', 'docs/scripts/preview.ts', 'README.md'],
-        recommendedSettings: {
-            '[markdown]': {
-                'editor.wordWrap': 'on',
-                'editor.quickSuggestions': {
-                    comments: 'off',
-                    strings: 'off',
-                    other: 'off',
-                },
-            },
-            'markdown.preview.breaks': true,
-        },
-        recommendedExtensions: ['yzhang.markdown-all-in-one', 'bierner.markdown-mermaid'],
-        recommendedDebugger: {
-            name: 'Docs preview',
-            type: 'pwa-node',
-            request: 'launch',
-            cwd: 'docs',
-            program: 'docs/scripts/preview.ts',
-            runtimeExecutable: 'node',
-        },
-        recommendedLinters: ['markdownlint'],
-        summary: 'Detected documentation-heavy workspace markers.',
-    },
-];
-const normalizeMarker = (value) => value.replace(/\\/g, '/').toLowerCase();
-const extractBasename = (value) => { var _a; return (_a = normalizeMarker(value).split('/').pop()) !== null && _a !== void 0 ? _a : normalizeMarker(value); };
-function findProjectDetectionRule(fileNames) {
-    const normalizedMarkers = fileNames.map((fileName) => normalizeMarker(fileName));
-    for (const rule of PROJECT_DETECTION_RULES) {
-        const matchedMarkers = rule.markers.filter((marker) => {
-            const normalizedMarker = normalizeMarker(marker);
-            return normalizedMarkers.some((fileName) => fileName.endsWith(normalizedMarker) || extractBasename(fileName) === normalizedMarker);
-        });
-        if (matchedMarkers.length > 0) {
-            return {
-                ...rule,
-                markers: matchedMarkers,
-            };
-        }
-    }
-    return undefined;
-}
-export function detectWorkspaceProjectType(fileNames) {
-    var _a;
-    return ((_a = findProjectDetectionRule(fileNames)) === null || _a === void 0 ? void 0 : _a.projectType) || 'unknown';
-}
-export function buildWorkspaceAutoConfigSuggestion(fileNames) {
-    const rule = findProjectDetectionRule(fileNames);
-    if (!rule) {
-        return undefined;
-    }
-    return {
-        projectType: rule.projectType,
-        detectedFrom: rule.markers,
-        recommendedSettings: { ...rule.recommendedSettings },
-        recommendedExtensions: [...rule.recommendedExtensions],
-        recommendedDebugger: { ...rule.recommendedDebugger },
-        recommendedLinters: [...rule.recommendedLinters],
-        summary: rule.summary,
-    };
-}
 function cloneWorkspaceRoot(root) {
     return {
         ...root,

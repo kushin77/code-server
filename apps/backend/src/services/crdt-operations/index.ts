@@ -8,6 +8,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { CRDTEditEvent, BaseEvent, EventSeverity, EventCategory } from '@kushin77/shared-events';
 
 /**
  * Represents a single CRDT operation (insert or delete)
@@ -127,6 +128,28 @@ export class CRDTOperationsService extends EventEmitter {
     history.push(operation);
     this.operationHistory.set(documentId, history);
 
+    // Standardized event broadcast
+    const crdtEvent: CRDTEditEvent = {
+      id: operation.id,
+      source: 'crdt-operations-service',
+      type: 'document-edit',
+      category: 'collaboration',
+      severity: 'low',
+      timestamp: operation.timestamp,
+      userId: clientId,
+      payload: {
+        documentId,
+        operation: {
+          type: 'insert',
+          position: operation.position,
+          content: operation.content,
+        },
+        version: state.version,
+        vectorClock: operation.vectorClock,
+      },
+    };
+    this.emit('documentEdited', crdtEvent);
+
     this.emit('insertOperation', { documentId, operation, state });
 
     return { operation, state };
@@ -191,6 +214,28 @@ export class CRDTOperationsService extends EventEmitter {
     // Store operation in history
     history.push(operation);
     this.operationHistory.set(documentId, history);
+
+    // Standardized event broadcast
+    const crdtEvent: CRDTEditEvent = {
+      id: operation.id,
+      source: 'crdt-operations-service',
+      type: 'document-edit',
+      category: 'collaboration',
+      severity: 'low',
+      timestamp: operation.timestamp,
+      userId: clientId,
+      payload: {
+        documentId,
+        operation: {
+          type: 'delete',
+          position: operation.position,
+          length: operation.length,
+        },
+        version: state.version,
+        vectorClock: operation.vectorClock,
+      },
+    };
+    this.emit('documentEdited', crdtEvent);
 
     this.emit('deleteOperation', { documentId, operation, state });
 

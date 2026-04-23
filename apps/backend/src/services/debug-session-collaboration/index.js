@@ -54,8 +54,11 @@ function normalizeActor(actor) {
     return normalizeText(actor);
 }
 export class DebugSessionCollaborationService extends EventEmitter {
-    logger = getLogger('DebugSessionCollaborationService');
-    sessions = new Map();
+    constructor() {
+        super(...arguments);
+        this.logger = getLogger('DebugSessionCollaborationService');
+        this.sessions = new Map();
+    }
     createSession(input) {
         const actor = normalizeActor(input.actor);
         const workspaceId = normalizeText(input.workspaceId);

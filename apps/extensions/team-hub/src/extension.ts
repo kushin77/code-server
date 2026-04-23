@@ -4,6 +4,8 @@ import { PresenceService } from './presence';
 import { TeamHubActions } from './actions';
 import { TeamHubSidebarProvider } from './sidebar';
 import { TerminalDLPScanner } from './terminal-dlp';
+import { GitHubTaskPanelProvider } from './github-task-panel';
+import { GitHubTaskSyncService } from '../../../backend/src/services/github-task-sync';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const getConfig = readTeamHubConfig;
@@ -15,6 +17,37 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const dlpScanner = new TerminalDLPScanner();
   const terminalMonitor = new TerminalDLPMonitor(dlpScanner);
 
+  // Initialize GitHub Task Sync (optional, if enabled)
+  const config = getConfig();
+  let gitHubTaskPanel: GitHubTaskPanelProvider | undefined;
+  let gitHubSyncService: GitHubTaskSyncService | undefined;
+
+  if (config.enableGitHubTaskSync && config.githubToken && config.githubOwner && config.githubRepo) {
+    try {
+      gitHubSyncService = new GitHubTaskSyncService({
+        githubToken: config.githubToken,
+        owner: config.githubOwner,
+        repo: config.githubRepo,
+        pollingIntervalMs: config.gitHubTaskSyncInterval,
+      });
+
+      await gitHubSyncService.initialize();
+
+      gitHubTaskPanel = new GitHubTaskPanelProvider({
+        apiBaseUrl: 'http://localhost:3100',
+        pollingIntervalMs: config.gitHubTaskSyncInterval,
+      });
+
+      context.subscriptions.push(
+        vscode.window.registerTreeDataProvider('gitHubTasks', gitHubTaskPanel)
+      );
+
+      gitHubSyncService.startPolling();
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to initialize GitHub Task Sync: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('teamHub.sidebar', sidebarProvider),
     vscode.commands.registerCommand('teamHub.mentionUser', (userId: string) => actions.mentionUser(userId)),
@@ -24,12 +57,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('teamHub.settings', () => actions.openSettings()),
     vscode.commands.registerCommand('teamHub.shareWorkspace', () => actions.shareWorkspace()),
     vscode.commands.registerCommand('teamHub.toggleDLP', () => terminalMonitor.toggleDLP()),
+    vscode.commands.registerCommand('gitHubTasks.refresh', () => gitHubTaskPanel?.refresh()),
+    vscode.commands.registerCommand('gitHubTasks.openIssue', (task: any) => {
+      if (task?.gitHubUrl) {
+        vscode.env.openExternal(vscode.Uri.parse(task.gitHubUrl));
+      }
+    }),
     new vscode.Disposable(() => presenceService.dispose()),
-    new vscode.Disposable(() => terminalMonitor.dispose())
+    new vscode.Disposable(() => terminalMonitor.dispose()),
+    new vscode.Disposable(() => gitHubSyncService?.stopPolling())
   );
 
-  const config = getConfig();
-  if (config.enableAutoPresence) {
+  const enableAutoPresence = config.enableAutoPresence;
+  if (enableAutoPresence) {
     context.subscriptions.push(
       vscode.window.onDidChangeActiveTextEditor((editor) => {
         presenceService.updateActiveEditor(editor);

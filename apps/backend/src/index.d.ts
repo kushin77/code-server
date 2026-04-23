@@ -23,11 +23,14 @@ export { initializeSessionCostTrackingRoutes, setupSessionCostTrackingIntegratio
 export { InlineCommunicationService } from './services/inline-communication';
 export type { InlineCommentThread, InlineComment, CodeLocation, ThreadArchive } from './services/inline-communication';
 export { initializeInlineCommunicationRoutes, setupInlineCommunicationIntegration, createInlineCommunicationExampleApp } from './services/inline-communication/integration-example';
+export { GitHubTaskSyncService } from './services/github-task-sync';
+export { createGitHubTaskSyncExampleApp, setupGitHubTaskSyncIntegration, initializeGitHubTaskSyncInApp, initializeGitHubTaskSyncRuntime } from './services/github-task-sync/integration-example';
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';
 export { initializeSymbolDiscussionsRoutes, SymbolDiscussionsService } from './routes/symbol-discussions';
 export { initializeMentionSystemRoutes, MentionSystemService } from './routes/mention-system';
 export { initializeFigmaIntegrationRoutes, FigmaIntegrationService } from './routes/figma-integration';
 export { initializeIssueLinkingRoutes, IssueLinkingService } from './routes/issue-linking';
+export { initializeGitHubTaskSyncRoutes } from './routes/github-task-sync';
 export { initializeDORAMetricsRoutes, DORAMetricsService } from './routes/dora-metrics';
 export { initializeHelpQueueRoutes, HelpQueueService } from './routes/help-queue';
 export { initializeSmartNotificationRoutingRoutes, SmartNotificationRoutingService } from './routes/smart-notification-routing';

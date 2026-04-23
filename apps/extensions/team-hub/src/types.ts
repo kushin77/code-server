@@ -31,6 +31,11 @@ export interface TeamHubConfig {
   showAvatars: boolean;
   highlightSameFile: boolean;
   enableTerminalDLP?: boolean;
+  enableGitHubTaskSync?: boolean;
+  githubToken?: string;
+  githubOwner?: string;
+  githubRepo?: string;
+  gitHubTaskSyncInterval?: number;
 }
 
 export interface TeamHubSnapshot {

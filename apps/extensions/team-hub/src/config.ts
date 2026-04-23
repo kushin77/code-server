@@ -13,6 +13,11 @@ export const readTeamHubConfig = (): TeamHubConfig => {
     presenceUpdateInterval: config.get<number>('presenceUpdateInterval', 5000),
     showAvatars: config.get<boolean>('showAvatars', true),
     highlightSameFile: config.get<boolean>('highlightSameFile', true),
-    enableTerminalDLP: config.get<boolean>('enableTerminalDLP', true)
+    enableTerminalDLP: config.get<boolean>('enableTerminalDLP', true),
+    enableGitHubTaskSync: config.get<boolean>('enableGitHubTaskSync', false),
+    githubToken: config.get<string>('githubToken', '').trim() || process.env.GITHUB_TOKEN,
+    githubOwner: config.get<string>('githubOwner', '').trim() || process.env.GITHUB_OWNER || 'kushin77',
+    githubRepo: config.get<string>('githubRepo', '').trim() || process.env.GITHUB_REPO || 'code-server',
+    gitHubTaskSyncInterval: config.get<number>('gitHubTaskSyncInterval', 30000)
   };
 };

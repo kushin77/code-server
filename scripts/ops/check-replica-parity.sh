@@ -1,268 +1,290 @@
 #!/usr/bin/env bash
+################################################################################
 # @file        scripts/ops/check-replica-parity.sh
-# @module      ops/monitoring
-# @description Check and report divergence between cluster replicas
+# @module      ops/validation
+# @description Compares running services and env config across all cluster replicas
+# @owner       platform
+# @status      active
 #
-# USAGE:
-#   bash scripts/ops/check-replica-parity.sh [--pre-deploy|--post-deploy] [--verbose]
+# USAGE
+#   bash scripts/ops/check-replica-parity.sh
 #
-# CHECKS:
-#   - Git commit hash parity (all replicas on same commit)
-#   - .env file hash parity (all replicas have same config)
-#   - Docker image tags parity (same versions running)
-#   - Container counts parity (same number of services)
-#   - Service health parity (same services healthy)
+# OUTPUTS
+#   - Green: all replicas identical
+#   - Red: divergence found with diff output
+#   - Exit code 0 = parity, 1 = divergence
 #
-# EXIT CODES:
+# CHECKS
+#   1. Git commit hash (all replicas on same commit)
+#   2. Running service names (docker ps --format {{.Names}})
+#   3. COMPOSE_PROFILES configuration
+#
+# EXIT CODES
 #   0 = All replicas in perfect parity
-#   1 = Parity issues detected (non-blocking)
-#   2 = Critical parity issues (must fix before deploy)
+#   1 = Parity divergence detected
+#   2 = Configuration or connectivity error
+#
+# NOTES
+#   - Does NOT compare env var values (security concern)
+#   - Requires id_rsa_onprem SSH key in ~/.ssh/
+#   - Uses canonical logging from scripts/_common/logging.sh
+#
+# Last Updated: April 23, 2026
+################################################################################
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Configuration
-# ─────────────────────────────────────────────────────────────────────────────
+SCRIPT_NAME="$(basename "$0")"
 
+################################################################################
+# CONFIGURATION
+################################################################################
+
+# Production cluster replicas
 REPLICAS=(
-  "akushnir@192.168.168.31:code-server-enterprise"
-  "akushnir@192.168.168.42:code-server-enterprise"
+  "akushnir@192.168.168.31"
+  "akushnir@192.168.168.42"
 )
 
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
 SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
-VERBOSE=false
-CHECK_MODE="default"  # pre-deploy, post-deploy, or default
+# Work directory for temp files
+WORK_DIR="/tmp/replica-parity-$$"
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --pre-deploy)
-      CHECK_MODE="pre-deploy"
-      shift
-      ;;
-    --post-deploy)
-      CHECK_MODE="post-deploy"
-      shift
-      ;;
-    --verbose)
-      VERBOSE=true
-      shift
-      ;;
-    *)
-      log_warn "Unknown argument: $1"
-      shift
-      ;;
-  esac
-done
+# Tracking
+DIVERGENCE_FOUND=0
+CRITICAL_ERROR=0
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Helper Functions
-# ─────────────────────────────────────────────────────────────────────────────
+################################################################################
+# CLEANUP TRAP
+################################################################################
 
-# Extract host and path from "user@host:path" format
-parse_replica() {
-  local replica=$1
-  echo "${replica%:*}"  # Return user@host part
+cleanup() {
+  rm -rf "$WORK_DIR"
 }
 
-# Run command on replica and return output
+trap cleanup EXIT
+
+################################################################################
+# HELPER FUNCTIONS
+################################################################################
+
+# Query a replica via SSH
 query_replica() {
-  local replica=$1
+  local host=$1
   shift
-  local host=$(parse_replica "$replica")
   local cmd="$@"
   
   ssh $SSH_OPTS "$host" "$cmd" 2>/dev/null || echo "ERROR"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Parity Checks
-# ─────────────────────────────────────────────────────────────────────────────
+# Log section header
+log_section() {
+  log_info ""
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info "$1"
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
 
-log_section "Replica Parity Check ($CHECK_MODE mode)"
+################################################################################
+# CONNECTIVITY CHECK
+################################################################################
 
-declare -A git_commits
-declare -A env_hashes
-declare -A container_counts
-declare -A service_counts
-
-parity_issues=0
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Check 1: Git Commit Parity
-# ─────────────────────────────────────────────────────────────────────────────
-
-log_info "Check 1: Git commit parity..."
-
-for replica in "${REPLICAS[@]}"; do
-  host=$(parse_replica "$replica")
-  commit=$(query_replica "$replica" "cd code-server-enterprise && git rev-parse HEAD 2>/dev/null" | head -1)
-  git_commits["$host"]="$commit"
+check_replica_connectivity() {
+  log_info "Verifying all replicas are reachable..."
   
-  if [[ "$VERBOSE" == true ]]; then
-    log_info "  $host: $commit"
-  fi
-done
-
-# Compare all commits to first replica
-first_host=$(parse_replica "${REPLICAS[0]}")
-first_commit="${git_commits[$first_host]}"
-
-for host in "${!git_commits[@]}"; do
-  if [[ "$host" != "$first_host" ]]; then
-    if [[ "${git_commits[$host]}" != "$first_commit" ]]; then
-      log_error "  ❌ $host diverged from $first_host"
-      log_error "     $host: ${git_commits[$host]}"
-      log_error "     $first_host: $first_commit"
-      parity_issues=$((parity_issues + 1))
+  local all_reachable=1
+  for replica in "${REPLICAS[@]}"; do
+    if ssh $SSH_OPTS "$replica" "true" 2>/dev/null; then
+      log_info "  ✓ $replica reachable"
+    else
+      log_error "  ✗ $replica unreachable"
+      all_reachable=0
     fi
+  done
+  
+  if [[ $all_reachable -eq 0 ]]; then
+    log_fatal "Some replicas are unreachable. Cannot proceed with parity check."
+    return 2
   fi
-done
+  
+  return 0
+}
 
-if [[ $parity_issues -eq 0 ]]; then
-  log_info "  ✅ All replicas on commit: $first_commit"
+################################################################################
+# PARITY CHECKS
+################################################################################
+
+check_git_commit_parity() {
+  log_section "Check 1: Git Commit Parity"
+  
+  local work_file="$WORK_DIR/git-commits"
+  mkdir -p "$(dirname "$work_file")"
+  
+  # Collect git commits from all replicas
+  declare -A commits
+  for replica in "${REPLICAS[@]}"; do
+    log_debug "  Getting git commit from $replica..."
+    local commit
+    commit=$(query_replica "$replica" "cd code-server-enterprise && git rev-parse HEAD 2>/dev/null" | head -1)
+    
+    if [[ "$commit" == "ERROR" ]] || [[ -z "$commit" ]]; then
+      log_error "  ✗ Failed to get git commit from $replica"
+      CRITICAL_ERROR=1
+      return 1
+    fi
+    
+    commits["$replica"]="$commit"
+    echo "$replica: $commit" >> "$work_file"
+    log_info "  $replica: $commit"
+  done
+  
+  # Compare all to first replica
+  local first_replica="${REPLICAS[0]}"
+  local first_commit="${commits[$first_replica]}"
+  
+  for replica in "${REPLICAS[@]}"; do
+    if [[ "$replica" != "$first_replica" ]]; then
+      if [[ "${commits[$replica]}" != "$first_commit" ]]; then
+        log_error "  ✗ DIVERGENCE: $replica on ${commits[$replica]:0:7}... vs $first_replica on ${first_commit:0:7}..."
+        DIVERGENCE_FOUND=1
+        return 1
+      fi
+    fi
+  done
+  
+  log_info "  ✓ All replicas on same commit: ${first_commit:0:7}..."
+  return 0
+}
+
+check_running_services_parity() {
+  log_section "Check 2: Running Services Parity"
+  
+  local work_dir="$WORK_DIR/services"
+  mkdir -p "$work_dir"
+  
+  # Collect service lists from all replicas
+  for replica in "${REPLICAS[@]}"; do
+    log_debug "  Getting running services from $replica..."
+    local services
+    services=$(query_replica "$replica" "docker ps --format '{{.Names}}' 2>/dev/null | sort" | head -50)
+    
+    if [[ "$services" == "ERROR" ]] || [[ -z "$services" ]]; then
+      log_warn "  ⊘ Could not retrieve service list from $replica (docker may not be running)"
+      continue
+    fi
+    
+    echo "$services" > "$work_dir/${replica//@/_}"
+    
+    local count
+    count=$(echo "$services" | wc -l)
+    log_info "  $replica: $count services"
+  done
+  
+  # Compare service lists
+  if [[ $(find "$work_dir" -type f | wc -l) -lt 2 ]]; then
+    log_warn "  ⊘ Could not retrieve service lists from both replicas"
+    return 0
+  fi
+  
+  local first_file
+  first_file=$(find "$work_dir" -type f | head -1)
+  
+  local first_replica=$(basename "$first_file" | sed 's/_/@/')
+  
+  for service_file in "$work_dir"/*; do
+    local replica=$(basename "$service_file" | sed 's/_/@/')
+    
+    if [[ "$service_file" != "$first_file" ]]; then
+      if ! diff -q "$first_file" "$service_file" >/dev/null 2>&1; then
+        log_error "  ✗ DIVERGENCE: Services differ between replicas"
+        log_error "    Diff:"
+        diff -u <(sed 's/^/      /' "$first_file") <(sed 's/^/      /' "$service_file") || true
+        DIVERGENCE_FOUND=1
+        return 1
+      fi
+    fi
+  done
+  
+  local count
+  count=$(wc -l < "$first_file")
+  log_info "  ✓ All replicas running identical $count services"
+  return 0
+}
+
+check_compose_profiles_parity() {
+  log_section "Check 3: COMPOSE_PROFILES Parity"
+  
+  local work_file="$WORK_DIR/profiles"
+  mkdir -p "$(dirname "$work_file")"
+  
+  # Collect COMPOSE_PROFILES from all replicas
+  declare -A profiles
+  for replica in "${REPLICAS[@]}"; do
+    log_debug "  Getting COMPOSE_PROFILES from $replica..."
+    local profile
+    profile=$(query_replica "$replica" "cd code-server-enterprise && grep -E '^COMPOSE_PROFILES=' .env 2>/dev/null | cut -d= -f2- || echo 'NONE'")
+    
+    profiles["$replica"]="$profile"
+    echo "$replica: $profile" >> "$work_file"
+    log_info "  $replica: ${profile:-NONE}"
+  done
+  
+  # Compare all profiles
+  local first_replica="${REPLICAS[0]}"
+  local first_profile="${profiles[$first_replica]}"
+  
+  for replica in "${REPLICAS[@]}"; do
+    if [[ "$replica" != "$first_replica" ]]; then
+      if [[ "${profiles[$replica]}" != "$first_profile" ]]; then
+        log_error "  ✗ DIVERGENCE: $replica has '${profiles[$replica]}' vs $first_replica has '$first_profile'"
+        DIVERGENCE_FOUND=1
+        return 1
+      fi
+    fi
+  done
+  
+  log_info "  ✓ All replicas have same COMPOSE_PROFILES: ${first_profile:-NONE}"
+  return 0
+}
+
+################################################################################
+# MAIN EXECUTION
+################################################################################
+
+log_section "Starting Replica Parity Check"
+log_info "Replicas: ${REPLICAS[*]}"
+log_info ""
+
+# Connectivity check first
+if ! check_replica_connectivity; then
+  log_fatal "Cannot proceed without replica connectivity"
 fi
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Check 2: Configuration File Parity (.env)
-# ─────────────────────────────────────────────────────────────────────────────
+log_info ""
 
-log_info "Check 2: Configuration file parity (.env)..."
+# Run all parity checks
+check_git_commit_parity || true
+check_running_services_parity || true
+check_compose_profiles_parity || true
 
-for replica in "${REPLICAS[@]}"; do
-  host=$(parse_replica "$replica")
-  # Hash .env files, ignoring runtime variables
-  env_hash=$(query_replica "$replica" "cd code-server-enterprise && md5sum .env 2>/dev/null | awk '{print \$1}'" | head -1)
-  env_hashes["$host"]="$env_hash"
-  
-  if [[ "$VERBOSE" == true ]]; then
-    log_info "  $host: $env_hash"
-  fi
-done
+################################################################################
+# FINAL SUMMARY
+################################################################################
 
-# Compare all hashes
-first_env_hash="${env_hashes[$first_host]}"
+log_section "Parity Check Summary"
 
-for host in "${!env_hashes[@]}"; do
-  if [[ "$host" != "$first_host" ]]; then
-    if [[ "${env_hashes[$host]}" != "$first_env_hash" ]]; then
-      log_error "  ❌ $host .env differs from $first_host"
-      parity_issues=$((parity_issues + 1))
-    fi
-  fi
-done
-
-if [[ $parity_issues -eq 0 ]] || [[ -z "$first_env_hash" ]]; then
-  if [[ -n "$first_env_hash" ]]; then
-    log_info "  ✅ All .env files synchronized (hash: ${first_env_hash:0:8}...)"
-  else
-    log_warn "  ⊘ Could not verify .env (may not exist locally)"
-  fi
-fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Check 3: Container Count Parity
-# ─────────────────────────────────────────────────────────────────────────────
-
-log_info "Check 3: Docker container count parity..."
-
-for replica in "${REPLICAS[@]}"; do
-  host=$(parse_replica "$replica")
-  count=$(query_replica "$replica" "cd code-server-enterprise && docker-compose ps -q 2>/dev/null | wc -l" | head -1)
-  container_counts["$host"]="$count"
-  
-  if [[ "$VERBOSE" == true ]]; then
-    log_info "  $host: $count containers"
-  fi
-done
-
-# Compare container counts
-first_count="${container_counts[$first_host]}"
-
-for host in "${!container_counts[@]}"; do
-  if [[ "$host" != "$first_host" ]]; then
-    if [[ "${container_counts[$host]}" != "$first_count" ]]; then
-      log_error "  ❌ $host has ${container_counts[$host]} containers, $first_host has $first_count"
-      parity_issues=$((parity_issues + 1))
-    fi
-  fi
-done
-
-if [[ $parity_issues -eq 0 ]] && [[ -n "$first_count" ]]; then
-  log_info "  ✅ All replicas running $first_count containers"
-fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Check 4: Service Health Parity
-# ─────────────────────────────────────────────────────────────────────────────
-
-log_info "Check 4: Service health parity..."
-
-for replica in "${REPLICAS[@]}"; do
-  host=$(parse_replica "$replica")
-  # Count healthy services (those in "Up" or "Up (healthy)" state)
-  healthy=$(query_replica "$replica" "cd code-server-enterprise && docker-compose ps 2>/dev/null | grep -c 'Up' || echo 0" | head -1)
-  service_counts["$host"]="$healthy"
-  
-  if [[ "$VERBOSE" == true ]]; then
-    log_info "  $host: $healthy services healthy"
-  fi
-done
-
-# Compare healthy service counts
-first_healthy="${service_counts[$first_host]}"
-
-for host in "${!service_counts[@]}"; do
-  if [[ "$host" != "$first_host" ]]; then
-    if [[ "${service_counts[$host]}" != "$first_healthy" ]]; then
-      log_error "  ❌ $host has ${service_counts[$host]} healthy services, $first_host has $first_healthy"
-      parity_issues=$((parity_issues + 1))
-    fi
-  fi
-done
-
-if [[ $parity_issues -eq 0 ]] && [[ -n "$first_healthy" ]]; then
-  log_info "  ✅ All replicas have $first_healthy healthy services"
-fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Summary
-# ─────────────────────────────────────────────────────────────────────────────
-
-log_section "Parity Summary"
-
-if [[ $parity_issues -eq 0 ]]; then
-  log_info "✅ Perfect replica parity"
-  log_info "   - Git commits synchronized"
-  log_info "   - Configuration files synchronized"
-  log_info "   - Container counts identical"
-  log_info "   - Service health synchronized"
+if [[ $DIVERGENCE_FOUND -eq 0 ]]; then
+  log_info "✓ All replicas are in perfect parity"
   exit 0
+elif [[ $CRITICAL_ERROR -ne 0 ]]; then
+  log_error "✗ Critical errors encountered during parity check"
+  exit 2
 else
-  log_error "❌ Detected $parity_issues parity issue(s)"
-  log_error ""
-  log_error "Recommendation for $CHECK_MODE:"
-  
-  case "$CHECK_MODE" in
-    pre-deploy)
-      log_error "  1. Fix parity issues before deploying"
-      log_error "  2. Run: bash scripts/ops/sync-replicas.sh"
-      log_error "  3. Re-run this check"
-      ;;
-    post-deploy)
-      log_error "  1. Deployment completed but replicas diverged"
-      log_error "  2. Investigate deployment logs"
-      log_error "  3. Consider rolling back and retrying"
-      ;;
-    *)
-      log_error "  Review divergence and manually sync if needed"
-      ;;
-  esac
-  
+  log_error "✗ Divergence detected across replicas - manual intervention required"
   exit 1
 fi

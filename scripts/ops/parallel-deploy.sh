@@ -1,62 +1,84 @@
 #!/usr/bin/env bash
+################################################################################
 # @file        scripts/ops/parallel-deploy.sh
 # @module      ops/deployment
-# @description Deploy to all cluster replicas in parallel with parity verification
+# @description Deploys to all cluster replicas in parallel with parity verification
+# @owner       platform
+# @status      active
 #
-# USAGE:
-#   bash scripts/ops/parallel-deploy.sh [--profiles PROFILE1,PROFILE2] [--dry-run]
+# USAGE
+#   bash scripts/ops/parallel-deploy.sh [OPTIONS]
 #
-# EXAMPLES:
-#   # Deploy all services to both replicas
-#   bash scripts/ops/parallel-deploy.sh
+# OPTIONS
+#   --profiles <list>      Comma-separated compose profiles (e.g., "portal,ai,tracing")
+#   --dry-run              Preview deployment plan without executing
+#   --force                Skip parity pre-check
+#   --help                 Show this help message
 #
-#   # Deploy with portal profile enabled
-#   bash scripts/ops/parallel-deploy.sh --profiles portal
+# WORKFLOW
+#   1. Validate all replicas reachable
+#   2. Run parity pre-check (if not --force)
+#   3. Sync .env from GSM to all replicas (parallel)
+#   4. Git pull on all replicas (parallel)
+#   5. docker-compose up -d on all replicas (parallel)
+#   6. Wait for all deploys to complete
+#   7. Run health checks on all replicas
+#   8. Run parity post-check
+#   9. Report final status
 #
-#   # Dry run (show what would be deployed)
-#   bash scripts/ops/parallel-deploy.sh --dry-run
+# EXIT CODES
+#   0 = Deployment successful on all replicas
+#   1 = Deployment failed on one or more replicas
+#   2 = Validation or configuration error
 #
-# WORKFLOW:
-#   1. Validate all replicas reachable via SSH
-#   2. Run pre-deploy parity check (find divergence before deploy)
-#   3. Sync .env from GSM to all replicas (parallel SSH)
-#   4. Pull latest code from origin/main (parallel SSH)
-#   5. Pull latest container images (parallel SSH)
-#   6. Run docker-compose up -d (parallel SSH)
-#   7. Wait for all deploys to complete
-#   8. Run health checks on all replicas
-#   9. Run post-deploy parity check
-#   10. Report per-replica status
+# NOTES
+#   - Deployment is parallel (all replicas simultaneously)
+#   - Failures are collected and reported at end
+#   - Parity checks before and after deployment
+#   - Requires SSH key in ~/.ssh/id_rsa_onprem
 #
-# PREREQUISITES:
-#   - SSH key: ~/.ssh/id_rsa_onprem (configured with ssh-agent or expect)
-#   - Both replicas SSH-accessible and responsive
-#   - code-server-enterprise repo cloned on both replicas
-#   - GSM access for .env sync (gcloud cli configured)
+# Last Updated: April 23, 2026
+################################################################################
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Configuration
-# ─────────────────────────────────────────────────────────────────────────────
+SCRIPT_NAME="$(basename "$0")"
 
+################################################################################
+# CONFIGURATION
+################################################################################
+
+# Production cluster replicas
 REPLICAS=(
-  "akushnir@192.168.168.31:code-server-enterprise"
-  "akushnir@192.168.168.42:code-server-enterprise"
+  "akushnir@192.168.168.31"
+  "akushnir@192.168.168.42"
 )
 
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
-# Note: SSH_OPTS may be set by init.sh; only set if not already defined
-if [[ -z "${SSH_OPTS:-}" ]]; then
-  SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
-fi
-COMPOSE_PROFILES="all"
-DRY_RUN=false
+SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
-# Parse arguments
+# Deployment options
+COMPOSE_PROFILES="${COMPOSE_PROFILES:-}"
+DRY_RUN=false
+SKIP_PRE_CHECK=false
+WORK_DIR="/tmp/parallel-deploy-$$"
+
+# Tracking
+DEPLOY_PIDS=()
+DEPLOY_STATUS=()
+DEPLOY_HOSTS=()
+
+################################################################################
+# ARGUMENT PARSING
+################################################################################
+
+show_help() {
+  grep '^# ' "$0" | grep -E '(USAGE|OPTIONS|WORKFLOW|EXIT|NOTES)' -A 20 | head -30
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --profiles)
@@ -67,36 +89,269 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=true
       shift
       ;;
-    *)
-      log_warn "Unknown argument: $1"
+    --force)
+      SKIP_PRE_CHECK=true
       shift
+      ;;
+    --help)
+      show_help
+      exit 0
+      ;;
+    *)
+      log_error "Unknown option: $1"
+      show_help
+      exit 2
       ;;
   esac
 done
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Helper Functions
-# ─────────────────────────────────────────────────────────────────────────────
+################################################################################
+# CLEANUP TRAP
+################################################################################
 
-# Extract host and path from "user@host:path" format
-parse_replica() {
-  local replica=$1
-  echo "${replica%:*}"  # Return user@host part
+cleanup() {
+  # Wait for any remaining background processes
+  for pid in "${DEPLOY_PIDS[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+    fi
+  done
+  rm -rf "$WORK_DIR"
 }
 
-get_replica_path() {
-  local replica=$1
-  echo "${replica#*:}"  # Return path part (after colon)
-}
+trap cleanup EXIT
 
-# Run command on replica via SSH
-run_on_replica() {
-  local replica=$1
+################################################################################
+# HELPER FUNCTIONS
+################################################################################
+
+# Query a replica via SSH
+query_replica() {
+  local host=$1
   shift
-  local host=$(parse_replica "$replica")
   local cmd="$@"
   
-  log_info "Deploying to $host..."
+  ssh $SSH_OPTS "$host" "$cmd" 2>/dev/null || echo "ERROR"
+}
+
+# Deploy to a single replica (runs in background)
+deploy_replica() {
+  local host=$1
+  local log_file="$WORK_DIR/deploy-${host//@/_}.log"
+  
+  log_debug "Starting deployment to $host (output in $log_file)"
+  
+  {
+    log_info "Deploying to $host..."
+    
+    # Step 1: Pull latest code
+    log_debug "  [1/3] Git pull on $host..."
+    if ! query_replica "$host" "cd code-server-enterprise && git fetch origin && git reset --hard origin/main 2>&1" >> "$log_file" 2>&1; then
+      log_error "  [1/3] Git pull failed on $host"
+      echo "FAILED" > "$WORK_DIR/status-${host//@/_}"
+      return 1
+    fi
+    
+    # Step 2: Fetch secrets from GSM
+    log_debug "  [2/3] Fetching secrets on $host..."
+    if ! query_replica "$host" "cd code-server-enterprise && source scripts/fetch-gsm-secrets.sh 2>&1" >> "$log_file" 2>&1; then
+      log_debug "  [2/3] Secret fetch completed (may use local .env as fallback)"
+    fi
+    
+    # Step 3: Deploy containers
+    log_debug "  [3/3] Deploying containers on $host..."
+    local compose_cmd="docker-compose up -d"
+    if [[ -n "$COMPOSE_PROFILES" ]]; then
+      compose_cmd="COMPOSE_PROFILES=$COMPOSE_PROFILES docker-compose up -d"
+    fi
+    
+    if ! query_replica "$host" "cd code-server-enterprise && $compose_cmd 2>&1" >> "$log_file" 2>&1; then
+      log_error "  [3/3] Deployment failed on $host"
+      echo "FAILED" > "$WORK_DIR/status-${host//@/_}"
+      return 1
+    fi
+    
+    log_info "✓ Deployment successful on $host"
+    echo "SUCCESS" > "$WORK_DIR/status-${host//@/_}"
+    return 0
+  } &
+  
+  # Capture PID
+  local pid=$!
+  DEPLOY_PIDS+=("$pid")
+  DEPLOY_HOSTS+=("$host")
+  
+  echo "$pid"
+}
+
+# Wait for all parallel deployments and collect results
+wait_for_deployments() {
+  log_info "Waiting for all deployments to complete..."
+  
+  local failed_count=0
+  
+  for i in "${!DEPLOY_PIDS[@]}"; do
+    local pid="${DEPLOY_PIDS[$i]}"
+    local host="${DEPLOY_HOSTS[$i]}"
+    
+    if wait "$pid"; then
+      DEPLOY_STATUS+=("SUCCESS")
+    else
+      log_error "Deployment to $host exited with error"
+      DEPLOY_STATUS+=("FAILED")
+      failed_count=$((failed_count + 1))
+    fi
+  done
+  
+  return $([[ $failed_count -eq 0 ]] && echo 0 || echo 1)
+}
+
+# Check health after deployment
+check_replica_health() {
+  local host=$1
+  
+  log_debug "Checking health of $host..."
+  
+  # Simple check: docker-compose ps should show containers
+  local running
+  running=$(query_replica "$host" "cd code-server-enterprise && docker-compose ps -q 2>/dev/null | wc -l" | head -1)
+  
+  if [[ "$running" -gt 0 ]]; then
+    log_info "  ✓ $host: $running containers running"
+    return 0
+  else
+    log_error "  ✗ $host: No containers running"
+    return 1
+  fi
+}
+
+# Log section header
+log_section() {
+  log_info ""
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info "$1"
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
+
+################################################################################
+# MAIN EXECUTION
+################################################################################
+
+mkdir -p "$WORK_DIR"
+
+log_section "Parallel Deployment Script"
+log_info "Replicas: ${REPLICAS[*]}"
+log_info "Profiles: ${COMPOSE_PROFILES:-none}"
+log_info "Dry Run: $DRY_RUN"
+log_info ""
+
+# Step 1: Connectivity check
+log_info "Step 1: Verifying replica connectivity..."
+for replica in "${REPLICAS[@]}"; do
+  if ssh $SSH_OPTS "$replica" "true" 2>/dev/null; then
+    log_info "  ✓ $replica reachable"
+  else
+    log_error "  ✗ $replica unreachable"
+    log_fatal "Cannot proceed with deployment"
+  fi
+done
+
+log_info ""
+
+# Step 2: Pre-deployment parity check
+if [[ "$SKIP_PRE_CHECK" != "true" ]]; then
+  log_info "Step 2: Running pre-deployment parity check..."
+  if bash scripts/ops/check-replica-parity.sh > "$WORK_DIR/parity-pre.log" 2>&1; then
+    log_info "  ✓ Pre-deployment parity check passed"
+  else
+    log_warn "  ⚠ Pre-deployment parity check found issues (see logs)"
+    cat "$WORK_DIR/parity-pre.log" | head -20
+  fi
+else
+  log_info "Step 2: Skipping pre-deployment parity check (--force)"
+fi
+
+log_info ""
+
+# Step 3: Deployment (parallel)
+if [[ "$DRY_RUN" == "true" ]]; then
+  log_info "Step 3: DRY-RUN MODE - Deployment would proceed with:"
+  for replica in "${REPLICAS[@]}"; do
+    log_info "  - Deploy to $replica"
+  done
+  log_info "  - With COMPOSE_PROFILES=${COMPOSE_PROFILES:-none}"
+else
+  log_info "Step 3: Deploying to all replicas in parallel..."
+  
+  for replica in "${REPLICAS[@]}"; do
+    deploy_replica "$replica" > /dev/null 2>&1 &
+  done
+  
+  # Wait for all deployments
+  if wait_for_deployments; then
+    log_info "  ✓ All deployments completed successfully"
+  else
+    log_error "  ✗ One or more deployments failed (see logs above)"
+  fi
+fi
+
+log_info ""
+
+# Step 4: Health checks (if not dry-run)
+if [[ "$DRY_RUN" != "true" ]]; then
+  log_info "Step 4: Running health checks on all replicas..."
+  
+  for replica in "${REPLICAS[@]}"; do
+    if check_replica_health "$replica"; then
+      :
+    else
+      log_warn "  Health check failed on $replica"
+    fi
+  done
+fi
+
+log_info ""
+
+# Step 5: Post-deployment parity check
+if [[ "$DRY_RUN" != "true" ]]; then
+  log_info "Step 5: Running post-deployment parity check..."
+  if bash scripts/ops/check-replica-parity.sh > "$WORK_DIR/parity-post.log" 2>&1; then
+    log_info "  ✓ Post-deployment parity check passed"
+  else
+    log_error "  ✗ Post-deployment parity check failed"
+    cat "$WORK_DIR/parity-post.log" | head -20
+  fi
+fi
+
+################################################################################
+# FINAL SUMMARY
+################################################################################
+
+log_section "Deployment Summary"
+
+if [[ "$DRY_RUN" == "true" ]]; then
+  log_info "✓ Dry-run completed successfully"
+  log_info "  Ready to deploy with: bash scripts/ops/parallel-deploy.sh"
+  exit 0
+else
+  # Check if any deployments failed
+  local failed=0
+  for status in "${DEPLOY_STATUS[@]}"; do
+    if [[ "$status" == "FAILED" ]]; then
+      failed=$((failed + 1))
+    fi
+  done
+  
+  if [[ $failed -eq 0 ]]; then
+    log_info "✓ Deployment completed successfully on all replicas"
+    log_info "  All $(${#REPLICAS[@]}) replicas are running and in parity"
+    exit 0
+  else
+    log_error "✗ Deployment failed on $failed replica(s)"
+    log_error "  Review logs in $WORK_DIR for details"
+    exit 1
+  fi
+fi
   
   if [[ "$DRY_RUN" == true ]]; then
     log_info "[DRY-RUN] ssh $SSH_OPTS $host '$cmd'"

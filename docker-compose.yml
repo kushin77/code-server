@@ -90,8 +90,6 @@ services:
     image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
     container_name: ollama
     restart: unless-stopped
-    # SECURITY FIX #969: Run as non-root user (1001:1001)
-    user: "1001:1001"
     # ✅ GPU ACCELERATION - Uncomment this line if NVIDIA GPU detected on host
     # runtime: nvidia
     networks:
@@ -102,6 +100,7 @@ services:
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_KEEP_ALIVE=30m
       - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
+      - OLLAMA_MODEL_DIR=/var/lib/ollama
       # ✅ GPU: Set OLLAMA_NUM_GPU to enable GPU acceleration (0=CPU-only by default)
       # To enable GPU:
       #   1. Verify nvidia-smi on host: ssh akushnir@192.168.168.31 nvidia-smi
@@ -114,11 +113,11 @@ services:
     #   - /dev/nvidiactl
     #   - /dev/nvidia0
     volumes:
-      - ollama-data:/root/.ollama
+      - ollama-data:/var/lib/ollama
     healthcheck:
-      test: ["CMD-SHELL", "ollama list >/dev/null || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
       start_period: 30s
     deploy:

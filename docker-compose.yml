@@ -525,9 +525,9 @@ services:
       - postgres-backup:/var/lib/postgresql/backup
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codeserver} -d ${POSTGRES_DB:-codeserver}"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
-      retries: 5
+      retries: 3
       start_period: 10s
     deploy:
       resources:
@@ -574,7 +574,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER:-codeserver} >/dev/null 2>&1"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s

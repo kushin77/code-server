@@ -24,7 +24,13 @@ log_info "Dry run: $([[ $DRY_RUN -eq 1 ]] && echo yes || echo no)"
 
 # Verify SSH access
 verify_ssh_access() {
-  if ! ssh "${SSH_OPTS[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" true 2>/dev/null; then
+  if [[ $DRY_RUN -eq 1 ]]; then
+    log_info "[dry-run] Skipping SSH verification in dry-run mode"
+    return 0
+  fi
+  
+  # SSH_OPTS is a string from config.sh with options separated by spaces
+  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" true 2>/dev/null; then
     log_fatal "SSH access failed to ${DEPLOY_USER}@${REPLICA_HOST}"
   fi
   log_info "SSH access verified"
@@ -32,15 +38,15 @@ verify_ssh_access() {
 
 # Fix ownership recursively
 fix_ownership() {
-  local remote_cmd="sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ~/${DEPLOY_DIR}/"
+  local remote_cmd="sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${DEPLOY_DIR}/"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh ${SSH_OPTS[*]} ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
   log_info "Fixing file ownership on $REPLICA_HOST..."
-  if ! ssh "${SSH_OPTS[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
     log_error "Failed to fix ownership. Ensure sudo is configured for $DEPLOY_USER without password prompt."
     return 1
   fi
@@ -49,7 +55,7 @@ fix_ownership() {
 
 # Clean git state
 clean_git_state() {
-  local remote_cmd="cd ~/${DEPLOY_DIR} && git clean -fdx && git reset --hard origin/main"
+  local remote_cmd="cd ${DEPLOY_DIR} && git clean -fdx && git reset --hard origin/main"
   
   if [[ $DRY_RUN -eq 1 ]]; then
     log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
@@ -66,7 +72,7 @@ clean_git_state() {
 
 # Pull latest and redeploy
 redeploy() {
-  local remote_cmd="cd ~/${DEPLOY_DIR} && git pull --ff-only origin main && docker compose pull && docker compose up -d"
+  local remote_cmd="cd ${DEPLOY_DIR} && git pull --ff-only origin main && docker compose pull && docker compose up -d"
   
   if [[ $DRY_RUN -eq 1 ]]; then
     log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
@@ -90,10 +96,10 @@ verify_git_status() {
     return 0
   fi
   
-  local commit_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ~/${DEPLOY_DIR} && git rev-parse --short HEAD")
+  local commit_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short HEAD")
   log_info "Replica 1 commit: $commit_sha"
   
-  local main_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ~/${DEPLOY_DIR} && git rev-parse --short origin/main")
+  local main_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short origin/main")
   log_info "Main branch commit: $main_sha"
   
   if [[ "$commit_sha" == "$main_sha" ]]; then

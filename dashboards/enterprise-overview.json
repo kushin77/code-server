@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+# @file        dashboards/enterprise-overview.json
+# @module      dashboards/grafana
+# @description Grafana dashboard for enterprise control plane
+
+{
+  "dashboard": {
+    "title": "Enterprise Control Plane - Multi-Org Overview",
+    "description": "Real-time risk aggregation, policy propagation status, compliance tracking",
+    "tags": ["control-plane", "enterprise", "governance"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Aggregated Risk Score",
+        "type": "gauge",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "control_plane_aggregated_risk_score",
+            "legendFormat": "Risk %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 70}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Org Risk Distribution",
+        "type": "bargauge",
+        "gridPos": {"x": 6, "y": 0, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "control_plane_org_risk_score",
+            "legendFormat": "{{ org_id }}"
+          }
+        ],
+        "options": {
+          "orientation": "auto",
+          "textMode": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Policy Propagation Status",
+        "type": "table",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "control_plane_policy_propagation_status",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "org_id": "Organization",
+                "policy_id": "Policy",
+                "status": "Status",
+                "acknowledged": "Acked",
+                "last_update": "Last Update"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "displayMode": "color-background",
+              "inspect": false
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Status"},
+              "properties": [
+                {
+                  "id": "custom.displayMode",
+                  "value": "color-background"
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"type": "value", "options": {"Propagating": {"color": "blue"}}},
+                    {"type": "value", "options": {"Acknowledged": {"color": "green"}}},
+                    {"type": "value", "options": {"Failed": {"color": "red"}}},
+                    {"type": "value", "options": {"Suspended": {"color": "dark-red"}}}
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 4,
+        "title": "Incident Rate (7d rolling avg)",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 8, "w": 8, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(control_plane_incidents_total[7d])",
+            "legendFormat": "{{ org_id }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "calcs": ["mean", "max"],
+            "displayMode": "table"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Deployment Failure Rate (7d)",
+        "type": "timeseries",
+        "gridPos": {"x": 8, "y": 8, "w": 8, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(control_plane_deploy_failures_total[7d])",
+            "legendFormat": "{{ org_id }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "calcs": ["mean", "max"],
+            "displayMode": "table"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Policy Denials (hourly)",
+        "type": "barchart",
+        "gridPos": {"x": 16, "y": 8, "w": 8, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(control_plane_policy_denials_total[1h])",
+            "legendFormat": "{{ org_id }}"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Compliance Status - Last 90 Days",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 16, "w": 6, "h": 6},
+        "targets": [
+          {
+            "expr": "control_plane_compliance_score",
+            "legendFormat": "Compliance %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 80},
+                {"color": "green", "value": 95}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "SOC2 Control Pass Rate",
+        "type": "gauge",
+        "gridPos": {"x": 6, "y": 16, "w": 6, "h": 6},
+        "targets": [
+          {
+            "expr": "control_plane_soc2_pass_rate * 100",
+            "legendFormat": "Pass %"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "NIST 800-53 Compliance",
+        "type": "gauge",
+        "gridPos": {"x": 12, "y": 16, "w": 6, "h": 6},
+        "targets": [
+          {
+            "expr": "control_plane_nist_compliance_score * 100",
+            "legendFormat": "Compliant %"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Org Federation Health",
+        "type": "status-history",
+        "gridPos": {"x": 18, "y": 16, "w": 6, "h": 6},
+        "targets": [
+          {
+            "expr": "control_plane_federation_health",
+            "legendFormat": "{{ org_id }}"
+          }
+        ]
+      }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 36,
+    "style": "dark",
+    "templating": {
+      "list": [
+        {
+          "name": "org_id",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(control_plane_org_risk_score, org_id)",
+          "multi": true,
+          "includeAll": true,
+          "current": {"text": "All", "value": "$__all"}
+        }
+      ]
+    },
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    }
+  },
+  "overwrite": true
+}

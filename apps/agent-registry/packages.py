@@ -61,6 +61,7 @@ class PackageStore:
             self.packages[namespace][version] = {
                 "agent_id": agent_id,
                 "metadata": metadata,
+                "content": content,
                 "content_hash": hashlib.sha256(content).hexdigest(),
                 "size_bytes": len(content),
                 "published_at": datetime.utcnow().isoformat(),
@@ -88,6 +89,27 @@ class PackageStore:
         except Exception as e:
             logger.error(f"Error retrieving package: {e}")
             return None
+
+    def get_package(self, agent_id: str, version: Optional[str] = None) -> Optional[dict]:
+        """Retrieve a package by ID with an optional version guard"""
+        try:
+            pkg = self.get(agent_id)
+            if not pkg:
+                return None
+
+            namespace, stored_version = self.index[agent_id]
+            if version is not None and version != stored_version:
+                return None
+
+            return {
+                "agent_id": agent_id,
+                "namespace": namespace,
+                "version": stored_version,
+                **pkg,
+            }
+        except Exception as e:
+            logger.error(f"Error retrieving package by version: {e}")
+            return None
     
     def list_by_namespace(self, namespace: str) -> List[dict]:
         """Get all versions of an agent"""
@@ -96,12 +118,62 @@ class PackageStore:
         
         versions = []
         for version, metadata in self.packages[namespace].items():
+            package_metadata = dict(metadata.get("metadata", {}))
             versions.append({
+                "agent_id": metadata.get("agent_id"),
                 "version": version,
-                **metadata
+                "namespace": namespace,
+                "metadata": package_metadata,
+                "published_at": metadata.get("published_at"),
+                "signature_verified": metadata.get("signature_verified", False),
+                "install_count": package_metadata.get("install_count", 0),
+                "reputation_score": package_metadata.get("reputation_score", 0),
+                "rating": package_metadata.get("rating", 0.0),
+                "category": package_metadata.get("category"),
+                "description": package_metadata.get("description"),
+                "author": package_metadata.get("author"),
+                "pricing_tier": package_metadata.get("pricing_tier", "free"),
+                "capabilities": package_metadata.get("capabilities", []),
             })
         
         return sorted(versions, key=lambda x: x["published_at"], reverse=True)
+
+    def list_all_latest(self) -> List[dict]:
+        """List the latest version of every agent in the registry"""
+        latest_agents = []
+
+        for namespace in self.packages:
+            versions = self.list_by_namespace(namespace)
+            if versions:
+                latest_agents.append(versions[0])
+
+        return latest_agents
+
+    def get_versions(self, agent_id: str) -> List[dict]:
+        """List all versions for the namespace associated with an agent ID"""
+        try:
+            if agent_id not in self.index:
+                return []
+
+            namespace, _ = self.index[agent_id]
+            return self.list_by_namespace(namespace)
+        except Exception as e:
+            logger.error(f"Error listing package versions: {e}")
+            return []
+
+    def increment_installs(self, agent_id: str) -> int:
+        """Increment the install count for a package and return the new value"""
+        try:
+            pkg = self.get(agent_id)
+            if not pkg:
+                raise ValueError(f"Agent {agent_id} not found")
+
+            metadata = pkg["metadata"]
+            metadata["install_count"] = int(metadata.get("install_count", 0)) + 1
+            return metadata["install_count"]
+        except Exception as e:
+            logger.error(f"Error incrementing installs: {e}")
+            raise
     
     def verify_signature(self, agent_id: str, signature: str) -> bool:
         """

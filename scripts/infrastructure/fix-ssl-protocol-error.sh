@@ -59,8 +59,8 @@ log_section() {
 }
 
 run_remote() {
-    local cmd="$1"
-    local desc="${2:-}"
+cmd="$1"
+desc="${2:-}"
     
     if [ -n "$desc" ]; then
         if [ "$DRY_RUN" = true ]; then
@@ -107,7 +107,7 @@ step_verify_caddy() {
         "cd ${PRIMARY_PATH} && docker ps | grep caddy | grep -E 'healthy|Up'" \
         "Checking Caddy status..."
     
-    local caddy_status=$?
+caddy_status=$?
     if [ $caddy_status -eq 0 ]; then
         log_success "Caddy is running and healthy"
     else
@@ -170,7 +170,7 @@ step_fix_session_broker() {
         "Getting image digest..."
     
     if [ "$EXECUTE" = true ]; then
-        local digest
+digest
         digest=$(ssh -o ConnectTimeout=5 "${PRIMARY_USER}@${PRIMARY_HOST}" \
             "cd ${PRIMARY_PATH} && docker images code-server-enterprise:dev --digests --quiet | head -1")
         
@@ -185,9 +185,9 @@ step_fix_session_broker() {
         run_remote \
             "cd ${PRIMARY_PATH} && \
              if grep -q 'CODE_SERVER_IMAGE_ID' .env; then \
-                 sed -i.bak \"s|CODE_SERVER_IMAGE_ID=.*|CODE_SERVER_IMAGE_ID=code-server-enterprise@${digest}|\" .env; \
+                 sed -i.bak "\"s|CODE_SERVER_IMAGE_ID=.*|CODE_SERVER_IMAGE_ID=code-server-enterprise@${digest}|"\" .env; \
              else \
-                 echo \"CODE_SERVER_IMAGE_ID=code-server-enterprise@${digest}\" >> .env; \
+                 echo "\"CODE_SERVER_IMAGE_ID=code-server-enterprise@${digest}"\" >> .env; \
              fi && \
              grep CODE_SERVER_IMAGE_ID .env" \
             "Updating CODE_SERVER_IMAGE_ID in .env..."

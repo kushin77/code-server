@@ -62,11 +62,11 @@ SQL
 }
 
 alert_on_pattern() {
-    local count="$1"
-    local msg="$2"
-    local hash="$3"
+count="$1"
+msg="$2"
+hash="$3"
 
-    local existing_issue
+existing_issue
     existing_issue=$("$SQLITE3" "$TRIAGE_DB" "SELECT github_issue_number FROM error_patterns WHERE pattern_hash = '$hash' AND github_issue_number IS NOT NULL LIMIT 1;")
     if [[ -n "$existing_issue" ]]; then
         return 0
@@ -87,8 +87,8 @@ alert_on_pattern() {
     # shellcheck source=/dev/null
     source "$ISSUE_CREATE_HELPER"
 
-    local issue_title="[AUTO-TRIAGE] Error Pattern: ${msg:0:60}..."
-    local issue_body
+issue_title="[AUTO-TRIAGE] Error Pattern: ${msg:0:60}..."
+issue_body
     issue_body=$(cat <<'BODY'
 ## Automated Error Detection Report
 
@@ -115,7 +115,7 @@ BODY
     issue_body="${issue_body//COUNT_PLACEHOLDER/$count}"
     issue_body="${issue_body//MSG_PLACEHOLDER/$msg}"
 
-    local issue_url
+issue_url
     issue_url=$(copilot_create_issue \
         --title "$issue_title" \
         --body "$issue_body" \
@@ -127,7 +127,7 @@ BODY
         return 1
     }
 
-    local new_issue_number
+new_issue_number
     new_issue_number=$(printf '%s' "$issue_url" | grep -oE 'issues/[0-9]+' | awk -F/ '{print $NF}' || true)
 
     if [[ -n "$new_issue_number" ]]; then
@@ -139,10 +139,10 @@ BODY
 }
 
 query_loki() {
-    local query='{level=~"ERROR|FATAL|error|fatal"}'
-    local now_epoch
-    local start_epoch
-    local start
+query='{level=~"ERROR|FATAL|error|fatal"}'
+now_epoch
+start_epoch
+start
 
     now_epoch=$(date +%s)
     start_epoch=$((now_epoch - ERROR_TRIAGE_WINDOW))
@@ -161,10 +161,10 @@ query_loki() {
 }
 
 record_error() {
-    local count="$1"
-    local msg="$2"
-    local hash
-    local escaped_msg
+count="$1"
+msg="$2"
+hash
+escaped_msg
 
     hash=$(printf '%s' "$msg" | sha256sum | cut -d' ' -f1)
     escaped_msg=${msg//\'/\'\'}
@@ -180,7 +180,7 @@ record_error() {
 }
 
 scan_once() {
-    local patterns
+patterns
     patterns=$(query_loki)
 
     if [[ -z "${patterns// }" ]]; then
@@ -190,8 +190,8 @@ scan_once() {
 
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
-        local count
-        local msg
+count
+msg
         count=$(echo "$line" | awk '{print $1}')
         msg=$(echo "$line" | cut -d' ' -f2-)
         if [[ -n "$count" && -n "$msg" && "$count" -ge "$MIN_OCCURRENCE_THRESHOLD" ]]; then

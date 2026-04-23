@@ -87,9 +87,9 @@ log_info "Looking back: ${SINCE} | Dry run: ${DRY_RUN}"
 # ─── Fingerprint function ─────────────────────────────────────────────────────
 # Produces a stable SHA fingerprint for a given error line
 fingerprint() {
-  local container="$1" pattern="$2" line="$3"
+container="$1" pattern="$2" line="$3"
   # Normalize: strip timestamps, PIDs, hex addresses, line numbers
-  local normalized
+normalized
   normalized=$(echo "${line}" | \
     sed 's/[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9:\.Z+-]*//g' | \
     sed 's/\b0x[0-9a-fA-F]\+\b/ADDR/g' | \
@@ -140,9 +140,9 @@ log_info "Found ${#findings[@]} unique new error fingerprints."
 # ─── GitHub auto-triage ───────────────────────────────────────────────────────
 # Search for existing open issue with same fingerprint in title
 search_existing_issue() {
-  local fp="$1"
+fp="$1"
   gh issue list --repo "${REPO}" --state open --json number,title \
-    --jq ".[] | select(.title | contains(\"[${fp}]\")) | .number" 2>/dev/null | head -1
+    --jq ".[] | select(.title | contains("\"[${fp}]"\")) | .number" 2>/dev/null | head -1
 }
 
 filed_count=0

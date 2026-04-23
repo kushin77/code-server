@@ -26,7 +26,7 @@ REPORT_FILE="$OUT_DIR/error_triage_report_${WEEK_LABEL}.md"
 mkdir -p "$OUT_DIR"
 
 query_count() {
-  local q="$1"
+q="$1"
   gh api \
     -X GET search/issues \
     -f q="$q" \

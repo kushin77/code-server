@@ -418,7 +418,7 @@ This repository runs **EXCLUSIVELY on Linux** (Ubuntu on 192.168.168.31 / .42).
 
 ## Scope
 
-✅ **ONLY**: kushin77/code-server — on-prem VSCode server + infrastructure at 192.168.168.31/.42  
+✅ **ONLY**: kushin77/code-server — on-prem VSCode server + cluster at 192.168.168.31/.42 (active replicas)  
 ❌ **NEVER**: eiq-linkedin, GCP-landing-zone, code-server-enterprise, or any other repo
 
 ## Priority Order (execute in this order)
@@ -438,26 +438,94 @@ This repository runs **EXCLUSIVELY on Linux** (Ubuntu on 192.168.168.31 / .42).
 - GitHub Issues = SSOT. Memory files = ephemeral working notes only
 - Never PATCH closed issues — add comments only
 
-## Production Host
+## Production Cluster Architecture (April 23, 2026)
 
-- **Primary**: `ssh akushnir@192.168.168.31` — deploy from here (Docker runs here)
-- **Replica**: `192.168.168.42`
-- Deploy: `docker compose up -d` or `terraform apply` on remote host
+**Direction**: Multi-replica active cluster with loadbalancing and failover (3+ replicas, expanding)
 
-## Quick Reference
+### Replica Nodes (ALL ACTIVE, NO PRIMARY/SECONDARY)
+- **Replica 1**: `ssh akushnir@192.168.168.31` — Active replica, loadbalanced
+- **Replica 2**: `ssh akushnir@192.168.168.42` — Active replica, loadbalanced  
+- **Replica 3+**: TBD — Future replicas (same deployment model)
 
+### Cluster Components
+- **Loadbalancing**: HAProxy or Cloudflare (health-check based round-robin)
+- **Failover**: Automatic on health check failure (< 5s detection)
+- **Session State**: Redis HA (Sentinel or cluster mode, shared across replicas)
+- **Data**: PostgreSQL HA (Patroni, replication across replicas)
+- **Storage**: NAS (192.168.168.56, mounted on all replicas)
+
+### Deployment Model (Replicas Always Identical)
+- **Code**: Same git commit on all replicas
+- **Config**: Same .env (pulled from GSM), no replica-specific overrides
+- **Deployment**: Parallel deploy to all replicas (not sequential)
+
+### Non-Negotiables for Cluster
+✅ **ALWAYS**: Deploy to all replicas in parallel  
+✅ **ALWAYS**: Validate health checks after deployment  
+✅ **ALWAYS**: Test failover by isolating each replica  
+✅ **ALWAYS**: Keep replicas in sync (same code version, same config)  
+❌ **NEVER**: Deploy to only one replica (creates inconsistency)  
+❌ **NEVER**: Skip health check validation after deploy  
+❌ **NEVER**: Use replica-specific configs (defeats HA purpose)  
+
+### Deployment Commands
+
+**All replicas (parallel)**:
 ```bash
-# Core services only (no AI, no tracing overhead)
-docker compose up -d
+# SSH to each replica and deploy in parallel
+ssh akushnir@192.168.168.31 'cd code-server-enterprise && docker compose up -d' &
+ssh akushnir@192.168.168.42 'cd code-server-enterprise && docker compose up -d' &
+wait  # wait for both to complete
+```
 
-# With AI (Ollama LLM)
-COMPOSE_PROFILES=ai docker compose up -d
+**Per-replica (if needed for testing)**:
+```bash
+ssh akushnir@192.168.168.31 'docker compose -f code-server-enterprise/docker-compose.yml up -d'
+ssh akushnir@192.168.168.42 'docker compose -f code-server-enterprise/docker-compose.yml up -d'
+```
 
-# With distributed tracing
-COMPOSE_PROFILES=tracing docker compose up -d
-
-# Full stack
+**With profiles**:
+```bash
+# On each replica:
 COMPOSE_PROFILES=ai,tracing docker compose up -d
 ```
 
-**Last updated: April 18, 2026** | [All Issues](https://github.com/kushin77/code-server/issues) | [Deduplication Analysis](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md) | [Script Writing Guide](docs/SCRIPT-WRITING-GUIDE.md)
+### Quick Reference
+
+```bash
+# Deploy to replica 1
+ssh akushnir@192.168.168.31 'cd code-server-enterprise && docker compose up -d'
+
+# Deploy to replica 2
+ssh akushnir@192.168.168.42 'cd code-server-enterprise && docker compose up -d'
+
+# Check cluster health
+for host in 192.168.168.31 192.168.168.42; do
+  echo "=== $host ==="
+  ssh akushnir@$host 'docker compose ps'
+done
+
+# View loadbalancer status (if HAProxy)
+curl http://LOADBALANCER:8080/stats  # Replace LOADBALANCER with actual LB IP
+
+# Failover test: isolate replica (network off, then restore)
+ssh akushnir@192.168.168.31 'sudo iptables -I INPUT 1 -j DROP'  # Block traffic
+sleep 5
+ssh akushnir@192.168.168.31 'sudo iptables -D INPUT -j DROP'   # Restore
+```
+
+### Key Differences from Primary/Replica
+| Aspect | Old (Primary/Secondary) | New (Cluster) |
+|--------|---------|---------|
+| Traffic routing | Primary only | Round-robin all replicas |
+| Failover | Manual promotion | Automatic (< 5s) |
+| Deployment | Deploy primary first | Deploy all replicas parallel |
+| Scaling | Add secondary | Add new replica (no reconfiguration) |
+| Session state | Replica follows primary | Shared Redis (all see same state) |
+
+### Cluster Reference Docs
+- [production-cluster-architecture-v2.md](/memories/repo/production-cluster-architecture-v2.md) — Full architecture, Phase 1/2/3 plan
+- [deployment-operations-complete-guide.md](/memories/repo/deployment-operations-complete-guide.md) — Operational runbooks
+- [terraform-consolidation-status.md](/memories/repo/terraform-consolidation-status.md) — IaC for cluster
+
+**Last updated: April 23, 2026 (CLUSTER ARCHITECTURE)** | [All Issues](https://github.com/kushin77/code-server/issues) | [Deduplication Analysis](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md) | [Script Writing Guide](docs/SCRIPT-WRITING-GUIDE.md)

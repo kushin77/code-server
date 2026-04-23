@@ -18,7 +18,7 @@ Responsibilities:
 
 import logging
 from typing import Dict, List
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class UsageEvent:
         self.agent_id = agent_id
         self.org_id = org_id
         self.tokens = tokens
-        self.timestamp = timestamp or datetime.utcnow().isoformat()
+        self.timestamp = timestamp or datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 class BillingEngine:

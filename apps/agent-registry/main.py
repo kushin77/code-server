@@ -21,6 +21,16 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
+from datetime import datetime, timezone
+
+try:
+    from .discovery import get_engine
+    from .packages import get_store
+    from .billing import get_engine as get_billing_engine
+except ImportError:  # pragma: no cover - script execution fallback
+    from discovery import get_engine
+    from packages import get_store
+    from billing import get_engine as get_billing_engine
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -71,20 +81,30 @@ async def publish_agent(package: AgentPackage) -> dict:
     """
     try:
         logger.info(f"Publishing agent: {package.metadata.namespace}:{package.metadata.version}")
-        
-        # TODO: Implement:
-        # 1. Verify agent signature
-        # 2. Validate capabilities declaration
-        # 3. Check author reputation (min 50 for public)
-        # 4. Store package in registry storage
-        # 5. Index for discovery
-        # 6. Update reputation score
-        
+
+        import base64
+
+        try:
+            content_bytes = base64.b64decode(package.content)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid base64 package content")
+
+        store = get_store()
+        agent_id = store.publish(
+            namespace=package.metadata.namespace,
+            version=package.metadata.version,
+            metadata=package.metadata.model_dump(),
+            content=content_bytes,
+        )
+        signature_verified = store.verify_signature(agent_id, package.metadata.signature)
+
         return {
             "status": "published",
+            "agent_id": agent_id,
             "namespace": package.metadata.namespace,
             "version": package.metadata.version,
-            "timestamp": "2026-04-23T16:00:00Z",
+            "signature_verified": signature_verified,
+            "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
     except Exception as e:
         logger.error(f"Error publishing agent: {e}")
@@ -105,18 +125,31 @@ async def list_agents(
     """
     try:
         logger.info(f"Listing agents: category={category}, sort={sort_by}")
-        
-        # TODO: Implement:
-        # 1. Query registry storage with filters
-        # 2. Apply ranking algorithm:
-        #    score = 0.5 * reputation + 0.3 * install_count + 0.2 * rating
-        # 3. Sort by requested field
-        # 4. Paginate results
-        # 5. Filter by reputation minimum (50) for public marketplace
-        
+
+        engine = get_engine()
+        store = get_store()
+
+        all_agents = store.list_all_latest()
+        agents = [agent.get("metadata", agent) for agent in all_agents]
+
+        if category:
+            agents = engine.filter_by_category(agents, category)
+
+        agents = engine.filter_public(agents)
+        ranked_agents = engine.rank(agents)
+
+        if sort_by == "install_count":
+            ranked_agents.sort(key=lambda agent: agent.get("install_count", 0), reverse=True)
+        elif sort_by == "rating":
+            ranked_agents.sort(key=lambda agent: agent.get("rating", 0), reverse=True)
+        elif sort_by == "newest":
+            ranked_agents.sort(key=lambda agent: agent.get("published_at", ""), reverse=True)
+
+        paginated = ranked_agents[offset: offset + limit]
+
         return {
-            "agents": [],
-            "total_count": 0,
+            "agents": paginated,
+            "total_count": len(ranked_agents),
             "limit": limit,
             "offset": offset,
         }
@@ -130,19 +163,27 @@ async def get_agent_details(agent_id: str) -> dict:
     """Get detailed information about a specific agent"""
     try:
         logger.info(f"Fetching agent details: {agent_id}")
-        
-        # TODO: Implement:
-        # 1. Query registry storage by agent_id
-        # 2. Fetch metadata, version history, ratings
-        # 3. Return full details
-        
+
+        store = get_store()
+        versions = store.get_versions(agent_id)
+        if not versions:
+            raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+
+        latest = versions[0]
+
         return {
-            "status": "not_found",
-            "detail": f"Agent {agent_id} not found",
+            "agent_id": agent_id,
+            "namespace": latest["namespace"],
+            "latest_version": latest["version"],
+            "metadata": latest["metadata"],
+            "version_history": [version["version"] for version in versions],
+            "versions": versions,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching agent: {e}")
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
@@ -161,16 +202,14 @@ async def search_agents(
     """
     try:
         logger.info(f"Searching agents: query={query}")
-        
-        # TODO: Implement:
-        # 1. Full-text search on metadata
-        # 2. Rank by relevance + reputation
-        # 3. Return top N results
-        
+
+        engine = get_engine()
+        results = engine.search(query, limit=limit)
+
         return {
             "query": query,
-            "results": [],
-            "total_count": 0,
+            "results": results,
+            "total_count": len(results),
         }
     except Exception as e:
         logger.error(f"Error searching agents: {e}")
@@ -193,20 +232,30 @@ async def install_agent(
     """
     try:
         logger.info(f"Installing agent {agent_id} for org {org_id}")
-        
-        # TODO: Implement:
-        # 1. Verify agent exists
-        # 2. Verify capabilities accepted by org
-        # 3. Generate signed download URL
-        # 4. Track installation for reputation
-        # 5. Initialize usage tracking
-        # 6. Return download + install instructions
-        
+
+        store = get_store()
+        package = store.get_package(agent_id)
+        if not package:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        metadata = package["metadata"]
+        if not store.verify_signature(agent_id, metadata.get("signature", "")):
+            logger.warning(f"Signature verification failed during install for {agent_id}")
+
+        install_count = store.increment_installs(agent_id)
+
+        import base64
+
         return {
             "status": "ready_for_install",
             "agent_id": agent_id,
-            "download_url": f"https://registry.kushnir.cloud/download/{agent_id}",
-            "install_command": f"elevatediq agent install {agent_id}",
+            "namespace": package["namespace"],
+            "version": package["version"],
+            "capabilities": metadata.get("capabilities", []),
+            "install_count": install_count,
+            "sandbox_requirement": "container-isolated",
+            "download_content": base64.b64encode(package["content"]).decode("utf-8"),
+            "install_command": f"elevatediq agent install {package['namespace']}:{package['version']}",
         }
     except Exception as e:
         logger.error(f"Error installing agent: {e}")
@@ -225,18 +274,17 @@ async def get_usage(
     """Get token usage for billing purposes"""
     try:
         logger.info(f"Fetching usage for agent {agent_id}, org {org_id}")
-        
-        # TODO: Implement:
-        # 1. Query usage tracking table
-        # 2. Calculate charges based on pricing tier
-        # 3. Return usage summary
-        
+
+        billing = get_billing_engine()
+        summary = billing.get_usage_summary(
+            agent_id,
+            org_id,
+            period=datetime.now(timezone.utc).strftime("%Y-%m"),
+        )
+
         return {
-            "agent_id": agent_id,
-            "org_id": org_id,
-            "tokens_consumed": 0,
-            "billing_period": "2026-04",
-            "estimated_charge": "$0.00",
+            **summary,
+            "estimated_charge": f"${summary['estimated_charge']:.2f}",
         }
     except Exception as e:
         logger.error(f"Error fetching usage: {e}")

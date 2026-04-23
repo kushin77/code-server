@@ -17,7 +17,7 @@
     "lz4js": "^0.2.0",
     "pg": "catalog:",
     "pino": "catalog:",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.0"
   },
   "devDependencies": {
     "@types/express": "catalog:",

@@ -14,7 +14,7 @@ const BASE_URL = 'http://localhost:8000';
 
 export default function () {
   // 1. Search for agents (Internal endpoint)
-  let searchRes = http.get(`${BASE_URL}/registry/search?q=security`);
+  let searchRes = http.get(`${BASE_URL}/registry/search?query=security`);
   check(searchRes, {
     'status is 200': (r) => r.status === 200,
   });

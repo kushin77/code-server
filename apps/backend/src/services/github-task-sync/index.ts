@@ -410,6 +410,137 @@ export class GitHubTaskSyncService extends EventEmitter {
       };
     }
   }
+
+  /**
+   * Set webhook handler (for real-time GitHub webhook integration)
+   * Called during service initialization in integration layer
+   */
+  setWebhookHandler(handler: any): void {
+    (this as any).webhookHandler = handler;
+    logger.info('Webhook handler attached to service');
+  }
+
+  /**
+   * Set broadcaster (for WebSocket event distribution)
+   * Called during service initialization in integration layer
+   */
+  setBroadcaster(broadcaster: any): void {
+    (this as any).broadcaster = broadcaster;
+    logger.info('WebSocket broadcaster attached to service');
+  }
+
+  /**
+   * Update issue from GitHub webhook (read-only state update)
+   * Used when webhook events trigger updates from GitHub
+   */
+  async updateIssueFromGitHub(
+    issueNumber: number,
+    updates: Partial<{
+      title: string;
+      body: string;
+      state: 'open' | 'closed';
+      labels: string[];
+      assignees: string[];
+    }>
+  ): Promise<TaskRecord> {
+    const task = this.localTasks.get(issueNumber);
+
+    if (!task) {
+      logger.warn(`Task #${issueNumber} not found locally, skipping update`);
+      throw new Error(`Task #${issueNumber} not found`);
+    }
+
+    // Update local task state from GitHub data
+    if (updates.title) task.title = updates.title;
+    if (updates.body !== undefined) task.description = updates.body || '';
+    if (updates.state) task.state = updates.state;
+    if (updates.labels) task.labels = updates.labels;
+    if (updates.assignees) task.assignees = updates.assignees;
+
+    task.lastModifiedAt = new Date();
+    task.lastSyncAt = new Date();
+
+    logger.info(`Updated local task #${issueNumber} from GitHub webhook`);
+    this.emit('task-updated-from-github', task);
+
+    return task;
+  }
+
+  /**
+   * Close issue from GitHub webhook
+   * Used when issue is closed via GitHub
+   */
+  async closeIssueFromGitHub(issueNumber: number): Promise<TaskRecord> {
+    const task = this.localTasks.get(issueNumber);
+
+    if (!task) {
+      logger.warn(`Task #${issueNumber} not found locally, skipping close`);
+      throw new Error(`Task #${issueNumber} not found`);
+    }
+
+    task.state = 'closed';
+    task.lastModifiedAt = new Date();
+    task.lastSyncAt = new Date();
+
+    logger.info(`Closed local task #${issueNumber} from GitHub webhook`);
+    this.emit('task-closed-from-github', task);
+
+    return task;
+  }
+
+  /**
+   * Get all tasks (for REST API endpoints)
+   */
+  getAllTasks(): TaskRecord[] {
+    return Array.from(this.localTasks.values());
+  }
+
+  /**
+   * Get open tasks
+   */
+  getOpenTasks(): TaskRecord[] {
+    return Array.from(this.localTasks.values()).filter((t) => t.state === 'open');
+  }
+
+  /**
+   * Get closed tasks
+   */
+  getClosedTasks(): TaskRecord[] {
+    return Array.from(this.localTasks.values()).filter((t) => t.state === 'closed');
+  }
+
+  /**
+   * Get a single task by issue number
+   */
+  getTask(issueNumber: number): TaskRecord | undefined {
+    return this.localTasks.get(issueNumber);
+  }
+
+  /**
+   * Get sync status
+   */
+  getSyncStatus(): { lastSyncAt: Date | null; syncInProgress: boolean; totalTasks: number } {
+    return {
+      lastSyncAt: this.lastSyncTime ? new Date(this.lastSyncTime) : null,
+      syncInProgress: this.syncInProgress,
+      totalTasks: this.localTasks.size,
+    };
+  }
+
+  /**
+   * Get conflict log
+   */
+  getConflictLog(): any[] {
+    return this.conflictLog;
+  }
+
+  /**
+   * Clear conflict log
+   */
+  clearConflictLog(): void {
+    this.conflictLog = [];
+    logger.info('Conflict log cleared');
+  }
 }
 
 export default GitHubTaskSyncService;

@@ -334,6 +334,203 @@ export function initializeGitHubTaskSyncRoutes(
     }
   });
 
+  /**
+   * POST /api/github-task-sync/webhook - GitHub webhook endpoint
+   * Receives GitHub webhook events and broadcasts to connected WebSocket clients
+   * Headers: X-Hub-Signature-256, X-GitHub-Delivery, X-GitHub-Event
+   * Body: Raw GitHub webhook payload
+   */
+  router.post('/webhook', async (req: Request, res: Response) => {
+    try {
+      const signature = req.headers['x-hub-signature-256'] as string;
+      const deliveryId = req.headers['x-github-delivery'] as string;
+      const deliveryTime = req.headers['x-github-delivery-timestamp'] as string || new Date().toISOString();
+      const eventType = req.headers['x-github-event'] as string;
+
+      // Log webhook receipt
+      logger.info('GitHub webhook received', {
+        deliveryId,
+        eventType,
+        timestamp: deliveryTime,
+      });
+
+      // Validate webhook signature
+      if (!signature || !deliveryId) {
+        logger.warn('Webhook missing required headers', { signature: !!signature, deliveryId: !!deliveryId });
+        return res.status(400).json({
+          status: 'error',
+          message: 'Missing X-Hub-Signature-256 or X-GitHub-Delivery header',
+        });
+      }
+
+      // Get webhook handler from service (if available)
+      // Note: Webhook handler should be attached to service during initialization
+      const webhookHandler = (service as any).webhookHandler;
+      if (!webhookHandler) {
+        logger.error('Webhook handler not available');
+        return res.status(503).json({
+          status: 'error',
+          message: 'Webhook handler not initialized',
+        });
+      }
+
+      // Process webhook (verify signature, validate, deduplicate)
+      const body = JSON.stringify(req.body);
+      const event = await webhookHandler.processWebhook(body, signature, deliveryId, deliveryTime);
+
+      if (!event) {
+        // Webhook was rejected (invalid signature, timestamp, etc.)
+        return res.status(401).json({
+          status: 'error',
+          message: 'Webhook verification failed',
+        });
+      }
+
+      // Check if this is an issue-related event
+      if (!webhookHandler.isIssueEvent(event)) {
+        logger.debug('Webhook is not an issue event, ignoring', { eventType, deliveryId });
+        return res.status(200).json({
+          status: 'success',
+          message: 'Webhook received but not an issue event',
+        });
+      }
+
+      // Extract issue data from event
+      const issueNumber = event.payload.issue?.number;
+      if (!issueNumber) {
+        logger.warn('Issue number not found in webhook', { deliveryId });
+        return res.status(400).json({
+          status: 'error',
+          message: 'Issue number not found in webhook payload',
+        });
+      }
+
+      // Update local task state based on webhook action
+      try {
+        const action = event.payload.action;
+        const issueData = event.payload.issue;
+
+        logger.info(`Processing webhook action: ${action} for issue #${issueNumber}`, {
+          deliveryId,
+          issueNumber,
+        });
+
+        // Handle different webhook actions
+        switch (action) {
+          case 'opened':
+          case 'edited':
+          case 'reopened':
+            // Update or create task from webhook data
+            if (issueData) {
+              const updatedTask = await service.updateIssueFromGitHub(issueNumber, {
+                title: issueData.title,
+                body: issueData.body,
+                state: issueData.state,
+                labels: issueData.labels.map((l) => l.name),
+                assignees: issueData.assignee ? [issueData.assignee.login] : [],
+              });
+              logger.info(`Updated task #${issueNumber} from webhook`, { deliveryId });
+            }
+            break;
+
+          case 'closed':
+            // Close task
+            await service.closeIssueFromGitHub(issueNumber);
+            logger.info(`Closed task #${issueNumber} from webhook`, { deliveryId });
+            break;
+
+          case 'labeled':
+          case 'unlabeled':
+            // Update labels
+            if (issueData) {
+              const updatedTask = await service.updateIssueFromGitHub(issueNumber, {
+                labels: issueData.labels.map((l) => l.name),
+              });
+              logger.info(`Updated labels for #${issueNumber} from webhook`, { deliveryId });
+            }
+            break;
+
+          case 'assigned':
+          case 'unassigned':
+            // Update assignees
+            if (issueData) {
+              const updatedTask = await service.updateIssueFromGitHub(issueNumber, {
+                assignees: issueData.assignee ? [issueData.assignee.login] : [],
+              });
+              logger.info(`Updated assignees for #${issueNumber} from webhook`, { deliveryId });
+            }
+            break;
+
+          default:
+            logger.debug(`Ignoring webhook action: ${action}`, { deliveryId });
+        }
+
+        // Broadcast update to connected WebSocket clients
+        const broadcaster = (service as any).broadcaster;
+        if (broadcaster) {
+          const broadcastMessage = {
+            type: action === 'closed' ? 'issue-closed' : 'issue-updated',
+            issueNumber,
+            action,
+            data: {
+              title: issueData?.title,
+              state: issueData?.state,
+              labels: issueData?.labels.map((l) => l.name),
+              assignees: issueData?.assignee ? [issueData.assignee.login] : [],
+              timestamp: new Date(issueData?.updated_at || Date.now()).getTime(),
+            },
+            timestamp: Date.now(),
+          };
+
+          broadcaster.broadcast(broadcastMessage);
+          logger.info(`Broadcast webhook event to clients`, {
+            deliveryId,
+            issueNumber,
+            clientsConnected: broadcaster.getClientCount(),
+          });
+        }
+
+        // Emit event for other listeners
+        service.emit('webhook-processed', {
+          deliveryId,
+          issueNumber,
+          action,
+          timestamp: Date.now(),
+        });
+
+        // Return success response
+        res.json({
+          status: 'success',
+          message: `Webhook processed for issue #${issueNumber}`,
+          data: {
+            deliveryId,
+            issueNumber,
+            action,
+          },
+        });
+      } catch (processingError: any) {
+        logger.error('Error processing webhook event', {
+          error: processingError.message,
+          deliveryId,
+          issueNumber,
+        });
+
+        // Return 202 Accepted even on processing error (GitHub will retry)
+        res.status(202).json({
+          status: 'partial',
+          message: 'Webhook received but processing encountered an error',
+          error: processingError.message,
+        });
+      }
+    } catch (error: any) {
+      logger.error('Webhook endpoint error', error);
+      res.status(500).json({
+        status: 'error',
+        message: error.message,
+      });
+    }
+  });
+
   return router;
 }
 

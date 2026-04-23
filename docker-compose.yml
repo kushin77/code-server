@@ -616,18 +616,12 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
     command: >
-      - sh
-      - -c
-      - |
-        test -n "$PAGERDUTY_SERVICE_KEY" || exit 1
-        escaped_key=$(printf '%s' "$PAGERDUTY_SERVICE_KEY" | sed 's/[&|]/\\&/g')
-        sed "s|__PAGERDUTY_SERVICE_KEY__|$escaped_key|g" /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.rendered.yml
-        exec /bin/alertmanager --config.file=/tmp/alertmanager.rendered.yml --storage.path=/alertmanager
+      redis-server
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
       --appendonly yes
       --appendfsync everysec
       --loglevel warning
       --save 60 1
-      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
     volumes:
       - redis-data:/data
     healthcheck:

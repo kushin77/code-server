@@ -109,13 +109,49 @@ check_requirements() {
     success "All prerequisites met"
 }
 
+# Safe GitHub API call with retry and 404 handling
+safe_gh_api() {
+    local endpoint="$1"
+    local max_retries="${2:-3}"
+    local retry_count=0
+    
+    while [[ $retry_count -lt $max_retries ]]; do
+        local response
+        response=$(gh api "$endpoint" 2>&1)
+        
+        # Check for success
+        if [[ $? -eq 0 ]]; then
+            echo "$response"
+            return 0
+        fi
+        
+        # Check for 404 (not found) - don't retry
+        if echo "$response" | grep -q "404\|Not Found"; then
+            verbose "GitHub API 404 (Not Found): $endpoint"
+            echo ""  # Return empty
+            return 0
+        fi
+        
+        # Other errors - retry with exponential backoff
+        retry_count=$((retry_count + 1))
+        if [[ $retry_count -lt $max_retries ]]; then
+            local wait_time=$((2 ** (retry_count - 1)))
+            warning "GitHub API error (attempt $retry_count/$max_retries), retrying in ${wait_time}s..."
+            sleep "$wait_time"
+        fi
+    done
+    
+    error "GitHub API call failed after $max_retries attempts: $endpoint"
+    return 1
+}
+
 # Get repository information
 get_repo_info() {
     local owner="${1:?Owner required}"
     local repo="${2:?Repo required}"
     
     verbose "Fetching repo info for $owner/$repo..."
-    gh api "repos/$owner/$repo" --jq '{name: .name, owner: .owner.login, default_branch: .default_branch}'
+    safe_gh_api "repos/$owner/$repo" | jq '{name: .name, owner: .owner.login, default_branch: .default_branch}'
 }
 
 # Apply branch protection to a branch
@@ -242,11 +278,23 @@ track_workflow_costs() {
     
     log "Tracking workflow costs for $owner/$repo..."
     
-    # Get recent workflow runs
+    # Get recent workflow runs with error handling for 404s
     local runs
-    runs=$(gh api "repos/$owner/$repo/actions/runs" \
+    local api_response
+    
+    # Fetch workflow runs list (handle 404 gracefully - repo may not have actions)
+    api_response=$(gh api "repos/$owner/$repo/actions/runs" \
         -F per_page=100 \
-        --jq '.workflow_runs[] | select(.updated_at > (now - 7*24*60*60 | todate)) | {id: .id, name: .name, status: .status, conclusion: .conclusion, run_number: .run_number}')
+        --jq '.workflow_runs[] | select(.updated_at > (now - 7*24*60*60 | todate)) | {id: .id, name: .name, status: .status, conclusion: .conclusion, run_number: .run_number}' \
+        2>&1 || true)
+    
+    # Check if API returned 404 or other error
+    if echo "$api_response" | grep -q "404\|Not Found"; then
+        verbose "Repository $owner/$repo has no workflow runs or Actions disabled"
+        return 0
+    fi
+    
+    runs="$api_response"
     
     if [[ -z "$runs" ]]; then
         verbose "No recent runs found"

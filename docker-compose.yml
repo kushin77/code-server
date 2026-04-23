@@ -90,7 +90,7 @@ services:
     image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
     container_name: ollama
     restart: unless-stopped
-    user: "1000:1000"
+    user: "0:0"
     # ✅ GPU ACCELERATION - Uncomment this line if NVIDIA GPU detected on host
     # runtime: nvidia
     networks:

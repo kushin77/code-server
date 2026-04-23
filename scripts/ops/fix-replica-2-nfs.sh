@@ -5,15 +5,15 @@
 
 set -euo pipefail
 
+# Set configuration BEFORE sourcing init.sh (which makes NAS_HOST readonly)
+TARGET_REPLICA="${TARGET_REPLICA:-192.168.168.42}"
+TARGET_USER="${TARGET_USER:-akushnir}"
+export NAS_HOST="${NAS_HOST:-192.168.168.56}"
+DRY_RUN="${DRY_RUN:-0}"
+
 # Source common utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
-
-# Configuration
-TARGET_REPLICA="${TARGET_REPLICA:-192.168.168.42}"
-TARGET_USER="${TARGET_USER:-akushnir}"
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
-DRY_RUN="${DRY_RUN:-0}"
 
 # NAS directories that need to exist
 NAS_DIRS=(

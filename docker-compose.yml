@@ -33,6 +33,9 @@ services:
       - net-app
     expose:
       - "8080"
+    ports:
+      # Expose code-server on host port 8080 for cross-host load balancing
+      - "8080:8080"
     environment:
       - PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
       - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
@@ -176,7 +179,11 @@ services:
       OAUTH2_PROXY_PROVIDER: "google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
       OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"
-      OAUTH2_PROXY_UPSTREAMS: "http://code-server:8080/"
+      # ✅ CROSS-HOST LOAD BALANCING: Proxy to both local and remote code-server instances
+      # On primary (31): local code-server + remote code-server on 42
+      # On replica (42): local code-server + remote code-server on 31
+      # Round-robin load balancing with health checks ensures requests distribute across both nodes
+      OAUTH2_PROXY_UPSTREAMS: "${OAUTH2_PROXY_UPSTREAMS:-http://code-server:8080/ http://${REPLICA_HOST:-192.168.168.42}:8080/}"
       # Allow any Google domain to attempt auth; authenticated-emails-file is the real gate.
       # This prevents org_internal 403 errors for accounts outside bioenergystrategies.com (e.g. gmail.com).
       OAUTH2_PROXY_EMAIL_DOMAINS: "*"

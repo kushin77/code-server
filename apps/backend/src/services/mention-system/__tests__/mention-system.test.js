@@ -8,14 +8,15 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MentionSystemService } from '../index';
 const collaborationEncryptionKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 const originalEncryptionKey = process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY;
+const loggerMock = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+};
 // Mock the logger
 vi.mock('../../../lib/logger', () => ({
-    getLogger: vi.fn(() => ({
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn(),
-    })),
+    getLogger: vi.fn(() => loggerMock),
 }));
 // Mock the database pool
 const mockPool = {
@@ -31,12 +32,12 @@ describe('MentionSystemService', () => {
     beforeEach(async () => {
         vi.clearAllMocks();
         process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY = collaborationEncryptionKey;
-        mockAuditService.emit.mockReset();
         mockClient = {
             query: vi.fn(),
             release: vi.fn(),
         };
         mockPool.connect.mockResolvedValue(mockClient);
+        mockAuditService.emit.mockReset();
         service = new MentionSystemService(mockPool, mockAuditService);
         mockClient.query.mockResolvedValue({ rows: [] });
         await service.initialize();
@@ -230,6 +231,12 @@ describe('MentionSystemService', () => {
                 channels: ['matrix'],
                 matrixRoomId: '!room:kushnir.cloud',
             });
+            expect(loggerMock.info).toHaveBeenCalledWith('Prepared encrypted Matrix notification', expect.objectContaining({
+                roomId: '!room:kushnir.cloud',
+                user: 'bob',
+                keyId: expect.any(String),
+                payloadBytes: expect.any(Number),
+            }));
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE mentions'), expect.any(Array));
             expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
                 userId: 'alice',

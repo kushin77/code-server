@@ -8,9 +8,9 @@ import { Router } from 'express';
 import { SmartNotificationRoutingService } from '../services/smart-notification-routing';
 import { getLogger } from '../lib/logger';
 const logger = getLogger('SmartNotificationRoutingRoutes');
-export function initializeSmartNotificationRoutingRoutes(pool) {
+export function initializeSmartNotificationRoutingRoutes(pool, auditService) {
     const router = Router();
-    const notificationService = new SmartNotificationRoutingService(pool);
+    const notificationService = new SmartNotificationRoutingService(pool, auditService);
     notificationService.initialize().catch(error => {
         logger.error('Failed to initialize notification routing service', { error });
     });

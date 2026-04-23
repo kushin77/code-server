@@ -7,11 +7,12 @@
 import { EventEmitter } from 'events';
 import { getLogger } from '../../lib/logger';
 export class AIReviewerRouterService extends EventEmitter {
-    constructor(pool, config = {}) {
+    constructor(pool, auditService, config = {}) {
         super();
         this.logger = getLogger('AIReviewerRouterService');
         this.initialized = false;
         this.pool = pool;
+        this.auditService = auditService;
         this.config = {
             maxReviewersToScore: config.maxReviewersToScore || 10,
             minExpertiseThreshold: config.minExpertiseThreshold || 30,
@@ -199,170 +200,197 @@ export class AIReviewerRouterService extends EventEmitter {
             client.release();
         }
     }
-    async assignReview(pullRequestId, changedFiles, teamId) {
-        const client = await this.pool.connect();
-        try {
-            // Score all reviewers
-            const scores = await this.scoreReviewers(changedFiles, teamId);
-            if (scores.length === 0) {
-                throw new Error(`No suitable reviewers found for PR ${pullRequestId}`);
-            }
-            // Get best reviewer
-            const bestReviewer = scores[0];
-            // Create assignment
-            const assignmentId = require('crypto').randomUUID();
-            await client.query(`INSERT INTO review_assignments (id, pull_request_id, reviewer_id, expertise_score, workload_score, availability_score, total_score, score_explanation)
+}
+({
+    userId: 'system',
+    action: 'allow',
+    role: 'system',
+    method: 'assignReview',
+    path: '/api/reviews/assign',
+    reason: 'Assigned review for PR ' + pullRequestId
+});
+pullRequestId: string,
+    changedFiles;
+string[],
+    teamId;
+string;
+Promise < ReviewAssignment > {
+    const: client = await this.pool.connect(),
+    try: {
+        // Score all reviewers
+        const: scores = await this.scoreReviewers(changedFiles, teamId),
+        if(scores) { }, : .length === 0
+    }
+};
+{
+    throw new Error(`No suitable reviewers found for PR ${pullRequestId}`);
+}
+// Get best reviewer
+const bestReviewer = scores[0];
+// Create assignment
+const assignmentId = require('crypto').randomUUID();
+await client.query(`INSERT INTO review_assignments (id, pull_request_id, reviewer_id, expertise_score, workload_score, availability_score, total_score, score_explanation)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [
-                assignmentId,
-                pullRequestId,
-                bestReviewer.reviewerId,
-                bestReviewer.expertiseScore,
-                bestReviewer.workloadScore,
-                bestReviewer.availabilityScore,
-                bestReviewer.totalScore,
-                JSON.stringify({ reasoning: bestReviewer.reasoning }),
-            ]);
-            // Increment pending reviews count
-            await client.query(`UPDATE reviewer_workload SET pending_reviews = pending_reviews + 1 WHERE reviewer_id = $1`, [bestReviewer.reviewerId]);
-            this.logger.info('Review assigned', { prId: pullRequestId, reviewerId: bestReviewer.reviewerId, score: bestReviewer.totalScore });
-            this.emit('review-assigned', {
-                prId: pullRequestId,
-                reviewerId: bestReviewer.reviewerId,
-                score: bestReviewer.totalScore,
-            });
-            return {
-                id: assignmentId,
-                pullRequestId,
-                reviewerId: bestReviewer.reviewerId,
-                assignedAt: new Date(),
-                scoreExplanation: {
-                    expertiseScore: bestReviewer.expertiseScore,
-                    workloadScore: bestReviewer.workloadScore,
-                    availabilityScore: bestReviewer.availabilityScore,
-                    totalScore: bestReviewer.totalScore,
-                    reasoning: bestReviewer.reasoning,
-                },
-            };
-        }
-        catch (error) {
-            this.logger.error('Failed to assign review', { error, prId: pullRequestId });
-            throw error;
-        }
-        finally {
-            client.release();
-        }
-    }
-    async scoreReviewers(changedFiles, teamId) {
-        const client = await this.pool.connect();
-        try {
-            // Get all reviewers with their data
-            const result = await client.query(`SELECT DISTINCT re.reviewer_id FROM reviewer_expertise re
+    assignmentId,
+    pullRequestId,
+    bestReviewer.reviewerId,
+    bestReviewer.expertiseScore,
+    bestReviewer.workloadScore,
+    bestReviewer.availabilityScore,
+    bestReviewer.totalScore,
+    JSON.stringify({ reasoning: bestReviewer.reasoning }),
+]);
+// Increment pending reviews count
+await client.query(`UPDATE reviewer_workload SET pending_reviews = pending_reviews + 1 WHERE reviewer_id = $1`, [bestReviewer.reviewerId]);
+this.logger.info('Review assigned', { prId: pullRequestId, reviewerId: bestReviewer.reviewerId, score: bestReviewer.totalScore });
+this.emit('review-assigned', {
+    prId: pullRequestId,
+    reviewerId: bestReviewer.reviewerId,
+    score: bestReviewer.totalScore,
+});
+return {
+    id: assignmentId,
+    pullRequestId,
+    reviewerId: bestReviewer.reviewerId,
+    assignedAt: new Date(),
+    scoreExplanation: {
+        expertiseScore: bestReviewer.expertiseScore,
+        workloadScore: bestReviewer.workloadScore,
+        availabilityScore: bestReviewer.availabilityScore,
+        totalScore: bestReviewer.totalScore,
+        reasoning: bestReviewer.reasoning,
+    },
+};
+try { }
+catch (error) {
+    this.logger.error('Failed to assign review', { error, prId: pullRequestId });
+    throw error;
+}
+finally {
+    client.release();
+}
+async;
+scoreReviewers(changedFiles, string[], teamId, string);
+Promise < ReviewerScore[] > {
+    const: client = await this.pool.connect(),
+    try: {
+        // Get all reviewers with their data
+        const: result = await client.query(`SELECT DISTINCT re.reviewer_id FROM reviewer_expertise re
          WHERE re.confidence >= $1
-         LIMIT $2`, [this.config.minExpertiseThreshold, this.config.maxReviewersToScore]);
-            const reviewerIds = result.rows.map(row => row.reviewer_id);
-            if (reviewerIds.length === 0) {
-                return [];
-            }
-            const scores = [];
-            for (const reviewerId of reviewerIds) {
-                // Get expertise score
-                const expertiseResult = await client.query(`SELECT AVG(confidence) as avg_confidence FROM reviewer_expertise
-           WHERE reviewer_id = $1`, [reviewerId]);
-                const expertiseScore = parseFloat(expertiseResult.rows[0].avg_confidence) || 0;
-                // Get workload score (inverse - lower pending = higher score)
-                const workloadResult = await client.query(`SELECT pending_reviews, completed_reviews_last_7days FROM reviewer_workload
-           WHERE reviewer_id = $1`, [reviewerId]);
-                const pendingReviews = workloadResult.rows[0]?.pending_reviews || 0;
-                const completedLast7 = workloadResult.rows[0]?.completed_reviews_last_7days || 1;
-                const workloadScore = Math.max(0, 100 - (pendingReviews * 10)); // Penalize high workload
-                // Get availability score
-                const availabilityResult = await client.query(`SELECT is_online, timezone FROM reviewer_availability
-           WHERE reviewer_id = $1`, [reviewerId]);
-                const isOnline = availabilityResult.rows[0]?.is_online || false;
-                const availabilityScore = isOnline ? 100 : 50;
-                // Calculate weighted total
-                const totalScore = (expertiseScore * this.config.expertiseWeightPercent +
-                    workloadScore * this.config.workloadWeightPercent +
-                    availabilityScore * this.config.availabilityWeightPercent) /
-                    100;
-                const reasoning = `Expertise: ${expertiseScore.toFixed(0)}%, Workload: ${workloadScore.toFixed(0)}% (${pendingReviews} pending), Availability: ${availabilityScore.toFixed(0)}% (${isOnline ? 'online' : 'offline'})`;
-                scores.push({
-                    reviewerId,
-                    name: reviewerId,
-                    expertiseScore,
-                    workloadScore,
-                    availabilityScore,
-                    totalScore,
-                    reasoning,
-                });
-            }
-            // Sort by total score descending
-            scores.sort((a, b) => b.totalScore - a.totalScore);
-            this.logger.debug('Reviewers scored', { count: scores.length, topScore: scores[0]?.totalScore });
-            this.emit('reviewers-scored', { count: scores.length, topScore: scores[0]?.totalScore });
-            return scores;
-        }
-        catch (error) {
-            this.logger.error('Failed to score reviewers', { error });
-            throw error;
-        }
-        finally {
-            client.release();
-        }
+         LIMIT $2`, [this.config.minExpertiseThreshold, this.config.maxReviewersToScore]),
+        const: reviewerIds = result.rows.map(row => row.reviewer_id),
+        if(reviewerIds) { }, : .length === 0
     }
-    async completeReview(assignmentId) {
-        const client = await this.pool.connect();
-        try {
-            // Get assignment to find reviewer
-            const result = await client.query(`SELECT reviewer_id FROM review_assignments WHERE id = $1`, [assignmentId]);
-            if (result.rows.length === 0) {
-                throw new Error(`Assignment ${assignmentId} not found`);
-            }
-            const reviewerId = result.rows[0].reviewer_id;
-            // Mark as completed
-            await client.query(`UPDATE review_assignments SET completed_at = NOW() WHERE id = $1`, [assignmentId]);
-            // Decrement pending reviews
-            await client.query(`UPDATE reviewer_workload SET pending_reviews = GREATEST(0, pending_reviews - 1) WHERE reviewer_id = $1`, [reviewerId]);
-            this.logger.info('Review completed', { assignmentId, reviewerId });
-            this.emit('review-completed', { assignmentId, reviewerId });
-        }
-        catch (error) {
-            this.logger.error('Failed to complete review', { error, assignmentId });
-            throw error;
-        }
-        finally {
-            client.release();
-        }
+};
+{
+    return [];
+}
+const scores = [];
+for (const reviewerId of reviewerIds) {
+    // Get expertise score
+    const expertiseResult = await client.query(`SELECT AVG(confidence) as avg_confidence FROM reviewer_expertise
+           WHERE reviewer_id = $1`, [reviewerId]);
+    const expertiseScore = parseFloat(expertiseResult.rows[0].avg_confidence) || 0;
+    // Get workload score (inverse - lower pending = higher score)
+    const workloadResult = await client.query(`SELECT pending_reviews, completed_reviews_last_7days FROM reviewer_workload
+           WHERE reviewer_id = $1`, [reviewerId]);
+    const pendingReviews = workloadResult.rows[0]?.pending_reviews || 0;
+    const completedLast7 = workloadResult.rows[0]?.completed_reviews_last_7days || 1;
+    const workloadScore = Math.max(0, 100 - (pendingReviews * 10)); // Penalize high workload
+    // Get availability score
+    const availabilityResult = await client.query(`SELECT is_online, timezone FROM reviewer_availability
+           WHERE reviewer_id = $1`, [reviewerId]);
+    const isOnline = availabilityResult.rows[0]?.is_online || false;
+    const availabilityScore = isOnline ? 100 : 50;
+    // Calculate weighted total
+    const totalScore = (expertiseScore * this.config.expertiseWeightPercent +
+        workloadScore * this.config.workloadWeightPercent +
+        availabilityScore * this.config.availabilityWeightPercent) /
+        100;
+    const reasoning = `Expertise: ${expertiseScore.toFixed(0)}%, Workload: ${workloadScore.toFixed(0)}% (${pendingReviews} pending), Availability: ${availabilityScore.toFixed(0)}% (${isOnline ? 'online' : 'offline'})`;
+    scores.push({
+        reviewerId,
+        name: reviewerId,
+        expertiseScore,
+        workloadScore,
+        availabilityScore,
+        totalScore,
+        reasoning,
+    });
+}
+// Sort by total score descending
+scores.sort((a, b) => b.totalScore - a.totalScore);
+this.logger.debug('Reviewers scored', { count: scores.length, topScore: scores[0]?.totalScore });
+this.emit('reviewers-scored', { count: scores.length, topScore: scores[0]?.totalScore });
+return scores;
+try { }
+catch (error) {
+    this.logger.error('Failed to score reviewers', { error });
+    throw error;
+}
+finally {
+    client.release();
+}
+async;
+completeReview(assignmentId, string);
+Promise < void  > {
+    const: client = await this.pool.connect(),
+    try: {
+        // Get assignment to find reviewer
+        const: result = await client.query(`SELECT reviewer_id FROM review_assignments WHERE id = $1`, [assignmentId]),
+        if(result) { }, : .rows.length === 0
     }
-    async getAssignment(assignmentId) {
-        const client = await this.pool.connect();
-        try {
-            const result = await client.query(`SELECT * FROM review_assignments WHERE id = $1`, [assignmentId]);
-            if (result.rows.length === 0) {
-                return null;
-            }
-            const row = result.rows[0];
-            return {
-                id: row.id,
-                pullRequestId: row.pull_request_id,
-                reviewerId: row.reviewer_id,
-                assignedAt: new Date(row.assigned_at),
-                scoreExplanation: {
-                    expertiseScore: parseFloat(row.expertise_score),
-                    workloadScore: parseFloat(row.workload_score),
-                    availabilityScore: parseFloat(row.availability_score),
-                    totalScore: parseFloat(row.total_score),
-                    reasoning: row.score_explanation?.reasoning || '',
-                },
-            };
-        }
-        catch (error) {
-            this.logger.error('Failed to get assignment', { error, assignmentId });
-            throw error;
-        }
-        finally {
-            client.release();
-        }
+};
+{
+    throw new Error(`Assignment ${assignmentId} not found`);
+}
+const reviewerId = result.rows[0].reviewer_id;
+// Mark as completed
+await client.query(`UPDATE review_assignments SET completed_at = NOW() WHERE id = $1`, [assignmentId]);
+// Decrement pending reviews
+await client.query(`UPDATE reviewer_workload SET pending_reviews = GREATEST(0, pending_reviews - 1) WHERE reviewer_id = $1`, [reviewerId]);
+this.logger.info('Review completed', { assignmentId, reviewerId });
+this.emit('review-completed', { assignmentId, reviewerId });
+try { }
+catch (error) {
+    this.logger.error('Failed to complete review', { error, assignmentId });
+    throw error;
+}
+finally {
+    client.release();
+}
+async;
+getAssignment(assignmentId, string);
+Promise < ReviewAssignment | null > {
+    const: client = await this.pool.connect(),
+    try: {
+        const: result = await client.query(`SELECT * FROM review_assignments WHERE id = $1`, [assignmentId]),
+        if(result) { }, : .rows.length === 0
     }
+};
+{
+    return null;
+}
+const row = result.rows[0];
+return {
+    id: row.id,
+    pullRequestId: row.pull_request_id,
+    reviewerId: row.reviewer_id,
+    assignedAt: new Date(row.assigned_at),
+    scoreExplanation: {
+        expertiseScore: parseFloat(row.expertise_score),
+        workloadScore: parseFloat(row.workload_score),
+        availabilityScore: parseFloat(row.availability_score),
+        totalScore: parseFloat(row.total_score),
+        reasoning: row.score_explanation?.reasoning || '',
+    },
+};
+try { }
+catch (error) {
+    this.logger.error('Failed to get assignment', { error, assignmentId });
+    throw error;
+}
+finally {
+    client.release();
 }
 //# sourceMappingURL=index.js.map

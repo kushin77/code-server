@@ -9,7 +9,6 @@ export const cloneUser = (user) => ({
     ...user,
     workingHours: cloneWorkingHours(user.workingHours)
 });
-
 const BASE_USERS = [
     { id: 'alice', displayName: 'Alice Chen', status: 'online', currentFile: 'api/auth.ts', currentLine: 142, currentFunction: 'handleLoginCallback', currentTask: 'Polish OAuth flow', customStatus: 'Pairing on auth', timezone: 'Europe/London', workingHours: { startHour: 9, endHour: 17 }, lastSeen: Date.now() - 12000, workspace: 'backend' },
     { id: 'bob', displayName: 'Bob Kumar', status: 'online', currentFile: 'utils/logger.ts', currentLine: 58, currentFunction: 'formatLogEntry', currentTask: 'Harden log redaction', customStatus: 'Reviewing telemetry', timezone: 'Asia/Tokyo', workingHours: { startHour: 9, endHour: 17 }, lastSeen: Date.now() - 18000, workspace: 'backend' },

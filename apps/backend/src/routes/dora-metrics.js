@@ -8,9 +8,9 @@ import { Router } from 'express';
 import { DORAMetricsService } from '../services/dora-metrics';
 import { getLogger } from '../lib/logger';
 const logger = getLogger('DORAMetricsRoutes');
-export function initializeDORAMetricsRoutes(pool) {
+export function initializeDORAMetricsRoutes(pool, auditService) {
     const router = Router();
-    const doraMetricsService = new DORAMetricsService(pool);
+    const doraMetricsService = new DORAMetricsService(pool, auditService);
     doraMetricsService.initialize().catch(error => {
         logger.error('Failed to initialize DORA metrics service', { error });
     });

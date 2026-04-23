@@ -54,9 +54,6 @@ function decodeEnvelope(body) {
     };
 }
 export class CollaborationMessageEncryptionService {
-    masterKey;
-    keyId;
-    info;
     constructor(options = {}) {
         const keyMaterial = options.keyMaterial ?? process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY ?? '';
         this.masterKey = parseKeyMaterial(keyMaterial);
@@ -111,6 +108,16 @@ export class CollaborationMessageEncryptionService {
             keyId: envelope.keyId,
         };
     }
+    /**
+     * Export the encryption vault backup for disaster recovery
+     *
+     * Creates a backup of the encryption key material that can be used to restore
+     * the service and decrypt messages encrypted with this key.
+     *
+     * @param backupKeyMaterial - Optional backup key material (for encrypting the vault)
+     * @param metadata - Optional metadata to include in the backup
+     * @returns Vault backup object with encrypted key material and keyId
+     */
     exportVaultBackup(backupKeyMaterial, metadata = {}) {
         const backupData = {
             version: 1,
@@ -125,6 +132,17 @@ export class CollaborationMessageEncryptionService {
             keyId: this.keyId,
         };
     }
+    /**
+     * Restore encryption service from a vault backup
+     *
+     * Recovers a CollaborationMessageEncryptionService instance from a previously
+     * exported vault backup, allowing decryption of messages encrypted before
+     * the backup was created.
+     *
+     * @param backupBody - The backup data (JSON string)
+     * @param backupKeyMaterial - Optional backup key material (for decrypting the vault)
+     * @returns Restored CollaborationMessageEncryptionService instance
+     */
     static restoreFromVaultBackup(backupBody, backupKeyMaterial) {
         const backupData = JSON.parse(backupBody);
         if (backupData.version !== 1) {

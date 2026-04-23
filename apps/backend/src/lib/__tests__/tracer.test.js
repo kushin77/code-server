@@ -10,9 +10,71 @@ vi.mock('@opentelemetry/api', () => ({
     },
     context: {},
     SpanStatusCode: { ERROR: 2, OK: 1, UNSET: 0 },
+    SpanKind: { INTERNAL: 0 },
+}));
+vi.mock('@opentelemetry/sdk-trace-node', () => ({
+    BatchSpanProcessor: class {
+    },
+    ConsoleSpanExporter: class {
+    },
+    SimpleSpanProcessor: class {
+    },
+    SpanProcessor: class {
+    },
+    SpanKind: { INTERNAL: 0 },
+}));
+vi.mock('@opentelemetry/sdk-node', () => ({
+    NodeSDK: class {
+        start() { }
+        shutdown() {
+            return Promise.resolve();
+        }
+    },
+}));
+vi.mock('@opentelemetry/resources', () => ({
+    Resource: class {
+    },
+}));
+vi.mock('@opentelemetry/semantic-conventions', () => ({
+    SemanticResourceAttributes: {
+        SERVICE_NAME: 'service.name',
+        SERVICE_VERSION: 'service.version',
+        DEPLOYMENT_ENVIRONMENT: 'deployment.environment',
+    },
+}));
+vi.mock('@opentelemetry/exporter-trace-otlp-grpc', () => ({
+    OTLPTraceExporter: class {
+    },
+}));
+vi.mock('@opentelemetry/core', () => ({
+    W3CTraceContextPropagator: class {
+    },
+    W3CBaggagePropagator: class {
+    },
+    CompositePropagator: class {
+        constructor(_config) { }
+        inject(_context, _carrier, _setter) { }
+    },
+}));
+vi.mock('@opentelemetry/context-async-hooks', () => ({
+    AsyncLocalStorageContextManager: class {
+    },
+}));
+vi.mock('@opentelemetry/instrumentation-http', () => ({
+    HttpInstrumentation: class {
+    },
+}));
+vi.mock('@opentelemetry/instrumentation-pg', () => ({
+    PgInstrumentation: class {
+    },
+}));
+vi.mock('@opentelemetry/instrumentation-redis-4', () => ({
+    RedisInstrumentation: class {
+    },
 }));
 import { tracingMiddleware, errorTracingMiddleware, getCurrentTraceContext } from '../../middleware/tracing';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
+import { withSpanSync } from '../tracing';
 const mockGetActiveSpan = trace.getActiveSpan;
 const makeReq = () => ({ url: '/api/test' });
 const makeRes = () => {
@@ -89,6 +151,38 @@ describe('getCurrentTraceContext', () => {
     it('returns undefined when no span is active', () => {
         mockGetActiveSpan.mockReturnValue(undefined);
         expect(getCurrentTraceContext()).toBeUndefined();
+    });
+});
+describe('withSpanSync', () => {
+    it('sets OK status and returns the callback result', () => {
+        const mockSpan = {
+            setStatus: vi.fn(),
+            recordException: vi.fn(),
+            end: vi.fn(),
+        };
+        const tracer = {
+            startActiveSpan: vi.fn((_name, _options, callback) => callback(mockSpan)),
+        };
+        const result = withSpanSync(tracer, 'demo', { feature: 'tracing' }, () => 'value');
+        expect(result).toBe('value');
+        expect(mockSpan.setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.OK });
+        expect(mockSpan.end).toHaveBeenCalledTimes(1);
+    });
+    it('records exceptions and sets ERROR status', () => {
+        const mockSpan = {
+            setStatus: vi.fn(),
+            recordException: vi.fn(),
+            end: vi.fn(),
+        };
+        const tracer = {
+            startActiveSpan: vi.fn((_name, _options, callback) => callback(mockSpan)),
+        };
+        expect(() => withSpanSync(tracer, 'demo', {}, () => {
+            throw new Error('boom');
+        })).toThrow('boom');
+        expect(mockSpan.recordException).toHaveBeenCalledWith(expect.any(Error));
+        expect(mockSpan.setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR, message: 'boom' });
+        expect(mockSpan.end).toHaveBeenCalledTimes(1);
     });
 });
 //# sourceMappingURL=tracer.test.js.map

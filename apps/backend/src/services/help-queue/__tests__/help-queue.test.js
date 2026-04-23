@@ -18,6 +18,9 @@ const mockPool = {
     connect: vi.fn(),
     end: vi.fn(),
 };
+const mockAuditService = {
+    emit: vi.fn(),
+};
 describe('HelpQueueService', () => {
     let service;
     let mockClient;
@@ -28,7 +31,7 @@ describe('HelpQueueService', () => {
             release: vi.fn(),
         };
         mockPool.connect.mockResolvedValue(mockClient);
-        service = new HelpQueueService(mockPool);
+        service = new HelpQueueService(mockPool, mockAuditService);
         mockClient.query.mockResolvedValue({ rows: [] });
         await service.initialize();
     });
@@ -55,6 +58,11 @@ describe('HelpQueueService', () => {
             expect(request.question).toBe('Why does this return 1?');
             expect(request.status).toBe('open');
             expect(request.urgency).toBe('normal');
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'user-1',
+                action: 'create',
+                resourceType: 'help-request',
+            }));
         });
         it('should calculate correct SLA for urgent requests', async () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] });
@@ -102,6 +110,11 @@ describe('HelpQueueService', () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
             await service.assignToExpert('req-1', 'expert-1');
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE help_requests'), expect.any(Array));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'expert-1',
+                action: 'update',
+                resourceType: 'help-request',
+            }));
         });
         it('should reject assignment if expert at capacity', async () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
@@ -123,6 +136,11 @@ describe('HelpQueueService', () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] });
             await service.respondToRequest('req-1', 'expert-1', 'Try using useCallback to memoize the function');
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO help_responses'), expect.any(Array));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'expert-1',
+                action: 'create',
+                resourceType: 'help-response',
+            }));
         });
         it('should include code proposal if provided', async () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] });
@@ -150,6 +168,11 @@ describe('HelpQueueService', () => {
             const slaBroken = await service.resolveRequest('req-1', 'expert-1');
             expect(slaBroken.slaBreached).toBe(false);
             expect(slaBroken.resolutionTimeMs).toBeGreaterThan(0);
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'expert-1',
+                action: 'update',
+                resourceType: 'help-request',
+            }));
         });
         it('should detect SLA breach', async () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
@@ -314,6 +337,11 @@ describe('HelpQueueService', () => {
             mockClient.query.mockResolvedValueOnce({ rows: [] });
             await service.registerExpert('expert-1', ['react', 'typescript', 'testing']);
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO expert_profiles'), expect.arrayContaining([['react', 'typescript', 'testing']]));
+            expect(mockAuditService.emit).toHaveBeenCalledWith(expect.objectContaining({
+                userId: 'expert-1',
+                action: 'update',
+                resourceType: 'expert',
+            }));
         });
     });
     describe('getAvailableExperts', () => {

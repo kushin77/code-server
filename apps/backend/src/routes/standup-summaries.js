@@ -13,9 +13,10 @@ let standupService = null;
  * Initialize the standup summaries service
  * This would typically be done in the main application initialization
  */
-export function initializeStandupRoutes(db, aiRouter, config) {
-    standupService = new StandupSummariesService(db, aiRouter, config);
-    standupService.initialize();
+export function initializeStandupRoutes(db, auditService, aiRouter, config) {
+    standupService = new StandupSummariesService(db, auditService, aiRouter, config);
+    standupService.initialize().catch(err => logger.error('Failed to initialize standup service', { err }));
+    return router;
 }
 /**
  * Middleware to ensure service is initialized

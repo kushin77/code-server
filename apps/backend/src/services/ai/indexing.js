@@ -6,7 +6,6 @@
 import { createHash } from "node:crypto";
 import { watch } from "node:fs";
 import { getAuditService } from "../audit/audit-service";
-
 const DEFAULT_OPTIONS = {
     chunkSizeTokens: 800,
     chunkOverlapTokens: 120,

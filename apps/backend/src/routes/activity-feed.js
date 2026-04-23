@@ -8,9 +8,9 @@ import { Router } from 'express';
 import { ActivityFeedService } from '../services/activity-feed';
 import { getLogger } from '../lib/logger';
 const logger = getLogger('ActivityFeedRoutes');
-export function initializeActivityFeedRoutes(pool) {
+export function initializeActivityFeedRoutes(pool, auditService) {
     const router = Router();
-    const activityFeedService = new ActivityFeedService(pool);
+    const activityFeedService = new ActivityFeedService(pool, auditService);
     activityFeedService.initialize().catch(error => {
         logger.error('Failed to initialize activity feed service', { error });
     });

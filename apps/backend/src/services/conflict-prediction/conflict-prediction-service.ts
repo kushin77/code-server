@@ -7,6 +7,7 @@
 
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
+import { ConflictPredictionEvent, BaseEvent, EventSeverity, EventCategory } from '@kushin77/shared-events';
 import type {
   ActiveEdit,
   ConflictAlert,
@@ -119,6 +120,24 @@ export class ConflictPredictionService extends EventEmitter {
 
           // Emit event for global listeners
           this.emit('conflict', alert);
+
+          // Standardized event broadcast
+          const standardizedEvent: ConflictPredictionEvent = {
+            id: alert.id,
+            source: 'conflict-prediction-service',
+            type: 'conflict-predicted',
+            category: 'ai',
+            severity: alert.severity as any,
+            timestamp: alert.timestamp,
+            userId: userId,
+            payload: {
+              filePath: alert.filePath,
+              functionName: alert.functionName,
+              riskScore: alert.riskScore,
+              conflictingUserIds: [conflictingEdit.userId],
+            },
+          };
+          this.emit('standardEvent', standardizedEvent);
         }
 
         this.stats.alertsGenerated += alerts.length;

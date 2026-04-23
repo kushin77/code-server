@@ -18,16 +18,17 @@ const statusEmoji = {
 const renderUserCard = (user, config, referenceDate, currentFile) => {
     const sameFile = config.highlightSameFile && Boolean(currentFile && user.currentFile === currentFile);
     const sameFileBadge = sameFile ? `<span class="badge badge-same">Same file${user.currentLine ? ` · L${user.currentLine}` : ''}</span>` : '';
-  const localTimeLabel = formatLocalTime(referenceDate, user.timezone);
-  const workingHoursLabel = formatWorkingHours(user.workingHours);
-  const workingHoursWarning = getWorkingHoursWarning(user, referenceDate);
+    const meetingModeBadge = user.status === 'dnd' ? '<span class="badge badge-meeting">📞 Meeting mode</span>' : '';
+    const localTimeLabel = formatLocalTime(referenceDate, user.timezone);
+    const workingHoursLabel = formatWorkingHours(user.workingHours);
+    const workingHoursWarning = getWorkingHoursWarning(user, referenceDate);
     const avatar = config.showAvatars && user.avatarUrl
         ? `<img class="avatar" src="${escapeHtml(user.avatarUrl)}" alt="${escapeHtml(user.displayName)}" />`
         : `<div class="avatar avatar-fallback">${escapeHtml(user.displayName.slice(0, 1).toUpperCase())}</div>`;
     const metaRows = [
         user.currentFile ? `File: ${escapeHtml(user.currentFile)}` : 'No file open',
-    `Local time: ${escapeHtml(localTimeLabel)}`,
-    `Working hours: ${escapeHtml(workingHoursLabel)}`,
+        `Local time: ${escapeHtml(localTimeLabel)}`,
+        `Working hours: ${escapeHtml(workingHoursLabel)}`,
         user.currentFunction ? `Function: ${escapeHtml(user.currentFunction)}` : undefined,
         user.currentTask ? `Task: ${escapeHtml(user.currentTask)}` : undefined,
         user.customStatus ? `Custom status: ${escapeHtml(user.customStatus)}` : undefined,
@@ -44,6 +45,7 @@ const renderUserCard = (user, config, referenceDate, currentFile) => {
         ${metaRows.map((row) => `<div class="user-meta">${row}</div>`).join('')}
         ${workingHoursWarning ? `<div class="user-meta warning">${escapeHtml(workingHoursWarning)}</div>` : ''}
         ${sameFileBadge}
+        ${meetingModeBadge}
       </div>
       <div class="user-actions">
         <button data-action="mention" data-user-id="${escapeHtml(user.id)}">@Mention</button>
@@ -96,6 +98,7 @@ export const renderTeamHubWebviewHtml = (snapshot, config, webview) => {
         .warning { color: var(--vscode-editorWarning-foreground); opacity: 1; }
         .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 8px; font-size: 0.75rem; margin-top: 6px; }
         .badge-same { background: var(--vscode-terminal-ansiGreen); color: var(--vscode-editor-background); }
+        .badge-meeting { background: var(--vscode-editorInfo-foreground); color: var(--vscode-editor-background); }
         .status-dot { font-size: 0.78rem; }
         .panel-grid { display: grid; gap: 12px; }
         .current-file { margin-top: 12px; }
@@ -118,6 +121,7 @@ export const renderTeamHubWebviewHtml = (snapshot, config, webview) => {
         <div class="user-meta">${escapeHtml(snapshot.currentFile ?? 'No active file')}</div>
         <div class="user-meta">Local time: ${escapeHtml(formatLocalTime(referenceDate, snapshot.currentUser.timezone))}</div>
         <div class="user-meta">Working hours: ${escapeHtml(formatWorkingHours(snapshot.currentUser.workingHours))}</div>
+        ${snapshot.currentUser.status === 'dnd' ? '<div class="user-meta warning">📞 Meeting mode active. Non-urgent notifications are queued.</div>' : ''}
         ${snapshot.currentUser.currentFunction ? `<div class="user-meta">Function: ${escapeHtml(snapshot.currentUser.currentFunction)}</div>` : ''}
         ${snapshot.currentUser.currentTask ? `<div class="user-meta">Task: ${escapeHtml(snapshot.currentUser.currentTask)}</div>` : ''}
         ${snapshot.currentUser.customStatus ? `<div class="user-meta">Custom status: ${escapeHtml(snapshot.currentUser.customStatus)}</div>` : ''}

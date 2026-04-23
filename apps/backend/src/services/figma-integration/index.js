@@ -7,13 +7,14 @@
 import { EventEmitter } from 'events';
 import { getLogger } from '../../lib/logger';
 export class FigmaIntegrationService extends EventEmitter {
-    constructor(pool) {
+    constructor(pool, auditService) {
         super();
         this.logger = getLogger('FigmaIntegrationService');
         this.initialized = false;
         this.figmaApiToken = process.env.FIGMA_API_TOKEN || '';
         this.figmaBaseUrl = 'https://api.figma.com/v1';
         this.pool = pool;
+        this.auditService = auditService;
     }
     async initialize() {
         if (this.initialized)
@@ -230,6 +231,15 @@ export class FigmaIntegrationService extends EventEmitter {
             client.release();
         }
     }
+    // SOC2: Audit design-to-code mapping
+    auditMapping(tokenId, cssVarName) {
+        this.auditService?.emit({
+            userId: 'system',
+            action: 'allow',
+            resource: 'figma-token-mapping:' + tokenId,
+            reason: 'Mapped Figma token ' + tokenId + ' to CSS variable ' + cssVarName
+        });
+    }
     async mapTokenToCSSVariable(tokenId, tokenName, cssVarName, cssValue) {
         const client = await this.pool.connect();
         try {
@@ -289,6 +299,15 @@ export class FigmaIntegrationService extends EventEmitter {
         finally {
             client.release();
         }
+    }
+    // SOC2: Audit design sync
+    auditFrameSync(fileKey, frameName) {
+        this.auditService?.emit({
+            userId: 'system',
+            action: 'allow',
+            resource: 'figma-frame:' + fileKey,
+            reason: 'Synced Figma frame ' + frameName + ' from file ' + fileKey
+        });
     }
     async saveFigmaFrame(fileKey, frame) {
         const client = await this.pool.connect();

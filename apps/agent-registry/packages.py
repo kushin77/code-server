@@ -19,7 +19,7 @@ Responsibilities:
 import hashlib
 import logging
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class PackageStore:
                 "content": content,
                 "content_hash": hashlib.sha256(content).hexdigest(),
                 "size_bytes": len(content),
-                "published_at": datetime.utcnow().isoformat(),
+                "published_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "signature_verified": False,  # TODO: Implement signature verification
             }
             

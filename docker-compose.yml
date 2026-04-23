@@ -56,7 +56,7 @@ services:
       - PYTHONUNBUFFERED=1
       - GOPATH=/opt/go
       - RUST_BACKTRACE=1
-    command: code-server --auth=password --bind-addr=0.0.0.0:8080
+    command: code-server --auth=none --bind-addr=0.0.0.0:8080
     volumes:
       - code-server-workspace:/home/coder/workspace
       - code-server-profile:/home/coder/.local/share/code-server
@@ -148,7 +148,6 @@ services:
     command:
       - -c
       - |
-      - test -n "$PAGERDUTY_SERVICE_KEY" || exit 1; escaped_key=$(printf "%s" "$PAGERDUTY_SERVICE_KEY" | sed "s/[&/]/\\\\&/g"); sed "s/__PAGERDUTY_SERVICE_KEY__/$escaped_key/g" /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.rendered.yml; exec /bin/alertmanager --config.file=/tmp/alertmanager.rendered.yml --storage.path=/alertmanager
         ollama pull codellama:7b || true
         echo "All models ready."
     depends_on:
@@ -322,15 +321,15 @@ services:
       # IMPORTANT: Both redirect URIs must be registered in Google Cloud Console OAuth app:
       #   - https://${IDE_DOMAIN}/oauth2/callback (IDE)
       #   - https://${DOMAIN}/oauth2/callback (Portal)
-      OAUTH2_PROXY_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
-      OAUTH2_PROXY_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_PORTAL_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID}}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_PORTAL_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET}}"
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
       OAUTH2_PROXY_PROVIDER: "oidc"
       OAUTH2_PROXY_PROVIDER_DISPLAY_NAME: "Google"
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
       OAUTH2_PROXY_OIDC_AUDIENCE: "${GOOGLE_CLIENT_ID}"
       OAUTH2_PROXY_SCOPE: "openid profile email"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://${DOMAIN:-kushnir.cloud}/oauth2/callback}"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://${PORTAL_DOMAIN:-kushnir.cloud}/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
       # Allow any Google domain to complete OAuth; authenticated-emails-file remains the real gate.
       # This prevents Google from returning org_internal 403 before our explicit allowlist is checked.

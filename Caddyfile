@@ -25,11 +25,16 @@ ide.kushnir.cloud {
     # OAuth2-Proxy Authentication Gate (default — all other traffic)
     # oauth2-proxy handles Google OAuth flow and upstream proxy to code-server
     # ────────────────────────────────────────────────────────────────────────────
-        reverse_proxy code-server:8080 {
-            header_up Host ide.kushnir.cloud
-            header_up X-Forwarded-Proto https
-            header_up X-Real-IP {remote_host}
-        }
+    reverse_proxy oauth2-proxy:4180 {
+        header_up Host ide.kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        fail_duration 5s
+        max_fails 3
+        health_uri /ping
+        health_interval 5s
+        health_timeout 2s
+    }
 }
 
 kushnir.cloud {
@@ -46,10 +51,15 @@ kushnir.cloud {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    # oauth2-proxy-portal sign-in gate for portal domain (routes to Appsmith)
-        reverse_proxy appsmith:80 {
-            header_up Host kushnir.cloud
-            header_up X-Forwarded-Proto https
-            header_up X-Real-IP {remote_host}
-        }
+    # oauth2-proxy-portal sign-in gate for portal domain
+    reverse_proxy oauth2-proxy-portal:4181 {
+        header_up Host kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        fail_duration 5s
+        max_fails 3
+        health_uri /ping
+        health_interval 5s
+        health_timeout 2s
+    }
 }

@@ -138,6 +138,15 @@ def add_alert(plugin_id, alert_name, description, solution, risk_code, risk_desc
         "severity": severity,
     })
 
+def looks_like_login_form(body: str) -> bool:
+    # Login forms are pre-auth credential submissions; they do not carry the
+    # same CSRF marker expectations as authenticated state-changing forms.
+    return bool(
+        re.search(r'<input[^>]+type=["\']password["\']', body, re.IGNORECASE)
+        or re.search(r'\b(?:sign\s*in|log\s*in|login)\b', body, re.IGNORECASE)
+        or re.search(r'/auth/login\b', body, re.IGNORECASE)
+    )
+
 try:
     target = normalize_target(target_url)
 except ValueError as exc:
@@ -288,19 +297,20 @@ else:
 
         if re.search(r"<form\b", root_body, re.IGNORECASE):
             if not re.search(r"csrf|xsrf|anti-forgery|authenticity_token", body_lower):
-                add_alert(
-                    "dast-csrf-token-missing",
-                    "Missing CSRF token markers",
-                    "A form was detected but no CSRF-style token markers were present in the response.",
-                    "Add per-request CSRF tokens or equivalent anti-forgery validation on all state-changing forms.",
-                    2,
-                    "Medium",
-                    "Low",
-                    target,
-                    "GET",
-                    "",
-                    "Form present without obvious CSRF token markers.",
-                )
+                if not looks_like_login_form(root_body):
+                    add_alert(
+                        "dast-csrf-token-missing",
+                        "Missing CSRF token markers",
+                        "A form was detected but no CSRF-style token markers were present in the response.",
+                        "Add per-request CSRF tokens or equivalent anti-forgery validation on all state-changing forms.",
+                        2,
+                        "Medium",
+                        "Low",
+                        target,
+                        "GET",
+                        "",
+                        "Form present without obvious CSRF token markers.",
+                    )
 
         header_checks = {
             "x-content-type-options": "nosniff",

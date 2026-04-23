@@ -22,6 +22,17 @@ SPIKE_USERS=${SPIKE_USERS:-1000}
 SUSTAINED_USERS=${SUSTAINED_USERS:-500}
 OUTPUT_DIR=${OUTPUT_DIR:-./artifacts/performance-tests}
 TEST_PAUSE_BETWEEN_PHASES=${TEST_PAUSE_BETWEEN_PHASES:-30}
+K6_CMD=()
+
+resolve_k6_command() {
+    if command -v k6 &> /dev/null; then
+        K6_CMD=(k6)
+    elif command -v docker &> /dev/null; then
+        K6_CMD=(docker run --rm -v "$(pwd):/work" -w /work grafana/k6)
+    else
+        K6_CMD=()
+    fi
+}
 
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
@@ -46,6 +57,8 @@ log_error() {
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
+
+    resolve_k6_command
     
     # Check if curl available
     if ! command -v curl &> /dev/null; then
@@ -58,9 +71,10 @@ check_prerequisites() {
         log_warn "jq not found. Some output formatting will be limited."
     fi
     
-    # Try to install k6 if not present
-    if ! command -v k6 &> /dev/null; then
-        log_warn "k6 not found. Falling back to the built-in simple benchmark path."
+    if [ ${#K6_CMD[@]} -eq 0 ]; then
+        log_warn "k6 not found and docker is unavailable. Falling back to the built-in simple benchmark path."
+    elif [ "${K6_CMD[0]}" = "docker" ]; then
+        log_info "k6 will be run via docker run grafana/k6"
     fi
     
     # Check if target is reachable
@@ -85,7 +99,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 export const options = {
-  stages: __STAGES__,
+    stages: [__STAGES__],
   thresholds: {
     http_req_duration: ['p(95)<500', 'p(99)<1000'],
     http_req_failed: ['rate<0.1'],
@@ -146,7 +160,7 @@ run_k6_test() {
     
     log_info "Running $test_name test..."
     
-    k6 run \
+    "${K6_CMD[@]}" run \
         --out json="$output_json" \
         --summary-export="$OUTPUT_DIR/${test_name}-summary.json" \
         "$test_file" 2>&1 | tee "$OUTPUT_DIR/${test_name}-output.log"
@@ -287,7 +301,7 @@ main() {
     
     # Run baseline test
     log_info "=== BASELINE TEST: $BASELINE_USERS concurrent users ==="
-    if command -v k6 &> /dev/null; then
+    if [ ${#K6_CMD[@]} -gt 0 ]; then
         run_k6_test "baseline" "$OUTPUT_DIR/baseline-test.js" "$OUTPUT_DIR/baseline-results.json"
         parse_k6_results "baseline" "$OUTPUT_DIR/baseline-results.json" "$OUTPUT_DIR/baseline-report.txt"
     else
@@ -299,7 +313,7 @@ main() {
     
     # Run spike test
     log_info "=== SPIKE TEST: $SPIKE_USERS concurrent users ==="
-    if command -v k6 &> /dev/null; then
+    if [ ${#K6_CMD[@]} -gt 0 ]; then
         run_k6_test "spike" "$OUTPUT_DIR/spike-test.js" "$OUTPUT_DIR/spike-results.json"
         parse_k6_results "spike" "$OUTPUT_DIR/spike-results.json" "$OUTPUT_DIR/spike-report.txt"
     else
@@ -315,7 +329,7 @@ main() {
     # Start metrics collection in background
     collect_metrics "sustained" "$TEST_DURATION_SUSTAINED" &
     
-    if command -v k6 &> /dev/null; then
+    if [ ${#K6_CMD[@]} -gt 0 ]; then
         run_k6_test "sustained" "$OUTPUT_DIR/sustained-test.js" "$OUTPUT_DIR/sustained-results.json"
         parse_k6_results "sustained" "$OUTPUT_DIR/sustained-results.json" "$OUTPUT_DIR/sustained-report.txt"
     else

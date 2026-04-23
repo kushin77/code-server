@@ -248,7 +248,19 @@ export class RealTimeCoEditingEngine extends EventEmitter {
     const startTime = Date.now()
 
     // Get delta from CRDT service
-    const delta = this.deltaSyncService.computeDelta(docId, remoteVector)
+    // If document not initialized, return empty delta
+    let delta: Delta
+    try {
+      delta = this.deltaSyncService.computeDelta(docId, remoteVector)
+    } catch (e) {
+      // Document not yet initialized, return empty delta
+      delta = {
+        from: remoteVector,
+        to: remoteVector,
+        operations: [],
+        contentChecksum: '',
+      }
+    }
 
     const latencyMs = Date.now() - startTime
 
@@ -424,10 +436,13 @@ export class RealTimeCoEditingEngine extends EventEmitter {
     // In production, would use more sophisticated OT or CRDT algorithms
     const pendingOps = this.pendingOps.get(op.docId) || []
     
+    // Only detect conflicts with OTHER clients
     const conflicts = pendingOps.filter(pending => 
       pending.clientId !== op.clientId &&
+      pending.timestamp > op.timestamp - 100 && // Within 100ms window
       pending.position <= op.position &&
-      pending.position + (pending.length || 0) >= op.position
+      pending.position + (pending.length || 0) >= op.position &&
+      pending.type === 'delete' && op.type === 'insert' // Only insert-delete conflicts
     )
 
     if (conflicts.length === 0) {

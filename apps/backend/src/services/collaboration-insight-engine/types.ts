@@ -84,7 +84,7 @@ export interface TeamDynamics {
   memberCount: number;
   activeCollaborators: number;
   communicationDensity: number; // 0-1
-  knowledge concentration: number; // 0-1 (how centralized knowledge is)
+  knowledgeConcentration: number; // 0-1 (how centralized knowledge is)
   averageCodeOwnershipConcentration: number; // 0-1
   collaborationScore: number; // 0-100
   riskFactors: string[];

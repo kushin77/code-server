@@ -174,14 +174,6 @@ export class SharedPromptLibraryService extends EventEmitter {
   }
 
   async createPrompt(
-    this.auditService?.emit({
-      userId: createdBy,
-      action: 'allow',
-      role: 'user',
-      method: 'createPrompt',
-      path: '/api/prompts',
-      reason: 'Created shared prompt: ' + name
-    });
     teamId: string,
     name: string,
     content: string,
@@ -193,6 +185,14 @@ export class SharedPromptLibraryService extends EventEmitter {
       tags?: string[];
     } = {}
   ): Promise<Prompt> {
+    this.auditService?.emit({
+      userId: createdBy,
+      action: 'allow',
+      role: 'user',
+      method: 'createPrompt',
+      path: '/api/prompts',
+      reason: 'Created shared prompt: ' + name
+    });
     if (content.length > this.config.maxPromptLength) {
       throw new Error(`Prompt exceeds max length of ${this.config.maxPromptLength} characters`);
     }

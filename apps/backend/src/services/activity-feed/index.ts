@@ -174,6 +174,11 @@ export class ActivityFeedService extends EventEmitter {
   }
 
   async recordActivity(
+    type: ActivityType,
+    title: string,
+    status: ActivityStatus = 'info',
+    options?: { description?: string; deepLink?: string; userId?: string; repository?: string; metadata?: any; tags?: string[] }
+  ): Promise<Activity> {
     this.auditService?.emit({
       userId: options?.userId || 'system',
       action: 'allow',
@@ -182,11 +187,6 @@ export class ActivityFeedService extends EventEmitter {
       path: '/api/activity',
       reason: 'Recorded activity type ' + type + ': ' + title
     });
-    type: ActivityType,
-    title: string,
-    status: ActivityStatus = 'info',
-    options?: { description?: string; deepLink?: string; userId?: string; repository?: string; metadata?: any; tags?: string[] }
-  ): Promise<Activity> {
     const client = await this.pool.connect();
     try {
       const id = require('crypto').randomUUID();

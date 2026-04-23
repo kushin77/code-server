@@ -302,6 +302,10 @@ export class AIReviewerRouterService extends EventEmitter {
   }
 
   async assignReview(
+    pullRequestId: string,
+    changedFiles: string[],
+    teamId: string
+  ): Promise<ReviewAssignment> {
     this.auditService?.emit({
       userId: 'system',
       action: 'allow',
@@ -310,10 +314,6 @@ export class AIReviewerRouterService extends EventEmitter {
       path: '/api/reviews/assign',
       reason: 'Assigned review for PR ' + pullRequestId
     });
-    pullRequestId: string,
-    changedFiles: string[],
-    teamId: string
-  ): Promise<ReviewAssignment> {
     const client = await this.pool.connect();
     try {
       // Score all reviewers

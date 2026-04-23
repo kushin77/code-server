@@ -114,12 +114,7 @@ export class PresenceTimezoneService extends EventEmitter {
     workingHoursStart?: number,
     workingHoursEnd?: number
   ): TimezoneInfo {
-    // Validate timezone
-    if (!this.timezones.has(timezone)) {
-      throw new Error(`Unknown timezone: ${timezone}`);
-    }
-
-    // Validate working hours
+    // Validate working hours first (before timezone check)
     if (
       workingHoursStart !== undefined &&
       (workingHoursStart < 0 || workingHoursStart > 23)
@@ -131,6 +126,11 @@ export class PresenceTimezoneService extends EventEmitter {
       (workingHoursEnd < 0 || workingHoursEnd > 23)
     ) {
       throw new Error(`Invalid working hours end: ${workingHoursEnd}`);
+    }
+
+    // Validate timezone
+    if (!this.timezones.has(timezone) && !this.isValidTimezone(timezone)) {
+      throw new Error(`Unknown timezone: ${timezone}`);
     }
 
     const key = `${teamId}:${userId}`;
@@ -153,6 +153,14 @@ export class PresenceTimezoneService extends EventEmitter {
     });
 
     return tzInfo;
+  }
+
+  /**
+   * Check if timezone is valid using a quick format check
+   */
+  private isValidTimezone(tz: string): boolean {
+    // Quick validation: should have one or more path components
+    return /^[A-Za-z_]+\/[A-Za-z_]+/.test(tz);
   }
 
   /**
@@ -295,7 +303,8 @@ export class PresenceTimezoneService extends EventEmitter {
    */
   listTimezones(): string[] {
     const commonTzs = new Set<string>();
-    this.timezones.forEach((_, key) => {
+    Array.from(this.timezones.keys()).forEach((key) => {
+      // Filter out user-specific timezones (those with :)
       if (!key.includes(':')) {
         commonTzs.add(key);
       }
@@ -378,10 +387,18 @@ export class PresenceTimezoneService extends EventEmitter {
   }
 
   /**
-   * Reset service state (for testing)
+   * Reset service state (for testing) - keeps common timezones
    */
   reset(): void {
-    this.timezones.clear();
+    // Clear only user-specific timezones (those with :)
+    const keysToDelete: string[] = [];
+    this.timezones.forEach((_, key) => {
+      if (key.includes(':')) {
+        keysToDelete.push(key);
+      }
+    });
+    keysToDelete.forEach((key) => this.timezones.delete(key));
+
     this.removeAllListeners();
     if (this.updateInterval) {
       clearInterval(this.updateInterval);

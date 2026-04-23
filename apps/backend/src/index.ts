@@ -34,6 +34,12 @@ export { initializeTeamRichPresenceRoutes, setupTeamRichPresenceIntegration, cre
 export { GuestSessionQuotasService, QuotaTier, QUOTA_LIMITS } from './services/guest-session-quotas';
 export type { GuestSessionQuota, QuotaLimit, QuotaWarning } from './services/guest-session-quotas';
 export { initializeGuestSessionQuotasRoutes, setupGuestSessionQuotasIntegration, createGuestSessionQuotasExampleApp } from './services/guest-session-quotas/integration-example';
+export { PresenceTimezoneService } from './services/presence-timezone';
+export type { TimezoneInfo, PresenceWithTimezone, TeamTimezoneStats } from './services/presence-timezone';
+export { initializePresenceTimezoneRoutes, setupPresenceTimezoneIntegration, createPresenceTimezoneExampleApp } from './services/presence-timezone/integration-example';
+export { SessionCostTrackingService } from './services/session-cost-tracking';
+export type { SessionCost, CostComponent, UserCostSummary, ProjectCostSummary } from './services/session-cost-tracking';
+export { initializeSessionCostTrackingRoutes, setupSessionCostTrackingIntegration, createSessionCostTrackingExampleApp } from './services/session-cost-tracking/integration-example';
 
 // Routes
 export { default as standupSummariesRouter, initializeStandupRoutes } from './routes/standup-summaries';

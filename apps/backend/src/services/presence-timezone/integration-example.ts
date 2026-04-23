@@ -34,18 +34,21 @@ export function initializePresenceTimezoneRoutes(
   });
 
   /**
-   * GET /api/presence-timezone/user/:userId/team/:teamId/:timezone
-   * Get timezone info for a user
+   * GET /api/presence-timezone/user/info
+   * Get timezone info for a user (timezone provided as query param to handle slashes)
    */
-  router.get('/user/:userId/team/:teamId/:timezone', (req: Request, res: Response) => {
-    const { userId, teamId, timezone } = req.params;
-    const { workingHoursStart, workingHoursEnd } = req.query;
+  router.get('/user/info', (req: Request, res: Response) => {
+    const { userId, teamId, timezone, workingHoursStart, workingHoursEnd } = req.query;
+
+    if (!userId || !teamId || !timezone) {
+      return res.status(400).json({ error: 'Missing required query params: userId, teamId, timezone' });
+    }
 
     try {
       const tzInfo = service.getTimezoneInfo(
-        userId,
-        teamId,
-        timezone,
+        userId as string,
+        teamId as string,
+        timezone as string,
         workingHoursStart ? parseInt(workingHoursStart as string) : undefined,
         workingHoursEnd ? parseInt(workingHoursEnd as string) : undefined
       );
@@ -56,15 +59,26 @@ export function initializePresenceTimezoneRoutes(
   });
 
   /**
-   * GET /api/presence-timezone/presence/:userId/team/:teamId/:timezone/:presence
-   * Get presence with timezone information
+   * GET /api/presence-timezone/presence/info
+   * Get presence with timezone information (timezone provided as query param to handle slashes)
    */
-  router.get('/presence/:userId/team/:teamId/:timezone/:presence', (req: Request, res: Response) => {
-    const { userId, teamId, timezone, presence } = req.params;
-    const lastActive = req.query.lastActive ? new Date(req.query.lastActive as string) : new Date();
+  router.get('/presence/info', (req: Request, res: Response) => {
+    const { userId, teamId, timezone, presence, lastActive } = req.query;
+
+    if (!userId || !teamId || !timezone || !presence) {
+      return res.status(400).json({ error: 'Missing required query params: userId, teamId, timezone, presence' });
+    }
+
+    const lastActiveDate = lastActive ? new Date(lastActive as string) : new Date();
 
     try {
-      const presenceWithTz = service.getPresenceWithTimezone(userId, teamId, presence, lastActive, timezone);
+      const presenceWithTz = service.getPresenceWithTimezone(
+        userId as string,
+        teamId as string,
+        presence as string,
+        lastActiveDate,
+        timezone as string
+      );
       res.json(presenceWithTz);
     } catch (err: any) {
       res.status(400).json({ error: err.message });

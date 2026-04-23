@@ -534,7 +534,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - postgres-backup:/var/lib/postgresql/backup
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codeserver} -d ${POSTGRES_DB:-codeserver}"]
+      test: ["CMD-SHELL", "pg_isready -U codeserver -d codeserver"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -583,7 +583,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -U ${POSTGRES_USER:-codeserver} >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -U codeserver >/dev/null 2>&1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -1197,7 +1197,7 @@ services:
     environment:
       - PORT=9095
       - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN:-placeholder}
-      - SENTRY_ORG_SLUG=${SENTRY_ORG_SLUG:-kushnir-cloud}
+      - SENTRY_ORG_SLUG=${SENTRY_ORG_SLUG:?SENTRY_ORG_SLUG must be set}
       - SENTRY_PROJECT_SLUG=${SENTRY_PROJECT_SLUG:-code-server}
       - GITHUB_TOKEN=${GITHUB_TOKEN:?GITHUB_TOKEN must be set}
     healthcheck:
@@ -1234,7 +1234,7 @@ services:
     environment:
       - PORT=9096
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:-placeholder}
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-placeholder}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:?SLACK_BOT_TOKEN must be set}
       - WORKSPACE_URL=${WORKSPACE_URL:-https://ide.kushnir.cloud}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9096/health || exit 1"]
@@ -1315,7 +1315,7 @@ services:
       - STORAGE_PATH=/data/extensions
       - ALLOWED_PUBLISHERS=${REGISTRY_ALLOWED_PUBLISHERS:-kushin77,@kushnircloud}
       - REQUIRE_AUTH=${REGISTRY_REQUIRE_AUTH:-true}
-      - AUTH_TOKEN_SECRET=${REGISTRY_AUTH_TOKEN_SECRET:-change-me-in-production}
+      - AUTH_TOKEN_SECRET=${REGISTRY_AUTH_TOKEN_SECRET:?REGISTRY_AUTH_TOKEN_SECRET must be set}
       - ENABLE_METRICS=${REGISTRY_ENABLE_METRICS:-true}
       - METRICS_PORT=9090
     volumes:

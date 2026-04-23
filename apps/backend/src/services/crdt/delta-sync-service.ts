@@ -96,8 +96,11 @@ export class DeltaSyncService extends EventEmitter {
     compressionRatio: 0.0, // (delta_size / full_doc_size)
   }
 
-  // Cache for performance
+  // Cache for performance - keyed by docId:remoteVector
   private deltaCache = new Map<string, Delta>()
+  
+  // Track which cache keys belong to each document for invalidation
+  private docCacheKeys = new Map<string, Set<string>>()
 
   constructor(private logger?: any) {
     super()
@@ -173,8 +176,14 @@ export class DeltaSyncService extends EventEmitter {
     // Update checksum
     this.contentChecksums.set(docId, this.computeChecksum(newContent))
 
-    // Invalidate delta cache
-    this.deltaCache.delete(docId)
+    // Invalidate ALL cache entries for this document
+    const cacheKeys = this.docCacheKeys.get(docId)
+    if (cacheKeys) {
+      for (const cacheKey of cacheKeys) {
+        this.deltaCache.delete(cacheKey)
+      }
+      this.docCacheKeys.delete(docId)
+    }
 
     this.emit('operation-added', {
       docId,
@@ -223,6 +232,12 @@ export class DeltaSyncService extends EventEmitter {
 
     // Cache delta
     this.deltaCache.set(cacheKey, delta)
+    
+    // Track cache keys for this document
+    if (!this.docCacheKeys.has(docId)) {
+      this.docCacheKeys.set(docId, new Set())
+    }
+    this.docCacheKeys.get(docId)!.add(cacheKey)
 
     return delta
   }
@@ -298,8 +313,14 @@ export class DeltaSyncService extends EventEmitter {
     // Update checksum
     this.contentChecksums.set(docId, this.computeChecksum(newContent))
 
-    // Invalidate cache
-    this.deltaCache.delete(docId)
+    // Invalidate ALL cache entries for this document
+    const cacheKeys = this.docCacheKeys.get(docId)
+    if (cacheKeys) {
+      for (const cacheKey of cacheKeys) {
+        this.deltaCache.delete(cacheKey)
+      }
+      this.docCacheKeys.delete(docId)
+    }
 
     this.emit('delta-merged', {
       docId,

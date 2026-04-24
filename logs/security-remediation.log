@@ -1,8 +1,0 @@
-2026-04-24T20:34:05Z [SECURITY] Security remediation: 5 CVEs addressed
-2026-04-24T20:34:05Z [SECURITY] form-data: <2.5.4 -> 2.5.5 (buffer overflow)
-2026-04-24T20:34:05Z [SECURITY] tough-cookie: <4.1.3 -> 4.1.3 (prototype pollution)
-2026-04-24T20:34:05Z [SECURITY] qs: <6.14.1 -> 6.14.2 (denial of service)
-2026-04-24T20:34:05Z [SECURITY] uuid: <14.0.0 -> 14.0.0 (information disclosure)
-2026-04-24T20:34:05Z [SECURITY] node-fetch: <2.6.11 -> 2.6.11 (request smuggling)
-2026-04-24T20:34:05Z [SECURITY] Method: pnpm.overrides in package.json
-2026-04-24T20:34:05Z [SECURITY] Status: READY FOR DEPLOYMENT

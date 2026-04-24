@@ -22,10 +22,12 @@
 set -euo pipefail
 
 # =============================================================================
-# CONFIGURATION
+# INITIALIZATION & CONFIGURATION
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ALLOWLIST_FILE="$PROJECT_DIR/.gatekeep-hardcoded-ips"
 

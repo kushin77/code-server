@@ -7,18 +7,3 @@
 [2026-04-24 17:23:55] [INFO] Checking OPA health...
 [0;31m✗[0m OPA not responding at http://localhost:8181
 [2026-04-24 17:23:55] [ERROR] OPA health check failed. Aborting tests.
-[2026-04-24 17:26:12] [INFO] ==========================================
-[2026-04-24 17:26:12] [INFO] OPA Policy Engine End-to-End Test Suite
-[2026-04-24 17:26:12] [INFO] ==========================================
-[2026-04-24 17:26:12] [INFO] Timestamp: 2026-04-24T21:26:12Z
-[2026-04-24 17:26:12] [INFO] OPA URL: http://localhost:8181
-[2026-04-24 17:26:12] [INFO] ==========================================
-[2026-04-24 17:26:12] [INFO] Checking OPA health...
-[0;31m✗[0m OPA not responding at http://localhost:8181
-[2026-04-24 17:26:12] [ERROR] OPA health check failed. Aborting tests.
-[0;32m✓[0m ok
-[0;31m✗[0m bad
-[1;33m⚠[0m skip
-[0;32m✓[0m ok
-[0;31m✗[0m bad
-[1;33m⚠[0m skip

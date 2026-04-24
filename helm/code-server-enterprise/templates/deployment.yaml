@@ -1,0 +1,101 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: DEPLOYMENT_TEMPLATE
+# PURPOSE: Base Kubernetes Deployment template for microservices
+# PATTERN: Used by all application services
+
+{{- if .Values.services }}
+{{- range $serviceName, $serviceConfig := .Values.services }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "code-server-enterprise.fullname" . }}-{{ $serviceConfig.name }}
+  labels:
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+  annotations:
+    {{- toYaml .Values.annotations | nindent 4 }}
+spec:
+  replicas: {{ $serviceConfig.replicas | default 1 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "code-server-enterprise.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $serviceConfig.name }}
+  template:
+    metadata:
+      labels:
+        {{- include "code-server-enterprise.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $serviceConfig.name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- toYaml .Values.annotations | nindent 8 }}
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "code-server-enterprise.serviceAccountName" . }}
+      containers:
+      - name: {{ $serviceConfig.name }}
+        image: "{{ .Values.global.imageRegistry }}/{{ $serviceConfig.image }}"
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ $serviceConfig.port }}
+          protocol: TCP
+        env:
+        - name: LOG_LEVEL
+          value: {{ .Values.global.logLevel | quote }}
+        - name: SERVICE_NAME
+          value: {{ $serviceConfig.name | quote }}
+        {{- range $key, $value := .Values.environment }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        resources:
+          {{- toYaml ($serviceConfig.resources | default .Values.global.resources) | nindent 12 }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "code-server-enterprise.fullname" . }}-config
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - {{ $serviceConfig.name }}
+              topologyKey: kubernetes.io/hostname
+{{- end }}
+{{- end }}
+{{- end }}

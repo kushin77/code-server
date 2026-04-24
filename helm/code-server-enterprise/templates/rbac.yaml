@@ -1,0 +1,50 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: RBAC_TEMPLATE
+# PURPOSE: Kubernetes RBAC configuration for service accounts and permissions
+# PATTERN: Principle of least privilege
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "code-server-enterprise.serviceAccountName" . }}
+  labels:
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.annotations | nindent 4 }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "code-server-enterprise.fullname" . }}
+  labels:
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "code-server-enterprise.fullname" . }}
+  labels:
+    {{- include "code-server-enterprise.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "code-server-enterprise.fullname" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "code-server-enterprise.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}

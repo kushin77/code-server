@@ -1,10 +1,181 @@
 // ════════════════════════════════════════════════════════════════════════════
-// IaC Deployment Variables — All infrastructure config flows through here
-// These are the ONLY configuration inputs; everything else is derived
+// Sovereign Deployment Variables — Terraform Drop Package
+// All infrastructure-as-code parameterized for on-prem, air-gapped, federated deployment
 // ════════════════════════════════════════════════════════════════════════════
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Service Configuration
+// Core Deployment Parameters (REQUIRED)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "apex_domain" {
+  description = "Apex domain for deployment (e.g., kushnir.cloud)"
+  type        = string
+  
+  validation {
+    condition     = can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$", var.apex_domain))
+    error_message = "apex_domain must be a valid domain name."
+  }
+}
+
+variable "ide_domain" {
+  description = "IDE subdomain (e.g., ide.kushnir.cloud or code-server.kushnir.cloud)"
+  type        = string
+  
+  validation {
+    condition     = can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$", var.ide_domain))
+    error_message = "ide_domain must be a valid domain name."
+  }
+}
+
+variable "primary_host" {
+  description = "Primary replica host IP (e.g., 192.168.168.31)"
+  type        = string
+  
+  validation {
+    condition     = can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}$", var.primary_host))
+    error_message = "primary_host must be a valid IPv4 address."
+  }
+}
+
+variable "replica_host" {
+  description = "Secondary replica host IP (e.g., 192.168.168.42)"
+  type        = string
+  
+  validation {
+    condition     = can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}$", var.replica_host))
+    error_message = "replica_host must be a valid IPv4 address."
+  }
+}
+
+variable "nas_host" {
+  description = "NAS server IP for persistent storage (e.g., 192.168.168.56)"
+  type        = string
+  
+  validation {
+    condition     = can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}$", var.nas_host))
+    error_message = "nas_host must be a valid IPv4 address."
+  }
+}
+
+variable "registry_url" {
+  description = "Container registry URL for custom images (e.g., docker.io, gcr.io, or private registry)"
+  type        = string
+  default     = "docker.io"
+}
+
+variable "admin_email" {
+  description = "Admin email for Let's Encrypt ACME (required for TLS certificate generation)"
+  type        = string
+  sensitive   = true
+  
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.admin_email))
+    error_message = "admin_email must be a valid email address."
+  }
+}
+
+variable "deployment_mode" {
+  description = "Deployment mode: private (on-prem single org), air-gapped (no external network), federated (multi-org)"
+  type        = string
+  default     = "private"
+  
+  validation {
+    condition     = contains(["private", "air-gapped", "federated"], var.deployment_mode)
+    error_message = "deployment_mode must be one of: private, air-gapped, federated."
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Feature Flags (OPTIONAL)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "enable_observability" {
+  description = "Enable Prometheus, Grafana, Loki observability stack"
+  type        = bool
+  default     = true
+}
+
+variable "enable_ai" {
+  description = "Enable Ollama AI model hosting and prompt gateway"
+  type        = bool
+  default     = true
+}
+
+variable "enable_opa" {
+  description = "Enable OPA policy engine for declarative governance"
+  type        = bool
+  default     = true
+}
+
+variable "environment" {
+  description = "Environment identifier (e.g., production, staging, development)"
+  type        = string
+  default     = "production"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Resource Tags
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "tags" {
+  description = "Common tags applied to all resources for organization and billing"
+  type        = map(string)
+  default = {
+    "Terraform"   = "true"
+    "Managed-By"  = "Terraform"
+    "Product"     = "kushnir.cloud"
+    "Phase"       = "1"
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Container Image Versions (All pinned by digest, NEVER :latest)
+// ─────────────────────────────────────────────────────────────────────────────
+
+variable "postgres_image" {
+  description = "PostgreSQL Docker image (MUST be pinned by digest)"
+  type        = string
+  default     = "postgres:16"
+}
+
+variable "redis_image" {
+  description = "Redis Docker image (MUST be pinned by digest)"
+  type        = string
+  default     = "redis:7"
+}
+
+variable "ollama_image" {
+  description = "Ollama Docker image for AI model hosting (MUST be pinned by digest)"
+  type        = string
+  default     = "ollama/ollama:latest"
+}
+
+variable "caddy_image" {
+  description = "Caddy reverse proxy image (MUST be pinned by digest)"
+  type        = string
+  default     = "caddy:2.7.6-alpine"
+}
+
+variable "loki_image" {
+  description = "Grafana Loki log aggregation image (MUST be pinned by digest)"
+  type        = string
+  default     = "grafana/loki:2.9.3"
+}
+
+variable "prometheus_image" {
+  description = "Prometheus metrics collection image (MUST be pinned by digest)"
+  type        = string
+  default     = "prom/prometheus:latest"
+}
+
+variable "opa_image" {
+  description = "Open Policy Agent image for policy enforcement (MUST be pinned by digest)"
+  type        = string
+  default     = "openpolicyagent/opa:latest"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Authentication & Security
 // ─────────────────────────────────────────────────────────────────────────────
 
 variable "code_server_password" {
@@ -15,16 +186,6 @@ variable "code_server_password" {
   validation {
     condition     = length(var.code_server_password) >= 8
     error_message = "code_server_password must be at least 8 characters."
-  }
-}
-
-variable "domain" {
-  description = "Root domain for deployment (e.g., kushnir.cloud). OAuth2 callbacks are derived from this domain and IDE_DOMAIN."
-  type        = string
-  default     = "kushnir.cloud"
-  validation {
-    condition     = can(regex("^[a-z0-9.-]+\\.[a-z]{2,}$", var.domain))
-    error_message = "domain must be a valid FQDN (e.g., kushnir.cloud)"
   }
 }
 

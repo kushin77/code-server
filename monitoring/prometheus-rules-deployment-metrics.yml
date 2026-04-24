@@ -1,0 +1,156 @@
+groups:
+  - name: deployment_metrics
+    interval: 30s
+    rules:
+      # Deployment duration tracking
+      - record: deployment:duration_seconds
+        expr: |
+          histogram_quantile(0.95, 
+            rate(deployment_duration_seconds_bucket[5m])
+          )
+      
+      - record: deployment:duration_p99_seconds
+        expr: |
+          histogram_quantile(0.99,
+            rate(deployment_duration_seconds_bucket[5m])
+          )
+      
+      # Service startup metrics
+      - record: container:startup_time_seconds
+        expr: |
+          histogram_quantile(0.95,
+            rate(container_startup_time_seconds_bucket[5m])
+          ) by (container_name, instance)
+      
+      - record: cluster:total_startup_time_seconds
+        expr: |
+          max(container_startup_time_seconds) by (instance)
+      
+      # Health check response times
+      - record: healthcheck:response_time_seconds
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_request_duration_seconds_bucket{handler="/healthz"}[5m])
+          ) by (instance)
+      
+      - record: healthcheck:response_time_p99_seconds
+        expr: |
+          histogram_quantile(0.99,
+            rate(http_request_duration_seconds_bucket{handler="/healthz"}[5m])
+          ) by (instance)
+      
+      # Health endpoint availability
+      - record: healthcheck:availability_percent
+        expr: |
+          100 * (
+            rate(http_requests_total{handler="/healthz",status="200"}[5m]) /
+            rate(http_requests_total{handler="/healthz"}[5m])
+          ) by (instance)
+      
+      # Failover detection time
+      - record: failover:detection_time_seconds
+        expr: |
+          histogram_quantile(0.95,
+            rate(failover_detection_time_seconds_bucket[5m])
+          )
+      
+      - record: failover:detection_time_p99_seconds
+        expr: |
+          histogram_quantile(0.99,
+            rate(failover_detection_time_seconds_bucket[5m])
+          )
+      
+      # Failover recovery time
+      - record: failover:recovery_time_seconds
+        expr: |
+          histogram_quantile(0.95,
+            rate(failover_recovery_time_seconds_bucket[5m])
+          )
+      
+      # Deployment success rate
+      - record: deployment:success_rate
+        expr: |
+          (
+            increase(deployment_total{status="success"}[1h])
+          ) / (
+            increase(deployment_total[1h])
+          )
+      
+      - record: deployment:success_rate_24h
+        expr: |
+          (
+            increase(deployment_total{status="success"}[24h])
+          ) / (
+            increase(deployment_total[24h])
+          )
+      
+      # Database replication lag
+      - record: postgres:replication_lag_bytes
+        expr: pg_stat_replication_replay_lag_bytes
+      
+      - record: postgres:replication_lag_mb
+        expr: pg_stat_replication_replay_lag_bytes / 1024 / 1024
+      
+      # Container uptime and stability
+      - record: container:uptime_percent
+        expr: |
+          100 * (
+            sum(rate(container_up[5m])) /
+            count(container_up)
+          )
+      
+      # Service startup time distribution
+      - record: container:startup_time_avg_seconds
+        expr: |
+          avg(container_startup_time_seconds) by (instance)
+      
+      - record: container:startup_time_max_seconds
+        expr: |
+          max(container_startup_time_seconds) by (instance)
+      
+      # Network latency between replicas
+      - record: network:latency_ms
+        expr: |
+          histogram_quantile(0.95,
+            rate(network_rtt_ms_bucket[5m])
+          ) by (source_replica, dest_replica)
+      
+      # Replica availability
+      - record: replica:availability_percent
+        expr: |
+          100 * avg(up{instance=~"192.168.168.(31|42):.*"}) by (instance)
+      
+      # Cluster-wide availability
+      - record: cluster:availability_percent
+        expr: |
+          100 * min(replica:availability_percent)
+      
+      # Data integrity metrics
+      - record: postgres:transaction_rollback_count
+        expr: |
+          rate(pg_stat_database_xact_rollback[5m])
+      
+      - record: redis:persistence_status
+        expr: |
+          redis_rdb_last_save_time_seconds
+      
+      # SLA compliance metrics
+      - record: sla:deployment_duration_compliant
+        expr: |
+          (deployment:duration_seconds < 780) ? 1 : 0  # 780s = 13min
+      
+      - record: sla:failover_time_compliant
+        expr: |
+          (failover:recovery_time_seconds < 5) ? 1 : 0
+      
+      - record: sla:data_loss_events
+        expr: |
+          increase(data_loss_events_total[1h])
+      
+      - record: sla:compliance_percent
+        expr: |
+          100 * (
+            (sla:deployment_duration_compliant +
+             sla:failover_time_compliant +
+             (sla:data_loss_events == 0 ? 1 : 0)) / 3
+          )

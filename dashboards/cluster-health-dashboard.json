@@ -1,0 +1,423 @@
+{
+  "dashboard": {
+    "title": "Cluster Health - Real-Time Status",
+    "tags": ["cluster", "health", "production"],
+    "timezone": "UTC",
+    "uid": "cluster-health-prod",
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Cluster Status Summary",
+        "type": "stat",
+        "gridPos": {"h": 2, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "count(up{job=~\"code-server-enterprise|replica.*\",instance=~\"192.168.168.31:.*|192.168.168.42:.*\"} == 1) / 2",
+            "refId": "A",
+            "legendFormat": "Replicas Healthy"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "orientation": "auto",
+          "colorMode": "background",
+          "textMode": "auto",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": null, "color": "red"},
+              {"value": 0, "color": "red"},
+              {"value": 0.5, "color": "yellow"},
+              {"value": 1, "color": "green"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Replica 192.168.168.31",
+        "type": "stat",
+        "gridPos": {"h": 2, "w": 3, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "up{instance=~\"192.168.168.31:.*\"}",
+            "refId": "A",
+            "legendFormat": "R31"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": null, "color": "red"},
+              {"value": 0, "color": "red"},
+              {"value": 1, "color": "green"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Replica 192.168.168.42",
+        "type": "stat",
+        "gridPos": {"h": 2, "w": 3, "x": 9, "y": 0},
+        "targets": [
+          {
+            "expr": "up{instance=~\"192.168.168.42:.*\"}",
+            "refId": "A",
+            "legendFormat": "R42"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": null, "color": "red"},
+              {"value": 0, "color": "red"},
+              {"value": 1, "color": "green"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Service Count - Replica 31",
+        "type": "stat",
+        "gridPos": {"h": 2, "w": 3, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "count(container_up{instance=\"192.168.168.31:9100\"} == 1)",
+            "refId": "A",
+            "legendFormat": "Services"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {},
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "red"},
+                {"value": 0, "color": "red"},
+                {"value": 30, "color": "yellow"},
+                {"value": 35, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Service Count - Replica 42",
+        "type": "stat",
+        "gridPos": {"h": 2, "w": 3, "x": 15, "y": 0},
+        "targets": [
+          {
+            "expr": "count(container_up{instance=\"192.168.168.42:9100\"} == 1)",
+            "refId": "A",
+            "legendFormat": "Services"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {},
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "red"},
+                {"value": 0, "color": "red"},
+                {"value": 30, "color": "yellow"},
+                {"value": 35, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Health Endpoint Status",
+        "type": "table",
+        "gridPos": {"h": 3, "w": 6, "x": 0, "y": 2},
+        "targets": [
+          {
+            "expr": "up{job=\"prometheus_blackbox_http_2xx\",instance=~\"(192.168.168.31|192.168.168.42):8080\"}",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "__name__": true,
+                "job": true,
+                "handler": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "instance": "Endpoint",
+                "Value": "Status"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "PostgreSQL Replication Lag",
+        "type": "gauge",
+        "gridPos": {"h": 3, "w": 3, "x": 6, "y": 2},
+        "targets": [
+          {
+            "expr": "pg_stat_replication_replay_lag_bytes{instance=\"192.168.168.31:9187\"} / 1024 / 1024",
+            "refId": "A",
+            "legendFormat": "Lag MB"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {},
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "red"},
+                {"value": 0, "color": "green"},
+                {"value": 50, "color": "yellow"},
+                {"value": 100, "color": "red"}
+              ]
+            },
+            "unit": "MB"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Redis Replication Status",
+        "type": "stat",
+        "gridPos": {"h": 3, "w": 3, "x": 9, "y": 2},
+        "targets": [
+          {
+            "expr": "redis_replication_role{instance=\"192.168.168.31:6379\"}",
+            "refId": "A",
+            "legendFormat": "{{role}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {},
+            "mappings": [
+              {
+                "options": {
+                  "1": {"text": "Master", "color": "green"},
+                  "0": {"text": "Slave", "color": "blue"}
+                },
+                "type": "value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Memory Usage %",
+        "type": "gauge",
+        "gridPos": {"h": 3, "w": 3, "x": 12, "y": 2},
+        "targets": [
+          {
+            "expr": "100 * (1 - (node_memory_MemAvailable_bytes{instance=~\"192.168.168.(31|42):9100\"} / node_memory_MemTotal_bytes{instance=~\"192.168.168.(31|42):9100\"}))",
+            "refId": "A",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {},
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 70, "color": "yellow"},
+                {"value": 90, "color": "red"}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Active Connections (Last 5m)",
+        "type": "timeseries",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 5},
+        "targets": [
+          {
+            "expr": "rate(container_network_transmit_bytes_total{instance=~\"192.168.168.(31|42):9100\"}[5m])",
+            "refId": "A",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "lineWidth": 1,
+              "fillOpacity": 10,
+              "showPoints": "auto"
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Docker Container Status",
+        "type": "table",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 5},
+        "targets": [
+          {
+            "expr": "container_up{instance=~\"192.168.168.(31|42):9100\"}",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "__name__": true,
+                "job": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "container_label_com_docker_compose_service": "Service",
+                "instance": "Host",
+                "Value": "Status"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Recent Alerts",
+        "type": "alertlist",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 5},
+        "options": {
+          "showOptions": "current",
+          "maxItems": 20,
+          "sortOrder": 3,
+          "dashboardAlerts": false,
+          "alertName": "",
+          "dashboardTitle": "",
+          "tags": ["cluster"]
+        }
+      },
+      {
+        "id": 13,
+        "title": "Health Check Timeline",
+        "type": "timeseries",
+        "gridPos": {"h": 3, "w": 12, "x": 0, "y": 9},
+        "targets": [
+          {
+            "expr": "up{instance=~\"192.168.168.(31|42):8080\"}",
+            "refId": "A",
+            "legendFormat": "{{instance}} health"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 0
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "red"},
+                {"value": 0, "color": "red"},
+                {"value": 1, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 14,
+        "title": "CPU Usage %",
+        "type": "timeseries",
+        "gridPos": {"h": 3, "w": 12, "x": 12, "y": 9},
+        "targets": [
+          {
+            "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\",instance=~\"192.168.168.(31|42):9100\"}[5m])) * 100)",
+            "refId": "A",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "lineWidth": 1,
+              "fillOpacity": 10
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 70, "color": "yellow"},
+                {"value": 90, "color": "red"}
+              ]
+            },
+            "unit": "percent"
+          }
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "replica",
+          "type": "custom",
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "options": [
+            {"text": "All", "value": "$__all"},
+            {"text": "Replica 31", "value": "192.168.168.31"},
+            {"text": "Replica 42", "value": "192.168.168.42"}
+          ],
+          "query": "All,192.168.168.31,192.168.168.42"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Prometheus --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "schemaVersion": 36,
+    "style": "dark",
+    "database": "Prometheus"
+  }
+}

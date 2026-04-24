@@ -68,9 +68,10 @@ kushnir.cloud {
 # Custom Domain Routing — Dynamic Whitelabel Domains
 # All custom domains (e.g., customer.example.com) route through saas-api
 # Caddy auto-provisions TLS via Let's Encrypt (ACME challenge via DNS01)
+# Note: ide.kushnir.cloud is explicitly handled above and takes precedence
 # ════════════════════════════════════════════════════════════════════════════════
 
-*.kushnir.cloud !ide.kushnir.cloud {
+*.kushnir.cloud {
     encode gzip
 
     header {

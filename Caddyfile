@@ -4,7 +4,29 @@
 # NOTE: Caddy must run as root (user 0) to access root-owned cert files.
 # OIDC issuer routes removed until custom issuer service is deployed (#1029).
 
+{
+    email devops@kushnir.cloud
+}
+
+# HTTP listener for health checks (bypass TLS, allow DAST scans)
+http://ide.kushnir.cloud {
+    @health path /health /healthz /ping
+    handle @health {
+        respond "OK" 200
+    }
+
+    # Redirect other traffic to HTTPS
+    handle {
+        redir https://{host}{uri}
+    }
+}
+
+# HTTPS listener with TLS and OAuth2-Proxy gateway
 ide.kushnir.cloud {
+    tls {
+        on_demand
+    }
+
     encode gzip
 
     header {
@@ -37,6 +59,20 @@ ide.kushnir.cloud {
     }
 }
 
+# HTTP listener for kushnir.cloud health checks (portal domain)
+http://kushnir.cloud {
+    @health path /health /healthz /ping
+    handle @health {
+        respond "OK" 200
+    }
+
+    # Redirect other traffic to HTTPS
+    handle {
+        redir https://{host}{uri}
+    }
+}
+
+# HTTPS listener for kushnir.cloud (portal domain)
 kushnir.cloud {
     encode gzip
 
@@ -71,6 +107,20 @@ kushnir.cloud {
 # Note: ide.kushnir.cloud is explicitly handled above and takes precedence
 # ════════════════════════════════════════════════════════════════════════════════
 
+# HTTP listener for custom/wildcard domains (health checks only)
+http://*.kushnir.cloud {
+    @health path /health /healthz /ping
+    handle @health {
+        respond "OK" 200
+    }
+
+    # Redirect other traffic to HTTPS
+    handle {
+        redir https://{host}{uri}
+    }
+}
+
+# HTTPS listener for custom/wildcard domains
 *.kushnir.cloud {
     encode gzip
 

@@ -5,10 +5,11 @@
 # OIDC issuer routes removed until custom issuer service is deployed (#1029).
 
 ide.kushnir.cloud {
-    # Issue #1686 FIX: Use on_demand TLS provisioning to reduce Let's Encrypt renewal attempts
-    # This delays certificate issuance until first request, reducing early renewal failures
-    # Rate limit suppression period: Until 2026-04-25 11:35:25 UTC
-    tls {
+    # Issue #1686 FIX: Use internal certificates to bypass Let's Encrypt rate limit
+    # Rate limit active until: 2026-04-25 11:35:25 UTC
+    # WARNING: Certificate will be self-signed and trigger browser warnings
+    # This is acceptable for emergency unblocking of monitoring/DAST endpoints
+    tls internal {
         on_demand
     }
 
@@ -45,9 +46,9 @@ ide.kushnir.cloud {
 }
 
 kushnir.cloud {
-    # Issue #1686 FIX: Use on_demand TLS provisioning
-    # Rate limit suppression period: Until 2026-04-25 11:35:25 UTC
-    tls {
+    # Issue #1686 FIX: Use internal certificates to bypass Let's Encrypt rate limit
+    # Rate limit active until: 2026-04-25 11:35:25 UTC
+    tls internal {
         on_demand
     }
 
@@ -85,9 +86,9 @@ kushnir.cloud {
 # ════════════════════════════════════════════════════════════════════════════════
 
 *.kushnir.cloud {
-    # Issue #1686 FIX: Use on_demand TLS provisioning
-    # Rate limit suppression period: Until 2026-04-25 11:35:25 UTC
-    tls {
+    # Issue #1686 FIX: Use internal certificates to bypass Let's Encrypt rate limit
+    # Rate limit active until: 2026-04-25 11:35:25 UTC
+    tls internal {
         on_demand
     }
 

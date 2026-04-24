@@ -81,17 +81,21 @@ ensure_opa_service() {
         return 0
     fi
 
-    if ! command -v docker >/dev/null 2>&1; then
+    log "INFO" "OPA not responding at ${OPA_URL}; starting opa service with docker compose"
+
+    if command -v docker >/dev/null 2>&1; then
+        (
+            cd "${PROJECT_ROOT}"
+            docker compose up -d opa >/dev/null 2>&1 || true
+        )
+    elif command -v powershell.exe >/dev/null 2>&1; then
+        powershell.exe -NoLogo -NoProfile -Command "Set-Location '${PROJECT_ROOT}'; docker compose up -d opa" >/dev/null 2>&1 || true
+    elif command -v pwsh >/dev/null 2>&1; then
+        pwsh -NoLogo -NoProfile -Command "Set-Location '${PROJECT_ROOT}'; docker compose up -d opa" >/dev/null 2>&1 || true
+    else
         error "OPA not responding at ${OPA_URL} and Docker is unavailable"
         return 1
     fi
-
-    log "INFO" "OPA not responding at ${OPA_URL}; starting opa service with docker compose"
-
-    (
-        cd "${PROJECT_ROOT}"
-        docker compose up -d opa >/dev/null 2>&1 || true
-    )
 
     local attempt=0
     local max_attempts=30

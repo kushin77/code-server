@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.kushnir.cloud/kafka/reputation.update.v1.json",
+  "title": "Reputation Update Event",
+  "description": "Score changes for engineers and agents (used by reputation engine)",
+  "allOf": [
+    {
+      "$ref": "event-envelope.v1.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event_type": {
+          "const": "reputation.update"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "actor_id": {
+              "type": "string",
+              "description": "ID of the engineer or agent whose score changed"
+            },
+            "actor_type": {
+              "type": "string",
+              "enum": ["engineer", "agent"],
+              "description": "Whether this is an engineer or agent"
+            },
+            "previous_score": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Score before the change"
+            },
+            "new_score": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Score after the change"
+            },
+            "change_amount": {
+              "type": "integer",
+              "description": "Delta (new_score - previous_score)"
+            },
+            "contributing_signals": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "signal": {
+                    "type": "string",
+                    "description": "Signal type (e.g., deploy_success, code_review_quality)"
+                  },
+                  "weight": {
+                    "type": "number",
+                    "description": "Weight of this signal in score calculation"
+                  },
+                  "value": {
+                    "type": "number",
+                    "description": "Measured value for this signal"
+                  }
+                }
+              },
+              "description": "Signals that contributed to this score change"
+            },
+            "new_tier": {
+              "type": "string",
+              "enum": ["restricted", "standard", "senior", "elite"],
+              "description": "New access tier based on score"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Human-readable explanation of the score change"
+            }
+          },
+          "required": ["actor_id", "actor_type", "previous_score", "new_score"],
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

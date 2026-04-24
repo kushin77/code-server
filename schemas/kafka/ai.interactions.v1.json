@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.kushnir.cloud/kafka/ai.interactions.v1.json",
+  "title": "AI Interaction Event",
+  "description": "Prompt/response metadata from Prompt Gateway and AI services",
+  "allOf": [
+    {
+      "$ref": "event-envelope.v1.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event_type": {
+          "const": "ai.interactions"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "model_name": {
+              "type": "string",
+              "description": "Name of the model used (e.g., llama3:8b, claude-3-opus)"
+            },
+            "provider": {
+              "type": "string",
+              "enum": ["ollama", "openai", "anthropic", "local"],
+              "description": "AI model provider"
+            },
+            "prompt_hash": {
+              "type": "string",
+              "description": "SHA256 hash of the prompt (for deduplication, not storing secrets)"
+            },
+            "prompt_tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Input tokens consumed"
+            },
+            "response_tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Output tokens consumed"
+            },
+            "total_tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Total tokens (input + output)"
+            },
+            "latency_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Round-trip latency in milliseconds"
+            },
+            "temperature": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2,
+              "description": "Temperature parameter used"
+            },
+            "max_tokens": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Max tokens requested"
+            },
+            "success": {
+              "type": "boolean",
+              "description": "Whether the interaction succeeded"
+            },
+            "error": {
+              "type": "string",
+              "description": "Error message if failed"
+            },
+            "cost_credits": {
+              "type": "number",
+              "description": "Cost in agent budget credits"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Tags for categorizing interactions"
+            }
+          },
+          "required": ["model_name", "provider", "prompt_tokens", "response_tokens"],
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

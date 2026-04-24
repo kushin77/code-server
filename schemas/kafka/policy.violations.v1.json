@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.kushnir.cloud/kafka/policy.violations.v1.json",
+  "title": "Policy Violation Event",
+  "description": "OPA policy denials and enforcement events",
+  "allOf": [
+    {
+      "$ref": "event-envelope.v1.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event_type": {
+          "const": "policy.violations"
+        },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "policy_name": {
+              "type": "string",
+              "description": "Name of the OPA policy that denied the action"
+            },
+            "action": {
+              "type": "string",
+              "description": "Action that was attempted (e.g., deploy, delete_resource)"
+            },
+            "resource": {
+              "type": "string",
+              "description": "Resource the action was attempted on"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Policy denial reason from OPA"
+            },
+            "severity": {
+              "type": "string",
+              "enum": ["info", "warning", "critical"],
+              "description": "Severity of the policy violation"
+            },
+            "remediation": {
+              "type": "string",
+              "description": "Suggested remediation steps"
+            },
+            "attributes": {
+              "type": "object",
+              "description": "Request attributes that triggered the denial"
+            }
+          },
+          "required": ["policy_name", "action", "reason"],
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

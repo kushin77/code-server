@@ -1,0 +1,114 @@
+name: "🔐 Security"
+description: "Security finding, hardening task, or remediation"
+title: "security: <short description>"
+labels: ["security", "P1", "needs-priority"]
+assignees: []
+body:
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - P0 — Critical/Blocking
+        - P1 — High/Security Impact
+        - P2 — Medium/Risk Reduction
+        - P3 — Low/Defense in Depth
+      default: 1
+    validations:
+      required: true
+
+  - type: input
+    id: cvss
+    attributes:
+      label: "CVSS Score"
+      description: "Approximate CVSS score if this is a security finding"
+      placeholder: "9.1"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: epic
+    attributes:
+      label: "Epic"
+      description: "Which security or platform initiative is affected?"
+      options:
+        - "epic:security-hardening"
+        - "epic:identity-access"
+        - "epic:policy-templates"
+        - "epic:resilience"
+        - "epic:observability"
+        - "epic:kushnir-cloud"
+        - "None"
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: finding
+    attributes:
+      label: "🛡️ Finding / Risk"
+      description: "What is the security issue or hardening opportunity?"
+      placeholder: "Describe the exposure, threat, or missing control."
+    validations:
+      required: true
+
+  - type: textarea
+    id: attack_surface
+    attributes:
+      label: "🔍 Attack Surface"
+      description: "What is exposed and how can it be reached?"
+      placeholder: |
+        - Endpoint or host:
+        - Authentication context:
+        - Data at risk:
+    validations:
+      required: true
+
+  - type: textarea
+    id: remediation
+    attributes:
+      label: "🧰 Remediation Plan"
+      description: "How should this be fixed safely?"
+      placeholder: "Describe the smallest immutable change that removes the risk."
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: "✅ Verification"
+      description: "How will we prove the fix works?"
+      placeholder: |
+        - Static validation
+        - Runtime smoke test
+        - Secret scan / auth test / header check
+    validations:
+      required: true
+
+  - type: textarea
+    id: agent_steps
+    attributes:
+      label: "🤖 Agent Execution Steps"
+      description: "Step-by-step instructions for Copilot"
+      placeholder: |
+        1. Reproduce the issue and capture evidence.
+        2. Implement the minimum secure change in canonical files only.
+        3. Add regression coverage and security validation.
+        4. Commit with a conventional commit message.
+        5. Open PR with Fixes #N and include rollback notes.
+        6. Verify deployment or audit the control in place.
+        7. Run: bash scripts/pmo/complete-issue.sh kushin77/code-server N
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: completion_gate
+    attributes:
+      label: "🎯 Completion Gate"
+      options:
+        - label: "gate:fixed — Remediation committed"
+        - label: "gate:reviewed — Security review completed"
+        - label: "gate:merged — PR merged to main"
+        - label: "gate:validated — Verification passed"
+    validations:
+      required: true

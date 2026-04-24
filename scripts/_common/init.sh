@@ -134,7 +134,6 @@ export -f init_repo ensure_root ensure_not_root
 # Ensure common safe-execution flags are set for the calling script
 set -euo pipefail
 
-unset _COMMON_DIR
 unset -f _load
 unset -f _ensure_pnpm
 

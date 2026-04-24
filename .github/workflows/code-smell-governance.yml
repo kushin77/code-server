@@ -23,6 +23,12 @@ jobs:
       - name: Enable corepack
         run: corepack enable
 
+      - name: Run template library validation
+        run: bash scripts/ci/validate-template-library.sh
+
+      - name: Run identity governance validation
+        run: bash scripts/ci/validate-identity-governance.sh
+
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 

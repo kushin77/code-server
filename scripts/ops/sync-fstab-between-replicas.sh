@@ -3,17 +3,16 @@
 # @module      infrastructure/cluster-synchronization
 # @description Synchronize /etc/fstab between Replica 1 and Replica 2 (Issue #1637)
 #
+
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../_common/init.sh"
-
-# Initialize repository context
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
 init_repo
 
-REPLICA_1="192.168.168.31"
-REPLICA_2="192.168.168.42"
-SSH_USER="akushnir"
+REPLICA_1="${REPLICA_HOST_1:-192.168.168.31}"
+REPLICA_2="${REPLICA_HOST_2:-192.168.168.42}"
+SSH_USER="${DEPLOY_USER:-akushnir}"
 
 # Backup timestamp
 BACKUP_TS="$(date +%Y%m%d-%H%M%S)"
@@ -28,14 +27,14 @@ sync_fstab() {
     
     # Backup target fstab
     local backup_file="/tmp/fstab-backup-${BACKUP_TS}.txt"
-    log_info "Backing up target fstab to /tmp/fstab-backup-${BACKUP_TS}.txt on $target_host..."
-    ssh "$SSH_USER@$target_host" "sudo cp /etc/fstab $backup_file && sudo chmod 644 $backup_file" || \
+    log_info "Creating backup on $target_label..."
+    ssh "$SSH_USER@$target_host" "sudo cp /etc/fstab /etc/fstab.bak.${BACKUP_TS} && cat /etc/fstab" > /tmp/target-fstab-backup.txt || \
         log_fatal "Failed to backup fstab on $target_host"
     
     # Get source fstab
-    log_info "Retrieving source fstab from $source_label..."
+    log_info "Fetching fstab from $source_label..."
     ssh "$SSH_USER@$source_host" "cat /etc/fstab" > /tmp/source-fstab.txt || \
-        log_fatal "Failed to retrieve source fstab"
+        log_fatal "Failed to read fstab from $source_label"
     
     # Copy to target
     log_info "Copying source fstab to $target_label..."
@@ -50,12 +49,7 @@ sync_fstab() {
         log_warn "⚠️  fstab syntax validation issue - review carefully"
     fi
     
-    # Actual mount test (non-destructive)
-    log_info "Testing mount operation on $target_label (not modifying existing mounts)..."
-    ssh "$SSH_USER@$target_host" "sudo mount -a" || log_warn "⚠️  Some mounts may have failed (expected if already mounted)"
-    
     log_info "✅ fstab synchronization complete: $source_label → $target_label"
-    log_info "   Backup available at: $backup_file on $target_host"
 }
 
 main() {

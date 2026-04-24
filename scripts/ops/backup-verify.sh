@@ -9,8 +9,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
 DRY_RUN="${DRY_RUN:-0}"
-DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 BACKUP_DIR="${BACKUP_DIR:-/tmp}"
 
 log_stage() {

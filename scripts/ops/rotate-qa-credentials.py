@@ -10,7 +10,7 @@ import sys
 import json
 import argparse
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 from google.cloud import secretmanager
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
@@ -121,7 +121,7 @@ class QACredentialRotator:
         print()
         print("[INFO] Recording rotation in audit log...")
         audit_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "action": "CREDENTIAL_ROTATION",
             "user": self.qa_email,
             "status": "success",

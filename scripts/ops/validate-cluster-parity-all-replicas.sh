@@ -1,44 +1,16 @@
 #!/usr/bin/env bash
-################################################################################
 # @file        scripts/ops/validate-cluster-parity-all-replicas.sh
 # @module      ops/cluster-validation
 # @description Comprehensive cluster parity validation for multi-replica deployment
 # @owner       platform
 # @status      active
 #
-# PURPOSE
-#   Validates that all cluster replicas are in parity:
-#   - Same git commit on all nodes
-#   - Same service count (20 services per replica)
-#   - Same configuration (env vars, docker-compose versions)
-#   - Health endpoints responding on all replicas
-#   - Data consistency across Redis and PostgreSQL
-#
-# USAGE
-#   bash scripts/ops/validate-cluster-parity-all-replicas.sh [OPTIONS]
-#
-# OPTIONS
-#   --replicas <list>    Comma-separated replica IPs (default: 192.168.168.31,192.168.168.42)
-#   --timeout <secs>     SSH connection timeout in seconds (default: 10)
-#   --json               Output in JSON format
-#   --strict             Require exact parity (default: allow minor lag)
-#   -h, --help           Show this help message
-#
-# EXIT CODES
-#   0 - All replicas in parity
-#   1 - Parity violation detected
-#   2 - Configuration error
-#
-# EXAMPLE
-#   bash scripts/ops/validate-cluster-parity-all-replicas.sh --replicas 192.168.168.31,192.168.168.42 --strict
-#
-################################################################################
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-source "$REPO_ROOT/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
+init_repo
 
 ################################################################################
 # CONFIGURATION
@@ -49,7 +21,7 @@ SSH_USER="${SSH_USER:-akushnir}"
 SSH_TIMEOUT="${SSH_TIMEOUT:-10}"
 JSON_OUTPUT=0
 STRICT_MODE=0
-ARTIFACTS_DIR="$REPO_ROOT/artifacts/triage"
+ARTIFACTS_DIR="${REPO_ROOT}/artifacts/triage"
 
 # Parity check results
 declare -A GIT_COMMITS
@@ -68,7 +40,12 @@ while [[ $# -gt 0 ]]; do
         --json) JSON_OUTPUT=1; shift ;;
         --strict) STRICT_MODE=1; shift ;;
         -h|--help) 
-            head -n 40 "$0" | grep "^#" | sed 's/^# //'
+            echo "Usage: scripts/ops/validate-cluster-parity-all-replicas.sh [OPTIONS]"
+            echo "Options:"
+            echo "  --replicas <list>    Comma-separated replica IPs"
+            echo "  --timeout <secs>     SSH connection timeout"
+            echo "  --json               Output in JSON format"
+            echo "  --strict             Require exact parity"
             exit 0
             ;;
         *) log_fatal "Unknown option: $1" ;;
@@ -103,7 +80,7 @@ check_replica_service_count() {
     local count
     count=$(ssh -o ConnectTimeout="$SSH_TIMEOUT" -o StrictHostKeyChecking=no \
         "$SSH_USER@$replica" \
-        "cd code-server-enterprise && docker-compose ps --services 2>/dev/null | wc -l" 2>/dev/null || echo "0")
+        "cd code-server-enterprise && docker compose ps --services 2>/dev/null | wc -l" 2>/dev/null || echo "0")
     
     SERVICE_COUNTS[$replica]="$count"
     log_debug "[$replica] Service count: $count"
@@ -134,6 +111,7 @@ validate_cluster_parity() {
     log_info ""
     
     # Convert replicas string to array
+    local replica_array
     IFS=',' read -ra replica_array <<< "$REPLICAS"
     
     # Check each replica
@@ -149,8 +127,8 @@ validate_cluster_parity() {
     log_info "=== Parity Check Results ==="
     
     # Check if all replicas have same git commit
-    local commits_match=1
     local first_commit=""
+    local commits_match=1
     for replica in "${replica_array[@]}"; do
         if [[ -z "$first_commit" ]]; then
             first_commit="${GIT_COMMITS[$replica]:-}"
@@ -208,7 +186,7 @@ validate_cluster_parity() {
 ################################################################################
 
 main() {
-    log_info "P2-1695: Cluster Parity Validation Script"
+    log_info "Cluster Parity Validation Script"
     log_info "Replicas: $REPLICAS"
     log_info ""
     

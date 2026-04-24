@@ -1,27 +1,22 @@
 #!/usr/bin/env bash
-################################################################################
 # @file        scripts/ops/setup-passwordless-sudo.sh
 # @module      infrastructure/security
 # @description Configure passwordless sudo for deployment operations (P1 #1636)
 # @owner       platform
 # @status      active
 #
-# USAGE
-#   scripts/ops/setup-passwordless-sudo.sh [host1 host2 ...]
-#
-# Last Updated: April 23, 2026
-################################################################################
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
+init_repo
 
 require_command ssh "ssh is required for sudo configuration verification"
 
 SSH_KEY_PATH="${SSH_KEY_PATH:-$HOME/.ssh/id_rsa_onprem}"
 SUDO_USER="${SUDO_USER:-${DEPLOY_USER}}"
-SUDOERS_TEMPLATE="$SCRIPT_DIR/../../etc/sudoers.d/akushnir"
+SUDOERS_TEMPLATE="${SCRIPT_DIR}/etc/sudoers.d/akushnir"
 
 require_file "$SSH_KEY_PATH"
 require_file "$SUDOERS_TEMPLATE"
@@ -29,7 +24,7 @@ require_file "$SUDOERS_TEMPLATE"
 if [[ $# -gt 0 ]]; then
     TARGET_HOSTS=("$@")
 else
-    TARGET_HOSTS=("$DEPLOY_HOST" "$STANDBY_HOST")
+    TARGET_HOSTS=("$DEPLOY_HOST" "$REPLICA_HOST_2")
 fi
 
 apply_sudoers() {

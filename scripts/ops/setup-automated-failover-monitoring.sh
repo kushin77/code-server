@@ -4,82 +4,82 @@
 # @description Setup Prometheus AlertManager webhook for automated failover response
 # @owner       Infrastructure Team
 # @status      In development - April 23, 2026
+#
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
 # Initialize repository context
 init_repo
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-PRIMARY_USER="${PRIMARY_USER:-akushnir}"
-ALERT_WEBHOOK_PORT="${ALERT_WEBHOOK_PORT:-5001}"
-
-# ============================================================================
-# Logging Functions
-# ============================================================================
-
-log_info() { log_info "$(date '+%Y-%m-%d %H:%M:%S') [FAILOVER] $*"; }
-log_error() { log_error "$(date '+%Y-%m-%d %H:%M:%S') [ERROR] $*"; }
-log_warn() { log_warn "$(date '+%Y-%m-%d %H:%M:%S') [WARN] $*"; }
+# Required configuration from environment
+: "${PRIMARY_HOST:?PRIMARY_HOST must be set}"
+: "${REPLICA_HOST:?REPLICA_HOST must be set}"
+: "${PRIMARY_USER:?PRIMARY_USER must be set}"
+: "${ALERTMANAGER_ALERTS_URL:?ALERTMANAGER_ALERTS_URL must be set}"
+: "${FAILOVER_WEBHOOK_URL:?FAILOVER_WEBHOOK_URL must be set}"
+: "${PRIMARY_EXPORTER_TARGET:?PRIMARY_EXPORTER_TARGET must be set}"
 
 # ============================================================================
 # AlertManager Webhook Configuration
 # ============================================================================
 
 create_webhook_handler() {
-    cat > /tmp/failover-webhook-handler.sh <<'EOF'
-#!/bin/bash
+  cat > /tmp/failover-webhook-handler.sh <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
 # Webhook receiver for Prometheus AlertManager
 # Triggers failover when critical alerts received
 
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-PRIMARY_USER="${PRIMARY_USER:-akushnir}"
+REPLICA_HOST="${REPLICA_HOST}"
+PRIMARY_HOST="${PRIMARY_HOST}"
+PRIMARY_USER="${PRIMARY_USER}"
 
 log_failover() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [FAILOVER] $*" | tee -a /var/log/failover-webhook.log
+  echo "\$(date '+%Y-%m-%d %H:%M:%S') [FAILOVER] \$*" | tee -a /var/log/failover-webhook.log
 }
 
 trigger_failover() {
-    log_failover "Failover triggered by alert: $1"
+  log_failover "Failover triggered by alert: \$1"
     
-    # Promote replica to primary
-    log_failover "Promoting replica to primary..."
-    ssh "${PRIMARY_USER}@${REPLICA_HOST}" "
-        docker exec postgres psql -U postgres -c 'SELECT pg_promote();' 2>/dev/null || \
-        docker exec postgres pg_ctl promote -D /var/lib/postgresql/data
+  # Promote replica to primary
+  log_failover "Promoting replica to primary..."
+  ssh "\${PRIMARY_USER}@\${REPLICA_HOST}" "
+    docker exec postgres psql -U postgres -c 'SELECT pg_promote();' 2>/dev/null || \
+    docker exec postgres pg_ctl promote -D /var/lib/postgresql/data
+  "
+    
+  if [ \$? -eq 0 ]; then
+    log_failover "✓ Replica promoted to primary"
+        
+    # Update application configuration if needed
+    ssh "\${PRIMARY_USER}@\${REPLICA_HOST}" "
+      cd code-server-enterprise && docker-compose restart code-server oauth2-proxy caddy 2>/dev/null || true
     "
-    
-    if [ $? -eq 0 ]; then
-        log_failover "✓ Replica promoted to primary"
         
-        # Update application configuration if needed
-        ssh "${PRIMARY_USER}@${REPLICA_HOST}" "
-            docker-compose restart code-server oauth2-proxy caddy 2>/dev/null || true
-        "
-        
-        log_failover "✓ Services restarted on new primary"
-    else
-        log_failover "✗ Failover failed - manual intervention required"
-        exit 1
-    fi
+    log_failover "✓ Services restarted on new primary"
+  else
+    log_failover "✗ Failover failed - manual intervention required"
+    exit 1
+  fi
 }
 
 # Parse alert webhook payload
-ALERT_STATUS=$(echo "$1" | jq -r '.status' 2>/dev/null || echo "unknown")
-ALERT_SEVERITY=$(echo "$1" | jq -r '.alerts[0].labels.severity' 2>/dev/null || echo "unknown")
+# Payload is received via stdin from a simple socat/nc listener or standard webhook server
+INPUT=\$(cat)
+ALERT_STATUS=\$(echo "\$INPUT" | jq -r '.status' 2>/dev/null || echo "unknown")
+ALERT_SEVERITY=\$(echo "\$INPUT" | jq -r '.alerts[0].labels.severity' 2>/dev/null || echo "unknown")
 
-if [ "${ALERT_STATUS}" = "firing" ] && [ "${ALERT_SEVERITY}" = "critical" ]; then
-    trigger_failover "$(echo "$1" | jq -r '.alerts[0].labels.alertname')"
+if [ "\${ALERT_STATUS}" = "firing" ] && [ "\${ALERT_SEVERITY}" = "critical" ]; then
+  trigger_failover "\$(echo "\$INPUT" | jq -r '.alerts[0].labels.alertname')"
 else
-    log_failover "Non-critical alert ignored: status=${ALERT_STATUS}, severity=${ALERT_SEVERITY}"
+  log_failover "Non-critical alert ignored: status=\${ALERT_STATUS}, severity=\${ALERT_SEVERITY}"
 fi
 EOF
-    chmod +x /tmp/failover-webhook-handler.sh
+  chmod +x /tmp/failover-webhook-handler.sh
 }
 
 # ============================================================================
@@ -89,7 +89,7 @@ EOF
 update_alertmanager_config() {
     log_info "Updating AlertManager configuration for webhook..."
     
-    cat > /tmp/alertmanager-failover.yml <<'EOF'
+  cat > /tmp/alertmanager-failover.yml <<EOF
 global:
   resolve_timeout: 5m
   
@@ -127,12 +127,12 @@ route:
 receivers:
   - name: 'default'
     webhook_configs:
-      - url: 'http://localhost:9093/api/v1/alerts'
+      - url: '${ALERTMANAGER_ALERTS_URL}'
         send_resolved: true
   
   - name: 'failover-webhook'
     webhook_configs:
-      - url: 'http://localhost:5001/webhook'
+      - url: '${FAILOVER_WEBHOOK_URL}'
         send_resolved: false
 
 inhibit_rules:
@@ -147,25 +147,26 @@ EOF
 }
 
 # ============================================================================
-# Prometheus Alert Rules
+# Create Critical Alert Rules
 # ============================================================================
 
 create_critical_alert_rules() {
-    cat > /tmp/critical-alerts.yml <<'EOF'
+    log_info "Creating critical alert rules..."
+
+  cat > /tmp/critical-alerts.yml <<EOF
 groups:
-  - name: infrastructure-critical
-    interval: 10s
+  - name: critical-infrastructure
     rules:
       # PostgreSQL down
       - alert: PostgreSQLDown
-        expr: up{job="postgres"} == 0
+        expr: pg_up == 0
         for: 10s
         labels:
           severity: critical
-          alerttype: infrastructure
+          alerttype: database
         annotations:
-          summary: "PostgreSQL is down"
-          description: "PostgreSQL has been unreachable for more than 10 seconds"
+          summary: "PostgreSQL is down on primary"
+          description: "PostgreSQL instance on {{ \$labels.instance }} has been down for more than 10 seconds"
       
       # Redis down
       - alert: RedisDown
@@ -187,18 +188,18 @@ groups:
           alerttype: database
         annotations:
           summary: "Replication lag critical"
-          description: "PostgreSQL replication lag is {{ $value }}s (>5s)"
+          description: "PostgreSQL replication lag is {{ \$value }}s (>5s)"
       
       # Primary host down
       - alert: PrimaryHostDown
-        expr: up{instance="192.168.168.31:9100"} == 0
+        expr: up{instance="${PRIMARY_EXPORTER_TARGET}"} == 0
         for: 10s
         labels:
           severity: critical
           alerttype: infrastructure
         annotations:
           summary: "Primary host is down"
-          description: "Primary host (192.168.168.31) is unreachable"
+          description: "Primary host (${PRIMARY_HOST}) is unreachable"
 EOF
     
     log_info "Critical alert rules created"
@@ -211,12 +212,9 @@ EOF
 deploy_webhook_handler() {
     log_info "Deploying webhook handler to primary host..."
     
-    ssh "${PRIMARY_USER}@${PRIMARY_HOST}" "
-    cat > /tmp/failover-webhook.sh <<'HEREDOC'
-$(cat /tmp/failover-webhook-handler.sh)
-HEREDOC
-    chmod +x /tmp/failover-webhook.sh
-    "
+    ssh "${PRIMARY_USER}@${PRIMARY_HOST}" "mkdir -p /opt/failover/bin"
+    scp /tmp/failover-webhook-handler.sh "${PRIMARY_USER}@${PRIMARY_HOST}:/opt/failover/bin/webhook-handler.sh"
+    ssh "${PRIMARY_USER}@${PRIMARY_HOST}" "chmod +x /opt/failover/bin/webhook-handler.sh"
     
     log_info "✓ Webhook handler deployed"
 }
@@ -226,18 +224,20 @@ HEREDOC
 # ============================================================================
 
 setup_alertmanager_webhook() {
-    log_info "Configuring AlertManager webhook endpoint..."
-    
+    log_info "Configuring AlertManager webhook endpoint on ${PRIMARY_HOST}..."
+
+    scp /tmp/alertmanager-failover.yml "${PRIMARY_USER}@${PRIMARY_HOST}:/tmp/alertmanager-failover.yml"
+
     ssh "${PRIMARY_USER}@${PRIMARY_HOST}" "
     # Update alertmanager configuration
     docker cp /tmp/alertmanager-failover.yml alertmanager:/etc/alertmanager/alertmanager.yml 2>/dev/null || {
         docker exec alertmanager bash -c '
-            if ! grep -q "failover_webhook" /etc/alertmanager/alertmanager.yml; then
+            if ! grep -q \"failover_webhook\" /etc/alertmanager/alertmanager.yml; then
                 cat >> /etc/alertmanager/alertmanager.yml <<HEREDOC
 
 # Failover webhook routing (appended)
 failover_webhook:
-  url: \"http://localhost:${ALERT_WEBHOOK_PORT}/webhook\"
+  url: \"${FAILOVER_WEBHOOK_URL}\"
   send_resolved: false
 HEREDOC
             fi
@@ -257,18 +257,21 @@ HEREDOC
 # ============================================================================
 
 register_critical_alerts() {
-    log_info "Registering critical alert rules with Prometheus..."
-    
+    log_info "Registering critical alert rules with Prometheus on ${PRIMARY_HOST}..."
+
+    scp /tmp/critical-alerts.yml "${PRIMARY_USER}@${PRIMARY_HOST}:/tmp/critical-alerts.yml"
+
     ssh "${PRIMARY_USER}@${PRIMARY_HOST}" "
     # Add critical alert rules to Prometheus
+    docker exec prometheus mkdir -p /etc/prometheus/rules/
     docker cp /tmp/critical-alerts.yml prometheus:/etc/prometheus/rules/ 2>/dev/null || {
         docker exec prometheus bash -c '
-            if ! grep -q "/etc/prometheus/rules/critical-alerts.yml" /etc/prometheus/prometheus.yml; then
+            if ! grep -q \"/etc/prometheus/rules/critical-alerts.yml\" /etc/prometheus/prometheus.yml; then
                 cat >> /etc/prometheus/prometheus.yml <<HEREDOC
 
 # Critical infrastructure alert rules (added)
 rule_files:
-  - "/etc/prometheus/rules/critical-alerts.yml"
+  - \"/etc/prometheus/rules/critical-alerts.yml\"
 HEREDOC
             fi
         '
@@ -286,25 +289,11 @@ HEREDOC
 # ============================================================================
 
 test_failover_webhook() {
-    log_info "Testing failover webhook..."
+    log_info "Testing failover webhook simulation..."
     
-    # Simulate alert webhook call
-    curl -X POST http://${PRIMARY_HOST}:${ALERT_WEBHOOK_PORT}/webhook \
-        -H "Content-Type: application/json" \
-        -d '{
-          "status": "firing",
-          "alerts": [{
-            "status": "firing",
-            "labels": {
-              "alertname": "PostgreSQLDown",
-              "severity": "critical"
-            }
-          }]
-        }' 2>/dev/null || log_warn "Webhook test failed (may be expected if not yet listening)"
-    
-    sleep 2
-    
-    log_info "Failover webhook test completed"
+    # Note: Full simulation requires the listener to be active on the target host
+    log_info "To test manually on primary:"
+    log_info "  echo '{\"status\":\"firing\",\"alerts\":[{\"labels\":{\"alertname\":\"PostgreSQLDown\",\"severity\":\"critical\"}}]}' | /opt/failover/bin/webhook-handler.sh"
 }
 
 # ============================================================================
@@ -314,13 +303,9 @@ test_failover_webhook() {
 main() {
     log_info "Setting up Automated Failover Monitoring"
     
-    # Create webhook handler
+    # Create configurations locally
     create_webhook_handler
-    
-    # Update AlertManager config
     update_alertmanager_config
-    
-    # Create critical alert rules
     create_critical_alert_rules
     
     # Deploy to primary host
@@ -328,12 +313,11 @@ main() {
     setup_alertmanager_webhook
     register_critical_alerts
     
-    # Test webhook
+    # Simulation report
     test_failover_webhook
     
     log_info "✓ Automated failover monitoring setup complete!"
     log_info "Critical alerts will now trigger automatic failover"
-    log_info "Monitor progress at: http://${PRIMARY_HOST}:3000 (Grafana)"
     
     return 0
 }

@@ -292,6 +292,45 @@ app.get('/api/audit-logs', requireSystemAdmin, async (req, res) => {
 // Custom Domain Endpoints (P3-1675)
 // ════════════════════════════════════════════════════════════════════════════
 
+// Caddy On-Demand TLS Validator (Rule 9: Idempotent/Safe)
+// GET /api/v1/validate-domain?domain=...
+// Returns 200 OK if the domain is authorized for TLS on-demand
+app.get('/api/v1/validate-domain', async (req, res) => {
+  const { domain } = req.query;
+
+  if (!domain) {
+    return res.status(400).end();
+  }
+
+  // Authorize our core domains and wildcards
+  const allowedDomains = [
+    'ide.kushnir.cloud',
+    'kushnir.cloud',
+    'localhost'
+  ];
+
+  if (allowedDomains.includes(domain) || domain.endsWith('.kushnir.cloud')) {
+    return res.status(200).end();
+  }
+
+  try {
+    // Check if domain is registered in custom_domains table and verified
+    const result = await pool.query(
+      'SELECT id FROM custom_domains WHERE domain = $1 AND is_verified = true AND is_active = true',
+      [domain.toLowerCase()]
+    );
+
+    if (result.rows.length > 0) {
+      return res.status(200).end();
+    }
+  } catch (err) {
+    console.error('Error validating domain for Caddy:', err);
+  }
+
+  // Deny all others (prevents certificate harvesting attacks)
+  res.status(403).end();
+});
+
 // POST /api/orgs/:org_id/custom-domain - Add custom domain with verification
 app.post('/api/orgs/:org_id/custom-domain', requireOrgAdmin, async (req, res) => {
   const { org_id } = req.params;

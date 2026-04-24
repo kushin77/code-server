@@ -195,9 +195,17 @@ check_metadata_headers() {
     local has_module=0
     local has_description=0
     
-    has_file=$(grep -c "# @file" "$script" || echo 0)
-    has_module=$(grep -c "# @module" "$script" || echo 0)
-    has_description=$(grep -c "# @description" "$script" || echo 0)
+    if grep -q "# @file" "$script"; then
+        has_file=1
+    fi
+
+    if grep -q "# @module" "$script"; then
+        has_module=1
+    fi
+
+    if grep -q "# @description" "$script"; then
+        has_description=1
+    fi
     
     if [[ $has_file -eq 0 || $has_module -eq 0 || $has_description -eq 0 ]]; then
         return 1
@@ -210,7 +218,9 @@ check_canonical_init() {
     local script="$1"
     local has_init=0
     
-    has_init=$(grep -c 'source.*_common/init\.sh' "$script" || echo 0)
+    if grep -q 'source.*_common/init\.sh' "$script"; then
+        has_init=1
+    fi
     
     if [[ $has_init -eq 0 ]]; then
         return 1
@@ -224,8 +234,13 @@ check_error_handling() {
     local has_pipefail=0
     local has_set_e=0
     
-    has_pipefail=$(grep -c "set -euo pipefail\|set -eu" "$script" || echo 0)
-    has_set_e=$(grep -c "set -e" "$script" || echo 0)
+    if grep -q "set -euo pipefail\|set -eu" "$script"; then
+        has_pipefail=1
+    fi
+
+    if grep -q "set -e" "$script"; then
+        has_set_e=1
+    fi
     
     if [[ $has_pipefail -eq 0 && $has_set_e -eq 0 ]]; then
         return 1
@@ -240,11 +255,15 @@ check_hardcoded_values() {
     
     # Look for IP addresses, URLs, credentials in the script
     if grep -qE '192\.168\.|10\.|172\.1[6-9]\.|172\.2[0-9]\.|172\.3[01]\.' "$script"; then
-        ((violations++))
+        violations=$((violations + 1))
     fi
     
-    if grep -qE 'https?://[^$]|localhost(?!:' "$script"; then
-        ((violations++))
+    if grep -qE 'https?://' "$script"; then
+        violations=$((violations + 1))
+    fi
+
+    if grep -qE 'localhost(:[0-9]+)?' "$script"; then
+        violations=$((violations + 1))
     fi
     
     [[ $violations -gt 0 ]] && return 1
@@ -270,34 +289,34 @@ check_script_compliance() {
     # Always check these
     if ! check_shebang "$script"; then
         log_debug "  ✗ Invalid shebang: $script"
-        ((violations++))
+        violations=$((violations + 1))
     fi
     
     if ! check_metadata_headers "$script"; then
         log_debug "  ✗ Missing GOV-002 headers: $script"
-        ((violations++))
+        violations=$((violations + 1))
     fi
     
     if ! check_canonical_init "$script"; then
         log_debug "  ✗ Not using canonical init.sh: $script"
-        ((violations++))
+        violations=$((violations + 1))
     fi
     
     if ! check_no_windows_artifacts "$script"; then
         log_debug "  ✗ Contains Windows/PowerShell artifacts: $script"
-        ((violations++))
+        violations=$((violations + 1))
     fi
     
     # Level-specific checks
     if [[ "$level" == "standard" || "$level" == "strict" ]]; then
         if ! check_error_handling "$script"; then
             log_debug "  ✗ Insufficient error handling: $script"
-            ((violations++))
+            violations=$((violations + 1))
         fi
         
         if ! check_hardcoded_values "$script"; then
             log_debug "  ✗ Contains hardcoded values (immutability violation): $script"
-            ((violations++))
+            violations=$((violations + 1))
         fi
     fi
     
@@ -333,13 +352,19 @@ EOF
     VIOLATION_COUNT=0
     
     for script in "$TARGET_DIR"/*.sh; do
-        ((TOTAL_SCRIPTS++))
         local script_name
         script_name=$(basename "$script")
+
+        if [[ "$script_name" == "$SCRIPT_NAME" ]]; then
+            log_debug "Skipping self-scan: $script_name"
+            continue
+        fi
+
+        TOTAL_SCRIPTS=$((TOTAL_SCRIPTS + 1))
         
         if check_script_compliance "$script" "$COMPLIANCE_LEVEL"; then
             log_info "✓ $script_name"
-            ((COMPLIANT_SCRIPTS++))
+            COMPLIANT_SCRIPTS=$((COMPLIANT_SCRIPTS + 1))
         else
             local violations=$?
             log_warn "✗ $script_name ($violations violations)"
@@ -369,6 +394,11 @@ EOF
     for script in "$TARGET_DIR"/*.sh; do
         local script_name
         script_name=$(basename "$script")
+
+        if [[ "$script_name" == "$SCRIPT_NAME" ]]; then
+            continue
+        fi
+
         if check_script_compliance "$script" "$COMPLIANCE_LEVEL" >/dev/null 2>&1; then
             echo "  - $script_name" >> "$REPORT_FILE"
         fi
@@ -441,14 +471,21 @@ fix_all_scripts() {
     fi
     
     for script in "$TARGET_DIR"/*.sh; do
+        local script_name
+        script_name=$(basename "$script")
+
+        if [[ "$script_name" == "$SCRIPT_NAME" ]]; then
+            continue
+        fi
+
         if check_script_compliance "$script" "$COMPLIANCE_LEVEL" >/dev/null 2>&1; then
             continue  # Skip already compliant scripts
         fi
         
         if fix_script "$script" "$dry_run"; then
-            ((fixed_count++))
+            fixed_count=$((fixed_count + 1))
         else
-            ((failed_count++))
+            failed_count=$((failed_count + 1))
         fi
     done
     

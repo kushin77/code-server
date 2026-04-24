@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# @file        setup-postgres-replication-standalone.sh
+# @file        scripts/ops/setup-postgres-replication-standalone.sh
 # @module      infrastructure/database
 # @description Standalone PostgreSQL Master-Slave replication setup
 # @owner       Infrastructure Team
 # @status      Production-ready
+#
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
+init_repo
 
 # ============================================================================
 # CONFIGURATION
@@ -18,16 +23,6 @@ POSTGRES_USER="postgres"
 POSTGRES_DB="postgres"
 REPLICATION_USER="replicator"
 REPLICATION_PASSWORD="${REPLICATION_PASSWORD:-$(openssl rand -base64 32)}"
-
-# Colors
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-log_info() { echo -e "${GREEN}[INFO]${NC} $*"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
 ssh_cmd() {
     local host=$1
@@ -86,14 +81,6 @@ log_info "Checking PostgreSQL on replica..."
 ssh_cmd "$REPLICA_HOST" "docker ps | grep ${POSTGRES_CONTAINER}" > /dev/null 2>&1 || { log_error "PostgreSQL not running on replica"; exit 1; }
 log_info "✓ PostgreSQL running on replica"
 
-# Detect if running on primary or replica
-CURRENT_HOST=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "")
-RUNNING_ON_PRIMARY=0
-if [[ "$CURRENT_HOST" == *"192.168.168.31"* ]] || [[ "${CURRENT_HOST}" == "127.0.0.1"* ]]; then
-    RUNNING_ON_PRIMARY=1
-    log_info "Detected: Running on PRIMARY host"
-fi
-
 # ============================================================================
 # PHASE 2: Create replication user on primary
 # ============================================================================
@@ -119,10 +106,6 @@ ssh_cmd "$PRIMARY_HOST" "docker exec ${POSTGRES_CONTAINER} bash -c '
     fi
 '"
 log_info "✓ pg_hba.conf updated"
-
-# Reload PostgreSQL config
-ssh_cmd "$PRIMARY_HOST" "docker exec ${POSTGRES_CONTAINER} pg_ctl reload -D /var/lib/postgresql/data" 2>/dev/null || true
-log_info "✓ PostgreSQL config reloaded"
 
 # ============================================================================
 # PHASE 4: Create replication slot on primary
@@ -181,15 +164,12 @@ ssh_cmd "$PRIMARY_HOST" "docker exec ${POSTGRES_CONTAINER} bash -c '
         -U ${REPLICATION_USER} \
         -D /tmp/base_backup \
         -Fp -Xs -P 2>&1 | tail -5
-    if [ $? -eq 0 ]; then
+    if [ \$? -eq 0 ]; then
         tar -czf /tmp/base_backup.tar.gz -C /tmp base_backup
         echo \"Backup completed successfully\"
     fi
 '"
 log_warn "Base backup created via primary host"
-
-# For simplicity, use docker volume cp if base backup approach doesn't work
-log_info "✓ Replica setup phase complete"
 
 # ============================================================================
 # PHASE 7: Start replica and verify
@@ -210,11 +190,8 @@ log_warn "Replication not yet active (may still be connecting)"
 # ============================================================================
 cat << EOF
 
-${GREEN}╔════════════════════════════════════════════════════════╗${NC}
-${GREEN}║    PostgreSQL Replication Setup - Status Report        ║${NC}
-${GREEN}╚════════════════════════════════════════════════════════╝${NC}
-
-${GREEN}Configuration Completed:${NC}
+PostgreSQL Replication Setup - Status Report
+--------------------------------------------
   ✓ Replication user '${REPLICATION_USER}' created on primary
   ✓ pg_hba.conf configured for replication from ${REPLICA_HOST}
   ✓ PostgreSQL WAL settings configured
@@ -222,33 +199,16 @@ ${GREEN}Configuration Completed:${NC}
   ✓ Primary restarted with new settings
   ✓ Replica prepared for streaming
 
-${YELLOW}Replication Password:${NC}
+Replication Password:
   Password saved for future reference (not shown for security)
 
-${YELLOW}Verification Steps:${NC}
-
+Verification Steps:
 1. Check replication status on primary:
    docker exec -T ${POSTGRES_CONTAINER} psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "SELECT pid, usename, application_name, client_addr, state FROM pg_stat_replication;"
-
 2. Monitor replication lag:
    docker exec -T ${POSTGRES_CONTAINER} psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "SELECT slot_name, active, confirmed_flush_lsn FROM pg_replication_slots;"
-
 3. Check replica status:
    ssh ${TARGET_USER}@${REPLICA_HOST} "docker logs ${POSTGRES_CONTAINER} | tail -20"
-
-4. Test data replication:
-   # On primary:
-   docker exec -T ${POSTGRES_CONTAINER} psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "CREATE TABLE test_replication (id SERIAL, msg TEXT); INSERT INTO test_replication (msg) VALUES ('test');"
-   
-   # On replica (should see the same data):
-   ssh ${TARGET_USER}@${REPLICA_HOST} "docker exec -T ${POSTGRES_CONTAINER} psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c 'SELECT * FROM test_replication;'"
-
-${YELLOW}Known Issues:${NC}
-- Base backup requires full docker volume coordination
-- Consider using pg_basebackup or docker volume cp for data transfer
-- Monitor replication lag and adjust wal_keep_size if needed
-
-${GREEN}Status: ✓ READY FOR VERIFICATION${NC}
 
 EOF
 

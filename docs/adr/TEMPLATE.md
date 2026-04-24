@@ -1,6 +1,6 @@
 # ADR Template
 
-**Purpose**: ADR Template — reference and operational document.
+**Purpose**: ADR template for reference and operational decisions.
 
 Use this template for all Architecture Decision Records.
 
@@ -16,14 +16,14 @@ Use this template for all Architecture Decision Records.
 
 ---
 
-## Contex
+## Context
 
 What is the issue we are addressing?
 
 Explain:
-- Problem statemen
+- Problem statement
 - Why it matters
-- Current state/pain points
+- Current state / pain points
 - Constraints or limitations we're working within
 
 ---
@@ -79,7 +79,7 @@ How does this decision affect security posture?
 - **Trust boundaries**: [How does this affect our trust model?]
 - **Attack surface**: [Does this expand or reduce attack surface?]
 - **Data exposure**: [Any new data exposure risks?]
-- **Authentication/Authorization**: [Implications for Auth?]
+- **Authentication/Authorization**: [Implications for auth?]
 - **Mitigation strategy**: [How do we mitigate identified risks?]
 
 ---
@@ -94,7 +94,7 @@ How does this decision affect security posture?
 
 ---
 
-## Operational Impac
+## Operational Impact
 
 - **Deployment**: [How does this change deployment?]
 - **Monitoring**: [What must we monitor?]

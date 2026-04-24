@@ -1,80 +1,61 @@
 #!/usr/bin/env bash
 # @file        scripts/ops/validate-nas-mount.sh
-# @module      ops/infrastructure
-# @description Validates NAS connectivity and export availability for production replicas
-# @owner       akushnir
-# @status      stable
-#
-# Implementation of Phase 3 NAS Mount Handling:
-# - Pings NAS host (192.168.168.56)
-# - Validates NFS/SMB export visibility
-# - Provides fail-fast signals for deployment orchestration
-#
-# Usage: bash scripts/ops/validate-nas-mount.sh [--host IP] [--export PATH] [--strict]
+# @module      ops/storage
+# @description Verify NAS mount connectivity and permissions across cluster
+# @owner       platform
+# @status      active
 #
 
 set -euo pipefail
 
-# Initialize repository context
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../_common/init.sh"
-
-# Initialize repository context
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
 init_repo
 
-# Default configuration
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
-NAS_EXPORT="${NAS_EXPORT:-/export/appsmith}"
-STRICT_MODE=0
+################################################################################
+# CONFIGURATION
+################################################################################
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --host)
-      NAS_HOST="$2"
-      shift 2
-      ;;
-    --export)
-      NAS_EXPORT="$2"
-      shift 2
-      ;;
-    --strict)
-      STRICT_MODE=1
-      shift
-      ;;
-    *)
-      log_error "Unknown option: $1"
-      exit 1
-      ;;
-  esac
-done
+REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+MOUNT_POINT="${NAS_MOUNT_POINT:-/mnt/nas/persistent}"
 
-log_info "Starting NAS validation for $NAS_HOST..."
+################################################################################
+# VALIDATION
+################################################################################
 
-# 1. Connectivity Check (Ping)
-log_debug "Pinging NAS host: $NAS_HOST"
-if ! ping -c 1 -W 2 "$NAS_HOST" > /dev/null 2>&1; then
-    if [[ "$STRICT_MODE" == "1" ]]; then
-        log_fatal "NAS host $NAS_HOST is unreachable. Strict mode enabled, aborting."
+validate_nas_replica() {
+    local replica="$1"
+    
+    log_info "Verifying NAS mount on $replica at $MOUNT_POINT..."
+    
+    if ssh "$DEPLOY_USER@$replica" "mountpoint -q $MOUNT_POINT && [ -w $MOUNT_POINT ]"; then
+        log_info "✅ NAS mount OK and Writable on $replica"
     else
-        log_warn "NAS host $NAS_HOST is unreachable. Deployments using NAS mounts will fail."
-        exit 1
+        log_error "✗ NAS mount verification failed on $replica"
+        return 1
     fi
-fi
-log_info "✅ NAS host $NAS_HOST is reachable"
+}
 
-# 2. Export Validation (if showmount is available)
-if command -v showmount > /dev/null 2>&1; then
-    log_debug "Checking exports on $NAS_HOST"
-    if ! showmount -e "$NAS_HOST" 2>/dev/null | grep -q "$NAS_EXPORT"; then
-        log_warn "Export $NAS_EXPORT not found on $NAS_HOST"
-        [[ "$STRICT_MODE" == "1" ]] && log_fatal "Required export missing in strict mode."
-        exit 1
+################################################################################
+# MAIN
+################################################################################
+
+main() {
+    log_info "Starting NAS Proximity Scan..."
+    
+    local replica_array
+    IFS=',' read -ra replica_array <<< "$REPLICAS"
+    
+    local fails=0
+    for replica in "${replica_array[@]}"; do
+        validate_nas_replica "$replica" || ((fails++))
+    done
+    
+    if [[ $fails -gt 0 ]]; then
+        log_fatal "NAS verification failed on $fails cluster nodes"
     fi
-    log_info "✅ NAS export $NAS_EXPORT is available"
-else
-    log_warn "showmount not found, skipping deep export validation"
-fi
+    
+    log_info "✅ NAS validated across entire active cluster"
+}
 
-log_info "SUCCESS: NAS validation passed for $NAS_HOST"
-exit 0
+main "$@"

@@ -1,3 +1,20 @@
+#!/usr/bin/env bash
+# @file        scripts/ops/P1-1694-FIX-SSL-HANDSHAKE-TIMEOUT.sh
+# @module      ops/infrastructure
+# @description Fixes SSL handshake timeouts for ide.kushnir.cloud and kushnir.cloud by switching to explicit TLS and adding 'ask' endpoint.
+#
+
+set -euo pipefail
+
+# 1. Archival of pre-fix Caddyfile
+cp Caddyfile Caddyfile.pre-ssl-fix
+
+# 2. Apply Caddyfile changes
+# - Add global email and ask endpoint
+# - Switch on_demand to explicit certs for core domains (managed by Caddy)
+# - Keep on_demand for wildcards but link to local validator
+
+cat <<EOF > Caddyfile
 # Production Caddyfile — kushnir.cloud / ide.kushnir.cloud
 # Caddy 2.7.6 — direct TLS termination with existing Let's Encrypt certs
 # Certs stored in enterprise_caddy-data volume (valid until 2026-07-19)
@@ -123,3 +140,6 @@ kushnir.cloud {
         header_up X-Real-IP {remote_host}
     }
 }
+EOF
+
+echo "[INFO] Caddyfile updated. Backed up as Caddyfile.pre-ssl-fix"

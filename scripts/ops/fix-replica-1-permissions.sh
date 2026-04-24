@@ -29,8 +29,9 @@ verify_ssh_access() {
     return 0
   fi
   
-  # SSH_OPTS is a string from config.sh with options separated by spaces
-  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" true 2>/dev/null; then
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
+  if ! ssh "${ssh_opts_array[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" true 2>/dev/null; then
     log_fatal "SSH access failed to ${DEPLOY_USER}@${REPLICA_HOST}"
   fi
   log_info "SSH access verified"
@@ -41,12 +42,16 @@ fix_ownership() {
   local remote_cmd="sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${DEPLOY_DIR}/"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    log_info "[dry-run] ssh ${ssh_opts_array[*]} ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
   log_info "Fixing file ownership on $REPLICA_HOST..."
-  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+  if ! ssh "${ssh_opts_array[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
     log_error "Failed to fix ownership. Ensure sudo is configured for $DEPLOY_USER without password prompt."
     return 1
   fi
@@ -58,12 +63,16 @@ clean_git_state() {
   local remote_cmd="cd ${DEPLOY_DIR} && git clean -fdx && git reset --hard origin/main"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    log_info "[dry-run] ssh ${ssh_opts_array[*]} ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
   log_info "Cleaning git state on $REPLICA_HOST..."
-  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+  if ! ssh "${ssh_opts_array[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
     log_error "Git cleanup failed"
     return 1
   fi
@@ -75,12 +84,16 @@ redeploy() {
   local remote_cmd="cd ${DEPLOY_DIR} && git pull --ff-only origin main && docker compose pull && docker compose up -d"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    log_info "[dry-run] ssh ${ssh_opts_array[*]} ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
   log_info "Redeploying on $REPLICA_HOST..."
-  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+  if ! ssh "${ssh_opts_array[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
     log_error "Redeployment failed"
     return 1
   fi
@@ -96,10 +109,12 @@ verify_git_status() {
     return 0
   fi
   
-  local commit_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short HEAD")
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
+  local commit_sha=$(ssh "${ssh_opts_array[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short HEAD")
   log_info "Replica 1 commit: $commit_sha"
   
-  local main_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short origin/main")
+  local main_sha=$(ssh "${ssh_opts_array[@]}" "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short origin/main")
   log_info "Main branch commit: $main_sha"
   
   if [[ "$commit_sha" == "$main_sha" ]]; then

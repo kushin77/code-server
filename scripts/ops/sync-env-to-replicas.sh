@@ -86,13 +86,15 @@ run_on_replica() {
   shift
   local host=$(parse_replica "$replica")
   local cmd="$@"
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
   
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    log_info "[dry-run] ssh $SSH_OPTS $host '$cmd'"
+    log_info "[dry-run] ssh ${ssh_opts_array[*]} $host '$cmd'"
     return 0
   fi
   
-  ssh $SSH_OPTS "$host" "$cmd" 2>&1
+  ssh "${ssh_opts_array[@]}" "$host" "$cmd" 2>&1
 }
 
 log_section "Environment Synchronization to All Replicas"
@@ -241,7 +243,9 @@ for replica in "${REPLICAS[@]}"; do
   fi
   
   # Verify hash on remote
-  remote_hash=$(ssh $SSH_OPTS "$host" "sha256sum $path/.env 2>/dev/null | awk '{print \$1}'" 2>&1)
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
+  remote_hash=$(ssh "${ssh_opts_array[@]}" "$host" "sha256sum $path/.env 2>/dev/null | awk '{print \$1}'" 2>&1)
   if [[ "$remote_hash" == "$LOCAL_HASH" ]]; then
     log_info "  ✓ Hash verified on $host: $remote_hash"
   else

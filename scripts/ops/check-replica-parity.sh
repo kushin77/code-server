@@ -78,8 +78,9 @@ query_replica() {
   local host=$1
   shift
   local cmd="$@"
-  
-  ssh $SSH_OPTS "$host" "$cmd" 2>/dev/null || echo "ERROR"
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
+  ssh "${ssh_opts_array[@]}" "$host" "$cmd" 2>/dev/null || echo "ERROR"
 }
 
 # Log section header
@@ -98,8 +99,10 @@ check_replica_connectivity() {
   log_info "Verifying all replicas are reachable..."
   
   local all_reachable=1
+  local -a ssh_opts_array
+  read -r -a ssh_opts_array <<< "$SSH_OPTS"
   for replica in "${REPLICAS[@]}"; do
-    if ssh $SSH_OPTS "$replica" "true" 2>/dev/null; then
+    if ssh "${ssh_opts_array[@]}" "$replica" "true" 2>/dev/null; then
       log_info "  ✓ $replica reachable"
     else
       log_error "  ✗ $replica unreachable"

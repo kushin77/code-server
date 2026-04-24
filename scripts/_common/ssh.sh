@@ -22,8 +22,10 @@ readonly _COMMON_SSH_LOADED=1
 # Usage: ssh_exec "docker ps"
 ssh_exec() {
     log_debug "ssh_exec → $DEPLOY_USER@$DEPLOY_HOST: $*"
-    # shellcheck disable=SC2086
-    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "$@"
+    # Convert SSH_OPTS string to array for proper expansion (IaC compliance)
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    ssh "${ssh_opts_array[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "$@"
 }
 
 # Execute a command on an arbitrary host/user with optional identity key.
@@ -50,8 +52,10 @@ ssh_exec_target() {
 # Usage: ssh_standby "docker ps"
 ssh_standby() {
     log_debug "ssh_standby → $STANDBY_USER@$STANDBY_HOST: $*"
-    # shellcheck disable=SC2086
-    ssh $SSH_OPTS "$STANDBY_USER@$STANDBY_HOST" "$@"
+    # Convert SSH_OPTS string to array for proper expansion (IaC compliance)
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    ssh "${ssh_opts_array[@]}" "$STANDBY_USER@$STANDBY_HOST" "$@"
 }
 
 # Stream a local script to the remote host and execute it
@@ -61,8 +65,10 @@ ssh_stream() {
     shift
     require_file "$script"
     log_debug "ssh_stream → $DEPLOY_USER@$DEPLOY_HOST: $script $*"
-    # shellcheck disable=SC2086
-    ssh $SSH_OPTS "$DEPLOY_USER@$DEPLOY_HOST" "bash -s -- $*" < "$script"
+    # Convert SSH_OPTS string to array for proper expansion (IaC compliance)
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    ssh "${ssh_opts_array[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "bash -s -- $*" < "$script"
 }
 
 # Upload a file to the deploy host
@@ -72,7 +78,9 @@ ssh_upload() {
     local dst="$2"
     require_file "$src"
     log_debug "ssh_upload: $src → $DEPLOY_USER@$DEPLOY_HOST:$dst"
-    scp $SSH_OPTS "$src" "$DEPLOY_USER@$DEPLOY_HOST:$dst"
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    scp "${ssh_opts_array[@]}" "$src" "$DEPLOY_USER@$DEPLOY_HOST:$dst"
 }
 
 # Upload a directory recursively
@@ -82,7 +90,9 @@ ssh_upload_dir() {
     local dst="$2"
     require_dir "$src"
     log_debug "ssh_upload_dir: $src → $DEPLOY_USER@$DEPLOY_HOST:$dst"
-    scp $SSH_OPTS -r "$src" "$DEPLOY_USER@$DEPLOY_HOST:$dst"
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    scp "${ssh_opts_array[@]}" -r "$src" "$DEPLOY_USER@$DEPLOY_HOST:$dst"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -95,7 +105,9 @@ assert_ssh_up() {
     local target_host="${1:-$DEPLOY_HOST}"
     local target_user="${2:-$DEPLOY_USER}"
     local ssh_error
-    if ! ssh_error="$(timeout "$SSH_CONNECT_TIMEOUT" ssh $SSH_OPTS "$target_user@$target_host" "echo OK" 2>&1)"; then
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    if ! ssh_error="$(timeout "$SSH_CONNECT_TIMEOUT" ssh "${ssh_opts_array[@]}" "$target_user@$target_host" "echo OK" 2>&1)"; then
         log_fatal "Cannot SSH to $target_user@$target_host — is the host reachable? ${ssh_error}"
     fi
     log_debug "✓ SSH connectivity confirmed: $target_user@$target_host"

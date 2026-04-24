@@ -1,0 +1,44 @@
+rules:
+  - name: sensitive-data-local-only
+    condition:
+      data_classification: [confidential, restricted]
+    force_destination: local
+    reason: "Enforce data sovereignty—regulated data cannot leave boundary"
+
+  - name: test-suites-to-ci
+    condition:
+      task_type: test_suite
+      cpu_cores_required: "<= 4"
+    prefer_destination: ci
+    reason: "Free CI resources; optimal for parallelizable test jobs"
+
+  - name: elite-users-get-priority
+    condition:
+      user_reputation_tier: elite
+    priority_boost: 10
+    reason: "Reputation-based QoS: elite users get preferred resource allocation"
+
+  - name: gpu-inference-local
+    condition:
+      task_type: [ai_inference, model_training]
+    force_destination: local
+    reason: "GPU inference must run on local hardware (no remote GPU)"
+
+  - name: lint-formatting-edge-burst
+    condition:
+      task_type: lint
+      task_size_mb: "< 10"
+    prefer_destination: edge
+    reason: "Lightweight formatting tasks can burst to engineer laptops"
+
+  - name: builds-to-ci
+    condition:
+      task_type: build
+    prefer_destination: ci
+    reason: "Build tasks optimal for parallelizable CI runners"
+
+  - name: deployments-require-human
+    condition:
+      task_type: deployment
+    force_destination: local
+    reason: "Production deployments must run locally with human oversight"

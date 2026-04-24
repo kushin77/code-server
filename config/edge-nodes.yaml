@@ -1,0 +1,21 @@
+# Edge node registry - engineer laptops registered for burst compute
+edge_nodes:
+  - name: "kushnir-laptop"
+    hostname: "kushnir-laptop.local"
+    description: "Primary engineer device"
+    last_heartbeat: "2026-04-25T12:00:00Z"
+    
+  - name: "team-macbook"
+    hostname: "team-macbook.local"
+    description: "Secondary team device"
+    last_heartbeat: "2026-04-25T12:00:00Z"
+
+# Heartbeat configuration
+heartbeat_timeout_seconds: 60
+heartbeat_check_interval_seconds: 30
+
+# Edge node resource thresholds
+resource_thresholds:
+  cpu_percent_available: 80
+  memory_percent_available: 80
+  disk_percent_available: 70

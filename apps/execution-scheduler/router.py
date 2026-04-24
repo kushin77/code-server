@@ -1,53 +1,282 @@
-#!/usr/bin/env python3
-# @file apps/execution-scheduler/router.py
-# @module infrastructure/execution-scheduler
-# @description P3-1561 Phase 1: Task routing decision engine
-# @governance GOV-002: All routing decisions logged for audit and cost tracking
+"""
+@file apps/execution-scheduler/router.py
+@description Core routing decision logic for task scheduling
+@governance GOV-002
+"""
 
-import json
-from datetime import datetime
-from typing import Dict, List, Optional, Literal
-from dataclasses import dataclass
 import logging
+from typing import Dict, List, Optional
+from datetime import datetime
+import yaml
+from pathlib import Path
 
-logging.basicConfig(level=logging.INFO)
+from models import (
+    TaskSubmissionRequest,
+    SchedulingDecision,
+    SystemResources,
+    Destination,
+    RoutingReason,
+    SchedulerConfig,
+    DataClassification,
+)
+
 logger = logging.getLogger(__name__)
 
-@dataclass
-class RoutingDecision:
-    """Task routing decision with justification"""
-    task_id: str
-    destination: Literal["local", "ci", "edge"]  # Where to run task
-    reason: str
-    cost_estimate: float  # USD
-    latency_estimate_ms: int
-    confidence: float  # 0-1
-    fallback_destination: Optional[str] = None
 
-class ExecutionScheduler:
-    """Route tasks to appropriate execution environment"""
-    
-    def __init__(self, config_file: str = "config/scheduler-rules.yaml"):
-        self.config_file = config_file
-        self.rules = self._load_routing_rules()
-        self.local_resources = {
-            "cpu_available_percent": 100,
-            "gpu_available_percent": 100,
-            "memory_available_gb": 32
-        }
-        self.ci_queue_depth = 0
-        self.edge_nodes = {}
-    
-    def _load_routing_rules(self) -> List[Dict]:
-        """Load routing rules from configuration"""
-        # Default rules - would load from YAML in production
-        return [
+class RoutingRule:
+    """Single routing rule from scheduler-rules.yaml."""
+
+    def __init__(self, rule_dict: Dict):
+        self.name = rule_dict.get("name")
+        self.condition = rule_dict.get("condition", {})
+        self.force_destination = rule_dict.get("force_destination")
+        self.prefer_destination = rule_dict.get("prefer_destination")
+        self.priority_boost = rule_dict.get("priority_boost", 0)
+        self.reason = rule_dict.get("reason", "")
+
+    def matches(self, task: TaskSubmissionRequest, resources: SystemResources) -> bool:
+        """Check if task matches this rule's conditions."""
+        condition = self.condition
+
+        # Check data classification
+        if "data_classification" in condition:
+            allowed_classifications = condition["data_classification"]
+            if task.data_classification.value not in allowed_classifications:
+                return False
+
+        # Check task type
+        if "task_type" in condition:
+            allowed_types = condition["task_type"]
+            if isinstance(allowed_types, str):
+                allowed_types = [allowed_types]
+            if task.task_type.value not in allowed_types:
+                return False
+
+        # Check CPU requirement
+        if "cpu_cores_required" in condition:
+            cpu_spec = condition["cpu_cores_required"]
+            if cpu_spec.startswith("<="):
+                max_cpu = float(cpu_spec[2:].strip())
+                if task.cpu_cores_required > max_cpu:
+                    return False
+            elif cpu_spec.startswith("<"):
+                max_cpu = float(cpu_spec[1:].strip())
+                if task.cpu_cores_required >= max_cpu:
+                    return False
+
+        # Check task size
+        if "task_size_mb" in condition:
+            size_spec = condition["task_size_mb"]
+            if size_spec.startswith("<"):
+                max_size = int(size_spec[1:].strip())
+                if task.memory_required_mb >= max_size:
+                    return False
+
+        # Check user reputation tier
+        if "user_reputation_tier" in condition:
+            required_tier = condition["user_reputation_tier"]
+            if task.submitter_tier != required_tier:
+                return False
+
+        return True
+
+
+class ExecutionRouter:
+    """Core routing decision engine."""
+
+    def __init__(self, config: SchedulerConfig):
+        self.config = config
+        self.rules: List[RoutingRule] = []
+        self.cost_tracker = {}
+        self.last_reload = datetime.utcnow()
+
+    def load_rules(self, rules_file: str = "config/scheduler-rules.yaml"):
+        """Load routing rules from YAML file."""
+        try:
+            with open(rules_file) as f:
+                data = yaml.safe_load(f)
+            self.rules = [RoutingRule(r) for r in data.get("rules", [])]
+            self.last_reload = datetime.utcnow()
+            logger.info(f"Loaded {len(self.rules)} routing rules")
+        except FileNotFoundError:
+            logger.warning(f"Rules file not found: {rules_file}, using defaults")
+            self._load_default_rules()
+
+    def _load_default_rules(self):
+        """Load built-in default rules."""
+        default_rules = [
             {
                 "name": "sensitive-data-local-only",
                 "condition": {"data_classification": ["confidential", "restricted"]},
                 "force_destination": "local",
-                "priority": 1000
+                "reason": "Enforce data sovereignty",
             },
+            {
+                "name": "test-suites-to-ci",
+                "condition": {"task_type": "test_suite", "cpu_cores_required": "<= 4"},
+                "prefer_destination": "ci",
+                "reason": "Free CI resources",
+            },
+            {
+                "name": "gpu-inference-local",
+                "condition": {"task_type": ["ai_inference", "model_training"]},
+                "force_destination": "local",
+                "reason": "GPU inference must run locally",
+            },
+        ]
+        self.rules = [RoutingRule(r) for r in default_rules]
+
+    def decide_destination(
+        self, task: TaskSubmissionRequest, resources: SystemResources
+    ) -> SchedulingDecision:
+        """Determine routing destination using hierarchical decision matrix."""
+
+        # [1] Check for explicit matching rules
+        for rule in self.rules:
+            if rule.matches(task, resources):
+                if rule.force_destination:
+                    logger.info(f"Task {task.task_id} forced to {rule.force_destination} by rule: {rule.name}")
+                    return self._create_decision(
+                        task,
+                        Destination(rule.force_destination),
+                        RoutingReason.EXPLICIT_RULE,
+                        rule.name,
+                        rule.priority_boost,
+                    )
+
+        # [2] Enforce data sovereignty
+        if task.data_classification in [DataClassification.CONFIDENTIAL, DataClassification.RESTRICTED]:
+            return self._create_decision(
+                task,
+                Destination.LOCAL,
+                RoutingReason.DATA_SOVEREIGNTY,
+                priority_boost=0,
+            )
+
+        # [3] Check if local GPU is available and not saturated
+        if self.config.local_gpu_available and not resources.local.saturated:
+            cost = 0.0  # Sunk cost
+            latency_ms = 50  # Local LAN latency
+            return self._create_decision(
+                task,
+                Destination.LOCAL,
+                RoutingReason.LOCAL_AVAILABLE,
+                estimated_cost=cost,
+                estimated_latency=latency_ms,
+                priority_boost=2 if task.submitter_tier == "elite" else 0,
+            )
+
+        # [4] Check if task is optimal for CI (test suite, lint, build)
+        if task.task_type.value in ["test_suite", "lint", "build"]:
+            if resources.ci.queue_depth < resources.ci.max_runners * 2:
+                cost = 0.0  # Free tier
+                latency_ms = 1000  # Queue + provisioning
+                return self._create_decision(
+                    task,
+                    Destination.CI,
+                    RoutingReason.CI_OPTIMAL,
+                    estimated_cost=cost,
+                    estimated_latency=latency_ms,
+                )
+
+        # [5] Check CI saturation
+        if resources.ci.queue_depth > resources.ci.max_runners * 2:
+            logger.warning(f"CI overloaded (queue: {resources.ci.queue_depth}), falling back to local")
+            if self.config.local_gpu_available:
+                return self._create_decision(
+                    task,
+                    Destination.LOCAL,
+                    RoutingReason.CI_OVERLOADED,
+                    estimated_cost=0.0,
+                    estimated_latency=50,
+                )
+
+        # [6] Check edge burst capacity
+        if self.config.edge_enabled:
+            available_edges = [e for e in resources.edge_nodes if e.available and e.cpu_percent < 80]
+            if available_edges:
+                return self._create_decision(
+                    task,
+                    Destination.EDGE,
+                    RoutingReason.EDGE_BURST,
+                    estimated_cost=0.0,
+                    estimated_latency=300,
+                )
+
+        # [7] Default fallback: try local if available, else CI
+        if self.config.local_gpu_available:
+            logger.warning(f"All preferred destinations unavailable, forcing to local")
+            return self._create_decision(
+                task,
+                Destination.LOCAL,
+                RoutingReason.LOCAL_SATURATED,
+                estimated_cost=0.0,
+                estimated_latency=500,  # Expect queueing
+            )
+
+        # Final fallback: CI runner
+        logger.warning(f"Defaulting to CI runner")
+        return self._create_decision(
+            task,
+            Destination.CI,
+            RoutingReason.DEFAULT,
+            estimated_cost=0.1,  # Rough estimate
+            estimated_latency=1500,
+        )
+
+    def _create_decision(
+        self,
+        task: TaskSubmissionRequest,
+        destination: Destination,
+        reason: RoutingReason,
+        matched_rule: Optional[str] = None,
+        estimated_cost: float = 0.0,
+        estimated_latency: int = 1000,
+        priority_boost: int = 0,
+    ) -> SchedulingDecision:
+        """Create a routing decision."""
+        # Adjust cost based on reputation tier
+        if task.submitter_tier == "elite":
+            estimated_cost *= 0.8  # 20% discount for elite
+
+        priority = 50 + priority_boost
+
+        return SchedulingDecision(
+            task_id=task.task_id,
+            assigned_destination=destination,
+            reasoning=reason,
+            estimated_cost_usd=estimated_cost,
+            expected_latency_ms=estimated_latency,
+            priority=priority,
+            matched_rule=matched_rule,
+        )
+
+    def track_cost(self, task_id: str, cost: float, destination: Destination):
+        """Track cost for budget monitoring."""
+        month_key = datetime.utcnow().strftime("%Y-%m")
+        if month_key not in self.cost_tracker:
+            self.cost_tracker[month_key] = {"total": 0.0, "by_destination": {}}
+
+        self.cost_tracker[month_key]["total"] += cost
+        dest_key = destination.value
+        if dest_key not in self.cost_tracker[month_key]["by_destination"]:
+            self.cost_tracker[month_key]["by_destination"][dest_key] = 0.0
+        self.cost_tracker[month_key]["by_destination"][dest_key] += cost
+
+        # Check budget alert
+        if self.config.ci_provider == "github":
+            current_cost = self.cost_tracker[month_key]["total"]
+            budget = self.config.monthly_ci_budget_usd
+            utilization = current_cost / budget
+            if utilization >= self.config.alert_threshold:
+                logger.warning(
+                    f"CI budget alert: {utilization*100:.1f}% of ${budget} (${current_cost:.2f})"
+                )
+
+    def get_cost_summary(self) -> Dict:
+        """Get current cost tracking summary."""
+        month_key = datetime.utcnow().strftime("%Y-%m")
+        return self.cost_tracker.get(month_key, {})
             {
                 "name": "test-suites-to-ci",
                 "condition": {"task_type": "test_suite"},

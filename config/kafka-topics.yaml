@@ -1,0 +1,197 @@
+# @file        config/kafka-topics.yaml
+# @description Kafka/Redpanda topic definitions with auto-creation configuration
+# @status      production-ready
+#
+# Topics are auto-created at Redpanda startup from this configuration file
+# Each topic includes retention policy, partition count, replication factor,
+# and schema enforcement
+
+topics:
+  # Agent lifecycle and actions
+  agent.audit:
+    description: "Every agent action with full context and outcome"
+    partitions: 3
+    replication_factor: 2
+    retention_ms: 7776000000  # 90 days
+    retention_bytes: -1       # Unlimited size
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+      min_insync_replicas: 1
+
+  agent.lifecycle:
+    description: "Agent spawn/complete/fail/timeout events"
+    partitions: 3
+    replication_factor: 2
+    retention_ms: 7776000000  # 90 days
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+  agent.awaiting_approval:
+    description: "Actions pending human review or intervention"
+    partitions: 1
+    replication_factor: 2
+    retention_ms: 259200000   # 3 days (short retention until consumed)
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+  agent.killswitch:
+    description: "Emergency stop/halt signals for running agents"
+    partitions: 1
+    replication_factor: 2
+    retention_ms: 31536000000 # 1 year (audit trail)
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+  # Reputation and scoring
+  reputation.update:
+    description: "Score changes for engineers and agents"
+    partitions: 2
+    replication_factor: 2
+    retention_ms: 31536000000 # 1 year
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+  # Deployment events
+  deploy.events:
+    description: "All deployment starts, completions, failures, rollbacks"
+    partitions: 2
+    replication_factor: 2
+    retention_ms: 31536000000 # 1 year
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+  # Code review lifecycle
+  code.review:
+    description: "PR opened/reviewed/approved/merged/reverted events"
+    partitions: 2
+    replication_factor: 2
+    retention_ms: 31536000000 # 1 year
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+  # Incident management
+  incident.events:
+    description: "Incidents created/resolved/escalated/post-mortems"
+    partitions: 2
+    replication_factor: 2
+    retention_ms: 63072000000 # 2 years
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+  # AI interactions and prompts
+  ai.interactions:
+    description: "Prompt/response metadata from Prompt Gateway"
+    partitions: 3
+    replication_factor: 2
+    retention_ms: 7776000000  # 90 days
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+  # Infrastructure and system alerts
+  system.alerts:
+    description: "Infrastructure alerts from Prometheus, monitors, health checks"
+    partitions: 2
+    replication_factor: 2
+    retention_ms: 2592000000  # 30 days
+    retention_bytes: -1
+    cleanup_policy: "delete"
+    config:
+      compression_type: "snappy"
+
+# ════════════════════════════════════════════════════════════════════════════
+# Consumer Groups
+# ════════════════════════════════════════════════════════════════════════════
+
+consumer_groups:
+  # Activity Feed: consumes all topics for unified engineering activity stream
+  activity-feed-consumer:
+    topics:
+      - agent.audit
+      - agent.lifecycle
+      - reputation.update
+      - deploy.events
+      - code.review
+      - incident.events
+      - ai.interactions
+    auto_offset_reset: "earliest"
+    group_min_session_timeout_ms: 6000
+
+  # Reputation Engine: extracts signals from all events
+  reputation-engine:
+    topics:
+      - agent.audit
+      - code.review
+      - deploy.events
+    auto_offset_reset: "earliest"
+
+  # Audit Logger: persists all events to PostgreSQL + Loki
+  audit-logger:
+    topics:
+      - agent.audit
+      - agent.lifecycle
+      - deploy.events
+      - code.review
+      - incident.events
+    auto_offset_reset: "earliest"
+
+  # Approval Handler: acts on awaiting_approval and killswitch
+  approval-handler:
+    topics:
+      - agent.awaiting_approval
+      - agent.killswitch
+    auto_offset_reset: "earliest"
+
+# ════════════════════════════════════════════════════════════════════════════
+# Broker Configuration
+# ════════════════════════════════════════════════════════════════════════════
+
+broker_config:
+  # Redpanda cluster settings
+  cluster:
+    node_count: 1  # Phase 1: single-node; Phase 2: 3+ for HA
+    replication_factor: 2
+    min_insync_replicas: 1
+  
+  # Network
+  network:
+    broker_port: 9092
+    advertised_port: 9092
+    schema_registry_port: 8081
+    admin_api_port: 9644
+    rpc_port: 33145
+  
+  # TLS (GSM-managed certificates)
+  tls:
+    enabled: true
+    cert_path: "/run/secrets/kafka_cert"
+    key_path: "/run/secrets/kafka_key"
+    ca_cert_path: "/run/secrets/kafka_ca"
+  
+  # Performance tuning
+  performance:
+    compression_type: "snappy"
+    linger_ms: 100
+    batch_size_bytes: 16384
+  
+  # Data persistence
+  storage:
+    data_dir: "/var/lib/redpanda/data"
+    wal_dir: "/var/lib/redpanda/wal"
+    quota_percent: 80  # Alert when 80% full

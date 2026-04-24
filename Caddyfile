@@ -5,13 +5,11 @@
 # OIDC issuer routes removed until custom issuer service is deployed (#1029).
 
 ide.kushnir.cloud {
-    # Issue #1686 FIX: Use internal certificates to bypass Let's Encrypt rate limit
-    # Rate limit active until: 2026-04-25 11:35:25 UTC
-    # WARNING: Certificate will be self-signed and trigger browser warnings
-    # This is acceptable for emergency unblocking of monitoring/DAST endpoints
-    tls internal {
-        on_demand
-    }
+    # Issue #1686 FIX: Use internal (self-signed) certificates
+    # Bypasses Let's Encrypt rate limit (HTTP 429 blocking all ACME requests)
+    # Rate limit expires: 2026-04-25 11:35:25 UTC
+    # Health endpoints use self-signed certs (acceptable for monitoring/DAST)
+    tls internal
 
     encode gzip
 
@@ -46,11 +44,10 @@ ide.kushnir.cloud {
 }
 
 kushnir.cloud {
-    # Issue #1686 FIX: Use internal certificates to bypass Let's Encrypt rate limit
-    # Rate limit active until: 2026-04-25 11:35:25 UTC
-    tls internal {
-        on_demand
-    }
+    # Issue #1686 FIX: Use internal (self-signed) certificates
+    # Bypasses Let's Encrypt rate limit
+    # Rate limit expires: 2026-04-25 11:35:25 UTC
+    tls internal
 
     encode gzip
 
@@ -86,11 +83,10 @@ kushnir.cloud {
 # ════════════════════════════════════════════════════════════════════════════════
 
 *.kushnir.cloud {
-    # Issue #1686 FIX: Use internal certificates to bypass Let's Encrypt rate limit
-    # Rate limit active until: 2026-04-25 11:35:25 UTC
-    tls internal {
-        on_demand
-    }
+    # Issue #1686 FIX: Use internal (self-signed) certificates
+    # Bypasses Let's Encrypt rate limit  
+    # Rate limit expires: 2026-04-25 11:35:25 UTC
+    tls internal
 
     encode gzip
 

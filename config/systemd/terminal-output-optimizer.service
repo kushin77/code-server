@@ -1,5 +1,0 @@
-# RETIRED: Archived pointer-only stub.
-# Canonical replacements:
-# - Supported latency service unit: config/systemd/latency-monitor.service
-# - Current structure index: docs/structure/README.md
-# - Issue tracking SSOT: GitHub Issues (repo issue tracker)

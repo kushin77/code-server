@@ -1,1 +1,0 @@
-{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"semgrep"}},"results":[{"ruleId":"test-rule","level":"error","message":{"text":"example finding"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"src/example.ts"},"region":{"startLine":12}}}]}]}]}

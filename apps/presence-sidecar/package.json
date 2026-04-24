@@ -19,7 +19,7 @@
     "matrix-js-sdk": "^38.2.0",
     "prom-client": "^15.0.0",
     "uuid": "^14.0.0",
-    "ws": "^8.14.2"
+    "ws": "catalog:"
   },
   "devDependencies": {
     "@types/express": "catalog:",

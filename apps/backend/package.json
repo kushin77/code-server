@@ -20,7 +20,7 @@
     "pg": "catalog:",
     "pino": "catalog:",
     "uuid": "14.0.0",
-    "ws": "8.20.0"
+    "ws": "catalog:"
   },
   "devDependencies": {
     "@types/express": "catalog:",

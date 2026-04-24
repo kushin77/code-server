@@ -380,7 +380,7 @@ services:
 
   reputation-engine:
     build:
-      context: apps/reputation-engine
+      context: apps/reputation_engine
       dockerfile: Dockerfile
     container_name: reputation-engine
     user: "1001:1001"
@@ -399,7 +399,7 @@ services:
       opa:
         condition: service_healthy
     volumes:
-      - ./apps/reputation-engine:/app
+      - ./apps/reputation_engine:/app
     restart: unless-stopped
     networks:
       - services
@@ -419,6 +419,43 @@ services:
           memory: 256m
     profiles:
       - "ai"
+      - "governance"
+
+  activity-feed:
+    build:
+      context: apps/activity_feed
+      dockerfile: ../reputation_engine/Dockerfile
+    container_name: activity-feed
+    user: "1001:1001"
+    ports:
+      - "8003:8000"
+    environment:
+      - KAFKA_BROKER=redpanda:9092
+      - LOG_LEVEL=INFO
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    volumes:
+      - ./apps/activity_feed:/app
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
+    profiles:
+      - "ai"
+      - "governance"
 
   # ========================================================================
   # DATA STORES

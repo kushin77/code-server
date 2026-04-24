@@ -5,12 +5,6 @@
 # OIDC issuer routes removed until custom issuer service is deployed (#1029).
 
 ide.kushnir.cloud {
-    # Issue #1686 FIX: Use internal (self-signed) certificates
-    # Bypasses Let's Encrypt rate limit (HTTP 429 blocking all ACME requests)
-    # Rate limit expires: 2026-04-25 11:35:25 UTC
-    # Health endpoints use self-signed certs (acceptable for monitoring/DAST)
-    tls internal
-
     encode gzip
 
     header {
@@ -44,11 +38,6 @@ ide.kushnir.cloud {
 }
 
 kushnir.cloud {
-    # Issue #1686 FIX: Use internal (self-signed) certificates
-    # Bypasses Let's Encrypt rate limit
-    # Rate limit expires: 2026-04-25 11:35:25 UTC
-    tls internal
-
     encode gzip
 
     header {
@@ -83,11 +72,6 @@ kushnir.cloud {
 # ════════════════════════════════════════════════════════════════════════════════
 
 *.kushnir.cloud {
-    # Issue #1686 FIX: Use internal (self-signed) certificates
-    # Bypasses Let's Encrypt rate limit  
-    # Rate limit expires: 2026-04-25 11:35:25 UTC
-    tls internal
-
     encode gzip
 
     header {

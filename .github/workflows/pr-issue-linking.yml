@@ -47,19 +47,19 @@ jobs:
       - name: Comment on PR with Link Status
         if: always()
         run: |
-          source scripts/_common/init.sh
           if [ -f artifacts/pr-issue-linking-report.json ]; then
             status=$(jq -r '.status' artifacts/pr-issue-linking-report.json)
             linked=$(jq -r '.issues_linked' artifacts/pr-issue-linking-report.json)
 
             if [ "$status" = "SUCCESS" ] && [ "$linked" -gt 0 ]; then
-              message="✅ **PR Linked**: This PR is linked to $linked issue(s). "
+              message="✅ **PR Linked**: This PR is linked to $linked issue(s)."
             else
-              message="⚠️ **Link Status**: No issues linked. Ensure PR title/branch contains 'Fixes #N', 'Closes #N', or 'issue-#N' format. "
+              message="⚠️ **Link Status**: No issues linked. Ensure PR title/branch contains 'Fixes #N', 'Closes #N', or 'issue-#N' format."
             fi
 
-            github_gh pr comment "${PR_NUMBER}" --repo "$GITHUB_REPO" \
-              --body "$message" || true
+            gh pr comment "${{ github.event.pull_request.number }}" \
+              --body "$message" \
+              --repo "${{ github.repository }}" || true
           fi
 
       - name: Upload Report

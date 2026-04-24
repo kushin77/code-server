@@ -43,9 +43,8 @@ jobs:
       - name: Check if PR is Merged
         id: check_merge
         run: |
-          source scripts/_common/init.sh
-          pr_number=${PR_NUMBER}
-          merged=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json merged -q '.merged')
+          pr_number="${{ github.event.pull_request.number }}"
+          merged=$(gh pr view "$pr_number" --repo "${{ github.repository }}" --json merged -q '.merged')
           echo "is_merged=$merged" >> $GITHUB_OUTPUT
 
       - name: Run Auto-Close Script

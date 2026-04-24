@@ -256,3 +256,31 @@ scrape_configs:
       - source_labels: [__name__]
         regex: 'livekit_(connections|participants|tracks|bitrate|jitter)'
         action: keep
+
+  # Cluster health checks - Replica 31 (#1472)
+  - job_name: 'cluster-health-replica-31'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ['192.168.168.31:443']
+        labels:
+          replica: '31'
+          cluster: production
+    metrics_path: /health
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Cluster health checks - Replica 42 (#1472)
+  - job_name: 'cluster-health-replica-42'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ['192.168.168.42:443']
+        labels:
+          replica: '42'
+          cluster: production
+    metrics_path: /health
+    scrape_interval: 30s
+    scrape_timeout: 10s

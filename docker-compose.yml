@@ -895,6 +895,7 @@ services:
       - ./config/grafana-dashboard-providers.yaml:/etc/grafana/provisioning/dashboards/providers.yaml:ro
       - ./config/grafana-dashboard-matrix-overview.json:/etc/grafana/provisioning/dashboards/matrix-overview.json:ro
       - ./config/grafana-dashboard-collaboration.json:/etc/grafana/provisioning/dashboards/collaboration.json:ro
+      - ./config/grafana-dashboard-cluster-health.json:/etc/grafana/provisioning/dashboards/cluster-health.json:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
       interval: 30s

@@ -7,7 +7,9 @@
 
 set -euo pipefail
 
-source "$SCRIPT_DIR/_common/init.sh"
+# Must calculate SCRIPT_DIR BEFORE sourcing init.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$SCRIPT_DIR/scripts/_common/init.sh"
 
 # ============================================================================
 # CONFIGURATION

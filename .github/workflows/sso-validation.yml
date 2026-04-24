@@ -1,0 +1,239 @@
+name: SSO Validation Tests (Phase 5 #1675)
+
+on:
+  # Daily validation at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+  
+  # Manual trigger from Actions tab
+  workflow_dispatch:
+  
+  # Also run on pull requests to main
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/sso-validation.yml'
+      - 'tests/e2e/**'
+      - 'apps/saas-api/**'
+      - 'Caddyfile'
+      - 'docker-compose.yml'
+
+# ════════════════════════════════════════════════════════════════════════════
+# Environment (IaC: All config in workflow, no hardcoded values)
+# ════════════════════════════════════════════════════════════════════════════
+env:
+  PLAYWRIGHT_VERSION: 1.40.0
+  NODE_VERSION: '20'
+  BASE_URL: 'https://kushnir.cloud'
+  IDE_URL: 'https://ide.kushnir.cloud'
+
+jobs:
+  # ════════════════════════════════════════════════════════════════════════
+  # Pre-check: Verify infrastructure is ready
+  # ════════════════════════════════════════════════════════════════════════
+  pre-check:
+    runs-on: ubuntu-latest
+    name: Infrastructure Pre-check
+    steps:
+      - name: 'Verify OAuth2-Proxy health'
+        run: |
+          echo "🔵 Checking OAuth2-Proxy availability..."
+          for i in {1..5}; do
+            if curl -ksf https://kushnir.cloud/health > /dev/null 2>&1; then
+              echo "✅ OAuth2-Proxy healthy"
+              exit 0
+            fi
+            echo "⏳ Retry $i/5..."
+            sleep 10
+          done
+          echo "❌ OAuth2-Proxy not responding"
+          exit 1
+      
+      - name: 'Verify Portal availability'
+        run: |
+          echo "🔵 Checking Portal availability..."
+          curl -ksf https://kushnir.cloud | grep -q "Kushnir\|Portal\|Appsmith" && echo "✅ Portal available" || echo "❌ Portal not responding"
+      
+      - name: 'Verify IDE availability'
+        run: |
+          echo "🔵 Checking IDE availability..."
+          curl -ksf https://ide.kushnir.cloud | grep -q "code-server\|VS Code\|vscode" && echo "✅ IDE available" || echo "⚠️ IDE not responding (may be expected during test)"
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Main test suite
+  # ════════════════════════════════════════════════════════════════════════
+  test:
+    runs-on: ubuntu-latest
+    name: E2E SSO Tests
+    needs: pre-check
+    strategy:
+      matrix:
+        # Run tests in different browsers for comprehensive coverage
+        browser: [chromium, firefox]
+      fail-fast: false
+    
+    timeout-minutes: 30
+    
+    steps:
+      # ════════════════════════════════════════════════════════════════════
+      # Checkout & Setup
+      # ════════════════════════════════════════════════════════════════════
+      - name: 'Checkout code'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      
+      - name: 'Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'tests/e2e/package.json'
+      
+      - name: 'Install Playwright dependencies'
+        run: |
+          cd tests/e2e
+          npm install
+          npx playwright install --with-deps ${{ matrix.browser }}
+
+      # ════════════════════════════════════════════════════════════════════
+      # Run Tests
+      # ════════════════════════════════════════════════════════════════════
+      - name: 'Run SSO E2E tests (${{ matrix.browser }})'
+        run: |
+          cd tests/e2e
+          npx playwright test \
+            tests/e2e/sso-flows.spec.ts \
+            --project=${{ matrix.browser }} \
+            --reporter=html \
+            --reporter=junit \
+            --reporter=github \
+            --timeout=60000
+        env:
+          BASE_URL: ${{ env.BASE_URL }}
+          IDE_URL: ${{ env.IDE_URL }}
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME: results-${{ matrix.browser }}.xml
+      
+      # ════════════════════════════════════════════════════════════════════
+      # Artifacts & Reporting
+      # ════════════════════════════════════════════════════════════════════
+      - name: 'Upload test results'
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ matrix.browser }}
+          path: tests/e2e/playwright-report/
+          retention-days: 7
+      
+      - name: 'Upload JUnit results'
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results-${{ matrix.browser }}
+          path: tests/e2e/results-${{ matrix.browser }}.xml
+      
+      - name: 'Publish test results'
+        if: always()
+        uses: EnricoMi/publish-unit-tests-result-action@v2
+        with:
+          files: tests/e2e/results-*.xml
+          check_name: SSO Test Results (${{ matrix.browser }})
+          comment_mode: always
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Post-test validation
+  # ════════════════════════════════════════════════════════════════════════
+  post-check:
+    runs-on: ubuntu-latest
+    name: Health Check Post-Test
+    needs: test
+    if: always()
+    
+    steps:
+      - name: 'Verify services still healthy'
+        run: |
+          echo "🔵 Post-test health check..."
+          
+          # Check portal
+          curl -ksf https://kushnir.cloud/health && echo "✅ Portal healthy" || echo "⚠️ Portal unhealthy"
+          
+          # Check IDE
+          curl -ksf https://ide.kushnir.cloud/health && echo "✅ IDE healthy" || echo "⚠️ IDE unhealthy"
+          
+          # Check API
+          curl -ksf https://kushnir.cloud/api/health && echo "✅ API healthy" || echo "⚠️ API unhealthy"
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Notifications
+  # ════════════════════════════════════════════════════════════════════════
+  notify:
+    runs-on: ubuntu-latest
+    name: Slack Notification
+    needs: [test, post-check]
+    if: always()
+    
+    steps:
+      - name: 'Prepare Slack message'
+        id: slack-message
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            STATUS="✅ PASSED"
+            COLOR="good"
+          else
+            STATUS="❌ FAILED"
+            COLOR="danger"
+          fi
+          
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "color=$COLOR" >> $GITHUB_OUTPUT
+      
+      - name: 'Send Slack notification'
+        uses: slackapi/slack-github-action@v1
+        if: vars.SLACK_WEBHOOK_URL != ''
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ steps.slack-message.outputs.color }}",
+                  "title": "SSO Validation Tests",
+                  "title_link": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "text": "${{ steps.slack-message.outputs.status }}",
+                  "fields": [
+                    {
+                      "title": "Workflow",
+                      "value": "SSO Validation (Phase 5 #1675)",
+                      "short": true
+                    },
+                    {
+                      "title": "Branch",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Repository",
+                      "value": "${{ github.repository }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Commit",
+                      "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}> by ${{ github.actor }}",
+                      "short": true
+                    }
+                  ],
+                  "footer": "GitHub Actions",
+                  "footer_icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+                }
+              ]
+            }
+
+# ════════════════════════════════════════════════════════════════════════════
+# Idempotent Design
+# ════════════════════════════════════════════════════════════════════════════
+# - All tests are read-only (no app state modification)
+# - Tests can run multiple times with same results
+# - Pre/post checks verify infrastructure only
+# - Failures don't block future runs
+# - Results captured in artifacts for audit trail

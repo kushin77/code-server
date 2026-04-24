@@ -41,7 +41,14 @@ LOG_FILE="${PROJECT_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
 ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
 REPORT_FILE="${ARTIFACT_DIR}/deployment-pipeline-${DEPLOYMENT_ID}.json"
 
-source "${PROJECT_ROOT}/.env.infrastructure"
+source "${PROJECT_ROOT}/scripts/_common/init.sh"
+source_env_file "${PROJECT_ROOT}/.env.infrastructure"
+
+: "${API_PROTOCOL:=http}"
+: "${API_HOST:=localhost}"
+: "${API_PORT:=3100}"
+: "${API_ENDPOINT:=http://${API_HOST}:${API_PORT}}"
+: "${API_HEALTH_ENDPOINT:=${API_ENDPOINT}/health}"
 
 mkdir -p "$(dirname "${LOG_FILE}")" "${ARTIFACT_DIR}"
 
@@ -101,7 +108,7 @@ fi
 log_info "Branch: $CURRENT_BRANCH | Commit: ${CURRENT_COMMIT:0:7}"
 
 # Verify repository is clean (allow override with --force-deploy)
-UNCOMMITTED=$(git -C "${PROJECT_ROOT}" status --short 2>/dev/null | grep -v "^??" | wc -l || echo 0)
+UNCOMMITTED=$(git -C "${PROJECT_ROOT}" status --porcelain=v1 2>/dev/null | awk 'END { print NR + 0 }')
 if (( UNCOMMITTED > 0 )); then
     if [[ "${2:-}" != "--force-deploy" ]]; then
         stage_fail "Repository has $UNCOMMITTED uncommitted changes. Use --force-deploy to override."

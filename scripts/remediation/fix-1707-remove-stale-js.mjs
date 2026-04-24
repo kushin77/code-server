@@ -8,12 +8,25 @@
  */
 
 import { execSync } from 'child_process';
-import fs from 'fs-extra';
+import { existsSync, unlinkSync, rmSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../../');
+
+// Helper to recursively remove file
+function removeFile(filePath) {
+    try {
+        if (existsSync(filePath)) {
+            unlinkSync(filePath);
+            return true;
+        }
+    } catch (e) {
+        // File may have been deleted already
+    }
+    return false;
+}
 
 const STALE_FILES = [
     'apps/session-broker/src/__tests__/session-sandbox.test.js',
@@ -50,22 +63,24 @@ async function removeStaleFiles() {
         const tsFile = file.replace(/\.js$/, '.ts');
         const tsPath = path.join(REPO_ROOT, tsFile);
         
-        if (fs.existsSync(filePath)) {
-            if (fs.existsSync(tsPath)) {
+        if (existsSync(filePath)) {
+            if (existsSync(tsPath)) {
                 console.log(`✓ Removing: ${file}`);
                 try {
                     // Stage removal in git
-                    execSync(`git rm --cached --force "${filePath}"`, {
-                        cwd: REPO_ROOT,
-                        stdio: 'pipe'
-                    });
+                    try {
+                        execSync(`git rm --cached --force "${filePath}"`, {
+                            cwd: REPO_ROOT,
+                            stdio: 'pipe'
+                        });
+                    } catch (e) {
+                        // Continue if git rm fails (file might not be tracked)
+                    }
                     // Physical removal
-                    fs.removeSync(filePath);
+                    removeFile(filePath);
                     removed++;
                 } catch (e) {
-                    // Continue if git rm fails (file might not be tracked)
-                    fs.removeSync(filePath);
-                    removed++;
+                    console.error(`Error removing ${file}: ${e.message}`);
                 }
             } else {
                 console.log(`⊘ Skipping: ${file} (no .ts equivalent)`);

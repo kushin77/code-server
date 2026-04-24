@@ -47,17 +47,17 @@ log() {
 
 success() {
     echo -e "${GREEN}✓${NC} $@" | tee -a "$LOG_FILE"
-    ((TESTS_PASSED++))
+    ((++TESTS_PASSED))
 }
 
 error() {
     echo -e "${RED}✗${NC} $@" | tee -a "$LOG_FILE"
-    ((TESTS_FAILED++))
+    ((++TESTS_FAILED))
 }
 
 warning() {
     echo -e "${YELLOW}⚠${NC} $@" | tee -a "$LOG_FILE"
-    ((TESTS_SKIPPED++))
+    ((++TESTS_SKIPPED))
 }
 
 # Query OPA and check response
@@ -420,5 +420,7 @@ main() {
     fi
 }
 
-# Run main
-main "$@"
+# Run main only when executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi

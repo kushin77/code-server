@@ -62,12 +62,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_organizations_is_active ON organizations(is_active);
-CREATE INDEX idx_users_is_active ON users(is_active);
-CREATE INDEX idx_groups_org_id ON groups(org_id);
-CREATE INDEX idx_memberships_user_id ON memberships(user_id);
-CREATE INDEX idx_memberships_org_id ON memberships(org_id);
-CREATE INDEX idx_memberships_deleted_at ON memberships(deleted_at);
-CREATE INDEX idx_audit_logs_org_id ON audit_logs(org_id);
-CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_organizations_is_active ON organizations(is_active);
+CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_groups_org_id ON groups(org_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_user_id ON memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_org_id ON memberships(org_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_deleted_at ON memberships(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_org_id ON audit_logs(org_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);

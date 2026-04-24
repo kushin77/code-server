@@ -7,14 +7,14 @@
 # Docker Container Health Monitor
 # Monitors all containers for crashes, restarts, and resource issues
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-CHECK_INTERVAL=30
-RESTART_THRESHOLD=3
-LOG_FILE="/tmp/docker-health-monitor.log"
+CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
+RESTART_THRESHOLD="${RESTART_THRESHOLD:-3}"
+LOG_FILE="${LOG_FILE:-/tmp/docker-health-monitor.log}"
 
 # Note: using canonical log_* functions from _common/logging.sh (sourced via init.sh)
 

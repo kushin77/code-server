@@ -11,7 +11,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
-source "${PROJECT_ROOT}/scripts/_common/init.sh" || { echo "FATAL: Cannot source init.sh"; exit 1; }
+source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
 # Dual-host configuration (immutable - use env vars or defaults)
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"

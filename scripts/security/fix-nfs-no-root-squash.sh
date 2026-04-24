@@ -10,10 +10,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../_common/init.sh" || {
-  echo "ERROR: Failed to source init.sh"
-  exit 1
-}
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # ============================================================================
 # CONSTANTS

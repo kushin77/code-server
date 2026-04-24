@@ -12,10 +12,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/logging.sh" || {
-  echo "ERROR: Cannot source logging.sh" >&2
-  exit 1
-}
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
 # ────────────────────────────────────────────────────────────────────────────
 # Load all images from directory

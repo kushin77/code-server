@@ -5,7 +5,7 @@
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../_common/init.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../_common/init.sh"
 
 log_info() { echo "[oauth:diag] $*"; }
 log_warn() { echo "[oauth:warn] $*" >&2; }

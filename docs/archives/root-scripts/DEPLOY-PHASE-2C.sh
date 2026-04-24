@@ -11,13 +11,14 @@ cd ~/code-server-enterprise
 
 echo "=== PHASE 2C DEPLOYMENT: Configuration Merge ==="
 
-# Step 1: Backup current .env
+# Step 1: Backup current .env (idempotent: preserve modes)
 BACKUP_NAME=".env.backup.phase-2c.$(date +%s)"
-cp .env "$BACKUP_NAME"
+cp -p .env "$BACKUP_NAME"
 echo "✓ Backed up .env to $BACKUP_NAME"
 
-# Step 2: Merge Phase 2 JWT variables into .env
-cat >> .env << 'PHASE2EOF'
+# Step 2: Merge Phase 2 JWT variables into .env (idempotent: guard with grep)
+if ! grep -q "PHASE 2 JWT SERVICE" .env 2>/dev/null; then
+    cat >> .env << 'PHASE2EOF'
 
 # Phase 2 JWT Service-to-Service Auth Configuration
 SERVICE_CLIENT_SESSION_BROKER_ID="session-broker"

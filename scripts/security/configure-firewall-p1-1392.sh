@@ -8,14 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-if [[ -f "$SCRIPT_DIR/../_common/init.sh" ]]; then
-    source "$SCRIPT_DIR/../_common/init.sh"
-elif [[ -f "$PROJECT_ROOT/scripts/_common/init.sh" ]]; then
-    source "$PROJECT_ROOT/scripts/_common/init.sh"
-else
-    echo "FATAL: Cannot source _common/init.sh"
-    exit 1
-fi
+source "$PROJECT_ROOT/scripts/_common/init.sh"
 
 configure_firewall() {
     log_info "Configuring UFW firewall for primary production host..."

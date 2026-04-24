@@ -6,10 +6,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/init.sh" 2>/dev/null || {
-    echo "ERROR: Cannot source init.sh"
-    exit 1
-}
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
 PRIMARY_HOST="${1:-192.168.168.31}"
 REPLICA_HOST="${2:-192.168.168.42}"

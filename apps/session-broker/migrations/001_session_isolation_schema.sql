@@ -103,11 +103,11 @@ ALTER TABLE IF EXISTS sessions
   ADD CONSTRAINT sessions_status_check
   CHECK (status IN ('creating', 'requested', 'queued', 'provisioning', 'ready', 'testing', 'teardown_pending', 'destroyed', 'failed', 'running', 'paused', 'terminated'));
 
-CREATE INDEX idx_sessions_user_id ON sessions(user_id);
-CREATE INDEX idx_sessions_username ON sessions(username);
-CREATE INDEX idx_sessions_status ON sessions(status);
-CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
-CREATE INDEX idx_sessions_container_port ON sessions(container_port);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_username ON sessions(username);
+CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_container_port ON sessions(container_port);
 
 -- Session activity log: audit trail for security/debugging
 CREATE TABLE IF NOT EXISTS session_activity (
@@ -129,10 +129,10 @@ CREATE TABLE IF NOT EXISTS session_activity (
   details JSONB
 );
 
-CREATE INDEX idx_session_activity_session ON session_activity(session_id);
-CREATE INDEX idx_session_activity_user ON session_activity(user_id);
-CREATE INDEX idx_session_activity_created ON session_activity(created_at);
-CREATE INDEX idx_session_activity_type ON session_activity(activity_type);
+CREATE INDEX IF NOT EXISTS idx_session_activity_session ON session_activity(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_activity_user ON session_activity(user_id);
+CREATE INDEX IF NOT EXISTS idx_session_activity_created ON session_activity(created_at);
+CREATE INDEX IF NOT EXISTS idx_session_activity_type ON session_activity(activity_type);
 
 -- Session resource usage: track CPU/memory/storage per session
 CREATE TABLE IF NOT EXISTS session_resource_usage (
@@ -155,8 +155,8 @@ CREATE TABLE IF NOT EXISTS session_resource_usage (
   sample_duration_ms INT
 );
 
-CREATE INDEX idx_resource_usage_session ON session_resource_usage(session_id);
-CREATE INDEX idx_resource_usage_recorded ON session_resource_usage(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_resource_usage_session ON session_resource_usage(session_id);
+CREATE INDEX IF NOT EXISTS idx_resource_usage_recorded ON session_resource_usage(recorded_at);
 
 -- Session isolation policies: define access controls between sessions
 CREATE TABLE IF NOT EXISTS session_policies (
@@ -184,9 +184,9 @@ CREATE TABLE IF NOT EXISTS session_policies (
   applied_by UUID
 );
 
-CREATE INDEX idx_policies_session ON session_policies(session_id);
-CREATE INDEX idx_policies_type ON session_policies(policy_type);
-CREATE INDEX idx_policies_active ON session_policies(active);
+CREATE INDEX IF NOT EXISTS idx_policies_session ON session_policies(session_id);
+CREATE INDEX IF NOT EXISTS idx_policies_type ON session_policies(policy_type);
+CREATE INDEX IF NOT EXISTS idx_policies_active ON session_policies(active);
 
 -- View: active user sessions
 CREATE OR REPLACE VIEW active_user_sessions AS

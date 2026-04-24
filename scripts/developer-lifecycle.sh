@@ -35,7 +35,7 @@ acquire_lock() {
     local timeout=5
     local elapsed=0
     while [[ $elapsed -lt $timeout ]]; do
-        if mkdir "$LOCK_FILE" 2>/dev/null; then
+        if mkdir -p "$LOCK_FILE" 2>/dev/null; then
             trap 'rmdir "$LOCK_FILE"' EXIT
             return 0
         fi

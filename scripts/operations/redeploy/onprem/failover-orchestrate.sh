@@ -278,7 +278,7 @@ enforce_vip_owner() {
 }
 
 acquire_lock() {
-  run_primary_cmd "set -euo pipefail; if mkdir '${LOCK_DIR}' 2>/dev/null; then printf '%s\\n' '$$' > '${LOCK_DIR}/owner.pid'; echo LOCK_OK; else echo LOCK_BUSY; exit 2; fi"
+  run_primary_cmd "set -euo pipefail; if mkdir -p '${LOCK_DIR}' 2>/dev/null; then printf '%s\\n' '$$' > '${LOCK_DIR}/owner.pid'; echo LOCK_OK; else echo LOCK_BUSY; exit 2; fi"
   LOCK_HOST="$PRIMARY_HOST"
 }
 

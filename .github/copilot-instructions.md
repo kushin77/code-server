@@ -1,6 +1,6 @@
 # Copilot Instructions for kushin77/code-server
 
-## ✅ Kushnir.cloud / KC Branding (April 21, 2026)
+## ✅ Kushnir.cloud / KC Branding
 Canonical reference: [docs/BRANDING-SSOT.md](docs/BRANDING-SSOT.md)
 
 **Active public brand**: Kushnir.cloud (KC)  
@@ -94,7 +94,7 @@ The template pre-configures:
 
 **Complete Reference**: [docs/SCRIPT-WRITING-GUIDE.md](docs/SCRIPT-WRITING-GUIDE.md) — covers all patterns, examples, checklist, common mistakes.
 
-### Rule 6 — Deduplication Enforcement (April 17, 2026 analysis)
+### Rule 6 — Deduplication Enforcement
 Repository underwent comprehensive deduplication audit (see [DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md)):
 
 **Logging System**: Use ONLY `log_*` from `scripts/_common/logging.sh`
@@ -423,10 +423,10 @@ This repository runs **EXCLUSIVELY on Linux** (Ubuntu on 192.168.168.31 / .42).
 
 ## Priority Order (execute in this order)
 
-- **P0** 🔴 Critical (outage, data loss, security breach) — fix immediately
-- **P1** 🟠 High (major degradation, core broken) — this sprint
-- **P2** 🟡 Medium (enhancement, non-critical) — next sprint
-- **P3** 🟢 Low (nice-to-have, docs, tech debt) — backlog
+- **P0** 🔴 Critical (outage, data loss, security breach) — fix ASAP
+- **P1** 🟠 High (major degradation, core broken) — fix ASAP
+- **P2** 🟡 Medium (enhancement, non-critical) — fix ASAP
+- **P3** 🟢 Low (nice-to-have, docs, tech debt) — fix ASAP
 
 ## Non-Negotiables
 
@@ -438,7 +438,7 @@ This repository runs **EXCLUSIVELY on Linux** (Ubuntu on 192.168.168.31 / .42).
 - GitHub Issues = SSOT. Memory files = ephemeral working notes only
 - Never PATCH closed issues — add comments only
 
-## Production Cluster Architecture (April 23, 2026)
+## Production Cluster Architecture
 
 **Direction**: Multi-replica active cluster with loadbalancing and failover (3+ replicas, expanding)
 
@@ -528,4 +528,4 @@ ssh akushnir@192.168.168.31 'sudo iptables -D INPUT -j DROP'   # Restore
 - [deployment-operations-complete-guide.md](/memories/repo/deployment-operations-complete-guide.md) — Operational runbooks
 - [terraform-consolidation-status.md](/memories/repo/terraform-consolidation-status.md) — IaC for cluster
 
-**Last updated: April 23, 2026 (CLUSTER ARCHITECTURE)** | [All Issues](https://github.com/kushin77/code-server/issues) | [Deduplication Analysis](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md) | [Script Writing Guide](docs/SCRIPT-WRITING-GUIDE.md)
+[All Issues](https://github.com/kushin77/code-server/issues) | [Deduplication Analysis](DEDUPLICATION-AND-EFFICIENCY-ANALYSIS.md) | [Script Writing Guide](docs/SCRIPT-WRITING-GUIDE.md)

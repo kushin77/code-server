@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # @file        scripts/audit-logging.sh
 # @module      audit-logging
 # @description audit logging — on-prem code-server
@@ -66,8 +67,11 @@ AUDIT_LOG_FILE="${AUDIT_LOG_DIR}/audit.jsonl"
 AUDIT_PYTHON_COLLECTOR="${AUDIT_PYTHON_COLLECTOR:-/srv/audit-system/audit-log-collector.py}"
 
 # Ensure log directory exists
-mkdir -p "$AUDIT_LOG_DIR"
-chmod 700 "$AUDIT_LOG_DIR"
+if [[ ! -d "$AUDIT_LOG_DIR" ]]; then
+    mkdir -p "$AUDIT_LOG_DIR"
+    chmod 700 "$AUDIT_LOG_DIR"
+    log_info "Created audit log directory: $AUDIT_LOG_DIR"
+fi
 
 ###############################################################################
 # UTILITY FUNCTIONS

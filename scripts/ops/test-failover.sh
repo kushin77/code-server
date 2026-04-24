@@ -1,6 +1,17 @@
-#!/bin/bash
-# Dual-host failover testing script
-# This simulates the Cloudflare failover scenario and verifies routing works correctly
+#!/usr/bin/env bash
+# @file        scripts/ops/test-failover.sh
+# @module      ops/failover
+# @description Dual-host failover testing script - simulates Cloudflare failover
+# @owner       Platform Engineering
+# @status      Active
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
+# Initialize repository context
+init_repo
 
 # Configuration
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
@@ -8,18 +19,6 @@ REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
 PORTAL_DOMAIN="${PORTAL_DOMAIN:-kushnir.cloud}"
 IDE_DOMAIN="${IDE_DOMAIN:-ide.kushnir.cloud}"
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
-
-log_info() {
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $*"
-}
-
-log_error() {
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2
-}
-
-log_success() {
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ $*"
-}
 
 # Test 1: Verify primary host is serving traffic
 test_primary_healthy() {

@@ -25,7 +25,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "${SCRIPT_DIR}")")"
 
-source "${PROJECT_ROOT}/scripts/_common/init.sh" || { echo "FATAL: Cannot source init.sh"; exit 1; }
+source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
 # Configuration
 HAPROXY_STATS_URL="${HAPROXY_STATS_URL:-http://localhost:8404/haproxy-stats;csv}"

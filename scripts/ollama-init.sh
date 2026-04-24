@@ -12,7 +12,7 @@ set -eu
 
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 if command -v ai-runtime-env >/dev/null 2>&1; then
   eval "$(ai-runtime-env env 2>/dev/null)" || true

@@ -114,7 +114,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres@sha256:29342cb52157b098821961d2c14eec3c019071f56a5d559e990cf07cf541ea9b
         env:
           POSTGRES_PASSWORD: postgres
         options: >-
@@ -126,7 +126,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: redis:7
+        image: redis@sha256:3e0669e42d4fe421c9dea0ba5fbc04d336b80b4f32a6c7d25bee3a1d089288a1
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s

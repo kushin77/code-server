@@ -21,30 +21,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 # Configuration
 MONITORING_DIR="${MONITORING_DIR:-.}/monitoring"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-LOG_FILE="/tmp/p0-bootstrap-${TIMESTAMP}.log"
-
-# Colors
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+LOG_FILE="${LOG_FILE:-/tmp/p0-bootstrap-${TIMESTAMP}.log}"
 
 log() {
-    echo -e "${GREEN}[$(date '+%H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $1" | tee -a "$LOG_FILE"
-    exit 1
-}
-
-warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1" | tee -a "$LOG_FILE"
+    log_info "$1"
 }
 
 ################################################################################
@@ -56,15 +41,15 @@ log "==== PHASE 1: PRE-FLIGHT VALIDATION ===="
 # Check Docker daemon
 log "[1/3] Checking Docker daemon..."
 if ! docker ps >/dev/null 2>&1; then
-    error "Docker daemon not running or not accessible"
+    log_fatal "Docker daemon not running or not accessible"
 fi
 log "✓ Docker daemon operational"
 
 # Check required tools (minimal set)
 log "[2/3] Checking required tools..."
 for tool in curl docker-compose; do
-    if ! command -v $tool &>/dev/null; then
-        error "Required tool not found: $tool"
+    if ! command -v "$tool" &>/dev/null; then
+        log_fatal "Required tool not found: $tool"
     fi
 done
 log "✓ All required tools available"
@@ -73,7 +58,7 @@ log "✓ All required tools available"
 log "[3/3] Checking disk space..."
 AVAILABLE_GB=$(df / | awk 'NR==2 {print int($4/1024/1024)}')
 if [ "$AVAILABLE_GB" -lt 5 ]; then
-    error "Insufficient disk space. Need 5GB, have ${AVAILABLE_GB}GB"
+    log_fatal "Insufficient disk space. Need 5GB, have ${AVAILABLE_GB}GB"
 fi
 log "✓ Sufficient disk space (${AVAILABLE_GB}GB available)"
 
@@ -85,13 +70,13 @@ log ""
 log "==== PHASE 2: VERIFY DOCKER COMPOSE ===="
 
 if [ ! -f "docker-compose.yml" ]; then
-    error "docker-compose.yml not found in current directory"
+    log_fatal "docker-compose.yml not found in current directory"
 fi
 log "✓ docker-compose.yml found"
 
 # Validate syntax (will fail if invalid)
 log "[1/2] Validating docker-compose.yml syntax..."
-docker-compose config --quiet >/dev/null 2>&1 || error "docker-compose.yml has syntax errors"
+docker-compose config --quiet >/dev/null 2>&1 || log_fatal "docker-compose.yml has syntax errors"
 log "✓ docker-compose.yml syntax valid"
 
 # List services
@@ -130,7 +115,7 @@ log "✓ Config directories ready"
 log "[3/3] Verifying integration points..."
 DOCKER_NETWORK=$(docker network list --format='{{.Name}}' | grep -E '^phase' || true)
 if [ -z "$DOCKER_NETWORK" ]; then
-    warn "Expected Docker network not found (will be created on docker-compose up)"
+    log_warn "Expected Docker network not found (will be created on docker-compose up)"
 else
     log "✓ Docker network '$DOCKER_NETWORK' exists"
 fi
@@ -146,7 +131,7 @@ log "[1/3] Validating Prometheus configuration..."
 if grep -q "scrape_interval" docker-compose.yml 2>/dev/null; then
     log "✓ Prometheus scrape configuration found"
 else
-    warn "Prometheus configuration not in docker-compose (may be external)"
+    log_warn "Prometheus configuration not in docker-compose (may be external)"
 fi
 
 log "[2/3] Validating AlertManager configuration..."

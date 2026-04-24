@@ -10,10 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source logging utilities directly
-source "${REPO_ROOT}/scripts/_common/logging.sh" || {
-    echo "[ERROR] Failed to source logging utilities"
-    exit 1
-}
+source "${REPO_ROOT}/scripts/_common/init.sh"
 
 log_info "Starting Database Resilience Infrastructure Deployment"
 log_info "Repo Root: $REPO_ROOT"

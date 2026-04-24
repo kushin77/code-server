@@ -109,9 +109,14 @@ gunzip -c /backups/postgres/postgres_YYYYMMDD_HHMMSS.sql.gz | docker exec -i pos
 
 ### 2. Configure recovery.conf for PITR
 ```bash
-docker exec postgres bash -c 'echo "restore_command = '"'"'cp /var/lib/postgresql/wal_archive/%f %p'"'"'" >> /var/lib/postgresql/data/recovery.conf'
-docker exec postgres bash -c 'echo "recovery_target_timeline = latest" >> /var/lib/postgresql/data/recovery.conf'
-docker exec postgres bash -c 'echo "recovery_target_xid = XXXXXX" >> /var/lib/postgresql/data/recovery.conf'
+docker exec postgres bash -c '
+    RECOVERY_CONF=/var/lib/postgresql/data/recovery.conf
+    if [ ! -f "$RECOVERY_CONF" ] || ! grep -q "restore_command" "$RECOVERY_CONF"; then
+        echo "restore_command = '"'"'cp /var/lib/postgresql/wal_archive/%f %p'"'"'" >> "$RECOVERY_CONF"
+        echo "recovery_target_timeline = latest" >> "$RECOVERY_CONF"
+        echo "recovery_target_xid = XXXXXX" >> "$RECOVERY_CONF"
+    fi
+'
 ```
 
 ### 3. Start database and verify recovery

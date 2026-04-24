@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Source logging from common directory
-source "$PROJECT_DIR/scripts/_common/logging.sh" 2>/dev/null || {
+source "$SCRIPT_DIR/../_common/init.sh"
     # Fallback if common logging not available
     log_info() { echo "[INFO] $*"; }
     log_warn() { echo "[WARN] $*"; }

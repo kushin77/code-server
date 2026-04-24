@@ -35,7 +35,8 @@ LOG_FILE="/var/log/keepalived-notify.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
 log_message() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [KEEPALIVED] [$STATE] $*" | tee -a "$LOG_FILE"
+    log_info "KEEPALIVED STATE CHANGE: $STATE - $*"
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [KEEPALIVED] [$STATE] $*" >> "$LOG_FILE"
 }
 
 # ==============================================================================
@@ -45,16 +46,8 @@ log_message() {
 handle_master() {
     # This host just became MASTER (now holding the VIP)
     log_message "✓ PROMOTED TO MASTER"
-    log_message "  - VIP ${VIP} now on this host ($(hostname -I))"
+    log_message "  - VIP ${VIP} now on this host"
     log_message "  - All traffic should flow here"
-    
-    # Optional: Notify monitoring system
-    # curl -X POST http://monitoring.prod.internal:9093/api/v1/alerts \
-    #      -H 'Content-Type: application/json' \
-    #      -d "{\"status\":\"success\",\"message\":\"VRRP MASTER promoted on ${HOSTNAME}\"}"
-    
-    # Optional: Update local DNS
-    # echo "$(date): Became MASTER" >> /etc/hosts.d/vrrp-status
 }
 
 handle_backup() {
@@ -62,11 +55,6 @@ handle_backup() {
     log_message "✓ DEMOTED TO BACKUP"
     log_message "  - VIP ${VIP} is on other host"
     log_message "  - Ready to take over if primary fails"
-    
-    # Optional: Notify monitoring
-    # curl -X POST http://monitoring.prod.internal:9093/api/v1/alerts \
-    #      -H 'Content-Type: application/json' \
-    #      -d "{\"status\":\"info\",\"message\":\"VRRP BACKUP on ${HOSTNAME}\"}"
 }
 
 handle_fault() {
@@ -75,16 +63,9 @@ handle_fault() {
     log_message "  - Health check failed, VIP lost"
     log_message "  - Primary services may be down, check logs"
     
-    # Alert monitoring
-    # curl -X POST http://monitoring.prod.internal:9093/api/v1/alerts \
-    #      -H 'Content-Type: application/json' \
-    #      -d "{\"status\":\"error\",\"severity\":\"critical\",\"message\":\"VRRP FAULT on ${HOSTNAME}, VIP lost\"}"
-    
     # Log system state for debugging
     log_message "System state at fault:"
     log_message "  - IP addresses: $(hostname -I)"
-    log_message "  - Network interfaces: $(ip link show | grep -E 'eth|bond')"
-    log_message "  - Health check status: Check /var/log/vrrp-health-monitor.log"
 }
 
 handle_stop() {

@@ -41,6 +41,7 @@ DRY_RUN="${DRY_RUN:-0}"
 # Required export directories
 declare -A EXPORTS=(
     [appsmith]="Portal administration interface"
+    [appsmith-replica-2]="Replica 2 isolated Appsmith store"
     [loki]="Log aggregation and persistence"
     [error-triage-db]="Error diagnostics database"
     [code-server-enterprise]="IDE workspace persistence"

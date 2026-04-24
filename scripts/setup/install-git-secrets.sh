@@ -31,6 +31,19 @@ cleanup() {
 
 trap cleanup EXIT
 
+ensure_global_pattern() {
+    local config_key="$1"
+    local pattern="$2"
+    local label="$3"
+
+    if git config --global --get-all "$config_key" 2>/dev/null | grep -Fxq -- "$pattern"; then
+        log_info "✓ $label already configured"
+    else
+        git secrets --add --global "$pattern"
+        log_info "✓ Added $label"
+    fi
+}
+
 log_info "Installing git-secrets for secret scanning..."
 
 # Check if git-secrets already installed
@@ -40,7 +53,9 @@ else
     log_info "Installing git-secrets from GitHub..."
     TMP_DIR="$(mktemp -d)"
     cd "$TMP_DIR"
-    git clone https://github.com/awslabs/git-secrets.git .
+    if [[ ! -d .git ]]; then
+        if [ ! -d .git ]; then git clone https://github.com/awslabs/git-secrets.git .; fi
+    fi
     sudo ./install.sh
     cd - >/dev/null
     log_info "✓ git-secrets installed successfully"
@@ -54,30 +69,16 @@ log_info "✓ Pre-commit hook installed"
 # Add secret patterns (AWS, GitHub, Stripe, Database)
 log_info "Configuring secret detection patterns..."
 
-git secrets --add --global '(aws_access_key_id|aws_secret_access_key)' || true
-log_info "✓ Added AWS credential pattern"
-
-git secrets --add --global '(AKIA[0-9A-Z]{16})' || true
-log_info "✓ Added AWS Access Key ID pattern"
-
-git secrets --add --global '(ghp_[A-Za-z0-9_]{36})' || true
-log_info "✓ Added GitHub Personal Access Token pattern"
-
-git secrets --add --global '(sk_live_[A-Za-z0-9]{24})' || true
-log_info "✓ Added Stripe Secret Key pattern"
-
-git secrets --add --global '(postgresql://[^:\s]+:[^@\s]+@)' || true
-log_info "✓ Added PostgreSQL connection string pattern"
-
-git secrets --add --global '(redis://:[^@\s]+@)' || true
-log_info "✓ Added Redis connection string pattern"
-
-git secrets --add --global '(mongodb://[^:\s]+:[^@\s]+@)' || true
-log_info "✓ Added MongoDB connection string pattern"
+ensure_global_pattern "secrets.patterns" '(aws_access_key_id|aws_secret_access_key)' "AWS credential pattern"
+ensure_global_pattern "secrets.patterns" '(AKIA[0-9A-Z]{16})' "AWS Access Key ID pattern"
+ensure_global_pattern "secrets.patterns" '(ghp_[A-Za-z0-9_]{36})' "GitHub Personal Access Token pattern"
+ensure_global_pattern "secrets.patterns" '(sk_live_[A-Za-z0-9]{24})' "Stripe Secret Key pattern"
+ensure_global_pattern "secrets.patterns" '(postgresql://[^:\s]+:[^@\s]+@)' "PostgreSQL connection string pattern"
+ensure_global_pattern "secrets.patterns" '(redis://:[^@\s]+@)' "Redis connection string pattern"
+ensure_global_pattern "secrets.patterns" '(mongodb://[^:\s]+:[^@\s]+@)' "MongoDB connection string pattern"
 
 # Allow specific patterns that are safe (examples)
-git secrets --add --allow '^(REPLACEME|YOUR-)' || true
-log_info "✓ Added allowed example pattern"
+ensure_global_pattern "secrets.allowed" '^(REPLACEME|YOUR-)' "allowed example pattern"
 
 log_info "✓ git-secrets setup complete"
 log_info ""

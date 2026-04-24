@@ -130,8 +130,8 @@ phase_repositories() {
     heading "PHASE 2: Repository Setup"
     
     # Main code-server repo
-    log "Cloning code-server repository..."
-    if [ ! -d "$REPOS_PATH/code-server" ]; then
+    log "Ensuring code-server repository..."
+    if [ ! -d "$REPOS_PATH/code-server/.git" ]; then
         cd "$REPOS_PATH"
         git clone "https://github.com/${GITHUB_ORG}/code-server.git"
         cd "code-server"

@@ -23,13 +23,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 # Configuration
 REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
 SSH_USER="akushnir"
 DEFAULT_SSH_KEY_PATH="${HOME}/.ssh/id_rsa_onprem"
 SSH_KEY="${SSH_KEY:-$DEFAULT_SSH_KEY_PATH}"
 PRECHECK_NAS_HOST="${NAS_HOST:-192.168.168.56}"
-PRECHECK_NAS_EXPORT="/export/appsmith"
+PRECHECK_NAS_EXPORT="${NAS_EXPORT_PATH:-/export}/appsmith"
 MIN_DISK_GB=10
 JSON_OUTPUT=0
 STRICT_MODE=0
@@ -138,7 +140,7 @@ fi
 
 # --- Check 2: Local Git State ---
 log_info "CHECK: Local git repository state"
-if cd /mnt/c/code-server-enterprise 2>/dev/null; then
+if cd "$REPO_ROOT" 2>/dev/null; then
   if git status --short | grep -q .; then
     check_warn "Git working tree dirty" "$(git status --short | wc -l) uncommitted changes"
   else
@@ -149,7 +151,7 @@ if cd /mnt/c/code-server-enterprise 2>/dev/null; then
   commit=$(git rev-parse --short HEAD 2>/dev/null || echo "UNKNOWN")
   check_pass "Git state" "branch=$branch commit=$commit"
 else
-  check_fail "Local repository not found" "/mnt/c/code-server-enterprise"
+  check_fail "Local repository not found" "$REPO_ROOT"
 fi
 
 # --- Check 3: SSH Connectivity to Replicas ---
@@ -167,8 +169,8 @@ done
 
 # --- Check 4: File Permissions (sample check) ---
 log_info "CHECK: File ownership on local repo"
-if [[ -d "/mnt/c/code-server-enterprise/.git" ]]; then
-  owner=$(stat -c '%U:%G' /mnt/c/code-server-enterprise/.git 2>/dev/null || echo "UNKNOWN")
+if [[ -d "$REPO_ROOT/.git" ]]; then
+  owner=$(stat -c '%U:%G' "$REPO_ROOT/.git" 2>/dev/null || echo "UNKNOWN")
   if [[ "$owner" == *"akushnir"* ]]; then
     check_pass "Git directory ownership" "$owner"
   else
@@ -193,7 +195,7 @@ done
 
 # --- Check 6: docker-compose Syntax ---
 log_info "CHECK: docker-compose configuration syntax"
-if cd /mnt/c/code-server-enterprise 2>/dev/null; then
+if cd "$REPO_ROOT" 2>/dev/null; then
   if command -v docker-compose >/dev/null 2>&1; then
     if docker-compose config >/dev/null 2>&1; then
       check_pass "docker-compose syntax valid"
@@ -215,6 +217,12 @@ fi
 log_info "CHECK: NAS connectivity"
 if ping -c 1 -W 2 "$PRECHECK_NAS_HOST" >/dev/null 2>&1; then
   check_pass "NAS host reachable" "$PRECHECK_NAS_HOST"
+
+  if ssh -i "$SSH_KEY" -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$SSH_USER@$PRECHECK_NAS_HOST" "test -d '$PRECHECK_NAS_EXPORT'" >/dev/null 2>&1; then
+    check_pass "NAS export path present" "$PRECHECK_NAS_EXPORT"
+  else
+    check_fail "NAS export path missing" "$PRECHECK_NAS_EXPORT on $PRECHECK_NAS_HOST"
+  fi
 else
   check_warn "NAS host unreachable" "$PRECHECK_NAS_HOST (non-critical, services can start without NAS)"
 fi

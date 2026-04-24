@@ -8,9 +8,10 @@
 set -euo pipefail
 
 # Configuration
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SCRIPTS_DIR="${REPO_ROOT}/scripts"
-MANIFEST="${SCRIPTS_DIR}/MANIFEST.toml"
+SCRIPT_DIR_INTERNAL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR_INTERNAL/.." && pwd)}"
+SCRIPTS_DIR="${SCRIPTS_DIR:-${REPO_ROOT}/scripts}"
+MANIFEST="${MANIFEST:-${SCRIPTS_DIR}/MANIFEST.toml}"
 DRY_RUN=false
 MODIFIED_COUNT=0
 

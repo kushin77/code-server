@@ -5,17 +5,14 @@
 # @status      Executable immediately without external dependencies
 #
 
+set -euo pipefail
+
 # Initialize script directory and dependencies
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
 
-# Canonical initialization via shared bootstrap
-if [[ -f "$REPO_ROOT/scripts/_common/init.sh" ]]; then
-    source "$REPO_ROOT/scripts/_common/init.sh"
-else
-    echo "ERROR: Could not find scripts/_common/init.sh"
-    exit 1
-fi
+# Initialize repository context
+init_repo
 
 # Colors
 GREEN='\033[0;32m'

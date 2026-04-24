@@ -13,7 +13,8 @@ set -euo pipefail
 mkdir -p ~/.local/bin
 cd /tmp
 rm -rf k6-tmp-$$
-mkdir k6-tmp-$$
+# Create temporary directory (idempotent: use -p or unique name)
+mkdir -p k6-tmp-$$
 cd k6-tmp-$$
 
 echo "[*] Downloading k6 v0.50.0..."

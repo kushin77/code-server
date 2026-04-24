@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # HAProxy - Load balancer frontend
   haproxy:
-    image: haproxy:2.8-alpine
+    image: haproxy@sha256:b6c7693f0fdab1d6d8695270212b82826c1d424c87a550d05525f1ac82f91937
     container_name: websocket-haproxy
     ports:
       - "8080:8080"  # WebSocket HTTP
@@ -32,7 +32,7 @@ services:
 
   # WebSocket Relay Node 1
   ws-relay-1:
-    image: node:18-alpine
+    image: node@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
     container_name: websocket-relay-1
     working_dir: /app
     volumes:
@@ -61,7 +61,7 @@ services:
 
   # WebSocket Relay Node 2
   ws-relay-2:
-    image: node:18-alpine
+    image: node@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
     container_name: websocket-relay-2
     working_dir: /app
     volumes:
@@ -90,7 +90,7 @@ services:
 
   # WebSocket Relay Node 3
   ws-relay-3:
-    image: node:18-alpine
+    image: node@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
     container_name: websocket-relay-3
     working_dir: /app
     volumes:
@@ -119,7 +119,7 @@ services:
 
   # Redis - Pub/Sub message broker
   redis:
-    image: redis:7-alpine
+    image: redis@sha256:7aec734b2bb298a1d769fd8729f13b8514a41bf90fcdd1f38ec52267fbaa8ee6
     container_name: websocket-redis
     ports:
       - "6379:6379"
@@ -143,7 +143,7 @@ services:
 
   # Prometheus - Metrics collection
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus@sha256:13f40c0279df792517b456ae6427dd6344685e9b1478fb9de8e4dc418727668f
     container_name: websocket-prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -164,7 +164,7 @@ services:
 
   # Grafana - Metrics visualization
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana@sha256:1ee0c54286b8ca09a3dd1419ff8653e7780a148a006ac088544203bb0affe550
     container_name: websocket-grafana
     ports:
       - "3000:3000"

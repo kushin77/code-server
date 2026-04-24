@@ -86,6 +86,51 @@ _ensure_pnpm
 [[ -f "$_COMMON_DIR/docker.sh" ]] && source "$_COMMON_DIR/docker.sh"
 [[ -f "$_COMMON_DIR/ssh.sh"    ]] && source "$_COMMON_DIR/ssh.sh"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CORE LIFECYCLE FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Initialize repository context and environment
+# Mandated by Rule 4: "initialize repo context"
+init_repo() {
+    log_debug "Initializing repository context..."
+    
+    # 1. Ensure we are in the repository root
+    local root_dir
+    root_dir="$(cd "$_COMMON_DIR/../.." && pwd)"
+    cd "$root_dir" || log_fatal "Could not change directory to repository root: $root_dir"
+    export REPO_ROOT="$root_dir"
+    
+    # 2. Load .env if present (Rule 3: GSM first, .env fallback)
+    if [[ -f ".env" ]]; then
+        log_debug "Found local .env, loading..."
+        load_env ".env"
+    fi
+    
+    # 3. Validation: Ensure essential vars from config.sh or .env exist
+    # (Add critical vars here as needed)
+    
+    log_debug "✓ Repository context initialized at $REPO_ROOT"
+}
+
+# Ensure script is running as root
+# Mandated by Rule 4
+ensure_root() {
+    if [[ $EUID -ne 0 ]]; then
+        log_fatal "This script must be run as root"
+    fi
+}
+
+# Ensure script is NOT running as root
+# Mandated by Rule 4
+ensure_not_root() {
+    if [[ $EUID -eq 0 ]]; then
+        log_fatal "This script must not be run as root"
+    fi
+}
+
+export -f init_repo ensure_root ensure_not_root
+
 # Ensure common safe-execution flags are set for the calling script
 set -euo pipefail
 

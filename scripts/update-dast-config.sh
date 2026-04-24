@@ -7,10 +7,7 @@ set -euo pipefail
 
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || {
-    echo "ERROR: Failed to source init.sh"
-    exit 1
-}
+source "$SCRIPT_DIR/_common/init.sh"
 
 log_info "Updating oauth2-proxy DAST scanner configuration..."
 

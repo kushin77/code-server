@@ -54,7 +54,7 @@
 # Fully automated production deployment with all dependent services
 # No manual intervention required - everything is code
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
@@ -65,88 +65,79 @@ PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"
 DEPLOY_USER="${DEPLOY_USER:-akushnir}"
 DEPLOY_ENV="${DEPLOY_ENV:-production}"
+DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 DEPLOYMENT_DIR="/home/${DEPLOY_USER}/code-server-immutable-$(date +%Y%m%d-%H%M%S)"
 
-echo "╔════════════════════════════════════════════════════════════╗"
-echo "║ AUTOMATED PRODUCTION DEPLOYMENT - PURE IaC                 ║"
-echo "║ No Manual Steps • Fully Reproducible • Enterprise Ready     ║"
-echo "╚════════════════════════════════════════════════════════════╝"
-echo ""
-echo "Configuration:"
-echo "  Domain: $DOMAIN"
-echo "  Deploy Host: $DEPLOY_HOST"
-echo "  Deploy User: $DEPLOY_USER"
-echo "  Environment: $DEPLOY_ENV"
-echo "  Deployment Dir: $DEPLOYMENT_DIR"
-echo ""
+log_info "╔════════════════════════════════════════════════════════════╗"
+log_info "║ AUTOMATED PRODUCTION DEPLOYMENT - PURE IaC                 ║"
+log_info "║ No Manual Steps • Fully Reproducible • Enterprise Ready     ║"
+log_info "╚════════════════════════════════════════════════════════════╝"
+log_info ""
+log_info "Configuration:"
+log_info "  Domain: $DOMAIN"
+log_info "  Deploy Host: $DEPLOY_HOST"
+log_info "  Deploy User: $DEPLOY_USER"
+log_info "  Environment: $DEPLOY_ENV"
+log_info "  Deployment Dir: $DEPLOYMENT_DIR"
+log_info ""
 
 # Step 1: Validate environment prerequisites
 validate_environment() {
-    echo "═══════════════════════════════════════════════════════════"
-    echo "STEP 1: VALIDATING ENVIRONMENT"
-    echo "═══════════════════════════════════════════════════════════"
-    echo ""
+    log_section "STEP 1: VALIDATING ENVIRONMENT"
     
     # Check local commands
-    for cmd in ssh scp docker docker-compose openssl curl jq; do
-        if ! command -v $cmd &> /dev/null; then
-            log_error "Required command not found: $cmd"
-            return 1
-        fi
-    done
-    echo "✓ All required local commands available"
+    require_command ssh
+    require_command scp
+    require_command docker
+    require_command openssl
+    require_command curl
+    require_command jq
+    
+    log_info "✓ All required local commands available"
     
     # Check SSH connectivity
     if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" \
         'echo "SSH connectivity verified" && docker --version' &>/dev/null; then
-        log_error "Cannot connect to ${DEPLOY_USER}@${DEPLOY_HOST}"
-        return 1
+        log_fatal "Cannot connect to ${DEPLOY_USER}@${DEPLOY_HOST}"
     fi
-    echo "✓ SSH connectivity to ${DEPLOY_HOST} verified"
-    echo "✓ Docker available on target host"
-    echo ""
+    log_info "✓ SSH connectivity to ${DEPLOY_HOST} verified"
+    log_info "✓ Docker available on target host"
+    log_info ""
 }
 
 # Step 2a: Configure OAuth (optional, for authentication)
 configure_oauth() {
-    echo "═══════════════════════════════════════════════════════════"
-    echo "STEP 2a: CONFIGURING OAUTH"
-    echo "═══════════════════════════════════════════════════════════"
-    echo ""
+    log_section "STEP 2a: CONFIGURING OAUTH"
     
-    if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
-        echo "⚠ OAuth credentials not provided"
-        echo "  To enable OAuth2 authentication:"
-        echo "  export GOOGLE_CLIENT_ID=\"<client-id>\""
-        echo "  export GOOGLE_CLIENT_SECRET=\"<client-secret>\""
-        echo ""
-        echo "  Run automated-oauth-configuration.sh for guided setup"
-        echo ""
+    if [ -z "${GOOGLE_CLIENT_ID:-}" ] || [ -z "${GOOGLE_CLIENT_SECRET:-}" ]; then
+        log_warn "OAuth credentials not provided"
+        log_info "  To enable OAuth2 authentication:"
+        log_info "  export GOOGLE_CLIENT_ID=\"<client-id>\""
+        log_info "  export GOOGLE_CLIENT_SECRET=\"<client-secret>\""
+        log_info ""
+        log_info "  Run automated-oauth-configuration.sh for guided setup"
+        log_info ""
         return 0
     fi
     
-    echo "✓ OAuth credentials configured"
-    echo "  Client ID: ${GOOGLE_CLIENT_ID:0:20}***"
-    echo ""
+    log_info "✓ OAuth credentials configured"
+    log_info "  Client ID: ${GOOGLE_CLIENT_ID:0:20}***"
+    log_info ""
 }
 
 # Step 3: Generate production configuration
 generate_configuration() {
-    echo "═══════════════════════════════════════════════════════════"
-    echo "STEP 3: GENERATING PRODUCTION CONFIGURATION"
-    echo "═══════════════════════════════════════════════════════════"
-    echo ""
+    log_section "STEP 3: GENERATING PRODUCTION CONFIGURATION"
     
     # Generate .env
     bash "${SCRIPT_DIR}/automated-env-generator.sh" || {
-        log_error "Failed to generate environment configuration"
-        return 1
+        log_fatal "Failed to generate environment configuration"
     }
-    echo ""
+    log_info ""
     
     # Generate certificates
     bash "${SCRIPT_DIR}/automated-certificate-management.sh" || {
-        echo "WARNING: Certificate generation encountered issues (may not block)"
+        log_warn "Certificate generation encountered issues (may not block)"
     }
     echo ""
 }

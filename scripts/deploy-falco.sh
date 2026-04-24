@@ -11,66 +11,71 @@
 
 set -euo pipefail
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/_common/init.sh"
 
 FALCO_VERSION="0.36.0"
 FALCO_SIDEKICK_VERSION="0.30.0"
 
-echo -e "${BLUE}════════════════════════════════════════════════════════════════════════════${NC}"
-echo -e "${BLUE}FALCO RUNTIME SECURITY DEPLOYMENT${NC}"
-echo -e "${BLUE}════════════════════════════════════════════════════════════════════════════${NC}"
+if [[ $EUID -ne 0 ]]; then
+    log_error "This script must be run as root"
+    exit 1
+fi
+
+log_info "════════════════════════════════════════════════════════════════════════════"
+log_info "FALCO RUNTIME SECURITY DEPLOYMENT"
+log_info "════════════════════════════════════════════════════════════════════════════"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Verify Prerequisites
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo -e "\n${BLUE}[1] Verifying prerequisites...${NC}"
+log_info ""
+log_info "[1] Verifying prerequisites..."
 
 # Check kernel version (need 4.11+ for eBPF)
 KERNEL_VERSION=$(uname -r | cut -d. -f1-2)
 if (( $(echo "$KERNEL_VERSION < 4.11" | bc -l) )); then
-    echo -e "${RED}✗ Kernel version $KERNEL_VERSION too old (need >= 4.11 for eBPF)${NC}"
+    log_error "Kernel version $KERNEL_VERSION too old (need >= 4.11 for eBPF)"
     exit 1
 fi
-echo -e "${GREEN}✓ Kernel version $KERNEL_VERSION supports eBPF${NC}"
+log_success "Kernel version $KERNEL_VERSION supports eBPF"
 
 # Check for Docker
 if ! command -v docker &>/dev/null; then
-    echo -e "${RED}✗ Docker not found${NC}"
+    log_error "Docker not found"
     exit 1
 fi
-echo -e "${GREEN}✓ Docker available${NC}"
+log_success "Docker available"
 
 # Check for Kubernetes API server (optional)
 if command -v kubectl &>/dev/null; then
-    echo -e "${GREEN}✓ kubectl available (Kubernetes support)${NC}"
+    log_success "kubectl available (Kubernetes support)"
 else
-    echo -e "${YELLOW}⚠ kubectl not found (Kubernetes support disabled)${NC}"
+    log_warn "kubectl not found (Kubernetes support disabled)"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Create Falco Configuration Directories
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo -e "\n${BLUE}[2] Creating configuration directories...${NC}"
+log_info ""
+log_info "[2] Creating configuration directories..."
 
 mkdir -p /etc/falco/rules.d
 mkdir -p /var/log/falco
-mkdir -p ~/.falco
+mkdir -p "${HOME}/.falco"
 chmod 755 /etc/falco/rules.d
 chmod 755 /var/log/falco
 
-echo -e "${GREEN}✓ Created config directories${NC}"
+log_success "Created config directories"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Install Falco Kernel Module (or eBPF probe)
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo -e "\n${BLUE}[3] Installing Falco eBPF kernel module...${NC}"
+log_info ""
+log_info "[3] Installing Falco eBPF kernel module..."
 
 # Add Falco repository and GPG key
 curl -s https://falco.org/repo/falcosecurity-3672BA8F.asc | apt-key add -
@@ -80,13 +85,14 @@ echo "deb https://download.falco.org/packages/deb stable main" | tee /etc/apt/so
 apt-get update -qq
 apt-get install -y -qq falco=${FALCO_VERSION}* falco-dkms=${FALCO_VERSION}*
 
-echo -e "${GREEN}✓ Installed Falco ${FALCO_VERSION}${NC}"
+log_success "Installed Falco ${FALCO_VERSION}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Build and Install eBPF Probe
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo -e "\n${BLUE}[4] Building Falco eBPF probe...${NC}"
+log_info ""
+log_info "[4] Building Falco eBPF probe..."
 
 # Install kernel headers (required for eBPF build)
 # shellcheck disable=SC2046
@@ -95,29 +101,30 @@ apt-get install -y -qq linux-headers-$(uname -r)
 # Build eBPF probe
 falco -o engine.kind=ebpf -o engine.ebpf.probe=/root/.falco/falco-${FALCO_VERSION}-x86_64.o -C /etc/falco/falco.yaml --list > /dev/null 2>&1 || true
 
-if [[ -f ~/.falco/falco-${FALCO_VERSION}-x86_64.o ]]; then
-    echo -e "${GREEN}✓ eBPF probe compiled: ~/.falco/falco-${FALCO_VERSION}-x86_64.o${NC}"
+if [[ -f "${HOME}/.falco/falco-${FALCO_VERSION}-x86_64.o" ]]; then
+    log_success "eBPF probe compiled: ${HOME}/.falco/falco-${FALCO_VERSION}-x86_64.o"
 else
-    echo -e "${YELLOW}⚠ eBPF probe build failed, falling back to kernel module${NC}"
+    log_warn "eBPF probe build failed, falling back to kernel module"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Install Falco Rules
 # ─────────────────────────────────────────────────────────────────────────────
 
-echo -e "\n${BLUE}[5] Installing Falco rules...${NC}"
+log_info ""
+log_info "[5] Installing Falco rules..."
 
 # Falco installs default rules to /etc/falco/falco_rules.yaml
 # Rules can be customized via /etc/falco/rules.d/
 
 if [[ -f /etc/falco/falco_rules.yaml ]]; then
-    echo -e "${GREEN}✓ Falco default rules installed${NC}"
+    log_success "Falco default rules installed"
 else
-    echo -e "${RED}✗ Falco rules not found${NC}"
+    log_error "Falco rules not found"
     exit 1
 fi
 
-echo -e "${GREEN}✓ Falco rules ready${NC}"
+log_success "Falco rules ready"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. Install Falco Sidekick (output dispatcher)

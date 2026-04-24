@@ -24,7 +24,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "${SCRIPT_DIR}")")"
 
-source "${PROJECT_ROOT}/scripts/_common/init.sh" || { echo "FATAL: Cannot source init.sh"; exit 1; }
+source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
 # Configuration
 LOKI_ENDPOINT="${LOKI_ENDPOINT:-http://loki:3100}"

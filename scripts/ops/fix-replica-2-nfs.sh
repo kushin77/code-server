@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/_common/init.sh"
 # NAS directories that need to exist
 NAS_DIRS=(
   "/export/appsmith"
+  "/export/appsmith-replica-2"
   "/export/loki"
   "/export/error-triage-db"
   "/export/code-server-enterprise"
@@ -131,6 +132,7 @@ for service in "${SERVICES_TO_CHECK[@]}"; do
   case "$service" in
     appsmith)
       [[ " ${MISSING_DIRS[*]} " =~ " /export/appsmith " ]] && service_needs_nfs=1
+      [[ " ${MISSING_DIRS[*]} " =~ " /export/appsmith-replica-2 " ]] && service_needs_nfs=1
       ;;
     loki)
       [[ " ${MISSING_DIRS[*]} " =~ " /export/loki " ]] && service_needs_nfs=1

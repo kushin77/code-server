@@ -72,6 +72,14 @@ http://kushnir.cloud {
     }
 }
 
+# Catch-all HTTP health listener for IP-based scrapes and internal probes
+:80 {
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    respond "Not Found" 404
+}
+
 # HTTPS listener for kushnir.cloud (portal domain)
 kushnir.cloud {
     encode gzip

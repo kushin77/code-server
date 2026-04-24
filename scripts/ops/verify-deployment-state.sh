@@ -10,6 +10,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
+# Initialize repository context
+init_repo
+
 REPLICA_1="192.168.168.31"
 REPLICA_2="192.168.168.42"
 DEPLOY_USER="akushnir"

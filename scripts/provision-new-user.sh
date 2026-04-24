@@ -7,36 +7,34 @@
 # scripts/provision-new-user.sh - Automated User Provisioning
 # Usage: ./scripts/provision-new-user.sh "email@company.com" "viewer|developer|architect|admin" "Display Name"
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
-EMAIL="${1}"
+EMAIL="${1:-}"
 ROLE="${2:-developer}"
 DISPLAY_NAME="${3:-${EMAIL%%@*}}"
 
 if [[ -z "$EMAIL" ]]; then
-  echo "❌ Usage: $0 <email@company.com> [role] [display_name]"
-  echo ""
-  echo "Available roles:"
-  echo "  viewer      - Read-only code access, no edits, no downloads"
-  echo "  developer   - Full development access with code changes"
-  echo "  architect   - Design review, markdown editing only, read-only code"
-  echo "  admin       - Full access with full audit"
+  log_error "Usage: $0 <email@company.com> [role] [display_name]"
+  log_info ""
+  log_info "Available roles:"
+  log_info "  viewer      - Read-only code access, no edits, no downloads"
+  log_info "  developer   - Full development access with code changes"
+  log_info "  architect   - Design review, markdown editing only, read-only code"
+  log_info "  admin       - Full access with full audit"
   exit 1
 fi
 
-# Validate email forma
+# Validate email format
 if ! [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-  echo "❌ Invalid email format: $EMAIL"
-  exit 1
+  log_fatal "Invalid email format: $EMAIL"
 fi
 
 # Validate role
 if ! [[ "$ROLE" =~ ^(viewer|developer|architect|admin)$ ]]; then
-  echo "❌ Invalid role: $ROLE (must be: viewer, developer, architect, or admin)"
-  exit 1
+  log_fatal "Invalid role: $ROLE (must be: viewer, developer, architect, or admin)"
 fi
 
 USER_ID=$(printf '%s' "$EMAIL" | tr '[:upper:]' '[:lower:]' | sed 's/@/-at-/g; s/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
@@ -45,38 +43,47 @@ IDE_URL="${IDE_URL:-https://${DOMAIN:-localhost}}"
 
 cd "$REPO_ROOT"
 
-echo ""
-echo "════════════════════════════════════════════════════════════════"
-echo "👤 PROVISIONING NEW IDE USER"
-echo "════════════════════════════════════════════════════════════════"
-echo "Email:       $EMAIL"
-echo "Role:        $ROLE"
-echo "Display:     $DISPLAY_NAME"
-echo "User ID:     $USER_ID"
-echo "Timestamp:   $(date -I'seconds')"
-echo ""
+log_info ""
+log_info "════════════════════════════════════════════════════════════════"
+log_info "👤 PROVISIONING NEW IDE USER"
+log_info "════════════════════════════════════════════════════════════════"
+log_info "Email:       $EMAIL"
+log_info "Role:        $ROLE"
+log_info "Display:     $DISPLAY_NAME"
+log_info "User ID:     $USER_ID"
+log_info "Timestamp:   $(date -I'seconds')"
+log_info ""
 
 # ─── STEP 1: Add to Email Allowlist ───────────────────────────────────────
-echo "Step 1️⃣  Adding to OAuth2 allowlist..."
+log_info "Step 1️⃣  Adding to OAuth2 allowlist..."
+if [[ ! -f "allowed-emails.txt" ]]; then
+  touch "allowed-emails.txt"
+fi
+
 if grep -Fqx -- "$EMAIL" allowed-emails.txt 2>/dev/null; then
-  echo "  ⚠️  Email already whitelisted"
+  log_warn "Email already whitelisted"
 else
   echo "$EMAIL" >> allowed-emails.txt
   sort allowed-emails.txt -o allowed-emails.txt  # Keep sorted
-  echo "  ✅ Email added to allowed-emails.txt"
+  log_success "Email added to allowed-emails.txt"
 fi
 
 # ─── STEP 2: Create User Settings Profile ──────────────────────────────────
-echo ""
-echo "Step 2️⃣  Creating user settings profile..."
+log_info ""
+log_info "Step 2️⃣  Creating user settings profile..."
 USER_CONFIG_DIR="config/user-settings/$USER_ID"
-mkdir -p "$USER_CONFIG_DIR"
+if [[ ! -d "$USER_CONFIG_DIR" ]]; then
+  mkdir -p "$USER_CONFIG_DIR"
+  log_info "Created user config directory: $USER_CONFIG_DIR"
+else
+  log_info "User config directory already exists: $USER_CONFIG_DIR"
+fi
 
 # Load role template
 ROLE_TEMPLATE="config/role-settings/${ROLE}-profile.json"
 if [[ ! -f "$ROLE_TEMPLATE" ]]; then
-  echo "  ⚠️  Role template not found: $ROLE_TEMPLATE"
-  echo "  Creating default template..."
+  log_warn "Role template not found: $ROLE_TEMPLATE"
+  log_info "Creating default template..."
   mkdir -p "config/role-settings"
 
   # Create a default based on role (see templates below)

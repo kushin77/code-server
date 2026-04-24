@@ -21,7 +21,10 @@ IFS=',' read -r -a EXPECTED_CODES <<< "$EXPECTED_BLOCK_CODES"
 read -r -a ENDPOINT_PATHS <<< "$RAW_PATHS"
 
 ensure_report_dir() {
-  mkdir -p "$REPORT_DIR"
+  if [[ ! -d "$REPORT_DIR" ]]; then
+    mkdir -p "$REPORT_DIR"
+    log_info "Created report directory: $REPORT_DIR"
+  fi
 }
 
 code_is_expected() {

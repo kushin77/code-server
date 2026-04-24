@@ -16,7 +16,7 @@ trap 'echo "Error on line $LINENO"' ERR
 # Initialize repo context and load shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-source "$SCRIPT_DIR/../_common/init.sh" || { echo "Failed to source init.sh"; exit 1; }
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 HOSTS_TO_INSTALL=()

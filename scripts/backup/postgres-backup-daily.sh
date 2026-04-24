@@ -9,10 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR%/scripts*}" && pwd)"
 
 # Source common utilities
-source "${PROJECT_ROOT}/scripts/_common/init.sh" || {
-  echo "ERROR: Cannot load init.sh" >&2
-  exit 1
-}
+source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
 # Configuration
 BACKUP_DIR="${BACKUP_DIR:-/mnt/nas-56/backups}"

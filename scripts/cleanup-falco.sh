@@ -10,15 +10,13 @@
 
 set -euo pipefail
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/_common/init.sh"
 
-echo -e "${YELLOW}Removing Falco runtime security...${NC}"
+log_info "Removing Falco runtime security..."
 
 if [[ $EUID -ne 0 ]]; then
-    echo -e "${RED}✗ This script must be run as root${NC}"
+    log_error "This script must be run as root"
     exit 1
 fi
 
@@ -30,13 +28,13 @@ systemctl disable falco falco-sidekick 2>/dev/null || true
 apt-get remove -y falco falco-dkms 2>/dev/null || true
 
 # Remove configuration
-rm -rf /etc/falco/rules.d/* 2>/dev/null || true
+find /etc/falco/rules.d -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
 rm -f /etc/systemd/system/falco.service 2>/dev/null || true
 rm -f /etc/systemd/system/falco-sidekick.service 2>/dev/null || true
 rm -f /usr/local/bin/falco-sidekick 2>/dev/null || true
-rm -rf ~/.falco 2>/dev/null || true
+rm -rf "${HOME}/.falco" 2>/dev/null || true
 
 # Reload systemd
 systemctl daemon-reload 2>/dev/null || true
 
-echo -e "${GREEN}✓ Falco removed${NC}"
+log_success "Falco removed"

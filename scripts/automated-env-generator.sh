@@ -57,7 +57,7 @@ source "$SCRIPT_DIR/_common/init.sh"
 
 ENV_FILE="${SCRIPT_DIR}/.env.production"
 
-echo "====== AUTOMATED PRODUCTION ENVIRONMENT GENERATION ======"
+log_info "====== AUTOMATED PRODUCTION ENVIRONMENT GENERATION ======"
 echo ""
 
 # Function to check environment variable or fail
@@ -77,7 +77,7 @@ generate_secret() {
     openssl rand -base64 "${1:-32}"
 }
 
-echo "Gathering configuration from environment..."
+log_info "Gathering configuration from environment..."
 echo ""
 
 # OAuth Configuration (from environment)
@@ -93,7 +93,7 @@ CODE_SERVER_PASSWORD=$(generate_secret 16)
 OAUTH2_PROXY_COOKIE_SECRET=$(generate_secret 32)
 REDIS_PASSWORD=$(generate_secret 16)
 
-echo "Generating .env.production..."
+log_info "Generating .env.production..."
 cat > "$ENV_FILE" << EOF
 # Kushnir.cloud (KC) - Production Configuration
 # Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -128,7 +128,7 @@ REDIS_BIND=127.0.0.1
 EOF
 
 chmod 600 "$ENV_FILE"
-echo "✓ Generated: $ENV_FILE (mode 600)"
+log_success "Generated: $ENV_FILE (mode 600)"
 echo ""
 echo "Configuration Summary:"
 echo "  Domain: $DOMAIN"
@@ -140,4 +140,4 @@ echo "To use this configuration:"
 echo "  cp $ENV_FILE .env"
 echo "  docker-compose up -d"
 echo ""
-echo "✅ Production environment ready"
+log_success "Production environment ready"

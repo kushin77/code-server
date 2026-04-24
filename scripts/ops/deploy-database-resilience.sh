@@ -158,11 +158,18 @@ deploy_replication() {
     # Create replication user
     log_info "Creating replication user..."
     ssh_primary "docker exec -u postgres ${POSTGRES_CONTAINER} psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}" <<EOF
-        DROP ROLE IF EXISTS ${REPLICATION_USER};
-        CREATE ROLE ${REPLICATION_USER} WITH REPLICATION ENCRYPTED PASSWORD '${REPLICATION_PASSWORD}' LOGIN;
+        DO \$\$
+        BEGIN
+            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${REPLICATION_USER}') THEN
+                CREATE ROLE ${REPLICATION_USER} WITH REPLICATION ENCRYPTED PASSWORD '${REPLICATION_PASSWORD}' LOGIN;
+            ELSE
+                ALTER ROLE ${REPLICATION_USER} WITH REPLICATION ENCRYPTED PASSWORD '${REPLICATION_PASSWORD}' LOGIN;
+            END IF;
+        END
+        \$\$;
         GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ${REPLICATION_USER};
 EOF
-    log_success "✓ Replication user created"
+    log_success "✓ Replication user verified/updated"
     
     # Configure primary WAL settings
     log_info "Configuring primary WAL..."
@@ -191,9 +198,10 @@ EOF
     # Create replication slot
     log_info "Creating replication slot..."
     ssh_primary "docker exec -u postgres ${POSTGRES_CONTAINER} psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}" <<EOF
-        SELECT * FROM pg_create_physical_replication_slot('${REPLICATION_SLOT_NAME}');
+        SELECT * FROM pg_create_physical_replication_slot('${REPLICATION_SLOT_NAME}')
+        WHERE NOT EXISTS (SELECT 1 FROM pg_replication_slots WHERE slot_name = '${REPLICATION_SLOT_NAME}');
 EOF
-    log_success "✓ Replication slot created"
+    log_success "✓ Replication slot verified"
     
     log_success "PostgreSQL Replication deployed"
     return 0
@@ -214,8 +222,13 @@ deploy_backup() {
     log_info "Creating backup infrastructure..."
     
     # Create backup directories
-    ssh_primary "mkdir -p /var/backups/postgresql && chmod 700 /var/backups/postgresql && chown postgres:postgres /var/backups/postgresql"
-    log_success "✓ Backup directory created"
+    ssh_primary "
+        if [ ! -d /var/backups/postgresql ]; then
+            mkdir -p /var/backups/postgresql
+            chmod 700 /var/backups/postgresql
+            chown postgres:postgres /var/backups/postgresql
+        fi"
+    log_success "✓ Backup directory verified"
     
     # Create initial backup
     log_info "Creating initial full backup..."

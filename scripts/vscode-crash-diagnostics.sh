@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 WINDOW_MINUTES="${WINDOW_MINUTES:-30}"
 GH_REPO_TARGET="${GH_REPO_TARGET:-kushin77/code-server}"

@@ -17,11 +17,11 @@ services:
   # trying to provision its own certificate via the custom-domain flow.
   # It also needs an isolated data volume because Appsmith's embedded MongoDB
   # cannot safely share the same WiredTiger store with replica 1.
+  # Replica-specific compose variables are injected by the deploy script so
+  # the top-level appsmith-data volume resolves to the replica-2 NFS export.
   appsmith:
     environment:
       - APPSMITH_CUSTOM_DOMAIN=
-      - APPSMITH_NAS_SUBDIR=appsmith-replica-2
-      - APPSMITH_VOLUME_NAME=code-server-enterprise_appsmith-data-replica-2
 
   # ────────────────────────────────────────────────────────────────────────────
   # session-broker — Replica instance for active/active horizontal scaling

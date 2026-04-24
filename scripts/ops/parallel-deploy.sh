@@ -45,6 +45,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
+# Initialize repository context
+init_repo
+
 SCRIPT_NAME="$(basename "$0")"
 
 ################################################################################
@@ -66,6 +69,7 @@ declare -a DEPLOY_SSH_OPTS_ARRAY=(-i "${SSH_KEY}" -o ConnectTimeout=10 -o Strict
 COMPOSE_PROFILES="${COMPOSE_PROFILES:-}"
 DRY_RUN=false
 SKIP_PRE_CHECK=false
+STRICT_MODE="${STRICT_MODE:-0}"
 WORK_DIR="/tmp/parallel-deploy-$$"
 
 # Tracking
@@ -169,9 +173,18 @@ deploy_replica() {
     
     # Step 3: Deploy containers
     log_debug "  [3/3] Deploying containers on $host..."
+    local compose_env_prefix=""
+    if [[ "$host" == "192.168.168.42" ]]; then
+      compose_env_prefix="APPSMITH_NAS_SUBDIR=appsmith-replica-2 APPSMITH_VOLUME_NAME=code-server-enterprise_appsmith-data-replica-2"
+    fi
+
     local compose_cmd="docker-compose up -d"
     if [[ -n "$COMPOSE_PROFILES" ]]; then
       compose_cmd="COMPOSE_PROFILES=$COMPOSE_PROFILES docker-compose up -d"
+    fi
+
+    if [[ -n "$compose_env_prefix" ]]; then
+      compose_cmd="$compose_env_prefix $compose_cmd"
     fi
     
     if ! query_replica "$host" "cd code-server-enterprise && $compose_cmd 2>&1" >> "$log_file" 2>&1; then
@@ -367,17 +380,28 @@ fi
     return 0
   fi
   
-  # Run command and redirect output to replica-specific log
-  ssh "${DEPLOY_SSH_OPTS_ARRAY[@]}" "$host" "$cmd" > "/tmp/deploy-${host//[@\/]/-}.log" 2>&1
-}
+if [[ -f "scripts/ops/validate-nas-mount.sh" ]]; then
+  log_info "Validating NAS connectivity..."
+  if ! bash scripts/ops/validate-nas-mount.sh; then
+    log_warn "NAS validation failed. Some services may not mount shared storage."
+    if [[ "$STRICT_MODE" == "1" ]]; then
+      log_fatal "NAS required but unavailable. Aborting."
+      exit 1
+    fi
+  fi
+else
+  log_warn "NAS validation script missing, skipping check"
+fi
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Validation Phase
-# ─────────────────────────────────────────────────────────────────────────────
+# 2. Permission Remediation (Phase 2 of Execution Plan)
+if [[ -f "scripts/ops/fix-deployment-permissions.sh" ]]; then
+  log_info "Ensuring correct file permissions on all replicas..."
+  bash scripts/ops/fix-deployment-permissions.sh
+else
+  log_warn "Permission fix script missing, skipping remediation"
+fi
 
-log_section "PHASE 0: Validation & Prerequisites"
-
-# Check SSH key exists
+# 3. SSH key exists
 if [[ ! -f "$SSH_KEY" ]]; then
   log_fatal "SSH key not found: $SSH_KEY"
   exit 1

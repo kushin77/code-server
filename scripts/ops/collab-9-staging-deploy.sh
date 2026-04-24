@@ -94,11 +94,12 @@ function phase_3_deploy_staging() {
   
   log_info "Setting environment variables..."
   ssh -p "${STAGING_PORT}" "${STAGING_USER}@${STAGING_HOST}" \
-    "cd ${REPO_PATH} && cat >> .env.local <<EOF
-${FEATURE_FLAG}
-${POLLING_FALLBACK}
-WEBHOOK_SECRET=${WEBHOOK_SECRET}
-EOF" || log_warn "Failed to set environment variables (may already be set)"
+    "cd ${REPO_PATH} && \
+    touch .env.local && \
+    for var in '${FEATURE_FLAG}' '${POLLING_FALLBACK}' 'WEBHOOK_SECRET=${WEBHOOK_SECRET}'; do \
+      key=\${var%%=*}; \
+      grep -q \"^\${key}=\" .env.local || echo \"\${var}\" >> .env.local; \
+    done" || log_warn "Failed to set environment variables"
   
   log_info "Restarting services..."
   ssh -p "${STAGING_PORT}" "${STAGING_USER}@${STAGING_HOST}" \

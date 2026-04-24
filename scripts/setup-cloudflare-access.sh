@@ -113,14 +113,14 @@ main() {
     exit 0
   fi
 
-  log_info "Reconciling Cloudflare Access apps and baseline policies"
+  log_section "Cloudflare Access Reconciliation"
   ensure_access_app "$IDE_DOMAIN" "Code Server IDE"
   ensure_access_app "$PORTAL_DOMAIN" "Code Server Portal"
 
   ensure_default_allow_policy "$IDE_DOMAIN"
   ensure_default_allow_policy "$PORTAL_DOMAIN"
 
-  log_info "Cloudflare Access setup completed"
+  log_success "Cloudflare Access setup completed"
 }
 
 main "$@"

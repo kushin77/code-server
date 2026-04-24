@@ -7,12 +7,12 @@ services:
     ports:
       - "8080:8080"
   postgres:
-    image: postgres:15-alpine
+    image: postgres@sha256:09e4f20b14ddb3dfe3a0c825b206032aaf8f28300ba2070c0b60fc1c10c6abc7
     container_name: postgres
     ports:
       - "5432:5432"
   redis:
-    image: redis:7-alpine
+    image: redis@sha256:7aec734b2bb298a1d769fd8729f13b8514a41bf90fcdd1f38ec52267fbaa8ee6
     container_name: redis
     ports:
       - "6379:6379"

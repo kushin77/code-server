@@ -7,34 +7,15 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+
+# Initialize repository context
+init_repo
+
 # Configuration (no hardcoded values - all from environment or defaults)
 DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 SCRIPT_NAME="$(basename "$0")"
-
-# Inline logging (lightweight, no dependencies)
-log_info() {
-  echo "[INFO] $*"
-}
-
-log_success() {
-  echo "[✓] $*"
-}
-
-log_error() {
-  echo "[✗] $*" >&2
-}
-
-log_title() {
-  echo ""
-  echo "════════════════════════════════════════════════════════════════════════════"
-  echo "  $1"
-  echo "════════════════════════════════════════════════════════════════════════════"
-}
-
-log_section() {
-  echo ""
-  echo "─ $1"
-}
 
 # Main idempotency verification
 main() {

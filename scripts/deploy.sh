@@ -87,53 +87,50 @@ assert_docker          # Docker daemon responding on remote
 # Setup error handling
 add_cleanup cleanup_deployment_handler
 
-echo "════════════════════════════════════════════════════════════════════════════"
-echo "IDEMPOTENT DEPLOYMENT: code-server-enterprise"
-echo "Timestamp: $(date -Iseconds)"
-echo "════════════════════════════════════════════════════════════════════════════"
+log_info "════════════════════════════════════════════════════════════════════════════"
+log_info "IDEMPOTENT DEPLOYMENT: code-server-enterprise"
+log_info "Timestamp: $(date -Iseconds)"
+log_info "════════════════════════════════════════════════════════════════════════════"
 
 # Step 1: Terraform init + apply (generates docker-compose.yml with versions)
 echo ""
-echo "Step 1: Generating infrastructure config (Terraform)..."
+log_info "Step 1: Generating infrastructure config (Terraform)..."
 if terraform -chdir="$TF_DIR" init && terraform -chdir="$TF_DIR" apply -auto-approve; then
-  echo "✅ Terraform apply completed"
+  log_success "Terraform apply completed"
 else
-  echo "❌ FATAL: Terraform apply failed"
-  exit 1
+  log_fatal "Terraform apply failed"
 fi
 
 # Step 2: Build Docker images (immutability: --no-cache forces full rebuild)
 echo ""
-echo "Step 2: Building Docker images with pinned versions..."
+log_info "Step 2: Building Docker images with pinned versions..."
 if docker compose build --no-cache; then
-  echo "✅ Docker images built successfully"
+  log_success "Docker images built successfully"
 else
-  echo "❌ FATAL: Docker image build failed"
-  exit 1
+  log_fatal "Docker image build failed"
 fi
 
 # Step 3: Bring up services
 echo ""
-echo "Step 3: Deploying containers..."
+log_info "Step 3: Deploying containers..."
 if docker compose up -d; then
-  echo "✅ Containers started"
+  log_success "Containers started"
 else
-  echo "❌ FATAL: Docker compose up failed"
-  exit 1
+  log_fatal "Docker compose up failed"
 fi
 
 # Step 4: Wait for healthchecks
 echo ""
-echo "Step 4: Waiting for all services to be healthy..."
+log_info "Step 4: Waiting for all services to be healthy..."
 MAX_WAIT=120
 ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
   HEALTHY=$(docker compose ps --format json | jq '[.[] | select(.Health=="healthy" or .State=="running")] | length')
   TOTAL=$(docker compose ps --format json | jq 'length')
-  echo "  [$ELAPSED/$MAX_WAIT] Healthy services: $HEALTHY/$TOTAL"
+  log_info "  [$ELAPSED/$MAX_WAIT] Healthy services: $HEALTHY/$TOTAL"
   
   if [ "$HEALTHY" -eq "$TOTAL" ]; then
-    echo "✅ All services healthy"
+    log_success "All services healthy"
     break
   fi
   
@@ -142,7 +139,7 @@ while [ $ELAPSED -lt $MAX_WAIT ]; do
 done
 
 if [ $ELAPSED -ge $MAX_WAIT ]; then
-  echo "⚠️  WARNING: Services not fully healthy after $MAX_WAIT seconds (may still be starting)"
+  log_warn "Services not fully healthy after $MAX_WAIT seconds (may still be starting)"
   docker compose ps
 fi
 

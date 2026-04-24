@@ -8,6 +8,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
+# Initialize repository context
+init_repo
+
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
 SECONDARY_HOST="${SECONDARY_HOST:-192.168.168.42}"
 SSH_KEY="${SSH_KEY:-~/.ssh/id_rsa_onprem}"

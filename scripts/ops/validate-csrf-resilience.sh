@@ -18,11 +18,7 @@ set -euo pipefail
 # Load shared initialization (logging, error handling, utils)
 # ────────────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=/dev/null
-source "${SCRIPT_DIR}/_common/init.sh" || {
-  echo "ERROR: Failed to source init.sh from ${SCRIPT_DIR}/_common/" >&2
-  exit 1
-}
+source "${SCRIPT_DIR}/_common/init.sh"
 
 # ────────────────────────────────────────────────────────────────────────────
 # Configuration

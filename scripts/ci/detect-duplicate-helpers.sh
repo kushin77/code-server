@@ -12,7 +12,7 @@ cd "${REPO_ROOT}"
 
 # Source logging if available
 if [[ -f "scripts/_common/init.sh" ]]; then
-    source "$SCRIPT_DIR/../_common/init.sh" 2>/dev/null || true
+    source "$SCRIPT_DIR/../_common/init.sh"
 fi
 
 log_info() { echo "[INFO] $*"; }

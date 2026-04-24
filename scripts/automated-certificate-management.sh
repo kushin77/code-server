@@ -11,7 +11,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 CERT_DIR="${SCRIPT_DIR}/certs"
 ACME_EMAIL="${ACME_EMAIL:-admin@kushnir.cloud}"
 DOMAIN="${DOMAIN:-ide.kushnir.cloud}"

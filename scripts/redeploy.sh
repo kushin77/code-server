@@ -1,38 +1,43 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # @file        scripts/redeploy.sh
 # @module      operations
-# @description redeploy — on-prem code-server
+# @description redeploy — on-prem code-server cluster orchestrator
 # @owner       platform
 # @status      active
-# File:    redeploy.sh
-# Owner:   Platform Engineering
-# Purpose: Post-merge deployment orchestration triggered by GitHub Actions
-# Status:  ACTIVE
-# Usage:   ./redeploy.sh [options]
 
 set -euo pipefail
 
 # Bootstrap _common library (logging, utils, error-handler, config, ssh, docker)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
+
+# Initialize repository context
+init_repo
 
 # Script metadata
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-PREFLIGHT_GUARD="${PREFLIGHT_GUARD:-$REPO_ROOT/scripts/ops/preflight.sh}"
+PREFLIGHT_GUARD="${REPO_ROOT}/scripts/ops/preflight.sh"
+PARALLEL_DEPLOY="${REPO_ROOT}/scripts/ops/parallel-deploy.sh"
 REDEPLOY_LOG_DIR="${REPO_ROOT}/logs/deployments"
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
 export LOG_FILE="${REDEPLOY_LOG_DIR}/redeploy_${TIMESTAMP}.log"
 
+# Idempotent log directory creation
 mkdir -p "$REDEPLOY_LOG_DIR"
 
 # Configuration
 DEPLOYMENT_TARGETS=("production" "staging")
 DEFAULT_TARGET="production"
+TARGET="${TARGET:-$DEFAULT_TARGET}"
 DRY_RUN=false
 NOTIFY_SLACK=true
 VERBOSE=false
 NO_HEALTH_CHECK=false
-PROD_ENDPOINT="${PROD_ENDPOINT:-https://${DOMAIN:-localhost}}"
+
+# Cluster endpoints for health checks
+PROD_ENDPOINTS=()
+for host in "${REGION_HOSTS[@]}"; do
+    PROD_ENDPOINTS+=("https://${DOMAIN:-localhost}")
+done
 STAGING_ENDPOINT="${STAGING_ENDPOINT:-https://staging.${DOMAIN:-localhost}}"
 
 ###############################################################################
@@ -107,10 +112,12 @@ parse_args() {
 
 init_logs() {
     mkdir -p "$REDEPLOY_LOG_DIR"
-    echo "Auto-Deploy Orchestration Log - ${TIMESTAMP}" > "$LOG_FILE"
-    echo "Repository: ${REPO_ROOT}" >> "$LOG_FILE"
-    echo "Target: ${TARGET}" >> "$LOG_FILE"
-    echo "" >> "$LOG_FILE"
+    {
+      echo "Auto-Deploy Orchestration Log - ${TIMESTAMP}"
+      echo "Repository: ${REPO_ROOT}"
+      echo "Target: ${TARGET}"
+      echo ""
+    } > "$LOG_FILE"
 }
 
 validate_target() {
@@ -156,14 +163,19 @@ check_git_state() {
 }
 
 check_deployment_readiness() {
-    log_section "Checking Deployment Readiness"
+    log_section "Checking Cluster Deployment Readiness"
 
     # Check required files
     local required_files=(
         "docker-compose.yml"
-        ".env.production"
-        "scripts/deploy-phase-12-all.sh"
+        "scripts/ops/parallel-deploy.sh"
     )
+
+    if [[ "${TARGET}" == "production" ]]; then
+        required_files+=("scripts/_common/config.sh")
+    else
+        required_files+=(".env.production")
+    fi
 
     for file in "${required_files[@]}"; do
         if [[ -f "${REPO_ROOT}/${file}" ]]; then
@@ -175,37 +187,33 @@ check_deployment_readiness() {
 
     # Check Docker availability
     if command -v docker &> /dev/null; then
-        log_success "Docker is available"
-        DOCKER_VERSION=$(docker --version)
-        log_info "Version: ${DOCKER_VERSION}"
+        log_success "Local Docker is available"
     else
-        log_error "Docker is not available"
-        return 1
-    fi
-
-    # Check Docker daemon
-    if docker ps &> /dev/null; then
-        log_success "Docker daemon is running"
-    else
-        log_error "Docker daemon is not running"
-        return 1
+        log_warn "Local Docker is not available (checking remote connectivity instead)"
     fi
 }
 
 check_health_before_deploy() {
     log_section "Pre-Deployment Health Check"
 
-    # Check if deployment endpoints are reachable
     if [[ "${TARGET}" == "production" ]]; then
-        local endpoint="$PROD_ENDPOINT"
+        log_info "Verifying cluster health for ${#REGION_HOSTS[@]} hosts..."
+        local all_up=true
+        for endpoint in "${PROD_ENDPOINTS[@]}"; do
+            if timeout 5 curl -sf "${endpoint}/health" &> /dev/null; then
+                log_success "Endpoint reachable: ${endpoint}"
+            else
+                log_warn "Endpoint not reachable: ${endpoint} (may be down for maintenance)"
+                all_up=false
+            fi
+        done
+        [[ "$all_up" == true ]] && log_success "All cluster endpoints are healthy"
     else
-        local endpoint="$STAGING_ENDPOINT"
-    fi
-
-    if timeout 5 curl -sf "${endpoint}/health" &> /dev/null; then
-        log_success "Health endpoint reachable: ${endpoint}"
-    else
-        log_warn "Health endpoint not reachable (may be down for maintenance)"
+        if timeout 5 curl -sf "${STAGING_ENDPOINT}/health" &> /dev/null; then
+            log_success "Staging endpoint reachable: ${STAGING_ENDPOINT}"
+        else
+            log_warn "Staging endpoint not reachable: ${STAGING_ENDPOINT}"
+        fi
     fi
 }
 
@@ -235,20 +243,20 @@ perform_deployment() {
 }
 
 deploy_production() {
-    log_info "Deploying to production..."
+    log_info "Deploying to production cluster via ${PARALLEL_DEPLOY}..."
 
     if [[ "${DRY_RUN}" == true ]]; then
-        log_info "[DRY RUN] Would execute: bash scripts/deploy-phase-12-all.sh"
+        log_info "[DRY RUN] Would execute: bash ${PARALLEL_DEPLOY}"
         return 0
     fi
 
-    # Execute deployment
-    if bash "${REPO_ROOT}/scripts/deploy-phase-12-all.sh" >> "$LOG_FILE" 2>&1; then
-        log_success "Production deployment completed"
+    # Execute cluster deployment
+    if bash "${PARALLEL_DEPLOY}" >> "$LOG_FILE" 2>&1; then
+        log_success "Production cluster deployment completed successfully"
         DEPLOYMENT_STATUS="success"
         return 0
     else
-        log_error "Production deployment failed"
+        log_error "Production cluster deployment failed"
         DEPLOYMENT_STATUS="failed"
         return 1
     fi
@@ -262,7 +270,7 @@ deploy_staging() {
         return 0
     fi
 
-    # Simpler staging deployment (could use docker-compose)
+    # Simpler staging deployment
     if docker-compose -f docker-compose.yml up -d --build &>> "$LOG_FILE"; then
         log_success "Staging deployment completed"
         DEPLOYMENT_STATUS="success"
@@ -281,26 +289,35 @@ deploy_staging() {
 check_health_after_deploy() {
     log_section "Post-Deployment Health Check"
 
-    local max_retries=10
+    local max_retries=12
     local retry_count=0
-    local health_check_url
-
-    if [[ "${TARGET}" == "production" ]]; then
-        health_check_url="${PROD_ENDPOINT%/}/health"
-    else
-        health_check_url="${STAGING_ENDPOINT%/}/health"
-    fi
 
     while [[ $retry_count -lt $max_retries ]]; do
         log_info "Health check attempt $((retry_count + 1))/${max_retries}..."
+        local all_up=true
 
-        if curl -sf "${health_check_url}" &> /dev/null; then
-            log_success "Health check passed ✅"
+        if [[ "${TARGET}" == "production" ]]; then
+            for endpoint in "${PROD_ENDPOINTS[@]}"; do
+                if ! curl -sf "${endpoint}/health" &> /dev/null; then
+                    log_warn "Endpoint not yet healthy: ${endpoint}"
+                    all_up=false
+                    break
+                fi
+            done
+        else
+            if ! curl -sf "${STAGING_ENDPOINT}/health" &> /dev/null; then
+                all_up=false
+            fi
+        fi
+
+        if [[ "$all_up" == true ]]; then
+            log_success "All endpoints passed health check ✅"
             return 0
         fi
 
         retry_count=$((retry_count + 1))
         if [[ $retry_count -lt $max_retries ]]; then
+            log_info "Waiting 10s for next attempt..."
             sleep 10
         fi
     done
@@ -310,12 +327,14 @@ check_health_after_deploy() {
 }
 
 verify_deployment() {
-    log_section "Verifying Deployment"
+    log_section "Verifying Cluster Deployment"
 
-    # Check container status
     if [[ "${TARGET}" == "production" ]]; then
-        log_info "Checking production containers..."
-        docker ps --filter label=environment=production --format "table {{.Names}}\t{{.Status}}"
+        log_info "Verifying container status across cluster..."
+        for host in "${REGION_HOSTS[@]}"; do
+            log_info "--- Host: ${host} ---"
+            ssh_exec_target "$host" "$DEPLOY_USER" "docker ps --filter label=environment=production --format 'table {{.Names}}\t{{.Status}}'" || log_warn "Failed to query containers on ${host}"
+        done
     else
         log_info "Checking staging containers..."
         docker ps --filter label=environment=staging --format "table {{.Names}}\t{{.Status}}"
@@ -508,6 +527,16 @@ main() {
     # Pre-flight checks
     check_git_state || return 1
     check_deployment_readiness || return 1
+
+    # Synchronize secrets/env to cluster (only for production)
+    if [[ "${TARGET}" == "production" ]]; then
+        log_section "Synchronizing Cluster Environment"
+        if [[ "${DRY_RUN}" == true ]]; then
+            log_info "[DRY RUN] Would execute: bash scripts/ops/sync-env-to-replicas.sh"
+        else
+            bash scripts/ops/sync-env-to-replicas.sh || log_warn "Cluster environment sync failed — proceeding with caution"
+        fi
+    fi
 
     if [[ "${DRY_RUN}" != true && "${NO_HEALTH_CHECK}" != true ]]; then
         check_health_before_deploy

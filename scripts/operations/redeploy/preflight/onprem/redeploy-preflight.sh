@@ -288,6 +288,7 @@ check_nas_export_paths() {
     "/code-server/workspace"
     "/code-server/profile"
     "/code-server/profile-backups"
+    "/appsmith-replica-2"
     "/ollama"
     "/postgres/backups"
   )

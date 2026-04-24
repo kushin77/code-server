@@ -9,7 +9,7 @@
 # Deploys OTel Collector, Jaeger backend, and anomaly detector
 # ─────────────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 

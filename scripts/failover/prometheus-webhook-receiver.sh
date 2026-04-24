@@ -29,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Source logging
-source "$PROJECT_DIR/scripts/_common/logging.sh" 2>/dev/null || {
+source "$SCRIPT_DIR/../_common/init.sh"
     log_info() { echo "[INFO] $*"; }
     log_warn() { echo "[WARN] $*"; }
     log_error() { echo "[ERROR] $*"; }

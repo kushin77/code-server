@@ -139,9 +139,9 @@ update_compose_config() {
         return 0
     fi
     
-    # Backup original
+    # Backup original (idempotent: preserve modes)
     local backup_file="${DOCKER_COMPOSE_FILE}.backup.$(date +%s)"
-    cp "$DOCKER_COMPOSE_FILE" "$backup_file"
+    cp -p "$DOCKER_COMPOSE_FILE" "$backup_file"
     log_info "✓ Backed up to: $backup_file"
     
     # The docker-compose.yml uses build: context, so image is built locally

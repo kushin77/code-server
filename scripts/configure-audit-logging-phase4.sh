@@ -14,17 +14,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Color codes (deprecated, using log_* from init.sh)
+# Note: Keeping color variables for backward compatibility if any echo remains, but transitioning to log_info/success/warn/error
 
-log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
-log_success() { echo -e "${GREEN}[✓]${NC} $*"; }
-log_warning() { echo -e "${YELLOW}[!]${NC} $*"; }
-log_error() { echo -e "${RED}[✗]${NC} $*" >&2; }
+# Sourcing init.sh already provides standardized log functions.
+# We will use the ones from init.sh (log_info, log_success, log_warn, log_error, log_fatal)
+
 
 # === Configuration ===
 POSTGRES_HOST="${POSTGRES_HOST:-${DEPLOY_HOST}}"
@@ -597,7 +592,7 @@ psql -h localhost -d code_server_prod -U postgres -c \
 
 ```bash
 # Install k6
-apt-get install k6  # Linux
+apt-get install -y k6  # Linux
 
 # Create test script
 cat > tests/iam-load-test.js <<'ENDSCRIPT'

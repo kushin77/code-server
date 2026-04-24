@@ -91,11 +91,11 @@ fi
 log_info "  → Pulling latest code from origin/main"
 ssh "$STAGING_SSH" "cd $REPO_PATH && git pull origin main"
 
-# 2. Set environment variable for deployment
+# 2. Set environment variable for deployment (idempotent: avoid duplicates)
 log_info "  → Setting feature flags"
-ssh "$STAGING_SSH" "cat >> $REPO_PATH/.env.local << 'EOF'
-FEATURE_WEBHOOK_ENABLED=$FEATURE_FLAG
-EOF"
+ssh "$STAGING_SSH" "cd $REPO_PATH && \
+    touch .env.local && \
+    grep -q 'FEATURE_WEBHOOK_ENABLED=' .env.local || echo 'FEATURE_WEBHOOK_ENABLED=$FEATURE_FLAG' >> .env.local"
 
 # 3. Redeploy services
 log_info "  → Redeploying services"

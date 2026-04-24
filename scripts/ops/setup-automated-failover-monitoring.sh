@@ -7,8 +7,11 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../_common/init.sh"
+
+# Initialize repository context
+init_repo
 
 PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
 REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
@@ -228,13 +231,17 @@ setup_alertmanager_webhook() {
     ssh "${PRIMARY_USER}@${PRIMARY_HOST}" "
     # Update alertmanager configuration
     docker cp /tmp/alertmanager-failover.yml alertmanager:/etc/alertmanager/alertmanager.yml 2>/dev/null || {
-        docker exec alertmanager bash -c 'cat >> /etc/alertmanager/alertmanager.yml' <<'HEREDOC'
+        docker exec alertmanager bash -c '
+            if ! grep -q "failover_webhook" /etc/alertmanager/alertmanager.yml; then
+                cat >> /etc/alertmanager/alertmanager.yml <<HEREDOC
 
 # Failover webhook routing (appended)
 failover_webhook:
-  url: 'http://localhost:${ALERT_WEBHOOK_PORT}/webhook'
+  url: \"http://localhost:${ALERT_WEBHOOK_PORT}/webhook\"
   send_resolved: false
 HEREDOC
+            fi
+        '
     }
     
     # Reload AlertManager config
@@ -255,12 +262,16 @@ register_critical_alerts() {
     ssh "${PRIMARY_USER}@${PRIMARY_HOST}" "
     # Add critical alert rules to Prometheus
     docker cp /tmp/critical-alerts.yml prometheus:/etc/prometheus/rules/ 2>/dev/null || {
-        docker exec prometheus bash -c 'cat >> /etc/prometheus/prometheus.yml' <<'HEREDOC'
+        docker exec prometheus bash -c '
+            if ! grep -q "/etc/prometheus/rules/critical-alerts.yml" /etc/prometheus/prometheus.yml; then
+                cat >> /etc/prometheus/prometheus.yml <<HEREDOC
 
 # Critical infrastructure alert rules (added)
 rule_files:
-  - '/etc/prometheus/rules/critical-alerts.yml'
+  - "/etc/prometheus/rules/critical-alerts.yml"
 HEREDOC
+            fi
+        '
     }
     
     # Reload Prometheus

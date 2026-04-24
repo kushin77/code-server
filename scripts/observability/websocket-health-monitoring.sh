@@ -6,10 +6,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/init.sh" 2>/dev/null || {
-    echo "ERROR: Cannot source init.sh"
-    exit 1
-}
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
 log_info "=========================================="
 log_info "P1 #1295: WebSocket Health Monitoring"

@@ -40,8 +40,8 @@ CREATE TABLE IF NOT EXISTS dns_cache (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_custom_domains_org_id ON custom_domains(org_id);
-CREATE INDEX idx_custom_domains_is_verified ON custom_domains(is_verified);
-CREATE INDEX idx_custom_domains_is_active ON custom_domains(is_active);
-CREATE INDEX idx_domain_verification_custom_domain_id ON domain_verification_attempts(custom_domain_id);
-CREATE INDEX idx_dns_cache_expires_at ON dns_cache(expires_at);
+CREATE INDEX IF NOT EXISTS idx_custom_domains_org_id ON custom_domains(org_id);
+CREATE INDEX IF NOT EXISTS idx_custom_domains_is_verified ON custom_domains(is_verified);
+CREATE INDEX IF NOT EXISTS idx_custom_domains_is_active ON custom_domains(is_active);
+CREATE INDEX IF NOT EXISTS idx_domain_verification_custom_domain_id ON domain_verification_attempts(custom_domain_id);
+CREATE INDEX IF NOT EXISTS idx_dns_cache_expires_at ON dns_cache(expires_at);

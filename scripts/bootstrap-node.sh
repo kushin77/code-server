@@ -37,6 +37,8 @@ set -euo pipefail
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Bootstrap options
@@ -61,36 +63,13 @@ BOOTSTRAP_STAGES=(
 )
 
 # =============================================================================
-# UTILITIES
-# =============================================================================
-
-log_info() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $*"
-}
-
-log_warn() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] WARN: $*" >&2
-}
-
-log_error() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2
-}
-
-log_stage() {
-    echo ""
-    echo "════════════════════════════════════════════════════════════════"
-    echo "→ STAGE: $*"
-    echo "════════════════════════════════════════════════════════════════"
-}
-
-# =============================================================================
 # VALIDATION
 # =============================================================================
 
 validate_prerequisites() {
-    log_stage "Validate Prerequisites"
+    log_section "Validate Prerequisites"
     
-    if [[ -z "$ROLE" ]]; then
+    if [[ -z "${ROLE:-}" ]]; then
         log_error "ROLE not set. Use: --role primary|replica"
         return 1
     fi
@@ -101,7 +80,7 @@ validate_prerequisites() {
     fi
     
     # Check if running as root
-    if [[ "$EUID" != 0 ]]; then
+    if [[ "$(id -u)" != 0 ]]; then
         log_error "This script must run as root on the target node"
         log_error "Run: sudo scripts/bootstrap-node.sh ..."
         return 1
@@ -141,7 +120,7 @@ validate_prerequisites() {
 # =============================================================================
 
 install_docker() {
-    log_stage "Install Docker Engine"
+    log_section "Install Docker Engine"
     
     if command -v docker >/dev/null 2>&1; then
         log_info "✓ Docker already installed ($(docker --version))"
@@ -205,9 +184,12 @@ clone_repository() {
     
     log_info "Cloning repository..."
     mkdir -p "$(dirname "$REPO_DIR")"
-    git clone -b "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR"
-    
-    log_info "✓ Repository cloned to $REPO_DIR"
+    if [ ! -d "$REPO_DIR" ]; then
+        if [ ! -d "$REPO_DIR" ]; then git clone -b "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR"; fi
+        log_info "✓ Repository cloned to $REPO_DIR"
+    else
+        log_info "Directory $REPO_DIR already exists, skipping clone"
+    fi
 }
 
 # =============================================================================

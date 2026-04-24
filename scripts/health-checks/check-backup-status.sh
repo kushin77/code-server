@@ -19,7 +19,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../_common/logging.sh"
+source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 BACKUP_DIR="${BACKUP_DIR:-/backups/postgresql}"

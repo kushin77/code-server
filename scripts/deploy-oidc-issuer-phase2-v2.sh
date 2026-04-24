@@ -21,7 +21,7 @@ trap 'log_error "Script failed at line $LINENO with exit code $?"' ERR
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PHASE2_DIR="$ROOT_DIR/config/iam"
-source "$SCRIPT_DIR/_common/init.sh" || { echo "FATAL: Cannot source _common/init.sh"; exit 1; }
+source "$SCRIPT_DIR/_common/init.sh"
 
 # Configuration
 OIDC_HOST="${OIDC_HOST:-${DEPLOY_HOST}}"

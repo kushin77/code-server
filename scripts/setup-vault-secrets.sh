@@ -27,7 +27,7 @@ VAULT_TOKEN_FILE="${VAULT_TOKEN_FILE:-.vault-token}"
 # ════════════════════════════════════════════════════════════════════════════
 
 init_vault() {
-  log_info "=== Initializing Vault ==="
+  log_section "Vault Initialization"
   
   # Check if Vault is already initialized
   if vault status >/dev/null 2>&1; then
@@ -53,13 +53,14 @@ init_vault() {
 # ════════════════════════════════════════════════════════════════════════════
 
 enable_kv2_engine() {
-  log_info "=== Enabling KV v2 Secrets Engine ==="
+  log_section "Enable KV v2 Secrets Engine"
   
-  vault secrets enable -version=2 -path=secret kv || {
-    log_warn "KV engine already enabled"
-  }
-  
-  log_success "KV v2 secrets engine enabled at path: secret/"
+  if vault secrets list | grep -q "^secret/"; then
+    log_info "KV engine already enabled at path: secret/"
+  else
+    vault secrets enable -version=2 -path=secret kv
+    log_success "KV v2 secrets engine enabled at path: secret/"
+  fi
 }
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -67,10 +68,11 @@ enable_kv2_engine() {
 # ════════════════════════════════════════════════════════════════════════════
 
 create_policies() {
-  log_info "=== Creating Vault Policies ==="
+  log_section "Create Vault Policies"
   
   # Policy for code-server application
-  cat > /tmp/code-server-policy.hcl << 'EOF'
+  local cs_policy_file="/tmp/code-server-policy.hcl"
+  cat > "$cs_policy_file" << 'EOF'
 # Code-Server Application Policy
 # Allows code-server to read its own secrets
 
@@ -83,11 +85,13 @@ path "secret/metadata/code-server/*" {
 }
 EOF
 
-  vault policy write code-server /tmp/code-server-policy.hcl
+  vault policy write code-server "$cs_policy_file"
   log_success "Policy 'code-server' created"
+  rm -f "$cs_policy_file"
   
   # Policy for DevOps (admin)
-  cat > /tmp/devops-policy.hcl << 'EOF'
+  local devops_policy_file="/tmp/devops-policy.hcl"
+  cat > "$devops_policy_file" << 'EOF'
 # DevOps Team Policy
 # Full access to all secrets for rotation and management
 
@@ -100,8 +104,9 @@ path "sys/leases/*" {
 }
 EOF
 
-  vault policy write devops /tmp/devops-policy.hcl
+  vault policy write devops "$devops_policy_file"
   log_success "Policy 'devops' created"
+  rm -f "$devops_policy_file"
 }
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -109,7 +114,7 @@ EOF
 # ════════════════════════════════════════════════════════════════════════════
 
 store_secrets() {
-  log_info "=== Storing Secrets in Vault ==="
+  log_section "Store Secrets in Vault"
   
   # These values should be provided via:
   #   - Environment variables

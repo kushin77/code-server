@@ -11,6 +11,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 METRICS_FILE="${REPO_ROOT}/artifacts/sla-metrics.json"
 
+source "${REPO_ROOT}/.env.infrastructure"
+
 mkdir -p "$(dirname "${METRICS_FILE}")"
 
 log_info() {
@@ -28,7 +30,7 @@ log_success() {
 collect_availability_metrics() {
   log_info "Collecting availability metrics..."
   
-  local health_endpoint="${HEALTH_CHECK_ENDPOINT:-http://localhost:3100/health}"
+  local health_endpoint="${HEALTH_CHECK_ENDPOINT:-${API_HEALTH_ENDPOINT}}"
   local total_checks=0
   local successful_checks=0
   local failed_checks=0
@@ -52,7 +54,7 @@ collect_availability_metrics() {
 collect_latency_metrics() {
   log_info "Collecting latency metrics..."
   
-  local health_endpoint="${HEALTH_CHECK_ENDPOINT:-http://localhost:3100/health}"
+  local health_endpoint="${HEALTH_CHECK_ENDPOINT:-${API_HEALTH_ENDPOINT}}"
   local total_time=0
   local num_requests=5
   
@@ -69,7 +71,7 @@ collect_latency_metrics() {
 collect_error_rate() {
   log_info "Collecting error rate metrics..."
   
-  local health_endpoint="${HEALTH_CHECK_ENDPOINT:-http://localhost:3100/health}"
+  local health_endpoint="${HEALTH_CHECK_ENDPOINT:-${API_HEALTH_ENDPOINT}}"
   local total_requests=20
   local error_count=0
   

@@ -49,7 +49,7 @@ analyze_gh_cli_usage() {
   local line_num
   local line_content
   
-  while IFS= read -r line_num line_content; do
+  while IFS=: read -r line_num line_content; do
     # Skip comments
     [[ "$line_content" =~ ^[[:space:]]*# ]] && continue
     
@@ -69,7 +69,7 @@ analyze_gh_cli_usage() {
     fi
     
     # Output record
-    python - "$file" "$line_num" "$line_content" "$has_repo_flag" "$has_error_handling" <<'PY'
+    python3 - "$file" "$line_num" "$line_content" "$has_repo_flag" "$has_error_handling" <<'PY'
 import json
 import sys
 
@@ -106,23 +106,16 @@ generate_audit_report() {
   local temp_file
   temp_file=$(mktemp)
   
-  echo "[" > "$temp_file"
-  
-  local first=true
   while IFS= read -r file; do
     while IFS= read -r record; do
       if [[ -n "$record" ]]; then
-        if ! $first; then
-          echo "," >> "$temp_file"
-        fi
-        echo -n "$record" >> "$temp_file"
-        first=false
+        echo "$record" >> "$temp_file"
         
         # Count stats
-        (( total_calls++ ))
+        ((++total_calls))
 
         local status
-        status=$(python - "$record" <<'PY'
+        status=$(python3 - "$record" <<'PY'
 import json
 import sys
 
@@ -130,17 +123,15 @@ print(json.loads(sys.argv[1]).get('status', ''))
 PY
 )
         if [[ "$status" == "✓ compliant" ]]; then
-          (( compliant_calls++ ))
+          ((++compliant_calls))
         else
-          (( non_compliant_calls++ ))
+          ((++non_compliant_calls))
         fi
       fi
     done < <(analyze_gh_cli_usage "$file")
   done < <(find_gh_cli_calls)
   
-  echo "]" >> "$temp_file"
-  
-  python - "$temp_file" "$AUDIT_OUTPUT" "$total_calls" "$compliant_calls" "$non_compliant_calls" <<'PY'
+  python3 - "$temp_file" "$AUDIT_OUTPUT" "$total_calls" "$compliant_calls" "$non_compliant_calls" <<'PY'
 import json
 import math
 import pathlib
@@ -269,7 +260,7 @@ export GH_TOKEN="$(github_get_token)"  # Uses GSM-stored fine-grained token
 EOF
   
   # Append non-compliant files
-  python - "$AUDIT_OUTPUT" "$recommendations_file" <<'PY'
+  python3 - "$AUDIT_OUTPUT" "$recommendations_file" <<'PY'
 import json
 import pathlib
 import sys

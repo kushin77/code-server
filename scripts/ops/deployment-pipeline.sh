@@ -41,6 +41,8 @@ LOG_FILE="${PROJECT_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
 ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
 REPORT_FILE="${ARTIFACT_DIR}/deployment-pipeline-${DEPLOYMENT_ID}.json"
 
+source "${PROJECT_ROOT}/.env.infrastructure"
+
 mkdir -p "$(dirname "${LOG_FILE}")" "${ARTIFACT_DIR}"
 
 # ============================================================================
@@ -226,10 +228,10 @@ cat > "${DEPLOYMENT_MANIFEST}" << EOF
     "monitoring": true
   },
   "status": "prepared",
-  "deployment_commands": {
+        "deployment_commands": {
     "docker_compose": "docker-compose -f docker-compose.yml up -d",
     "terraform": "terraform -chdir=terraform apply -auto-approve",
-    "verify": "curl http://localhost:3100/health"
+            "verify": "curl ${API_HEALTH_ENDPOINT}"
   }
 }
 EOF
@@ -316,7 +318,7 @@ cat > "${REPORT_JSON}" << EOF
   "next_steps": [
     "Deploy via GitOps CD: git push origin main",
     "Manual deployment: bash scripts/ops/deployment-pipeline.sh production --execute",
-    "Verify deployment: curl http://localhost:3100/health"
+    "Verify deployment: curl ${API_HEALTH_ENDPOINT}"
   ],
   "rollback_procedure": "scripts/_common/rollback-manager.sh rollback <commit-sha>"
 }
@@ -369,7 +371,7 @@ if [[ "${2:-}" == "--execute" ]]; then
         log_info "Waiting for services to be healthy..."
         sleep 5
         
-        if curl -sf http://localhost:3100/health >/dev/null 2>&1; then
+        if curl -sf "${API_HEALTH_ENDPOINT}" >/dev/null 2>&1; then
             log_success "✅ Deployment successful - services are healthy"
         else
             log_warn "⚠️  Health check failed - verify manually"

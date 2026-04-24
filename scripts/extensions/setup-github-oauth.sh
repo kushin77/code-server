@@ -27,6 +27,8 @@ source "${PROJECT_ROOT}/scripts/_common/init.sh"
 # Source infrastructure configuration
 source_env_file "${PROJECT_ROOT}/.env.infrastructure"
 
+GITHUB_REDIRECT_URI="${API_OAUTH_CALLBACK}"
+
 # ============================================================================
 # Logging
 # ============================================================================
@@ -155,14 +157,14 @@ fi
 ((step_count++))
 log_info "STEP $step_count: Configure OAuth environment variables"
 
-cat > "${PROJECT_ROOT}/.env.github-oauth" << 'EOF'
+cat > "${PROJECT_ROOT}/.env.github-oauth" << EOF
 # GitHub OAuth Configuration
 # P2 #1539 Phase 5: User-scoped GitHub authentication and repository access
 
 GITHUB_OAUTH_ENABLED=true
 GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
 GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
-GITHUB_REDIRECT_URI=${API_OAUTH_CALLBACK:=${API_PROTOCOL:-http}://${API_HOST:-localhost}:${API_PORT:-3100}/oauth/callback}
+GITHUB_REDIRECT_URI=${GITHUB_REDIRECT_URI}
 GITHUB_OAUTH_SCOPES=user:email,read:user,read:repo_hook,repo,gist
 GITHUB_TOKEN_EXPIRY_SECONDS=3600
 GITHUB_AUTO_REFRESH_ENABLED=true

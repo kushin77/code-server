@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
+source "${REPO_ROOT}/.env.infrastructure"
+
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
 }
@@ -87,7 +89,7 @@ EOF
 generate_prometheus_metrics() {
   log_info "Generating Prometheus metrics for memory engine..."
   
-  cat > "${REPO_ROOT}/config/memory-engine-metrics.yaml" <<'EOF'
+  cat > "${REPO_ROOT}/config/memory-engine-metrics.yaml" <<EOF
 global:
   scrape_interval: 30s
   evaluation_interval: 30s
@@ -95,7 +97,7 @@ global:
 scrape_configs:
   - job_name: 'memory-engine'
     static_configs:
-      - targets: ['localhost:8000']
+      - targets: ['${MEMORY_SERVICE_ENDPOINT#http://}']
     metrics_path: '/metrics'
     scrape_interval: 30s
 

@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
+source "${REPO_ROOT}/.env.infrastructure"
+
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
 }
@@ -25,11 +27,11 @@ setup_vscode_commands() {
   mkdir -p "${REPO_ROOT}/.vscode"
   
   # Add memory commands to settings
-  cat >> "${REPO_ROOT}/.vscode/settings.json" <<'EOF'
+  cat >> "${REPO_ROOT}/.vscode/settings.json" <<EOF
 ,
   "elevatediq.memory": {
     "enabled": true,
-    "endpoint": "${MEMORY_SERVICE_ENDPOINT:-http://localhost:8000}",
+    "endpoint": "${MEMORY_SERVICE_ENDPOINT}",
     "defaultCollection": "incidents"
   }
 EOF

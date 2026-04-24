@@ -38,6 +38,8 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 REPORT_DIR="${PROJECT_ROOT}/artifacts"
 REPORT_FILE="${REPORT_DIR}/sla-metrics-$(date +%Y%m%d-%H%M%S).json"
 
+source "${PROJECT_ROOT}/.env.infrastructure"
+
 mkdir -p "${REPORT_DIR}"
 
 log_info "=== SLA Metrics Reporter ==="
@@ -63,7 +65,7 @@ declare -A SLA_TARGETS=(
 
 collect_metrics() {
     local timestamp=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-    local api_endpoint="${API_ENDPOINT:-http://localhost:3100}"
+    local api_endpoint="${API_ENDPOINT}"
     
     # Initialize metrics object
     cat > "${REPORT_FILE}" << EOF

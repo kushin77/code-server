@@ -11,9 +11,21 @@ echo "Checking resource limits in docker-compose.yml..."
 compose_file="./docker-compose.yml"
 services_without_limits=0
 
+service_has_deploy() {
+  local service_name="$1"
+
+  awk -v svc="  ${service_name}:" '
+    BEGIN { in_block = 0; found = 0 }
+    $0 == svc { in_block = 1; next }
+    in_block && $0 ~ /^  [A-Za-z0-9._-]+:/ { exit found ? 0 : 1 }
+    in_block && $0 ~ /^[[:space:]]*deploy:/ { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$compose_file"
+}
+
 # Check each service
 for service in opa oauth2-proxy caddy prometheus grafana loki qdrant postgres redis redpanda redpanda-console ollama; do
-  if ! grep -A 10 "^  $service:" "$compose_file" | grep -q "deploy:" ; then
+  if ! service_has_deploy "$service"; then
     echo "⚠️  $service: Missing deploy section"
     ((services_without_limits++))
   fi

@@ -26,6 +26,22 @@ log_success() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
 }
 
+wait_for_redpanda_health() {
+  local max_attempts=30
+  local attempt=0
+
+  while [[ ${attempt} -lt ${max_attempts} ]]; do
+    if verify_redpanda_health; then
+      return 0
+    fi
+
+    sleep 2
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 # Generate Redpanda configuration
 generate_redpanda_config() {
   log_info "Generating Redpanda configuration..."
@@ -163,7 +179,7 @@ version: '3.8'
 
 services:
   redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:v23.3.0@sha256:abc123def456
+    image: docker.redpanda.com/redpandadata/redpanda:v26.1.6@sha256:e5b6aaecf38861d199b0d26d635b83da26dd6e6acf0684cd8b92f16b4f4b8733
     container_name: redpanda
     command:
       - redpanda
@@ -190,7 +206,7 @@ services:
       - services
   
   redpanda-console:
-    image: docker.redpanda.com/redpandadata/console:v0.36.0@sha256:xyz789uvw456
+    image: docker.redpanda.com/redpandadata/console:v3.7.1@sha256:d5ec9a54339db74d8efa61b18576185903694bee1deb4c029befa492e41ac78f
     container_name: redpanda-console
     environment:
       KAFKA_BROKERS: redpanda:9092
@@ -293,11 +309,9 @@ main() {
   if [[ "${deploy}" == "true" ]]; then
     log_info "Deploying Redpanda..."
     cd "${REPO_ROOT}"
-    docker-compose -f docker-compose.redpanda.yml up -d
-    
-    sleep 5
-    
-    if verify_redpanda_health; then
+    docker compose -f docker-compose.redpanda.yml up -d
+
+    if wait_for_redpanda_health; then
       initialize_kafka_topics
       log_success "Redpanda Event Bus deployed and initialized"
     else

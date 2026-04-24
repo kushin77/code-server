@@ -400,9 +400,18 @@ if [[ "$EXECUTE_DEPLOY" == "true" ]]; then
         
         # Wait for health checks
         log_info "Waiting for services to be healthy..."
-        sleep 5
-        
-        if curl -sf "${API_HEALTH_ENDPOINT}" >/dev/null 2>&1; then
+        attempt=0
+        max_attempts=24
+        while [[ ${attempt} -lt ${max_attempts} ]]; do
+            if curl -sf "${API_HEALTH_ENDPOINT}" >/dev/null 2>&1; then
+                break
+            fi
+
+            sleep 5
+            attempt=$((attempt + 1))
+        done
+
+        if [[ ${attempt} -lt ${max_attempts} ]]; then
             log_success "✅ Deployment successful - services are healthy"
         else
             log_warn "⚠️  Health check failed - verify manually"

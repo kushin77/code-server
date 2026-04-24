@@ -1,0 +1,81 @@
+# Paperclip Human Control Plane Configuration
+# Hot-reloadable escalation rules and SLA settings
+
+escalation:
+  # Tier 1: Developer level approval (fast)
+  tier1:
+    roles:
+      - developer
+      - engineer
+    timeout_minutes: 5
+    
+  # Tier 2: Technical lead approval (moderate)
+  tier2:
+    roles:
+      - tech_lead
+      - engineering_lead
+    timeout_minutes: 10
+    
+  # Tier 3: CTO/Executive approval (slow) - reserved for critical actions
+  tier3:
+    roles:
+      - cto
+      - vp_engineering
+    timeout_minutes: 20
+    
+  # Fallback action when all tiers timeout
+  fallback: auto_deny  # "auto_deny" or "escalate_to_tier3"
+
+# Heartbeat monitoring configuration
+heartbeat:
+  # Agent must check in every N seconds
+  interval_seconds: 30
+  
+  # After this gap with no heartbeat, agent marked degraded
+  degraded_threshold_seconds: 60
+  
+  # After 2 missed heartbeats, agent marked unresponsive and killed
+  unresponsive_threshold_heartbeats: 2
+  
+  # Check for timeouts every N seconds
+  check_interval_seconds: 15
+
+# Budget enforcement
+budget:
+  # Alert agent when token usage reaches N% of session budget
+  alert_thresholds: [50, 75, 90]
+  
+  # Hard stop at 100% - agent cannot proceed without manual approval
+  hard_limit_percent: 100
+
+# Audit & Retention
+audit:
+  # Keep approval records in hot storage for N days
+  hot_retention_days: 90
+  
+  # Archive older records to NAS cold storage
+  cold_storage_path: /mnt/nas/cold/paperclip-audit/
+  
+  # Export approvals to compliance system weekly
+  export_interval_hours: 168
+
+# WebSocket configuration for IDE real-time updates
+websocket:
+  # Broadcast approval status change every N ms
+  broadcast_interval_ms: 500
+  
+  # Max concurrent WS connections per IDE session
+  max_connections: 100
+
+# Kafka integration (Phase 2)
+kafka:
+  brokers:
+    - kafka1:9092
+    - kafka2:9092
+    - kafka3:9092
+  
+  topics:
+    approvals: agent.awaiting_approval
+    escalations: approval.escalated
+    heartbeats: agent.heartbeat
+    killswitch: agent.killswitch

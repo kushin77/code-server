@@ -1,320 +1,286 @@
-#!/usr/bin/env python3
-# @file apps/reputation-engine/opa_sync.py
-# @module reputation-engine/opa-integration
-# @description Sync reputation scores to OPA policy engine
-# @governance GOV-004 - OPA policy engine integration
+"""
+@file apps/reputation-engine/opa_sync.py
+@description Sync reputation scores to OPA for policy enforcement
+@governance GOV-002
+"""
 
-from typing import Dict, Any, Optional, List
 import logging
 import requests
-from datetime import datetime, timezone
-from threading import Thread, Event, Lock
-import time
-
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
-
-from models import ReputationScore, ActorType
+import json
+from typing import Dict, Any, List
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
-class OpaClient:
-    """Client for OPA Data API."""
-    
+class OPASyncManager:
+    """Sync reputation scores to OPA data store."""
+
     def __init__(self, opa_url: str = "http://localhost:8181"):
-        """Initialize OPA client.
+        self.opa_url = opa_url
+        self.data_endpoint = f"{opa_url}/v1/data/reputation"
+        logger.info(f"Initialized OPA sync manager: {opa_url}")
+
+    def update_engineer_score(
+        self,
+        engineer_id: str,
+        score: float,
+        tier: str,
+        signals: Dict[str, float],
+    ) -> bool:
+        """
+        Update engineer reputation score in OPA.
         
         Args:
-            opa_url: OPA server base URL
+            engineer_id: Username or engineer ID
+            score: Current reputation score (0-100)
+            tier: Current tier (elite, senior, standard, restricted)
+            signals: Individual signal values
+            
+        Returns:
+            True if successful, False otherwise
         """
-        self.opa_url = opa_url.rstrip("/")
-        self.data_api = f"{self.opa_url}/v1/data"
-        logger.info(f"Initialized OPA client: {self.opa_url}")
-    
+        try:
+            data = {
+                "engineers": {
+                    engineer_id: {
+                        "score": score,
+                        "tier": tier,
+                        "signals": signals,
+                        "updated_at": datetime.utcnow().isoformat() + "Z",
+                    }
+                }
+            }
+            
+            response = requests.put(
+                self.data_endpoint,
+                json=data,
+                timeout=10,
+            )
+            
+            if response.status_code in (200, 204):
+                logger.info(f"Synced engineer {engineer_id} score to OPA: {score} ({tier})")
+                return True
+            else:
+                logger.error(f"OPA sync failed ({response.status_code}): {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to sync engineer {engineer_id} to OPA: {e}")
+            return False
+
+    def update_agent_score(
+        self,
+        agent_id: str,
+        score: float,
+        tier: str,
+        signals: Dict[str, float],
+    ) -> bool:
+        """
+        Update agent reputation score in OPA.
+        
+        Args:
+            agent_id: Agent identifier
+            score: Current reputation score (0-100)
+            tier: Current tier (elite, senior, standard, restricted)
+            signals: Individual signal values
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            data = {
+                "agents": {
+                    agent_id: {
+                        "score": score,
+                        "tier": tier,
+                        "signals": signals,
+                        "updated_at": datetime.utcnow().isoformat() + "Z",
+                    }
+                }
+            }
+            
+            response = requests.put(
+                self.data_endpoint,
+                json=data,
+                timeout=10,
+            )
+            
+            if response.status_code in (200, 204):
+                logger.info(f"Synced agent {agent_id} score to OPA: {score} ({tier})")
+                return True
+            else:
+                logger.error(f"OPA sync failed ({response.status_code}): {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to sync agent {agent_id} to OPA: {e}")
+            return False
+
+    def batch_update_scores(self, updates: List[Dict[str, Any]]) -> Dict[str, bool]:
+        """
+        Batch update multiple scores.
+        
+        Args:
+            updates: List of {entity_type, entity_id, score, tier, signals}
+            
+        Returns:
+            {entity_id: success}
+        """
+        results = {}
+        
+        for update in updates:
+            entity_type = update.get("entity_type")
+            entity_id = update.get("entity_id")
+            score = update.get("score", 50.0)
+            tier = update.get("tier", "standard")
+            signals = update.get("signals", {})
+            
+            if entity_type == "engineer":
+                success = self.update_engineer_score(entity_id, score, tier, signals)
+            elif entity_type == "agent":
+                success = self.update_agent_score(entity_id, score, tier, signals)
+            else:
+                success = False
+            
+            results[entity_id] = success
+        
+        return results
+
+    def get_engineer_score(self, engineer_id: str) -> Dict[str, Any]:
+        """Retrieve engineer score from OPA."""
+        try:
+            response = requests.get(
+                f"{self.data_endpoint}/engineers/{engineer_id}",
+                timeout=5,
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.warning(f"Could not retrieve score for {engineer_id}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Failed to retrieve engineer {engineer_id} score: {e}")
+            return {}
+
+    def get_agent_score(self, agent_id: str) -> Dict[str, Any]:
+        """Retrieve agent score from OPA."""
+        try:
+            response = requests.get(
+                f"{self.data_endpoint}/agents/{agent_id}",
+                timeout=5,
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.warning(f"Could not retrieve score for {agent_id}")
+                return {}
+                
+        except Exception as e:
+            logger.error(f"Failed to retrieve agent {agent_id} score: {e}")
+            return {}
+
     def health_check(self) -> bool:
         """Check if OPA is healthy."""
         try:
-            response = requests.get(f"{self.opa_url}/health", timeout=5)
+            response = requests.get(
+                f"{self.opa_url}/health",
+                timeout=5,
+            )
             return response.status_code == 200
         except Exception as e:
-            logger.warning(f"OPA health check failed: {e}")
+            logger.error(f"OPA health check failed: {e}")
             return False
-    
-    def put_data(self, path: str, data: Dict[str, Any]) -> bool:
-        """Put data into OPA (create or replace).
-        
-        Args:
-            path: Data path (e.g., "reputation/engineers/user123")
-            data: Data to store
-        
-        Returns:
-            True if successful
-        """
-        url = f"{self.data_api}/{path}"
-        
+
+    def delete_reputation_data(self, entity_type: str, entity_id: str) -> bool:
+        """Delete reputation data for entity (e.g., on user deletion)."""
         try:
-            response = requests.put(url, json=data, timeout=5)
-            if response.status_code in (200, 201, 204):
-                logger.debug(f"Put OPA data: {path}")
+            response = requests.delete(
+                f"{self.data_endpoint}/{entity_type}s/{entity_id}",
+                timeout=10,
+            )
+            
+            if response.status_code in (200, 204):
+                logger.info(f"Deleted reputation data for {entity_type}:{entity_id}")
                 return True
             else:
-                logger.error(f"Failed to put OPA data {path}: {response.status_code} {response.text}")
+                logger.error(f"Failed to delete reputation data: {response.text}")
                 return False
+                
         except Exception as e:
-            logger.error(f"Error putting OPA data {path}: {e}")
-            return False
-    
-    def get_data(self, path: str) -> Optional[Dict[str, Any]]:
-        """Get data from OPA.
-        
-        Args:
-            path: Data path
-        
-        Returns:
-            Data dictionary or None
-        """
-        url = f"{self.data_api}/{path}"
-        
-        try:
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                result = response.json()
-                return result.get("result")
-            else:
-                logger.warning(f"Failed to get OPA data {path}: {response.status_code}")
-                return None
-        except Exception as e:
-            logger.error(f"Error getting OPA data {path}: {e}")
-            return None
-    
-    def patch_data(self, path: str, data: Dict[str, Any]) -> bool:
-        """Patch data in OPA (merge).
-        
-        Args:
-            path: Data path
-            data: Data to merge
-        
-        Returns:
-            True if successful
-        """
-        url = f"{self.data_api}/{path}"
-        
-        try:
-            response = requests.patch(url, json=data, timeout=5)
-            if response.status_code in (200, 201, 204):
-                logger.debug(f"Patched OPA data: {path}")
-                return True
-            else:
-                logger.error(f"Failed to patch OPA data {path}: {response.status_code}")
-                return False
-        except Exception as e:
-            logger.error(f"Error patching OPA data {path}: {e}")
+            logger.error(f"Failed to delete {entity_type}:{entity_id}: {e}")
             return False
 
 
-class OpaReputationSync:
-    """Sync reputation scores from database to OPA."""
-    
-    def __init__(
+class OPAPolicyDeployer:
+    """Deploy reputation policies to OPA."""
+
+    def __init__(self, opa_url: str = "http://localhost:8181"):
+        self.opa_url = opa_url
+        self.policies_endpoint = f"{opa_url}/v1/policies"
+        logger.info(f"Initialized OPA policy deployer: {opa_url}")
+
+    def deploy_reputation_policy(self, policy_content: str, policy_name: str = "reputation") -> bool:
+        """
+        Deploy reputation policy to OPA.
+        
+        Args:
+            policy_content: Rego policy code
+            policy_name: Policy identifier
+            
+        Returns:
+            True if successful
+        """
+        try:
+            response = requests.put(
+                f"{self.policies_endpoint}/{policy_name}",
+                data=policy_content,
+                headers={"Content-Type": "text/plain"},
+                timeout=10,
+            )
+            
+            if response.status_code in (200, 201):
+                logger.info(f"Deployed OPA policy: {policy_name}")
+                return True
+            else:
+                logger.error(f"Policy deployment failed ({response.status_code}): {response.text}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to deploy policy {policy_name}: {e}")
+            return False
+
+    def test_policy_decision(
         self,
-        db_session: Session,
-        opa_url: str = "http://localhost:8181",
-        sync_interval_seconds: int = 60,
-    ):
-        """Initialize OPA sync.
+        policy_path: str,
+        input_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Test policy decision with given input.
         
         Args:
-            db_session: SQLAlchemy session
-            opa_url: OPA server URL
-            sync_interval_seconds: Sync interval in seconds
-        """
-        self.db = db_session
-        self.opa_client = OpaClient(opa_url)
-        self.sync_interval_seconds = sync_interval_seconds
-        
-        self.running = False
-        self.stop_event = Event()
-        self.lock = Lock()
-        
-        logger.info(f"Initialized OPA reputation sync (interval={sync_interval_seconds}s)")
-    
-    def start(self):
-        """Start OPA sync background task."""
-        if self.running:
-            logger.warning("OPA sync already running")
-            return
-        
-        # Check OPA health
-        if not self.opa_client.health_check():
-            logger.warning("OPA is not healthy, sync may not work")
-        
-        self.running = True
-        self.stop_event.clear()
-        
-        thread = Thread(target=self._sync_loop, daemon=True)
-        thread.start()
-        logger.info("Started OPA reputation sync")
-    
-    def stop(self):
-        """Stop OPA sync background task."""
-        if not self.running:
-            return
-        
-        self.stop_event.set()
-        self.running = False
-        logger.info("Stopped OPA reputation sync")
-    
-    def _sync_loop(self):
-        """Main sync loop."""
-        try:
-            while self.running and not self.stop_event.is_set():
-                try:
-                    self.sync_all_scores()
-                    self.stop_event.wait(timeout=self.sync_interval_seconds)
-                except Exception as e:
-                    logger.error(f"Error in sync loop: {e}", exc_info=True)
-                    self.stop_event.wait(timeout=10)  # Wait before retry
-        except Exception as e:
-            logger.error(f"Fatal error in sync loop: {e}", exc_info=True)
-    
-    def sync_all_scores(self):
-        """Sync all reputation scores to OPA."""
-        with self.lock:
-            try:
-                scores = self.db.query(ReputationScore).all()
-                
-                if not scores:
-                    logger.debug("No reputation scores to sync")
-                    return
-                
-                logger.info(f"Syncing {len(scores)} reputation scores to OPA")
-                
-                for score in scores:
-                    self.sync_score(score)
+            policy_path: e.g., "reputation/allow_deploy"
+            input_data: Input context
             
-            except Exception as e:
-                logger.error(f"Error syncing all scores: {e}", exc_info=True)
-    
-    def sync_score(self, score: ReputationScore) -> bool:
-        """Sync a single reputation score to OPA.
-        
-        Args:
-            score: ReputationScore instance
-        
         Returns:
-            True if successful
+            Policy decision result
         """
         try:
-            # Determine OPA path based on actor type
-            if score.actor_type == ActorType.ENGINEER:
-                path = f"reputation/engineers/{score.actor_id}"
+            response = requests.post(
+                f"{self.opa_url}/v1/data/{policy_path}",
+                json={"input": input_data},
+                timeout=10,
+            )
+            
+            if response.status_code == 200:
+                return response.json()
             else:
-                path = f"reputation/agents/{score.actor_id}"
-            
-            # Prepare OPA data structure
-            opa_data = {
-                "actor_id": score.actor_id,
-                "actor_type": score.actor_type.value,
-                "score": score.current_score,
-                "tier": score.tier.value,
-                "updated_at": score.updated_at.isoformat() if score.updated_at else None,
-            }
-            
-            # Add metrics if available
-            if score.actor_type == ActorType.ENGINEER:
-                opa_data.update({
-                    "deploy_success_rate": score.deploy_success_rate,
-                    "pr_acceptance_rate": score.pr_acceptance_rate,
-                    "incident_rate": score.incident_rate,
-                    "review_quality": score.review_quality,
-                    "task_completion_rate": score.task_completion_rate,
-                })
-            else:
-                opa_data.update({
-                    "task_success_rate": score.task_success_rate,
-                    "human_override_rate": score.human_override_rate,
-                    "code_quality_score": score.code_quality_score,
-                    "token_efficiency": score.token_efficiency,
-                })
-            
-            # Push to OPA
-            success = self.opa_client.put_data(path, opa_data)
-            
-            if success:
-                logger.debug(f"Synced score to OPA: {score.actor_id} = {score.current_score}")
-            
-            return success
-        
+                logger.error(f"Policy test failed ({response.status_code}): {response.text}")
+                return {"result": False, "error": "policy_error"}
+                
         except Exception as e:
-            logger.error(f"Error syncing score {score.actor_id}: {e}", exc_info=True)
-            return False
-    
-    def sync_leaderboard(self, limit: int = 100) -> bool:
-        """Sync top scores leaderboard to OPA.
-        
-        Args:
-            limit: Max number of scores to include
-        
-        Returns:
-            True if successful
-        """
-        try:
-            # Get top engineers by score
-            engineers = self.db.query(ReputationScore).filter(
-                ReputationScore.actor_type == ActorType.ENGINEER
-            ).order_by(desc(ReputationScore.current_score)).limit(limit).all()
-            
-            engineer_leaderboard = [
-                {
-                    "actor_id": score.actor_id,
-                    "score": score.current_score,
-                    "tier": score.tier.value,
-                }
-                for score in engineers
-            ]
-            
-            # Get top agents by score
-            agents = self.db.query(ReputationScore).filter(
-                ReputationScore.actor_type == ActorType.AGENT
-            ).order_by(desc(ReputationScore.current_score)).limit(limit).all()
-            
-            agent_leaderboard = [
-                {
-                    "actor_id": score.actor_id,
-                    "score": score.current_score,
-                    "tier": score.tier.value,
-                }
-                for score in agents
-            ]
-            
-            # Push to OPA
-            leaderboard_data = {
-                "engineers": engineer_leaderboard,
-                "agents": agent_leaderboard,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-            
-            success = self.opa_client.put_data("reputation/leaderboard", leaderboard_data)
-            
-            if success:
-                logger.info(f"Synced leaderboard to OPA: {len(engineers)} engineers, {len(agents)} agents")
-            
-            return success
-        
-        except Exception as e:
-            logger.error(f"Error syncing leaderboard: {e}", exc_info=True)
-            return False
-    
-    def get_opa_stats(self) -> Optional[Dict[str, Any]]:
-        """Get reputation statistics from OPA.
-        
-        Returns:
-            Statistics dictionary
-        """
-        try:
-            stats = self.opa_client.get_data("reputation/stats")
-            return stats
-        except Exception as e:
-            logger.error(f"Error getting OPA stats: {e}")
-            return None
+            logger.error(f"Failed to test policy {policy_path}: {e}")
+            return {"result": False, "error": str(e)}

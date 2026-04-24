@@ -378,6 +378,48 @@ services:
     profiles:
       - "ai"
 
+  reputation-engine:
+    build:
+      context: apps/reputation-engine
+      dockerfile: Dockerfile
+    container_name: reputation-engine
+    user: "1001:1001"
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres-db:5432/reputation
+      - KAFKA_BROKER=redpanda:9092
+      - OPA_URL=http://opa:8181
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      opa:
+        condition: service_healthy
+    volumes:
+      - ./apps/reputation-engine:/app
+    restart: unless-stopped
+    networks:
+      - services
+      - database
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
+    profiles:
+      - "ai"
+
   # ========================================================================
   # DATA STORES
   # ========================================================================

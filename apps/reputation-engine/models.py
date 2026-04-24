@@ -1,192 +1,153 @@
-#!/usr/bin/env python3
-# @file apps/reputation-engine/models.py
-# @module reputation-engine/models
-# @description SQLAlchemy models for Reputation Engine
-# @governance GOV-004 - Reputation scoring and tier-based access
+"""
+@file apps/reputation-engine/models.py
+@description SQLAlchemy models for reputation scoring
+@governance GOV-002
+"""
 
-from datetime import datetime, timezone
-from typing import Optional
-from enum import Enum
-
-from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime, JSON, Enum as SQLEnum, Index, ForeignKey
+from datetime import datetime
+from sqlalchemy import Column, String, Float, DateTime, JSON, Index, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
-import os
 
 Base = declarative_base()
 
 
-class ActorType(str, Enum):
-    """Actor type enumeration."""
-    ENGINEER = "engineer"
-    AGENT = "agent"
-
-
-class AccessTier(str, Enum):
-    """Access tier enumeration."""
-    RESTRICTED = "restricted"
-    STANDARD = "standard"
-    SENIOR = "senior"
-    ELITE = "elite"
-
-
-class ScoreSignal(Base):
-    """Individual signal contributing to a score."""
-    
-    __tablename__ = "score_signals"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    actor_id = Column(String, ForeignKey("reputation_scores.actor_id"), nullable=False, index=True)
-    signal_type = Column(String, nullable=False)  # e.g., deploy_success, code_review_quality
-    signal_value = Column(Float, nullable=False)  # Measured value
-    weight = Column(Float, nullable=False)  # Weight in calculation
-    contribution = Column(Float, nullable=False)  # Actual contribution to score
-    event_id = Column(String, unique=True, nullable=True)  # Reference to source event
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
-    
-    __table_args__ = (
-        Index('ix_actor_signal_time', 'actor_id', 'signal_type', 'created_at'),
-    )
-    
-    def to_dict(self):
-        """Convert to dictionary."""
-        return {
-            "signal_type": self.signal_type,
-            "signal_value": self.signal_value,
-            "weight": self.weight,
-            "contribution": self.contribution,
-            "created_at": self.created_at.isoformat(),
-        }
-
-
 class ReputationScore(Base):
-    """Reputation score for an engineer or agent."""
-    
+    """Current reputation scores for engineers and agents."""
     __tablename__ = "reputation_scores"
+
+    # Primary key format: "engineer:username" or "agent:agent_id"
+    id = Column(String(256), primary_key=True)
     
-    actor_id = Column(String, primary_key=True, index=True)
-    actor_type = Column(SQLEnum(ActorType), nullable=False, index=True)
-    current_score = Column(Integer, default=50, nullable=False)  # 0-100
-    tier = Column(SQLEnum(AccessTier), default=AccessTier.STANDARD, nullable=False, index=True)
+    # Entity info
+    entity_type = Column(String(16), nullable=False, index=True)  # "engineer" or "agent"
+    entity_id = Column(String(256), nullable=False, index=True)
     
-    # Engineer-specific metrics
-    deploy_success_rate = Column(Float, default=0.0)  # 0-1
-    pr_acceptance_rate = Column(Float, default=0.0)  # 0-1
-    incident_rate = Column(Float, default=0.0)  # 0-1 (negative impact)
-    review_quality = Column(Float, default=0.0)  # 0-1
-    task_completion_rate = Column(Float, default=0.0)  # 0-1
+    # Score and tier
+    current_score = Column(Float, default=50.0, nullable=False)
+    tier = Column(String(16), default="standard", nullable=False, index=True)
     
-    # Agent-specific metrics
-    task_success_rate = Column(Float, default=0.0)  # 0-1
-    human_override_rate = Column(Float, default=0.0)  # 0-1 (negative impact)
-    code_quality_score = Column(Float, default=0.0)  # 0-1
-    token_efficiency = Column(Float, default=0.0)  # 0-1
+    # Signal values (last 30-day average)
+    deploy_success_rate = Column(Float, default=0.0)
+    pr_acceptance_rate = Column(Float, default=0.0)
+    incident_rate = Column(Float, default=0.0)
+    review_quality_score = Column(Float, default=0.0)
+    task_completion_rate = Column(Float, default=0.0)
     
-    # Historical metrics (30-day rolling)
-    score_history = Column(JSON, default=dict)  # {timestamp: score}
-    signal_counts = Column(JSON, default=dict)  # {signal_type: count}
+    # For agents
+    task_success_rate = Column(Float, default=0.0)
+    human_override_rate = Column(Float, default=0.0)
+    code_quality_score = Column(Float, default=0.0)
+    token_efficiency = Column(Float, default=0.0)
     
     # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), index=True)
-    last_signal_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Relationships
-    signals = relationship("ScoreSignal", cascade="all, delete-orphan")
-    
+    # Composite indexes for efficient queries
+    __table_args__ = (
+        Index("ix_entity_type_id", "entity_type", "entity_id"),
+        Index("ix_tier", "tier"),
+        Index("ix_updated_at", "updated_at"),
+        UniqueConstraint("entity_type", "entity_id", name="uq_entity"),
+    )
+
     def __repr__(self):
-        return f"<ReputationScore {self.actor_id}: {self.current_score} ({self.tier.value})>"
-    
-    def to_dict(self):
-        """Convert to dictionary."""
-        return {
-            "actor_id": self.actor_id,
-            "actor_type": self.actor_type.value,
-            "current_score": self.current_score,
-            "tier": self.tier.value,
-            "deploy_success_rate": self.deploy_success_rate,
-            "pr_acceptance_rate": self.pr_acceptance_rate,
-            "incident_rate": self.incident_rate,
-            "review_quality": self.review_quality,
-            "task_completion_rate": self.task_completion_rate,
-            "task_success_rate": self.task_success_rate,
-            "human_override_rate": self.human_override_rate,
-            "code_quality_score": self.code_quality_score,
-            "token_efficiency": self.token_efficiency,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-            "last_signal_at": self.last_signal_at.isoformat() if self.last_signal_at else None,
-        }
+        return f"<ReputationScore {self.entity_type}:{self.entity_id} score={self.current_score:.1f}>"
 
 
-class ScoreHistory(Base):
-    """Historical record of score changes."""
+class ReputationHistory(Base):
+    """Historical reputation events for audit and trend analysis."""
+    __tablename__ = "reputation_history"
+
+    id = Column(String(512), primary_key=True)
     
-    __tablename__ = "score_history"
+    # Entity reference
+    entity_type = Column(String(16), nullable=False, index=True)
+    entity_id = Column(String(256), nullable=False, index=True)
     
-    id = Column(Integer, primary_key=True, index=True)
-    actor_id = Column(String, ForeignKey("reputation_scores.actor_id"), nullable=False, index=True)
-    actor_type = Column(SQLEnum(ActorType), nullable=False)
-    previous_score = Column(Integer, nullable=False)
-    new_score = Column(Integer, nullable=False)
-    change_amount = Column(Integer, nullable=False)  # new - previous
-    previous_tier = Column(SQLEnum(AccessTier), nullable=False)
-    new_tier = Column(SQLEnum(AccessTier), nullable=False)
-    contributing_signals = Column(JSON, nullable=True)  # List of signals
-    reason = Column(String, nullable=True)
-    triggered_by_event = Column(String, nullable=True)  # Event ID
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    # Score and tier at time of event
+    score = Column(Float, nullable=False)
+    tier = Column(String(16), nullable=False)
     
+    # Signal details (JSON)
+    signals = Column(JSON, nullable=False, default={})
+    
+    # Event reference
+    event_type = Column(String(64), nullable=False, index=True)
+    event_id = Column(String(256), index=True)
+    
+    # Timestamp
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    # Composite indexes
     __table_args__ = (
-        Index('ix_actor_time', 'actor_id', 'created_at'),
-        Index('ix_tier_change', 'previous_tier', 'new_tier', 'created_at'),
-    )
-    
-    def to_dict(self):
-        """Convert to dictionary."""
-        return {
-            "actor_id": self.actor_id,
-            "actor_type": self.actor_type.value,
-            "previous_score": self.previous_score,
-            "new_score": self.new_score,
-            "change_amount": self.change_amount,
-            "previous_tier": self.previous_tier.value,
-            "new_tier": self.new_tier.value,
-            "contributing_signals": self.contributing_signals,
-            "reason": self.reason,
-            "triggered_by_event": self.triggered_by_event,
-            "created_at": self.created_at.isoformat(),
-        }
-
-
-class ReputationAudit(Base):
-    """Audit log for all reputation engine actions."""
-    
-    __tablename__ = "reputation_audit"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    action = Column(String, nullable=False)  # e.g., score_calculated, signal_processed
-    actor_id = Column(String, nullable=False, index=True)
-    event_id = Column(String, nullable=True)
-    details = Column(JSON, nullable=True)
-    status = Column(String, nullable=False)  # success, error, warning
-    error_message = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
-    
-    __table_args__ = (
-        Index('ix_action_time', 'action', 'created_at'),
-        Index('ix_status_time', 'status', 'created_at'),
+        Index("ix_entity_timeline", "entity_type", "entity_id", "timestamp"),
+        Index("ix_event_type_time", "event_type", "timestamp"),
     )
 
-
-def init_db():
-    """Initialize database tables."""
-    database_url = os.getenv("DATABASE_URL", "postgresql://appuser:changeme@localhost:5432/appdb")
-    engine = create_engine(database_url, echo=False)
-    Base.metadata.create_all(bind=engine)
-    return engine
+    def __repr__(self):
+        return f"<ReputationHistory {self.entity_type}:{self.entity_id} event={self.event_type}>"
 
 
-if __name__ == "__main__":
-    init_db()
-    print("Database tables created successfully")
+class TierAccess(Base):
+    """Tier-based access control configuration."""
+    __tablename__ = "tier_access"
+
+    tier = Column(String(16), primary_key=True)
+    
+    # Score ranges
+    min_score = Column(Float, nullable=False)
+    max_score = Column(Float, nullable=False)
+    
+    # Access privileges
+    model_access = Column(String(32), nullable=False)  # "llama3:70b", "llama3:8b", "mistral:7b", "none"
+    daily_token_budget = Column(Float, nullable=False)
+    
+    # Approval requirements
+    requires_approval = Column(String(64))  # "none", "self", "human", "human,mentor"
+    can_self_approve = Column(String(64))  # Comma-separated risk levels: "low,medium"
+    
+    # Description for UI
+    description = Column(String(256))
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<TierAccess {self.tier} score={self.min_score}-{self.max_score}>"
+
+
+# Helper functions for tier management
+
+def get_tier_for_score(score: float) -> str:
+    """Determine tier from score."""
+    if score >= 90:
+        return "elite"
+    elif score >= 70:
+        return "senior"
+    elif score >= 50:
+        return "standard"
+    else:
+        return "restricted"
+
+
+def get_score_range_for_tier(tier: str) -> tuple:
+    """Get score range for tier."""
+    ranges = {
+        "elite": (90, 100),
+        "senior": (70, 89),
+        "standard": (50, 69),
+        "restricted": (0, 49),
+    }
+    return ranges.get(tier, (50, 69))
+
+
+def should_recover_score(history: list) -> bool:
+    """Check if entity should recover from restricted tier."""
+    if not history or len(history) < 5:
+        return False
+    
+    # Check if last 5 events all have positive contribution
+    recent = history[-5:]
+    return all(event.get("signals", {}).get("contribution", 0) > 0 for event in recent)

@@ -3,10 +3,10 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1001 reputation
 
 # Copy requirements
 COPY requirements.txt .
@@ -17,12 +17,22 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Set ownership
+RUN chown -R reputation:reputation /app
+
+# Switch to non-root user
+USER 1001
+
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=15s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8002/health || exit 1
 
-# Expose port
-EXPOSE 8000
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# Run application
+# Expose API port
+EXPOSE 8002
+
+# Run reputation engine
 CMD ["python", "main.py"]

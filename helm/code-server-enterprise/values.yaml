@@ -1,0 +1,193 @@
+# GOV-002: Enterprise Governance Header
+# METADATA: HELM_VALUES
+# PURPOSE: Default configuration values for code-server-enterprise Helm deployment
+# IMMUTABILITY: All values are versioned in Git
+
+# Global configuration
+global:
+  # Image registry and pull policy
+  imageRegistry: "docker.io"
+  imagePullPolicy: "IfNotPresent"
+  
+  # Domain and TLS configuration
+  domain: "example.com"
+  tlsEnabled: true
+  tlsEmail: "admin@example.com"
+  
+  # Log level across all services
+  logLevel: "info"
+  
+  # Resource limits (can be overridden per service)
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+
+# Labels and annotations applied to all resources
+labels:
+  app: "code-server-enterprise"
+  version: "1.0.0"
+  managed-by: "helm"
+  environment: "production"
+
+annotations:
+  governance/policy: "GOV-002"
+  governance/compliance: "required"
+
+# Service account and pod security defaults
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Service definitions for 20 microservices
+services:
+  # Core API & Gateway
+  api:
+    enabled: true
+    name: "api"
+    replicas: 3
+    image: "code-server-enterprise-api:latest"
+    port: 3100
+    resources:
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+  
+  # Frontend
+  frontend:
+    enabled: true
+    name: "frontend"
+    replicas: 2
+    image: "code-server-enterprise-frontend:latest"
+    port: 3000
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+  
+  # Governance Services
+  reputation_engine:
+    enabled: true
+    name: "reputation-engine"
+    replicas: 2
+    image: "code-server-enterprise-reputation-engine:latest"
+    port: 5000
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+  
+  activity_feed:
+    enabled: true
+    name: "activity-feed"
+    replicas: 2
+    image: "code-server-enterprise-activity-feed:latest"
+    port: 5001
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+  
+  # Session Management
+  session_broker:
+    enabled: true
+    name: "session-broker"
+    replicas: 2
+    image: "code-server-enterprise-session-broker:latest"
+    port: 5002
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+  
+  # Infrastructure services (managed separately)
+  postgres:
+    enabled: true
+    name: "postgres"
+    replicas: 1
+    image: "postgres:16-alpine"
+    port: 5432
+  
+  redis:
+    enabled: true
+    name: "redis"
+    replicas: 1
+    image: "redis:7-alpine"
+    port: 6379
+  
+  prometheus:
+    enabled: true
+    name: "prometheus"
+    replicas: 1
+    image: "prom/prometheus:v2.48.0"
+    port: 9090
+  
+  grafana:
+    enabled: true
+    name: "grafana"
+    replicas: 1
+    image: "grafana/grafana:10.2.0"
+    port: 3000
+  
+  loki:
+    enabled: true
+    name: "loki"
+    replicas: 1
+    image: "grafana/loki:2.9.4"
+    port: 3100
+
+# Environment variables
+environment:
+  LOG_LEVEL: "info"
+  NODE_ENV: "production"
+
+# Secrets (should be mounted from external secret manager)
+secrets:
+  databaseUrl: ""
+  redisPassword: ""
+  oauthClientId: ""
+  oauthClientSecret: ""
+
+# Persistence configuration
+persistence:
+  enabled: true
+  storageClass: "fast-ssd"
+  size: "100Gi"
+
+# Network policies
+networkPolicy:
+  enabled: true
+  ingressAllowed: ["ingress-controller"]
+  egressAllowed: ["dns", "external-api"]
+
+# Pod Security Standards
+podSecurity:
+  enforce: "baseline"
+  audit: "restricted"
+  warn: "restricted"

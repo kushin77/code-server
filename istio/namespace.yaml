@@ -1,0 +1,27 @@
+# GOV-002: Enterprise Governance Compliance
+# Component: Istio Control Plane - Service Mesh Namespace Configuration
+# Date: April 25, 2026
+# Version: 1.0.0
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: code-server-enterprise
+  labels:
+    app: code-server-enterprise
+    version: v1.0.0
+    istio-injection: enabled
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true

@@ -1,0 +1,229 @@
+# GOV-002: Enterprise Governance Compliance
+# Component: Istio DestinationRules - Load Balancing & Traffic Policies
+# Date: April 25, 2026
+# Version: 1.0.0
+# Purpose: Define traffic policies, connection pooling, outlier detection
+
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: api-dr
+  namespace: code-server-enterprise
+  labels:
+    app: api
+    version: v1.0.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  host: api
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 1000
+      http:
+        http1MaxPendingRequests: 500
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 2
+        h2UpgradePolicy: UPGRADE
+    loadBalancer:
+      simple: ROUND_ROBIN
+      consistentHash:
+        httpHeaderName: "x-session-id"
+        minimumRingSize: 128
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minRequestVolume: 5
+      splitExternalLocalOriginErrors: true
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+  - name: stable
+    labels:
+      version: v1.0.0
+    trafficPolicy:
+      loadBalancer:
+        simple: ROUND_ROBIN
+  - name: canary
+    labels:
+      version: v1.1.0-rc1
+    trafficPolicy:
+      loadBalancer:
+        simple: LEAST_REQUEST
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: frontend-dr
+  namespace: code-server-enterprise
+  labels:
+    app: frontend
+    version: v1.0.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  host: frontend
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 500
+      http:
+        http1MaxPendingRequests: 200
+        http2MaxRequests: 500
+        maxRequestsPerConnection: 1
+    loadBalancer:
+      simple: ROUND_ROBIN
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 30
+      minRequestVolume: 3
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+  - name: stable
+    labels:
+      version: v1.0.0
+  - name: canary
+    labels:
+      version: v1.1.0-rc1
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: reputation-engine-dr
+  namespace: code-server-enterprise
+  labels:
+    app: reputation-engine
+    version: v1.0.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  host: reputation-engine
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 200
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 200
+    loadBalancer:
+      simple: ROUND_ROBIN
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: activity-feed-dr
+  namespace: code-server-enterprise
+  labels:
+    app: activity-feed
+    version: v1.0.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  host: activity-feed
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 200
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 200
+    loadBalancer:
+      simple: ROUND_ROBIN
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: session-broker-dr
+  namespace: code-server-enterprise
+  labels:
+    app: session-broker
+    version: v1.0.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  host: session-broker
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 200
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 200
+    loadBalancer:
+      simple: ROUND_ROBIN
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+    tls:
+      mode: ISTIO_MUTUAL
+---
+# Database & cache DestinationRules (mTLS not applied to external DBs)
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: postgres-dr
+  namespace: code-server-enterprise
+  labels:
+    app: postgres
+    version: v16.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  host: postgres-db
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+    loadBalancer:
+      simple: ROUND_ROBIN
+    tls:
+      mode: DISABLE
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: redis-dr
+  namespace: code-server-enterprise
+  labels:
+    app: redis
+    version: v7.0.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  host: redis
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+    loadBalancer:
+      simple: ROUND_ROBIN
+    tls:
+      mode: DISABLE

@@ -58,7 +58,7 @@ REPLICAS=(
 )
 
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
-SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
+DEPLOY_SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 # Deployment options
 COMPOSE_PROFILES="${COMPOSE_PROFILES:-}"
@@ -131,7 +131,7 @@ query_replica() {
   shift
   local cmd="$@"
   
-  ssh $SSH_OPTS "$host" "$cmd" 2>/dev/null || echo "ERROR"
+  ssh $DEPLOY_SSH_OPTS "$host" "$cmd" 2>/dev/null || echo "ERROR"
 }
 
 # Deploy to a single replica (runs in background)
@@ -248,7 +248,7 @@ log_info ""
 # Step 1: Connectivity check
 log_info "Step 1: Verifying replica connectivity..."
 for replica in "${REPLICAS[@]}"; do
-  if ssh $SSH_OPTS "$replica" "true" 2>/dev/null; then
+  if ssh $DEPLOY_SSH_OPTS "$replica" "true" 2>/dev/null; then
     log_info "  ✓ $replica reachable"
   else
     log_error "  ✗ $replica unreachable"
@@ -354,12 +354,12 @@ else
 fi
   
   if [[ "$DRY_RUN" == true ]]; then
-    log_info "[DRY-RUN] ssh $SSH_OPTS $host '$cmd'"
+    log_info "[DRY-RUN] ssh $DEPLOY_SSH_OPTS $host '$cmd'"
     return 0
   fi
   
   # Run command and redirect output to replica-specific log
-  ssh $SSH_OPTS "$host" "$cmd" > "/tmp/deploy-${host//[@\/]/-}.log" 2>&1
+  ssh $DEPLOY_SSH_OPTS "$host" "$cmd" > "/tmp/deploy-${host//[@\/]/-}.log" 2>&1
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -379,7 +379,7 @@ log_info "✅ SSH key found: $SSH_KEY"
 log_info "Testing SSH connectivity to all replicas..."
 for replica in "${REPLICAS[@]}"; do
   host=$(parse_replica "$replica")
-  if ssh $SSH_OPTS "$host" "echo 'SSH OK'" > /dev/null 2>&1; then
+  if ssh $DEPLOY_SSH_OPTS "$host" "echo 'SSH OK'" > /dev/null 2>&1; then
     log_info "✅ $host reachable"
   else
     log_fatal "$host not reachable. Check network and SSH key."
@@ -495,7 +495,7 @@ for replica in "${REPLICAS[@]}"; do
   host=$(parse_replica "$replica")
   log_info "Checking health on $host..."
   
-  if ssh $SSH_OPTS "$host" "cd code-server-enterprise && docker-compose ps | grep -q 'Up'" 2>/dev/null; then
+  if ssh $DEPLOY_SSH_OPTS "$host" "cd code-server-enterprise && docker-compose ps | grep -q 'Up'" 2>/dev/null; then
     log_info "✅ $host services healthy"
   else
     log_error "❌ $host services not healthy"

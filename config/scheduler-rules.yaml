@@ -1,0 +1,150 @@
+# @file        config/scheduler-rules.yaml
+# @description Declarative routing rules for execution scheduler (hot-reloadable)
+# @status      production-ready
+#
+# Rules are evaluated in priority order (top to bottom)
+# If a rule matches, routing decision is made and subsequent rules are skipped
+
+rules:
+  # Rule 1: Sensitive data classification → LOCAL ONLY (fail-closed)
+  # Confidential/restricted data never leaves the on-prem boundary
+  - name: sensitive-data-local-only
+    priority: 1000
+    description: "Sensitive data (confidential/restricted) always runs locally"
+    condition:
+      data_classification: ["confidential", "restricted"]
+    action:
+      destination: local
+      fail_if_unavailable: true
+      reason: "Sensitive data classification requires local-only execution"
+    kafka_signal: security.routing_decision_sensitive_local
+
+  # Rule 2: GPU inference/training → LOCAL if available
+  # AI workloads benefit from local GPU; falls back to CI if local saturated
+  - name: gpu-inference-local
+    priority: 900
+    description: "GPU inference and model training prefer local GPU"
+    condition:
+      task_type: ["ai_inference", "model_training"]
+      gpu_required: true
+      local_gpu_percent: ["<", 80]
+    action:
+      destination: local
+      fail_if_unavailable: false
+      reason: "GPU task with available local GPU"
+    fallback_destination: ci
+    kafka_signal: compute.routing_decision_gpu_local
+
+  # Rule 3: Test suites → CI (free, parallelizable)
+  # CI runner is optimal for test execution (free tier, parallelizable)
+  - name: test-suites-to-ci
+    priority: 850
+    description: "Test suites route to CI for parallelization"
+    condition:
+      task_type: ["test_suite", "lint", "build"]
+      cpu_cores_required: ["<=", 4]
+      ci_available_runners: [">", 0]
+    action:
+      destination: ci
+      fail_if_unavailable: false
+      reason: "CI-optimized task type"
+    fallback_destination: local
+    kafka_signal: ci.routing_decision_tests
+
+  # Rule 4: Elite users → LOCAL priority boost
+  # Engineering team members (elite reputation) get priority on local GPU
+  - name: elite-users-get-priority
+    priority: 800
+    description: "Elite users receive priority on local GPU"
+    condition:
+      user_reputation_tier: "elite"
+      local_gpu_percent: ["<", 50]
+      local_memory_percent: ["<", 70]
+    action:
+      destination: local
+      priority_boost: 10
+      reason: "Elite user priority boost: local resources available"
+    fallback_destination: ci
+    kafka_signal: reputation.routing_decision_elite_priority
+
+  # Rule 5: Data processing → LOCAL (prefer local for data residency)
+  # Data processing should stay local to avoid data egress costs
+  - name: data-processing-local
+    priority: 700
+    description: "Data processing prefers local execution"
+    condition:
+      task_type: "data_processing"
+      local_memory_percent: ["<", 85]
+    action:
+      destination: local
+      reason: "Data processing prefers local execution for data residency"
+    fallback_destination: ci
+    kafka_signal: data.routing_decision_processing_local
+
+  # Rule 6: Edge burst mode → EDGE (if available)
+  # Engineer laptops can be used for burst compute when configured
+  - name: edge-burst-available
+    priority: 600
+    description: "Route to edge nodes if available and burst mode enabled"
+    condition:
+      task_type: "general"
+      burst_mode_enabled: true
+      edge_nodes_available: [">", 0]
+      cpu_cores_required: ["<=", 8]
+    action:
+      destination: edge
+      reason: "Edge burst node available for general compute"
+    fallback_destination: ci
+    kafka_signal: edge.routing_decision_burst
+
+  # Rule 7: Default → CI (safe fallback for all remaining tasks)
+  # Catch-all rule ensures all tasks get routed even if no specific rules match
+  - name: default-ci-fallback
+    priority: 0
+    description: "Default: route to CI runner"
+    condition: {}  # Empty condition = always matches
+    action:
+      destination: ci
+      reason: "Default: CI runner for general tasks"
+    kafka_signal: ci.routing_decision_default
+
+# ════════════════════════════════════════════════════════════════════════════
+# Cost Model Configuration
+# ════════════════════════════════════════════════════════════════════════════
+
+cost_model:
+  destinations:
+    local:
+      hourly_cost: 0.0
+      description: "Sunk cost - hardware already owned"
+      multiplier_by_resource:
+        gpu: 1.5  # GPU-heavy tasks cost 1.5x
+        cpu_intensive: 1.1  # CPU-heavy tasks cost 1.1x
+      
+    ci:
+      hourly_cost: 0.0  # GitHub free tier
+      description: "Free tier for open source repos"
+      burst_cost_per_hour: 2.50  # If overflow to paid runners
+      
+    edge:
+      hourly_cost: 0.0
+      description: "Volunteer compute from engineer laptops"
+
+# ════════════════════════════════════════════════════════════════════════════
+# Monitoring & Alerting
+# ════════════════════════════════════════════════════════════════════════════
+
+monitoring:
+  # Alert if routing decisions violate cost budget
+  cost_alerts:
+    monthly_ci_budget_usd: 500
+    alert_threshold_percent: 80
+    
+  # Track routing decision metrics
+  metrics:
+    - name: scheduler_routing_decision_count
+      labels: [destination, routing_rule]
+    - name: scheduler_task_latency_seconds
+      labels: [destination]
+    - name: scheduler_resource_utilization_percent
+      labels: [resource_type, destination]

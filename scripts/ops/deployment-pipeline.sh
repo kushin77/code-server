@@ -9,15 +9,32 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# ============================================================================
+# Logging Functions
+# ============================================================================
 
-source "${PROJECT_ROOT}/scripts/_common/init.sh"
+log_info() {
+  printf '[%s] [INFO] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+}
+
+log_success() {
+  printf '[%s] [SUCCESS] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*"
+}
+
+log_warn() {
+  printf '[%s] [WARN] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+}
+
+log_error() {
+  printf '[%s] [ERROR] %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+}
 
 # ============================================================================
 # Configuration
 # ============================================================================
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ENVIRONMENT=${1:-production}
 DEPLOYMENT_ID=$(date +%s)
 LOG_FILE="${PROJECT_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
@@ -38,7 +55,7 @@ DEPLOYMENT_ERRORS=""
 log_stage() {
     local stage=$1
     local description=$2
-    ((STAGE++))
+    STAGE=$((STAGE + 1))
     log_info ""
     log_info "[$STAGE] $description"
     log_info "---"
@@ -47,7 +64,7 @@ log_stage() {
 
 stage_success() {
     log_success "✅ Stage $STAGE complete"
-    ((SUCCESS++))
+    SUCCESS=$((SUCCESS + 1))
     echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') [SUCCESS] Stage $STAGE completed" >> "${LOG_FILE}"
 }
 

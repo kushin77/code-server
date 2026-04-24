@@ -287,7 +287,7 @@ describe('Session Snapshot Service', () => {
       const listener = vi.fn();
       service.on('snapshot-restored', listener);
 
-      const result = await service.restoreSnapshot(original.id);
+      const _result = await service.restoreSnapshot(original.id);
 
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({

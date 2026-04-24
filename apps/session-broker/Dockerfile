@@ -28,6 +28,7 @@ WORKDIR /workspace
 # Copy entire workspace
 COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc package.json ./
 COPY apps/session-broker ./apps/session-broker
+COPY apps/backend ./apps/backend
 
 # Install dependencies and build
 RUN npm install -g pnpm@9.15.4 && \

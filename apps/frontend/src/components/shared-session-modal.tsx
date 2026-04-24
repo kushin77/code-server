@@ -72,7 +72,7 @@ export const SharedSessionModal: React.FC<SharedSessionModalProps> = ({
       try {
         await navigator.clipboard.writeText(session.shareUrl);
         setCopied(true);
-      } catch (_err) {
+      } catch {
         setError('Failed to copy link');
       }
     }

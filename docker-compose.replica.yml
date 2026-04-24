@@ -15,9 +15,12 @@ version: '3.8'
 services:
   # Appsmith on replica 2 should use the shared edge proxy for TLS instead of
   # trying to provision its own certificate via the custom-domain flow.
+  # It also needs an isolated data volume because Appsmith's embedded MongoDB
+  # cannot safely share the same WiredTiger store with replica 1.
   appsmith:
     environment:
-      APPSMITH_CUSTOM_DOMAIN: ""
+      - APPSMITH_CUSTOM_DOMAIN=
+      - APPSMITH_NAS_SUBDIR=appsmith-replica-2
 
   # ────────────────────────────────────────────────────────────────────────────
   # session-broker — Replica instance for active/active horizontal scaling

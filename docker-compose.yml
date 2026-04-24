@@ -1008,6 +1008,7 @@ services:
       - APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - APPSMITH_BASE_URL=https://${DOMAIN:-kushnir.cloud}
       - APPSMITH_CUSTOM_DOMAIN=${DOMAIN:-kushnir.cloud}
+      - APPSMITH_NAS_SUBDIR=${APPSMITH_NAS_SUBDIR:-appsmith}
       - APPSMITH_ADMIN_EMAILS=${APPSMITH_ADMIN_EMAILS:-akushnir@bioenergystrategies.com}
     expose:
       - "80"
@@ -1464,7 +1465,7 @@ volumes:
     driver_opts:
       type: nfs
       o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
-      device: ":${NAS_EXPORT_PATH:-/export}/appsmith"
+      device: ":${NAS_EXPORT_PATH:-/export}/${APPSMITH_NAS_SUBDIR:-appsmith}"
 
   # ── Observability: Loki log storage ──────────────────────────────────────
   loki-data:

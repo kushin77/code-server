@@ -58,7 +58,9 @@ REPLICAS=(
 )
 
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
-DEPLOY_SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
+
+# SSH options as array for proper expansion (IaC compliance)
+declare -a DEPLOY_SSH_OPTS_ARRAY=(-i "${SSH_KEY}" -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o BatchMode=yes)
 
 # Deployment options
 COMPOSE_PROFILES="${COMPOSE_PROFILES:-}"
@@ -131,7 +133,7 @@ query_replica() {
   shift
   local cmd="$@"
   
-  ssh $DEPLOY_SSH_OPTS "$host" "$cmd" 2>/dev/null || echo "ERROR"
+  ssh "${DEPLOY_SSH_OPTS_ARRAY[@]}" "$host" "$cmd" 2>/dev/null || echo "ERROR"
 }
 
 # Deploy to a single replica (runs in background)

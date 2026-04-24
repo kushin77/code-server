@@ -31,12 +31,12 @@ CHECKS_TOTAL=0
 
 log_pass() {
   echo -e "${GREEN}[✓]${NC} $1"
-  ((CHECKS_PASSED++))
+  CHECKS_PASSED=$((CHECKS_PASSED + 1))
 }
 
 log_fail() {
   echo -e "${RED}[✗]${NC} $1"
-  ((CHECKS_FAILED++))
+  CHECKS_FAILED=$((CHECKS_FAILED + 1))
 }
 
 # Shared logging defines log_info, but we override for local color formatting if desired
@@ -50,7 +50,7 @@ log_section() {
 }
 
 verify_check() {
-  ((CHECKS_TOTAL++))
+  CHECKS_TOTAL=$((CHECKS_TOTAL + 1))
 }
 
 # Section 1: Git Status
@@ -85,7 +85,7 @@ fi
 
 verify_check
 COMMITS_THIS_SESSION=$(git log --oneline --since="4 hours ago" | wc -l)
-if [[ $COMMITS_THIS_SESSION -gt 0 ]]; then
+if [[ $((COMMITS_THIS_SESSION)) -gt 0 ]]; then
   log_pass "Session commits: $COMMITS_THIS_SESSION"
 else
   log_fail "No commits in last 4 hours"

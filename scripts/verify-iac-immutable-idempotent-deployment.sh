@@ -13,8 +13,10 @@
 
 set -euo pipefail
 
+# Initialize governance shared libraries
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+source "$REPO_ROOT/scripts/_common/init.sh"
 
 echo "════════════════════════════════════════════════════════════════════════════"
 echo "IaC/Immutable/Idempotent Deployment Verification"

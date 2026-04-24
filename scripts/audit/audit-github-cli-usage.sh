@@ -214,7 +214,6 @@ export GH_TOKEN="$(github_get_token)"  # Uses GSM-stored fine-grained token
 
 1. **Replace all direct `gh` calls with wrapper:**
    ```bash
-   source scripts/_common/github-api-client.sh
    
    # Use:
    github_gh issue create --title "..." --repo kushin77/code-server
@@ -224,13 +223,11 @@ export GH_TOKEN="$(github_get_token)"  # Uses GSM-stored fine-grained token
 
 2. **Use gsm-backed token retrieval:**
    ```bash
-   source scripts/_common/github-api-client.sh
    TOKEN=$(github_get_token)  # Automatically uses GSM
    ```
 
 3. **Wrap in error handling:**
    ```bash
-   source scripts/_common/github-api-client.sh
    github_api_call GET "/repos/kushin77/code-server/issues" || return 1
    ```
 

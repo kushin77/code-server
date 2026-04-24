@@ -41,7 +41,7 @@ declare -i issues_fixed=0
 # STEP 1: Fix direct sourcing of individual _common files
 # ============================================================================
 
-((step_count++))
+step_count=$((step_count + 1))
 log_info "STEP $step_count: Replace direct _common sourcing with init.sh"
 
 # Files to check for sourcing consolidation
@@ -62,7 +62,7 @@ for file in "${sourcing_files[@]}"; do
                 sed -i '/^PROJECT_ROOT=/a source "${PROJECT_ROOT}/scripts/_common/init.sh"' \
                     "${PROJECT_ROOT}/${file}" 2>/dev/null || true
                 log_info "    ✓ Added init.sh sourcing"
-                ((issues_fixed++))
+                issues_fixed=$((issues_fixed + 1))
             fi
             
             # Remove redundant direct sourcing
@@ -72,11 +72,11 @@ for file in "${sourcing_files[@]}"; do
                 "${PROJECT_ROOT}/${file}" 2>/dev/null || true
             
             log_info "    ✓ Removed redundant sourcing"
-            ((issues_fixed++))
+            issues_fixed=$((issues_fixed + 1))
         else
             log_info "  ✓ Already using consolidated sourcing: ${file}"
         fi
-        ((step_ok++))
+        step_ok=$((step_ok + 1))
     fi
 done
 
@@ -84,7 +84,7 @@ done
 # STEP 2: Replace inline logging with log_* functions
 # ============================================================================
 
-((step_count++))
+step_count=$((step_count + 1))
 log_info "STEP $step_count: Replace inline logging with log_* functions"
 
 declare -a logging_files=(

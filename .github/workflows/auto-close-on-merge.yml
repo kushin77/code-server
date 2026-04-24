@@ -11,8 +11,13 @@ on:
         required: true
 
 concurrency:
-  group: merge-close-${{ github.event.pull_request.number }}
+  group: merge-close-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_REPO: ${{ github.repository }}
+  PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
 
 jobs:
   auto-close-on-merge:
@@ -32,13 +37,12 @@ jobs:
       - name: Set Up Environment
         run: |
           mkdir -p artifacts
-          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
-          echo "GITHUB_REPO=${{ github.repository }}" >> $GITHUB_ENV
+          echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
       
       - name: Check if PR is Merged
         id: check_merge
         run: |
-          pr_number=${{ github.event.pull_request.number }}
+          pr_number=${PR_NUMBER}
           merged=$(gh pr view $pr_number --repo "$GITHUB_REPO" --json merged -q '.merged')
           echo "is_merged=$merged" >> $GITHUB_OUTPUT
       
@@ -46,7 +50,7 @@ jobs:
         if: steps.check_merge.outputs.is_merged == 'true'
         run: |
           chmod +x scripts/ops/auto-close-issue-on-merge.sh
-          pr_number=${{ github.event.pull_request.number }}
+          pr_number=${PR_NUMBER}
           merge_commit=${{ github.event.pull_request.merge_commit_sha }}
           
           scripts/ops/auto-close-issue-on-merge.sh "$pr_number" "$merge_commit" || true

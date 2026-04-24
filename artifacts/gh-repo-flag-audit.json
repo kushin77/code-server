@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-04-24T21:02:03Z",
+  "timestamp": "2026-04-24T21:04:35Z",
   "status": "PASS",
   "total_violations": 0,
-  "scanned_files": 64,
+  "scanned_files": 68,
   "policy": "All 'gh issue' and 'gh pr' commands must include --repo flag for explicit repo scope",
   "remediation": {
     "option_1": "Use scripts/ci/gh-wrapper.sh which auto-adds --repo",

@@ -94,12 +94,24 @@ link_pr_to_issue() {
 
 main() {
     local pr_number="$1"
-    local pr_title="$2"
-    local pr_body="$3"
-    local branch_name="$4"
+    local pr_title="${2:-}"
+    local pr_body="${3:-}"
+    local branch_name="${4:-}"
     
-    if [[ -z "$pr_number" || -z "$pr_title" ]]; then
+    if [[ -z "$pr_number" ]]; then
         log_error "Usage: $0 <pr_number> <pr_title> <pr_body> <branch_name>"
+        return 1
+    fi
+
+    if [[ -z "$pr_title" || -z "$pr_body" || -z "$branch_name" ]]; then
+        log_info "Resolving PR metadata from GitHub for #$pr_number"
+        pr_title=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json title -q '.title' 2>/dev/null || echo "")
+        pr_body=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json body -q '.body' 2>/dev/null || echo "")
+        branch_name=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json headRefName -q '.headRefName' 2>/dev/null || echo "")
+    fi
+
+    if [[ -z "$pr_title" || -z "$branch_name" ]]; then
+        log_error "Unable to resolve PR metadata for #$pr_number"
         return 1
     fi
     

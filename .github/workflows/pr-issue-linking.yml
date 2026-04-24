@@ -5,10 +5,19 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to process'
+        required: true
 
 concurrency:
-  group: pr-linking-${{ github.event.pull_request.number }}
+  group: pr-linking-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_REPO: ${{ github.repository }}
+  PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
 
 jobs:
   link-issues:
@@ -28,25 +37,12 @@ jobs:
       - name: Set Up Environment
         run: |
           mkdir -p artifacts
-          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
-          echo "GITHUB_REPO=${{ github.repository }}" >> $GITHUB_ENV
-      
-      - name: Extract PR Metadata
-        id: extract
-        run: |
-          echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          echo "pr_title=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
-          echo "pr_body=${{ github.event.pull_request.body }}" >> $GITHUB_OUTPUT
-          echo "branch_name=${{ github.event.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+          echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
       
       - name: Run Auto-Link Script
         run: |
           chmod +x scripts/ops/auto-link-pr-issue.sh
-          scripts/ops/auto-link-pr-issue.sh \
-            "${{ steps.extract.outputs.pr_number }}" \
-            "${{ steps.extract.outputs.pr_title }}" \
-            "${{ steps.extract.outputs.pr_body }}" \
-            "${{ steps.extract.outputs.branch_name }}" || true
+          scripts/ops/auto-link-pr-issue.sh "${PR_NUMBER}" || true
       
       - name: Comment on PR with Link Status
         if: always()
@@ -61,7 +57,7 @@ jobs:
               message="⚠️ **Link Status**: No issues linked. Ensure PR title/branch contains 'Fixes #N', 'Closes #N', or 'issue-#N' format. "
             fi
             
-            gh pr comment ${{ github.event.pull_request.number }} \
+                        gh pr comment "${PR_NUMBER}" \
               --body "$message" \
               --repo "$GITHUB_REPO" || true
           fi

@@ -174,7 +174,10 @@ refresh_remote_env_and_restart() {
     log_info "Refreshing remote .env on $TARGET_DEPLOY_USER@$TARGET_DEPLOY_HOST"
     audit_note "refresh_env target=${TARGET_DEPLOY_USER}@${TARGET_DEPLOY_HOST} services=${services[*]}"
 
-    ssh $SSH_OPTS "$TARGET_DEPLOY_USER@$TARGET_DEPLOY_HOST" bash -s -- "$REMOTE_REPO_DIR" "$ROTATION_TIMESTAMP" "${service_args[@]}" <<'REMOTE'
+    # Convert SSH_OPTS string to array for proper expansion (IaC compliance)
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    ssh "${ssh_opts_array[@]}" "$TARGET_DEPLOY_USER@$TARGET_DEPLOY_HOST" bash -s -- "$REMOTE_REPO_DIR" "$ROTATION_TIMESTAMP" "${service_args[@]}" <<'REMOTE'
 set -euo pipefail
 
 repo_dir="$1"
@@ -218,7 +221,10 @@ verify_rotation() {
         return 0
     fi
 
-    ssh $SSH_OPTS "$TARGET_DEPLOY_USER@$TARGET_DEPLOY_HOST" "set -euo pipefail; cd $REMOTE_REPO_DIR && docker compose ps --status running $service_list" >/dev/null
+    # Convert SSH_OPTS string to array for proper expansion (IaC compliance)
+    local -a ssh_opts_array
+    read -r -a ssh_opts_array <<< "$SSH_OPTS"
+    ssh "${ssh_opts_array[@]}" "$TARGET_DEPLOY_USER@$TARGET_DEPLOY_HOST" "set -euo pipefail; cd $REMOTE_REPO_DIR && docker compose ps --status running $service_list" >/dev/null
     log_info "  ✓ Remote service health check passed"
     audit_note "verified_services=$service_list"
 }

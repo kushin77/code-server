@@ -1,0 +1,24 @@
+cluster:
+  id: 1
+  brokers:
+    - id: 1
+
+redpanda:
+  node_id: 1
+  data_directory: /var/lib/redpanda/data
+  
+  admin:
+    address: 0.0.0.0
+    port: 9644
+  
+  kafka_api:
+    - address: 0.0.0.0
+      port: 9092
+  
+  schema_registry:
+    address: 0.0.0.0
+    port: 8081
+  
+  rack: primary
+
+license_check_interval_ms: 30000

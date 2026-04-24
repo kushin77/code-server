@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.0@sha256:abc123def456
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --node-id=1
+      - --kafka-addr=0.0.0.0:9092
+      - --advertise-kafka-addr=redpanda:9092
+      - --schema-registry-addr=0.0.0.0:8081
+      - --rpc-addr=0.0.0.0:33145
+      - --advertise-rpc-addr=redpanda:33145
+    ports:
+      - "9092:9092"   # Kafka broker
+      - "8081:8081"   # Schema Registry
+      - "9644:9644"   # Admin API
+    volumes:
+      - ./data/redpanda:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "info"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - services
+  
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v0.36.0@sha256:xyz789uvw456
+    container_name: redpanda-console
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+      SCHEMA_REGISTRY_URL: http://redpanda:8081
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redpanda
+    restart: unless-stopped
+    networks:
+      - services
+
+networks:
+  services:
+    driver: bridge

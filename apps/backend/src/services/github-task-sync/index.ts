@@ -320,19 +320,11 @@ export class GitHubTaskSyncService extends EventEmitter {
   /**
    * Get sync status
    */
-  getSyncStatus(): {
-    lastSyncTime: number;
-    totalTasks: number;
-    openTasks: number;
-    closedTasks: number;
-    conflictCount: number;
-  } {
+  getSyncStatus(): { lastSyncAt: Date | null; syncInProgress: boolean; totalTasks: number } {
     return {
-      lastSyncTime: this.lastSyncTime,
+      lastSyncAt: this.lastSyncTime ? new Date(this.lastSyncTime) : null,
+      syncInProgress: this.syncInProgress,
       totalTasks: this.localTasks.size,
-      openTasks: this.getOpenTasks().length,
-      closedTasks: this.getClosedTasks().length,
-      conflictCount: this.conflictLog.length,
     };
   }
 
@@ -514,17 +506,6 @@ export class GitHubTaskSyncService extends EventEmitter {
    */
   getTask(issueNumber: number): TaskRecord | undefined {
     return this.localTasks.get(issueNumber);
-  }
-
-  /**
-   * Get sync status
-   */
-  getSyncStatus(): { lastSyncAt: Date | null; syncInProgress: boolean; totalTasks: number } {
-    return {
-      lastSyncAt: this.lastSyncTime ? new Date(this.lastSyncTime) : null,
-      syncInProgress: this.syncInProgress,
-      totalTasks: this.localTasks.size,
-    };
   }
 
   /**

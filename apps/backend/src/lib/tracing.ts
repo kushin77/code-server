@@ -145,11 +145,12 @@ export function withSpanSync<T>(
   });
   try {
     const result = fn(span);
-    span.setStatus({ code: 0 }); // OK
+    span.setStatus({ code: 1 }); // SpanStatusCode.OK
     return result;
   } catch (err) {
-    span.recordException(err instanceof Error ? err : new Error(String(err)));
-    span.setStatus({ code: 2 }); // ERROR
+    const error = err instanceof Error ? err : new Error(String(err));
+    span.recordException(error);
+    span.setStatus({ code: 2, message: error.message }); // SpanStatusCode.ERROR
     throw err;
   } finally {
     span.end();

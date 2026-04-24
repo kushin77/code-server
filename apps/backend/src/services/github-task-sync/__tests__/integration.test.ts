@@ -7,13 +7,33 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GitHubTaskSyncService } from '../index';
-import * as GitHubModule from '../github-api-client';
+
+// vi.mock hoisted to top: replaces the GitHubAPIClient constructor before
+// index.ts binds it, so new GitHubAPIClient() uses the mock instance.
+vi.mock('../github-api-client', () => ({
+  GitHubAPIClient: vi.fn().mockImplementation(() => ({
+    validateAccess: vi.fn().mockResolvedValue(true),
+    listIssues: vi.fn().mockResolvedValue([]),
+    createIssue: vi.fn(),
+    updateIssue: vi.fn(),
+    closeIssue: vi.fn(),
+    reopenIssue: vi.fn(),
+    getAuthenticatedUser: vi.fn().mockResolvedValue({ login: 'test-user' }),
+    on: vi.fn(),
+    removeListener: vi.fn(),
+  })),
+}));
+
+import { GitHubAPIClient } from '../github-api-client';
 
 describe('GitHubTaskSyncService', () => {
   let service: GitHubTaskSyncService | null = null;
   let mockApiClient: any;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Reconfigure the mock to return a fresh mockApiClient for each test
     mockApiClient = {
       validateAccess: vi.fn().mockResolvedValue(true),
       listIssues: vi.fn().mockResolvedValue([]),
@@ -25,11 +45,9 @@ describe('GitHubTaskSyncService', () => {
       on: vi.fn(),
       removeListener: vi.fn(),
     };
-
-    // Spy on and replace the GitHubAPIClient constructor
-    vi.spyOn(GitHubModule, 'GitHubAPIClient' as any).mockImplementation(
-      () => mockApiClient
-    );
+    (GitHubAPIClient as any).mockImplementation(function GitHubAPIClientMock() {
+      return mockApiClient;
+    });
 
     service = new GitHubTaskSyncService({
       githubToken: 'test-token',
@@ -396,11 +414,9 @@ describe('GitHubTaskSyncService', () => {
 
       const status = service.getSyncStatus();
 
-      expect(status).toHaveProperty('lastSyncTime');
+      expect(status).toHaveProperty('lastSyncAt');
+      expect(status).toHaveProperty('syncInProgress');
       expect(status).toHaveProperty('totalTasks');
-      expect(status).toHaveProperty('openTasks');
-      expect(status).toHaveProperty('closedTasks');
-      expect(status).toHaveProperty('conflictCount');
     });
 
     it('should pass health check', async () => {

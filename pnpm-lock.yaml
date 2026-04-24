@@ -3842,7 +3842,7 @@ packages:
     resolution: {integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==}
     engines: {node: 18 || 20 || >=22}
 
-  minimatch@3.0.4:
+  minimatch@3.0.5:
     resolution: {integrity: sha512-yJHVQEhyqPLUTgt9B83PXu6W3rx4MvvHvSUvToogpwoGDOUQ+yDrR0HRot+yOCdCO7u4hX3pWft6kWBBcqh0UA==}
 
   minimatch@3.1.5:
@@ -8845,7 +8845,7 @@ snapshots:
     dependencies:
       brace-expansion: 5.0.5
 
-  minimatch@3.0.4:
+  minimatch@3.0.5:
     dependencies:
       brace-expansion: 1.1.14
 
@@ -8875,7 +8875,7 @@ snapshots:
       glob: 7.1.2
       growl: 1.10.5
       he: 1.1.1
-      minimatch: 3.0.4
+      minimatch: 3.0.5
       mkdirp: 0.5.1
       supports-color: 5.4.0
 

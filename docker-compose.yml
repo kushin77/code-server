@@ -169,8 +169,6 @@ services:
       - prometheus_data:/prometheus
     environment:
       - TZ=UTC
-    environment:
-      - TZ=UTC
     healthcheck:
       test:
         - CMD

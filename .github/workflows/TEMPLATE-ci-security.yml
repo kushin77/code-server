@@ -206,8 +206,9 @@ jobs:
         env:
           # DAST_TARGET_URL takes precedence; falls back to PORTAL_BASE_URL → IDE_BASE_URL.
           # Default to the stable health endpoint to avoid flaky root-path edge checks.
-          # Must be a publicly reachable HTTPS URL — loopback/private addresses are skipped automatically.
-          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL || format('{0}/health', vars.IDE_BASE_URL || 'https://ide.kushnir.cloud') }}
+          # Health endpoint supports HTTP (port 80) to bypass TLS issues during Let's Encrypt rate-limit periods.
+          # Must be a publicly reachable URL — loopback/private addresses are skipped automatically.
+          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL || format('{0}/health', vars.IDE_BASE_URL || 'http://ide.kushnir.cloud') }}
           PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
           IDE_BASE_URL: ${{ vars.IDE_BASE_URL }}
           GH_TOKEN: ${{ github.token }}

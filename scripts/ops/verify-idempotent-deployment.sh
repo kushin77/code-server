@@ -8,9 +8,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
+# Set DEPLOY_HOST before sourcing init.sh (which makes it readonly)
 DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
+
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
 log_title "🔄 IDEMPOTENCY VERIFICATION"
 log_info "Checking if deployment can be safely re-applied..."

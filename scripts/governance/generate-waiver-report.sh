@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# @file        scripts/governance/generate-waiver-report.sh
+# @module      governance/reporting
+# @description Generate compliance waiver inventory report with decision audit trail
+# @owner       compliance
+# @status      active
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

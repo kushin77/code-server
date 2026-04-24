@@ -9,7 +9,7 @@ vi.mock('axios', () => ({
   },
 }))
 
-vi.mock('../../../lib/tracing.js', () => ({
+vi.mock('../../../lib/tracing', () => ({
   extractTraceHeaders: vi.fn(() => ({ traceparent: '00-abcdef0123456789abcdef0123456789-abcdef0123456789-01' })),
   getTracer: vi.fn(() => ({})),
   withSpan: vi.fn(async (_tracer, _name, _attributes, fn) => {

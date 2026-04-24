@@ -1,0 +1,67 @@
+name: OPA Policy Validation
+
+on:
+  pull_request:
+    paths:
+      - 'policies/**'
+      - 'terraform/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/opa-policy-validation.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'policies/**'
+
+jobs:
+  policy-syntax-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up OPA
+        run: |
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+          chmod +x opa
+          sudo mv opa /usr/local/bin/
+      
+      - name: Validate OPA Policy Syntax
+        run: opa fmt -d policies/ --check
+      
+      - name: Run OPA Policy Tests
+        run: opa test -v policies/
+  
+  infrastructure-policy-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up conftest
+        run: |
+          curl -L -o conftest https://github.com/open-policy-agent/conftest/releases/download/v0.54.0/conftest_linux_x86_64
+          chmod +x conftest
+          sudo mv conftest /usr/local/bin/
+      
+      - name: Evaluate Terraform Policies
+        if: always()
+        run: |
+          cd terraform
+          terraform init -backend=false 2>/dev/null || true
+          terraform plan -json 2>/dev/null | conftest test -p ../policies -
+        continue-on-error: true
+      
+      - name: Evaluate Docker Compose Policies
+        if: always()
+        run: |
+          conftest test -p policies/infrastructure docker-compose.yml
+        continue-on-error: true
+      
+      - name: Upload Policy Evaluation Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: policy-evaluation-report
+          path: artifacts/policy-evaluation-*
+          retention-days: 30

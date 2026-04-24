@@ -42,6 +42,24 @@ variable "deployment_mode" {
   }
 }
 
+variable "aws_region" {
+  type        = string
+  description = "AWS region for remote state and infrastructure"
+  default     = "us-east-1"
+}
+
+variable "environment" {
+  type        = string
+  description = "Environment name for tagging"
+  default     = "production"
+}
+
+variable "kubeconfig_path" {
+  type        = string
+  description = "Path to Kubernetes configuration file"
+  default     = "~/.kube/config"
+}
+
 locals {
   deployment_profile = {
     private = {

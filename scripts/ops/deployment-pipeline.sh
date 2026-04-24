@@ -41,6 +41,17 @@ LOG_FILE="${PROJECT_ROOT}/logs/deployment-${DEPLOYMENT_ID}.log"
 ARTIFACT_DIR="${PROJECT_ROOT}/artifacts"
 REPORT_FILE="${ARTIFACT_DIR}/deployment-pipeline-${DEPLOYMENT_ID}.json"
 
+# Argument flags
+FORCE_DEPLOY=false
+EXECUTE_DEPLOY=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --force-deploy) FORCE_DEPLOY=true ;;
+        --execute) EXECUTE_DEPLOY=true ;;
+    esac
+done
+
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
 source_env_file "${PROJECT_ROOT}/.env.infrastructure"
 
@@ -109,16 +120,18 @@ log_info "Branch: $CURRENT_BRANCH | Commit: ${CURRENT_COMMIT:0:7}"
 
 # Verify repository is clean (allow override with --force-deploy)
 UNCOMMITTED=$(git -C "${PROJECT_ROOT}" status --porcelain=v1 2>/dev/null | awk 'END { print NR + 0 }')
+REPO_STATUS="clean"
 if (( UNCOMMITTED > 0 )); then
-    if [[ "${2:-}" != "--force-deploy" ]]; then
+    if [[ "$FORCE_DEPLOY" != "true" ]]; then
         stage_fail "Repository has $UNCOMMITTED uncommitted changes. Use --force-deploy to override."
         exit 1
     else
         log_warn "Repository has $UNCOMMITTED uncommitted changes (--force-deploy used, proceeding anyway)"
+        REPO_STATUS="override (${UNCOMMITTED} changes)"
     fi
 fi
 
-log_info "Repository status: clean"
+log_info "Repository status: ${REPO_STATUS}"
 stage_success
 
 # ============================================================================
@@ -296,6 +309,9 @@ stage_success
 
 log_stage 9 "Deployment report generation"
 
+DEPLOYMENT_STATUS="READY"
+FINAL_SUCCESS=$((SUCCESS + 1))
+
 REPORT_JSON="${ARTIFACT_DIR}/deployment-ready-${DEPLOYMENT_ID}.json"
 
 cat > "${REPORT_JSON}" << EOF
@@ -315,7 +331,7 @@ cat > "${REPORT_JSON}" << EOF
     "required_files": "all_present"
   },
   "stages_completed": $STAGE,
-  "stages_successful": $SUCCESS,
+    "stages_successful": $FINAL_SUCCESS,
   "deployment_status": "$DEPLOYMENT_STATUS",
   "artifacts": {
     "manifest": "$DEPLOYMENT_MANIFEST",
@@ -367,12 +383,20 @@ fi
 # Optional: Execute Deployment
 # ============================================================================
 
-if [[ "${2:-}" == "--execute" ]]; then
+if [[ "$EXECUTE_DEPLOY" == "true" ]]; then
     log_info "=== Executing Deployment ==="
     
-    if command -v docker-compose >/dev/null 2>&1; then
-        log_info "Starting docker-compose deployment..."
-        docker-compose -f "${PROJECT_ROOT}/docker-compose.yml" up -d
+    # Try docker compose (V2) first, then docker-compose (V1)
+    DOCKER_COMPOSE_CMD=""
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        DOCKER_COMPOSE_CMD="docker compose"
+    elif command -v docker-compose >/dev/null 2>&1; then
+        DOCKER_COMPOSE_CMD="docker-compose"
+    fi
+
+    if [[ -n "$DOCKER_COMPOSE_CMD" ]]; then
+        log_info "Starting deployment with $DOCKER_COMPOSE_CMD..."
+        $DOCKER_COMPOSE_CMD -f "${PROJECT_ROOT}/docker-compose.yml" up -d
         
         # Wait for health checks
         log_info "Waiting for services to be healthy..."
@@ -384,7 +408,7 @@ if [[ "${2:-}" == "--execute" ]]; then
             log_warn "⚠️  Health check failed - verify manually"
         fi
     else
-        log_error "docker-compose not available for execution in this environment"
+        log_error "Neither 'docker compose' nor 'docker-compose' available for execution"
     fi
 else
     log_info "Deployment ready. Use --execute flag to deploy now."

@@ -11,7 +11,7 @@ services:
   # ========================================================================
 
   opa:
-    image: openpolicyagent/opa:0.58.0
+    image: openpolicyagent/opa:0.58.0@sha256:63186b7f0d95e51cf4c7ee38cae6fd2cf9168020abd09d48104bd87c99f863fe
     container_name: opa-service
     command: run --server --log-level=info --set decision_logs.console.enabled=true
     ports:
@@ -49,7 +49,7 @@ services:
   # ========================================================================
 
   oauth2-proxy:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:e797b3934eb8d7cb2756b67e59be2ef29c18c2b45da763f540ece66d843cec85
     container_name: oauth2-proxy
     command:
       - --config=/etc/oauth2-proxy/oauth2-proxy.cfg
@@ -87,7 +87,7 @@ services:
   # ========================================================================
 
   caddy:
-    image: caddy:2.7.4
+    image: caddy:2.7.4@sha256:505de4e957da923672a8c79f16581e9b717a2479a8d5ddb909ab2d1b351f2ba4
     container_name: caddy-gateway
     ports:
       - "80:80"
@@ -128,7 +128,7 @@ services:
   # ========================================================================
 
   prometheus:
-    image: prom/prometheus:v2.48.0
+    image: prom/prometheus:v2.48.0@sha256:b440bc0e8aa5bab44a782952c09516b6a50f9d7b2325c1ffafac7bc833298e2e
     container_name: prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -163,7 +163,7 @@ services:
         max-file: "3"
 
   grafana:
-    image: grafana/grafana:10.2.0
+    image: grafana/grafana:10.2.0@sha256:1ee0c54286b8ca09a3dd1419ff8653e7780a148a006ac088544203bb0affe550
     container_name: grafana-dashboards
     ports:
       - "3000:3000"
@@ -198,7 +198,7 @@ services:
         max-file: "3"
 
   loki:
-    image: grafana/loki:2.9.4
+    image: grafana/loki:2.9.4@sha256:f379a20ce9dd815884ed6446aad8819b81a8ba4d36b548ca14be8cecbc6cbca0
     container_name: loki-logs
     ports:
       - "3100:3100"
@@ -234,7 +234,7 @@ services:
   # ========================================================================
 
   qdrant:
-    image: qdrant/qdrant:v1.7.0
+    image: qdrant/qdrant:v1.7.0@sha256:ff1639878418c0572f50a7e1314874e399537eb97e6d2f42d6b987a07a2c4c4f
     container_name: qdrant-vectors
     ports:
       - "6333:6333"
@@ -268,7 +268,7 @@ services:
   # ========================================================================
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
     container_name: postgres-db
     ports:
       - "5432:5432"
@@ -297,7 +297,7 @@ services:
         max-file: "3"
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:7aec734b2bb298a1d769fd8729f13b8514a41bf90fcdd1f38ec52267fbaa8ee6
     container_name: redis-cache
     ports:
       - "6379:6379"
@@ -329,7 +329,7 @@ services:
   # ========================================================================
 
   redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:v23.3.0
+    image: docker.redpanda.com/redpandadata/redpanda:v26.1.6@sha256:e5b6aaecf38861d199b0d26d635b83da26dd6e6acf0684cd8b92f16b4f4b8733
     container_name: redpanda-broker
     command:
       - redpanda
@@ -377,7 +377,7 @@ services:
       io.elevatediq.tier: "infrastructure"
 
   redpanda-console:
-    image: docker.redpanda.com/redpandadata/console:v0.49.1
+    image: docker.redpanda.com/redpandadata/console:v3.7.1@sha256:d5ec9a54339db74d8efa61b18576185903694bee1deb4c029befa492e41ac78f
     container_name: redpanda-console
     ports:
       - "8080:8080"
@@ -418,7 +418,7 @@ services:
   # ========================================================================
 
   ollama:
-    image: ollama/ollama:0.1.16
+    image: ollama/ollama:0.1.16@sha256:3a3ec7ea8e006aea63ce13b7027069687ed34cc85bbd7bbebf1f565db587511a
     container_name: ollama-models
     ports:
       - "11434:11434"

@@ -1,0 +1,133 @@
+# Resource Limits Configuration for docker-compose.yml
+# Add these deploy sections to each service for production safety
+#
+# Example:
+#   service_name:
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: '2.0'
+#           memory: 4g
+#         reservations:
+#           cpus: '1.0'
+#           memory: 2g
+
+OPA:
+  deploy:
+    resources:
+      limits:
+        cpus: '0.5'
+        memory: 512m
+      reservations:
+        cpus: '0.25'
+        memory: 256m
+
+oauth2-proxy:
+  deploy:
+    resources:
+      limits:
+        cpus: '0.5'
+        memory: 256m
+      reservations:
+        cpus: '0.25'
+        memory: 128m
+
+Caddy:
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 512m
+      reservations:
+        cpus: '0.5'
+        memory: 256m
+
+Prometheus:
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 1g
+      reservations:
+        cpus: '0.5'
+        memory: 512m
+
+Grafana:
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 512m
+      reservations:
+        cpus: '0.5'
+        memory: 256m
+
+Loki:
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 512m
+      reservations:
+        cpus: '0.5'
+        memory: 256m
+
+Qdrant:
+  deploy:
+    resources:
+      limits:
+        cpus: '2.0'
+        memory: 2g
+      reservations:
+        cpus: '1.0'
+        memory: 1g
+
+PostgreSQL:
+  deploy:
+    resources:
+      limits:
+        cpus: '2.0'
+        memory: 4g
+      reservations:
+        cpus: '1.0'
+        memory: 2g
+
+Redis:
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 1g
+      reservations:
+        cpus: '0.5'
+        memory: 512m
+
+Redpanda:
+  deploy:
+    resources:
+      limits:
+        cpus: '4.0'
+        memory: 8g
+      reservations:
+        cpus: '2.0'
+        memory: 4g
+
+Redpanda Console:
+  deploy:
+    resources:
+      limits:
+        cpus: '1.0'
+        memory: 512m
+      reservations:
+        cpus: '0.5'
+        memory: 256m
+
+Ollama:
+  deploy:
+    resources:
+      limits:
+        cpus: '4.0'
+        memory: 8g
+      reservations:
+        cpus: '2.0'
+        memory: 4g

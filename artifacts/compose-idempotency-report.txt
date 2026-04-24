@@ -1,5 +1,5 @@
-timestamp=2026-04-24T21:24:40Z
-compose_file=/mnt/c/code-server-enterprise/docker-compose.yml
+timestamp=2026-04-24T22:29:39Z
+compose_file=docker-compose.yml
 status=PASS
 immutable_image_digests=1
 immutable_configuration=1

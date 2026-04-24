@@ -1,0 +1,10 @@
+[0;32m[2026-04-24 18:29:07][0m ==========================================
+[0;32m[2026-04-24 18:29:07][0m Docker Image Digest Pinning
+[0;32m[2026-04-24 18:29:07][0m ==========================================
+[0;32m[2026-04-24 18:29:07][0m Mode: APPLY
+[0;32m[2026-04-24 18:29:07][0m Generating immutable image manifest: ./config/docker-images.lock
+[0;32m[2026-04-24 18:29:07][0m Image manifest generated
+[0;32m[2026-04-24 18:29:07][0m Updating docker-compose.yml with pinned image digests...
+[0;32m[2026-04-24 18:29:07][0m Applying image pinning to docker-compose.yml
+[0;32m[2026-04-24 18:29:07][0m Verifying all images are pinned to digests...
+[1;33m[2026-04-24 18:29:07] WARNING:[0m Unpinned image found:     image: openpolicyagent/opa:0.58.0

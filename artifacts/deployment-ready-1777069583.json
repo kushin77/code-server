@@ -1,0 +1,30 @@
+{
+  "deployment_id": "1777069583",
+  "timestamp": "2026-04-24T22:26:34Z",
+  "environment": "production",
+  "git_commit": "5e7135a",
+  "git_branch": "main",
+  "status": "READY",
+  "validation_results": {
+    "git_status": "clean",
+    "infrastructure_health": "pass",
+    "docker_config": "valid",
+    "terraform_config": "valid",
+    "opa_policies": "18 policies",
+    "required_files": "all_present"
+  },
+  "stages_completed": 9,
+    "stages_successful": 9,
+  "deployment_status": "READY",
+  "artifacts": {
+    "manifest": "/mnt/c/code-server-enterprise/artifacts/deployment-manifest-1777069583.json",
+    "report": "/mnt/c/code-server-enterprise/artifacts/deployment-ready-1777069583.json",
+    "backup": "/mnt/c/code-server-enterprise/.deployments/1777069583"
+  },
+  "next_steps": [
+    "Deploy via GitOps CD: git push origin main",
+    "Manual deployment: bash scripts/ops/deployment-pipeline.sh production --execute",
+    "Verify deployment: curl http://localhost:3100/health"
+  ],
+  "rollback_procedure": "scripts/_common/rollback-manager.sh rollback <commit-sha>"
+}

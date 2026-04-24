@@ -65,15 +65,25 @@ class StandardEventEnvelope:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
-        return {
+        actor = asdict(self.actor)
+        if actor.get("reputation_score") is None:
+            actor.pop("reputation_score", None)
+
+        data = {
             "event_id": self.event_id,
             "event_type": self.event_type,
             "schema_version": self.schema_version,
             "timestamp": self.timestamp,
             "source": asdict(self.source),
-            "actor": asdict(self.actor),
-            "correlation_id": self.correlation_id,
-            "payload": self.payload
+            "actor": actor,
+            "payload": self.payload,
+        }
+
+        if self.correlation_id is not None:
+            data["correlation_id"] = self.correlation_id
+
+        return {
+            **data
         }
     
     def to_json(self) -> str:

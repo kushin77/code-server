@@ -40,10 +40,10 @@ export class SentryErrorsSidebarProvider implements vscode.TreeDataProvider<Sent
   }
 
   private loadConfig(): void {
-    const config = vscode.workspace.getConfiguration('sentry')
-    const token = (config.get('token') as string | undefined) || ''
-    const organization = (config.get('organization') as string | undefined) || ''
-    const project = (config.get('project') as string | undefined) || ''
+    const config = vscode.workspace.getConfiguration('sentry');
+    const token = (config.get('token') as string | undefined) || '';
+    const _organization = (config.get('organization') as string | undefined) || '';
+    const _project = (config.get('project') as string | undefined) || '';
 
     if (!token) {
       void vscode.window.showWarningMessage(

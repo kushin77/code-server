@@ -22,16 +22,16 @@ import {
  * Simple event emitter for snapshot service
  */
 class SimpleEventEmitter {
-  private listeners = new Map<string, Set<Function>>();
+  private listeners = new Map<string, Set<(data?: any) => void>>();
 
-  on(event: string, listener: Function): void {
+  on(event: string, listener: (data?: any) => void): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event)!.add(listener);
   }
 
-  off(event: string, listener: Function): void {
+  off(event: string, listener: (data?: any) => void): void {
     this.listeners.get(event)?.delete(listener);
   }
 
@@ -409,10 +409,11 @@ export class SessionSnapshotService extends SimpleEventEmitter {
    * Private helper: Restore files
    */
   private async restoreFiles(
-    files: SnapshotFile[],
+    _files: SnapshotFile[],
     selectedFile: string | null
   ): Promise<void> {
     // In real implementation, open files via VS Code API
+    void selectedFile;  // Use selectedFile to suppress unused warning if needed later
   }
 
   /**
@@ -454,7 +455,7 @@ export class SessionSnapshotService extends SimpleEventEmitter {
   /**
    * Private helper: Restore layout
    */
-  private async restoreLayout(layout: SnapshotLayout): Promise<void> {
+  private async restoreLayout(_layout: SnapshotLayout): Promise<void> {
     // In real implementation, apply layout via VS Code API
   }
 }

@@ -61,7 +61,6 @@ export const SymbolDiscussionsPanel: React.FC<SymbolDiscussionsPanelProps> = ({
     setLineNumberText(initialLineNumber ? String(initialLineNumber) : '');
 
     void loadDiscussions(initialFilePath, initialLineNumber);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFilePath, initialLineNumber]);
 
   async function loadDiscussions(nextFilePath = filePath, nextLineNumber = clampLineNumber(lineNumberText)): Promise<void> {

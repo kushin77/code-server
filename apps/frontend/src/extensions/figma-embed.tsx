@@ -147,15 +147,15 @@ export const FigmaEmbedPanel: React.FC = () => {
    */
   const loadConfig = useCallback((): void => {
     // In real implementation, would call VS Code API
-    const token = localStorage.getItem('figma.token')
-    const fileKey = localStorage.getItem('figma.fileKey')
+    const token = localStorage.getItem('figma.token');
+    const fileKey = localStorage.getItem('figma.fileKey');
 
     if (token) {
-      setConfig({ token, fileKey: fileKey || undefined })
+      setConfig({ token, fileKey: fileKey || undefined });
     } else {
-      setError('Figma token not configured. Open settings to configure.')
+      setError('Figma token not configured. Open settings to configure.');
     }
-  }, [])
+  }, []);
 
   /**
    * Fetch list of Figma files

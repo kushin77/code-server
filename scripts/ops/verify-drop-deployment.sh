@@ -8,6 +8,8 @@
 # Usage: bash verify-drop-deployment.sh
 # Verifies: Replicas, NAS, PostgreSQL, Redis, Services, Ollama models, Policy engine
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${REPO_ROOT}/scripts/_common/init.sh"
@@ -20,6 +22,8 @@ VERIFY_PRIMARY_HOST="${VERIFY_PRIMARY_HOST:-${DEPLOY_HOST:-${REPLICA_1_IP:-}}}"
 VERIFY_REPLICA_HOST="${VERIFY_REPLICA_HOST:-${REPLICA_2_IP:-}}"
 VERIFY_NAS_HOST="${VERIFY_NAS_HOST:-${NAS_HOST:-}}"
 VERIFY_LOOPBACK_HOST="${VERIFY_LOOPBACK_HOST:-127.0.0.1}"
+VERIFY_HTTP_SCHEME="${VERIFY_HTTP_SCHEME:-http}"
+VERIFY_HTTPS_SCHEME="${VERIFY_HTTPS_SCHEME:-https}"
 VERIFY_TIMEOUT="${VERIFY_TIMEOUT:-5}"
 
 if [[ -z "$VERIFY_PRIMARY_HOST" ]]; then
@@ -164,11 +168,11 @@ log_info "───────────────────────�
 log_info "Phase 3: Service Health Endpoints"
 log_info "────────────────────────────────────────────"
 
-verify_http_endpoint "https://$VERIFY_PRIMARY_HOST/health" "Code-Server"
-verify_http_endpoint "http://$VERIFY_PRIMARY_HOST:11434/api/tags" "Ollama models"
-verify_http_endpoint "http://$VERIFY_PRIMARY_HOST:3250/health" "Prompt Gateway"
-verify_http_endpoint "http://$VERIFY_PRIMARY_HOST:8181/health" "OPA"
-verify_http_endpoint "http://$VERIFY_PRIMARY_HOST:9090/-/healthy" "Prometheus"
+verify_http_endpoint "${VERIFY_HTTPS_SCHEME}://${VERIFY_PRIMARY_HOST}/health" "Code-Server"
+verify_http_endpoint "${VERIFY_HTTP_SCHEME}://${VERIFY_PRIMARY_HOST}:11434/api/tags" "Ollama models"
+verify_http_endpoint "${VERIFY_HTTP_SCHEME}://${VERIFY_PRIMARY_HOST}:3250/health" "Prompt Gateway"
+verify_http_endpoint "${VERIFY_HTTP_SCHEME}://${VERIFY_PRIMARY_HOST}:8181/health" "OPA"
+verify_http_endpoint "${VERIFY_HTTP_SCHEME}://${VERIFY_PRIMARY_HOST}:9090/-/healthy" "Prometheus"
 
 log_info ""
 
@@ -200,11 +204,11 @@ log_info "Phase 6: Ollama Model Availability"
 log_info "────────────────────────────────────────────"
 
 verify_ssh_command "$VERIFY_PRIMARY_HOST" "root" \
-  "curl -s http://${VERIFY_LOOPBACK_HOST}:11434/api/tags | grep -q 'llama3:8b'" \
+  "curl -s ${VERIFY_HTTP_SCHEME}://${VERIFY_LOOPBACK_HOST}:11434/api/tags | grep -q 'llama3:8b'" \
   "llama3:8b model loaded"
 
 verify_ssh_command "$VERIFY_PRIMARY_HOST" "root" \
-  "curl -s http://${VERIFY_LOOPBACK_HOST}:11434/api/tags | grep -q 'mistral'" \
+  "curl -s ${VERIFY_HTTP_SCHEME}://${VERIFY_LOOPBACK_HOST}:11434/api/tags | grep -q 'mistral'" \
   "mistral model loaded"
 
 log_info ""
@@ -215,7 +219,7 @@ log_info "Phase 7: OPA Policy Engine"
 log_info "────────────────────────────────────────────"
 
 verify_ssh_command "$VERIFY_PRIMARY_HOST" "root" \
-  "curl -s http://${VERIFY_LOOPBACK_HOST}:8181/v1/policies | grep -q 'policy'" \
+  "curl -s ${VERIFY_HTTP_SCHEME}://${VERIFY_LOOPBACK_HOST}:8181/v1/policies | grep -q 'policy'" \
   "OPA policies loaded"
 
 log_info ""
@@ -273,11 +277,11 @@ if [ $CHECKS_FAILED -eq 0 ]; then
 ║  Your Kushnir.cloud deployment is ready for use!                      ║
 ║                                                                        ║
 ║  Next Steps:                                                           ║
-║  1. Access IDE: https://ide.kushnir.cloud                             ║
-║  2. View Metrics: https://prometheus.kushnir.cloud                    ║
-║  3. Configure Grafana: https://grafana.kushnir.cloud                  ║
-║  4. Check Logs: https://loki.kushnir.cloud                            ║
-║  5. Policy Rules: curl http://$VERIFY_PRIMARY_HOST:8181/v1/policies       ║
+║  1. Access IDE: ide.kushnir.cloud                                     ║
+║  2. View Metrics: prometheus.kushnir.cloud                            ║
+║  3. Configure Grafana: grafana.kushnir.cloud                          ║
+║  4. Check Logs: loki.kushnir.cloud                                    ║
+║  5. Policy Rules: curl ${VERIFY_HTTP_SCHEME}://${VERIFY_PRIMARY_HOST}:8181/v1/policies       ║
 ║                                                                        ║
 ╚════════════════════════════════════════════════════════════════════════╝
 

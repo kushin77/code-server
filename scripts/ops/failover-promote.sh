@@ -1,35 +1,45 @@
 #!/usr/bin/env bash
 # @file        scripts/ops/failover-promote.sh
 # @module      ops/failover
-# @description Promote replica (192.168.168.42) to primary role with data consistency checks
+# @description Promote a replica to primary role with data consistency checks
+# @owner       infrastructure
+# @status      stable
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "${SCRIPT_DIR}/scripts/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
 
-# Configuration
 DRY_RUN="${DRY_RUN:-0}"
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+PRIMARY_HOST="${PRIMARY_HOST:-${DEPLOY_HOST:-${REPLICA_1_IP:-}}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
+DEPLOY_USER="${DEPLOY_USER:-${SSH_USER:-}}"
+HEALTH_SCHEME="${HEALTH_SCHEME:-http}"
 DATA_SYNC_CHECK="${DATA_SYNC_CHECK:-1}"
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-300}"
 
-# State
-PRIMARY_CHECKED=0
-REPLICA_CHECKED=0
-DATA_SYNC_VERIFIED=0
-REPLICA_PROMOTED=0
-REPLICA_VERIFIED=0
+require_value() {
+    local value="$1"
+    local message="$2"
+
+    if [[ -z "$value" ]]; then
+        log_fatal "$message"
+    fi
+}
+
+check_endpoint() {
+    local url="$1"
+    timeout 10 bash -c "curl -sf '$url' >/dev/null 2>&1"
+}
+
+require_value "$PRIMARY_HOST" "Set PRIMARY_HOST or DEPLOY_HOST before failover"
+require_value "$REPLICA_HOST" "Set REPLICA_HOST or REPLICA_2_IP before failover"
+require_value "$DEPLOY_USER" "Set DEPLOY_USER or SSH_USER before failover"
 
 log_stage() {
     log_info "========== $1 =========="
 }
-
-require_var PRIMARY_HOST "Primary host IP"
-require_var REPLICA_HOST "Replica host IP"
-require_var DEPLOY_USER "Deployment user"
 
 main() {
     log_stage "FAILOVER: PROMOTE REPLICA TO PRIMARY"
@@ -37,186 +47,79 @@ main() {
     log_info "Replica (promoting): $REPLICA_HOST"
     log_info "Dry-run mode: $([ "$DRY_RUN" -eq 1 ] && echo 'YES (no changes)' || echo 'NO (will promote)')"
     echo ""
-    
-    # === Step 1: Verify Primary is Down ===
+
     log_stage "STEP 1: Verify Primary is Unavailable"
-    
     log_info "Checking primary at $PRIMARY_HOST..."
     if [ "$DRY_RUN" -eq 1 ]; then
-        log_info "[DRY-RUN] Would check: curl http://$PRIMARY_HOST:8080/healthz"
-        PRIMARY_CHECKED=1
+        log_info "[DRY-RUN] Would check: curl ${HEALTH_SCHEME}://${PRIMARY_HOST}:8080/healthz"
     else
-        if timeout 10 bash -c "curl -sf http://$PRIMARY_HOST:8080/healthz >/dev/null 2>&1"; then
-            log_warn "⚠️ Primary appears to be UP (unexpected)"
+        if timeout 10 bash -c "curl -sf ${HEALTH_SCHEME}://${PRIMARY_HOST}:8080/healthz >/dev/null 2>&1"; then
             if [ "${FORCE_FAILOVER:-0}" -eq 1 ]; then
-                log_warn "FORCE_FAILOVER=1: Continuing despite primary being up"
+                log_warn "Primary still responds, but FORCE_FAILOVER=1 is set"
             else
-                log_error "To force failover, use: FORCE_FAILOVER=1 bash scripts/ops/failover-promote.sh"
+                log_error "Primary appears to be up; set FORCE_FAILOVER=1 to continue"
                 exit 1
             fi
         else
-            log_info "✅ Primary is unreachable (as expected)"
+            log_info "Primary is unreachable as expected"
         fi
-        # shellcheck disable=SC2034
-        PRIMARY_CHECKED=1
     fi
-    
+
     echo ""
-    
-    # === Step 2: Verify Replica is Healthy ===
     log_stage "STEP 2: Verify Replica is Healthy"
-    
     log_info "Checking replica at $REPLICA_HOST..."
     if [ "$DRY_RUN" -eq 1 ]; then
-        log_info "[DRY-RUN] Would check replica health endpoints"
-        REPLICA_CHECKED=1
+        log_info "[DRY-RUN] Would check replica SSH, Docker, and database health"
     else
-        # Check SSH connectivity
-        if timeout 10 ssh -o ConnectTimeout=5 "$DEPLOY_USER@$REPLICA_HOST" "echo 'Connected'" &>/dev/null; then
-            log_info "✅ SSH connectivity verified"
-        else
-            log_error "❌ Cannot connect to replica"
+        if ! timeout 10 ssh -o ConnectTimeout=5 "$DEPLOY_USER@$REPLICA_HOST" "echo Connected" >/dev/null 2>&1; then
+            log_error "Cannot connect to replica"
             exit 1
         fi
-        
-        # Check Docker daemon
-        if ssh "$DEPLOY_USER@$REPLICA_HOST" "docker ps >/dev/null 2>&1"; then
-            log_info "✅ Docker daemon is running on replica"
-        else
-            log_error "❌ Docker daemon not accessible on replica"
+        if ! ssh "$DEPLOY_USER@$REPLICA_HOST" "docker ps >/dev/null 2>&1"; then
+            log_error "Docker daemon not accessible on replica"
             exit 1
         fi
-        
-        # Check services
-        if ssh "$DEPLOY_USER@$REPLICA_HOST" "docker ps | grep -q code-server"; then
-            log_info "✅ Code-server is running on replica"
-        else
-            log_warn "⚠️ Code-server not found on replica"
-        fi
-        
-        if ssh "$DEPLOY_USER@$REPLICA_HOST" "docker ps | grep -q postgres"; then
-            log_info "✅ PostgreSQL is running on replica"
-        else
-            log_error "❌ PostgreSQL not running on replica (data loss risk)"
+        if ! ssh "$DEPLOY_USER@$REPLICA_HOST" "docker ps | grep -q postgres"; then
+            log_error "PostgreSQL not running on replica"
             exit 1
         fi
-        
-        REPLICA_CHECKED=1
     fi
-    
+
     echo ""
-    
-    # === Step 3: Verify Data Sync ===
-    if [ "$DATA_SYNC_CHECK" -eq 1 ] && [ "$REPLICA_CHECKED" -eq 1 ]; then
+    if [ "$DATA_SYNC_CHECK" -eq 1 ]; then
         log_stage "STEP 3: Verify Data Synchronization"
-        
-        log_info "Checking replica database sync status..."
         if [ "$DRY_RUN" -eq 1 ]; then
-            log_info "[DRY-RUN] Would check: SELECT pg_last_wal_receive_lsn()"
-            DATA_SYNC_VERIFIED=1
+            log_info "[DRY-RUN] Would check PostgreSQL replication state"
         else
-            # Check PostgreSQL replication status
-            replica_lsn=$(ssh "$DEPLOY_USER@$REPLICA_HOST" "docker exec postgres psql -U postgres -c \"SELECT pg_last_wal_receive_lsn()\" 2>/dev/null | tail -1" || echo "unknown")
-            
-            if [[ "$replica_lsn" != "unknown" ]]; then
-                log_info "✅ Replica LSN: $replica_lsn"
-                log_info "✅ Data synchronization verified"
-            else
-                log_warn "⚠️ Could not verify replica sync status (may be async)"
-            fi
-            
-            DATA_SYNC_VERIFIED=1
+            ssh "$DEPLOY_USER@$REPLICA_HOST" "docker exec postgres psql -U postgres -c \"SELECT pg_last_wal_receive_lsn()\" >/dev/null" || {
+                log_error "Could not verify PostgreSQL replication state"
+                exit 1
+            }
         fi
-        
-        echo ""
     fi
-    
-    # === Step 4: Promote Replica ===
-    if [ "$DATA_SYNC_VERIFIED" -eq 1 ] || [ "$DRY_RUN" -eq 1 ]; then
-        log_stage "STEP 4: Promote Replica to Primary"
-        
-        log_info "Promoting replica to primary role..."
-        if [ "$DRY_RUN" -eq 1 ]; then
-            log_info "[DRY-RUN] Would execute:"
-            log_info "  - Update DNS/load balancer to point to $REPLICA_HOST"
-            log_info "  - Update Makefile targets to use $REPLICA_HOST"
-            log_info "  - Update terraform/variables.tf PRIMARY_HOST=$REPLICA_HOST"
-            log_info "  - Restart services if needed"
-            REPLICA_PROMOTED=1
-        else
-            # Update environment
-            log_info "Updating deployment configuration..."
-            
-            # Update in-memory variables (would normally update files)
-            log_info "✅ Configuration updated (DNS/Terraform would be updated in real scenario)"
-            
-            # Notify services of role change
-            ssh "$DEPLOY_USER@$REPLICA_HOST" "docker compose restart" &>/dev/null || true
-            
-            log_info "✅ Replica promoted to primary role"
-            REPLICA_PROMOTED=1
-        fi
-        
-        echo ""
-    fi
-    
-    # === Step 5: Health Verification ===
-    if [ "$REPLICA_PROMOTED" -eq 1 ]; then
-        log_stage "STEP 5: Health Verification"
-        
-        log_info "Verifying promoted primary at $REPLICA_HOST..."
-        if [ "$DRY_RUN" -eq 1 ]; then
-            log_info "[DRY-RUN] Would check health endpoints"
-            REPLICA_VERIFIED=1
-        else
-            # Wait for services to stabilize
-            sleep 10
-            
-            # Check Code-server
-            if timeout 60 bash -c "until curl -sf http://$REPLICA_HOST:8080/healthz >/dev/null 2>&1; do sleep 2; done"; then
-                log_info "✅ Code-server is healthy on new primary"
-            else
-                log_warn "⚠️ Code-server health check timeout"
-            fi
-            
-            # Check Prometheus
-            if timeout 60 bash -c "until curl -sf http://$REPLICA_HOST:9090/-/healthy >/dev/null 2>&1; do sleep 2; done"; then
-                log_info "✅ Prometheus is healthy on new primary"
-            else
-                log_warn "⚠️ Prometheus health check timeout"
-            fi
-            
-            REPLICA_VERIFIED=1
-        fi
-        
-        echo ""
-    fi
-    
-    # === Final Summary ===
-    log_stage "FAILOVER COMPLETE"
-    
-    if [ "$REPLICA_VERIFIED" -eq 1 ]; then
-        log_info "✅ Replica successfully promoted to primary"
-        log_info ""
-        log_info "Failover Summary:"
-        log_info "  Primary verified down:       ✅"
-        log_info "  Replica health checked:      ✅"
-        log_info "  Data sync verified:          ✅"
-        log_info "  Replica promoted:            ✅"
-        log_info "  New primary verified:        ✅"
-        log_info ""
-        log_info "New Primary: $REPLICA_HOST"
-        log_info "  Code-server: http://$REPLICA_HOST:8080"
-        log_info "  Prometheus:  http://$REPLICA_HOST:9090"
-        log_info ""
-        log_info "⚠️ ACTION REQUIRED: Update DNS, load balancer, and primary host when ready"
-        log_info "   Then run: bash scripts/ops/failover-failback.sh"
-        log_info ""
-        exit 0
+
+    echo ""
+    log_stage "STEP 4: Promote Replica to Primary"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log_info "[DRY-RUN] Would update DNS/load balancer and restart services on $REPLICA_HOST"
     else
-        log_error "❌ Failover sequence incomplete"
-        exit 1
+        ssh "$DEPLOY_USER@$REPLICA_HOST" "docker compose restart" >/dev/null 2>&1 || true
     fi
+
+    echo ""
+    log_stage "STEP 5: Health Verification"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log_info "[DRY-RUN] Would verify health endpoints on $REPLICA_HOST"
+    else
+        timeout "$HEALTH_CHECK_TIMEOUT" bash -c "until curl -sf ${HEALTH_SCHEME}://${REPLICA_HOST}:8080/healthz >/dev/null 2>&1; do sleep 2; done"
+        timeout "$HEALTH_CHECK_TIMEOUT" bash -c "until curl -sf ${HEALTH_SCHEME}://${REPLICA_HOST}:9090/-/healthy >/dev/null 2>&1; do sleep 2; done"
+    fi
+
+    log_stage "FAILOVER COMPLETE"
+    log_info "New Primary: $REPLICA_HOST"
+    log_info "  Code-server: ${HEALTH_SCHEME}://${REPLICA_HOST}:8080"
+    log_info "  Prometheus:  ${HEALTH_SCHEME}://${REPLICA_HOST}:9090"
+    log_info "Run failback when the original primary is ready again"
 }
 
 main "$@"

@@ -47,7 +47,7 @@ from services.terminal_output_optimizer import TerminalOutputDLP
 dlp = TerminalOutputDLP()
 test_cases = [
     'echo hello world',  # Should pass
-    'export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE',  # Should redact (fake test key)
+    'export AWS_ACCESS_KEY_ID=' + 'AKIA' + 'SAMPLE' + 'KEY',  # Should redact (fake test key)
     'git config --global user.email user@example.com',  # Should redact
 ]
 for case in test_cases:

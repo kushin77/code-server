@@ -17,6 +17,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 # Configuration
 REPLICA="${1:-${REPLICA_2_IP:-${REPLICA_HOST_2:-}}}"
 SSH_KEY="${SSH_KEY:-${ONPREM_SSH_KEY:-}}"

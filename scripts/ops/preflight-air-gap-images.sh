@@ -187,7 +187,7 @@ cat << EOF
 ╠════════════════════════════════════════════════════════════════════════╣
 ║ NEXT STEPS FOR AIR-GAPPED DEPLOYMENT:
 ║
-║ 1. On each air-gapped host (192.168.1.31, 192.168.1.42):
+║ 1. On each air-gapped host (${REPLICA_1_IP:-replica-1}, ${REPLICA_2_IP:-replica-2}):
 ║    a) Mount NAS:
 ║       mount -t nfs $PREFLIGHT_NAS_PATH /opt/images
 ║    b) Load images:

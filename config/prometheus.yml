@@ -1,0 +1,104 @@
+# @file prometheus.yml
+# @module config
+# @description Prometheus scrape configuration for ElevatedIQ DevOS observability
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: kushnir-cloud
+    env: production
+    region: primary
+
+# Alertmanager configuration for alert routing
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - localhost:9093
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+# Scrape configurations for each service
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  # OPA Policy Engine
+  - job_name: opa
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    static_configs:
+      - targets:
+          - opa:8181
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__scheme__]
+        target_label: scheme
+
+  # Caddy Gateway
+  - job_name: caddy
+    static_configs:
+      - targets:
+          - caddy:2019
+    metrics_path: /metrics
+
+  # PostgreSQL Database (via postgres_exporter)
+  - job_name: postgres
+    static_configs:
+      - targets:
+          - localhost:9187
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Redis Cache (via redis_exporter)
+  - job_name: redis
+    static_configs:
+      - targets:
+          - localhost:9121
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Node Exporter (system metrics)
+  - job_name: node
+    static_configs:
+      - targets:
+          - localhost:9100
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Docker metrics
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost:9323
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Grafana
+  - job_name: grafana
+    static_configs:
+      - targets:
+          - grafana:3000
+
+  # Loki logs ingestion metrics
+  - job_name: loki
+    static_configs:
+      - targets:
+          - loki:3100
+
+  # Service discovery for dynamically registered targets
+  - job_name: file-sd
+    static_configs:
+      - files:
+          - /etc/prometheus/targets/*.json

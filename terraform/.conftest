@@ -1,0 +1,66 @@
+# @file terraform/.conftest
+# @module infrastructure
+# @description Conftest configuration for OPA policy validation in Terraform
+# @governance GOV-002 - Terraform must pass policy checks before apply
+
+# Conftest namespace for terraform policies
+namespace: terraform
+
+# Test rules
+rules:
+  # No hardcoded IPs in infrastructure
+  - name: no-hardcoded-ips
+    description: Infrastructure must not contain hardcoded IP addresses (use variables)
+    patterns:
+      - '"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}"'
+      - "'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'"
+    fail_message: 'Hardcoded IP address found. Use variables from variables.tf instead (kushin77/code-server#1552)'
+
+  # No hardcoded domain names
+  - name: no-hardcoded-domain
+    description: Use APEX_DOMAIN variable instead of hardcoded domain
+    patterns:
+      - 'kushnir.cloud'
+      - 'kushnir.local'
+    fail_message: 'Hardcoded domain name found. Use var.apex_domain instead (kushin77/code-server#1531)'
+
+  # No :latest tags in production
+  - name: no-floating-image-tags
+    description: Container images must use immutable digests, not floating tags
+    patterns:
+      - 'image.*:latest'
+      - 'image.*:main'
+      - 'image.*:stable'
+    fail_message: 'Floating image tag detected. Use immutable SHA256 digest instead (kushin77/code-server#1550)'
+
+  # Secret values must come from variables/GSM
+  - name: no-hardcoded-secrets
+    description: Do not hardcode secrets in Terraform
+    patterns:
+      - 'password.*=.*".*"'
+      - 'api_key.*=.*".*"'
+      - 'secret.*=.*".*"'
+    fail_message: 'Potential hardcoded secret detected. Use var.secret_name or google_secret_manager_secret_version instead'
+
+  # All resources must have descriptions
+  - name: all-resources-documented
+    description: All Terraform resources should have descriptions
+    patterns: []  # Empty patterns means check syntax
+    fail_message: 'Resource missing description comment'
+
+# Severity levels
+severity: warning  # Set to 'error' to fail CI on violations
+
+# Ignore rules for specific file patterns
+ignore:
+  - path: "**/examples/**"  # Example files can be lenient
+  - path: "**/test/**"      # Test files can be lenient
+  - resource_type: "null_resource"  # Allow null resources
+
+# Policy data files to use
+data:
+  - type: json
+    source: policies/terraform-policies.json
+
+# Merge strategy for multiple inputs
+merge_strategy: deep

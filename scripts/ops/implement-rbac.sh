@@ -17,7 +17,7 @@ REDIS_ACL_TEMPLATE="${PROJECT_ROOT}/config/redis.acl.example"
 
 setup_opa_rbac() {
     log_info "Configuring OPA RBAC policies..."
-    mkdir -p "$OPA_POLICY_DIR"
+    mkdir -p "$OPA_POLICY_DIR" "$(dirname "$REDIS_ACL_TEMPLATE")"
 
     cat <<REGO > "$OPA_POLICY_DIR/rbac.rego"
 package system.rbac
@@ -56,8 +56,8 @@ harden_service_access() {
     # Placeholder for service-specific RBAC (e.g., Postgres roles, Redis ACLs)
     log_info "Applying Redis ACL template..."
     cat <<ACL > "${REDIS_ACL_TEMPLATE}"
-user default on nopass ~* &* +@all
-user worker on >workerpassword ~work:* +@read +@write -@admin
+user default off ~* &* +@all
+user worker on >REPLACE_WITH_SECURE_PASSWORD ~work:* +@read +@write -@admin
 ACL
     log_success "Service access templates generated."
 }

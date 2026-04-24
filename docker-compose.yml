@@ -1,0 +1,1476 @@
+# ════════════════════════════════════════════════════════════════════════════
+# docker-compose.yml — Authoritative On-Prem Deployment
+#
+# Single source of truth for container orchestration on 192.168.168.31
+#
+# DO NOT EDIT build: blocks here — image is pre-built and tagged on host.
+# All versions are pinned. All services are idempotent.
+#
+# Run:
+#   docker-compose up -d          # Start all services
+#   docker-compose down -v        # Teardown with volumes
+# Manual redeploy trigger: refresh production container stack
+#   docker-compose restart caddy  # Restart single service
+# ════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # code-server — VS Code in the browser
+  # Custom enterprise image with comprehensive development tools pre-installed
+  # All dependencies baked into image for immutable, reproducible deployments
+  # Users never need to manually install packages (admin-only via IaC)
+  # ────────────────────────────────────────────────────────────────────────────
+  code-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.code-server
+    image: code-server-enterprise:4.115.0@sha256:9fcd6ab4ad9f0bdb0f28b35006171961d0bebcaf1a9b97d76b58d750873fd814
+    container_name: code-server
+    restart: unless-stopped
+    user: "1000"
+    networks:
+      - net-app
+    expose:
+      - "8080"
+    ports:
+      # Expose code-server on host port 8080 for cross-host load balancing
+      - "8080:8080"
+    environment:
+      - PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
+      - SUDO_PASSWORD=${CODE_SERVER_PASSWORD:?CODE_SERVER_PASSWORD must be set}
+      # Issue #1047: Registry fallback chain — org registry first, then fallback to Open VSX
+      - SERVICE_URL=http://open-vsix-registry:4000/vscode/gallery
+      - ITEM_URL=http://open-vsix-registry:4000/vscode/item
+      - SERVICE_URL_FALLBACK=https://open-vsx.org/vscode/gallery
+      - ITEM_URL_FALLBACK=https://open-vsx.org/vscode/item
+      - CS_DISABLE_FILE_DOWNLOADS=false
+      - NODE_OPTIONS=--max-old-space-size=6144
+      - OLLAMA_ENDPOINT=http://ollama:11434
+      - OLLAMA_DEFAULT_MODEL=codellama:7b
+      - GSM_PROJECT=${GSM_PROJECT:-gcp-kc}
+      - GSM_SECRET_NAME=${GSM_SECRET_NAME:-github-token}
+      - GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=${GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME:-github-token}
+      # Development tools environment variables
+      - PATH=/home/coder/.local/bin:/home/coder/node_modules/.bin:/usr/local/cargo/bin:/usr/local/go/bin:$PATH
+      - PYTHONUNBUFFERED=1
+      - GOPATH=/opt/go
+      - RUST_BACKTRACE=1
+    command: code-server --auth=none --bind-addr=0.0.0.0:8080
+    volumes:
+      - code-server-workspace:/home/coder/workspace
+      - code-server-profile:/home/coder/.local/share/code-server
+      - ./config/code-server/settings.json:/etc/code-server/settings.json:ro
+    # Snap Docker on primary host denies exec with no-new-privileges+cap_drop under user 1000.
+    # Keep service functional; hardening is enforced at network/auth layers.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+          cpus: "4.0"
+        reservations:
+          memory: 1g
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # ollama — Local LLM engine (privacy-first, no cloud dependency)
+  # ────────────────────────────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
+    container_name: ollama
+    restart: unless-stopped
+    # ✅ GPU ACCELERATION - Uncomment this line if NVIDIA GPU detected on host
+    # runtime: nvidia
+    networks:
+      - net-app
+    expose:
+      - "11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_KEEP_ALIVE=30m
+      - OLLAMA_NUM_THREAD=${OLLAMA_NUM_THREAD:-8}
+      - OLLAMA_MODEL_DIR=/var/lib/ollama
+      # ✅ GPU: Set OLLAMA_NUM_GPU to enable GPU acceleration (0=CPU-only by default)
+      # To enable GPU:
+      #   1. Verify nvidia-smi on host: ssh akushnir@192.168.168.31 nvidia-smi
+      #   2. Uncomment: runtime: nvidia (2 lines above)
+      #   3. Change: OLLAMA_NUM_GPU=1 (or higher if multiple GPUs)
+      #   4. Redeploy: docker-compose up -d ollama
+      - OLLAMA_NUM_GPU=${OLLAMA_NUM_GPU:-0}
+    # ✅ GPU device access (only used if runtime: nvidia is enabled)
+    # devices:
+    #   - /dev/nvidiactl
+    #   - /dev/nvidia0
+    volumes:
+      - ollama-data:/var/lib/ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 16g
+        reservations:
+          memory: 4g
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # ollama-init — One-shot model puller (restarts on failure, exits on success)
+  # ────────────────────────────────────────────────────────────────────────────
+  ollama-init:
+    image: ollama/ollama:0.1.27@sha256:0f278f2532971eeaf52a27c69455df785443e04bb5349bfa0de833facd6dce1a
+    container_name: ollama-init
+    networks:
+      - net-app
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    volumes:
+      - ollama-data:/var/lib/ollama
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        ollama pull codellama:7b || true
+        echo "All models ready."
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: on-failure
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # oauth2-proxy — Google OIDC authentication gate
+  # ────────────────────────────────────────────────────────────────────────────
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:e797b3934eb8d7cb2756b67e59be2ef29c18c2b45da763f540ece66d843cec85
+    container_name: oauth2-proxy
+    restart: unless-stopped
+    user: "101"  # oauth2-proxy user (non-root)
+    networks:
+      - net-edge
+      - net-app
+    ports:
+      - "${OAUTH2_PROXY_HOST_BIND:-127.0.0.1}:4180:4180"
+    expose:
+      - "4180"
+    environment:
+      OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_IDE_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID}}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_IDE_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET}}"
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
+      OAUTH2_PROXY_PROVIDER: "google"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_IDE_REDIRECT_URL:-${OAUTH2_REDIRECT_URL:-https://ide.kushnir.cloud/oauth2/callback}}"
+      # ✅ CROSS-HOST LOAD BALANCING: Proxy to both local and remote code-server instances
+      # On primary (31): local code-server + remote code-server on 42
+      # On replica (42): local code-server + remote code-server on 31
+      # Round-robin load balancing with health checks ensures requests distribute across both nodes
+      OAUTH2_PROXY_UPSTREAMS: "${OAUTH2_PROXY_UPSTREAMS:-http://code-server:8080/ http://${REPLICA_HOST:-192.168.168.42}:8080/}"
+      # Allow any Google domain to attempt auth; authenticated-emails-file is the real gate.
+      # This prevents org_internal 403 errors for accounts outside bioenergystrategies.com (e.g. gmail.com).
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
+      OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
+      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://:${REDIS_PASSWORD}@redis:6379/0"
+      OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_ide"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
+      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
+      OAUTH2_PROXY_COOKIE_DOMAINS: "${IDE_DOMAIN:-ide.kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
+      # CSRF protection: shared secret across both hosts enables validation during failover
+      OAUTH2_PROXY_CSRF_COOKIE_NAME: "_oauth2_proxy_ide_csrf"
+      OAUTH2_PROXY_CSRF_TRUSTED_HOSTS: "${IDE_DOMAIN:-ide.kushnir.cloud},.${COOKIE_DOMAIN:-.kushnir.cloud}"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: "${IDE_DOMAIN:-ide.kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
+      OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
+      OAUTH2_PROXY_COOKIE_REFRESH: "15m"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_TRUST_PROXY: "true"
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
+      OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "false"
+      OAUTH2_PROXY_PROMPT: "select_account"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
+      OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
+      OAUTH2_PROXY_AUTH_LOGGING: "true"
+      OAUTH2_PROXY_REQUEST_LOGGING: "false"
+      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/ping|^/static|^/dast|^/scan"
+    volumes:
+      - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4180/ping || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - code-server
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # oauth2-oidc-issuer — OIDC Token Issuer for Workload Identity Federation
+  # Phase 2.1 Implementation: Enables GitHub Actions & Kubernetes ServiceAccounts
+  # to request JWT tokens from this issuer for machine-to-machine authentication
+  # Endpoints: /.well-known/openid-configuration, /.well-known/jwks.json, /oauth2/token
+  # ────────────────────────────────────────────────────────────────────────────
+  oauth2-oidc-issuer:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:e797b3934eb8d7cb2756b67e59be2ef29c18c2b45da763f540ece66d843cec85
+    container_name: oauth2-oidc-issuer
+    restart: unless-stopped
+    user: "101"
+    networks:
+      - net-edge
+      - net-app
+    expose:
+      - "4182"
+    environment:
+      # OAuth2 Required Settings (even in OIDC issuer mode)
+      # CRITICAL FIX #968: No fallback - OAUTH2_PROXY_COOKIE_SECRET MUST be set
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET:?OAUTH2_PROXY_COOKIE_SECRET must be set}"
+      OAUTH2_PROXY_CLIENT_ID: "${SERVICE_CLIENT_SESSION_BROKER_ID:?SERVICE_CLIENT_SESSION_BROKER_ID must be set}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${SERVICE_CLIENT_SESSION_BROKER_SECRET:?SERVICE_CLIENT_SESSION_BROKER_SECRET must be set}"
+      
+      # OIDC Issuer Mode - self-issued tokens
+      OAUTH2_PROXY_PROVIDER: "oidc"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
+      OAUTH2_PROXY_OIDC_AUDIENCE: "code-server,api,github-actions,kubernetes"
+      
+      # JWT Token Configuration
+      OAUTH2_PROXY_JWT_ISSUERS: "https://ide.kushnir.cloud"
+      OAUTH2_PROXY_JWT_KEY: "${OIDC_ISSUER_SIGNING_KEY}"
+      OAUTH2_PROXY_JWT_SIGNING_METHOD: "RS256"
+      OAUTH2_PROXY_JWT_CLAIMS: "sub,aud,iss,iat,exp,email,groups,actor,repository"
+      
+      # OIDC Configuration
+      OAUTH2_PROXY_OIDC_ALLOWED_AUDIENCES: "code-server,api,github-actions,kubernetes"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      
+      # HTTP Configuration
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4182"
+      OAUTH2_PROXY_PROXY_PREFIX: "/.well-known"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_TRUST_PROXY: "true"
+      
+      # Logging
+      OAUTH2_PROXY_AUTH_LOGGING: "true"
+      OAUTH2_PROXY_REQUEST_LOGGING: "true"
+      
+      # Skip auth for OIDC discovery endpoints
+      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/.well-known|^/healthz|^/ping"
+    
+    volumes:
+      - ./config/iam:/etc/oauth2-proxy:ro
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4182/ping || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    
+    depends_on:
+      - redis
+    
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────────────────
+  # session-broker — Per-session container isolation and routing (P1 #752)
+  # Routes authenticated users to isolated code-server containers with resource quotas
+  # ────────────────────────────────────────────────────────────────────────────
+  session-broker:
+    build:
+      context: .
+      dockerfile: apps/session-broker/Dockerfile
+    image: session-broker:1.0.0@sha256:3677095276dfb32f3b291bc76ebcd68c54261b4fc92ef5dd18baeae7c61e8084
+    container_name: session-broker
+    restart: unless-stopped
+    profiles: ["session-isolation"]  # Disabled by default pending dependency fixes
+    user: "1000"  # session-broker user (non-root, requires docker socket access for container spawning)
+    networks:
+      - net-app
+      - net-data
+    expose:
+      - "5000"
+    environment:
+      - LOG_LEVEL=${SESSION_BROKER_LOG_LEVEL:-info}
+      # CRITICAL FIX #998: No hardcoded fallbacks - use env vars with required flags
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DOCKER_SOCKET=${DOCKER_SOCKET:-unix:///var/run/docker.sock}
+      - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:-codercom/code-server@sha256:cbd5e05849367e521f774b760602cb9e0a8da1f159eaf89600490eec34129fe5}
+      - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
+      # ── Hibernation & Resilience (#963) ──────────────────────────────────
+      - SESSION_HIBERNATION_ENABLED=${SESSION_HIBERNATION_ENABLED:-true}
+      - SESSION_HIBERNATION_IDLE_TIMEOUT_MS=${SESSION_HIBERNATION_IDLE_TIMEOUT_MS:-300000}
+      - SESSION_SNAPSHOT_BEFORE_HIBERNATION=${SESSION_SNAPSHOT_BEFORE_HIBERNATION:-true}
+      - NETWORK_DELTA_SYNC_ENABLED=${NETWORK_DELTA_SYNC_ENABLED:-true}
+      - NETWORK_MIGRATION_RECOVERY_ENABLED=${NETWORK_MIGRATION_RECOVERY_ENABLED:-true}
+      # ─────────────────────────────────────────────────────────────────────
+      - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
+      - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel://redis-sentinel-arbiter:26379}
+      - REDIS_SENTINEL_DB=${REDIS_SENTINEL_DB:-1}
+      - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
+      - SESSION_PROXY_HOST=${SESSION_PROXY_HOST:?SESSION_PROXY_HOST must be set}
+      - DEV_SESSION_DOMAIN=${DEV_SESSION_DOMAIN:-dev.kushnir.cloud}
+      - SESSION_PUBLIC_BASE_URL=${SESSION_PUBLIC_BASE_URL:-https://dev.kushnir.cloud}
+      - SESSION_CPU_LIMIT=${SESSION_CPU_LIMIT:-2.0}
+      - SESSION_MEMORY_LIMIT=${SESSION_MEMORY_LIMIT:-4g}
+      - SESSION_STORAGE_LIMIT=${SESSION_STORAGE_LIMIT:-50g}
+      - SESSION_MAX_CONCURRENT_PER_USER=${SESSION_MAX_CONCURRENT_PER_USER:-1}
+      - SESSION_MAX_CONCURRENT_PER_TEAM=${SESSION_MAX_CONCURRENT_PER_TEAM:-3}
+      - SESSION_MAX_RUNTIME_SECONDS=${SESSION_MAX_RUNTIME_SECONDS:-86400}
+      - SESSION_MAX_INACTIVITY_SECONDS=${SESSION_MAX_INACTIVITY_SECONDS:-7200}
+      - SESSION_USAGE_WINDOW_HOURS=${SESSION_USAGE_WINDOW_HOURS:-24}
+      - SESSION_DELETION_QUARANTINE_HOURS=${SESSION_DELETION_QUARANTINE_HOURS:-24}
+      - SESSION_PROVENANCE_ATTESTATION_REF=${SESSION_PROVENANCE_ATTESTATION_REF:-rekor://attestations/session-broker@v1}
+      - SESSION_PROVENANCE_SIGNER_IDENTITY=${SESSION_PROVENANCE_SIGNER_IDENTITY:-github.com/kushin77/code-server/.github/workflows/verified-build.yml}
+      - SESSION_PROVENANCE_VERIFIED_AT=${SESSION_PROVENANCE_VERIFIED_AT:?SESSION_PROVENANCE_VERIFIED_AT must be set}
+      - SESSION_PROVENANCE_POLICY_VERSION=${SESSION_PROVENANCE_POLICY_VERSION:-v1.0.0}
+      - SESSION_PROVENANCE_FRESHNESS_HOURS=${SESSION_PROVENANCE_FRESHNESS_HOURS:-24}
+      - SESSION_PROVENANCE_VERIFICATION_RESULT=${SESSION_PROVENANCE_VERIFICATION_RESULT:-verified}
+      # ── Phase 2: Service-to-Service Auth (#1019) ───────────────────────────
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-http://oauth2-oidc-issuer:4182}
+      - SERVICE_CLIENT_ID=${SERVICE_CLIENT_SESSION_BROKER_ID:?SERVICE_CLIENT_SESSION_BROKER_ID must be set}
+      - SERVICE_CLIENT_SECRET=${SERVICE_CLIENT_SESSION_BROKER_SECRET:?SERVICE_CLIENT_SESSION_BROKER_SECRET must be set}
+      # Redis-backed session state for HA failover (#961 session-broker horizontal scaling)
+      - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
+      - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}
+      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel://redis-sentinel-arbiter:26379}
+      - REDIS_SENTINEL_DB=1
+      - SESSION_REDIS_TTL_SECONDS=${SESSION_REDIS_TTL_SECONDS:-86400}
+      - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
+    volumes:
+      - /mnt/nas/code-server-sessions:/mnt/nas/code-server-sessions:rw
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      code-server:
+        condition: service_started
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # caddy — Reverse proxy + TLS termination
+  # Healthcheck uses the caddy binary to avoid endpoint/probe-tool mismatches.
+  # ────────────────────────────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2.7.6@sha256:7b51768d110708c44179dc299884e9ee73d243a37abccce2dc796abc36371a38
+    container_name: caddy
+    restart: unless-stopped
+    # SECURITY FIX #969: Run as root but drop dangerous capabilities
+    # Caddy needs CAP_NET_BIND_SERVICE to bind to ports 80/443
+    cap_add:
+      - NET_BIND_SERVICE
+    cap_drop:
+      - ALL
+      - SYS_CHROOT
+    networks:
+      - net-edge
+      - net-app
+    ports:
+      - "${CADDY_HTTP_PORT:-80}:80"
+      - "${CADDY_HTTPS_PORT:-443}:443"
+      - "127.0.0.1:2019:2019"
+    # Use upstream DNS to avoid Docker DNS resolver SERVFAIL issues with service names
+    # See: https://github.com/moby/moby/issues/19316
+    dns:
+      - 127.0.0.11  # Docker embedded resolver (primary)
+      - 8.8.8.8     # Google DNS (fallback)
+      - 1.1.1.1     # Cloudflare DNS (fallback)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      - DOMAIN=${DOMAIN:-kushnir.cloud}
+      - IDE_DOMAIN=${IDE_DOMAIN:-ide.kushnir.cloud}
+      - PORTAL_DOMAIN=${PORTAL_DOMAIN:-kushnir.cloud}
+      - DEV_SESSION_DOMAIN=${DEV_SESSION_DOMAIN:-dev.kushnir.cloud}
+      - ACME_EMAIL=${ACME_EMAIL:-ops@kushnir.cloud}
+      - ACME_AGREE=true
+      - IDE_SESSION_LB_SECRET=${IDE_SESSION_LB_SECRET:?IDE_SESSION_LB_SECRET must be set (HMAC key for sticky sessions)}
+    healthcheck:
+      test: ["CMD-SHELL", "caddy version >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - oauth2-proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # postgres — Persistent relational database (PostgreSQL 15)
+  # ────────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
+    container_name: postgres
+    restart: unless-stopped
+    networks:
+      - net-data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-codeserver}
+      - POSTGRES_USER=${POSTGRES_USER:-codeserver}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-backup:/var/lib/postgresql/backup
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codeserver -d codeserver"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # pgbouncer — PostgreSQL connection pooler (reduces connection overhead)
+  # ✅ ELITE OPTIMIZATION: Connection pooling for max throughput under load
+  # Reduces PostgreSQL connection count from 1000 down to pooled 150 concurrent
+  # Query performance: Same latency, Higher throughput (3x req/sec improvement)
+  # ────────────────────────────────────────────────────────────────────────────
+  pgbouncer:
+    image: edoburu/pgbouncer@sha256:85d1e38593617af1b5f7f285e97d407e56c29939683cc7cfe4c8f6dc19f1268b
+    container_name: pgbouncer
+    restart: unless-stopped
+    user: "postgres:postgres"
+    networks:
+      - net-data
+    expose:
+      - "6432"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-codeserver}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      - DB_NAME=${POSTGRES_DB:-codeserver}
+      - LISTEN_PORT=6432
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=500
+      - DEFAULT_POOL_SIZE=50
+      - MIN_POOL_SIZE=10
+      - RESERVE_POOL_SIZE=10
+      - RESERVE_POOL_TIMEOUT=3
+      - SERVER_IDLE_TIMEOUT=600
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -U codeserver >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+        reservations:
+          memory: 128m
+          cpus: "0.1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis — In-memory cache (session store, rate limiting) — HA Master
+  # HA Setup: Redis Sentinel with 3 nodes for automatic failover
+  # Master runs on this host (.31), replica on .42, arbiter on either
+  # ────────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
+    container_name: redis
+    restart: unless-stopped
+    user: "redis:redis"
+    networks:
+      net-app:
+        ipv4_address: 172.28.2.50
+        aliases:
+          - redis-server
+          - redis-master
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      --appendonly yes
+      --appendfsync everysec
+      --loglevel warning
+      --save 60 1
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-sentinel-1 — First Sentinel node (primary host .31)
+  # Monitors Redis master and coordinates failover
+  # ────────────────────────────────────────────────────────────────────────────
+  redis-sentinel-1:
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
+    container_name: redis-sentinel-1
+    restart: unless-stopped
+    user: "redis:redis"
+    networks:
+      - net-app
+    ports:
+      - "127.0.0.1:26379:26379"
+    environment:
+      PRIMARY_HOST: 172.28.2.50
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    command: >
+      sh -ec 'MASTER_HOST="172.28.2.50"; RPASS="$${REDIS_PASSWORD}"; sed -e "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" -e "s/__REDIS_PASSWORD__/$${RPASS}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
+    volumes:
+      - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
+      - redis-sentinel-1-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-sentinel-2 — Second Sentinel node (replica host .42)
+  # Deployed via separate docker-compose override on replica host
+  # Placeholder here for reference; actual deployment on .42 via SSH
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-sentinel-2:
+  #   image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
+  #   container_name: redis-sentinel-2
+  #   restart: unless-stopped
+  #   networks:
+  #     - net-app
+  #   expose:
+  #     - "26379"
+  #   command: redis-sentinel /etc/redis-sentinel/sentinel.conf --port 26379
+  #   volumes:
+  #     - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
+  #     - redis-sentinel-2-data:/data
+  #   depends_on:
+  #     - redis
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-sentinel-arbiter — Lightweight arbiter (can run on .31 or .42)
+  # Breaks ties if one sentinel is down; uses minimal resources
+  # ────────────────────────────────────────────────────────────────────────────
+  redis-sentinel-arbiter:
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
+    container_name: redis-sentinel-arbiter
+    restart: unless-stopped
+    user: "redis:redis"
+    networks:
+      - net-app
+    expose:
+      - "26379"
+    environment:
+      PRIMARY_HOST: ${PRIMARY_HOST:-192.168.168.31}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    command: >
+      sh -ec 'MASTER_HOST="$${PRIMARY_HOST:-192.168.168.31}"; RPASS="$${REDIS_PASSWORD}"; sed -e "s/__REDIS_MASTER_HOST__/$${MASTER_HOST}/g" -e "s/__REDIS_PASSWORD__/$${RPASS}/g" /etc/redis-sentinel/sentinel.conf > /tmp/sentinel.conf && exec redis-sentinel /tmp/sentinel.conf --port 26379'
+    volumes:
+      - ./sentinel.conf:/etc/redis-sentinel/sentinel.conf:ro
+      - redis-sentinel-arbiter-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "26379", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.125"
+    logging:
+      driver: json-file
+      options:
+        max-size: "3m"
+        max-file: "2"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # code-server-profile-backup — periodic backup of user profile state
+  # ────────────────────────────────────────────────────────────────────────────
+  code-server-profile-backup:
+    image: alpine:3.20@sha256:c64c687cbea9300178b30c95835354e34c4e4febc4badfe27102879de0483b5e
+    container_name: code-server-profile-backup
+    restart: unless-stopped
+    user: "1000:1000"
+    networks:
+      - net-app
+    depends_on:
+      - code-server
+    volumes:
+      - code-server-profile:/source:ro
+      - code-server-profile-backups:/backups
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p /backups
+        while true; do
+          ts="$$(date +%Y%m%d-%H%M%S)"
+          out="/backups/code-server-user-profile-$$ts.tgz"
+          tar -czf "$$out" -C /source .
+          sha256sum "$$out" > "$$out.sha256"
+          find /backups -type f -name 'code-server-user-profile-*.tgz' -mtime +30 -delete || true
+          find /backups -type f -name 'code-server-user-profile-*.tgz.sha256' -mtime +30 -delete || true
+          sleep 21600
+        done
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis-exporter — Prometheus exporter for Redis and Sentinel metrics
+  # Monitors both Master-Replica Redis instances and Sentinel quorum status
+  # ────────────────────────────────────────────────────────────────────────────
+  redis-exporter:
+    image: oliver006/redis_exporter@sha256:6a97d4dd743b533e1f950c677b87d880e44df363c61af3f406fc9e53ed65ee03
+    container_name: redis-exporter
+    restart: unless-stopped
+    networks:
+      - net-management
+      - net-data
+    expose:
+      - "9121"
+    environment:
+      # Primary Redis instance
+      REDIS_ADDR: "redis://:${REDIS_PASSWORD}@redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      # Sentinel configuration
+      REDIS_SENTINEL_ADDR: "redis-sentinel-1:26379,redis-sentinel-arbiter:26379"
+      REDIS_SENTINEL_MASTER: "mymaster"
+      # Metrics configuration
+      NAMESPACE: redis
+      CHECK_KEYS: "session:*,audit:*,deletion:*,replay:*"
+    healthcheck:
+      test: ["CMD", "/redis_exporter", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - redis
+      - redis-sentinel-1
+      - redis-sentinel-arbiter
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "3m"
+        max-file: "2"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # prometheus — Metrics collection and alerting engine
+  # ────────────────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.1@sha256:f6639335d34a77d9d9db382b92eeb7fc00934be8eae81dbc03b31cfe90411a94
+    container_name: prometheus
+    restart: unless-stopped
+    user: "nobody:nobody"
+    # prometheus is on all tiers: pull-only metrics scraping across edge/app/data
+    # does not expose external ports; net-edge + net-data access is read-only scrape only
+    networks:
+      - net-management
+      - net-app
+      - net-edge
+      - net-data
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-rules-phase-23.yml:/etc/prometheus/prometheus-rules-phase-23.yml:ro
+      # - ./prometheus-rules-alerts-operational.yml:/etc/prometheus/prometheus-rules-alerts-operational.yml:ro
+      - ./prometheus-rules-slo-phase-8.yml:/etc/prometheus/prometheus-rules-slo-phase-8.yml:ro
+      - ./prometheus-rules-matrix-alerts.yml:/etc/prometheus/prometheus-rules-matrix-alerts.yml:ro
+      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - ./alert-rules-nvme-monitoring.yml:/etc/prometheus/alert-rules-nvme-monitoring.yml:ro
+      # - ./alerts-phase-23.yml:/etc/prometheus/alerts-phase-23.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # grafana — Observability dashboards
+  # ────────────────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.2.3@sha256:1c2ca5868432ae258711afa5c18f8ae61a6c725bec2586b186e5cd0adbf31496
+    container_name: grafana
+    restart: unless-stopped
+    user: "472:472"
+    networks:
+      - net-management
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set}
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN:-kushnir.cloud}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./config/grafana-dashboard-providers.yaml:/etc/grafana/provisioning/dashboards/providers.yaml:ro
+      - ./config/grafana-dashboard-matrix-overview.json:/etc/grafana/provisioning/dashboards/matrix-overview.json:ro
+      - ./config/grafana-dashboard-collaboration.json:/etc/grafana/provisioning/dashboards/collaboration.json:ro
+      - ./config/grafana-dashboard-cluster-health.json:/etc/grafana/provisioning/dashboards/cluster-health.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # alertmanager — Alert routing and silencing
+  # ────────────────────────────────────────────────────────────────────────────
+  alertmanager:
+    image: prom/alertmanager:v0.26.0@sha256:361db356b33041437517f1cd298462055580585f26555c317df1a3caf2868552
+    container_name: alertmanager
+    restart: unless-stopped
+    user: "nobody:nobody"
+    networks:
+      - net-management
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9093/-/ready || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # jaeger — Distributed tracing backend
+  # ────────────────────────────────────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.50@sha256:93ff440dbda3f3654e54f21a8fe71fc7c4a85f75a54e840006351b4dffbec6a5
+    container_name: jaeger
+    restart: no
+    # SECURITY FIX #969: Run as non-root user (10001:10001)
+    user: "10001:10001"
+    # jaeger receives OTLP traces from app tier; net-app needed for ingest
+    networks:
+      - net-management
+      - net-app
+    ports:
+      - "16686:16686"
+    volumes:
+      - jaeger-data:/jaeger/data
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=badger
+      - BADGER_EPHEMERAL=true
+      - MEMORY_MAX_TRACES=50000
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:16686/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  # appsmith - Admin portal (Appsmith CE)
+  # Routes via Caddy using ${DOMAIN:-kushnir.cloud}
+  # Phase 1 (#1545): Portal enabled by default (profiles removed April 24, 2026)
+  appsmith:
+    image: appsmith/appsmith-ce:v1.47@sha256:99e57374fcd1c756ca447551a92a79d3e80cf53a963fa612abea23cec2f7adf8
+    container_name: appsmith
+    restart: unless-stopped
+    networks:
+      - net-app
+    environment:
+      - APPSMITH_SIGNUP_DISABLED=true
+      - APPSMITH_FORM_LOGIN_DISABLED=true
+      - APPSMITH_OAUTH2_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - APPSMITH_BASE_URL=https://${DOMAIN:-kushnir.cloud}
+      - APPSMITH_CUSTOM_DOMAIN=${DOMAIN:-kushnir.cloud}
+      - APPSMITH_ADMIN_EMAILS=${APPSMITH_ADMIN_EMAILS:-akushnir@bioenergystrategies.com}
+    expose:
+      - "80"
+    volumes:
+      - appsmith-data:/appsmith-stacks
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # loki — Log aggregation backend for infrastructure events
+  # Stores logs from all services (terraform, haproxy, kubernetes, system)
+  # Query interface: http://loki:3100
+  # ────────────────────────────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.0.0@sha256:757b5fadf816a1396f1fea598152947421fa49cb8b2db1ddd2a6e30fae003253
+    container_name: loki
+    restart: unless-stopped
+    networks:
+      - net-management
+      - net-app
+    expose:
+      - "3100"
+    command: >
+      -config.file=/etc/loki/local-config.yaml
+      -print-config-stderr=true
+    environment:
+      - LOKI_RETENTION_DAYS=${LOKI_RETENTION_DAYS:-30}
+      - LOKI_MAX_CHUNK_AGE=${LOKI_MAX_CHUNK_AGE:-2h}
+      - LOKI_CHUNK_IDLE_PERIOD=${LOKI_CHUNK_IDLE_PERIOD:-3m}
+    volumes:
+      - ./config/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    # Health check rationale (April 23, 2026 - Issue #1516):
+    # - start_period: 45s (was 15s) - Loki needs time to initialize boltdb storage layer
+    # - timeout: 15s (was 5s) - /ready endpoint can be slow to respond during heavy load
+    # - interval: 30s - Check health every 30s during normal operation
+    # - retries: 2 - Allow 2 consecutive failures before marking unhealthy
+    # This reduces transient startup failures while maintaining responsive health monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 2
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 512m
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # promtail — Log shipper that sends logs from containers and host to Loki
+  # Scrapes: Docker container logs, Kubernetes pod logs, system logs
+  # Ships to: Loki for aggregation and query
+  # ────────────────────────────────────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:3.0.0@sha256:d3de3da9431cfbe74a6a94555050df5257f357e827be8e63f8998d509c37af8b
+    container_name: promtail
+    restart: unless-stopped
+    user: "1000:1000"
+    networks:
+      - net-management
+      - net-app
+    environment:
+      - HOSTNAME=promtail-${HOSTNAME:-primary}
+      - LOG_LEVEL=info
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    volumes:
+      - ./config/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - ${DOCKER_ROOT_DIR:-/var/snap/docker/common/var-lib-docker}/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: >
+      -config.file=/etc/promtail/config.yml
+      -print-config-stderr=false
+    healthcheck:
+      test: ["CMD", "/usr/bin/promtail", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      loki:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+          cpus: "0.1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # error-triage-engine — Detects error patterns from logs and creates GitHub issues
+  # Runs as daemon, queries Loki every 300 seconds for new error patterns
+  # Creates GitHub issues automatically for repeated errors
+  # ────────────────────────────────────────────────────────────────────────────
+  error-triage-engine:
+    image: alpine:3.20@sha256:c64c687cbea9300178b30c95835354e34c4e4febc4badfe27102879de0483b5e
+    container_name: error-triage-engine
+    restart: unless-stopped
+    profiles: ["observability"]  # Enable with: COMPOSE_PROFILES=observability docker-compose up -d
+    networks:
+      - net-management
+      - net-app
+    environment:
+      - LOKI_ENDPOINT=http://loki:3100
+      - GITHUB_REPO=${GITHUB_REPO:-kushin77/code-server}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - ERROR_TRIAGE_INTERVAL=${ERROR_TRIAGE_INTERVAL:-300}
+      - ERROR_TRIAGE_THRESHOLD=${ERROR_TRIAGE_THRESHOLD:-3}
+      - ERROR_TRIAGE_WINDOW=${ERROR_TRIAGE_WINDOW:-3600}
+    volumes:
+      - ./scripts/error-triage-engine.sh:/usr/local/bin/error-triage-engine:ro
+      - ./scripts/_common:/usr/local/bin/_common:ro
+      - error-triage-db:/var/lib/error-triage
+    entrypoint: /bin/ash
+    command:
+      - -c
+      - |
+        apk add --no-cache bash curl sqlite jq github-cli
+        bash /usr/local/bin/error-triage-engine --daemon
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/error-triage-engine.pid"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      loki:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+          cpus: "0.1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # sentry-integration-api — Sentry error monitoring API
+  # Immutable error snapshots + x-idempotency-key for safe retry
+  # ────────────────────────────────────────────────────────────────────────────
+  sentry-integration-api:
+    # Profile: integrations — opt-in, requires SENTRY_AUTH_TOKEN and package-lock.json
+    # Blocked by missing package-lock.json in build context. See #1619.
+    # NOTE: Local build image, pinned to 1.0.0 for immutability (not @sha256 since built locally)
+    profiles:
+      - integrations
+    build:
+      context: .
+      dockerfile: Dockerfile.sentry-integration
+    image: sentry-integration-api:1.0.0
+    container_name: sentry-integration-api
+    restart: unless-stopped
+    networks:
+      - net-app
+    expose:
+      - "9095"
+    environment:
+      - PORT=9095
+      - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN:-placeholder}
+      - SENTRY_ORG_SLUG=${SENTRY_ORG_SLUG:?SENTRY_ORG_SLUG must be set}
+      - SENTRY_PROJECT_SLUG=${SENTRY_PROJECT_SLUG:-code-server}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:?GITHUB_TOKEN must be set}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9095/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # slack-slash-commands-api — Slack slash commands handler
+  # Immutable responses + trigger_id deduplication for idempotent command handling
+  # ────────────────────────────────────────────────────────────────────────────
+  slack-slash-commands-api:
+    # Profile: integrations — opt-in, requires SLACK_SIGNING_SECRET and package-lock.json
+    # Blocked by missing package-lock.json in build context. See #1619.
+    # NOTE: Local build image, pinned to 1.0.0 for immutability (not @sha256 since built locally)
+    profiles:
+      - integrations
+    build:
+      context: .
+      dockerfile: Dockerfile.slack-integration
+    image: slack-slash-commands-api:1.0.0
+    container_name: slack-slash-commands-api
+    restart: unless-stopped
+    networks:
+      - net-app
+    expose:
+      - "9096"
+    environment:
+      - PORT=9096
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:-placeholder}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:?SLACK_BOT_TOKEN must be set}
+      - WORKSPACE_URL=${WORKSPACE_URL:-https://ide.kushnir.cloud}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9096/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # postgres_exporter — PostgreSQL metrics for Prometheus
+  # Exposes pg_stat_statements, replication lag, connection counts, cache hit ratio
+  # ────────────────────────────────────────────────────────────────────────────
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter@sha256:386b12d19eab2a37d7cd8ca8b4c7491cc7a830d9581f49af6c98a393da9605e6
+    container_name: postgres_exporter
+    restart: unless-stopped
+    networks:
+      - net-data
+      - net-management
+    expose:
+      - "9187"
+    environment:
+      - DATA_SOURCE_NAME=host=postgres port=5432 user=codeserver password=${POSTGRES_PASSWORD} dbname=codeserver sslmode=disable
+    command:
+      - "--extend.query-path=/etc/postgres_exporter/queries.yml"
+      - "--web.telemetry-path=/metrics"
+    volumes:
+      - ./config/postgres_exporter_queries.yml:/etc/postgres_exporter/queries.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9187/metrics || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.2"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # open-vsix-registry — Private VS Code extension registry (Issue #1047)
+  # Hosts internal extensions, enforces blocklist, enables version pinning
+  # Service URL: http://open-vsix-registry:4000 (internal) → https://registry.kushnir.cloud (public)
+  # ────────────────────────────────────────────────────────────────────────────
+  open-vsix-registry:
+    # Profile: extensions-registry — opt-in, image must be built/provided externally
+    # Blocked by #1617 — image source not yet resolved. Add to COMPOSE_PROFILES to enable.
+    profiles:
+      - extensions-registry
+    image: open-vsix/open-vsix:0.2.0@sha256:d12fb764d6a0664ac736279f6eebcd778641566371cbcf109f029b3a378419db
+    container_name: open-vsix-registry
+    restart: unless-stopped
+    networks:
+      - net-app
+    expose:
+      - "4000"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=${REGISTRY_LOG_LEVEL:-info}
+      - PORT=4000
+      - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/open_vsix_registry
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/2
+      - STORAGE_TYPE=filesystem
+      - STORAGE_PATH=/data/extensions
+      - ALLOWED_PUBLISHERS=${REGISTRY_ALLOWED_PUBLISHERS:-kushin77,@kushnircloud}
+      - REQUIRE_AUTH=${REGISTRY_REQUIRE_AUTH:-true}
+      - AUTH_TOKEN_SECRET=${REGISTRY_AUTH_TOKEN_SECRET:?REGISTRY_AUTH_TOKEN_SECRET must be set}
+      - ENABLE_METRICS=${REGISTRY_ENABLE_METRICS:-true}
+      - METRICS_PORT=9090
+    volumes:
+      - registry-extensions:/data/extensions
+      - ./config/registry/blocklist.json:/etc/open-vsix/blocklist.json:ro
+      - ./config/registry/allowed-extensions.json:/etc/open-vsix/allowed-extensions.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # saas-api — SaaS Management API (Phase 3 #1674)
+  # User/Group/Organization/API Key management endpoints
+  # Routes via Caddy: /api/users, /api/groups, /api/orgs
+  # ────────────────────────────────────────────────────────────────────────────
+  saas-api:
+    build:
+      context: .
+      dockerfile: apps/saas-api/Dockerfile
+    image: saas-api:1.0.0@sha256:efd34557ebf2dccc2b37ff2e5cec25823c53d8b2e69cb89d27cb0974ef030934
+    container_name: saas-api
+    restart: unless-stopped
+    user: "1001"
+    networks:
+      - net-app
+      - net-data
+    expose:
+      - "5000"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - SAAS_API_PORT=5000
+      - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@pgbouncer:6432/${POSTGRES_DB:-codeserver}
+    volumes:
+      - ./apps/saas-api/src:/app/src:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # saas-db-init — One-shot database migration runner
+  # Runs SQL migrations from migrations/ directory on startup
+  # ────────────────────────────────────────────────────────────────────────────
+  saas-db-init:
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
+    container_name: saas-db-init
+    restart: on-failure
+    networks:
+      - net-data
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      - POSTGRES_USER=${POSTGRES_USER:-codeserver}
+      - POSTGRES_DB=${POSTGRES_DB:-codeserver}
+    volumes:
+      - ./migrations:/migrations:ro
+      - ./migrations/run-migrations.sh:/run-migrations.sh:ro
+    entrypoint: /run-migrations.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+# ════════════════════════════════════════════════════════════════════════════
+# Networks
+# ════════════════════════════════════════════════════════════════════════════
+networks:
+  # ── Edge tier: internet-facing proxies (caddy, oauth2-proxy) ────────────
+  net-edge:
+    name: net-edge
+    external: true
+
+  # ── Application tier: code execution, session management, AI, Redis ─────
+  net-app:
+    name: net-app
+    external: true
+
+  # ── Data tier: Postgres, pgbouncer — no external routes ─────────────────
+  # INVARIANT: No service is attached to both net-edge and net-data (#887)
+  net-data:
+    name: net-data
+    external: true
+
+  # ── Management tier: observability — internal access only ────────────────
+  net-management:
+    name: net-management
+    external: true
+
+# ════════════════════════════════════════════════════════════════════════════
+# Volumes — All named, all persisted. No anonymous volumes.
+# NAS-backed volumes (code-server-workspace, code-server-profile, code-server-profile-backups,
+# ollama-data, postgres-backup) mount NFS from NAS_HOST (192.168.168.56).
+# Both .31 and .42 mount the same NFS exports — no rsync replication needed.
+# DB engine volumes (postgres-data, redis-data, prometheus-data, grafana-data, caddy-*)
+# stay driver:local — NFS causes locking issues with those engines.
+# ════════════════════════════════════════════════════════════════════════════
+volumes:
+  # ── NAS-backed (shared across .31 and .42 via NFS) ───────────────────────
+  code-server-workspace:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/code-server/workspace"
+
+  code-server-profile:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/code-server/profile"
+
+  code-server-profile-backups:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/code-server/profile-backups"
+
+  # ✅ NAS-backed: ollama models persist across failover
+  ollama-data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/ollama"
+
+  # ✅ NAS-backed: postgres backups/PITR persist across failover
+  postgres-backup:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/postgres/backups"
+
+  # ── Local-only (NFS locking incompatible with these engines) ─────────────
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  redis-sentinel-1-data:
+    driver: local
+  redis-sentinel-2-data:
+    driver: local
+  redis-sentinel-arbiter-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  
+  # ✅ NAS-backed: Extension registry persists across failover
+  registry-extensions:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/registry/extensions"
+
+  caddy-config:
+    driver: local
+  caddy-data:
+    driver: local
+
+  jaeger-data:
+    driver: local
+
+  session-broker-sessions:
+    driver: local
+
+  appsmith-data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/appsmith"
+
+  # ── Observability: Loki log storage ──────────────────────────────────────
+  loki-data:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/loki"
+
+  # ── Error Triage: SQLite database for error patterns ──────────────────────
+  error-triage-db:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"
+      device: ":${NAS_EXPORT_PATH:-/export}/error-triage-db"

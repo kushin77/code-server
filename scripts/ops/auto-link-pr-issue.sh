@@ -66,7 +66,6 @@ extract_issue_references() {
 link_pr_to_issue() {
     local pr_number="$1"
     local issue_ref="$2"
-    local pr_url="$3"
     
     log_info "Linking PR #$pr_number to issue $issue_ref"
     

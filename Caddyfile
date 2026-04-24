@@ -22,6 +22,22 @@ ide.kushnir.cloud {
     respond @health "OK" 200
 
     # ────────────────────────────────────────────────────────────────────────────
+    # SaaS API Endpoints (P3-1674: User/Group/Org management)
+    # All /api/* routes require OAuth2 authentication
+    # ────────────────────────────────────────────────────────────────────────────
+    @api path /api/*
+    reverse_proxy @api saas-api:5000 {
+        header_up Host ide.kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        fail_duration 5s
+        max_fails 3
+        health_uri /health
+        health_interval 30s
+        health_timeout 5s
+    }
+
+    # ────────────────────────────────────────────────────────────────────────────
     # OAuth2-Proxy Authentication Gate (unified - handles both subdomains)
     # oauth2-proxy handles Google OAuth flow and upstream proxy to code-server
     # ────────────────────────────────────────────────────────────────────────────

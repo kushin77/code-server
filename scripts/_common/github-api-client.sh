@@ -2,6 +2,7 @@
 # @file        scripts/_common/github-api-client.sh
 # @module      github/api-client
 # @description Fine-grained GitHub token management, rate limit tracking, and exponential backoff retry logic
+# @governance GOV-002: Consolidated sourcing via init.sh pattern prevents duplicate loads
 #
 # Provides:
 # - Secure fine-grained token retrieval from GSM
@@ -11,6 +12,10 @@
 #
 
 set -euo pipefail
+
+# Source guards to prevent duplicate sourcing
+[[ "${_GITHUB_API_CLIENT_SOURCED:-0}" == "1" ]] && return 0
+readonly _GITHUB_API_CLIENT_SOURCED=1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"

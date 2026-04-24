@@ -13,8 +13,8 @@ DRIFT_LOG="${REPO_ROOT}/logs/drift-detection.log"
 DRIFT_REPORT="${REPO_ROOT}/artifacts/drift-report.json"
 DRIFT_THRESHOLD_HOURS=24
 
+# Source init.sh which includes github-api-client.sh (P3 #1533: consolidated sourcing)
 source "${REPO_ROOT}/scripts/_common/init.sh"
-source "${REPO_ROOT}/scripts/_common/github-api-client.sh"
 
 mkdir -p "${REPO_ROOT}/logs" "$(dirname "${DRIFT_REPORT}")"
 

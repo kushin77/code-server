@@ -22,7 +22,7 @@ services:
   # Users never need to manually install packages (admin-only via IaC)
   # ────────────────────────────────────────────────────────────────────────────
   code-server:
-    image: code-server-enterprise:4.115.0
+    image: codercom/code-server:4.115.0@sha256:cbd5e05849367e521f774b760602cb9e0a8da1f159eaf89600490eec34129fe5
     container_name: code-server
     restart: unless-stopped
     user: "1000"

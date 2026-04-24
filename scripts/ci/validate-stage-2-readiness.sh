@@ -38,7 +38,7 @@ function check_ssh_access() {
   
   log_info "Checking SSH access to $name ($user@$host)..."
   
-  if ssh -o ConnectTimeout=5 "$user@$host" "exit 0" 2>/dev/null; then
+  if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "$user@$host" "exit 0" 2>/dev/null; then
     log_info "✅ SSH access verified: $user@$host"
     ((VALIDATION_PASSED++))
     return 0
@@ -57,7 +57,7 @@ function check_git_status() {
   log_info "Checking git status on $name..."
   
   local git_status
-  git_status=$(ssh "$user@$host" "cd code-server-enterprise && git status" 2>&1)
+  git_status=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "$user@$host" "cd code-server-enterprise && git status" 2>&1)
   
   if [[ "$git_status" == *"On branch main"* ]] && [[ "$git_status" != *"Changes not staged"* ]]; then
     log_info "✅ Git status clean on $name"
@@ -78,7 +78,7 @@ function check_docker_services() {
   log_info "Checking docker services on $name..."
   
   local running_count
-  running_count=$(ssh "$user@$host" "cd code-server-enterprise && docker-compose ps 2>&1 | grep -c 'Up ' || echo 0")
+  running_count=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "$user@$host" "cd code-server-enterprise && docker-compose ps 2>&1 | grep -c 'Up ' || echo 0")
   
   if (( running_count >= REQUIRED_SERVICES )); then
     log_info "✅ Docker services running on $name: $running_count/$REQUIRED_SERVICES"

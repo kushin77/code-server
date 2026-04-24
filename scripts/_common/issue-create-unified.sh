@@ -56,8 +56,7 @@ check_issue_exists() {
     local title="$1"
     
     # Search for similar open issues
-    local result=$(gh issue list \
-        --repo "$GITHUB_REPO" \
+    local result=$(gh issue list --repo "$GITHUB_REPO" \
         --search "title:\"$title\" state:open" \
         --json title \
         --jq 'length' 2>/dev/null || echo "0")

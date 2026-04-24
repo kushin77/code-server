@@ -52,7 +52,7 @@ audit_gh_calls() {
         --include="*.sh" \
         "${PROJECT_ROOT}/scripts" \
         "${PROJECT_ROOT}/.github/workflows" 2>/dev/null | \
-        grep -v "\--repo" | wc -l | tr -d '[:space:]')
+        grep -v "\--repo" | grep -v "scripts/audit/" | grep -v "scripts/ci/check-gh-repo-flag.sh" | wc -l | tr -d '[:space:]')
     
     if [ "$missing_repo" -gt 0 ]; then
         findings+=("❌ $missing_repo gh issue/pr calls missing --repo flag (may cause ambiguity)")

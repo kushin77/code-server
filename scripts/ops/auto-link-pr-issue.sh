@@ -81,9 +81,8 @@ link_pr_to_issue() {
     
     # Add comment linking PR to issue
     local comment="🔗 Linked from PR #$pr_number"
-    if github_gh issue comment "$issue_num" \
-        --body "$comment" \
-        --repo "$GITHUB_REPO" &>>"$LOG_FILE"; then
+    if github_gh issue comment "$issue_num" --repo "$GITHUB_REPO" \
+        --body "$comment" &>>"$LOG_FILE"; then
         log_success "Linked PR #$pr_number → Issue #$issue_num"
         return 0
     else

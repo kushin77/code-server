@@ -91,9 +91,8 @@ close_linked_issue() {
     # Add closing comment with PR reference
     local close_comment="Auto-closed via merged PR #$pr_number (commit: ${merge_commit:0:7})"
     
-    if ! github_gh issue comment "$issue_number" \
-        --body "$close_comment" \
-        --repo "$GITHUB_REPO" &>>"$LOG_FILE"; then
+    if ! github_gh issue comment "$issue_number" --repo "$GITHUB_REPO" \
+        --body "$close_comment" &>>"$LOG_FILE"; then
         log_error "Failed to add closing comment to issue #$issue_number"
         return 1
     fi

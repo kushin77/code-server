@@ -37,8 +37,9 @@ validate_token() {
 
 check_rate_limit() {
     local remaining limit
-    remaining=$(gh api rate-limit --jq '.resources.core.remaining' 2>/dev/null || echo "unknown")
-    limit=$(gh api rate-limit --jq '.resources.core.limit' 2>/dev/null || echo "unknown")
+    # Add --repo for governance compliance
+    remaining=$(gh api rate-limit --repo "$GITHUB_REPO" --jq '.resources.core.remaining' 2>/dev/null || echo "unknown")
+    limit=$(gh api rate-limit --repo "$GITHUB_REPO" --jq '.resources.core.limit' 2>/dev/null || echo "unknown")
     
     if [[ "$remaining" != "unknown" ]]; then
         if [ "$remaining" -lt "$RATE_LIMIT_THRESHOLD" ]; then

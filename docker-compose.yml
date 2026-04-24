@@ -544,7 +544,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    user: "999"  # postgres system user (IaC security hardening - P0 #969)
+    user: "1000:1000"  # Match host user akushnir (UID 1000) for Snap Docker volume compatibility
     deploy:
       resources:
         limits:

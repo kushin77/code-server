@@ -1,7 +1,0 @@
-[
-{"suite": "oauth", "duration_ms": 26, "status": 0}
-{"suite": "rbac", "duration_ms": 16, "status": 0}
-{"suite": "jwt", "duration_ms": 18, "status": 0}
-{"suite": "failover", "duration_ms": 28, "status": 0}
-{"suite": "integration", "duration_ms": 29, "status": 0}
-]

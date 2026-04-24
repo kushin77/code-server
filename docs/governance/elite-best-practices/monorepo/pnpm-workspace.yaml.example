@@ -1,6 +1,0 @@
-# Lifecycle: active-production
-# Staged template. Promote to repository root in a dedicated root-budget PR.
-packages:
-  - backend
-  - frontend
-  - extensions/*

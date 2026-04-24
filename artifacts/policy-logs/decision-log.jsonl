@@ -1,2 +1,0 @@
-{"timestamp":"2026-04-18T12:00:00Z","decision":"allow","policy_domain":"security","actor":"make","source":"runtime"}
-{"timestamp":"2026-04-19T02:01:17Z","decision":"deny","policy_domain":"runtime","actor":"unknown","source":"text-log"}

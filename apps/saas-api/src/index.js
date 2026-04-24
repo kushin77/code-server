@@ -289,6 +289,147 @@ app.get('/api/audit-logs', requireSystemAdmin, async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// Custom Domain Endpoints (P3-1675)
+// ════════════════════════════════════════════════════════════════════════════
+
+// POST /api/orgs/:org_id/custom-domain - Add custom domain with verification
+app.post('/api/orgs/:org_id/custom-domain', requireOrgAdmin, async (req, res) => {
+  const { org_id } = req.params;
+  const { domain } = req.body;
+
+  if (!domain) {
+    return res.status(400).json({ error: 'Domain is required' });
+  }
+
+  // Validate domain format
+  if (!/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.​[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(domain)) {
+    return res.status(400).json({ error: 'Invalid domain format' });
+  }
+
+  try {
+    // Generate cryptographically secure TXT record value
+    const txtRecordValue = crypto.randomBytes(32).toString('hex');
+
+    const result = await pool.query(
+      'INSERT INTO custom_domains (org_id, domain, txt_record_value) VALUES ($1, $2, $3) RETURNING id, org_id, domain, txt_record_value, is_verified, created_at',
+      [org_id, domain.toLowerCase(), txtRecordValue]
+    );
+
+    const customDomain = result.rows[0];
+    res.status(201).json({
+      id: customDomain.id,
+      domain: customDomain.domain,
+      txt_record_value: customDomain.txt_record_value,
+      is_verified: customDomain.is_verified,
+      dns_verification_instruction: `Add TXT record to _acme-challenge.${domain}: ${txtRecordValue}`,
+      created_at: customDomain.created_at,
+    });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Domain already exists for another organization' });
+    }
+    console.error('Error creating custom domain:', err);
+    res.status(500).json({ error: 'Failed to create custom domain' });
+  }
+});
+
+// GET /api/orgs/:org_id/custom-domain/:domain - Get custom domain details
+app.get('/api/orgs/:org_id/custom-domain/:domain', requireOrgAdmin, async (req, res) => {
+  const { org_id, domain } = req.params;
+
+  try {
+    const result = await pool.query(
+      'SELECT id, org_id, domain, txt_record_value, is_verified, tls_certificate_expires_at, verified_at FROM custom_domains WHERE org_id = $1 AND domain = $2',
+      [org_id, domain.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Custom domain not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching custom domain:', err);
+    res.status(500).json({ error: 'Failed to fetch custom domain' });
+  }
+});
+
+// GET /api/orgs/:org_id/dns-verification - Check DNS TXT record and verify
+app.get('/api/orgs/:org_id/dns-verification', requireOrgAdmin, async (req, res) => {
+  const { org_id } = req.params;
+  const { domain } = req.query;
+
+  if (!domain) {
+    return res.status(400).json({ error: 'Domain query parameter required' });
+  }
+
+  try {
+    // Get the expected TXT record value
+    const domainResult = await pool.query(
+      'SELECT txt_record_value FROM custom_domains WHERE org_id = $1 AND domain = $2',
+      [org_id, domain.toLowerCase()]
+    );
+
+    if (domainResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Custom domain not found' });
+    }
+
+    const expectedTxtValue = domainResult.rows[0].txt_record_value;
+
+    // Record verification attempt
+    try {
+      await pool.query(
+        'INSERT INTO domain_verification_attempts (custom_domain_id, attempt_number, result) SELECT id, 1, $1 FROM custom_domains WHERE org_id = $2 AND domain = $3',
+        ['pending', org_id, domain.toLowerCase()]
+      );
+    } catch (e) {
+      // Ignore duplicate verification attempts
+    }
+
+    // In production, would use dns module to query actual DNS
+    // For now, return status structure for integration testing
+    res.json({
+      domain: domain.toLowerCase(),
+      txt_record_expected: expectedTxtValue,
+      txt_record_found: false, // Placeholder - would query actual DNS
+      is_verified: false,
+      verification_status: 'pending',
+      next_check: new Date(Date.now() + 60000).toISOString(), // Suggest retry in 60s
+      dns_verification_instruction: `Add TXT record to _acme-challenge.${domain}: ${expectedTxtValue}`,
+    });
+  } catch (err) {
+    console.error('Error checking DNS:', err);
+    res.status(500).json({ error: 'Failed to verify DNS' });
+  }
+});
+
+// DELETE /api/orgs/:org_id/custom-domain/:domain - Remove custom domain
+app.delete('/api/orgs/:org_id/custom-domain/:domain', requireOrgAdmin, async (req, res) => {
+  const { org_id, domain } = req.params;
+
+  try {
+    const result = await pool.query(
+      'UPDATE custom_domains SET is_active = false WHERE org_id = $1 AND domain = $2 RETURNING id, domain, is_active',
+      [org_id, domain.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Custom domain not found' });
+    }
+
+    res.json({
+      success: true,
+      domain: result.rows[0].domain,
+      is_active: result.rows[0].is_active,
+      message: 'Custom domain deactivated',
+    });
+  } catch (err) {
+    console.error('Error deleting custom domain:', err);
+    res.status(500).json({ error: 'Failed to delete custom domain' });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 // Error Handling
 // ════════════════════════════════════════════════════════════════════════════
 app.use((err, req, res, next) => {

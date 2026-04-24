@@ -1,0 +1,3 @@
+# Kafka producer utility dependencies
+aiokafka==0.8.1
+asyncpg==0.29.0

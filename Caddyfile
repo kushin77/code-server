@@ -90,6 +90,58 @@ kushnir.cloud {
     }
 }
 
+# Kafka Event Bus Console — kafka.kushnir.cloud
+kafka.kushnir.cloud {
+    tls /etc/caddy/tls.crt /etc/caddy/tls.key
+
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    reverse_proxy redpanda-console:8080 {
+        header_up Host kafka.kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        fail_duration 5s
+        max_fails 3
+    }
+}
+
+# Activity Feed API — activity.kushnir.cloud
+activity.kushnir.cloud {
+    tls /etc/caddy/tls.crt /etc/caddy/tls.key
+
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
+    @health path /health /healthz /ping
+    respond @health "OK" 200
+
+    reverse_proxy activity-feed:8081 {
+        header_up Host activity.kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        fail_duration 5s
+        max_fails 3
+    }
+}
+
 # Catch-all HTTP health listener
 :80 {
     @health path /health /healthz /ping

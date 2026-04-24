@@ -1,0 +1,160 @@
+{
+  "type": "record",
+  "name": "AIInteractionEvent",
+  "namespace": "com.kushnircloud.events",
+  "doc": "AI model interactions through the Prompt Gateway with usage metrics",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "doc": "Unique event identifier (UUID)"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "doc": "Event timestamp in milliseconds since epoch"
+    },
+    {
+      "name": "interaction_id",
+      "type": "string",
+      "doc": "Unique interaction identifier"
+    },
+    {
+      "name": "model",
+      "type": {
+        "type": "enum",
+        "name": "AIModel",
+        "symbols": ["gpt-4", "gpt-3.5-turbo", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku", "copilot", "custom"]
+      },
+      "doc": "AI model used for the interaction"
+    },
+    {
+      "name": "provider",
+      "type": {
+        "type": "enum",
+        "name": "AIProvider",
+        "symbols": ["openai", "anthropic", "github_copilot", "local", "custom"]
+      },
+      "doc": "AI service provider"
+    },
+    {
+      "name": "user_id",
+      "type": "string",
+      "doc": "User who initiated the interaction"
+    },
+    {
+      "name": "session_id",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "VS Code session identifier"
+    },
+    {
+      "name": "request_type",
+      "type": {
+        "type": "enum",
+        "name": "RequestType",
+        "symbols": ["completion", "chat", "edit", "function_call", "embedding", "moderation"]
+      },
+      "doc": "Type of AI request"
+    },
+    {
+      "name": "prompt_length",
+      "type": "int",
+      "doc": "Length of the input prompt in characters"
+    },
+    {
+      "name": "response_length",
+      "type": ["null", "int"],
+      "default": null,
+      "doc": "Length of the response in characters"
+    },
+    {
+      "name": "tokens_used",
+      "type": {
+        "type": "record",
+        "name": "TokenUsage",
+        "fields": [
+          {
+            "name": "prompt_tokens",
+            "type": "int",
+            "doc": "Number of tokens in the prompt"
+          },
+          {
+            "name": "completion_tokens",
+            "type": ["null", "int"],
+            "default": null,
+            "doc": "Number of tokens in the completion"
+          },
+          {
+            "name": "total_tokens",
+            "type": "int",
+            "doc": "Total tokens used"
+          }
+        ]
+      },
+      "doc": "Token usage statistics"
+    },
+    {
+      "name": "duration_ms",
+      "type": "long",
+      "doc": "Request duration in milliseconds"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "InteractionStatus",
+        "symbols": ["success", "error", "timeout", "rate_limited", "cancelled"]
+      },
+      "doc": "Outcome of the interaction"
+    },
+    {
+      "name": "error_message",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Error message if interaction failed"
+    },
+    {
+      "name": "context",
+      "type": {
+        "type": "record",
+        "name": "InteractionContext",
+        "fields": [
+          {
+            "name": "workspace",
+            "type": ["null", "string"],
+            "default": null,
+            "doc": "Workspace/project context"
+          },
+          {
+            "name": "file_path",
+            "type": ["null", "string"],
+            "default": null,
+            "doc": "File being worked on"
+          },
+          {
+            "name": "language",
+            "type": ["null", "string"],
+            "default": null,
+            "doc": "Programming language context"
+          },
+          {
+            "name": "action_type",
+            "type": ["null", "string"],
+            "default": null,
+            "doc": "Type of action (code generation, review, etc.)"
+          }
+        ]
+      },
+      "doc": "Context information for the interaction"
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "map",
+        "values": "string"
+      },
+      "doc": "Additional metadata (model version, temperature, etc.)"
+    }
+  ]
+}

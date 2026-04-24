@@ -1,0 +1,125 @@
+{
+  "name": "kc-collab-intelligence",
+  "displayName": "KC Real-Time Collaboration Intelligence",
+  "description": "Real-time collaboration awareness with conflict detection, presence tracking, and AI-powered insights",
+  "version": "1.0.0",
+  "publisher": "kushnir",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other", "Collaboration"],
+  "keywords": [
+    "collaboration",
+    "real-time",
+    "conflict-detection",
+    "presence",
+    "team",
+    "awareness"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:kcCollabIntelligence.togglePresence",
+    "onCommand:kcCollabIntelligence.showConflictWarning",
+    "onCommand:kcCollabIntelligence.viewTeamStatus"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "kcCollabIntelligence.togglePresence",
+        "title": "KC Collab: Toggle Presence Awareness",
+        "description": "Enable/disable real-time presence tracking"
+      },
+      {
+        "command": "kcCollabIntelligence.showConflictWarning",
+        "title": "KC Collab: Show Conflict Warning",
+        "description": "Display current conflict detection status"
+      },
+      {
+        "command": "kcCollabIntelligence.viewTeamStatus",
+        "title": "KC Collab: View Team Status",
+        "description": "Show team presence, expertise, and collaboration metrics"
+      },
+      {
+        "command": "kcCollabIntelligence.acceptRecommendation",
+        "title": "KC Collab: Accept AI Recommendation",
+        "description": "Accept AI suggestion for conflict resolution or collaboration"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kcCollabSidebar",
+          "title": "KC Collaboration",
+          "icon": "media/collab-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "kcCollabSidebar": [
+        {
+          "id": "kcTeamPresence",
+          "name": "Team Presence",
+          "description": "Real-time team member presence and status"
+        },
+        {
+          "id": "kcConflictAlerts",
+          "name": "Conflict Alerts",
+          "description": "Active conflict detection warnings"
+        },
+        {
+          "id": "kcAIInsights",
+          "name": "AI Insights",
+          "description": "AI-powered collaboration suggestions"
+        }
+      ]
+    },
+    "statusBar": [
+      {
+        "id": "kcCollabStatus",
+        "alignment": "right",
+        "priority": 100
+      }
+    ],
+    "colors": [
+      {
+        "id": "kcCollab.conflictBackground",
+        "description": "Background color for conflict warnings",
+        "defaults": {
+          "light": "#ffd700",
+          "dark": "#ff6b6b",
+          "highContrast": "#ff0000"
+        }
+      },
+      {
+        "id": "kcCollab.presenceActive",
+        "description": "Color for active user presence",
+        "defaults": {
+          "light": "#4CAF50",
+          "dark": "#81C784",
+          "highContrast": "#00FF00"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=ES2020",
+    "build": "npm run esbuild-base",
+    "watch": "npm run esbuild-base -- --watch",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^5.42.0",
+    "@typescript-eslint/parser": "^5.42.0",
+    "esbuild": "^0.18.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "vscode": "^1.1.37"
+  }
+}

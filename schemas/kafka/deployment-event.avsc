@@ -1,0 +1,127 @@
+{
+  "type": "record",
+  "name": "DeploymentEvent",
+  "namespace": "com.kushnircloud.events",
+  "doc": "Deployment lifecycle events for infrastructure and application changes",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "doc": "Unique event identifier (UUID)"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "doc": "Event timestamp in milliseconds since epoch"
+    },
+    {
+      "name": "deployment_id",
+      "type": "string",
+      "doc": "Unique deployment identifier"
+    },
+    {
+      "name": "type",
+      "type": {
+        "type": "enum",
+        "name": "DeploymentType",
+        "symbols": ["terraform", "docker_compose", "kubernetes", "ansible", "custom"]
+      },
+      "doc": "Type of deployment system used"
+    },
+    {
+      "name": "action",
+      "type": {
+        "type": "enum",
+        "name": "DeploymentAction",
+        "symbols": ["plan", "apply", "destroy", "rollback", "validate", "preview"]
+      },
+      "doc": "Deployment action performed"
+    },
+    {
+      "name": "environment",
+      "type": {
+        "type": "enum",
+        "name": "Environment",
+        "symbols": ["development", "staging", "production", "testing"]
+      },
+      "doc": "Target environment"
+    },
+    {
+      "name": "target",
+      "type": "string",
+      "doc": "Deployment target (host, cluster, service name)"
+    },
+    {
+      "name": "initiator",
+      "type": "string",
+      "doc": "User or system that initiated the deployment"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "DeploymentStatus",
+        "symbols": ["started", "in_progress", "completed", "failed", "cancelled", "rolled_back"]
+      },
+      "doc": "Current deployment status"
+    },
+    {
+      "name": "duration_ms",
+      "type": ["null", "long"],
+      "default": null,
+      "doc": "Deployment duration in milliseconds"
+    },
+    {
+      "name": "resources_changed",
+      "type": ["null", "int"],
+      "default": null,
+      "doc": "Number of resources changed/created/destroyed"
+    },
+    {
+      "name": "error_message",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Error message if deployment failed"
+    },
+    {
+      "name": "metadata",
+      "type": {
+        "type": "map",
+        "values": "string"
+      },
+      "doc": "Additional deployment metadata (commit SHA, version, etc.)"
+    },
+    {
+      "name": "changes",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "ResourceChange",
+          "fields": [
+            {
+              "name": "resource_type",
+              "type": "string",
+              "doc": "Type of resource changed"
+            },
+            {
+              "name": "resource_name",
+              "type": "string",
+              "doc": "Name of the resource"
+            },
+            {
+              "name": "action",
+              "type": {
+                "type": "enum",
+                "name": "ResourceAction",
+                "symbols": ["create", "update", "delete", "replace", "no_op"]
+              },
+              "doc": "Action performed on the resource"
+            }
+          ]
+        }
+      },
+      "doc": "List of resources changed in this deployment"
+    }
+  ]
+}

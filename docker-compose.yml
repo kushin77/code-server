@@ -754,6 +754,54 @@ services:
         max-file: "2"
 
   # ────────────────────────────────────────────────────────────────────────────
+  # activity-feed — unified engineering activity stream from Kafka events
+  # REST API and WebSocket for real-time activity visualization in IDE
+  # ────────────────────────────────────────────────────────────────────────────
+  activity-feed:
+    image: python:3.11-slim@sha256:8c8c4e5b5c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f
+    container_name: activity-feed
+    restart: unless-stopped
+    networks:
+      - net-app
+      - net-data
+    expose:
+      - "8081"
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - POSTGRES_DSN=postgresql://codeserver:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/codeserver
+      - CONSUMER_GROUP=activity-feed-consumer
+      - API_PORT=8081
+    volumes:
+      - ./apps/activity-feed:/app:ro
+      - ./schemas:/app/schemas:ro
+    working_dir: /app
+    command: ["python", "main.py"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+        reservations:
+          memory: 256m
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
   # code-server-profile-backup — periodic backup of user profile state
   # ────────────────────────────────────────────────────────────────────────────
   code-server-profile-backup:
@@ -1441,6 +1489,10 @@ volumes:
   prometheus-data:
     driver: local
   grafana-data:
+    driver: local
+  
+  # ✅ Local-only: Redpanda event streaming data (high I/O, local performance)
+  redpanda-data:
     driver: local
   
   # ✅ NAS-backed: Extension registry persists across failover

@@ -67,6 +67,11 @@ def test_approval_lifecycle_and_killswitch():
     assert client.get("/approvals/escalated").json()["items"] == []
     assert client.get("/killswitch").json()["active"] is True
 
+    events = client.get("/events").json()["items"]
+    event_types = [event["event_type"] for event in events]
+    assert "agent.awaiting_approval" in event_types
+    assert "agent.killswitch" in event_types
+
 
 def test_escalation_marks_overdue_approvals():
     approval = client.post(
@@ -93,6 +98,38 @@ def test_escalation_marks_overdue_approvals():
     assert response.json()["auto_denied"] == 0
     escalated_items = client.get("/approvals/escalated").json()["items"]
     assert any(item["approval_id"] == approval["approval_id"] for item in escalated_items)
+
+    escalated_events = client.get("/events", params={"event_type": "approval.escalated"}).json()["items"]
+    assert any(event["payload"]["approval_id"] == approval["approval_id"] for event in escalated_events)
+
+
+def test_escalation_does_not_republish_existing_events():
+    approval = client.post(
+        "/approvals",
+        json={
+            "agent_id": "agent-11",
+            "task_id": "task-11",
+            "action_description": "Avoid duplicate escalation events",
+            "risk_score": 55,
+            "timeout_minutes": 1,
+            "requested_by": "agent-runtime",
+        },
+    ).json()
+
+    from main import approval_queue
+
+    record = approval_queue.get(approval["approval_id"])
+    record.created_at = record.created_at - timedelta(minutes=6)
+
+    first = client.post("/approvals/escalate-overdue")
+    second = client.post("/approvals/escalate-overdue")
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+    escalated_events = client.get("/events", params={"event_type": "approval.escalated"}).json()["items"]
+    matching_events = [event for event in escalated_events if event["payload"]["approval_id"] == approval["approval_id"]]
+    assert len(matching_events) == 1
 
 
 def test_escalation_auto_denies_after_tier2_timeout():
@@ -122,6 +159,17 @@ def test_escalation_auto_denies_after_tier2_timeout():
     approval_state = client.get(f"/approvals/{approval['approval_id']}").json()
     assert approval_state["status"] == "denied"
     assert approval_state["decision_reason"] == "Escalation timeout reached; auto-denied"
+
+
+def test_killswitch_emits_event():
+    response = client.post(
+        "/killswitch",
+        json={"triggered_by": "operator-2", "reason": "Emergency stop"},
+    )
+
+    assert response.status_code == 200
+    killswitch_events = client.get("/events", params={"event_type": "agent.killswitch"}).json()["items"]
+    assert killswitch_events[-1]["payload"]["triggered_by"] == "operator-2"
 
 
 def test_heartbeat_tracking():

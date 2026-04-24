@@ -3,11 +3,14 @@
 # @module paperclip
 # @description Minimal Paperclip human control plane service
 
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException
 
 from approval_queue import ApprovalQueue
 from heartbeat import HeartbeatMonitor
 from killswitch import KillswitchManager
+from event_publisher import PaperclipEventPublisher
 from models import ApprovalCreate, ApprovalDecision, HeartbeatCreate, KillswitchRequest
 
 
@@ -16,6 +19,7 @@ app = FastAPI(title="Paperclip Human Control Plane", version="1.0")
 approval_queue = ApprovalQueue()
 heartbeat_monitor = HeartbeatMonitor()
 killswitch_manager = KillswitchManager()
+event_publisher = PaperclipEventPublisher()
 
 
 @app.get("/health")
@@ -30,6 +34,7 @@ async def health():
 @app.post("/approvals")
 async def submit_approval(request: ApprovalCreate):
     approval = approval_queue.submit(request)
+    event_publisher.publish_pending_approval(approval)
     return approval.model_dump()
 
 
@@ -80,7 +85,12 @@ async def delegate(approval_id: str, decision: ApprovalDecision):
 
 @app.post("/approvals/escalate-overdue")
 async def escalate_overdue_approvals():
-    return approval_queue.escalate_overdue()
+    previous_escalated_ids = {approval.approval_id for approval in approval_queue.list_escalated()}
+    result = approval_queue.escalate_overdue()
+    for approval in approval_queue.list_escalated():
+        if approval.approval_id not in previous_escalated_ids:
+            event_publisher.publish_escalated_approval(approval)
+    return result
 
 
 @app.post("/heartbeats")
@@ -100,7 +110,13 @@ async def list_heartbeats():
 @app.post("/killswitch")
 async def trigger_killswitch(request: KillswitchRequest):
     denied_count = approval_queue.deny_all_pending(request.reason, request.triggered_by)
+    event_publisher.publish_killswitch(request.triggered_by, request.reason, denied_count)
     return killswitch_manager.trigger(request.triggered_by, request.reason, denied_count)
+
+
+@app.get("/events")
+async def list_events(event_type: Optional[str] = None):
+    return {"items": event_publisher.list_events(event_type)}
 
 
 @app.get("/killswitch")

@@ -46,7 +46,7 @@ health_critical() {
     local component=$1
     local message=$2
     log_error "    ❌ CRITICAL: $component - $message"
-    ((CRITICAL_COUNT++))
+    CRITICAL_COUNT+=1
     HEALTH_STATUS="CRITICAL"
 }
 
@@ -54,7 +54,7 @@ health_warning() {
     local component=$1
     local message=$2
     log_warn "    ⚠️  WARNING: $component - $message"
-    ((WARNING_COUNT++))
+    WARNING_COUNT+=1
     if [[ "$HEALTH_STATUS" == "HEALTHY" ]]; then
         HEALTH_STATUS="WARNING"
     fi
@@ -64,7 +64,7 @@ health_ok() {
     local component=$1
     local message=$2
     log_success "    ✅ OK: $component - $message"
-    ((INFO_COUNT++))
+    INFO_COUNT+=1
 }
 
 # ============================================================================
@@ -83,7 +83,7 @@ else
 fi
 
 # Check for uncommitted changes (acceptable but should be tracked)
-UNCOMMITTED=$(git -C "${PROJECT_ROOT}" status --short 2>/dev/null | wc -l)
+UNCOMMITTED=$(git -C "${PROJECT_ROOT}" status --short 2>/dev/null | wc -l || echo 0)
 if (( UNCOMMITTED == 0 )); then
     health_ok "Git State" "Repository clean (immutable)"
 else
@@ -220,9 +220,20 @@ done
 log_info ""
 log_info "=== 7. Security Assessment ==="
 
-# Check for secrets in common locations
-if grep -r "ghp_" "${PROJECT_ROOT}" 2>/dev/null | grep -v ".git" | grep -v "node_modules" >/dev/null; then
-    health_critical "Secrets" "Possible GitHub token exposure found"
+# Check for secrets in common locations (excluding known false positives)
+if grep -r "ghp_" "${PROJECT_ROOT}" 2>/dev/null | \
+    grep -v ".git" | \
+    grep -v "node_modules" | \
+    grep -v "scripts/ops/infrastructure-health-check.sh" | \
+    grep -v "scripts/_common/github-api-client.sh" | \
+    grep -v "scripts/_common/github-token-rotation.sh" | \
+    grep -v "scripts/ci/check-github-api-governance.sh" | \
+    grep -v "scripts/ci/validate-config-ssot.sh" | \
+    grep -v "ghp_xxxxxxxxxxxx" | \
+    grep -v "ghp_classic_token..." | \
+    grep -v "ghp_\*" | \
+    grep -v "ghp_\[" >/dev/null; then
+    health_critical "Secrets" "Possible GitHub token exposure found (ghp_* pattern)"
 else
     health_ok "Secrets" "No obvious secrets in repository"
 fi

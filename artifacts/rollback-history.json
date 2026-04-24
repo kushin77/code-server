@@ -34,3 +34,10 @@
   "status": "success",
   "health_check": "not-checked"
 }
+{
+  "timestamp": "2026-04-24T20:00:52Z",
+  "component": "compose",
+  "version": "latest",
+  "status": "success",
+  "health_check": "not-checked"
+}

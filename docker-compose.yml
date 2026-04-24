@@ -1462,6 +1462,7 @@ volumes:
 
   appsmith-data:
     driver: local
+    name: ${APPSMITH_VOLUME_NAME:-code-server-enterprise_appsmith-data}
     driver_opts:
       type: nfs
       o: "addr=${NAS_HOST:?NAS_HOST must be set},nfsvers=4,rsize=131072,wsize=131072,hard,timeo=600,retrans=2"

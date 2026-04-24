@@ -1,8 +1,11 @@
-#!/bin/bash
-# scripts/health/health-recover.sh
-# Part of Phase 7d-003: Health Checks & Automatic Failover
+#!/usr/bin/env bash
+# @file        scripts/health/health-recover.sh
+# @module      health/recovery
+# @description Automatic service recovery and health restoration procedures
+# @owner       infrastructure
+# @status      active
 
-set -e
+set -euo pipefail
 
 SERVICE=$1
 RESTART_COUNT_FILE="/tmp/${SERVICE}_restart_count"

@@ -1,8 +1,11 @@
-#!/bin/bash
-# scripts/health/health-check.sh
-# Part of Phase 7d-003: Health Checks & Automatic Failover
+#!/usr/bin/env bash
+# @file        scripts/health/health-check.sh
+# @module      health/monitoring
+# @description Verify health of all production services and trigger failover if degradation detected
+# @owner       infrastructure
+# @status      active
 
-set -e
+set -euo pipefail
 
 FAILED_SERVICES=()
 HEALTH_STATUS="HEALTHY"

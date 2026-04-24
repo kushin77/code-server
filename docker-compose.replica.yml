@@ -21,6 +21,7 @@ services:
     environment:
       - APPSMITH_CUSTOM_DOMAIN=
       - APPSMITH_NAS_SUBDIR=appsmith-replica-2
+      - APPSMITH_VOLUME_NAME=code-server-enterprise_appsmith-data-replica-2
 
   # ────────────────────────────────────────────────────────────────────────────
   # session-broker — Replica instance for active/active horizontal scaling

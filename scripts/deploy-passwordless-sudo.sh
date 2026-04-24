@@ -1,13 +1,18 @@
-#!/bin/bash
-# Deploy Issue #1636 - Passwordless Sudo Configuration
-# This script sets up passwordless sudo for the akushnir user on Replica 1
-# 
+#!/usr/bin/env bash
+# @file        scripts/deploy-passwordless-sudo.sh
+# @module      deploy/privileges
+# @description Configure passwordless sudo for deployment user on remote hosts
+# @owner       infrastructure
+# @status      active
+#
 # IMPORTANT: This script REQUIRES ONE-TIME INTERACTIVE SUDO SETUP
 # The initial password entry cannot be automated for security reasons.
 #
 # Usage: 
 #   ssh akushnir@192.168.168.31
 #   bash ~/code-server-enterprise/scripts/deploy-passwordless-sudo.sh
+
+set -euo pipefail
 
 set -euo pipefail
 

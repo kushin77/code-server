@@ -1,0 +1,103 @@
+/**
+ * @file kc-ide-extension-pack.json
+ * @module apps/extensions/team-hub/kc-ide-extension-pack.json
+ * @description KC IDE Extension Pack — Core extensions pre-installed for all users
+ * 
+ * This file defines the standard extension set for KC IDE. All extensions are open-source
+ * and can be customized per organization.
+ */
+
+{
+  "name": "kc-ide-extension-pack",
+  "displayName": "KC IDE Extension Pack",
+  "description": "Essential KC IDE extensions for Developer Operating System",
+  "version": "1.0.0",
+  "publisher": "kushin77",
+  "repository": "https://github.com/kushin77/code-server",
+  "license": "Apache-2.0",
+  
+  "extensionPack": [
+    "ms-vscode.cpptools",
+    "ms-python.python",
+    "ms-vscode.go",
+    "ms-vscode.makefile-tools",
+    "ms-vscode-remote.remote-ssh",
+    "ms-vscode-remote.remote-ssh-edit",
+    "ms-vscode.remote-explorer",
+    "gitpod.gitpod-desktop",
+    "eamodio.gitlens",
+    "github.copilot",
+    "github.vscode-pull-request-github",
+    "github.github-vscode-theme",
+    "ms-vscode.vscode-github-issue-notebooks",
+    "GitHub.codespaces",
+    "redhat.vscode-yaml",
+    "ms-vscode.makefile-tools",
+    "ms-azuretools.vscode-docker",
+    "hashicorp.terraform",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "arturadib.Graphviz-Preview",
+    "bainbrid.author-generator",
+    "EditorConfig.EditorConfig",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.extension-pack-for-java",
+    "ms-dotnettools.csharp",
+    "bradlc.vscode-tailwindcss",
+    "bradymholt.aspnetcore-switcher"
+  ],
+  
+  "dependencies": {
+    "coc.nvim": "^0.0.82",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  
+  "contributes": {
+    "configuration": {
+      "title": "KC IDE Extension Pack",
+      "properties": {
+        "kcIde.extensions.autoUpdate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically update KC IDE extension pack"
+        },
+        "kcIde.extensions.telemetry": {
+          "type": "boolean",
+          "default": false,
+          "description": "Send extension telemetry (disabled by default for privacy)"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "kcIde.extensions.checkUpdates",
+        "title": "KC IDE: Check Extension Updates"
+      },
+      {
+        "command": "kcIde.extensions.openGallery",
+        "title": "KC IDE: Open Extension Gallery"
+      }
+    ]
+  },
+  
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/KC%20IDE-certified-blue",
+      "href": "https://github.com/kushin77/code-server",
+      "description": "KC IDE Certified"
+    }
+  ],
+  
+  "keywords": [
+    "devos",
+    "developer-operating-system",
+    "code-server",
+    "kushin.cloud",
+    "team-development"
+  ],
+  
+  "categories": [
+    "Extension Packs"
+  ]
+}

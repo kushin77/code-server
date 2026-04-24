@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KC IDE — Developer Operating System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #0a1428 0%, #1a2d47 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            text-align: center;
+            background: rgba(10, 20, 40, 0.8);
+            border: 1px solid #2d4a6f;
+            border-radius: 12px;
+            padding: 60px 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #4a9eff 0%, #7b68ee 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+        }
+        
+        h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+        
+        .tagline {
+            font-size: 18px;
+            color: #a0b0c8;
+            margin-bottom: 40px;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+        
+        .description {
+            color: #c0d0e0;
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+            text-align: left;
+        }
+        
+        .feature {
+            padding: 20px;
+            background: rgba(30, 50, 80, 0.4);
+            border-left: 3px solid #4a9eff;
+            border-radius: 6px;
+        }
+        
+        .feature-title {
+            font-weight: 700;
+            color: #4a9eff;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        
+        .feature-desc {
+            color: #a0b0c8;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .cta {
+            margin-top: 40px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .button {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .button-primary {
+            background: linear-gradient(135deg, #4a9eff 0%, #7b68ee 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+        }
+        
+        .button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 158, 255, 0.4);
+        }
+        
+        .button-secondary {
+            background: transparent;
+            color: #4a9eff;
+            border: 1px solid #4a9eff;
+        }
+        
+        .button-secondary:hover {
+            background: rgba(74, 158, 255, 0.1);
+        }
+        
+        .footer {
+            margin-top: 50px;
+            font-size: 13px;
+            color: #607080;
+            border-top: 1px solid #1e3250;
+            padding-top: 20px;
+        }
+        
+        .status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #4a9eff;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 20px;
+            }
+            h1 {
+                font-size: 32px;
+            }
+            .logo {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">KC IDE</div>
+        <h1>Developer Operating System</h1>
+        <p class="tagline">Sovereign Development Environment for Modern Teams</p>
+        
+        <p class="description">
+            KC IDE is your personal developer operating system — fully customizable, completely under your control, and designed for teams that think differently.
+        </p>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-title">🚀 Autonomous Copilot</div>
+                <div class="feature-desc">AI that learns from your codebase, docs, and issues. Completes complex tasks with minimal prompts.</div>
+            </div>
+            <div class="feature">
+                <div class="feature-title">👥 Real-Time Collaboration</div>
+                <div class="feature-desc">Work together seamlessly. Conflict detection, live presence, and AI-assisted merging.</div>
+            </div>
+            <div class="feature">
+                <div class="feature-title">💬 Team Communication</div>
+                <div class="feature-desc">Encrypted sidebar chat, video meetings, and team coordination — all from your IDE.</div>
+            </div>
+            <div class="feature">
+                <div class="feature-title">🔒 Private by Design</div>
+                <div class="feature-desc">Your code, your data, your infrastructure. Zero vendor lock-in. Complete sovereignty.</div>
+            </div>
+        </div>
+        
+        <div class="cta">
+            <a href="javascript:void(0)" class="button button-primary" onclick="openWorkspace()">Open Workspace</a>
+            <a href="https://github.com/kushin77/code-server" target="_blank" class="button button-secondary">Documentation</a>
+        </div>
+        
+        <div class="footer">
+            <span class="status"></span>System healthy and ready
+        </div>
+    </div>
+    
+    <script>
+        function openWorkspace() {
+            // Redirect to actual code-server workspace
+            window.location.href = '/workspace';
+        }
+    </script>
+</body>
+</html>

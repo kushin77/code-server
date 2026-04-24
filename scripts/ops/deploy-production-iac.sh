@@ -31,11 +31,12 @@ source "$SCRIPT_DIR/../_common/init.sh"
 # Configuration
 REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
 SSH_USER="akushnir"
-SSH_KEY="${SSH_KEY:-~/.ssh/id_rsa_onprem}"
+DEFAULT_SSH_KEY_PATH="${HOME}/.ssh/id_rsa_onprem"
+SSH_KEY="${SSH_KEY:-$DEFAULT_SSH_KEY_PATH}"
 DRY_RUN=0
 WAIT_HEALTHY=1
-HEALTH_CHECK_TIMEOUT=300  # 5 minutes
-HEALTH_CHECK_INTERVAL=10   # Check every 10 seconds
+DEPLOY_HEALTH_CHECK_TIMEOUT=300  # 5 minutes
+DEPLOY_HEALTH_CHECK_INTERVAL=10   # Check every 10 seconds
 
 # Deployment tracking
 DEPLOY_START_TIME=$(date +%s)
@@ -98,19 +99,19 @@ wait_for_health() {
 
   log_info "[$replica] Waiting for health checks to pass..."
 
-  while [[ $elapsed -lt $HEALTH_CHECK_TIMEOUT ]]; do
+  while [[ $elapsed -lt $DEPLOY_HEALTH_CHECK_TIMEOUT ]]; do
     if ssh -i "$SSH_KEY" -o ConnectTimeout=5 "$SSH_USER@$replica" \
       "curl -sk https://localhost/health >/dev/null 2>&1" >/dev/null 2>&1; then
       log_info "[$replica] ✅ Health check passed"
       return 0
     fi
 
-    log_info "[$replica] Waiting... (${elapsed}s/${HEALTH_CHECK_TIMEOUT}s)"
-    sleep "$HEALTH_CHECK_INTERVAL"
-    elapsed=$((elapsed + HEALTH_CHECK_INTERVAL))
+    log_info "[$replica] Waiting... (${elapsed}s/${DEPLOY_HEALTH_CHECK_TIMEOUT}s)"
+    sleep "$DEPLOY_HEALTH_CHECK_INTERVAL"
+    elapsed=$((elapsed + DEPLOY_HEALTH_CHECK_INTERVAL))
   done
 
-  log_warn "[$replica] Health check timeout after ${HEALTH_CHECK_TIMEOUT}s"
+  log_warn "[$replica] Health check timeout after ${DEPLOY_HEALTH_CHECK_TIMEOUT}s"
   return 1
 }
 

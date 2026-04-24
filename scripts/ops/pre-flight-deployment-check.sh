@@ -26,9 +26,10 @@ source "$SCRIPT_DIR/../_common/init.sh"
 # Configuration
 REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
 SSH_USER="akushnir"
-SSH_KEY="${SSH_KEY:~/.ssh/id_rsa_onprem}"
-NAS_HOST="192.168.168.56"
-NAS_EXPORT="/export/appsmith"
+DEFAULT_SSH_KEY_PATH="${HOME}/.ssh/id_rsa_onprem"
+SSH_KEY="${SSH_KEY:-$DEFAULT_SSH_KEY_PATH}"
+PRECHECK_NAS_HOST="${NAS_HOST:-192.168.168.56}"
+PRECHECK_NAS_EXPORT="/export/appsmith"
 MIN_DISK_GB=10
 JSON_OUTPUT=0
 STRICT_MODE=0
@@ -71,7 +72,7 @@ done
 check_pass() {
   local name="$1"
   local detail="${2:-}"
-  ((CHECKS_PASSED++))
+  CHECKS_PASSED=$((CHECKS_PASSED + 1))
   CHECK_RESULTS+=("PASS|$name|$detail")
   log_info "✅ $name${detail:+ — $detail}"
 }
@@ -79,7 +80,7 @@ check_pass() {
 check_warn() {
   local name="$1"
   local detail="${2:-}"
-  ((CHECKS_WARNED++))
+  CHECKS_WARNED=$((CHECKS_WARNED + 1))
   CHECK_RESULTS+=("WARN|$name|$detail")
   log_warn "⚠️  $name${detail:+ — $detail}"
 }
@@ -87,7 +88,7 @@ check_warn() {
 check_fail() {
   local name="$1"
   local detail="${2:-}"
-  ((CHECKS_FAILED++))
+  CHECKS_FAILED=$((CHECKS_FAILED + 1))
   CHECK_RESULTS+=("FAIL|$name|$detail")
   log_error "❌ $name${detail:+ — $detail}"
 }
@@ -144,9 +145,7 @@ if cd /mnt/c/code-server-enterprise 2>/dev/null; then
     check_pass "Git working tree clean"
   fi
 
-  local branch
   branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "UNKNOWN")
-  local commit
   commit=$(git rev-parse --short HEAD 2>/dev/null || echo "UNKNOWN")
   check_pass "Git state" "branch=$branch commit=$commit"
 else
@@ -169,7 +168,6 @@ done
 # --- Check 4: File Permissions (sample check) ---
 log_info "CHECK: File ownership on local repo"
 if [[ -d "/mnt/c/code-server-enterprise/.git" ]]; then
-  local owner
   owner=$(stat -c '%U:%G' /mnt/c/code-server-enterprise/.git 2>/dev/null || echo "UNKNOWN")
   if [[ "$owner" == *"akushnir"* ]]; then
     check_pass "Git directory ownership" "$owner"
@@ -182,7 +180,6 @@ fi
 log_info "CHECK: Disk space availability"
 for replica in "${REPLICA_ARRAY[@]}"; do
   replica="${replica// /}"
-  local disk_free_gb
   disk_free_gb=$(ssh -i "$SSH_KEY" -o ConnectTimeout=5 "$SSH_USER@$replica" \
     "df /home/akushnir/code-server-enterprise | tail -1 | awk '{print \$4}'" 2>/dev/null || echo "0")
   disk_free_gb=$((disk_free_gb / 1024 / 1024))  # Convert KB to GB
@@ -197,19 +194,29 @@ done
 # --- Check 6: docker-compose Syntax ---
 log_info "CHECK: docker-compose configuration syntax"
 if cd /mnt/c/code-server-enterprise 2>/dev/null; then
-  if docker-compose config >/dev/null 2>&1; then
-    check_pass "docker-compose syntax valid"
+  if command -v docker-compose >/dev/null 2>&1; then
+    if docker-compose config >/dev/null 2>&1; then
+      check_pass "docker-compose syntax valid"
+    else
+      check_fail "docker-compose syntax invalid" "Run: docker-compose config"
+    fi
+  elif command -v docker >/dev/null 2>&1; then
+    if docker compose config >/dev/null 2>&1; then
+      check_pass "docker compose syntax valid"
+    else
+      check_fail "docker compose syntax invalid" "Run: docker compose config"
+    fi
   else
-    check_fail "docker-compose syntax invalid" "Run: docker-compose config"
+    check_warn "docker tooling unavailable" "Skipping local compose syntax validation"
   fi
 fi
 
 # --- Check 7: NAS Connectivity (Sample) ---
 log_info "CHECK: NAS connectivity"
-if ping -c 1 -W 2 "$NAS_HOST" >/dev/null 2>&1; then
-  check_pass "NAS host reachable" "$NAS_HOST"
+if ping -c 1 -W 2 "$PRECHECK_NAS_HOST" >/dev/null 2>&1; then
+  check_pass "NAS host reachable" "$PRECHECK_NAS_HOST"
 else
-  check_warn "NAS host unreachable" "$NAS_HOST (non-critical, services can start without NAS)"
+  check_warn "NAS host unreachable" "$PRECHECK_NAS_HOST (non-critical, services can start without NAS)"
 fi
 
 # ============================================================================

@@ -10,3 +10,8 @@ export {
   type HealthCheckSummary,
   type DatabaseHealthCheckConfig,
 } from './database-health-check-service';
+
+export {
+  SessionResilienceHealthService,
+  type SessionResilienceHealthConfig,
+} from './session-resilience-health-service';

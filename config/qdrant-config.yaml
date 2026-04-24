@@ -1,0 +1,26 @@
+# Qdrant Vector Database Configuration
+# Organizational Memory Engine - stores embeddings for semantic search
+
+server:
+  http_port: 6333
+  grpc_port: 6334
+
+storage:
+  storage_path: /qdrant/storage
+  snapshots_path: /qdrant/snapshots
+  wal_path: /qdrant/wal
+  # Vector index configuration
+  snapshots:
+    # Snapshot interval in seconds
+    snapshot_interval: 600
+    # Maximum snapshots to keep
+    max_snapshots: 5
+
+log_level: info
+
+# API key disabled - Qdrant is internal-only
+api_key: null
+
+# Clustering disabled for single-node deployment
+clusters:
+  enabled: false

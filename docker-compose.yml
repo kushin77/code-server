@@ -396,7 +396,8 @@ services:
     image: caddy:2.7.6@sha256:7b51768d110708c44179dc299884e9ee73d243a37abccce2dc796abc36371a38
     container_name: caddy
     restart: unless-stopped
-    # SECURITY FIX #969: Run as root but drop dangerous capabilities
+    user: "101"
+    # SECURITY FIX #969: Run as non-root user 101 (caddy system user)
     # Caddy needs CAP_NET_BIND_SERVICE to bind to ports 80/443
     cap_add:
       - NET_BIND_SERVICE
@@ -449,6 +450,7 @@ services:
     image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres
     restart: unless-stopped
+    user: "999"
     networks:
       - net-data
     environment:

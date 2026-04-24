@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
@@ -83,15 +84,44 @@ def test_escalation_marks_overdue_approvals():
     from main import approval_queue
 
     record = approval_queue.get(approval["approval_id"])
-    record.created_at = record.created_at.replace(year=record.created_at.year - 1)
+    record.created_at = record.created_at - timedelta(minutes=6)
 
     response = client.post("/approvals/escalate-overdue")
 
     assert response.status_code == 200
     assert response.json()["escalated"] == 1
+    assert response.json()["auto_denied"] == 0
     escalated_items = client.get("/approvals/escalated").json()["items"]
-    assert escalated_items[0]["approval_id"] == approval["approval_id"]
-    assert escalated_items[0]["escalation_level"] == 1
+    assert any(item["approval_id"] == approval["approval_id"] for item in escalated_items)
+
+
+def test_escalation_auto_denies_after_tier2_timeout():
+    approval = client.post(
+        "/approvals",
+        json={
+            "agent_id": "agent-10",
+            "task_id": "task-10",
+            "action_description": "Auto-deny overdue approval",
+            "risk_score": 70,
+            "timeout_minutes": 1,
+            "requested_by": "agent-runtime",
+        },
+    ).json()
+
+    from main import approval_queue
+
+    record = approval_queue.get(approval["approval_id"])
+    record.created_at = record.created_at - timedelta(minutes=20)
+
+    response = client.post("/approvals/escalate-overdue")
+
+    assert response.status_code == 200
+    assert response.json()["escalated"] == 0
+    assert response.json()["auto_denied"] == 1
+
+    approval_state = client.get(f"/approvals/{approval['approval_id']}").json()
+    assert approval_state["status"] == "denied"
+    assert approval_state["decision_reason"] == "Escalation timeout reached; auto-denied"
 
 
 def test_heartbeat_tracking():

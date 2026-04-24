@@ -1,10 +1,10 @@
 {
-  "test_timestamp": "2026-04-24T21:56:15Z",
+  "test_timestamp": "2026-04-24T22:15:48Z",
   "test_type": "full_redeploy",
-  "git_commit": "ab8f04c",
+  "git_commit": "4d5237d",
   "deployment": {
-    "start_time": "1777067775",
-    "end_time": "1777067775",
+    "start_time": "1777068946",
+    "end_time": "1777068946",
     "duration_seconds": 0,
     "sla_max_duration": 300,
     "sla_compliance": true
@@ -12,7 +12,7 @@
   "services": {
     "running": 0,
     "exited": 0,
-    "total_time_seconds": 1
+    "total_time_seconds": 0
   },
   "health_checks": {
     "endpoints_tested": 4,

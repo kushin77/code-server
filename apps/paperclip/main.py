@@ -80,7 +80,7 @@ async def delegate(approval_id: str, decision: ApprovalDecision):
 
 @app.post("/approvals/escalate-overdue")
 async def escalate_overdue_approvals():
-    return {"escalated": approval_queue.escalate_overdue()}
+    return approval_queue.escalate_overdue()
 
 
 @app.post("/heartbeats")

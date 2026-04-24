@@ -1,0 +1,10 @@
+escalation:
+  tier1:
+    roles:
+      - developer
+    timeout_minutes: 5
+  tier2:
+    roles:
+      - tech_lead
+    timeout_minutes: 10
+  fallback: auto_deny

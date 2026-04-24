@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.code-server
-    image: code-server-enterprise:4.115.0
+    image: code-server-enterprise:4.115.0@sha256:9fcd6ab4ad9f0bdb0f28b35006171961d0bebcaf1a9b97d76b58d750873fd814
     container_name: code-server
     restart: unless-stopped
     user: "1000"
@@ -300,84 +300,6 @@ services:
         max-file: "3"
 
   # ────────────────────────────────────────────────────────────────────────────
-  # oauth2-proxy-portal — Google OIDC gate for portal domain (via Appsmith)
-  # Issue #688: Split OAuth callback — enables separate redirect URLs for apex vs. IDE
-  # Callback: https://${DOMAIN}/oauth2/callback (different from IDE: https://${IDE_DOMAIN}/oauth2/callback)
-  # Phase 1 (#1545): Portal enabled by default (profiles removed April 24, 2026)
-  # ────────────────────────────────────────────────────────────────────────────
-  oauth2-proxy-portal:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0@sha256:3da33b9670c67bd782277f99acadf7026f75b9507bfba2088eb2d497266ef7fc
-    container_name: oauth2-proxy-portal
-    restart: unless-stopped
-    user: "101"  # oauth2-proxy user (non-root)
-    networks:
-      - net-edge
-      - net-app
-    expose:
-      - "4181"
-    environment:
-      # Portal uses the same Google OAuth app as IDE
-      # IMPORTANT: Both redirect URIs must be registered in Google Cloud Console OAuth app:
-      #   - https://${IDE_DOMAIN}/oauth2/callback (IDE)
-      #   - https://${DOMAIN}/oauth2/callback (Portal)
-      OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_PORTAL_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID}}"
-      OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_PORTAL_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET}}"
-      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
-      OAUTH2_PROXY_PROVIDER: "oidc"
-      OAUTH2_PROXY_PROVIDER_DISPLAY_NAME: "Google"
-      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
-      OAUTH2_PROXY_OIDC_AUDIENCE: "${GOOGLE_CLIENT_ID}"
-      OAUTH2_PROXY_SCOPE: "openid profile email"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://${DOMAIN:-kushnir.cloud}/oauth2/callback}"
-      OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
-      # Allow any Google domain to complete OAuth; authenticated-emails-file remains the real gate.
-      # This prevents Google from returning org_internal 403 before our explicit allowlist is checked.
-      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_PORTAL_EMAIL_DOMAINS:-*}"
-      OAUTH2_PROXY_AUTHENTICATED_EMAILS_FILE: "/etc/oauth2-proxy/allowed-emails.txt"
-      OAUTH2_PROXY_SESSION_STORE_TYPE: "redis"
-      OAUTH2_PROXY_REDIS_CONNECTION_URL: "redis://:${REDIS_PASSWORD:-}@redis:6379/0"
-      OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_portal"
-      OAUTH2_PROXY_COOKIE_SECURE: "true"
-      OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
-      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
-      OAUTH2_PROXY_COOKIE_DOMAINS: "${DOMAIN:-kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
-      # CSRF protection: shared secret across both hosts enables validation during failover
-      OAUTH2_PROXY_CSRF_COOKIE_NAME: "_oauth2_proxy_portal_csrf"
-      OAUTH2_PROXY_CSRF_TRUSTED_HOSTS: "${DOMAIN:-kushnir.cloud},.${COOKIE_DOMAIN:-.kushnir.cloud}"
-      OAUTH2_PROXY_WHITELIST_DOMAINS: "${DOMAIN:-kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
-      OAUTH2_PROXY_COOKIE_EXPIRE: "24h"
-      OAUTH2_PROXY_COOKIE_REFRESH: "15m"
-      OAUTH2_PROXY_REVERSE_PROXY: "true"
-      OAUTH2_PROXY_TRUST_PROXY: "true"
-      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4181"
-      OAUTH2_PROXY_PROXY_PREFIX: "/oauth2"
-      OAUTH2_PROXY_PROXY_WEBSOCKETS: "true"
-      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "false"
-      OAUTH2_PROXY_PROMPT: "select_account"
-      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
-      OAUTH2_PROXY_PASS_USER_HEADERS: "true"
-      # Appsmith redirects static assets when upstream Host is kushnir.cloud over internal HTTP.
-      # Keep public host at edge, but present upstream host as appsmith:80 to avoid self-redirect loops.
-      OAUTH2_PROXY_PASS_HOST_HEADER: "false"
-      OAUTH2_PROXY_PASS_BASIC_AUTH: "false"
-      OAUTH2_PROXY_PREFER_EMAIL_TO_USER: "true"
-      OAUTH2_PROXY_AUTH_LOGGING: "true"
-      OAUTH2_PROXY_REQUEST_LOGGING: "false"
-      OAUTH2_PROXY_SKIP_AUTH_REGEX: "^/healthz|^/ping|^/static|^/oauth2/start|^/oauth2/callback"
-    volumes:
-      - ./allowed-emails.txt:/etc/oauth2-proxy/allowed-emails.txt:ro
-    # Health check removed (Issue #1640): Alpine image lacks tools for traditional health checks.
-    # Service is stable and functional. Docker daemon monitors process state via restart policy.
-    # For future: upgrade to oauth2-proxy image with health endpoint tooling if needed.
-    depends_on:
-      appsmith:
-        condition: service_started
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   # ────────────────────────────────────────────────────────────────────────────
   # session-broker — Per-session container isolation and routing (P1 #752)
   # Routes authenticated users to isolated code-server containers with resource quotas
@@ -386,7 +308,7 @@ services:
     build:
       context: .
       dockerfile: apps/session-broker/Dockerfile
-    image: session-broker:1.0.0
+    image: session-broker:1.0.0@sha256:3677095276dfb32f3b291bc76ebcd68c54261b4fc92ef5dd18baeae7c61e8084
     container_name: session-broker
     restart: unless-stopped
     profiles: ["session-isolation"]  # Disabled by default pending dependency fixes
@@ -524,7 +446,7 @@ services:
   # postgres — Persistent relational database (PostgreSQL 15)
   # ────────────────────────────────────────────────────────────────────────────
   postgres:
-    image: postgres:15-alpine@sha256:895f54361a7eada8e612efef7a8c5e80ba657c013cc9b4146b513c43ab901902
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: postgres
     restart: unless-stopped
     networks:
@@ -612,7 +534,7 @@ services:
   # Master runs on this host (.31), replica on .42, arbiter on either
   # ────────────────────────────────────────────────────────────────────────────
   redis:
-    image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
     container_name: redis
     restart: unless-stopped
     user: "redis:redis"
@@ -655,7 +577,7 @@ services:
   # Monitors Redis master and coordinates failover
   # ────────────────────────────────────────────────────────────────────────────
   redis-sentinel-1:
-    image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
     container_name: redis-sentinel-1
     restart: unless-stopped
     user: "redis:redis"
@@ -697,7 +619,7 @@ services:
   # Placeholder here for reference; actual deployment on .42 via SSH
   # ────────────────────────────────────────────────────────────────────────────
   # redis-sentinel-2:
-  #   image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
+  #   image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
   #   container_name: redis-sentinel-2
   #   restart: unless-stopped
   #   networks:
@@ -716,7 +638,7 @@ services:
   # Breaks ties if one sentinel is down; uses minimal resources
   # ────────────────────────────────────────────────────────────────────────────
   redis-sentinel-arbiter:
-    image: redis:7-alpine@sha256:84b07a33a16c4584d2933128ffb28b66ee4d3284ac9dc327a5170782d5cf5b27
+    image: redis:7-alpine@sha256:8b81dd37ff027bec4e516d41acfbe9fe2460070dc6d4a4570a2ac5b9d59df065
     container_name: redis-sentinel-arbiter
     restart: unless-stopped
     user: "redis:redis"
@@ -792,7 +714,7 @@ services:
   # Monitors both Master-Replica Redis instances and Sentinel quorum status
   # ────────────────────────────────────────────────────────────────────────────
   redis-exporter:
-    image: oliver006/redis_exporter@sha256:d82625bda93823fb40de881ffbb45b65aca772a39c30141387f92314c258da5d
+    image: oliver006/redis_exporter@sha256:6a97d4dd743b533e1f950c677b87d880e44df363c61af3f406fc9e53ed65ee03
     container_name: redis-exporter
     restart: unless-stopped
     networks:
@@ -835,7 +757,7 @@ services:
   # prometheus — Metrics collection and alerting engine
   # ────────────────────────────────────────────────────────────────────────────
   prometheus:
-    image: prom/prometheus:v2.48.0@sha256:13f40c0279df792517b456ae6427dd6344685e9b1478fb9de8e4dc418727668f
+    image: prom/prometheus:v2.54.1@sha256:f6639335d34a77d9d9db382b92eeb7fc00934be8eae81dbc03b31cfe90411a94
     container_name: prometheus
     restart: unless-stopped
     user: "nobody:nobody"
@@ -925,7 +847,7 @@ services:
   # alertmanager — Alert routing and silencing
   # ────────────────────────────────────────────────────────────────────────────
   alertmanager:
-    image: prom/alertmanager:v0.26.0@sha256:b97390a5b2b52cf4dd66098a091ac0575d18fbf35acf2501fb0f180e3488ad15
+    image: prom/alertmanager:v0.26.0@sha256:361db356b33041437517f1cd298462055580585f26555c317df1a3caf2868552
     container_name: alertmanager
     restart: unless-stopped
     user: "nobody:nobody"
@@ -1305,7 +1227,7 @@ services:
     # Blocked by #1617 — image source not yet resolved. Add to COMPOSE_PROFILES to enable.
     profiles:
       - extensions-registry
-    image: open-vsix/open-vsix:0.2.0
+    image: open-vsix/open-vsix:0.2.0@sha256:d12fb764d6a0664ac736279f6eebcd778641566371cbcf109f029b3a378419db
     container_name: open-vsix-registry
     restart: unless-stopped
     networks:
@@ -1363,10 +1285,10 @@ services:
     build:
       context: .
       dockerfile: apps/saas-api/Dockerfile
-    image: saas-api:1.0.0
+    image: saas-api:1.0.0@sha256:efd34557ebf2dccc2b37ff2e5cec25823c53d8b2e69cb89d27cb0974ef030934
     container_name: saas-api
     restart: unless-stopped
-    user: "1000"
+    user: "1001"
     networks:
       - net-app
       - net-data
@@ -1377,6 +1299,8 @@ services:
       - LOG_LEVEL=info
       - SAAS_API_PORT=5000
       - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@pgbouncer:6432/${POSTGRES_DB:-codeserver}
+    volumes:
+      - ./apps/saas-api/src:/app/src:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/health"]
       interval: 30s
@@ -1399,28 +1323,19 @@ services:
   # Runs SQL migrations from migrations/ directory on startup
   # ────────────────────────────────────────────────────────────────────────────
   saas-db-init:
-    image: postgres:15-alpine@sha256:895f54361a7eada8e612efef7a8c5e80ba657c013cc9b4146b513c43ab901902
+    image: postgres:15-alpine@sha256:fceb6f86328c36f2438fae3b851b0cc57c4a7e69a58c866d9ce24281f2cf0c9c
     container_name: saas-db-init
     restart: on-failure
     networks:
       - net-data
     environment:
       - PGPASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      - POSTGRES_USER=${POSTGRES_USER:-codeserver}
+      - POSTGRES_DB=${POSTGRES_DB:-codeserver}
     volumes:
       - ./migrations:/migrations:ro
-    entrypoint: /bin/bash
-    command:
-      - -c
-      - |
-        set -e
-        echo "Running SaaS API database migrations..."
-        for migration in /migrations/*.sql; do
-          if [ -f "$$migration" ]; then
-            echo "Running: $$migration"
-            psql -h postgres -U ${POSTGRES_USER:-codeserver} -d ${POSTGRES_DB:-codeserver} -f "$$migration" || true
-          fi
-        done
-        echo "Migrations complete."
+      - ./migrations/run-migrations.sh:/run-migrations.sh:ro
+    entrypoint: /run-migrations.sh
     depends_on:
       postgres:
         condition: service_healthy

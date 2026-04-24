@@ -1,0 +1,66 @@
+{
+  "dashboard": {
+    "title": "Execution Scheduler",
+    "uid": "execution-scheduler",
+    "tags": ["execution", "scheduler", "infrastructure"],
+    "timezone": "UTC",
+    "panels": [
+      {
+        "title": "Tasks by Destination",
+        "targets": [
+          {"expr": "scheduler_tasks_submitted_total"}
+        ],
+        "type": "pie-chart"
+      },
+      {
+        "title": "Cost Trend (30-day)",
+        "targets": [
+          {"expr": "scheduler_cost_usd_total"}
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Resource Utilization",
+        "targets": [
+          {"expr": "scheduler_resource_utilization_percent"}
+        ],
+        "type": "gauge"
+      },
+      {
+        "title": "Task Duration Distribution",
+        "targets": [
+          {"expr": "scheduler_task_duration_seconds"}
+        ],
+        "type": "histogram"
+      },
+      {
+        "title": "Budget Status",
+        "targets": [
+          {"expr": "scheduler_monthly_budget_utilization_percent"}
+        ],
+        "type": "gauge"
+      },
+      {
+        "title": "Routing Confidence",
+        "targets": [
+          {"expr": "scheduler_routing_decision_latency_ms"}
+        ],
+        "type": "histogram"
+      },
+      {
+        "title": "Tasks Completed Status",
+        "targets": [
+          {"expr": "scheduler_tasks_completed_total"}
+        ],
+        "type": "table"
+      },
+      {
+        "title": "Available Edge Nodes",
+        "targets": [
+          {"expr": "scheduler_edge_nodes_available"}
+        ],
+        "type": "gauge"
+      }
+    ]
+  }
+}

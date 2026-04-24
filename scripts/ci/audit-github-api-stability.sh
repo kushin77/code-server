@@ -97,7 +97,7 @@ audit_gh_calls() {
     log_audit "Testing GitHub token validity..."
     local token_test=""
     if [ -n "${GH_TOKEN:-}" ] || [ -n "${GITHUB_TOKEN:-}" ]; then
-        token_test=$(gh auth status 2>&1 || echo "Token validation failed")
+        token_test=$(github_gh auth status 2>&1 || echo "Token validation failed")
         if echo "$token_test" | grep -q "Logged in\|authenticated"; then
             findings+=("✅ GitHub token is valid and authenticated")
         else

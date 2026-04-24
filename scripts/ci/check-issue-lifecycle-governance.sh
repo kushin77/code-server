@@ -15,7 +15,7 @@ set -euo pipefail
 ################################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_ROOT}/../.." && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # Source common functions
 source "${SCRIPT_DIR}/../_common/init.sh"
@@ -43,7 +43,7 @@ check_closed_issues() {
     local since_date=$(date -u -d "30 days ago" +'%Y-%m-%dT%H:%M:%SZ')
     
     # Query GitHub for closed issues
-    local closed_issues=$(gh issue list \
+    local closed_issues=$(github_gh issue list \
         --state closed \
         --updated ">=${since_date}" \
         --json number,title,closedAt,labels \
@@ -72,11 +72,11 @@ check_closed_issues() {
         fi
         
         # Check if issue has a linked PR (via "Fixes" comments or PR references)
-        local linked_pr=$(gh issue view "$issue_num" --json body --jq '.body' 2>/dev/null | \
+        local linked_pr=$(github_gh issue view "$issue_num" --json body --jq '.body' 2>/dev/null | \
             grep -oE "(Fixes|Closes|Resolves) #[0-9]+" | head -1 || echo "")
         
         # Alternative: check for manual close reason in recent comment
-        local close_reason=$(gh issue view "$issue_num" --json comments --jq '.comments[] | select(.body | test("(manual close|auto-closed|stale|duplicate|by design)"))' 2>/dev/null || echo "")
+        local close_reason=$(github_gh issue view "$issue_num" --json comments --jq '.comments[] | select(.body | test("(manual close|auto-closed|stale|duplicate|by design)"))' 2>/dev/null || echo "")
         
         if [[ -n "$linked_pr" ]] || [[ -n "$close_reason" ]]; then
             ((compliant++))

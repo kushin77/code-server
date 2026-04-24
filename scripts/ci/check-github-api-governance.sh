@@ -33,11 +33,11 @@ check_gh_repo_flag() {
   
   local violations=0
   
-  # Find all gh CLI calls in changed files
+  # Find all gh/github_gh CLI calls in changed files
   while IFS= read -r file; do
-    if grep -n "gh " "$file" | grep -v "^[[:space:]]*#" | grep -v "\-\-repo" >/dev/null 2>&1; then
+    if grep -nE "(gh |github_gh )" "$file" | grep -v "^[[:space:]]*#" | grep -v "\-\-repo" >/dev/null 2>&1; then
       log_warn "❌ $file: gh CLI call without --repo flag"
-      grep -n "gh " "$file" | grep -v "\-\-repo" | head -3
+      grep -nE "(gh |github_gh )" "$file" | grep -v "\-\-repo" | head -3
       (( violations++ ))
     fi
   done < <(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(sh|bash|py)$" || true)

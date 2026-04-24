@@ -66,7 +66,8 @@ jobs:
 ${REPORT}
 \`\`\`
 
-Please address documentation gaps before merge."
+Please address documentation gaps before merge." \
+                --repo kushin77/code-server
             fi
           fi
 
@@ -102,7 +103,7 @@ Please address documentation gaps before merge."
           ISSUE_NUM=$(grep -oE '(Fixes|Closes|Resolves|fix|close|resolve)\ #([0-9]+)' <<< "${{ github.event.pull_request.body }}" | grep -oE '[0-9]+' | head -1)
           
           if [ -n "$ISSUE_NUM" ]; then
-            ISSUE_JSON=$(gh issue view "$ISSUE_NUM" --json labels -q '.labels[].name' || echo "")
+            ISSUE_JSON=$(gh issue view "$ISSUE_NUM" --json labels -q '.labels[].name' --repo kushin77/code-server || echo "")
             
             if ! echo "$ISSUE_JSON" | grep -E '^P[0-3]$'; then
               echo "⚠️ WARNING: Linked issue #$ISSUE_NUM does not have a priority label (P0/P1/P2/P3)"
@@ -145,7 +146,7 @@ Please address documentation gaps before merge."
               TITLE="${TYPE}: $(echo "$TEXT" | cut -c1-60)"
               
               # Check if similar issue already exists
-              EXISTING=$(gh issue list -S "$TITLE" -s open --json number --limit 1 2>/dev/null || echo "")
+              EXISTING=$(gh issue list -S "$TITLE" -s open --json number --limit 1 --repo kushin77/code-server 2>/dev/null || echo "")
               
               if [ -z "$EXISTING" ]; then
                 echo "Creating issue: $TITLE"
@@ -154,7 +155,8 @@ Please address documentation gaps before merge."
                   --title "$TITLE" \
                   --body "**Source**: $FILE\n\n$TEXT\n\nAuto-created from code scan." \
                   --label "agent-ready" \
-                  --label "tech-debt" || true
+                  --label "tech-debt" \
+                  --repo kushin77/code-server || true
               fi
             done
           fi
@@ -177,17 +179,19 @@ Please address documentation gaps before merge."
             --state open \
             --updated "<${SINCE}" \
             --json number,title,updatedAt \
-            --limit 100 | jq -r '.[] | "\(.number) - \(.title)"' | while IFS=' - ' read -r NUM TITLE; do
+            --limit 100 \
+            --repo kushin77/code-server | jq -r '.[] | "\(.number) - \(.title)"' | while IFS=' - ' read -r NUM TITLE; do
             
             # Check if already marked stale
-            HAS_STALE=$(gh issue view "$NUM" --json labels -q '.labels[].name' | grep -c "stale" || echo 0)
+            HAS_STALE=$(gh issue view "$NUM" --json labels -q '.labels[].name' --repo kushin77/code-server | grep -c "stale" || echo 0)
             
             if [ "$HAS_STALE" -eq 0 ]; then
               echo "Marking issue #$NUM as stale"
               gh issue comment "$NUM" \
-                -b "⚠️ This issue has been inactive for 30+ days. Adding 'stale' label. Will auto-close in 14 days if no activity." || true
+                -b "⚠️ This issue has been inactive for 30+ days. Adding 'stale' label. Will auto-close in 14 days if no activity." \
+                --repo kushin77/code-server || true
               
-              gh issue edit "$NUM" --add-label "stale" || true
+              gh issue edit "$NUM" --add-label "stale" --repo kushin77/code-server || true
             fi
           done
 
@@ -210,12 +214,14 @@ Please address documentation gaps before merge."
             --label "stale" \
             --updated "<${SINCE}" \
             --json number,title \
-            --limit 100 | jq -r '.[] | .number' | while read -r NUM; do
+            --limit 100 \
+            --repo kushin77/code-server | jq -r '.[] | .number' | while read -r NUM; do
             
             echo "Auto-closing stale issue #$NUM"
             gh issue close "$NUM" \
               --reason "not_planned" \
-              -c "Auto-closed due to inactivity (stale for 44+ days). Please reopen if this is still needed." || true
+              -c "Auto-closed due to inactivity (stale for 44+ days). Please reopen if this is still needed." \
+              --repo kushin77/code-server || true
           done
 
   broken-link-check:
@@ -251,7 +257,8 @@ Please address documentation gaps before merge."
           
           if [ "$BROKEN" -gt 0 ]; then
             gh pr comment "${{ github.event.pull_request.number }}" \
-              -b "⚠️ Documentation contains $BROKEN broken links. Please fix before merge." || true
+              -b "⚠️ Documentation contains $BROKEN broken links. Please fix before merge." \
+              --repo kushin77/code-server || true
           fi
 
   weekly-status-report:
@@ -268,11 +275,11 @@ Please address documentation gaps before merge."
         run: |
           WEEK_SINCE=$(date -u -d "7 days ago" +'%Y-%m-%dT%H:%M:%SZ')
           
-          OPEN_ISSUES=$(gh issue list --state open --json number --limit 1 | jq 'length')
-          NEW_ISSUES=$(gh issue list --state open --created ">=${WEEK_SINCE}" --json number | jq 'length')
-          CLOSED_ISSUES=$(gh issue list --state closed --updated ">=${WEEK_SINCE}" --json number --limit 100 | jq 'length')
-          OPEN_PRS=$(gh pr list --state open --json number | jq 'length')
-          MERGED_PRS=$(gh pr list --state closed --updated ">=${WEEK_SINCE}" --json number --limit 100 | jq 'length')
+          OPEN_ISSUES=$(gh issue list --state open --json number --limit 1 --repo kushin77/code-server | jq 'length')
+          NEW_ISSUES=$(gh issue list --state open --created ">=${WEEK_SINCE}" --json number --repo kushin77/code-server | jq 'length')
+          CLOSED_ISSUES=$(gh issue list --state closed --updated ">=${WEEK_SINCE}" --json number --limit 100 --repo kushin77/code-server | jq 'length')
+          OPEN_PRS=$(gh pr list --state open --json number --repo kushin77/code-server | jq 'length')
+          MERGED_PRS=$(gh pr list --state closed --updated ">=${WEEK_SINCE}" --json number --limit 100 --repo kushin77/code-server | jq 'length')
           
           echo "## Weekly Status Report — $(date -u +'%Y-%m-%d')" > /tmp/weekly-report.md
           echo "" >> /tmp/weekly-report.md
@@ -293,7 +300,7 @@ Please address documentation gaps before merge."
           if [ "$MERGED_PRS" -gt 0 ]; then
             echo "" >> /tmp/weekly-report.md
             echo "### Recent Merges" >> /tmp/weekly-report.md
-            gh pr list --state closed --updated ">=${WEEK_SINCE}" --json number,title,mergedAt --limit 10 | \
+            gh pr list --state closed --updated ">=${WEEK_SINCE}" --json number,title,mergedAt --limit 10 --repo kushin77/code-server | \
               jq -r '.[] | "- #\(.number): \(.title)"' >> /tmp/weekly-report.md || true
           fi
           

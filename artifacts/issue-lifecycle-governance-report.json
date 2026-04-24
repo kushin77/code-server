@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-04-24T20:54:16Z",
+  "period_days": 30,
+  "total_checked": 0,
+  "compliant_count": 0,
+  "violation_count": 0,
+  "compliance_percentage": 0,
+  "violations": [
+  ],
+  "status": "COMPLIANT"
+}

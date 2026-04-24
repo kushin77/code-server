@@ -41,7 +41,7 @@ check_direct_gh_usage() {
       fi
       
       # Check if line has direct "gh " usage (not wrapped in error handling)
-      if [[ "$line_content" =~ [^_]gh[[:space:]] ]] && ! [[ "$line_content" =~ \|\| ]]; then
+      if [[ "$line_content" =~ [^_]gh[[:space:]] || "$line_content" =~ ^gh[[:space:]] ]] && ! [[ "$line_content" =~ \|\| ]]; then
         log_warn "Direct gh usage at $file:$line_num: $line_content"
         violation_list+=("{\"file\": $(json_escape "$file"), \"line\": $line_num, \"content\": $(json_escape "$line_content")}")
         ((violations++))

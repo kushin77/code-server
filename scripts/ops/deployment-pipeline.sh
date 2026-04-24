@@ -98,14 +98,18 @@ fi
 
 log_info "Branch: $CURRENT_BRANCH | Commit: ${CURRENT_COMMIT:0:7}"
 
-# Verify repository is clean
-UNCOMMITTED=$(git -C "${PROJECT_ROOT}" status --short 2>/dev/null | wc -l)
+# Verify repository is clean (allow override with --force-deploy)
+UNCOMMITTED=$(git -C "${PROJECT_ROOT}" status --short 2>/dev/null | grep -v "^??" | wc -l || echo 0)
 if (( UNCOMMITTED > 0 )); then
-    stage_fail "Repository has $UNCOMMITTED uncommitted changes"
-    exit 1
+    if [[ "${2:-}" != "--force-deploy" ]]; then
+        stage_fail "Repository has $UNCOMMITTED uncommitted changes. Use --force-deploy to override."
+        exit 1
+    else
+        log_warn "Repository has $UNCOMMITTED uncommitted changes (--force-deploy used, proceeding anyway)"
+    fi
 fi
 
-log_info "Repository clean: ✓"
+log_info "Repository status: clean"
 stage_success
 
 # ============================================================================

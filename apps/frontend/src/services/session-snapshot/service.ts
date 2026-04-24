@@ -419,7 +419,7 @@ export class SessionSnapshotService extends SimpleEventEmitter {
   /**
    * Private helper: Restore terminals
    */
-  private async restoreTerminals(terminals: SnapshotTerminal[]): Promise<void> {
+  private async restoreTerminals(_terminals: SnapshotTerminal[]): Promise<void> {
     // In real implementation, recreate terminals via VS Code API
   }
 
@@ -427,7 +427,7 @@ export class SessionSnapshotService extends SimpleEventEmitter {
    * Private helper: Restore debug sessions
    */
   private async restoreDebugSessions(
-    sessions: SnapshotDebugSession[]
+    _sessions: SnapshotDebugSession[]
   ): Promise<void> {
     // In real implementation, restore debug state via VS Code API
   }
@@ -436,8 +436,8 @@ export class SessionSnapshotService extends SimpleEventEmitter {
    * Private helper: Restore settings
    */
   private async restoreSettings(
-    settings: Record<string, any>,
-    includeExtensions: boolean
+    _settings: Record<string, any>,
+    _includeExtensions: boolean
   ): Promise<void> {
     // In real implementation, update VS Code settings
   }
@@ -446,8 +446,8 @@ export class SessionSnapshotService extends SimpleEventEmitter {
    * Private helper: Restore extensions
    */
   private async restoreExtensions(
-    enabled: string[],
-    disabled: string[]
+    _enabled: string[],
+    _disabled: string[]
   ): Promise<void> {
     // In real implementation, enable/disable extensions via VS Code API
   }

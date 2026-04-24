@@ -4,19 +4,16 @@
  * @description Comprehensive session snapshot test suite
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   SessionSnapshotService,
-  CaptureMetrics,
 } from '../service.js';
 import {
   SessionSnapshotStorage,
-  SNAPSHOT_DB_CONFIG,
 } from '../storage.js';
 import {
   SessionSnapshot,
   SnapshotMetadata,
-  RestoreOptions,
 } from '../types.js';
 
 /**
@@ -165,7 +162,7 @@ describe('Session Snapshot Service', () => {
     });
 
     it('should track capture metrics', async () => {
-      const snap = await service.captureSnapshot();
+      const _snap = await service.captureSnapshot();
       const metrics = service.getMetrics();
 
       expect(metrics).toBeDefined();
@@ -264,7 +261,7 @@ describe('Session Snapshot Service', () => {
   describe('Snapshot Restore', () => {
     it('should restore snapshot with default options', async () => {
       const original = await service.captureSnapshot();
-      const result = await service.restoreSnapshot(original.id);
+      const _result = await service.restoreSnapshot(original.id);
 
       expect(result.success).toBe(true);
       expect(result.snapshotId).toBe(original.id);
@@ -403,7 +400,7 @@ describe('Session Snapshot Service', () => {
 
   describe('Metrics & Diagnostics', () => {
     it('should calculate capture metrics', async () => {
-      const snap = await service.captureSnapshot();
+      const _snap = await service.captureSnapshot();
       const metrics = service.getMetrics();
 
       expect(metrics).toBeDefined();

@@ -11,6 +11,9 @@ LABEL version="1.0.0"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     jq \
+  python3 \
+  make \
+  g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure docker group exists for /var/run/docker.sock access

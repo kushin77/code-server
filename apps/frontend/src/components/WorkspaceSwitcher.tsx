@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { VscSync, VscClose } from 'vscode-icons-js';
+import { VscSync } from 'vscode-icons-js';
 import {
   WorkspaceSwitcher,
   SwitchMetrics,

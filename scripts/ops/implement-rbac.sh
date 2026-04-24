@@ -1,17 +1,19 @@
 #!/bin/bash
-/**
- * @file scripts/ops/implement-rbac.sh
- * @description Implements Role-Based Access Control (RBAC) via OPA policies and service configuration.
- * @governance GOV-002
- */
+# @file scripts/ops/implement-rbac.sh
+# @description Implements Role-Based Access Control (RBAC) via OPA policies and service configuration.
+# @governance GOV-002
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
 log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }
 log_error() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*"; }
 
-OPA_POLICY_DIR="opa/policies"
+OPA_POLICY_DIR="${PROJECT_ROOT}/policies"
+REDIS_ACL_TEMPLATE="${PROJECT_ROOT}/config/redis.acl.example"
 
 setup_opa_rbac() {
     log_info "Configuring OPA RBAC policies..."
@@ -53,7 +55,7 @@ harden_service_access() {
     log_info "Hardening service-level access controls..."
     # Placeholder for service-specific RBAC (e.g., Postgres roles, Redis ACLs)
     log_info "Applying Redis ACL template..."
-    cat <<ACL > redis.acl.example
+    cat <<ACL > "${REDIS_ACL_TEMPLATE}"
 user default on nopass ~* &* +@all
 user worker on >workerpassword ~work:* +@read +@write -@admin
 ACL

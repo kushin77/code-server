@@ -1,0 +1,2 @@
+user default on nopass ~* &* +@all
+user worker on >workerpassword ~work:* +@read +@write -@admin

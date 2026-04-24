@@ -1,0 +1,6 @@
+1. Identify block device: lsblk
+2. Format with LUKS: sudo cryptsetup luksFormat /dev/sdX
+3. Open encrypted device: sudo cryptsetup open /dev/sdX cryptdata
+4. Format filesystem: sudo mkfs.ext4 /dev/mapper/cryptdata
+5. Mount: sudo mount /dev/mapper/cryptdata ./data
+6. Update fstab and crypttab for persistence

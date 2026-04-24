@@ -1,0 +1,128 @@
+name: env.yaml CI Integration
+
+on:
+  pull_request:
+    paths:
+      - 'env.yaml*'
+      - 'schemas/env-yaml*'
+      - 'apps/env-provisioner/**'
+      - '.github/workflows/env-yaml-ci-integration.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'env.yaml'
+
+jobs:
+  validate-schema:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install jsonschema pyyaml
+      
+      - name: Validate env.yaml schema
+        run: |
+          python3 -c "
+          import json
+          import yaml
+          from jsonschema import validate, ValidationError
+          
+          with open('schemas/env-yaml.v1.json') as f:
+              schema = json.load(f)
+          
+          with open('env.yaml') as f:
+              config = yaml.safe_load(f)
+          
+          try:
+              validate(instance=config, schema=schema)
+              print('✓ env.yaml schema validation passed')
+          except ValidationError as e:
+              print(f'✗ Schema validation failed: {e.message}')
+              exit(1)
+          "
+  
+  provision-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [local, ci]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+      
+      - name: Provision environment (${{ matrix.mode }})
+        run: |
+          python3 apps/env-provisioner/provisioner.py provision env.yaml
+        env:
+          ENV_MODE: ${{ matrix.mode }}
+      
+      - name: Health check
+        run: |
+          docker ps
+        continue-on-error: true
+      
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provisioner-logs-${{ matrix.mode }}
+          path: artifacts/provisioner.log
+
+  env-diff-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+      
+      - name: Test env diff
+        run: |
+          python3 apps/env-provisioner/provisioner.py diff env.yaml env.yaml.example
+        continue-on-error: true
+
+  environment-fingerprint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate environment fingerprint
+        run: |
+          sha256sum env.yaml > artifacts/env-fingerprint.txt
+          cat artifacts/env-fingerprint.txt
+      
+      - name: Upload fingerprint
+        uses: actions/upload-artifact@v4
+        with:
+          name: env-fingerprint
+          path: artifacts/env-fingerprint.txt
+          retention-days: 30

@@ -998,7 +998,6 @@ services:
   appsmith:
     image: appsmith/appsmith-ce:v1.47@sha256:99e57374fcd1c756ca447551a92a79d3e80cf53a963fa612abea23cec2f7adf8
     container_name: appsmith
-    profiles: [portal]
     restart: unless-stopped
     networks:
       - net-app

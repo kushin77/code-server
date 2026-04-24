@@ -82,6 +82,10 @@ http://kushnir.cloud {
 
 # HTTPS listener for kushnir.cloud (portal domain)
 kushnir.cloud {
+    tls {
+        on_demand
+    }
+
     encode gzip
 
     header {
@@ -95,14 +99,15 @@ kushnir.cloud {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    # oauth2-proxy-portal sign-in gate for portal domain
-    reverse_proxy oauth2-proxy-portal:4181 {
+    # Route to Appsmith portal container (portal foundation — phase 1 of 5)
+    # Appsmith provides KC-branded dashboard with service status and user links
+    reverse_proxy appsmith:80 {
         header_up Host kushnir.cloud
         header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}
         fail_duration 5s
         max_fails 3
-        health_uri /ping
+        health_uri /api/v1/health
         health_interval 5s
         health_timeout 2s
     }

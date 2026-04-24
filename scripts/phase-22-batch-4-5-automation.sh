@@ -21,23 +21,18 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Get directory of this script and source the canonical initialization module
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/init.sh"
+
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DRY_RUN=false
 LOG_FILE="${PROJECT_ROOT}/phase-22-batch-4-5.log"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-# ─────────────────────────────────────────────────────────────────────────────
-# LOGGING
-# ─────────────────────────────────────────────────────────────────────────────
-
+# Use canonical log_info etc. from init.sh / logging.sh
+# Redefining helper for legacy support if used but prioritizing canonical log_*
 log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $*" | tee -a "$LOG_FILE"
+    log_info "$*"
 }
 
 success() {

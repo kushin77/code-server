@@ -90,7 +90,9 @@ check_immutability() {
   local score=0
   
   # Check read-only volume mounts
-  local ro_mounts=$(grep -c ":ro" docker-compose.yml || echo "0")
+  local ro_mounts
+  ro_mounts=$(grep -c ":ro" docker-compose.yml 2>/dev/null || true)
+  ro_mounts=${ro_mounts:-0}
   if [[ $ro_mounts -gt 5 ]]; then
     pass "Read-only configuration mounts verified ($ro_mounts)"
     ((score+=25))
@@ -183,7 +185,9 @@ check_resource_limits() {
     pass "Resource limits configuration file present"
     ((score+=30))
     
-    local limits_count=$(grep -c "memory_limit\|cpu_limit" config/resource-limits.yaml || echo "0")
+    local limits_count
+    limits_count=$(grep -c "memory_limit\|cpu_limit" config/resource-limits.yaml 2>/dev/null || true)
+    limits_count=${limits_count:-0}
     if [[ $limits_count -gt 10 ]]; then
       pass "Resource limits configured for all services ($limits_count)"
       ((score+=40))
@@ -191,7 +195,9 @@ check_resource_limits() {
   fi
   
   # Check docker-compose for deploy section
-  local deploy_count=$(grep -c "deploy:" docker-compose.yml || echo "0")
+  local deploy_count
+  deploy_count=$(grep -c "deploy:" docker-compose.yml 2>/dev/null || true)
+  deploy_count=${deploy_count:-0}
   if [[ $deploy_count -gt 0 ]]; then
     pass "Docker Compose deploy sections present ($deploy_count)"
     ((score+=30))
@@ -401,7 +407,7 @@ generate_compliance_report() {
 }
 EOF
 
-  success "JSON report generated: $COMPLIANCE_REPORT"
+  pass "JSON report generated: $COMPLIANCE_REPORT"
   
   # Generate Markdown checklist
   cat > "$CHECKLIST_FILE" << EOF

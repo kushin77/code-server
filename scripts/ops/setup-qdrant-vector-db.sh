@@ -191,7 +191,7 @@ main() {
   if [[ "${deploy}" == "true" ]]; then
     log_info "Deploying Qdrant service..."
     cd "${REPO_ROOT}"
-    docker-compose -f docker-compose.qdrant.yml up -d
+    docker compose -f docker-compose.qdrant.yml up -d
     
     if wait_for_qdrant_health && verify_qdrant_health; then
       initialize_qdrant_collections

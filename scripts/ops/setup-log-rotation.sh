@@ -1,9 +1,7 @@
 #!/bin/bash
-/**
- * @file scripts/ops/setup-log-rotation.sh
- * @description Configures log rotation for infrastructure logs to prevent disk exhaustion.
- * @governance GOV-002
- */
+# @file scripts/ops/setup-log-rotation.sh
+# @description Configures log rotation for infrastructure logs to prevent disk exhaustion.
+# @governance GOV-002
 
 set -euo pipefail
 

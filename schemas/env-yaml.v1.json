@@ -59,8 +59,8 @@
           },
           "image": {
             "type": "string",
-            "pattern": "^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+(@sha256:[a-f0-9]{64})?$",
-            "description": "Container image with version and optional digest"
+            "pattern": "^[a-zA-Z0-9./_-]+:[a-zA-Z0-9._-]+@sha256:[a-f0-9]{64}$",
+            "description": "Container image pinned by digest"
           },
           "persistent": {
             "type": "boolean",

@@ -13,6 +13,9 @@ DRIFT_LOG="${REPO_ROOT}/logs/drift-detection.log"
 DRIFT_REPORT="${REPO_ROOT}/artifacts/drift-report.json"
 DRIFT_THRESHOLD_HOURS=24
 
+source "${REPO_ROOT}/scripts/_common/init.sh"
+source "${REPO_ROOT}/scripts/_common/github-api-client.sh"
+
 mkdir -p "${REPO_ROOT}/logs" "$(dirname "${DRIFT_REPORT}")"
 
 log_info() {
@@ -125,10 +128,8 @@ generate_drift_alert() {
   
   log_error "Drift detected: ${drift_count} divergences between code and running state"
   
-  # Create GitHub issue if drift exceeds threshold
-  if command -v gh &> /dev/null; then
-    local issue_title="🚨 Infrastructure Drift Detected - $(date -u +'%Y-%m-%d %H:%M:%SZ')"
-    local issue_body="Automated drift detection found ${drift_count} divergences between infrastructure code (Git) and running state.
+  local issue_title="🚨 Infrastructure Drift Detected - $(date -u +'%Y-%m-%d %H:%M:%SZ')"
+  local issue_body="Automated drift detection found ${drift_count} divergences between infrastructure code (Git) and running state.
 
 **Actions:**
 - Review drift-report.json artifact
@@ -136,9 +137,15 @@ generate_drift_alert() {
 - Or manually reconcile changes
 
 **Time:** $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-    
-    gh issue create --repo kushin77/code-server --title "${issue_title}" --body "${issue_body}" --label "infrastructure,drift" 2>/dev/null || log_warning "Could not create GitHub issue"
-  fi
+
+  local issue_payload
+  issue_payload=$(jq -n \
+    --arg title "${issue_title}" \
+    --arg body "${issue_body}" \
+    '{title: $title, body: $body, labels: ["P1", "infrastructure", "drift"]}')
+
+  github_api_call POST "/repos/kushin77/code-server/issues" "${issue_payload}" \
+    || log_warning "Could not create GitHub issue"
 }
 
 # Generate report

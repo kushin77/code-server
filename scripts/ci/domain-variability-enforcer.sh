@@ -11,13 +11,23 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 REPORT_FILE="${REPO_ROOT}/artifacts/domain-variability-report.json"
 
-# Critical domain strings that must be templated
-declare -A DOMAIN_VARS=(
+# Critical domain and host strings that must be templated
+declare -A REFERENCE_VARS=(
   ["kushnir.cloud"]='${APEX_DOMAIN}'
   ["ide.kushnir.cloud"]='${IDE_DOMAIN}'
   ["auth.kushnir.cloud"]='${AUTH_DOMAIN}'
   ["api.kushnir.cloud"]='${API_DOMAIN}'
   ["registry.kushnir.cloud"]='${REGISTRY_DOMAIN}'
+  ["192.168.168.31"]='${PRIMARY_HOST}'
+  ["192.168.168.42"]='${REPLICA_HOST}'
+)
+
+TARGET_FILES=(
+  "${REPO_ROOT}/Caddyfile"
+  "${REPO_ROOT}/docker-compose.yml"
+  "${REPO_ROOT}/terraform/on-prem.tfvars"
+  "${REPO_ROOT}/docs/RUNBOOK-INFRASTRUCTURE-LIFECYCLE.md"
+  "${REPO_ROOT}/scripts/_common/rollback-manager.sh"
 )
 
 log_error() {
@@ -39,39 +49,48 @@ find_hardcoded_domains() {
   local violations=()
   
   # Scan infrastructure files
-  for file in "${REPO_ROOT}"/{Caddyfile,docker-compose.yml,terraform/on-prem.tfvars}; do
+  for file in "${TARGET_FILES[@]}"; do
     if [[ ! -f "${file}" ]]; then
       continue
     fi
     
-    for domain in "${!DOMAIN_VARS[@]}"; do
-      # Skip if domain is already templated
+    for reference in "${!REFERENCE_VARS[@]}"; do
+      # Skip if reference is already templated
       if grep -q "\${.*DOMAIN}" "${file}" 2>/dev/null; then
         continue
       fi
       
-      # Check for hardcoded domain
-      if grep -q "${domain}" "${file}" 2>/dev/null; then
-        local count=$(grep -c "${domain}" "${file}" 2>/dev/null || echo 0)
-        violations+=("${file}:${domain}:${count}")
-        log_warning "Found ${count} hardcoded references to '${domain}' in ${file}"
+      # Check for hardcoded domain or host reference
+      if grep -q "${reference}" "${file}" 2>/dev/null; then
+        local count=$(grep -c "${reference}" "${file}" 2>/dev/null || echo 0)
+        violations+=("${file}:${reference}:${count}")
+        log_warning "Found ${count} hardcoded references to '${reference}' in ${file}"
       fi
     done
   done
   
-  # Generate JSON report
-  local json_violations='[]'
-  for violation in "${violations[@]}"; do
-    IFS=':' read -r file domain count <<< "${violation}"
-    json_violations=$(jq --arg file "${file}" --arg domain "${domain}" --arg count "${count}" \
-      '. += [{file: $file, domain: $domain, count: ($count | tonumber)}]' <<< "${json_violations}")
-  done
-  
   mkdir -p "$(dirname "${REPORT_FILE}")"
-  jq -n --argjson violations "${json_violations}" \
-    --arg timestamp "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-    '{scan_timestamp: $timestamp, violations: $violations, status: (if ($violations | length) > 0 then "FOUND_VIOLATIONS" else "CLEAN" end)}' \
-    > "${REPORT_FILE}"
+  {
+    printf '{\n'
+    printf '  "scan_timestamp": "%s",\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+    printf '  "violations": [\n'
+    local first_violation="true"
+    for violation in "${violations[@]}"; do
+      IFS=':' read -r file reference count <<< "${violation}"
+      if [[ "${first_violation}" == "false" ]]; then
+        printf ',\n'
+      fi
+      first_violation="false"
+      printf '    {"file": "%s", "reference": "%s", "count": %s}' "${file}" "${reference}" "${count}"
+    done
+    printf '\n  ],\n'
+    if [[ ${#violations[@]} -gt 0 ]]; then
+      printf '  "status": "FOUND_VIOLATIONS"\n'
+    else
+      printf '  "status": "CLEAN"\n'
+    fi
+    printf '}\n'
+  } > "${REPORT_FILE}"
   
   return $([ ${#violations[@]} -eq 0 ] && echo 0 || echo 1)
 }
@@ -82,22 +101,22 @@ fix_hardcoded_domains() {
   
   local files_modified=0
   
-  for file in "${REPO_ROOT}"/{Caddyfile,docker-compose.yml,terraform/on-prem.tfvars}; do
+  for file in "${TARGET_FILES[@]}"; do
     if [[ ! -f "${file}" ]]; then
       continue
     fi
     
     local file_modified=0
-    for domain in "${!DOMAIN_VARS[@]}"; do
-      local var="${DOMAIN_VARS[${domain}]}"
+    for reference in "${!REFERENCE_VARS[@]}"; do
+      local var="${REFERENCE_VARS[${reference}]}"
       
       # Only fix if not already templated
       if ! grep -q "\${.*DOMAIN}" "${file}" 2>/dev/null; then
-        local before=$(grep -c "${domain}" "${file}" 2>/dev/null || echo 0)
+        local before=$(grep -c "${reference}" "${file}" 2>/dev/null || echo 0)
         if [[ "${before}" -gt 0 ]]; then
-          sed -i "s|${domain}|${var}|g" "${file}"
-          local after=$(grep -c "${domain}" "${file}" 2>/dev/null || echo 0)
-          log_info "Fixed ${domain} in ${file}: ${before} → ${after}"
+          sed -i "s|${reference}|${var}|g" "${file}"
+          local after=$(grep -c "${reference}" "${file}" 2>/dev/null || echo 0)
+          log_info "Fixed ${reference} in ${file}: ${before} → ${after}"
           file_modified=1
         fi
       fi
@@ -117,7 +136,7 @@ validate_env_vars() {
   log_info "Validating required environment variables..."
   
   local missing_vars=()
-  local required_vars=("APEX_DOMAIN" "IDE_DOMAIN" "AUTH_DOMAIN" "API_DOMAIN" "REGISTRY_DOMAIN")
+  local required_vars=("APEX_DOMAIN" "IDE_DOMAIN" "AUTH_DOMAIN" "API_DOMAIN" "REGISTRY_DOMAIN" "PRIMARY_HOST" "REPLICA_HOST")
   
   for var in "${required_vars[@]}"; do
     if [[ -z "${!var:-}" ]]; then

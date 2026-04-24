@@ -24,6 +24,8 @@ check_direct_gh_usage() {
   while IFS= read -r file; do
     # Skip this file itself
     [[ "$file" == *"check-gh-cli-governance.sh" ]] && continue
+    # Skip the approved unified issue helper
+    [[ "$file" == *"issue-create-unified.sh" ]] && continue
     
     # Look for direct gh command usage (not in comments)
     while IFS= read -r line_num line_content; do
@@ -68,8 +70,7 @@ check_wrapper_functions() {
   local wrappers=(
     "github_gh"
     "github_api_call"
-    "github_list_issues"
-    "github_create_issue"
+    "github_get_token"
   )
   
   local missing=0

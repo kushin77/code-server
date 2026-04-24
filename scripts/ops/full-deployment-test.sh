@@ -12,7 +12,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TEST_LOG="${REPO_ROOT}/artifacts/deployment-test-$(date +%s).log"
 TEST_REPORT="${REPO_ROOT}/artifacts/deployment-test-report.json"
 
-mkdir -p "$(dirname "${TEST_LOG}" "${TEST_REPORT}")"
+ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
+mkdir -p "${ARTIFACTS_DIR}"
 
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*" | tee -a "${TEST_LOG}"

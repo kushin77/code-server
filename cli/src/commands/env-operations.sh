@@ -3,7 +3,7 @@
 # @module cli/environment
 # @description P0-1553 Phase 3: Environment cloning, offline mode, replay, promotion
 # @governance GOV-002: All environment operations version-controlled and reversible
-# @usage elevatediq env <clone|offline|replay|promote> [options]
+# @usage elevatediq env <validate|clone|offline|replay|promote> [options]
 
 set -euo pipefail
 
@@ -23,6 +23,26 @@ log_success() {
 
 log_error() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*" | tee -a "${ENV_OPS_LOG}" >&2
+}
+
+# Clone environment: copy env.yaml from source and pin service versions
+env_validate() {
+  local env_file="${1:-env.yaml}"
+
+  log_info "Validating environment config: ${env_file}..."
+
+  if [[ ! -f "${env_file}" ]]; then
+    log_error "env.yaml not found: ${env_file}"
+    return 1
+  fi
+
+  if python3 "${REPO_ROOT}/apps/env-provisioner/provisioner.py" validate "${env_file}"; then
+    log_success "Environment validation passed: ${env_file}"
+    return 0
+  fi
+
+  log_error "Environment validation failed: ${env_file}"
+  return 1
 }
 
 # Clone environment: copy env.yaml from source and pin service versions
@@ -148,6 +168,16 @@ main() {
   shift || true
   
   case "${command}" in
+    validate)
+      local env_file
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --env-file) env_file="$2"; shift 2 ;;
+          *) shift ;;
+        esac
+      done
+      env_validate "${env_file}"
+      ;;
     clone)
       local from_env to_env
       while [[ $# -gt 0 ]]; do
@@ -184,7 +214,7 @@ main() {
       env_promote "${from_env}" "${to_env}"
       ;;
     *)
-      log_error "Usage: elevatediq env <clone|offline|replay|promote> [options]"
+      log_error "Usage: elevatediq env <validate|clone|offline|replay|promote> [options]"
       return 1
       ;;
   esac

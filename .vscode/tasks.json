@@ -1,0 +1,33 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "full-deployment-test-dry-run-4",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"scripts/ops/full-deployment-test.sh",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "full-deployment-test-dry-run-5",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"scripts/ops/full-deployment-test.sh",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		}
+	]
+}

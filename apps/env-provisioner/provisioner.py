@@ -8,10 +8,11 @@ import json
 import yaml
 import subprocess
 import os
+import re
 from pathlib import Path
 from typing import Dict, Any, List
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 @dataclass
 class ProvisionerConfig:
@@ -42,7 +43,7 @@ class EnvProvisioner:
     
     def _log(self, msg: str, level: str = "INFO"):
         """Log to file"""
-        timestamp = datetime.utcnow().isoformat() + "Z"
+        timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         log_msg = f"[{timestamp}] [{level}] {msg}"
         print(log_msg)
         with open(self.log_file, "a") as f:
@@ -65,11 +66,15 @@ class EnvProvisioner:
             self._log("Missing 'services' section", "ERROR")
             return False
         
-        # Validate image digests
+        # Validate image digests and immutable pinning
         for service in self.config.services:
             image = service.get("image", "")
-            if not image or ":" not in image:
-                self._log(f"Service {service['name']} has invalid image format", "WARN")
+            if not image or not re.match(r"^[a-zA-Z0-9./_-]+:[a-zA-Z0-9._-]+@sha256:[a-f0-9]{64}$", image):
+                self._log(
+                    f"Service {service['name']} must use a digest-pinned image (got: {image})",
+                    "ERROR",
+                )
+                return False
         
         self._log("Configuration validation passed")
         return True
@@ -87,7 +92,7 @@ class EnvProvisioner:
             override["services"][service["name"]] = {
                 "image": service["image"],
                 "environment": service.get("env", {}),
-                "restart_policy": "unless-stopped"
+                "restart": "unless-stopped"
             }
             
             if service.get("persistent"):
@@ -98,7 +103,7 @@ class EnvProvisioner:
         # Write override file
         override_path = Path("docker-compose.override.yml")
         with open(override_path, "w") as f:
-            yaml.dump(override, f)
+            yaml.safe_dump(override, f, sort_keys=False)
         
         self._log(f"Docker Compose override generated: {override_path}")
         return str(override_path)
@@ -116,7 +121,7 @@ class EnvProvisioner:
         # Start services
         self._log("Starting Docker Compose services...")
         result = subprocess.run(
-            ["docker-compose", "up", "-d"],
+            ["docker", "compose", "up", "-d"],
             capture_output=True,
             text=True
         )
@@ -127,18 +132,23 @@ class EnvProvisioner:
         
         self._log("Environment provisioned successfully")
         return True
+
+    def validate(self) -> bool:
+        """Validate env.yaml without provisioning services"""
+        return self._validate_config()
     
     def diff(self, other_env_file: str) -> Dict[str, Any]:
         """Compare two env.yaml files"""
         self._log(f"Computing diff between {self.env_file} and {other_env_file}...")
         
-        other_config = ProvisionerConfig(**yaml.safe_load(open(other_env_file)))
+        with open(other_env_file) as f:
+            other_config = ProvisionerConfig(**yaml.safe_load(f))
         
         diff = {
             "runtime_changes": {},
             "service_changes": [],
             "ai_changes": {},
-            "timestamp": datetime.utcnow().isoformat() + "Z"
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         }
         
         # Compare runtime
@@ -170,7 +180,7 @@ if __name__ == "__main__":
     import sys
     
     if len(sys.argv) < 2:
-        print("Usage: provisioner.py <provision|diff> [env_file]")
+        print("Usage: provisioner.py <validate|provision|diff> [env_file]")
         sys.exit(1)
     
     command = sys.argv[1]
@@ -178,7 +188,10 @@ if __name__ == "__main__":
     
     provisioner = EnvProvisioner(env_file)
     
-    if command == "provision":
+    if command == "validate":
+        success = provisioner.validate()
+        sys.exit(0 if success else 1)
+    elif command == "provision":
         success = provisioner.provision()
         sys.exit(0 if success else 1)
     elif command == "diff":

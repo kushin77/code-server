@@ -996,3 +996,28 @@ groups:
           description: "Average collaboration synthetic runtime has exceeded 45s for 5 minutes. Check external network latency, auth redirects, and IDE startup performance."
           runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#synthetic-monitoring"
 
+      # Cluster Health Checks (#1472)
+      - alert: ClusterHealthCheckFailure
+        expr: up{job=~"cluster-health-replica-.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+          component: cluster-health
+        annotations:
+          summary: "Cluster replica health check failure - {{ $labels.replica }}"
+          description: "Replica {{ $labels.replica }} (192.168.168.{{ $labels.replica }}) failed health check for 1+ minute. IDE cluster may have degraded capacity."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#cluster-health"
+
+      - alert: ClusterHealthCheckBothReplicasDown
+        expr: count(up{job=~"cluster-health-replica-.*"} == 0) == 2
+        for: 30s
+        labels:
+          severity: critical
+          team: infrastructure
+          component: cluster-health
+        annotations:
+          summary: "CRITICAL: Both cluster replicas are down"
+          description: "Both production replicas (31 and 42) have failed health checks. Cluster is OFFLINE. Immediate escalation required."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/OPERATIONS-RUNBOOK.md#cluster-emergency-recovery"
+

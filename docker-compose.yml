@@ -402,7 +402,7 @@ services:
       # CRITICAL FIX #998: No hardcoded fallbacks - use env vars with required flags
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - DOCKER_SOCKET=${DOCKER_SOCKET:-unix:///var/run/docker.sock}
-      - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:?CODE_SERVER_IMAGE_ID must be set}
+      - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:-codercom/code-server@sha256:cbd5e05849367e521f774b760602cb9e0a8da1f159eaf89600490eec34129fe5}
       - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
       # ── Hibernation & Resilience (#963) ──────────────────────────────────
       - SESSION_HIBERNATION_ENABLED=${SESSION_HIBERNATION_ENABLED:-true}
@@ -414,7 +414,7 @@ services:
       - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
       - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}
       - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
-      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://:${REDIS_PASSWORD}@redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster}
+      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel://redis-sentinel-arbiter:26379}
       - REDIS_SENTINEL_DB=${REDIS_SENTINEL_DB:-1}
       - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}
       - SESSION_PROXY_HOST=${SESSION_PROXY_HOST:?SESSION_PROXY_HOST must be set}
@@ -442,7 +442,7 @@ services:
       # Redis-backed session state for HA failover (#961 session-broker horizontal scaling)
       - SESSION_USE_REDIS=${SESSION_USE_REDIS:-true}
       - SESSION_REDIS_REQUIRED=${SESSION_REDIS_REQUIRED:-true}
-      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster}
+      - REDIS_SENTINEL_URLS=${REDIS_SENTINEL_URLS:-redis-sentinel://redis-sentinel-1:26379,redis-sentinel://redis-sentinel-arbiter:26379}
       - REDIS_SENTINEL_DB=1
       - SESSION_REDIS_TTL_SECONDS=${SESSION_REDIS_TTL_SECONDS:-86400}
       - SESSION_REDIS_NAMESPACE=${SESSION_REDIS_NAMESPACE:-session-broker}

@@ -26,6 +26,22 @@ log_success() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
 }
 
+wait_for_qdrant_health() {
+  local max_attempts=30
+  local attempt=0
+
+  while [[ ${attempt} -lt ${max_attempts} ]]; do
+    if curl -sf http://localhost:6333/health > /dev/null 2>&1; then
+      return 0
+    fi
+
+    sleep 2
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 # Generate Qdrant configuration
 generate_qdrant_config() {
   log_info "Generating Qdrant configuration..."
@@ -61,7 +77,7 @@ version: '3.8'
 
 services:
   qdrant:
-    image: qdrant/qdrant:v1.7.0@sha256:abc123def456
+    image: qdrant/qdrant:v1.7.0@sha256:ff1639878418c0572f50a7e1314874e399537eb97e6d2f42d6b987a07a2c4c4f
     container_name: qdrant
     ports:
       - "6333:6333"    # HTTP API
@@ -177,7 +193,7 @@ main() {
     cd "${REPO_ROOT}"
     docker-compose -f docker-compose.qdrant.yml up -d
     
-    if verify_qdrant_health; then
+    if wait_for_qdrant_health && verify_qdrant_health; then
       initialize_qdrant_collections
       log_success "Qdrant Vector Database deployed and initialized"
     else

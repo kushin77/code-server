@@ -20,7 +20,7 @@
     "jose": "catalog:",
     "pg": "catalog:",
     "redis": "^4.6.12",
-    "uuid": "14.0.0",
+    "uuid": "catalog:",
     "winston": "^3.11.0"
   },
   "devDependencies": {

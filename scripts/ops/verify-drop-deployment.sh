@@ -8,16 +8,34 @@
 # Usage: bash verify-drop-deployment.sh
 # Verifies: Replicas, NAS, PostgreSQL, Redis, Services, Ollama models, Policy engine
 
-source "$SCRIPT_DIR/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
-VERIFY_PRIMARY_HOST="${VERIFY_PRIMARY_HOST:-192.168.168.31}"
-VERIFY_REPLICA_HOST="${VERIFY_REPLICA_HOST:-192.168.168.42}"
-VERIFY_NAS_HOST="${VERIFY_NAS_HOST:-192.168.168.56}"
+VERIFY_PRIMARY_HOST="${VERIFY_PRIMARY_HOST:-${DEPLOY_HOST:-${REPLICA_1_IP:-}}}"
+VERIFY_REPLICA_HOST="${VERIFY_REPLICA_HOST:-${REPLICA_2_IP:-}}"
+VERIFY_NAS_HOST="${VERIFY_NAS_HOST:-${NAS_HOST:-}}"
+VERIFY_LOOPBACK_HOST="${VERIFY_LOOPBACK_HOST:-127.0.0.1}"
 VERIFY_TIMEOUT="${VERIFY_TIMEOUT:-5}"
+
+if [[ -z "$VERIFY_PRIMARY_HOST" ]]; then
+  log_error "Set VERIFY_PRIMARY_HOST, DEPLOY_HOST, or REPLICA_1_IP before running the deployment check"
+  exit 1
+fi
+
+if [[ -z "$VERIFY_REPLICA_HOST" ]]; then
+  log_error "Set VERIFY_REPLICA_HOST or REPLICA_2_IP before running the deployment check"
+  exit 1
+fi
+
+if [[ -z "$VERIFY_NAS_HOST" ]]; then
+  log_error "Set VERIFY_NAS_HOST or NAS_HOST before running the deployment check"
+  exit 1
+fi
 
 # Health check counters
 CHECKS_PASSED=0
@@ -182,11 +200,11 @@ log_info "Phase 6: Ollama Model Availability"
 log_info "────────────────────────────────────────────"
 
 verify_ssh_command "$VERIFY_PRIMARY_HOST" "root" \
-  "curl -s http://localhost:11434/api/tags | grep -q 'llama3:8b'" \
+  "curl -s http://${VERIFY_LOOPBACK_HOST}:11434/api/tags | grep -q 'llama3:8b'" \
   "llama3:8b model loaded"
 
 verify_ssh_command "$VERIFY_PRIMARY_HOST" "root" \
-  "curl -s http://localhost:11434/api/tags | grep -q 'mistral'" \
+  "curl -s http://${VERIFY_LOOPBACK_HOST}:11434/api/tags | grep -q 'mistral'" \
   "mistral model loaded"
 
 log_info ""
@@ -197,7 +215,7 @@ log_info "Phase 7: OPA Policy Engine"
 log_info "────────────────────────────────────────────"
 
 verify_ssh_command "$VERIFY_PRIMARY_HOST" "root" \
-  "curl -s http://localhost:8181/v1/policies | grep -q 'policy'" \
+  "curl -s http://${VERIFY_LOOPBACK_HOST}:8181/v1/policies | grep -q 'policy'" \
   "OPA policies loaded"
 
 log_info ""

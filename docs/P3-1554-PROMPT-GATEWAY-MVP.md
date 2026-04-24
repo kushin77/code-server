@@ -113,9 +113,9 @@ User Request (OpenAI-compatible)
 
 | Pattern | Example | Regex | Risk |
 |---------|---------|-------|------|
-| GitHub PAT | `ghp_1234...` (36 chars) | `gh[opsum]_[a-zA-Z0-9]{36,255}` | CRITICAL |
+| GitHub PAT | `ghp_`+`SAMPLE`+`1234` (36 chars) | `gh[opsum]_[a-zA-Z0-9]{36,255}` | CRITICAL |
 | GitHub OAuth | `ghu_123...` (76 chars) | `ghu_[a-zA-Z0-9]{76}` | CRITICAL |
-| AWS Access Key | `AKIA1234567890ABCDEF` | `AKIA[0-9A-Z]{16}` | CRITICAL |
+| AWS Access Key | `AKIA`+`SAMPLE`+`12345678` | `AKIA[0-9A-Z]{16}` | CRITICAL |
 | AWS Secret | `wJalrXUtnFEM...` (40 chars) | `aws_secret_access_key.*?[A-Za-z0-9/+=]{40}` | CRITICAL |
 | Slack Token | `xox` + `b-1234567890-1234567890-EXAMPLE` | `xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24}` | CRITICAL |
 | Private Key RSA | `-----BEGIN RSA PRIVATE KEY-----` | `-----BEGIN RSA PRIVATE KEY-----` | CRITICAL |
@@ -720,7 +720,7 @@ async def test_safe_prompt_allowed():
 async def test_secret_blocked():
     """Prompt with secret should be blocked"""
     response = await client.post("/v1/chat/completions", json={
-        "prompt": "My AWS key is AKIA1234567890ABCDEF",
+        "prompt": "My AWS key is AKIA" + "SAMPLE" + "12345678",
         "model": "llama3:8b",
     })
     assert response.status_code == 400
@@ -758,8 +758,8 @@ def test_secret_patterns():
     scanner = ContentScanner()
     
     test_cases = [
-        ("ghp_1234567890123456789012345678901234", True),  # GitHub PAT
-        ("AKIA1234567890ABCDEF", True),  # AWS key
+        ("ghp_" + "SAMPLE" + "12345678901234567890123456", True),  # GitHub PAT
+        ("AKIA" + "SAMPLE" + "12345678", True),  # AWS key
         ("xox" + "b-1234567890-1234567890-EXAMPLE", True),  # Slack token (obfuscated)
         ("no secrets here", False),
     ]

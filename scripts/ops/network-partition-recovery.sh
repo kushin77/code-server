@@ -10,10 +10,12 @@ source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
 PRIMARY_HOST="${PRIMARY_HOST:-}"
 REPLICA_HOST="${REPLICA_HOST:-}"
-TARGET_USER="${TARGET_USER:-akushnir}"
+TARGET_USER="${TARGET_USER:-${SSH_USER:-${DEPLOY_USER:-}}}"
 LOCAL_UPSTREAM_SCHEME="${LOCAL_UPSTREAM_SCHEME:-http}"
 LOCAL_UPSTREAM_HOST="${LOCAL_UPSTREAM_HOST:-code-server:8080}"
 PRIMARY_UPSTREAM_URL="${PRIMARY_UPSTREAM_URL:-${LOCAL_UPSTREAM_SCHEME}://${LOCAL_UPSTREAM_HOST}/}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
 
 # Colors
 RED='\033[0;31m'
@@ -108,7 +110,7 @@ graceful_degradation() {
     ssh "${TARGET_USER}@${PRIMARY_HOST}" "
         cd code-server-enterprise
         # Update docker-compose to remove remote upstream
-        sed -i 's|OAUTH2_PROXY_UPSTREAMS.*|OAUTH2_PROXY_UPSTREAMS=\"${PRIMARY_UPSTREAM_URL}\"|' docker-compose.yml
+        sed -i 's|OAUTH2_PROXY_UPSTREAMS.*|OAUTH2_PROXY_UPSTREAMS="${PRIMARY_UPSTREAM_URL} ${LOCAL_UPSTREAM_SCHEME}://${REPLICA_HOST}:8080/"|' docker-compose.yml
         # Restart oauth2-proxy
         docker-compose restart oauth2-proxy 2>/dev/null || true
     " 2>/dev/null || log_error "Could not update config"
@@ -184,7 +186,7 @@ continuous_monitoring() {
                 # Restore full operations
                 ssh "${TARGET_USER}@${PRIMARY_HOST}" "
                     cd code-server-enterprise
-                    sed -i 's|OAUTH2_PROXY_UPSTREAMS.*|OAUTH2_PROXY_UPSTREAMS=\"http://code-server:8080/ http://${REPLICA_HOST}:8080/\"|' docker-compose.yml
+                    sed -i 's|OAUTH2_PROXY_UPSTREAMS.*|OAUTH2_PROXY_UPSTREAMS=\"\${PRIMARY_UPSTREAM_URL} \${REPLICA_UPSTREAM_URL}\"|' docker-compose.yml
                     docker-compose restart oauth2-proxy 2>/dev/null || true
                 " 2>/dev/null
                 

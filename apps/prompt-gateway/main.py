@@ -26,6 +26,7 @@ import yaml
 from scanner import ContentScanner
 from router import ModelRouter
 from fallback import FallbackHandler
+from kafka_client import KafkaProducer
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,7 @@ class PromptGateway:
         self.scanner = scanner
         self.router = ModelRouter(ROUTER_CONFIG_PATH, REGISTRY_CONFIG_PATH)
         self.fallback = FallbackHandler(REGISTRY_CONFIG_PATH)
+        self.kafka = KafkaProducer()
 
     async def process_prompt(self, request: PromptRequest, user: str) -> Dict[str, Any]:
         """
@@ -315,14 +317,17 @@ class PromptGateway:
             return True  # Fail-open: if OPA unavailable, allow
     
     async def _log_audit(self, **kwargs) -> None:
-        """Log to Loki for audit trail"""
+        """Log to Loki and publish to Kafka for audit trail"""
         audit_entry = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             **kwargs,
         }
         
-        # Log to stdout (Loki will scrape)
+        # 1. Log to stdout (Loki will scrape)
         logger.info(f"AUDIT: {json.dumps(audit_entry)}")
+        
+        # 2. Publish to Kafka (if enabled)
+        self.kafka.publish_interaction(audit_entry)
         
         # TODO: Phase 2 - Direct Loki push
     

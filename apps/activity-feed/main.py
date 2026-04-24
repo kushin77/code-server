@@ -118,7 +118,7 @@ def translate_kafka_event(kafka_message: Dict[str, Any]) -> Optional[ActivityEve
         payload = kafka_message.get("payload", {})
         actor = kafka_message.get("actor", {})
         
-        # Map Kafka event_type to ActivityType
+        # Map Kafka event_type/topic to ActivityType
         activity_type_map = {
             "agent.audit": ActivityType.AGENT_ACTION,
             "agent.lifecycle": ActivityType.AGENT_ACTION,
@@ -130,6 +130,25 @@ def translate_kafka_event(kafka_message: Dict[str, Any]) -> Optional[ActivityEve
             "system.alerts": ActivityType.SYSTEM_ALERT,
         }
         
+        # Determine source topic / event type
+        source_topic = kafka_message.get("event_type") or kafka_message.get("source_topic") or "unknown"
+        
+        # Handle Prompt Gateway specific events (which use AUDIT structure from Phase 1/2)
+        if "AUDIT" in str(kafka_message) or source_topic == "ai.interactions":
+            activity = ActivityEvent(
+                id=kafka_message.get("session_id", str(uuid.uuid4())),
+                activity_type=ActivityType.AI_INTERACTION,
+                title=f"AI Interaction: {kafka_message.get('intent', 'general')}",
+                description=f"Model: {kafka_message.get('model', 'unknown')} | Status: {kafka_message.get('policy_decision', 'unknown')}",
+                actor_type=ActorType.HUMAN,
+                actor_id=kafka_message.get("user", "anonymous"),
+                timestamp=datetime.fromisoformat(kafka_message.get("timestamp", datetime.utcnow().isoformat()).replace("Z", "+00:00")),
+                correlation_id=kafka_message.get("session_id"),
+                metadata=kafka_message,
+                source_topic="ai.interactions"
+            )
+            return activity
+
         # Extract key fields from payload (varies by topic)
         title = payload.get("title") or event_type
         description = payload.get("description") or payload.get("message")

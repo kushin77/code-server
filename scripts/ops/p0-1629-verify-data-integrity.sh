@@ -18,9 +18,24 @@
 set -euo pipefail
 
 # Configuration
-REPLICA="${1:-192.168.168.42}"
-SSH_KEY="${HOME}/.ssh/id_rsa_onprem"
-SSH_USER="akushnir"
+REPLICA="${1:-${REPLICA_2_IP:-${REPLICA_HOST_2:-}}}"
+SSH_KEY="${SSH_KEY:-${ONPREM_SSH_KEY:-}}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+
+if [[ -z "$REPLICA" ]]; then
+  log_fail "Set REPLICA_2_IP or REPLICA_HOST_2 before running the integrity check"
+  exit 1
+fi
+
+if [[ -z "$SSH_KEY" ]]; then
+  log_fail "Set SSH_KEY or ONPREM_SSH_KEY before running the integrity check"
+  exit 1
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+  log_fail "Set SSH_USER or DEPLOY_USER before running the integrity check"
+  exit 1
+fi
 
 # Color output
 RED='\033[0;31m'
@@ -48,11 +63,7 @@ log_section() {
 
 # SSH execution wrapper
 ssh_exec() {
-  if [[ "${REPLICA}" == "localhost" ]] || [[ "${REPLICA}" == "127.0.0.1" ]]; then
-    eval "$@"
-  else
-    ssh -i "${SSH_KEY}" "${SSH_USER}@${REPLICA}" "$@" 2>&1
-  fi
+  ssh -i "${SSH_KEY}" "${SSH_USER}@${REPLICA}" "$@" 2>&1
 }
 
 main() {

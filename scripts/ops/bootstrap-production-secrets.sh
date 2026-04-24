@@ -9,8 +9,8 @@ set -euo pipefail
 
 source "$SCRIPT_DIR/_common/init.sh"
 
-PRODUCTION_HOST="${PRODUCTION_HOST:-192.168.168.31}"
-PRODUCTION_USER="${PRODUCTION_USER:-akushnir}"
+PRODUCTION_HOST="${PRODUCTION_HOST:-}"
+PRODUCTION_USER="${PRODUCTION_USER:-ainternal}"
 
 log_info "Bootstrapping production secrets on $PRODUCTION_HOST..."
 
@@ -28,10 +28,10 @@ create_env_file() {
 
 # Infrastructure
 DEPLOYMENT_ENV=production
-APEX_DOMAIN=kushnir.cloud
-PRIMARY_HOST=192.168.168.31
-REPLICA_2_HOST=192.168.168.42
-NAS_HOST=192.168.168.56
+APEX_DOMAIN=internal.cloud
+PRIMARY_HOST=
+REPLICA_2_HOST=
+NAS_HOST=
 
 # Code Server
 CODE_SERVER_PASSWORD=SecureCodeServerPassword2026!@#
@@ -53,7 +53,7 @@ OAUTH2_PROXY_COOKIE_SECURE=true
 OAUTH2_PROXY_COOKIE_HTTPONLY=true
 
 # Optional: Vault Integration (can be disabled)
-VAULT_ADDR=https://vault.kushnir.cloud
+VAULT_ADDR=https://vault.internal.cloud
 VAULT_ROOT_TOKEN=dev-vault-root-2026
 VAULT_CODE_SERVER_PASSWORD=dev-vault-password-2026
 VAULT_REDIS_PASSWORD=dev-vault-redis-2026
@@ -71,7 +71,7 @@ GOOGLE_CLIENT_SECRET=dev-google-secret-2026
 
 # Optional: External Services (can be disabled)
 SLACK_BOT_TOKEN=xoxb-dev-slack-token-2026
-SENTRY_ORG_SLUG=kushnir-cloud
+SENTRY_ORG_SLUG=internal.cloud
 GITHUB_TOKEN=ghp_dev_github_token_2026
 
 # Monitoring & Observability
@@ -101,6 +101,6 @@ log_info "Verifying services..."
 ssh "$PRODUCTION_USER@$PRODUCTION_HOST" "cd code-server-enterprise && docker-compose ps | grep -c UP && echo 'Services running'"
 
 log_info "✅ Production secrets bootstrap complete"
-log_info "Next: Verify DAST scans can reach https://ide.kushnir.cloud/"
+log_info "Next: Verify DAST scans can reach https://ide.internal.cloud/"
 
 rm -f /tmp/production.env

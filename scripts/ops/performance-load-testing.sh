@@ -5,6 +5,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "${SCRIPT_DIR}/scripts/_common/init.sh"
+init_repo
+
 # Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -13,7 +17,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-TEST_TARGET="${TEST_TARGET:-http://localhost:3000}"
+TEST_TARGET="${TEST_TARGET:-}"
 TEST_DURATION_BASELINE=${TEST_DURATION_BASELINE:-600}  # 10 minutes
 TEST_DURATION_SPIKE=${TEST_DURATION_SPIKE:-300}        # 5 minutes
 TEST_DURATION_SUSTAINED=${TEST_DURATION_SUSTAINED:-1800} # 30 minutes
@@ -23,6 +27,11 @@ SUSTAINED_USERS=${SUSTAINED_USERS:-500}
 OUTPUT_DIR=${OUTPUT_DIR:-./artifacts/performance-tests}
 TEST_PAUSE_BETWEEN_PHASES=${TEST_PAUSE_BETWEEN_PHASES:-30}
 K6_CMD=()
+
+if [[ -z "$TEST_TARGET" ]]; then
+    log_error "Set TEST_TARGET before running performance load testing"
+    exit 1
+fi
 
 resolve_k6_command() {
     if command -v k6 &> /dev/null; then

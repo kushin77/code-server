@@ -8,7 +8,9 @@
 # Usage: PREFLIGHT_NAS_PATH=/mnt/nas bash preflight-air-gap-images.sh
 # After running, configure docker on air-gapped hosts to use local image registry
 
-source "$SCRIPT_DIR/_common/init.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/_common/init.sh"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration

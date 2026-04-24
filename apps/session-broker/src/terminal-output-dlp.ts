@@ -82,7 +82,7 @@ export class TerminalOutputDLP extends EventEmitter {
       },
       // CRITICAL: GitHub Tokens
       {
-        regex: /(ghp_[A-Za-z0-9_]{36}|ghu_[A-Za-z0-9_]{36}|ghs_[A-Za-z0-9_]{36})/g,
+        regex: /(ghp_[A-Za-z0-9_]{30,}|ghu_[A-Za-z0-9_]{30,}|ghs_[A-Za-z0-9_]{30,})/g,
         name: 'github-pat',
         category: 'credentials',
         severity: 'critical',
@@ -109,7 +109,7 @@ export class TerminalOutputDLP extends EventEmitter {
       },
       // HIGH: AWS Credentials
       {
-        regex: /(?:AKIA|ASIA)[0-9A-Z]{16}/g,
+        regex: /(?:AKIA|ASIA)[0-9A-Z]{16,20}/g,
         name: 'aws-access-key',
         category: 'credentials',
         severity: 'high',

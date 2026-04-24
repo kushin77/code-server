@@ -126,8 +126,10 @@ export const FigmaEmbedPanel: React.FC = () => {
 
   // Load configuration
   useEffect(() => {
-    void loadConfig()
-  }, [])
+    void loadConfig();
+  }, []);
+
+  useEffect(() => {
     if (config?.token) {
       const client = axios.create({
         baseURL: 'https://api.figma.com/v1',

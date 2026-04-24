@@ -274,6 +274,97 @@
       "restart_policy": "unless-stopped",
       "depends_on": ["redis"],
       "healthcheck": {"type": "command", "target": "redis-cli -p 26379 ping"}
+    },
+    {
+      "name": "error-triage-engine",
+      "container_name": "error-triage-engine",
+      "source": "compose",
+      "purpose": "Automated error triage and classification engine",
+      "internal_dns": "error-triage-engine",
+      "external_dns": null,
+      "ports": [7000],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": ["error-triage-db"],
+      "healthcheck": {"type": "http", "target": "http://localhost:7000/health"}
+    },
+    {
+      "name": "loki",
+      "container_name": "loki",
+      "source": "compose",
+      "purpose": "Grafana Loki log aggregation",
+      "internal_dns": "loki",
+      "external_dns": null,
+      "ports": [3100],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": [],
+      "healthcheck": {"type": "http", "target": "http://localhost:3100/ready"}
+    },
+    {
+      "name": "open-vsix-registry",
+      "container_name": "open-vsix-registry",
+      "source": "compose",
+      "purpose": "Self-hosted VS Code extension registry (Open VSX)",
+      "internal_dns": "open-vsix-registry",
+      "external_dns": null,
+      "ports": [5000],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": [],
+      "healthcheck": {"type": "http", "target": "http://localhost:5000/-/health"}
+    },
+    {
+      "name": "postgres_exporter",
+      "container_name": "postgres_exporter",
+      "source": "compose",
+      "purpose": "Prometheus exporter for PostgreSQL metrics",
+      "internal_dns": "postgres_exporter",
+      "external_dns": null,
+      "ports": [9187],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": ["postgres"],
+      "healthcheck": {"type": "http", "target": "http://localhost:9187/metrics"}
+    },
+    {
+      "name": "promtail",
+      "container_name": "promtail",
+      "source": "compose",
+      "purpose": "Loki log scraper — tails container logs and ships to Loki",
+      "internal_dns": "promtail",
+      "external_dns": null,
+      "ports": [9080],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": ["loki"],
+      "healthcheck": {"type": "http", "target": "http://localhost:9080/ready"}
+    },
+    {
+      "name": "sentry-integration-api",
+      "container_name": "sentry-integration-api",
+      "source": "compose",
+      "purpose": "Sentry integration API for error tracking",
+      "internal_dns": "sentry-integration-api",
+      "external_dns": null,
+      "ports": [8090],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": [],
+      "healthcheck": {"type": "http", "target": "http://localhost:8090/health"}
+    },
+    {
+      "name": "slack-slash-commands-api",
+      "container_name": "slack-slash-commands-api",
+      "source": "compose",
+      "purpose": "Slack slash command handler API",
+      "internal_dns": "slack-slash-commands-api",
+      "external_dns": null,
+      "ports": [8091],
+      "profile": "base",
+      "restart_policy": "unless-stopped",
+      "depends_on": [],
+      "healthcheck": {"type": "http", "target": "http://localhost:8091/health"}
     }
   ]
 }

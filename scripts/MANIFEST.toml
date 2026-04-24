@@ -738,3 +738,112 @@ category = "uncategorized"
 status   = "active"
 purpose  = "TODO: add purpose"
 
+
+[[script]]
+file     = "create-100-collab-issues.sh"
+category = "ops"
+status   = "active"
+purpose  = "Create 100 collaborative GitHub issues for bulk workflow testing"
+
+[[script]]
+file     = "deploy-enterprise-customer.sh"
+category = "ops"
+status   = "active"
+purpose  = "Deploy enterprise customer configuration and provisioning"
+
+[[script]]
+file     = "deploy-gvisor-isolation.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy gVisor container isolation for enhanced security"
+
+[[script]]
+file     = "deploy-logging-pipeline-iac.sh"
+category = "observability"
+status   = "active"
+purpose  = "Deploy logging pipeline via IaC (immutable, idempotent)"
+
+[[script]]
+file     = "deploy-passwordless-sudo.sh"
+category = "ops"
+status   = "active"
+purpose  = "Configure passwordless sudo for deployment service accounts"
+
+[[script]]
+file     = "deploy-terminal-dlp.sh"
+category = "security"
+status   = "active"
+purpose  = "Deploy terminal DLP (Data Loss Prevention) scanning"
+
+[[script]]
+file     = "error-triage-engine-fixed.sh"
+category = "ops"
+status   = "active"
+purpose  = "Fixed error triage engine deployment script"
+
+[[script]]
+file     = "fix-collab-9-issues.sh"
+category = "ops"
+status   = "active"
+purpose  = "Apply fixes for collaborative editing phase 9 issues"
+
+[[script]]
+file     = "fix-p0-1181-redis-security.sh"
+category = "security"
+status   = "active"
+purpose  = "Fix P0-1181 Redis security misconfiguration"
+
+[[script]]
+file     = "mtls-certificate-management.sh"
+category = "security"
+status   = "active"
+purpose  = "Manage mTLS certificate lifecycle (issue, rotate, revoke)"
+
+[[script]]
+file     = "network-security-management.sh"
+category = "security"
+status   = "active"
+purpose  = "Manage network security rules and firewall policies"
+
+[[script]]
+file     = "p0-rotate-credentials.sh"
+category = "security"
+status   = "active"
+purpose  = "Rotate all P0-critical credentials and secrets"
+
+[[script]]
+file     = "runtime-proof-iac-immutable-idempotent.sh"
+category = "ops"
+status   = "active"
+purpose  = "Runtime proof of IaC immutability and idempotency"
+
+[[script]]
+file     = "test-iac-immutable-idempotent-live.sh"
+category = "ops"
+status   = "active"
+purpose  = "Live test of IaC immutability and idempotency guarantees"
+
+[[script]]
+file     = "update-dast-config.sh"
+category = "security"
+status   = "active"
+purpose  = "Update DAST (Dynamic Application Security Testing) configuration"
+
+[[script]]
+file     = "validate-logging-pipeline-iac.sh"
+category = "observability"
+status   = "active"
+purpose  = "Validate logging pipeline IaC correctness"
+
+[[script]]
+file     = "verify-iac-immutable-idempotent-deployment.sh"
+category = "ops"
+status   = "active"
+purpose  = "Verify IaC deployment is immutable and idempotent"
+
+[[script]]
+file     = "verify-p0-completion.sh"
+category = "ops"
+status   = "active"
+purpose  = "Verify all P0 critical issue fixes are complete"
+

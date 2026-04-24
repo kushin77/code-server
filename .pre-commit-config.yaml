@@ -78,7 +78,8 @@ repos:
       # P0 SECURITY: Detect secrets before commit using TruffleHog
       - id: trufflehog-secrets
         name: "Security: TruffleHog secret detection"
-        entry: bash -c 'python3 -m pip install truffleHog==2.2.1 >/dev/null 2>&1 && trufflehog filesystem . --only-verified --max-depth 3 || echo "⚠ TruffleHog 2.2.1 scan skipped - install with: pip install truffleHog==2.2.1"'
+        entry: >-
+          bash -c 'python3 -m pip install truffleHog==2.2.1 >/dev/null 2>&1 && trufflehog filesystem . --only-verified --max-depth 3 || echo "TruffleHog 2.2.1 scan skipped - install with: pip install truffleHog==2.2.1"'
         language: system
         files: ''
         pass_filenames: false

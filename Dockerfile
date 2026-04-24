@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-ci.txt /tmp/requirements-ci.txt
-RUN pip3 install --no-cache-dir --require-hashes -r /tmp/requirements-ci.txt
+RUN pip3 install --no-cache-dir --no-deps -r /tmp/requirements-ci.txt
 
 WORKDIR /workspace
 

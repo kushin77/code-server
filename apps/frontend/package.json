@@ -40,7 +40,7 @@
     "prettier": "^3.1.1",
     "tailwindcss": "^3.4.1",
     "typescript": "catalog:",
-    "vite": "^8.0.8",
+    "vite": "^8.0.10",
     "vitest": "catalog:"
   },
   "engines": {

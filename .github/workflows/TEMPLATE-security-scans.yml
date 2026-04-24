@@ -53,9 +53,9 @@ jobs:
 
       - name: Run DAST scan
         env:
-          # Default to HTTP for the health probe so DAST does not stall on TLS certificate recovery windows.
+          # Default to the public HTTP health probe so TLS recovery windows do not stall DAST.
           # Callers can still override this with DAST_TARGET_URL when a different public target is required.
-          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL || format('{0}/health', vars.IDE_BASE_URL || 'http://ide.kushnir.cloud') }}
+          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL || 'http://ide.kushnir.cloud/healthz' }}
           PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
           IDE_BASE_URL: ${{ vars.IDE_BASE_URL }}
           GH_TOKEN: ${{ github.token }}

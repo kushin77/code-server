@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { TeamHubConfig, TeamHubSnapshot, TeamHubUser, PresenceStatus } from './types';
+import { renderActivityFeedHtml, type TeamHubActivityEntry } from './activity-feed';
 import {
   findBestMeetingSlot,
   formatLocalTime,
@@ -79,7 +80,13 @@ const renderStatusSection = (title: string, users: TeamHubUser[], config: TeamHu
     </section>`;
 };
 
-export const renderTeamHubWebviewHtml = (snapshot: TeamHubSnapshot, config: TeamHubConfig, webview: vscode.Webview): string => {
+export const renderTeamHubWebviewHtml = (
+  snapshot: TeamHubSnapshot,
+  config: TeamHubConfig,
+  webview: vscode.Webview,
+  activityEntries: TeamHubActivityEntry[] = [],
+  privateViewEnabled: boolean = false
+): string => {
   const nonce = `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`;
   const cspSource = webview.cspSource;
 
@@ -101,6 +108,9 @@ export const renderTeamHubWebviewHtml = (snapshot: TeamHubSnapshot, config: Team
         .hero h2 { margin: 0; font-size: 1.1rem; }
         .hero-actions, .quick-actions, .user-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .quick-actions { margin: 14px 0; }
+        .command-panel { margin: 14px 0; display: grid; gap: 10px; }
+        .command-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .command-input { flex: 1 1 280px; min-width: 220px; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--vscode-editorWidget-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); }
         button { border: 1px solid var(--vscode-button-border, transparent); background: var(--vscode-button-background); color: var(--vscode-button-foreground); padding: 6px 10px; border-radius: 6px; cursor: pointer; }
         button:hover { background: var(--vscode-button-hoverBackground); }
         .card, .user-card { border: 1px solid var(--vscode-editorWidget-border); border-radius: 10px; padding: 10px; background: var(--vscode-editorWidget-background); }
@@ -120,13 +130,24 @@ export const renderTeamHubWebviewHtml = (snapshot: TeamHubSnapshot, config: Team
         .panel-grid { display: grid; gap: 12px; }
         .current-file { margin-top: 12px; }
         .meeting-suggestion { margin: 12px 0; }
+        .activity-list { display: grid; gap: 8px; }
+        .activity-entry { border-radius: 8px; padding: 8px 10px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-editorWidget-border); }
+        .activity-topline { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+        .activity-time { font-size: 0.8rem; opacity: 0.7; white-space: nowrap; }
+        .activity-detail { margin-top: 4px; font-size: 0.88rem; opacity: 0.82; }
+        .activity-system { border-left: 3px solid var(--vscode-terminal-ansiBlue); }
+        .activity-presence { border-left: 3px solid var(--vscode-terminal-ansiGreen); }
+        .activity-collaboration { border-left: 3px solid var(--vscode-terminal-ansiCyan); }
+        .activity-navigation { border-left: 3px solid var(--vscode-terminal-ansiYellow); }
+        .activity-settings { border-left: 3px solid var(--vscode-terminal-ansiMagenta); }
+        .private-banner { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; padding: 10px 12px; border-radius: 8px; background: rgba(255, 204, 0, 0.1); border: 1px solid rgba(255, 204, 0, 0.35); }
         .empty-state { opacity: 0.65; padding: 10px 0; }
         h3 { margin: 0 0 8px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8; }
       </style>
     </head>
     <body>
       <div class="hero">
-        <h2>👥 Team Hub</h2>
+        <h2>KC IDE Team Hub</h2>
         <div class="hero-actions">
           <button data-action="refresh">Refresh</button>
           <button data-action="settings">Settings</button>
@@ -157,6 +178,31 @@ export const renderTeamHubWebviewHtml = (snapshot: TeamHubSnapshot, config: Team
       <div class="quick-actions">
         <button data-action="start-meet">Start Meet</button>
         <button data-action="share-workspace">Share Link</button>
+        <button data-action="toggle-isolation">${privateViewEnabled ? 'Exit Private View' : 'Private View'}</button>
+      </div>
+
+      ${privateViewEnabled ? `
+        <div class="private-banner">
+          <div>
+            <strong>Private view enabled.</strong>
+            <div class="user-meta">Collaborator presence is hidden in this workspace until you exit private view.</div>
+          </div>
+          <button data-action="toggle-isolation">Show Collaborators</button>
+        </div>
+      ` : ''}
+
+      <div class="card command-panel">
+        <h3>Agent Command Interface</h3>
+        <div class="user-meta">Try: open sidebar, start meet, share workspace, refresh presence, open settings, toggle private mode</div>
+        <div class="command-row">
+          <input id="teamhub-command" class="command-input" type="text" placeholder="Type a KC IDE command" />
+          <button data-action="run-command">Run Command</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Activity Feed</h3>
+        ${renderActivityFeedHtml(activityEntries, referenceDate)}
       </div>
 
       <div class="panel-grid">
@@ -178,9 +224,22 @@ export const renderTeamHubWebviewHtml = (snapshot: TeamHubSnapshot, config: Team
           button.addEventListener('click', () => {
             const action = button.getAttribute('data-action');
             const userId = button.getAttribute('data-user-id');
-            vscode.postMessage({ action, userId });
+            const commandText = commandInput && commandInput.value ? commandInput.value : undefined;
+            vscode.postMessage({ action, userId, commandText });
+            if (action === 'run-command' && commandInput) {
+              commandInput.value = '';
+            }
           });
         });
+
+        if (commandInput) {
+          commandInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              vscode.postMessage({ action: 'run-command', commandText: commandInput.value });
+              commandInput.value = '';
+            }
+          });
+        }
       </script>
     </body>
   </html>`;

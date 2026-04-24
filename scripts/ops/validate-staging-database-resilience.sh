@@ -21,16 +21,17 @@ source "$REPO_ROOT/scripts/_common/init.sh"
 # CONFIGURATION
 # ============================================================================
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-TARGET_USER="${TARGET_USER:-akushnir}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
+TARGET_USER="${TARGET_USER:-${DEPLOY_USER:-}}"
+SSH_KEY="${SSH_KEY:-}"
 POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-postgres}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-postgres}"
 
-HEALTH_CHECK_PORT="${HEALTH_CHECK_PORT:-8081}"
-FAILOVER_WEBHOOK_PORT="${FAILOVER_WEBHOOK_PORT:-8082}"
-QUORUM_PORT="${QUORUM_PORT:-8083}"
+HEALTH_CHECK_URL="${HEALTH_CHECK_URL:-}"
+FAILOVER_WEBHOOK_URL="${FAILOVER_WEBHOOK_URL:-}"
+QUORUM_URL="${QUORUM_URL:-}"
 
 STAGING_LOG_DIR="${STAGING_LOG_DIR:-artifacts/staging-validation}"
 STAGING_REPORT="${STAGING_LOG_DIR}/validation-report-$(date +%Y%m%d-%H%M%S).md"
@@ -38,6 +39,22 @@ TEST_RESULTS_FILE="${STAGING_LOG_DIR}/test-results.json"
 
 TEST_PASSED=0
 TEST_FAILED=0
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+    log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running staging database resilience validation"
+fi
+
+if [[ -z "$TARGET_USER" ]]; then
+    log_fatal "Set TARGET_USER or DEPLOY_USER before running staging database resilience validation"
+fi
+
+if [[ -z "$SSH_KEY" ]]; then
+    log_fatal "Set SSH_KEY before running staging database resilience validation"
+fi
+
+if [[ -z "$HEALTH_CHECK_URL" || -z "$FAILOVER_WEBHOOK_URL" || -z "$QUORUM_URL" ]]; then
+    log_fatal "Set HEALTH_CHECK_URL, FAILOVER_WEBHOOK_URL, and QUORUM_URL before running staging database resilience validation"
+fi
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -48,12 +65,12 @@ ensure_staging_dir() {
 }
 
 ssh_primary() {
-    ssh -i ~/.ssh/id_rsa -o BatchMode=yes -o ConnectTimeout=8 \
+    ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=8 \
         "${TARGET_USER}@${PRIMARY_HOST}" "$@"
 }
 
 ssh_replica() {
-    ssh -i ~/.ssh/id_rsa -o BatchMode=yes -o ConnectTimeout=8 \
+    ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=8 \
         "${TARGET_USER}@${REPLICA_HOST}" "$@"
 }
 
@@ -203,7 +220,7 @@ validate_health_checks() {
     
     # Test 1: Health check endpoint responds
     log_info "Testing health check endpoint..."
-    if curl -sf "http://localhost:${HEALTH_CHECK_PORT}/health" >/dev/null 2>&1; then
+    if curl -sf "${HEALTH_CHECK_URL}/health" >/dev/null 2>&1; then
         log_test "Health check endpoint responds" "PASS"
     else
         log_test "Health check endpoint responds" "FAIL" "Connection refused"
@@ -211,7 +228,7 @@ validate_health_checks() {
     
     # Test 2: Replication health check
     log_info "Testing replication health check..."
-    if curl -sf "http://localhost:${HEALTH_CHECK_PORT}/health/replication" >/dev/null 2>&1; then
+    if curl -sf "${HEALTH_CHECK_URL}/health/replication" >/dev/null 2>&1; then
         log_test "Replication health check works" "PASS"
     else
         log_test "Replication health check works" "FAIL" "Endpoint unreachable"
@@ -219,7 +236,7 @@ validate_health_checks() {
     
     # Test 3: Backup health check
     log_info "Testing backup health check..."
-    if curl -sf "http://localhost:${HEALTH_CHECK_PORT}/health/backup" >/dev/null 2>&1; then
+    if curl -sf "${HEALTH_CHECK_URL}/health/backup" >/dev/null 2>&1; then
         log_test "Backup health check works" "PASS"
     else
         log_test "Backup health check works" "FAIL" "Endpoint unreachable"
@@ -234,7 +251,7 @@ validate_failover() {
     
     # Test 1: Failover webhook responds
     log_info "Testing failover webhook..."
-    if curl -sf "http://localhost:${FAILOVER_WEBHOOK_PORT}/failover/validate-status" >/dev/null 2>&1; then
+    if curl -sf "${FAILOVER_WEBHOOK_URL}/failover/validate-status" >/dev/null 2>&1; then
         log_test "Failover webhook responds" "PASS"
     else
         log_test "Failover webhook responds" "FAIL" "Endpoint unreachable"
@@ -242,7 +259,7 @@ validate_failover() {
     
     # Test 2: Multi-criteria validation works
     log_info "Testing failover decision logic..."
-    if validation_response=$(curl -s "http://localhost:${FAILOVER_WEBHOOK_PORT}/failover/validate-status"); then
+    if validation_response=$(curl -s "${FAILOVER_WEBHOOK_URL}/failover/validate-status"); then
         if echo "$validation_response" | grep -q "failover_decision"; then
             log_test "Failover decision logic works" "PASS"
         else
@@ -261,7 +278,7 @@ validate_partition_recovery() {
     
     # Test 1: Quorum monitor responds
     log_info "Testing quorum monitor..."
-    if curl -sf "http://localhost:${QUORUM_PORT}/quorum/status" >/dev/null 2>&1; then
+    if curl -sf "${QUORUM_URL}/quorum/status" >/dev/null 2>&1; then
         log_test "Quorum monitor responds" "PASS"
     else
         log_test "Quorum monitor responds" "FAIL" "Endpoint unreachable"
@@ -269,7 +286,7 @@ validate_partition_recovery() {
     
     # Test 2: Quorum status has 3 nodes
     log_info "Checking quorum node count..."
-    if quorum_response=$(curl -s "http://localhost:${QUORUM_PORT}/quorum/status"); then
+    if quorum_response=$(curl -s "${QUORUM_URL}/quorum/status"); then
         if echo "$quorum_response" | grep -q '"connected_nodes": 3'; then
             log_test "Quorum has 3 nodes" "PASS"
         else

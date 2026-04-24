@@ -16,11 +16,23 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-BACKUP_USER="${DEPLOY_USER:-akushnir}"
-BACKUP_REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+BACKUP_USER="${BACKUP_USER:-${SSH_USER:-${DEPLOY_USER:-}}}"
+BACKUP_REPLICAS="${BACKUP_REPLICAS:-}"
 NAS_MOUNT_POINT="${NAS_MOUNT_POINT:-/mnt/nas/backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
 CRON_SCHEDULE="${CRON_SCHEDULE:-0 2 * * *}"  # 2 AM daily
+
+if [[ -z "$BACKUP_USER" ]]; then
+    log_fatal "Set BACKUP_USER, SSH_USER, or DEPLOY_USER before running backup setup"
+fi
+
+if [[ -z "$BACKUP_REPLICAS" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        BACKUP_REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set BACKUP_REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running backup setup"
+    fi
+fi
 
 ################################################################################
 # VALIDATION

@@ -1,0 +1,35 @@
+# @file        config/model-router.yaml
+# @module      ai/routing
+# @description Routing rules for Prompt Gateway - intent-based model selection
+
+routing_rules:
+  - intent: "code_generation"
+    preferred_model: "codellama:13b"
+    fallback_model: "llama3:8b"
+    min_tokens: 0
+    max_tokens: 4096
+
+  - intent: "complex_reasoning"
+    preferred_model: "llama3:70b"
+    fallback_model: "llama3:8b"
+    min_tokens: 0
+    max_tokens: 8192
+
+  - intent: "general_purpose"
+    preferred_model: "llama3:8b"
+    fallback_model: "mistral:7b"
+    min_tokens: 0
+    max_tokens: 4096
+
+  - intent: "fast_summary"
+    preferred_model: "mistral:7b"
+    fallback_model: "llama3:8b"
+    min_tokens: 0
+    max_tokens: 2048
+
+# Default fallback if no intent matches
+default_model: "llama3:8b"
+max_fallback_depth: 2
+enable_ab_testing: true
+ab_test_ratio: 0.1  # 10% for variant model
+variant_model: "mistral:7b"

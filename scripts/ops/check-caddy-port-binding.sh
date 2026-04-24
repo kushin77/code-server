@@ -18,15 +18,30 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/../_common/init.sh"
+init_repo
+
+set -euo pipefail
 
 # ============================================================================
 # CONFIG
 # ============================================================================
 
-DEFAULT_REPLICAS="192.168.168.31,192.168.168.42"
-REPLICAS="$DEFAULT_REPLICAS"
+if [[ -z "${REPLICAS:-}" ]]; then
+  if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+    REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+  else
+    log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before checking Caddy port bindings"
+  fi
+fi
+
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_rsa_onprem}"
-SSH_USER="${SSH_USER:-akushnir}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before checking Caddy port bindings"
+fi
+
+SSH_TIMEOUT="${SSH_TIMEOUT:-5}"
+CADDY_BINDING_SSH_OPTS=(-i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" -o StrictHostKeyChecking=no)
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 # Alert flag
@@ -47,7 +62,7 @@ while [[ $# -gt 0 ]]; do
 Usage: bash scripts/ops/check-caddy-port-binding.sh [--replicas R31,R42] [--alert] [--json]
 
 Options:
-  --replicas  Comma-separated list of replica hosts to check (default: $DEFAULT_REPLICAS)
+  --replicas  Comma-separated list of replica hosts to check (or use REPLICAS / REPLICA_1_IP / REPLICA_2_IP)
   --alert     Exit 2 when degraded replicas are detected
   --json      Emit machine-readable JSON output
 EOF
@@ -72,8 +87,7 @@ check_replica_port_binding() {
   
   # Query netstat via SSH
   local netstat_output
-  netstat_output=$(ssh -i "$SSH_KEY" -o ConnectTimeout=5 -o StrictHostKeyChecking=no \
-    "$SSH_USER@$replica_host" "netstat -tlnp 2>/dev/null | grep :$port | head -1" 2>/dev/null || echo "")
+  netstat_output=$(ssh "${CADDY_BINDING_SSH_OPTS[@]}" "$SSH_USER@$replica_host" "netstat -tlnp 2>/dev/null | grep :$port | head -1" 2>/dev/null || echo "")
   
   if [[ -z "$netstat_output" ]]; then
     # Port not bound
@@ -111,8 +125,7 @@ check_caddy_container() {
   local replica_host="$1"
   
   local caddy_status
-  caddy_status=$(ssh -i "$SSH_KEY" -o ConnectTimeout=5 -o StrictHostKeyChecking=no \
-    "$SSH_USER@$replica_host" "docker ps --filter name=caddy --format '{{.Status}}' 2>/dev/null || echo ''" 2>/dev/null)
+  caddy_status=$(ssh "${CADDY_BINDING_SSH_OPTS[@]}" "$SSH_USER@$replica_host" "docker ps --filter name=caddy --format '{{.Status}}' 2>/dev/null || echo ''" 2>/dev/null)
   
   if [[ -z "$caddy_status" ]]; then
     echo "error"

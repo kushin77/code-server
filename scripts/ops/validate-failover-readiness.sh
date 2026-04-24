@@ -16,8 +16,13 @@ init_repo
 # FAILOVER READINESS VALIDATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+if [[ -z "${REPLICAS:-}" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running failover readiness validation"
+    fi
+fi
 
 log_info "🔴 FAILOVER READINESS VALIDATION"
 log_info "   Per: docs/FAILOVER-RUNBOOK-SIMPLIFIED.md"
@@ -80,7 +85,7 @@ log_info "🗄️  Database Replication:"
 log_info "   - PostgreSQL 15 with Patroni HA configured"
 log_info "   - Replication lag: < 1 second (proven)"
 log_info "   - Standby ready: Yes"
-log_info "   Status: ✅ Ready (manual verification: ssh akushnir@192.168.168.31 'cd code-server-enterprise && docker compose exec postgres-primary pg_stat_replication')"
+log_info "   Status: ✅ Ready (manual verification via the failover runbook on the active replica)"
 
 # Check 5: Cache failover
 log_info ""

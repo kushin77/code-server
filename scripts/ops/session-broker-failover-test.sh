@@ -12,12 +12,32 @@ source "$SCRIPT_DIR/../_common/init.sh"
 # Configuration
 # ────────────────────────────────────────────────────────────────────────────
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
 SESSION_BROKER_PORT="${SESSION_BROKER_PORT:-5000}"
+SESSION_BROKER_SCHEME="${SESSION_BROKER_SCHEME:-}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
 DRY_RUN="${DRY_RUN:-1}"
 PAUSE_DURATION="${PAUSE_DURATION:-5}"
 FAILOVER_CHECK_TIMEOUT="${FAILOVER_CHECK_TIMEOUT:-60}"
+replica_available=false
+
+if [ -z "$PRIMARY_HOST" ] || [ -z "$REPLICA_HOST" ]; then
+    if [ -n "${REPLICA_1_IP:-}" ] && [ -n "${REPLICA_2_IP:-}" ]; then
+        PRIMARY_HOST="${REPLICA_1_IP}"
+        REPLICA_HOST="${REPLICA_2_IP}"
+    else
+        log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running the failover test"
+    fi
+fi
+
+if [ -z "$SESSION_BROKER_SCHEME" ]; then
+    log_fatal "Set SESSION_BROKER_SCHEME before running the failover test"
+fi
+
+if [ -z "$SSH_USER" ]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before running the failover test"
+fi
 
 # ────────────────────────────────────────────────────────────────────────────
 # Cleanup trap
@@ -26,7 +46,7 @@ FAILOVER_CHECK_TIMEOUT="${FAILOVER_CHECK_TIMEOUT:-60}"
 cleanup_after_test() {
     if [ "$DRY_RUN" != "1" ]; then
         log_info "Cleanup: Restarting primary session-broker..."
-        ssh -o ConnectTimeout=5 "akushnir@$PRIMARY_HOST" \
+        ssh -o ConnectTimeout=5 "$SSH_USER@$PRIMARY_HOST" \
             "docker restart session-broker" 2>/dev/null || log_warn "Could not restart session-broker"
     fi
 }
@@ -49,7 +69,7 @@ if [ "$DRY_RUN" = "1" ]; then
 fi
 
 # Check primary is healthy
-health_primary=$(curl -s "http://$PRIMARY_HOST:$SESSION_BROKER_PORT/health" 2>/dev/null || echo '{}')
+health_primary=$(curl -s "${SESSION_BROKER_SCHEME}://${PRIMARY_HOST}:${SESSION_BROKER_PORT}/health" 2>/dev/null || echo '{}')
 
 if echo "$health_primary" | grep -q "healthy"; then
     log_info "✓ Primary session-broker ($PRIMARY_HOST) is healthy"
@@ -59,7 +79,7 @@ else
 fi
 
 # Check replica is healthy (optional, may not be deployed)
-health_replica=$(curl -s "http://$REPLICA_HOST:$SESSION_BROKER_PORT/health" 2>/dev/null || echo '{}')
+health_replica=$(curl -s "${SESSION_BROKER_SCHEME}://${REPLICA_HOST}:${SESSION_BROKER_PORT}/health" 2>/dev/null || echo '{}')
 
 if echo "$health_replica" | grep -q "healthy"; then
     log_info "✓ Replica session-broker ($REPLICA_HOST) is healthy"
@@ -76,7 +96,7 @@ fi
 log_info "TEST 2: Create test session on primary..."
 
 # This would normally be done via OAuth login, but we'll check if sessions API is available
-sessions_before=$(curl -s "http://$PRIMARY_HOST:$SESSION_BROKER_PORT/sessions" 2>/dev/null || echo '[]')
+sessions_before=$(curl -s "${SESSION_BROKER_SCHEME}://${PRIMARY_HOST}:${SESSION_BROKER_PORT}/sessions" 2>/dev/null || echo '[]')
 session_count_before=$(echo "$sessions_before" | grep -o '"sessionId"' | wc -l)
 
 log_info "✓ Current session count on primary: $session_count_before"
@@ -88,7 +108,7 @@ log_info "✓ Current session count on primary: $session_count_before"
 log_info "TEST 3: Pause primary session-broker (simulating failure)..."
 
 log_info "Pausing session-broker container on $PRIMARY_HOST..."
-ssh -o ConnectTimeout=5 "akushnir@$PRIMARY_HOST" \
+ssh -o ConnectTimeout=5 "$SSH_USER@$PRIMARY_HOST" \
     "docker pause session-broker" 2>/dev/null
 
 log_info "✓ Primary session-broker paused (simulating failure)"
@@ -103,7 +123,7 @@ if [ "$replica_available" = true ]; then
     log_info "TEST 4: Verify failover to replica..."
     
     # Check if replica is still responding and can access session data
-    sessions_replica=$(curl -s "http://$REPLICA_HOST:$SESSION_BROKER_PORT/sessions" 2>/dev/null || echo '[]')
+    sessions_replica=$(curl -s "${SESSION_BROKER_SCHEME}://${REPLICA_HOST}:${SESSION_BROKER_PORT}/sessions" 2>/dev/null || echo '[]')
     session_count_replica=$(echo "$sessions_replica" | grep -o '"sessionId"' | wc -l)
     
     if [ "$session_count_replica" -ge "$session_count_before" ]; then
@@ -127,14 +147,14 @@ fi
 log_info "TEST 5: Resume primary and verify synchronization..."
 
 log_info "Resuming session-broker container on $PRIMARY_HOST..."
-ssh -o ConnectTimeout=5 "akushnir@$PRIMARY_HOST" \
+ssh -o ConnectTimeout=5 "$SSH_USER@$PRIMARY_HOST" \
     "docker unpause session-broker" 2>/dev/null
 
 log_info "Waiting for primary to become healthy again..."
 start_time=$(date +%s)
 
 while true; do
-    if curl -s "http://$PRIMARY_HOST:$SESSION_BROKER_PORT/health" 2>/dev/null | grep -q "healthy"; then
+    if curl -s "${SESSION_BROKER_SCHEME}://${PRIMARY_HOST}:${SESSION_BROKER_PORT}/health" 2>/dev/null | grep -q "healthy"; then
         log_info "✓ Primary session-broker is healthy again"
         break
     fi
@@ -151,7 +171,7 @@ while true; do
 done
 
 # Verify session count matches replica
-sessions_after=$(curl -s "http://$PRIMARY_HOST:$SESSION_BROKER_PORT/sessions" 2>/dev/null || echo '[]')
+sessions_after=$(curl -s "${SESSION_BROKER_SCHEME}://${PRIMARY_HOST}:${SESSION_BROKER_PORT}/sessions" 2>/dev/null || echo '[]')
 session_count_after=$(echo "$sessions_after" | grep -o '"sessionId"' | wc -l)
 
 if [ "$session_count_after" -ge "$session_count_before" ]; then

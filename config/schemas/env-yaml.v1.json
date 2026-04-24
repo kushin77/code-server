@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kushnir.cloud/schemas/env-yaml.v1.json",
+  "title": "ElevatedIQ Environment Specification",
+  "description": "Schema for env.yaml environment parity files",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "env": { "enum": ["local", "staging", "production", "ci"] }
+      },
+      "required": ["name", "env"]
+    },
+    "compute": {
+      "type": "object",
+      "properties": {
+        "replicas": { "type": "integer", "minimum": 1 },
+        "profiles": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "postgres": {
+          "type": "object",
+          "properties": {
+            "version": { "type": "string" },
+            "ha": { "type": "boolean" }
+          }
+        },
+        "redis": {
+          "type": "object",
+          "properties": {
+            "version": { "type": "string" },
+            "mode": { "enum": ["standalone", "sentinel", "cluster"] }
+          }
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "properties": {
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "enabled": { "type": "boolean", "default": true },
+              "models": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["name"]
+          }
+        }
+      }
+    },
+    "networking": {
+      "type": "object",
+      "properties": {
+        "domain": { "type": "string" },
+        "tls": { "enum": ["provider-managed", "self-signed", "none"] }
+      }
+    }
+  },
+  "required": ["version", "metadata"]
+}

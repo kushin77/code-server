@@ -26,15 +26,31 @@ source "$SCRIPT_DIR/../_common/init.sh"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Configuration
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
-SSH_USER="akushnir"
+REPLICAS="${REPLICAS:-}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
 DEFAULT_SSH_KEY_PATH="${HOME}/.ssh/id_rsa_onprem"
 SSH_KEY="${SSH_KEY:-$DEFAULT_SSH_KEY_PATH}"
-PRECHECK_NAS_HOST="${NAS_HOST:-192.168.168.56}"
+PRECHECK_NAS_HOST="${NAS_HOST:-}"
 PRECHECK_NAS_EXPORT="${NAS_EXPORT_PATH:-/export}/appsmith"
 MIN_DISK_GB=10
 JSON_OUTPUT=0
 STRICT_MODE=0
+
+if [[ -z "$REPLICAS" ]]; then
+  if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+    REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+  else
+    log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running the pre-flight check"
+  fi
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before running the pre-flight check"
+fi
+
+if [[ -z "$PRECHECK_NAS_HOST" ]]; then
+  log_fatal "Set NAS_HOST before running the pre-flight check"
+fi
 
 # Tracking
 CHECKS_PASSED=0

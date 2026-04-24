@@ -6,6 +6,17 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_common/init.sh"
+init_repo
+
+BASE_DOMAIN="${BASE_DOMAIN:-kushnir.cloud}"
+IDE_DOMAIN="${IDE_DOMAIN:-ide.${BASE_DOMAIN}}"
+PORTAL_DOMAIN="${PORTAL_DOMAIN:-${BASE_DOMAIN}}"
+SAAS_API_VALIDATE_HOST="${SAAS_API_VALIDATE_HOST:-saas-api:5000}"
+HTTP_SCHEME="http"
+HTTPS_SCHEME="https"
+
 # 1. Archival of pre-fix Caddyfile
 cp Caddyfile Caddyfile.pre-ssl-fix
 
@@ -15,7 +26,7 @@ cp Caddyfile Caddyfile.pre-ssl-fix
 # - Keep on_demand for wildcards but link to local validator
 
 cat <<EOF > Caddyfile
-# Production Caddyfile — kushnir.cloud / ide.kushnir.cloud
+# Production Caddyfile — ${PORTAL_DOMAIN} / ${IDE_DOMAIN}
 # Caddy 2.7.6 — direct TLS termination with existing Let's Encrypt certs
 # Certs stored in enterprise_caddy-data volume (valid until 2026-07-19)
 # NOTE: Caddy must run as root (user 0) to access root-owned cert files.
@@ -24,12 +35,12 @@ cat <<EOF > Caddyfile
     email devops@kushnir.cloud
     on_demand_tls {
         # Saas-api provides domain validation for custom whitelabel domains
-        ask http://saas-api:5000/api/v1/validate-domain
+        ask ${HTTP_SCHEME}://${SAAS_API_VALIDATE_HOST}/api/v1/validate-domain
     }
 }
 
 # HTTP listener for health checks (bypass TLS, allow DAST scans)
-http://ide.kushnir.cloud {
+${HTTP_SCHEME}://${IDE_DOMAIN} {
     @health path /health /healthz /ping
     handle @health {
         respond "OK" 200
@@ -37,14 +48,14 @@ http://ide.kushnir.cloud {
 
     # Redirect other traffic to HTTPS
     handle {
-        redir https://{host}{uri}
+        redir ${HTTPS_SCHEME}://{host}{uri}
     }
 }
 
-# HTTPS listener for ide.kushnir.cloud (Explicit certs)
-ide.kushnir.cloud {
-    # No 'on_demand' here - let Caddy handle standard ACME for this domain
-    tls devops@kushnir.cloud
+# HTTPS listener for ide.kushnir.cloud (Explicit certs with self-signed fallback)
+${IDE_DOMAIN} {
+    # Reference the local certs generated via scripts/ops/p1-1694-tls-recovery.sh
+    tls /etc/caddy/tls.crt /etc/caddy/tls.key
 
     encode gzip
 
@@ -60,8 +71,8 @@ ide.kushnir.cloud {
     respond @health "OK" 200
 
     reverse_proxy oauth2-proxy:4180 {
-        header_up Host ide.kushnir.cloud
-        header_up X-Forwarded-Proto https
+        header_up Host ${IDE_DOMAIN}
+        header_up X-Forwarded-Proto ${HTTPS_SCHEME}
         header_up X-Real-IP {remote_host}
         fail_duration 5s
         max_fails 3
@@ -70,20 +81,20 @@ ide.kushnir.cloud {
 }
 
 # HTTP listener for kushnir.cloud health checks
-http://kushnir.cloud {
+${HTTP_SCHEME}://${PORTAL_DOMAIN} {
     @health path /health /healthz /ping
     handle @health {
         respond "OK" 200
     }
 
     handle {
-        redir https://{host}{uri}
+        redir ${HTTPS_SCHEME}://{host}{uri}
     }
 }
 
 # HTTPS listener for kushnir.cloud (Explicit certs)
-kushnir.cloud {
-    tls devops@kushnir.cloud
+${PORTAL_DOMAIN} {
+    tls /etc/caddy/tls.crt /etc/caddy/tls.key
 
     encode gzip
 
@@ -99,8 +110,8 @@ kushnir.cloud {
     respond @health "OK" 200
 
     reverse_proxy appsmith:80 {
-        header_up Host kushnir.cloud
-        header_up X-Forwarded-Proto https
+        header_up Host ${PORTAL_DOMAIN}
+        header_up X-Forwarded-Proto ${HTTPS_SCHEME}
         header_up X-Real-IP {remote_host}
         fail_duration 5s
         max_fails 3
@@ -118,7 +129,7 @@ kushnir.cloud {
 # Custom Domain Routing — Dynamic Whitelabel Domains
 # ════════════════════════════════════════════════════════════════════════════════
 
-*.kushnir.cloud {
+*.${BASE_DOMAIN} {
     tls {
         on_demand
     }
@@ -142,4 +153,4 @@ kushnir.cloud {
 }
 EOF
 
-echo "[INFO] Caddyfile updated. Backed up as Caddyfile.pre-ssl-fix"
+echo "[INFO] Caddyfile updated with local cert references."

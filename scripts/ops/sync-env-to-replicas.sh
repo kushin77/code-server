@@ -16,9 +16,21 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
+REPLICAS="${REPLICAS:-}"
+DEPLOY_USER="${DEPLOY_USER:-${SSH_USER:-}}"
 ENV_FILE=".env"
+
+if [[ -z "$REPLICAS" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before syncing the environment"
+    fi
+fi
+
+if [[ -z "$DEPLOY_USER" ]]; then
+    log_fatal "Set DEPLOY_USER or SSH_USER before syncing the environment"
+fi
 
 ################################################################################
 # SYNC LOGIC

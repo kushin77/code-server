@@ -16,8 +16,25 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-BACKUP_USER="${DEPLOY_USER:-akushnir}"
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before configuring the backup strategy"
+fi
+
+BACKUP_USER="${BACKUP_USER:-$SSH_USER}"
+if [[ -z "$BACKUP_USER" ]]; then
+    log_fatal "Set BACKUP_USER or SSH_USER before configuring the backup strategy"
+fi
+
+if [[ -z "${REPLICAS:-}" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before configuring the backup strategy"
+    fi
+fi
+
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no)
 NAS_MOUNT="${NAS_MOUNT_POINT:-/mnt/nas/backups}"
 
 ################################################################################
@@ -31,9 +48,9 @@ deploy_backup_strategy() {
     
     local strategy_script="/home/$BACKUP_USER/scripts/database-backup-tiered.sh"
     
-    ssh "$BACKUP_USER@$replica" "mkdir -p /home/$BACKUP_USER/scripts"
+    ssh "${SSH_OPTS[@]}" "$BACKUP_USER@$replica" "mkdir -p /home/$BACKUP_USER/scripts"
     
-    ssh "$BACKUP_USER@$replica" "cat << 'EOF' > $strategy_script
+    ssh "${SSH_OPTS[@]}" "$BACKUP_USER@$replica" "cat << 'EOF' > $strategy_script
 #!/usr/bin/env bash
 # Tiered Database Backup Strategy
 # Deployed by setup-database-backup-strategy.sh
@@ -62,7 +79,7 @@ find \"$NAS_MOUNT/tiered/\" -type d -mtime +90 -exec rm -rf {} +
 echo \"Strategy execution finished.\"
 EOF"
 
-    ssh "$BACKUP_USER@$replica" "chmod +x $strategy_script"
+    ssh "${SSH_OPTS[@]}" "$BACKUP_USER@$replica" "chmod +x $strategy_script"
     log_info "✅ Tiered backup strategy script deployed to $replica"
 }
 

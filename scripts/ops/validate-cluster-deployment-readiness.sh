@@ -26,6 +26,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
 VERBOSE="${VERBOSE:-0}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+
+if [[ -z "${REPLICAS:-}" ]]; then
+  if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+    REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+  else
+    log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running deployment readiness validation"
+  fi
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before running deployment readiness validation"
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Validation Functions
@@ -118,12 +131,12 @@ if [[ -f "$SSH_KEY" ]]; then
   log_info "  ✓ SSH key found: $SSH_KEY"
   
   # Try pinging replicas (may fail if no network access from local machine)
-  for replica in "akushnir@192.168.168.31" "akushnir@192.168.168.42"; do
-    ip="${replica#*@}"
-    if ssh -o ConnectTimeout=3 -o BatchMode=yes "$replica" "echo test" >/dev/null 2>&1; then
-      log_info "  ✓ SSH to $ip responsive"
+  IFS=',' read -ra replica_array <<< "$REPLICAS"
+  for replica in "${replica_array[@]}"; do
+    if ssh -o ConnectTimeout=3 -o BatchMode=yes "${SSH_USER}@${replica}" "echo test" >/dev/null 2>&1; then
+      log_info "  ✓ SSH to $replica responsive"
     else
-      log_warn "  ⚠ SSH to $ip not currently reachable (may require network/VPN)"
+      log_warn "  ⚠ SSH to $replica not currently reachable (may require network/VPN)"
       [[ "$VERBOSE" -eq 1 ]] && log_debug "    This is expected if running from outside production network"
     fi
   done

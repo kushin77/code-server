@@ -15,14 +15,22 @@ init_repo
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-TARGET_USER="${TARGET_USER:-akushnir}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-${REPLICA_HOST_1:-}}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-${REPLICA_HOST_2:-}}}"
+TARGET_USER="${TARGET_USER:-${SSH_USER:-${DEPLOY_USER:-}}}"
 POSTGRES_CONTAINER="postgres"
 POSTGRES_USER="postgres"
 POSTGRES_DB="postgres"
 REPLICATION_USER="replicator"
 REPLICATION_PASSWORD="${REPLICATION_PASSWORD:-$(openssl rand -base64 32)}"
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+    log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running standalone PostgreSQL replication"
+fi
+
+if [[ -z "$TARGET_USER" ]]; then
+    log_fatal "Set TARGET_USER, SSH_USER, or DEPLOY_USER before running standalone PostgreSQL replication"
+fi
 
 ssh_cmd() {
     local host=$1
@@ -45,7 +53,7 @@ psql_cmd() {
 # Detect if running on primary or replica
 CURRENT_HOST=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "")
 RUNNING_ON_PRIMARY=0
-if [[ "$CURRENT_HOST" == *"192.168.168.31"* ]] || [[ "${CURRENT_HOST}" == "127.0.0.1"* ]]; then
+if [[ "$CURRENT_HOST" == "$PRIMARY_HOST" ]]; then
     RUNNING_ON_PRIMARY=1
     log_info "Detected: Running on PRIMARY host"
 fi

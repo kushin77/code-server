@@ -16,8 +16,12 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-PRIMARY="${REPLICA_HOST_1:-192.168.168.31}"
-STANDBY="${REPLICA_HOST_2:-192.168.168.42}"
+PRIMARY="${PRIMARY:-${REPLICA_1_IP:-${REPLICA_HOST_1:-}}}"
+STANDBY="${STANDBY:-${REPLICA_2_IP:-${REPLICA_HOST_2:-}}}"
+
+if [[ -z "$PRIMARY" || -z "$STANDBY" ]]; then
+    log_fatal "Set PRIMARY/STANDBY or REPLICA_1_IP/REPLICA_2_IP before running streaming replication setup"
+fi
 
 ################################################################################
 # MAIN

@@ -21,15 +21,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
 # Configuration
-PRIMARY_HOST="${PRIMARY_HOST:-localhost}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
 PRIMARY_BROKER_PORT="${PRIMARY_BROKER_PORT:-5000}"
-REPLICA_HOST="${REPLICA_HOST:-replica-host}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
 REPLICA_BROKER_PORT="${REPLICA_BROKER_PORT:-5000}"
-REDIS_SENTINEL_HOST="${REDIS_SENTINEL_HOST:-localhost}"
+REDIS_SENTINEL_HOST="${REDIS_SENTINEL_HOST:-${REDIS_SENTINEL_IP:-}}"
 REDIS_SENTINEL_PORT="${REDIS_SENTINEL_PORT:-26379}"
 REDIS_MASTER_NAME="${REDIS_MASTER_NAME:-mymaster}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-10}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+BROKER_SCHEME="${BROKER_SCHEME:-}"
 DRY_RUN="${DRY_RUN:-0}"
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" || -z "$REDIS_SENTINEL_HOST" ]]; then
+  log_fatal "Set PRIMARY_HOST/REPLICA_HOST/REDIS_SENTINEL_HOST or their env aliases before running session-broker verification"
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before running session-broker verification"
+fi
+
+if [[ -z "$BROKER_SCHEME" ]]; then
+  log_fatal "Set BROKER_SCHEME before running session-broker verification"
+fi
 
 # ════════════════════════════════════════════════════════════════════════════
 # Utility Functions
@@ -40,7 +54,7 @@ broker_is_healthy() {
   local port=$2
   local name=${3:-"session-broker"}
   
-  if timeout $TIMEOUT_SEC curl -sf "http://$host:$port/health" > /dev/null 2>&1; then
+  if timeout $TIMEOUT_SEC curl -sf "${BROKER_SCHEME}://$host:$port/health" > /dev/null 2>&1; then
     log_info "  ✓ $name ($host:$port) is healthy"
     return 0
   else
@@ -53,7 +67,7 @@ get_active_sessions() {
   local host=$1
   local port=$2
   
-  if timeout $TIMEOUT_SEC curl -sf "http://$host:$port/sessions" 2>/dev/null; then
+  if timeout $TIMEOUT_SEC curl -sf "${BROKER_SCHEME}://$host:$port/sessions" 2>/dev/null; then
     return 0
   else
     log_warn "  Could not query sessions from $host:$port"
@@ -66,7 +80,7 @@ get_session_count() {
   local port=$2
   
   local count
-  count=$(timeout $TIMEOUT_SEC curl -sf "http://$host:$port/sessions" 2>/dev/null | grep -c '"id"' || echo "0")
+  count=$(timeout $TIMEOUT_SEC curl -sf "${BROKER_SCHEME}://$host:$port/sessions" 2>/dev/null | grep -c '"id"' || echo "0")
   echo "$count"
 }
 
@@ -194,7 +208,7 @@ simulate_primary_failure() {
   
   # Simulate failure: pause primary container (non-destructive)
   log_info "  Step 2: Pausing primary broker container..."
-  if timeout 5 ssh -o ConnectTimeout=5 "akushnir@$PRIMARY_HOST" \
+  if timeout 5 ssh -o ConnectTimeout=5 "$SSH_USER@$PRIMARY_HOST" \
     "docker pause session-broker 2>/dev/null || echo 'pause-skipped'" >/dev/null 2>&1; then
     log_info "    ✓ Primary paused"
   else
@@ -211,7 +225,7 @@ simulate_primary_failure() {
   else
     log_error "    ✗ Replica is not responding"
     # Resume primary
-    ssh -o ConnectTimeout=5 "akushnir@$PRIMARY_HOST" "docker unpause session-broker 2>/dev/null" >/dev/null 2>&1 || true
+    ssh -o ConnectTimeout=5 "$SSH_USER@$PRIMARY_HOST" "docker unpause session-broker 2>/dev/null" >/dev/null 2>&1 || true
     return 2
   fi
   
@@ -223,7 +237,7 @@ simulate_primary_failure() {
   
   # Resume primary
   log_info "  Step 5: Resuming primary broker..."
-  if timeout 5 ssh -o ConnectTimeout=5 "akushnir@$PRIMARY_HOST" \
+  if timeout 5 ssh -o ConnectTimeout=5 "$SSH_USER@$PRIMARY_HOST" \
     "docker unpause session-broker 2>/dev/null || echo 'unpause-skipped'" >/dev/null 2>&1; then
     log_info "    ✓ Primary resumed"
   else

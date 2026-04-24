@@ -5,12 +5,14 @@ import { TeamHubActions } from './actions';
 import { TeamHubSidebarProvider } from './sidebar';
 import { TerminalDLPScanner } from './terminal-dlp';
 import { GitHubTaskPanelProvider } from './github-task-panel';
+import { TeamHubWelcomePage } from './welcome-page';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const getConfig = readTeamHubConfig;
   const presenceService = new PresenceService(getConfig);
   const actions = new TeamHubActions(presenceService);
-  const sidebarProvider = new TeamHubSidebarProvider(context.extensionUri, presenceService, actions, getConfig);
+  const sidebarProvider = new TeamHubSidebarProvider(context.extensionUri, presenceService, actions, getConfig, context.workspaceState);
+  const welcomePage = new TeamHubWelcomePage(context.extensionUri, context.workspaceState, actions);
 
   // Initialize Terminal DLP Scanner
   const dlpScanner = new TerminalDLPScanner();
@@ -36,6 +38,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   context.subscriptions.push(
+    vscode.commands.registerCommand('teamHub.openActivityFeed', () => {
+      void vscode.commands.executeCommand('workbench.view.extension.teamHub-container');
+    }),
+    vscode.commands.registerCommand('teamHub.openWelcome', () => welcomePage.open()),
     vscode.window.registerWebviewViewProvider('teamHub.sidebar', sidebarProvider),
     vscode.commands.registerCommand('teamHub.mentionUser', (userId: string) => actions.mentionUser(userId)),
     vscode.commands.registerCommand('teamHub.startMeet', (userIds: string[] | undefined) => actions.startMeet(userIds ?? [])),
@@ -51,8 +57,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }),
     new vscode.Disposable(() => presenceService.dispose()),
-    new vscode.Disposable(() => terminalMonitor.dispose())
+    new vscode.Disposable(() => terminalMonitor.dispose()),
+    new vscode.Disposable(() => welcomePage.dispose())
   );
+
+  await welcomePage.openIfNeeded();
 
   const enableAutoPresence = config.enableAutoPresence;
   if (enableAutoPresence) {

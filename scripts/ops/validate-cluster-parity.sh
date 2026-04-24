@@ -16,7 +16,13 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+if [[ -z "${REPLICAS:-}" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running quick parity checks"
+    fi
+fi
 
 ################################################################################
 # QUICK PARITY CHECK

@@ -17,6 +17,17 @@ init_repo
 ################################################################################
 
 SIGNOFF_FILE="artifacts/signoff-packet-$(date +%Y%m%d%H%M%S).md"
+REPLICA_1="${REPLICA_1:-${REPLICA_1_IP:-${REPLICA_HOST_1:-}}}"
+REPLICA_2="${REPLICA_2:-${REPLICA_2_IP:-${REPLICA_HOST_2:-}}}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+
+if [[ -z "$REPLICA_1" || -z "$REPLICA_2" ]]; then
+    log_fatal "Set REPLICA_1/REPLICA_2 or REPLICA_1_IP/REPLICA_2_IP before generating the signoff packet"
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before generating the signoff packet"
+fi
 
 ################################################################################
 # GENERATION
@@ -32,8 +43,8 @@ generate_signoff() {
 **Commit:** $(git rev-parse HEAD)
 
 ## 🏗️ Environment Status
-- **Replica 1 (192.168.168.31):** $(ssh 192.168.168.31 'docker compose ps --format json' | jq -r '.[].Status' | sort | uniq -c | xargs || echo "OFFLINE")
-- **Replica 2 (192.168.168.42):** $(ssh 192.168.168.42 'docker compose ps --format json' | jq -r '.[].Status' | sort | uniq -c | xargs || echo "OFFLINE")
+- **Replica 1 (${REPLICA_1}):** $(ssh "${SSH_USER}@${REPLICA_1}" 'docker compose ps --format json' | jq -r '.[].Status' | sort | uniq -c | xargs || echo "OFFLINE")
+- **Replica 2 (${REPLICA_2}):** $(ssh "${SSH_USER}@${REPLICA_2}" 'docker compose ps --format json' | jq -r '.[].Status' | sort | uniq -c | xargs || echo "OFFLINE")
 
 ## ✅ Verification Results
 - [x] Cluster Parity Validated

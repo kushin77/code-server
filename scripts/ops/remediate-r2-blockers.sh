@@ -38,8 +38,13 @@ log_info "Port 80 cleanup completed"
 # 2. Verify NAS accessibility and create appsmith directory
 # ────────────────────────────────────────────────────────────────────────────
 log_info "Checking NAS accessibility..."
-NAS_HOST="${NAS_HOST:-192.168.168.56}"
+NAS_HOST="${NAS_HOST:-}"
 NAS_EXPORT="${NAS_EXPORT:-/export}"
+
+if [[ -z "$NAS_HOST" ]]; then
+  log_error "Set NAS_HOST before running this script"
+  exit 1
+fi
 
 if ping -c 1 "$NAS_HOST" &> /dev/null; then
   log_info "NAS ($NAS_HOST) is reachable"

@@ -24,10 +24,10 @@ http://ide.kushnir.cloud {
     }
 }
 
-# HTTPS listener for ide.kushnir.cloud (Explicit certs)
+# HTTPS listener for ide.kushnir.cloud (Explicit certs with self-signed fallback)
 ide.kushnir.cloud {
-    # No 'on_demand' here - let Caddy handle standard ACME for this domain
-    tls devops@kushnir.cloud
+    # Reference the local certs generated via scripts/ops/p1-1694-tls-recovery.sh
+    tls /etc/caddy/tls.crt /etc/caddy/tls.key
 
     encode gzip
 
@@ -66,7 +66,7 @@ http://kushnir.cloud {
 
 # HTTPS listener for kushnir.cloud (Explicit certs)
 kushnir.cloud {
-    tls devops@kushnir.cloud
+    tls /etc/caddy/tls.crt /etc/caddy/tls.key
 
     encode gzip
 

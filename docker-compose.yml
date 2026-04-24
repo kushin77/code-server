@@ -494,6 +494,8 @@ services:
       - 1.1.1.1     # Cloudflare DNS (fallback)
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./config/caddy/tls.crt:/etc/caddy/tls.crt:ro
+      - ./config/caddy/tls.key:/etc/caddy/tls.key:ro
       - caddy-data:/data
       - caddy-config:/config
     environment:

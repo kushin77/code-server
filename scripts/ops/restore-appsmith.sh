@@ -16,8 +16,17 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+REPLICAS="${REPLICAS:-${REPLICA_1_IP:-},${REPLICA_2_IP:-}}"
+DEPLOY_USER="${DEPLOY_USER:-${SSH_USER:-}}"
 BACKUP_FILE="${1:-}"
+
+if [[ -z "$REPLICAS" || "$REPLICAS" == "," ]]; then
+    log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP"
+fi
+
+if [[ -z "$DEPLOY_USER" ]]; then
+    log_fatal "Set DEPLOY_USER or SSH_USER"
+fi
 
 if [[ -z "$BACKUP_FILE" ]]; then
     log_fatal "Usage: $0 <backup_file_path_on_nas>"

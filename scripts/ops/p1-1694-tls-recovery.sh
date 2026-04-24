@@ -17,10 +17,27 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
-DOMAIN="${DOMAIN:-kushnir.cloud}"
+REPLICAS="${REPLICAS:-}"
+DOMAIN="${DOMAIN:-${IDE_DOMAIN:-}}"
+PRIMARY_HEALTH_URL="${PRIMARY_HEALTH_URL:-}"
 RECOVERY_MODE="${RECOVERY_MODE:-self-signed}"  # self-signed | wait | alternative-ca
 CERT_EXPIRY_UTC="2026-04-25T11:29:47Z"
+
+if [[ -z "$REPLICAS" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running TLS recovery"
+    fi
+fi
+
+if [[ -z "$DOMAIN" ]]; then
+    log_fatal "Set DOMAIN or IDE_DOMAIN before running TLS recovery"
+fi
+
+if [[ -z "$PRIMARY_HEALTH_URL" ]]; then
+    log_fatal "Set PRIMARY_HEALTH_URL before running TLS recovery"
+fi
 
 ################################################################################
 # UTILITY FUNCTIONS
@@ -87,7 +104,7 @@ verify_tls_connectivity() {
         log_info "⚡ Testing $replica:443 with TLS handshake..."
         
         # Silent SSL handshake test (may fail on self-signed, but should connect)
-        if timeout 5 bash -c "exec 3<>/dev/tcp/$replica/443; echo -e 'HEAD /health HTTP/1.1\r\nHost: ide.kushnir.cloud\r\nConnection: close\r\n\r\n' >&3; cat <&3" 2>/dev/null | grep -E "HTTP|Connection" > /dev/null; then
+        if timeout 5 bash -c "exec 3<>/dev/tcp/$replica/443; echo -e 'HEAD /health HTTP/1.1\r\nHost: ${DOMAIN}\r\nConnection: close\r\n\r\n' >&3; cat <&3" 2>/dev/null | grep -E "HTTP|Connection" > /dev/null; then
             log_info "✅ $replica: TLS port 443 responding"
         else
             log_warn "⚠️ $replica: TLS port 443 not responding (may still be restarting)"
@@ -107,7 +124,7 @@ document_recovery_action() {
 
 **Date**: $(date -u)
 **Issue**: #1694 - DAST target unreachable (SSL handshake timeout)
-**Root Cause**: Let's Encrypt rate limit (5 certs/168h for kushnir.cloud)
+**Root Cause**: Let's Encrypt rate limit (5 certs/168h for ${DOMAIN})
 **Rate Limit Expires**: 2026-04-25T11:29:47Z
 
 ## Recovery Method
@@ -147,12 +164,12 @@ document_recovery_action() {
 
 **Test HTTPS with self-signed (insecure):**
 \`\`\`bash
-curl -k https://ide.kushnir.cloud/health
+curl -k "${PRIMARY_HEALTH_URL}/health"
 \`\`\`
 
 **Test from DAST scanner (if supported):**
 \`\`\`bash
-python3 -c "import ssl; ssl._create_default_https_context = ssl._create_unverified_context; import urllib.request; print(urllib.request.urlopen('https://ide.kushnir.cloud/health').read())"
+python3 -c "import os, ssl, urllib.request; ssl._create_default_https_context = ssl._create_unverified_context; print(urllib.request.urlopen(os.environ['PRIMARY_HEALTH_URL'] + '/health').read())"
 \`\`\`
 
 ## Compliance

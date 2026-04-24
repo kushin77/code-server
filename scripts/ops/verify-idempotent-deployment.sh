@@ -16,7 +16,20 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+REPLICAS="${REPLICAS:-}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+
+if [[ -z "$REPLICAS" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running idempotency verification"
+    fi
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before running idempotency verification"
+fi
 
 ################################################################################
 # IDEMPOTENCY CHECK
@@ -29,7 +42,7 @@ check_node_idempotency() {
     
     # Run docker compose up and check for "up-to-date" signals
     local out
-    out=$(ssh "$DEPLOY_USER@$replica" "cd code-server-enterprise && docker compose up -d 2>&1")
+    out=$(ssh "$SSH_USER@$replica" "cd code-server-enterprise && docker compose up -d 2>&1")
     
     if echo "$out" | grep -v "up-to-date" | grep -E "Created|Started|Restarted" > /dev/null; then
         log_warn "⚠️  NODE $replica NOT IDEMPOTENT: Services were modified!"

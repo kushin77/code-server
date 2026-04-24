@@ -29,6 +29,12 @@ jobs:
       - name: Run identity governance validation
         run: bash scripts/ci/validate-identity-governance.sh
 
+      - name: Run disaster recovery validation
+        run: bash scripts/ci/validate-disaster-recovery-doc.sh
+
+      - name: Run storage lifecycle validation
+        run: bash scripts/ci/validate-storage-lifecycle-doc.sh
+
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 

@@ -16,7 +16,20 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+REPLICAS="${REPLICAS:-}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+
+if [[ -z "$REPLICAS" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running secret rotation"
+    fi
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before running secret rotation"
+fi
 
 ################################################################################
 # ROTATION LOGIC
@@ -39,7 +52,7 @@ rotate_cluster_secrets() {
     
     for replica in "${replica_array[@]}"; do
         log_info "♻️ Rolling restart on $replica..."
-        ssh "$DEPLOY_USER@$replica" "cd code-server-enterprise && docker compose up -d"
+        ssh "$SSH_USER@$replica" "cd code-server-enterprise && docker compose up -d"
         log_info "✅ $replica secret rotation applied"
     done
 }
@@ -49,7 +62,7 @@ rotate_cluster_secrets() {
 ################################################################################
 
 main() {
-    log_info "Kushnir.cloud Secret Rotation Pipeline Initiated"
+    log_info "Secret Rotation Pipeline Initiated"
     rotate_cluster_secrets
     log_info "✅ Secret rotation and service adoption complete"
 }

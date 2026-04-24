@@ -13,12 +13,13 @@ source "$SCRIPT_DIR/../_common/init.sh"
 # CONFIGURATION
 # ============================================================================
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
 APEX_DOMAIN="${APEX_DOMAIN:-kushnir.cloud}"
 IDE_DOMAIN="${IDE_DOMAIN:-ide.${APEX_DOMAIN}}"
 PORTAL_DOMAIN="${PORTAL_DOMAIN:-${APEX_DOMAIN}}"
-SSH_USER="${DEPLOY_USER:-akushnir}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+PUBLIC_SCHEME="${PUBLIC_SCHEME:-}"
 
 # Test thresholds
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
@@ -29,6 +30,18 @@ FAILBACK_TIMEOUT="${FAILBACK_TIMEOUT:-30}"
 
 # DRY_RUN mode (default: 1 = safe, 0 = real failover)
 DRY_RUN="${DRY_RUN:-1}"
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+  log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running the failover test"
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before running the failover test"
+fi
+
+if [[ -z "$PUBLIC_SCHEME" ]]; then
+  log_fatal "Set PUBLIC_SCHEME before running the failover test"
+fi
 
 # Test toggles
 RUN_PREFLIGHT="${RUN_PREFLIGHT:-1}"
@@ -137,7 +150,7 @@ run_preflight_checks() {
   log_info "Check 3: Caddy health checks..."
   local caddy_start=$(date +%s%N)
   
-  if ! curl -sf "https://$PORTAL_DOMAIN/health" --max-time 10 > /dev/null 2>&1; then
+  if ! curl -sf "${PUBLIC_SCHEME}://${PORTAL_DOMAIN}/health" --max-time 10 > /dev/null 2>&1; then
     log_error "Caddy health check failed on primary"
     EXIT_CODE=1
   else
@@ -224,7 +237,7 @@ run_failover_scenario() {
   local attempts=0
   local max_attempts=10
   while [[ $attempts -lt $max_attempts ]]; do
-    if curl -sf "https://$IDE_DOMAIN/health" --max-time 5 > /dev/null 2>&1; then
+    if curl -sf "${PUBLIC_SCHEME}://${IDE_DOMAIN}/health" --max-time 5 > /dev/null 2>&1; then
       local reroute_time=$(elapsed_ms $reroute_start)
       record_timing "failover" $reroute_time "traffic_reroute_time"
       log_success "✓ Traffic rerouted to replica in ${reroute_time}ms"
@@ -261,7 +274,7 @@ run_oauth_jwt_tests() {
   
   if [[ $RUN_OAUTH_TEST -eq 1 ]]; then
     log_info "Testing OAuth on replica during failover..."
-    if curl -sf "https://$PORTAL_DOMAIN/oauth2/start" --max-time 10 > /dev/null 2>&1; then
+    if curl -sf "${PUBLIC_SCHEME}://${PORTAL_DOMAIN}/oauth2/start" --max-time 10 > /dev/null 2>&1; then
       log_success "✓ OAuth endpoint accessible on replica"
     else
       log_error "OAuth endpoint not accessible on replica"
@@ -325,7 +338,7 @@ run_failback_scenario() {
   
   # Verify traffic returns to primary (or stays balanced)
   log_info "Verifying traffic routing after recovery..."
-  if curl -sf "https://$PORTAL_DOMAIN/health" --max-time 10 > /dev/null 2>&1; then
+  if curl -sf "${PUBLIC_SCHEME}://${PORTAL_DOMAIN}/health" --max-time 10 > /dev/null 2>&1; then
     log_success "✓ Primary health check passed after recovery"
   else
     log_error "Primary health check failed after recovery"

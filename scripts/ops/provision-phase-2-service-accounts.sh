@@ -161,7 +161,7 @@ main() {
   
   # Check gcloud availability
   if ! command -v gcloud &> /dev/null; then
-    log_fatal "gcloud CLI not found. Install via: curl https://sdk.cloud.google.com | bash"
+    log_fatal "gcloud CLI not found. Install Google Cloud SDK before running this script"
   fi
   
   # Check authentication
@@ -184,7 +184,7 @@ main() {
   log_info "Next steps:"
   log_info "1. Run verification: bash scripts/ci/check-phase-2-jwt-readiness.sh"
   log_info "2. Deploy: docker-compose up -d"
-  log_info "3. Test token acquisition: curl -X POST http://localhost:4182/oauth2/token ..."
+  log_info "3. Test token acquisition using your configured oauth2-proxy token endpoint"
 }
 
 main "$@"

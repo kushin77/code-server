@@ -27,16 +27,30 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$SCRIPT_DIR/_common/init.sh"
 
 # Configuration
-PRIMARY_HOST="${PRIMARY_HOST:-localhost}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
 PRIMARY_OAUTH_PORT="${PRIMARY_OAUTH_PORT:-4180}"
 PRIMARY_APPSMITH_PORT="${PRIMARY_APPSMITH_PORT:-80}"
-REPLICA_HOST="${REPLICA_HOST:-replica-host}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
 REPLICA_OAUTH_PORT="${REPLICA_OAUTH_PORT:-4180}"
 REPLICA_APPSMITH_PORT="${REPLICA_APPSMITH_PORT:-80}"
 PORTAL_DOMAIN="${PORTAL_DOMAIN:-kushnir.cloud}"
 IDE_DOMAIN="${IDE_DOMAIN:-ide.kushnir.cloud}"
+AUTH_SCHEME="${AUTH_SCHEME:-}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
 CSRF_TIMEOUT="${CSRF_TIMEOUT:-10}"
 DRY_RUN="${DRY_RUN:-0}"
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+  log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running CSRF verification"
+fi
+
+if [[ -z "$AUTH_SCHEME" ]]; then
+  log_fatal "Set AUTH_SCHEME before running CSRF verification"
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before running CSRF verification"
+fi
 
 # ════════════════════════════════════════════════════════════════════════════
 # Utility Functions
@@ -46,7 +60,7 @@ oauth_is_running() {
   local host=$1
   local port=$2
   
-  if timeout 5 curl -sf "http://$host:$port/ping" > /dev/null 2>&1; then
+  if timeout 5 curl -sf "${AUTH_SCHEME}://${host}:${port}/ping" > /dev/null 2>&1; then
     return 0
   else
     return 1
@@ -59,7 +73,7 @@ get_cookie_secret_from_env() {
   # Query the oauth2-proxy container for its OAUTH2_PROXY_COOKIE_SECRET env var
   # This requires SSH access and docker inspect capability
   
-  if ! timeout 5 ssh -o ConnectTimeout=5 "akushnir@$host" "docker inspect oauth2-proxy | grep OAUTH2_PROXY_COOKIE_SECRET" 2>/dev/null; then
+  if ! timeout 5 ssh -o ConnectTimeout=5 "${SSH_USER}@$host" "docker inspect oauth2-proxy | grep OAUTH2_PROXY_COOKIE_SECRET" 2>/dev/null; then
     log_warn "Could not query oauth2-proxy env on $host (SSH access required)"
     return 1
   fi
@@ -75,7 +89,7 @@ test_auth_reset_endpoint() {
   
   # Test /auth/reset clears cookies
   local output
-  if ! output=$(timeout 5 curl -sv "https://$PORTAL_DOMAIN/auth/reset" 2>&1); then
+  if ! output=$(timeout 5 curl -sv "${AUTH_SCHEME}://${PORTAL_DOMAIN}/auth/reset" 2>&1); then
     log_error "  Failed to reach /auth/reset endpoint"
     return 1
   fi
@@ -100,7 +114,7 @@ test_csrf_token_validity() {
   
   # Get login page from primary (should contain CSRF token)
   local csrf_token
-  if ! csrf_token=$(timeout 5 curl -sf "https://$IDE_DOMAIN/oauth2/start" | grep -oP 'csrf=[^&"]+' | head -1); then
+  if ! csrf_token=$(timeout 5 curl -sf "${AUTH_SCHEME}://${IDE_DOMAIN}/oauth2/start" | grep -oP 'csrf=[^&"]+' | head -1); then
     log_warn "  Could not extract CSRF token from login page"
     return 1
   fi
@@ -109,7 +123,7 @@ test_csrf_token_validity() {
   
   # Test: Submit login form from primary with this CSRF token
   log_info "  Testing CSRF token on primary host..."
-  if timeout 5 curl -sf "https://$IDE_DOMAIN/oauth2/sign_in" \
+  if timeout 5 curl -sf "${AUTH_SCHEME}://${IDE_DOMAIN}/oauth2/sign_in" \
     -d "$csrf_token" \
     -d "email=test@example.com" > /dev/null 2>&1; then
     log_info "  ✓ CSRF token accepted on primary"

@@ -1,9 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # @file        scripts/ops/verify-production-readiness-quick.sh
 # @module      operations/validation
 # @description Quick production readiness verification - works on Windows Git Bash
 # @status      Executable immediately
 #
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$SCRIPT_DIR/scripts/_common/init.sh"
+init_repo
 
 CHECKS_PASSED=0
 CHECKS_FAILED=0

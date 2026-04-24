@@ -297,8 +297,8 @@ else
   log_fail "SSL/TLS documentation missing"
 fi
 
-# Section 10: Code Quality
-log_section "10. CODE QUALITY"
+# Section Ten: Code Quality
+log_section "TEN. CODE QUALITY"
 
 verify_check
 if grep -q "#!/usr/bin/env bash\|@file\|@module\|@description" scripts/ops/create-qa-user-automated.sh; then

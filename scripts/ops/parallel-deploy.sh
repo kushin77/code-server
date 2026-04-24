@@ -55,12 +55,26 @@ SCRIPT_NAME="$(basename "$0")"
 ################################################################################
 
 # Production cluster replicas
-REPLICAS=(
-  "akushnir@192.168.168.31"
-  "akushnir@192.168.168.42"
-)
-
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
+
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before running parallel deployment"
+fi
+
+REPLICAS=()
+if [[ -n "${REPLICA_TARGETS:-}" ]]; then
+  IFS=',' read -ra REPLICAS <<< "${REPLICA_TARGETS}"
+elif [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+  REPLICAS=(
+    "${SSH_USER}@${REPLICA_1_IP}"
+    "${SSH_USER}@${REPLICA_2_IP}"
+  )
+else
+  log_fatal "Set REPLICA_TARGETS or REPLICA_1_IP/REPLICA_2_IP before running parallel deployment"
+fi
+
+PORT_OVERRIDE_HOST="${PORT_OVERRIDE_HOST:-${REPLICA_2_IP:-}}"
 
 # SSH options as array for proper expansion (IaC compliance)
 declare -a DEPLOY_SSH_OPTS_ARRAY=(-i "${SSH_KEY}" -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o BatchMode=yes)
@@ -174,7 +188,7 @@ deploy_replica() {
     # Step 3: Deploy containers
     log_debug "  [3/3] Deploying containers on $host..."
     local compose_env_prefix=""
-    if [[ "$host" == "192.168.168.42" ]]; then
+    if [[ -n "$PORT_OVERRIDE_HOST" && "$ip_addr" == "$PORT_OVERRIDE_HOST" ]]; then
       compose_env_prefix="APPSMITH_NAS_SUBDIR=appsmith-replica-2 APPSMITH_VOLUME_NAME=code-server-enterprise_appsmith-data-replica-2"
     fi
 
@@ -456,10 +470,10 @@ log_info "Starting parallel deployments..."
 declare -A pids
 for replica in "${REPLICAS[@]}"; do
   host=$(parse_replica "$replica")
-  ip_addr="${host#*@}"  # Extract IP from akushnir@192.168.168.XX
+  ip_addr="${host#*@}"  # Extract host portion from user@host
   
   # Replica 2 needs port override to work around kernel-level port 80 phantom binding (#1641)
-  if [[ "$ip_addr" == "192.168.168.42" ]]; then
+  if [[ -n "$PORT_OVERRIDE_HOST" && "$ip_addr" == "$PORT_OVERRIDE_HOST" ]]; then
     COMPOSE_FILES="-f docker-compose.yml -f docker-compose.replica.yml -f docker-compose.replica-port-override.yml"
     log_info "→ Using port override for Replica 2 (#1641 workaround)"
   else

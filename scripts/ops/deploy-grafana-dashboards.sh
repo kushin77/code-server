@@ -16,8 +16,15 @@ init_repo
 # GRAFANA DASHBOARD DEPLOYMENT
 ################################################################################
 
-GRAFANA_URL="${GRAFANA_URL:-http://localhost:3000}"
+GRAFANA_SCHEME="${GRAFANA_SCHEME:-http}"
+GRAFANA_HOST="${GRAFANA_HOST:-grafana}"
+GRAFANA_PORT="${GRAFANA_PORT:-3000}"
+GRAFANA_URL="${GRAFANA_URL:-${GRAFANA_SCHEME}://${GRAFANA_HOST}:${GRAFANA_PORT}}"
 GRAFANA_TOKEN="${GRAFANA_TOKEN:-}"
+PROMETHEUS_SCHEME="${PROMETHEUS_SCHEME:-http}"
+PROMETHEUS_HOST="${PROMETHEUS_HOST:-prometheus}"
+PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
+PROMETHEUS_URL="${PROMETHEUS_URL:-${PROMETHEUS_SCHEME}://${PROMETHEUS_HOST}:${PROMETHEUS_PORT}}"
 DASHBOARD_JSON="${SCRIPT_DIR}/monitoring/grafana-cluster-health-dashboard.json"
 
 log_info "📊 Grafana Dashboard Deployment"
@@ -75,7 +82,7 @@ else
         -d '{
             "name": "Prometheus",
             "type": "prometheus",
-            "url": "http://prometheus:9090",
+            "url": "'"${PROMETHEUS_URL}"'",
             "access": "proxy",
             "isDefault": true,
             "jsonData": {
@@ -145,8 +152,8 @@ if curl -s "${GRAFANA_URL}/api/dashboards/uid/cluster-health" > /dev/null 2>&1; 
     log_info "   7. Active Alerts Count"
     log_info "   8. Memory Usage %"
     log_info "   9. Disk Usage %"
-    log_info "  10. Alert History (last 24h)"
-    log_info "  11. Custom Metrics"
+    log_info "   (A) Alert History (last 24h)"
+    log_info "   (B) Custom Metrics"
     log_info ""
     exit 0
 else

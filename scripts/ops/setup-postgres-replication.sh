@@ -16,10 +16,14 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-PRIMARY_HOST="${REPLICA_HOST_1:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST_2:-192.168.168.42}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-${REPLICA_HOST_1:-}}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-${REPLICA_HOST_2:-}}}"
 DB_USER="replicator"
 DB_PASS_SECRET="POSTGRES_REPLICATION_PASSWORD"
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+    log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running PostgreSQL replication setup"
+fi
 
 ################################################################################
 # REPLICATION SETUP

@@ -1,7 +1,7 @@
 {
   "name": "team-hub",
-  "displayName": "Team Hub - Real-Time Collaboration for code-server",
-  "description": "Team presence, same-file awareness, and one-click collaboration actions for code-server.",
+  "displayName": "KC IDE Team Hub - Real-Time Collaboration",
+  "description": "Team presence, same-file awareness, and one-click collaboration actions for KC IDE.",
   "version": "0.1.0",
   "publisher": "kushnir",
   "license": "MIT",
@@ -43,6 +43,14 @@
       ]
     },
     "commands": [
+      {
+        "command": "teamHub.openActivityFeed",
+        "title": "Team Hub: Open Activity Feed"
+      },
+      {
+        "command": "teamHub.openWelcome",
+        "title": "Team Hub: Open KC IDE Welcome"
+      },
       {
         "command": "teamHub.mentionUser",
         "title": "Team Hub: Mention User"

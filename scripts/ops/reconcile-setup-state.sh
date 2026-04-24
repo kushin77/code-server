@@ -94,8 +94,8 @@ if command -v code-server-auth >/dev/null 2>&1; then
 fi
 
 # 7. Policy bundle/portal reachable (best-effort)
-PORTAL="${POLICY_PORTAL_URL:-https://kushnir.cloud}"
-if command -v curl >/dev/null 2>&1; then
+PORTAL="${POLICY_PORTAL_URL:-}"
+if [[ -n "$PORTAL" ]] && command -v curl >/dev/null 2>&1; then
   if curl -sf --max-time 3 "$PORTAL/health" > /dev/null 2>&1 || \
      curl -sf --max-time 3 "$PORTAL" > /dev/null 2>&1; then
     probe "admin-portal-reachable" "ok" "HEALTHY" "$PORTAL"

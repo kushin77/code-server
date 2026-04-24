@@ -9,16 +9,16 @@
 #   Creates NAS export directories (/export/*) required by Replica 1, Replica 2,
 #   and supporting services (Appsmith, Loki, Error Triage DB).
 #
-#   This script MUST be run on the NAS host (192.168.168.56) with root or
+#   This script MUST be run on the NAS host with root or
 #   passwordless sudo access.
 #
 # Usage (on NAS host):
-#   ssh akushnir@192.168.168.56
+#   ssh akushnir@<nas-host>
 #   cd /path/to/code-server-enterprise  # or copy script there
 #   sudo bash scripts/ops/provision-nas-exports.sh
 #
 # Prerequisites:
-#   - SSH access to NAS host (akushnir@192.168.168.56)
+#   - SSH access to the NAS host
 #   - Passwordless sudo (or root shell access)
 #   - NFS/NAS filesystem available at /export
 #
@@ -34,8 +34,8 @@ source "$SCRIPT_DIR/_common/init.sh"
 
 # Configuration
 NAS_EXPORT_BASE="${NAS_EXPORT_BASE:-/export}"
-REPLICA_1_HOST="${REPLICA_1_HOST:-192.168.168.31}"
-REPLICA_2_HOST="${REPLICA_2_HOST:-192.168.168.42}"
+REPLICA_1_HOST="${REPLICA_1_HOST:-}"
+REPLICA_2_HOST="${REPLICA_2_HOST:-}"
 DRY_RUN="${DRY_RUN:-0}"
 
 # Required export directories
@@ -69,7 +69,7 @@ validate_environment() {
     # Check if /export exists
     if [[ ! -d "$NAS_EXPORT_BASE" ]]; then
         log_fatal "NAS export base directory does not exist: $NAS_EXPORT_BASE"
-        log_fatal "This script must be run on the NAS host (192.168.168.56)"
+        log_fatal "This script must be run on the NAS host"
         exit 2
     fi
 
@@ -205,16 +205,20 @@ configure_nfs_exports() {
     log_info "Current NFS exports:"
     grep "^/export" "$exports_file" | sed 's/^/  /'
 
-    if grep -q "^/export.*${REPLICA_1_HOST}" "$exports_file"; then
-        log_success "✓ NFS export includes Replica 1 (${REPLICA_1_HOST})"
-    else
-        log_warn "Replica 1 (${REPLICA_1_HOST}) may not be in NFS exports"
+    if [[ -n "$REPLICA_1_HOST" ]]; then
+        if grep -q "^/export.*${REPLICA_1_HOST}" "$exports_file"; then
+            log_success "✓ NFS export includes Replica 1 (${REPLICA_1_HOST})"
+        else
+            log_warn "Replica 1 (${REPLICA_1_HOST}) may not be in NFS exports"
+        fi
     fi
 
-    if grep -q "^/export.*${REPLICA_2_HOST}" "$exports_file"; then
-        log_success "✓ NFS export includes Replica 2 (${REPLICA_2_HOST})"
-    else
-        log_warn "Replica 2 (${REPLICA_2_HOST}) may not be in NFS exports"
+    if [[ -n "$REPLICA_2_HOST" ]]; then
+        if grep -q "^/export.*${REPLICA_2_HOST}" "$exports_file"; then
+            log_success "✓ NFS export includes Replica 2 (${REPLICA_2_HOST})"
+        else
+            log_warn "Replica 2 (${REPLICA_2_HOST}) may not be in NFS exports"
+        fi
     fi
 
     return 0

@@ -11,11 +11,24 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
 # CONSTANTS
-PRIMARY_HOST="${DEPLOY_HOST:-192.168.168.31}"
-REPLICA_HOST="${STANDBY_HOST:-192.168.168.42}"
-EXEC_USER="${DEPLOY_USER:-akushnir}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-${DEPLOY_HOST:-}}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-${STANDBY_HOST:-}}}"
+EXEC_USER="${EXEC_USER:-${SSH_USER:-${DEPLOY_USER:-}}}"
+NAS_EXPORT_HOST="${NAS_EXPORT_HOST:-}"
 DRY_RUN="${DRY_RUN:-0}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+    log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before syncing fstab replicas"
+fi
+
+if [[ -z "$EXEC_USER" ]]; then
+    log_fatal "Set EXEC_USER, SSH_USER, or DEPLOY_USER before syncing fstab replicas"
+fi
+
+if [[ -z "$NAS_EXPORT_HOST" ]]; then
+    log_fatal "Set NAS_EXPORT_HOST before syncing fstab replicas"
+fi
 
 # Backup fstab on a host
 backup_fstab() {
@@ -35,7 +48,7 @@ get_nas_mounts() {
     local host="$1"
     
     log_debug "Retrieving NAS mount entries from $host"
-    ssh "${EXEC_USER}@${host}" "grep -E '(192.168.168.56|mnt-|nas|eiq-shared)' /etc/fstab 2>/dev/null || true"
+    ssh "${EXEC_USER}@${host}" "grep -E '(mnt-|nas|eiq-shared)' /etc/fstab 2>/dev/null || true"
 }
 
 # Add missing NAS entries to fstab
@@ -107,7 +120,7 @@ verify_mounts() {
     fi
     
     log_info "Current NAS entries in $host fstab:"
-    ssh "${EXEC_USER}@${host}" "grep -E '(192.168.168.56|mnt-|nas|eiq-shared)' /etc/fstab 2>/dev/null || echo 'No NAS entries found'" | sed 's/^/  /'
+    ssh "${EXEC_USER}@${host}" "grep -E '(mnt-|nas|eiq-shared)' /etc/fstab 2>/dev/null || echo 'No NAS entries found'" | sed 's/^/  /'
 }
 
 # MAIN
@@ -143,7 +156,7 @@ main() {
     
     if [ -z "$primary_nas_entries" ]; then
         log_warn "No NAS entries found in primary fstab - using default"
-        primary_nas_entries="192.168.168.56:/export /mnt/eiq-shared nfs4 rw,sync,hard,intr 0 0"
+        primary_nas_entries="${NAS_EXPORT_HOST}:/export /mnt/eiq-shared nfs4 rw,sync,hard,intr 0 0"
     fi
     
     log_info "NAS entries on primary ($PRIMARY_HOST):"

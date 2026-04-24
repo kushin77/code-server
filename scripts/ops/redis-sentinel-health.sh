@@ -16,7 +16,20 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+REPLICAS="${REPLICAS:-}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+
+if [[ -z "$REPLICAS" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running Redis Sentinel health audit"
+    fi
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before running Redis Sentinel health audit"
+fi
 
 ################################################################################
 # HEALTH AUDIT
@@ -28,14 +41,14 @@ audit_redis_health() {
     log_info "🔍 Auditing Redis Sentinel health on $replica..."
     
     # 1. Check Sentinel process
-    if ! ssh "$DEPLOY_USER@$replica" "cd code-server-enterprise && docker compose ps redis-sentinel | grep 'running'" > /dev/null 2>&1; then
+    if ! ssh "$SSH_USER@$replica" "cd code-server-enterprise && docker compose ps redis-sentinel | grep 'running'" > /dev/null 2>&1; then
         log_error "✗ Redis Sentinel NOT running on $replica"
         return 1
     fi
     
     # 2. Get master info from sentinel
     local master_info
-    master_info=$(ssh "$DEPLOY_USER@$replica" "cd code-server-enterprise && docker compose exec -T redis-sentinel redis-cli -p 26379 sentinel masters" 2>/dev/null)
+    master_info=$(ssh "$SSH_USER@$replica" "cd code-server-enterprise && docker compose exec -T redis-sentinel redis-cli -p 26379 sentinel masters" 2>/dev/null)
     
     if [[ -n "$master_info" ]]; then
         log_info "✅ Sentinel topology healthy on $replica"

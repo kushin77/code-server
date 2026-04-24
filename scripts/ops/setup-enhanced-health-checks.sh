@@ -16,8 +16,20 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before deploying enhanced health checks"
+fi
+
+if [[ -z "${REPLICAS:-}" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before deploying enhanced health checks"
+    fi
+fi
+
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no)
 
 ################################################################################
 # HEALTH CHECK IMPLEMENTATION
@@ -29,11 +41,11 @@ deploy_health_check() {
     log_info "Deploying enhanced health check to $replica..."
     
     # Push the status-check.sh script which is used by Caddy/LoadBalancer
-    local status_script="/home/$DEPLOY_USER/scripts/cluster-health-probe.sh"
+    local status_script="/home/$SSH_USER/scripts/cluster-health-probe.sh"
     
-    ssh "$DEPLOY_USER@$replica" "mkdir -p /home/$DEPLOY_USER/scripts"
+    ssh "${SSH_OPTS[@]}" "$SSH_USER@$replica" "mkdir -p /home/$SSH_USER/scripts"
     
-    ssh "$DEPLOY_USER@$replica" "cat << 'EOF' > $status_script
+    ssh "${SSH_OPTS[@]}" "$SSH_USER@$replica" "cat << 'EOF' > $status_script
 #!/usr/bin/env bash
 # Application-Aware Health Probe
 # Checks Docker services, DB connectivity, and NAS mount
@@ -52,7 +64,7 @@ else
 fi
 EOF"
 
-    ssh "$DEPLOY_USER@$replica" "chmod +x $status_script"
+    ssh "${SSH_OPTS[@]}" "$SSH_USER@$replica" "chmod +x $status_script"
     log_info "✅ Health probe script deployed to $replica"
 }
 

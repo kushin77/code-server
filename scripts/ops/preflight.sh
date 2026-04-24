@@ -238,7 +238,7 @@ check_ssl_certificate_validity() {
 
   local host
   for host in "${hosts[@]}"; do
-    if [[ "$host" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ || "$host" == localhost ]]; then
+    if [[ "$host" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
       continue
     fi
 

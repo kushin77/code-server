@@ -8,19 +8,38 @@ set -euo pipefail
 # Source common utilities and logging
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
+init_repo
 
 # ────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ────────────────────────────────────────────────────────────────────────────
 
-GCP_PROJECT="${GCP_PROJECT:-gcp-kc}"
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-SSH_USER="${DEPLOY_USER:-akushnir}"
+GCP_PROJECT="${GCP_PROJECT:-${GOOGLE_CLOUD_PROJECT:-}}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+HOST_SCHEME="${HOST_SCHEME:-}"
+GIT_FILTER_REPO_URL="${GIT_FILTER_REPO_URL:-}"
 
 SECRET_NAME="ide-session-lb-secret"
 SECRET_BITS=128  # 32 hex characters = 128 bits
 DRY_RUN="${DRY_RUN:-1}"
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+    log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running secret provisioning"
+fi
+
+if [[ -z "$GCP_PROJECT" ]]; then
+    log_fatal "Set GCP_PROJECT or GOOGLE_CLOUD_PROJECT before running secret provisioning"
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before running secret provisioning"
+fi
+
+if [[ -z "$HOST_SCHEME" ]]; then
+    log_fatal "Set HOST_SCHEME before running secret provisioning"
+fi
 
 # ────────────────────────────────────────────────────────────────────────────
 # Functions
@@ -116,7 +135,7 @@ test_sticky_sessions() {
     # Verify Caddy is operational
     log_info "Verifying Caddy health on $host..."
     ssh -o BatchMode=yes "$SSH_USER@$host" \
-        "curl -sf https://$host/health || curl -sk https://$host/health" \
+        "curl -sf \"${HOST_SCHEME}://$host/health\" || curl -sk \"${HOST_SCHEME}://$host/health\"" \
         2>&1 | log_debug
     
     log_info "✓ Sticky sessions verified on $host"
@@ -162,15 +181,19 @@ cleanup_git_history() {
         log_info "Installing git-filter-repo if needed..."
         if ! command -v git-filter-repo &>/dev/null; then
             log_info "Downloading git-filter-repo..."
-            curl -s https://raw.githubusercontent.com/newren/git-filter-repo/main/git-filter-repo > /tmp/git-filter-repo
-            chmod +x /tmp/git-filter-repo
+            if [[ -z "$GIT_FILTER_REPO_URL" ]]; then
+                log_warn "git-filter-repo download URL not set; skipping automatic download"
+            else
+                curl -s "$GIT_FILTER_REPO_URL" > /tmp/git-filter-repo
+                chmod +x /tmp/git-filter-repo
+            fi
         fi
         
         log_warn "Git history cleanup requires manual intervention (security precaution)"
         log_warn "To remove 'secret734' from git history, run:"
         log_warn "  git-filter-repo --replace-text /tmp/secret734-replacements.txt"
         log_warn "  git push --force-with-lease"
-        log_warn "See: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository"
+        log_warn "See repository-sensitive-data removal documentation for cleanup steps"
     else
         log_info "✓ 'secret734' not found in git history"
     fi

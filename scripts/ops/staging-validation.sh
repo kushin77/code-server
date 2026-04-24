@@ -10,12 +10,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "$REPO_ROOT/scripts/_common/init.sh"
 
-TARGET_HOST="${TARGET_HOST:-192.168.168.42}"
+TARGET_HOST="${TARGET_HOST:-${REPLICA_2_IP:-}}"
 OUTPUT_MD="${OUTPUT_MD:-artifacts/staging/staging-validation-dry-run.md}"
 RUNBOOK_FILE="${RUNBOOK_FILE:-docs/PRODUCTION-DEPLOYMENT-RUNBOOK.md}"
 PERF_GUIDE_FILE="${PERF_GUIDE_FILE:-docs/PERFORMANCE-LOAD-TESTING-GUIDE.md}"
 PERF_REPORT_FILE="${PERF_REPORT_FILE:-artifacts/performance-tests/PERFORMANCE-TEST-ANALYSIS-APR22-2026.md}"
 STAGING_REPORT_FILE="${STAGING_REPORT_FILE:-artifacts/staging/staging-deployment-report.md}"
+
+if [[ -z "$TARGET_HOST" ]]; then
+  log_fatal "Set TARGET_HOST or REPLICA_2_IP before generating the staging validation dry run"
+fi
 # Find latest readiness report if not explicitly set, convert to relative path
 if [[ -z "${READINESS_REPORT_FILE:-}" ]]; then
   latest_readiness="$(ls -t "$REPO_ROOT/artifacts/triage/deployment-readiness-report"*.md 2>/dev/null | head -1)"
@@ -33,7 +37,7 @@ Usage:
 
 Options:
   --output-md       Markdown report to generate. Defaults to artifacts/staging/staging-validation-dry-run.md.
-  --target-host     Staging host to reference in the report. Defaults to 192.168.168.42.
+  --target-host     Staging host to reference in the report. Defaults to REPLICA_2_IP.
 EOF
 }
 

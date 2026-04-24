@@ -21,10 +21,15 @@ source "$SCRIPT_DIR/_common/init.sh"
 # Configuration
 QA_USER_EMAIL="${QA_USER_EMAIL:-qa@kushnir.cloud}"
 GCP_PROJECT="${GCP_PROJECT:-kushin77-ops}"
-TEST_BASE_URL="${TEST_BASE_URL:-https://kushnir.cloud}"
+TEST_BASE_URL="${TEST_BASE_URL:-}"
 FULL_CHECK="false"
 CHECK_GSM="false"
 CHECK_OAUTH="false"
+
+if [[ -z "$TEST_BASE_URL" ]]; then
+  log_fail "Set TEST_BASE_URL before running the E2E QA setup verification"
+  exit 1
+fi
 
 # Colors
 RED='\033[0;31m'

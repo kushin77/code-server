@@ -14,9 +14,17 @@ source "$SCRIPT_DIR/../_common/issue-create-unified.sh"
 
 OUTPUT_DIR="${OUTPUT_DIR:-artifacts/triage}"
 CAMPAIGN_BASENAME="${CAMPAIGN_BASENAME:-resilience-campaign}"
-PORTAL_BASE_URL="${PORTAL_BASE_URL:-https://kushnir.cloud}"
-IDE_BASE_URL="${IDE_BASE_URL:-https://ide.kushnir.cloud}"
+PORTAL_BASE_URL="${PORTAL_BASE_URL:-}"
+IDE_BASE_URL="${IDE_BASE_URL:-}"
 CAMPAIGN_PROFILE="${CAMPAIGN_PROFILE:-baseline}"
+
+if [[ -z "$PORTAL_BASE_URL" ]]; then
+    log_fatal "Set PORTAL_BASE_URL before running the resilience campaign"
+fi
+
+if [[ -z "$IDE_BASE_URL" ]]; then
+    log_fatal "Set IDE_BASE_URL before running the resilience campaign"
+fi
 
 baseline_request_count_set=false
 baseline_throttle_limit_set=false

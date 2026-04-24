@@ -1,43 +1,99 @@
 # OPS Scripts Compliance Report
-Generated: Fri Apr 24 13:53:16 UTC 2026
+Generated: Fri Apr 24 15:41:04 UTC 2026
 Compliance Level: standard
 Target Directory: /mnt/c/code-server-enterprise/scripts/ops
 
 
 ## Summary
-Total Scripts: 140
-Compliant: 23
-Non-Compliant: 117
-Total Violations: 132
+Total Scripts: 147
+Compliant: 80
+Non-Compliant: 67
+Total Violations: 79
 
 ## Compliant Scripts
+  - P1-1694-FIX-SSL-HANDSHAKE-TIMEOUT.sh
+  - P2-1662-DEPLOY-CLUSTER-HEALTH-DASHBOARD.sh
+  - audit-idle-resources.sh
   - backup-verify.sh
   - benchmark-build-cache.sh
   - benchmark-nfs-performance.sh
   - bootstrap-env.sh
   - cert-renew.sh
+  - check-caddy-port-binding.sh
+  - check-replica-parity.sh
   - cloudflare-log-triage.sh
   - create-qa-user-automated.sh
+  - deploy-cluster-health-monitoring.sh
+  - deploy-grafana-dashboards.sh
   - diagnose-oauth.sh
   - error-fingerprint-triage.sh
   - fix-nas-disk-space.sh
   - iam-deployment-checklist.sh
   - kubernetes-log-triage.sh
+  - p1-1694-tls-recovery.sh
+  - parallel-deploy.sh
+  - pre-flight-deployment-check.sh
+  - preflight.sh
+  - provision-ide-session-lb-secret.sh
+  - provision-nas-exports.sh
+  - provision-phase-2-service-accounts.sh
+  - reconcile-setup-state.sh
+  - redeploy-portal.sh
+  - redeploy-service.sh
+  - redeploy-with-gh-tracking.sh
+  - redeploy.sh
+  - redis-sentinel-failover-test.sh
+  - redis-sentinel-health.sh
+  - remediate-r2-blockers.sh
+  - restore-appsmith.sh
+  - rollback.sh
   - route-security-audit-events.sh
+  - run-production-failover-test.sh
+  - run-resilience-campaign.sh
+  - secret-rotation.sh
   - security-scan-triage.sh
+  - session-broker-failover-test.sh
+  - session-broker-ha-health.sh
+  - session-broker-verify.sh
+  - setup-automated-backups.sh
   - setup-automated-failover-monitoring.sh
   - setup-ci-qa-credentials.sh
+  - setup-database-backup-strategy.sh
+  - setup-enhanced-health-checks.sh
+  - setup-network-partition-recovery.sh
   - setup-passwordless-sudo.sh
+  - setup-postgres-replication-standalone.sh
+  - setup-postgres-replication.sh
+  - setup-postgres-streaming-replication.sh
   - setup-qa-user-gsm.sh
+  - staging-validation.sh
+  - sync-env-to-replicas.sh
+  - sync-fstab-between-replicas.sh
+  - sync-fstab-replicas-v2.sh
+  - sync-fstab-replicas.sh
+  - team-signoff-packet.sh
   - terraform-drift-detect.sh
+  - test-failover.sh
   - test-failure-triage.sh
   - triage-issues-autonomous.sh
+  - validate-cluster-deployment-readiness.sh
+  - validate-cluster-parity-all-replicas.sh
+  - validate-cluster-parity.sh
+  - validate-csrf-resilience.sh
+  - validate-failover-readiness.sh
+  - validate-nas-mount.sh
+  - validate-staging-database-resilience.sh
   - verify-deployment-state.sh
+  - verify-e2e-qa-setup.sh
+  - verify-ide-session-lb-secret.sh
+  - verify-idempotent-deployment.sh
+  - verify-pre-deployment-readiness.sh
+  - verify-production-readiness-quick.sh
+  - verify-production-readiness.sh
   - verify-terraform-idempotent.sh
 
 ## Non-Compliant Scripts
 EXECUTE-4-PHASE-DEPLOYMENT-APRIL-24.sh: 2 violation(s)
-P2-1662-DEPLOY-CLUSTER-HEALTH-DASHBOARD.sh: 1 violation(s)
 P2-1665-IDEMPOTENCY-REBOOT-TEST.sh: 2 violation(s)
 P3-1674-DEPLOY-SAAS-BACKEND.sh: 1 violation(s)
 P3-1675-CUSTOM-DOMAIN-ENDPOINTS.sh: 1 violation(s)
@@ -51,8 +107,6 @@ bootstrap-production-secrets.sh: 1 violation(s)
 bulletproof-cluster-failover.sh: 1 violation(s)
 caddy-upstream-verify.sh: 1 violation(s)
 chaos-test-cluster-failover.sh: 1 violation(s)
-check-caddy-port-binding.sh: 2 violation(s)
-check-replica-parity.sh: 1 violation(s)
 cluster-audit-comprehensive.sh: 1 violation(s)
 cluster-health-monitor-100percent.sh: 1 violation(s)
 cluster-sync.sh: 1 violation(s)
@@ -63,7 +117,6 @@ collab-9-troubleshoot.sh: 1 violation(s)
 collect-live-surface-baseline.sh: 1 violation(s)
 configure-passwordless-sudo.sh: 1 violation(s)
 dast-scan.sh: 1 violation(s)
-deploy-cluster-health-monitoring.sh: 1 violation(s)
 deploy-collab-9-production-canary.sh: 1 violation(s)
 deploy-collab-9-staging.sh: 1 violation(s)
 deploy-database-resilience.sh: 1 violation(s)
@@ -71,6 +124,7 @@ deploy-health-monitoring-direct.sh: 2 violation(s)
 deploy-p0-1163-secret.sh: 1 violation(s)
 deploy-phase-2.1-oidc.sh: 1 violation(s)
 deploy-production-iac.sh: 1 violation(s)
+deploy-sla-metrics.sh: 1 violation(s)
 diagnose-dast-404-error.sh: 1 violation(s)
 diagnose-dast-target-unreachable.sh: 1 violation(s)
 diagnose-postgresql-packet-errors.sh: 1 violation(s)
@@ -82,6 +136,7 @@ enforce-failover-loadbalancing.sh: 1 violation(s)
 entitlement-sync.sh: 2 violation(s)
 ephemeral-route-manager.sh: 1 violation(s)
 execute-database-resilience.sh: 1 violation(s)
+execute-p1-1694-security-fix.sh: 1 violation(s)
 failover-failback.sh: 1 violation(s)
 failover-promote.sh: 1 violation(s)
 fix-dast-404-target-unreachable.sh: 1 violation(s)
@@ -104,52 +159,4 @@ network-partition-recovery.sh: 1 violation(s)
 oauth2-csrf-verify.sh: 1 violation(s)
 p0-1629-backup-replica2-data.sh: 2 violation(s)
 p0-1629-verify-data-integrity.sh: 2 violation(s)
-parallel-deploy.sh: 1 violation(s)
 performance-load-testing.sh: 2 violation(s)
-pre-flight-deployment-check.sh: 1 violation(s)
-preflight.sh: 1 violation(s)
-provision-ide-session-lb-secret.sh: 1 violation(s)
-provision-nas-exports.sh: 1 violation(s)
-provision-phase-2-service-accounts.sh: 1 violation(s)
-reconcile-setup-state.sh: 1 violation(s)
-redeploy-portal.sh: 1 violation(s)
-redeploy-service.sh: 1 violation(s)
-redeploy-with-gh-tracking.sh: 1 violation(s)
-redeploy.sh: 1 violation(s)
-redis-sentinel-failover-test.sh: 1 violation(s)
-redis-sentinel-health.sh: 1 violation(s)
-remediate-r2-blockers.sh: 1 violation(s)
-restore-appsmith.sh: 1 violation(s)
-rollback.sh: 1 violation(s)
-run-production-failover-test.sh: 1 violation(s)
-run-resilience-campaign.sh: 1 violation(s)
-secret-rotation.sh: 1 violation(s)
-session-broker-failover-test.sh: 1 violation(s)
-session-broker-ha-health.sh: 1 violation(s)
-session-broker-verify.sh: 1 violation(s)
-setup-automated-backups.sh: 1 violation(s)
-setup-database-backup-strategy.sh: 1 violation(s)
-setup-enhanced-health-checks.sh: 1 violation(s)
-setup-network-partition-recovery.sh: 1 violation(s)
-setup-postgres-replication-standalone.sh: 1 violation(s)
-setup-postgres-replication.sh: 1 violation(s)
-setup-postgres-streaming-replication.sh: 1 violation(s)
-staging-validation.sh: 1 violation(s)
-sync-env-to-replicas.sh: 1 violation(s)
-sync-fstab-between-replicas.sh: 1 violation(s)
-sync-fstab-replicas-v2.sh: 1 violation(s)
-sync-fstab-replicas.sh: 1 violation(s)
-team-signoff-packet.sh: 1 violation(s)
-test-failover.sh: 1 violation(s)
-validate-cluster-deployment-readiness.sh: 1 violation(s)
-validate-cluster-parity-all-replicas.sh: 1 violation(s)
-validate-cluster-parity.sh: 1 violation(s)
-validate-csrf-resilience.sh: 1 violation(s)
-validate-nas-mount.sh: 1 violation(s)
-validate-staging-database-resilience.sh: 1 violation(s)
-verify-e2e-qa-setup.sh: 1 violation(s)
-verify-ide-session-lb-secret.sh: 1 violation(s)
-verify-idempotent-deployment.sh: 1 violation(s)
-verify-pre-deployment-readiness.sh: 1 violation(s)
-verify-production-readiness-quick.sh: 3 violation(s)
-verify-production-readiness.sh: 1 violation(s)

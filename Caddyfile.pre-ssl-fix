@@ -2,10 +2,13 @@
 # Caddy 2.7.6 — direct TLS termination with existing Let's Encrypt certs
 # Certs stored in enterprise_caddy-data volume (valid until 2026-07-19)
 # NOTE: Caddy must run as root (user 0) to access root-owned cert files.
-# OIDC issuer routes removed until custom issuer service is deployed (#1029).
 
 {
     email devops@kushnir.cloud
+    on_demand_tls {
+        # Saas-api provides domain validation for custom whitelabel domains
+        ask http://saas-api:5000/api/v1/validate-domain
+    }
 }
 
 # HTTP listener for health checks (bypass TLS, allow DAST scans)
@@ -21,11 +24,10 @@ http://ide.kushnir.cloud {
     }
 }
 
-# HTTPS listener with TLS and OAuth2-Proxy gateway
+# HTTPS listener for ide.kushnir.cloud (Explicit certs)
 ide.kushnir.cloud {
-    tls {
-        on_demand
-    }
+    # No 'on_demand' here - let Caddy handle standard ACME for this domain
+    tls devops@kushnir.cloud
 
     encode gzip
 
@@ -37,16 +39,9 @@ ide.kushnir.cloud {
         -Server
     }
 
-    # ────────────────────────────────────────────────────────────────────────────
-    # Health Check Endpoints (always respond, no auth)
-    # ────────────────────────────────────────────────────────────────────────────
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    # ────────────────────────────────────────────────────────────────────────────
-    # OAuth2-Proxy Authentication Gate (default — all other traffic)
-    # oauth2-proxy handles Google OAuth flow and upstream proxy to code-server
-    # ────────────────────────────────────────────────────────────────────────────
     reverse_proxy oauth2-proxy:4180 {
         header_up Host ide.kushnir.cloud
         header_up X-Forwarded-Proto https
@@ -54,34 +49,59 @@ ide.kushnir.cloud {
         fail_duration 5s
         max_fails 3
         health_uri /ping
-        health_interval 5s
-        health_timeout 2s
     }
 }
 
-# HTTP listener for kushnir.cloud health checks (portal domain)
+# HTTP listener for kushnir.cloud health checks
 http://kushnir.cloud {
     @health path /health /healthz /ping
     handle @health {
         respond "OK" 200
     }
 
-    # Redirect other traffic to HTTPS
     handle {
         redir https://{host}{uri}
     }
 }
 
-# Catch-all HTTP health listener for IP-based scrapes and internal probes
-:80 {
+# HTTPS listener for kushnir.cloud (Explicit certs)
+kushnir.cloud {
+    tls devops@kushnir.cloud
+
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        -Server
+    }
+
     @health path /health /healthz /ping
     respond @health "OK" 200
 
+    reverse_proxy appsmith:80 {
+        header_up Host kushnir.cloud
+        header_up X-Forwarded-Proto https
+        header_up X-Real-IP {remote_host}
+        fail_duration 5s
+        max_fails 3
+    }
+}
+
+# Catch-all HTTP health listener
+:80 {
+    @health path /health /healthz /ping
+    respond @health "OK" 200
     respond "Not Found" 404
 }
 
-# HTTPS listener for kushnir.cloud (portal domain)
-kushnir.cloud {
+# ════════════════════════════════════════════════════════════════════════════════
+# Custom Domain Routing — Dynamic Whitelabel Domains
+# ════════════════════════════════════════════════════════════════════════════════
+
+*.kushnir.cloud {
     tls {
         on_demand
     }
@@ -91,75 +111,15 @@ kushnir.cloud {
     header {
         X-Content-Type-Options nosniff
         X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         -Server
     }
 
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    # Route to Appsmith portal container (portal foundation — phase 1 of 5)
-    # Appsmith provides KC-branded dashboard with service status and user links
-    reverse_proxy appsmith:80 {
-        header_up Host kushnir.cloud
-        header_up X-Forwarded-Proto https
-        header_up X-Real-IP {remote_host}
-        fail_duration 5s
-        max_fails 3
-        health_uri /api/v1/health
-        health_interval 5s
-        health_timeout 2s
-    }
-}
-
-# ════════════════════════════════════════════════════════════════════════════════
-# Custom Domain Routing — Dynamic Whitelabel Domains
-# All custom domains (e.g., customer.example.com) route through saas-api
-# Caddy auto-provisions TLS via Let's Encrypt (ACME challenge via DNS01)
-# Note: ide.kushnir.cloud is explicitly handled above and takes precedence
-# ════════════════════════════════════════════════════════════════════════════════
-
-# HTTP listener for custom/wildcard domains (health checks only)
-http://*.kushnir.cloud {
-    @health path /health /healthz /ping
-    handle @health {
-        respond "OK" 200
-    }
-
-    # Redirect other traffic to HTTPS
-    handle {
-        redir https://{host}{uri}
-    }
-}
-
-# HTTPS listener for custom/wildcard domains
-*.kushnir.cloud {
-    encode gzip
-
-    header {
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        X-XSS-Protection "1; mode=block"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        -Server
-        X-Custom-Domain {http.request.host}
-    }
-
-    @health path /health /healthz /ping
-    respond @health "OK" 200
-
-    # Route custom domain traffic to saas-api with domain context
-    # saas-api:5000 handles domain lookups, Appsmith redirection, branding
     reverse_proxy saas-api:5000 {
         header_up Host {http.request.host}
         header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}
-        header_up X-Custom-Domain {http.request.host}
-        fail_duration 5s
-        max_fails 3
-        health_uri /health
-        health_interval 5s
-        health_timeout 2s
     }
 }

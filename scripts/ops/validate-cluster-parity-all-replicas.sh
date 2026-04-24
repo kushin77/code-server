@@ -16,9 +16,23 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
 SSH_USER="${SSH_USER:-akushnir}"
 SSH_TIMEOUT="${SSH_TIMEOUT:-10}"
+SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
+HEALTH_SCHEME="${HEALTH_SCHEME:-https}"
+HEALTH_PATH="${HEALTH_PATH:-/health}"
+HEALTH_HOST="${HEALTH_HOST:-ide.kushnir.cloud}"
+PUBLIC_HEALTH_SCHEME="${PUBLIC_HEALTH_SCHEME:-https}"
+PUBLIC_HEALTH_PATH="${PUBLIC_HEALTH_PATH:-/healthz}"
+PUBLIC_HEALTH_HOST="${PUBLIC_HEALTH_HOST:-}"
+PARITY_IGNORED_SERVICES_REGEX="${PARITY_IGNORED_SERVICES_REGEX:-^(session-broker)$}"
+
+if [[ -z "$PUBLIC_HEALTH_HOST" && -n "${IDE_BASE_URL:-}" ]]; then
+    PUBLIC_HEALTH_HOST="${IDE_BASE_URL#*://}"
+    PUBLIC_HEALTH_HOST="${PUBLIC_HEALTH_HOST%%/*}"
+fi
+
+PUBLIC_HEALTH_HOST="${PUBLIC_HEALTH_HOST:-ide.kushnir.cloud}"
 JSON_OUTPUT=0
 STRICT_MODE=0
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts/triage"
@@ -52,6 +66,20 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ -z "${REPLICAS:-}" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running cluster parity validation"
+    fi
+fi
+
+if [[ ! -f "$SSH_KEY" ]]; then
+    log_fatal "SSH key not found: $SSH_KEY"
+fi
+
+PARITY_SSH_OPTS=(-i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout="${SSH_TIMEOUT}" -o StrictHostKeyChecking=no)
+
 ################################################################################
 # CLUSTER PARITY VALIDATION
 ################################################################################
@@ -60,7 +88,7 @@ check_replica_git_commit() {
     local replica="$1"
     
     local commit
-    commit=$(ssh -o ConnectTimeout="$SSH_TIMEOUT" -o StrictHostKeyChecking=no \
+    commit=$(ssh "${PARITY_SSH_OPTS[@]}" \
         "$SSH_USER@$replica" \
         "cd code-server-enterprise && git rev-parse HEAD" 2>/dev/null || echo "ERROR")
     
@@ -78,9 +106,9 @@ check_replica_service_count() {
     local replica="$1"
     
     local count
-    count=$(ssh -o ConnectTimeout="$SSH_TIMEOUT" -o StrictHostKeyChecking=no \
+    count=$(ssh "${PARITY_SSH_OPTS[@]}" \
         "$SSH_USER@$replica" \
-        "cd code-server-enterprise && docker compose ps --services 2>/dev/null | wc -l" 2>/dev/null || echo "0")
+        "cd code-server-enterprise && docker-compose ps --services 2>/dev/null | grep -Ev '${PARITY_IGNORED_SERVICES_REGEX}' | wc -l" 2>/dev/null || echo "0")
     
     SERVICE_COUNTS[$replica]="$count"
     log_debug "[$replica] Service count: $count"
@@ -91,9 +119,10 @@ check_replica_health() {
     local replica="$1"
     
     local status
-    status=$(curl -s -o /dev/null -w "%{http_code}" \
+    status=$(curl -sk -o /dev/null -w "%{http_code}" \
         --connect-timeout 5 \
-        "http://$replica/health" 2>/dev/null || echo "000")
+        --resolve "${HEALTH_HOST}:443:${replica}" \
+        "${HEALTH_SCHEME}://${HEALTH_HOST}${HEALTH_PATH}" 2>/dev/null || echo "000")
     
     HEALTH_STATUS[$replica]="$status"
     
@@ -102,6 +131,26 @@ check_replica_health() {
         return 0
     else
         log_debug "[$replica] Health check: FAIL (HTTP $status)"
+        return 1
+    fi
+}
+
+check_replica_public_health() {
+    local replica="$1"
+
+    local status
+    status=$(curl -sk -o /dev/null -w "%{http_code}" \
+        --connect-timeout 5 \
+        --resolve "${PUBLIC_HEALTH_HOST}:443:${replica}" \
+        "${PUBLIC_HEALTH_SCHEME}://${PUBLIC_HEALTH_HOST}${PUBLIC_HEALTH_PATH}" 2>/dev/null || echo "000")
+
+    HEALTH_STATUS["${replica}_public"]="$status"
+
+    if [[ "$status" == "200" ]]; then
+        log_debug "[$replica] Public HTTPS health check: OK"
+        return 0
+    else
+        log_debug "[$replica] Public HTTPS health check: FAIL (HTTP $status)"
         return 1
     fi
 }
@@ -118,9 +167,10 @@ validate_cluster_parity() {
     for replica in "${replica_array[@]}"; do
         log_info "Checking replica: $replica"
         
-        check_replica_git_commit "$replica" || ((PARITY_VIOLATIONS++))
+        check_replica_git_commit "$replica" || ((++PARITY_VIOLATIONS))
         check_replica_service_count "$replica"
-        check_replica_health "$replica" || ((PARITY_VIOLATIONS++))
+        check_replica_health "$replica" || ((++PARITY_VIOLATIONS))
+        check_replica_public_health "$replica" || ((++PARITY_VIOLATIONS))
     done
     
     log_info ""
@@ -142,39 +192,57 @@ validate_cluster_parity() {
         log_info "✓ All replicas on same git commit: ${first_commit:0:8}"
     else
         log_error "✗ Git commits do not match across replicas"
-        ((PARITY_VIOLATIONS++))
+        ((++PARITY_VIOLATIONS))
     fi
     
-    # Check if all replicas have same service count
-    local target_count=20  # Expected service count per replica
-    local all_healthy=1
+    # Check if all replicas have matching service count without hardcoding topology.
+    local baseline_count=""
+    local all_counts_match=1
     for replica in "${replica_array[@]}"; do
         local count="${SERVICE_COUNTS[$replica]:-0}"
-        if [[ "$count" -ne "$target_count" ]]; then
-            log_error "✗ Service count mismatch on $replica: $count (expected $target_count)"
-            all_healthy=0
+
+        if [[ "$count" -le 0 ]]; then
+            log_error "✗ Service count unavailable on $replica"
+            all_counts_match=0
+            continue
+        fi
+
+        if [[ -z "$baseline_count" ]]; then
+            baseline_count="$count"
+            continue
+        fi
+
+        if [[ "$count" -ne "$baseline_count" ]]; then
+            log_error "✗ Service count mismatch on $replica: $count (expected $baseline_count from first replica)"
+            all_counts_match=0
         fi
     done
-    
-    if [[ $all_healthy -eq 1 ]]; then
-        log_info "✓ All replicas have correct service count ($target_count)"
+
+    if [[ $all_counts_match -eq 1 ]]; then
+        log_info "✓ All replicas have matching service count ($baseline_count)"
     else
-        ((PARITY_VIOLATIONS++))
+        ((++PARITY_VIOLATIONS))
     fi
     
-    # Check health status
+    # Check health status, including the public HTTPS health route.
     local all_healthy_check=1
+    local all_public_healthy_check=1
     for replica in "${replica_array[@]}"; do
         if [[ "${HEALTH_STATUS[$replica]:-000}" != "200" ]]; then
             log_error "✗ Health check failed on $replica: HTTP ${HEALTH_STATUS[$replica]:-000}"
             all_healthy_check=0
         fi
+
+        if [[ "${HEALTH_STATUS[${replica}_public]:-000}" != "200" ]]; then
+            log_error "✗ Public HTTPS health check failed on $replica: HTTP ${HEALTH_STATUS[${replica}_public]:-000}"
+            all_public_healthy_check=0
+        fi
     done
     
-    if [[ $all_healthy_check -eq 1 ]]; then
+    if [[ $all_healthy_check -eq 1 && $all_public_healthy_check -eq 1 ]]; then
         log_info "✓ All replicas health checks passed"
     else
-        ((PARITY_VIOLATIONS++))
+        ((++PARITY_VIOLATIONS))
     fi
     
     log_info ""

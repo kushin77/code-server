@@ -12,11 +12,25 @@ source "$SCRIPT_DIR/../_common/init.sh"
 # Configuration
 # ────────────────────────────────────────────────────────────────────────────
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
 IDE_SESSION_LB_SECRET="${IDE_SESSION_LB_SECRET:?IDE_SESSION_LB_SECRET must be set}"
 SESSION_BROKER_PORT="${SESSION_BROKER_PORT:-5000}"
+SESSION_BROKER_SCHEME="${SESSION_BROKER_SCHEME:-}"
 DRY_RUN="${DRY_RUN:-1}"
+
+if [ -z "$PRIMARY_HOST" ] || [ -z "$REPLICA_HOST" ]; then
+    if [ -n "${REPLICA_1_IP:-}" ] && [ -n "${REPLICA_2_IP:-}" ]; then
+        PRIMARY_HOST="${REPLICA_1_IP}"
+        REPLICA_HOST="${REPLICA_2_IP}"
+    else
+        log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running session-broker HA health checks"
+    fi
+fi
+
+if [ -z "$SESSION_BROKER_SCHEME" ]; then
+    log_fatal "Set SESSION_BROKER_SCHEME before running session-broker HA health checks"
+fi
 
 # ────────────────────────────────────────────────────────────────────────────
 # Colors for output
@@ -53,7 +67,7 @@ log_info "TEST 1: Check session-broker health on primary host (.31)..."
 if [ "$DRY_RUN" = "1" ]; then
     log_info "[DRY-RUN] Would verify session-broker health on $PRIMARY_HOST:$SESSION_BROKER_PORT"
 else
-    health_primary=$(curl -s -w "\n%{http_code}" "http://$PRIMARY_HOST:$SESSION_BROKER_PORT/health" 2>/dev/null || echo -e "Connection failed\n000")
+    health_primary=$(curl -s -w "\n%{http_code}" "${SESSION_BROKER_SCHEME}://${PRIMARY_HOST}:${SESSION_BROKER_PORT}/health" 2>/dev/null || echo -e "Connection failed\n000")
     http_code=$(echo "$health_primary" | tail -n1)
     
     if [ "$http_code" = "200" ]; then
@@ -72,7 +86,7 @@ log_info "TEST 2: Check session-broker health on replica host (.42)..."
 if [ "$DRY_RUN" = "1" ]; then
     log_info "[DRY-RUN] Would verify session-broker health on $REPLICA_HOST:$SESSION_BROKER_PORT"
 else
-    health_replica=$(curl -s -w "\n%{http_code}" "http://$REPLICA_HOST:$SESSION_BROKER_PORT/health" 2>/dev/null || echo -e "Connection failed\n000")
+    health_replica=$(curl -s -w "\n%{http_code}" "${SESSION_BROKER_SCHEME}://${REPLICA_HOST}:${SESSION_BROKER_PORT}/health" 2>/dev/null || echo -e "Connection failed\n000")
     http_code=$(echo "$health_replica" | tail -n1)
     
     if [ "$http_code" = "200" ]; then
@@ -174,7 +188,7 @@ if [ "$DRY_RUN" = "1" ]; then
     log_info "[DRY-RUN] Would check /sessions endpoint on both hosts"
 else
     # Try to get active sessions list from primary
-    sessions=$(curl -s "http://$PRIMARY_HOST:$SESSION_BROKER_PORT/sessions" 2>/dev/null || echo '{}')
+    sessions=$(curl -s "${SESSION_BROKER_SCHEME}://${PRIMARY_HOST}:${SESSION_BROKER_PORT}/sessions" 2>/dev/null || echo '{}')
     
     if echo "$sessions" | grep -q '"sessionId"' || [ "$sessions" = "[]" ] || [ "$sessions" = "{}" ]; then
         log_info "✓ /sessions endpoint is available on primary host"
@@ -192,7 +206,7 @@ log_info "TEST 8: Verify session-broker Prometheus metrics..."
 if [ "$DRY_RUN" = "1" ]; then
     log_info "[DRY-RUN] Would verify /metrics endpoint"
 else
-    metrics=$(curl -s "http://$PRIMARY_HOST:$SESSION_BROKER_PORT/metrics" 2>/dev/null || echo '')
+    metrics=$(curl -s "${SESSION_BROKER_SCHEME}://${PRIMARY_HOST}:${SESSION_BROKER_PORT}/metrics" 2>/dev/null || echo '')
     
     if echo "$metrics" | grep -q "session_broker"; then
         log_info "✓ Prometheus metrics endpoint is available"

@@ -11,10 +11,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
 # CONSTANTS
-PRIMARY_HOST="${DEPLOY_HOST:-192.168.168.31}"
-REPLICA_HOST="${STANDBY_HOST:-192.168.168.42}"
-EXEC_USER="${DEPLOY_USER:-akushnir}"
-REPO_PATH="/home/akushnir/code-server-enterprise"
+PRIMARY_HOST="${PRIMARY_HOST:-${DEPLOY_HOST:-${REPLICA_1_IP:-}}}"
+REPLICA_HOST="${REPLICA_HOST:-${STANDBY_HOST:-${REPLICA_2_IP:-}}}"
+EXEC_USER="${EXEC_USER:-${SSH_USER:-${DEPLOY_USER:-}}}"
+REPO_PATH="${REPO_PATH:-${WORKSPACE_DIR:-}}"
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+    log_fatal "Set PRIMARY_HOST/REPLICA_HOST or DEPLOY_HOST/STANDBY_HOST or REPLICA_1_IP/REPLICA_2_IP before running pre-deployment readiness verification"
+fi
+
+if [[ -z "$EXEC_USER" ]]; then
+    log_fatal "Set EXEC_USER, SSH_USER, or DEPLOY_USER before running pre-deployment readiness verification"
+fi
+
+if [[ -z "$REPO_PATH" ]]; then
+    log_fatal "Set REPO_PATH or WORKSPACE_DIR before running pre-deployment readiness verification"
+fi
 
 # Verify SSH connectivity
 verify_ssh_connectivity() {

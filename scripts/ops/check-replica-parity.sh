@@ -36,6 +36,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
+init_repo
 
 SCRIPT_NAME="$(basename "$0")"
 
@@ -43,14 +44,34 @@ SCRIPT_NAME="$(basename "$0")"
 # CONFIGURATION
 ################################################################################
 
-# Production cluster replicas
-REPLICAS=(
-  "akushnir@192.168.168.31"
-  "akushnir@192.168.168.42"
-)
-
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
-SSH_OPTS="-i ${SSH_KEY} -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before running replica parity checks"
+fi
+
+SSH_TIMEOUT="${SSH_TIMEOUT:-10}"
+REPLICAS_INPUT="${REPLICAS:-}"
+if [[ -z "$REPLICAS_INPUT" ]]; then
+  if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+    REPLICAS_INPUT="${REPLICA_1_IP},${REPLICA_2_IP}"
+  else
+    log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running replica parity checks"
+  fi
+fi
+
+REPLICA_TARGETS=()
+IFS=',' read -ra replica_inputs <<< "$REPLICAS_INPUT"
+for replica in "${replica_inputs[@]}"; do
+  replica_host="$(echo "$replica" | xargs)"
+  if [[ "$replica_host" == *@* ]]; then
+    REPLICA_TARGETS+=("$replica_host")
+  else
+    REPLICA_TARGETS+=("${SSH_USER}@${replica_host}")
+  fi
+done
+
+CADDY_PARITY_SSH_OPTS=(-i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout="$SSH_TIMEOUT" -o StrictHostKeyChecking=no)
 
 # Work directory for temp files
 WORK_DIR="/tmp/replica-parity-$$"
@@ -79,8 +100,7 @@ query_replica() {
   shift
   local cmd="$@"
   local -a ssh_opts_array
-  read -r -a ssh_opts_array <<< "$SSH_OPTS"
-  ssh "${ssh_opts_array[@]}" "$host" "$cmd" 2>/dev/null || echo "ERROR"
+  ssh "${CADDY_PARITY_SSH_OPTS[@]}" "$host" "$cmd" 2>/dev/null || echo "ERROR"
 }
 
 # Log section header
@@ -99,10 +119,8 @@ check_replica_connectivity() {
   log_info "Verifying all replicas are reachable..."
   
   local all_reachable=1
-  local -a ssh_opts_array
-  read -r -a ssh_opts_array <<< "$SSH_OPTS"
-  for replica in "${REPLICAS[@]}"; do
-    if ssh "${ssh_opts_array[@]}" "$replica" "true" 2>/dev/null; then
+  for replica in "${REPLICA_TARGETS[@]}"; do
+    if ssh "${CADDY_PARITY_SSH_OPTS[@]}" "$replica" "true" 2>/dev/null; then
       log_info "  ✓ $replica reachable"
     else
       log_error "  ✗ $replica unreachable"
@@ -130,7 +148,7 @@ check_git_commit_parity() {
   
   # Collect git commits from all replicas
   declare -A commits
-  for replica in "${REPLICAS[@]}"; do
+  for replica in "${REPLICA_TARGETS[@]}"; do
     log_debug "  Getting git commit from $replica..."
     local commit
     commit=$(query_replica "$replica" "cd code-server-enterprise && git rev-parse HEAD 2>/dev/null" | head -1)
@@ -147,10 +165,10 @@ check_git_commit_parity() {
   done
   
   # Compare all to first replica
-  local first_replica="${REPLICAS[0]}"
+  local first_replica="${REPLICA_TARGETS[0]}"
   local first_commit="${commits[$first_replica]}"
   
-  for replica in "${REPLICAS[@]}"; do
+  for replica in "${REPLICA_TARGETS[@]}"; do
     if [[ "$replica" != "$first_replica" ]]; then
       if [[ "${commits[$replica]}" != "$first_commit" ]]; then
         log_error "  ✗ DIVERGENCE: $replica on ${commits[$replica]:0:7}... vs $first_replica on ${first_commit:0:7}..."
@@ -171,7 +189,7 @@ check_running_services_parity() {
   mkdir -p "$work_dir"
   
   # Collect service lists from all replicas
-  for replica in "${REPLICAS[@]}"; do
+  for replica in "${REPLICA_TARGETS[@]}"; do
     log_debug "  Getting running services from $replica..."
     local services
     services=$(query_replica "$replica" "docker ps --format '{{.Names}}' 2>/dev/null | sort" | head -50)
@@ -227,7 +245,7 @@ check_compose_profiles_parity() {
   
   # Collect COMPOSE_PROFILES from all replicas
   declare -A profiles
-  for replica in "${REPLICAS[@]}"; do
+  for replica in "${REPLICA_TARGETS[@]}"; do
     log_debug "  Getting COMPOSE_PROFILES from $replica..."
     local profile
     profile=$(query_replica "$replica" "cd code-server-enterprise && grep -E '^COMPOSE_PROFILES=' .env 2>/dev/null | cut -d= -f2- || echo 'NONE'")
@@ -238,10 +256,10 @@ check_compose_profiles_parity() {
   done
   
   # Compare all profiles
-  local first_replica="${REPLICAS[0]}"
-  local first_profile="${profiles[$first_replica]}"
+  local first_replica="${REPLICA_TARGETS[0]}"
+  local first_profile="${profiles[$first_replica]:-NONE}"
   
-  for replica in "${REPLICAS[@]}"; do
+  for replica in "${REPLICA_TARGETS[@]}"; do
     if [[ "$replica" != "$first_replica" ]]; then
       if [[ "${profiles[$replica]}" != "$first_profile" ]]; then
         log_error "  ✗ DIVERGENCE: $replica has '${profiles[$replica]}' vs $first_replica has '$first_profile'"
@@ -260,7 +278,7 @@ check_compose_profiles_parity() {
 ################################################################################
 
 log_section "Starting Replica Parity Check"
-log_info "Replicas: ${REPLICAS[*]}"
+log_info "Replicas: ${REPLICA_TARGETS[*]}"
 log_info ""
 
 # Connectivity check first

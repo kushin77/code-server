@@ -12,13 +12,24 @@ source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
-SSH_USER="${SSH_USER:-akushnir}"
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before deploying the dashboard"
+fi
+if [[ -z "${REPLICAS:-}" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before deploying the dashboard"
+    fi
+fi
 GRAFANA_API_PORT="${GRAFANA_API_PORT:-3000}"
 GRAFANA_API_USER="${GRAFANA_API_USER:-admin}"
 DRY_RUN="${DRY_RUN:-0}"
 DASHBOARD_UID="cluster-health-prod"
 DASHBOARD_DIR="${DASHBOARD_DIR:-dashboards}"
+GRAFANA_SCHEME="${GRAFANA_SCHEME:-http}"
+GRAFANA_HOST="${GRAFANA_HOST:-grafana}"
 
 # ============================================================================
 # Helper Functions
@@ -78,7 +89,7 @@ deploy_to_all_replicas() {
         log_info "Would deploy dashboard:"
         log_info "  From: $DASHBOARD_DIR/cluster-health-dashboard.json"
         log_info "  To replicas: $REPLICAS"
-        log_info "  Grafana URL: http://localhost:$GRAFANA_API_PORT"
+        log_info "  Grafana URL: ${GRAFANA_SCHEME}://${GRAFANA_HOST}:$GRAFANA_API_PORT"
         log_info "  Dashboard UID: $DASHBOARD_UID"
         log_info ""
         return 0

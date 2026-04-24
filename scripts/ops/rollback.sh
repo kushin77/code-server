@@ -16,8 +16,17 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+REPLICAS="${REPLICAS:-${REPLICA_1_IP:-},${REPLICA_2_IP:-}}"
+DEPLOY_USER="${DEPLOY_USER:-${SSH_USER:-}}"
 ROLLBACK_COMMIT="${1:-HEAD^}"
+
+if [[ -z "$REPLICAS" || "$REPLICAS" == "," ]]; then
+    log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP"
+fi
+
+if [[ -z "$DEPLOY_USER" ]]; then
+    log_fatal "Set DEPLOY_USER or SSH_USER"
+fi
 
 ################################################################################
 # ROLLBACK LOGIC

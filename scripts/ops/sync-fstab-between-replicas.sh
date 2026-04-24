@@ -10,9 +10,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${SCRIPT_DIR}/scripts/_common/init.sh"
 init_repo
 
-REPLICA_1="${REPLICA_HOST_1:-192.168.168.31}"
-REPLICA_2="${REPLICA_HOST_2:-192.168.168.42}"
-SSH_USER="${DEPLOY_USER:-akushnir}"
+REPLICA_1="${REPLICA_1:-${REPLICA_1_IP:-${REPLICA_HOST_1:-}}}"
+REPLICA_2="${REPLICA_2:-${REPLICA_2_IP:-${REPLICA_HOST_2:-}}}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+
+if [[ -z "$REPLICA_1" || -z "$REPLICA_2" ]]; then
+    log_fatal "Set REPLICA_1/REPLICA_2 or REPLICA_1_IP/REPLICA_2_IP before syncing fstab"
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before syncing fstab"
+fi
 
 # Backup timestamp
 BACKUP_TS="$(date +%Y%m%d-%H%M%S)"

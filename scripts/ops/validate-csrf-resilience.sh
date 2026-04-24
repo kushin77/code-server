@@ -19,18 +19,16 @@ set -euo pipefail
 # ────────────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/_common/init.sh"
+init_repo
 
 # ────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ────────────────────────────────────────────────────────────────────────────
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
-SSH_USER="${DEPLOY_USER:-akushnir}"
-
-OAUTH2_PORTAL_PORT="4181"
-OAUTH2_IDE_PORT="4180"
-
+PRIMARY_HOST="${PRIMARY_HOST:-${REPLICA_1_IP:-}}"
+REPLICA_HOST="${REPLICA_HOST:-${REPLICA_2_IP:-}}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+CSRF_SCHEME="${CSRF_SCHEME:-http}"
 # Domains
 PORTAL_DOMAIN="${DOMAIN:-kushnir.cloud}"
 IDE_DOMAIN="${IDE_DOMAIN:-ide.kushnir.cloud}"
@@ -42,6 +40,18 @@ CSRF_COOKIE_IDE="_oauth2_proxy_ide_csrf"
 # Timeouts
 CURL_TIMEOUT="${CURL_TIMEOUT:-10}"
 CSRF_HEALTH_TIMEOUT="${CSRF_HEALTH_TIMEOUT:-30}"
+CSRF_SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout="${CSRF_HEALTH_TIMEOUT}" -o StrictHostKeyChecking=no)
+
+OAUTH2_PORTAL_PORT="4181"
+OAUTH2_IDE_PORT="4180"
+
+if [[ -z "$PRIMARY_HOST" || -z "$REPLICA_HOST" ]]; then
+  log_fatal "Set PRIMARY_HOST/REPLICA_HOST or REPLICA_1_IP/REPLICA_2_IP before running CSRF validation"
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+  log_fatal "Set SSH_USER or DEPLOY_USER before running CSRF validation"
+fi
 
 # ────────────────────────────────────────────────────────────────────────────
 # Helper: Extract CSRF cookie from response
@@ -64,8 +74,8 @@ verify_oauth2_health() {
   
   log_info "Checking oauth2-proxy health on ${host}:${port} (${proxy_type})..."
   
-  if ! timeout "${CSRF_HEALTH_TIMEOUT}" ssh "${SSH_USER}@${host}" \
-    "docker exec oauth2-proxy${proxy_type:+-portal} curl -fsS http://localhost:${port}/ping > /dev/null 2>&1" 2>/dev/null; then
+  if ! timeout "${CSRF_HEALTH_TIMEOUT}" ssh "${CSRF_SSH_OPTS[@]}" "${SSH_USER}@${host}" \
+    "docker exec oauth2-proxy${proxy_type:+-portal} curl -fsS ${CSRF_SCHEME}://127.0.0.1:${port}/ping > /dev/null 2>&1" 2>/dev/null; then
     log_error "oauth2-proxy (${proxy_type}) on ${host}:${port} is not healthy"
     return 1
   fi
@@ -85,8 +95,8 @@ verify_shared_cookie_secret() {
   local secret_42=""
   
   if [[ ! $DRY_RUN ]]; then
-    secret_31=$(ssh "${SSH_USER}@${PRIMARY_HOST}" "grep OAUTH2_PROXY_COOKIE_SECRET= ~/code-server-enterprise/.env | cut -d= -f2" 2>/dev/null || echo "")
-    secret_42=$(ssh "${SSH_USER}@${REPLICA_HOST}" "grep OAUTH2_PROXY_COOKIE_SECRET= ~/code-server-enterprise/.env | cut -d= -f2" 2>/dev/null || echo "")
+    secret_31=$(ssh "${CSRF_SSH_OPTS[@]}" "${SSH_USER}@${PRIMARY_HOST}" "grep OAUTH2_PROXY_COOKIE_SECRET= ~/code-server-enterprise/.env | cut -d= -f2" 2>/dev/null || echo "")
+    secret_42=$(ssh "${CSRF_SSH_OPTS[@]}" "${SSH_USER}@${REPLICA_HOST}" "grep OAUTH2_PROXY_COOKIE_SECRET= ~/code-server-enterprise/.env | cut -d= -f2" 2>/dev/null || echo "")
     
     if [[ -z "$secret_31" ]] || [[ -z "$secret_42" ]]; then
       log_warn "Could not verify cookie secrets (may be loaded from GSM at runtime)"
@@ -125,7 +135,7 @@ test_primary_csrf_cookies() {
   portal_response=$(
     timeout "${CURL_TIMEOUT}" curl -sv -L \
       --connect-timeout 5 \
-      "http://${PRIMARY_HOST}:${OAUTH2_PORTAL_PORT}/oauth2/start" 2>&1 || true
+      "${CSRF_SCHEME}://${PRIMARY_HOST}:${OAUTH2_PORTAL_PORT}/oauth2/start" 2>&1 || true
   )
   
   if echo "$portal_response" | grep -q "Set-Cookie.*${CSRF_COOKIE_PORTAL}"; then
@@ -140,7 +150,7 @@ test_primary_csrf_cookies() {
   ide_response=$(
     timeout "${CURL_TIMEOUT}" curl -sv -L \
       --connect-timeout 5 \
-      "http://${PRIMARY_HOST}:${OAUTH2_IDE_PORT}/oauth2/start" 2>&1 || true
+      "${CSRF_SCHEME}://${PRIMARY_HOST}:${OAUTH2_IDE_PORT}/oauth2/start" 2>&1 || true
   )
   
   if echo "$ide_response" | grep -q "Set-Cookie.*${CSRF_COOKIE_IDE}"; then
@@ -198,7 +208,7 @@ test_auth_endpoint_csrf_validation() {
   response=$(
     timeout "${CURL_TIMEOUT}" curl -sI -w "\n%{http_code}" \
       -H "Cookie: _oauth2_proxy_portal=" \
-      "http://${PRIMARY_HOST}:${OAUTH2_PORTAL_PORT}/oauth2/auth" 2>/dev/null || echo "000"
+      "${CSRF_SCHEME}://${PRIMARY_HOST}:${OAUTH2_PORTAL_PORT}/oauth2/auth" 2>/dev/null || echo "000"
   )
   
   if echo "$response" | grep -q "403\|401\|302"; then
@@ -224,7 +234,7 @@ test_oauth2_startup_config() {
   # Check logs for CSRF trusted hosts configuration
   local portal_logs
   portal_logs=$(
-    timeout 10 ssh "${SSH_USER}@${PRIMARY_HOST}" \
+    timeout 10 ssh "${CSRF_SSH_OPTS[@]}" "${SSH_USER}@${PRIMARY_HOST}" \
       "docker logs oauth2-proxy-portal 2>&1 | head -50" 2>/dev/null || echo ""
   )
   

@@ -16,10 +16,26 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
-DEPLOY_USER="${DEPLOY_USER:-akushnir}"
-GATEWAY_IP="192.168.168.1"
+REPLICAS="${REPLICAS:-}"
+DEPLOY_USER="${DEPLOY_USER:-${SSH_USER:-}}"
+GATEWAY_IP="${GATEWAY_IP:-}"
 QUORUM_TIMEOUT=60 # seconds
+
+if [[ -z "$REPLICAS" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running network partition recovery setup"
+    fi
+fi
+
+if [[ -z "$DEPLOY_USER" ]]; then
+    log_fatal "Set DEPLOY_USER or SSH_USER before running network partition recovery setup"
+fi
+
+if [[ -z "$GATEWAY_IP" ]]; then
+    log_fatal "Set GATEWAY_IP before running network partition recovery setup"
+fi
 
 ################################################################################
 # RECOVERY IMPLEMENTATION

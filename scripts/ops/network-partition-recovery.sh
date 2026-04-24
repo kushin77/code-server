@@ -8,9 +8,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "${SCRIPT_DIR}/scripts/_common/init.sh"
 
-PRIMARY_HOST="${PRIMARY_HOST:-192.168.168.31}"
-REPLICA_HOST="${REPLICA_HOST:-192.168.168.42}"
+PRIMARY_HOST="${PRIMARY_HOST:-}"
+REPLICA_HOST="${REPLICA_HOST:-}"
 TARGET_USER="${TARGET_USER:-akushnir}"
+LOCAL_UPSTREAM_SCHEME="${LOCAL_UPSTREAM_SCHEME:-http}"
+LOCAL_UPSTREAM_HOST="${LOCAL_UPSTREAM_HOST:-code-server:8080}"
+PRIMARY_UPSTREAM_URL="${PRIMARY_UPSTREAM_URL:-${LOCAL_UPSTREAM_SCHEME}://${LOCAL_UPSTREAM_HOST}/}"
 
 # Colors
 RED='\033[0;31m'
@@ -105,7 +108,7 @@ graceful_degradation() {
     ssh "${TARGET_USER}@${PRIMARY_HOST}" "
         cd code-server-enterprise
         # Update docker-compose to remove remote upstream
-        sed -i 's|OAUTH2_PROXY_UPSTREAMS.*|OAUTH2_PROXY_UPSTREAMS=\"http://code-server:8080/\"|' docker-compose.yml
+        sed -i 's|OAUTH2_PROXY_UPSTREAMS.*|OAUTH2_PROXY_UPSTREAMS=\"${PRIMARY_UPSTREAM_URL}\"|' docker-compose.yml
         # Restart oauth2-proxy
         docker-compose restart oauth2-proxy 2>/dev/null || true
     " 2>/dev/null || log_error "Could not update config"
@@ -135,7 +138,7 @@ recovery_when_healed() {
             ssh "${TARGET_USER}@${PRIMARY_HOST}" "
                 cd code-server-enterprise
                 # Restore remote upstream
-                sed -i 's|OAUTH2_PROXY_UPSTREAMS.*|OAUTH2_PROXY_UPSTREAMS=\"http://code-server:8080/ http://${REPLICA_HOST}:8080/\"|' docker-compose.yml
+                sed -i 's|OAUTH2_PROXY_UPSTREAMS.*|OAUTH2_PROXY_UPSTREAMS=\"${PRIMARY_UPSTREAM_URL} ${REPLICA_UPSTREAM_URL}\"|' docker-compose.yml
                 # Restart services
                 docker-compose restart oauth2-proxy code-server 2>/dev/null || true
             " 2>/dev/null
@@ -207,8 +210,8 @@ After=network.target docker.service
 
 [Service]
 Type=simple
-User=akushnir
-WorkingDirectory=/home/akushnir/code-server-enterprise
+User=${TARGET_USER}
+WorkingDirectory=/home/${TARGET_USER}/code-server-enterprise
 ExecStart=/bin/bash scripts/ops/network-partition-recovery.sh --daemon
 Restart=on-failure
 RestartSec=10

@@ -16,7 +16,20 @@ init_repo
 # CONFIGURATION
 ################################################################################
 
-REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
+REPLICAS="${REPLICAS:-}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER:-}}"
+
+if [[ -z "$REPLICAS" ]]; then
+    if [[ -n "${REPLICA_1_IP:-}" && -n "${REPLICA_2_IP:-}" ]]; then
+        REPLICAS="${REPLICA_1_IP},${REPLICA_2_IP}"
+    else
+        log_fatal "Set REPLICAS or REPLICA_1_IP/REPLICA_2_IP before running the failover test"
+    fi
+fi
+
+if [[ -z "$SSH_USER" ]]; then
+    log_fatal "Set SSH_USER or DEPLOY_USER before running the failover test"
+fi
 
 ################################################################################
 # TEST LOGIC
@@ -28,7 +41,7 @@ execute_failover_test() {
     log_warn "🔥 DANGER: Simulating HARD FAILURE on $node_to_kill..."
     
     # 1. Isolate the node via iptables (reversible)
-    ssh "$DEPLOY_USER@$node_to_kill" "sudo iptables -I INPUT 1 -j DROP"
+    ssh "$SSH_USER@$node_to_kill" "sudo iptables -I INPUT 1 -j DROP"
     
     log_info "Waiting 15s for loadbalancer to detect failure..."
     sleep 15
@@ -39,7 +52,7 @@ execute_failover_test() {
     
     # 3. Recovery
     log_info "Restoring connectivity on $node_to_kill..."
-    ssh "$DEPLOY_USER@$node_to_kill" "sudo iptables -D INPUT 1"
+    ssh "$SSH_USER@$node_to_kill" "sudo iptables -D INPUT 1"
     
     log_info "✅ Node recovery confirmed"
 }

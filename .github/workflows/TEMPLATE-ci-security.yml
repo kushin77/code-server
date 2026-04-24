@@ -204,11 +204,10 @@ jobs:
 
       - name: Run DAST scan
         env:
-          # DAST_TARGET_URL takes precedence; falls back to PORTAL_BASE_URL → IDE_BASE_URL.
-          # Default to the stable health endpoint to avoid flaky root-path edge checks.
-          # Health endpoint supports HTTP (port 80) to bypass TLS issues during Let's Encrypt rate-limit periods.
+          # DAST_TARGET_URL takes precedence; the default probe is the public HTTP health endpoint.
+          # Keep this independent from IDE_BASE_URL so TLS recovery windows do not reintroduce HTTPS timeouts.
           # Must be a publicly reachable URL — loopback/private addresses are skipped automatically.
-          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL || format('{0}/health', vars.IDE_BASE_URL || 'http://ide.kushnir.cloud') }}
+          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL || 'http://ide.kushnir.cloud/healthz' }}
           PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
           IDE_BASE_URL: ${{ vars.IDE_BASE_URL }}
           GH_TOKEN: ${{ github.token }}

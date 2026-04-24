@@ -42,7 +42,7 @@ audit_gh_calls() {
     local gh_calls=$(grep -r "^[[:space:]]*gh " \
         --include="*.sh" \
         "${PROJECT_ROOT}/scripts" \
-        "${PROJECT_ROOT}/.github/workflows" 2>/dev/null | wc -l)
+        "${PROJECT_ROOT}/.github/workflows" 2>/dev/null | wc -l | tr -d '[:space:]')
     
     log_audit "Found $gh_calls direct gh CLI calls"
     
@@ -52,7 +52,7 @@ audit_gh_calls() {
         --include="*.sh" \
         "${PROJECT_ROOT}/scripts" \
         "${PROJECT_ROOT}/.github/workflows" 2>/dev/null | \
-        grep -v "\--repo" | wc -l || echo 0)
+        grep -v "\--repo" | wc -l | tr -d '[:space:]')
     
     if [ "$missing_repo" -gt 0 ]; then
         findings+=("❌ $missing_repo gh issue/pr calls missing --repo flag (may cause ambiguity)")
@@ -64,7 +64,7 @@ audit_gh_calls() {
     local no_retry=$(grep -r "^[[:space:]]*gh " \
         --include="*.sh" \
         "${PROJECT_ROOT}/scripts" 2>/dev/null | \
-        grep -v "retry\|backoff\|429\|403" | wc -l || echo 0)
+        grep -v "retry\|backoff\|429\|403" | wc -l | tr -d '[:space:]')
     
     if [ "$no_retry" -gt 0 ]; then
         findings+=("⚠️ $no_retry gh calls may lack retry logic for 429/403 errors")
@@ -76,7 +76,7 @@ audit_gh_calls() {
         --include="*.yml" \
         --include="*.yaml" \
         "${PROJECT_ROOT}/.github" 2>/dev/null | \
-        grep -c "secrets.GITHUB_TOKEN" || echo 0)
+        grep -c "secrets.GITHUB_TOKEN" || true)
     
     if [ "$uses_classic_pat" -gt 0 ]; then
         findings+=("ℹ️ Using GITHUB_TOKEN (fine-grained tokens recommended for reduced scope)")
@@ -86,7 +86,7 @@ audit_gh_calls() {
     log_audit "Checking for rate limit guards..."
     local rate_limit_guards=$(grep -r "rate.limit\|rate_limit\|429\|403" \
         --include="*.sh" \
-        "${PROJECT_ROOT}/scripts" 2>/dev/null | wc -l || echo 0)
+        "${PROJECT_ROOT}/scripts" 2>/dev/null | wc -l | tr -d '[:space:]')
     
     if [ "$rate_limit_guards" -lt 3 ]; then
         findings+=("⚠️ Few rate limit guards detected — consider adding rate limit monitoring")
@@ -123,7 +123,7 @@ audit_gh_calls() {
         --include="*.yml" \
         --include="*.yaml" \
         "${PROJECT_ROOT}/.github/workflows" 2>/dev/null | \
-        grep -v "issue-create-unified" | wc -l || echo 0)
+        grep -v "issue-create-unified" | wc -l | tr -d '[:space:]')
     
     if [ "$direct_creates" -gt 0 ]; then
         findings+=("⚠️ $direct_creates direct 'gh issue create' calls found in workflows (consolidate to unified script)")
@@ -183,7 +183,7 @@ EOF
     # Generate markdown findings
     local md_findings="# GitHub API Stability Audit Report
 
-**Generated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')  
+**Generated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
 **Total gh CLI Calls**: $gh_calls  
 **Status**: $([ "${#issues_found[@]}" -eq 0 ] && echo "✅ PASS" || echo "⚠️ NEEDS_REMEDIATION")
 

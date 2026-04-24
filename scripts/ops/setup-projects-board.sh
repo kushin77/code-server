@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+# Ensure shared initialization and GitHub API client are loaded
+readonly REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -55,7 +59,7 @@ create_project_board() {
     
     # Query to get repository node ID
     local repo_id
-    repo_id=$(gh api graphql -f query='
+    repo_id=$(github_gh api graphql -f query='
       query($owner:String!,$repo:String!) {
         repository(owner:$owner,name:$repo) {
           id
@@ -72,7 +76,7 @@ create_project_board() {
     
     # Create project
     local project_id
-    project_id=$(gh api graphql -f query='
+    project_id=$(github_gh api graphql -f query='
       mutation($input:CreateProjectInput!) {
         createProject(input:$input) {
           project {

@@ -1,17 +1,15 @@
 {
-  "timestamp": "2026-04-24T21:07:58Z",
+  "timestamp": "2026-04-24T21:10:57Z",
   "total_gh_calls": 8,
   "audit_findings": [
     "❌ 4 gh issue/pr calls missing --repo flag (may cause ambiguity)",
     "⚠️ 8 gh calls may lack retry logic for 429/403 errors",
     "ℹ️ Using GITHUB_TOKEN (fine-grained tokens recommended for reduced scope)",
     "⚠️ No GitHub token found (GH_TOKEN or GITHUB_TOKEN env var)",
-    "✅ Unified issue creation script found",
-    "⚠️ 1 direct 'gh issue create' calls found in workflows (consolidate to unified script)"
+    "✅ Unified issue creation script found"
   ],
   "issues_requiring_action": [
-    {"key": "github-api-missing-repo-flag", "description": "4 gh calls missing --repo flag"},
-    {"key": "github-api-consolidate-issue-creation", "description": "Consolidate direct gh issue create calls to unified script"}
+    {"key": "github-api-missing-repo-flag", "description": "4 gh calls missing --repo flag"}
   ],
   "status": "NEEDS_REMEDIATION"
 }

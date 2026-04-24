@@ -1,0 +1,14 @@
+[2026-04-24T21:09:06Z] [INFO] ==========================================
+[2026-04-24T21:09:06Z] [INFO] GitLab Mirror Sync Initiated
+[2026-04-24T21:09:06Z] [INFO] ==========================================
+[2026-04-24T21:09:06Z] [INFO] Validating prerequisites...
+[2026-04-24T21:09:06Z] [ERROR] GITHUB_TOKEN not set
+[2026-04-24T21:09:06Z] [ERROR] Validation failed - aborting sync
+[2026-04-24T21:09:06Z] [INFO] Cleaning up temporary directory: /tmp/code-server-mirror-sync-1544863
+[2026-04-24T21:09:09Z] [INFO] ==========================================
+[2026-04-24T21:09:09Z] [INFO] GitLab Mirror Sync Initiated
+[2026-04-24T21:09:09Z] [INFO] ==========================================
+[2026-04-24T21:09:09Z] [INFO] Validating prerequisites...
+[2026-04-24T21:09:09Z] [ERROR] GITHUB_TOKEN not set
+[2026-04-24T21:09:09Z] [ERROR] Validation failed - aborting sync
+[2026-04-24T21:09:09Z] [INFO] Cleaning up temporary directory: /tmp/code-server-mirror-sync-1544977

@@ -19,6 +19,8 @@ on:
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GH_REPO: ${{ github.repository }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_REPO: ${{ github.repository }}
 
 jobs:
   documentation-gaps:
@@ -156,12 +158,10 @@ Please address documentation gaps before merge."
               if [ -z "$EXISTING" ]; then
                 echo "Creating issue: $TITLE"
                 echo "File: $FILE"
-                github_gh issue create \
+                ./scripts/_common/issue-create-unified.sh \
                   --title "$TITLE" \
                   --body "**Source**: $FILE\n\n$TEXT\n\nAuto-created from code scan." \
-                  --label "agent-ready" \
-                  --label "tech-debt" \
-                  --repo "${GH_REPO}" || true
+                  --labels "P2,agent-ready,tech-debt" || true
               fi
             done
           fi
@@ -181,8 +181,7 @@ Please address documentation gaps before merge."
           # Find issues updated more than 30 days ago
           SINCE=$(date -u -d "30 days ago" +'%Y-%m-%dT%H:%M:%SZ')
 
-          github_gh issue list \
-            --repo "${GH_REPO}" \
+          github_gh issue list --repo "${GH_REPO}" \
             --state open \
             --updated "<${SINCE}" \
             --json number,title,updatedAt \
@@ -194,9 +193,8 @@ Please address documentation gaps before merge."
 
             if [ "$HAS_STALE" -eq 0 ]; then
               echo "Marking issue #$NUM as stale"
-              github_gh issue comment "$NUM" \
-                -b "⚠️ This issue has been inactive for 30+ days. Adding 'stale' label. Will auto-close in 14 days if no activity." \
-                --repo "${GH_REPO}" || true
+              github_gh issue comment "$NUM" --repo "${GH_REPO}" \
+                -b "⚠️ This issue has been inactive for 30+ days. Adding 'stale' label. Will auto-close in 14 days if no activity." || true
 
               github_gh issue edit "$NUM" --add-label "stale" --repo "${GH_REPO}" || true
             fi
@@ -217,8 +215,7 @@ Please address documentation gaps before merge."
           # Find stale issues marked 14+ days ago
           SINCE=$(date -u -d "44 days ago" +'%Y-%m-%dT%H:%M:%SZ')
 
-          github_gh issue list \
-            --repo "${GH_REPO}" \
+          github_gh issue list --repo "${GH_REPO}" \
             --state open \
             --label "stale" \
             --updated "<${SINCE}" \
@@ -227,10 +224,9 @@ Please address documentation gaps before merge."
             | jq -r '.[] | .number' | while read -r NUM; do
 
             echo "Auto-closing stale issue #$NUM"
-            github_gh issue close "$NUM" \
+            github_gh issue close "$NUM" --repo "${GH_REPO}" \
               --reason "not_planned" \
-              -c "Auto-closed due to inactivity (stale for 44+ days). Please reopen if this is still needed." \
-              --repo "${GH_REPO}" || true
+              -c "Auto-closed due to inactivity (stale for 44+ days). Please reopen if this is still needed." || true
           done
 
   broken-link-check:
@@ -267,9 +263,8 @@ Please address documentation gaps before merge."
           done | grep -c "ERROR" || echo 0)
 
           if [ "$BROKEN" -gt 0 ]; then
-            github_gh pr comment "${{ github.event.pull_request.number }}" \
-              -b "⚠️ Documentation contains $BROKEN broken links. Please fix before merge." \
-              --repo "${GH_REPO}" || true
+            github_gh pr comment "${{ github.event.pull_request.number }}" --repo "${GH_REPO}" \
+              -b "⚠️ Documentation contains $BROKEN broken links. Please fix before merge." || true
           fi
 
   weekly-status-report:

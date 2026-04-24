@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+# Ensure shared initialization and GitHub API client are loaded
+readonly REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -40,10 +44,10 @@ find_linked_issues() {
     
     # Get PR details including body
     local pr_body
-    pr_body=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json body -q '.body' 2>/dev/null || echo "")
+    pr_body=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json body -q '.body' 2>/dev/null || echo "")
     
     local pr_title
-    pr_title=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json title -q '.title' 2>/dev/null || echo "")
+    pr_title=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json title -q '.title' 2>/dev/null || echo "")
     
     local -a issues=()
     
@@ -70,14 +74,14 @@ close_linked_issue() {
     log_info "Closing issue #$issue_number (linked from merged PR #$pr_number)..."
     
     # Verify issue exists
-    if ! gh issue view "$issue_number" --repo "$GITHUB_REPO" &>/dev/null; then
+    if ! github_gh issue view "$issue_number" --repo "$GITHUB_REPO" &>/dev/null; then
         log_error "Issue #$issue_number does not exist"
         return 1
     fi
     
     # Check if already closed
     local state
-    state=$(gh issue view "$issue_number" --repo "$GITHUB_REPO" --json state -q '.state')
+    state=$(github_gh issue view "$issue_number" --repo "$GITHUB_REPO" --json state -q '.state')
     
     if [[ "$state" == "CLOSED" ]]; then
         log_info "Issue #$issue_number is already closed"
@@ -87,7 +91,7 @@ close_linked_issue() {
     # Add closing comment with PR reference
     local close_comment="Auto-closed via merged PR #$pr_number (commit: ${merge_commit:0:7})"
     
-    if ! gh issue comment "$issue_number" \
+    if ! github_gh issue comment "$issue_number" \
         --body "$close_comment" \
         --repo "$GITHUB_REPO" &>>"$LOG_FILE"; then
         log_error "Failed to add closing comment to issue #$issue_number"
@@ -95,7 +99,7 @@ close_linked_issue() {
     fi
     
     # Close the issue
-    if ! gh issue close "$issue_number" --repo "$GITHUB_REPO" &>>"$LOG_FILE"; then
+    if ! github_gh issue close "$issue_number" --repo "$GITHUB_REPO" &>>"$LOG_FILE"; then
         log_error "Failed to close issue #$issue_number"
         return 1
     fi
@@ -116,7 +120,7 @@ check_other_open_prs() {
     
     # Search for other PRs mentioning this issue
     local open_prs
-    open_prs=$(gh search prs \
+    open_prs=$(github_gh search prs \
         --repo "$GITHUB_REPO" \
         --state open \
         --in title,body \
@@ -155,7 +159,7 @@ main() {
     
     # Get PR merge status
     local merged
-    merged=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json merged -q '.merged' 2>/dev/null)
+    merged=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json merged -q '.merged' 2>/dev/null)
     
     if [[ "$merged" != "true" ]]; then
         log_error "PR #$pr_number is not merged"
@@ -164,7 +168,7 @@ main() {
     
     # If no merge commit provided, get it
     if [[ -z "$merge_commit" ]]; then
-        merge_commit=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json mergeCommit -q '.mergeCommit.oid' 2>/dev/null || echo "")
+        merge_commit=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json mergeCommit -q '.mergeCommit.oid' 2>/dev/null || echo "")
     fi
     
     log_info "PR #$pr_number is merged (commit: ${merge_commit:0:7})"

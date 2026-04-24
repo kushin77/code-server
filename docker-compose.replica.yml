@@ -13,6 +13,12 @@
 version: '3.8'
 
 services:
+  # Appsmith on replica 2 should use the shared edge proxy for TLS instead of
+  # trying to provision its own certificate via the custom-domain flow.
+  appsmith:
+    environment:
+      APPSMITH_CUSTOM_DOMAIN: ""
+
   # ────────────────────────────────────────────────────────────────────────────
   # session-broker — Replica instance for active/active horizontal scaling
   # Configured with Redis-backed session state (shared with primary)

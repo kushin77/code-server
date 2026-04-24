@@ -127,6 +127,13 @@ trap cleanup EXIT
 # HELPER FUNCTIONS
 ################################################################################
 
+# Parse replica identifier (format: user@host) and return just the host
+parse_replica() {
+  local replica="$1"
+  # If it contains @, extract the host part; otherwise return as-is
+  echo "${replica##*@}"
+}
+
 # Query a replica via SSH
 query_replica() {
   local host=$1
@@ -250,7 +257,7 @@ log_info ""
 # Step 1: Connectivity check
 log_info "Step 1: Verifying replica connectivity..."
 for replica in "${REPLICAS[@]}"; do
-  if ssh $DEPLOY_SSH_OPTS "$replica" "true" 2>/dev/null; then
+  if ssh "${DEPLOY_SSH_OPTS_ARRAY[@]}" "$replica" "true" 2>/dev/null; then
     log_info "  ✓ $replica reachable"
   else
     log_error "  ✗ $replica unreachable"
@@ -356,12 +363,12 @@ else
 fi
   
   if [[ "$DRY_RUN" == true ]]; then
-    log_info "[DRY-RUN] ssh $DEPLOY_SSH_OPTS $host '$cmd'"
+    log_info "[DRY-RUN] ssh \"\${DEPLOY_SSH_OPTS_ARRAY[@]}\" \"$host\" '$cmd'"
     return 0
   fi
   
   # Run command and redirect output to replica-specific log
-  ssh $DEPLOY_SSH_OPTS "$host" "$cmd" > "/tmp/deploy-${host//[@\/]/-}.log" 2>&1
+  ssh "${DEPLOY_SSH_OPTS_ARRAY[@]}" "$host" "$cmd" > "/tmp/deploy-${host//[@\/]/-}.log" 2>&1
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -381,7 +388,7 @@ log_info "✅ SSH key found: $SSH_KEY"
 log_info "Testing SSH connectivity to all replicas..."
 for replica in "${REPLICAS[@]}"; do
   host=$(parse_replica "$replica")
-  if ssh $DEPLOY_SSH_OPTS "$host" "echo 'SSH OK'" > /dev/null 2>&1; then
+  if ssh "${DEPLOY_SSH_OPTS_ARRAY[@]}" "$host" "echo 'SSH OK'" > /dev/null 2>&1; then
     log_info "✅ $host reachable"
   else
     log_fatal "$host not reachable. Check network and SSH key."
@@ -497,7 +504,7 @@ for replica in "${REPLICAS[@]}"; do
   host=$(parse_replica "$replica")
   log_info "Checking health on $host..."
   
-  if ssh $DEPLOY_SSH_OPTS "$host" "cd code-server-enterprise && docker-compose ps | grep -q 'Up'" 2>/dev/null; then
+  if ssh "${DEPLOY_SSH_OPTS_ARRAY[@]}" "$host" "cd code-server-enterprise && docker-compose ps | grep -q 'Up'" 2>/dev/null; then
     log_info "✅ $host services healthy"
   else
     log_error "❌ $host services not healthy"

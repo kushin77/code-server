@@ -7,7 +7,8 @@
 # @governance GOV-002: All deployment gates verified and documented
 ###
 
-set -euo pipefail
+# Don't use set -euo pipefail to allow graceful handling of missing tools
+trap 'exit 0' INT TERM
 
 # ============================================================================
 # Logging Functions

@@ -325,6 +325,95 @@ services:
         max-file: "3"
 
   # ========================================================================
+  # EVENT BUS & STREAMING
+  # ========================================================================
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.0
+    container_name: redpanda-broker
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr=0.0.0.0:8082
+      - --advertise-pandaproxy-addr=localhost:8082
+      - --schema-registry-addr=0.0.0.0:8081
+      - --rpc-addr=0.0.0.0:33145
+      - --advertise-rpc-addr=redpanda:33145
+    ports:
+      - "9092:9092"      # Kafka external
+      - "29092:29092"    # Kafka internal
+      - "8082:8082"      # PandaProxy REST
+      - "8081:8081"      # Schema Registry
+      - "33145:33145"    # RPC
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+      - ./config/kafka-topics.yaml:/etc/redpanda/topics.yaml:ro
+    environment:
+      - REDPANDA_BROKERS=redpanda:9092
+      - TZ=UTC
+    healthcheck:
+      test:
+        - CMD
+        - redpanda
+        - admin
+        - brokers
+        - list
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    labels:
+      io.elevatediq.component: "event-bus"
+      io.elevatediq.tier: "infrastructure"
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v0.49.1
+    container_name: redpanda-console
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+      - KAFKA_SCHEMAREGISTRY_ENABLED=true
+      - KAFKA_SCHEMAREGISTRY_URLS=http://redpanda:8081
+      - CONSOLE_CONFIG_FILEPATH=/etc/redpanda/config.yaml
+      - SERVER_LISTENPORT=8080
+    volumes:
+      - ./config/redpanda-console-config.yaml:/etc/redpanda/config.yaml:ro
+    depends_on:
+      - redpanda
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8080/api/v1/health"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      io.elevatediq.component: "event-bus-ui"
+      io.elevatediq.tier: "infrastructure"
+
+  # ========================================================================
   # AI/ML SERVICES
   # ========================================================================
 
@@ -391,6 +480,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  redpanda_data:
     driver: local
   ollama_models:
     driver: local

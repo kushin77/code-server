@@ -1,0 +1,60 @@
+# @file config/redpanda-console-config.yaml
+# @module infrastructure/event-bus
+# @description Redpanda Console (admin UI) configuration
+# @governance GOV-003 - Event bus observability and management
+
+# Redpanda Console configuration
+console:
+  topicDocumentation:
+    enabled: true
+    source:
+      kind: "git"
+      url: "https://github.com/kushin77/code-server"
+      branch: "main"
+      paths: ["config/kafka-topics.yaml"]
+
+  # Topic filters for cleaner UI
+  topicFilters:
+    - regex: "^agent\\."
+      description: "Agent lifecycle and audit events"
+    - regex: "^reputation\\."
+      description: "Reputation engine events"
+    - regex: "^deploy\\."
+      description: "Deployment events"
+    - regex: "^code\\."
+      description: "Code review events"
+    - regex: "^incident\\."
+      description: "Incident management events"
+    - regex: "^ai\\."
+      description: "AI/model interaction events"
+    - regex: "^system\\."
+      description: "System health and alerts"
+    - regex: "^policy\\."
+      description: "Policy enforcement events"
+    - regex: "^audit\\."
+      description: "Audit logging"
+
+  # Message preview settings
+  messagePreview:
+    enabled: true
+    maxChars: 500
+    formatOptions:
+      prettifyJson: true
+
+  # Consumer group tracking
+  consumerGroups:
+    enabled: true
+
+  # Schema Registry integration
+  schemaRegistry:
+    enabled: true
+    brokerUrl: "http://redpanda:8081"
+
+# Authentication (if needed in future)
+#auth:
+#  enabled: false
+#  # OIDC configuration for kushnir.cloud SSO
+#  oidc:
+#    clientId: "${OIDC_CLIENT_ID}"
+#    clientSecret: "${OIDC_CLIENT_SECRET}"
+#    issuerUrl: "https://auth.kushnir.cloud"

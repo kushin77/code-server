@@ -76,6 +76,39 @@ query_opa() {
     echo "$response"
 }
 
+ensure_opa_service() {
+    if curl -sf "${OPA_URL}/health" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if ! command -v docker >/dev/null 2>&1; then
+        error "OPA not responding at ${OPA_URL} and Docker is unavailable"
+        return 1
+    fi
+
+    log "INFO" "OPA not responding at ${OPA_URL}; starting opa service with docker compose"
+
+    (
+        cd "${PROJECT_ROOT}"
+        docker compose up -d opa >/dev/null 2>&1 || true
+    )
+
+    local attempt=0
+    local max_attempts=30
+    while [[ ${attempt} -lt ${max_attempts} ]]; do
+        if curl -sf "${OPA_URL}/health" >/dev/null 2>&1; then
+            success "OPA service is healthy"
+            return 0
+        fi
+
+        attempt=$((attempt + 1))
+        sleep 2
+    done
+
+    error "OPA failed to become healthy at ${OPA_URL}"
+    return 1
+}
+
 # Check if deny rule fired
 assert_denied() {
     local response=$1
@@ -380,7 +413,7 @@ main() {
     log "INFO" "=========================================="
     
     # Pre-flight checks
-    if ! check_opa_health; then
+    if ! ensure_opa_service; then
         log "ERROR" "OPA health check failed. Aborting tests."
         exit 1
     fi

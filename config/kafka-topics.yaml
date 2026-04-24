@@ -1,0 +1,172 @@
+# @file config/kafka-topics.yaml
+# @module infrastructure/event-bus
+# @description Kafka topics configuration for Redpanda event bus
+# @governance GOV-003 - Event schema enforcement and retention policies
+
+# Core topics for ElevatedIQ DevOS event streaming
+topics:
+  # Agent lifecycle and audit topics
+  - name: agent.audit
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "7776000000"  # 90 days
+      compression.type: snappy
+      cleanup.policy: delete
+      segment.ms: "86400000"  # 1 day segments
+    description: Every agent action with full context (audit trail)
+
+  - name: agent.lifecycle
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "7776000000"  # 90 days
+      compression.type: snappy
+      cleanup.policy: delete
+    description: Agent spawn/complete/fail/timeout events
+
+  - name: agent.awaiting_approval
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "259200000"  # 3 days (until consumed)
+      compression.type: lz4
+      cleanup.policy: delete
+    description: Actions pending human review (approval queue)
+
+  - name: agent.killswitch
+    partitions: 1
+    replication_factor: 1
+    config:
+      retention.ms: "31536000000"  # 1 year
+      compression.type: snappy
+      cleanup.policy: delete
+    description: Emergency stop events (high priority, ordered)
+
+  # Reputation and scoring topics
+  - name: reputation.update
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "31536000000"  # 1 year
+      compression.type: snappy
+      cleanup.policy: delete
+      segment.ms: "604800000"  # 1 week segments
+    description: Score changes for engineers and agents
+
+  # Deployment and infrastructure topics
+  - name: deploy.events
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "31536000000"  # 1 year
+      compression.type: snappy
+      cleanup.policy: delete
+      segment.ms: "604800000"  # 1 week segments
+    description: Deployment starts/completions/failures
+
+  - name: infrastructure.drift
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "31536000000"  # 1 year
+      compression.type: snappy
+      cleanup.policy: delete
+    description: Infrastructure drift detection and reconciliation events
+
+  # Code review and PR topics
+  - name: code.review
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "31536000000"  # 1 year
+      compression.type: snappy
+      cleanup.policy: delete
+      segment.ms: "604800000"  # 1 week segments
+    description: PR opened/reviewed/merged/reverted events
+
+  # Incident topics
+  - name: incident.events
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "63072000000"  # 2 years
+      compression.type: snappy
+      cleanup.policy: delete
+      segment.ms: "1209600000"  # 2 week segments
+    description: Incidents created/resolved/escalated (long retention for compliance)
+
+  # AI and model interactions
+  - name: ai.interactions
+    partitions: 5
+    replication_factor: 1
+    config:
+      retention.ms: "7776000000"  # 90 days
+      compression.type: snappy
+      cleanup.policy: delete
+    description: Prompt/response metadata from Prompt Gateway
+
+  - name: ai.model_calls
+    partitions: 5
+    replication_factor: 1
+    config:
+      retention.ms: "7776000000"  # 90 days
+      compression.type: snappy
+      cleanup.policy: delete
+    description: Model invocations with latency and token usage
+
+  # System and monitoring topics
+  - name: system.alerts
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "2592000000"  # 30 days
+      compression.type: lz4
+      cleanup.policy: delete
+    description: Infrastructure alerts from Prometheus and monitoring
+
+  - name: system.health
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "1209600000"  # 14 days
+      compression.type: lz4
+      cleanup.policy: delete
+    description: Service health check events and status
+
+  # Activity feed (union of all events)
+  - name: engineering.activity
+    partitions: 5
+    replication_factor: 1
+    config:
+      retention.ms: "31536000000"  # 1 year
+      compression.type: snappy
+      cleanup.policy: delete
+      segment.ms: "604800000"  # 1 week segments
+    description: Unified activity stream for IDE and dashboards
+
+  # Policy and compliance topics
+  - name: policy.violations
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "31536000000"  # 1 year (compliance requirement)
+      compression.type: snappy
+      cleanup.policy: delete
+    description: OPA policy denials and enforcement events
+
+  - name: audit.log
+    partitions: 3
+    replication_factor: 1
+    config:
+      retention.ms: "63072000000"  # 2 years (audit compliance)
+      compression.type: snappy
+      cleanup.policy: delete
+      segment.ms: "1209600000"  # 2 week segments
+    description: Central audit log for all sensitive actions
+
+# Schema registry configuration (Redpanda built-in)
+schema_registry:
+  enabled: true
+  port: 8081
+  compatibility_level: "BACKWARD"  # Allow backward-compatible schema evolution

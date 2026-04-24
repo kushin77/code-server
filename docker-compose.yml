@@ -13,6 +13,7 @@ services:
   opa:
     image: openpolicyagent/opa:0.58.0@sha256:63186b7f0d95e51cf4c7ee38cae6fd2cf9168020abd09d48104bd87c99f863fe
     container_name: opa-service
+    user: "101:101"  # @security P0 #969 - Run as non-root openpolicyagent user
     command: run --server --log-level=info --set decision_logs.console.enabled=true
     ports:
       - "8181:8181"
@@ -40,6 +41,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
     labels:
       io.elevatediq.component: "policy-engine"
       io.elevatediq.tier: "infrastructure"
@@ -51,6 +60,7 @@ services:
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.5.1@sha256:e797b3934eb8d7cb2756b67e59be2ef29c18c2b45da763f540ece66d843cec85
     container_name: oauth2-proxy
+    user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
     command:
       - --config=/etc/oauth2-proxy/oauth2-proxy.cfg
     ports:
@@ -60,7 +70,7 @@ services:
     environment:
       - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_CLIENT_ID:-}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET:-}
-      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_COOKIE_SECRET:-}
+      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_COOKIE_SECRET}
     healthcheck:
       test:
         - CMD
@@ -81,6 +91,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+        reservations:
+          cpus: "0.25"
+          memory: 128m
 
   # ========================================================================
   # REVERSE PROXY & GATEWAY
@@ -89,6 +107,7 @@ services:
   caddy:
     image: caddy:2.7.4@sha256:505de4e957da923672a8c79f16581e9b717a2479a8d5ddb909ab2d1b351f2ba4
     container_name: caddy-gateway
+    user: "101:101"  # @security P0 #969 - Run as non-root www-data user
     ports:
       - "80:80"
       - "443:443"
@@ -119,6 +138,14 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+        reservations:
+          cpus: "0.5"
+          memory: 256m
     labels:
       io.elevatediq.component: "gateway"
       io.elevatediq.tier: "infrastructure"
@@ -130,6 +157,7 @@ services:
   prometheus:
     image: prom/prometheus:v2.48.0@sha256:b440bc0e8aa5bab44a782952c09516b6a50f9d7b2325c1ffafac7bc833298e2e
     container_name: prometheus
+    user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -161,15 +189,24 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
 
   grafana:
     image: grafana/grafana:10.2.0@sha256:1ee0c54286b8ca09a3dd1419ff8653e7780a148a006ac088544203bb0affe550
     container_name: grafana-dashboards
+    user: "472:472"  # @security P0 #969 - Run as non-root grafana user
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
@@ -196,10 +233,19 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+        reservations:
+          cpus: "0.5"
+          memory: 256m
 
   loki:
     image: grafana/loki:2.9.4@sha256:f379a20ce9dd815884ed6446aad8819b81a8ba4d36b548ca14be8cecbc6cbca0
     container_name: loki-logs
+    user: "10001:10001"  # @security P0 #969 - Run as non-root loki user
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
@@ -228,6 +274,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+        reservations:
+          cpus: "0.5"
+          memory: 256m
 
   # ========================================================================
   # VECTOR DATABASE & SEARCH
@@ -236,6 +290,7 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.7.0@sha256:ff1639878418c0572f50a7e1314874e399537eb97e6d2f42d6b987a07a2c4c4f
     container_name: qdrant-vectors
+    user: "101:101"  # @security P0 #969 - Run as non-root qdrant user
     ports:
       - "6333:6333"
       - "6334:6334"
@@ -243,7 +298,7 @@ services:
       - ./config/qdrant-config.yaml:/qdrant/config/local_config.yaml:ro
       - qdrant_data:/qdrant/storage
     environment:
-      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
     healthcheck:
       test:
         - CMD
@@ -262,6 +317,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2g
+        reservations:
+          cpus: "1.0"
+          memory: 1g
 
   # ========================================================================
   # DATA STORES
@@ -270,12 +333,13 @@ services:
   postgres:
     image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
     container_name: postgres-db
+    user: "999:999"  # @security P0 #969 - Run as non-root postgres user
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=${DB_NAME:-appdb}
-      - POSTGRES_USER=${DB_USER:-appuser}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_INITDB_ARGS=--encoding=UTF8
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -295,13 +359,22 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4g
+        reservations:
+          cpus: "1.0"
+          memory: 2g
 
   redis:
     image: redis:7-alpine@sha256:7aec734b2bb298a1d769fd8729f13b8514a41bf90fcdd1f38ec52267fbaa8ee6
     container_name: redis-cache
+    user: "999:999"  # @security P0 #969 - Run as non-root redis user
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
@@ -323,6 +396,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
 
   # ========================================================================
   # EVENT BUS & STREAMING
@@ -331,6 +412,7 @@ services:
   redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:v26.1.6@sha256:e5b6aaecf38861d199b0d26d635b83da26dd6e6acf0684cd8b92f16b4f4b8733
     container_name: redpanda-broker
+    user: "101:101"  # @security P0 #969 - Run as non-root redpanda user
     command:
       - redpanda
       - start
@@ -372,6 +454,14 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8g
+        reservations:
+          cpus: "2.0"
+          memory: 4g
     labels:
       io.elevatediq.component: "event-bus"
       io.elevatediq.tier: "infrastructure"
@@ -379,6 +469,7 @@ services:
   redpanda-console:
     image: docker.redpanda.com/redpandadata/console:v3.7.1@sha256:d5ec9a54339db74d8efa61b18576185903694bee1deb4c029befa492e41ac78f
     container_name: redpanda-console
+    user: "101:101"  # @security P0 #969 - Run as non-root redpanda-console user
     ports:
       - "8080:8080"
     environment:
@@ -409,6 +500,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+        reservations:
+          cpus: "0.5"
+          memory: 256m
     labels:
       io.elevatediq.component: "event-bus-ui"
       io.elevatediq.tier: "infrastructure"
@@ -420,13 +519,14 @@ services:
   ollama:
     image: ollama/ollama:0.1.16@sha256:3a3ec7ea8e006aea63ce13b7027069687ed34cc85bbd7bbebf1f565db587511a
     container_name: ollama-models
+    user: "11434:11434"  # @security P0 #969 - Run as non-root ollama user
     ports:
       - "11434:11434"
     volumes:
-      - ollama_models:/root/.ollama
+      - ollama_models:/home/ollama/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
-      - OLLAMA_MODELS=/root/.ollama/models
+      - OLLAMA_MODELS=/home/ollama/.ollama/models
     healthcheck:
       test:
         - CMD

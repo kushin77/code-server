@@ -74,7 +74,28 @@ log() {
 
 # Check if services are already running
 services_running() {
-  docker compose ps --services --filter "status=running" | wc -l
+  docker compose ps --services 2>/dev/null | wc -l | tr -d ' '
+}
+
+# Wait for all services to report healthy
+wait_for_healthy_services() {
+  local expected_count
+  expected_count=$(services_running)
+
+  local attempt=0
+  while [[ $attempt -lt 24 ]]; do
+    local healthy_count
+    healthy_count=$(docker compose ps 2>/dev/null | grep -c "(healthy)" || true)
+
+    if [[ "$healthy_count" -ge "$expected_count" && "$expected_count" -gt 0 ]]; then
+      return 0
+    fi
+
+    sleep 5
+    ((attempt++))
+  done
+
+  return 1
 }
 
 # Idempotent deployment
@@ -110,7 +131,10 @@ deploy() {
   docker compose up -d
   
   log "Waiting for health checks..."
-  sleep 5
+  if ! wait_for_healthy_services; then
+    echo "ERROR: Services did not become healthy in time" >&2
+    return 1
+  fi
   
   # Verify all services are healthy
   local unhealthy=0
@@ -161,6 +185,27 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
 }
 
+# Wait for all services to report healthy after restart
+wait_for_healthy_services() {
+  local expected_count
+  expected_count=$(docker compose ps --services 2>/dev/null | wc -l | tr -d ' ')
+
+  local attempt=0
+  while [[ $attempt -lt 24 ]]; do
+    local healthy_count
+    healthy_count=$(docker compose ps 2>/dev/null | grep -c "(healthy)" || true)
+
+    if [[ "$healthy_count" -ge "$expected_count" && "$expected_count" -gt 0 ]]; then
+      return 0
+    fi
+
+    sleep 5
+    ((attempt++))
+  done
+
+  return 1
+}
+
 # Find latest deployment backup
 latest_backup() {
   ls -t "${BACKUP_DIR}"/deployment-*.tar.gz 2>/dev/null | head -1
@@ -200,6 +245,11 @@ rollback() {
   
   log "Restarting services..."
   docker compose up -d
+
+  if ! wait_for_healthy_services; then
+    echo "ERROR: Services did not become healthy after rollback" >&2
+    return 1
+  fi
   
   # Record rollback state
   docker compose config | sha256sum | cut -d' ' -f1 > "${BACKUP_DIR}/.last_rollback"

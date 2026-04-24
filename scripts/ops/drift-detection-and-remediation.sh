@@ -207,7 +207,7 @@ detect_resource_drift() {
 
 # Generate drift report
 generate_drift_report() {
-  local services_running=$(docker compose ps --services --filter "status=running" | wc -l)
+  local services_running=$(docker compose ps --services 2>/dev/null | wc -l | tr -d ' ')
   local services_total=$(docker compose ps --services | wc -l)
   local drift_issues=$(grep -c "drift\|ERROR\|WARNING" "$LOG_FILE" || echo "0")
   

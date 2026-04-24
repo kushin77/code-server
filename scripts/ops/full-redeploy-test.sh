@@ -117,10 +117,24 @@ if [[ ! -f "${COMPOSE_FILE}" ]]; then
     COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.service.yml.tpl"
 fi
 
-if [[ -f "${COMPOSE_FILE}" ]] && docker-compose -f "${COMPOSE_FILE}" config >/dev/null 2>&1; then
-    test_pass "docker-compose configuration valid"
+if [[ -f "${COMPOSE_FILE}" ]]; then
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        if docker compose -f "${COMPOSE_FILE}" config >/dev/null 2>&1; then
+            test_pass "docker compose configuration valid"
+        else
+            test_warn "docker compose validation" "Configuration validation skipped or failed (acceptable for templates)"
+        fi
+    elif command -v docker-compose >/dev/null 2>&1; then
+        if docker-compose -f "${COMPOSE_FILE}" config >/dev/null 2>&1; then
+            test_pass "docker-compose configuration valid"
+        else
+            test_warn "docker-compose validation" "Configuration validation skipped or failed (acceptable for templates)"
+        fi
+    else
+        test_warn "docker compose validation" "Docker compose unavailable (acceptable for templates)"
+    fi
 else
-    test_warn "docker-compose validation" "Configuration validation skipped or failed (acceptable for templates)"
+    test_warn "docker compose validation" "Configuration validation skipped or failed (acceptable for templates)"
 fi
 
 # Check for required configuration patterns
@@ -139,7 +153,13 @@ log_test_step 4 "Execute deployment validation"
 DEPLOY_START=$(date +%s)
 
 # Check if docker-compose available and validate config
-if docker-compose -f "${PROJECT_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    if docker compose -f "${PROJECT_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
+        test_pass "docker compose configuration is deployable"
+    else
+        test_warn "Deployment" "Cannot validate full deployment (docker not available or config issue)"
+    fi
+elif command -v docker-compose >/dev/null 2>&1 && docker-compose -f "${PROJECT_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
     test_pass "docker-compose configuration is deployable"
 else
     test_warn "Deployment" "Cannot validate full deployment (docker not available or config issue)"

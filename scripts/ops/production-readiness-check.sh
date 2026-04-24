@@ -129,7 +129,13 @@ log_info "=========================================="
 # Docker Compose configuration
 if [[ -f "${PROJECT_ROOT}/docker-compose.yml" ]]; then
     check_pass "docker-compose.yml: exists"
-    if command -v docker-compose >/dev/null 2>&1; then
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        if docker compose -f "${PROJECT_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
+            check_pass "docker-compose.yml: valid configuration"
+        else
+            check_fail "docker-compose.yml: invalid configuration"
+        fi
+    elif command -v docker-compose >/dev/null 2>&1; then
         if docker-compose -f "${PROJECT_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
             check_pass "docker-compose.yml: valid configuration"
         else

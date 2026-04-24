@@ -159,7 +159,15 @@ if [[ ! -f "${PROJECT_ROOT}/docker-compose.yml" ]]; then
     exit 1
 fi
 
-if command -v docker-compose >/dev/null 2>&1; then
+if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    if docker compose -f "${PROJECT_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
+        log_info "docker compose validation: PASS"
+        stage_success
+    else
+        stage_fail "docker compose configuration invalid"
+        exit 1
+    fi
+elif command -v docker-compose >/dev/null 2>&1; then
     if docker-compose -f "${PROJECT_ROOT}/docker-compose.yml" config >/dev/null 2>&1; then
         log_info "docker-compose validation: PASS"
         stage_success
@@ -168,7 +176,7 @@ if command -v docker-compose >/dev/null 2>&1; then
         exit 1
     fi
 else
-    log_warn "docker-compose not available (expected on remote)"
+    log_warn "docker compose not available (expected on remote)"
     stage_success
 fi
 
@@ -249,7 +257,7 @@ cat > "${DEPLOYMENT_MANIFEST}" << EOF
   },
   "status": "prepared",
         "deployment_commands": {
-    "docker_compose": "docker-compose -f docker-compose.yml up -d",
+        "docker_compose": "docker compose -f docker-compose.yml up -d",
     "terraform": "terraform -chdir=terraform apply -auto-approve",
             "verify": "curl ${API_HEALTH_ENDPOINT}"
   }

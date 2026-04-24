@@ -97,6 +97,20 @@ wait
 
 echo "Deployment to both replicas complete. Waiting for service stabilization..."
 sleep 180  # Wait 3 minutes for services to fully start
+
+### Step 4: Hibernation-Aware State Verification (NEW)
+
+Ensure the `SessionLifecycleCoordinator` is active and cluster state is preserved:
+
+```bash
+# Verify coordinator service is healthy on both replicas
+ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.31 'curl -f http://localhost:3000/api/health'
+ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.42 'curl -f http://localhost:3000/api/health'
+
+# Check hibernation volume mounts for CRIU snapshots
+ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.31 'ls -ld /var/lib/hibernation/checkpoints'
+ssh -i ~/.ssh/id_rsa_onprem akushnir@192.168.168.42 'ls -ld /var/lib/hibernation/checkpoints'
+```
 ```
 
 **What This Does:**

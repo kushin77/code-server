@@ -178,7 +178,7 @@ function check_alertmanager() {
   log_info "Checking AlertManager..."
   
   local alert_status
-  alert_status=$(ssh "$user@$host" "docker logs alertmanager 2>&1 | grep -i 'loaded\|listening' | tail -1" 2>/dev/null || echo "")
+  alert_status=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "$user@$host" "docker logs alertmanager 2>&1 | grep -i 'loaded\|listening' | tail -1" 2>/dev/null || echo "")
   
   if [[ "$alert_status" == *"listening"* ]]; then
     log_info "✅ AlertManager running"
@@ -199,7 +199,7 @@ function run_baseline_test() {
   log_info "(This may take 30-60 seconds...)"
   
   local test_result
-  test_result=$(ssh "$user@$host" "cd code-server-enterprise && timeout 120 node COLLAB-9-BASELINE-LOAD-TEST.js 2>&1 | tail -20" 2>/dev/null || echo "FAILED")
+  test_result=$(ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "$user@$host" "cd code-server-enterprise && timeout 120 node COLLAB-9-BASELINE-LOAD-TEST.js 2>&1 | tail -20" 2>/dev/null || echo "FAILED")
   
   if [[ "$test_result" == *"SLO MET"* ]]; then
     log_info "✅ Baseline performance test PASSED"

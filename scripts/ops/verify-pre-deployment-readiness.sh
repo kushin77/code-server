@@ -22,7 +22,7 @@ verify_ssh_connectivity() {
     
     log_info "Verifying SSH connectivity to $host..."
     
-    if ssh -o ConnectTimeout=5 "${EXEC_USER}@${host}" "echo 'Connected'" > /dev/null 2>&1; then
+    if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "${EXEC_USER}@${host}" "echo 'Connected'" > /dev/null 2>&1; then
         log_success "✓ SSH connection successful to $host"
         return 0
     else
@@ -37,7 +37,7 @@ verify_services_operational() {
     log_info "Verifying services operational on $host..."
     
     local running_count
-    running_count=$(ssh "${EXEC_USER}@${host}" "docker ps --format 'table {{.Names}}' | wc -l" || echo "0")
+    running_count=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "${EXEC_USER}@${host}" "docker ps --format 'table {{.Names}}' | wc -l" || echo "0")
     
     log_info "Running containers on $host: $running_count"
     
@@ -60,7 +60,7 @@ check_database_replication() {
     log_info "Checking PostgreSQL replication lag on $host..."
     
     local replication_lag
-    replication_lag=$(ssh "${EXEC_USER}@${host}" "docker exec \$(docker ps -q -f name=postgres) psql -U postgres -c 'SELECT slot_name, restart_lsn FROM pg_replication_slots;' 2>/dev/null || echo 'FAILED'" || echo "ERROR")
+    replication_lag=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "${EXEC_USER}@${host}" "docker exec \$(docker ps -q -f name=postgres) psql -U postgres -c 'SELECT slot_name, restart_lsn FROM pg_replication_slots;' 2>/dev/null || echo 'FAILED'" || echo "ERROR")
     
     if [ "$replication_lag" = "FAILED" ] || [ "$replication_lag" = "ERROR" ]; then
         log_warn "⚠ Could not determine replication status"
@@ -80,7 +80,7 @@ check_redis_sentinel_quorum() {
     log_info "Checking Redis Sentinel quorum health on $host..."
     
     local sentinel_info
-    sentinel_info=$(ssh "${EXEC_USER}@${host}" "docker exec \$(docker ps -q -f name=sentinel) redis-cli -p 26379 info sentinel 2>/dev/null | grep -E 'masters|slaves' || echo 'FAILED'" || echo "ERROR")
+    sentinel_info=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "${EXEC_USER}@${host}" "docker exec \$(docker ps -q -f name=sentinel) redis-cli -p 26379 info sentinel 2>/dev/null | grep -E 'masters|slaves' || echo 'FAILED'" || echo "ERROR")
     
     if [ "$sentinel_info" = "FAILED" ] || [ "$sentinel_info" = "ERROR" ]; then
         log_warn "⚠ Could not determine Sentinel quorum status"
@@ -100,7 +100,7 @@ verify_nas_storage() {
     log_info "Verifying NAS storage availability on $host..."
     
     local nas_space
-    nas_space=$(ssh "${EXEC_USER}@${host}" "df -h /mnt/eiq-shared 2>/dev/null | tail -1 | awk '{print \$4}' || echo 'FAILED'" || echo "ERROR")
+    nas_space=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "${EXEC_USER}@${host}" "df -h /mnt/eiq-shared 2>/dev/null | tail -1 | awk '{print \$4}' || echo 'FAILED'" || echo "ERROR")
     
     if [ "$nas_space" = "FAILED" ] || [ "$nas_space" = "ERROR" ]; then
         log_warn "⚠ Could not determine NAS storage availability"
@@ -119,7 +119,7 @@ run_e2e_tests() {
     
     # Check for test script
     local test_result
-    test_result=$(ssh "${EXEC_USER}@${host}" "cd $REPO_PATH && npm test 2>&1 | tail -5 || echo 'TESTS_FAILED'" || echo "ERROR")
+    test_result=$(ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new "${EXEC_USER}@${host}" "cd $REPO_PATH && npm test 2>&1 | tail -5 || echo 'TESTS_FAILED'" || echo "ERROR")
     
     if [ "$test_result" = "ERROR" ] || [ "$test_result" = "TESTS_FAILED" ]; then
         log_warn "⚠ E2E tests may have failed - review results:"
@@ -139,7 +139,7 @@ test_rollback_procedure() {
     
     # Check if rollback script exists
     local rollback_exists
-    rollback_exists=$(ssh "${EXEC_USER}@${host}" "test -f $REPO_PATH/scripts/ops/rollback.sh && echo 'EXISTS' || echo 'MISSING'" || echo "ERROR")
+    rollback_exists=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "${EXEC_USER}@${host}" "test -f $REPO_PATH/scripts/ops/rollback.sh && echo 'EXISTS' || echo 'MISSING'" || echo "ERROR")
     
     if [ "$rollback_exists" = "MISSING" ]; then
         log_error "Rollback procedure script not found"

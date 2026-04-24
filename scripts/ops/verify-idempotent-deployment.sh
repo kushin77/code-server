@@ -71,9 +71,9 @@ main() {
   log_section "Service State Stability"
 
   local state1 state2
-  state1=$(ssh akushnir@"${DEPLOY_HOST}" "docker ps --format '{{.Names}}:{{.State}}' | sort" 2>/dev/null || echo "ERROR")
+  state1=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new akushnir@"${DEPLOY_HOST}" "docker ps --format '{{.Names}}:{{.State}}' | sort" 2>/dev/null || echo "ERROR")
   sleep 5
-  state2=$(ssh akushnir@"${DEPLOY_HOST}" "docker ps --format '{{.Names}}:{{.State}}' | sort" 2>/dev/null || echo "ERROR")
+  state2=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new akushnir@"${DEPLOY_HOST}" "docker ps --format '{{.Names}}:{{.State}}' | sort" 2>/dev/null || echo "ERROR")
 
   if [[ "$state1" == "$state2" ]] && [[ "$state1" != "ERROR" ]]; then
     log_success "Service states are stable (all services Running/Up)"

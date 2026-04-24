@@ -1,0 +1,129 @@
+# GOV-002: Enterprise Governance Compliance
+# Component: Istio mTLS Policy - Strict Mode Enforcement
+# Date: April 25, 2026
+# Version: 1.0.0
+# Purpose: Enforce mutual TLS for all service-to-service communication
+
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    "3100":
+      mode: STRICT  # API port
+    "3000":
+      mode: STRICT  # Frontend port (for internal mesh only)
+    "5000":
+      mode: STRICT  # reputation_engine
+    "5001":
+      mode: STRICT  # activity_feed
+    "5002":
+      mode: STRICT  # session_broker
+    "9090":
+      mode: STRICT  # prometheus
+    "6379":
+      mode: STRICT  # redis
+    "5432":
+      mode: STRICT  # postgres
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: system-namespaces
+  namespace: istio-system
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  mtls:
+    mode: STRICT
+---
+# Authorization policies for defense-in-depth
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: default-deny
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  {} # This creates a default deny-all policy
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-mesh-internal
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/code-server-enterprise/sa/code-server-enterprise"
+        - "cluster.local/ns/code-server-enterprise/sa/api"
+        - "cluster.local/ns/code-server-enterprise/sa/reputation-engine"
+        - "cluster.local/ns/code-server-enterprise/sa/activity-feed"
+        - "cluster.local/ns/code-server-enterprise/sa/session-broker"
+    to:
+    - operation:
+        methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH
+---
+# Allow ingress gateway to reach API
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-api
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  selector:
+    matchLabels:
+      app: api
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
+    to:
+    - operation:
+        ports:
+        - "3100"
+        methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH

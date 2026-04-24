@@ -1,0 +1,108 @@
+# GOV-002: Enterprise Governance Compliance
+# Component: Istio ProxyConfig - Sidecar Configuration
+# Date: April 25, 2026
+# Version: 1.0.0
+# Purpose: Configure Envoy sidecars for performance, security, and observability
+
+apiVersion: networking.istio.io/v1beta1
+kind: ProxyConfig
+metadata:
+  name: istio-proxy-config
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  concurrency: 2
+  environmentVariables:
+    ENVOY_LOG_LEVEL: "info"
+    ISTIO_LOG_LEVEL: "info"
+---
+# ServiceEntry for external APIs (if needed)
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-dns
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  hosts:
+  - "*.googleapis.com"
+  - "*.github.com"
+  - "*.cloudflare.com"
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL
+  resolution: DNS
+---
+# NetworkPolicy to allow Istio egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-external
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  podSelector:
+    matchLabels: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: code-server-enterprise
+    ports:
+    - protocol: TCP
+      port: 3100
+    - protocol: TCP
+      port: 3000
+    - protocol: TCP
+      port: 5000
+    - protocol: TCP
+      port: 5001
+    - protocol: TCP
+      port: 5002
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 6379
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    ports:
+    - protocol: TCP
+      port: 15000
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 169.254.169.254/32
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443

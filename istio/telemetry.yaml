@@ -1,0 +1,150 @@
+# GOV-002: Enterprise Governance Compliance
+# Component: Istio Telemetry - Jaeger Tracing Integration
+# Date: April 25, 2026
+# Version: 1.0.0
+# Purpose: Configure distributed tracing, sampling, and observability
+
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: jaeger-tracing
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  tracing:
+  - providers:
+    - name: jaeger
+      port: 6831
+      host: jaeger-collector.code-server-enterprise.svc.cluster.local
+    randomSamplingPercentage: 100.0
+    useRequestIdForTraceSamplingDecisionOnly: false
+    customTags:
+      literals:
+      - name: environment
+        value: production
+      - name: cluster
+        value: primary
+      - name: version
+        value: v1.0.0
+      headers:
+      - name: x-request-id
+        header:
+          name: x-request-id
+      - name: x-user-id
+        header:
+          name: x-user-id
+      - name: x-session-id
+        header:
+          name: x-session-id
+      environment:
+      - name: POD_NAME
+        env: HOSTNAME
+      - name: POD_NAMESPACE
+        env: NAMESPACE
+      - name: POD_IP
+        env: PODIP
+---
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: metrics-config
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  metrics:
+  - providers:
+    - name: prometheus
+    dimensions:
+    - request_path
+    - response_code
+    - grpc_status
+    - response_flags
+    - connection_security_policy
+    - upstream_cluster
+    - request_protocol
+    - request_method
+    - request_host
+    - request_path
+    tagOverrides:
+    - name: request_path
+      value: request.path | "unknown"
+    - name: response_code
+      value: response.code | "0"
+    overrides:
+    - match:
+        metric: REQUEST_COUNT
+      dimensions:
+      - request_path
+      - response_code
+---
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: access-logging
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  accessLogging:
+  - providers:
+    - name: envoy
+    match:
+      mode: CLIENT_AND_SERVER
+    disabled: false
+---
+# Telemetry for system namespaces
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: jaeger-tracing-system
+  namespace: istio-system
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  tracing:
+  - providers:
+    - name: jaeger
+      port: 6831
+      host: jaeger-collector.code-server-enterprise.svc.cluster.local
+    randomSamplingPercentage: 50.0
+---
+# RequestAuthentication for external APIs
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: api-auth
+  namespace: code-server-enterprise
+  labels:
+    app: istio
+    version: v1.18.0
+    managed-by: terraform
+    governance/policy: enabled
+    governance/compliance: true
+spec:
+  selector:
+    matchLabels:
+      app: api
+  jwtRules:
+  - issuer: "https://auth.code-server-enterprise.local"
+    jwksUri: "https://auth.code-server-enterprise.local/.well-known/jwks.json"
+    audiences: "api.code-server-enterprise"
+    forwardOriginalToken: true
+    outputPayloadToHeader: "x-jwt-payload"

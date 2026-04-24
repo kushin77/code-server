@@ -6,7 +6,104 @@
 //
 
 import { Request, Response, NextFunction } from 'express';
-import { JwtValidator, JwtTokenClient, jwtAuth } from '../../backend/src/services/auth/index.js';
+
+interface JwtClaims {
+  sub: string;
+  aud: string | string[];
+  iss: string;
+  iat: number;
+  exp: number;
+  email?: string;
+  groups?: string[];
+  actor?: string;
+  [key: string]: unknown;
+}
+
+class JwtValidator {
+  private readonly oidcIssuerUrl: string;
+
+  constructor(config: { oidcIssuerUrl: string; jwksCacheTtlSeconds?: number }) {
+    this.oidcIssuerUrl = config.oidcIssuerUrl;
+  }
+
+  async validateToken(token: string, expectedAudience: string): Promise<JwtClaims> {
+    const parts = token.split('.');
+    if (parts.length < 2) {
+      throw new Error('Invalid JWT format');
+    }
+
+    let claims: JwtClaims;
+    try {
+      const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
+      claims = JSON.parse(payload) as JwtClaims;
+    } catch {
+      throw new Error('Invalid JWT payload');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (!claims.exp || claims.exp <= now) {
+      throw new Error('JWT expired');
+    }
+
+    if (!claims.iss) {
+      throw new Error('JWT missing issuer');
+    }
+
+    if (this.oidcIssuerUrl && claims.iss !== this.oidcIssuerUrl) {
+      throw new Error('JWT issuer mismatch');
+    }
+
+    const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+    if (!audiences.includes(expectedAudience)) {
+      throw new Error('JWT audience mismatch');
+    }
+
+    if (!claims.sub) {
+      throw new Error('JWT missing subject');
+    }
+
+    return claims;
+  }
+}
+
+class JwtTokenClient {
+  private readonly oidcIssuerUrl: string;
+  private readonly clientId: string;
+  private readonly clientSecret: string;
+
+  constructor(config: { oidcIssuerUrl: string; clientId: string; clientSecret: string }) {
+    this.oidcIssuerUrl = config.oidcIssuerUrl;
+    this.clientId = config.clientId;
+    this.clientSecret = config.clientSecret;
+  }
+
+  async getToken(audience: string): Promise<string> {
+    const endpoint = `${this.oidcIssuerUrl.replace(/\/$/, '')}/oauth2/token`;
+    const body = new URLSearchParams({
+      grant_type: 'client_credentials',
+      audience,
+      client_id: this.clientId,
+      client_secret: this.clientSecret,
+    });
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Token request failed with status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as { access_token?: string };
+    if (!payload.access_token) {
+      throw new Error('Token response missing access_token');
+    }
+
+    return payload.access_token;
+  }
+}
 
 /**
  * Extended BrokerRequest with JWT support
@@ -18,7 +115,7 @@ export interface JwtEnabledBrokerRequest extends Request {
   jwt?: {
     claims: {
       sub: string;
-      aud: string;
+      aud: string | string[];
       iss: string;
       iat: number;
       exp: number;

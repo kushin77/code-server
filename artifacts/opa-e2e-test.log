@@ -50,3 +50,10 @@
 [2026-04-24 17:29:55] [INFO] OPA not responding at http://localhost:8181; starting opa service with docker compose
 [0;31m✗[0m OPA failed to become healthy at http://localhost:8181
 [2026-04-24 17:31:05] [ERROR] OPA health check failed. Aborting tests.
+[2026-04-24 17:31:21] [INFO] ==========================================
+[2026-04-24 17:31:21] [INFO] OPA Policy Engine End-to-End Test Suite
+[2026-04-24 17:31:21] [INFO] ==========================================
+[2026-04-24 17:31:21] [INFO] Timestamp: 2026-04-24T21:31:21Z
+[2026-04-24 17:31:21] [INFO] OPA URL: http://localhost:8181
+[2026-04-24 17:31:21] [INFO] ==========================================
+[2026-04-24 17:31:21] [INFO] OPA not responding at http://localhost:8181; starting opa service with docker compose

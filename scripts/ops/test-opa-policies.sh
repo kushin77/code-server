@@ -98,7 +98,7 @@ ensure_opa_service() {
     fi
 
     local attempt=0
-    local max_attempts=30
+    local max_attempts=60
     while [[ ${attempt} -lt ${max_attempts} ]]; do
         if curl -sf "${OPA_URL}/health" >/dev/null 2>&1; then
             success "OPA service is healthy"

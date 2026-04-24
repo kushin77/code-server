@@ -1,7 +1,11 @@
-#!/bin/bash
-# Enterprise Code-Server Setup Scrip
+#!/usr/bin/env bash
+# @file        scripts/install/setup.sh
+# @module      install/bootstrap
+# @description Idempotent enterprise code-server initial setup and directory structure creation
+# @owner       infrastructure
+# @status      active
 
-set -e
+set -euo pipefail
 
 echo "🚀 Setting up Enterprise Code-Server Deployment..."
 

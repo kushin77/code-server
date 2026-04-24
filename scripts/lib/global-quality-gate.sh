@@ -1,10 +1,9 @@
-#!/bin/bash
-# ═══════════════════════════════════════════════════════════════════════════════
-# Global Quality Gate - Phase 3+ Production Verification
-# ═══════════════════════════════════════════════════════════════════════════════
-# Validates: Environment variables, Docker services, Security configs, Health checks
-# Exit Code: 0 = all checks pass, 1+ = failures detected
-# ═══════════════════════════════════════════════════════════════════════════════
+#!/usr/bin/env bash
+# @file        scripts/lib/global-quality-gate.sh
+# @module      lib/quality
+# @description Global quality gate checks for all deployment operations (immutability, security, compliance)
+# @owner       infrastructure
+# @status      active
 
 set -euo pipefail
 

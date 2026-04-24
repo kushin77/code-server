@@ -1,4 +1,9 @@
 #!/bin/bash
+/**
+ * @file scripts/ops/validate-resource-limits.sh
+ * @description Validates that all services in docker-compose.yml have resource limits.
+ * @governance GOV-002
+ */
 # Validate that all services have resource limits configured
 
 echo "Checking resource limits in docker-compose.yml..."

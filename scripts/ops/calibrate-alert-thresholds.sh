@@ -1,4 +1,9 @@
 #!/bin/bash
+/**
+ * @file scripts/ops/calibrate-alert-thresholds.sh
+ * @description Updates Prometheus alert rules based on collected baseline metrics.
+ * @governance GOV-002
+ */
 # Alert Threshold Calibration Script
 # Updates Prometheus alert rules based on collected baseline metrics
 

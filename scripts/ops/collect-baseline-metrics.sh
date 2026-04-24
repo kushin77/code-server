@@ -1,4 +1,9 @@
 #!/bin/bash
+/**
+ * @file scripts/ops/collect-baseline-metrics.sh
+ * @description Collects performance metrics to establish operational baselines.
+ * @governance GOV-002
+ */
 # Baseline Metrics Collection Script
 # Collects hourly performance metrics for 24 hours to establish operational baselines
 

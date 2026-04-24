@@ -55,32 +55,20 @@ class AgentLearning(BaseModel):
     duration_seconds: float
     timestamp: str
 
-@app.get("/health")
-async def health():
-    """Health check endpoint"""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"}
 
-@app.post("/memory/search", response_model=SearchResponse)
-async def semantic_search(
-    query: str = Query(..., description="Natural language search query"),
-    collection: str = Query("incidents", description="Collection to search"),
-    limit: int = Query(10, ge=1, le=100),
-    min_relevance: float = Query(0.7, ge=0, le=1)
+def _perform_semantic_search(
+    query: str,
+    collection: str,
+    limit: int,
+    min_relevance: float,
 ) -> SearchResponse:
-    """
-    Semantic search across organizational memory.
-    
-    Returns relevant documents from specified collection based on semantic similarity.
-    """
+    """Return search results for the requested memory collection."""
     logger.info(f"Semantic search query: {query} (collection={collection})")
-    
-    # Validate collection exists
+
     valid_collections = ["incidents", "runbooks", "pr_descriptions", "retrospectives", "agent_learnings"]
     if collection not in valid_collections:
         raise HTTPException(status_code=400, detail=f"Unknown collection: {collection}")
-    
-    # This would call Qdrant API to perform embedding + search
-    # For now, return mock results
+
     results = [
         SearchResult(
             id="github-issue-812",
@@ -93,16 +81,43 @@ async def semantic_search(
             timestamp="2026-04-15T10:30:00Z"
         )
     ]
-    
-    logger.info(f"Search returned {len(results)} results")
-    
+
+    filtered_results = [result for result in results if result.relevance_score >= min_relevance][:limit]
+
+    logger.info(f"Search returned {len(filtered_results)} results")
+
     return SearchResponse(
         query=query,
         collection=collection,
-        results=results,
-        count=len(results),
+        results=filtered_results,
+        count=len(filtered_results),
         timestamp=datetime.utcnow().isoformat() + "Z"
     )
+
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"}
+
+@app.get("/memory/search", response_model=SearchResponse)
+async def semantic_search(
+    q: str = Query(..., description="Natural language search query"),
+    collection: str = Query("incidents", description="Collection to search"),
+    limit: int = Query(10, ge=1, le=100),
+    min_relevance: float = Query(0.7, ge=0, le=1)
+) -> SearchResponse:
+    """
+    Semantic search across organizational memory.
+    
+    Returns relevant documents from specified collection based on semantic similarity.
+    """
+    return _perform_semantic_search(q, collection, limit, min_relevance)
+
+
+@app.post("/memory/search", response_model=SearchResponse)
+async def semantic_search_legacy(request: SearchRequest) -> SearchResponse:
+    """Compatibility wrapper for existing POST-based callers."""
+    return _perform_semantic_search(request.query, request.collection, request.limit, request.min_relevance)
 
 @app.post("/memory/incidents/{incident_id}")
 async def record_incident(

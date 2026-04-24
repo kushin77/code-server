@@ -27,45 +27,81 @@ jobs:
       pull-requests: write
       issues: write
       contents: read
-    
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Set Up Environment
-        run: |
-          mkdir -p artifacts
-          echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
-      
-      - name: Run Auto-Link Script
-        run: |
-          chmod +x scripts/ops/auto-link-pr-issue.sh
-          scripts/ops/auto-link-pr-issue.sh "${PR_NUMBER}" || true
-      
-      - name: Comment on PR with Link Status
-        if: always()
-        run: |
-          if [ -f artifacts/pr-issue-linking-report.json ]; then
-            status=$(jq -r '.status' artifacts/pr-issue-linking-report.json)
-            linked=$(jq -r '.issues_linked' artifacts/pr-issue-linking-report.json)
-            
-            if [ "$status" = "SUCCESS" ] && [ "$linked" -gt 0 ]; then
-              message="✅ **PR Linked**: This PR is linked to $linked issue(s). "
-            else
-              message="⚠️ **Link Status**: No issues linked. Ensure PR title/branch contains 'Fixes #N', 'Closes #N', or 'issue-#N' format. "
-            fi
-            
-                        gh pr comment "${PR_NUMBER}" \
-              --body "$message" \
-              --repo "$GITHUB_REPO" || true
-          fi
-      
-      - name: Upload Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-issue-linking-report
-          path: artifacts/pr-issue-linking-report.json
-          retention-days: 30
+      name: PR-Issue Linking Automation
+      # @governance GOV-002 - All gh calls use --repo flag
+
+      on:
+        pull_request:
+          types:
+            - opened
+            - edited
+            - synchronize
+            - reopened
+        workflow_dispatch:
+          inputs:
+            pr_number:
+              description: PR number to process
+              required: true
+
+      concurrency:
+        group: pr-linking-${{ github.event.pull_request.number || inputs.pr_number }}
+        cancel-in-progress: false
+
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+
+      jobs:
+        link-issues:
+          name: Auto-Link PR to Issues
+          runs-on: ubuntu-latest
+          permissions:
+            pull-requests: write
+            issues: write
+            contents: read
+
+          steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+              with:
+                fetch-depth: 0
+
+            - name: Set Up Environment
+              run: |
+                mkdir -p artifacts
+                echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
+
+            - name: Run Auto-Link Script
+              run: |
+                chmod +x scripts/ops/auto-link-pr-issue.sh
+                scripts/ops/auto-link-pr-issue.sh "${PR_NUMBER}" || true
+
+            - name: Comment on PR with Link Status
+              if: always()
+              run: |
+                source scripts/_common/init.sh
+                if [ -f artifacts/pr-issue-linking-report.json ]; then
+                  status=$(jq -r '.status' artifacts/pr-issue-linking-report.json)
+                  linked=$(jq -r '.issues_linked' artifacts/pr-issue-linking-report.json)
+
+                  if [ "$status" = "SUCCESS" ] && [ "$linked" -gt 0 ]; then
+                    message="✅ **PR Linked**: This PR is linked to $linked issue(s). "
+                  else
+                    message="⚠️ **Link Status**: No issues linked. Ensure PR title/branch contains 'Fixes #N', 'Closes #N', or 'issue-#N' format. "
+                  fi
+
+                  github_gh pr comment "${PR_NUMBER}" \
+                    --body "$message" \
+                    --repo "$GITHUB_REPO" || true
+                fi
+
+            - name: Upload Report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                name: pr-issue-linking-report
+                path: artifacts/pr-issue-linking-report.json
+                retention-days: 30

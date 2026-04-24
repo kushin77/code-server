@@ -6,6 +6,11 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+source "${PROJECT_ROOT}/scripts/_common/init.sh"
+
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -70,14 +75,14 @@ link_pr_to_issue() {
     issue_num=$(echo "$issue_ref" | grep -oE "[0-9]+")
     
     # Verify issue exists
-    if ! gh issue view "$issue_num" --repo "$GITHUB_REPO" &>/dev/null; then
+    if ! github_gh issue view "$issue_num" --repo "$GITHUB_REPO" &>/dev/null; then
         log_error "Issue #$issue_num does not exist"
         return 1
     fi
     
     # Add comment linking PR to issue
     local comment="🔗 Linked from PR #$pr_number"
-    if gh issue comment "$issue_num" \
+    if github_gh issue comment "$issue_num" \
         --body "$comment" \
         --repo "$GITHUB_REPO" &>>"$LOG_FILE"; then
         log_success "Linked PR #$pr_number → Issue #$issue_num"
@@ -105,9 +110,9 @@ main() {
 
     if [[ -z "$pr_title" || -z "$pr_body" || -z "$branch_name" ]]; then
         log_info "Resolving PR metadata from GitHub for #$pr_number"
-        pr_title=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json title -q '.title' 2>/dev/null || echo "")
-        pr_body=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json body -q '.body' 2>/dev/null || echo "")
-        branch_name=$(gh pr view "$pr_number" --repo "$GITHUB_REPO" --json headRefName -q '.headRefName' 2>/dev/null || echo "")
+        pr_title=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json title -q '.title' 2>/dev/null || echo "")
+        pr_body=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json body -q '.body' 2>/dev/null || echo "")
+        branch_name=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json headRefName -q '.headRefName' 2>/dev/null || echo "")
     fi
 
     if [[ -z "$pr_title" || -z "$branch_name" ]]; then

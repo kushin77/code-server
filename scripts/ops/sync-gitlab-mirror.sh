@@ -6,13 +6,18 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+source "${PROJECT_ROOT}/scripts/_common/gitlab-source-control-config.sh"
+
 # ============================================================================
 # Configuration
 # ============================================================================
-readonly SOURCE_REPO="https://github.com/kushin77/code-server.git"
-readonly TARGET_REPO="https://github.com/kushin77/source-control.git"
-readonly SOURCE_BRANCH="main"
-readonly TARGET_BRANCH="main"
+readonly SOURCE_REPO="${SYNC_SOURCE_REPO:-${CODE_SERVER_REPO}}"
+readonly TARGET_REPO="${SYNC_TARGET_REPO:-${GITLAB_REPO}}"
+readonly SOURCE_BRANCH="${SYNC_SOURCE_BRANCH:-main}"
+readonly TARGET_BRANCH="${SYNC_TARGET_BRANCH:-main}"
 readonly SYNC_LOG_FILE="artifacts/gitlab-mirror-sync.log"
 readonly SYNC_REPORT_FILE="artifacts/gitlab-mirror-sync-report.json"
 readonly MIRROR_TEMP_DIR="/tmp/code-server-mirror-sync-$$"

@@ -3,11 +3,12 @@ name: Auto-Close Issues on PR Merge
 
 on:
   pull_request:
-    types: [closed]
+    types:
+      - closed
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number to process'
+        description: PR number to process
         required: true
 
 concurrency:
@@ -27,46 +28,47 @@ jobs:
       pull-requests: read
       issues: write
       contents: read
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Set Up Environment
         run: |
           mkdir -p artifacts
           echo "PR_NUMBER=${PR_NUMBER}" >> $GITHUB_ENV
-      
+
       - name: Check if PR is Merged
         id: check_merge
         run: |
+          source scripts/_common/init.sh
           pr_number=${PR_NUMBER}
-          merged=$(gh pr view $pr_number --repo "$GITHUB_REPO" --json merged -q '.merged')
+          merged=$(github_gh pr view "$pr_number" --repo "$GITHUB_REPO" --json merged -q '.merged')
           echo "is_merged=$merged" >> $GITHUB_OUTPUT
-      
+
       - name: Run Auto-Close Script
         if: steps.check_merge.outputs.is_merged == 'true'
         run: |
           chmod +x scripts/ops/auto-close-issue-on-merge.sh
           pr_number=${PR_NUMBER}
           merge_commit=${{ github.event.pull_request.merge_commit_sha }}
-          
+
           scripts/ops/auto-close-issue-on-merge.sh "$pr_number" "$merge_commit" || true
-      
+
       - name: Report Status
         if: always()
         run: |
           if [ -f artifacts/pr-merge-issue-close-report.json ]; then
             cat artifacts/pr-merge-issue-close-report.json
-            
+
             closed=$(jq -r '.issues_closed' artifacts/pr-merge-issue-close-report.json)
             if [ "$closed" -gt 0 ]; then
               echo "✅ Auto-closed $closed issue(s)"
             fi
           fi
-      
+
       - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v4

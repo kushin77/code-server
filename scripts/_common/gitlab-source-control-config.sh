@@ -18,6 +18,7 @@ source "$SCRIPT_DIR/_common/init.sh"
 # Configuration
 # ============================================================================
 
+readonly CODE_SERVER_REPO="${CODE_SERVER_REPO:-https://github.com/kushin77/code-server.git}"
 readonly GITLAB_REPO="${GITLAB_REPO:-https://github.com/kushin77/source-control.git}"
 readonly GITLAB_WORK_DIR="${GITLAB_WORK_DIR:-${WORK_DIR:-/tmp/gitlab-source-control}}"
 

@@ -10,7 +10,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-DEFAULT_ENDPOINT="http://localhost:3100/health"
+# Source infrastructure configuration
+if [[ -f "${REPO_ROOT}/.env.infrastructure" ]]; then
+    source "${REPO_ROOT}/.env.infrastructure"
+fi
+
+DEFAULT_ENDPOINT="${API_HEALTH_ENDPOINT:-http://localhost:3100/health}"
 DEFAULT_TIMEOUT=300
 HEALTH_REPORT="${REPO_ROOT}/artifacts/health-check-report.json"
 

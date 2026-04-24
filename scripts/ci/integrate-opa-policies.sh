@@ -10,6 +10,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
+# Source infrastructure configuration
+if [[ -f "${REPO_ROOT}/.env.infrastructure" ]]; then
+    source "${REPO_ROOT}/.env.infrastructure"
+fi
+
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
 }
@@ -89,8 +94,9 @@ query_opa_decision() {
   
   local policy="$1"
   local input="$2"
+  local opa_url="${OPA_ENDPOINT:-http://localhost:8181}"
   
-  if ! curl -sf -X POST "http://localhost:8181/v1/data/${policy}" \
+  if ! curl -sf -X POST "${opa_url}/v1/data/${policy}" \
     -H 'Content-Type: application/json' \
     -d "${input}" > /dev/null 2>&1; then
     log_error "Failed to query OPA policy: ${policy}"

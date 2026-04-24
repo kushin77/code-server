@@ -29,7 +29,7 @@ setup_vscode_commands() {
 ,
   "elevatediq.memory": {
     "enabled": true,
-    "endpoint": "http://localhost:8000",
+    "endpoint": "${MEMORY_SERVICE_ENDPOINT:-http://localhost:8000}",
     "defaultCollection": "incidents"
   }
 EOF

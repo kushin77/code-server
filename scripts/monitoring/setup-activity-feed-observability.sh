@@ -10,6 +10,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
+# Source infrastructure configuration
+if [[ -f "${REPO_ROOT}/.env.infrastructure" ]]; then
+    source "${REPO_ROOT}/.env.infrastructure"
+fi
+
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"
 }
@@ -155,19 +160,19 @@ global:
 scrape_configs:
   - job_name: 'kafka-broker'
     static_configs:
-      - targets: ['localhost:9308']  # Kafka JMX exporter
+      - targets: ['${KAFKA_JMX_EXPORTER}']  # Kafka JMX exporter
     metrics_path: '/metrics'
   
   - job_name: 'activity-feed'
     static_configs:
-      - targets: ['localhost:8000']
+      - targets: ['${MEMORY_SERVICE_ENDPOINT}']
     metrics_path: '/metrics'
     scrape_interval: 15s
 
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['localhost:9093']
+        - targets: ['${KAFKA_BROKER}']
 
 rule_files:
   - 'activity-feed-alert-rules.yaml'
@@ -267,9 +272,9 @@ main() {
   generate_documentation
   
   log_success "Activity Feed observability setup complete"
-  log_info "Grafana: http://localhost:3000 (Kafka Event Bus & Activity Feed dashboard)"
-  log_info "Prometheus: http://localhost:9090"
-  log_info "AlertManager: http://localhost:9093"
+  log_info "Grafana: ${GRAFANA_ENDPOINT} (Kafka Event Bus & Activity Feed dashboard)"
+  log_info "Prometheus: ${PROMETHEUS_ENDPOINT}"
+  log_info "AlertManager: ${KAFKA_BROKER}"
 }
 
 main "$@"

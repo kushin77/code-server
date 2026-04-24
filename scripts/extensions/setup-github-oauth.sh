@@ -24,6 +24,11 @@ fi
 
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
+# Source infrastructure configuration
+if [[ -f "${PROJECT_ROOT}/.env.infrastructure" ]]; then
+    source "${PROJECT_ROOT}/.env.infrastructure"
+fi
+
 # ============================================================================
 # Logging
 # ============================================================================
@@ -159,7 +164,7 @@ cat > "${PROJECT_ROOT}/.env.github-oauth" << 'EOF'
 GITHUB_OAUTH_ENABLED=true
 GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
 GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
-GITHUB_REDIRECT_URI=http://localhost:3100/oauth/callback
+GITHUB_REDIRECT_URI=${API_OAUTH_CALLBACK:-http://localhost:3100/oauth/callback}
 GITHUB_OAUTH_SCOPES=user:email,read:user,read:repo_hook,repo,gist
 GITHUB_TOKEN_EXPIRY_SECONDS=3600
 GITHUB_AUTO_REFRESH_ENABLED=true

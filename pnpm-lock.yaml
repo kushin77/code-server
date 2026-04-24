@@ -207,6 +207,10 @@ importers:
         version: 5.9.3
 
   apps/extensions/team-hub:
+    dependencies:
+      axios:
+        specifier: 'catalog:'
+        version: 1.15.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

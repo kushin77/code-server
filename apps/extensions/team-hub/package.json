@@ -124,7 +124,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "axios": "^1.7.7"
+    "axios": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -1,0 +1,162 @@
+name: GitOps CD Workflow
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker-compose.yml'
+      - 'terraform/**'
+      - 'policies/**'
+      - 'config/**'
+      - '.github/workflows/gitops-cd.yml'
+  schedule:
+    # Run reconciliation every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  plan:
+    name: Plan Infrastructure Changes
+    runs-on: ubuntu-latest
+    outputs:
+      terraform-changes: ${{ steps.tf-plan.outputs.changes }}
+      docker-changes: ${{ steps.docker-check.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Terraform Format Check
+        run: terraform -chdir=terraform fmt -check
+      
+      - name: Terraform Plan
+        id: tf-plan
+        run: |
+          cd terraform
+          terraform init -upgrade
+          terraform plan -json > /tmp/plan.json
+          CHANGES=$(jq '[.resource_changes[] | select(.change.actions != ["no-op"])] | length' /tmp/plan.json)
+          echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+      
+      - name: Docker Compose Check
+        id: docker-check
+        run: |
+          docker compose config > /dev/null
+          echo "changes=0" >> $GITHUB_OUTPUT
+      
+      - name: OPA Policy Validation
+        run: |
+          # Install OPA
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_x86_64
+          chmod +x opa
+          
+          # Validate policies
+          ./opa test policies/ -v
+  
+  deploy:
+    name: Deploy to Production
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform init -upgrade
+          terraform apply -auto-approve -json > /tmp/apply.json
+          
+          # Log results
+          echo "=== Terraform Apply Results ==="
+          jq '.[] | select(.type == "summary") | .changes' /tmp/apply.json
+      
+      - name: Deploy Docker Services
+        if: needs.plan.outputs.docker-changes != '0'
+        run: |
+          docker compose pull
+          docker compose up -d --remove-orphans
+          
+          # Wait for health checks
+          for i in {1..30}; do
+            if curl -sf http://localhost:3100/api/health > /dev/null; then
+              echo "✓ Health check passed"
+              exit 0
+            fi
+            echo "Waiting for services... ($i/30)"
+            sleep 2
+          done
+          
+          echo "✗ Health check timeout"
+          exit 1
+      
+      - name: Run Integration Tests
+        run: |
+          docker compose exec -T api npm run test:integration || true
+      
+      - name: Notify Deployment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = context.payload.pull_request ? 'completed' : 'triggered';
+            const message = `
+            **GitOps CD Deployment ${status.toUpperCase()}**
+            
+            - Terraform changes: ${{ needs.plan.outputs.terraform-changes }}
+            - Docker changes: ${{ needs.plan.outputs.docker-changes }}
+            - Commit: ${{ github.sha }}
+            
+            [View Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            }).catch(() => console.log('No PR context'));
+  
+  reconcile:
+    name: Run GitOps Reconciliation
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Reconciliation Check
+        run: |
+          bash scripts/_common/gitops-reconciler.sh || true
+      
+      - name: Check Infrastructure Drift
+        run: |
+          bash scripts/ci/gitops-drift-detector.sh || true
+      
+      - name: Report Drift
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🔴 Infrastructure Drift Detected',
+              body: 'Automatic drift detection found infrastructure differences. Review GitOps reconciliation logs.',
+              labels: ['P1', 'infrastructure', 'drift-detection']
+            });

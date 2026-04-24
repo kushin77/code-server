@@ -1,9 +1,7 @@
 #!/bin/bash
-/**
- * @file scripts/ops/setup-encryption-at-rest.sh
- * @description Configures encryption at rest for data volumes using dm-crypt/LUKS or cloud-native equivalents.
- * @governance GOV-002
- */
+# @file scripts/ops/setup-encryption-at-rest.sh
+# @description Configures encryption at rest for data volumes using dm-crypt/LUKS or cloud-native equivalents.
+# @governance GOV-002
 
 set -euo pipefail
 

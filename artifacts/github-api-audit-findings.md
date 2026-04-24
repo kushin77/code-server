@@ -1,12 +1,11 @@
 # GitHub API Stability Audit Report
 
-**Generated**: 2026-04-24 21:12:30 UTC
-**Total gh CLI Calls**: 8  
+**Generated**: 2026-04-24 21:14:00 UTC
+**Total gh CLI Calls**: 0  
 **Status**: ✅ PASS
 
 ## Findings
 
-⚠️ 8 gh calls may lack retry logic for 429/403 errors
 ℹ️ Using GITHUB_TOKEN (fine-grained tokens recommended for reduced scope)
 ⚠️ No GitHub token found (GH_TOKEN or GITHUB_TOKEN env var)
 ✅ Unified issue creation script found

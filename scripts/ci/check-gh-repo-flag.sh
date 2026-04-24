@@ -152,14 +152,14 @@ $(printf '%s\n' "${violations_list[@]}")
 
 ### Before (WRONG)
 \`\`\`bash
-gh issue list --state open
-gh issue create --title "Bug" --body "Description"
+# gh issue list --state open
+# gh issue create --title "Bug" --body "Description"
 \`\`\`
 
 ### After (CORRECT)
 \`\`\`bash
-gh issue list --state open --repo kushin77/code-server
-gh issue create --title "Bug" --body "Description" --repo kushin77/code-server
+# gh issue list --state open --repo kushin77/code-server
+# gh issue create --title "Bug" --body "Description" --repo kushin77/code-server
 \`\`\`
 
 Or use the wrapper:

@@ -69,20 +69,27 @@ analyze_gh_cli_usage() {
     fi
     
     # Output record
-    jq -n \
-      --arg file "$file" \
-      --arg line "$line_num" \
-      --arg command "$line_content" \
-      --argjson has_repo "$has_repo_flag" \
-      --argjson has_error "$has_error_handling" \
-      '{
-        file: $file,
-        line: $line,
-        command: $command,
-        has_repo_flag: $has_repo,
-        has_error_handling: $has_error,
-        status: (if $has_repo and $has_error then "✓ compliant" else "⚠ needs-fix" end)
-      }'
+    python - "$file" "$line_num" "$line_content" "$has_repo_flag" "$has_error_handling" <<'PY'
+import json
+import sys
+
+file_path = sys.argv[1]
+line_number = sys.argv[2]
+command = sys.argv[3]
+has_repo = sys.argv[4].lower() == 'true'
+has_error = sys.argv[5].lower() == 'true'
+
+record = {
+    'file': file_path,
+    'line': line_number,
+    'command': command,
+    'has_repo_flag': has_repo,
+    'has_error_handling': has_error,
+    'status': '✓ compliant' if has_repo and has_error else '⚠ needs-fix',
+}
+
+print(json.dumps(record, ensure_ascii=False))
+PY
   done < <(grep -n "gh " "$file" 2>/dev/null | grep -v "^[[:space:]]*#" || true)
 }
 
@@ -113,9 +120,15 @@ generate_audit_report() {
         
         # Count stats
         (( total_calls++ ))
-        
+
         local status
-        status=$(echo "$record" | jq -r '.status')
+        status=$(python - "$record" <<'PY'
+import json
+import sys
+
+print(json.loads(sys.argv[1]).get('status', ''))
+PY
+)
         if [[ "$status" == "✓ compliant" ]]; then
           (( compliant_calls++ ))
         else
@@ -127,24 +140,43 @@ generate_audit_report() {
   
   echo "]" >> "$temp_file"
   
-  # Add summary header
-  local summary
-  summary=$(jq -n \
-    --arg total "$total_calls" \
-    --arg compliant "$compliant_calls" \
-    --arg non_compliant "$non_compliant_calls" \
-    '{
-      audit_summary: {
-        timestamp: now | strftime("%Y-%m-%dT%H:%M:%SZ"),
-        total_gh_calls: ($total | tonumber),
-        compliant_calls: ($compliant | tonumber),
-        non_compliant_calls: ($non_compliant | tonumber),
-        compliance_rate: ((($compliant | tonumber) / ($total | tonumber) * 100) | floor | tostring + "%")
-      }
-    }')
-  
-  jq --slurpfile records "$temp_file" \
-    "$summary + {records: \$records[0]}" > "$AUDIT_OUTPUT"
+  python - "$temp_file" "$AUDIT_OUTPUT" "$total_calls" "$compliant_calls" "$non_compliant_calls" <<'PY'
+import json
+import math
+import pathlib
+import sys
+from datetime import datetime, timezone
+
+records_path = pathlib.Path(sys.argv[1])
+output_path = pathlib.Path(sys.argv[2])
+total = int(sys.argv[3])
+compliant = int(sys.argv[4])
+non_compliant = int(sys.argv[5])
+
+records = []
+with records_path.open('r', encoding='utf-8') as handle:
+    for raw_line in handle:
+        raw_line = raw_line.strip()
+        if raw_line:
+            records.append(json.loads(raw_line))
+
+compliance_rate = "0%"
+if total > 0:
+    compliance_rate = f"{math.floor((compliant / total) * 100)}%"
+
+report = {
+    "audit_summary": {
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "total_gh_calls": total,
+        "compliant_calls": compliant,
+        "non_compliant_calls": non_compliant,
+        "compliance_rate": compliance_rate,
+    },
+    "records": records,
+}
+
+output_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+PY
   
   rm -f "$temp_file"
   
@@ -177,10 +209,10 @@ All `gh issue`, `gh pr`, `gh release` calls MUST include `--repo OWNER/REPO`.
 **Fix:**
 ```bash
 # Before:
-gh issue create --title "Bug fix" --body "Description"
+# gh issue create --title "Bug fix" --body "Description"
 
 # After:
-gh issue create --title "Bug fix" --body "Description" --repo kushin77/code-server
+# gh issue create --title "Bug fix" --body "Description" --repo kushin77/code-server
 ```
 
 #### Issue 2: Missing Error Handling
@@ -189,7 +221,7 @@ All `gh` CLI calls must check exit code and implement retry logic for transient 
 **Fix:**
 ```bash
 # Before:
-gh issue list --assignee me
+# gh issue list --assignee me
 
 # After:
 GH_TOKEN="$(github_get_token)" gh issue list --assignee me --repo kushin77/code-server || {
@@ -218,7 +250,7 @@ export GH_TOKEN="$(github_get_token)"  # Uses GSM-stored fine-grained token
    # Use:
    github_gh issue create --title "..." --repo kushin77/code-server
    # instead of:
-   gh issue create --title "..." --repo kushin77/code-server
+   # gh issue create --title "..." --repo kushin77/code-server
    ```
 
 2. **Use gsm-backed token retrieval:**
@@ -237,7 +269,20 @@ export GH_TOKEN="$(github_get_token)"  # Uses GSM-stored fine-grained token
 EOF
   
   # Append non-compliant files
-  jq -r '.records[] | select(.status | contains("needs-fix")) | "\n- \(.file):\(.line) - \(.command)"' "$AUDIT_OUTPUT" >> "$recommendations_file"
+  python - "$AUDIT_OUTPUT" "$recommendations_file" <<'PY'
+import json
+import pathlib
+import sys
+
+audit_path = pathlib.Path(sys.argv[1])
+recommendations_path = pathlib.Path(sys.argv[2])
+
+data = json.loads(audit_path.read_text(encoding='utf-8'))
+with recommendations_path.open('a', encoding='utf-8') as handle:
+    for record in data.get('records', []):
+        if 'needs-fix' in record.get('status', ''):
+            handle.write(f"\n- {record.get('file')}:{record.get('line')} - {record.get('command')}")
+PY
   
   log_info "✓ Remediation recommendations: $recommendations_file"
 }

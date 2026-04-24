@@ -1,8 +1,7 @@
 {
-  "timestamp": "2026-04-24T21:12:30Z",
-  "total_gh_calls": 8,
+  "timestamp": "2026-04-24T21:14:00Z",
+  "total_gh_calls": 0,
   "audit_findings": [
-    "⚠️ 8 gh calls may lack retry logic for 429/403 errors",
     "ℹ️ Using GITHUB_TOKEN (fine-grained tokens recommended for reduced scope)",
     "⚠️ No GitHub token found (GH_TOKEN or GITHUB_TOKEN env var)",
     "✅ Unified issue creation script found"

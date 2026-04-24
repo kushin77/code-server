@@ -22,6 +22,7 @@ source "${SCRIPT_DIR}/../_common/init.sh"
 
 REPORT_FILE="${PROJECT_ROOT}/artifacts/issue-lifecycle-governance-report.json"
 VIOLATIONS_FILE="${PROJECT_ROOT}/artifacts/issue-lifecycle-violations.md"
+REPO_SLUG="${GITHUB_REPOSITORY:-${REPO:-kushin77/code-server}}"
 
 ################################################################################
 # Functions
@@ -44,18 +45,20 @@ check_closed_issues() {
     
     # Query GitHub for closed issues
     local closed_issues=$(github_gh issue list \
+        --repo "$REPO_SLUG" \
         --state closed \
         --updated ">=${since_date}" \
         --json number,title,closedAt,labels \
-        --limit 100 2>/dev/null || echo "[]")
-    
-    log_governance "Checking $(echo "$closed_issues" | jq 'length') closed issues from last 30 days"
-    
+        --jq '.[] | "\(.number)\t\(.title)\t\(.labels | map(.name) | join(","))"' \
+        --limit 100 2>/dev/null || echo "")
+
+    local closed_count
+    closed_count=$(printf '%s\n' "$closed_issues" | sed '/^$/d' | wc -l | tr -d ' ')
+    log_governance "Checking ${closed_count} closed issues from last 30 days"
+
     # Check each closed issue
-    while IFS= read -r issue_line; do
-        local issue_num=$(echo "$issue_line" | jq -r '.number')
-        local issue_title=$(echo "$issue_line" | jq -r '.title')
-        local labels=$(echo "$issue_line" | jq -r '.labels[].name' | tr '\n' ',')
+    while IFS=$'\t' read -r issue_num issue_title labels; do
+        [ -z "$issue_num" ] && continue
         
         ((checked++))
         
@@ -72,11 +75,11 @@ check_closed_issues() {
         fi
         
         # Check if issue has a linked PR (via "Fixes" comments or PR references)
-        local linked_pr=$(github_gh issue view "$issue_num" --json body --jq '.body' 2>/dev/null | \
+        local linked_pr=$(github_gh issue view "$issue_num" --repo "$REPO_SLUG" --json body --jq '.body' 2>/dev/null | \
             grep -oE "(Fixes|Closes|Resolves) #[0-9]+" | head -1 || echo "")
         
         # Alternative: check for manual close reason in recent comment
-        local close_reason=$(github_gh issue view "$issue_num" --json comments --jq '.comments[] | select(.body | test("(manual close|auto-closed|stale|duplicate|by design)"))' 2>/dev/null || echo "")
+        local close_reason=$(github_gh issue view "$issue_num" --repo "$REPO_SLUG" --json comments --jq '.comments[] | select(.body | test("(manual close|auto-closed|stale|duplicate|by design)"))' 2>/dev/null || echo "")
         
         if [[ -n "$linked_pr" ]] || [[ -n "$close_reason" ]]; then
             ((compliant++))
@@ -86,7 +89,7 @@ check_closed_issues() {
             ((violations_count++))
             log_governance "❌ #$issue_num: VIOLATION"
         fi
-    done < <(echo "$closed_issues" | jq -c '.[]')
+    done < <(printf '%s\n' "$closed_issues")
     
     # Generate JSON report
     local json_report=$(cat <<EOF

@@ -26,22 +26,27 @@ readonly VIOLATIONS_MAX=10  # Fail if more than this
 # ============================================================================
 
 #
-# Check for direct `gh` calls without --repo flag
+# Check for direct `gh` issue/pr calls without --repo flag
 #
 check_gh_repo_flag() {
-  log_info "Checking for gh CLI --repo flag compliance..."
-  
+  log_info "Checking for gh issue/pr --repo flag compliance..."
+
   local violations=0
-  
-  # Find all gh/github_gh CLI calls in changed files
+
+  # Find all gh/github_gh issue/pr CLI calls in changed files.
   while IFS= read -r file; do
-    if grep -nE "(gh |github_gh )" "$file" | grep -v "^[[:space:]]*#" | grep -v "\-\-repo" >/dev/null 2>&1; then
-      log_warn "❌ $file: gh CLI call without --repo flag"
-      grep -nE "(gh |github_gh )" "$file" | grep -v "\-\-repo" | head -3
+    if grep -nE "(gh|github_gh)[[:space:]]+(issue|pr)[[:space:]]" "$file" \
+      | grep -v "^[[:space:]]*#" \
+      | grep -v -- "--repo" >/dev/null 2>&1; then
+      log_warn "❌ $file: gh issue/pr call without --repo flag"
+      grep -nE "(gh|github_gh)[[:space:]]+(issue|pr)[[:space:]]" "$file" \
+        | grep -v "^[[:space:]]*#" \
+        | grep -v -- "--repo" \
+        | head -3
       (( violations++ ))
     fi
   done < <(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(sh|bash|py)$" || true)
-  
+
   return $violations
 }
 

@@ -1,8 +1,8 @@
 # Issue Lifecycle Governance Report
 
-**Generated**: 2026-04-24 20:54:16 UTC  
-**Period**: Last 30 days  
-**Compliance**: 0 / 0 (0%)  
+**Generated**: 2026-04-24 20:59:34 UTC
+**Period**: Last 30 days
+**Compliance**: 0 / 0 (0%)
 **Status**: ✅ COMPLIANT
 
 ## Summary
@@ -20,7 +20,7 @@ All issues comply with governance rules.
 
 1. **Priority Labels** (Required)
    - Every issue must have exactly one: P0 (critical), P1 (high), P2 (medium), P3 (low)
-   
+
 2. **Close Documentation** (Required)
    - If closed with linked PR: PR title/description must reference issue ("Fixes #N")
    - If closed manually: Close comment must explain reason

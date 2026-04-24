@@ -30,6 +30,10 @@ check_direct_gh_usage() {
     [[ "$file" == *"check-gh-cli-governance.sh" ]] && continue
     # Skip the approved unified issue helper
     [[ "$file" == *"issue-create-unified.sh" ]] && continue
+    # Skip the approved GH wrapper helper
+    [[ "$file" == *"gh-wrapper.sh" ]] && continue
+    # Skip the approved repo-flag governance helper
+    [[ "$file" == *"check-gh-repo-flag.sh" ]] && continue
     # Skip the audit fixture that intentionally documents direct gh usage examples
     [[ "$file" == *"audit-github-cli-usage.sh" ]] && continue
     

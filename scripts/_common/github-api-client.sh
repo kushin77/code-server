@@ -212,11 +212,14 @@ github_api_call() {
 github_gh() {
   local token
   token=$(github_get_token)
+  local subcommand="${1:-}"
   
-  # Ensure --repo flag is present
-  if [[ ! "$*" =~ --repo ]]; then
-    log_warn "GitHub CLI call missing --repo flag: gh $*"
-    log_info "Adding --repo flag..."
+  # Enforce explicit repo scoping for repo-bound commands.
+  if [[ "$subcommand" == "issue" || "$subcommand" == "pr" ]]; then
+    if [[ ! "$*" =~ --repo ]]; then
+      log_error "GitHub CLI call missing --repo flag: gh $*"
+      return 1
+    fi
   fi
   
   GH_TOKEN="$token" gh "$@" || {

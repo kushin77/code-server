@@ -81,7 +81,7 @@ kushnir.cloud {
     @health path /health /healthz /ping
     respond @health "OK" 200
 
-    reverse_proxy appsmith:80 {
+    reverse_proxy oauth2-proxy-portal:4181 {
         header_up Host kushnir.cloud
         header_up X-Forwarded-Proto https
         header_up X-Real-IP {remote_host}

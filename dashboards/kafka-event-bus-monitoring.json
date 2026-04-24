@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "Kafka Event Bus & Activity Feed",
+    "uid": "kafka-event-bus",
+    "tags": ["kafka", "event-bus", "activity-feed"],
+    "timezone": "UTC",
+    "panels": [
+      {
+        "title": "Event Throughput (5min)",
+        "targets": [
+          {"expr": "sum(rate(kafka_messages_received_total[5m])) by (topic)"}
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Consumer Lag",
+        "targets": [
+          {"expr": "kafka_consumer_lag"}
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Activity Feed API Latency (p95)",
+        "targets": [
+          {"expr": "histogram_quantile(0.95, activity_feed_api_latency_seconds)"}
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "Event Parsing Error Rate",
+        "targets": [
+          {"expr": "rate(event_parsing_errors_total[5m])"}
+        ],
+        "type": "graph"
+      },
+      {
+        "title": "WebSocket Connections",
+        "targets": [
+          {"expr": "activity_feed_websocket_connections"}
+        ],
+        "type": "gauge"
+      },
+      {
+        "title": "Events by Type (24h)",
+        "targets": [
+          {"expr": "sum(increase(kafka_messages_received_total[24h])) by (topic)"}
+        ],
+        "type": "table"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: 'kafka-broker'
+    static_configs:
+      - targets: ['${KAFKA_JMX_EXPORTER}']  # Kafka JMX exporter
+    metrics_path: '/metrics'
+  
+  - job_name: 'activity-feed'
+    static_configs:
+      - targets: ['${MEMORY_SERVICE_ENDPOINT}']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['${KAFKA_BROKER}']
+
+rule_files:
+  - 'activity-feed-alert-rules.yaml'

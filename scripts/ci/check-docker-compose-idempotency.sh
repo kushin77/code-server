@@ -40,12 +40,15 @@ done
 check_floating_tags() {
  log_info "Checking for floating image tags"
  local violations=0
- local images=$(grep -E ^[[:space:]]*image:[[:space:]]* ${COMPOSE_FILE} | awk {print $2})
+ local images
+ images=$(grep -E '^[[:space:]]*image:[[:space:]]*' "${COMPOSE_FILE}" | awk '{print $2}')
  for image in $images; do
- if echo $image | grep -qE :latest$|:main$|:master$|:dev$|:develop$|:staging$; then
+ case "$image" in
+ *:latest|*:main|*:master|*:dev|*:develop|*:staging)
  log_warn "Floating tag detected: $image"
  violations=$((violations + 1))
- fi
+ ;;
+ esac
  done
  return $violations
 }

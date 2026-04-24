@@ -4,7 +4,8 @@
 # @file fix-codebase-deduplication.sh
 # @module scripts/ci/fix-codebase-deduplication.sh
 # @description P3 #1533 Phase 2: Apply codebase deduplication fixes identified by audit
-# @compliance IaC, immutable, environment-driven, GOV-002 compliant
+# @governance GOV-002: Preserve logging, configuration, and sourcing consistency across scripts
+# @usage fix-codebase-deduplication.sh
 ###
 
 set -euo pipefail

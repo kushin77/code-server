@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # @file        scripts/ci/check-gh-cli-governance.sh
 # @module      ci/gh-cli-governance
-# @description CI guard: enforce unified gh CLI usage, block direct calls
+# @description GOV-002 guard: enforce unified gh CLI usage and block direct calls
+# @governance  GOV-002: GitHub CLI calls must use shared wrappers and repo-scoped execution
+# @usage       check-gh-cli-governance.sh [all|direct|wrappers|endpoints|report]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

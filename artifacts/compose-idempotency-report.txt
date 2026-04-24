@@ -1,3 +1,7 @@
-status=SKIPPED
-compose_file=NONE
-reason=No compose manifest present in repo
+timestamp=2026-04-24T21:24:40Z
+compose_file=/mnt/c/code-server-enterprise/docker-compose.yml
+status=PASS
+immutable_image_digests=1
+immutable_configuration=1
+restart_policies=1
+health_checks=1

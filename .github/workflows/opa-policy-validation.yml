@@ -65,3 +65,20 @@ jobs:
           name: policy-evaluation-report
           path: artifacts/policy-evaluation-*
           retention-days: 30
+
+  opa-runtime-e2e:
+    runs-on: ubuntu-latest
+    needs:
+      - policy-syntax-check
+      - infrastructure-policy-check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start OPA service
+        run: docker compose up -d opa
+
+      - name: Run OPA runtime policy tests
+        run: |
+          chmod +x scripts/ops/test-opa-policies.sh
+          scripts/ops/test-opa-policies.sh

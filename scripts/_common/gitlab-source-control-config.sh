@@ -18,8 +18,8 @@ source "$SCRIPT_DIR/_common/init.sh"
 # Configuration
 # ============================================================================
 
-readonly GITLAB_REPO="https://github.com/kushin77/source-control.git"
-readonly GITLAB_WORK_DIR="${WORK_DIR:-/tmp/gitlab-source-control}"
+readonly GITLAB_REPO="${GITLAB_REPO:-https://github.com/kushin77/source-control.git}"
+readonly GITLAB_WORK_DIR="${GITLAB_WORK_DIR:-${WORK_DIR:-/tmp/gitlab-source-control}}"
 
 # Repos managed by source-control repo
 readonly SOURCE_CONTROL_MODULES=(
@@ -33,10 +33,8 @@ readonly SOURCE_CONTROL_MODULES=(
 # Repository Strategy
 # ============================================================================
 
-#
-# Document repository strategy (SSOT)
-#
-cat > "$SCRIPT_DIR/../docs/REPO-STRATEGY.md" <<'EOF'
+gitlab_write_repo_strategy() {
+  cat > "$SCRIPT_DIR/../docs/REPO-STRATEGY.md" <<'EOF'
 # Repository Strategy Map
 
 ## Current State (April 2026)
@@ -62,7 +60,7 @@ apps/
 scripts/
   _common/             # Shared libraries
     github-api-client.sh      # GitHub API wrapper
-    gitlab-config.sh          # GitLab config (this file)
+    gitlab-source-control-config.sh  # GitLab config (this file)
 docs/
   REPO-STRATEGY.md     # This document
   BRANDING-SSOT.md     # KC branding canonical reference
@@ -134,7 +132,7 @@ vcs-adapters/
 **Status**: Active (in use)
 EOF
 
-log_info "✓ Repository strategy documented in docs/REPO-STRATEGY.md"
+  log_info "✓ Repository strategy documented in docs/REPO-STRATEGY.md"
 }
 
 #
@@ -213,6 +211,7 @@ gitlab_verify_structure() {
 export -f gitlab_clone_repo
 export -f gitlab_sync_to_repo
 export -f gitlab_verify_structure
+export -f gitlab_write_repo_strategy
 
 # ============================================================================
 # Main Entry Point
@@ -230,8 +229,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
       gitlab_verify_structure "${2:-$GITLAB_WORK_DIR}"
       ;;
     doc-strategy)
-      # Already called above, just output success
-      log_info "✓ Repository strategy documented"
+      gitlab_write_repo_strategy
       ;;
     help|*)
       cat <<EOF

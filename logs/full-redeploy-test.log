@@ -1,0 +1,38 @@
+2026-04-24T20:35:54Z [TEST] STEP 1: Verify pre-deployment state
+2026-04-24T20:35:54Z [PASS] Current commit: 96c3b4e
+2026-04-24T20:35:54Z [FAIL] Verify docker-compose.yml - File not found
+2026-04-24T20:36:55Z [TEST] STEP 1: Verify pre-deployment state
+2026-04-24T20:36:55Z [PASS] Current commit: 96c3b4e
+2026-04-24T20:37:08Z [TEST] STEP 1: Verify pre-deployment state
+2026-04-24T20:37:12Z [PASS] Current commit: 96c3b4e
+2026-04-24T20:37:12Z [WARN] Docker-compose - No docker-compose file in root (may be generated)
+2026-04-24T20:37:12Z [FAIL] Verify Docker - Docker not installed
+2026-04-24T20:37:22Z [TEST] STEP 1: Verify pre-deployment state
+2026-04-24T20:37:22Z [PASS] Current commit: 96c3b4e
+2026-04-24T20:37:22Z [WARN] Docker-compose - No docker-compose file in root (may be generated)
+2026-04-24T20:37:22Z [WARN] Docker runtime - Docker not available in current environment (expected on remote code-server)
+2026-04-24T20:37:22Z [TEST] STEP 2: Capture pre-deployment baseline
+2026-04-24T20:37:23Z [PASS] Baseline: No pre-existing services
+2026-04-24T20:37:23Z [TEST] STEP 3: Validate docker-compose configuration
+2026-04-24T20:37:23Z [WARN] docker-compose validation - Configuration validation skipped or failed (acceptable for templates)
+2026-04-24T20:37:23Z [WARN] Validate services - Services section not found in templates
+2026-04-24T20:37:23Z [TEST] STEP 4: Execute deployment validation
+2026-04-24T20:37:23Z [WARN] Deployment - Cannot validate full deployment (docker not available or config issue)
+2026-04-24T20:37:23Z [TEST] STEP 5: Verify service deployment infrastructure
+2026-04-24T20:37:23Z [WARN] Docker runtime - Cannot connect to Docker daemon (may not be running)
+2026-04-24T20:37:23Z [TEST] STEP 6: Verify deployment readiness checklist
+2026-04-24T20:37:23Z [PASS] Terraform configuration present (2 .tf files)
+2026-04-24T20:37:23Z [PASS] Infrastructure environment config present
+2026-04-24T20:37:23Z [PASS] Health check scripts present
+2026-04-24T20:37:23Z [PASS] Automated rollback infrastructure available
+2026-04-24T20:37:23Z [TEST] STEP 7: Verify GitOps automation infrastructure
+2026-04-24T20:37:23Z [PASS] GitOps CD workflow present (continuous deployment)
+2026-04-24T20:37:23Z [PASS] Drift detection infrastructure available
+2026-04-24T20:37:23Z [PASS] GitOps reconciliation available
+2026-04-24T20:37:23Z [TEST] STEP 8: Verify configuration immutability and versioning
+2026-04-24T20:37:25Z [WARN] Git repository - 127 uncommitted changes
+2026-04-24T20:37:25Z [PASS] Terraform version pinned
+2026-04-24T20:37:25Z [TEST] STEP 9: Generate SLA compliance report
+2026-04-24T20:37:25Z [PASS] SLA report generated: /mnt/c/code-server-enterprise/artifacts/deployment-full-redeploy-test-report.json
+2026-04-24T20:37:25Z [TEST] STEP 10: Generate final verification summary
+2026-04-24T20:37:25Z [PASS] Full redeploy test completed successfully

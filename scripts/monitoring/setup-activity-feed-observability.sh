@@ -10,10 +10,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
+# Source shared helpers and normalize environment file line endings
+source "${REPO_ROOT}/scripts/_common/init.sh"
+
 # Source infrastructure configuration
-if [[ -f "${REPO_ROOT}/.env.infrastructure" ]]; then
-    source "${REPO_ROOT}/.env.infrastructure"
-fi
+source_env_file "${REPO_ROOT}/.env.infrastructure"
 
 log_info() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"

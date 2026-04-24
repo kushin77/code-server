@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { readTeamHubConfig } from './config';
 
 export interface DocumentContext {
   filename: string;
@@ -112,12 +113,61 @@ export class CopilotContextEngine {
 
   /**
    * Query GitHub issues (if GitHub API available)
-   * This will be populated when GitHub integration is added (Phase 5)
+   * Requires explicit opt-in via Team Hub settings.
    */
   async queryGitHubIssues(query: string): Promise<IssueContext[]> {
-    // TODO: Implement in Phase 5 - GitHub Account Integration
-    // For now, return empty to maintain idempotency
-    return [];
+    const config = readTeamHubConfig();
+
+    if (!config.enableGitHubIssueContext) {
+      return [];
+    }
+
+    if (!config.githubOwner || !config.githubRepo) {
+      console.warn('[CopilotContextEngine] GitHub issue context skipped: repository is not configured');
+      return [];
+    }
+
+    const searchQuery = `repo:${config.githubOwner}/${config.githubRepo} ${query} in:title,body,comments state:open`;
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+
+    if (config.githubToken) {
+      headers.Authorization = `Bearer ${config.githubToken}`;
+    }
+
+    try {
+      const url = new URL('https://api.github.com/search/issues');
+      url.searchParams.set('q', searchQuery);
+      url.searchParams.set('per_page', '5');
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub search failed with status ${response.status}`);
+      }
+
+      const payload = await response.json() as { items?: unknown[] };
+      const items = Array.isArray(payload.items) ? payload.items : [];
+
+      return items.map((item: any) => ({
+        number: item.number,
+        title: item.title ?? '',
+        body: typeof item.body === 'string' ? item.body.slice(0, 2000) : '',
+        labels: Array.isArray(item.labels)
+          ? item.labels.map((label: any) => (typeof label === 'string' ? label : label?.name)).filter(Boolean)
+          : [],
+        relevanceScore: typeof item.score === 'number' ? item.score : 0
+      })) as IssueContext[];
+    } catch (error) {
+      console.warn('[CopilotContextEngine] GitHub issue query failed:', error);
+      return [];
+    }
   }
 
   /**

@@ -25,9 +25,7 @@ fi
 source "${PROJECT_ROOT}/scripts/_common/init.sh"
 
 # Source infrastructure configuration
-if [[ -f "${PROJECT_ROOT}/.env.infrastructure" ]]; then
-    source "${PROJECT_ROOT}/.env.infrastructure"
-fi
+source_env_file "${PROJECT_ROOT}/.env.infrastructure"
 
 # ============================================================================
 # Logging

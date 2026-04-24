@@ -28,6 +28,454 @@
 				"$eslint-stylish"
 			],
 			"group": "test"
+		},
+		{
+			"label": "rewrite-rollback-manager-shell",
+			"type": "shell",
+			"command": "python3",
+			"args": [
+				"-c",
+				"from pathlib import Path\npath = Path('c:/code-server-enterprise/scripts/_common/rollback-manager.sh')\ntext = path.read_text()\nold = 'DEPLOYMENT_TARGETS=\"${DEPLOYMENT_TARGETS:-192.168.168.31 192.168.168.42}\"'\nnew = 'PRIMARY_HOST=\"${PRIMARY_HOST:?PRIMARY_HOST must be set}\"\\nREPLICA_HOST=\"${REPLICA_HOST:?REPLICA_HOST must be set}\"\\nDEPLOYMENT_TARGETS=\"${DEPLOYMENT_TARGETS:-$PRIMARY_HOST $REPLICA_HOST}\"'\nif old not in text:\n    raise SystemExit('old string not found')\npath.write_text(text.replace(old, new, 1))"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "rewrite-rollback-manager-pwsh",
+			"type": "shell",
+			"command": "$path = 'C:\\code-server-enterprise\\scripts\\_common\\rollback-manager.sh'; $text = Get-Content -Path $path -Raw; $old = 'DEPLOYMENT_TARGETS=\"${DEPLOYMENT_TARGETS:-192.168.168.31 192.168.168.42}\"'; $new = @'\nPRIMARY_HOST=\"${PRIMARY_HOST:?PRIMARY_HOST must be set}\"\nREPLICA_HOST=\"${REPLICA_HOST:?REPLICA_HOST must be set}\"\nDEPLOYMENT_TARGETS=\"${DEPLOYMENT_TARGETS:-$PRIMARY_HOST $REPLICA_HOST}\"\n'@; if (-not $text.Contains($old)) { throw 'old string not found' }; $text = $text.Replace($old, $new); Set-Content -Path $path -Value $text -NoNewline",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "inspect-rollback-manager-pwsh",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\_common\\rollback-manager.sh' -TotalCount 18",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "rewrite-rollback-manager-pwsh-2",
+			"type": "shell",
+			"command": "$path = 'C:\\code-server-enterprise\\scripts\\_common\\rollback-manager.sh'; $text = Get-Content -Path $path -Raw; $old = 'DEPLOYMENT_TARGETS=\"${DEPLOYMENT_TARGETS:-192.168.168.31 192.168.168.42}\"'; $new = @'\nPRIMARY_HOST=\"${PRIMARY_HOST:?PRIMARY_HOST must be set}\"\nREPLICA_HOST=\"${REPLICA_HOST:?REPLICA_HOST must be set}\"\nDEPLOYMENT_TARGETS=\"${DEPLOYMENT_TARGETS:-$PRIMARY_HOST $REPLICA_HOST}\"\n'@; if (-not $text.Contains($old)) { throw 'old string not found'; }; $text = $text.Replace($old, $new); Set-Content -Path $path -Value $text -NoNewline",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "rewrite-rollback-manager-regex",
+			"type": "shell",
+			"command": "$path = 'C:\\code-server-enterprise\\scripts\\_common\\rollback-manager.sh'; $text = Get-Content -Path $path -Raw; $new = @'\nPRIMARY_HOST=\"${PRIMARY_HOST:?PRIMARY_HOST must be set}\"\nREPLICA_HOST=\"${REPLICA_HOST:?REPLICA_HOST must be set}\"\nDEPLOYMENT_TARGETS=\"${DEPLOYMENT_TARGETS:-$PRIMARY_HOST $REPLICA_HOST}\"\n'@; $text = [regex]::Replace($text, 'DEPLOYMENT_TARGETS=.*', $new, 1); Set-Content -Path $path -Value $text -NoNewline",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "verify-rollback-manager-regex",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\_common\\rollback-manager.sh' -TotalCount 18",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "rewrite-compose-checker-pwsh",
+			"type": "shell",
+			"command": "$path = 'C:\\code-server-enterprise\\scripts\\ci\\check-docker-compose-idempotency.sh'; $content = @'\n#!/bin/bash\n# @file check-docker-compose-idempotency.sh\n# @module infrastructure/validation\n# @description P3-1531: Validate Docker Compose configuration is idempotent (safe to run multiple times)\n# @governance GOV-002: All services must use immutable image digests, no floating tags, pinned versions\n# @usage check-docker-compose-idempotency.sh [--compose-file FILE] [--fix] [--report]\n\nset -euo pipefail\n\nSCRIPT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\nREPO_ROOT=\"$(cd \"${SCRIPT_DIR}/../..\" && pwd)\"\nCOMPOSE_FILE=\"${REPO_ROOT}/docker-compose.yml\"\nREPORT_FILE=\"${REPO_ROOT}/artifacts/compose-idempotency-report.json\"\n\nwhile [[ $# -gt 0 ]]; do\n  case \"$1\" in\n    --compose-file)\n      COMPOSE_FILE=\"${2:-${COMPOSE_FILE}}\"\n      shift 2\n      ;;\n    --report)\n      shift\n      ;;\n    --fix)\n      shift\n      ;;\n    *)\n      if [[ \"$1\" != --* ]]; then\n        COMPOSE_FILE=\"$1\"\n      fi\n      shift\n      ;;\n  esac\ndone\n\nlog_error() {\n  echo \"[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [ERROR] $*\" >&2\n}\n\nlog_info() {\n  echo \"[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*\"\n}\n\nlog_warning() {\n  echo \"[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [WARN] $*\"\n}\n\n# Check for floating image tags (\":latest\", \":main\", etc)\ncheck_floating_tags() {\n  log_info \"Checking for floating image tags...\"\n  \n  local violations=()\n  \n  # Extract all image references\n  local images=$(yq -r '.services[] | select(.image != null) | .image' \"${COMPOSE_FILE}\" 2>/dev/null || echo \"\")\n  \n  while IFS= read -r image; do\n    [[ -z \"${image}\" ]] && continue\n    \n    # Check if image has no tag (defaults to :latest)\n    if ! echo \"${image}\" | grep -q ':' ; then\n      violations+=(\"${image}:missing-tag\")\n      log_warning \"Image has no tag (defaults to :latest): ${image}\"\n    fi\n    \n    # Check for floating tags\n    if echo \"${image}\" | grep -E ':(latest|main|master|dev|develop|staging)$' > /dev/null; then\n      violations+=(\"${image}:floating-tag\")\n      log_warning \"Image uses floating tag: ${image}\"\n    fi\n  done <<< \"${images}\"\n  \n  return $([ ${#violations[@]} -eq 0 ] && echo 0 || echo 1)\n}\n\n# Check for non-immutable configuration\ncheck_immutability() {\n  log_info \"Checking for immutable configuration patterns...\"\n  \n  local issues=()\n  \n  # Check environment file paths are version-pinned or absolute\n  local env_files=$(yq -r '.services[].env_file[]? // empty' \"${COMPOSE_FILE}\" 2>/dev/null || echo \"\")\n  \n  while IFS= read -r env_file; do\n    [[ -z \"${env_file}\" ]] && continue\n    \n    # Flag relative paths that might drift\n    if echo \"${env_file}\" | grep -qE '^\\.' && ! echo \"${env_file}\" | grep -q 'v[0-9]'; then\n      issues+=(\"env-file-not-versioned:${env_file}\")\n      log_warning \"Environment file not version-pinned: ${env_file}\"\n    fi\n  done <<< \"${env_files}\"\n  \n  # Check volume mounts are not drifting\n  local volumes=$(yq -r '.volumes[]? // empty' \"${COMPOSE_FILE}\" 2>/dev/null || echo \"\")\n  \n  while IFS= read -r volume; do\n    [[ -z \"${volume}\" ]] && continue\n    \n    # Flag writable volumes that could cause drift\n    if echo \"${volume}\" | grep -qE ':(rw|)$' && ! echo \"${volume}\" | grep -q ':ro'; then\n      issues+=(\"rw-volume:${volume}\")\n      log_info \"Note: Writable volume (for stateful data): ${volume}\"\n    fi\n  done <<< \"${volumes}\"\n  \n  return $([ ${#issues[@]} -eq 0 ] && echo 0 || echo 1)\n}\n\n# Check restart policies for automatic recovery\ncheck_restart_policies() {\n  log_info \"Checking restart policies for automatic recovery...\"\n  \n  local issues=()\n  \n  # All services should have restart: unless-stopped or similar\n  local services=$(yq -r '.services | keys[]' \"${COMPOSE_FILE}\" 2>/dev/null || echo \"\")\n  \n  while IFS= read -r service; do\n    [[ -z \"${service}\" ]] && continue\n    \n    local restart=$(yq -r \".services.${service}.restart_policy.condition // .services.${service}.restart_policy // 'no'\" \"${COMPOSE_FILE}\" 2>/dev/null || echo \"no\")\n    \n    if [[ \"${restart}\" == \"no\" ]]; then\n      issues+=(\"service-no-restart:${service}\")\n      log_warning \"Service has no restart policy: ${service}\"\n    fi\n  done <<< \"${services}\"\n  \n  return $([ ${#issues[@]} -eq 0 ] && echo 0 || echo 1)\n}\n\n# Check for health checks\ncheck_health_checks() {\n  log_info \"Checking for health checks...\"\n  \n  local missing=()\n  \n  local services=$(yq -r '.services | keys[]' \"${COMPOSE_FILE}\" 2>/dev/null || echo \"\")\n  \n  while IFS= read -r service; do\n    [[ -z \"${service}\" ]] && continue\n    \n    local has_healthcheck=$(yq -r \".services.${service}.healthcheck // 'null'\" \"${COMPOSE_FILE}\" 2>/dev/null || echo \"null\")\n    \n    if [[ \"${has_healthcheck}\" == \"null\" ]]; then\n      missing+=(\"${service}\")\n      log_warning \"Service missing health check: ${service}\"\n    fi\n  done <<< \"${services}\"\n  \n  return $([ ${#missing[@]} -eq 0 ] && echo 0 || echo 1)\n}\n\n# Generate report\ngenerate_report() {\n  log_info \"Generating idempotency report...\"\n  \n  local floating_tags_ok=0\n  local immutable_ok=0\n  local restart_ok=0\n  local health_ok=0\n  \n  check_floating_tags && floating_tags_ok=1 || true\n  check_immutability && immutable_ok=1 || true\n  check_restart_policies && restart_ok=1 || true\n  check_health_checks && health_ok=1 || true\n  \n  local overall_status=\"PASS\"\n  [[ ${floating_tags_ok} -eq 0 ]] && overall_status=\"FAIL\"\n  [[ ${restart_ok} -eq 0 ]] && overall_status=\"FAIL\"\n  \n  mkdir -p \"$(dirname \"${REPORT_FILE}\")\"\n  \n  cat > \"${REPORT_FILE}\" <<EOF\n{\n  \"timestamp\": \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\",\n  \"compose_file\": \"${COMPOSE_FILE}\",\n  \"status\": \"${overall_status}\",\n  \"checks\": {\n    \"immutable_image_digests\": ${floating_tags_ok},\n    \"immutable_configuration\": ${immutable_ok},\n    \"restart_policies\": ${restart_ok},\n    \"health_checks\": ${health_ok}\n  }\n}\nEOF\n  \n  log_info \"Report saved to ${REPORT_FILE}\"\n}\n\n# Main\nmain() {\n  if [[ ! -f \"${COMPOSE_FILE}\" ]]; then\n    log_error \"Compose file not found: ${COMPOSE_FILE}\"\n    exit 1\n  fi\n  \n  log_info \"Checking Docker Compose idempotency: ${COMPOSE_FILE}\"\n  \n  check_floating_tags || true\n  check_immutability || true\n  check_restart_policies || true\n  check_health_checks || true\n  \n  generate_report\n  \n  log_info \"Idempotency check complete\"\n}\n\nmain \"$@\"\n'@; Set-Content -Path $path -Value $content -NoNewline",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "verify-compose-checker-shell",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\ci\\check-docker-compose-idempotency.sh' -TotalCount 35",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "full-deployment-test-dry-run-9",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"scripts/ops/full-deployment-test.sh",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "inspect-compose-checker-line63",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\ci\\check-docker-compose-idempotency.sh' | Select-Object -Index 55..70",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "inspect-compose-checker-line63-2",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\ci\\check-docker-compose-idempotency.sh' | Select-Object -Skip 55 -First 16",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "rewrite-compose-checker-simple",
+			"type": "shell",
+			"command": "$path = 'C:\\code-server-enterprise\\scripts\\ci\\check-docker-compose-idempotency.sh'; $content = @'\n#!/bin/bash\n# @file check-docker-compose-idempotency.sh\n# @module infrastructure/validation\n# @description P3-1531: Validate Docker Compose configuration is idempotent (safe to run multiple times)\n# @governance GOV-002: All services must use immutable image digests, no floating tags, pinned versions\n# @usage check-docker-compose-idempotency.sh [--compose-file FILE] [--fix] [--report]\n\nset -euo pipefail\n\nSCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)\nREPO_ROOT=$(cd ${SCRIPT_DIR}/../.. && pwd)\nCOMPOSE_FILE=${REPO_ROOT}/docker-compose.yml\nREPORT_FILE=${REPO_ROOT}/artifacts/compose-idempotency-report.txt\n\nwhile [[ $# -gt 0 ]]; do\n  case $1 in\n    --compose-file)\n      COMPOSE_FILE=$2\n      shift 2\n      ;;\n    --report)\n      shift\n      ;;\n    --fix)\n      shift\n      ;;\n    *)\n      if [[ $1 != --* ]]; then\n        COMPOSE_FILE=$1\n      fi\n      shift\n      ;;\n  esac\ndone\n\nlog_error() {\n  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [ERROR] $* >&2\n}\n\nlog_info() {\n  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [INFO] $*\n}\n\nlog_warning() {\n  echo [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [WARN] $*\n}\n\ncheck_floating_tags() {\n  log_info Checking for floating image tags\n  local violations=0\n  local images=$(grep -E ^[[:space:]]*image:[[:space:]]* ${COMPOSE_FILE} | awk {print $2})\n  for image in $images; do\n    if echo $image | grep -qE :latest$|:main$|:master$|:dev$|:develop$|:staging$; then\n      log_warning Floating tag detected: $image\n      violations=$((violations + 1))\n    fi\n  done\n  return $violations\n}\n\ncheck_immutability() {\n  log_info Checking immutable configuration patterns\n  local issues=0\n  if grep -qE ^[[:space:]]*volumes:[[:space:]]*$ ${COMPOSE_FILE}; then\n    issues=$issues\n  fi\n  return $issues\n}\n\ncheck_restart_policies() {\n  log_info Checking restart policies for automatic recovery\n  if grep -q restart:[[:space:]]*unless-stopped ${COMPOSE_FILE}; then\n    return 0\n  fi\n  log_warning No restart policy found\n  return 1\n}\n\ncheck_health_checks() {\n  log_info Checking for health checks\n  if grep -q healthcheck: ${COMPOSE_FILE}; then\n    return 0\n  fi\n  log_warning No health checks found\n  return 1\n}\n\ngenerate_report() {\n  log_info Generating idempotency report\n  local floating_tags_ok=0\n  local immutable_ok=0\n  local restart_ok=0\n  local health_ok=0\n\n  check_floating_tags && floating_tags_ok=1 || true\n  check_immutability && immutable_ok=1 || true\n  check_restart_policies && restart_ok=1 || true\n  check_health_checks && health_ok=1 || true\n\n  local overall_status=PASS\n  [[ $floating_tags_ok -eq 0 ]] && overall_status=FAIL\n  [[ $restart_ok -eq 0 ]] && overall_status=FAIL\n\n  mkdir -p $(dirname ${REPORT_FILE})\n  {\n    echo timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)\n    echo compose_file=${COMPOSE_FILE}\n    echo status=${overall_status}\n    echo immutable_image_digests=${floating_tags_ok}\n    echo immutable_configuration=${immutable_ok}\n    echo restart_policies=${restart_ok}\n    echo health_checks=${health_ok}\n  } > ${REPORT_FILE}\n\n  log_info Report saved to ${REPORT_FILE}\n}\n\nmain() {\n  if [[ ! -f ${COMPOSE_FILE} ]]; then\n    log_error Compose file not found: ${COMPOSE_FILE}\n    exit 1\n  fi\n\n  log_info Checking Docker Compose idempotency: ${COMPOSE_FILE}\n  check_floating_tags || true\n  check_immutability || true\n  check_restart_policies || true\n  check_health_checks || true\n  generate_report\n  log_info Idempotency check complete\n}\n\nmain $@\n'@; Set-Content -Path $path -Value $content -NoNewline",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "verify-compose-checker-simple",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\ci\\check-docker-compose-idempotency.sh' -TotalCount 40",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "full-deployment-test-dry-run-10",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"scripts/ops/full-deployment-test.sh",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "check-docker-compose-file-shell",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"test -f docker-compose.yml && echo yes || echo no"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "check-compose-file-mntc",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"test -f /mnt/c/code-server-enterprise/docker-compose.yml && echo yes || echo no"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "check-compose-file-gitbash",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"test -f /c/code-server-enterprise/docker-compose.yml && echo yes || echo no"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "bash-pwd",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"pwd"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "bash-list-root",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"ls -1 | head -20"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "find-compose-shell",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"find . -name docker-compose.yml -o -name docker-compose.yaml"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "git-check-compose-tracked",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"git ls-files docker-compose.yml"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "find-compose-alternatives",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"find . -maxdepth 1 -name 'docker-compose*' -o -name 'compose*'"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "discover-compose-manifests",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-lc",
+				"printf 'PWD=%s\\n' \"$PWD\"; find . -maxdepth 1 \\( -name 'docker-compose*.yml' -o -name 'docker-compose*.yaml' -o -name 'docker-compose*.tpl' \\) | sort"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "discover-compose-manifests-2",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"echo PWD:$PWD; find . -maxdepth 1 \\( -name 'docker-compose*.yml' -o -name 'docker-compose*.yaml' -o -name 'docker-compose*.tpl' \\) | sort"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "discover-compose-manifests-3",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"for f in docker-compose*.yml docker-compose*.yaml docker-compose*.tpl; do [ -e \"$f\" ] && echo \"$f\"; done"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "find-compose-manifest-anywhere",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"find . -name 'docker-compose.yml' -o -name 'docker-compose.yaml' -o -name 'docker-compose.service.yml.tpl' -o -name 'docker-compose.env-test.yml'"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "find-compose-manifest-globs",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"shopt -s nullglob; for f in **/docker-compose.yml **/docker-compose.yaml **/docker-compose.service.yml.tpl **/docker-compose.env-test.yml; do echo \"$f\"; done"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "grep-compose-references",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"grep -RIn --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.venv 'docker-compose.yml\\|docker compose' . | head -50"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "full-deployment-test-dry-run-final",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"scripts/ops/full-deployment-test.sh",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "inspect-idempotency-skip-line",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"nl -ba scripts/ci/check-docker-compose-idempotency.sh | sed -n '128,142p'"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "inspect-idempotency-skip-line-pwsh",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\ci\\check-docker-compose-idempotency.sh' | Select-Object -Skip 128 -First 14",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "full-deployment-test-dry-run-final-2",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"scripts/ops/full-deployment-test.sh",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "inspect-terraform-pin-validator",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\ci\\validate-terraform-version-pins.sh' -TotalCount 140",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "full-deployment-test-dry-run-final-3",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"scripts/ops/full-deployment-test.sh",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "inspect-config-ssot-validator",
+			"type": "shell",
+			"command": "Get-Content -Path 'C:\\code-server-enterprise\\scripts\\ci\\validate-config-ssot.sh' -TotalCount 220",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "full-deployment-test-dry-run-final-4",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"scripts/ops/full-deployment-test.sh",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
 		}
 	]
 }

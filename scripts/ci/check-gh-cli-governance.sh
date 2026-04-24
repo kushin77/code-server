@@ -9,6 +9,10 @@ source "$SCRIPT_DIR/_common/init.sh"
 
 readonly VIOLATIONS_FILE=".gh-cli-violations.json"
 
+json_escape() {
+  python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"
+}
+
 # Scan for direct gh CLI usage violations
 check_direct_gh_usage() {
   log_info "Checking for direct gh CLI usage violations..."
@@ -26,6 +30,8 @@ check_direct_gh_usage() {
     [[ "$file" == *"check-gh-cli-governance.sh" ]] && continue
     # Skip the approved unified issue helper
     [[ "$file" == *"issue-create-unified.sh" ]] && continue
+    # Skip the audit fixture that intentionally documents direct gh usage examples
+    [[ "$file" == *"audit-github-cli-usage.sh" ]] && continue
     
     # Look for direct gh command usage (not in comments)
     while IFS= read -r line_num line_content; do
@@ -37,7 +43,7 @@ check_direct_gh_usage() {
       # Check if line has direct "gh " usage (not wrapped in error handling)
       if [[ "$line_content" =~ [^_]gh[[:space:]] ]] && ! [[ "$line_content" =~ \|\| ]]; then
         log_warn "Direct gh usage at $file:$line_num: $line_content"
-        violation_list+=("{\"file\": \"$file\", \"line\": $line_num, \"content\": \"$line_content\"}")
+        violation_list+=("{\"file\": $(json_escape "$file"), \"line\": $line_num, \"content\": $(json_escape "$line_content")}")
         ((violations++))
       fi
     done < <(grep -n "gh " "$file" 2>/dev/null || true)
@@ -45,16 +51,19 @@ check_direct_gh_usage() {
   
   # Generate JSON report
   if [[ $violations -gt 0 ]]; then
-    local json_violations
-    json_violations=$(printf '%s\n' "${violation_list[@]}" | jq -s '.')
-    
-    local report
-    report=$(jq -n \
-      --arg repo "${REPO:-kushin77/code-server}" \
-      --argjson violations "$json_violations" \
-      '{timestamp: now | floor, repo: $repo, violation_count: '"$violations"', violations: $violations}')
-    
-    echo "$report" > "$VIOLATIONS_FILE"
+    local repo timestamp json_violations
+    repo="${REPO:-kushin77/code-server}"
+    timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    json_violations=$(IFS=,; echo "${violation_list[*]}")
+
+    cat > "$VIOLATIONS_FILE" <<EOF
+{
+  "timestamp": "$timestamp",
+  "repo": "$repo",
+  "violation_count": $violations,
+  "violations": [${json_violations}]
+}
+EOF
     log_error "Found $violations direct gh CLI usage violations (see $VIOLATIONS_FILE)"
     return 1
   fi
@@ -96,9 +105,12 @@ check_hardcoded_endpoints() {
   # Look for direct curl/wget to api.github.com (should use github_api_call)
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
+    [[ "$line" =~ github-api-client\.sh: ]] && continue
+    [[ "$line" =~ github-token-rotation\.sh: ]] && continue
+    [[ "$line" =~ ^[^:]+:[0-9]+:[[:space:]]*# ]] && continue
     log_warn "Hardcoded GitHub API endpoint: $line"
     ((violations++))
-  done < <(grep -r "api\.github\.com\|https://github\.com/api" --include="*.sh" . 2>/dev/null || true)
+  done < <(grep -rn "api\.github\.com\|https://github\.com/api" --include="*.sh" . 2>/dev/null || true)
   
   if [[ $violations -gt 0 ]]; then
     log_error "Found $violations hardcoded GitHub API endpoints"
@@ -122,13 +134,25 @@ generate_governance_report() {
   check_wrapper_functions || wrapper_check=$?
   check_hardcoded_endpoints || endpoints_check=$?
   
-  local report
-  report=$(jq -n \
-    --arg repo "${REPO:-kushin77/code-server}" \
-    --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '{timestamp: $timestamp, repo: $repo, checks: {direct_gh_usage: '"$direct_check"', wrapper_functions: '"$wrapper_check"', hardcoded_endpoints: '"$endpoints_check"'}, passed: ('"$direct_check"' == 0 and '"$wrapper_check"' == 0 and '"$endpoints_check"' == 0)}')
-  
-  echo "$report" | jq . > "$report_file"
+  local repo timestamp
+  repo="${REPO:-kushin77/code-server}"
+  timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local passed="true"
+
+  [[ $direct_check -eq 0 && $wrapper_check -eq 0 && $endpoints_check -eq 0 ]] || passed="false"
+
+  cat > "$report_file" <<EOF
+{
+  "timestamp": "$timestamp",
+  "repo": "$repo",
+  "checks": {
+    "direct_gh_usage": $direct_check,
+    "wrapper_functions": $wrapper_check,
+    "hardcoded_endpoints": $endpoints_check
+  },
+  "passed": $passed
+}
+EOF
   log_info "✓ Governance report: $report_file"
   
   # Return fail if any check failed

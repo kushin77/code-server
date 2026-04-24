@@ -8,7 +8,9 @@ set -euo pipefail
 # ============================================================================
 # Configuration
 # ============================================================================
-DEPLOYMENT_TARGETS="${DEPLOYMENT_TARGETS:-192.168.168.31 192.168.168.42}"
+PRIMARY_HOST=${PRIMARY_HOST:?PRIMARY_HOST must be set}
+REPLICA_HOST=${REPLICA_HOST:?REPLICA_HOST must be set}
+DEPLOYMENT_TARGETS=${DEPLOYMENT_TARGETS:-$PRIMARY_HOST $REPLICA_HOST}
 SSH_USER="${SSH_USER:-akushnir}"
 ROLLBACK_TIMEOUT="${ROLLBACK_TIMEOUT:-300}"
 HEALTH_CHECK_RETRIES="${HEALTH_CHECK_RETRIES:-5}"

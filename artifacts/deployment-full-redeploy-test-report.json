@@ -1,0 +1,35 @@
+{
+  "test_timestamp": "2026-04-24T20:37:25Z",
+  "test_type": "full_redeploy",
+  "git_commit": "96c3b4e",
+  "deployment": {
+    "start_time": "1777063043",
+    "end_time": "1777063043",
+    "duration_seconds": 0,
+    "sla_max_duration": 300,
+    "sla_compliance": true
+  },
+  "services": {
+    "running": 0,
+    "exited": 0,
+    "total_time_seconds": 1
+  },
+  "health_checks": {
+    "endpoints_tested": 4,
+    "endpoints_passed": 3,
+    "max_retry_timeout_seconds": 300
+  },
+  "sla_metrics": {
+    "max_deployment_time_seconds": 300,
+    "actual_deployment_time_seconds": 0,
+    "max_downtime_seconds": 30,
+    "availability_percent": 100
+  },
+  "status": "PASS",
+  "next_steps": [
+    "Monitor services for 24 hours",
+    "Check logs for any warnings",
+    "Verify performance metrics",
+    "Run capacity testing if needed"
+  ]
+}

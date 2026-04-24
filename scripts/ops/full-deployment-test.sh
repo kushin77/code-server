@@ -78,10 +78,12 @@ test_deployment_simulation() {
 
 # Test Phase 4: Health check validation
 test_health_checks() {
+  local timeout="$1"
+
   log_info "Test Phase 4: Health Check Validation"
   
-  log_info "  - Running post-deployment health checks (timeout=60s)..."
-  "${REPO_ROOT}/scripts/ci/health-check-post-deploy.sh" --timeout 60 >> "${TEST_LOG}" 2>&1 || true
+  log_info "  - Running post-deployment health checks (timeout=${timeout}s)..."
+  "${REPO_ROOT}/scripts/ci/health-check-post-deploy.sh" --timeout "${timeout}" >> "${TEST_LOG}" 2>&1 || true
   
   if [[ -f "${REPO_ROOT}/artifacts/health-check-report.json" ]]; then
     log_success "Phase 4 PASSED: Health check report generated"
@@ -142,6 +144,7 @@ EOF
 main() {
   local target="both"
   local dry_run="false"
+  local health_check_timeout=60
   
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -158,6 +161,10 @@ main() {
         ;;
     esac
   done
+
+  if [[ "${dry_run}" == "true" ]]; then
+    health_check_timeout=0
+  fi
   
   log_info "=" 
   log_info "Full Deployment Test Suite"
@@ -173,7 +180,7 @@ main() {
   test_infrastructure_validation || test1="FAIL"
   test_gitops_drift || test2="FAIL"
   test_deployment_simulation || test3="FAIL"
-  test_health_checks || test4="PASS"  # Health check failure doesn't block full suite
+  test_health_checks "${health_check_timeout}" || test4="PASS"  # Health check failure doesn't block full suite
   test_rollback_verification || test5="FAIL"
   
   generate_test_report "${test1}" "${test2}" "${test3}" "${test4}" "${test5}"

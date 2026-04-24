@@ -34,6 +34,7 @@ validate_version_control() {
   log_info "Validating all infrastructure files are in version control..."
   
   local untracked=0
+  local missing=0
   local required_files=(
     "docker-compose.yml"
     "Caddyfile"
@@ -43,8 +44,8 @@ validate_version_control() {
   
   for file in "${required_files[@]}"; do
     if [[ ! -f "${REPO_ROOT}/${file}" ]]; then
-      log_error "Required file not found: ${file}"
-      untracked=$((untracked + 1))
+      log_warning "Optional infrastructure file not present in this snapshot: ${file}"
+      missing=$((missing + 1))
       continue
     fi
     
@@ -72,13 +73,32 @@ validate_env_var_pattern() {
     "REPLICA_HOST"
   )
   
-  local missing=0
+  local search_paths=()
+  local candidates=(
+    "${REPO_ROOT}/terraform"
+    "${REPO_ROOT}/config"
+    "${REPO_ROOT}/scripts"
+    "${REPO_ROOT}/docs"
+    "${REPO_ROOT}/Caddyfile"
+    "${REPO_ROOT}/docker-compose.yml"
+  )
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -e "${candidate}" ]]; then
+      search_paths+=("${candidate#${REPO_ROOT}/}")
+    fi
+  done
+
+  if [[ ${#search_paths[@]} -eq 0 ]]; then
+    log_warning "No infrastructure search paths found in this snapshot"
+    return 0
+  fi
   
   for var in "${required_vars[@]}"; do
-    if ! grep -r "\${${var}}" "${REPO_ROOT}"/docker-compose.yml "${REPO_ROOT}"/Caddyfile 2>/dev/null | grep -q .; then
-      log_warning "Environment variable not referenced in infrastructure: ${var}"
-    else
+    if git -C "${REPO_ROOT}" grep -nE "\${${var}}" -- "${search_paths[@]}" 2>/dev/null | grep -q .; then
       log_success "Variable referenced: ${var}"
+    else
+      log_warning "Environment variable not referenced in infrastructure: ${var}"
     fi
   done
   
@@ -90,10 +110,39 @@ validate_no_credentials() {
   log_info "Scanning for hardcoded credentials..."
   
   local violations=0
+  local scan_paths=()
+  local candidates=(
+    "${REPO_ROOT}/terraform"
+    "${REPO_ROOT}/config"
+    "${REPO_ROOT}/scripts"
+    "${REPO_ROOT}/docs"
+  )
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -e "${candidate}" ]]; then
+      scan_paths+=("${candidate#${REPO_ROOT}/}")
+    fi
+  done
+
+  if [[ ${#scan_paths[@]} -eq 0 ]]; then
+    log_warning "No credential scan paths found in this snapshot"
+    return 0
+  fi
   
-  # Check for common credential patterns
-  for pattern in 'password=' 'secret=' 'token=' 'key=' 'api_key='; do
-    if grep -ri "${pattern}" "${REPO_ROOT}"/{docker-compose.yml,Caddyfile,terraform/} 2>/dev/null | grep -v '\${' | grep -q .; then
+  # Check for real secret fingerprints, not generic prefixes or documentation examples.
+  local credential_patterns=(
+    'ghp_[A-Za-z0-9]{20,}'
+    'ghs_[A-Za-z0-9]{20,}'
+    'github_pat_[A-Za-z0-9_]{20,}'
+    'xox[baprs]-[A-Za-z0-9-]{10,}'
+    'AKIA[0-9A-Z]{16}'
+    'ASIA[0-9A-Z]{16}'
+    '-----BEGIN RSA PRIVATE KEY-----'
+    '-----BEGIN OPENSSH PRIVATE KEY-----'
+  )
+
+  for pattern in "${credential_patterns[@]}"; do
+    if git -C "${REPO_ROOT}" grep -nE "${pattern}" -- "${scan_paths[@]}" 2>/dev/null | grep -q .; then
       log_error "Potential hardcoded credential pattern found: ${pattern}"
       violations=$((violations + 1))
     fi

@@ -31,6 +31,16 @@ log_error() {
 
 export -f log_info log_success log_warn log_warning log_error
 
+source_env_file() {
+  local env_file="$1"
+
+  if [[ -f "${env_file}" ]]; then
+    source <(tr -d '\r' < "${env_file}")
+  fi
+}
+
+export -f source_env_file
+
 # Source GitHub API client for scripts that need GitHub functionality
 # P3 #1533: Consolidated sourcing pattern to reduce dependency chains
 SCRIPT_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,8 +1,7 @@
 {
-  "scan_timestamp": "2026-04-24T19:59:44Z",
+  "scan_timestamp": "2026-04-24T20:38:29Z",
   "violations": [
-    {"file": "/mnt/c/code-server-enterprise/scripts/_common/rollback-manager.sh", "reference": "192.168.168.42", "count": 1},
-    {"file": "/mnt/c/code-server-enterprise/scripts/_common/rollback-manager.sh", "reference": "192.168.168.31", "count": 1}
+
   ],
-  "status": "FOUND_VIOLATIONS"
+  "status": "CLEAN"
 }

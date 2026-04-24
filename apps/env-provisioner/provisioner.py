@@ -14,6 +14,8 @@ from typing import Dict, Any, List
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from jsonschema import Draft7Validator
+
 @dataclass
 class ProvisionerConfig:
     """env.yaml configuration"""
@@ -26,20 +28,30 @@ class ProvisionerConfig:
 
 class EnvProvisioner:
     def __init__(self, env_file: str = "env.yaml"):
-        self.env_file = env_file
+        self.env_path = Path(env_file)
+        self.repo_root = Path(__file__).resolve().parents[2]
         self.config = self._load_config()
-        self.log_file = Path("artifacts/provisioner.log")
+        self.schema_path = self.repo_root / "schemas" / "env-yaml.v1.json"
+        self.log_file = self.repo_root / "artifacts" / "provisioner.log"
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
     
     def _load_config(self) -> ProvisionerConfig:
         """Load and validate env.yaml"""
-        if not Path(self.env_file).exists():
-            raise FileNotFoundError(f"env.yaml not found: {self.env_file}")
+        if not self.env_path.exists():
+            raise FileNotFoundError(f"env.yaml not found: {self.env_path}")
         
-        with open(self.env_file) as f:
+        with open(self.env_path) as f:
             data = yaml.safe_load(f)
         
         return ProvisionerConfig(**data)
+
+    def _load_schema(self) -> Dict[str, Any]:
+        """Load the canonical env.yaml JSON schema."""
+        if not self.schema_path.exists():
+            raise FileNotFoundError(f"env schema not found: {self.schema_path}")
+
+        with open(self.schema_path) as f:
+            return json.load(f)
     
     def _log(self, msg: str, level: str = "INFO"):
         """Log to file"""
@@ -52,6 +64,21 @@ class EnvProvisioner:
     def _validate_config(self) -> bool:
         """Validate env.yaml schema"""
         self._log("Validating env.yaml schema...")
+
+        try:
+            schema = self._load_schema()
+            with open(self.env_path) as f:
+                raw_config = yaml.safe_load(f)
+        except Exception as exc:
+            self._log(f"Failed to load env.yaml or schema: {exc}", "ERROR")
+            return False
+
+        errors = sorted(Draft7Validator(schema).iter_errors(raw_config), key=lambda error: error.path)
+        if errors:
+            first_error = errors[0]
+            location = "/".join(str(part) for part in first_error.path) or "root"
+            self._log(f"Schema validation failed at {location}: {first_error.message}", "ERROR")
+            return False
         
         # Check required fields
         if not self.config.version:
@@ -101,7 +128,7 @@ class EnvProvisioner:
                 ]
         
         # Write override file
-        override_path = Path("docker-compose.override.yml")
+        override_path = self.repo_root / "docker-compose.override.yml"
         with open(override_path, "w") as f:
             yaml.safe_dump(override, f, sort_keys=False)
         
@@ -139,7 +166,7 @@ class EnvProvisioner:
     
     def diff(self, other_env_file: str) -> Dict[str, Any]:
         """Compare two env.yaml files"""
-        self._log(f"Computing diff between {self.env_file} and {other_env_file}...")
+        self._log(f"Computing diff between {self.env_path} and {other_env_file}...")
         
         with open(other_env_file) as f:
             other_config = ProvisionerConfig(**yaml.safe_load(f))

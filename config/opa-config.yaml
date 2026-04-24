@@ -1,0 +1,50 @@
+# OPA Service Configuration
+# Policy-as-Code engine for centralized governance
+
+# OPA service definition (to be added to docker-compose.yml)
+# 
+# opa:
+#   image: openpolicyagent/opa:latest
+#   command: run --server --log-level=info --set decision_logs.console.enabled=true
+#   ports:
+#     - "8181:8181"
+#   volumes:
+#     - ./policies:/policies:ro
+#   environment:
+#     - OPA_ADDR=0.0.0.0:8181
+#   healthcheck:
+#     test: ["CMD", "curl", "-f", "http://localhost:8181/health"]
+#     interval: 30s
+#     timeout: 5s
+#     retries: 3
+#   restart: unless-stopped
+#   networks:
+#     - services
+
+services:
+  localhost:
+    url: http://opa:8181
+
+bundles:
+  policies:
+    service: localhost
+    resource: /bundles/policies.tar.gz
+    polling:
+      min_delay_seconds: 60
+      max_delay_seconds: 300
+
+decision_logs:
+  console:
+    level: info
+  http:
+    url: http://loki:3100/loki/api/v1/push
+    batch_size: 100
+    retry:
+      max_retries: 3
+      backoff:
+        initial_delay_seconds: 1
+        max_delay_seconds: 60
+
+status:
+  service: localhost
+  partition_name: default

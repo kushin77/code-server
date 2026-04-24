@@ -326,6 +326,58 @@ services:
           cpus: "1.0"
           memory: 1g
 
+  memory-engine:
+    build:
+      context: apps/memory-engine
+      dockerfile: Dockerfile
+    container_name: memory-engine
+    user: "1000:1000"
+    ports:
+      - "8001:8001"
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - OLLAMA_HOST=http://ollama:11434
+      - MEMORY_ENGINE_PORT=8001
+      - MEMORY_ENGINE_HOST=0.0.0.0
+      - LOG_LEVEL=INFO
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ./apps/memory-engine:/app
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - "-f"
+        - "http://localhost:8001/health"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - services
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+        reservations:
+          cpus: "0.5"
+          memory: 512m
+    profiles:
+      - "ai"
+
   # ========================================================================
   # DATA STORES
   # ========================================================================

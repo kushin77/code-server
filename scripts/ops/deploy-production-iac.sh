@@ -29,6 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
+DEPLOY_DIR="${DEPLOY_DIR:-/home/akushnir/code-server-enterprise}"
 REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
 SSH_USER="akushnir"
 DEFAULT_SSH_KEY_PATH="${HOME}/.ssh/id_rsa_onprem"
@@ -42,6 +43,13 @@ DEPLOY_HEALTH_CHECK_INTERVAL=10   # Check every 10 seconds
 DEPLOY_START_TIME=$(date +%s)
 REPLICAS_DEPLOYED=()
 REPLICAS_FAILED=()
+DEPLOY_TRACKING_DIR="$(mktemp -d /tmp/deploy-production-iac.XXXXXX)"
+
+cleanup() {
+  rm -rf "$DEPLOY_TRACKING_DIR"
+}
+
+trap cleanup EXIT
 
 # ============================================================================
 # Parse Arguments
@@ -84,13 +92,17 @@ execute_on_replica() {
     return 0
   fi
 
-  if ssh -i "$SSH_KEY" -o ConnectTimeout=10 "$SSH_USER@$replica" bash -c "$command"; then
+  if ssh -i "$SSH_KEY" -o ConnectTimeout=10 "$SSH_USER@$replica" "$command"; then
     log_info "[$replica] ✅ Success"
     return 0
   else
     log_error "[$replica] ❌ Failed"
     return 1
   fi
+}
+
+remote_repo_dir() {
+  printf '%s' "$DEPLOY_DIR"
 }
 
 wait_for_health() {
@@ -141,15 +153,23 @@ for replica in "${REPLICA_ARRAY[@]}"; do
   replica="${replica// /}"
   (
     if execute_on_replica "$replica" \
-      "cd code-server-enterprise && git fetch origin && git reset --hard origin/main" \
+      "bash -lc 'cd \"$(remote_repo_dir)\" && git fetch origin && git reset --hard origin/main'" \
       "Git pull"; then
-      true
+      printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/pulled"
     else
-      REPLICAS_FAILED+=("$replica")
+      printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/failed"
     fi
   ) &
 done
 wait
+
+if [[ -f "$DEPLOY_TRACKING_DIR/pulled" ]]; then
+  mapfile -t REPLICAS_DEPLOYED < "$DEPLOY_TRACKING_DIR/pulled"
+fi
+
+if [[ -f "$DEPLOY_TRACKING_DIR/failed" ]]; then
+  mapfile -t REPLICAS_FAILED < "$DEPLOY_TRACKING_DIR/failed"
+fi
 
 if [[ ${#REPLICAS_FAILED[@]} -gt 0 ]]; then
   log_error "Git pull failed on: ${REPLICAS_FAILED[*]}"
@@ -164,15 +184,18 @@ for replica in "${REPLICA_ARRAY[@]}"; do
   replica="${replica// /}"
   (
     if execute_on_replica "$replica" \
-      "sudo chown -R akushnir:akushnir ~/code-server-enterprise ~/.docker 2>/dev/null || true" \
+      "bash -lc 'sudo chown -R akushnir:akushnir \"$(remote_repo_dir)\" ~/.docker 2>/dev/null || true'" \
       "Fixing permissions"; then
-      true
+      printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/perms-fixed"
     else
-      log_warn "Permission fix had issues on $replica (non-critical)"
+      printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/failed"
     fi
   ) &
 done
 wait
+if [[ -f "$DEPLOY_TRACKING_DIR/failed" ]]; then
+  mapfile -t REPLICAS_FAILED < "$DEPLOY_TRACKING_DIR/failed"
+fi
 log_info "✅ Permissions fixed"
 log_info ""
 
@@ -182,15 +205,24 @@ for replica in "${REPLICA_ARRAY[@]}"; do
   replica="${replica// /}"
   (
     if execute_on_replica "$replica" \
-      "cd code-server-enterprise && docker-compose -f docker-compose.yml -f docker-compose.runtime-override.yml up -d" \
+      "bash -lc 'cd \"$(remote_repo_dir)\" && docker-compose -f docker-compose.yml -f docker-compose.runtime-override.yml up -d'" \
       "Starting services"; then
-      REPLICAS_DEPLOYED+=("$replica")
+      printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/deployed"
     else
-      REPLICAS_FAILED+=("$replica")
+      printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/failed"
     fi
   ) &
 done
 wait
+
+REPLICAS_DEPLOYED=()
+REPLICAS_FAILED=()
+if [[ -f "$DEPLOY_TRACKING_DIR/deployed" ]]; then
+  mapfile -t REPLICAS_DEPLOYED < "$DEPLOY_TRACKING_DIR/deployed"
+fi
+if [[ -f "$DEPLOY_TRACKING_DIR/failed" ]]; then
+  mapfile -t REPLICAS_FAILED < "$DEPLOY_TRACKING_DIR/failed"
+fi
 
 if [[ ${#REPLICAS_FAILED[@]} -gt 0 ]]; then
   log_error "Service startup failed on: ${REPLICAS_FAILED[*]}"

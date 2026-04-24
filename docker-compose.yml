@@ -421,6 +421,42 @@ services:
       - "ai"
       - "governance"
 
+  env-provisioner:
+    build:
+      context: apps/env-provisioner
+      dockerfile: Dockerfile
+    container_name: env-provisioner
+    user: "1002:1002"
+    ports:
+      - "8050:8050"
+    environment:
+      - LOG_LEVEL=INFO
+      - REPO_ROOT=/app
+    volumes:
+      - ./apps/env-provisioner:/app
+      - ./config:/app/config:ro
+      - ./artifacts:/app/artifacts
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
+    restart: unless-stopped
+    networks:
+      - ingress
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
+        reservations:
+          cpus: "0.25"
+          memory: 256m
+    profiles:
+      - "infrastructure"
+      - "all"
+
   activity-feed:
     build:
       context: apps/activity_feed

@@ -1,9 +1,7 @@
 #!/bin/bash
-/**
- * @file scripts/ops/monitor-replication.sh
- * @description Monitors database replication lag and status for PostgreSQL and Redis.
- * @governance GOV-002
- */
+# @file scripts/ops/monitor-replication.sh
+# @description Monitors database replication lag and status for PostgreSQL and Redis.
+# @governance GOV-002
 
 set -euo pipefail
 

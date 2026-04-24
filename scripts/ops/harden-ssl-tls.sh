@@ -1,9 +1,7 @@
 #!/bin/bash
-/**
- * @file scripts/ops/harden-ssl-tls.sh
- * @description Hardens SSL/TLS configuration for Caddy, OPA, and other services.
- * @governance GOV-002
- */
+# @file scripts/ops/harden-ssl-tls.sh
+# @description Hardens SSL/TLS configuration for Caddy, OPA, and other services.
+# @governance GOV-002
 
 set -euo pipefail
 

@@ -1,5 +1,7 @@
 # Sentry Error Tracking Integration - Implementation Guide
 
+**Purpose**: Implementation guide for integrating Sentry error tracking (Collab-9.5) into the VS Code IDE environment.
+
 ## Overview
 
 This document describes the implementation of the **Sentry Error Tracking** (Collab-9.5), which brings real-time error monitoring directly into VS Code with issue management and release tracking.

@@ -560,7 +560,7 @@ gh issue create --repo kushin77/code-server \
 - **Prometheus**: http://localhost:9090
 - **Grafana**: http://localhost:3000
 - **GitHub Repo**: https://github.com/kushin77/code-server/issues
-- **Error Triage Engine**: [error-triage-engine.sh](../error-triage-engine.sh)
+- **Error Triage Engine**: [error-triage-engine.sh](../../scripts/error-triage-engine.sh)
 - **Comprehensive Setup**: [comprehensive-log-pipeline-setup.sh](./comprehensive-log-pipeline-setup.sh)
 
 ---

@@ -1,4 +1,7 @@
 # Production Failover Test Runbook
+
+**Purpose**: Step-by-step runbook for executing and validating full-stack production failover between cluster replicas.
+
 ## Issue #1175 - Full Stack Validation (Primary ↔ Replica)
 
 **Status**: Ready for execution after secret rotation (#1163) complete  

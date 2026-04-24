@@ -61,7 +61,7 @@ Coverage is based on visible repo test files, recorded resilience artifacts, and
 - [tests/e2e/specs/authenticated-session-persistence.spec.ts](../tests/e2e/specs/authenticated-session-persistence.spec.ts)
 - [tests/e2e/specs/failover-session-continuity.spec.ts](../tests/e2e/specs/failover-session-continuity.spec.ts)
 - [artifacts/triage/resilience-campaign.md](../artifacts/triage/resilience-campaign.md)
-- [artifacts/triage/failover-continuity-20260419.md](../artifacts/triage/failover-continuity-20260419.md)
+- Failover continuity evidence artifact: `artifacts/triage/failover-continuity-20260419.md` (generated in CI artifacts when continuity checks run)
 
 ### Public edge load coverage
 

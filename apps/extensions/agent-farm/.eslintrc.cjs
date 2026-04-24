@@ -26,7 +26,6 @@ module.exports = {
       files: ["**/*.test.js", "**/*.test.ts", "**/*.spec.js", "**/*.spec.ts"],
       env: {
         jest: true,
-        "vitest-globals/env": true,
       },
       globals: {
         describe: "readonly",

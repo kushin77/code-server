@@ -1,5 +1,7 @@
 # Automated Failover Monitoring - Prometheus Webhook Integration
 
+**Purpose**: Documents the Prometheus AlertManager webhook integration for automated failover monitoring and recovery on the on-prem cluster.
+
 **Issue Reference**: #1519  
 **Date**: April 23, 2026  
 **Environment**: On-Prem 192.168.168.31 & 192.168.168.42  

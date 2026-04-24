@@ -329,7 +329,7 @@ services:
       OAUTH2_PROXY_OIDC_ISSUER_URL: "https://accounts.google.com"
       OAUTH2_PROXY_OIDC_AUDIENCE: "${GOOGLE_CLIENT_ID}"
       OAUTH2_PROXY_SCOPE: "openid profile email"
-      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://${PORTAL_DOMAIN:-kushnir.cloud}/oauth2/callback}"
+      OAUTH2_PROXY_REDIRECT_URL: "${OAUTH2_PROXY_PORTAL_REDIRECT_URL:-https://${DOMAIN:-kushnir.cloud}/oauth2/callback}"
       OAUTH2_PROXY_UPSTREAMS: "http://appsmith:80/"
       # Allow any Google domain to complete OAuth; authenticated-emails-file remains the real gate.
       # This prevents Google from returning org_internal 403 before our explicit allowlist is checked.

@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Standard Event Envelope",
+  "description": "All Kafka events use this standard envelope format",
+  "type": "object",
+  "required": ["event_id", "event_type", "schema_version", "timestamp", "source", "actor", "payload"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "Unique event identifier (UUID v4)"
+    },
+    "event_type": {
+      "type": "string",
+      "pattern": "^[a-z_]+\\.[a-z_]+$",
+      "description": "Event type (e.g., deploy.completed, incident.created)"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Schema version of this event type"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp (ISO 8601 UTC)"
+    },
+    "source": {
+      "type": "object",
+      "required": ["service", "instance"],
+      "properties": {
+        "service": {
+          "type": "string",
+          "description": "Service that generated the event"
+        },
+        "instance": {
+          "type": "string",
+          "description": "Service instance identifier"
+        }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["human", "agent"],
+          "description": "Actor type"
+        },
+        "id": {
+          "type": "string",
+          "description": "Actor identifier (GitHub username or agent ID)"
+        },
+        "reputation_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Actor reputation score at event time"
+        }
+      }
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlation ID to link related events"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Topic-specific event data"
+    }
+  }
+}

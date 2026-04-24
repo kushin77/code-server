@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Audit Event",
+  "description": "P3-1560: Event published when agent completes a task",
+  "type": "object",
+  "required": ["task_id", "status", "start_time", "end_time"],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Unique task identifier"
+    },
+    "task_description": {
+      "type": "string",
+      "description": "Human-readable task description"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "failure", "timeout", "cancelled"],
+      "description": "Task completion status"
+    },
+    "start_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Task start time"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Task end time"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Task duration in seconds"
+    },
+    "tokens_used": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "LLM tokens consumed"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error message if status is failure"
+    },
+    "resolution_steps": {
+      "type": "string",
+      "description": "Steps taken to resolve issue"
+    }
+  }
+}

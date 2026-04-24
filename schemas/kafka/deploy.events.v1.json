@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Deploy Event",
+  "description": "P3-1560: Event published on deployment start/completion",
+  "type": "object",
+  "required": ["deploy_id", "status", "timestamp"],
+  "properties": {
+    "deploy_id": {
+      "type": "string",
+      "description": "Unique deployment identifier"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["started", "completed", "failed", "rolled_back"],
+      "description": "Deployment status"
+    },
+    "services": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Services being deployed"
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["staging", "production"],
+      "description": "Target environment"
+    },
+    "git_commit": {
+      "type": "string",
+      "description": "Git commit SHA"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Deployment duration"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error if deployment failed"
+    }
+  }
+}

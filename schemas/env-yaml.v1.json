@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ElevatedIQ env.yaml Environment Parity Specification",
+  "description": "Portable development environment specification - local = remote = CI = AI",
+  "type": "object",
+  "version": "1.0",
+  "required": ["version", "runtime", "services"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "env.yaml schema version",
+      "enum": ["1", "1.0"]
+    },
+    "runtime": {
+      "type": "object",
+      "description": "Runtime environment configuration",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["local", "remote", "ci", "edge"],
+          "description": "Execution environment: local docker, remote VM, CI runner, edge device"
+        },
+        "host": {
+          "type": "string",
+          "description": "Remote host URL (required if mode=remote)"
+        },
+        "fallback": {
+          "type": "string",
+          "enum": ["local", "remote", "none"],
+          "description": "Fallback mode if primary fails"
+        },
+        "resource_limits": {
+          "type": "object",
+          "properties": {
+            "cpu": {
+              "type": "integer",
+              "description": "CPU cores"
+            },
+            "memory": {
+              "type": "string",
+              "pattern": "^\\d+[KMGT]i?$",
+              "description": "Memory limit (e.g., 8Gi, 4096Mi)"
+            }
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "description": "Services to provision",
+      "items": {
+        "type": "object",
+        "required": ["name", "image"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Service name (must be unique)"
+          },
+          "image": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+(@sha256:[a-f0-9]{64})?$",
+            "description": "Container image with version and optional digest"
+          },
+          "persistent": {
+            "type": "boolean",
+            "description": "Whether data persists across restarts"
+          },
+          "env": {
+            "type": "object",
+            "description": "Environment variables",
+            "additionalProperties": {"type": "string"}
+          }
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "description": "AI model configuration",
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "AI model name (e.g., llama3:8b)"
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["ollama", "openai", "anthropic", "local"],
+          "description": "AI provider"
+        },
+        "fallback_chain": {
+          "type": "array",
+          "description": "Fallback providers in order",
+          "items": {"type": "string"}
+        },
+        "constraints": {
+          "type": "array",
+          "description": "AI usage constraints",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "policies": {
+      "type": "array",
+      "description": "Governance policies for this environment",
+      "items": {"type": "string"}
+    },
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "frameworks": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Compliance frameworks (SOC2, NIST-800-53, etc.)"
+        },
+        "data_classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted"],
+          "description": "Data classification level"
+        }
+      }
+    }
+  }
+}

@@ -48,14 +48,19 @@ main() {
   # ════════════════════════════════════════════════════════════════════════════
   log_section "Docker Compose Configuration Stability"
   
-  local hash1 hash2
-  hash1=$(ssh akushnir@"${DEPLOY_HOST}" "cd code-server-enterprise && docker-compose config 2>/dev/null | sha256sum | awk '{print \$1}'" 2>/dev/null || echo "ERROR")
-  hash2=$(ssh akushnir@"${DEPLOY_HOST}" "cd code-server-enterprise && docker-compose config 2>/dev/null | sha256sum | awk '{print \$1}'" 2>/dev/null || echo "ERROR")
+  # Save config twice and compare them directly (avoids awk escaping issues)
+  ssh akushnir@"${DEPLOY_HOST}" "cd code-server-enterprise && docker-compose config 2>/dev/null" > /tmp/config1.yml 2>/dev/null || true
+  sleep 1
+  ssh akushnir@"${DEPLOY_HOST}" "cd code-server-enterprise && docker-compose config 2>/dev/null" > /tmp/config2.yml 2>/dev/null || true
 
-  if [[ "$hash1" == "$hash2" ]] && [[ "$hash1" != "ERROR" ]]; then
+  if diff -q /tmp/config1.yml /tmp/config2.yml >/dev/null 2>&1; then
     log_success "docker-compose config is stable (deterministic output)"
+    rm -f /tmp/config1.yml /tmp/config2.yml
   else
     log_error "docker-compose config produced different output on re-read"
+    log_error "First 10 differences:"
+    diff /tmp/config1.yml /tmp/config2.yml | head -10 || true
+    rm -f /tmp/config1.yml /tmp/config2.yml
     return 1
   fi
   log_info ""

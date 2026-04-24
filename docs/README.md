@@ -19,3 +19,14 @@ This directory contains documentation related to the infrastructure management, 
 1. **Health Check**: Run `bash scripts/ops/infrastructure-health-check.sh`
 2. **Deployment**: Run `bash scripts/ops/deployment-pipeline.sh production`
 3. **Compliance**: Run `bash scripts/ops/compliance-validation.sh`
+
+## Maintenance Tasks
+
+- **Image Pinning**: To ensure immutability, run `bash scripts/ops/pin-docker-images.sh --execute`.
+- **Secret Scanning**: Regularly validate that no secrets are committed using `bash scripts/ops/validate-secrets.sh`.
+- **Idempotency Verification**: Use `bash scripts/ops/idempotency-enforcer.sh` to scaffold new idempotent scripts.
+
+## Disaster Recovery
+
+Refer to the [Infrastructure Lifecycle Runbook](RUNBOOK-INFRASTRUCTURE-LIFECYCLE.md) for detailed recovery steps and drift remediation strategies using `scripts/ops/drift-detection-and-remediation.sh`.
+

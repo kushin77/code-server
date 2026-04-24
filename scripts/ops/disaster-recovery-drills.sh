@@ -27,6 +27,28 @@ error() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] ❌ $*" | tee -a "$LOG_FILE"
 }
 
+wait_for_compose_health() {
+  local max_attempts=24
+  local attempt=0
+
+  while [[ ${attempt} -lt ${max_attempts} ]]; do
+    local total_count
+    local healthy_count
+
+    total_count=$(docker compose ps --services 2>/dev/null | wc -l | tr -d ' ')
+    healthy_count=$(docker compose ps 2>/dev/null | grep -c "(healthy)" || true)
+
+    if [[ ${total_count} -gt 0 && ${healthy_count} -ge ${total_count} ]]; then
+      return 0
+    fi
+
+    sleep 5
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 # DR Drill 1: Service Recovery
 dr_service_recovery() {
   log ""
@@ -57,8 +79,11 @@ dr_service_recovery() {
   # Restart services
   log "Restarting all services..."
   docker compose up -d
-  
-  sleep 10
+
+  if ! wait_for_compose_health; then
+    error "DR DRILL 1 FAILED: Services did not become healthy in time"
+    return 1
+  fi
   
   # Verify health
   log "Verifying service health..."
@@ -283,7 +308,10 @@ dr_rto_test() {
   docker compose down >/dev/null 2>&1 || true
   sleep 2
   docker compose up -d >/dev/null 2>&1 || true
-  sleep 15
+
+  if ! wait_for_compose_health; then
+    warn "Recovery simulation did not reach healthy state in time"
+  fi
   
   local end_time=$(date +%s)
   local elapsed=$((end_time - start_time))

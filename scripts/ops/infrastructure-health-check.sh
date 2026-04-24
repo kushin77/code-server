@@ -173,8 +173,8 @@ log_info "=== 5. Dependency Versions ==="
 
 # Check if package.json exists and has overrides
 if [[ -f "${PROJECT_ROOT}/package.json" ]]; then
-    if grep -q "pnpm.*overrides" "${PROJECT_ROOT}/package.json"; then
-        OVERRIDE_COUNT=$(grep -c "@.*:" "${PROJECT_ROOT}/package.json" | head -1 || echo "0")
+    if grep -q "overrides" "${PROJECT_ROOT}/package.json"; then
+        OVERRIDE_COUNT=$(grep -A 20 "overrides" "${PROJECT_ROOT}/package.json" | grep -c ": \"" || echo "0")
         health_ok "Package Overrides" "pnpm overrides configured ($OVERRIDE_COUNT packages)"
     else
         health_warning "Package Overrides" "No security overrides found in package.json"

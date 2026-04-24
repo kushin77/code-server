@@ -27,6 +27,22 @@ log_success() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
 }
 
+wait_for_opa_healthy() {
+  local max_attempts=30
+  local attempt=0
+
+  while [[ ${attempt} -lt ${max_attempts} ]]; do
+    if curl -sf http://localhost:8181/health > /dev/null 2>&1; then
+      return 0
+    fi
+
+    sleep 2
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 # Generate OPA configuration
 generate_opa_config() {
   log_info "Generating OPA configuration..."
@@ -102,22 +118,13 @@ deploy_opa() {
   
   log_info "Starting OPA service..."
   docker compose up -d opa
-  
-  # Wait for OPA to be ready
-  local max_attempts=30
-  local attempt=0
-  
-  while [[ ${attempt} -lt ${max_attempts} ]]; do
-    if curl -sf http://localhost:8181/health > /dev/null 2>&1; then
-      log_success "OPA service is healthy"
-      return 0
-    fi
-    
-    sleep 2
-    attempt=$((attempt + 1))
-  done
-  
-  log_error "OPA service failed to start within ${max_attempts} attempts"
+
+  if wait_for_opa_healthy; then
+    log_success "OPA service is healthy"
+    return 0
+  fi
+
+  log_error "OPA service failed to start within the expected time window"
   return 1
 }
 

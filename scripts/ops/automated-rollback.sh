@@ -28,6 +28,28 @@ log_success() {
   echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"
 }
 
+wait_for_compose_health() {
+  local max_attempts=30
+  local attempt=0
+
+  while [[ ${attempt} -lt ${max_attempts} ]]; do
+    local healthy_count
+    local total_count
+
+    total_count=$(docker compose ps --services 2>/dev/null | wc -l | tr -d ' ')
+    healthy_count=$(docker compose ps 2>/dev/null | grep -c "(healthy)" || true)
+
+    if [[ ${total_count} -gt 0 && ${healthy_count} -ge ${total_count} ]]; then
+      return 0
+    fi
+
+    sleep 5
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 health_check() {
   log_info "Running health check at ${HEALTH_CHECK_ENDPOINT} (timeout: ${HEALTH_CHECK_TIMEOUT}s)..."
   
@@ -64,6 +86,11 @@ rollback_docker_compose() {
   cd "${REPO_ROOT}"
   docker compose down || true
   docker compose up -d
+
+  if ! wait_for_compose_health; then
+    log_error "Docker Compose services did not become healthy after rollback"
+    return 1
+  fi
   
   log_success "Docker Compose rolled back"
 }

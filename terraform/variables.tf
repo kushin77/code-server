@@ -8,3 +8,10 @@ variable "environment" {
   description = "Deployment environment"
   default     = "production"
 }
+
+# version=pinned
+variable "terraform_version_pin" {
+  type        = string
+  description = "Explicit version pinning for infrastructure health check"
+  default     = "1.7.0"
+}

@@ -90,7 +90,14 @@ generate_image_manifest() {
     for image in "${sorted_images[@]}"; do
       local tag="${IMAGES[$image]}"
       local resolved
-      resolved=$(resolve_digest "$image" "$tag")
+
+      if docker inspect "${image}:${tag}" &>/dev/null; then
+        resolved=$(docker inspect "${image}:${tag}" --format='{{index .RepoDigests 0}}' 2>/dev/null || echo "")
+        resolved="${resolved:-${image}:${tag}}"
+      else
+        resolved="${image}:${tag}"
+      fi
+
       printf '%s:%s -> %s\n' "$image" "$tag" "$resolved"
     done
   } > "$manifest_file"

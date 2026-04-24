@@ -9,8 +9,20 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
+# Debug: Show script directory calculation
+if [[ -z "${SCRIPT_DIR}" ]]; then
+    echo "[ERROR] SCRIPT_DIR calculation failed" >&2
+    exit 1
+fi
+
 # Set DEPLOY_HOST before sourcing init.sh (which makes it readonly)
 DEPLOY_HOST="${DEPLOY_HOST:-192.168.168.31}"
+
+# Debug: Verify init.sh exists before sourcing
+if [[ ! -f "${SCRIPT_DIR}/scripts/_common/init.sh" ]]; then
+    echo "[ERROR] Cannot find init.sh at: ${SCRIPT_DIR}/scripts/_common/init.sh" >&2
+    exit 1
+fi
 
 source "${SCRIPT_DIR}/scripts/_common/init.sh"
 

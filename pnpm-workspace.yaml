@@ -2,7 +2,6 @@ packages:
   - apps/backend
   - apps/frontend
   - apps/session-broker
-  - apps/matrix-admin-bot
   - apps/extensions/*
   - apps/presence-sidecar
   - tests/e2e

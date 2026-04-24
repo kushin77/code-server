@@ -15,7 +15,7 @@ const logger = winston.createLogger({
 });
 
 // Configuration from environment
-const REDIS_SENTINEL_URLS = (process.env.REDIS_SENTINEL_URLS || 'redis-sentinel://redis-sentinel-1:26379,redis-sentinel-arbiter:26379/mymaster').split(',');
+const REDIS_SENTINEL_URLS = (process.env.REDIS_SENTINEL_URLS || 'redis-sentinel://redis-sentinel-1:26379,redis-sentinel://redis-sentinel-arbiter:26379').split(',');
 const REDIS_SENTINEL_DB = Number(process.env.REDIS_SENTINEL_DB || '1');
 const SESSION_REDIS_TTL_SECONDS = Number(process.env.SESSION_REDIS_TTL_SECONDS || '86400'); // 1 day default
 const SESSION_REDIS_NAMESPACE = process.env.SESSION_REDIS_NAMESPACE || 'session-broker';

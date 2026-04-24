@@ -34,7 +34,7 @@ ssh_exec() {
 validate_dashboard_json() {
     log_info "Validating dashboard JSON syntax..."
     
-    if ! jq empty "$DASHBOARD_DIR/cluster-health-dashboard.json" 2>/dev/null; then
+    if ! python3 -m json.tool "$DASHBOARD_DIR/cluster-health-dashboard.json" > /dev/null 2>&1; then
         log_fatal "Dashboard JSON is invalid"
     fi
     

@@ -17,9 +17,6 @@ RUN npm install -g pnpm@9.15.4 && \
     cd apps/session-broker && \
     pnpm run build
 
-# Materialize a standalone production bundle for the runtime stage.
-RUN pnpm deploy --filter ./apps/session-broker --prod /runtime/session-broker --ignore-scripts
-
 # --- Runtime Stage ---
 FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391b8e61cc6a
 
@@ -42,8 +39,13 @@ RUN useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true && \
 
 WORKDIR /app
 
-# Copy the standalone production bundle from the builder stage.
-COPY --from=builder /runtime/session-broker/ ./
+# Copy built artifacts and install production dependencies
+COPY --from=builder /workspace/apps/session-broker/dist ./dist
+COPY --from=builder /workspace/apps/session-broker/package.json ./package.json
+# Copy resolved runtime dependencies from the builder stage.
+# This keeps the runtime image deterministic and avoids re-resolving catalog
+# dependencies in a partial workspace context.
+COPY --from=builder /workspace/node_modules ./node_modules
 
 # Fix permissions
 RUN chown -R 1000:999 /app

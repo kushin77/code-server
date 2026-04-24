@@ -302,13 +302,12 @@ services:
   # ────────────────────────────────────────────────────────────────────────────
   # oauth2-proxy-portal — Google OIDC gate for portal domain (via Appsmith)
   # Issue #688: Split OAuth callback — enables separate redirect URLs for apex vs. IDE
-  # Redeploy: pnpm redeploy:portal-oauth OR manually trigger portal-oauth-redeploy.yml
   # Callback: https://${DOMAIN}/oauth2/callback (different from IDE: https://${IDE_DOMAIN}/oauth2/callback)
+  # Phase 1 (#1545): Portal enabled by default (profiles removed April 24, 2026)
   # ────────────────────────────────────────────────────────────────────────────
   oauth2-proxy-portal:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0@sha256:3da33b9670c67bd782277f99acadf7026f75b9507bfba2088eb2d497266ef7fc
     container_name: oauth2-proxy-portal
-    profiles: [portal]
     restart: unless-stopped
     user: "101"  # oauth2-proxy user (non-root)
     networks:
@@ -340,7 +339,7 @@ services:
       OAUTH2_PROXY_COOKIE_NAME: "_oauth2_proxy_portal"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
-      OAUTH2_PROXY_COOKIE_SAMESITE: "none"
+      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
       OAUTH2_PROXY_COOKIE_DOMAINS: "${DOMAIN:-kushnir.cloud},${COOKIE_DOMAIN:-.kushnir.cloud}"
       # CSRF protection: shared secret across both hosts enables validation during failover
       OAUTH2_PROXY_CSRF_COOKIE_NAME: "_oauth2_proxy_portal_csrf"
@@ -994,12 +993,12 @@ services:
         max-file: "3"
 
 
-  # appsmith - Admin portal (Appsmith CE), profile: portal
+  # appsmith - Admin portal (Appsmith CE)
   # Routes via Caddy using ${DOMAIN:-kushnir.cloud}
+  # Phase 1 (#1545): Portal enabled by default (profiles removed April 24, 2026)
   appsmith:
     image: appsmith/appsmith-ce:v1.47@sha256:99e57374fcd1c756ca447551a92a79d3e80cf53a963fa612abea23cec2f7adf8
     container_name: appsmith
-    profiles: [portal]
     restart: unless-stopped
     networks:
       - net-app
@@ -1188,12 +1187,13 @@ services:
   sentry-integration-api:
     # Profile: integrations — opt-in, requires SENTRY_AUTH_TOKEN and package-lock.json
     # Blocked by missing package-lock.json in build context. See #1619.
+    # NOTE: Local build image, pinned to 1.0.0 for immutability (not @sha256 since built locally)
     profiles:
       - integrations
     build:
       context: .
       dockerfile: Dockerfile.sentry-integration
-    image: sentry-integration-api:latest
+    image: sentry-integration-api:1.0.0
     container_name: sentry-integration-api
     restart: unless-stopped
     networks:
@@ -1225,12 +1225,13 @@ services:
   slack-slash-commands-api:
     # Profile: integrations — opt-in, requires SLACK_SIGNING_SECRET and package-lock.json
     # Blocked by missing package-lock.json in build context. See #1619.
+    # NOTE: Local build image, pinned to 1.0.0 for immutability (not @sha256 since built locally)
     profiles:
       - integrations
     build:
       context: .
       dockerfile: Dockerfile.slack-integration
-    image: slack-slash-commands-api:latest
+    image: slack-slash-commands-api:1.0.0
     container_name: slack-slash-commands-api
     restart: unless-stopped
     networks:
@@ -1259,7 +1260,7 @@ services:
   # Exposes pg_stat_statements, replication lag, connection counts, cache hit ratio
   # ────────────────────────────────────────────────────────────────────────────
   postgres_exporter:
-    image: prometheuscommunity/postgres-exporter:v0.15.0
+    image: prometheuscommunity/postgres-exporter@sha256:386b12d19eab2a37d7cd8ca8b4c7491cc7a830d9581f49af6c98a393da9605e6
     container_name: postgres_exporter
     restart: unless-stopped
     networks:
@@ -1352,6 +1353,82 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # saas-api — SaaS Management API (Phase 3 #1674)
+  # User/Group/Organization/API Key management endpoints
+  # Routes via Caddy: /api/users, /api/groups, /api/orgs
+  # ────────────────────────────────────────────────────────────────────────────
+  saas-api:
+    build:
+      context: .
+      dockerfile: apps/saas-api/Dockerfile
+    image: saas-api:1.0.0
+    container_name: saas-api
+    restart: unless-stopped
+    user: "1000"
+    networks:
+      - net-app
+      - net-data
+    expose:
+      - "5000"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - SAAS_API_PORT=5000
+      - DATABASE_URL=postgres://${POSTGRES_USER:-codeserver}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@pgbouncer:6432/${POSTGRES_DB:-codeserver}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # saas-db-init — One-shot database migration runner
+  # Runs SQL migrations from migrations/ directory on startup
+  # ────────────────────────────────────────────────────────────────────────────
+  saas-db-init:
+    image: postgres:15-alpine@sha256:895f54361a7eada8e612efef7a8c5e80ba657c013cc9b4146b513c43ab901902
+    container_name: saas-db-init
+    restart: on-failure
+    networks:
+      - net-data
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        set -e
+        echo "Running SaaS API database migrations..."
+        for migration in /migrations/*.sql; do
+          if [ -f "$$migration" ]; then
+            echo "Running: $$migration"
+            psql -h postgres -U ${POSTGRES_USER:-codeserver} -d ${POSTGRES_DB:-codeserver} -f "$$migration" || true
+          fi
+        done
+        echo "Migrations complete."
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
 
 # ════════════════════════════════════════════════════════════════════════════
 # Networks

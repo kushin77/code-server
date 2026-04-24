@@ -29,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
-DEPLOY_DIR="${DEPLOY_DIR:-/home/akushnir/code-server-enterprise}"
+# DEPLOY_DIR is already defined as readonly in _common/config.sh (sourced via init.sh)
 REPLICAS="${REPLICAS:-192.168.168.31,192.168.168.42}"
 SSH_USER="akushnir"
 DEFAULT_SSH_KEY_PATH="${HOME}/.ssh/id_rsa_onprem"
@@ -113,7 +113,7 @@ wait_for_health() {
 
   while [[ $elapsed -lt $DEPLOY_HEALTH_CHECK_TIMEOUT ]]; do
     if ssh -i "$SSH_KEY" -o ConnectTimeout=5 "$SSH_USER@$replica" \
-      "curl -sk https://localhost/health >/dev/null 2>&1" >/dev/null 2>&1; then
+      "curl -sf http://localhost:8080/healthz >/dev/null 2>&1" >/dev/null 2>&1; then
       log_info "[$replica] ✅ Health check passed"
       return 0
     fi
@@ -153,7 +153,7 @@ for replica in "${REPLICA_ARRAY[@]}"; do
   replica="${replica// /}"
   (
     if execute_on_replica "$replica" \
-      "bash -lc 'cd \"$(remote_repo_dir)\" && git fetch origin && git reset --hard origin/main'" \
+      "cd \"$(remote_repo_dir)\" && git fetch origin && git reset --hard origin/main" \
       "Git pull"; then
       printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/pulled"
     else
@@ -184,7 +184,7 @@ for replica in "${REPLICA_ARRAY[@]}"; do
   replica="${replica// /}"
   (
     if execute_on_replica "$replica" \
-      "bash -lc 'sudo chown -R akushnir:akushnir \"$(remote_repo_dir)\" ~/.docker 2>/dev/null || true'" \
+      "sudo chown -R akushnir:akushnir \"$(remote_repo_dir)\" ~/.docker 2>/dev/null || true" \
       "Fixing permissions"; then
       printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/perms-fixed"
     else
@@ -205,7 +205,7 @@ for replica in "${REPLICA_ARRAY[@]}"; do
   replica="${replica// /}"
   (
     if execute_on_replica "$replica" \
-      "bash -lc 'cd \"$(remote_repo_dir)\" && docker-compose -f docker-compose.yml -f docker-compose.runtime-override.yml up -d'" \
+      "cd \"$(remote_repo_dir)\" && docker-compose -f docker-compose.yml -f docker-compose.runtime-override.yml up -d" \
       "Starting services"; then
       printf '%s\n' "$replica" >> "$DEPLOY_TRACKING_DIR/deployed"
     else

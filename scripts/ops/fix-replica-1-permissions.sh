@@ -12,8 +12,10 @@ source "$SCRIPT_DIR/../_common/init.sh"
 
 # Configuration
 REPLICA_HOST="${REPLICA_1_HOST:-192.168.168.31}"
-# Note: DEPLOY_USER, DEPLOY_DIR, SSH_OPTS are set as readonly by config.sh (via init.sh)
+# Note: DEPLOY_USER and DEPLOY_DIR are set as readonly by config.sh (via init.sh)
 # We use them directly without reassigning
+FIX_SSH_KEY="${SSH_KEY:-${HOME}/.ssh/id_rsa_onprem}"
+FIX_SSH_OPTS="-i ${FIX_SSH_KEY} -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 DRY_RUN="${DRY_RUN:-0}"
 
 log_info "Replica 1 Permission Remediation"
@@ -30,7 +32,7 @@ verify_ssh_access() {
   fi
   
   # SSH_OPTS is a string from config.sh with options separated by spaces
-  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" true 2>/dev/null; then
+  if ! ssh $FIX_SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" true 2>/dev/null; then
     log_fatal "SSH access failed to ${DEPLOY_USER}@${REPLICA_HOST}"
   fi
   log_info "SSH access verified"
@@ -38,32 +40,32 @@ verify_ssh_access() {
 
 # Fix ownership recursively
 fix_ownership() {
-  local remote_cmd="sudo chown -R ${DEPLOY_USER}:${DEPLOY_USER} ${DEPLOY_DIR}/"
+  local remote_cmd="drift_paths=\$(find \"${DEPLOY_DIR}\" -xdev \( -not -user \"${DEPLOY_USER}\" -o -not -group \"${DEPLOY_USER}\" \) -type f -print); if [[ -n \"\$drift_paths\" ]]; then while IFS= read -r path; do rel_path=\${path#\"${DEPLOY_DIR}/\"}; if git ls-files --error-unmatch -- \"\$rel_path\" >/dev/null 2>&1; then rm -f \"\$rel_path\" && git checkout -- \"\$rel_path\"; fi; done <<< \"\$drift_paths\"; fi"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    log_info "[dry-run] ssh $FIX_SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
-  log_info "Fixing file ownership on $REPLICA_HOST..."
-  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
-    log_error "Failed to fix ownership. Ensure sudo is configured for $DEPLOY_USER without password prompt."
+  log_info "Repairing tracked file ownership on $REPLICA_HOST..."
+  if ! ssh $FIX_SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+    log_error "Failed to repair tracked file ownership."
     return 1
   fi
-  log_info "File ownership fixed"
+  log_info "Tracked file ownership repaired"
 }
 
 # Clean git state
 clean_git_state() {
-  local remote_cmd="cd ${DEPLOY_DIR} && git clean -fdx && git reset --hard origin/main"
+  local remote_cmd="cd ${DEPLOY_DIR} && git reset --hard origin/main"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    log_info "[dry-run] ssh $FIX_SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
   log_info "Cleaning git state on $REPLICA_HOST..."
-  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+  if ! ssh $FIX_SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
     log_error "Git cleanup failed"
     return 1
   fi
@@ -72,15 +74,15 @@ clean_git_state() {
 
 # Pull latest and redeploy
 redeploy() {
-  local remote_cmd="cd ${DEPLOY_DIR} && git pull --ff-only origin main && docker compose pull && docker compose up -d"
+  local remote_cmd="cd ${DEPLOY_DIR} && git pull --ff-only origin main && docker-compose -f docker-compose.yml -f docker-compose.runtime-override.yml up -d"
   
   if [[ $DRY_RUN -eq 1 ]]; then
-    log_info "[dry-run] ssh $SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
+    log_info "[dry-run] ssh $FIX_SSH_OPTS ${DEPLOY_USER}@${REPLICA_HOST} '$remote_cmd'"
     return 0
   fi
   
   log_info "Redeploying on $REPLICA_HOST..."
-  if ! ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
+  if ! ssh $FIX_SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "$remote_cmd"; then
     log_error "Redeployment failed"
     return 1
   fi
@@ -96,10 +98,10 @@ verify_git_status() {
     return 0
   fi
   
-  local commit_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short HEAD")
+  local commit_sha=$(ssh $FIX_SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short HEAD")
   log_info "Replica 1 commit: $commit_sha"
   
-  local main_sha=$(ssh $SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short origin/main")
+  local main_sha=$(ssh $FIX_SSH_OPTS "${DEPLOY_USER}@${REPLICA_HOST}" "cd ${DEPLOY_DIR} && git rev-parse --short origin/main")
   log_info "Main branch commit: $main_sha"
   
   if [[ "$commit_sha" == "$main_sha" ]]; then
@@ -116,6 +118,7 @@ verify_ssh_access
 fix_ownership || exit 1
 clean_git_state || exit 1
 redeploy || exit 1
+fix_ownership || exit 1
 verify_git_status
 
 log_info "Replica 1 remediation completed successfully"

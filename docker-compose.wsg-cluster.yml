@@ -1,0 +1,163 @@
+version: '3.8'
+
+services:
+  # WebSocket Gateway Node 1
+  websocket-gateway-1:
+    image: ${REGISTRY:-registry.kushnir.cloud}/${NAMESPACE:-collab}/websocket-gateway:${VERSION:-latest}
+    container_name: websocket-gateway-1
+    hostname: websocket-gateway-1
+    environment:
+      NODE_ID: wsg-1
+      NODE_NAME: "WebSocket Gateway 1"
+      REDIS_URL: redis://redis:6379/0
+      HASH_RING_NODES: "wsg-1,wsg-2,wsg-3"
+      HASH_RING_NODES_FULL: "websocket-gateway-1:8080,websocket-gateway-2:8080,websocket-gateway-3:8080"
+      PORT: 8080
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9090
+      CONNECTION_TIMEOUT: "60000"
+      MESSAGE_BUFFER_SIZE: "10000"
+      ENABLE_COMPRESSION: "true"
+      SESSION_TTL: "300000"
+      HEARTBEAT_INTERVAL: "30000"
+    ports:
+      - "8080:8080"
+      - "19090:9090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - collaboration
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "node=wsg-1"
+
+  # WebSocket Gateway Node 2
+  websocket-gateway-2:
+    image: ${REGISTRY:-registry.kushnir.cloud}/${NAMESPACE:-collab}/websocket-gateway:${VERSION:-latest}
+    container_name: websocket-gateway-2
+    hostname: websocket-gateway-2
+    environment:
+      NODE_ID: wsg-2
+      NODE_NAME: "WebSocket Gateway 2"
+      REDIS_URL: redis://redis:6379/0
+      HASH_RING_NODES: "wsg-1,wsg-2,wsg-3"
+      HASH_RING_NODES_FULL: "websocket-gateway-1:8080,websocket-gateway-2:8080,websocket-gateway-3:8080"
+      PORT: 8080
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9090
+      CONNECTION_TIMEOUT: "60000"
+      MESSAGE_BUFFER_SIZE: "10000"
+      ENABLE_COMPRESSION: "true"
+      SESSION_TTL: "300000"
+      HEARTBEAT_INTERVAL: "30000"
+    ports:
+      - "8081:8080"
+      - "19091:9090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - collaboration
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "node=wsg-2"
+
+  # WebSocket Gateway Node 3
+  websocket-gateway-3:
+    image: ${REGISTRY:-registry.kushnir.cloud}/${NAMESPACE:-collab}/websocket-gateway:${VERSION:-latest}
+    container_name: websocket-gateway-3
+    hostname: websocket-gateway-3
+    environment:
+      NODE_ID: wsg-3
+      NODE_NAME: "WebSocket Gateway 3"
+      REDIS_URL: redis://redis:6379/0
+      HASH_RING_NODES: "wsg-1,wsg-2,wsg-3"
+      HASH_RING_NODES_FULL: "websocket-gateway-1:8080,websocket-gateway-2:8080,websocket-gateway-3:8080"
+      PORT: 8080
+      LOG_LEVEL: info
+      ENABLE_METRICS: "true"
+      METRICS_PORT: 9090
+      CONNECTION_TIMEOUT: "60000"
+      MESSAGE_BUFFER_SIZE: "10000"
+      ENABLE_COMPRESSION: "true"
+      SESSION_TTL: "300000"
+      HEARTBEAT_INTERVAL: "30000"
+    ports:
+      - "8082:8080"
+      - "19092:9090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - collaboration
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "node=wsg-3"
+
+  # Redis for shared session state
+  redis:
+    image: redis:7-alpine
+    container_name: redis-collab
+    hostname: redis
+    command: redis-server --appendonly yes --appendfsync everysec --loglevel notice
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - collaboration
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=redis"
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  collaboration:
+    driver: bridge
+    name: collaboration

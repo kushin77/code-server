@@ -1,0 +1,30 @@
+# Single-stage Dockerfile for session-broker - THE FINAL ATTEMPT
+FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391b8e61cc6a AS builder
+WORKDIR /workspace
+COPY pnpm-workspace.yaml pnpm-lock.yaml .npmrc package.json ./
+COPY apps/session-broker ./apps/session-broker
+COPY apps/backend ./apps/backend
+RUN npm install -g pnpm@9.15.4 && \
+    pnpm install --frozen-lockfile && \
+    cd apps/session-broker && \
+    pnpm run build
+
+FROM node:22-slim@sha256:db9a3a15e8e8e2adbaf1e1c3d93dfb04c2e294bdd027490addb2391b8e61cc6a
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl jq && rm -rf /var/lib/apt/lists/*
+RUN groupadd -g 999 docker 2>/dev/null || true && \
+    useradd -m -u 1000 -g 999 session-broker 2>/dev/null || true && \
+    usermod -aG docker session-broker 2>/dev/null || true
+COPY --from=builder /workspace/apps/session-broker/dist ./dist
+COPY --from=builder /workspace/apps/session-broker/package.json ./package.json
+
+# CRITICAL: Re-install only prod dependencies IN the runtime stage.
+# We modify package.json to remove "catalog:" references before installing as we are outside the workspace.
+RUN sed -i 's/catalog://g' package.json && \
+    npm install --omit=dev
+
+RUN chown -R 1000:999 /app
+USER 1000
+EXPOSE 5000
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:5000/health || exit 1
+CMD ["node", "dist/index.js"]

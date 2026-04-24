@@ -85,6 +85,7 @@ class EventValidator:
     
     def __init__(self):
         self.schemas = {}
+        self.schema_store = {}
         self.schema_dir = Path(__file__).resolve().parents[2] / "schemas" / "kafka"
         self._load_schemas()
     
@@ -100,6 +101,14 @@ class EventValidator:
             event_type = schema_path.name.removesuffix(".v1.json")
             self.schemas[event_type] = schema
 
+            schema_id = schema.get("$id") or f"https://schemas.kushnir.cloud/kafka/{schema_path.name}"
+            self.schema_store[schema_id] = schema
+
+    def _build_validator(self, schema: Dict[str, Any]) -> jsonschema.Draft7Validator:
+        """Build a validator that resolves local schema references from disk."""
+        resolver = jsonschema.RefResolver.from_schema(schema, store=self.schema_store)
+        return jsonschema.Draft7Validator(schema, resolver=resolver)
+
     def _get_payload_schema(self, event_type: str) -> Optional[Dict[str, Any]]:
         """Extract the payload subschema for a specific event type."""
         schema = self.schemas.get(event_type)
@@ -114,17 +123,25 @@ class EventValidator:
                 return payload_schema
 
         return schema.get("properties", {}).get("payload")
+
+    def _uses_event_envelope(self, schema: Dict[str, Any]) -> bool:
+        """Detect schemas that validate a full event envelope instead of just the payload."""
+        if "allOf" in schema:
+            return True
+
+        required = set(schema.get("required", []))
+        return {"event_id", "event_type", "schema_version", "timestamp", "source", "actor", "payload"}.issubset(required)
     
     def validate(self, event: StandardEventEnvelope) -> bool:
         """Validate event against its schema"""
         try:
-            event_dict = event.to_dict()
             schema = self.schemas.get(event.event_type) or self.schemas.get("event-envelope")
             if not schema:
                 print(f"No schema found for event type: {event.event_type}")
                 return False
 
-            jsonschema.validate(instance=event_dict, schema=schema)
+            instance = event.to_dict() if self._uses_event_envelope(schema) else event.payload
+            self._build_validator(schema).validate(instance)
             return True
         except jsonschema.ValidationError as e:
             print(f"Validation error: {e}")
@@ -133,12 +150,14 @@ class EventValidator:
     def validate_payload(self, event_type: str, payload: Dict[str, Any]) -> bool:
         """Validate just the payload against event-specific schema"""
         try:
-            payload_schema = self._get_payload_schema(event_type)
-            if not payload_schema:
+            schema = self.schemas.get(event_type)
+            if not schema:
                 print(f"No payload schema found for event type: {event_type}")
                 return False
 
-            jsonschema.validate(instance=payload, schema=payload_schema)
+            payload_schema = self._get_payload_schema(event_type)
+            instance_schema = payload_schema if payload_schema else schema
+            self._build_validator(instance_schema).validate(payload)
             return True
         except jsonschema.ValidationError as e:
             print(f"Payload validation error: {e}")

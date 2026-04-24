@@ -37,6 +37,25 @@ The infrastructure follows a Zero Trust architecture:
 - Network traffic is managed by Caddy with automatic SSL and TLS termination.
 - Audit logging is integrated into the operational pipeline and OPA policies.
 
+## Continuous Compliance
+
+GOV-002 defines the governance model for all infrastructure components:
+- Standardized Shell Headers: All scripts must contain file metadata and governance tags.
+- Immutable Deployments: Image pinning via SHAs is mandatory for production.
+- Health Monitoring: The `infrastructure-health-check.sh` script provides real-time validation.
+
+## Environment Management
+
+- **Production**: Deployed via `docker-compose.yml`. Configured with `.env.infrastructure`.
+- **Staging/Test**: Deployed via `docker-compose.env-test.yml` for validation.
+- **Development**: Managed via local Docker Desktop with host mounts for rapid iteration.
+
+## Key Contacts
+
+- Infrastructure Lead: Alex Kushnir
+- Security Officer: Copilot Gemini 3 Flash (AI)
+- Policy Compliance: GOV-002 Engine
+
 ## Disaster Recovery
 
 Refer to the [Infrastructure Lifecycle Runbook](RUNBOOK-INFRASTRUCTURE-LIFECYCLE.md) for detailed recovery steps and drift remediation strategies. In case of a major failure, the `scripts/ops/` directory contains tools for state recovery and volume backup verification.

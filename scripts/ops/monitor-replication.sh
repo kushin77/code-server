@@ -6,8 +6,7 @@
 set -euo pipefail
 
 # Configuration
-PG_HOST=${DB_HOST:-localhost}
-PG_USER=${DB_USER:-postgres}
+PG_USER=${DB_USER:?DB_USER must be set}
 
 log_info() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [INFO] $*"; }
 log_success() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] [SUCCESS] $*"; }

@@ -19,7 +19,7 @@ services:
       - "8181:8181"
     volumes:
       - ./policies:/policies:ro
-      - ./config/opa-config.yaml:/etc/opa/config.yaml:ro
+      - ./config:/opa-src:ro
     environment:
       - OPA_ADDR=0.0.0.0:8181
       - LOG_LEVEL=info
@@ -66,7 +66,7 @@ services:
     ports:
       - "4180:4180"
     volumes:
-      - ./config/oauth2-proxy.cfg:/etc/oauth2-proxy/oauth2-proxy.cfg:ro
+      - ./config:/oauth2src:ro
     environment:
       - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_CLIENT_ID}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET}
@@ -113,7 +113,7 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./config/caddy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:
@@ -159,14 +159,16 @@ services:
     container_name: prometheus
     user: "65534:65534"  # @security P0 #969 - Run as non-root nobody user
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--config.file=/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=30d"
     ports:
       - "9090:9090"
     volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config:/prometheus-config:ro
       - prometheus_data:/prometheus
+    environment:
+      - TZ=UTC
     environment:
       - TZ=UTC
     healthcheck:
@@ -248,9 +250,9 @@ services:
     user: "10001:10001"  # @security P0 #969 - Run as non-root loki user
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-      - ./config/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - ./config/loki:/etc/loki:ro
       - loki_data:/loki
     environment:
       - LOG_LEVEL=info
@@ -295,7 +297,7 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./config/qdrant-config.yaml:/qdrant/config/local_config.yaml:ro
+      - ./config:/qdrant-src:ro
       - qdrant_data:/qdrant/storage
     environment:
       - QDRANT_API_KEY=${QDRANT_API_KEY}
@@ -562,7 +564,7 @@ services:
       - "33145:33145"    # RPC
     volumes:
       - redpanda_data:/var/lib/redpanda/data
-      - ./config/kafka-topics.yaml:/etc/redpanda/topics.yaml:ro
+      - ./config:/redpanda-src:ro
     environment:
       - REDPANDA_BROKERS=redpanda:9092
       - TZ=UTC
@@ -607,10 +609,10 @@ services:
       - KAFKA_BROKERS=redpanda:9092
       - KAFKA_SCHEMAREGISTRY_ENABLED=true
       - KAFKA_SCHEMAREGISTRY_URLS=http://redpanda:8081
-      - CONSOLE_CONFIG_FILEPATH=/etc/redpanda/config.yaml
+      - CONSOLE_CONFIG_FILEPATH=/etc/redpanda/redpanda-console-config.yaml
       - SERVER_LISTENPORT=8080
     volumes:
-      - ./config/redpanda-console-config.yaml:/etc/redpanda/config.yaml:ro
+      - ./config:/redpanda-console-src:ro
     depends_on:
       - redpanda
     healthcheck:

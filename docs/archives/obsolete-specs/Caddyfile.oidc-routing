@@ -1,0 +1,41 @@
+# Caddyfile.oidc-routing
+# OIDC Issuer Routing Configuration (Phase 2.1)
+# Add this to the :80 block in main Caddyfile
+
+# ────────────────────────────────────────────────────────────────────────────
+# OIDC Discovery & JWKS Endpoints (no authentication required)
+# ────────────────────────────────────────────────────────────────────────────
+@oidc_discovery path /.well-known/openid-configuration /.well-known/jwks.json /.well-known/oauth-authorization-server
+reverse_proxy @oidc_discovery oauth2-oidc-issuer:4182 {
+    header_up Host ide.kushnir.cloud
+    header_up X-Forwarded-Proto https
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+}
+
+# ────────────────────────────────────────────────────────────────────────────
+# Token Issuance Endpoint (requires client authentication)
+# ────────────────────────────────────────────────────────────────────────────
+@token_endpoint path /oauth2/token
+reverse_proxy @token_endpoint oauth2-oidc-issuer:4182 {
+    header_up Host ide.kushnir.cloud
+    header_up X-Forwarded-Proto https
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+}
+
+# ────────────────────────────────────────────────────────────────────────────
+# Health Check Endpoints (no authentication required)
+# ────────────────────────────────────────────────────────────────────────────
+@health path /health /healthz /ping
+respond @health "OK" 200
+
+# ────────────────────────────────────────────────────────────────────────────
+# OAuth2-Proxy Gate (all other traffic)
+# ────────────────────────────────────────────────────────────────────────────
+reverse_proxy 172.28.1.2:4180 {
+    header_up Host ide.kushnir.cloud
+    header_up X-Forwarded-Proto https
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+}

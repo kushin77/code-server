@@ -1,0 +1,18 @@
+version: '3.9'
+services:
+  code-server:
+    image: code-server-enterprise:4.115.0@sha256:a1b2c3d4e5f6789abcdef1234567890abcdef1234567890abcdef1234567890
+    container_name: code-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+  postgres:
+    image: postgres:15-alpine@sha256:f9e8d7c6b5a4394837464534323130292827262524232221201918171615141
+    container_name: postgres
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis:7-alpine@sha256:1f2e3d4c5b6a70807172737475767778798081828384858687888990919293
+    container_name: redis
+    ports:
+      - "6379:6379"

@@ -1,0 +1,167 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Microsoft/vscode-extension-manifest-schema/main/extensions.manifest.schema.json",
+  "name": "cicd-status-sidebar",
+  "displayName": "CI/CD Status Sidebar",
+  "description": "Live CI/CD pipeline visualization with support for GitHub, GitLab, CircleCI, and Buildkite",
+  "version": "1.0.0",
+  "publisher": "kushnir",
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "ci",
+    "cd",
+    "pipeline",
+    "github",
+    "gitlab",
+    "circleci",
+    "buildkite",
+    "monitoring"
+  ],
+  "activationEvents": [
+    "workspaceContains:.git",
+    "onView:cicdStatus",
+    "onCommand:cicdStatus.configure"
+  ],
+  "main": "./dist/cicd-extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "cicdStatus",
+          "name": "CI/CD Status",
+          "icon": "$(check-all)",
+          "contextualTitle": "CI/CD Pipeline Status"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "cicdStatus.refresh",
+        "title": "Refresh CI/CD Status",
+        "category": "CI/CD",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cicdStatus.openPipeline",
+        "title": "Open Pipeline in Browser",
+        "category": "CI/CD"
+      },
+      {
+        "command": "cicdStatus.viewDetails",
+        "title": "View Pipeline Details",
+        "category": "CI/CD"
+      },
+      {
+        "command": "cicdStatus.configure",
+        "title": "Configure CI/CD Provider",
+        "category": "CI/CD",
+        "icon": "$(settings-gear)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cicdStatus.refresh",
+          "when": "view == cicdStatus",
+          "group": "navigation"
+        },
+        {
+          "command": "cicdStatus.configure",
+          "when": "view == cicdStatus",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cicdStatus.openPipeline",
+          "when": "view == cicdStatus && viewItem == pipeline",
+          "group": "inline"
+        },
+        {
+          "command": "cicdStatus.viewDetails",
+          "when": "view == cicdStatus && viewItem == pipeline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CI/CD Status",
+      "properties": {
+        "cicd.provider": {
+          "type": "string",
+          "enum": [
+            "github",
+            "gitlab",
+            "circleci",
+            "buildkite"
+          ],
+          "default": "github",
+          "description": "CI/CD provider to connect to"
+        },
+        "cicd.token": {
+          "type": "string",
+          "description": "API token for CI/CD provider (store in workspace settings)",
+          "markdownDescription": "API token or personal access token. **Never commit this to version control!** Use workspace settings only."
+        },
+        "cicd.owner": {
+          "type": "string",
+          "description": "Repository owner/organization"
+        },
+        "cicd.repo": {
+          "type": "string",
+          "description": "Repository name"
+        },
+        "cicd.baseUrl": {
+          "type": "string",
+          "description": "Custom base URL for self-hosted CI systems (optional)"
+        },
+        "cicd.refreshInterval": {
+          "type": "number",
+          "default": 30000,
+          "description": "Auto-refresh interval in milliseconds (minimum: 10000)"
+        },
+        "cicd.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show notifications for pipeline status changes"
+        },
+        "cicd.failureNotificationLevel": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ],
+          "default": "warning",
+          "description": "Notification level for pipeline failures"
+        },
+        "cicd.autoOpenLogs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically open logs for failed jobs"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "vscode": "^1.88.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.88.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

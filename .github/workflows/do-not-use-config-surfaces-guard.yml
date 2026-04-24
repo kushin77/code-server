@@ -1,0 +1,43 @@
+name: Do Not Use Config Surfaces Guard
+
+on:
+  pull_request:
+    paths:
+      - "scripts/docker-compose.yml"
+      - "config/systemd/terminal-output-optimizer.service"
+      - "docs/status/AUTONOMOUS-OPEN-ISSUE-STATUS-2026-04-18.md"
+      - "Makefile"
+      - "docs/status/README.md"
+      - "docs/ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md"
+      - "config/issues/agent-execution-manifest.json"
+      - ".github/workflows/validate-issue-governance.yml"
+      - "scripts/ci/check-do-not-use-config-surfaces.sh"
+      - ".github/workflows/do-not-use-config-surfaces-guard.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/docker-compose.yml"
+      - "config/systemd/terminal-output-optimizer.service"
+      - "docs/status/AUTONOMOUS-OPEN-ISSUE-STATUS-2026-04-18.md"
+      - "Makefile"
+      - "docs/status/README.md"
+      - "docs/ops/PORTAL-OAUTH-GCP-GSM-BOOTSTRAP-695.md"
+      - "config/issues/agent-execution-manifest.json"
+      - ".github/workflows/validate-issue-governance.yml"
+      - "scripts/ci/check-do-not-use-config-surfaces.sh"
+      - ".github/workflows/do-not-use-config-surfaces-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-do-not-use-surfaces:
+    name: Validate do-not-use config surfaces
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Enforce retired config surface policy
+        run: bash scripts/ci/check-do-not-use-config-surfaces.sh

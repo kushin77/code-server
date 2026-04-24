@@ -1,0 +1,38 @@
+# @file        config/code-server/ai/model-entitlements.yml
+# @module      ai/access
+# @description Model entitlement mapping consumed by entitlement sync and portal-issued policy.
+#
+
+version: "1"
+deny_by_default: true
+source_of_truth: "admin-portal"
+
+entitlement_inputs:
+  required:
+    - github_username
+    - repository_access
+    - team_memberships
+    - temporary_overrides
+
+default_profile: "denied"
+
+team_profiles:
+  platform:
+    profile: "platform-admin"
+    allowed_models_csv: "codellama:7b,mistral,llama3"
+  maintainers:
+    profile: "power-user"
+    allowed_models_csv: "codellama:7b,mistral,llama3"
+  contributors:
+    profile: "standard-developer"
+    allowed_models_csv: "codellama:7b,mistral"
+
+override_policy:
+  require_actor: true
+  require_reason: true
+  require_expiry: true
+  audit_events:
+    - grant
+    - revoke
+    - override
+    - denial

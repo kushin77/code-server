@@ -1,0 +1,107 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Logs
+*.log
+deployment.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Local temporary files
+*.tmp
+*.bak
+*.backup
+.task-completion/
+
+# Sensitive data (if accidentally created)
+*.pem
+*.key
+.env
+.env.local
+
+# OIDC and authentication keys - NEVER commit these
+.env.oidc
+.env.phase-2-additions
+OIDC_ISSUER_SIGNING_KEY.env
+*.oidc
+*-signing-key*
+
+# User session and secrets (never commit)
+sessions/
+.secrets/
+
+# Docker
+docker-compose.override.yml
+
+# Caddy
+*.crt
+*.key
+
+# Build artifacts
+node_modules/
+dist/
+build/
+!terraform/modules/keepalived/build/
+!terraform/modules/keepalived/build/Dockerfile
+*.d.ts
+*.d.ts.map
+*.js.map
+tests/artifacts/playwright-results.json
+
+# Terraform backup
+backup.tfstate
+
+workspace/*
+!workspace/.gitkeep
+terraform.tfvars
+data/postgresql/
+data/
+
+# Security: Never commit environment files with secrets
+.env.oidc
+.env.phase-2-additions
+.env.*.local
+.env.*.prod
+.env.secrets
+
+# Security: Never commit private keys or certificates
+*.key
+*.pem
+*.p12
+*.pfx
+private-key*
+signing-key*
+tls.key
+
+# Security: Never commit Google Cloud service account keys
+*-gcp-*.json
+service-account*.json
+# Workspace state markers
+.AGENT_TASK_COMPLETE_ACK
+.ISSUE-950-TASK-COMPLETE
+.TASK_COMPLETE
+.phase-*
+.new
+.tmp-audit.jsonl
+.coverage-history/
+.archived/

@@ -1,0 +1,393 @@
+#!/usr/bin/env bash
+# @file        config/prometheus/alert-rules-production.yml
+# @module      monitoring/alerting
+# @description Production alert rules for code-server infrastructure monitoring
+# 
+# This file defines all production alert thresholds and conditions for:
+# - Service availability (health checks)
+# - Application performance (latency, error rates)
+# - Infrastructure health (CPU, memory, disk)
+# - Database operations (replication, query performance)
+# - Cache operations (hit rates, eviction)
+#
+# Alert severity levels:
+#   CRITICAL: Page on-call engineer immediately (5 min SLA)
+#   HIGH:     Investigate within 15 minutes
+#   MEDIUM:   Investigate within 1 hour
+#   LOW:      Monitor, no immediate action
+#
+
+groups:
+  - name: production_alerts
+    interval: 30s
+    rules:
+      # ===========================================================================
+      # CRITICAL ALERTS (Page immediately - 5 min SLA)
+      # ===========================================================================
+
+      - alert: ServiceDown
+        expr: up{job="code-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "Code-server service is down"
+          description: "Service has been unreachable for {{ $value }} minute(s). Immediate action required."
+          runbook: "docs/runbooks/service-down.md"
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "High error rate detected (>5%)"
+          description: |
+            Error rate is {{ $value | humanizePercentage }} over last 5 minutes.
+            Current error rate threshold: 5%
+          runbook: "docs/runbooks/high-error-rate.md"
+
+      - alert: DatabaseReplicationLagCritical
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database replication lag critical (>30s)"
+          description: |
+            Replica is {{ $value }} seconds behind primary.
+            This may indicate network issues or replica overload.
+          runbook: "docs/runbooks/replication-lag.md"
+
+      - alert: MemoryLeak
+        expr: |
+          (container_memory_usage_bytes{name="code-server"}[1h] / 1024 / 1024 / 1024)
+          > on() (container_memory_usage_bytes{name="code-server"} offset 1h / 1024 / 1024 / 1024)
+        for: 30m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "Possible memory leak detected"
+          description: |
+            Memory usage increased by {{ $value | humanize }}GB over 1 hour.
+            Container may need restart.
+          runbook: "docs/runbooks/memory-leak.md"
+
+      - alert: PersistentDiskUsageHigh
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Disk usage critical (>90%)"
+          description: "Only {{ $value | humanizePercentage }} of disk space remaining."
+          runbook: "docs/runbooks/disk-full.md"
+
+      - alert: HealthCheckFailing
+        expr: http_health_check_status{target="code-server"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "Health check endpoint failing"
+          description: "Service health check has been failing for {{ $value }} minutes."
+          runbook: "docs/runbooks/health-check-failing.md"
+
+      # ===========================================================================
+      # HIGH ALERTS (Investigate within 15 min)
+      # ===========================================================================
+
+      - alert: ElevatedLatency
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: high
+          component: application
+        annotations:
+          summary: "Elevated latency detected (p99 >500ms)"
+          description: |
+            99th percentile response time: {{ $value | humanizeDuration }}
+            Target: <500ms
+          runbook: "docs/runbooks/elevated-latency.md"
+
+      - alert: ModerateErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.01 and (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) < 0.05
+        for: 5m
+        labels:
+          severity: high
+          component: application
+        annotations:
+          summary: "Moderate error rate (1-5%)"
+          description: |
+            Error rate: {{ $value | humanizePercentage }}
+            Current threshold: 1%
+          runbook: "docs/runbooks/elevated-error-rate.md"
+
+      - alert: HighCPUUsage
+        expr: |
+          (
+            sum(rate(container_cpu_usage_seconds_total{name="code-server"}[5m]))
+            * 100
+          ) > 80
+        for: 10m
+        labels:
+          severity: high
+          component: infrastructure
+        annotations:
+          summary: "High CPU usage (>80%)"
+          description: |
+            CPU usage: {{ $value | humanize }}%
+            Duration: >10 minutes
+          runbook: "docs/runbooks/high-cpu-usage.md"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            container_memory_usage_bytes{name="code-server"}
+            /
+            container_spec_memory_limit_bytes{name="code-server"}
+          ) > 0.8
+        for: 5m
+        labels:
+          severity: high
+          component: infrastructure
+        annotations:
+          summary: "High memory usage (>80%)"
+          description: |
+            Memory usage: {{ $value | humanizePercentage }} of limit
+            Consider scaling up memory allocation
+          runbook: "docs/runbooks/high-memory-usage.md"
+
+      - alert: DatabaseReplicationLagHigh
+        expr: pg_replication_lag_seconds > 10 and pg_replication_lag_seconds < 30
+        for: 5m
+        labels:
+          severity: high
+          component: database
+        annotations:
+          summary: "Database replication lag elevated (10-30s)"
+          description: |
+            Replica is {{ $value }} seconds behind primary.
+            Monitor closely; may need intervention if continues to grow.
+          runbook: "docs/runbooks/replication-lag.md"
+
+      - alert: CacheHitRateLow
+        expr: |
+          (
+            sum(rate(redis_keyspace_hits_total[5m]))
+            /
+            (
+              sum(rate(redis_keyspace_hits_total[5m]))
+              +
+              sum(rate(redis_keyspace_misses_total[5m]))
+            )
+          ) < 0.8
+        for: 10m
+        labels:
+          severity: high
+          component: cache
+        annotations:
+          summary: "Cache hit rate low (<80%)"
+          description: |
+            Cache hit rate: {{ $value | humanizePercentage }}
+            This may indicate increased database load.
+          runbook: "docs/runbooks/cache-hit-rate-low.md"
+
+      - alert: DatabaseConnectionPoolNearMax
+        expr: |
+          pg_stat_activity_count
+          /
+          (
+            pg_setting_max_connections
+            * 0.9
+          ) > 1
+        for: 5m
+        labels:
+          severity: high
+          component: database
+        annotations:
+          summary: "Database connection pool >90% used"
+          description: |
+            Active connections: {{ $value }}
+            Consider increasing max_connections or investigating long-running queries.
+          runbook: "docs/runbooks/db-connection-pool-high.md"
+
+      # ===========================================================================
+      # MEDIUM ALERTS (Investigate within 1 hour)
+      # ===========================================================================
+
+      - alert: SlightlyElevatedMetrics
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.001 and (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) < 0.01
+        for: 15m
+        labels:
+          severity: medium
+          component: application
+        annotations:
+          summary: "Slightly elevated error rate"
+          description: |
+            Error rate: {{ $value | humanizePercentage }}
+            Monitor trend; escalate if continues to increase.
+          runbook: "docs/runbooks/slightly-elevated-errors.md"
+
+      - alert: DiskUsageWarning
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes) < 0.2
+        for: 30m
+        labels:
+          severity: medium
+          component: infrastructure
+        annotations:
+          summary: "Disk usage warning (>80%)"
+          description: |
+            {{ $value | humanizePercentage }} of disk space used.
+            Plan cleanup or expansion soon.
+          runbook: "docs/runbooks/disk-usage-high.md"
+
+      - alert: DatabaseSlowQueries
+        expr: |
+          pg_stat_statements_mean_exec_time_seconds > 1
+        for: 10m
+        labels:
+          severity: medium
+          component: database
+        annotations:
+          summary: "Slow queries detected (>1 second)"
+          description: |
+            Mean execution time: {{ $value | humanizeDuration }}
+            Review query performance and indexes.
+          runbook: "docs/runbooks/slow-queries.md"
+
+      - alert: ServiceDegraded
+        expr: |
+          (
+            sum(rate(http_requests_total{status="200"}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) < 0.95
+        for: 20m
+        labels:
+          severity: medium
+          component: application
+        annotations:
+          summary: "Service degradation detected"
+          description: |
+            Success rate: {{ $value | humanizePercentage }}
+            Target: >95%
+          runbook: "docs/runbooks/service-degraded.md"
+
+      - alert: PostgresConnections
+        expr: pg_stat_activity_count > 50
+        for: 15m
+        labels:
+          severity: medium
+          component: database
+        annotations:
+          summary: "High number of database connections (>50)"
+          description: "Active connections: {{ $value }}"
+          runbook: "docs/runbooks/high-db-connections.md"
+
+      # ===========================================================================
+      # LOW ALERTS (Monitor, no immediate action)
+      # ===========================================================================
+
+      - alert: PodMemoryUsageIncrease
+        expr: |
+          (
+            container_memory_usage_bytes{name="code-server"}
+            /
+            container_memory_usage_bytes{name="code-server"} offset 1h
+          ) > 1.1
+        for: 30m
+        labels:
+          severity: low
+          component: infrastructure
+        annotations:
+          summary: "Memory usage increased by >10%"
+          description: |
+            Memory growth rate: {{ $value | humanizePercentage }}
+            Monitor for potential slow leak.
+          runbook: "docs/runbooks/memory-usage-increase.md"
+
+      - alert: CacheEvictionRate
+        expr: rate(redis_evicted_keys_total[5m]) > 0
+        for: 30m
+        labels:
+          severity: low
+          component: cache
+        annotations:
+          summary: "Cache eviction occurring"
+          description: |
+            Keys evicted per minute: {{ $value | humanize }}
+            May indicate insufficient cache memory.
+          runbook: "docs/runbooks/cache-eviction.md"
+
+      - alert: HighNetworkIO
+        expr: |
+          (
+            sum(rate(container_network_transmit_bytes_total[5m]))
+            +
+            sum(rate(container_network_receive_bytes_total[5m]))
+          ) > (1024 * 1024 * 100)  # 100 MB/s
+        for: 30m
+        labels:
+          severity: low
+          component: infrastructure
+        annotations:
+          summary: "High network I/O detected"
+          description: |
+            Network throughput: {{ $value | humanize }}B/s
+            Monitor for network saturation.
+          runbook: "docs/runbooks/high-network-io.md"
+
+      # ===========================================================================
+      # INFORMATIONAL ALERTS (Tracking only)
+      # ===========================================================================
+
+      - alert: DeploymentOccurred
+        expr: changes(deployment_version[1h]) > 0
+        labels:
+          severity: info
+          component: deployment
+        annotations:
+          summary: "Deployment detected in last hour"
+          description: "Application version may have changed."
+
+      - alert: ConfigReload
+        expr: changes(config_reload_timestamp[1h]) > 0
+        labels:
+          severity: info
+          component: configuration
+        annotations:
+          summary: "Configuration reload occurred"
+          description: "Configuration was reloaded in the last hour."

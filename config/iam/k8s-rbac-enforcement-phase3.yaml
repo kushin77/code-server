@@ -1,0 +1,572 @@
+---
+# Phase 3: RBAC Enforcement for Workload Identity Authorization
+# Production-grade role-based access control for all services
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbac-enforcement
+  labels:
+    phase: 3
+    app: rbac
+
+---
+# Role: Code-Server IDE Access Control
+# Defines permissions for code-server to interact with backend services
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: code-server-role
+  namespace: default
+  labels:
+    service: code-server
+    phase: 3
+rules:
+  # Allow reading ConfigMaps (app configuration)
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+    resourceNames: ["app-config", "feature-flags"]
+  
+  # Allow reading Secrets (API keys, credentials)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["database-credentials", "oauth-secrets"]
+  
+  # Allow creating/updating own tokens
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  
+  # Allow reading workspace volumes
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
+
+---
+# Role: PostgreSQL Database Access Control
+# Defines permissions for database operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: postgresql-role
+  namespace: default
+  labels:
+    service: postgresql
+    phase: 3
+rules:
+  # Allow reading database connection secrets
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["postgres-credentials"]
+  
+  # Allow reading replication config
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+    resourceNames: ["postgres-replication-config"]
+  
+  # Allow accessing backup storage
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
+    resourceNames: ["postgres-backup-volume"]
+
+---
+# Role: Redis Cache Access Control
+# Defines permissions for cache operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: redis-role
+  namespace: default
+  labels:
+    service: redis
+    phase: 3
+rules:
+  # Allow reading cache configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+    resourceNames: ["redis-config"]
+  
+  # Allow reading authentication secrets
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["redis-auth-token"]
+  
+  # Allow monitoring status
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list"]
+
+---
+# Role: Prometheus Metrics Collection
+# Defines permissions for metrics scraping
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-role
+  namespace: default
+  labels:
+    service: prometheus
+    phase: 3
+rules:
+  # Allow reading service endpoints for scrape targets
+  - apiGroups: [""]
+    resources: ["endpoints", "services"]
+    verbs: ["get", "list", "watch"]
+  
+  # Allow reading pod metrics
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  
+  # Allow reading scrape configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+    resourceNames: ["prometheus-scrape-config"]
+
+---
+# Role: Grafana Dashboard Access
+# Defines permissions for dashboard management
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: grafana-role
+  namespace: default
+  labels:
+    service: grafana
+    phase: 3
+rules:
+  # Allow reading datasource configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+    resourceNames: ["grafana-datasources"]
+  
+  # Allow reading API credentials for Prometheus
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["grafana-api-key"]
+  
+  # Allow updating dashboard state
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["update", "patch"]
+    resourceNames: ["grafana-dashboards"]
+
+---
+# Role: Ollama GPU Inference
+# Defines permissions for GPU-accelerated inference
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ollama-role
+  namespace: default
+  labels:
+    service: ollama
+    phase: 3
+rules:
+  # Allow reading model configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+    resourceNames: ["ollama-models"]
+  
+  # Allow accessing GPU resources
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+  
+  # Allow accessing model storage volume
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get"]
+    resourceNames: ["ollama-models-volume"]
+
+---
+# Role: AlertManager Alerting
+# Defines permissions for alert routing and silencing
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alertmanager-role
+  namespace: default
+  labels:
+    service: alertmanager
+    phase: 3
+rules:
+  # Allow reading alert configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+    resourceNames: ["alertmanager-config"]
+  
+  # Allow reading webhook credentials
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["alertmanager-webhooks"]
+  
+  # Allow updating silence state
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["update"]
+    resourceNames: ["alertmanager-silences"]
+
+---
+# Role: Jaeger Distributed Tracing
+# Defines permissions for trace collection
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jaeger-role
+  namespace: default
+  labels:
+    service: jaeger
+    phase: 3
+rules:
+  # Allow reading trace configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+    resourceNames: ["jaeger-config"]
+  
+  # Allow accessing trace storage
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get"]
+    resourceNames: ["jaeger-traces-volume"]
+
+---
+# ClusterRole: Service-to-Service Cross-Namespace Access
+# Allows services to communicate across namespaces with proper RBAC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: service-cross-namespace-role
+  labels:
+    phase: 3
+rules:
+  # Allow reading ServiceAccounts in other namespaces (for identity validation)
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list"]
+  
+  # Allow reading ConfigMaps across namespaces (for service discovery)
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+    namespaces: ["*"]
+
+---
+# RoleBinding: Code-Server to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: code-server-rolebinding
+  namespace: default
+  labels:
+    service: code-server
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: code-server-role
+subjects:
+  - kind: ServiceAccount
+    name: code-server-sa
+    namespace: default
+
+---
+# RoleBinding: PostgreSQL to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: postgresql-rolebinding
+  namespace: default
+  labels:
+    service: postgresql
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: postgresql-role
+subjects:
+  - kind: ServiceAccount
+    name: postgresql-sa
+    namespace: default
+
+---
+# RoleBinding: Redis to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: redis-rolebinding
+  namespace: default
+  labels:
+    service: redis
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: redis-role
+subjects:
+  - kind: ServiceAccount
+    name: redis-sa
+    namespace: default
+
+---
+# RoleBinding: Prometheus to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-rolebinding
+  namespace: default
+  labels:
+    service: prometheus
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-role
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-sa
+    namespace: default
+
+---
+# RoleBinding: Grafana to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grafana-rolebinding
+  namespace: default
+  labels:
+    service: grafana
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: grafana-role
+subjects:
+  - kind: ServiceAccount
+    name: grafana-sa
+    namespace: default
+
+---
+# RoleBinding: Ollama to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ollama-rolebinding
+  namespace: default
+  labels:
+    service: ollama
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ollama-role
+subjects:
+  - kind: ServiceAccount
+    name: ollama-sa
+    namespace: default
+
+---
+# RoleBinding: AlertManager to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alertmanager-rolebinding
+  namespace: default
+  labels:
+    service: alertmanager
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: alertmanager-role
+subjects:
+  - kind: ServiceAccount
+    name: alertmanager-sa
+    namespace: default
+
+---
+# RoleBinding: Jaeger to Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jaeger-rolebinding
+  namespace: default
+  labels:
+    service: jaeger
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jaeger-role
+subjects:
+  - kind: ServiceAccount
+    name: jaeger-sa
+    namespace: default
+
+---
+# ClusterRoleBinding: Service Cross-Namespace Access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: service-cross-namespace-binding
+  labels:
+    phase: 3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: service-cross-namespace-role
+subjects:
+  - kind: ServiceAccount
+    name: code-server-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: postgresql-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: redis-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: prometheus-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: grafana-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: ollama-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: alertmanager-sa
+    namespace: default
+  - kind: ServiceAccount
+    name: jaeger-sa
+    namespace: default
+
+---
+# ConfigMap: RBAC Policy Audit Log Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rbac-audit-config
+  namespace: default
+  labels:
+    phase: 3
+data:
+  audit-policy.yaml: |
+    apiVersion: audit.k8s.io/v1
+    kind: Policy
+    rules:
+      # Log all RBAC deny events (failed authorization attempts)
+      - level: RequestResponse
+        verbs: ["*"]
+        omitStages:
+          - RequestReceived
+        userGroups: ["system:unauthenticated"]
+      
+      # Log all RBAC events for service accounts
+      - level: RequestResponse
+        verbs: ["*"]
+        resources: ["*"]
+        userGroups: ["system:serviceaccounts"]
+        omitStages:
+          - RequestReceived
+      
+      # Log all permission checks (get, list, create, etc)
+      - level: Metadata
+        verbs: ["get", "list", "create", "update", "patch", "delete"]
+        omitStages:
+          - RequestReceived
+
+---
+# ConfigMap: Service Authorization Policies
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-authorization-policies
+  namespace: default
+  labels:
+    phase: 3
+data:
+  policies.json: |
+    {
+      "policies": [
+        {
+          "service": "code-server",
+          "audience": "code-server",
+          "allowedCalls": ["postgresql", "redis", "ollama", "prometheus"],
+          "deniedCalls": ["alertmanager"],
+          "requiresToken": true,
+          "tokenValidation": "strict"
+        },
+        {
+          "service": "postgresql",
+          "audience": "postgresql",
+          "allowedCalls": ["code-server", "grafana", "prometheus"],
+          "deniedCalls": ["ollama"],
+          "requiresToken": true,
+          "tokenValidation": "strict"
+        },
+        {
+          "service": "redis",
+          "audience": "redis",
+          "allowedCalls": ["code-server", "prometheus"],
+          "deniedCalls": [],
+          "requiresToken": true,
+          "tokenValidation": "standard"
+        },
+        {
+          "service": "prometheus",
+          "audience": "prometheus",
+          "allowedCalls": ["grafana", "alertmanager"],
+          "deniedCalls": [],
+          "requiresToken": false,
+          "tokenValidation": "none"
+        },
+        {
+          "service": "grafana",
+          "audience": "grafana",
+          "allowedCalls": ["prometheus"],
+          "deniedCalls": ["code-server"],
+          "requiresToken": true,
+          "tokenValidation": "standard"
+        },
+        {
+          "service": "ollama",
+          "audience": "ollama",
+          "allowedCalls": ["code-server"],
+          "deniedCalls": ["postgresql"],
+          "requiresToken": true,
+          "tokenValidation": "strict"
+        },
+        {
+          "service": "alertmanager",
+          "audience": "alertmanager",
+          "allowedCalls": ["prometheus"],
+          "deniedCalls": [],
+          "requiresToken": false,
+          "tokenValidation": "none"
+        },
+        {
+          "service": "jaeger",
+          "audience": "jaeger",
+          "allowedCalls": ["code-server", "prometheus", "grafana"],
+          "deniedCalls": [],
+          "requiresToken": true,
+          "tokenValidation": "standard"
+        }
+      ]
+    }
+

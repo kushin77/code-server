@@ -1,0 +1,352 @@
+#!/usr/bin/env bash
+# @file        scripts/ci/detect-config-drift.sh
+# @module      ci/config-validation
+# @description Detect hardcoded config values that violate SSOT (single source of truth)
+# @owner       kushnir77
+# @status      production
+
+set -euo pipefail
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2034
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Source common utilities
+source "$SCRIPT_DIR/../_common/init.sh"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+# SSOT files (allowed to have config values)
+declare -a SSOT_FILES=(
+    ".env"
+    ".env.example"
+    ".env.defaults"
+    ".env.schema.json"
+    "terraform/variables.tf"
+    "docs/PHASE-2-TASKS-3-4-IMPLEMENTATION.md"
+)
+
+# Directory prefixes to skip for domain/IP checks (config definitions, not scripts)
+declare -a SKIP_DIRS=(
+    "docs/"
+    "config/"
+    "docker/configs/"
+    "tests/artifacts/"
+    "artifacts/"
+    "environments/"
+    "scripts/nas-ingress.yaml"
+    "alert-rules"
+    "alertmanager"
+    "k8s/"
+    "terraform/"
+    "code-server-config.yaml"
+    "promtail-config.yml"
+    "prometheus-rules"
+    "otel-config.yml"
+    "loki-config.yml"
+    ".github/"
+    ".vscode/"
+    ".pre-commit-hooks.yaml"
+    "scripts/dev/check-config-drift.sh"
+    "scripts/ci/detect-config-drift.sh"
+    "phase-20-a1-config.yml"
+    "docker-compose.production.yml"
+    "docker-compose-phase-"
+    "docker-compose-air-gapped.yml"
+    "Caddyfile-air-gapped"
+    "phase-"
+)
+
+# File-level allowlist for intentional static domain references
+# (documentation/examples, not runtime config surfaces).
+declare -a DOMAIN_ALLOWLIST_FILES=(
+    "docs/service-registry.yaml"
+    "team-hub-extension-package.json"
+)
+
+# Hardcoded patterns to detect (should use env vars instead)
+# shellcheck disable=SC2034
+declare -A DRIFT_PATTERNS=(
+    ["IP_192_168"]="192\.168\.168\.\d+"
+    ["DOMAIN_KUSHNIR"]="kushnir\.cloud"
+    ["DOMAIN_INTERNAL"]="prod\.internal"
+    ["PORT_9090"]=":9090(?!\")"
+    ["PORT_3000"]=":3000(?!\")"
+    ["PORT_8080"]=":8080(?!\")"
+)
+
+# Files to scan
+# shellcheck disable=SC2034
+declare -a SCAN_PATTERNS=(
+    "docker-compose*.yml"
+    "docker-compose*.yaml"
+    "Caddyfile*"
+    "scripts/*.sh"
+    "scripts/**/*.sh"
+    "*.tf"
+    "otel-config.yml"
+)
+
+REPORT_DIR="artifacts/config-ssot"
+REPORT_JSON="${REPORT_DIR}/config-ssot-report.json"
+
+# shellcheck disable=SC2034
+declare -a SCAN_FILES=()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Functions
+# ─────────────────────────────────────────────────────────────────────────────
+
+is_ssot_file() {
+    local file="$1"
+    local normalized="${file#./}"
+    for ssot in "${SSOT_FILES[@]}"; do
+        if [[ "$normalized" == "$ssot" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+is_skip_dir() {
+    local file="$1"
+    for dir in "${SKIP_DIRS[@]}"; do
+        if [[ "$file" == "$dir"* ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+is_allowlisted_domain_file() {
+    local file="$1"
+    local normalized="${file#./}"
+
+    for allowlisted in "${DOMAIN_ALLOWLIST_FILES[@]}"; do
+        if [[ "$normalized" == "$allowlisted" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+check_hardcoded_ips() {
+    local drift_found=0
+    local -a files=()
+    local file
+    local line
+    
+    log_info "Checking for hardcoded IPs (192.168.168.*)..."
+    
+    # Search for hardcoded IPs
+    while IFS= read -r line; do
+        local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
+        
+        # Skip SSOT files, explicit allowlist files, and archived directories
+        if is_ssot_file "$file" || is_allowlisted_domain_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
+            continue
+        fi
+        
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
+        
+        # Skip lines where IP is already in an env-var default (${VAR:-ip})
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded IP in $file: $content"
+        drift_found=1
+    done < <(grep -rn "192\.168\.168\." \
+        docker-compose.yml \
+        docker-compose.base.yml \
+        docker-compose.dev.yml \
+        Caddyfile \
+        Caddyfile.production \
+        2>/dev/null || true)
+    
+    return $drift_found
+}
+
+check_hardcoded_domains() {
+    local drift_found=0
+    local -a files=()
+    local file
+    local line
+    
+    log_info "Checking for hardcoded domains (kushnir.cloud, prod.internal)..."
+    
+    # Search for hardcoded domains
+    while IFS= read -r line; do
+        local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
+        
+        # Skip SSOT files and archived directories
+        if is_ssot_file "$file" || is_allowlisted_domain_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
+            continue
+        fi
+        
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
+        
+        # Skip lines where domain is already in an env-var default (${VAR:-domain})
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded domain in $file: $content"
+        drift_found=1
+    done < <(grep -rn "kushnir\.cloud\|prod\.internal" \
+        --include="*.yml" \
+        --include="*.yaml" \
+        --include="*.conf" \
+        --include="*.json" \
+        --exclude-dir=.git \
+        --exclude-dir=archived \
+        --exclude-dir=_archive \
+        2>/dev/null || true)
+    
+    return $drift_found
+}
+
+check_hardcoded_ports() {
+    local drift_found=0
+    # shellcheck disable=SC2034
+    local -a files=()
+    local file
+    local line
+    
+    log_info "Checking for hardcoded ports (9090, 3000, 8080)..."
+    
+    # Search for hardcoded ports in docker-compose and Caddyfile
+    while IFS= read -r line; do
+        local file="${line%%:*}"
+        local content
+        content=$(echo "$line" | cut -d: -f3-)
+        
+        # Skip SSOT files and archived directories
+        if is_ssot_file "$file" || is_skip_dir "$file" || [[ "$file" =~ archived|_archive ]]; then
+            continue
+        fi
+        
+        # Skip comment lines
+        if [[ "$content" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
+        
+        # Skip docker-compose port mapping lines ("NNNN:NNNN" format — required syntax)
+        if [[ "$content" =~ [0-9]+:[0-9]+ ]] && [[ "$content" =~ ^[[:space:]]*- ]]; then
+            continue
+        fi
+        
+        # Skip health check localhost URLs (localhost:port is not hardcoded deployment config)
+        if [[ "$content" =~ localhost:[0-9]+ ]]; then
+            continue
+        fi
+        
+        # Skip Docker internal service name URLs (e.g. http://prometheus:9090)
+        if [[ "$content" =~ http[s]?://[a-z][a-z0-9_-]+:[0-9]+ ]]; then
+            continue
+        fi
+        
+        # Skip lines where port is already in an env-var interpolation
+        if echo "$line" | grep -qF '${'; then
+            continue
+        fi
+        
+        log_warn "  Found hardcoded port in $file: $content"
+        drift_found=1
+    done < <(grep -rn ":[9308][0908][909][0]" \
+        docker-compose*.yml \
+        docker-compose*.yaml \
+        Caddyfile* \
+        --exclude-dir=.git \
+        --exclude-dir=archived \
+        --exclude-dir=_archive \
+        2>/dev/null || true)
+    
+    return $drift_found
+}
+
+check_config_ssot_report() {
+    log_info "Generating configuration SSOT report..."
+
+    if bash scripts/ci/generate-config-ssot-report.sh; then
+        log_success "Configuration SSOT report generated at ${REPORT_JSON}"
+    else
+        log_error "Configuration SSOT report generation failed"
+        return 1
+    fi
+}
+
+check_ssot_integrity() {
+    log_info "Checking .env file integrity..."
+    
+    if [[ ! -f ".env" ]] && [[ ! -f ".env.example" ]] && [[ ! -f ".env.defaults" ]]; then
+        log_warn "No .env, .env.example, or .env.defaults found (SSOT master file recommended)"
+        return 0
+    fi
+    
+    # Prefer tracked SSOT files over local .env
+    local env_file=".env.defaults"
+    [[ ! -f ".env.defaults" ]] && env_file=".env.example"
+    [[ ! -f ".env.example" ]] && env_file=".env"
+    
+    # Verify required SSOT coverage (supports legacy and current key names)
+    local missing=0
+
+    if ! grep -qE '^(DEPLOY_HOST|PRIMARY_HOST_IP)=' "$env_file" 2>/dev/null; then
+        log_warn "Missing deployment host variable in $env_file (expected DEPLOY_HOST or PRIMARY_HOST_IP)"
+        missing=1
+    fi
+
+    if ! grep -qE '^(DOMAIN|APEX_DOMAIN)=' "$env_file" 2>/dev/null; then
+        log_warn "Missing domain variable in $env_file (expected DOMAIN or APEX_DOMAIN)"
+        missing=1
+    fi
+
+    if [[ $missing -gt 0 ]]; then
+        log_warn "SSOT coverage gaps detected in $env_file (advisory)"
+    fi
+
+    return 0
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
+
+main() {
+    log_info "Starting config drift detection..."
+    
+    local total_drift=0
+    
+    # Run all checks
+    check_ssot_integrity || total_drift=$((total_drift + 1))
+    check_hardcoded_ips || total_drift=$((total_drift + 1))
+    check_hardcoded_domains || total_drift=$((total_drift + 1))
+    check_hardcoded_ports || total_drift=$((total_drift + 1))
+    check_config_ssot_report || total_drift=$((total_drift + 1))
+    
+    echo ""
+    
+    if [[ $total_drift -eq 0 ]]; then
+        log_info "✓ No config drift detected (SSOT intact)"
+        return 0
+    else
+        log_fatal "✗ Config drift detected in $total_drift area(s). Use env vars instead of hardcoded values."
+    fi
+}
+
+main "$@"

@@ -1,0 +1,202 @@
+openapi: 3.1.0
+info:
+  title: Git Proxy Server API
+  version: 1.0.0
+  description: Credential proxy and git operation API behind Cloudflare Access.
+servers:
+  - url: https://git-proxy.local
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /api/credentials:
+    post:
+      summary: Get temporary git credentials
+      operationId: getCredentials
+      security:
+        - cloudflareAccess: []
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitCredentialRequest'
+      responses:
+        '200':
+          description: Temporary credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitCredentialResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/git-operation:
+    post:
+      summary: Execute a git operation
+      operationId: executeGitOperation
+      security:
+        - cloudflareAccess: []
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitOperationRequest'
+      responses:
+        '200':
+          description: Operation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitOperationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  securitySchemes:
+    cloudflareAccess:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    AuthorizationHeader:
+      name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Cloudflare Access JWT bearer token.
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    GitCredentialRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        protocol:
+          type: string
+          enum: [https, ssh]
+        host:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - protocol
+        - host
+    GitCredentialResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        protocol:
+          type: string
+        host:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - protocol
+        - host
+        - username
+        - password
+    GitOperationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        operation:
+          type: string
+          enum: [push, pull, status]
+        repo:
+          type: string
+        branch:
+          type: string
+        message:
+          type: string
+      required:
+        - operation
+        - repo
+    GitOperationResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        result:
+          type: object
+          additionalProperties: true
+      required:
+        - status
+        - message
+        - result
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+      required:
+        - status
+        - timestamp
+        - version

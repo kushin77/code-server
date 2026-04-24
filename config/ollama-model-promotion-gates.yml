@@ -1,0 +1,50 @@
+# @file        config/ollama-model-promotion-gates.yml
+# @module      ai/gates
+# @description AI model promotion gates: candidate -> canary -> default.
+#              Mandatory scorecards and rollback thresholds.
+#
+# Applies whenever OLLAMA_DEFAULT_MODEL changes in compose or env.
+
+version: "1"
+updated: "2026-04-18"
+
+lifecycle:
+  stages:
+    - candidate
+    - canary
+    - default
+
+# ── Mandatory scorecards ──────────────────────────────────────────────────────
+quality_gates:
+  required_metrics:
+    - accuracy_score
+    - safety_score
+    - latency_ms
+    - token_cost_estimate
+  minimums:
+    accuracy_score: 0.80
+    safety_score: 0.95
+    latency_ms: 2000
+
+# ── Canary rollout ────────────────────────────────────────────────────────────
+canary:
+  percentage: 10
+  duration_hours: 24
+  rollback_thresholds:
+    error_rate_percent: 5
+    latency_regression_percent: 20
+    safety_incidents: 1
+
+# ── Promotion decision ───────────────────────────────────────────────────────
+promotion:
+  require_human_approval: true
+  approvers:
+    - platform
+  require_artifacts:
+    - evaluation_report.json
+    - canary_results.json
+
+# ── Rollback ──────────────────────────────────────────────────────────────────
+rollback:
+  command: "git revert"
+  restore_previous_default: true

@@ -1,0 +1,327 @@
+---
+# Namespace: Isolated OIDC issuer environment
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: oidc-issuer
+  labels:
+    app: oidc-issuer
+    phase: 2.1
+
+---
+# ConfigMap: OIDC Issuer Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oidc-issuer-config
+  namespace: oidc-issuer
+  labels:
+    app: oidc-issuer
+data:
+  config.yaml: |
+    # OIDC Issuer Configuration for ide.kushnir.cloud
+    issuer: https://oidc.kushnir.cloud
+    storage:
+      type: kubernetes
+      config:
+        inCluster: true
+    web:
+      http: 0.0.0.0:8888
+    oauth2:
+      skipApprovalScreen: false
+      alwaysShowLoginScreen: false
+    staticClients:
+      - id: code-server
+        redirectURIs:
+          - https://ide.kushnir.cloud/callback
+        name: Code-Server IDE
+        secret: code-server-secret-do-not-use-in-prod
+      - id: grafana
+        redirectURIs:
+          - https://grafana.kushnir.cloud/login/generic_oauth
+        name: Grafana Monitoring
+        secret: grafana-secret-do-not-use-in-prod
+    connectors:
+      - type: mockCallback
+        id: mock
+        name: Mock Connector (dev only)
+    expiry:
+      idTokens: "1h"
+      refreshTokens: "7d"
+      accessTokens: "15m"
+      authRequests: "24h"
+    logger:
+      level: info
+      format: json
+
+---
+# Secret: OIDC Signing Key (ED25519 private key)
+# IMPORTANT: In production, generate with:
+#   openssl genpkey -algorithm ed25519 -out signing-key.pem
+#   kubectl create secret generic oidc-signing-key \
+#     --from-file=signing-key.pem -n oidc-issuer
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oidc-signing-key
+  namespace: oidc-issuer
+  labels:
+    app: oidc-issuer
+type: Opaque
+data:
+  # PLACEHOLDER: Base64-encoded ED25519 private key
+  # Generated separately and injected at deployment time
+  signing-key.pem: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1DNENBUUF3QlFZREsyVndCQUlCQWhCQjJ5YVhOUlJpVT0KLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQo=
+
+---
+# ServiceAccount: OIDC Issuer Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: oidc-issuer-sa
+  namespace: oidc-issuer
+  labels:
+    app: oidc-issuer
+
+---
+# Role: Read ServiceAccounts across cluster (for workload identity discovery)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: oidc-issuer-role
+  labels:
+    app: oidc-issuer
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["oidc-signing-key"]
+    verbs: ["get"]
+    namespaceSelector:
+      matchNames:
+        - oidc-issuer
+
+---
+# ClusterRoleBinding: Bind OIDC Issuer SA to cluster role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-issuer-rolebinding
+  labels:
+    app: oidc-issuer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: oidc-issuer-role
+subjects:
+  - kind: ServiceAccount
+    name: oidc-issuer-sa
+    namespace: oidc-issuer
+
+---
+# Service: Expose OIDC issuer internally (port 8888)
+apiVersion: v1
+kind: Service
+metadata:
+  name: oidc-issuer
+  namespace: oidc-issuer
+  labels:
+    app: oidc-issuer
+spec:
+  type: ClusterIP
+  selector:
+    app: oidc-issuer
+  ports:
+    - port: 8888
+      targetPort: 8888
+      protocol: TCP
+      name: http
+
+---
+# Deployment: OIDC Issuer (3 replicas for HA)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oidc-issuer
+  namespace: oidc-issuer
+  labels:
+    app: oidc-issuer
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: oidc-issuer
+  template:
+    metadata:
+      labels:
+        app: oidc-issuer
+        phase: 2.1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8888"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: oidc-issuer-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: oidc-issuer
+          # Using CoreOS Dex as production OIDC issuer
+          image: dexidp/dex:v2.35.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8888
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dex
+              readOnly: true
+            - name: signing-key
+              mountPath: /etc/dex/signing-key
+              readOnly: true
+          env:
+            - name: DEXISSUER
+              value: "https://oidc.kushnir.cloud"
+            - name: DEXWEB_HTTP
+              value: "0.0.0.0:8888"
+            - name: DEXLOG_LEVEL
+              value: "info"
+            - name: DEXLOG_FORMAT
+              value: "json"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8888
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8888
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: oidc-issuer-config
+        - name: signing-key
+          secret:
+            secretName: oidc-signing-key
+            defaultMode: 0400
+
+---
+# HorizontalPodAutoscaler: Scale OIDC issuer based on CPU
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: oidc-issuer-hpa
+  namespace: oidc-issuer
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: oidc-issuer
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+# PodDisruptionBudget: Ensure at least 2 replicas running during updates
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: oidc-issuer-pdb
+  namespace: oidc-issuer
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: oidc-issuer
+
+---
+# NetworkPolicy: Restrict traffic to OIDC issuer
+# Allow traffic from services that need to authenticate
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: oidc-issuer-network-policy
+  namespace: oidc-issuer
+spec:
+  podSelector:
+    matchLabels:
+      app: oidc-issuer
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow from Caddy ingress controller (reverse proxy)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-caddy
+        - podSelector:
+            matchLabels:
+              app: caddy
+      ports:
+        - protocol: TCP
+          port: 8888
+    # Allow from services in any namespace
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8888
+
+---
+# ServiceMonitor: Prometheus scraping for OIDC issuer
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: oidc-issuer-monitor
+  namespace: oidc-issuer
+  labels:
+    app: oidc-issuer
+spec:
+  selector:
+    matchLabels:
+      app: oidc-issuer
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+

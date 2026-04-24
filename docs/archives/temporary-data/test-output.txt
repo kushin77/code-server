@@ -1,0 +1,79 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.4 [39m[90mC:/code-server-enterprise[39m
+
+{"timestamp":"2026-04-22T23:15:39.731Z","level":"info","message":"Extension registered: test.extension v1.0.0","service":"RegistryManager","publisher":"test-org"}
+{"timestamp":"2026-04-22T23:15:39.747Z","level":"info","message":"Extension registered: test.ext v1.0.0","service":"RegistryManager","publisher":"org"}
+{"timestamp":"2026-04-22T23:15:39.753Z","level":"info","message":"Extension registered: test.ext v1.0.0","service":"RegistryManager","publisher":"org"}
+{"timestamp":"2026-04-22T23:15:39.757Z","level":"info","message":"Extension registered: ext1 v1.0.0","service":"RegistryManager","publisher":"pub1"}
+{"timestamp":"2026-04-22T23:15:39.757Z","level":"info","message":"Extension registered: ext2 v2.0.0","service":"RegistryManager","publisher":"pub2"}
+{"timestamp":"2026-04-22T23:15:39.767Z","level":"warn","message":"Extension blocked: malicious.ext","service":"RegistryManager","reason":"Contains malware","severity":"critical"}
+{"timestamp":"2026-04-22T23:15:39.773Z","level":"warn","message":"Extension blocked: blocked.ext","service":"RegistryManager","reason":"CVE","severity":"high"}
+{"timestamp":"2026-04-22T23:15:39.776Z","level":"info","message":"Extension unblocked: blocked.ext","service":"RegistryManager"}
+{"timestamp":"2026-04-22T23:15:39.777Z","level":"warn","message":"Extension blocked: ext1","service":"RegistryManager","reason":"CVE-1","severity":"high"}
+{"timestamp":"2026-04-22T23:15:39.777Z","level":"warn","message":"Extension blocked: ext2","service":"RegistryManager","reason":"CVE-2","severity":"medium"}
+{"timestamp":"2026-04-22T23:15:39.790Z","level":"info","message":"Version pinning applied: pinned.ext","service":"RegistryManager","workspaceId":"ws-1","allowedVersions":["1.0.0","1.5.0"]}
+{"timestamp":"2026-04-22T23:15:39.807Z","level":"info","message":"Version pinning applied: pinned.ext","service":"RegistryManager","workspaceId":"ws-1","allowedVersions":["1.0.0","1.5.0"]}
+{"timestamp":"2026-04-22T23:15:39.814Z","level":"info","message":"Version pinning applied: pinned.ext","service":"RegistryManager","workspaceId":"ws-1","allowedVersions":["1.0.0","1.5.0"]}
+{"timestamp":"2026-04-22T23:15:39.832Z","level":"info","message":"Extension registered: internal.ext v1.0.0","service":"RegistryManager","publisher":"kushnircloud"}
+{"timestamp":"2026-04-22T23:15:39.832Z","level":"info","message":"Extension registered: external.ext v1.0.0","service":"RegistryManager","publisher":"microsoft"}
+{"timestamp":"2026-04-22T23:15:39.832Z","level":"warn","message":"Extension blocked: blocked.ext","service":"RegistryManager","reason":"CVE","severity":"high"}
+{"timestamp":"2026-04-22T23:15:39.843Z","level":"info","message":"Extension registered: internal.ext v1.0.0","service":"RegistryManager","publisher":"kushnircloud"}
+{"timestamp":"2026-04-22T23:15:39.843Z","level":"info","message":"Extension registered: external.ext v1.0.0","service":"RegistryManager","publisher":"microsoft"}
+{"timestamp":"2026-04-22T23:15:39.843Z","level":"warn","message":"Extension blocked: blocked.ext","service":"RegistryManager","reason":"CVE","severity":"high"}
+{"timestamp":"2026-04-22T23:15:39.844Z","level":"info","message":"Registry sync completed","service":"RegistryManager"}
+{"timestamp":"2026-04-22T23:15:39.852Z","level":"info","message":"Registry sync completed","service":"RegistryManager"}
+{"timestamp":"2026-04-22T23:15:39.860Z","level":"info","message":"Extension registered: internal.tool v1.0.0","service":"RegistryManager","publisher":"kushnircloud"}
+{"timestamp":"2026-04-22T23:15:39.863Z","level":"info","message":"Extension registered: dangerous.ext v1.0.0","service":"RegistryManager","publisher":"badactor"}
+{"timestamp":"2026-04-22T23:15:39.865Z","level":"warn","message":"Extension blocked: dangerous.ext","service":"RegistryManager","reason":"CVE-2024-1234","severity":"critical"}
+{"timestamp":"2026-04-22T23:15:39.868Z","level":"info","message":"Version pinning applied: internal.tool","service":"RegistryManager","workspaceId":"ws-prod","allowedVersions":["1.0.0","1.1.0"]}
+{"timestamp":"2026-04-22T23:15:39.876Z","level":"info","message":"Registry sync completed","service":"RegistryManager"}
+ [31mΓ¥»[39m apps/backend/src/routes/__tests__/extension-registry.test.ts [2m([22m[2m21 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 176[2mms[22m[39m
+       [32mΓ£ô[39m should register extension[32m 32[2mms[22m[39m
+       [32mΓ£ô[39m should validate required fields[32m 8[2mms[22m[39m
+       [32mΓ£ô[39m should get extension metadata[32m 6[2mms[22m[39m
+       [32mΓ£ô[39m should return 404 for non-existent extension[32m 4[2mms[22m[39m
+       [32mΓ£ô[39m should get all extensions[32m 5[2mms[22m[39m
+       [32mΓ£ô[39m should block extension[32m 6[2mms[22m[39m
+       [32mΓ£ô[39m should validate required fields[32m 4[2mms[22m[39m
+       [32mΓ£ô[39m should unblock extension[32m 4[2mms[22m[39m
+       [32mΓ£ô[39m should get blocklist[32m 8[2mms[22m[39m
+       [32mΓ£ô[39m should set version pinning[32m 8[2mms[22m[39m
+       [32mΓ£ô[39m should validate required fields[32m 7[2mms[22m[39m
+       [32mΓ£ô[39m should validate allowedVersions is array[32m 7[2mms[22m[39m
+       [32mΓ£ô[39m should validate allowed version[32m 7[2mms[22m[39m
+       [32mΓ£ô[39m should reject disallowed version[32m 4[2mms[22m[39m
+       [32mΓ£ô[39m should record installation[32m 4[2mms[22m[39m
+       [32mΓ£ô[39m should increment installation count[32m 10[2mms[22m[39m
+[31m       [31m├ù[31m should get registry statistics[39m[32m 11[2mms[22m[39m
+       [32mΓ£ô[39m should report sync status[32m 6[2mms[22m[39m
+       [32mΓ£ô[39m should trigger sync[32m 4[2mms[22m[39m
+       [32mΓ£ô[39m should return health status[32m 4[2mms[22m[39m
+       [32mΓ£ô[39m should handle complete registry workflow[32m 23[2mms[22m[39m
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Tests 1 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  apps/backend/src/routes/__tests__/extension-registry.test.ts > Extension Registry Routes > GET /statistics > should get registry statistics
+AssertionError: expected 2 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 2
+
+ Γ¥» apps/backend/src/routes/__tests__/extension-registry.test.ts:309:50
+    307|       expect(response.status).toBe(200);
+    308|       expect(response.body.success).toBe(true);
+    309|       expect(response.body.data.totalExtensions).toBe(3);
+       |                                                  ^
+    310|       expect(response.body.data.blockedExtensions).toBe(1);
+    311|       expect(response.body.data.totalInstallations).toBe(2);
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/1]ΓÄ»
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m20 passed[39m[22m[90m (21)[39m
+[2m   Start at [22m 19:15:39
+[2m   Duration [22m 871ms[2m (transform 102ms, setup 0ms, import 402ms, tests 176ms, environment 0ms)[22m
+

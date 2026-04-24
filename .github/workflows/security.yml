@@ -1,0 +1,102 @@
+name: Security Scans
+
+# Closes #342 (GOV-012 partial) — Fail-closed secrets and IaC scanning.
+# ALL jobs must pass before merging. No || true bypasses in critical paths.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  security-scans:
+    name: TruffleHog + Gitleaks + DAST
+    uses: ./.github/workflows/TEMPLATE-security-scans.yml
+
+  credential-helper-hardening:
+    name: git-credential-gsm hardening tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Validate deterministic fallback and strict mode behavior
+        run: bash scripts/ci/test-git-credential-gsm.sh
+
+  auth-conformance:
+    name: Auth/Policy Conformance Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run auth conformance tests
+        run: bash scripts/ci/test-auth-conformance.sh
+      - name: Upload conformance report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: auth-conformance-report
+          path: /tmp/auth-conformance-report.json
+
+  iac-security:
+    name: Checkov + Tfsec IaC Scans
+    uses: ./.github/workflows/TEMPLATE-validate-iac.yml
+    with:
+      check_checkov: true
+      check_terraform: false
+      check_docker_compose: false
+
+  snyk:
+    name: pnpm dependency vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      
+      - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2  # v4.0.0
+        with:
+          version: 9.15.4
+      
+      - uses: actions/setup-node@1e60f620b9541d910d4cec63d3ae33e271e2e78e  # v4.0.5
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      
+      - name: Run pnpm audit for CRITICAL vulnerabilities
+        run: |
+          pnpm audit --audit-level=critical --json > artifacts/security-audit.json || {
+            echo "CRITICAL CVEs found in dependencies"
+            cat artifacts/security-audit.json
+            exit 1
+          }
+      
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-audit-report
+          path: artifacts/security-audit.json
+
+  sbom-generation:
+    name: Software Bill of Materials (SBOM)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      
+      - name: Generate SBOM (CycloneDX format)
+        uses: anchore/sbom-action@d94f46e13c6c5d59afc3520204b56d0aec07bdac  # v0.17.0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: artifacts/sbom.cyclonedx.json
+      
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-${{ github.sha }}
+          path: artifacts/sbom.cyclonedx.json
+          retention-days: 90

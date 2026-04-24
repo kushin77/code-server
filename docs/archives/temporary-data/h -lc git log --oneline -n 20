@@ -1,0 +1,95 @@
+[33mcommit 5c1ca509e309db9b363a6e89dfb24cbdac1930fb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Copilot Ops <ops@kushnir.cloud>
+Date:   Fri Apr 24 00:09:28 2026 -0400
+
+    feat(P2-1679): IaC pinning and Custom Domains deployment
+
+docker-compose.yml
+
+[33mcommit e0e26d29cac01bc65ea8583a87f649e949a636ce[m
+Author: Copilot Ops <ops@kushnir.cloud>
+Date:   Fri Apr 24 00:08:10 2026 -0400
+
+    fix: Database migration script with idempotent user creation
+
+migrations/run-migrations-fixed.sh
+
+[33mcommit 988b84b47b57fdcd5570e283e341a8d7827ce4b4[m
+Author: Copilot Ops <ops@kushnir.cloud>
+Date:   Fri Apr 24 00:04:59 2026 -0400
+
+    ci(#980): Add automated secret scanning workflow
+    
+    Automated secret detection pipeline:
+    - git-secrets: Pattern-based detection (AWS keys, API keys, tokens, passwords)
+    - TruffleHog: Entropy scanning + GitHub token detection
+    - Runs on: push to main, PRs, daily schedule (2 AM UTC)
+    
+    Security Patterns Detected:
+    - Private keys (PRIVATE KEY.*BEGIN)
+    - API keys (api_key.*=)
+    - Secrets (secret.*=)
+    - Passwords (password.*=)
+    - OAuth/Bearer tokens (oauth|bearer.*token)
+    - Google secrets (google.*secret)
+    - AWS credentials (via aws-secrets)
+    - High-entropy strings (TruffleHog)
+    
+    IaC Compliance:
+    - Workflow version-controlled (.github/workflows/secret-scanning.yml)
+    - Declarative YAML pipeline (immutable)
+    - Idempotent execution (safe to run multiple times)
+    - Automated triggers (push, PR, schedule)
+    
+    Prevents:
+    - Accidental secret commits to repository
+    - Unauthorized API key exposure
+    - Token leaks to public repositories
+    - Database password commits
+    
+    Fixes #980
+
+.github/workflows/secret-scanning.yml
+P0-SECURITY-980-SECRET-SCANNING.md
+
+[33mcommit df1bd358376161b31d46b3d9964b3db78f41dfe6[m
+Merge: d7f32720 274f86fc
+Author: Copilot Ops <ops@kushnir.cloud>
+Date:   Thu Apr 23 23:59:55 2026 -0400
+
+    Merge branch 'main' of https://github.com/kushin77/code-server
+    
+    # Conflicts:
+    #       Caddyfile
+    #       playwright.config.ts
+    #       tests/e2e/sso-flows.spec.ts
+
+[33mcommit d7f327203e896fe07ea53f10d6278c11c65541e6[m
+Author: Copilot Ops <ops@kushnir.cloud>
+Date:   Thu Apr 23 23:59:34 2026 -0400
+
+    fix(#969): Run containers as non-root users (security hardening)
+    
+    - caddy → user 101 (caddy system user)
+    - postgres → user 999 (postgres system user)
+    - oauth2-proxy → already configured as user 101
+    - redis → already configured as redis:redis user
+    
+    Security Impact:
+    - Eliminates Docker privilege escalation vector
+    - Prevents container escape to host root access
+    - Complies with CIS Docker Security Benchmark
+    
+    IaC Compliance:
+    - All changes version-controlled (docker-compose.yml)
+    - Idempotent deployment (docker-compose up -d safe to repeat)
+    - Immutable containers (non-root user enforced at runtime)
+    
+    Deployment:
+    - Staging: 192.168.168.42 (test environment)
+    - Production: 192.168.168.31 (primary)
+    - Zero-downtime: Orchestrated via docker-compose
+    
+    Fixes #969
+
+docker-compose.yml

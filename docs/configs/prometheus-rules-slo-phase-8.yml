@@ -1,0 +1,197 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 8 Post-HA: Prometheus SLO Error Budget Alert Rules
+# Supplements prometheus-rules-phase-23.yml (SLI recording rules)
+# Referenced in prometheus.yml → rule_files
+# ─────────────────────────────────────────────────────────────────────────────
+
+groups:
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # GROUP 1: Error Budget Burn Rate Alerts (Multi-window, Multi-burn)
+  # Based on Google SRE Book error budget burn rate model
+  # Targets: 99.99% availability SLO → 52.6 min/year error budget
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: slo_error_budget
+    rules:
+      # Fast burn: consuming 2% error budget in 1h (14.4× burn rate)
+      # Pages immediately — SLO exhaustion in < 72h at this rate
+      - alert: SLOErrorBudgetFastBurn
+        expr: |
+          (
+            (1 - sli:availability:ratio_rate5m) > (14.4 * 0.0001)
+          )
+          and
+          (
+            (1 - sli:availability:ratio_rate1h) > (14.4 * 0.0001)
+          )
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+          scope: error_budget
+        annotations:
+          summary: "SLO error budget burning at >14.4× rate (fast burn)"
+          description: "Availability SLI below threshold on both 5m and 1h windows. Budget consumed: {{ $value | humanizePercentage }} per minute."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-error-budget.md"
+
+      # Slow burn: consuming 5% error budget in 6h (6× burn rate)
+      # Warns — SLO exhaustion possible within days
+      - alert: SLOErrorBudgetSlowBurn
+        expr: |
+          (
+            (1 - sli:availability:ratio_rate5m) > (6 * 0.0001)
+          )
+          and
+          (
+            (1 - sli:availability:ratio_rate6h) > (6 * 0.0001)
+          )
+        for: 15m
+        labels:
+          severity: warning
+          slo: availability
+          scope: error_budget
+        annotations:
+          summary: "SLO error budget burning at >6× rate (slow burn)"
+          description: "Availability SLI below threshold on 5m and 6h windows. Budget at risk of exhaustion this week."
+          runbook: "https://github.com/kushin77/code-server/blob/main/docs/runbooks/slo-error-budget.md"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # GROUP 2: Latency SLO Alerts
+  # P50 <50ms, P99 <100ms — Phase 8 targets
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: slo_latency
+    rules:
+      - alert: SLOLatencyP99Breach
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.100
+        for: 5m
+        labels:
+          severity: warning
+          slo: latency_p99
+        annotations:
+          summary: "P99 latency SLO breach (>100ms)"
+          description: "P99 request latency is {{ $value | humanizeDuration }}. SLO target: <100ms."
+
+      - alert: SLOLatencyP99Critical
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.500
+        for: 2m
+        labels:
+          severity: critical
+          slo: latency_p99
+        annotations:
+          summary: "P99 latency critically high (>500ms)"
+          description: "P99 request latency is {{ $value | humanizeDuration }}. Investigate immediately."
+
+      - alert: SLOLatencyP50Breach
+        expr: |
+          histogram_quantile(0.50,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 0.050
+        for: 10m
+        labels:
+          severity: warning
+          slo: latency_p50
+        annotations:
+          summary: "P50 latency SLO breach (>50ms)"
+          description: "P50 request latency is {{ $value | humanizeDuration }}. SLO target: <50ms."
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # GROUP 3: PgBouncer + PostgreSQL Performance Alerts
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: pgbouncer_performance
+    rules:
+      # High wait queue: clients waiting for a server connection
+      - alert: PgBouncerHighWaitQueue
+        expr: pgbouncer_pools_cl_waiting > 5
+        for: 2m
+        labels:
+          severity: warning
+          component: pgbouncer
+        annotations:
+          summary: "PgBouncer client wait queue > 5"
+          description: "{{ $value }} clients waiting for a server connection. Consider increasing default_pool_size."
+
+      # Pool saturation: all server connections in use
+      - alert: PgBouncerPoolSaturated
+        expr: |
+          (pgbouncer_pools_sv_active / pgbouncer_pools_sv_maxwait_us) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: pgbouncer
+        annotations:
+          summary: "PgBouncer connection pool >90% saturated"
+          description: "Connection pool utilization critically high. Evaluate max_db_connections."
+
+      # Postgres slow queries (from pg_stat_statements via postgres_exporter)
+      - alert: PostgresSlowQueriesHigh
+        expr: |
+          increase(pg_stat_statements_total_time_seconds[5m]) /
+          increase(pg_stat_statements_calls_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: postgres
+        annotations:
+          summary: "PostgreSQL average query time >500ms"
+          description: "Average query execution time exceeded 500ms threshold. Run scripts/performance/analyze-query-performance.sh."
+
+      # Postgres replication lag (for replica at 192.168.168.42)
+      - alert: PostgresReplicationLagHigh
+        expr: pg_replication_lag_seconds > 5
+        for: 2m
+        labels:
+          severity: warning
+          component: postgres
+        annotations:
+          summary: "PostgreSQL replication lag > 5s"
+          description: "Replica lag is {{ $value }}s. RPO target at risk."
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # GROUP 4: SLO Recording Rules (6h window for slow-burn detection)
+  # Extends phase-23 SLI rules with additional time windows
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: slo_recording_extended
+    interval: 5m
+    rules:
+      # 1-hour availability ratio (for fast-burn detection)
+      - record: sli:availability:ratio_rate1h
+        expr: |
+          (
+            sum(rate(http_requests_total{status!~"5.."}[1h]))
+          ) /
+          (
+            sum(rate(http_requests_total[1h])) > 0
+          )
+
+      # 6-hour availability ratio (for slow-burn detection)
+      - record: sli:availability:ratio_rate6h
+        expr: |
+          (
+            sum(rate(http_requests_total{status!~"5.."}[6h]))
+          ) /
+          (
+            sum(rate(http_requests_total[6h])) > 0
+          )
+
+      # 30-day availability (for SLO compliance reporting)
+      - record: sli:availability:ratio_rate30d
+        expr: |
+          (
+            sum(rate(http_requests_total{status!~"5.."}[30d]))
+          ) /
+          (
+            sum(rate(http_requests_total[30d])) > 0
+          )
+
+      # Error budget remaining (99.99% target = 0.01% error allowance)
+      - record: slo:error_budget:remaining
+        expr: |
+          1 - (
+            (1 - sli:availability:ratio_rate30d) / 0.0001
+          )

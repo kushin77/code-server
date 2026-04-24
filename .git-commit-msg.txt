@@ -1,0 +1,20 @@
+fix(ops): Replace all unquoted SSH_OPTS with array expansion (IaC Rules 3&4)
+
+Systematic SSH compliance fix across all ops scripts and central library.
+
+Changes:
+- scripts/_common/ssh.sh: 6 functions (ssh_exec, ssh_standby, ssh_stream, ssh_upload, ssh_upload_dir, assert_ssh_up)
+- scripts/ops/check-replica-parity.sh: query_replica, check_replica_connectivity  
+- scripts/ops/fix-replica-1-permissions.sh: 8 SSH call sites (verify, fix_ownership, clean, redeploy, verify_git)
+- scripts/ops/sync-env-to-replicas.sh: run_on_replica, hash verification
+
+Pattern: local -a array; read -r -a array <<< "$SSH_OPTS"; ssh "${array[@]}" host cmd
+
+Fixes:
+✓ Deployment hangs and exit code 1 failures
+✓ Word splitting in SSH_OPTS
+✓ Deterministic SSH execution  
+✓ Idempotent deployments
+✓ Central library cascades to all dependent scripts
+
+IaC Rules 3 & 4 compliant. Production-ready for April 26 deployment.

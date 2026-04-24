@@ -1,0 +1,286 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'production'
+    env: 'prod'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+rule_files:
+  - /etc/prometheus/alert-rules.yml
+  - /etc/prometheus/prometheus-rules-phase-23.yml
+  - /etc/prometheus/prometheus-rules-matrix-alerts.yml
+
+scrape_configs:
+  - job_name: 'prometheus'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['localhost:9090']  # prometheus scrapes itself via localhost
+
+  - job_name: 'code-server'
+    static_configs:
+      - targets: ['code-server:8080']
+
+  - job_name: 'oauth2-proxy'
+    static_configs:
+      - targets: ['oauth2-proxy:4180']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    metric_relabel_configs:
+      - source_labels: [user]
+        regex: 'qa@kushnir\.cloud'
+        action: drop
+
+  - job_name: 'oauth2-proxy-portal'
+    static_configs:
+      - targets: ['oauth2-proxy-portal:4181']
+    metrics_path: /metrics
+    scrape_interval: 30s
+    metric_relabel_configs:
+      - source_labels: [user]
+        regex: 'qa@kushnir\.cloud'
+        action: drop
+
+  - job_name: 'caddy'
+    static_configs:
+      - targets: ['caddy:2019']
+        labels:
+          instance: caddy-proxy
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+
+  - job_name: 'redis-sentinel-1'
+    static_configs:
+      - targets: ['redis-sentinel-1:26379']
+        labels:
+          instance: redis-sentinel-1
+
+  - job_name: 'redis-sentinel-arbiter'
+    static_configs:
+      - targets: ['redis-sentinel-arbiter:26379']
+        labels:
+          instance: redis-sentinel-arbiter
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+
+  # ── PostgreSQL Exporter - Detailed metrics (#1069) ───────────────────────
+  - job_name: 'postgres_exporter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+        labels:
+          instance: postgres-exporter
+          service: database
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      # Keep essential PostgreSQL metrics
+      - source_labels: [__name__]
+        regex: 'pg_(stat_statements|replication_lag|stat_activity_count|cache_hit_ratio|table|checkpoint|unused|vacuum)'
+        action: keep
+
+  # ── Phase 23: OTel Collector metrics ──────────────────────────────────────
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+        labels:
+          instance: otel-collector
+
+  # Phase 23: OTel Collector exported metrics (app traces → Prometheus metrics)
+  - job_name: 'otel-collector-prom'
+    static_configs:
+      - targets: ['otel-collector:8889']
+        labels:
+          instance: otel-exporter
+
+  # Phase 23: Anomaly detector sidecar metrics
+  - job_name: 'anomaly-detector'
+    static_configs:
+      - targets: ['anomaly-detector:9095']
+        labels:
+          instance: anomaly-detector
+
+  # Phase 23: Jaeger metrics
+  - job_name: 'jaeger'
+    static_configs:
+      - targets: ['jaeger:14269']
+        labels:
+          instance: jaeger-backend
+
+  # Session broker metrics (#995)
+  - job_name: 'session-broker'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['session-broker:5000']
+        labels:
+          instance: session-broker
+
+  # Redis exporter for both Master-Replica and Sentinel metrics (#995)
+  - job_name: 'redis-exporter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          instance: redis-sentinel-exporter
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      # Keep only essential Redis metrics
+      - source_labels: [__name__]
+        regex: 'redis_(info|command_calls|command_duration|connected_clients|evicted_keys|expired_keys|maxmemory|memory|used_memory|keyspace|db|slaves|replication|sentinel|master)'
+        action: keep
+
+  # NAS node_exporter metrics (#1393)
+  - job_name: 'nas-node-exporter'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['192.168.168.56:9100']
+        labels:
+          instance: nas-node-exporter
+          host: kushnas
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # ── Matrix Collaboration Hub Metrics (#1011) ────────────────────────────
+  # Synapse homeserver metrics
+  - job_name: 'synapse'
+    metrics_path: /_synapse/metrics
+    static_configs:
+      - targets: ['synapse:8008']
+        labels:
+          instance: synapse-homeserver
+          service: matrix-core
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      # Keep homeserver health, federation, storage, and database metrics
+      - source_labels: [__name__]
+        regex: 'synapse_(http_requests|database|storage|federation|replication|cache|event|room|user|device|push|http_client|log)'
+        action: keep
+
+  # Slack bidirectional bridge metrics
+  - job_name: 'slack-bridge'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['slack-bridge:9000']
+        labels:
+          instance: slack-bridge
+          bridge_type: slack
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'matrix_bridge_(messages|users|rooms|latency|errors|queue)'
+        action: keep
+
+  # Teams bidirectional bridge metrics
+  - job_name: 'teams-bridge'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['teams-bridge:9001']
+        labels:
+          instance: teams-bridge
+          bridge_type: teams
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'matrix_bridge_(messages|users|rooms|latency|errors|queue)'
+        action: keep
+
+  # Google Chat bridge metrics
+  - job_name: 'google-chat-bridge'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['google-chat-bridge:9002']
+        labels:
+          instance: google-chat-bridge
+          bridge_type: google-chat
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'matrix_bridge_(messages|users|rooms|latency|errors|queue)'
+        action: keep
+
+  # Real-time presence sidecar metrics (#1003)
+  - job_name: 'presence-sidecar'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['presence-sidecar:9100']
+        labels:
+          instance: presence-sidecar
+          service: matrix-presence
+    scrape_interval: 15s
+    scrape_timeout: 5s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'presence_(users_active|users_editing|same_file_pairs|update_latency|updates_total|sync_duration)'
+        action: keep
+
+  # JWT service-to-service auth metrics (Phase 2 - OIDC issuer + validator)
+  - job_name: 'jwt-auth'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['backend:3001']
+        labels:
+          instance: backend
+          service: jwt-auth
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'jwt_(validations_total|validation_errors_total|validator_duration_ms.*|jwks_cache_hits_total|jwks_cache_misses_total|jwks_fetch_total|jwks_fetch_errors_total|token_issued_total|token_refresh_total|token_errors_total|token_ttl_seconds|active_validations)'
+        action: keep
+
+  # Element Call / LiveKit metrics (optional, only if enabled)
+  - job_name: 'element-call'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['element-call:9103']
+        labels:
+          instance: element-call
+          service: matrix-calls
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'livekit_(connections|participants|tracks|bitrate|jitter)'
+        action: keep
+
+  # Cluster health checks - Replica 31 (#1472)
+  - job_name: 'cluster-health-replica-31'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ['192.168.168.31:443']
+        labels:
+          replica: '31'
+          cluster: production
+    metrics_path: /health
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Cluster health checks - Replica 42 (#1472)
+  - job_name: 'cluster-health-replica-42'
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ['192.168.168.42:443']
+        labels:
+          replica: '42'
+          cluster: production
+    metrics_path: /health
+    scrape_interval: 30s
+    scrape_timeout: 10s

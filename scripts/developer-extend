@@ -1,0 +1,217 @@
+#!/bin/bash
+###############################################################################
+# DEVELOPER-EXTEND: Extend Existing Developer Access
+# Issue #186: Developer Access Lifecycle - Provisioning & Revocation
+#
+# Extends existing developer access by N days without revoking and re-creating
+#
+# Usage:
+#   developer-extend john@example.com 14
+#   developer-extend john@example.com 30 "Extended for project deadline"
+#
+###############################################################################
+
+set -e
+
+# Configuration
+DEVELOPERS_DIR="${HOME}/.code-server-developers"
+DEVELOPERS_CSV="${DEVELOPERS_DIR}/developers.csv"
+REVOCATION_LOG="${DEVELOPERS_DIR}/revocation.log"
+CLOUDFLARE_ACCOUNT_ID="${CF_ACCOUNT_ID:-}"
+CLOUDFLARE_AUTH_TOKEN="${CF_AUTH_TOKEN:-}"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+###############################################################################
+# VALIDATION
+###############################################################################
+
+if [ $# -lt 2 ]; then
+    cat << EOF
+${YELLOW}DEVELOPER-EXTEND: Extend Existing Developer Access${NC}
+
+Usage:
+  developer-extend <email> <days> [reason]
+
+Examples:
+  developer-extend john@example.com 14
+  developer-extend john@example.com 30 "Extended for project deadline"
+
+Description:
+  Extends the access expiry date for an existing developer by N days.
+  Does NOT revoke and recreate - maintains continuity.
+  Useful for contractors who need additional time.
+
+EOF
+    exit 1
+fi
+
+EMAIL="$1"
+EXTEND_DAYS="$2"
+REASON="${3:-Manual extension by administrator}"
+
+# Validate extend days is positive integer
+if ! [[ "$EXTEND_DAYS" =~ ^[0-9]+$ ]] || [ "$EXTEND_DAYS" -lt 1 ]; then
+    echo -e "${RED}ERROR: Extend days must be a positive integer${NC}"
+    exit 1
+fi
+
+# Validate email format
+if ! [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+    echo -e "${RED}ERROR: Invalid email format: $EMAIL${NC}"
+    exit 1
+fi
+
+###############################################################################
+# VERIFY DEVELOPER EXISTS
+###############################################################################
+
+if [ ! -f "$DEVELOPERS_CSV" ]; then
+    echo -e "${RED}ERROR: Developer database not found${NC}"
+    exit 1
+fi
+
+# Find developer in database
+DEVELOPER_LINE=$(grep "^${EMAIL}," "$DEVELOPERS_CSV" 2>/dev/null || echo "")
+
+if [ -z "$DEVELOPER_LINE" ]; then
+    echo -e "${RED}ERROR: Developer not found: $EMAIL${NC}"
+    echo
+    echo "Current developers:"
+    developer-list 2>/dev/null || grep "^" "$DEVELOPERS_CSV" | head -5
+    exit 1
+fi
+
+###############################################################################
+# PARSE EXISTING DEVELOPER DATA
+###############################################################################
+
+# CSV: email,name,grant_date,expiry_date,duration_days,status,cloudflare_access_id,invite_code,share_link,notes
+IFS=',' read -r old_email old_name old_grant old_expiry old_duration old_status old_cf_id old_code old_link old_notes <<< "$DEVELOPER_LINE"
+
+echo -e "${BLUE}Extending access for: ${GREEN}$old_email${NC} (${BLUE}$old_name${NC})"
+echo "Current expiry: $old_expiry"
+
+# Verify developer is not revoked
+if [ "$old_status" != "active" ]; then
+    echo -e "${RED}ERROR: Developer is $old_status, cannot extend${NC}"
+    exit 1
+fi
+
+###############################################################################
+# CALCULATE NEW EXPIRY DATE
+###############################################################################
+
+# Parse current expiry date and add extend_days
+CURRENT_EPOCH=$(date '+%s')
+NEW_EXPIRY_EPOCH=$(($(date -d "$old_expiry" '+%s') + ($EXTEND_DAYS * 86400)))
+NEW_EXPIRY=$(date -u -d @"$NEW_EXPIRY_EPOCH" '+%Y-%m-%d')
+NEW_DURATION=$((old_duration + EXTEND_DAYS))
+
+echo "New expiry: $NEW_EXPIRY (+ $EXTEND_DAYS days)"
+echo "New total duration: $NEW_DURATION days"
+
+###############################################################################
+# UPDATE CLOUDFLARE ACCESS POLICY (if configured)
+###############################################################################
+
+if [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$CLOUDFLARE_AUTH_TOKEN" ] && [ -n "$old_cf_id" ]; then
+    echo -e "${YELLOW}Updating Cloudflare Access policy...${NC}"
+    
+    # Calculate decision duration for Cloudflare policy
+    CF_DECISION_DURATION_S=$((NEW_DURATION * 86400))
+    
+    # Update Cloudflare Access rule with new expiry
+    RESPONSE=$(curl -s -X PUT \
+        "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/access/policies/${old_cf_id}" \
+        -H "Authorization: Bearer ${CLOUDFLARE_AUTH_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{
+          \"name\": \"Developer Access: ${old_email}\",
+          \"decision\": \"allow\",
+          \"include\": [{\"email\": {\"email\": \"${old_email}\"}}],
+          \"require\": {\"group\": {\"id\": \"dev-contractors\"}},
+          \"precedence\": 10
+        }" 2>&1)
+    
+    if echo "$RESPONSE" | grep -q '"success":true'; then
+        echo -e "${GREEN}✓ Cloudflare policy updated${NC}"
+    else
+        echo -e "${YELLOW}⚠ Warning: Cloudflare policy update may have failed${NC}"
+        echo "Response: $RESPONSE"
+    fi
+fi
+
+###############################################################################
+# UPDATE DATABASE
+###############################################################################
+
+echo -e "${YELLOW}Updating developer database...${NC}"
+
+# Create backup
+cp "$DEVELOPERS_CSV" "${DEVELOPERS_CSV}.backup.$(date +%s)"
+
+# Update the entry (recreate CSV line with new expiry and duration)
+NEW_LINE="${old_email},${old_name},${old_grant},${NEW_EXPIRY},${NEW_DURATION},${old_status},${old_cf_id},${old_code},${old_link},Extended: ${REASON}"
+
+# Replace in file (using sed with temp file to preserve structure)
+TEMP_CSV="${DEVELOPERS_CSV}.tmp"
+grep -v "^${EMAIL}," "$DEVELOPERS_CSV" > "$TEMP_CSV"
+echo "$NEW_LINE" >> "$TEMP_CSV"
+mv "$TEMP_CSV" "$DEVELOPERS_CSV"
+
+echo -e "${GREEN}✓ Database updated${NC}"
+
+###############################################################################
+# LOG AUDIT EVENT
+###############################################################################
+
+LOG_ENTRY="[$(date '+%Y-%m-%d %H:%M:%S')] EXTEND | $EMAIL | ${EXTEND_DAYS}d | New expiry: $NEW_EXPIRY | Reason: $REASON"
+echo "$LOG_ENTRY" >> "$REVOCATION_LOG"
+
+###############################################################################
+# SUMMARY OUTPUT
+###############################################################################
+
+cat << EOF
+
+${GREEN}═══════════════════════════════════════════════════════════════${NC}
+${GREEN}✓ ACCESS EXTENDED${NC}
+
+Developer:       $old_email ($old_name)
+Previous expiry: $old_expiry
+New expiry:      $NEW_EXPIRY
+Extension:       +$EXTEND_DAYS days
+New total:       $NEW_DURATION days
+Reason:          $REASON
+Status:          active
+${GREEN}═══════════════════════════════════════════════════════════════${NC}
+
+The developer's access has been extended without interruption.
+No new invite code needed - existing credentials remain valid.
+
+EOF
+
+# Send notification email
+if command -v mail &> /dev/null; then
+    SUBJECT="Code Server Access Extended - Expires $NEW_EXPIRY"
+    EMAIL_BODY="Your Code Server access has been extended until ${NEW_EXPIRY}.
+
+Previous expiry: ${old_expiry}
+Extended by: ${EXTEND_DAYS} days
+New total duration: ${NEW_DURATION} days
+Reason: ${REASON}
+
+Your existing credentials remain valid. No action needed."
+    
+    echo "$EMAIL_BODY" | mail -s "$SUBJECT" "$old_email" 2>/dev/null || true
+    echo "Notification email sent to: $old_email"
+fi
+
+echo
+echo "Run 'developer-list' to view all developers and their status"

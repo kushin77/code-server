@@ -10,8 +10,8 @@
 #   scripts/ops/execute-cluster-parity-validation.sh [--replicas HOSTS] [--dry-run] [--verbose]
 #
 # ENVIRONMENT VARIABLES
-#   REPLICA_HOSTS     - Comma-separated replica IPs (default: 192.168.168.31,192.168.168.42)
-#   SSH_USER          - SSH user (default: akushnir)
+#   REPLICA_HOSTS     - Comma-separated replica IPs
+#   SSH_USER          - SSH user
 #   DRY_RUN           - Preview mode (0 or 1)
 #   VERBOSE           - Verbose output (0 or 1)
 #
@@ -36,8 +36,8 @@ init_repo
 source "${SCRIPT_DIR}/../fetch-gsm-secrets.sh"
 
 # Configuration
-REPLICA_HOSTS="${REPLICA_HOSTS:-192.168.168.31,192.168.168.42}"
-SSH_USER="${SSH_USER:-${DEPLOY_USER:-akushnir}}"
+REPLICA_HOSTS="${REPLICA_HOSTS:-${REPLICA_1_IP},${REPLICA_2_IP}}"
+SSH_USER="${SSH_USER:-${DEPLOY_USER}}"
 DRY_RUN="${DRY_RUN:-0}"
 VERBOSE="${VERBOSE:-0}"
 VALIDATION_REPORT="${VALIDATION_REPORT:-artifacts/ops/cluster-parity-$(date +%Y%m%d-%H%M%S).log}"

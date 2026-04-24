@@ -1,0 +1,615 @@
+---
+# P1 #388: Standardized Identity & RBAC Implementation
+# Phase 3: Complete RBAC enforcement for workload federation
+
+################################################################################
+# 1. NAMESPACE & RBAC POLICY ENFORCEMENT
+################################################################################
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workload-identity
+  labels:
+    phase: 3
+    tier: security
+    rbac-policy: enforced
+
+---
+# Policy: Enforce authentication on all cross-service calls
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls
+  namespace: workload-identity
+spec:
+  mtls:
+    mode: STRICT  # All pod-to-pod traffic must be mTLS
+
+---
+################################################################################
+# 2. SERVICE ACCOUNTS & WORKLOAD IDENTITY
+################################################################################
+
+# Code-Server service account (user-facing IDE)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: code-server
+  namespace: default
+  labels:
+    service: code-server
+    tier: frontend
+    rbac-level: user
+
+---
+# Backstage service account (developer portal)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backstage
+  namespace: default
+  labels:
+    service: backstage
+    tier: platform
+    rbac-level: admin
+
+---
+# Appsmith service account (low-code platform)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: appsmith
+  namespace: default
+  labels:
+    service: appsmith
+    tier: platform
+    rbac-level: operator
+
+---
+# AI Gateway service account (LLM service)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ai-gateway
+  namespace: default
+  labels:
+    service: ai-gateway
+    tier: backend
+    rbac-level: operator
+
+---
+# PostgreSQL service account (data layer)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgresql
+  namespace: default
+  labels:
+    service: postgresql
+    tier: data
+    rbac-level: operator
+
+---
+# Prometheus service account (observability)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: default
+  labels:
+    service: prometheus
+    tier: observability
+    rbac-level: viewer
+
+---
+################################################################################
+# 3. ROLE DEFINITIONS (RBAC-3-TIER: admin/operator/viewer)
+################################################################################
+
+# TIER 1: ADMIN - Full infrastructure control
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rbac-admin
+  labels:
+    tier: admin
+spec:
+  rules:
+  # All resources, all verbs (unrestricted)
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+
+---
+# TIER 2: OPERATOR - Service deployment and configuration
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rbac-operator
+  labels:
+    tier: operator
+spec:
+  rules:
+  # Core K8s operations (no delete cluster-wide)
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  
+  # Deployments and statefulsets
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  
+  # Persistent volumes (no delete)
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  
+  # Cannot delete namespace or cluster resources
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+  
+  # Logs access
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+
+---
+# TIER 3: VIEWER - Read-only observability
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rbac-viewer
+  labels:
+    tier: viewer
+spec:
+  rules:
+  # Read-only access to resources
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "persistentvolumeclaims", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  
+  # Read-only deployment status
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+  
+  # Logs access
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+  
+  # Metrics access
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+
+---
+################################################################################
+# 4. ROLE BINDINGS (Service → Role assignments)
+################################################################################
+
+# Code-Server: USER tier (read workspace, execute IDE operations)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: code-server-rbac-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-operator  # Code-Server gets operator tier (deploy, manage workspaces)
+subjects:
+- kind: ServiceAccount
+  name: code-server
+  namespace: default
+
+---
+# Backstage: ADMIN tier (deploy services, manage platform)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backstage-rbac-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-admin  # Backstage gets admin tier (full platform control)
+subjects:
+- kind: ServiceAccount
+  name: backstage
+  namespace: default
+
+---
+# Appsmith: OPERATOR tier (CRUD operations, no platform changes)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: appsmith-rbac-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-operator
+subjects:
+- kind: ServiceAccount
+  name: appsmith
+  namespace: default
+
+---
+# AI Gateway: OPERATOR tier (access models, cache, storage)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ai-gateway-rbac-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-operator
+subjects:
+- kind: ServiceAccount
+  name: ai-gateway
+  namespace: default
+
+---
+# PostgreSQL: OPERATOR tier (manage own cluster, backups)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: postgresql-rbac-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-operator
+subjects:
+- kind: ServiceAccount
+  name: postgresql
+  namespace: default
+
+---
+# Prometheus: VIEWER tier (metrics collection only)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-rbac-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-viewer
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: default
+
+---
+################################################################################
+# 5. JWT POLICY & OIDC INTEGRATION
+################################################################################
+
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: jwt-policy
+  namespace: default
+spec:
+  jwtRules:
+  - issuer: "https://accounts.google.com"  # OIDC issuer
+    jwksUri: "https://www.googleapis.com/oauth2/v3/certs"
+    audiences: ["kushin77/code-server"]
+    claims:
+    - "email"
+    - "name"
+    - "hd"  # Hosted domain (for org verification)
+    - "groups"  # Custom claims for role mapping
+    - "team"
+
+---
+################################################################################
+# 6. AUTHORIZATION POLICIES (Who can do what)
+################################################################################
+
+# Policy: Code-Server can only read/write own workspace
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: code-server-policy
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      service: code-server
+  action: ALLOW
+  rules:
+  # Allow authenticated users to access code-server
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/code-server"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/*"]
+
+---
+# Policy: Backstage (admin) can deploy/manage all services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: backstage-policy
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      tier: platform
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/backstage"]
+    to:
+    - operation:
+        verbs: ["*"]
+
+---
+# Policy: AI Gateway can only read models, cache, storage
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: ai-gateway-policy
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      service: ai-gateway
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/ai-gateway"]
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/api/models/*", "/api/cache/*"]
+
+---
+# Policy: Prometheus (viewer) can only scrape metrics
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: prometheus-policy
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      service: prometheus
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/prometheus"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/metrics", "/api/v1/query*"]
+
+---
+################################################################################
+# 7. PRIVILEGED OPERATION ENFORCEMENT
+################################################################################
+
+# ConfigMap: Privileged operations that require explicit approval
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: privileged-operations
+  namespace: default
+spec:
+  data:
+    # Operations requiring admin role
+    admin_only: |
+      - Delete database (DELETE /api/database)
+      - Create user (POST /api/users)
+      - Change org settings (PATCH /api/org/settings)
+      - Deploy to production (POST /api/deploy/prod)
+      - Rotate secrets (POST /api/secrets/rotate)
+    
+    # Operations requiring operator role
+    operator_only: |
+      - Create deployment (POST /api/deployments)
+      - Update config (PATCH /api/config)
+      - Scale service (PATCH /api/services/*/scale)
+      - Execute backup (POST /api/backup)
+    
+    # Operations requiring viewer role (read-only)
+    viewer_only: |
+      - List resources (GET /api/*)
+      - Read logs (GET /api/logs)
+      - Query metrics (GET /api/metrics)
+
+---
+################################################################################
+# 8. AUDIT LOGGING SCHEMA
+################################################################################
+
+apiVersion: audit.k8s.io/v1
+kind: Policy
+metadata:
+  name: audit-policy
+spec:
+  # Log level: Metadata (user, action) for all requests
+  rules:
+  - level: Metadata
+    omitStages:
+    - RequestReceived
+    resources:
+    - group: ""
+      resources: ["secrets", "configmaps"]
+    namespaces: ["default", "workload-identity"]
+  
+  # Log body for auth/rbac operations
+  - level: RequestResponse
+    verbs: ["create", "update", "patch", "delete"]
+    omitStages:
+    - RequestReceived
+    resources:
+    - group: "rbac.authorization.k8s.io"
+    - group: "security.istio.io"
+
+---
+################################################################################
+# 9. TOKEN VALIDATION WEBHOOK
+################################################################################
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-token-validator
+  namespace: default
+spec:
+  ports:
+  - port: 443
+    targetPort: 8443
+  selector:
+    app: token-validator
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: token-validator
+spec:
+  webhooks:
+  - name: token-validator.kushnir.cloud
+    clientConfig:
+      service:
+        name: webhook-token-validator
+        namespace: default
+        path: "/validate"
+      caBundle: ""  # Set from secret
+    rules:
+    - operations: ["CREATE", "UPDATE"]
+      apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["pods"]
+    failurePolicy: Fail
+    sideEffects: None
+    admissionReviewVersions: ["v1"]
+    timeoutSeconds: 5
+
+---
+################################################################################
+# 10. SECRET ROTATION POLICY
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: secret-rotation-policy
+  namespace: default
+spec:
+  data:
+    rotation_schedule: |
+      # RBAC tokens: rotate every 30 days
+      rbac_token_ttl: 2592000  # 30 days in seconds
+      rbac_token_refresh_before_expiry: 604800  # Refresh 7 days before expiry
+      
+      # JWT tokens: rotate every 1 year
+      jwt_signing_key_ttl: 31536000  # 1 year
+      jwt_signing_key_rotation_schedule: "0 0 1 * *"  # Monthly check
+      
+      # Service credentials: rotate quarterly
+      service_credential_ttl: 7776000  # 90 days
+      service_credential_rotation_schedule: "0 0 1 */3 *"  # Every 3 months
+
+---
+################################################################################
+# 11. BREAK-GLASS EMERGENCY ACCESS
+################################################################################
+
+# ServiceAccount for break-glass emergency access
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: break-glass-admin
+  namespace: default
+  labels:
+    purpose: emergency-access
+    rbac-level: admin
+    audit-required: "true"
+
+---
+# Bind break-glass to admin role (with audit logging)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: break-glass-admin-binding
+  labels:
+    audit-critical: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-admin
+subjects:
+- kind: ServiceAccount
+  name: break-glass-admin
+  namespace: default
+
+---
+################################################################################
+# 12. AUDIT EVENT LOGGING CONFIGURATION
+################################################################################
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-event-schema
+  namespace: default
+spec:
+  data:
+    audit_schema: |
+      {
+        "version": "1.0",
+        "event_types": {
+          "authentication": {
+            "fields": [
+              {"name": "timestamp", "type": "timestamp", "required": true},
+              {"name": "user_id", "type": "string", "required": true},
+              {"name": "user_email", "type": "string", "required": true},
+              {"name": "service", "type": "string", "required": true},
+              {"name": "auth_method", "type": "enum", "values": ["oidc", "workload-identity", "api-token", "mTLS"]},
+              {"name": "success", "type": "boolean", "required": true},
+              {"name": "reason", "type": "string", "required": false},
+              {"name": "correlation_id", "type": "uuid", "required": true}
+            ]
+          },
+          "authorization": {
+            "fields": [
+              {"name": "timestamp", "type": "timestamp", "required": true},
+              {"name": "user_id", "type": "string", "required": true},
+              {"name": "service", "type": "string", "required": true},
+              {"name": "action", "type": "string", "required": true},
+              {"name": "resource", "type": "string", "required": true},
+              {"name": "rbac_role", "type": "enum", "values": ["admin", "operator", "viewer"]},
+              {"name": "decision", "type": "enum", "values": ["ALLOW", "DENY"]},
+              {"name": "reason", "type": "string", "required": false},
+              {"name": "correlation_id", "type": "uuid", "required": true}
+            ]
+          },
+          "privileged_operation": {
+            "fields": [
+              {"name": "timestamp", "type": "timestamp", "required": true},
+              {"name": "user_id", "type": "string", "required": true},
+              {"name": "operation", "type": "string", "required": true},
+              {"name": "resource_affected", "type": "string", "required": true},
+              {"name": "approval_required", "type": "boolean", "required": true},
+              {"name": "approved_by", "type": "string", "required": false},
+              {"name": "result", "type": "enum", "values": ["SUCCESS", "DENIED", "REVOKED"]},
+              {"name": "correlation_id", "type": "uuid", "required": true}
+            ]
+          }
+        },
+        "retention_policies": {
+          "authentication": "1 year",
+          "authorization": "1 year",
+          "privileged_operation": "3 years (compliance)"
+        },
+        "immutability": "audit logs are append-only and cannot be deleted"
+      }

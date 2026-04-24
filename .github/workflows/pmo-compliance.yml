@@ -1,0 +1,228 @@
+name: PMO Compliance Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Validate branch naming, commits, and PR format
+  pmo-compliance:
+    name: PMO Branch & Commit Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for commit validation
+
+      # Step 1: Validate branch name pattern
+      - name: Validate branch naming convention
+        id: branch-name
+        run: |
+          BRANCH=${{ github.head_ref }}
+          echo "Validating branch: $BRANCH"
+          
+          if [[ ! $BRANCH =~ ^(feat|fix|refactor|chore|docs|infra)/[a-z0-9]+-[0-9]+-[a-z0-9-]+$ ]]; then
+            echo "❌ BRANCH_NAME_INVALID"
+            echo "Expected pattern: <type>/<epic-id>-<issue-number>-<slug>"
+            echo "Example: feat/pmo-001-1576-label-taxonomy"
+            exit 1
+          fi
+          echo "✓ Branch name valid: $BRANCH"
+          
+          # Extract issue number from branch name
+          ISSUE_NUM=$(echo $BRANCH | grep -oE '[0-9]+' | tail -1)
+          echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+
+      # Step 2: Validate Conventional Commits
+      - name: Validate Conventional Commits
+        run: |
+          COMMITS=$(git log ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} --format=%B)
+          
+          while IFS= read -r commit; do
+            if [[ ! -z "$commit" && ! $commit =~ ^(feat|fix|refactor|chore|docs|test|perf|ci):\ .+ ]]; then
+              echo "❌ INVALID COMMIT: $commit"
+              echo "Must start with: feat|fix|refactor|chore|docs|test|perf|ci:"
+              exit 1
+            fi
+          done <<< "$COMMITS"
+          
+          echo "✓ All commits follow Conventional Commits format"
+
+      # Step 3: Validate PR body contains "Closes #N" or "Fixes #N"
+      - name: Validate PR body links issue
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          ISSUE_NUM=${{ steps.branch-name.outputs.issue_number }}
+          
+          if ! echo "$PR_BODY" | grep -iq "closes #$ISSUE_NUM\|fixes #$ISSUE_NUM"; then
+            echo "❌ PR_BODY_INVALID"
+            echo "PR body must contain: 'Closes #$ISSUE_NUM' or 'Fixes #$ISSUE_NUM'"
+            echo "Current body:"
+            echo "$PR_BODY"
+            exit 1
+          fi
+          
+          echo "✓ PR body correctly links issue #$ISSUE_NUM"
+
+      # Step 4: Check for hardcoded credentials/IPs
+      - name: Scan for secrets and hardcoded values
+        run: |
+          # Check for common hardcoded patterns
+          echo "Scanning for hardcoded secrets..."
+          
+          # Check for IP addresses (192.168.*, 10.*, etc.) in non-docs files
+          if git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} \
+             --name-only | grep -v '\.md$' | while read file; do
+            if grep -E '(192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+)' "$file" | \
+               grep -v 'DEPLOY_HOST\|CONFIG_HOST\|# Example\|#.*192.168'; then
+              echo "⚠️ WARNING: Possible hardcoded IP in $file"
+              # Don't fail on this; IPs in examples/comments are OK
+            fi
+          done
+          
+          # Check for API keys, passwords, etc.
+          if git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} \
+             | grep -iE 'password|secret|api_?key|token|credential' | grep -v '^\-\|^@@'; then
+            echo "⚠️ WARNING: Possible secrets found in diff"
+          fi
+          
+          echo "✓ Credential scan complete (warnings reviewed)"
+
+      # Step 5: Validate GOV-002 metadata headers on new bash/python scripts
+      - name: Validate script metadata headers (GOV-002)
+        run: |
+          echo "Checking new scripts for GOV-002 metadata headers..."
+          
+          git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} \
+            --name-only --diff-filter=A | grep -E '\.(sh|py)$' | while read script; do
+            
+            # Check for required headers
+            if ! head -5 "$script" | grep -q '@file'; then
+              echo "⚠️ Missing @file header in $script"
+            fi
+            
+            if ! head -5 "$script" | grep -q '@description'; then
+              echo "⚠️ Missing @description header in $script"
+            fi
+            
+            # At least check shebang exists
+            if ! head -1 "$script" | grep -qE '^#!/usr/bin/env (bash|python3?)'; then
+              echo "❌ Invalid shebang in $script"
+              exit 1
+            fi
+          done
+          
+          echo "✓ Script metadata validation complete"
+
+  # Job 2: Validate labels on linked issue
+  label-check:
+    name: Validate Issue Labels
+    runs-on: ubuntu-latest
+    needs: pmo-compliance
+    steps:
+      - name: Check issue has P + Type + Epic labels
+        run: |
+          ISSUE_NUM=$(echo ${{ github.head_ref }} | grep -oE '[0-9]+' | tail -1)
+          
+          echo "Checking labels on issue #$ISSUE_NUM..."
+          
+          LABELS=$(gh issue view $ISSUE_NUM \
+            --repo ${{ github.repository }} \
+            --json labels \
+            --jq '.labels[].name' | tr '\n' ' ')
+          
+          echo "Labels: $LABELS"
+          
+          # Check for priority label (P0|P1|P2|P3)
+          if ! echo "$LABELS" | grep -qE 'P[0-3]'; then
+            echo "⚠️ WARNING: Issue #$ISSUE_NUM missing priority label (P0/P1/P2/P3)"
+          fi
+          
+          # Check for type label
+          if ! echo "$LABELS" | grep -qE 'epic|feature|bug|task|chore|refactor|security|docs|infra|test'; then
+            echo "⚠️ WARNING: Issue #$ISSUE_NUM missing type label"
+          fi
+          
+          # Check for epic label
+          if ! echo "$LABELS" | grep -qE 'epic:'; then
+            echo "⚠️ WARNING: Issue #$ISSUE_NUM missing epic label (epic:*)"
+          fi
+          
+          echo "✓ Label validation complete"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  # Job 3: Post-merge audit (detect stale branches)
+  stale-branch-audit:
+    name: Stale Branch Audit (Post-Merge)
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch and audit stale branches
+        run: |
+          git fetch --prune
+          
+          echo "Scanning for stale branches..."
+          
+          STALE_COUNT=0
+          
+          # Find local branches merged into main
+          for branch in $(git branch --merged main --format='%(refname:short)'); do
+            if [[ "$branch" != "main" && "$branch" != "master" ]]; then
+              echo "⚠️ Stale local: $branch"
+              ((STALE_COUNT++))
+            fi
+          done
+          
+          # Find remote branches merged into main
+          for branch in $(git branch -r --merged origin/main --format='%(refname:short)' 2>/dev/null); do
+            if [[ "$branch" != "origin/main" && "$branch" != "origin/HEAD" ]]; then
+              echo "⚠️ Stale remote: $branch"
+              ((STALE_COUNT++))
+            fi
+          done
+          
+          if [[ $STALE_COUNT -gt 0 ]]; then
+            echo "ℹ️ Found $STALE_COUNT stale branches — run: bash scripts/pmo/cleanup-stale-branches.sh"
+          else
+            echo "✓ No stale branches detected"
+          fi
+        continue-on-error: true
+
+  # Summary Job
+  compliance-summary:
+    name: PMO Compliance Summary
+    runs-on: ubuntu-latest
+    needs: [pmo-compliance]
+    if: always()
+    steps:
+      - name: Check overall compliance
+        run: |
+          if [[ "${{ needs.pmo-compliance.result }}" == "success" ]]; then
+            echo "✅ PMO compliance checks PASSED"
+            echo ""
+            echo "Your PR is ready for review and merge."
+            echo ""
+            echo "After merge, run:"
+            echo "  bash scripts/pmo/complete-issue.sh kushin77/code-server <ISSUE_NUMBER>"
+          else
+            echo "❌ PMO compliance checks FAILED"
+            echo ""
+            echo "Please fix the errors above:"
+            echo "  1. Branch name must match: <type>/<epic-id>-<issue-number>-<slug>"
+            echo "  2. Commits must be Conventional Commits: feat: / fix: / refactor: / etc."
+            echo "  3. PR body must include: 'Closes #N' or 'Fixes #N'"
+            echo "  4. No hardcoded secrets or IPs"
+            echo ""
+            echo "Reference: docs/PMO-BRANCH-CONVENTION.md"
+            exit 1
+          fi

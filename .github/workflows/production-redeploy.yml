@@ -1,0 +1,276 @@
+name: Kushnir.cloud (KC) Production Redeploy
+# @module ci/deployment
+# @description Manual workflow to trigger KC production redeploy with predeploy gate validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Deployment mode (full|partial|portal|service)"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - full
+          - partial
+          - portal
+          - service
+      service:
+        description: "Service name (for mode=service only)"
+        required: false
+        type: choice
+        options:
+          - code-server
+          - caddy
+          - oauth2-proxy
+          - portal
+          - prometheus
+          - grafana
+          - alertmanager
+      dry_run:
+        description: "Dry-run mode (no actual changes)"
+        required: false
+        type: boolean
+        default: true
+      skip_preflight:
+        description: "Skip preflight checks"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  predeploy-gate:
+    name: Pre-Deployment Gate
+    runs-on: ubuntu-latest
+    outputs:
+      gate_passed: ${{ steps.gate.outputs.gate_passed }}
+      gate_report: ${{ steps.gate.outputs.gate_report }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Run pre-deployment gate
+        id: gate
+        run: |
+          set +e
+          bash scripts/ci/predeploy-gate.sh
+          gate_status=$?
+          set -e
+          
+          if [ $gate_status -eq 0 ]; then
+            echo "gate_passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "gate_passed=false" >> "$GITHUB_OUTPUT"
+          fi
+          
+          # Capture gate report if it exists
+          if [ -f "artifacts/ci/predeploy-gate-report.json" ]; then
+            report=$(cat artifacts/ci/predeploy-gate-report.json | jq -c .)
+            echo "gate_report=$report" >> "$GITHUB_OUTPUT"
+          fi
+          
+          exit $gate_status
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: predeploy-gate-report
+          path: artifacts/ci/predeploy-gate-report.json
+          retention-days: 30
+
+  full-redeploy:
+    name: Full Production Redeploy
+    needs: predeploy-gate
+    if: |
+      needs.predeploy-gate.outputs.gate_passed == 'true' &&
+      github.event.inputs.mode == 'full'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://ide.kushnir.cloud
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 192.168.168.31 >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H 192.168.168.42 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Full redeploy
+        env:
+          DEPLOY_HOST: 192.168.168.31
+          DEPLOY_USER: akushnir
+          DRY_RUN: ${{ github.event.inputs.dry_run && '1' || '0' }}
+          SKIP_PREFLIGHT: ${{ github.event.inputs.skip_preflight && '1' || '0' }}
+          GITHUB_ISSUE_NUMBER: ""
+          TERRAFORM_AUTO_APPROVE: "1"
+        run: |
+          bash scripts/ops/redeploy.sh
+
+      - name: Verify deployment
+        if: success()
+        env:
+          DEPLOY_HOST: 192.168.168.31
+          DEPLOY_USER: akushnir
+        run: |
+          bash scripts/ci/verify-deployment-health.sh
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **Full Redeploy Failed**\n\nCheck workflow logs for details.'
+            })
+
+  partial-redeploy:
+    name: Partial Redeploy (Docker Compose Only)
+    needs: predeploy-gate
+    if: |
+      needs.predeploy-gate.outputs.gate_passed == 'true' &&
+      github.event.inputs.mode == 'partial'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://ide.kushnir.cloud
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 192.168.168.31 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Partial redeploy
+        env:
+          DEPLOY_HOST: 192.168.168.31
+          DEPLOY_USER: akushnir
+          DRY_RUN: ${{ github.event.inputs.dry_run && '1' || '0' }}
+        run: |
+          ssh $DEPLOY_USER@$DEPLOY_HOST \
+            "cd code-server-enterprise && docker compose pull && docker compose up -d"
+
+      - name: Health check
+        if: success()
+        env:
+          DEPLOY_HOST: 192.168.168.31
+          DEPLOY_USER: akushnir
+        run: |
+          for i in {1..10}; do
+            if ssh "$DEPLOY_USER@$DEPLOY_HOST" "docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -q 'Up'"; then
+              echo "✅ Services are healthy"
+              exit 0
+            fi
+            echo "Waiting for services (attempt $i/10)..."
+            sleep 10
+          done
+          echo "❌ Services did not become healthy"
+          exit 1
+
+  service-redeploy:
+    name: Single Service Redeploy
+    needs: predeploy-gate
+    if: |
+      needs.predeploy-gate.outputs.gate_passed == 'true' &&
+      github.event.inputs.mode == 'service'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://ide.kushnir.cloud
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 192.168.168.31 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Validate service selection
+        run: |
+          service="${{ github.event.inputs.service }}"
+          if [ -z "$service" ]; then
+            echo "❌ Service name required for mode=service"
+            exit 1
+          fi
+          echo "Service to redeploy: $service"
+
+      - name: Service redeploy
+        env:
+          SERVICE: ${{ github.event.inputs.service }}
+          DEPLOY_HOST: 192.168.168.31
+          DEPLOY_USER: akushnir
+          DRY_RUN: ${{ github.event.inputs.dry_run && '1' || '0' }}
+        run: |
+          bash scripts/ops/redeploy-service.sh
+
+  portal-redeploy:
+    name: Atomic Portal Redeploy (Zero-Downtime)
+    needs: predeploy-gate
+    if: |
+      needs.predeploy-gate.outputs.gate_passed == 'true' &&
+      github.event.inputs.mode == 'portal'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://portal.kushnir.cloud
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 192.168.168.31 >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H 192.168.168.42 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Portal redeploy (zero-downtime)
+        env:
+          DEPLOY_HOST: 192.168.168.31
+          DEPLOY_REPLICA: 192.168.168.42
+          DEPLOY_USER: akushnir
+          DRY_RUN: ${{ github.event.inputs.dry_run && '1' || '0' }}
+        run: |
+          bash scripts/ops/redeploy-portal.sh
+
+  deployment-summary:
+    name: Deployment Summary
+    needs: predeploy-gate
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check gate status
+        run: |
+          if [ "${{ needs.predeploy-gate.outputs.gate_passed }}" == "true" ]; then
+            echo "✅ Pre-deployment gate PASSED"
+            echo "📋 Mode: ${{ github.event.inputs.mode }}"
+            echo "🔧 Dry-run: ${{ github.event.inputs.dry_run }}"
+          else
+            echo "❌ Pre-deployment gate FAILED"
+            echo "Review artifacts/predeploy-gate-report.json for details"
+            exit 1
+          fi
+
+      - name: Publish deployment report
+        if: always()
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: deployment-summary
+          path: |
+            artifacts/ci/predeploy-gate-report.json
+            artifacts/ci/deployment-health-report.json
+          retention-days: 90

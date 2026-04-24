@@ -1,0 +1,80 @@
+# @file        playbooks/healing/redis-oom.yaml
+# @description Remediation playbook for Redis out-of-memory conditions
+# @owner       Phase 4 — Ecosystem & Autonomy
+
+name: redis-oom-recovery
+description: "Clears expired keys and manages Redis memory to prevent OOM"
+anomaly_type: redis-oom
+version: "1.0.0"
+
+# Diagnosis phase
+diagnosis:
+  - name: "Check Redis memory usage"
+    type: shell
+    command: "docker exec redis redis-cli INFO memory | grep used_memory_human"
+    on_error: continue
+    timeout: 10
+  
+  - name: "Check Redis max memory"
+    type: shell
+    command: "docker exec redis redis-cli CONFIG GET maxmemory"
+    on_error: continue
+    timeout: 10
+  
+  - name: "Count expired keys"
+    type: shell
+    command: "docker exec redis redis-cli INFO keyspace | grep expires"
+    on_error: continue
+    timeout: 10
+
+# Remediation phase
+remediation:
+  - name: "Trigger key expiration pass"
+    type: shell
+    command: "docker exec redis redis-cli BGSAVE"
+    on_error: continue
+    timeout: 30
+  
+  - name: "Clear expired keys explicitly"
+    type: shell
+    command: "docker exec redis redis-cli SCRIPT LOAD \"return redis.call('del', unpack(redis.call('keys', ARGV[1])))\" 1 'session:*' '*:expired'"
+    on_error: continue
+    timeout: 30
+  
+  - name: "Increase Redis maxmemory if needed"
+    type: shell
+    command: "docker exec redis redis-cli CONFIG SET maxmemory 2gb"
+    on_error: continue
+    timeout: 10
+
+# Validation phase
+validation:
+  - name: "Verify memory pressure reduced"
+    type: shell
+    command: "docker exec redis redis-cli INFO memory | grep used_memory_human"
+    on_error: continue
+    timeout: 10
+  
+  - name: "Check no eviction errors in logs"
+    type: shell
+    command: "docker logs redis --since 5m | grep -i 'evicted\\|oom' | wc -l | grep -q 0"
+    on_error: continue
+    timeout: 10
+
+# Rollback phase
+rollback:
+  - name: "Restore previous maxmemory setting"
+    type: shell
+    command: "docker exec redis redis-cli CONFIG SET maxmemory 1gb"
+    on_error: continue
+    timeout: 10
+
+# Post-remediation
+post:
+  publish_event: "healing.redis-oom"
+  store_memory: true
+  alert_if_failed: true
+  success_criteria:
+    - "Redis memory usage < 85% of max"
+    - "No OOM eviction events in last 10 minutes"
+    - "Session data integrity preserved"

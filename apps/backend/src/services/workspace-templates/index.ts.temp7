@@ -1,0 +1,14 @@
+
+> function parseJsonc(raw: string): Record<string, unknown> {
+    const stripped = raw
+> function extractImmutableSettings(settings: Record<string, unknown>): Record<string, unknown> {
+    const extracted: Record<string, unknown> = {};
+> function formatExtensionId(extensionId: string, version: string): string {
+    return `${extensionId}@${version}`;
+> function emitSettingsReadAudit(filePath: string): void {
+    getAuditService()?.emit({
+> function emitDirectoryReadAudit(dirPath: string): void {
+    getAuditService()?.emit({
+> function emitRoleProfileReadAudit(filePath: string): void {
+    getAuditService()?.emit({
+

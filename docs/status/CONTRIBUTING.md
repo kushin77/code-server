@@ -1,0 +1,1136 @@
+# Contributing — Engineering Constitution
+
+This repository operates at **FAANG-level standards**. Every contribution must be:
+
+- **Secure by default** — Zero hardcoded secrets, least privilege IAM, explicit trust boundaries
+- **Observable by default** — Structured logging, metrics, tracing, health endpoints
+- **Scalable by design** — Stateless architecture, horizontal scaling validated, no implicit coupling
+- **Automated end-to-end** — Deterministic builds, reproducible deployments, versioned artifacts
+- **Measurable** — Performance profiled, SLOs defined, alerts configured
+- **Defensible in audit** — Policy compliant, security scans enforced, threat models documented
+
+**If it would not survive principal-level review at Amazon, Google, or Meta, it does not merge.**
+
+Working locally is not sufficient. Production-hardened is the baseline.
+
+---
+
+## AI-Assisted Development Directive
+
+All AI-generated contributions (GitHub Copilot, LLMs, internal agents) must operate in **Ruthless Enterprise Mode**.
+
+AI must:
+- Challenge assumptions aggressively
+- Avoid demo-level implementations
+- Avoid insecure defaults
+- Avoid hidden scalability ceilings
+- Avoid implicit coupling
+- Avoid unbounded memory or concurrency
+
+**AI-generated code must meet the same standards as senior staff engineers.**
+
+---
+
+## Mandatory Review Gates
+
+Every PR must satisfy these non-negotiable gates:
+
+### Linux-Native File Format Policy
+- [ ] Text files use LF line endings only (no CRLF)
+- [ ] `.gitattributes` normalization rules are respected
+- [ ] Linux-native content guard passes before PR submission
+
+Run this guard locally before opening a PR:
+
+```bash
+bash scripts/ci/check-no-windows-content.sh
+```
+
+If you introduce CRLF on Windows, normalize before commit:
+
+```bash
+git add --renormalize .
+```
+
+### 🏗️ Architecture
+- [ ] Horizontal scalability validated
+- [ ] Stateless where possible
+- [ ] Explicit dependency boundaries documented
+- [ ] Failure isolation strategy defined
+- [ ] ADR linked (if architectural change)
+
+### 🔐 Security
+- [ ] Zero hardcoded secrets (automated scan enforces this)
+- [ ] IAM follows least privilege principle
+- [ ] Input validation implemented
+- [ ] Explicit trust boundaries defined
+- [ ] Threat model documented (for new services)
+
+### ⚡ Performance
+- [ ] No blocking operations in hot paths
+- [ ] No N+1 query patterns
+- [ ] Performance measured, not assumed
+- [ ] Resource limits defined
+- [ ] Benchmarked on target infrastructure
+
+### 📊 Observability
+- [ ] Structured logging (JSON, correlation IDs)
+- [ ] Metrics emitted (Prometheus format)
+- [ ] Distributed tracing enabled (OpenTelemetry ready)
+- [ ] Health endpoints implemented
+- [ ] Alert conditions defined
+
+### 🔄 CI/CD & Reproducibility
+- [ ] Deterministic builds (no floating versions)
+- [ ] Automated tests required (unit + integration)
+- [ ] Static analysis enforced (lint failures block)
+- [ ] Security scans enforced (SAST, dependency, secrets, container)
+- [ ] Artifacts versioned immutably
+- [ ] Rollback strategy documented
+- [ ] Reviewer checklist confirms canonical helper reuse (no duplicated helper logic)
+
+---
+
+## How To Avoid Overlap (Dedup First)
+
+Before adding any new helper or utility, always check canonical locations first:
+
+1. `scripts/_common/`
+2. `scripts/lib/`
+3. Existing service-specific utilities
+
+If capability already exists, reuse it. Do not re-implement.
+
+### Required Dedup Checks Before PR
+
+```bash
+# Detect duplicate helper re-implementation
+bash scripts/ci/detect-duplicate-helpers.sh
+
+# Advisory compose overlap detector
+bash scripts/ci/detect-duplicate-compose-keys.sh
+
+# PR dedup quality score
+bash scripts/ci/dedup-score-report.sh
+```
+
+### Reviewer Prompt
+
+Reviewers should explicitly ask: "Did this PR reuse canonical helpers and avoid overlap-prone duplication?"
+
+---
+
+## Definition of Done (Enterprise)
+
+A change is complete **only when**:
+
+✅ Secure — No vulnerability paths
+✅ Observable — Logs, metrics, traces exis
+✅ Load-tested — Performance validated
+✅ Documented — Architecture, deployment, rollback clear
+✅ Automated — Tests, builds, deploys all pass
+✅ Reproducible — Anyone can rebuild from source
+✅ Policy compliant — All scans passing, ADRs linked
+
+**"Works locally" is not done.** "Works in production" is the standard.
+
+---
+
+## Local Development Checklis
+
+Before opening a PR, validate locally:
+
+```bash
+# Pre-commit checks
+pre-commit run --all-files
+
+# Repository validation scrip
+./scripts/validate.sh
+
+# IaC policy validation (OPA/Conftest)
+conftest test terraform/ -p policies/
+
+# Docker/container builds
+docker-compose build --no-cache
+
+# Unit tests
+pytest tests/ -v --cov=. --cov-report=term
+
+# Static analysis
+pylint src/
+shellcheck scripts/*.sh
+
+# Pre-commit hooks (Phase 2.3) — REQUIRED for all commits
+pre-commit run --all-files
+```
+
+Failure in any local check = PR must address before review request.
+
+---
+
+## Phase 2.3: Pre-Commit Hooks — Code Quality & Governance
+
+Pre-commit hooks automate enforcement of standards BEFORE code reaches version control.
+
+### Setup (One-time)
+
+```bash
+# Install pre-commit framework
+pip install pre-commit
+
+# Install hooks in your local repository
+pre-commit install
+
+# Verify installation
+pre-commit --version
+```
+
+### What Hooks Check
+
+| Hook | Purpose | Auto-Fix? | Stage |
+|------|---------|-----------|-------|
+| **shellcheck** | Bash script quality | ❌ | Commit |
+| **yamllint** | YAML syntax & format | ✅ | Commit |
+| **trailing-whitespace** | Clean trailing spaces | ✅ | Commit |
+| **end-of-file-fixer** | Add final newline | ✅ | Commit |
+| **check-yaml** | YAML validity | ❌ | Commit |
+| **check-json** | JSON syntax | ❌ | Commit |
+| **detect-private-key** | Block hardcoded secrets | ❌ | Commit |
+| **verify-scripts-source-common** | Scripts use logging/error libraries | ❌ | Commit |
+| **verify-metadata-headers** | Scripts have standardized headers | ❌ | Commit |
+| **no-hardcoded-secrets** | Block hardcoded passwords/tokens | ❌ | Commit |
+
+### Running Hooks
+
+**Automatically at commit time** (default):
+```bash
+git add .
+git commit -m "feat: ..."  # Hooks run automatically
+```
+
+**Manually on all files** (recommended before PR):
+```bash
+pre-commit run --all-files  # Check entire repo
+```
+
+**Manually on specific files**:
+```bash
+pre-commit run shellcheck --all-files  # Only shellcheck
+pre-commit run yamllint --all-files    # Only YAML linting
+```
+
+**Manual checks** (best practices, not enforced):
+```bash
+pre-commit run --all-files --hook-stage manual  # Run optional checks
+```
+
+### When Hooks Fail
+
+**If a hook fails:**
+
+1. **Auto-fixable hooks** (trailing-whitespace, end-of-file-fixer, yamllint):
+   ```bash
+   # Run again — these fix themselves
+   git add .
+   git commit -m "feat: ..."
+   ```
+
+2. **Manual fix required** (shellcheck, detect-private-key, etc.):
+   ```bash
+   # Fix the issue (e.g., remove hardcoded secret)
+   # Verify fix:
+   pre-commit run <hook-name>  # Re-run specific hook
+   # Then commit again
+   git commit -m "feat: ..."
+   ```
+
+3. **Bypass if absolutely necessary**:
+   ```bash
+   git commit -m "..." --no-verify  # Skip hooks (NOT RECOMMENDED)
+   ```
+   ⚠️ **Use `--no-verify` only in emergencies. CI will still check.**
+
+### Common Failures & Fixes
+
+**shellcheck failures**:
+```bash
+# Run shellcheck manually to see details
+shellcheck scripts/deploy.sh
+
+# Fix issues:
+# - Quote variables: "$var" not $var
+# - Use set -euo pipefail at script top
+# - Use functions for reusable logic
+```
+
+**Hardcoded secret detected**:
+```bash
+# WRONG - hardcoded password:
+docker run -e PASSWORD=admin123 ...
+
+# RIGHT - use environment variable:
+docker run -e PASSWORD="$PASSWORD" ...
+```
+
+**Missing metadata header**:
+```bash
+# Add to top of script (after #!/bin/bash):
+################################################################################
+# File: script-name.sh
+# Owner: Team Name
+# Purpose: Brief description
+# ...
+################################################################################
+```
+
+**Scripts not sourcing common libraries**:
+```bash
+# Add to script after header:
+source "$(dirname "$0")/_common/logging.sh"
+source "$(dirname "$0")/_common/utils.sh"
+source "$(dirname "$0")/_common/error-handler.sh"
+```
+
+---
+
+## Testing Locally
+
+Before pushing, verify your code meets all standards:
+
+```bash
+# 1. Run pre-commit hooks
+pre-commit run --all-files
+
+# 2. Validate configuration files
+docker-compose config > /dev/null
+terraform validate
+
+# 3. Run tests
+pytest tests/ -v
+
+# 4. Check with all security scans
+bash scripts/validate.sh
+
+# 5. Final verification before push
+git push --dry-run  # Verify what will be pushed
+```
+
+If all pass, you're ready for PR!
+
+---
+
+## CI/CD Validation (Automatic)
+
+The following run automatically on every PR in GitHub Actions:
+
+- **validate-config.yml** — Configuration syntax validation (6+ checks)
+- **Test Suite** — Unit, integration, E2E tests
+- **Security Scanning** — TruffleHog for secrets, Snyk for dependencies
+- **Performance Tests** — Benchmarks must not regress
+
+**If CI fails**, the PR cannot merge. Fix locally and push again.
+
+---
+
+## Phase 2 Integration (Error Handling & Logging)
+
+All shell scripts must now use standardized error handling (Phase 2.2):
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Source common libraries
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common/logging.sh"
+source "$SCRIPT_DIR/_common/utils.sh"
+source "$SCRIPT_DIR/_common/error-handler.sh"
+
+# Use logging functions
+log_info "Operation starting..."
+require_command docker  # Verify docker is installed
+retry 3 docker pull image:tag  # Retry transient failures
+
+log_success "Operation complete"
+
+
+## CI/CD Enforcement Pipeline
+
+The following stages are **non-waivable**:
+
+1. **Lint** — Code style, formatting
+2. **Unit Tests** — Coverage gate enforced (minimum 80%)
+3. **SAST** — Static application security testing
+4. **Dependency Scanning** — Known CVE detection
+5. **Secrets Scanning** — Hardcoded credentials detection
+6. **IaC Policy** — OPA/Conftest validation against security policies
+7. **Container Scan** — Image vulnerability scan
+8. **Build Artifact** — Versioned, signed, immutable
+9. **Integration Tests** — End-to-end contract testing
+10. **Coverage Enforcement** — Minimum thresholds non-negotiable
+
+Failure at **any stage blocks merge**. No exceptions.
+
+---
+
+## Configuration Validation (CI Pipeline)
+
+All configuration files are **automatically validated** on every PR:
+
+### Automated Checks (`.github/workflows/validate-config.yml`)
+
+| Check | Files | Tool | Failure Mode |
+|-------|-------|------|--------------|
+| **Docker Compose** | `docker-compose*.yml` | `docker-compose config` | Syntax error blocks merge |
+| **Caddyfile** | `Caddyfile*` | `caddy validate` | Syntax error blocks merge |
+| **Terraform** | `*.tf` | `terraform validate` | Invalid HCL blocks merge |
+| **Shell Scripts** | `scripts/**/*.sh` | `bash -n` + `shellcheck` | Syntax errors warn (non-blocking) |
+| **Secrets** | `.env*` files | TruffleHog + pattern scan | Hardcoded secrets block merge |
+| **Obsolete Files** | Root directory | File pattern matching | Phase-specific files warn (non-blocking) |
+
+### What These Checks Prevent
+
+- ❌ Invalid docker-compose syntax silently breaking deployments
+- ❌ Caddyfile configuration errors causing traffic downtime
+- ❌ Terraform HCL errors preventing infrastructure updates
+- ❌ Hardcoded database passwords or API keys in git history
+- ❌ Obsolete phase-specific files cluttering repository
+
+---
+
+## GitHub Issues as Single Source of Truth (SSOT)
+
+All work tracking flows through GitHub Issues. This section documents mandatory process rules.
+
+**Reference**: Issue #451 — PROCESS [SSOT]: GitHub Issues as SSOT — fix 403-on-closed-issue pattern, enforce branch-issue-PR binding
+
+### Issue Lifecycle
+
+Every piece of work follows this mandatory flow:
+
+```
+OPEN (assigned) → IN-PROGRESS (branch created) → REVIEW (PR opened) → CLOSED (merged to main)
+```
+
+| Phase | Action | Tool | Never Do |
+|-------|--------|------|----------|
+| **OPEN** | Create issue for new work | GitHub Issues UI or `gh issue create` | Track work in memory files only |
+| **IN-PROGRESS** | Create branch linked to issue | `git checkout -b feature/...` | Create branch without an issue |
+| **REVIEW** | Open PR with `Fixes #N` in description | `gh pr create` | Open PR without issue reference |
+| **CLOSED** | PR merges to main; issue auto-closes | GitHub auto-closes via `Fixes #N` | Manually re-open/re-close issues |
+
+### Branch → Issue → PR Binding (Mandatory)
+
+Every feature/fix branch MUST have:
+
+1. **Corresponding open GitHub issue** (created before branch exists)
+2. **PR with `Fixes #N` or `Closes #N`** in description (before merge)
+3. **Automatic closure** when PR merges to main
+
+**Example PR description**:
+```
+## Summary
+Implement GCP Secret Manager integration for GitHub PAT storage.
+
+## Issue
+Fixes #458
+
+## Changes
+- scripts/git-credential-gsm: credential helper
+- scripts/setup-git-credentials.sh: idempotent setup
+- GSM_PROJECT fix in fetch-gsm-secrets.sh
+
+## Testing
+- Tested on 192.168.168.31 with gcloud auth
+- Verified `git ls-remote` authentication
+```
+
+### What NOT to Do (403 Error Prevention)
+
+**❌ NEVER PATCH a closed issue**:
+```bash
+# WRONG — will fail with 403 "Must have admin rights"
+gh issue update 386 --state open
+```
+
+**Why?**: Only repo admins can modify issues after closure. Use comments instead.
+
+**✅ DO THIS INSTEAD** — Add a comment to a closed issue:
+```bash
+# RIGHT — anyone can add comments
+gh issue comment 386 --body "Follow-up work required in #500"
+```
+
+**❌ NEVER create work without an issue**:
+```bash
+# WRONG — branch exists but not tracked
+git checkout -b feature/new-feature
+# ... commits ...
+# Later: "where did this branch come from?"
+```
+
+**✅ DO THIS INSTEAD**:
+```bash
+# 1. Create issue first
+gh issue create --title "feat: add new feature" --body "Description"
+# → Returns issue number (e.g., #500)
+
+# 2. Then create branch
+git checkout -b feature/new-feature-500
+
+# 3. Push and create PR with Fixes #500
+git push origin feature/new-feature-500
+gh pr create --title "feat: new feature" --body "Fixes #500"
+```
+
+### GitHub Actions Token Permissions
+
+The automation token (GitHub Actions) has `write` access but NOT `admin`. This means:
+
+**Permitted** ✅:
+- Create/update issues
+- Add comments to issues
+- PATCH on open issues only
+- Create PRs
+- Push to branches
+
+**Not permitted** ❌:
+- PATCH closed issues (403 error)
+- Create new labels
+- Create milestones
+- Merge PRs (requires branch protection)
+
+**Rule**: Only use existing labels in automation. Never attempt `POST /labels` via Actions.
+
+### Memory File Policy
+
+Memory files (`/memories/repo/`) are **NOT** the source of truth. They're ephemeral working notes.
+
+| File Type | Purpose | Max Age | Action When Stale |
+|-----------|---------|---------|-------------------|
+| `/memories/session/` | In-progress notes | 48 hours | Delete after session ends |
+| `/memories/repo/` | Repo facts (if not on GitHub) | 30 days | Delete once GitHub issue exists |
+| **GitHub Issue** | **SSOT for all work state** | Permanent | Never delete; link instead |
+
+**Rule**: When a fact appears in both a memory file AND a GitHub issue, the GitHub issue wins. Delete the memory file.
+
+### Success Criteria
+
+- ✅ Zero PATCH errors on closed issues in automation logs
+- ✅ Every open branch has a corresponding open GitHub issue
+- ✅ Every PR includes `Fixes #N` or `Closes #N` in description
+- ✅ Zero `/memories/repo/` files older than 30 days
+- ✅ CI enforces `Fixes #` presence in PR titles (Phase 2 CI rule)
+
+---
+
+### Example: Running CI Validations Locally
+
+Before pushing, validate locally:
+
+```bash
+# Docker Compose
+docker-compose config > /dev/null
+
+# Caddyfile
+caddy validate --config Caddyfile
+
+# Terraform
+terraform init -backend=false && terraform validate
+
+# Shell scripts
+bash -n scripts/*.sh
+shellcheck scripts/*.sh
+
+# Secrets
+if grep -r 'password\|secret\|key' .env*; then
+  echo "ERROR: Hardcoded secrets detected"
+  exit 1
+fi
+```
+
+### CI Validation Failures
+
+If a PR fails CI validation:
+
+1. **Read the error message carefully** — It tells you exactly what's wrong
+2. **Fix locally** using the commands above
+3. **Commit and push** — CI will re-run automatically
+4. **No forced merges** — Even if an admin can bypass CI, don't do it
+
+---
+
+## Branch Protection Rules (Enforced)
+
+All branches follow:
+
+- ✅ Require PR before merge (no direct push)
+- ✅ Require 2 approvals (1 must be code owner)
+- ✅ Require all status checks passing
+- ✅ Require conversations resolved
+- ✅ Dismiss stale reviews on new commits
+- ✅ Prevent force pushes
+- ✅ Require signed commits (elite tier)
+- ✅ Linear history (rebasing preferred)
+
+---
+
+## Threat Modeling & Security Review
+
+For any new service or significant architectural change:
+
+1. Document trust boundaries
+2. Identify threats using STRIDE or similar
+3. Document mitigations
+4. Threat model reviewed by security team
+
+Link threat model document in PR.
+
+---
+
+## ADR System (Architectural Discipline)
+
+Major architectural decisions require an ADR (Architecture Decision Record).
+
+**Location**: `/docs/adr/
+
+**When required**:
+- New service architecture
+- Technology selection (framework, database, message queue)
+- Infrastructure topology change
+- Security boundary change
+- Major refactoring
+
+**ADR template** located at [docs/adr/TEMPLATE.md](docs/adr/TEMPLATE.md)
+
+**Example ADRs**:
+- [ADR-001: Containerized code-server Deployment](docs/adr/001-containerized-deployment.md)
+- [ADR-002: OAuth2 Proxy for Authentication](docs/adr/002-oauth2-authentication.md)
+
+All ADRs are immutable; new decisions require new ADRs with `Supersedes` link.
+
+---
+
+## SLO & Observability
+
+For production services, define:
+
+- **SLI** (Service Level Indicator): What we measure
+- **SLO** (Service Level Objective): The target (e.g., 99.9% uptime)
+- **Error Budget**: How much failure is acceptable
+- **Alert Thresholds**: When to page on-call
+
+**Location**: `/docs/slos/
+
+Without SLOs, you're not running engineering — you're gambling.
+
+---
+
+## Code Review Standards
+
+Reviewers must validate:
+
+1. **Does it follow the architecture?** — Check against ADRs
+2. **Is it secure?** — Threat model, input validation, least privilege
+3. **Is it observable?** — Logs, metrics, traces
+4. **Is it scalable?** — No hidden limits, blocking calls
+5. **Is it tested?** — Unit + integration coverage
+6. **Is it documented?** — Can a new engineer understand it 6 months later?
+
+**Red flags that block approval**:
+- Hardcoded configuration
+- No error handling
+- No logging
+- No tests
+- No documentation
+- Blocking operations in hot paths
+- Implicit dependencies
+
+---
+
+## Phase 1-4 Production Readiness Framework (Automated)
+
+All PRs undergo a **4-phase automated quality gate system** (#404) to ensure production readiness:
+
+### Phase 1: Design Certification 🏗️
+
+**Gate Owner**: @architecture-team (automated via GitHub Actions)  
+**Duration**: 1-3 hours  
+**Status**: Blocks Phase 2 until approved  
+
+**Requirements**:
+- [ ] ADR requirement satisfied (or exemption documented)
+- [ ] Horizontal scaling analysis completed
+- [ ] Failure isolation strategy defined
+- [ ] Threat modeling (STRIDE) documented
+- [ ] No architectural concerns identified
+
+**Exemptions**: Minor fixes, optimizations, documentation-only changes  
+**Approval**: @kushin77 or @PureBlissAK required for Phase 1 sign-off  
+
+**What happens**:
+1. PR opened → `.github/workflows/validate-quality-gates.yml` runs automatically
+2. Verifies PR template includes Phase 1 section with checklist
+3. Posts compliance report as PR comment
+4. Awaits reviewer approval (opens Phase 2)
+
+### Phase 2: Code & Quality Review 💻
+
+**Gate Owner**: @code-review-team  
+**Duration**: 2-4 hours (depends on complexity)  
+**Status**: Can begin after Phase 1 approved  
+
+**Security Requirements**:
+- [ ] SAST scan (static application security testing) PASSED
+- [ ] Secrets scan (TruffleHog) PASSED — zero hardcoded secrets
+- [ ] Dependency scan (npm audit / pip audit) PASSED — no critical CVEs
+- [ ] Container scan (Trivy/Snyk) PASSED — no image vulnerabilities
+
+**Code Quality Requirements**:
+- [ ] Lint/style checks passing (ESLint, Pylint, Shellcheck)
+- [ ] No skipped/pending tests (test count must stay same or increase)
+- [ ] Cyclomatic complexity < 10 (avoid deeply nested logic)
+- [ ] No security anti-patterns (hardcoded secrets, unvalidated input, weak crypto)
+
+**Testing Requirements**:
+- [ ] Unit test coverage ≥ 80% on modified code
+- [ ] Integration tests if cross-service changes
+- [ ] E2E tests if UI/frontend changes
+- [ ] No test skips or TODO markers left
+
+**Observability Requirements**:
+- [ ] Structured logging with correlation IDs (JSON format)
+- [ ] Prometheus metrics exported for critical paths
+- [ ] Health endpoints implemented (if new service)
+- [ ] OpenTelemetry spans/tracing headers added (X-Trace-ID, X-Span-ID)
+- [ ] Error messages include context (what failed, why, how to fix)
+
+**Approval**: Any code owner (CODEOWNERS file) required  
+
+### Phase 3: Performance & Load Testing ⚡
+
+**Gate Owner**: @performance-team  
+**Duration**: 1-2 hours  
+**Status**: Can begin after Phase 2 approved  
+
+**Requirements** (Exemptions: docs-only, test code, non-critical utilities):
+- [ ] Baseline benchmark established (p50, p99 latency, requests/sec)
+- [ ] Load test scenarios: 1x, 2x, 5x, 10x current traffic levels
+- [ ] Results show ≤5% regression in p99 latency
+- [ ] Memory usage remains stable under load
+- [ ] No connection leaks or unbounded concurrency
+
+**Test Results Format**:
+```
+Before: p50=42ms, p99=156ms, RPS=4200, Memory=512MB
+After:  p50=43ms, p99=158ms, RPS=4198, Memory=513MB
+Change: p50: +2.4%, p99: +1.3%, RPS: -0.05%, Memory: +0.2%
+Status: ✅ PASS (all within 5% threshold)
+```
+
+**Exemptions**: Documentation, tests, non-critical utility changes  
+**Approval**: Team lead or automated if CI baseline gates pass  
+
+### Phase 4: Operational Readiness 📊
+
+**Gate Owner**: @operations-team  
+**Duration**: 1-2 hours  
+**Status**: Final gate before production merge  
+
+**Deployment Requirements**:
+- [ ] Backward compatibility verified (old clients can still use service)
+- [ ] Database migrations are reversible (with `DOWN` migration)
+- [ ] Configuration changes documented (.env, ConfigMap, secrets)
+- [ ] Deployment strategy defined: rolling / blue-green / canary / feature-flag
+
+**Rollback Requirements**:
+- [ ] Rollback time SLA documented (goal: <5 minutes)
+- [ ] Rollback command provided: `git revert -m 1 <commit>`
+- [ ] Data considerations explicit (irreversible migrations flagged)
+- [ ] Dependent services notified and verified
+
+**Monitoring & Alerts**:
+- [ ] Prometheus metrics and Grafana dashboard updated
+- [ ] Alert rules added to AlertManager (for new error conditions)
+- [ ] Runbooks created for operator response
+- [ ] Team training completed (all OpsEngineers briefed)
+
+**Documentation Requirements**:
+- [ ] RUNBOOKS.md updated with new operational procedures
+- [ ] DEPLOYMENT.md updated if deployment process changed
+- [ ] README.md updated if user-facing features added
+- [ ] ADR linked if architectural impact
+
+**Approval**: Operations lead (@kushin77) required  
+
+---
+
+## Automated Reviewer Assignment
+
+GitHub Actions **automatically assigns reviewers** based on changed files:
+
+| Change Type | Assigned Reviewer | Automatic? |
+|-------------|------------------|-----------|
+| Infrastructure (TF, Caddy, Docker) | @kushin77 | ✅ Yes |
+| Application Code (TS/JS) | @kushin77 | ✅ Yes |
+| GitHub Actions workflows | @kushin77 | ✅ Yes |
+| Architecture/ADR changes | @kushin77 | ✅ Yes |
+
+**How it works**:
+1. PR opened → `.github/workflows/assign-pr-reviewers.yml` runs
+2. Detects file types (TF, Docker, TS/JS, YAML, etc.)
+3. Posts comment: "Phase 1: Automated Reviewer Assignment"
+4. Automatically requests reviews from appropriate team
+5. You'll see review request notification in GitHub
+
+**Manual override**:
+```
+@kushin77 please review /specific-concern
+```
+
+---
+
+## Rollback Strategy (Mandatory)
+
+Every production change must answer:
+
+- How do we revert safely?
+- What is the rollback time SLA?
+- What data migrations need reversal?
+- Are there dependencies that break?
+
+### Rollback playbook format:
+
+```markdown
+## Rollback Plan
+
+**Time to rollback**: <X minutes>
+**Data considerations**: <impact of reverting>
+**Dependent services**: <systems that might break>
+**Steps**:
+1. [Specific step]
+2. [Specific step]
+3. [Verification step]
+
+
+---
+
+## CI Pipeline Configuration
+
+Refer to [.github/workflows/](github/workflows/) for implementation details:
+
+- `ci-validate.yml` — Lint, unit tests, SAS
+- `security.yml` — Dependency, secrets, container scans
+- `deploy.yml` — Artifact versioning, rollback capability
+- `validate.yml` — IaC policy enforcemen
+
+---
+
+## When in Doub
+
+Ask the following:
+
+1. **Would a principal engineer at Google accept this?** If no, rework it.
+2. **Is this secure by default?** If defaults are insecure, fix it.
+3. **Is this observable?** If you can't debug it in production, it's not done.
+4. **Is this scalable?** If it has hidden limits, document them.
+5. **Are we measuring this?** If there are no metrics, we can't manage it.
+6. **Can we rollback this safely?** If not, the risk profile is unacceptable.
+
+---
+
+## Configuration Consolidation Patterns
+
+To eliminate duplication and maintain single sources of truth across the codebase, follow these patterns:
+
+### 1. Docker Compose Inheritance
+
+**Pattern**: Use `docker-compose.base.yml` with YAML anchors for shared service definitions.
+
+**File Structure**:
+```
+docker-compose.base.yml    ← Define all core services + shared anchors
+docker-compose.yml          ← Production: compose base + overrides
+docker-compose.dev.yml      ← Development: compose base + dev-specific settings
+docker-compose.onprem.yml   ← On-premises: compose base + on-prem overrides
+```
+
+**YAML Anchors** (reusable blocks):
+- `&healthcheck-standard` — Standard 30-second health check
+- `&logging-standard` — JSON logging to stdout
+- `&deploy-resources` — CPU/memory limits (cpu: 2.0, memory: 4g)
+- `&network-enterprise` — Enterprise network attachment
+- `&restart-policy` — unless-stopped restart
+
+**Usage**:
+```yaml
+services:
+  code-server:
+    <<: *deploy-resources      # Inherit resource limits
+    <<: *logging-standard      # Inherit logging config
+    healthcheck: *healthcheck-standard
+```
+
+**Benefits**:
+- 40% code reduction across variants
+- Single definition point for all shared config
+- Easy to update all services simultaneously
+- Variant-specific overrides are explicit
+
+### 2. Caddyfile Named Segments
+
+**Pattern**: Use named segment blocks (@import) in Caddyfile for reusable configuration.
+
+**File Structure**:
+```
+Caddyfile.base         ← Contains all named segment definitions
+Caddyfile              ← Production: @import base + production-specific matchers
+Caddyfile.new          ← New deployments: @import base + new-deployment config
+Caddyfile.production   ← Strict security: @import base + security_headers_strict
+```
+
+**Named Segments** (reusable blocks):
+- `(security_headers)` — Standard security headers (CSP, X-Frame-Options, HSTS)
+- `(security_headers_strict)` — Enhanced headers for high-security deployments
+- `(cache_control_rules)` — Cache policies for assets, API, health endpoints
+- `(compression_standard)` — gzip compression for HTML/CSS/JS
+- `(compression_advanced)` — brotli + gzip for high-bandwidth environments
+- `(reverse_proxy_code_server)` — code-server reverse proxy with proper headers
+- `(http_to_https_redirect)` — Port 80 → 443 redirection
+- `(rate_limiting_production)` — Rate limiting for DDoS protection
+
+**Usage**:
+```caddyfile
+@import Caddyfile.base
+
+:80 {
+    encode gzip
+    header @import (security_headers)
+    header @import (cache_control_rules)
+    reverse_proxy code-server:8080
+}
+```
+
+**Benefits**:
+- 37% code reduction across variants
+- Security headers defined once
+- Easy to switch between security levels
+- Cache/compression policies unified
+
+### 3. AlertManager Base Configuration
+
+**Pattern**: Use `alertmanager-base.yml` for shared route structures and inhibit rules.
+
+**File Structure**:
+```
+alertmanager-base.yml          ← Shared global, route structure, inhibit rules
+alertmanager.yml               ← Simple variant: references base
+alertmanager-production.yml    ← Complex variant: references base + custom receivers
+```
+
+**Shared Structure** (in base):
+- Global settings (resolve_timeout, slack_api_url)
+- Route definition with severity-based grouping (critical→high→medium→low)
+- Inhibit rules (suppress lower severity when higher is firing)
+- Template configuration section
+
+**Usage**:
+```yaml
+# In alertmanager.yml
+include: alertmanager-base.yml
+
+receivers:
+  - name: 'team-slack'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+```
+
+**Benefits**:
+- 33% code reduction across variants
+- Severity-based routing unified
+- Inhibit rules applied consistently
+- Easy to add new receivers without duplicating routing logic
+
+### 4. Terraform Locals Pinning
+
+**Pattern**: Centralize all service versions and resource allocations in `terraform/locals.tf`.
+
+**Structure**:
+```hcl
+locals {
+  docker_images = {
+    code-server   = "codercom/code-server:4.115.0"
+    ollama        = "ollama/ollama:0.1.27"
+    oauth2-proxy  = "quay.io/oauth2-proxy/oauth2-proxy:v7.5.1"
+    caddy         = "caddy:2-alpine"
+    prometheus    = "prom/prometheus:v2.48.0"
+    grafana       = "grafana/grafana:10.2.3"
+    alertmanager  = "prom/alertmanager:v0.26.0"
+  }
+  
+  resource_limits = {
+    code-server = {
+      cpu_limit = "2.0"
+      memory    = "4g"
+    }
+    ollama = {
+      cpu_limit = "4.0"
+      memory    = "32g"
+    }
+  }
+}
+```
+
+**Usage** (in resources):
+```hcl
+docker_image {
+  name = local.docker_images["prometheus"]
+}
+
+resources {
+  cpu_limit  = local.resource_limits["code-server"]["cpu_limit"]
+  memory     = local.resource_limits["code-server"]["memory"]
+}
+```
+
+**Benefits**:
+- 100% centralized version management
+- Single source of truth for all images
+- Easy rolling updates across all terraform resources
+- Resource limits defined once, applied everywhere
+
+### 5. Environment Variable Extraction
+
+**Pattern**: Extract environment variables into dedicated `.env.MODULE_NAME` files.
+
+**File Structure**:
+```
+.env.oauth2-proxy  ← All OAuth2-Proxy variables (28 vars consolidated)
+.env.prometheus    ← All Prometheus variables
+docker-compose.yml ← References: env_file: [.env.oauth2-proxy, .env.prometheus]
+```
+
+**Structure** (example: .env.oauth2-proxy):
+```bash
+# OAuth2-Proxy Configuration
+OAUTH2_PROXY_PROVIDER=oidc
+OAUTH2_PROXY_CLIENT_ID=${CLIENT_ID}
+OAUTH2_PROXY_CLIENT_SECRET=${CLIENT_SECRET}
+# ... 28 total variables
+```
+
+**Benefits**:
+- 67% reduction in variable duplication
+- Single point to manage credentials
+- Easy to version control (with secrets scanning)
+- Clear separation of concerns
+
+### 6. Script Function Libraries
+
+**Pattern**: Consolidate common operations into reusable bash libraries.
+
+**Bash Library** (`scripts/_common/logging.sh`):
+```bash
+#!/usr/bin/env bash
+# Structured logging with timestamps and colors
+log_info() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO] $1"; }
+log_error() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $1" >&2; }
+log_success() { echo "[$(date +'%Y-%m-%d %H:%M:%S')] [SUCCESS] $1"; }
+```
+
+**Usage**:
+```bash
+#!/usr/bin/env bash
+source scripts/_common/init.sh  # includes logging.sh
+log_info "Deployment starting..."
+```
+
+**Benefits**:
+- 50% reduction in duplicate logging code
+- Consistent error handling across scripts
+- Easy to update formatting/behavior globally
+- Linux-native mandate enforced (#885)
+
+---
+
+## When Adding New Configuration
+
+Before creating a new config file, ask:
+
+1. **Is this duplicating existing configuration?** → Use consolidation patterns above
+2. **Can this be a variant of an existing config?** → Use composition/inheritance
+3. **Does this define multiple instances of same type?** → Use YAML anchors or terraform locals
+4. **Are there environment-specific values?** → Extract to .env files or locals
+
+**Add to ADR system** if introducing new consolidation patterns.
+
+---
+
+## Ruthless Truth
+
+If:
+- Policies are not automated → This entire document is corporate cosplay
+- Reviews are optional → Engineers will skip them
+- Security scans are warnings only → Vulnerabilities will ship
+- Performance is not measured → You'll be surprised in production
+- ADRs are ignored → Architectural debt accumulates
+- Rollbacks are undocumented → Incidents become disasters
+- Configuration is duplicated → Bugs propagate across the codebase
+
+Elite engineering = **enforcement + culture + automation**.
+
+No exceptions. No compromises. No "we'll clean it up later."
+
+---
+
+## Shell Script Standards
+
+> See also: `.github/workflows/shell-lint.yml` — enforced on every PR. Closes #400.
+
+### Rules (non-negotiable)
+
+1. **Shebang**: All scripts MUST begin with exactly `#!/bin/bash` — not `/bin/sh`, not `#!/usr/bin/env bash`
+2. **Linting**: All scripts MUST pass `shellcheck --severity=warning --shell=bash`
+3. **Error handling**: All scripts MUST use `set -euo pipefail`
+4. **Source**: All scripts MUST source `scripts/_common/init.sh` for shared helpers
+5. **No platform assumptions**: Scripts MUST run on Linux only; no Windows paths
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/_common/init.sh"
+
+# ... your script body
+```
+
+### Validation
+
+```bash
+# Run locally before pushing
+shellcheck --severity=warning --shell=bash scripts/**/*.sh
+```
+
+---
+
+## Windows Policy
+
+> See also: `deprecated/windows/README.md` and `.github/workflows/validate-linux-only.yml`. Closes #398 #399.
+
+**Windows is not a supported deployment or development platform.**
+
+This project deploys exclusively to on-premises Linux hosts at `192.168.168.31` and `192.168.168.42`.
+
+### What this means
+
+- ❌ **Do not add PowerShell scripts** (`.ps1`) anywhere outside `deprecated/windows/`
+- ❌ **Do not add Windows paths** (`C:\`, `%APPDATA%`, `Program Files`) in any IaC, workflow, or script
+- ❌ **Do not use Windows runners** (`windows-*`) in GitHub Actions workflows
+- ❌ **Do not reference Windows commands** (`Get-Command`, `Set-Location`, `Write-Host`) in CI/CD
+- ✅ **All scripts MUST be bash** and run on `ubuntu-latest` or the production Linux hosts
+- ✅ **Deploy via SSH** to `akushnir@192.168.168.31` — never run Terraform/Docker locally on Windows
+
+### Enforcement
+
+CI workflow `validate-linux-only.yml` blocks any PR containing Windows-specific content.

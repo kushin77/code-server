@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-04-19T02:05:49Z",
+  "total": 11,
+  "passed": 11,
+  "failed": 0,
+  "results": [
+    {"name":"fresh-shell: GSM_PROJECT=gcp-eiq\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:37Z"},
+    {"name":"fresh-shell: GSM_SECRET_NAME=github-token\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:38Z"},
+    {"name":"fresh-shell: GIT_CREDENTIAL_GSM_CANONICAL_SECRET_NAME=github-token\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:38Z"},
+    {"name":"restored-shell: GSM_PROJECT propagates\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:38Z"},
+    {"name":"restored-shell: GSM_SECRET_NAME propagates\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:39Z"},
+    {"name":"stale-env: deprecated GSM_GITHUB_TOKEN_SECRET does not override canonical\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:39Z"},
+    {"name":"stale-env: canonical name wins over legacy override\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:39Z"},
+    {"name":"repo-switch: canonical env stable across repo changes\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:40Z"},
+    {"name":"repo-switch: auth-keepalive health command exits 0\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:40Z"},
+    {"name":"extension-governance: role profile recommendation policy lint\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:43Z"},
+    {"name":"extension-governance: curated manifest signature + marketplace block\n","status":"pass","detail":"\n","ts":"2026-04-19T02:05:49Z"}
+  ]
+}

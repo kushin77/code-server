@@ -1,0 +1,62 @@
+# OIDC Issuer Reverse Proxy (Phase 2.1)
+# Exposes Kubernetes OIDC endpoint publicly
+
+oidc.{$APEX_DOMAIN} {
+    # Reverse proxy to K8s OIDC endpoint
+    reverse_proxy kubernetes.default.svc.cluster.local:443 {
+        transport http {
+            tls
+            tls_insecure_skip_verify
+        }
+        uri /oidc/*
+        path_regexp ^/oidc/(.*)$
+        replace_uri /openid/$1
+    }
+
+    # Well-known OIDC configuration endpoint
+    route /.well-known/openid-configuration {
+        reverse_proxy kubernetes.default.svc.cluster.local:443 {
+            transport http {
+                tls
+                tls_insecure_skip_verify
+            }
+            uri /.well-known/openid-configuration
+        }
+    }
+
+    # JWKS endpoint for token validation
+    route /.well-known/openid-configuration/jwks {
+        reverse_proxy kubernetes.default.svc.cluster.local:443 {
+            transport http {
+                tls
+                tls_insecure_skip_verify
+            }
+            uri /openid/v1/jwks
+        }
+    }
+
+    # Security headers
+    header X-Content-Type-Options nosniff
+    header X-Frame-Options DENY
+    header X-XSS-Protection "1; mode=block"
+    header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+
+    # CORS for cross-service access
+    header Access-Control-Allow-Origin "*"
+    header Access-Control-Allow-Methods "GET, OPTIONS"
+    header Access-Control-Allow-Headers "Content-Type, Authorization"
+
+    # Enable TLS
+    tls {$TLS_EMAIL} {
+        dns cloudflare {$CLOUDFLARE_API_TOKEN}
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/oidc-proxy.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+        level info
+    }
+}

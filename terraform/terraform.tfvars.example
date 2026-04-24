@@ -1,0 +1,77 @@
+# terraform.tfvars.example
+# 
+# Sovereign Terraform Deployment Variables
+# Copy to terraform.tfvars and fill in your deployment details
+#
+# For kushnir.cloud on-prem deployment:
+#   cp terraform.tfvars.example terraform.tfvars
+#   Edit each variable with your values
+#   terraform init
+#   terraform apply
+#
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REQUIRED: Organization & Domain
+# ─────────────────────────────────────────────────────────────────────────────
+
+apex_domain = "kushnir.cloud"          # Primary domain (e.g., yourdomain.com)
+ide_domain  = "ide.kushnir.cloud"      # Code-server subdomain
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REQUIRED: Replica Hosts (On-Prem IPs or Cloud IPs)
+# ─────────────────────────────────────────────────────────────────────────────
+
+primary_host = "192.168.168.31"        # Primary replica (active)
+replica_host = "192.168.168.42"        # Secondary replica (active, HA standby)
+nas_host     = "192.168.168.56"        # NAS server (persistent storage)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REQUIRED: Admin Email & Registry
+# ─────────────────────────────────────────────────────────────────────────────
+
+admin_email = "admin@kushnir.cloud"    # For Let's Encrypt TLS certs (receive renewal notices here)
+registry_url = "docker.io"             # Container registry (docker.io, gcr.io, or private)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REQUIRED: Code-Server Authentication
+# ─────────────────────────────────────────────────────────────────────────────
+
+code_server_password = "changeme-secure-password"  # Change to secure password (min 8 chars)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPTIONAL: Deployment Mode (default: private)
+# ─────────────────────────────────────────────────────────────────────────────
+
+deployment_mode = "private"            # Options: "private" (on-prem), "air-gapped" (no external), "federated" (multi-org)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPTIONAL: Feature Toggles (all true by default)
+# ─────────────────────────────────────────────────────────────────────────────
+
+enable_observability = true            # Prometheus, Grafana, Loki
+enable_ai           = true             # Ollama, Prompt Gateway
+enable_opa          = true             # OPA Policy Engine
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPTIONAL: Container Image Versions (all pinned by default)
+# ─────────────────────────────────────────────────────────────────────────────
+
+postgres_image    = "postgres:16"      # Database - pin to specific version
+redis_image       = "redis:7"          # Cache - pin to specific version
+ollama_image      = "ollama/ollama:latest"
+caddy_image       = "caddy:2.7.6-alpine"
+loki_image        = "grafana/loki:2.9.3"
+prometheus_image  = "prom/prometheus:latest"
+opa_image         = "openpolicyagent/opa:latest"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPTIONAL: Common Tags
+# ─────────────────────────────────────────────────────────────────────────────
+
+tags = {
+  "Terraform"   = "true"
+  "Product"     = "kushnir.cloud"
+  "Environment" = "production"
+  "Owner"       = "devops"
+  "CostCenter"  = "engineering"
+}

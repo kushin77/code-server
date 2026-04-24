@@ -1,0 +1,162 @@
+# ════════════════════════════════════════════════════════════════════════════
+# docker-compose.mtls.yml — mTLS Configuration Override
+#
+# Add to docker-compose with: docker-compose -f docker-compose.yml -f docker-compose.mtls.yml up -d
+#
+# Configures mutual TLS authentication for all inter-service communication
+# Part of P0 #1123: Zero-Trust Network Access layer
+#
+# Certificate structure:
+#   /etc/secrets/certs/<service>/
+#     ├── cert.pem        (Service certificate signed by intermediate CA)
+#     ├── key.pem         (Service private key)
+#     ├── fullchain.pem   (Service cert + CA chain)
+#     └── ca-chain.pem    (Intermediate CA + Root CA for validation)
+# ════════════════════════════════════════════════════════════════════════════
+
+version: '3.9'
+
+services:
+  # ────────────────────────────────────────────────────────────────────────────
+  # redis — In-memory data store with mTLS
+  # ────────────────────────────────────────────────────────────────────────────
+  redis:
+    environment:
+      REDIS_TLS_PORT: "6379"
+      REDIS_TLS_CERT_FILE: "/run/secrets/redis-cert"
+      REDIS_TLS_KEY_FILE: "/run/secrets/redis-key"
+      REDIS_TLS_CA_FILE: "/run/secrets/redis-ca-chain"
+    secrets:
+      - redis-cert
+      - redis-key
+      - redis-ca-chain
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # postgres — Relational database with SSL
+  # ────────────────────────────────────────────────────────────────────────────
+  postgres:
+    environment:
+      POSTGRES_INITDB_ARGS: |
+        -c ssl=on
+        -c ssl_cert_file=/run/secrets/postgres-cert
+        -c ssl_key_file=/run/secrets/postgres-key
+        -c ssl_ca_file=/run/secrets/postgres-ca-chain
+    secrets:
+      - postgres-cert
+      - postgres-key
+      - postgres-ca-chain
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # pgbouncer — PostgreSQL connection pooler with client certificates
+  # ────────────────────────────────────────────────────────────────────────────
+  pgbouncer:
+    environment:
+      PGBOUNCER_SSLMODE: "require"
+    secrets:
+      - pgbouncer-cert
+      - pgbouncer-key
+      - pgbouncer-ca-chain
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # prometheus — Monitoring with TLS scrape auth
+  # ────────────────────────────────────────────────────────────────────────────
+  prometheus:
+    environment:
+      PROMETHEUS_INSECURE_SKIP_VERIFY: "false"
+    secrets:
+      - prometheus-cert
+      - prometheus-key
+      - prometheus-ca-chain
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # alertmanager — Alert router with TLS
+  # ────────────────────────────────────────────────────────────────────────────
+  alertmanager:
+    environment:
+      ALERTMANAGER_TLS_CERT_FILE: "/run/secrets/alertmanager-cert"
+      ALERTMANAGER_TLS_KEY_FILE: "/run/secrets/alertmanager-key"
+    secrets:
+      - alertmanager-cert
+      - alertmanager-key
+      - alertmanager-ca-chain
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # loki — Log aggregation with TLS
+  # ────────────────────────────────────────────────────────────────────────────
+  loki:
+    environment:
+      LOKI_TLS_CERT_FILE: "/run/secrets/loki-cert"
+      LOKI_TLS_KEY_FILE: "/run/secrets/loki-key"
+    secrets:
+      - loki-cert
+      - loki-key
+      - loki-ca-chain
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # promtail — Log shipper with client certificates
+  # ────────────────────────────────────────────────────────────────────────────
+  promtail:
+    environment:
+      PROMTAIL_TLS_CERT_FILE: "/run/secrets/promtail-cert"
+      PROMTAIL_TLS_KEY_FILE: "/run/secrets/promtail-key"
+    secrets:
+      - promtail-cert
+      - promtail-key
+      - promtail-ca-chain
+
+secrets:
+  # Redis certificates
+  redis-cert:
+    file: ./config/mtls-certs/services/redis/cert.pem
+  redis-key:
+    file: ./config/mtls-certs/services/redis/key.pem
+  redis-ca-chain:
+    file: ./config/mtls-certs/services/redis/ca-chain.pem
+
+  # PostgreSQL certificates
+  postgres-cert:
+    file: ./config/mtls-certs/services/postgres/cert.pem
+  postgres-key:
+    file: ./config/mtls-certs/services/postgres/key.pem
+  postgres-ca-chain:
+    file: ./config/mtls-certs/services/postgres/ca-chain.pem
+
+  # PGBouncer certificates
+  pgbouncer-cert:
+    file: ./config/mtls-certs/services/pgbouncer/cert.pem
+  pgbouncer-key:
+    file: ./config/mtls-certs/services/pgbouncer/key.pem
+  pgbouncer-ca-chain:
+    file: ./config/mtls-certs/services/pgbouncer/ca-chain.pem
+
+  # Prometheus certificates
+  prometheus-cert:
+    file: ./config/mtls-certs/services/prometheus/cert.pem
+  prometheus-key:
+    file: ./config/mtls-certs/services/prometheus/key.pem
+  prometheus-ca-chain:
+    file: ./config/mtls-certs/services/prometheus/ca-chain.pem
+
+  # AlertManager certificates
+  alertmanager-cert:
+    file: ./config/mtls-certs/services/alertmanager/cert.pem
+  alertmanager-key:
+    file: ./config/mtls-certs/services/alertmanager/key.pem
+  alertmanager-ca-chain:
+    file: ./config/mtls-certs/services/alertmanager/ca-chain.pem
+
+  # Loki certificates
+  loki-cert:
+    file: ./config/mtls-certs/services/loki/cert.pem
+  loki-key:
+    file: ./config/mtls-certs/services/loki/key.pem
+  loki-ca-chain:
+    file: ./config/mtls-certs/services/loki/ca-chain.pem
+
+  # Promtail certificates
+  promtail-cert:
+    file: ./config/mtls-certs/services/promtail/cert.pem
+  promtail-key:
+    file: ./config/mtls-certs/services/promtail/key.pem
+  promtail-ca-chain:
+    file: ./config/mtls-certs/services/promtail/ca-chain.pem

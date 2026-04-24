@@ -1,0 +1,147 @@
+name: "Phase 2: Code & Quality Review Gate"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, review_requested, review_request_removed]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  phase-2-code-review-gate:
+    name: Verify Phase 2 Code & Quality Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Check PR for Phase 2 completion
+        id: check-phase-2
+        run: |
+          BODY=$(cat <<'EOF'
+          ${{ github.event.pull_request.body }}
+          EOF
+          )
+
+          if echo "$BODY" | grep -q "^\- \[x\] Documentation change only" || \
+             echo "$BODY" | grep -q "^\- \[x\] Dependency security patch" || \
+             echo "$BODY" | grep -q "^\- \[x\] Test code only"; then
+            echo "PHASE_2_REQUIRED=false" >> $GITHUB_OUTPUT
+            echo "REASON=Trivial change exemption marked" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if echo "$BODY" | grep -q "## Phase 1: Design Quality Gate" && \
+             ! echo "$BODY" | grep -q "SLA Target" && \
+             ! echo "$BODY" | grep -q "Failure Mode Analysis"; then
+            echo "PHASE_2_REQUIRED=false" >> $GITHUB_OUTPUT
+            echo "REASON=Phase 1 not yet completed - Phase 2 depends on Phase 1" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if echo "$BODY" | grep -q "## Phase 2: Code & Quality Review"; then
+            if echo "$BODY" | grep -q "### Security" && \
+               echo "$BODY" | grep -q "### Code Quality" && \
+               echo "$BODY" | grep -q "### Testing" && \
+               echo "$BODY" | grep -q "### Observability"; then
+              security_checked=$(echo "$BODY" | sed -n '/### Security/,/### Code Quality/p' | grep -c "^\- \[x\]" || true)
+              quality_checked=$(echo "$BODY" | sed -n '/### Code Quality/,/### Testing/p' | grep -c "^\- \[x\]" || true)
+              testing_checked=$(echo "$BODY" | sed -n '/### Testing/,/### Observability/p' | grep -c "^\- \[x\]" || true)
+              observability_checked=$(echo "$BODY" | sed -n '/### Observability/,/---/p' | grep -c "^\- \[x\]" || true)
+              total_checked=$((security_checked + quality_checked + testing_checked + observability_checked))
+              if [ "$total_checked" -lt 8 ]; then
+                echo "PHASE_2_COMPLETE=false" >> $GITHUB_OUTPUT
+                echo "REASON=Phase 2 section found but fewer than 8 items checked (checked: $total_checked)" >> $GITHUB_OUTPUT
+              else
+                echo "PHASE_2_COMPLETE=true" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "PHASE_2_COMPLETE=false" >> $GITHUB_OUTPUT
+              echo "REASON=Phase 2 section incomplete - missing Security/Quality/Testing/Observability subsections" >> $GITHUB_OUTPUT
+            fi
+            echo "PHASE_2_REQUIRED=true" >> $GITHUB_OUTPUT
+          else
+            echo "PHASE_2_REQUIRED=false" >> $GITHUB_OUTPUT
+            echo "REASON=Phase 2 Code & Quality Review section not found (likely awaiting Phase 1 approval)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post guidance comment if Phase 2 incomplete
+        if: steps.check-phase-2.outputs.PHASE_2_REQUIRED == 'true' && steps.check-phase-2.outputs.PHASE_2_COMPLETE == 'false'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+        with:
+          script: |
+            const reason = `${{ steps.check-phase-2.outputs.REASON }}`;
+            const body = [
+              '## Phase 2 Code & Quality Review Incomplete',
+              '',
+              "What's missing:",
+              reason,
+              '',
+              'Complete the Phase 2 section in the PR template (Security, Code Quality, Testing, Observability).'
+            ].join('\n');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            })
+
+  phase-2-reviewer-check:
+    name: Phase 2 Peer Review Status
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Check for peer review approval
+        id: check-reviews
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          APPROVAL_COUNT=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/reviews" \
+            | jq '[.[] | select(.state == "APPROVED")] | length')
+
+          if [ "$APPROVAL_COUNT" -gt 0 ]; then
+            echo "HAS_PEER_APPROVAL=true" >> "$GITHUB_OUTPUT"
+            echo "APPROVAL_COUNT=$APPROVAL_COUNT" >> "$GITHUB_OUTPUT"
+          else
+            echo "HAS_PEER_APPROVAL=false" >> "$GITHUB_OUTPUT"
+            echo "APPROVAL_COUNT=0" >> "$GITHUB_OUTPUT"
+          fi
+
+          REVIEWERS_REQUESTED='${{ toJSON(github.event.pull_request.requested_reviewers) }}'
+          if [ -z "$REVIEWERS_REQUESTED" ] || [ "$REVIEWERS_REQUESTED" = "[]" ]; then
+            echo "REVIEWERS_ASSIGNED=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "REVIEWERS_ASSIGNED=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post reminder if no reviewers assigned
+        if: steps.check-reviews.outputs.REVIEWERS_ASSIGNED == 'false'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Phase 2 peer review is not assigned yet. Request at least one reviewer before merge.'
+            })
+
+      - name: Post status if review approved
+        if: steps.check-reviews.outputs.HAS_PEER_APPROVAL == 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Phase 2 peer review approved. Approval count: ${{ steps.check-reviews.outputs.APPROVAL_COUNT }}`
+            })

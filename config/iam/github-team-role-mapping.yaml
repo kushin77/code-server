@@ -1,0 +1,273 @@
+#
+# P1 #388 - Role Mapping from GitHub Teams to Application Roles
+# Phase 1: Identity & Workload Authentication Standardization
+#
+# Maps GitHub organization teams to three-tier role hierarchy:
+# - admin: Full platform access, deploy, destroy infrastructure
+# - operator: Execute deployments, manage incidents, run workflows
+# - viewer: Read-only access to dashboards, logs, metrics
+#
+
+---
+# Version and metadata
+version: "1.0"
+last_updated: "2026-04-22"
+iam_issue: "P1 #388"
+phase: 1
+
+# Role hierarchy (inheritance)
+# admin > operator > viewer
+# A user with admin role implicitly has operator and viewer permissions
+role_hierarchy:
+  admin:
+    inherits_from: []
+    level: 3
+  operator:
+    inherits_from: []
+    level: 2
+  viewer:
+    inherits_from: []
+    level: 1
+
+# GitHub organization structure (kushin77)
+github_organization: "kushin77"
+
+# Team-to-Role Mappings
+# Format: github_org/team_name -> application_role
+team_mappings:
+  kushin77/platform-engineers:
+    role: admin
+    description: "Platform engineering team with full infrastructure access"
+    inherit_roles:
+      - operator
+      - viewer
+    permissions:
+      - "terraform:apply"
+      - "terraform:destroy"
+      - "kubernetes:admin"
+      - "docker:push"
+      - "secrets:read"
+      - "secrets:write"
+      - "secrets:rotate"
+      - "backups:restore"
+      - "disaster-recovery:execute"
+      - "incidents:declare"
+      - "incidents:command"
+      - "deployments:approve"
+      - "rollbacks:execute"
+      - "audit:read"
+      - "audit:export"
+
+  kushin77/security-team:
+    role: admin
+    description: "Security engineering team with full platform access"
+    inherit_roles:
+      - operator
+      - viewer
+    permissions:
+      - "security-scan:execute"
+      - "secrets:audit"
+      - "audit:read"
+      - "audit:export"
+      - "compliance:verify"
+      - "mfa-policy:update"
+      - "rbac-policy:update"
+      - "tls-certificate:manage"
+
+  kushin77/sre-oncall:
+    role: operator
+    description: "Site Reliability Engineering on-call team"
+    inherit_roles:
+      - viewer
+    permissions:
+      - "terraform:plan"
+      - "deployments:execute"
+      - "rollbacks:execute"
+      - "incidents:declare"
+      - "incidents:respond"
+      - "incidents:mitigate"
+      - "logs:read"
+      - "metrics:read"
+      - "alerts:acknowledge"
+      - "diagnostics:execute"
+      - "backups:list"
+      - "backups:test"
+
+  kushin77/devops-team:
+    role: operator
+    description: "DevOps team with deployment and troubleshooting access"
+    inherit_roles:
+      - viewer
+    permissions:
+      - "terraform:plan"
+      - "deployments:execute"
+      - "rollbacks:execute"
+      - "logs:read"
+      - "metrics:read"
+      - "diagnostics:execute"
+      - "docker:pull"
+      - "docker:run"
+
+  kushin77/developers:
+    role: viewer
+    description: "Software developers with read-only access to infrastructure"
+    inherit_roles: []
+    permissions:
+      - "logs:read"
+      - "metrics:read"
+      - "dashboards:view"
+      - "code-server:execute"
+      - "deployments:view"
+      - "incidents:view"
+
+  kushin77/data-scientists:
+    role: viewer
+    description: "Data science team with access to AI/ML services"
+    inherit_roles: []
+    permissions:
+      - "ollama:inference"
+      - "notebooks:execute"
+      - "data:read"
+      - "metrics:read"
+      - "logs:read"
+
+  kushin77/observers:
+    role: viewer
+    description: "External stakeholders with minimal access"
+    inherit_roles: []
+    permissions:
+      - "dashboards:view"
+      - "status-page:view"
+
+# GitHub User-to-Role Mappings (Individual Overrides)
+# Overrides team mappings for specific users
+user_mappings:
+  kushin77:  # GitHub username
+    role: admin
+    description: "Repository owner"
+    permissions:
+      - "*"  # Full access (wildcard)
+
+  alice-dev:
+    role: operator
+    description: "Alice Developer - elevated from viewer to operator for incident response training"
+    override_reason: "Incident response training period"
+    expires_at: "2026-05-22"
+
+  bob-contractor:
+    role: viewer
+    description: "External contractor - limited to read-only access"
+    override_reason: "External contract work"
+    expires_at: "2026-06-01"
+
+# Workload Identity Mappings
+# Maps Kubernetes ServiceAccounts and CI/CD workflows to roles
+workload_mappings:
+  # CI/CD Workflows (GitHub Actions)
+  "repo:kushin77/code-server:ref:refs/heads/main":
+    identity_type: automation
+    role: operator
+    description: "Main branch CI/CD deployment workflow"
+    permissions:
+      - "deployments:execute"
+      - "docker:push"
+      - "terraform:apply"
+    restrictions:
+      - "environment: production"
+      - "max_parallelism: 1"
+
+  "repo:kushin77/code-server:pull_request":
+    identity_type: automation
+    role: viewer
+    description: "PR validation workflow"
+    permissions:
+      - "deployments:plan"
+      - "docker:build"
+      - "terraform:plan"
+      - "security-scan:execute"
+
+  # Kubernetes Service Accounts
+  "namespace:prod,serviceaccount:code-server":
+    identity_type: workload
+    role: viewer
+    description: "code-server application runtime identity"
+    permissions:
+      - "code-server:execute"
+      - "logs:write"
+      - "metrics:export"
+
+  "namespace:prod,serviceaccount:ollama":
+    identity_type: workload
+    role: viewer
+    description: "Ollama AI inference service"
+    permissions:
+      - "ollama:inference"
+      - "metrics:export"
+      - "logs:write"
+
+  "namespace:prod,serviceaccount:backstage":
+    identity_type: workload
+    role: operator
+    description: "Backstage service catalog"
+    permissions:
+      - "backstage:catalog-read"
+      - "backstage:catalog-write"
+      - "github:read"
+      - "metrics:export"
+      - "logs:write"
+
+  "namespace:prod,serviceaccount:appsmith":
+    identity_type: workload
+    role: operator
+    description: "Appsmith operational workflows"
+    permissions:
+      - "appsmith:app-execute"
+      - "deployments:view"
+      - "incidents:view"
+      - "metrics:export"
+      - "logs:write"
+
+# Default Mappings
+# Applied when GitHub team/user not found in mappings above
+defaults:
+  unknown_github_user:
+    role: viewer
+    description: "Default role for unknown GitHub users"
+    permissions:
+      - "dashboards:view"
+      - "status-page:view"
+
+  unknown_workload:
+    role: viewer
+    description: "Default role for unknown workloads"
+    permissions:
+      - "logs:read"
+      - "metrics:read"
+
+# Approval Matrix
+# Who can approve role elevation requests
+approval_matrix:
+  viewer_to_operator:
+    approvers:
+      - "kushin77/platform-engineers"
+      - "kushin77/sre-oncall"
+    duration_days: 7
+
+  operator_to_admin:
+    approvers:
+      - "kushin77/platform-engineers"
+      - "kushin77/security-team"
+    duration_days: 1
+
+  user_override:
+    approvers:
+      - "kushin77/platform-engineers"
+    max_duration_days: 90
+
+# Audit Requirements
+audit_requirements:
+  log_all_role_mappings: true
+  log_role_changes: true
+  alert_on_elevated_privileges: true
+  alert_on_admin_actions: true
+  retention_days: 365

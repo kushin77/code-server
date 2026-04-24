@@ -1,0 +1,47 @@
+name: Governance Monthly Report
+
+on:
+  schedule:
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  generate-governance-report:
+    name: Generate governance metrics report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Verify script syntax
+        run: bash -n scripts/governance/generate-monthly-report.sh
+
+      - name: Generate monthly report artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x scripts/governance/generate-monthly-report.sh
+          scripts/governance/generate-monthly-report.sh "${{ github.repository }}"
+          REPORT_FILE=$(ls -1 .github/reports/governance/governance_report_*.md | tail -n 1)
+          METRICS_FILE=$(ls -1 .github/reports/governance/governance_metrics_*.prom | tail -n 1)
+          {
+            echo "## Governance Monthly Report"
+            echo
+            cat "$REPORT_FILE"
+            echo
+            echo "### Prometheus Metrics File"
+            echo
+            echo '```prometheus'
+            cat "$METRICS_FILE"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post report to canonical governance issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPORT_FILE=$(ls -1 .github/reports/governance/governance_report_*.md | tail -n 1)
+          gh issue comment 380 --repo "${{ github.repository }}" --body-file "$REPORT_FILE"

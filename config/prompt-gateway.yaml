@@ -1,0 +1,128 @@
+# @file        config/prompt-gateway.yaml
+# @module      ai/security
+# @description Prompt Gateway configuration - model allowlist, token limits, OPA policies
+# @owner       ai/security
+# @status      production-ready
+#
+# Hot-reloadable configuration for Prompt Gateway MVP
+
+server:
+  host: "0.0.0.0"
+  port: 3250
+  log_level: "info"
+
+# Model allowlist (comma-separated in GSM, parsed here)
+# Source: GSM secret "prompt-gateway-model-allowlist" (hot-reload every 30s)
+model_allowlist:
+  - "llama3:8b"
+  - "llama3:70b"
+  - "codellama:13b"
+  - "mistral:7b"
+
+# Token budget limits (per-user, time-based)
+token_limits:
+  daily:
+    default: 100000      # 100K tokens/day per user
+    elite: 500000        # 500K for elite users (reputation score >= 90)
+    standard: 100000     # 100K for standard users (reputation >= 50)
+    restricted: 10000    # 10K for restricted users (reputation < 50)
+  
+  hourly:
+    default: 10000       # 10K tokens/hour per user
+    elite: 50000
+    standard: 10000
+    restricted: 1000
+
+# PII detection settings
+pii_detection:
+  enabled: true
+  block_on_detection: true  # Fail-closed: block if PII detected
+  
+  # PII types to detect
+  patterns:
+    - email                 # email@example.com
+    - credit_card           # 1234-5678-9012-3456
+    - ssn                   # 123-45-6789
+    - us_phone              # (123) 456-7890
+    - passport              # AB123456789
+    - license_plate         # ABC123XY
+
+# Secret detection settings
+secret_detection:
+  enabled: true
+  block_on_detection: true  # Fail-closed: always block if secret found
+  
+  patterns:
+    - github_pat            # ghp_... (parameterized)
+    - github_oauth          # ghu_... (parameterized)
+    - aws_access_key        # AKIA... (parameterized)
+    - aws_secret_key        # wJalr... (parameterized)
+    - slack_token           # xox... (parameterized)
+    - private_key_rsa       # -----BEGIN RSA PRIVATE KEY-----
+    - private_key_ec        # -----BEGIN EC PRIVATE KEY-----
+    - private_key_openssh   # -----BEGIN OPENSSH PRIVATE KEY-----
+    - bearer_token          # bearer <token>
+    - api_key_generic       # api_key=... or API_KEY=...
+
+# OPA policy evaluation
+opa:
+  enabled: true
+  url: "http://localhost:8181"
+  timeout_ms: 5000
+  default_decision: "allow"  # If OPA unavailable, allow (fail-open) or deny (fail-closed)
+  
+  policies:
+    - path: "ai/prompt_policy"
+      timeout_ms: 5000
+    - path: "ai/model_allowlist"
+      timeout_ms: 5000
+    - path: "ai/budget_policy"
+      timeout_ms: 5000
+
+# Audit logging
+audit:
+  enabled: true
+  loki_url: "http://localhost:3100"
+  
+  # What to audit
+  log_successful_requests: true
+  log_blocked_requests: true
+  log_policy_violations: true
+  log_budget_exceeded: true
+  
+  # Sanitization
+  truncate_prompt_length: 500     # Truncate long prompts in logs
+  mask_user_identifiers: false    # Mask email addresses, user IDs
+
+# Ollama configuration
+ollama:
+  api_url: "http://localhost:11434"
+  timeout_ms: 60000
+  max_retries: 3
+  retry_backoff_ms: 1000
+
+# Redis (for token budget tracking, rate limiting)
+redis:
+  url: "redis://localhost:6379"
+  db: 0
+  timeout_ms: 5000
+
+# Metrics (Prometheus)
+metrics:
+  enabled: true
+  port: 9090
+  path: "/metrics"
+  
+  # Tracked metrics
+  tracked_metrics:
+    - "prompt_gateway_requests_total"        # Total requests by model
+    - "prompt_gateway_requests_blocked"      # Blocked by reason (pii, secret, budget, model)
+    - "prompt_gateway_latency_ms"            # Request latency histogram
+    - "prompt_gateway_token_usage_total"     # Total tokens processed
+    - "prompt_gateway_budget_exceeded_total" # Budget limit hits
+    - "prompt_gateway_model_errors_total"    # Ollama errors by model
+
+# Deployment mode
+deployment:
+  environment: "production"  # development | staging | production
+  replicas: 2                # Expected replicas (192.168.168.31, 192.168.168.42)

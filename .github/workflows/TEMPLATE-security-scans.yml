@@ -1,0 +1,94 @@
+name: Security Scans (Reusable)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  TRUFFLEHOG_VERSION: "3.76.3"
+
+jobs:
+  secret-scan:
+    name: TruffleHog Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Install TruffleHog CLI
+        run: |
+          if ! pip install truffleHog==${TRUFFLEHOG_VERSION}; then
+            echo "⚠ truffleHog==${TRUFFLEHOG_VERSION} not available on pip; continuing (route step will skip if no output file is created)"
+          fi
+      
+      - name: TruffleHog scan for secrets
+        run: |
+          trufflehog filesystem . --only-verified --json 2>&1 | tee trufflehog-output.json
+          if grep -q '"verified": true' trufflehog-output.json; then
+            echo "Verified secrets detected"
+            exit 1
+          fi
+
+      - name: Route TruffleHog findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f trufflehog-output.json ]; then
+            bash scripts/ops/security-scan-triage.sh --tool trufflehog --secret-jsonl trufflehog-output.json --repo "${GH_REPO}"
+          fi
+
+  dast-scan:
+    name: DAST Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Run DAST scan
+        env:
+          # Default to the public HTTP health probe so TLS recovery windows do not stall DAST.
+          # Callers can still override this with DAST_TARGET_URL when a different public target is required.
+          DAST_TARGET_URL: ${{ vars.DAST_TARGET_URL || 'http://ide.kushnir.cloud/healthz' }}
+          PORTAL_BASE_URL: ${{ vars.PORTAL_BASE_URL }}
+          IDE_BASE_URL: ${{ vars.IDE_BASE_URL }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          bash scripts/ops/dast-scan.sh --output-json artifacts/triage/dast-zap-report.json --output-md artifacts/triage/dast-zap-report.md
+
+      - name: Route DAST findings to issues
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -f artifacts/triage/dast-zap-report.json ]; then
+            bash scripts/ops/security-scan-triage.sh --tool zap --zap-json artifacts/triage/dast-zap-report.json --repo "${GH_REPO}"
+          fi
+
+  gitleaks:
+    name: Gitleaks Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+      
+      - name: Gitleaks scan
+        uses: gitleaks/gitleaks-action@e6dab246340401bf53eec993b8f05aebe80ac636  # v2.3.4
+        env:
+          # Work around upstream artifact-name regression that fails runs before reporting results.
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          source: ${{ github.server_url }}/${{ github.repository }}
+          verbose: true
+          redact: true
+          fail: true

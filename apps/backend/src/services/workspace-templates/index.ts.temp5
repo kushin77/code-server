@@ -1,0 +1,53 @@
+
+> export class WorkspaceTemplateCatalogService {
+    private readonly settingsPath: string;
+    private readonly approvedManifestPath: string;
+    private readonly registry: PrivateExtensionRegistryService;
+  
+    constructor(options: WorkspaceTemplateCatalogOptions = {}) {
+      this.settingsPath = options.settingsPath ?? DEFAULT_SETTINGS_PATH;
+      this.approvedManifestPath = options.approvedManifestPath ?? path.resolve(__dirname, '../../../../../config/code-server/extensions/extensions-approved.json');
+      this.registry = new PrivateExtensionRegistryService({
+        approvedManifestPath: this.approvedManifestPath,
+        blockedManifestPath: options.blockedManifestPath,
+      });
+    }
+  
+    getSnapshot(): WorkspaceTemplateCatalogSnapshot {
+      const settings = this.loadSettings();
+      const extensionManifest = this.registry.getSnapshot();
+      const standardTemplate = this.buildCollaborationCoreTemplate(settings, extensionManifest);
+      const roleTemplates = this.buildRoleSpecificTemplates(extensionManifest);
+  
+      return {
+        templates: [standardTemplate, ...roleTemplates],
+        settings: standardTemplate.settings,
+        extensionManifest,
+      };
+    }
+  
+    private buildRoleSpecificTemplates(
+      extensionManifest: PrivateExtensionRegistrySnapshot
+    ): WorkspaceTemplateDefinition[] {
+      const templates: WorkspaceTemplateDefinition[] = [];
+      const roleSettingsDir = this.getRoleSettingsDir();
+  
+      if (!fs.existsSync(roleSettingsDir)) {
+        return templates;
+      }
+  
+      const files = fs.readdirSync(roleSettingsDir);
+      emitDirectoryReadAudit(roleSettingsDir);
+  
+      for (const file of files) {
+        if (!file.endsWith('-profile.json')) continue;
+  
+        try {
+          const filePath = path.join(roleSettingsDir, file);
+          const raw = fs.readFileSync(filePath, 'utf8');
+          emitRoleProfileReadAudit(filePath);
+  
+          const profile = JSON.parse(raw);
+          const role = profile.role || file.replace('-profile.json', '');
+  
+

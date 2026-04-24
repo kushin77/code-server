@@ -1,0 +1,51 @@
+[Unit]
+Description=Code-Server SSH Proxy with Audit Logging
+Documentation=https://github.com/kushin77/code-server
+After=network-online.target
+Wants=network-online.target
+PartOf=code-server.target
+
+# Restart policy (immutable)
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+StartLimitInterval=300
+StartLimitBurst=10
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/log/code-server-audit.log /var/lib/code-server
+
+# Resource limits
+MemoryLimit=256M
+CPUQuota=50%
+
+# User/group (immutable)
+User=code-server
+Group=code-server
+
+# Working directory
+WorkingDirectory=/opt/code-server
+
+# Executable (FastAPI SSH proxy)
+ExecStart=/usr/bin/python3 /opt/code-server/ssh-proxy.py \
+  --listen 127.0.0.1:2222 \
+  --target localhost:22 \
+  --audit-config /etc/code-server/audit-logging.conf \
+  --log-level info
+
+# Environment
+Environment="PYTHONUNBUFFERED=1"
+Environment="AUDIT_LOG_PATH=/var/log/code-server-audit.log"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ssh-proxy
+
+[Install]
+WantedBy=multi-user.target

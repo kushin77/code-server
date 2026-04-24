@@ -1,0 +1,35 @@
+version: "1"
+generated_for_issue: 669
+
+classification:
+  apps:
+    - apps/backend/
+    - apps/frontend/
+    - src/
+    - apps/extensions/
+    - services/
+    - operations/
+  packages:
+    - packages/
+    - lib/
+    - libs/
+    - scripts/_common/
+    - scripts/lib/
+  infra:
+    - terraform/
+    - k8s/
+    - kubernetes/
+    - infra/
+    - environments/
+    - .github/workflows/
+    - docker-compose.yml
+    - Dockerfile
+  docs:
+    - docs/
+    - ARCHITECTURE.md
+    - README.md
+    - CONTRIBUTING.md
+
+notes:
+  - "Canonical app roots now live under apps/; legacy top-level backend/, frontend/, and extensions/ are compatibility symlinks during transition."
+  - "Future migration commits should continue removing hardcoded legacy paths while preserving idempotent deploy/build behavior."

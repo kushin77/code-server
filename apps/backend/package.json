@@ -1,0 +1,37 @@
+{
+  "name": "code-server-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ai-quality": "vitest run src/services/ai/__tests__/indexing-quality.test.ts src/services/ai/__tests__/indexing.test.ts --reporter=verbose"
+  },
+  "dependencies": {
+    "axios": "catalog:",
+    "express": "catalog:",
+    "ioredis": "catalog:",
+    "jose": "catalog:",
+    "js-yaml": "^4.1.1",
+    "livekit-server-sdk": "catalog:",
+    "lz4js": "^0.2.0",
+    "pg": "catalog:",
+    "pino": "catalog:",
+    "uuid": "catalog:",
+    "ws": "catalog:"
+  },
+  "devDependencies": {
+    "@types/express": "catalog:",
+    "@types/ioredis-mock": "^8.2.7",
+    "@types/lz4js": "^0.2.2",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@vitest/coverage-v8": "^4.1.4",
+    "ioredis-mock": "^8.13.1",
+    "supertest": "^6.3.4",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

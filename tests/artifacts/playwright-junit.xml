@@ -1,0 +1,36 @@
+<testsuites id="" name="" tests="8" failures="0" skipped="8" errors="0" time="0.16985400000000003">
+<testsuite name="collaboration-synthetic-monitor.spec.ts" timestamp="2026-04-23T02:09:34.821Z" hostname="chromium" tests="8" failures="0" skipped="8" time="0" errors="0">
+<testcase name="Collaboration Synthetic Monitor › portal landing page exposes IDE launch surface" classname="collaboration-synthetic-monitor.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Collaboration Synthetic Monitor › launching IDE from portal reaches the workbench shell" classname="collaboration-synthetic-monitor.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Collaboration Synthetic Monitor › direct IDE access remains on the IDE host across reloads" classname="collaboration-synthetic-monitor.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Collaboration Synthetic Monitor › authenticated IDE context survives a reload when storage state is available" classname="collaboration-synthetic-monitor.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Collaboration Synthetic Monitor › voice session creation returns a token and session payload" classname="collaboration-synthetic-monitor.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Collaboration Synthetic Monitor › voice session join, metrics update, and leave succeed" classname="collaboration-synthetic-monitor.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Collaboration Synthetic Monitor › file lock acquisition and renewal succeed" classname="collaboration-synthetic-monitor.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Collaboration Synthetic Monitor › file lock release, list, and cleanup succeed" classname="collaboration-synthetic-monitor.spec.ts">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+</testsuites>

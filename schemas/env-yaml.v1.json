@@ -1,0 +1,195 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ElevatedIQ env.yaml Schema v1",
+  "description": "Declarative specification for portable development environments (local = remote = CI = AI)",
+  "type": "object",
+  "required": ["version", "runtime"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": ["1"],
+      "description": "Schema version"
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["mode"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["local", "remote", "ci", "edge"],
+          "description": "Execution environment: local (Docker Desktop), remote (IDE server), ci (GitHub Actions), edge (on-prem)"
+        },
+        "host": {
+          "type": "string",
+          "description": "Remote host for remote mode (e.g., ide.kushnir.cloud)"
+        },
+        "fallback": {
+          "type": "string",
+          "enum": ["local", "remote", "ci", "edge"],
+          "description": "Fallback mode if primary unavailable"
+        },
+        "resource_limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpu": {
+              "type": ["integer", "string"],
+              "description": "CPU cores or limit (e.g., 4 or 0.5)"
+            },
+            "memory": {
+              "type": "string",
+              "description": "Memory limit (e.g., 8Gi, 512Mi)"
+            },
+            "disk": {
+              "type": "string",
+              "description": "Disk space limit (e.g., 50Gi)"
+            }
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "description": "Services to provision (databases, caches, brokers, etc.)",
+      "items": {
+        "type": "object",
+        "required": ["name", "image"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]+$",
+            "description": "Service name (used as Docker container name)"
+          },
+          "image": {
+            "type": "string",
+            "description": "Container image with optional digest (e.g., postgres:16@sha256:abc123)"
+          },
+          "persistent": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether data persists across restarts"
+          },
+          "ports": {
+            "type": "array",
+            "description": "Port mappings (host:container)",
+            "items": {
+              "type": "string",
+              "pattern": "^\\d+:\\d+$"
+            }
+          },
+          "env": {
+            "type": "object",
+            "description": "Environment variables",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "volumes": {
+            "type": "array",
+            "description": "Volume mounts (source:destination)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "healthcheck": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "test": {
+                "type": "array",
+                "description": "Health check command",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "interval": {
+                "type": "string",
+                "description": "Check interval (e.g., 30s)"
+              },
+              "timeout": {
+                "type": "string",
+                "description": "Check timeout (e.g., 10s)"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "description": "AI model and constraint configuration",
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Default model (e.g., llama3:8b, gpt-4)"
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["ollama", "openai", "anthropic", "azure"],
+          "description": "AI provider"
+        },
+        "fallback_chain": {
+          "type": "array",
+          "description": "Fallback models if primary unavailable",
+          "items": {
+            "type": "string"
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "description": "AI usage constraints",
+          "items": {
+            "type": "string",
+            "enum": [
+              "no_external_unless_explicit",
+              "prompt_pii_scan",
+              "log_all_interactions",
+              "require_human_approval",
+              "local_only",
+              "sandbox_execution"
+            ]
+          }
+        }
+      }
+    },
+    "policies": {
+      "type": "array",
+      "description": "OPA policies to enforce",
+      "items": {
+        "type": "string",
+        "enum": [
+          "no_prod_without_human",
+          "secrets_never_leave_boundary",
+          "full_audit_all_actions",
+          "require_signed_commits",
+          "enforce_mfa",
+          "enforce_tls_1_2"
+        ]
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "description": "Compliance and security framework requirements",
+      "additionalProperties": false,
+      "properties": {
+        "frameworks": {
+          "type": "array",
+          "description": "Compliance frameworks",
+          "items": {
+            "type": "string",
+            "enum": ["SOC2", "HIPAA", "PCI-DSS", "GDPR", "NIST-800-53", "ISO-27001"]
+          }
+        },
+        "data_classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted"],
+          "description": "Data classification level"
+        }
+      }
+    }
+  }
+}

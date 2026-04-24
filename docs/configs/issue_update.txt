@@ -1,0 +1,18 @@
+Automated onboarding completion update — actions performed:
+
+- Added onboarding docs and stubs (DEV_ONBOARDING.md, CONTRIBUTING.md, ARCHITECTURE.md, DEPLOYMENT.md, RUNBOOKS.md, onboarding/HANDOFF.md).
+- Added developer tooling (setup-dev.sh, Dockerfile, Makefile targets).
+- Added pre-commit config (.pre-commit-config.yaml) and CI workflows (.github/workflows/ci-validate.yml, security.yml).
+- Added IaC linting guidance: .tflint.hcl and infra/backend.tf.example (GCS+CMEK sample).
+- Added scripts/validate.sh and ran validation; report posted here: https://github.com/kushin77/code-server/issues/8#issuecomment-3797265020
+- Opened and merged PRs for the onboarding changes; most recent merged: #13 (docs stubs + validate fix).
+
+Remaining admin tasks (action required):
+- Add SNYK_TOKEN to repository secrets for scheduled Snyk scans.
+- Replace placeholders in .github/CODEOWNERS with actual team/user handles.
+- Enable branch protection on main (require PR reviews and CI Validate checks).
+- Install/enable gitleaks, checkov, and tfsec in CI runners for full security scans.
+
+If youd
+
+<!-- verification commit -->

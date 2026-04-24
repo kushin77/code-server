@@ -1,0 +1,305 @@
+# NetworkPolicy: default-deny + explicit service-to-service allow rules
+# Implements: https://github.com/kushin77/code-server/issues/873
+#
+# Policy: default-deny all ingress and egress in each namespace.
+# Explicit allow rules are added for each declared dependency.
+# Undeclared communication paths are blocked.
+#
+# Apply: kubectl apply -f kubernetes/security/network-policies.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NAMESPACE: agents
+# ─────────────────────────────────────────────────────────────────────────────
+
+---
+# Default-deny all ingress to agents namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: agents
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+# Default-deny all egress from agents namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: agents
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+
+---
+# Allow: agents/embeddings ingress from agents tier (internal service calls)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-embeddings-ingress-internal
+  namespace: agents
+spec:
+  podSelector:
+    matchLabels:
+      app: embeddings
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agents
+      ports:
+        - protocol: TCP
+          port: 8001
+
+---
+# Allow: agents egress to kube-dns for service discovery
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: agents
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# Block: agents → cloud metadata endpoint (169.254.169.254)
+# Explicit egress allow rules above mean metadata is already blocked;
+# this policy makes the intent explicit with a named deny.
+# Note: In K8s, NetworkPolicy is allow-list only. No explicit deny syntax exists.
+# The default-deny-egress above handles this case.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NAMESPACE: phase-12
+# ─────────────────────────────────────────────────────────────────────────────
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: phase-12
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: phase-12
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+
+---
+# Allow: ingress from ingress controller (nginx/caddy) to phase-12 services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-from-ingress-controller
+  namespace: phase-12
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 8080
+
+---
+# Allow: phase-12 egress to postgres on port 5432
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-postgres
+  namespace: phase-12
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: phase-12
+          podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+# Allow: phase-12 egress to DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: phase-12
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NAMESPACE: monitoring
+# ─────────────────────────────────────────────────────────────────────────────
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+
+---
+# Allow: prometheus scrape access to agents and phase-12 namespaces
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}  # all namespaces
+      ports:
+        - protocol: TCP
+          port: 9090
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8001
+        - protocol: TCP
+          port: 9100  # node-exporter
+
+---
+# Allow: grafana access to prometheus
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-grafana-to-prometheus
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: grafana
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - protocol: TCP
+          port: 9090
+
+---
+# Allow: monitoring ingress from Cloudflare Access only
+# (Grafana/Prometheus UIs accessed via Cloudflare Tunnel — see #876)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-monitoring-ui
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cloudflared
+      ports:
+        - protocol: TCP
+          port: 3000   # grafana
+        - protocol: TCP
+          port: 9090   # prometheus
+        - protocol: TCP
+          port: 9093   # alertmanager
+        - protocol: TCP
+          port: 16686  # jaeger
+
+---
+# Allow: monitoring egress to DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: monitoring
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

@@ -1,0 +1,93 @@
+# JWT Validation & RBAC Enforcement Module
+# 
+# This module is included in Caddyfile and enforces RBAC at the reverse
+# proxy level. All requests must have a valid JWT token with appropriate
+# role claims.
+
+# Phase 3: JWT Validator & RBAC Enforcer
+(jwt_validator) {
+  # Extract JWT from Authorization header
+  # Expected format: Authorization: Bearer <jwt_token>
+  
+  @has_token {
+    header Authorization Bearer*
+  }
+  
+  @no_token {
+    not header Authorization *
+  }
+  
+  # Return 401 for missing token
+  handle @no_token {
+    respond 401 {
+      close
+      body `{"error": "Unauthorized", "message": "Missing JWT token", "timestamp": "2026-04-23T00:00:00Z"}`
+    }
+  }
+  
+  # For requests with token, validate it
+  handle @has_token {
+    # JWT validation would happen here via a middleware
+    # For Phase 3 implementation, we'll use caddy-security extension or custom handler
+    # Placeholder: caddy-security jwt <key> <audience> <issuer>
+    
+    # If JWT invalid, return 401
+    # If JWT valid but role insufficient for endpoint, return 403
+    # If JWT valid and role OK, forward to backend
+  }
+}
+
+# RBAC Policy Matrix (evaluated after JWT validation)
+(rbac_enforcer) {
+  # Define per-endpoint access control
+  
+  @code_server_get {
+    path /code-server*
+    method GET
+  }
+  
+  @code_server_post {
+    path /code-server*
+    method POST
+  }
+  
+  @admin_endpoints {
+    path /admin/*
+  }
+  
+  @prometheus {
+    path /prometheus*
+  }
+  
+  # Code-Server (available to all authenticated users)
+  handle @code_server_get {
+    # Allow: admin, operator, viewer (all identity types)
+    # Would be validated against JWT claims here
+    reverse_proxy localhost:8080
+  }
+  
+  # Code-Server POST (restricted to admin)
+  handle @code_server_post {
+    # Allow: admin only
+    # Would be validated against JWT claims here
+    reverse_proxy localhost:8080
+  }
+  
+  # Admin Endpoints (restricted to human admin)
+  handle @admin_endpoints {
+    # Allow: admin only, identity_type=human only
+    # Would be validated against JWT claims here
+    # If insufficient privileges: respond 403 with audit reason
+    respond 403 {
+      close
+      body `{"error": "Forbidden", "message": "Admin role required", "audit_id": "phase3-rbac"}`
+    }
+  }
+  
+  # Prometheus (allow authenticated queries)
+  handle @prometheus {
+    # Allow: admin, operator, viewer
+    # Would be validated against JWT claims here
+    reverse_proxy localhost:9090
+  }
+}

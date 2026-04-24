@@ -1,0 +1,148 @@
+# @file        config/edge-nodes.yaml
+# @description Edge node registry - engineer laptops available for burst compute
+# @status      production-ready
+#
+# Edge nodes are volunteer compute resources (engineer laptops) that can be enabled
+# for burst workloads when local GPU is saturated
+
+edge_nodes:
+  # Node 1: Engineer laptop (development machine)
+  - id: edge-alex-laptop
+    hostname: "alex-laptop.kushnir.cloud"
+    ip_address: "192.168.1.42"  # VPN accessible
+    owner: "alex_kushnir"
+    enabled: true
+    
+    capabilities:
+      cpu_cores: 16
+      cpu_model: "Intel i9-13900K"
+      memory_gb: 64
+      gpu: false
+      storage_gb: 2000
+    
+    constraints:
+      max_concurrent_tasks: 2
+      reserved_for_local_dev: 8  # Keep this many cores reserved
+      idle_timeout_seconds: 300  # Power down after 5 min idle
+    
+    network:
+      vpn_required: true
+      vpn_provider: "wireguard"
+      bandwidth_mbps: 100
+    
+    status:
+      last_heartbeat: "2026-04-24T12:30:00Z"
+      is_online: true
+      task_count: 0
+      resource_utilization_percent: 5
+  
+  # Node 2: QA engineer laptop
+  - id: edge-qa-team-laptop
+    hostname: "qa-machine.kushnir.cloud"
+    ip_address: "192.168.1.43"
+    owner: "qa_team"
+    enabled: true
+    
+    capabilities:
+      cpu_cores: 12
+      cpu_model: "AMD Ryzen 9 5900X"
+      memory_gb: 32
+      gpu: false
+      storage_gb: 1500
+    
+    constraints:
+      max_concurrent_tasks: 1
+      reserved_for_local_dev: 6
+      idle_timeout_seconds: 300
+    
+    network:
+      vpn_required: true
+      vpn_provider: "wireguard"
+      bandwidth_mbps: 100
+    
+    status:
+      last_heartbeat: "2026-04-24T12:25:00Z"
+      is_online: true
+      task_count: 0
+      resource_utilization_percent: 2
+  
+  # Node 3: DevOps team laptop (typically offline)
+  - id: edge-devops-laptop
+    hostname: "devops-machine.kushnir.cloud"
+    ip_address: "192.168.1.44"
+    owner: "devops_team"
+    enabled: false  # Offline, disabled
+    
+    capabilities:
+      cpu_cores: 8
+      cpu_model: "Intel i7-12700K"
+      memory_gb: 32
+      gpu: false
+      storage_gb: 1000
+    
+    constraints:
+      max_concurrent_tasks: 1
+      reserved_for_local_dev: 4
+      idle_timeout_seconds: 300
+    
+    network:
+      vpn_required: true
+      vpn_provider: "wireguard"
+      bandwidth_mbps: 100
+    
+    status:
+      last_heartbeat: "2026-04-23T18:00:00Z"
+      is_online: false
+      task_count: 0
+      resource_utilization_percent: 0
+
+# ════════════════════════════════════════════════════════════════════════════
+# Edge Burst Configuration
+# ════════════════════════════════════════════════════════════════════════════
+
+burst_config:
+  # When to enable edge burst mode
+  triggers:
+    local_gpu_utilization_threshold_percent: 85
+    ci_queue_depth_threshold: 5
+    
+  # How long to use edge nodes for burst
+  duration:
+    max_burst_duration_seconds: 3600  # Max 1 hour per burst
+    cooldown_seconds: 300  # Wait 5 min before next burst
+  
+  # Task types that can run on edge (not all tasks are edge-safe)
+  allowed_task_types:
+    - test_suite
+    - build
+    - lint
+    - data_processing
+  
+  # Task types that CANNOT run on edge (sensitive/local-only)
+  blocked_task_types:
+    - ai_inference
+    - model_training
+  
+  # Data classification that can use edge
+  allowed_data_classifications:
+    - public
+    - internal
+  
+  blocked_data_classifications:
+    - confidential
+    - restricted
+
+# ════════════════════════════════════════════════════════════════════════════
+# Heartbeat & Health Monitoring
+# ════════════════════════════════════════════════════════════════════════════
+
+health_check:
+  interval_seconds: 30
+  timeout_seconds: 10
+  retries: 3
+  
+  # Endpoint to check (edge nodes run scheduler agent)
+  endpoint: "/health"
+  
+  # Mark offline if no heartbeat for this long
+  offline_threshold_seconds: 120

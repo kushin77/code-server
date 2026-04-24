@@ -1,0 +1,144 @@
+{
+  "name": "team-hub",
+  "displayName": "KC IDE Team Hub - Real-Time Collaboration",
+  "description": "Team presence, same-file awareness, and one-click collaboration actions for KC IDE.",
+  "version": "0.1.0",
+  "publisher": "kushnir",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Collaboration",
+    "Other"
+  ],
+  "keywords": [
+    "collaboration",
+    "presence",
+    "matrix",
+    "meet",
+    "sidebar"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "teamHub-container",
+          "title": "Team Hub",
+          "icon": "media/team-hub-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "teamHub-container": [
+        {
+          "id": "teamHub.sidebar",
+          "name": "Team Presence",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "teamHub.openActivityFeed",
+        "title": "Team Hub: Open Activity Feed"
+      },
+      {
+        "command": "teamHub.openWelcome",
+        "title": "Team Hub: Open KC IDE Welcome"
+      },
+      {
+        "command": "teamHub.mentionUser",
+        "title": "Team Hub: Mention User"
+      },
+      {
+        "command": "teamHub.startMeet",
+        "title": "Team Hub: Start Google Meet"
+      },
+      {
+        "command": "teamHub.goToUserFile",
+        "title": "Team Hub: Go To User File"
+      },
+      {
+        "command": "teamHub.refreshPresence",
+        "title": "Team Hub: Refresh Presence"
+      },
+      {
+        "command": "teamHub.settings",
+        "title": "Team Hub: Open Settings"
+      },
+      {
+        "command": "teamHub.shareWorkspace",
+        "title": "Team Hub: Share Workspace Link"
+      }
+    ],
+    "configuration": {
+      "title": "Team Hub",
+      "properties": {
+        "teamHub.matrixHomeserver": {
+          "type": "string",
+          "default": "",
+          "description": "Matrix homeserver URL used for collaboration messages."
+        },
+        "teamHub.roomId": {
+          "type": "string",
+          "default": "",
+          "description": "Default Matrix room ID for mentions and meet links."
+        },
+        "teamHub.presenceSidecarUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Optional presence sidecar URL for live collaboration state."
+        },
+        "teamHub.enableAutoPresence": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically publish presence updates when the active editor changes."
+        },
+        "teamHub.enableGoogleMeet": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Google Meet link generation."
+        },
+        "teamHub.presenceUpdateInterval": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "Presence refresh interval in milliseconds."
+        },
+        "teamHub.showAvatars": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show user avatars in the sidebar."
+        },
+        "teamHub.highlightSameFile": {
+          "type": "boolean",
+          "default": true,
+          "description": "Highlight collaborators editing the same file."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "compile": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --target=node18",
+    "watch": "npm run compile -- --sourcemap --watch",
+    "build": "npm run compile",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "axios": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/vscode": "catalog:",
+    "esbuild": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

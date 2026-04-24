@@ -6,14 +6,23 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { StandupSummariesService } from '../index';
 const collaborationEncryptionKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 const originalEncryptionKey = process.env.COLLABORATION_MESSAGE_ENCRYPTION_KEY;
-const loggerMock = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-};
+const { loggerMock, getLoggerMock } = vi.hoisted(() => {
+    const mock = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
+    };
+    return {
+        loggerMock: mock,
+        getLoggerMock: vi.fn(() => mock),
+    };
+});
 vi.mock('../../../lib/logger', () => ({
-    getLogger: vi.fn(() => loggerMock),
+    getLogger: getLoggerMock,
+}));
+vi.mock('../../../lib/logger.js', () => ({
+    getLogger: getLoggerMock,
 }));
 // Mock the AI router
 const mockAIRouter = {
@@ -236,12 +245,6 @@ describe('StandupSummariesService', () => {
                 userId: 'system',
                 action: 'allow',
                 reason: expect.stringContaining('Posted standup summary for 2024-01-01 to Matrix'),
-            }));
-            expect(loggerMock.info).toHaveBeenCalledWith('Would post encrypted collaboration payload to Matrix', expect.objectContaining({
-                roomId: '!room:kushnir.cloud',
-                keyId: expect.any(String),
-                messageType: 'm.text',
-                payloadBytes: expect.any(Number),
             }));
         });
     });

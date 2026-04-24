@@ -1,5 +1,9 @@
 import { defineConfig } from "vitest/config";
 export default defineConfig({
+    resolve: {
+        // Prefer TypeScript sources in tests to avoid stale/generated JS artifacts.
+        extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json"],
+    },
     test: {
         globals: true,
         environment: "node",

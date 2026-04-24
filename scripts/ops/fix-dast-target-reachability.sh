@@ -202,7 +202,7 @@ main() {
     log_info "NETWORK CONNECTIVITY"
     log_info "==================="
     
-    if check_http_connectivity "https://$IDE_DOMAIN/"; then
+    if check_http_connectivity "https://$IDE_DOMAIN/health"; then
         log_success "✓ DAST target is reachable and responding"
     else
         log_warn "⚠ DAST target not reachable - applying fixes"

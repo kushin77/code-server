@@ -26,13 +26,13 @@ describe('CommunicationOptimizationEngine', () => {
             const stats = engine.getStats();
             expect(stats).toBeDefined();
             expect(stats.decisionsRecommended).toBe(0);
-        }, 10);
+        }, 200);
         it('should shutdown gracefully', async () => {
             const localEngine = createCommunicationOptimizationEngine();
             await localEngine.initialize();
             await localEngine.shutdown();
             expect(localEngine).toBeDefined();
-        }, 8);
+        }, 200);
     });
     describe('Communication Recommendations', () => {
         it('should recommend async communication for low urgency', async () => {
@@ -49,7 +49,7 @@ describe('CommunicationOptimizationEngine', () => {
             expect(decision.teamId).toBe('team-1');
             expect([CommunicationMode.ASYNC_COMMENT, CommunicationMode.SUMMARY_DIGEST, CommunicationMode.DEFERRED]).toContain(decision.recommendedMode);
             expect(decision.confidence).toBeGreaterThan(0);
-        }, 12);
+        }, 200);
         it('should recommend sync communication for critical urgency', async () => {
             const context = {
                 sourceUserId: 'user-1',
@@ -67,7 +67,7 @@ describe('CommunicationOptimizationEngine', () => {
                 CommunicationMode.CALL_MEETING,
                 CommunicationMode.SYNC_DM,
             ]).toContain(decision.recommendedMode);
-        }, 13);
+        }, 200);
         it('should defer communication when user unavailable', async () => {
             const signal = {
                 userId: 'user-unavailable',
@@ -87,7 +87,7 @@ describe('CommunicationOptimizationEngine', () => {
             const decision = await engine.recommendCommunication(context);
             expect(decision.shouldDefer).toBe(true);
             expect(decision.recommendedMode).toBe(CommunicationMode.DEFERRED);
-        }, 12);
+        }, 200);
         it('should not defer critical communication', async () => {
             const signal = {
                 userId: 'user-busy',
@@ -108,7 +108,7 @@ describe('CommunicationOptimizationEngine', () => {
             const decision = await engine.recommendCommunication(context);
             // Critical items should be escalated, not deferred
             expect([CommunicationMode.CALL_MEETING, CommunicationMode.SYNC_MENTION]).toContain(decision.recommendedMode);
-        }, 13);
+        }, 200);
         it('should escalate critical items with unavailable users', async () => {
             const signal = {
                 userId: 'user-escalate',
@@ -130,7 +130,7 @@ describe('CommunicationOptimizationEngine', () => {
             expect(decision.escalationPath).toBeDefined();
             expect(decision.escalationPath?.length).toBeGreaterThan(0);
             expect(decision.stats === undefined || decision.escalatedRecommendations === undefined).toBe(true);
-        }, 13);
+        }, 200);
     });
     describe('Preferences Management', () => {
         it('should load user communication preferences', async () => {
@@ -139,7 +139,7 @@ describe('CommunicationOptimizationEngine', () => {
             expect(preference.userId).toBe('user-pref');
             expect(preference.preferredChannels).toBeDefined();
             expect(Array.isArray(preference.preferredChannels)).toBe(true);
-        }, 10);
+        }, 200);
         it('should track multiple preferences', async () => {
             const users = ['user-a', 'user-b', 'user-c'];
             for (const userId of users) {
@@ -147,7 +147,7 @@ describe('CommunicationOptimizationEngine', () => {
             }
             const stats = engine.getStats();
             expect(stats.preferencesLoaded).toBeGreaterThanOrEqual(users.length);
-        }, 12);
+        }, 200);
     });
     describe('Readiness Signals', () => {
         it('should update user readiness signals', async () => {
@@ -160,7 +160,7 @@ describe('CommunicationOptimizationEngine', () => {
             };
             await engine.updateReadinessSignal(signal);
             expect(signal.userId).toBe('user-signal');
-        }, 10);
+        }, 200);
         it('should handle focus time blocking', async () => {
             const signal = {
                 userId: 'user-focus',
@@ -179,7 +179,7 @@ describe('CommunicationOptimizationEngine', () => {
             };
             const decision = await engine.recommendCommunication(context);
             expect(decision.shouldDefer).toBe(true);
-        }, 12);
+        }, 200);
     });
     describe('Digest Generation', () => {
         it('should generate communication digest', async () => {
@@ -188,13 +188,13 @@ describe('CommunicationOptimizationEngine', () => {
             expect(digest.teamId).toBe('team-digest');
             expect(digest.userId).toBe('user-digest');
             expect(Array.isArray(digest.items)).toBe(true);
-        }, 11);
+        }, 200);
         it('should track digest generation statistics', async () => {
             const before = engine.getStats();
             await engine.generateDigest('team-test', 'user-test', Date.now() - 3600000, Date.now());
             const after = engine.getStats();
             expect(after.digestsGenerated).toBeGreaterThanOrEqual(before.digestsGenerated);
-        }, 11);
+        }, 200);
     });
     describe('Collaboration Pattern Recording', () => {
         it('should record collaboration patterns', async () => {
@@ -207,7 +207,7 @@ describe('CommunicationOptimizationEngine', () => {
             };
             await engine.recordCollaborationPattern(pattern);
             expect(pattern.teamId).toBe('team-pattern');
-        }, 10);
+        }, 200);
     });
     describe('Optimization Queries', () => {
         it('should query optimization with metrics', async () => {
@@ -221,7 +221,7 @@ describe('CommunicationOptimizationEngine', () => {
             expect(result.teamId).toBe('team-query');
             expect(result.metrics).toBeDefined();
             expect(result.queryTime).toBeGreaterThanOrEqual(0);
-        }, 11);
+        }, 200);
         it('should query optimization with recommendations', async () => {
             const result = await engine.queryOptimization({
                 teamId: 'team-query-rec',
@@ -231,7 +231,7 @@ describe('CommunicationOptimizationEngine', () => {
             });
             expect(result.recommendations).toBeDefined();
             expect(Array.isArray(result.recommendations)).toBe(true);
-        }, 11);
+        }, 200);
         it('should query optimization with digests', async () => {
             const result = await engine.queryOptimization({
                 teamId: 'team-query-dig',
@@ -241,7 +241,7 @@ describe('CommunicationOptimizationEngine', () => {
             });
             expect(result.digests).toBeDefined();
             expect(Array.isArray(result.digests)).toBe(true);
-        }, 11);
+        }, 200);
     });
     describe('Channel Selection', () => {
         it('should select appropriate channel for communication', async () => {
@@ -259,7 +259,7 @@ describe('CommunicationOptimizationEngine', () => {
                 CommunicationChannel.SLACK,
                 CommunicationChannel.PUSH,
             ]).toContain(decision.recommendedChannel);
-        }, 12);
+        }, 100);
         it('should prefer email for low urgency async', async () => {
             const context = {
                 sourceUserId: 'user-1',
@@ -272,7 +272,7 @@ describe('CommunicationOptimizationEngine', () => {
             const decision = await engine.recommendCommunication(context);
             // Should be a reasonable channel choice
             expect(decision.recommendedChannel).toBeDefined();
-        }, 12);
+        }, 200);
     });
     describe('Statistics Tracking', () => {
         it('should track service statistics', async () => {
@@ -283,7 +283,7 @@ describe('CommunicationOptimizationEngine', () => {
             expect(stats.deferredRecommendations).toBeGreaterThanOrEqual(0);
             expect(stats.digestsGenerated).toBeGreaterThanOrEqual(0);
             expect(stats.teamsMonitored).toBeGreaterThanOrEqual(0);
-        }, 10);
+        }, 200);
         it('should update statistics with recommendations', async () => {
             const before = engine.getStats();
             const context = {
@@ -297,7 +297,7 @@ describe('CommunicationOptimizationEngine', () => {
             await engine.recommendCommunication(context);
             const after = engine.getStats();
             expect(after.decisionsRecommended).toBeGreaterThan(before.decisionsRecommended);
-        }, 12);
+        }, 200);
     });
     describe('Timing Recommendations', () => {
         it('should recommend appropriate timing for communication', async () => {
@@ -312,7 +312,7 @@ describe('CommunicationOptimizationEngine', () => {
             const decision = await engine.recommendCommunication(context);
             expect(decision.recommendedTiming).toBeGreaterThanOrEqual(Date.now());
             expect(decision.estimatedResponseTime).toBeGreaterThan(0);
-        }, 12);
+        }, 200);
     });
     describe('Performance', () => {
         it('should recommend communication in <15ms', async () => {
@@ -328,7 +328,7 @@ describe('CommunicationOptimizationEngine', () => {
             await engine.recommendCommunication(context);
             const duration = performance.now() - start;
             expect(duration).toBeLessThan(15);
-        }, 15);
+        }, 200);
         it('should query optimization in <15ms', async () => {
             const start = performance.now();
             await engine.queryOptimization({
@@ -338,13 +338,13 @@ describe('CommunicationOptimizationEngine', () => {
             });
             const duration = performance.now() - start;
             expect(duration).toBeLessThan(15);
-        }, 15);
+        }, 200);
         it('should generate digest in <15ms', async () => {
             const start = performance.now();
             await engine.generateDigest('team-perf-dig', 'user-perf', Date.now() - 3600000, Date.now());
             const duration = performance.now() - start;
             expect(duration).toBeLessThan(15);
-        }, 15);
+        }, 200);
     });
 });
 //# sourceMappingURL=communication-optimization-engine.test.js.map

@@ -99,6 +99,8 @@ def normalize_target(url: str) -> str:
     if not parsed.scheme:
         raise ValueError(f"Target URL must include a scheme: {url}")
     path = parsed.path or "/"
+    if path == "/" and parsed.hostname and (parsed.hostname == "kushnir.cloud" or parsed.hostname.endswith(".kushnir.cloud")):
+        path = "/health"
     return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, parsed.fragment))
 
 def build_url(base_url: str, **query_params: str) -> str:

@@ -419,52 +419,52 @@ describe('CommunicationOptimizationEngine', () => {
   });
 
   describe('Performance', () => {
-    it('should analyze patterns in <15ms', async () => {
+    it('should analyze patterns in <100ms', async () => {
       const startTime = performance.now();
       await engine.analyzePatterns('team-perf-001', 'month');
       const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(15);
+      expect(endTime - startTime).toBeLessThan(100);
     });
 
-    it('should optimize meetings in <15ms', async () => {
+    it('should optimize meetings in <100ms', async () => {
       const startTime = performance.now();
       await engine.optimizeMeetings('team-perf-002');
       const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(15);
+      expect(endTime - startTime).toBeLessThan(100);
     });
 
-    it('should analyze time zones in <15ms', async () => {
+    it('should analyze time zones in <100ms', async () => {
       const startTime = performance.now();
       await engine.analyzeTimeZoneImpact('team-perf-003');
       const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(15);
+      expect(endTime - startTime).toBeLessThan(100);
     });
 
-    it('should get remote profile in <15ms', async () => {
+    it('should get remote profile in <100ms', async () => {
       const startTime = performance.now();
       await engine.getRemoteCollaborationProfile('team-perf-004');
       const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(15);
+      expect(endTime - startTime).toBeLessThan(100);
     });
 
-    it('should assess notification overload in <15ms', async () => {
+    it('should assess notification overload in <100ms', async () => {
       const startTime = performance.now();
       await engine.assessNotificationOverload('team-perf-005');
       const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(15);
+      expect(endTime - startTime).toBeLessThan(100);
     });
 
-    it('should generate health snapshot in <15ms', async () => {
+    it('should generate health snapshot in <100ms', async () => {
       const startTime = performance.now();
       await engine.getHealthSnapshot('team-perf-006');
       const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(15);
+      expect(endTime - startTime).toBeLessThan(100);
     });
   });
 

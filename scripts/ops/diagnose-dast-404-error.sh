@@ -14,7 +14,7 @@ source "$SCRIPT_DIR/../_common/init.sh" || exit 1
 PRIMARY_HOST="${DEPLOY_HOST:-192.168.168.31}"
 EXEC_USER="${DEPLOY_USER:-akushnir}"
 REPO_PATH="/home/${EXEC_USER}/code-server-enterprise"
-TARGET_URL="https://ide.kushnir.cloud"
+TARGET_URL="https://ide.kushnir.cloud/health"
 
 # Check if Caddy is running
 check_caddy_status() {
@@ -218,7 +218,7 @@ main() {
     
     check_compose_config "${EXEC_USER}@${PRIMARY_HOST}" || true
     log_info ""
-    
+
     test_dast_access "$TARGET_URL" || true
     log_info ""
     
@@ -230,7 +230,7 @@ main() {
     log_info "  1. Caddy must be running and routing traffic"
     log_info "  2. oauth2-proxy must be responding on port 4180"
     log_info "  3. code-server must be responding on localhost:8080"
-    log_info "  4. Check docker-compose.yml for correct service configuration"
+    log_info "  4. DAST scanner should probe /health, not the auth-gated root path"
     log_info ""
     log_info "If oauth2-proxy or code-server are down:"
     log_info "  ssh ${EXEC_USER}@${PRIMARY_HOST}"

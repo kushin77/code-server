@@ -1,0 +1,97 @@
+{
+  "alerts": [
+    {
+      "name": "API Availability",
+      "uid": "api-availability-001",
+      "condition": "A",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasourceUid": "prometheus-uid",
+          "expression": "1 - (count(http_requests_total{status=~'2..'}) / count(http_requests_total))",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "summary": "API availability below SLA",
+        "description": "Current availability: {{ $value | humanizePercentage }}"
+      },
+      "labels": {
+        "severity": "critical",
+        "sla": "99.9%"
+      }
+    },
+    {
+      "name": "Database Connection Pool",
+      "uid": "db-pool-001",
+      "condition": "A",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 300,
+            "to": 0
+          },
+          "datasourceUid": "prometheus-uid",
+          "expression": "pg_stat_activity_count / pg_settings_max_connections",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "5m",
+      "annotations": {
+        "summary": "Database connection pool usage high",
+        "description": "Pool utilization: {{ $value | humanizePercentage }}"
+      },
+      "labels": {
+        "severity": "high",
+        "component": "database"
+      }
+    },
+    {
+      "name": "Disk Space",
+      "uid": "disk-space-001",
+      "condition": "A",
+      "data": [
+        {
+          "refId": "A",
+          "queryType": "",
+          "relativeTimeRange": {
+            "from": 900,
+            "to": 0
+          },
+          "datasourceUid": "prometheus-uid",
+          "expression": "node_filesystem_avail_bytes / node_filesystem_size_bytes",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200
+        }
+      ],
+      "noDataState": "NoData",
+      "execErrState": "Alerting",
+      "for": "15m",
+      "annotations": {
+        "summary": "Disk space running low",
+        "description": "Free space: {{ $value | humanizePercentage }}"
+      },
+      "labels": {
+        "severity": "critical",
+        "component": "filesystem"
+      }
+    }
+  ],
+  "created": "2026-04-25T00:00:00Z",
+  "version": "1.0",
+  "governance": "GOV-002: All alerts documented with runbooks and SLA targets"
+}

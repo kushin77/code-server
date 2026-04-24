@@ -10,9 +10,9 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
 import json
-from .router import ExecutionScheduler, RoutingDecision
-from .monitors import ResourceMonitoringService
-from .cost_tracker import CostTracker
+from router import ExecutionScheduler, RoutingDecision
+from monitors import ResourceMonitoringService
+from cost_tracker import CostTracker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

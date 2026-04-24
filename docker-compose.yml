@@ -22,10 +22,7 @@ services:
   # Users never need to manually install packages (admin-only via IaC)
   # ────────────────────────────────────────────────────────────────────────────
   code-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.code-server
-    image: code-server-enterprise:4.115.0@sha256:e1d4e08b7f123a45b6c7d8e9f0a1b2c3d4e5f6789abcdef0123456789abcdef
+    image: codercom/code-server:4.115.0@sha256:cbd5e05849367e521f774b760602cb9e0a8da1f159eaf89600490eec34129fe5
     container_name: code-server
     restart: unless-stopped
     user: "1000"
@@ -402,7 +399,7 @@ services:
       # CRITICAL FIX #998: No hardcoded fallbacks - use env vars with required flags
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - DOCKER_SOCKET=${DOCKER_SOCKET:-unix:///var/run/docker.sock}
-      - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:-codercom/code-server@sha256:cbd5e05849367e521f774b760602cb9e0a8da1f159eaf89600490eec34129fe5}
+      - CODE_SERVER_IMAGE_ID=${CODE_SERVER_IMAGE_ID:-sha256:9fcd6ab4ad9f0bdb0f28b35006171961d0bebcaf1a9b97d76b58d750873fd814}
       - SESSIONS_ROOT=${SESSIONS_ROOT:-/mnt/nas/code-server-sessions}
       # ── Hibernation & Resilience (#963) ──────────────────────────────────
       - SESSION_HIBERNATION_ENABLED=${SESSION_HIBERNATION_ENABLED:-true}

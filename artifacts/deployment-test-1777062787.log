@@ -28,3 +28,26 @@
 [2026-04-24T20:41:00Z] [INFO] Checking endpoint health: http://localhost:3100/health (timeout: 60s)
 [2026-04-24T20:41:00Z] [WARN] Attempt 1: HTTP 000000, retrying in 10s...
 [2026-04-24T20:41:10Z] [WARN] Attempt 2: HTTP 000000, retrying in 10s...
+[2026-04-24T20:42:07Z] [SUCCESS] Phase 4 PASSED: Health check report generated
+{
+  "timestamp": "2026-04-24T20:42:07Z",
+  "status": "FAIL",
+  "checks": {
+    "endpoint": "FAIL",
+    "services": "PASS",
+    "disk_space": "PASS",
+    "memory": "PASS"
+  }
+}
+[2026-04-24T20:42:07Z] [INFO] Test Phase 5: Rollback Verification
+[2026-04-24T20:42:07Z] [INFO]   - Verifying rollback mechanism...
+[2026-04-24T20:42:07Z] [INFO] Automated rollback initiated: component=compose, version=latest, dry_run=true
+[2026-04-24T20:42:07Z] [INFO] Rolling back Docker Compose to version latest...
+[2026-04-24T20:42:07Z] [INFO] [DRY-RUN] Would stop all services and restart
+[2026-04-24T20:42:07Z] [SUCCESS] Rollback completed successfully
+[2026-04-24T20:42:07Z] [SUCCESS] Phase 5 PASSED: Rollback mechanism verified
+[2026-04-24T20:42:07Z] [SUCCESS] Test report saved to /mnt/c/code-server-enterprise/artifacts/deployment-test-report.json
+[2026-04-24T20:42:07Z] [INFO] ==
+[2026-04-24T20:42:07Z] [INFO] Test Suite Result: FAIL/PASS/PASS/PASS/PASS
+[2026-04-24T20:42:07Z] [INFO] ==
+[2026-04-24T20:42:07Z] [ERROR] Deployment test suite FAILED

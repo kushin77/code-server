@@ -11,7 +11,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ROLLBACK_HISTORY="${REPO_ROOT}/artifacts/rollback-history.json"
 HEALTH_CHECK_TIMEOUT=300
-HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_ENDPOINT:-http://localhost:3100/health}"
+# Templated health check endpoint with fallback to environment-driven defaults
+HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_ENDPOINT:=${API_PROTOCOL:-http}://${API_HOST:-localhost}:${API_PORT:-3100}/health}"
 
 mkdir -p "$(dirname "${ROLLBACK_HISTORY}")"
 

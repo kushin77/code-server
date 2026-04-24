@@ -98,8 +98,8 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     environment:
-      - APEX_DOMAIN=${APEX_DOMAIN:-kushnir.cloud}
-      - TLS_EMAIL=${TLS_EMAIL:-admin@kushnir.cloud}
+      - APEX_DOMAIN=${APEX_DOMAIN}
+      - TLS_EMAIL=${TLS_EMAIL}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     healthcheck:
       test:

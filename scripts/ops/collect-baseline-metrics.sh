@@ -6,13 +6,41 @@ set -e
 
 ARTIFACT_DIR="artifacts"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BASELINE_DIR="${ARTIFACT_DIR}/baseline-${TIMESTAMP}"
+CONTINUE_MODE="false"
+BASELINE_DIR=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --continue)
+            CONTINUE_MODE="true"
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: bash scripts/ops/collect-baseline-metrics.sh [--continue]"
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            exit 1
+            ;;
+    esac
+done
 
 # Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+
+if [[ "${CONTINUE_MODE}" == "true" ]]; then
+    BASELINE_DIR="$(ls -td "${ARTIFACT_DIR}"/baseline-* 2>/dev/null | head -1 || true)"
+    if [[ -z "${BASELINE_DIR}" || ! -d "${BASELINE_DIR}" ]]; then
+        echo "No existing baseline directory found. Run once without --continue first." >&2
+        exit 1
+    fi
+else
+    BASELINE_DIR="${ARTIFACT_DIR}/baseline-${TIMESTAMP}"
+fi
 
 echo -e "${BLUE}=== BASELINE METRICS COLLECTION ===${NC}"
 echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -162,9 +190,14 @@ EOF
     echo "  ✓ Snapshot saved: ${BASELINE_DIR}/baseline-hour-${hour}.json"
 }
 
-# Create initial snapshots
-create_hourly_baseline 0
-create_hourly_baseline 1
+# Create snapshots
+if [[ "${CONTINUE_MODE}" == "true" ]]; then
+    current_hour=$(find "${BASELINE_DIR}" -maxdepth 1 -name 'baseline-hour-*.json' -type f 2>/dev/null | wc -l | tr -d ' ')
+    create_hourly_baseline "${current_hour}"
+else
+    create_hourly_baseline 0
+    create_hourly_baseline 1
+fi
 
 echo ""
 echo -e "${GREEN}✓ Baseline collection initialized${NC}"
@@ -177,6 +210,7 @@ echo "Review metrics using: cat ${BASELINE_DIR}/baseline-hour-*.json | jq ."
 echo ""
 
 # Create baseline summary report
+if [[ "${CONTINUE_MODE}" != "true" ]]; then
 cat > "${BASELINE_DIR}/README.md" << 'EOF'
 # Baseline Metrics Collection
 
@@ -230,5 +264,6 @@ After baseline collection complete (24 hours):
 3. Deploy updated thresholds to Prometheus
 4. Update operational procedures if needed
 EOF
+fi
 
 echo "Baseline collection ready. Monitor hourly for next 24 hours."

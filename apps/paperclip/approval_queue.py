@@ -3,7 +3,7 @@
 # @module paperclip/queue
 # @description In-memory approval queue for the human control plane
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
 import uuid
 
@@ -31,6 +31,9 @@ class ApprovalQueue:
     def list_pending(self) -> List[ApprovalRecord]:
         return [approval for approval in self._approvals.values() if approval.status == ApprovalStatus.PENDING]
 
+    def list_escalated(self) -> List[ApprovalRecord]:
+        return [approval for approval in self._approvals.values() if approval.status == ApprovalStatus.ESCALATED]
+
     def get(self, approval_id: str) -> Optional[ApprovalRecord]:
         return self._approvals.get(approval_id)
 
@@ -46,13 +49,30 @@ class ApprovalQueue:
     def deny_all_pending(self, reason: str, triggered_by: str) -> int:
         denied = 0
         for approval in list(self._approvals.values()):
-            if approval.status == ApprovalStatus.PENDING:
+            if approval.status in (ApprovalStatus.PENDING, ApprovalStatus.ESCALATED):
                 approval.status = ApprovalStatus.DENIED
                 approval.approved_by = triggered_by
                 approval.decision_reason = reason
                 approval.updated_at = datetime.now(timezone.utc)
                 denied += 1
         return denied
+
+    def escalate_overdue(self, now: Optional[datetime] = None) -> int:
+        current_time = now or datetime.now(timezone.utc)
+        escalated = 0
+
+        for approval in self._approvals.values():
+            if approval.status != ApprovalStatus.PENDING:
+                continue
+
+            deadline = approval.created_at + timedelta(minutes=approval.timeout_minutes)
+            if current_time >= deadline:
+                approval.status = ApprovalStatus.ESCALATED
+                approval.escalation_level += 1
+                approval.updated_at = current_time
+                escalated += 1
+
+        return escalated
 
     def _apply_decision(
         self,

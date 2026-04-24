@@ -38,6 +38,11 @@ async def list_approvals():
     return {"items": [approval.model_dump() for approval in approval_queue.list_pending()]}
 
 
+@app.get("/approvals/escalated")
+async def list_escalated_approvals():
+    return {"items": [approval.model_dump() for approval in approval_queue.list_escalated()]}
+
+
 @app.get("/approvals/{approval_id}")
 async def get_approval(approval_id: str):
     approval = approval_queue.get(approval_id)
@@ -71,6 +76,11 @@ async def delegate(approval_id: str, decision: ApprovalDecision):
     except KeyError:
         raise HTTPException(status_code=404, detail="Approval not found")
     return approval.model_dump()
+
+
+@app.post("/approvals/escalate-overdue")
+async def escalate_overdue_approvals():
+    return {"escalated": approval_queue.escalate_overdue()}
 
 
 @app.post("/heartbeats")

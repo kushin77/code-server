@@ -16,6 +16,7 @@ def utcnow() -> datetime:
 
 class ApprovalStatus(str, Enum):
     PENDING = "pending"
+    ESCALATED = "escalated"
     APPROVED = "approved"
     DENIED = "denied"
     DELEGATED = "delegated"
